@@ -48,8 +48,21 @@ typedef struct {
     uint16_t e_phnum;
     uint16_t e_shentsize;
     uint16_t e_shnum;
-    uint16_t e_shtrndx;
+    uint16_t e_shstrndx;
 } PACKED Elf32_Ehdr_t;
+
+typedef struct {
+    uint32_t sh_name;      // Section name, index in string tbl
+    uint32_t sh_type;      // Type of section
+    uint32_t sh_flags;     // Miscellaneous section attributes
+    uint32_t sh_addr;      // Section virtual addr at execution
+    uint32_t sh_offset;    // Section file offset
+    uint32_t sh_size;      // Size of section in bytes
+    uint32_t sh_link;      // Index of another section
+    uint32_t sh_info;      // Additional section information
+    uint32_t sh_addralign; // Section alignment
+    uint32_t sh_entsize;   // Entry size if section holds table
+} PACKED Elf32_Shdr_t;
 
 #define PT_NULL      0
 #define PT_LOAD      1

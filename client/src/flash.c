@@ -29,6 +29,7 @@
 #include "at91sam7s512.h"
 #include "util_posix.h"
 #include "comms.h"
+#include "commonutil.h"
 
 #define FLASH_START            0x100000
 
@@ -84,12 +85,12 @@ static int chipid_to_mem_avail(uint32_t iChipID) {
 
 // Turn PHDRs into flasher segments, checking for PHDR sanity and merging adjacent
 // unaligned segments if needed
-static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr_t *phdrs, uint16_t num_phdrs, uint32_t flash_end) {
-    Elf32_Phdr_t *phdr = phdrs;
+static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, uint32_t flash_end) {
+    Elf32_Phdr_t *phdr = ctx->phdrs;
     flash_seg_t *seg;
     uint32_t last_end = 0;
 
-    ctx->segments = calloc(sizeof(flash_seg_t) * num_phdrs, sizeof(uint8_t));
+    ctx->segments = calloc(sizeof(flash_seg_t) * ctx->num_phdrs, sizeof(uint8_t));
     if (!ctx->segments) {
         PrintAndLogEx(ERR, "Out of memory");
         return PM3_EMALLOC;
@@ -98,7 +99,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr_t *phdr
     seg = ctx->segments;
 
     PrintAndLogEx(SUCCESS, "Loading usable ELF segments:");
-    for (int i = 0; i < num_phdrs; i++) {
+    for (int i = 0; i < ctx->num_phdrs; i++) {
         if (le32(phdr->p_type) != PT_LOAD) {
             phdr++;
             continue;
@@ -236,13 +237,16 @@ static int check_segs(flash_file_t *ctx, int can_write_bl, uint32_t flash_end) {
     return PM3_SUCCESS;
 }
 
-// Load an ELF file and prepare it for flashing
-int flash_load(flash_file_t *ctx, const char *name, int can_write_bl, int flash_size) {
+// Read an ELF file and do some checks
+int flash_check(flash_file_t *ctx, const char *name) {
     FILE *fd;
     Elf32_Ehdr_t ehdr;
     Elf32_Phdr_t *phdrs = NULL;
+    Elf32_Shdr_t *shdrs = NULL;
     uint16_t num_phdrs;
-    uint32_t flash_end  = FLASH_START + flash_size;
+    uint16_t num_shdrs;
+    uint8_t *shstr = NULL;
+    struct version_information_t *vi = NULL;
     int res = PM3_EUNDEF;
 
     fd = fopen(name, "rb");
@@ -305,21 +309,118 @@ int flash_load(flash_file_t *ctx, const char *name, int can_write_bl, int flash_
         goto fail;
     }
 
-    res = build_segs_from_phdrs(ctx, fd, phdrs, num_phdrs, flash_end);
+    num_shdrs = le16(ehdr.e_shnum);
+
+    shdrs = calloc(le16(ehdr.e_shnum) * sizeof(Elf32_Shdr_t), sizeof(uint8_t));
+    if (!shdrs) {
+        PrintAndLogEx(ERR, "Out of memory");
+        res = PM3_EMALLOC;
+        goto fail;
+    }
+    if (fseek(fd, le32(ehdr.e_shoff), SEEK_SET) < 0) {
+        PrintAndLogEx(ERR, "Error while reading ELF SHDRs");
+        res = PM3_EFILE;
+        goto fail;
+    }
+    if (fread(shdrs, sizeof(Elf32_Shdr_t), num_shdrs, fd) != num_shdrs) {
+        res = PM3_EFILE;
+        PrintAndLogEx(ERR, "Error while reading ELF SHDRs");
+        goto fail;
+    }
+
+    shstr = calloc(shdrs[ehdr.e_shstrndx].sh_size, sizeof(uint8_t));
+    if (!shstr) {
+        PrintAndLogEx(ERR, "Out of memory");
+        res = PM3_EMALLOC;
+        goto fail;
+    }
+    if (fseek(fd, le32(shdrs[ehdr.e_shstrndx].sh_offset), SEEK_SET) < 0) {
+        PrintAndLogEx(ERR, "Error while reading ELF section string table");
+        res = PM3_EFILE;
+        goto fail;
+    }
+    if (fread(shstr, shdrs[ehdr.e_shstrndx].sh_size, 1, fd) != 1) {
+        res = PM3_EFILE;
+        PrintAndLogEx(ERR, "Error while reading ELF section string table");
+        goto fail;
+    }
+
+    for(uint16_t i=0; i<ehdr.e_shnum; i++) {
+        if (strcmp(((char *)shstr) + shdrs[i].sh_name, ".version_information")==0){
+            vi = calloc(shdrs[i].sh_size, sizeof(uint8_t));
+            if (!vi) {
+                PrintAndLogEx(ERR, "Out of memory");
+                res = PM3_EMALLOC;
+                goto fail;
+            }
+            if (fseek(fd, le32(shdrs[i].sh_offset), SEEK_SET) < 0) {
+                PrintAndLogEx(ERR, "Error while reading ELF version_information section");
+                res = PM3_EFILE;
+                goto fail;
+            }
+            if (fread(vi, shdrs[i].sh_size, 1, fd) != 1) {
+                res = PM3_EFILE;
+                PrintAndLogEx(ERR, "Error while reading ELF version_information section");
+                goto fail;
+            }
+            if (strlen(g_version_information.armsrc) == 9) {
+                if (strncmp(vi->armsrc, g_version_information.armsrc, 9) != 0) {
+                        PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));
+                        PrintAndLogEx(WARNING,  "Make sure to flash a correct and up-to-date version");
+// TODO: prompt user to continue or abort
+                }
+            }
+            free(vi);
+        }
+    }
+
+    free(shdrs);
+    free(shstr);
+    fclose(fd);
+    ctx->filename = name;
+    ctx->phdrs = phdrs;
+    ctx->num_phdrs = num_phdrs;
+    return PM3_SUCCESS;
+
+fail:
+    if (phdrs)
+        free(phdrs);
+    if (shdrs)
+        free(shdrs);
+    if (shstr)
+        free(shstr);
+    if (vi)
+        free(vi);
+    if (fd)
+        fclose(fd);
+    flash_free(ctx);
+    return res;
+}
+
+// Load an ELF file and prepare it for flashing
+int flash_load(flash_file_t *ctx, int can_write_bl, int flash_size) {
+    FILE *fd;
+    uint32_t flash_end  = FLASH_START + flash_size;
+    int res = PM3_EUNDEF;
+
+    fd = fopen(ctx->filename, "rb");
+    if (!fd) {
+        PrintAndLogEx(ERR, _RED_("Could not open file") " %s  >>> ", ctx->filename);
+        res = PM3_EFILE;
+        goto fail;
+    }
+
+    res = build_segs_from_phdrs(ctx, fd, flash_end);
     if (res != PM3_SUCCESS)
         goto fail;
     res = check_segs(ctx, can_write_bl, flash_end);
     if (res != PM3_SUCCESS)
         goto fail;
 
-    free(phdrs);
     fclose(fd);
-    ctx->filename = name;
     return PM3_SUCCESS;
 
 fail:
-    if (phdrs)
-        free(phdrs);
     if (fd)
         fclose(fd);
     flash_free(ctx);
@@ -624,6 +725,11 @@ void flash_free(flash_file_t *ctx) {
         free(ctx->segments);
         ctx->segments = NULL;
         ctx->num_segs = 0;
+    }
+    if (ctx->phdrs) {
+        free(ctx->phdrs);
+        ctx->phdrs = NULL;
+        ctx->num_phdrs = 0;
     }
 }
 

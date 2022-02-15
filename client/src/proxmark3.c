@@ -635,6 +635,14 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
         PrintAndLogEx(SUCCESS, "   "_YELLOW_("%s"), filepaths[i]);
     }
 
+    for (int i = 0 ; i < num_files; ++i) {
+        ret = flash_check(&files[i], filepaths[i]);
+        if (ret != PM3_SUCCESS) {
+            goto finish;
+        }
+        PrintAndLogEx(NORMAL, "");
+    }
+
     if (OpenProxmark(&g_session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
         PrintAndLogEx(NORMAL, _GREEN_(" found"));
     } else {
@@ -653,7 +661,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
         goto finish;
 
     for (int i = 0 ; i < num_files; ++i) {
-        ret = flash_load(&files[i], filepaths[i], can_write_bl, max_allowed * ONE_KB);
+        ret = flash_load(&files[i], can_write_bl, max_allowed * ONE_KB);
         if (ret != PM3_SUCCESS) {
             goto finish;
         }
@@ -667,7 +675,6 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
         if (ret != PM3_SUCCESS) {
             goto finish;
         }
-        flash_free(&files[i]);
         PrintAndLogEx(NORMAL, "");
     }
 
@@ -678,6 +685,7 @@ finish:
     CloseProxmark(g_session.current_device);
 finish2:
     for (int i = 0 ; i < num_files; ++i) {
+        flash_free(&files[i]);
         if (filepaths[i] != NULL)
             free(filepaths[i]);
     }
