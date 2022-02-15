@@ -654,7 +654,7 @@ static int NxpSysInfo(uint8_t *uid) {
     uint16_t reqlen = 0;
 
     req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-    req[reqlen++] = ISO15693_GET_SYSTEM_INFO;
+    req[reqlen++] = ISO15693_GET_NXP_SYSTEM_INFO;
     req[reqlen++] = 0x04; // IC manufacturer code
     memcpy(req + 3, uid, 8); // add UID
     reqlen += 8;
@@ -930,8 +930,12 @@ static int CmdHF15Info(const char *Cmd) {
     }
 
     // Check if SLIX2 and attempt to get NXP System Information
-    PrintAndLogEx(DEBUG, "4 & 08 :: %02x   7 == 1 :: %u   8 == 4 :: %u", data[4], data[7], data[8]);
-    if (data[8] == 0x04 && data[7] == 0x01 && data[4] & 0x80) {
+    PrintAndLogEx(DEBUG, "Byte 6 :: %02x   Byte 7 :: %02x   Byte 8 :: %02x", data[6], data[7], data[8]);
+    // SLIX2 uses xxx0 1xxx format on data[6] of UID
+    uint8_t nxp_version = data[6] & 0x18;
+    PrintAndLogEx(DEBUG, "NXP Version: %02x", nxp_version);
+    if (data[8] == 0x04 && data[7] == 0x01 && nxp_version == 0x08) {
+        PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
         return NxpSysInfo(uid);
     }
 
