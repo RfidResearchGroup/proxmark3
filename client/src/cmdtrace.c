@@ -79,7 +79,7 @@ static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, ui
 
     return true;
 }
-static uint8_t calc_pos(uint8_t *d) {
+static uint8_t calc_pos(const uint8_t *d) {
     // PCB [CID] [NAD] [INF] CRC CRC
     uint8_t pos = 1;
     if ((d[0] & 0x08) == 0x08)  // cid byte following
