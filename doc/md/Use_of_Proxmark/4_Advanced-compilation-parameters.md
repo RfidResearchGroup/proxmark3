@@ -120,7 +120,8 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_CRAFTBYTE    | UID stealer - Emulates scanned 14a UID - Anze Jensterle
 | HF_COLIN        | Mifare ultra fast sniff/sim/clone - Colin Brigato
 | HF_ICECLASS     | iCLASS 4-1 mode  sim/read & dump/loclass/glitch & config to flashmem - Iceman1001
-| HF_LEGIC        | HF Legic Prime standalone - uhei
+| HF_LEGIC        | HF Legic Prime Read/Store/Sim standalone - uhei
+| HF_LEGICSIM     | HF Legic Prime Simulate standalone - uhei
 | HF_MATTYRUN     | Mifare sniff/clone - Matías A. Ré Medina
 | HF_MFCSIM       | Simulate Mifare Classic 1k card storing in flashmem - Ray Lee
 | HF_MSDSAL       | EMV Read and emulation - Salvador Mendoza
