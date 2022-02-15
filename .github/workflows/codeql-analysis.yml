@@ -37,6 +37,19 @@ jobs:
         # Learn more about CodeQL language support at https://git.io/codeql-language-support
 
     steps:
+    - name: Update apt repos
+      run: sudo apt-get update
+
+    - name: Install dependencies
+      run: sudo apt-get install -yqq make autoconf build-essential ca-certificates pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libbz2-dev libbluetooth-dev libpython3-dev python3 python3-dev libpython3-all-dev liblua5.2-dev liblua5.2-0-dbg liblua5.2-0 lua5.2 sed libssl-dev
+
+    - name: Install Python dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install setuptools
+        python3 -m pip install ansicolors sslcrypto
+        if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
+
     - name: Checkout repository
       uses: actions/checkout@v2
 
@@ -50,21 +63,13 @@ jobs:
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
-    # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
-    # If this step fails, then you should remove it and run the build manually (see below)
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v1
+    - name: make clean
+      run: make clean
 
-    # ℹ️ Command-line programs to run using the OS shell.
-    # 📚 https://git.io/JvXDl
-
-    # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
-    #    and modify them (or add more) to build your code if your project
-    #    uses a compiled language
-
-    #- run: |
-    #   make bootstrap
-    #   make release
+    - name: Build
+      env:
+        V: 1
+      run: make
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
