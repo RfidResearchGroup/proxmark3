@@ -69,6 +69,7 @@ jobs:
     - name: Build
       env:
         V: 1
+        PLATFORM_EXTRAS: BTADDON
       run: make
 
     - name: Perform CodeQL Analysis
