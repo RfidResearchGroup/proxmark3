@@ -2,9 +2,9 @@
 #define __AES_NI_H__
 
 #include "aes-ni.h"
-#include <stdint.h>     //for int8_t
-#include <string.h>     //for memcmp
-#include <wmmintrin.h>  //for intrinsics for AES-NI
+// #include <stdint.h>     //for int8_t
+// #include <string.h>     //for memcmp
+// #include <wmmintrin.h>  //for intrinsics for AES-NI
 //compile using gcc and following arguments: -g;-O0;-Wall;-msse2;-msse;-march=native;-maes
 
 /*
