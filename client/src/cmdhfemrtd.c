@@ -2317,6 +2317,10 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     uint8_t path[FILENAME_MAX] = { 0x00 };
     bool is_offline = CLIParamStrToBuf(arg_get_str(ctx, 5), path, sizeof(path), &slen) == 0 && slen > 0;
     CLIParserFree(ctx);
+    if ((! IfPm3Iso14443()) && (! is_offline)) {
+        PrintAndLogEx(WARNING, "Only offline mode is available");
+        error = true;
+    }
     if (error) {
         return PM3_ESOFT;
     }
