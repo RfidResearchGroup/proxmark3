@@ -1,5 +1,5 @@
 MYSRCPATHS = ../../common ../../common/mbedtls
-MYSRCS = util_posix.c
+MYSRCS = util_posix.c randoms.c
 MYINCLUDES =  -I../../include -I../../common -I../../common/mbedtls
 MYCFLAGS = -march=native -Ofast
 MYDEFS =
@@ -9,7 +9,7 @@ ifneq ($(SKIPPTHREAD),1)
     MYLDLIBS += -lpthread
 endif
 
-BINS = brute_key mfd_aes_brute
+BINS = brute_key mfd_aes_brute mfd_multi_brute
 INSTALLTOOLS = $(BINS)
 
 include ../../Makefile.host
@@ -33,3 +33,5 @@ endif
 brute_key : $(OBJDIR)/brute_key.o $(MYOBJS)
 
 mfd_aes_brute : $(OBJDIR)/mfd_aes_brute.o $(MYOBJS)
+
+mfd_multi_brute : $(OBJDIR)/mfd_multi_brute.o $(MYOBJS)
