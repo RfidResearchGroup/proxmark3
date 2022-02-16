@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf emrtd info` segfault on some platforms (@doegox)
+ - Fixed `hf emrtd info` when offline (@doegox)
+ - Fixed `commands.json` generation (@doegox)
  - Added new standalone mode `hf_legicsim` (@uhei)
  - Changed `hf legic *` - now uses NG instead (@iceman1001)
  - Added `hf legic view` - view contents of LEGIC Prime dump files (@iceman1001)
