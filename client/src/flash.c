@@ -316,10 +316,35 @@ int flash_load(flash_file_t *ctx) {
     shdrs = (Elf32_Shdr_t *)(ctx->elf + le32(ehdr->e_shoff));
     shstr = ctx->elf + le32(shdrs[ehdr->e_shstrndx].sh_offset);
 
+    char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
     for (uint16_t i = 0; i < le16(ehdr->e_shnum); i++) {
         if (strcmp(((char *)shstr) + shdrs[i].sh_name, ".version_information") == 0) {
             vi = (struct version_information_t *)(ctx->elf + le32(shdrs[i].sh_offset));
-            char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+            FormatVersionInformation(temp, sizeof(temp), "", vi);
+            PrintAndLogEx(SUCCESS, _CYAN_("ELF file version") _YELLOW_(" %s"), temp);
+            if (strlen(g_version_information.armsrc) == 9) {
+                if (strncmp(vi->armsrc, g_version_information.armsrc, 9) != 0) {
+                    PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));
+                    PrintAndLogEx(INFO,  "Make sure to flash a correct and up-to-date version");
+                    PrintAndLogEx(NORMAL,  "Do you want to flash the current image? (yes/no)");
+                    char answer[10];
+                    if ((fgets (answer, sizeof(answer), stdin) == NULL) || (strncmp(answer, "yes", 3) != 0)) {
+                        res = PM3_EOPABORTED;
+                        goto fail;
+                    }
+                }
+            }
+        }
+        if (strcmp(((char *)shstr) + shdrs[i].sh_name, ".bootphase1") == 0) {
+            uint32_t offset = *(uint32_t*)(ctx->elf + le32(shdrs[i].sh_offset) + le32(shdrs[i].sh_size) - 4);
+            if (offset < le32(shdrs[i].sh_addr))
+                continue;
+            offset -= le32(shdrs[i].sh_addr);
+            if (offset >= le32(shdrs[i].sh_size))
+                continue;
+            vi = (struct version_information_t *)(ctx->elf + le32(shdrs[i].sh_offset) + offset);
+            if (vi->magic != VERSION_INFORMATION_MAGIC)
+                continue;
             FormatVersionInformation(temp, sizeof(temp), "", vi);
             PrintAndLogEx(SUCCESS, _CYAN_("ELF file version") _YELLOW_(" %s"), temp);
             if (strlen(g_version_information.armsrc) == 9) {
