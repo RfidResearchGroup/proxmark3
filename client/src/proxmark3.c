@@ -607,7 +607,6 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
     int ret = PM3_EUNDEF;
     flash_file_t files[FLASH_MAX_FILES];
     memset(files, 0, sizeof(files));
-    char *filepaths[FLASH_MAX_FILES] = {0};
 
     if (serial_port_name == NULL) {
         PrintAndLogEx(ERR, "You must specify a port.\n");
@@ -627,16 +626,16 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
         if (ret != PM3_SUCCESS) {
             goto finish2;
         }
-        filepaths[i] = path;
+        files[i].filename = path;
     }
 
     PrintAndLogEx(SUCCESS, "About to use the following file%s:", num_files > 1 ? "s" : "");
     for (int i = 0 ; i < num_files; ++i) {
-        PrintAndLogEx(SUCCESS, "   "_YELLOW_("%s"), filepaths[i]);
+        PrintAndLogEx(SUCCESS, "   "_YELLOW_("%s"), files[i].filename);
     }
 
     for (int i = 0 ; i < num_files; ++i) {
-        ret = flash_check(&files[i], filepaths[i]);
+        ret = flash_load(&files[i]);
         if (ret != PM3_SUCCESS) {
             goto finish;
         }
@@ -661,7 +660,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
         goto finish;
 
     for (int i = 0 ; i < num_files; ++i) {
-        ret = flash_load(&files[i], can_write_bl, max_allowed * ONE_KB);
+        ret = flash_prepare(&files[i], can_write_bl, max_allowed * ONE_KB);
         if (ret != PM3_SUCCESS) {
             goto finish;
         }
@@ -686,8 +685,6 @@ finish:
 finish2:
     for (int i = 0 ; i < num_files; ++i) {
         flash_free(&files[i]);
-        if (filepaths[i] != NULL)
-            free(filepaths[i]);
     }
     if (ret == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, _CYAN_("All done"));

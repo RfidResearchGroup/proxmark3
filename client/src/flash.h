@@ -32,7 +32,8 @@ typedef struct {
 } flash_seg_t;
 
 typedef struct {
-    const char *filename;
+    char *filename;
+    uint8_t *elf;
     Elf32_Phdr_t *phdrs;
     uint16_t num_phdrs;
     int can_write_bl;
@@ -40,8 +41,8 @@ typedef struct {
     flash_seg_t *segments;
 } flash_file_t;
 
-int flash_check(flash_file_t *ctx, const char *name);
-int flash_load(flash_file_t *ctx, int can_write_bl, int flash_size);
+int flash_load(flash_file_t *ctx);
+int flash_prepare(flash_file_t *ctx, int can_write_bl, int flash_size);
 int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t *max_allowed);
 int flash_write(flash_file_t *ctx);
 void flash_free(flash_file_t *ctx);
