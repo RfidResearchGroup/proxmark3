@@ -319,6 +319,9 @@ int flash_load(flash_file_t *ctx) {
     for (uint16_t i = 0; i < le16(ehdr->e_shnum); i++) {
         if (strcmp(((char *)shstr) + shdrs[i].sh_name, ".version_information") == 0) {
             vi = (struct version_information_t *)(ctx->elf + le32(shdrs[i].sh_offset));
+            char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+            FormatVersionInformation(temp, sizeof(temp), "", vi);
+            PrintAndLogEx(SUCCESS, _CYAN_("ELF file version") _YELLOW_(" %s"), temp);
             if (strlen(g_version_information.armsrc) == 9) {
                 if (strncmp(vi->armsrc, g_version_information.armsrc, 9) != 0) {
                     PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));
