@@ -637,7 +637,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
     for (int i = 0 ; i < num_files; ++i) {
         ret = flash_load(&files[i]);
         if (ret != PM3_SUCCESS) {
-            goto finish;
+            goto finish2;
         }
         PrintAndLogEx(NORMAL, "");
     }
@@ -679,7 +679,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
 
 finish:
     if (ret != PM3_SUCCESS)
-        PrintAndLogEx(INFO, "The flashing procedure failed, follow the suggested steps!");
+        PrintAndLogEx(WARNING, "The flashing procedure failed, follow the suggested steps!");
     ret = flash_stop_flashing();
     CloseProxmark(g_session.current_device);
 finish2:
@@ -688,6 +688,8 @@ finish2:
     }
     if (ret == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, _CYAN_("All done"));
+    else if (ret == PM3_EOPABORTED)
+        PrintAndLogEx(FAILED, "Aborted by user");
     else
         PrintAndLogEx(ERR, "Aborted on error");
     PrintAndLogEx(INFO, "\nHave a nice day!");

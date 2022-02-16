@@ -322,8 +322,13 @@ int flash_load(flash_file_t *ctx) {
             if (strlen(g_version_information.armsrc) == 9) {
                 if (strncmp(vi->armsrc, g_version_information.armsrc, 9) != 0) {
                     PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));
-                    PrintAndLogEx(WARNING,  "Make sure to flash a correct and up-to-date version");
-// TODO: prompt user to continue or abort
+                    PrintAndLogEx(INFO,  "Make sure to flash a correct and up-to-date version");
+                    PrintAndLogEx(NORMAL,  "Do you want to flash the current image? (yes/no)");
+                    char answer[10];
+                    if ((fgets (answer, sizeof(answer), stdin) == NULL) || (strncmp(answer, "yes", 3) != 0)) {
+                        res = PM3_EOPABORTED;
+                        goto fail;
+                    }
                 }
             }
         }
