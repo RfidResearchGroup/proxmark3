@@ -68,12 +68,16 @@ extern "C" void RepaintGraphWindow(void) {
 
 // hook up picture viewer
 extern "C" void ShowPictureWindow(char *fn) {
+    // No support for jpeg2000 in Qt Image since a while...
+    // https://doc.qt.io/qt-5/qtimageformats-index.html
+    if(strlen(fn) > 4 && !strcmp(fn + strlen(fn) - 4, ".jp2"))
+        return;
     if (!gui) {
         // Show a notice if X11/XQuartz isn't available
 #if defined(__MACH__) && defined(__APPLE__)
         PrintAndLogEx(WARNING, "You appear to be on a MacOS device without XQuartz.\nYou may need to install XQuartz (https://www.xquartz.org/) to make the plot work.");
 #else
-        PrintAndLogEx(WARNING, "You appear to be on an environment without an X11 server or without DISPLAY environment variable set.\nPlot may not work until you resolve these issues.");
+        PrintAndLogEx(WARNING, "You appear to be on an environment without an X11 server or without DISPLAY environment variable set.\nPicture display may not work until you resolve these issues.");
 #endif
         return;
     }
