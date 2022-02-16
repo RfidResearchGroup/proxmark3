@@ -163,7 +163,7 @@ uint32_t CRC8Hitag1Bits(const uint8_t *buff, size_t bitsize) {
     uint8_t data = 0;
     uint8_t n = 0;
     crc_init_ref(&crc, 8, 0x1d, 0xff, 0, false, false);
-    uint8_t i;
+    size_t i;
     for (i = 0; i < bitsize; i++) {
         data <<= 1;
         data += (buff[i / 8] >> (7 - (i % 8))) & 1;

@@ -701,7 +701,7 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
     }
 
     size_t i = 1;
-    uint16_t num_clks = 9;
+    uint8_t num_clks = 9;
     // first 255 value pos0 is placeholder for user inputed clock.
     uint16_t clk[] = {255, 8, 16, 32, 40, 50, 64, 100, 128, 255};
 

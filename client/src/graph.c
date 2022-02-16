@@ -33,7 +33,7 @@ TODO,  verfy that this doesn't overflow buffer  (iceman)
 */
 void AppendGraph(bool redraw, uint16_t clock, int bit) {
     uint8_t half = clock / 2;
-    uint8_t i;
+    uint16_t i;
     //set first half the clock bit (all 1's or 0's for a 0 or 1 bit)
     for (i = 0; i < half; ++i)
         g_GraphBuffer[g_GraphTraceLen++] = bit;

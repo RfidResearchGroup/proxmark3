@@ -296,7 +296,7 @@ bool t55xxAcquireAndCompareBlock0(bool usepwd, uint32_t password, uint32_t known
             continue;
         }
 
-        for (uint16_t i = 0; i < g_DemodBufferLen - 32; i++) {
+        for (size_t i = 0; i < g_DemodBufferLen - 32; i++) {
             uint32_t tmp = PackBits(i, 32, g_DemodBuffer);
             if (tmp == known_block0) {
                 config.offset = i;
@@ -4091,7 +4091,7 @@ static int CmdT55xxSniff(const char *Cmd) {
                 // We auto find widths
                 if ((width0 == 0) && (width1 == 0)) {
                     // We ignore bit 0 for the moment as it may be a ref. pulse, so check last
-                    uint8_t ii = 2;
+                    uint32_t ii = 2;
                     minWidth = pulseBuffer[1];
                     maxWidth = pulseBuffer[1];
                     bool done = false;

@@ -201,7 +201,7 @@ static int CmdIdteckSim(const char *Cmd) {
     memset(bs, 0x00, sizeof(bs));
 
     uint8_t counter = 0;
-    for (int8_t i = 0; i < raw_len; i++) {
+    for (int32_t i = 0; i < raw_len; i++) {
         uint8_t tmp = raw[i];
         bs[counter++] = (tmp >> 7) & 1;
         bs[counter++] = (tmp >> 6) & 1;

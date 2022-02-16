@@ -35,7 +35,7 @@ static int CmdHelp(const char *Cmd);
 
 // trace pointer
 static uint8_t *gs_trace;
-static long gs_traceLen = 0;
+static uint16_t gs_traceLen = 0;
 
 static bool is_last_record(uint16_t tracepos, uint16_t traceLen) {
     return ((tracepos + TRACELOG_HDR_LEN) >= traceLen);

@@ -174,7 +174,7 @@ static int CmdLFTune(const char *Cmd) {
     print_progress(0, max, style);
 
     // loop forever (till button pressed) if iter = 0 (default)
-    for (uint8_t i = 0; iter == 0 || i < iter; i++) {
+    for (uint32_t i = 0; iter == 0 || i < iter; i++) {
         if (kbd_enter_pressed()) {
             break;
         }
@@ -840,13 +840,13 @@ int lfsim_upload_gb(void) {
 
     //can send only 512 bits at a time (1 byte sent per bit...)
     PrintAndLogEx(INFO, "." NOLF);
-    for (uint16_t i = 0; i < g_GraphTraceLen; i += PM3_CMD_DATA_SIZE - 3) {
+    for (size_t i = 0; i < g_GraphTraceLen; i += PM3_CMD_DATA_SIZE - 3) {
 
         size_t len = MIN((g_GraphTraceLen - i), PM3_CMD_DATA_SIZE - 3);
         clearCommandBuffer();
         payload_up.offset = i;
 
-        for (uint16_t j = 0; j < len; j++)
+        for (size_t j = 0; j < len; j++)
             payload_up.data[j] = g_GraphBuffer[i + j];
 
         SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, sizeof(struct pupload));

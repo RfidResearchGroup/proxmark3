@@ -445,7 +445,7 @@ int bruteforceItem(loclass_dumpdata_t item, uint16_t keytable[]) {
 
     loclass_thread_arg_t args[loclass_tc];
     // init thread arguments
-    for (int i = 0; i < loclass_tc; i++) {
+    for (size_t i = 0; i < loclass_tc; i++) {
         args[i].thread_idx = i;
         args[i].numbytes_to_recover = numbytes_to_recover;
         args[i].endmask = 1 << 8 * numbytes_to_recover;
@@ -458,7 +458,7 @@ int bruteforceItem(loclass_dumpdata_t item, uint16_t keytable[]) {
 
     pthread_t threads[loclass_tc];
     // create threads
-    for (int i = 0; i < loclass_tc; i++) {
+    for (size_t i = 0; i < loclass_tc; i++) {
         int res = pthread_create(&threads[i], NULL, bf_thread, (void *)&args[i]);
         if (res) {
             PrintAndLogEx(NORMAL, "");
@@ -468,7 +468,7 @@ int bruteforceItem(loclass_dumpdata_t item, uint16_t keytable[]) {
     }
     // wait for threads to terminate:
     void *ptrs[loclass_tc];
-    for (int i = 0; i < loclass_tc; i++)
+    for (size_t i = 0; i < loclass_tc; i++)
         pthread_join(threads[i], &ptrs[i]);
 
     // was it a success?
@@ -493,7 +493,7 @@ int bruteforceItem(loclass_dumpdata_t item, uint16_t keytable[]) {
             keytable[bytes_to_recover[i]] &= 0xFF;
             keytable[bytes_to_recover[i]] |= LOCLASS_CRACKED;
         }
-        for (uint8_t i = 0; i < loclass_tc; i++) {
+        for (size_t i = 0; i < loclass_tc; i++) {
             free(ptrs[i]);
         }
     }
