@@ -1281,7 +1281,7 @@ static void emrtd_print_issuance(char *data, bool ascii) {
 
 static void emrtd_print_personalization_timestamp(uint8_t *data) {
     char str_date[0x0F] = { 0x00 };
-    strcpy(str_date, sprint_hex_inrow(data, 0x0E));
+    strcpy(str_date, sprint_hex_inrow(data, 0x07));
     char final_date[20] = { 0x00 };
     sprintf(final_date, "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", str_date, str_date + 4, str_date + 6, str_date + 8, str_date + 10, str_date + 12);
 
