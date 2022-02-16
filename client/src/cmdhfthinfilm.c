@@ -92,7 +92,7 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
 
     snprintf(s + strlen(s), barcode_len - 3, (const char *)&barcode[2], barcode_len - 4);
 
-    for (uint8_t i = 0; i < strlen(s); i++) {
+    for (size_t i = 0; i < strlen(s); i++) {
 
         // terminate string
         if ((uint8_t) s[i] == 0xFE) {

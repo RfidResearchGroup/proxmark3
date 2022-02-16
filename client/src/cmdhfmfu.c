@@ -4064,7 +4064,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     }
 
     // read NDEF records.
-    for (uint16_t i = 0, j = 0; i < maxsize; i += 16, j += 4) {
+    for (uint32_t i = 0, j = 0; i < maxsize; i += 16, j += 4) {
         status = ul_read(4 + j, records + i, 16);
         if (status == -1) {
             DropField();

@@ -1215,7 +1215,7 @@ static void check_for_BitFlipProperties(bool time_budget) {
 
     uint8_t args[NUM_CHECK_BITFLIPS_THREADS][3];
     uint16_t bytes_per_thread = (256 + (NUM_CHECK_BITFLIPS_THREADS / 2)) / NUM_CHECK_BITFLIPS_THREADS;
-    for (uint8_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
+    for (uint32_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
         args[i][0] = i * bytes_per_thread;
         args[i][1] = MIN(args[i][0] + bytes_per_thread - 1, 255);
         args[i][2] = time_budget;
@@ -1224,18 +1224,18 @@ static void check_for_BitFlipProperties(bool time_budget) {
     // args[NUM_CHECK_BITFLIPS_THREADS - 1][1] = MAX(args[NUM_CHECK_BITFLIPS_THREADS - 1][1], 255);
 
     // start threads
-    for (uint8_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
+    for (uint32_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
         pthread_create(&thread_id[i], NULL, check_for_BitFlipProperties_thread, args[i]);
     }
 
     // wait for threads to terminate:
-    for (uint8_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
+    for (uint32_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
         pthread_join(thread_id[i], NULL);
     }
 
     if (hardnested_stage & CHECK_2ND_BYTES) {
         hardnested_stage &= ~CHECK_1ST_BYTES; // we are done with 1st stage, except...
-        for (uint16_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
+        for (uint32_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
             if (args[i][1] != 0) {
                 hardnested_stage |= CHECK_1ST_BYTES;  // ... when any of the threads didn't complete in time
                 break;
@@ -2036,7 +2036,7 @@ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
     pthread_t thread_id[NUM_REDUCTION_WORKING_THREADS];
 
     uint16_t sums1[NUM_REDUCTION_WORKING_THREADS][3];
-    for (uint16_t i = 0; i < NUM_REDUCTION_WORKING_THREADS; i++) {
+    for (uint32_t i = 0; i < NUM_REDUCTION_WORKING_THREADS; i++) {
         sums1[i][0] = sum_a0_idx;
         sums1[i][1] = sum_a8_idx;
         sums1[i][2] = i + 1;
@@ -2044,7 +2044,7 @@ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
     }
 
     // wait for threads to terminate:
-    for (uint16_t i = 0; i < NUM_REDUCTION_WORKING_THREADS; i++) {
+    for (uint32_t i = 0; i < NUM_REDUCTION_WORKING_THREADS; i++) {
         pthread_join(thread_id[i], NULL);
     }
 
