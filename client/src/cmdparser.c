@@ -206,6 +206,8 @@ void CmdsHelp(const command_t Commands[]) {
         }
         ++i;
     }
+    // empty line needed for the help2json parser
+    PrintAndLogEx(NORMAL, "");
 }
 
 int CmdsParse(const command_t Commands[], const char *Cmd) {

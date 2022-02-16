@@ -97,7 +97,15 @@
         },
         "analyse help": {
             "command": "analyse help",
-            "description": "help this help lcr generate final byte for xor lrc crc stub method for crc evaluations chksum checksum with adding, masking and one's complement dates look for datestamps in a given array of bytes lfsr lfsr tests a num bits test nuid create nuid from 7byte uid demodbuff load binary string to demodbuffer freq calc wave lengths foo muxer units convert etu <> us <> ssp_clk (3.39mhz) --------------------------------------------------------------------------------------- analyse lcr available offline: yes specifying the bytes of a uid with a known lrc will find the last byte value needed to generate that lrc with a rolling xor. all bytes should be specified in hex.",
+            "description": "help this help lcr generate final byte for xor lrc crc stub method for crc evaluations chksum checksum with adding, masking and one's complement dates look for datestamps in a given array of bytes lfsr lfsr tests a num bits test nuid create nuid from 7byte uid demodbuff load binary string to demodbuffer freq calc wave lengths foo muxer units convert etu <> us <> ssp_clk (3.39mhz)",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "analyse lcr": {
+            "command": "analyse lcr",
+            "description": "specifying the bytes of a uid with a known lrc will find the last byte value needed to generate that lrc with a rolling xor. all bytes should be specified in hex.",
             "notes": [
                 "analyse lcr -d 04008064ba -> target (ba) requires final lrc xor byte value: 5a"
             ],
@@ -149,6 +157,19 @@
                 "--us <dec> number in micro seconds (us)"
             ],
             "usage": "analyse units [-h] [--etu <dec>] [--us <dec>]"
+        },
+        "auto": {
+            "command": "auto",
+            "description": "run lf search / hf search / data plot / data save",
+            "notes": [
+                "auto"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-c continue searching even after a first hit"
+            ],
+            "usage": "auto [-hc]"
         },
         "clear": {
             "command": "clear",
@@ -215,6 +236,22 @@
                 "-d, --data <bin> binary string to convert"
             ],
             "usage": "data bin2hex [-h] -d <bin>"
+        },
+        "data biphaserawdecode": {
+            "command": "data biphaserawdecode",
+            "description": "biphase decode binary stream in demodbuffer converts 10 or 01 -> 1 and 11 or 00 -> 0 - must have binary sequence in demodbuffer (run `data rawdemod --ar` before) - invert for conditional dephase encoding (cdp) aka differential manchester",
+            "notes": [
+                "data biphaserawdecode -> decode biphase bitstream from the demodbuffer",
+                "data biphaserawdecode -oi -> decode biphase bitstream from the demodbuffer, adjust offset, and invert output"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "-o, --offset set to adjust decode start position",
+                "-i, --inv invert output",
+                "--err <dec> set max errors tolerated (def 20)"
+            ],
+            "usage": "data biphaserawdecode [-hoi] [--err <dec>]"
         },
         "data bitsamples": {
             "command": "data bitsamples",
@@ -344,19 +381,11 @@
         },
         "data help": {
             "command": "data help",
-            "description": "help this help ----------- ------------------------- modulation------------------------- biphaserawdecode biphase decode bin stream in demodbuffer detectclock detect ask, fsk, nrz, psk clock rate of wave in graphbuffer fsktonrz convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode manchester decode binary stream in demodbuffer modulation identify lf signal for clock and modulation rawdemod demodulate the data in the graphbuffer and output binary ----------- ------------------------- graph------------------------- askedgedetect adjust graph for manual ask demod using the length of sample differences to detect the edge of a wave autocorr autocorrelation over window dirthreshold max rising higher up-thres/ min falling lower down-thres, keep rest as prev. decimate decimate samples undecimate un-decimate samples hide hide graph window hpf remove dc offset from trace iir apply iir buttersworth filter on plot data grid overlay grid on graph window ltrim trim samples from left of trace mtrim trim out samples from the specified start to the specified stop norm normalize max/min to +/-128 plot show graph window rtrim trim samples from right of trace setgraphmarkers set blue and orange marker in graph window shiftgraphzero shift 0 for graphed wave + or - shift value timescale set a timescale to get a differential reading between the yellow and purple markers as time duration zerocrossings count time between zero-crossings convertbitstream convert graphbuffer's 0/1 values to 127 / -127 getbitstream convert graphbuffer's >=1 values to 1 and <1 to 0 ----------- ------------------------- general------------------------- asn1 asn1 decoder bin2hex converts binary to hexadecimal clear clears bigbuf on deviceside and graph window hex2bin converts hexadecimal to binary load load contents of file into graph window print print the data in the demodbuffer save save signal trace data (from graph window) setdebugmode set debugging level on client side --------------------------------------------------------------------------------------- data biphaserawdecode available offline: yes biphase decode binary stream in demodbuffer converts 10 or 01 -> 1 and 11 or 00 -> 0 - must have binary sequence in demodbuffer (run `data rawdemod --ar` before) - invert for conditional dephase encoding (cdp) aka differential manchester",
-            "notes": [
-                "data biphaserawdecode -> decode biphase bitstream from the demodbuffer",
-                "data biphaserawdecode -oi -> decode biphase bitstream from the demodbuffer, adjust offset, and invert output"
-            ],
+            "description": "help this help ----------- ------------------------- modulation------------------------- biphaserawdecode biphase decode bin stream in demodbuffer detectclock detect ask, fsk, nrz, psk clock rate of wave in graphbuffer fsktonrz convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode manchester decode binary stream in demodbuffer modulation identify lf signal for clock and modulation rawdemod demodulate the data in the graphbuffer and output binary ----------- ------------------------- graph------------------------- askedgedetect adjust graph for manual ask demod using the length of sample differences to detect the edge of a wave autocorr autocorrelation over window dirthreshold max rising higher up-thres/ min falling lower down-thres, keep rest as prev. decimate decimate samples undecimate un-decimate samples hide hide graph window hpf remove dc offset from trace iir apply iir buttersworth filter on plot data grid overlay grid on graph window ltrim trim samples from left of trace mtrim trim out samples from the specified start to the specified stop norm normalize max/min to +/-128 plot show graph window rtrim trim samples from right of trace setgraphmarkers set blue and orange marker in graph window shiftgraphzero shift 0 for graphed wave + or - shift value timescale set a timescale to get a differential reading between the yellow and purple markers as time duration zerocrossings count time between zero-crossings convertbitstream convert graphbuffer's 0/1 values to 127 / -127 getbitstream convert graphbuffer's >=1 values to 1 and <1 to 0 ----------- ------------------------- general------------------------- asn1 asn1 decoder bin2hex converts binary to hexadecimal clear clears bigbuf on deviceside and graph window hex2bin converts hexadecimal to binary load load contents of file into graph window print print the data in the demodbuffer save save signal trace data (from graph window) setdebugmode set debugging level on client side",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-o, --offset set to adjust decode start position",
-                "-i, --inv invert output",
-                "--err <dec> set max errors tolerated (def 20)"
-            ],
-            "usage": "data biphaserawdecode [-hoi] [--err <dec>]"
+            "options": [],
+            "usage": ""
         },
         "data hex2bin": {
             "command": "data hex2bin",
@@ -712,6 +741,30 @@
             ],
             "usage": "emv challenge [-hkaw]"
         },
+        "emv exec": {
+            "command": "emv exec",
+            "description": "executes emv contactless transaction",
+            "notes": [
+                "emv exec -sat -> select card, execute msd transaction, show apdu and tlv",
+                "emv exec -satc -> select card, execute cda transaction, show apdu and tlv"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-s, -s, --select activate field and select card",
+                "-a, -a, --apdu show apdu reqests and responses",
+                "-t, -t, --tlv tlv decode results",
+                "-j, -j, --jload load transaction parameters from `emv_defparams.json` file",
+                "-f, -f, --forceaid force search aid. search aid instead of execute ppse",
+                "by default: transaction type - msd",
+                "-v, -v, --qvsdc transaction type - qvsdc or m/chip",
+                "-c, -c, --qvsdccda transaction type - qvsdc or m/chip plus cda (sdad generation)",
+                "-x, -x, --vsdc transaction type - vsdc. for test only. not a standard behavior",
+                "-g, -g, --acgpo visa. generate ac from gpo",
+                "-w, -w, --wired send data via contact (iso7816) interface. (def: contactless interface)"
+            ],
+            "usage": "emv exec [-hsatjfvcxgw] by default:"
+        },
         "emv genac": {
             "command": "emv genac",
             "description": "generate application cryptogram command. it returns data in tlv format. needs a emv applet to be selected and gpo to be executed.",
@@ -759,27 +812,11 @@
         },
         "emv help": {
             "command": "emv help",
-            "description": "help this help test crypto logic test list list iso7816 history --------------------------------------------------------------------------------------- emv exec available offline: no executes emv contactless transaction",
-            "notes": [
-                "emv exec -sat -> select card, execute msd transaction, show apdu and tlv",
-                "emv exec -satc -> select card, execute cda transaction, show apdu and tlv"
-            ],
+            "description": "help this help test crypto logic test list list iso7816 history",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-s, -s, --select activate field and select card",
-                "-a, -a, --apdu show apdu reqests and responses",
-                "-t, -t, --tlv tlv decode results",
-                "-j, -j, --jload load transaction parameters from `emv_defparams.json` file",
-                "-f, -f, --forceaid force search aid. search aid instead of execute ppse",
-                "by default: transaction type - msd",
-                "-v, -v, --qvsdc transaction type - qvsdc or m/chip",
-                "-c, -c, --qvsdccda transaction type - qvsdc or m/chip plus cda (sdad generation)",
-                "-x, -x, --vsdc transaction type - vsdc. for test only. not a standard behavior",
-                "-g, -g, --acgpo visa. generate ac from gpo",
-                "-w, -w, --wired send data via contact (iso7816) interface. (def: contactless interface)"
-            ],
-            "usage": "emv exec [-hsatjfvcxgw] by default:"
+            "options": [],
+            "usage": ""
         },
         "emv intauth": {
             "command": "emv intauth",
@@ -968,16 +1005,11 @@
         },
         "help": {
             "command": "help",
-            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program --------------------------------------------------------------------------------------- auto available offline: no run lf search / hf search / data plot / data save",
-            "notes": [
-                "auto"
-            ],
+            "description": "help use `<command> help` for details of a command prefs { edit client/device preferences... } -------- ----------------------- technology ----------------------- analyse { analyse utils... } data { plot window / data buffer manipulation... } emv { emv iso-14443 / iso-7816... } hf { high frequency commands... } hw { hardware commands... } lf { low frequency commands... } nfc { nfc commands... } reveng { crc calculations from reveng software... } smart { smart card iso-7816 commands... } script { scripting commands... } trace { trace manipulation... } wiegand { wiegand format manipulation... } -------- ----------------------- general ----------------------- clear clear screen hints turn hints on / off msleep add a pause in milliseconds rem add a text line in log file quit exit exit program",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-c continue searching even after a first hit"
-            ],
-            "usage": "auto [-hc]"
+            "options": [],
+            "usage": ""
         },
         "hf 14a antifuzz": {
             "command": "hf 14a antifuzz",
@@ -1032,26 +1064,11 @@
         },
         "hf 14a config": {
             "command": "hf 14a config",
-            "description": "--------------------------------------------------------------------------------------- hf 14a apdufind available offline: no enumerate apdu's of iso7816 protocol to find valid cls/ins/p1/p2 commands. it loops all 256 possible values for each byte. the loop oder is ins -> p1/p2 (alternating) -> cla. tag must be on antenna before running.",
-            "notes": [
-                "hf 14a apdufind",
-                "hf 14a apdufind --cla 80",
-                "hf 14a apdufind --cla 80 --error-limit 20 --skip-ins a4 --skip-ins b0 --with-le"
-            ],
+            "description": "--------------------------------------------------------------------------------------- hf 14a apdufind available offline: no",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-c, --cla <hex> start value of class (1 hex byte)",
-                "-i, --ins <hex> start value of instruction (1 hex byte)",
-                "--p1 <hex> start value of p1 (1 hex byte)",
-                "--p2 <hex> start value of p2 (1 hex byte)",
-                "-r, --reset <number> minimum secondes before resetting the tag (to prevent timeout issues). default is 5 minutes",
-                "-e, --error-limit <number> maximum times an status word other than 0x9000 or 0x6d00 is shown. default is 512.",
-                "-s, --skip-ins <hex> do not test an instruction (can be specified multiple times)",
-                "-l, --with-le search for apdus with le=0 (case 2s) as well",
-                "-v, --verbose verbose output"
-            ],
-            "usage": "hf 14a apdufind [-hlv] [-c <hex>] [-i <hex>] [--p1 <hex>] [--p2 <hex>] [-r <number>] [-e <number>] [-s <hex>]..."
+            "options": [],
+            "usage": ""
         },
         "hf 14a cuids": {
             "command": "hf 14a cuids",
@@ -1068,7 +1085,30 @@
         },
         "hf 14a help": {
             "command": "hf 14a help",
-            "description": "help this help list list iso 14443-a history --------------------------------------------------------------------------------------- hf 14a list available offline: yes alias of `trace list -t 14a` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "description": "help this help list list iso 14443-a history",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf 14a info": {
+            "command": "hf 14a info",
+            "description": "this command makes more extensive tests against a iso14443a tag in order to collect information",
+            "notes": [
+                "hf 14a info -nsv -> shows full information about the card"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-v, --verbose adds some information to results",
+                "-n, --nacktest test for nack bug",
+                "-s, --aidsearch checks if aids from aidlist.json is present on the card and prints information about found aids"
+            ],
+            "usage": "hf 14a info [-hvns]"
+        },
+        "hf 14a list": {
+            "command": "hf 14a list",
+            "description": "alias of `trace list -t 14a` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 14a list -f -> show frame delay times",
                 "hf 14a list -1 -> use trace buffer"
@@ -1086,21 +1126,6 @@
                 "--dict <file> use dictionary keys file"
             ],
             "usage": "hf 14a list [-h1fcrux] [--dict <file>]"
-        },
-        "hf 14a info": {
-            "command": "hf 14a info",
-            "description": "this command makes more extensive tests against a iso14443a tag in order to collect information",
-            "notes": [
-                "hf 14a info -nsv -> shows full information about the card"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-v, --verbose adds some information to results",
-                "-n, --nacktest test for nack bug",
-                "-s, --aidsearch checks if aids from aidlist.json is present on the card and prints information about found aids"
-            ],
-            "usage": "hf 14a info [-hvns]"
         },
         "hf 14a ndefread": {
             "command": "hf 14a ndefread",
@@ -1206,6 +1231,31 @@
             ],
             "usage": "hf 14a sniff [-hcr]"
         },
+        "hf 14b apdu": {
+            "command": "hf 14b apdu",
+            "description": "sends an iso 7816-4 apdu via iso 14443-4 block transmission protocol (t=cl). works with all apdu types from iso 7816-4:2013",
+            "notes": [
+                "hf 14b apdu -s -d 94a40800043f000002",
+                "hf 14b apdu -s --decode -d 00a404000e325041592e5359532e444446303100 -> decode apdu",
+                "hf 14b apdu -sm 00a40400 -l 256 -d 325041592e5359532e4444463031 -> encode standard apdu",
+                "hf 14b apdu -sm 00a40400 -el 65536 -d 325041592e5359532e4444463031 -> encode extended apdu"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-s, --select activate field and select card",
+                "-k, --keep leave the signal field on after receive response",
+                "-t, --tlv executes tlv decoder if it possible",
+                "--decode decode apdu request if it possible",
+                "-m, --make <hex> make apdu with head from this field and data from data field.",
+                "must be 4 bytes: <cla ins p1 p2>",
+                "-e, --extended make extended length apdu if `m` parameter included",
+                "-l, --le <int> le apdu parameter if `m` parameter included",
+                "-d, --data <hex> <apdu | data> if `m` parameter included",
+                "--timeout <dec> timeout in ms"
+            ],
+            "usage": "hf 14b apdu [-hskte] [--decode] [-m <hex>] [-l <int>] -d <hex> [--timeout <dec>]"
+        },
         "hf 14b dump": {
             "command": "hf 14b dump",
             "description": "this command dumps the contents of a iso-14443-b tag and save it to file tries to autodetect cardtype, memory size defaults to sri4k",
@@ -1222,28 +1272,11 @@
         },
         "hf 14b help": {
             "command": "hf 14b help",
-            "description": "help this help list list iso-14443-b history --------------------------------------------------------------------------------------- hf 14b apdu available offline: no sends an iso 7816-4 apdu via iso 14443-4 block transmission protocol (t=cl). works with all apdu types from iso 7816-4:2013",
-            "notes": [
-                "hf 14b apdu -s -d 94a40800043f000002",
-                "hf 14b apdu -s --decode -d 00a404000e325041592e5359532e444446303100 -> decode apdu",
-                "hf 14b apdu -sm 00a40400 -l 256 -d 325041592e5359532e4444463031 -> encode standard apdu",
-                "hf 14b apdu -sm 00a40400 -el 65536 -d 325041592e5359532e4444463031 -> encode extended apdu"
-            ],
+            "description": "help this help list list iso-14443-b history",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-s, --select activate field and select card",
-                "-k, --keep leave the signal field on after receive response",
-                "-t, --tlv executes tlv decoder if it possible",
-                "--decode decode apdu request if it possible",
-                "-m, --make <hex> make apdu with head from this field and data from data field.",
-                "must be 4 bytes: <cla ins p1 p2>",
-                "-e, --extended make extended length apdu if `m` parameter included",
-                "-l, --le <int> le apdu parameter if `m` parameter included",
-                "-d, --data <hex> <apdu | data> if `m` parameter included",
-                "--timeout <dec> timeout in ms"
-            ],
-            "usage": "hf 14b apdu [-hskte] [--decode] [-m <hex>] [-l <int>] -d <hex> [--timeout <dec>]"
+            "options": [],
+            "usage": ""
         },
         "hf 14b info": {
             "command": "hf 14b info",
@@ -1448,24 +1481,11 @@
         },
         "hf 15 help": {
             "command": "hf 15 help",
-            "description": "----------- --------------------- general --------------------- help this help list list iso-15693 history demod demodulate iso-15693 from tag --------------------------------------------------------------------------------------- hf 15 list available offline: yes alias of `trace list -t 15` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
-            "notes": [
-                "hf 15 list -f -> show frame delay times",
-                "hf 15 list -1 -> use trace buffer"
-            ],
+            "description": "----------- --------------------- general --------------------- help this help list list iso-15693 history demod demodulate iso-15693 from tag",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
-                "-c mark crc bytes",
-                "-r show relative times (gap and duration)",
-                "-u display times in microseconds instead of clock cycles",
-                "-x show hexdump to convert to pcap(ng)",
-                "or to import into wireshark using encapsulation type \"iso 14443\"",
-                "--dict <file> use dictionary keys file"
-            ],
-            "usage": "hf 15 list [-h1fcrux] [--dict <file>]"
+            "options": [],
+            "usage": ""
         },
         "hf 15 info": {
             "command": "hf 15 info",
@@ -1485,6 +1505,27 @@
                 "-o, --opt set option flag (needed for ti)"
             ],
             "usage": "hf 15 info [-h*2o] [-u <hex>] [--ua]"
+        },
+        "hf 15 list": {
+            "command": "hf 15 list",
+            "description": "alias of `trace list -t 15` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "notes": [
+                "hf 15 list -f -> show frame delay times",
+                "hf 15 list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "-1, --buffer use data from trace buffer",
+                "-f show frame delay times",
+                "-c mark crc bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into wireshark using encapsulation type \"iso 14443\"",
+                "--dict <file> use dictionary keys file"
+            ],
+            "usage": "hf 15 list [-h1fcrux] [--dict <file>]"
         },
         "hf 15 raw": {
             "command": "hf 15 raw",
@@ -1858,11 +1899,19 @@
         },
         "hf cipurse help": {
             "command": "hf cipurse help",
-            "description": "help this help. test tests --------------------------------------------------------------------------------------- hf cipurse info available offline: no get info from cipurse tags",
+            "description": "help this help. test tests",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf cipurse info": {
+            "command": "hf cipurse info",
+            "description": "get info from cipurse tags",
             "notes": [
                 "hf cipurse info"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help"
             ],
@@ -1916,18 +1965,11 @@
         },
         "hf cipurse test": {
             "command": "hf cipurse test",
-            "description": "[=] ------ cipurse tests ------ [=] kvv.............. passed [=] iso9797m2........ passed [=] smi.............. passed [=] mic.............. passed [=] auth............. passed [=] channel mac...... passed [=] channel encdec... passed [=] apdu............. passed [=] --------------------------- [+] tests [ ok ] ======================================================================================= hf epa { german identification card... } --------------------------------------------------------------------------------------- hf epa help available offline: yes help this help --------------------------------------------------------------------------------------- hf epa cnonces available offline: no tries to collect nonces when doing part of pace protocol.",
-            "notes": [
-                "hf epa cnonces --size 4 --num 4 --delay 1"
-            ],
+            "description": "[=] ------ cipurse tests ------ [=] kvv.............. passed [=] iso9797m2........ passed [=] smi.............. passed [=] mic.............. passed [=] auth............. passed [=] channel mac...... passed [=] channel encdec... passed [=] apdu............. passed [=] --------------------------- [+] tests [ ok ]",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "--size <dec> nonce size",
-                "--num <dec> number of nonces to collect",
-                "-d, --delay <dec> delay between attempts"
-            ],
-            "usage": "hf epa cnonces [-h] --size <dec> --num <dec> -d <dec>"
+            "options": [],
+            "usage": ""
         },
         "hf cipurse updakey": {
             "command": "hf cipurse updakey",
@@ -2011,13 +2053,13 @@
             ],
             "usage": "hf cipurse write [-hav] [-n <dec>] [-k <hex>] [--aid <hex>] [--fid <hex>] [-o <dec>] [--noauth] [--sreq <plain|mac|encode>] [--sresp <plain|mac|encode>] [-d <hex>] [--commit]"
         },
-        "hf emrtd help": {
-            "command": "hf emrtd help",
-            "description": "help this help info display info about an emrtd list list iso 14443a/7816 history --------------------------------------------------------------------------------------- hf emrtd dump available offline: no dump all files on an emrtd",
+        "hf emrtd dump": {
+            "command": "hf emrtd dump",
+            "description": "dump all files on an emrtd",
             "notes": [
                 "hf emrtd dump"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help",
                 "-n, --documentnumber <alphanum> document number, up to 9 chars",
@@ -2027,6 +2069,14 @@
                 "--path <dirpath> save dump to the given dirpath"
             ],
             "usage": "hf emrtd dump [-h] [-n <alphanum>] [-d <yymmdd>] [-e <yymmdd>] [-m <[0-9a-z<]>] [--path <dirpath>]"
+        },
+        "hf emrtd help": {
+            "command": "hf emrtd help",
+            "description": "help this help info display info about an emrtd list list iso 14443a/7816 history",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "hf emrtd info": {
             "command": "hf emrtd info",
@@ -2065,6 +2115,29 @@
                 "--dict <file> use dictionary keys file"
             ],
             "usage": "hf emrtd list [-h1fcrux] [--dict <file>]"
+        },
+        "hf epa cnonces": {
+            "command": "hf epa cnonces",
+            "description": "tries to collect nonces when doing part of pace protocol.",
+            "notes": [
+                "hf epa cnonces --size 4 --num 4 --delay 1"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "--size <dec> nonce size",
+                "--num <dec> number of nonces to collect",
+                "-d, --delay <dec> delay between attempts"
+            ],
+            "usage": "hf epa cnonces [-h] --size <dec> --num <dec> -d <dec>"
+        },
+        "hf epa help": {
+            "command": "hf epa help",
+            "description": "help this help",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "hf epa preplay": {
             "command": "hf epa preplay",
@@ -2123,7 +2196,27 @@
         },
         "hf felica help": {
             "command": "hf felica help",
-            "description": "help this help ----------- ----------------------- general ----------------------- list list iso 18092/felica history ----------- ----------------------- felica standard ----------------------- ----------- ----------------------- felica light ----------------------- --------------------------------------------------------------------------------------- hf felica list available offline: yes alias of `trace list -t felica` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "description": "help this help ----------- ----------------------- general ----------------------- list list iso 18092/felica history ----------- ----------------------- felica standard ----------------------- ----------- ----------------------- felica light -----------------------",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf felica info": {
+            "command": "hf felica info",
+            "description": "reader for felica based tags",
+            "notes": [
+                "hf felica info"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "hf felica info [-h]"
+        },
+        "hf felica list": {
+            "command": "hf felica list",
+            "description": "alias of `trace list -t felica` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf felica list -f -> show frame delay times",
                 "hf felica list -1 -> use trace buffer"
@@ -2141,18 +2234,6 @@
                 "--dict <file> use dictionary keys file"
             ],
             "usage": "hf felica list [-h1fcrux] [--dict <file>]"
-        },
-        "hf felica info": {
-            "command": "hf felica info",
-            "description": "reader for felica based tags",
-            "notes": [
-                "hf felica info"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help this help"
-            ],
-            "usage": "hf felica info [-h]"
         },
         "hf felica litedump": {
             "command": "hf felica litedump",
@@ -2201,25 +2282,11 @@
         },
         "hf felica rdbl": {
             "command": "hf felica rdbl",
-            "description": "use this command to read block data from authentication-not-required service. - mode shall be mode0. - successful == block data - unsuccessful == status flag1 and flag2",
-            "notes": [
-                "hf felica rdbl --sn 01 --scl 8b00 --bn 01 --ble 8000",
-                "hf felica rdbl --sn 01 --scl 4b18 --bn 01 --ble 8000 -b",
-                "hf felica rdbl -i 01100910c11bc407 --sn 01 --scl 8b00 --bn 01 --ble 8000"
-            ],
+            "description": "use this command to read block data from authentication-not-required service.",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-b get all block list elements 00 -> ff",
-                "-i <hex> set custom idm",
-                "-l, --long use 3 byte block list element block number",
-                "--sn <hex> number of service",
-                "--scl <hex> service code list",
-                "--bn <hex> number of block",
-                "--ble <hex> block list element (def 2|3 bytes)",
-                "-v, --verbose verbose helptext"
-            ],
-            "usage": "hf felica rdbl [-hblv] [-i <hex>] [--sn <hex>] [--scl <hex>] [--bn <hex>] [--ble <hex>]"
+            "options": [],
+            "usage": ""
         },
         "hf felica reader": {
             "command": "hf felica reader",
@@ -2343,23 +2410,11 @@
         },
         "hf felica wrbl": {
             "command": "hf felica wrbl",
-            "description": "use this command to write block data to authentication-not-required service. - mode shall be mode0. - un-/ssuccessful == status flag1 and flag2",
-            "notes": [
-                "hf felica wrbl --sn 01 --scl cb10 --bn 01 --ble 8001 -d 0102030405060708090a0b0c0d0e0f10",
-                "hf felica wrbl -i 01100910c11bc407 --sn 01 --scl cb10 --bn 01 --ble 8001 -d 0102030405060708090a0b0c0d0e0f10"
-            ],
+            "description": "use this command to write block data to authentication-not-required service.",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-d, --data <hex> data, 16 hex bytes",
-                "-i <hex> set custom idm",
-                "--sn <hex> number of service",
-                "--scl <hex> service code list",
-                "--bn <hex> number of block",
-                "--ble <hex> block list element (def 2|3 bytes)",
-                "-v, --verbose verbose helptext"
-            ],
-            "usage": "hf felica wrbl [-hv] [-d <hex>] [-i <hex>] [--sn <hex>] [--scl <hex>] [--bn <hex>] [--ble <hex>]"
+            "options": [],
+            "usage": ""
         },
         "hf fido assert": {
             "command": "hf fido assert",
@@ -2409,7 +2464,27 @@
         },
         "hf fido help": {
             "command": "hf fido help",
-            "description": "help this help. list list iso 14443a history --------------------------------------------------------------------------------------- hf fido list available offline: yes alias of `trace list -t 14a` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "description": "help this help. list list iso 14443a history",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf fido info": {
+            "command": "hf fido info",
+            "description": "get info from fido tags",
+            "notes": [
+                "hf fido info"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "hf fido info [-h]"
+        },
+        "hf fido list": {
+            "command": "hf fido list",
+            "description": "alias of `trace list -t 14a` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf fido list -f -> show frame delay times",
                 "hf fido list -1 -> use trace buffer"
@@ -2427,18 +2502,6 @@
                 "--dict <file> use dictionary keys file"
             ],
             "usage": "hf fido list [-h1fcrux] [--dict <file>]"
-        },
-        "hf fido info": {
-            "command": "hf fido info",
-            "description": "get info from fido tags",
-            "notes": [
-                "hf fido info"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help this help"
-            ],
-            "usage": "hf fido info [-h]"
         },
         "hf fido make": {
             "command": "hf fido make",
@@ -2545,12 +2608,20 @@
         },
         "hf gallagher help": {
             "command": "hf gallagher help",
-            "description": "help this help diversifykey diversify gallagher key --------------------------------------------------------------------------------------- hf gallagher reader available offline: no read a gallagher desfire tag from the card application directory, cad specify site key is required if using non-default key",
+            "description": "help this help diversifykey diversify gallagher key",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf gallagher reader": {
+            "command": "hf gallagher reader",
+            "description": "read a gallagher desfire tag from the card application directory, cad specify site key is required if using non-default key",
             "notes": [
                 "hf gallagher reader -@ -> continuous reader mode",
                 "hf gallagher reader --aid 2081f4 --sitekey 00112233445566778899aabbccddeeff -> skip cad"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help",
                 "--aid <hex> application id to read (3 bytes). if specified, the cad is not used",
@@ -2563,24 +2634,11 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- high frequency ----------------------- 14a { iso14443a rfids... } 14b { iso14443b rfids... } 15 { iso15693 rfids... } cipurse { cipurse transport cards... } epa { german identification card... } emrtd { machine readable travel document... } felica { iso18092 / felica rfids... } fido { fido and fido2 authenticators... } gallagher { gallagher desfire rfids... } ksx6924 { ks x 6924 (t-money, snapper+) rfids } jooki { jooki rfids... } iclass { iclass rfids... } legic { legic rfids... } lto { lto cartridge memory rfids... } mf { mifare rfids... } mfp { mifare plus rfids... } mfu { mifare ultralight rfids... } mfdes { mifare desfire rfids... } seos { seos rfids... } st25ta { st25ta rfids... } thinfilm { thinfilm rfids... } topaz { topaz (nfc type 1) rfids... } waveshare { waveshare nfc epaper... } ----------- --------------------- general --------------------- help this help list list protocol data in trace buffer search search for known hf tags --------------------------------------------------------------------------------------- hf list available offline: yes alias of `trace list -t raw` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
-            "notes": [
-                "hf list -f -> show frame delay times",
-                "hf list -1 -> use trace buffer"
-            ],
+            "description": "-------- ----------------------- high frequency ----------------------- 14a { iso14443a rfids... } 14b { iso14443b rfids... } 15 { iso15693 rfids... } cipurse { cipurse transport cards... } epa { german identification card... } emrtd { machine readable travel document... } felica { iso18092 / felica rfids... } fido { fido and fido2 authenticators... } gallagher { gallagher desfire rfids... } ksx6924 { ks x 6924 (t-money, snapper+) rfids } jooki { jooki rfids... } iclass { iclass rfids... } legic { legic rfids... } lto { lto cartridge memory rfids... } mf { mifare rfids... } mfp { mifare plus rfids... } mfu { mifare ultralight rfids... } mfdes { mifare desfire rfids... } seos { seos rfids... } st25ta { st25ta rfids... } thinfilm { thinfilm rfids... } topaz { topaz (nfc type 1) rfids... } waveshare { waveshare nfc epaper... } ----------- --------------------- general --------------------- help this help list list protocol data in trace buffer search search for known hf tags",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
-                "-c mark crc bytes",
-                "-r show relative times (gap and duration)",
-                "-u display times in microseconds instead of clock cycles",
-                "-x show hexdump to convert to pcap(ng)",
-                "or to import into wireshark using encapsulation type \"iso 14443\"",
-                "--dict <file> use dictionary keys file"
-            ],
-            "usage": "hf list [-h1fcrux] [--dict <file>]"
+            "options": [],
+            "usage": ""
         },
         "hf iclass calcnewkey": {
             "command": "hf iclass calcnewkey",
@@ -2642,22 +2700,35 @@
         },
         "hf iclass decrypt": {
             "command": "hf iclass decrypt",
-            "description": "3des decrypt data this is a naive implementation, it tries to decrypt every block after block 6. correct behaviour would be to decrypt only the application areas where the key is valid, which is defined by the configuration block. obs! in order to use this function, the file `iclass_decryptionkey.bin` must reside in the resources directory. the file should be 16 bytes binary data or... make sure your cardhelper is placed in the sim module",
-            "notes": [
-                "hf iclass decrypt -f hf-iclass-aa162d30f8ff12f1-dump.bin",
-                "hf iclass decrypt -f hf-iclass-aa162d30f8ff12f1-dump.bin -k 000102030405060708090a0b0c0d0e0f",
-                "hf iclass decrypt -d 1122334455667788 -k 000102030405060708090a0b0c0d0e0f"
-            ],
+            "description": "3des decrypt data this is a naive implementation, it tries to decrypt every block after block 6. correct behaviour would be to decrypt only the application areas where the key is valid, which is defined by the configuration block.",
+            "notes": [],
             "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf iclass dump": {
+            "command": "hf iclass dump",
+            "description": "dump all memory from a iclass tag",
+            "notes": [
+                "hf iclass dump -k 001122334455667b",
+                "hf iclass dump -k aaaaaaaaaaaaaaaa --credit 001122334455667b",
+                "hf iclass dump -k aaaaaaaaaaaaaaaa --elite",
+                "hf iclass dump --ki 0",
+                "hf iclass dump --ki 0 --ci 2"
+            ],
+            "offline": false,
             "options": [
                 "-h, --help this help",
-                "-f, --file <fn> filename of dump file (bin/eml/json)",
-                "-d, --data <hex> 3des encrypted data",
-                "-k, --key <hex> 3des transport key",
-                "-v, --verbose verbose output",
-                "--d6 decode as block 6"
+                "-f, --file <fn> save filename",
+                "-k, --key <hex> debit key or nr/mac for replay as 8 hex bytes",
+                "--ki <dec> debit key index to select key from memory 'hf iclass managekeys'",
+                "--credit <hex> credit key as 8 hex bytes",
+                "--ci <dec> credit key index to select key from memory 'hf iclass managekeys'",
+                "--elite elite computations applied to key",
+                "--raw raw, the key is interpreted as raw block 3/4",
+                "--nr replay of nr/mac"
             ],
-            "usage": "hf iclass decrypt [-hv] [-f <fn>] [-d <hex>] [-k <hex>] [--d6]"
+            "usage": "hf iclass dump [-h] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr]"
         },
         "hf iclass eload": {
             "command": "hf iclass eload",
@@ -2746,27 +2817,11 @@
         },
         "hf iclass help": {
             "command": "hf iclass help",
-            "description": "----------- --------------------- operations --------------------- help this help info tag information list list iclass history ----------- --------------------- recovery --------------------- loclass use loclass to perform bruteforce reader attack lookup uses authentication trace to check for key in dictionary file ----------- --------------------- simulation --------------------- ----------- --------------------- utils --------------------- configcard reader configuration card calcnewkey calc diversified keys (blocks 3 & 4) to write new keys encode encode binary wiegand to block 7 encrypt encrypt given block data decrypt decrypt given block data or tag dump file managekeys manage keys to use with iclass commands permutekey permute function from 'heart of darkness' paper view display content from tag dump file --------------------------------------------------------------------------------------- hf iclass dump available offline: no dump all memory from a iclass tag",
-            "notes": [
-                "hf iclass dump -k 001122334455667b",
-                "hf iclass dump -k aaaaaaaaaaaaaaaa --credit 001122334455667b",
-                "hf iclass dump -k aaaaaaaaaaaaaaaa --elite",
-                "hf iclass dump --ki 0",
-                "hf iclass dump --ki 0 --ci 2"
-            ],
+            "description": "----------- --------------------- operations --------------------- help this help info tag information list list iclass history ----------- --------------------- recovery --------------------- loclass use loclass to perform bruteforce reader attack lookup uses authentication trace to check for key in dictionary file ----------- --------------------- simulation --------------------- ----------- --------------------- utils --------------------- configcard reader configuration card calcnewkey calc diversified keys (blocks 3 & 4) to write new keys encode encode binary wiegand to block 7 encrypt encrypt given block data decrypt decrypt given block data or tag dump file managekeys manage keys to use with iclass commands permutekey permute function from 'heart of darkness' paper view display content from tag dump file",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-f, --file <fn> save filename",
-                "-k, --key <hex> debit key or nr/mac for replay as 8 hex bytes",
-                "--ki <dec> debit key index to select key from memory 'hf iclass managekeys'",
-                "--credit <hex> credit key as 8 hex bytes",
-                "--ci <dec> credit key index to select key from memory 'hf iclass managekeys'",
-                "--elite elite computations applied to key",
-                "--raw raw, the key is interpreted as raw block 3/4",
-                "--nr replay of nr/mac"
-            ],
-            "usage": "hf iclass dump [-h] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr]"
+            "options": [],
+            "usage": ""
         },
         "hf iclass info": {
             "command": "hf iclass info",
@@ -3002,6 +3057,22 @@
             ],
             "usage": "hf iclass wrbl [-hv] [-k <hex>] [--ki <dec>] -b <dec> -d <hex> [--credit] [--elite] [--raw] [--nr]"
         },
+        "hf jooki clone": {
+            "command": "hf jooki clone",
+            "description": "write a jooki token to a ultralight or ntag tag",
+            "notes": [
+                "hf jooki clone -d <hex bytes> -> where hex is raw ndef",
+                "hf jooki clone --b64 7wzlgezqlgwtnwny -> using base64 url parameter"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-b, --b64 <base64> base64 url parameter",
+                "-d, --data <hex> raw ndef bytes",
+                "-p, --pwd <hex> password for authentication (ev1/ntag 4 bytes)"
+            ],
+            "usage": "hf jooki clone [-h] [-b <base64>] [-d <hex>] [-p <hex>]"
+        },
         "hf jooki decode": {
             "command": "hf jooki decode",
             "description": "decode a base64-encode jooki token in ndef uri format",
@@ -3052,19 +3123,11 @@
         },
         "hf jooki help": {
             "command": "hf jooki help",
-            "description": "help this help decode decode jooki token encode encode jooki token --------------------------------------------------------------------------------------- hf jooki clone available offline: no write a jooki token to a ultralight or ntag tag",
-            "notes": [
-                "hf jooki clone -d <hex bytes> -> where hex is raw ndef",
-                "hf jooki clone --b64 7wzlgezqlgwtnwny -> using base64 url parameter"
-            ],
+            "description": "help this help decode decode jooki token encode encode jooki token",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-b, --b64 <base64> base64 url parameter",
-                "-d, --data <hex> raw ndef bytes",
-                "-p, --pwd <hex> password for authentication (ev1/ntag 4 bytes)"
-            ],
-            "usage": "hf jooki clone [-h] [-b <base64>] [-d <hex>] [-p <hex>]"
+            "options": [],
+            "usage": ""
         },
         "hf jooki sim": {
             "command": "hf jooki sim",
@@ -3080,19 +3143,27 @@
             ],
             "usage": "hf jooki sim [-h] [-b <base64>]"
         },
-        "hf ksx6924 help": {
-            "command": "hf ksx6924 help",
-            "description": "help this help --------------------------------------------------------------------------------------- hf ksx6924 balance available offline: no gets the current purse balance",
+        "hf ksx6924 balance": {
+            "command": "hf ksx6924 balance",
+            "description": "gets the current purse balance",
             "notes": [
                 "hf ksx6924 balance"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help",
                 "-k, --keep keep field on for next command",
                 "-a, --apdu show apdu reqests and responses"
             ],
             "usage": "hf ksx6924 balance [-hka]"
+        },
+        "hf ksx6924 help": {
+            "command": "hf ksx6924 help",
+            "description": "help this help",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "hf ksx6924 info": {
             "command": "hf ksx6924 info",
@@ -3165,6 +3236,22 @@
             ],
             "usage": "hf legic crc [-h] -d <hex> [--mcc <hex>] [-t <dec>]"
         },
+        "hf legic dump": {
+            "command": "hf legic dump",
+            "description": "read all memory from legic prime tags and saves to (bin/eml/json) dump file it autodetects card type (mim22, mim256, mim1024)",
+            "notes": [
+                "hf legic dump -> use uid as filename",
+                "hf legic dump -f myfile",
+                "hf legic dump --de -> use uid as filename and deobfuscate data"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-f, --file <fn> dump filename",
+                "--de deobfuscate dump data (xor with mcc)"
+            ],
+            "usage": "hf legic dump [-h] [-f <fn>] [--de]"
+        },
         "hf legic eload": {
             "command": "hf legic eload",
             "description": "loads a legic prime dump file into emulator memory",
@@ -3217,19 +3304,11 @@
         },
         "hf legic help": {
             "command": "hf legic help",
-            "description": "----------- --------------------- operations --------------------- help this help list list legic history ----------- --------------------- simulation --------------------- ----------- --------------------- utils --------------------- crc calculate legic crc over given bytes view display content from tag dump file --------------------------------------------------------------------------------------- hf legic dump available offline: no read all memory from legic prime tags and saves to (bin/eml/json) dump file it autodetects card type (mim22, mim256, mim1024)",
-            "notes": [
-                "hf legic dump -> use uid as filename",
-                "hf legic dump -f myfile",
-                "hf legic dump --de -> use uid as filename and deobfuscate data"
-            ],
+            "description": "----------- --------------------- operations --------------------- help this help list list legic history ----------- --------------------- simulation --------------------- ----------- --------------------- utils --------------------- crc calculate legic crc over given bytes view display content from tag dump file",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-f, --file <fn> dump filename",
-                "--de deobfuscate dump data (xor with mcc)"
-            ],
-            "usage": "hf legic dump [-h] [-f <fn>] [--de]"
+            "options": [],
+            "usage": ""
         },
         "hf legic info": {
             "command": "hf legic info",
@@ -3365,18 +3444,47 @@
             ],
             "usage": "hf legic wrbl [-h] -o <dec> -d <hex> [--danger]"
         },
-        "hf lto help": {
-            "command": "hf lto help",
-            "description": "help this help list list lto-cm history --------------------------------------------------------------------------------------- hf lto dump available offline: no dump data from lto tag",
+        "hf list": {
+            "command": "hf list",
+            "description": "alias of `trace list -t raw` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "notes": [
+                "hf list -f -> show frame delay times",
+                "hf list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "-1, --buffer use data from trace buffer",
+                "-f show frame delay times",
+                "-c mark crc bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into wireshark using encapsulation type \"iso 14443\"",
+                "--dict <file> use dictionary keys file"
+            ],
+            "usage": "hf list [-h1fcrux] [--dict <file>]"
+        },
+        "hf lto dump": {
+            "command": "hf lto dump",
+            "description": "dump data from lto tag",
             "notes": [
                 "hf lto dump -f myfile"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help",
                 "-f, --file <fn> specify a filename for dumpfile"
             ],
             "usage": "hf lto dump [-h] [-f <fn>]"
+        },
+        "hf lto help": {
+            "command": "hf lto help",
+            "description": "help this help list list lto-cm history",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "hf lto info": {
             "command": "hf lto info",
@@ -3904,32 +4012,19 @@
         },
         "hf mf gen3blk": {
             "command": "hf mf gen3blk",
-            "description": "overwrite full manufacturer block for magic gen3 card - you can specify part of manufacturer block as 4/7-bytes for uid change only note: bcc, sak, atqa will be calculated automatically",
-            "notes": [
-                "hf mf gen3blk -> print current data",
-                "hf mf gen3blk -d 01020304 -> set 4 byte uid",
-                "hf mf gen3blk -d 01020304050607 -> set 7 byte uid",
-                "hf mf gen3blk -d 01020304ffffffff0102030405060708"
-            ],
+            "description": "overwrite full manufacturer block for magic gen3 card - you can specify part of manufacturer block as 4/7-bytes for uid change only",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-d, --data <hex> manufacturer block data up to 16 hex bytes"
-            ],
-            "usage": "hf mf gen3blk [-h] [-d <hex>]"
+            "options": [],
+            "usage": ""
         },
         "hf mf gen3freeze": {
             "command": "hf mf gen3freeze",
-            "description": "perma lock further uid changes. no more uid changes available after operation completed note: operation is ! irreversible !",
-            "notes": [
-                "hf mf gen3freeze -y"
-            ],
+            "description": "perma lock further uid changes. no more uid changes available after operation completed",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-y, --yes confirm uid lock operation"
-            ],
-            "usage": "hf mf gen3freeze -y[h]"
+            "options": [],
+            "usage": ""
         },
         "hf mf gen3uid": {
             "command": "hf mf gen3uid",
@@ -4003,7 +4098,15 @@
         },
         "hf mf help": {
             "command": "hf mf help",
-            "description": "help this help list list mifare history hardnested nested attack for hardened mifare classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace acl decode and print mifare classic access rights bytes view display content from tag dump file --------------------------------------------------------------------------------------- hf mf list available offline: yes alias of `trace list -t mf` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "description": "help this help list list mifare history hardnested nested attack for hardened mifare classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace acl decode and print mifare classic access rights bytes view display content from tag dump file",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf mf list": {
+            "command": "hf mf list",
+            "description": "alias of `trace list -t mf` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mf list -f -> show frame delay times",
                 "hf mf list -1 -> use trace buffer"
@@ -4166,26 +4269,11 @@
         },
         "hf mf restore": {
             "command": "hf mf restore",
-            "description": "restore mifare classic dump file to tag. the key file and dump file will program the card sector trailers. by default we authenticate to card with key b 0xffffffffffff. if access rights in dump file is all zeros, it will be replaced with default values `--uid` param is used for filename templates `hf-mf-<uid>-dump.bin` and `hf-mf-<uid>-key.bin. if not specified, it will read the card uid instead. `--ka` param you can indicate that the key file should be used for authentication instead. if so we also try both b/a keys",
-            "notes": [
-                "hf mf restore",
-                "hf mf restore --1k --uid 04010203",
-                "hf mf restore --1k --uid 04010203 -k hf-mf-aabbccdd-key.bin",
-                "hf mf restore --4k"
-            ],
+            "description": "restore mifare classic dump file to tag.",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help this help",
-                "--mini mifare classic mini / s20",
-                "--1k mifare classic 1k / s50 (def)",
-                "--2k mifare classic/plus 2k",
-                "--4k mifare classic 4k / s70",
-                "-u, --uid <hex> uid, 6 hex bytes",
-                "-f, --file <fn> specify dump filename (bin/eml/json)",
-                "-k, --kfn <fn> key filename",
-                "--ka use specified keyfile to authenticate"
-            ],
-            "usage": "hf mf restore [-h] [--mini] [--1k] [--2k] [--4k] [-u <hex>] [-f <fn>] [-k <fn>] [--ka]"
+            "options": [],
+            "usage": ""
         },
         "hf mf setmod": {
             "command": "hf mf setmod",
@@ -5120,11 +5208,19 @@
         },
         "hf mfdes help": {
             "command": "hf mfdes help",
-            "description": "help this help list list desfire (iso 14443a) history test test crypto --------------------------------------------------------------------------------------- hf mfdes info available offline: no get info from mifare desfire tags",
+            "description": "help this help list list desfire (iso 14443a) history test test crypto",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf mfdes info": {
+            "command": "hf mfdes info",
+            "description": "get info from mifare desfire tags",
             "notes": [
                 "hf mfdes info"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help"
             ],
@@ -5351,15 +5447,11 @@
         },
         "hf mfdes test": {
             "command": "hf mfdes test",
-            "description": "[=] ------ desfire tests ------ [!] no space for crc. pos: 1 [=] crc16............. passed [!] no space for crc. pos: 2 [=] crc32............. passed [=] cmac subkeys...... passed [=] an10922 aes....... passed [=] an10922 2tdea..... passed [=] an10922 3tdea..... passed [=] cmac 3tdea........ passed [=] cmac 2tdea........ passed [=] cmac des.......... passed [=] ev2 session keys.. passed [=] ev2 iv calc....... passed [=] ev2 mac calc...... passed [=] trans session key. passed [=] lrp plaintexts.... passed [=] lrp updated keys.. passed [=] lrp eval.......... passed [=] lrp inc counter... passed [=] lrp encode........ passed [=] lrp decode........ passed [=] lrp subkeys....... passed [=] lrp cmac.......... passed [=] lrp session keys.. passed [=] --------------------------- [+] tests [ ok ] ======================================================================================= hf seos { seos rfids... } --------------------------------------------------------------------------------------- hf seos help available offline: yes help this help list list seos history --------------------------------------------------------------------------------------- hf seos info available offline: no get info from seos tags",
-            "notes": [
-                "hf seos info"
-            ],
+            "description": "[=] ------ desfire tests ------ [!] no space for crc. pos: 1 [=] crc16............. passed [!] no space for crc. pos: 2 [=] crc32............. passed [=] cmac subkeys...... passed [=] an10922 aes....... passed [=] an10922 2tdea..... passed [=] an10922 3tdea..... passed [=] cmac 3tdea........ passed [=] cmac 2tdea........ passed [=] cmac des.......... passed [=] ev2 session keys.. passed [=] ev2 iv calc....... passed [=] ev2 mac calc...... passed [=] trans session key. passed [=] lrp plaintexts.... passed [=] lrp updated keys.. passed [=] lrp eval.......... passed [=] lrp inc counter... passed [=] lrp encode........ passed [=] lrp decode........ passed [=] lrp subkeys....... passed [=] lrp cmac.......... passed [=] lrp session keys.. passed [=] --------------------------- [+] tests [ ok ]",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help"
-            ],
-            "usage": "hf seos info [-h]"
+            "options": [],
+            "usage": ""
         },
         "hf mfdes value": {
             "command": "hf mfdes value",
@@ -5500,11 +5592,19 @@
         },
         "hf mfp help": {
             "command": "hf mfp help",
-            "description": "help this help --------------------------------------------------------------------------------------- hf mfp info available offline: no get info from mifare plus tags",
+            "description": "help this help",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf mfp info": {
+            "command": "hf mfp info",
+            "description": "get info from mifare plus tags",
             "notes": [
                 "hf mfp info"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help"
             ],
@@ -5701,18 +5801,11 @@
         },
         "hf mfu help": {
             "command": "hf mfu help",
-            "description": "help this help keygen generate 3des mifare diversified keys pwdgen generate pwd from known algos view display content from tag dump file --------------------------------------------------------------------------------------- hf mfu keygen available offline: yes set the 3des key on mifare ultralight-c tag.",
-            "notes": [
-                "hf mfu keygen -r",
-                "hf mfu keygen --uid 11223344556677"
-            ],
+            "description": "help this help keygen generate 3des mifare diversified keys pwdgen generate pwd from known algos view display content from tag dump file",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-u, --uid <hex> <4|7> hex byte uid",
-                "-r read uid from tag"
-            ],
-            "usage": "hf mfu keygen [-hr] [-u <hex>]"
+            "options": [],
+            "usage": ""
         },
         "hf mfu info": {
             "command": "hf mfu info",
@@ -5729,6 +5822,21 @@
                 "-l swap entered key's endianness"
             ],
             "usage": "hf mfu info [-hl] [-k <hex>]"
+        },
+        "hf mfu keygen": {
+            "command": "hf mfu keygen",
+            "description": "set the 3des key on mifare ultralight-c tag.",
+            "notes": [
+                "hf mfu keygen -r",
+                "hf mfu keygen --uid 11223344556677"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "-u, --uid <hex> <4|7> hex byte uid",
+                "-r read uid from tag"
+            ],
+            "usage": "hf mfu keygen [-hr] [-u <hex>]"
         },
         "hf mfu ndefread": {
             "command": "hf mfu ndefread",
@@ -5927,6 +6035,26 @@
             ],
             "usage": "hf search [-hv]"
         },
+        "hf seos help": {
+            "command": "hf seos help",
+            "description": "help this help list list seos history",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf seos info": {
+            "command": "hf seos info",
+            "description": "get info from seos tags",
+            "notes": [
+                "hf seos info"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "hf seos info [-h]"
+        },
         "hf seos list": {
             "command": "hf seos list",
             "description": "alias of `trace list -t 7816` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
@@ -5965,11 +6093,19 @@
         },
         "hf st25ta help": {
             "command": "hf st25ta help",
-            "description": "help this help list list iso 14443a/7816 history ndefread read ndef file on tag --------------------------------------------------------------------------------------- hf st25ta info available offline: no get info about st25ta tag",
+            "description": "help this help list list iso 14443a/7816 history ndefread read ndef file on tag",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf st25ta info": {
+            "command": "hf st25ta info",
+            "description": "get info about st25ta tag",
             "notes": [
                 "hf st25ta info"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help"
             ],
@@ -6061,11 +6197,19 @@
         },
         "hf thinfilm help": {
             "command": "hf thinfilm help",
-            "description": "help this help list list nfc barcode / thinfilm history - not correct --------------------------------------------------------------------------------------- hf thinfilm info available offline: no get info from thinfilm tags",
+            "description": "help this help list list nfc barcode / thinfilm history - not correct",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf thinfilm info": {
+            "command": "hf thinfilm info",
+            "description": "get info from thinfilm tags",
             "notes": [
                 "hf thinfilm info"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help"
             ],
@@ -6108,7 +6252,30 @@
         },
         "hf topaz help": {
             "command": "hf topaz help",
-            "description": "help this help list list topaz history --------------------------------------------------------------------------------------- hf topaz list available offline: yes alias of `trace list -t topaz` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "description": "help this help list list topaz history",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf topaz info": {
+            "command": "hf topaz info",
+            "description": "get info from topaz tags",
+            "notes": [
+                "hf topaz info",
+                "hf topaz info -f myfilename -> save raw ndef to file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-f, --file <fn> save raw ndef to file",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf topaz info [-hv] [-f <fn>]"
+        },
+        "hf topaz list": {
+            "command": "hf topaz list",
+            "description": "alias of `trace list -t topaz` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf topaz list -f -> show frame delay times",
                 "hf topaz list -1 -> use trace buffer"
@@ -6126,21 +6293,6 @@
                 "--dict <file> use dictionary keys file"
             ],
             "usage": "hf topaz list [-h1fcrux] [--dict <file>]"
-        },
-        "hf topaz info": {
-            "command": "hf topaz info",
-            "description": "get info from topaz tags",
-            "notes": [
-                "hf topaz info",
-                "hf topaz info -f myfilename -> save raw ndef to file"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-f, --file <fn> save raw ndef to file",
-                "-v, --verbose verbose output"
-            ],
-            "usage": "hf topaz info [-hv] [-f <fn>]"
         },
         "hf topaz raw": {
             "command": "hf topaz raw",
@@ -6210,7 +6362,15 @@
         },
         "hf waveshare help": {
             "command": "hf waveshare help",
-            "description": "help this help --------------------------------------------------------------------------------------- hf waveshare loadbmp available offline: no load bmp file to waveshare nfc epaper.",
+            "description": "help this help",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf waveshare loadbmp": {
+            "command": "hf waveshare loadbmp",
+            "description": "load bmp file to waveshare nfc epaper.",
             "notes": [
                 "hf waveshare loadbmp -f myfile -m 0 -> 2.13 inch e-paper ( 122, 250 )",
                 "hf waveshare loadbmp -f myfile -m 1 -> 2.9 inch e-paper ( 296, 128 )",
@@ -6221,7 +6381,7 @@
                 "hf waveshare loadbmp -f myfile -m 6 -> 1.54 inch e-paper b (with red) ( 200, 200 )",
                 "hf waveshare loadbmp -f myfile -m 7 -> 7.5 inch e-paper hd ( 880, 528 )"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help",
                 "-m <nr> model number [0 - 7] of your tag",
@@ -6244,6 +6404,18 @@
                 "-0, --off turn off hints"
             ],
             "usage": "hints [-h10]"
+        },
+        "hw break": {
+            "command": "hw break",
+            "description": "send break loop package",
+            "notes": [
+                "hw break"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "hw break [-h]"
         },
         "hw connect": {
             "command": "hw connect",
@@ -6305,15 +6477,11 @@
         },
         "hw help": {
             "command": "hw help",
-            "description": "------------- ----------------------- hardware ----------------------- help this help connect connect proxmark3 to serial port version show version information about the client and the connected proxmark3, if any --------------------------------------------------------------------------------------- hw break available offline: no send break loop package",
-            "notes": [
-                "hw break"
-            ],
+            "description": "------------- ----------------------- hardware ----------------------- help this help connect connect proxmark3 to serial port version show version information about the client and the connected proxmark3, if any",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help"
-            ],
-            "usage": "hw break [-h]"
+            "options": [],
+            "usage": ""
         },
         "hw lcd": {
             "command": "hw lcd",
@@ -6528,9 +6696,9 @@
             ],
             "usage": "lf awid clone [-h] --fmt <dec> --fc <dec> --cn <dec> [--q5] [--em]"
         },
-        "lf awid help": {
-            "command": "lf awid help",
-            "description": "help this help demod demodulate an awid fsk tag from the graphbuffer --------------------------------------------------------------------------------------- lf awid demod available offline: yes try to find awid prox preamble, if found decode / descramble data",
+        "lf awid demod": {
+            "command": "lf awid demod",
+            "description": "try to find awid prox preamble, if found decode / descramble data",
             "notes": [
                 "lf awid demod"
             ],
@@ -6539,6 +6707,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf awid demod [-h]"
+        },
+        "lf awid help": {
+            "command": "lf awid help",
+            "description": "help this help demod demodulate an awid fsk tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf awid reader": {
             "command": "lf awid reader",
@@ -6606,9 +6782,17 @@
             ],
             "usage": "lf cmdread [-hvk@] [-d <us>] [-c <0|1|...>] [-e <us>]... [-o <us>] [-z <us>] [-s <dec>] [--crc-ht]"
         },
-        "lf cotag help": {
-            "command": "lf cotag help",
-            "description": "help this help demod demodulate an cotag tag --------------------------------------------------------------------------------------- lf cotag demod available offline: yes try to find cotag preamble, if found decode / descramble data",
+        "lf config": {
+            "command": "lf config",
+            "description": "get/set config for lf sampling, bit/sample, decimation, frequency these changes are temporary, will be reset after a power cycle.",
+            "notes": [],
+            "offline": false,
+            "options": [],
+            "usage": ""
+        },
+        "lf cotag demod": {
+            "command": "lf cotag demod",
+            "description": "try to find cotag preamble, if found decode / descramble data",
             "notes": [
                 "lf cotag demod"
             ],
@@ -6617,6 +6801,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf cotag demod [-h]"
+        },
+        "lf cotag help": {
+            "command": "lf cotag help",
+            "description": "help this help demod demodulate an cotag tag",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf cotag reader": {
             "command": "lf cotag reader",
@@ -6650,9 +6842,9 @@
             ],
             "usage": "lf destron clone [-h] -u <hex> [--q5] [--em]"
         },
-        "lf destron help": {
-            "command": "lf destron help",
-            "description": "help this help demod demodulate an destron tag from the graphbuffer --------------------------------------------------------------------------------------- lf destron demod available offline: yes try to find destron preamble, if found decode / descramble data",
+        "lf destron demod": {
+            "command": "lf destron demod",
+            "description": "try to find destron preamble, if found decode / descramble data",
             "notes": [
                 "lf destron demod"
             ],
@@ -6661,6 +6853,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf destron demod [-h]"
+        },
+        "lf destron help": {
+            "command": "lf destron help",
+            "description": "help this help demod demodulate an destron tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf destron reader": {
             "command": "lf destron reader",
@@ -6721,6 +6921,35 @@
                 "--q5 specify writing to q5/t5555 tag"
             ],
             "usage": "lf em 410x clone [-h] [--clk <dec>] --id <hex> [--q5]"
+        },
+        "lf em 410x demod": {
+            "command": "lf em 410x demod",
+            "description": "try to find em 410x preamble, if found decode / descramble data",
+            "notes": [
+                "lf em 410x demod -> demod an em410x tag id from graphbuffer",
+                "lf em 410x demod --clk 32 -> demod an em410x tag id from graphbuffer using a clock of rf/32",
+                "lf em 410x demod --clk 32 -i -> demod an em410x tag id from graphbuffer using a clock of rf/32 and inverting data",
+                "lf em 410x demod -i -> demod an em410x tag id from graphbuffer while inverting data",
+                "lf em 410x demod --clk 64 -i --err 0 -> demod an em410x tag id from graphbuffer using a clock of rf/64 and inverting data and allowing 0 demod errors"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "--clk <dec> clock (default autodetect)",
+                "--err <dec> maximum allowed errors (default 100)",
+                "--len <dec> maximum length",
+                "-i, --invert invert output",
+                "-a, --amp amplify signal"
+            ],
+            "usage": "lf em 410x demod [-hia] [--clk <dec>] [--err <dec>] [--len <dec>]"
+        },
+        "lf em 410x help": {
+            "command": "lf em 410x help",
+            "description": "help this help demod demodulate a em410x tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf em 410x reader": {
             "command": "lf em 410x reader",
@@ -6788,6 +7017,22 @@
             ],
             "usage": "lf em 410x watch [-h]"
         },
+        "lf em 4x05 brute": {
+            "command": "lf em 4x05 brute",
+            "description": "this command tries to bruteforce the password of a em4205/4305/4469/4569 the loop is running on device side, press proxmark3 button to abort",
+            "notes": [
+                "note: if you get many false positives, change position on the antennalf em 4x05 brute",
+                "lf em 4x05 brute -n 1 -> stop after first candidate found",
+                "lf em 4x05 brute -s 000022aa -> start at 000022aa"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-s, --start <hex> start bruteforce enumeration from this password value",
+                "-n <dec> stop after having found n candidates. default: 0 (infinite)"
+            ],
+            "usage": "lf em 4x05 brute [-h] [-s <hex>] [-n <dec>]"
+        },
         "lf em 4x05 chk": {
             "command": "lf em 4x05 chk",
             "description": "this command uses a dictionary attack against em4205/4305/4469/4569",
@@ -6834,19 +7079,11 @@
         },
         "lf em 4x05 help": {
             "command": "lf em 4x05 help",
-            "description": "help this help demod demodulate a em4x05/em4x69 tag from the graphbuffer sniff attempt to recover em4x05 commands from sample buffer --------------------------------------------------------------------------------------- lf em 4x05 brute available offline: no this command tries to bruteforce the password of a em4205/4305/4469/4569 the loop is running on device side, press proxmark3 button to abort",
-            "notes": [
-                "note: if you get many false positives, change position on the antennalf em 4x05 brute",
-                "lf em 4x05 brute -n 1 -> stop after first candidate found",
-                "lf em 4x05 brute -s 000022aa -> start at 000022aa"
-            ],
+            "description": "help this help demod demodulate a em4x05/em4x69 tag from the graphbuffer sniff attempt to recover em4x05 commands from sample buffer",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-s, --start <hex> start bruteforce enumeration from this password value",
-                "-n <dec> stop after having found n candidates. default: 0 (infinite)"
-            ],
-            "usage": "lf em 4x05 brute [-h] [-s <hex>] [-n <dec>]"
+            "options": [],
+            "usage": ""
         },
         "lf em 4x05 info": {
             "command": "lf em 4x05 info",
@@ -6949,6 +7186,20 @@
             ],
             "usage": "lf em 4x05 write [-h] [-a <dec>] -d <hex> [-p <hex>] [--po]"
         },
+        "lf em 4x50 brute": {
+            "command": "lf em 4x50 brute",
+            "description": "tries to bruteforce the password of a em4x50 card. function can be stopped by pressing pm3 button.",
+            "notes": [
+                "lf em 4x50 brute --first 12330000 --last 12340000 -> tries pwds from 0x12330000 to 0x1234000000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "--first <hex> first password (start), 4 bytes, lsb",
+                "--last <hex> last password (stop), 4 bytes, lsb"
+            ],
+            "usage": "lf em 4x50 brute [-h] --first <hex> --last <hex>"
+        },
         "lf em 4x50 chk": {
             "command": "lf em 4x50 chk",
             "description": "run dictionary key recovery against em4x50 card.",
@@ -7021,17 +7272,11 @@
         },
         "lf em 4x50 help": {
             "command": "lf em 4x50 help",
-            "description": "help this help ----------- --------------------- operations --------------------- ----------- --------------------- simulation --------------------- --------------------------------------------------------------------------------------- lf em 4x50 brute available offline: no tries to bruteforce the password of a em4x50 card. function can be stopped by pressing pm3 button.",
-            "notes": [
-                "lf em 4x50 brute --first 12330000 --last 12340000 -> tries pwds from 0x12330000 to 0x1234000000"
-            ],
+            "description": "help this help ----------- --------------------- operations --------------------- ----------- --------------------- simulation ---------------------",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "--first <hex> first password (start), 4 bytes, lsb",
-                "--last <hex> last password (stop), 4 bytes, lsb"
-            ],
-            "usage": "lf em 4x50 brute [-h] --first <hex> --last <hex>"
+            "options": [],
+            "usage": ""
         },
         "lf em 4x50 info": {
             "command": "lf em 4x50 info",
@@ -7183,12 +7428,20 @@
         },
         "lf em 4x70 help": {
             "command": "lf em 4x70 help",
-            "description": "help this help --------------------------------------------------------------------------------------- lf em 4x70 info available offline: no tag information em4x70 tag variants include id48 automotive transponder. id48 does not use command parity (default). v4070 and em4170 do require parity bit.",
+            "description": "help this help",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "lf em 4x70 info": {
+            "command": "lf em 4x70 info",
+            "description": "tag information em4x70 tag variants include id48 automotive transponder. id48 does not use command parity (default). v4070 and em4170 do require parity bit.",
             "notes": [
                 "lf em 4x70 info",
                 "lf em 4x70 info --par -> adds parity bit to command"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help",
                 "--par add parity bit when sending commands"
@@ -7257,24 +7510,11 @@
         },
         "lf em help": {
             "command": "lf em help",
-            "description": "help this help 410x { em 4102 commands... } 4x05 { em 4205 / 4305 / 4369 / 4469 commands... } 4x50 { em 4350 / 4450 commands... } 4x70 { em 4070 / 4170 commands... } ======================================================================================= lf em 410x { em 4102 commands... } --------------------------------------------------------------------------------------- lf em 410x help available offline: yes help this help demod demodulate a em410x tag from the graphbuffer --------------------------------------------------------------------------------------- lf em 410x demod available offline: yes try to find em 410x preamble, if found decode / descramble data",
-            "notes": [
-                "lf em 410x demod -> demod an em410x tag id from graphbuffer",
-                "lf em 410x demod --clk 32 -> demod an em410x tag id from graphbuffer using a clock of rf/32",
-                "lf em 410x demod --clk 32 -i -> demod an em410x tag id from graphbuffer using a clock of rf/32 and inverting data",
-                "lf em 410x demod -i -> demod an em410x tag id from graphbuffer while inverting data",
-                "lf em 410x demod --clk 64 -i --err 0 -> demod an em410x tag id from graphbuffer using a clock of rf/64 and inverting data and allowing 0 demod errors"
-            ],
+            "description": "help this help 410x { em 4102 commands... } 4x05 { em 4205 / 4305 / 4369 / 4469 commands... } 4x50 { em 4350 / 4450 commands... } 4x70 { em 4070 / 4170 commands... }",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "--clk <dec> clock (default autodetect)",
-                "--err <dec> maximum allowed errors (default 100)",
-                "--len <dec> maximum length",
-                "-i, --invert invert output",
-                "-a, --amp amplify signal"
-            ],
-            "usage": "lf em 410x demod [-hia] [--clk <dec>] [--err <dec>] [--len <dec>]"
+            "options": [],
+            "usage": ""
         },
         "lf fdxb clone": {
             "command": "lf fdxb clone",
@@ -7297,9 +7537,9 @@
             ],
             "usage": "lf fdxb clone [-ha] -c <dec> -n <dec> [--extended <hex>] [--q5] [--em]"
         },
-        "lf fdxb help": {
-            "command": "lf fdxb help",
-            "description": "help this help demod demodulate a fdx-b iso11784/85 tag from the graphbuffer --------------------------------------------------------------------------------------- lf fdxb demod available offline: yes try to find fdx-b preamble, if found decode / descramble data",
+        "lf fdxb demod": {
+            "command": "lf fdxb demod",
+            "description": "try to find fdx-b preamble, if found decode / descramble data",
             "notes": [
                 "lf fdxb demod"
             ],
@@ -7308,6 +7548,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf fdxb demod [-h]"
+        },
+        "lf fdxb help": {
+            "command": "lf fdxb help",
+            "description": "help this help demod demodulate a fdx-b iso11784/85 tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf fdxb reader": {
             "command": "lf fdxb reader",
@@ -7361,9 +7609,9 @@
             ],
             "usage": "lf gallagher clone [-h] [-r <hex>] [--q5] [--em] [--rc <decimal>] [--fc <decimal>] [--cn <decimal>] [--il <decimal>]"
         },
-        "lf gallagher help": {
-            "command": "lf gallagher help",
-            "description": "help this help demod demodulate an gallagher tag from the graphbuffer --------------------------------------------------------------------------------------- lf gallagher demod available offline: yes try to find gallagher preamble, if found decode / descramble data",
+        "lf gallagher demod": {
+            "command": "lf gallagher demod",
+            "description": "try to find gallagher preamble, if found decode / descramble data",
             "notes": [
                 "lf gallagher demod"
             ],
@@ -7372,6 +7620,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf gallagher demod [-h]"
+        },
+        "lf gallagher help": {
+            "command": "lf gallagher help",
+            "description": "help this help demod demodulate an gallagher tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf gallagher reader": {
             "command": "lf gallagher reader",
@@ -7423,9 +7679,9 @@
             ],
             "usage": "lf gproxii clone [-h] --fmt <dec> --fc <dec> --cn <dec> [--q5] [--em]"
         },
-        "lf gproxii help": {
-            "command": "lf gproxii help",
-            "description": "help this help demod demodulate a g prox ii tag from the graphbuffer --------------------------------------------------------------------------------------- lf gproxii demod available offline: yes try to find guardall prox-ii preamble, if found decode / descramble data",
+        "lf gproxii demod": {
+            "command": "lf gproxii demod",
+            "description": "try to find guardall prox-ii preamble, if found decode / descramble data",
             "notes": [
                 "lf gproxii demod -> use graphbuffer to decode",
                 "lf gproxii demod --raw fb8ee718ee3b8cc785c11b92 ->"
@@ -7436,6 +7692,14 @@
                 "-r, --raw <hex> raw bytes"
             ],
             "usage": "lf gproxii demod [-h] [-r <hex>]"
+        },
+        "lf gproxii help": {
+            "command": "lf gproxii help",
+            "description": "help this help demod demodulate a g prox ii tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf gproxii reader": {
             "command": "lf gproxii reader",
@@ -7467,29 +7731,11 @@
         },
         "lf help": {
             "command": "lf help",
-            "description": "help this help ----------- -------------- low frequency -------------- awid { awid rfids... } cotag { cotag chips... } destron { fdx-a destron rfids... } em { em chips & rfids... } fdxb { fdx-b rfids... } gallagher { gallagher rfids... } gproxii { guardall prox ii rfids... } hid { hid prox rfids... } hitag { hitag chips... } idteck { idteck rfids... } indala { indala rfids... } io { ioprox rfids... } jablotron { jablotron rfids... } keri { keri rfids... } motorola { motorola rfids... } nedap { nedap rfids... } nexwatch { nexwatch rfids... } noralsy { noralsy rfids... } pac { pac/stanley rfids... } paradox { paradox rfids... } pcf7931 { pcf7931 chips... } presco { presco rfids... } pyramid { farpointe/pyramid rfids... } securakey { securakey rfids... } ti { ti chips... } t55xx { t55xx chips... } viking { viking rfids... } visa2000 { visa2000 rfids... } ----------- --------------------- general --------------------- search read and search for valid known tag --------------------------------------------------------------------------------------- lf config available offline: no get/set config for lf sampling, bit/sample, decimation, frequency these changes are temporary, will be reset after a power cycle. - use `lf read` performs a read (active field) - use `lf sniff` performs a sniff (no active field)",
-            "notes": [
-                "lf config -> shows current config",
-                "lf config -b 8 --125 -> samples at 125 khz, 8 bps",
-                "lf config -b 4 --134 --dec 3 -> samples at 134 khz, averages three samples into one, stored with a resolution of 4 bits per sample",
-                "lf config --trig 20 -s 10000 -> trigger sampling when above 20, skip 10 000 first samples after triggered",
-                "lf config --reset -> reset back to default values"
-            ],
+            "description": "help this help ----------- -------------- low frequency -------------- awid { awid rfids... } cotag { cotag chips... } destron { fdx-a destron rfids... } em { em chips & rfids... } fdxb { fdx-b rfids... } gallagher { gallagher rfids... } gproxii { guardall prox ii rfids... } hid { hid prox rfids... } hitag { hitag chips... } idteck { idteck rfids... } indala { indala rfids... } io { ioprox rfids... } jablotron { jablotron rfids... } keri { keri rfids... } motorola { motorola rfids... } nedap { nedap rfids... } nexwatch { nexwatch rfids... } noralsy { noralsy rfids... } pac { pac/stanley rfids... } paradox { paradox rfids... } pcf7931 { pcf7931 chips... } presco { presco rfids... } pyramid { farpointe/pyramid rfids... } securakey { securakey rfids... } ti { ti chips... } t55xx { t55xx chips... } viking { viking rfids... } visa2000 { visa2000 rfids... } ----------- --------------------- general --------------------- search read and search for valid known tag",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "--125 125 khz frequency",
-                "--134 134 khz frequency",
-                "-a, --avg <0|1> averaging - if set, will average the stored sample value when decimating (default 1)",
-                "-b, --bps <1-8> sets resolution of bits per sample (default 8)",
-                "--dec <1-8> sets decimation. a value of n saves only 1 in n samples (default 1)",
-                "--divisor <19-255> manually set freq divisor. 88 -> 134 khz, 95 -> 125 khz",
-                "-f, --freq <47-600> manually set frequency in khz",
-                "-r, --reset reset values to defaults",
-                "-s, --skip <dec> sets a number of samples to skip before capture (default 0)",
-                "-t, --trig <0-128> sets trigger threshold. 0 means no threshold"
-            ],
-            "usage": "lf config [-hr] [--125] [--134] [-a <0|1>] [-b <1-8>] [--dec <1-8>] [--divisor <19-255>] [-f <47-600>] [-s <dec>] [-t <0-128>]"
+            "options": [],
+            "usage": ""
         },
         "lf hid brute": {
             "command": "lf hid brute",
@@ -7542,9 +7788,9 @@
             ],
             "usage": "lf hid clone [-h] [-w <format>] [--fc <dec>] [--cn <dec>] [-i <dec>] [-o <dec>] [-r <hex>] [--q5] [--em] [--bin <bin>]"
         },
-        "lf hid help": {
-            "command": "lf hid help",
-            "description": "help this help demod demodulate hid prox tag from the graphbuffer --------------------------------------------------------------------------------------- lf hid demod available offline: yes try to find hid prox preamble, if found decode / descramble data",
+        "lf hid demod": {
+            "command": "lf hid demod",
+            "description": "try to find hid prox preamble, if found decode / descramble data",
             "notes": [
                 "lf hid demod"
             ],
@@ -7553,6 +7799,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf hid demod [-h]"
+        },
+        "lf hid help": {
+            "command": "lf hid help",
+            "description": "help this help demod demodulate hid prox tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf hid reader": {
             "command": "lf hid reader",
@@ -7630,13 +7884,13 @@
             ],
             "usage": "lf hitag dump [-h] [-f <fn>] [-k <hex>] [--nrar <hex>]"
         },
-        "lf hitag help": {
-            "command": "lf hitag help",
-            "description": "help this help list list hitag trace history --------------------------------------------------------------------------------------- lf hitag eload available offline: no loads hitag tag dump into emulator memory on device",
+        "lf hitag eload": {
+            "command": "lf hitag eload",
+            "description": "loads hitag tag dump into emulator memory on device",
             "notes": [
                 "lf hitag eload -2 -f lf-hitag-11223344-dump.bin"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help",
                 "-f, --file <fn> specfiy dump filename",
@@ -7646,6 +7900,14 @@
                 "-m card type hitagm"
             ],
             "usage": "lf hitag eload [-h12sm] -f <fn>"
+        },
+        "lf hitag help": {
+            "command": "lf hitag help",
+            "description": "help this help list list hitag trace history",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf hitag info": {
             "command": "lf hitag info",
@@ -7775,9 +8037,9 @@
             ],
             "usage": "lf idteck clone [-h] -r <hex> [--q5] [--em]"
         },
-        "lf idteck help": {
-            "command": "lf idteck help",
-            "description": "help this help demod demodulate an idteck tag from the graphbuffer --------------------------------------------------------------------------------------- lf idteck demod available offline: yes try to find idteck preamble, if found decode / descramble data",
+        "lf idteck demod": {
+            "command": "lf idteck demod",
+            "description": "try to find idteck preamble, if found decode / descramble data",
             "notes": [
                 "lf idteck demod"
             ],
@@ -7786,6 +8048,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf idteck demod [-h]"
+        },
+        "lf idteck help": {
+            "command": "lf idteck help",
+            "description": "help this help demod demodulate an idteck tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf idteck reader": {
             "command": "lf idteck reader",
@@ -7829,30 +8099,15 @@
         },
         "lf indala clone": {
             "command": "lf indala clone",
-            "description": "clone indala uid to t55x7 or q5/t5555 tag using different known formats warning, encoding with fc/cn doesn't always work",
-            "notes": [
-                "lf indala clone --heden 888 -> use heden 2l format",
-                "lf indala clone --fc 123 --cn 1337 -> use standard 26b format",
-                "lf indala clone --fc 123 --cn 1337 --4041x -> use 4041x format",
-                "lf indala clone -r a0000000a0002021",
-                "lf indala clone -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"
-            ],
+            "description": "clone indala uid to t55x7 or q5/t5555 tag using different known formats",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-r, --raw <hex> raw bytes",
-                "--heden <decimal> card number for heden 2l format",
-                "--fc <decimal> facility code (26 bit h10301 format)",
-                "--cn <decimal> card number (26 bit h10301 format)",
-                "--q5 optional - specify writing to q5/t5555 tag",
-                "--em optional - specify writing to em4305/4469 tag",
-                "--4041x optional - specify indala 4041x format, must use with fc and cn"
-            ],
-            "usage": "lf indala clone [-h] [-r <hex>] [--heden <decimal>] [--fc <decimal>] [--cn <decimal>] [--q5] [--em] [--4041x]"
+            "options": [],
+            "usage": ""
         },
-        "lf indala help": {
-            "command": "lf indala help",
-            "description": "help this help demod demodulate an indala tag (psk1) from the graphbuffer altdemod alternative method to demodulate samples for indala 64 bit uid (option '224' for 224 bit) --------------------------------------------------------------------------------------- lf indala demod available offline: yes tries to psk demodulate the graphbuffer as indala",
+        "lf indala demod": {
+            "command": "lf indala demod",
+            "description": "tries to psk demodulate the graphbuffer as indala",
             "notes": [
                 "lf indala demod",
                 "lf indala demod --clock 32 -> demod a indala tag from the graphbuffer using a clock of rf/32",
@@ -7867,6 +8122,14 @@
                 "-i, --invert optional - invert output"
             ],
             "usage": "lf indala demod [-hi] [--clock <dec>] [--maxerr <dec>]"
+        },
+        "lf indala help": {
+            "command": "lf indala help",
+            "description": "help this help demod demodulate an indala tag (psk1) from the graphbuffer altdemod alternative method to demodulate samples for indala 64 bit uid (option '224' for 224 bit)",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf indala reader": {
             "command": "lf indala reader",
@@ -7917,9 +8180,9 @@
             ],
             "usage": "lf io clone [-h] --vn <dec> --fc <dec> --cn <dec> [--q5] [--em]"
         },
-        "lf io help": {
-            "command": "lf io help",
-            "description": "help this help demod demodulate an ioprox tag from the graphbuffer --------------------------------------------------------------------------------------- lf io demod available offline: yes try to find ioprox preamble, if found decode / descramble data",
+        "lf io demod": {
+            "command": "lf io demod",
+            "description": "try to find ioprox preamble, if found decode / descramble data",
             "notes": [
                 "lf io demod"
             ],
@@ -7928,6 +8191,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf io demod [-h]"
+        },
+        "lf io help": {
+            "command": "lf io help",
+            "description": "help this help demod demodulate an ioprox tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf io reader": {
             "command": "lf io reader",
@@ -7986,9 +8257,9 @@
             ],
             "usage": "lf jablotron clone [-h] --cn <hex> [--q5] [--em]"
         },
-        "lf jablotron help": {
-            "command": "lf jablotron help",
-            "description": "help this help demod demodulate an jablotron tag from the graphbuffer --------------------------------------------------------------------------------------- lf jablotron demod available offline: yes try to find jablotron preamble, if found decode / descramble data",
+        "lf jablotron demod": {
+            "command": "lf jablotron demod",
+            "description": "try to find jablotron preamble, if found decode / descramble data",
             "notes": [
                 "lf jablotron demod"
             ],
@@ -7997,6 +8268,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf jablotron demod [-h]"
+        },
+        "lf jablotron help": {
+            "command": "lf jablotron help",
+            "description": "help this help demod demodulate an jablotron tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf jablotron reader": {
             "command": "lf jablotron reader",
@@ -8042,9 +8321,9 @@
             ],
             "usage": "lf keri clone [-h] [-t <m|i>] [--fc <dec>] --cn <dec> [--q5] [--em]"
         },
-        "lf keri help": {
-            "command": "lf keri help",
-            "description": "help this help demod demodulate an keri tag from the graphbuffer --------------------------------------------------------------------------------------- lf keri demod available offline: yes try to find keri preamble, if found decode / descramble data",
+        "lf keri demod": {
+            "command": "lf keri demod",
+            "description": "try to find keri preamble, if found decode / descramble data",
             "notes": [
                 "lf keri demod"
             ],
@@ -8053,6 +8332,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf keri demod [-h]"
+        },
+        "lf keri help": {
+            "command": "lf keri help",
+            "description": "help this help demod demodulate an keri tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf keri reader": {
             "command": "lf keri reader",
@@ -8097,9 +8384,9 @@
             ],
             "usage": "lf motorola clone [-h] -r <hex> [--q5] [--em]"
         },
-        "lf motorola help": {
-            "command": "lf motorola help",
-            "description": "help this help demod demodulate an motorola tag from the graphbuffer --------------------------------------------------------------------------------------- lf motorola demod available offline: yes try to find motorola preamble, if found decode / descramble data",
+        "lf motorola demod": {
+            "command": "lf motorola demod",
+            "description": "try to find motorola preamble, if found decode / descramble data",
             "notes": [
                 "lf motorola demod"
             ],
@@ -8108,6 +8395,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf motorola demod [-h]"
+        },
+        "lf motorola help": {
+            "command": "lf motorola help",
+            "description": "help this help demod demodulate an motorola tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf motorola reader": {
             "command": "lf motorola reader",
@@ -8152,9 +8447,9 @@
             ],
             "usage": "lf nedap clone [-hl] [--st <dec>] --cc <dec> --id <dec> [--q5] [--em]"
         },
-        "lf nedap help": {
-            "command": "lf nedap help",
-            "description": "help this help demod demodulate nedap tag from the graphbuffer --------------------------------------------------------------------------------------- lf nedap demod available offline: yes try to find nedap preamble, if found decode / descramble data",
+        "lf nedap demod": {
+            "command": "lf nedap demod",
+            "description": "try to find nedap preamble, if found decode / descramble data",
             "notes": [
                 "lf nedap demod"
             ],
@@ -8163,6 +8458,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf nedap demod [-h]"
+        },
+        "lf nedap help": {
+            "command": "lf nedap help",
+            "description": "help this help demod demodulate nedap tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf nedap reader": {
             "command": "lf nedap reader",
@@ -8218,9 +8521,9 @@
             ],
             "usage": "lf nexwatch clone [-h] [-r <hex>] [--cn <dec>] [-m <dec>] [--nc] [--qc] [--hc] [--q5] [--em] [--magic <hex>] [--psk2]"
         },
-        "lf nexwatch help": {
-            "command": "lf nexwatch help",
-            "description": "help this help demod demodulate a nexwatch tag (nexkey, quadrakey) from the graphbuffer --------------------------------------------------------------------------------------- lf nexwatch demod available offline: yes try to find nexwatch preamble, if found decode / descramble data",
+        "lf nexwatch demod": {
+            "command": "lf nexwatch demod",
+            "description": "try to find nexwatch preamble, if found decode / descramble data",
             "notes": [
                 "lf nexwatch demod"
             ],
@@ -8229,6 +8532,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf nexwatch demod [-h]"
+        },
+        "lf nexwatch help": {
+            "command": "lf nexwatch help",
+            "description": "help this help demod demodulate a nexwatch tag (nexkey, quadrakey) from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf nexwatch reader": {
             "command": "lf nexwatch reader",
@@ -8284,9 +8595,9 @@
             ],
             "usage": "lf noralsy clone [-h] --cn <dec> [-y <dec>] [--q5] [--em]"
         },
-        "lf noralsy help": {
-            "command": "lf noralsy help",
-            "description": "help this help demod demodulate an noralsy tag from the graphbuffer --------------------------------------------------------------------------------------- lf noralsy demod available offline: yes try to find noralsy preamble, if found decode / descramble data",
+        "lf noralsy demod": {
+            "command": "lf noralsy demod",
+            "description": "try to find noralsy preamble, if found decode / descramble data",
             "notes": [
                 "lf noralsy demod"
             ],
@@ -8295,6 +8606,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf noralsy demod [-h]"
+        },
+        "lf noralsy help": {
+            "command": "lf noralsy help",
+            "description": "help this help demod demodulate an noralsy tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf noralsy reader": {
             "command": "lf noralsy reader",
@@ -8343,9 +8662,9 @@
             ],
             "usage": "lf pac clone [-h] [--cn <dec>] [-r <hex>] [--q5] [--em]"
         },
-        "lf pac help": {
-            "command": "lf pac help",
-            "description": "help this help demod demodulate a pac tag from the graphbuffer --------------------------------------------------------------------------------------- lf pac demod available offline: yes try to find pac/stanley preamble, if found decode / descramble data",
+        "lf pac demod": {
+            "command": "lf pac demod",
+            "description": "try to find pac/stanley preamble, if found decode / descramble data",
             "notes": [
                 "lf pac demod"
             ],
@@ -8354,6 +8673,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf pac demod [-h]"
+        },
+        "lf pac help": {
+            "command": "lf pac help",
+            "description": "help this help demod demodulate a pac tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf pac reader": {
             "command": "lf pac reader",
@@ -8400,9 +8727,9 @@
             ],
             "usage": "lf paradox clone [-h] [-r <hex>] [--q5] [--em]"
         },
-        "lf paradox help": {
-            "command": "lf paradox help",
-            "description": "help this help demod demodulate a paradox fsk tag from the graphbuffer --------------------------------------------------------------------------------------- lf paradox demod available offline: yes try to find paradox preamble, if found decode / descramble data",
+        "lf paradox demod": {
+            "command": "lf paradox demod",
+            "description": "try to find paradox preamble, if found decode / descramble data",
             "notes": [
                 "lf paradox demod"
             ],
@@ -8411,6 +8738,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf paradox demod [-h]"
+        },
+        "lf paradox help": {
+            "command": "lf paradox help",
+            "description": "help this help demod demodulate a paradox fsk tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf paradox reader": {
             "command": "lf paradox reader",
@@ -8459,11 +8794,19 @@
         },
         "lf pcf7931 help": {
             "command": "lf pcf7931 help",
-            "description": "help this help config configure the password, the tags initialization delay and time offsets (optional) --------------------------------------------------------------------------------------- lf pcf7931 reader available offline: no read a pcf7931 tag",
+            "description": "help this help config configure the password, the tags initialization delay and time offsets (optional)",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "lf pcf7931 reader": {
+            "command": "lf pcf7931 reader",
+            "description": "read a pcf7931 tag",
             "notes": [
                 "lf pcf7931 reader -@ -> continuous reader mode"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help",
                 "-@ optional - continuous reader mode"
@@ -8503,9 +8846,9 @@
             ],
             "usage": "lf presco clone [-h] [-c <hex>] [-d <digits>] [--q5] [--em]"
         },
-        "lf presco help": {
-            "command": "lf presco help",
-            "description": "help this help demod demodulate presco tag from the graphbuffer --------------------------------------------------------------------------------------- lf presco demod available offline: yes try to find presco preamble, if found decode / descramble data",
+        "lf presco demod": {
+            "command": "lf presco demod",
+            "description": "try to find presco preamble, if found decode / descramble data",
             "notes": [
                 "lf presco demod"
             ],
@@ -8514,6 +8857,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf presco demod [-h]"
+        },
+        "lf presco help": {
+            "command": "lf presco help",
+            "description": "help this help demod demodulate presco tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf presco reader": {
             "command": "lf presco reader",
@@ -8562,9 +8913,9 @@
             ],
             "usage": "lf pyramid clone [-h] [--fc <dec>] [--cn <dec>] [--q5] [--em] [-r <hex>]"
         },
-        "lf pyramid help": {
-            "command": "lf pyramid help",
-            "description": "help this help demod demodulate a pyramid fsk tag from the graphbuffer --------------------------------------------------------------------------------------- lf pyramid demod available offline: yes try to find farpoint/pyramid preamble, if found decode / descramble data",
+        "lf pyramid demod": {
+            "command": "lf pyramid demod",
+            "description": "try to find farpoint/pyramid preamble, if found decode / descramble data",
             "notes": [
                 "lf pyramid demod"
             ],
@@ -8573,6 +8924,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf pyramid demod [-h]"
+        },
+        "lf pyramid help": {
+            "command": "lf pyramid help",
+            "description": "help this help demod demodulate a pyramid fsk tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf pyramid reader": {
             "command": "lf pyramid reader",
@@ -8654,9 +9013,9 @@
             ],
             "usage": "lf securakey clone [-h] -r <hex> [--q5] [--em]"
         },
-        "lf securakey help": {
-            "command": "lf securakey help",
-            "description": "help this help demod demodulate an securakey tag from the graphbuffer --------------------------------------------------------------------------------------- lf securakey demod available offline: yes try to find securakey preamble, if found decode / descramble data",
+        "lf securakey demod": {
+            "command": "lf securakey demod",
+            "description": "try to find securakey preamble, if found decode / descramble data",
             "notes": [
                 "lf securakey demod"
             ],
@@ -8665,6 +9024,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf securakey demod [-h]"
+        },
+        "lf securakey help": {
+            "command": "lf securakey help",
+            "description": "help this help demod demodulate an securakey tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf securakey reader": {
             "command": "lf securakey reader",
@@ -8744,27 +9111,11 @@
         },
         "lf simfsk": {
             "command": "lf simfsk",
-            "description": "simulate fsk tag from demodbuffer or input. there are about four fsk modulations to know of. fsk1 - where fc/8 = high and fc/5 = low fsk1a - is inverted fsk1, ie: fc/5 = high and fc/8 = low fsk2 - where fc/10 = high and fc/8 = low fsk2a - is inverted fsk2, ie: fc/10 = high and fc/8 = low note: if you set one clock manually set them all manually",
-            "notes": [
-                "lf simfsk -c 40 --high 8 --low 5 -d 010203 -> fsk1 rf/40 data 010203",
-                "lf simfsk -c 40 --high 5 --low 8 -d 010203 -> fsk1a rf/40 data 010203",
-                "lf simfsk -c 64 --high 10 --low 8 -d 010203 -> fsk2 rf/64 data 010203",
-                "lf simfsk -c 64 --high 8 --low 10 -d 010203 -> fsk2a rf/64 data 010203",
-                "",
-                "lf simfsk -c 50 --high 10 --low 8 -d 1d5559555569a9a555a59569 -> simulate hid prox tag manually",
-                "lf simfsk -c 50 --high 10 --low 8 --stt -d 011db2487e8d811111111111 -> simulate awid tag manually"
-            ],
+            "description": "simulate fsk tag from demodbuffer or input. there are about four fsk modulations to know of. fsk1 - where fc/8 = high and fc/5 = low fsk1a - is inverted fsk1, ie: fc/5 = high and fc/8 = low fsk2 - where fc/10 = high and fc/8 = low fsk2a - is inverted fsk2, ie: fc/10 = high and fc/8 = low",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-c, --clk <dec> manually set clock - can autodetect if using demodbuffer (default 64)",
-                "--low <dec> manually set larger field clock",
-                "--high <dec> manually set smaller field clock",
-                "--stt tbd! - stt to enable a gap between playback repetitions (default: no gap)",
-                "-d, --data <hex> data to sim - omit to use demodbuffer",
-                "-v, --verbose verbose output"
-            ],
-            "usage": "lf simfsk [-hv] [-c <dec>] [--low <dec>] [--high <dec>] [--stt] [-d <hex>]"
+            "options": [],
+            "usage": ""
         },
         "lf simpsk": {
             "command": "lf simpsk",
@@ -8790,38 +9141,19 @@
         },
         "lf sniff": {
             "command": "lf sniff",
-            "description": "sniff low frequency signal. you need to configure the lf part on the proxmark3 device manually. usually a trigger and skip samples is a good thing to set before doing a low frequency sniff. - use `lf config` to set parameters. - use `data plot` to look at sniff signal. - use `lf search -1` to see if signal can be automatic decoded",
-            "notes": [
-                "lf sniff -v",
-                "lf sniff -s 3000 -@ -> oscilloscope style"
-            ],
+            "description": "sniff low frequency signal. you need to configure the lf part on the proxmark3 device manually. usually a trigger and skip samples is a good thing to set before doing a low frequency sniff.",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-s, --samples <dec> number of samples to collect",
-                "-v, --verbose verbose output",
-                "-@ continuous sniffing mode"
-            ],
-            "usage": "lf sniff [-hv@] [-s <dec>]"
+            "options": [],
+            "usage": ""
         },
         "lf t55xx bruteforce": {
             "command": "lf t55xx bruteforce",
-            "description": "this command uses bruteforce to scan a number range. try reading page 0, block 7 before. warning this may brick non-password protected chips!",
-            "notes": [
-                "lf t55xx bruteforce --r2 -s aaaaaa77 -e aaaaaa99"
-            ],
+            "description": "this command uses bruteforce to scan a number range. try reading page 0, block 7 before.",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-s, --start <hex> search start password (4 hex bytes)",
-                "-e, --end <hex> search end password (4 hex bytes)",
-                "--r0 downlink - fixed bit length",
-                "--r1 downlink - long leading reference",
-                "--r2 downlink - leading zero",
-                "--r3 downlink - 1 of 4 coding reference",
-                "--all try all downlink modes (def)"
-            ],
-            "usage": "lf t55xx bruteforce [-h] -s <hex> -e <hex> [--r0] [--r1] [--r2] [--r3] [--all]"
+            "options": [],
+            "usage": ""
         },
         "lf t55xx chk": {
             "command": "lf t55xx chk",
@@ -8844,6 +9176,18 @@
                 "--all try all downlink modes (def)"
             ],
             "usage": "lf t55xx chk [-hm] [-f <fn>] [--em <hex>] [--r0] [--r1] [--r2] [--r3] [--all]"
+        },
+        "lf t55xx clonehelp": {
+            "command": "lf t55xx clonehelp",
+            "description": "display a list of available commands for cloning specific techs on t5xx tags",
+            "notes": [
+                "lf t55xx clonehelp"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "lf t55xx clonehelp [-h]"
         },
         "lf t55xx config": {
             "command": "lf t55xx config",
@@ -8965,15 +9309,11 @@
         },
         "lf t55xx help": {
             "command": "lf t55xx help",
-            "description": "----------- ---------------------------- notice ----------------------------- remember to run `lf t55xx detect` first whenever a new card is placed on the proxmark3 or the config block changed. help this help ----------- --------------------- operations --------------------- config set/get t55xx configuration (modulation, inverted, offset, rate) detect try detecting the tag modulation from reading the configuration block info show t55x7 configuration data (page 0/ blk 0) trace show t55x7 traceability data (page 1/ blk 0-1) ----------- --------------------- recovery --------------------- sniff attempt to recover t55xx commands from sample buffer --------------------------------------------------------------------------------------- lf t55xx clonehelp available offline: no display a list of available commands for cloning specific techs on t5xx tags",
-            "notes": [
-                "lf t55xx clonehelp"
-            ],
+            "description": "----------- ---------------------------- notice ----------------------------- remember to run `lf t55xx detect` first whenever a new card is placed on the proxmark3 or the config block changed. help this help ----------- --------------------- operations --------------------- config set/get t55xx configuration (modulation, inverted, offset, rate) detect try detecting the tag modulation from reading the configuration block info show t55x7 configuration data (page 0/ blk 0) trace show t55x7 traceability data (page 1/ blk 0-1) ----------- --------------------- recovery --------------------- sniff attempt to recover t55xx commands from sample buffer",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help"
-            ],
-            "usage": "lf t55xx clonehelp [-h]"
+            "options": [],
+            "usage": ""
         },
         "lf t55xx info": {
             "command": "lf t55xx info",
@@ -9041,45 +9381,19 @@
         },
         "lf t55xx read": {
             "command": "lf t55xx read",
-            "description": "read t55xx block data. this commands defaults to page 0. * * * warning * * * use of read with password on a tag not configured for a password can damage the tag * * * * * * * * * *",
-            "notes": [
-                "lf t55xx read -b 0 -> read data from block 0",
-                "lf t55xx read -b 0 --pwd 01020304 -> read data from block 0, pwd 01020304",
-                "lf t55xx read -b 0 --pwd 01020304 -o -> read data from block 0, pwd 01020304, override"
-            ],
+            "description": "read t55xx block data. this commands defaults to page 0.",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-b, --blk <0-7> block number to read",
-                "-p, --pwd <hex> password (4 hex bytes)",
-                "-o, --override override safety check",
-                "--pg1 read page 1",
-                "--r0 downlink - fixed bit length (detected def)",
-                "--r1 downlink - long leading reference",
-                "--r2 downlink - leading zero",
-                "--r3 downlink - 1 of 4 coding reference"
-            ],
-            "usage": "lf t55xx read [-ho] -b <0-7> [-p <hex>] [--pg1] [--r0] [--r1] [--r2] [--r3]"
+            "options": [],
+            "usage": ""
         },
         "lf t55xx recoverpw": {
             "command": "lf t55xx recoverpw",
-            "description": "this command uses a few tricks to try to recover mangled password. try reading page 0, block 7 before. warning this may brick non-password protected chips!",
-            "notes": [
-                "lf t55xx recoverpw",
-                "lf t55xx recoverpw -p 11223344",
-                "lf t55xx recoverpw -p 11223344 --r3"
-            ],
+            "description": "this command uses a few tricks to try to recover mangled password. try reading page 0, block 7 before.",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help this help",
-                "-p, --pwd <hex> password (4 hex bytes)",
-                "--r0 downlink - fixed bit length",
-                "--r1 downlink - long leading reference",
-                "--r2 downlink - leading zero",
-                "--r3 downlink - 1 of 4 coding reference",
-                "--all try all downlink modes (def)"
-            ],
-            "usage": "lf t55xx recoverpw [-h] [-p <hex>] [--r0] [--r1] [--r2] [--r3] [--all]"
+            "options": [],
+            "usage": ""
         },
         "lf t55xx resetread": {
             "command": "lf t55xx resetread",
@@ -9223,9 +9537,9 @@
             ],
             "usage": "lf t55xx write [-ht] -b <0-7> [-d <hex>] [-p <hex>] [--pg1] [--verify] [--r0] [--r1] [--r2] [--r3]"
         },
-        "lf ti help": {
-            "command": "lf ti help",
-            "description": "help this help demod demodulate raw bits for ti lf tag from the graphbuffer --------------------------------------------------------------------------------------- lf ti demod available offline: yes try to find ti preamble, if found decode / descramble data",
+        "lf ti demod": {
+            "command": "lf ti demod",
+            "description": "try to find ti preamble, if found decode / descramble data",
             "notes": [
                 "lf ti demod"
             ],
@@ -9234,6 +9548,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf ti demod [-h]"
+        },
+        "lf ti help": {
+            "command": "lf ti help",
+            "description": "help this help demod demodulate raw bits for ti lf tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf ti reader": {
             "command": "lf ti reader",
@@ -9299,9 +9621,9 @@
             ],
             "usage": "lf viking clone [-h] --cn <hex> [--q5] [--em]"
         },
-        "lf viking help": {
-            "command": "lf viking help",
-            "description": "help this help demod demodulate a viking tag from the graphbuffer --------------------------------------------------------------------------------------- lf viking demod available offline: yes try to find viking am preamble, if found decode / descramble data",
+        "lf viking demod": {
+            "command": "lf viking demod",
+            "description": "try to find viking am preamble, if found decode / descramble data",
             "notes": [
                 "lf viking demod"
             ],
@@ -9310,6 +9632,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf viking demod [-h]"
+        },
+        "lf viking help": {
+            "command": "lf viking help",
+            "description": "help this help demod demodulate a viking tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf viking reader": {
             "command": "lf viking reader",
@@ -9354,9 +9684,9 @@
             ],
             "usage": "lf visa2000 clone [-h] --cn <dec> [--q5] [--em]"
         },
-        "lf visa2000 help": {
-            "command": "lf visa2000 help",
-            "description": "help this help demod demodulate an visa2000 tag from the graphbuffer --------------------------------------------------------------------------------------- lf visa2000 demod available offline: yes try to find visa2000 preamble, if found decode / descramble data",
+        "lf visa2000 demod": {
+            "command": "lf visa2000 demod",
+            "description": "try to find visa2000 preamble, if found decode / descramble data",
             "notes": [
                 "lf visa2000 demod"
             ],
@@ -9365,6 +9695,14 @@
                 "-h, --help this help"
             ],
             "usage": "lf visa2000 demod [-h]"
+        },
+        "lf visa2000 help": {
+            "command": "lf visa2000 help",
+            "description": "help this help demod demodulate an visa2000 tag from the graphbuffer",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "lf visa2000 reader": {
             "command": "lf visa2000 reader",
@@ -9392,6 +9730,19 @@
             ],
             "usage": "lf visa2000 sim [-h] --cn <dec>"
         },
+        "mem baudrate": {
+            "command": "mem baudrate",
+            "description": "set the baudrate for the spi flash memory communications. reading flash id will virtually always fail under 48mhz setting. unless you know what you are doing, please stay at 24mhz. if >= 24mhz, fastreads instead of reads instruction will be used.",
+            "notes": [
+                "mem baudrate --mhz 48"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "--mhz <24|48> spi baudrate in mhz"
+            ],
+            "usage": "mem baudrate [-h] --mhz <24|48>"
+        },
         "mem dump": {
             "command": "mem dump",
             "description": "dumps flash memory on device into a file or view in console",
@@ -9413,16 +9764,11 @@
         },
         "mem help": {
             "command": "mem help",
-            "description": "help this help --------------------------------------------------------------------------------------- mem baudrate available offline: no set the baudrate for the spi flash memory communications. reading flash id will virtually always fail under 48mhz setting. unless you know what you are doing, please stay at 24mhz. if >= 24mhz, fastreads instead of reads instruction will be used.",
-            "notes": [
-                "mem baudrate --mhz 48"
-            ],
+            "description": "help this help",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "--mhz <24|48> spi baudrate in mhz"
-            ],
-            "usage": "mem baudrate [-h] --mhz <24|48>"
+            "options": [],
+            "usage": ""
         },
         "mem info": {
             "command": "mem info",
@@ -9473,6 +9819,20 @@
             ],
             "usage": "mem spiffs check [-h]"
         },
+        "mem spiffs copy": {
+            "command": "mem spiffs copy",
+            "description": "copy a file to another (destructively) in spiffs file system",
+            "notes": [
+                "mem spiffs copy -s aaa.bin -d aaa_cpy.bin"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-s, --src <fn> source file name",
+                "-d, --dest <fn> destination file name"
+            ],
+            "usage": "mem spiffs copy [-h] -s <fn> -d <fn>"
+        },
         "mem spiffs dump": {
             "command": "mem spiffs dump",
             "description": "dumps device spiffs file to a local file size is handled by first sending a stat command against file to verify existence",
@@ -9491,17 +9851,11 @@
         },
         "mem spiffs help": {
             "command": "mem spiffs help",
-            "description": "help this help --------------------------------------------------------------------------------------- mem spiffs copy available offline: no copy a file to another (destructively) in spiffs file system",
-            "notes": [
-                "mem spiffs copy -s aaa.bin -d aaa_cpy.bin"
-            ],
+            "description": "help this help",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-s, --src <fn> source file name",
-                "-d, --dest <fn> destination file name"
-            ],
-            "usage": "mem spiffs copy [-h] -s <fn> -d <fn>"
+            "options": [],
+            "usage": ""
         },
         "mem spiffs info": {
             "command": "mem spiffs info",
@@ -9658,24 +10012,23 @@
         },
         "nfc barcode help": {
             "command": "nfc barcode help",
-            "description": "-------- ------------------ nfc barcode -------------------- -------- --------------------- general --------------------- help this help ======================================================================================= reveng { crc calculations from reveng software... } [=] reveng: no mode switch specified. use reveng -h for help. ======================================================================================= smart { smart card iso-7816 commands... } --------------------------------------------------------------------------------------- smart help available offline: yes help this help list list iso 7816 history upgrade upgrade sim module firmware --------------------------------------------------------------------------------------- smart list available offline: yes alias of `trace list -t 7816` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
-            "notes": [
-                "smart list -f -> show frame delay times",
-                "smart list -1 -> use trace buffer"
-            ],
+            "description": "-------- ------------------ nfc barcode -------------------- -------- --------------------- general --------------------- help this help",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
-                "-c mark crc bytes",
-                "-r show relative times (gap and duration)",
-                "-u display times in microseconds instead of clock cycles",
-                "-x show hexdump to convert to pcap(ng)",
-                "or to import into wireshark using encapsulation type \"iso 14443\"",
-                "--dict <file> use dictionary keys file"
+            "options": [],
+            "usage": ""
+        },
+        "nfc barcode read": {
+            "command": "nfc barcode read",
+            "description": "get info from thinfilm tags",
+            "notes": [
+                "hf thinfilm info"
             ],
-            "usage": "smart list [-h1fcrux] [--dict <file>]"
+            "offline": false,
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "hf thinfilm info [-h]"
         },
         "nfc barcode sim": {
             "command": "nfc barcode sim",
@@ -9691,9 +10044,9 @@
             ],
             "usage": "hf thinfilm sim [-h] -d <hex> [--raw]"
         },
-        "nfc help": {
-            "command": "nfc help",
-            "description": "-------- --------------------- nfc tags -------------------- type1 { nfc forum tag type 1... } type2 { nfc forum tag type 2... } type4a { nfc forum tag type 4 iso14443a... } type4b { nfc forum tag type 4 iso14443b... } mf { nfc type mifare classic/plus tag... } barcode { nfc barcode tag... } -------- --------------------- general --------------------- help this help decode decode ndef records --------------------------------------------------------------------------------------- nfc decode available offline: yes decode and print nfc data exchange format (ndef) you must provide either data in hex or a filename, but not both",
+        "nfc decode": {
+            "command": "nfc decode",
+            "description": "decode and print nfc data exchange format (ndef) you must provide either data in hex or a filename, but not both",
             "notes": [
                 "nfc decode -d 9101085402656e48656c6c6f5101085402656e576f726c64",
                 "nfc decode -d 0103d020240203e02c040300fe",
@@ -9708,17 +10061,41 @@
             ],
             "usage": "nfc decode [-hv] [-d <hex>] [-f <fn>]"
         },
+        "nfc help": {
+            "command": "nfc help",
+            "description": "-------- --------------------- nfc tags -------------------- type1 { nfc forum tag type 1... } type2 { nfc forum tag type 2... } type4a { nfc forum tag type 4 iso14443a... } type4b { nfc forum tag type 4 iso14443b... } mf { nfc type mifare classic/plus tag... } barcode { nfc barcode tag... } -------- --------------------- general --------------------- help this help decode decode ndef records",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "nfc mf cread": {
+            "command": "nfc mf cread",
+            "description": "prints nfc data exchange format (ndef)",
+            "notes": [
+                "hf mf ndefread -> shows ndef parsed data",
+                "hf mf ndefread -vv -> shows ndef parsed and raw data",
+                "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows ndef data with custom aid, key and with key b",
+                "hf mf ndefread -f myfilename -> save raw ndef to file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-v, --verbose show technical data",
+                "--aid <aid> replace default aid for ndef",
+                "-k, --key <key> replace default key for ndef",
+                "-b, --keyb use key b for access sectors (by default: key a)",
+                "-f, --file <fn> save raw ndef to file"
+            ],
+            "usage": "hf mf ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
+        },
         "nfc mf help": {
             "command": "nfc mf help",
-            "description": "-------- --------- nfc type mifare classic/plus tag -------- -------- --------------------- general --------------------- help this help ======================================================================================= nfc barcode { nfc barcode tag... } --------------------------------------------------------------------------------------- nfc barcode read available offline: no get info from thinfilm tags",
-            "notes": [
-                "hf thinfilm info"
-            ],
+            "description": "-------- --------- nfc type mifare classic/plus tag -------- -------- --------------------- general --------------------- help this help",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help"
-            ],
-            "usage": "hf thinfilm info [-h]"
+            "options": [],
+            "usage": ""
         },
         "nfc mf pread": {
             "command": "nfc mf pread",
@@ -9742,19 +10119,11 @@
         },
         "nfc type1 help": {
             "command": "nfc type1 help",
-            "description": "-------- -------------- nfc forum tag type 1 --------------- -------- --------------------- general --------------------- help this help ======================================================================================= nfc type2 { nfc forum tag type 2... } --------------------------------------------------------------------------------------- nfc type2 read available offline: no prints nfc data exchange format (ndef)",
-            "notes": [
-                "hf mfu ndefread -> shows ndef data",
-                "hf mfu ndefread -k ffffffff -> shows ndef data with key",
-                "hf mfu ndefread -f myfilename -> save raw ndef to file"
-            ],
+            "description": "-------- -------------- nfc forum tag type 1 --------------- -------- --------------------- general --------------------- help this help",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-l swap entered key's endianness",
-                "-f, --file <fn> save raw ndef to file"
-            ],
-            "usage": "hf mfu ndefread [-hl] [-k replace default key for ndef] [-f <fn>]"
+            "options": [],
+            "usage": ""
         },
         "nfc type1 read": {
             "command": "nfc type1 read",
@@ -9773,31 +10142,49 @@
         },
         "nfc type2 help": {
             "command": "nfc type2 help",
-            "description": "-------- -------------- nfc forum tag type 2 --------------- -------- --------------------- general --------------------- help this help ======================================================================================= nfc type4a { nfc forum tag type 4 iso14443a... } --------------------------------------------------------------------------------------- nfc type4a read available offline: no read nfc data exchange format (ndef) file on type 4 ndef tag",
+            "description": "-------- -------------- nfc forum tag type 2 --------------- -------- --------------------- general --------------------- help this help",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "nfc type2 read": {
+            "command": "nfc type2 read",
+            "description": "prints nfc data exchange format (ndef)",
+            "notes": [
+                "hf mfu ndefread -> shows ndef data",
+                "hf mfu ndefread -k ffffffff -> shows ndef data with key",
+                "hf mfu ndefread -f myfilename -> save raw ndef to file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help this help",
+                "-l swap entered key's endianness",
+                "-f, --file <fn> save raw ndef to file"
+            ],
+            "usage": "hf mfu ndefread [-hl] [-k replace default key for ndef] [-f <fn>]"
+        },
+        "nfc type4a help": {
+            "command": "nfc type4a help",
+            "description": "-------- --------- nfc forum tag type 4 iso14443a ---------- -------- --------------------- general --------------------- help this help",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "nfc type4a read": {
+            "command": "nfc type4a read",
+            "description": "read nfc data exchange format (ndef) file on type 4 ndef tag",
             "notes": [
                 "hf 14a ndefread",
                 "hf 14a ndefread -f myfilename -> save raw ndef to file"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help this help",
                 "-f, --file <fn> save raw ndef to file"
             ],
             "usage": "hf 14a ndefread [-h] [-f <fn>]"
-        },
-        "nfc type4a help": {
-            "command": "nfc type4a help",
-            "description": "-------- --------- nfc forum tag type 4 iso14443a ---------- -------- --------------------- general --------------------- help this help ======================================================================================= nfc type4b { nfc forum tag type 4 iso14443b... } --------------------------------------------------------------------------------------- nfc type4b read available offline: no print nfc data exchange format (ndef)",
-            "notes": [
-                "hf 14b ndefread",
-                "hf 14b ndefread -f myfilename -> save raw ndef to file"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-f, --file <fn> save raw ndef to file"
-            ],
-            "usage": "hf 14b ndefread [-h] [-f <fn>]"
         },
         "nfc type4a st25taread": {
             "command": "nfc type4a st25taread",
@@ -9816,23 +10203,25 @@
         },
         "nfc type4b help": {
             "command": "nfc type4b help",
-            "description": "-------- --------- nfc forum tag type 4 iso14443b ------------- -------- --------------------- general --------------------- help this help ======================================================================================= nfc mf { nfc type mifare classic/plus tag... } --------------------------------------------------------------------------------------- nfc mf cread available offline: no prints nfc data exchange format (ndef)",
-            "notes": [
-                "hf mf ndefread -> shows ndef parsed data",
-                "hf mf ndefread -vv -> shows ndef parsed and raw data",
-                "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows ndef data with custom aid, key and with key b",
-                "hf mf ndefread -f myfilename -> save raw ndef to file"
-            ],
+            "description": "-------- --------- nfc forum tag type 4 iso14443b ------------- -------- --------------------- general --------------------- help this help",
+            "notes": [],
             "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "nfc type4b read": {
+            "command": "nfc type4b read",
+            "description": "print nfc data exchange format (ndef)",
+            "notes": [
+                "hf 14b ndefread",
+                "hf 14b ndefread -f myfilename -> save raw ndef to file"
+            ],
+            "offline": false,
             "options": [
                 "-h, --help this help",
-                "-v, --verbose show technical data",
-                "--aid <aid> replace default aid for ndef",
-                "-k, --key <key> replace default key for ndef",
-                "-b, --keyb use key b for access sectors (by default: key a)",
                 "-f, --file <fn> save raw ndef to file"
             ],
-            "usage": "hf mf ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
+            "usage": "hf 14b ndefread [-h] [-f <fn>]"
         },
         "prefs get barmode": {
             "command": "prefs get barmode",
@@ -9932,15 +10321,26 @@
         },
         "prefs help": {
             "command": "prefs help",
-            "description": "help this help get { get a preference } set { set a preference } show show all preferences --------------------------------------------------------------------------------------- prefs show available offline: yes show all persistent preferences",
+            "description": "help this help get { get a preference } set { set a preference } show show all preferences",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "prefs set barmode": {
+            "command": "prefs set barmode",
+            "description": "set persistent preference of hf/lf tune command styled output in the client",
             "notes": [
-                "prefs show"
+                "prefs set barmode --mix"
             ],
             "offline": true,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "--bar measured values as bar only",
+                "--mix measured values as numbers and bar",
+                "--val measured values only"
             ],
-            "usage": "prefs show [-h]"
+            "usage": "prefs set barmode [-h] [--bar] [--mix] [--val]"
         },
         "prefs set clientdebug": {
             "command": "prefs set clientdebug",
@@ -10003,18 +10403,11 @@
         },
         "prefs set help": {
             "command": "prefs set help",
-            "description": "help this help barmode set bar mode clientdebug set client debug level clientdelay set client execution delay color set color support emoji set emoji display hints set hint display savepaths ... to be adjusted next ... plotsliders set plot slider display --------------------------------------------------------------------------------------- prefs set barmode available offline: yes set persistent preference of hf/lf tune command styled output in the client",
-            "notes": [
-                "prefs set barmode --mix"
-            ],
+            "description": "help this help barmode set bar mode clientdebug set client debug level clientdelay set client execution delay color set color support emoji set emoji display hints set hint display savepaths ... to be adjusted next ... plotsliders set plot slider display",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "--bar measured values as bar only",
-                "--mix measured values as numbers and bar",
-                "--val measured values only"
-            ],
-            "usage": "prefs set barmode [-h] [--bar] [--mix] [--val]"
+            "options": [],
+            "usage": ""
         },
         "prefs set hints": {
             "command": "prefs set hints",
@@ -10061,6 +10454,18 @@
             ],
             "usage": "prefs set savepaths [-hc] [--def <path>] [--dump <path>] [--trace <path>]"
         },
+        "prefs show": {
+            "command": "prefs show",
+            "description": "show all persistent preferences",
+            "notes": [
+                "prefs show"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "prefs show [-h]"
+        },
         "quit": {
             "command": "quit",
             "description": "quit the proxmark3 client terminal",
@@ -10088,15 +10493,11 @@
         },
         "script help": {
             "command": "script help",
-            "description": "this is a feature to run lua/cmd/python scripts. you can place scripts within the luascripts/cmdscripts/pyscripts folders. --------------------------------------------------------------------------------------- script list available offline: yes list available lua, cmd and python scripts",
-            "notes": [
-                "script list"
-            ],
+            "description": "this is a feature to run lua/cmd/python scripts. you can place scripts within the luascripts/cmdscripts/pyscripts folders. --------------------------------------------------------------------------------------- script list available offline: yes",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help"
-            ],
-            "usage": "script list [-h]"
+            "options": [],
+            "usage": ""
         },
         "script run": {
             "command": "script run",
@@ -10125,6 +10526,14 @@
             ],
             "usage": "smart brute [-ht]"
         },
+        "smart help": {
+            "command": "smart help",
+            "description": "help this help list list iso 7816 history upgrade upgrade sim module firmware",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
         "smart info": {
             "command": "smart info",
             "description": "extract more detailed information from smart card.",
@@ -10137,6 +10546,27 @@
                 "-v, --verbose verbose"
             ],
             "usage": "smart info [-hv]"
+        },
+        "smart list": {
+            "command": "smart list",
+            "description": "alias of `trace list -t 7816` with selected protocol data to annotate trace buffer you can load a trace from file (see `trace load -h`) or it be downloaded from device by default it accepts all other arguments of `trace list`. note that some might not be relevant for this specific protocol",
+            "notes": [
+                "smart list -f -> show frame delay times",
+                "smart list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "-1, --buffer use data from trace buffer",
+                "-f show frame delay times",
+                "-c mark crc bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into wireshark using encapsulation type \"iso 14443\"",
+                "--dict <file> use dictionary keys file"
+            ],
+            "usage": "smart list [-h1fcrux] [--dict <file>]"
         },
         "smart raw": {
             "command": "smart raw",
@@ -10190,20 +10620,15 @@
         },
         "smart upgrade": {
             "command": "smart upgrade",
-            "description": "[=] ------------------------------------------------------------------- [!] warning - sim module firmware upgrade [!] a dangerous command, do wrong and you could brick the sim module [=] ------------------------------------------------------------------- upgrade rdv4.0 sim module firmware",
-            "notes": [
-                "smart upgrade -f sim011.bin"
-            ],
+            "description": "[=] ------------------------------------------------------------------- [!] warning - sim module firmware upgrade [!] a dangerous command, do wrong and you could brick the sim module [=] -------------------------------------------------------------------",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-f, --file <fn> specify firmware file name"
-            ],
-            "usage": "smart upgrade [-h] -f <fn>"
+            "options": [],
+            "usage": ""
         },
-        "trace help": {
-            "command": "trace help",
-            "description": "help this help extract extract authentication challenges found in trace list list protocol data in trace buffer load load trace from file save save trace buffer to file --------------------------------------------------------------------------------------- trace extract available offline: yes extracts protocol authentication challenges from trace buffer",
+        "trace extract": {
+            "command": "trace extract",
+            "description": "extracts protocol authentication challenges from trace buffer",
             "notes": [
                 "trace extract",
                 "trace extract -1"
@@ -10214,6 +10639,14 @@
                 "-1, --buffer use data from trace buffer"
             ],
             "usage": "trace extract [-h1]"
+        },
+        "trace help": {
+            "command": "trace help",
+            "description": "help this help extract extract authentication challenges found in trace list list protocol data in trace buffer load load trace from file save save trace buffer to file",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
         },
         "trace list": {
             "command": "trace list",
@@ -10287,15 +10720,24 @@
         },
         "usart btfactory": {
             "command": "usart btfactory",
-            "description": "reset bt add-on to factory settings this requires 1) btpower to be turned on 2) bt add-on to not be connected => the add-on blue led must blink warning: process only if strictly needed!",
+            "description": "reset bt add-on to factory settings this requires 1) btpower to be turned on 2) bt add-on to not be connected => the add-on blue led must blink",
+            "notes": [],
+            "offline": false,
+            "options": [],
+            "usage": ""
+        },
+        "usart btpin": {
+            "command": "usart btpin",
+            "description": "change bt add-on pin. warning: this requires 1) btpower to be turned on 2) bt add-on to not be connected => the add-on blue led must blink",
             "notes": [
-                "usart btfactory"
+                "usart btpin -p 1234"
             ],
             "offline": false,
             "options": [
-                "-h, --help this help"
+                "-h, --help this help",
+                "-p, --pin <dec> desired pin number (4 digits)"
             ],
-            "usage": "usart btfactory [-h]"
+            "usage": "usart btpin [-h] -p <dec>"
         },
         "usart config": {
             "command": "usart config",
@@ -10317,16 +10759,11 @@
         },
         "usart help": {
             "command": "usart help",
-            "description": "help this help --------------------------------------------------------------------------------------- usart btpin available offline: no change bt add-on pin. warning: this requires 1) btpower to be turned on 2) bt add-on to not be connected => the add-on blue led must blink",
-            "notes": [
-                "usart btpin -p 1234"
-            ],
+            "description": "help this help",
+            "notes": [],
             "offline": true,
-            "options": [
-                "-h, --help this help",
-                "-p, --pin <dec> desired pin number (4 digits)"
-            ],
-            "usage": "usart btpin [-h] -p <dec>"
+            "options": [],
+            "usage": ""
         },
         "usart rx": {
             "command": "usart rx",
@@ -10431,7 +10868,15 @@
         },
         "wiegand help": {
             "command": "wiegand help",
-            "description": "help this help list list available wiegand formats encode encode to wiegand raw hex (currently for hid prox) decode convert raw hex to decoded wiegand format (currently for hid prox) --------------------------------------------------------------------------------------- wiegand list available offline: yes list available wiegand formats",
+            "description": "help this help list list available wiegand formats encode encode to wiegand raw hex (currently for hid prox) decode convert raw hex to decoded wiegand format (currently for hid prox)",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "wiegand list": {
+            "command": "wiegand list",
+            "description": "list available wiegand formats",
             "notes": [
                 "wiegand list"
             ],
@@ -10443,8 +10888,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 608,
+        "commands_extracted": 687,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-02-14T20:43:01"
+        "extracted_on": "2022-02-16T13:50:08"
     }
 }
