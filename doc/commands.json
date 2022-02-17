@@ -3659,13 +3659,13 @@
                 "hf mf chk --4k -k ffffffffffff -> check all sectors, all keys against mifare 4k",
                 "hf mf chk --1k --emu -> check all sectors, all keys, 1k, and write to emulator memory",
                 "hf mf chk --1k --dump -> check all sectors, all keys, 1k, and write to file",
-                "hf mf chk -a --blk 0 -f mfc_default_keys.dic -> check dictionary against block 0, key a"
+                "hf mf chk -a --tblk 0 -f mfc_default_keys.dic -> check dictionary against block 0, key a"
             ],
             "offline": false,
             "options": [
                 "-h, --help this help",
                 "-k, --key <hex> key specified as 12 hex symbols",
-                "--blk <dec> input block number",
+                "--tblk <dec> target block number",
                 "-a target key a",
                 "-b target key b",
                 "-*, --all target both key a & b (default)",
@@ -3677,7 +3677,7 @@
                 "--dump dump found keys to binary file",
                 "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf mf chk [-hab*] [-k <hex>]... [--blk <dec>] [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [-f <fn>]"
+            "usage": "hf mf chk [-hab*] [-k <hex>]... [--tblk <dec>] [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [-f <fn>]"
         },
         "hf mf cload": {
             "command": "hf mf cload",
@@ -4182,7 +4182,7 @@
             "command": "hf mf nested",
             "description": "execute nested attack against mifare classic card for key recovery",
             "notes": [
-                "hf mf nested --single --blk 0 -a ffffffffffff --tblk 4 --ta -> single sector key recovery. use block 0 key a to find block 4 key a",
+                "hf mf nested --blk 0 -a -k ffffffffffff --tblk 4 --ta -> use block 0 key a to find block 4 key a (single sector key recovery)",
                 "hf mf nested --mini --blk 0 -a -k ffffffffffff -> key recovery against mifare mini",
                 "hf mf nested --1k --blk 0 -a -k ffffffffffff -> key recovery against mifare classic 1k",
                 "hf mf nested --2k --blk 0 -a -k ffffffffffff -> key recovery against mifare 2k",
@@ -4204,10 +4204,9 @@
                 "--tb target b key",
                 "--emu fill simulator keys from found keys",
                 "--dump dump found keys to file",
-                "--single single sector (defaults to all)",
                 "--mem use dictionary from flashmemory"
             ],
-            "usage": "hf mf nested [-hab] [-k <hex>] [--mini] [--1k] [--2k] [--4k] [--blk <dec>] [--tblk <dec>] [--ta] [--tb] [--emu] [--dump] [--single] [--mem]"
+            "usage": "hf mf nested [-hab] [-k <hex>] [--mini] [--1k] [--2k] [--4k] [--blk <dec>] [--tblk <dec>] [--ta] [--tb] [--emu] [--dump] [--mem]"
         },
         "hf mf personalize": {
             "command": "hf mf personalize",
@@ -10890,6 +10889,6 @@
     "metadata": {
         "commands_extracted": 687,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-02-16T13:50:08"
+        "extracted_on": "2022-02-17T00:41:11"
     }
 }

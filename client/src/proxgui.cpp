@@ -70,7 +70,7 @@ extern "C" void RepaintGraphWindow(void) {
 extern "C" void ShowPictureWindow(char *fn) {
     // No support for jpeg2000 in Qt Image since a while...
     // https://doc.qt.io/qt-5/qtimageformats-index.html
-    if(strlen(fn) > 4 && !strcmp(fn + strlen(fn) - 4, ".jp2"))
+    if (strlen(fn) > 4 && !strcmp(fn + strlen(fn) - 4, ".jp2"))
         return;
     if (!gui) {
         // Show a notice if X11/XQuartz isn't available

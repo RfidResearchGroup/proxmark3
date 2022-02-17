@@ -1,6 +1,6 @@
 //  MIFARE bruteforce tool
 //  It's Multi threaded and supports all DES/2TDEA/3TDEA/AES crypto authentication modes.
-//  also supports six different LCG random generators. 
+//  also supports six different LCG random generators.
 //  as a consequece this tools also work on MIFARE Ultralight-C challenges
 //
 //
