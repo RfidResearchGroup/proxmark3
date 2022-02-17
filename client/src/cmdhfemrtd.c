@@ -1817,7 +1817,7 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
     return PM3_SUCCESS;
 }
 
-static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_sod, int hash_algo) {
+static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_sod, int hash_algo, bool fastdump) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
 
@@ -1835,7 +1835,11 @@ static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_s
             if (calc_all_zero == true && sod_all_zero == true) {
                 continue;
             } else if (calc_all_zero == true) {
-                PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File couldn't be read, but is in EF_SOD."), i);
+                if (fastdump && !dg_table[i].fastdump && !dg_table[i].pace && !dg_table[i].eac) {
+                    PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File was skipped, but is in EF_SOD."), i);
+                } else {
+                    PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File couldn't be read, but is in EF_SOD."), i);
+                }
             } else if (sod_all_zero == true) {
                 PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File is not in EF_SOD."), i);
             } else if (hash_matches == false) {
@@ -2010,7 +2014,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
     DropField();
 
-    emrtd_print_ef_sod_info(*dg_hashes_calc, *dg_hashes_sod, hash_algo);
+    emrtd_print_ef_sod_info(*dg_hashes_calc, *dg_hashes_sod, hash_algo, true);
 
     return PM3_SUCCESS;
 }
@@ -2110,7 +2114,7 @@ int infoHF_EMRTD_offline(const char *path) {
     }
     free(filepath);
 
-    emrtd_print_ef_sod_info(*dg_hashes_calc, *dg_hashes_sod, hash_algo);
+    emrtd_print_ef_sod_info(*dg_hashes_calc, *dg_hashes_sod, hash_algo, false);
 
     return PM3_SUCCESS;
 }
