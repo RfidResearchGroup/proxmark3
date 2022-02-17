@@ -209,13 +209,6 @@ static uint8_t NumOfSectors(char card) {
     }
 }
 
-static uint8_t GetSectorFromBlockNo(uint8_t blockNo) {
-    if (blockNo < 32 * 4)
-        return blockNo / 4;
-    else
-        return 32 + ((blockNo - (32 * 4)) / 16);
-}
-
 static char GetFormatFromSector(uint8_t sectors) {
     switch (sectors) {
         case MIFARE_MINI_MAXSECTOR:
@@ -3120,12 +3113,12 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
         // loop sectors but block is used as to keep track of from which blocks to test
         int b = blockNo;
-        for (int i = 0; i < SectorsCnt; ++i) {
+        for (int i = mfSectorNum(b); i < SectorsCnt; ++i) {
 
             // skip already found keys.
             if (e_sector[i].foundKey[trgKeyType]) continue;
 
-            for (uint16_t c = 0; c < keycnt; c += max_keys) {
+            for (uint32_t c = 0; c < keycnt; c += max_keys) {
 
                 PrintAndLogEx(NORMAL, "." NOLF);
                 fflush(stdout);
@@ -3135,7 +3128,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
                     goto out;
                 }
 
-                uint16_t size = keycnt - c > max_keys ? max_keys : keycnt - c;
+                uint32_t size = keycnt - c > max_keys ? max_keys : keycnt - c;
 
                 if (mfCheckKeys(b, trgKeyType, clearLog, size, &keyBlock[6 * c], &key64) == PM3_SUCCESS) {
                     e_sector[i].Key[trgKeyType] = key64;
@@ -3159,14 +3152,13 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
         // loop sectors but block is used as to keep track of from which blocks to test
         int b = blockNo;
-        for (int i = 0; i < SectorsCnt; i++) {
+        for (int i = mfSectorNum(b); i < SectorsCnt; i++) {
 
             // KEY A but not KEY B
             if (e_sector[i].foundKey[0] && !e_sector[i].foundKey[1]) {
 
-                uint8_t s = GetSectorFromBlockNo(b);
-                uint8_t sectrail = (mfFirstBlockOfSector(s) + mfNumBlocksPerSector(s) - 1);
-                PrintAndLogEx(INFO, "Sector: %u, First block: %u, Last block: %u, Num of blocks: %u", s, mfFirstBlockOfSector(s), sectrail, mfNumBlocksPerSector(s));
+                uint8_t sectrail = mfSectorTrailerOfSector(i);
+                PrintAndLogEx(INFO, "Sector: %u, First block: %u, Last block: %u, Num of blocks: %u", i, mfFirstBlockOfSector(i), sectrail, mfNumBlocksPerSector(i));
                 PrintAndLogEx(INFO, "Reading sector trailer");
 
                 mf_readblock_t payload;
@@ -3203,8 +3195,8 @@ out:
     PrintAndLogEx(SUCCESS, _GREEN_("found keys:"));
 
     //print keys
-    if (SectorsCnt == 1)
-        printKeyTableEx(SectorsCnt, e_sector, GetSectorFromBlockNo(blockNo));
+    if (singleSector)
+        printKeyTableEx(1, e_sector, mfSectorNum(blockNo));
     else
         printKeyTable(SectorsCnt, e_sector);
 
