@@ -48,11 +48,6 @@
 #define MIFARE_2K_MAXSECTOR 32
 #define MIFARE_4K_MAXSECTOR 40
 
-/* On some platforms, max() may already be defined */
-#ifndef max
-#define max(a, b)  ((a) > (b) ? (a) : (b))
-#endif
-
 static int CmdHelp(const char *Cmd);
 
 /*
@@ -1243,7 +1238,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
     if (singleSector) {
         uint8_t MinSectorsCnt = 0;
         // find a MIFARE type that can accommodate the provided block number
-        uint8_t s = max(mfSectorNum(trgBlockNo), mfSectorNum(blockNo));
+        uint8_t s = MAX(mfSectorNum(trgBlockNo), mfSectorNum(blockNo));
         if (s < MIFARE_MINI_MAXSECTOR) {
             MinSectorsCnt = MIFARE_MINI_MAXSECTOR;
         } else if (s < MIFARE_1K_MAXSECTOR) {
