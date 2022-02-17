@@ -1153,11 +1153,11 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14AMfNested(const char *Cmd) {
+static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't find keys...
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf nested",
                   "Execute Nested attack against MIFARE Classic card for key recovery",
-                  "hf mf nested --single --blk 0 -a FFFFFFFFFFFF --tblk 4 --ta     --> Single sector key recovery. Use block 0 Key A to find block 4 Key A\n"
+                  "hf mf nested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta           --> Use block 0 Key A to find block 4 Key A (single sector key recovery)\n"
                   "hf mf nested --mini --blk 0 -a -k FFFFFFFFFFFF                  --> Key recovery against MIFARE Mini\n"
                   "hf mf nested --1k --blk 0 -a -k FFFFFFFFFFFF                    --> Key recovery against MIFARE Classic 1k\n"
                   "hf mf nested --2k --blk 0 -a -k FFFFFFFFFFFF                    --> Key recovery against MIFARE 2k\n"
@@ -1178,7 +1178,6 @@ static int CmdHF14AMfNested(const char *Cmd) {
         arg_lit0(NULL, "tb", "Target B key"),
         arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
         arg_lit0(NULL, "dump", "Dump found keys to file"),
-        arg_lit0(NULL, "single", "Single sector (defaults to All)"),
         arg_lit0(NULL, "mem", "Use dictionary from flashmemory"),
         arg_param_end
     };
@@ -1205,7 +1204,7 @@ static int CmdHF14AMfNested(const char *Cmd) {
         keyType = MF_KEY_B;
     }
 
-    uint8_t trgBlockNo = arg_get_u32_def(ctx, 9, 0);
+    int trgBlockNo = arg_get_int_def(ctx, 9, -1);
 
     uint8_t trgKeyType = MF_KEY_A;
 
@@ -1219,8 +1218,8 @@ static int CmdHF14AMfNested(const char *Cmd) {
 
     bool transferToEml = arg_get_lit(ctx, 12);
     bool createDumpFile = arg_get_lit(ctx, 13);
-    bool singleSector = arg_get_lit(ctx, 14);
-    bool use_flashmemory = arg_get_lit(ctx, 15);
+    bool singleSector = trgBlockNo > -1;
+    bool use_flashmemory = arg_get_lit(ctx, 14);
 
     CLIParserFree(ctx);
 
@@ -1241,11 +1240,31 @@ static int CmdHF14AMfNested(const char *Cmd) {
         SectorsCnt = MIFARE_4K_MAXSECTOR;
     }
 
-    if (singleSector == false) {
-        if (SectorsCnt == 0) {
-            PrintAndLogEx(WARNING, "Invalid MIFARE Type");
+    if (singleSector) {
+        uint8_t MinSectorsCnt = 0;
+        // find a MIFARE type that can accommodate the provided block number
+        uint8_t s = max(mfSectorNum(trgBlockNo), mfSectorNum(blockNo));
+        if (s < MIFARE_MINI_MAXSECTOR) {
+            MinSectorsCnt = MIFARE_MINI_MAXSECTOR;
+        } else if (s < MIFARE_1K_MAXSECTOR) {
+            MinSectorsCnt = MIFARE_1K_MAXSECTOR;
+        } else if (s < MIFARE_2K_MAXSECTOR) {
+            MinSectorsCnt = MIFARE_2K_MAXSECTOR;
+        } else if (s < MIFARE_4K_MAXSECTOR) {
+            MinSectorsCnt = MIFARE_4K_MAXSECTOR;
+        } else {
+            PrintAndLogEx(WARNING, "Provided block out of possible MIFARE Type memory map");
             return PM3_EINVARG;
         }
+        if (SectorsCnt == 1) {
+            SectorsCnt = MinSectorsCnt;
+        } else if (SectorsCnt < MinSectorsCnt) {
+            PrintAndLogEx(WARNING, "Provided block out of provided MIFARE Type memory map");
+            return PM3_EINVARG;
+        }
+    }
+    if (SectorsCnt == 1) {
+        SectorsCnt = MIFARE_1K_MAXSECTOR;
     }
 
     if (keylen != 6) {
