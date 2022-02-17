@@ -3002,12 +3002,12 @@ static int CmdHF14AMfChk(const char *Cmd) {
                   "hf mf chk --4k -k FFFFFFFFFFFF                --> Check all sectors, all keys against MIFARE 4k\n"
                   "hf mf chk --1k --emu                          --> Check all sectors, all keys, 1K, and write to emulator memory\n"
                   "hf mf chk --1k --dump                         --> Check all sectors, all keys, 1K, and write to file\n"
-                  "hf mf chk -a --blk 0 -f mfc_default_keys.dic  --> Check dictionary against block 0, key A");
+                  "hf mf chk -a --tblk 0 -f mfc_default_keys.dic --> Check dictionary against block 0, key A");
 
     void *argtable[] = {
         arg_param_begin,
         arg_strx0("k", "key", "<hex>", "Key specified as 12 hex symbols"),
-        arg_int0(NULL, "blk", "<dec>", "Input block number"),
+        arg_int0(NULL, "tblk", "<dec>", "Target block number"),
         arg_lit0("a", NULL, "Target Key A"),
         arg_lit0("b", NULL, "Target Key B"),
         arg_lit0("*", "all", "Target both key A & B (default)"),
