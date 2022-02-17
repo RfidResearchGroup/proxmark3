@@ -48,6 +48,11 @@
 #define MIFARE_2K_MAXSECTOR 32
 #define MIFARE_4K_MAXSECTOR 40
 
+/* On some platforms, max() may already be defined */
+#ifndef max
+#define max(a, b)  ((a) > (b) ? (a) : (b))
+#endif
+
 static int CmdHelp(const char *Cmd);
 
 /*
@@ -2700,6 +2705,73 @@ all_found:
     return PM3_SUCCESS;
 }
 
+static int mfLoadKeys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, int userkeylen, const char *filename, int fnlen) {
+    // Handle Keys
+    *pkeycnt = 0;
+    *pkeyBlock = NULL;
+    uint8_t *p;
+    // Handle user supplied key
+    // (it considers *pkeycnt and *pkeyBlock as possibly non-null so logic can be easily reordered)
+    if (userkeylen >= 6) {
+        int numKeys = userkeylen / 6;
+        p = realloc(*pkeyBlock, (*pkeycnt + numKeys) * 6);
+        if (!p) {
+            PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+            free(*pkeyBlock);
+            return PM3_EMALLOC;
+        }
+        *pkeyBlock = p;
+
+        memcpy(*pkeyBlock + *pkeycnt * 6, userkey, numKeys * 6);
+
+        for (int i = 0; i < numKeys; i++) {
+            PrintAndLogEx(INFO, "[%2d] key %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * 6, 6));
+        }
+        *pkeycnt += numKeys;
+    }
+
+    // Handle default keys
+    p = realloc(*pkeyBlock, (*pkeycnt + ARRAYLEN(g_mifare_default_keys)) * 6);
+    if (!p) {
+        PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+        free(*pkeyBlock);
+        return PM3_EMALLOC;
+    }
+    *pkeyBlock = p;
+    // Copy default keys to list
+    for (int i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
+        num_to_bytes(g_mifare_default_keys[i], 6, (uint8_t *)(*pkeyBlock + (*pkeycnt + i) * 6));
+        PrintAndLogEx(DEBUG, "[%2d] key %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * 6, 6));
+    }
+    *pkeycnt += ARRAYLEN(g_mifare_default_keys);
+
+    // Handle user supplied dictionary file
+    if (fnlen > 0) {
+        uint32_t loaded_numKeys = 0;
+        uint8_t *keyBlock_tmp = NULL;
+        int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock_tmp, 6, &loaded_numKeys);
+        if (res != PM3_SUCCESS || loaded_numKeys == 0 || *pkeyBlock == NULL) {
+            PrintAndLogEx(FAILED, "An error occurred while loading the dictionary!");
+            free(keyBlock_tmp);
+            free(*pkeyBlock);
+            return PM3_EFILE;
+        } else {
+            p = realloc(*pkeyBlock, (*pkeycnt + loaded_numKeys) * 6);
+            if (!p) {
+                PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+                free(keyBlock_tmp);
+                free(*pkeyBlock);
+                return PM3_EMALLOC;
+            }
+            *pkeyBlock = p;
+            memcpy(*pkeyBlock + *pkeycnt * 6, keyBlock_tmp, loaded_numKeys * 6);
+            *pkeycnt += loaded_numKeys;
+            free(keyBlock_tmp);
+        }
+    }
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14AMfChk_fast(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf fchk",
@@ -2770,100 +2842,11 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    // Handle Keys
-    int keycnt = 0;
-    uint32_t keyitems = ARRAYLEN(g_mifare_default_keys);
-    uint8_t *keyBlock, *p;
-    // Allocate memory for keys to be tested
-    keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
-    if (keyBlock == NULL) return PM3_EMALLOC;
-
-    // Copy default keys to list
-    for (int cnt = 0; cnt < ARRAYLEN(g_mifare_default_keys); cnt++)
-        num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t *)(keyBlock + cnt * 6));
-
-    // Handle user supplied key
-    if (keylen >= 6) {
-        int numKeys = keylen / 6;
-
-        p = realloc(keyBlock, 6 * (keyitems + numKeys));
-        if (!p) {
-            PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
-            free(keyBlock);
-            return PM3_EMALLOC;
-        }
-        keyBlock = p;
-
-        memcpy(keyBlock + 6 * keycnt, key, 6 * numKeys);
-
-        for (int i = 0; i < numKeys; i++) {
-            PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex((keyBlock + 6 * keycnt), 6));
-            keycnt++;
-        }
-
-    }
-
-    // Handle user supplied dictionary file
-    FILE *f;
-    char buf[13];
-    if (fnlen > 0) {
-        char *dict_path;
-        int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic", false);
-        if (res != PM3_SUCCESS) {
-            free(keyBlock);
-            return PM3_EFILE;
-        }
-        f = fopen(dict_path, "r");
-        if (!f) {
-            PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", dict_path);
-            free(dict_path);
-            free(keyBlock);
-            return PM3_EFILE;
-        }
-        free(dict_path);
-        // load keys from dictionary file
-        while (fgets(buf, sizeof(buf), f)) {
-            if (strlen(buf) < 12 || buf[11] == '\n')
-                continue;
-
-            while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
-
-            if (buf[0] == '#') continue; //The line start with # is comment, skip
-
-            // codesmell, only checks first char?
-            if (!isxdigit(buf[0])) {
-                PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
-                continue;
-            }
-
-            buf[12] = 0;
-
-            if (keyitems - keycnt < 2) {
-                p = realloc(keyBlock, 6 * (keyitems += 64));
-                if (!p) {
-                    PrintAndLogEx(FAILED, "Cannot allocate memory for defKeys");
-                    free(keyBlock);
-                    fclose(f);
-                    return PM3_EMALLOC;
-                }
-                keyBlock = p;
-            }
-            memset(keyBlock + 6 * keycnt, 0, 6);
-            num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6 * keycnt);
-            //PrintAndLogEx(NORMAL, "check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
-            keycnt++;
-            memset(buf, 0, sizeof(buf));
-        }
-        fclose(f);
-        PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_("%s"), keycnt, filename);
-    }
-
-    if (keycnt == 0 && !use_flashmemory) {
-        PrintAndLogEx(SUCCESS, "No key specified, trying default keys");
-        for (; keycnt < ARRAYLEN(g_mifare_default_keys); keycnt++)
-            PrintAndLogEx(NORMAL, "[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
-                          (keyBlock + 6 * keycnt)[0], (keyBlock + 6 * keycnt)[1], (keyBlock + 6 * keycnt)[2],
-                          (keyBlock + 6 * keycnt)[3], (keyBlock + 6 * keycnt)[4], (keyBlock + 6 * keycnt)[5]);
+    uint8_t *keyBlock = NULL;
+    uint32_t keycnt = 0;
+    int ret = mfLoadKeys(&keyBlock, &keycnt, key, keylen, filename, fnlen);
+    if (ret != PM3_SUCCESS) {
+        return ret;
     }
 
     // create/initialize key storage structure
@@ -2873,7 +2856,6 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         free(keyBlock);
         return PM3_EMALLOC;
     }
-
 
     uint32_t chunksize = keycnt > (PM3_CMD_DATA_SIZE / 6) ? (PM3_CMD_DATA_SIZE / 6) : keycnt;
     bool firstChunk = true, lastChunk = false;
@@ -3051,6 +3033,11 @@ static int CmdHF14AMfChk(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 12), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     CLIParserFree(ctx);
+    bool singleSector = blockNo > -1;
+    if (! singleSector) {
+        // start from first trailer block
+        blockNo = 3;
+    }
 
     //validations
     if ((m0 + m1 + m2 + m4) > 1) {
@@ -3069,122 +3056,41 @@ static int CmdHF14AMfChk(const char *Cmd) {
         SectorsCnt = MIFARE_4K_MAXSECTOR;
     }
 
-    if ((blockNo == -1) && (SectorsCnt == 1)) {
-        // Default to 1K if block number not specified
+    if (singleSector) {
+        uint8_t MinSectorsCnt = 0;
+        // find a MIFARE type that can accommodate the provided block number
+        uint8_t s =  mfSectorNum(blockNo);
+        if (s < MIFARE_MINI_MAXSECTOR) {
+            MinSectorsCnt = MIFARE_MINI_MAXSECTOR;
+        } else if (s < MIFARE_1K_MAXSECTOR) {
+            MinSectorsCnt = MIFARE_1K_MAXSECTOR;
+        } else if (s < MIFARE_2K_MAXSECTOR) {
+            MinSectorsCnt = MIFARE_2K_MAXSECTOR;
+        } else if (s < MIFARE_4K_MAXSECTOR) {
+            MinSectorsCnt = MIFARE_4K_MAXSECTOR;
+        } else {
+            PrintAndLogEx(WARNING, "Provided block out of possible MIFARE Type memory map");
+            return PM3_EINVARG;
+        }
+        if (SectorsCnt == 1) {
+            SectorsCnt = MinSectorsCnt;
+        } else if (SectorsCnt < MinSectorsCnt) {
+            PrintAndLogEx(WARNING, "Provided block out of provided MIFARE Type memory map");
+            return PM3_EINVARG;
+        }
+    }
+    if (SectorsCnt == 1) {
         SectorsCnt = MIFARE_1K_MAXSECTOR;
     }
 
-    if (blockNo > -1) {
-        if (SectorsCnt == 0) {
-            PrintAndLogEx(WARNING, "Invalid MIFARE Type");
-            return PM3_EINVARG;
-        }
-    } else {
-        blockNo = 3;
-    }
-
-    // Handle Keys
-    int keycnt = 0;
-    uint32_t keyitems = ARRAYLEN(g_mifare_default_keys);
-    uint8_t *keyBlock, *p;
-    // Allocate memory for keys to be tested
-    keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
-    if (keyBlock == NULL) return PM3_EMALLOC;
-
-    // Copy default keys to list
-    for (int cnt = 0; cnt < ARRAYLEN(g_mifare_default_keys); cnt++)
-        num_to_bytes(g_mifare_default_keys[cnt], 6, (uint8_t *)(keyBlock + cnt * 6));
-
-    // Handle user supplied key
-    if (keylen >= 6) {
-        int numKeys = keylen / 6;
-
-        p = realloc(keyBlock, 6 * (keyitems + numKeys));
-        if (!p) {
-            PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
-            free(keyBlock);
-            return PM3_EMALLOC;
-        }
-        keyBlock = p;
-
-        memcpy(keyBlock + 6 * keycnt, key, 6 * numKeys);
-
-        for (int i = 0; i < numKeys; i++) {
-            PrintAndLogEx(NORMAL, "[%2d] key %s", keycnt, sprint_hex((keyBlock + 6 * keycnt), 6));
-            keycnt++;
-        }
-
-    }
-
-    // Handle user supplied dictionary file
-    FILE *f;
-    char buf[13];
-    if (fnlen > 0) {
-        char *dict_path;
-        int res = searchFile(&dict_path, DICTIONARIES_SUBDIR, filename, ".dic", false);
-        if (res != PM3_SUCCESS) {
-            free(keyBlock);
-            return PM3_EFILE;
-        }
-        f = fopen(dict_path, "r");
-        if (!f) {
-            PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", dict_path);
-            free(dict_path);
-            free(keyBlock);
-            return PM3_EFILE;
-        }
-        free(dict_path);
-        // load keys from dictionary file
-        while (fgets(buf, sizeof(buf), f)) {
-            if (strlen(buf) < 12 || buf[11] == '\n')
-                continue;
-
-            while (fgetc(f) != '\n' && !feof(f)) ;  //goto next line
-
-            if (buf[0] == '#') continue; //The line start with # is comment, skip
-
-            // codesmell, only checks first char?
-            if (!isxdigit(buf[0])) {
-                PrintAndLogEx(FAILED, "File content error. '" _YELLOW_("%s")"' must include 12 HEX symbols", buf);
-                continue;
-            }
-
-            buf[12] = 0;
-
-            if (keyitems - keycnt < 2) {
-                p = realloc(keyBlock, 6 * (keyitems += 64));
-                if (!p) {
-                    PrintAndLogEx(FAILED, "Cannot allocate memory for defKeys");
-                    free(keyBlock);
-                    fclose(f);
-                    return PM3_EMALLOC;
-                }
-                keyBlock = p;
-            }
-            memset(keyBlock + 6 * keycnt, 0, 6);
-            num_to_bytes(strtoll(buf, NULL, 16), 6, keyBlock + 6 * keycnt);
-            //PrintAndLogEx(NORMAL, "check key[%2d] %012" PRIx64, keycnt, bytes_to_num(keyBlock + 6*keycnt, 6));
-            keycnt++;
-            memset(buf, 0, sizeof(buf));
-        }
-        fclose(f);
-        PrintAndLogEx(SUCCESS, "Loaded %2d keys from " _YELLOW_("%s"), keycnt, filename);
+    uint8_t *keyBlock = NULL;
+    uint32_t keycnt = 0;
+    int ret = mfLoadKeys(&keyBlock, &keycnt, key, keylen, filename, fnlen);
+    if (ret != PM3_SUCCESS) {
+        return ret;
     }
 
     uint64_t key64 = 0;
-
-    if (keycnt == 0) {
-        PrintAndLogEx(INFO, "No key specified, trying default keys");
-        for (; keycnt < ARRAYLEN(g_mifare_default_keys); keycnt++)
-            PrintAndLogEx(NORMAL, "[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
-                          (keyBlock + 6 * keycnt)[0],
-                          (keyBlock + 6 * keycnt)[1],
-                          (keyBlock + 6 * keycnt)[2],
-                          (keyBlock + 6 * keycnt)[3],
-                          (keyBlock + 6 * keycnt)[4],
-                          (keyBlock + 6 * keycnt)[5]
-                         );
-    }
 
     // create/initialize key storage structure
     sector_t *e_sector = NULL;
@@ -3239,6 +3145,8 @@ static int CmdHF14AMfChk(const char *Cmd) {
                 }
                 clearLog = false;
             }
+            if (singleSector)
+                break;
             b < 127 ? (b += 4) : (b += 16);
         }
     }
@@ -3284,6 +3192,8 @@ static int CmdHF14AMfChk(const char *Cmd) {
                     e_sector[i].Key[1] = key64;
                 }
             }
+            if (singleSector)
+                break;
             b < 127 ? (b += 4) : (b += 16);
         }
     }
