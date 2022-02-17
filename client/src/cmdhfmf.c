@@ -3628,9 +3628,9 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
     char strA[12 + 1] = {0};
     char strB[12 + 1] = {0};
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "|-----|----------------|---|----------------|---|");
-    PrintAndLogEx(SUCCESS, "| Sec | key A          |res| key B          |res|");
-    PrintAndLogEx(SUCCESS, "|-----|----------------|---|----------------|---|");
+    PrintAndLogEx(SUCCESS, "|-----|-----|----------------|---|----------------|---|");
+    PrintAndLogEx(SUCCESS, "| Sec | Blk | key A          |res| key B          |res|");
+    PrintAndLogEx(SUCCESS, "|-----|-----|----------------|---|----------------|---|");
     for (uint8_t i = 0; i < sectorscnt; i++) {
 
         snprintf(strA, sizeof(strA), "------------");
@@ -3643,8 +3643,9 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
             snprintf(strB, sizeof(strB), "%012" PRIx64, e_sector[i].Key[1]);
 
         if (e_sector[i].foundKey[0] > 1) {
-            PrintAndLogEx(SUCCESS, "| "_YELLOW_("%03d")" | " _GREEN_("%s")"   | " _YELLOW_("%c")" | " _GREEN_("%s")"   | " _YELLOW_("%c")" |"
+            PrintAndLogEx(SUCCESS, "| "_YELLOW_("%03d")" | "_YELLOW_("%03d")" | " _GREEN_("%s")"   | " _YELLOW_("%c")" | " _GREEN_("%s")"   | " _YELLOW_("%c")" |"
                           , i
+                          , mfSectorTrailerOfSector(i)
                           , strA, e_sector[i].foundKey[0]
                           , strB, e_sector[i].foundKey[1]
                          );
@@ -3655,14 +3656,15 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
             if (start_sector == 0)
                 s = i;
 
-            PrintAndLogEx(SUCCESS, "| "_YELLOW_("%03d")" | " _GREEN_("%s")"   | " _YELLOW_("%d")" | " _GREEN_("%s")"   | " _YELLOW_("%d")" |"
+            PrintAndLogEx(SUCCESS, "| "_YELLOW_("%03d")" | "_YELLOW_("%03d")" | " _GREEN_("%s")"   | " _YELLOW_("%d")" | " _GREEN_("%s")"   | " _YELLOW_("%d")" |"
                           , s
+                          , mfSectorTrailerOfSector(s)
                           , strA, e_sector[i].foundKey[0]
                           , strB, e_sector[i].foundKey[1]
                          );
         }
     }
-    PrintAndLogEx(SUCCESS, "|-----|----------------|---|----------------|---|");
+    PrintAndLogEx(SUCCESS, "|-----|-----|----------------|---|----------------|---|");
 
     if (e_sector[0].foundKey[0] > 1) {
         PrintAndLogEx(INFO, "( "
