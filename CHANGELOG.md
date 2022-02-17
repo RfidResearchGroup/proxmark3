@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mf nested`: removed option `--single` redundant with usage of `--tblk` (@doegox)
+ - Fixed `hf mf chk` single block mode (@doegox)
+ - Fixed `hf mf fchk/chk` internal logic to load keys (@doegox)
+ - Changed `hf mf *` printKeyTable: now display sector trailer info too (@doegox)
+ - Changed `hf mf chk` option `--blk` into `--tblk` (as for nested) (@doegox)
  - Added new tool `mfd_multi_brute` - MIFARE DESfire / UL-C key recovery (@iceman1001)
  - Fixed `hf emrtd info` segfault on some platforms (@doegox)
  - Fixed `hf emrtd info` when offline (@doegox)
