@@ -474,7 +474,7 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     int res =  mfReadBlock(blockno, keytype, key, data);
     if (res == PM3_SUCCESS) {
 
-        uint8_t sector = GetSectorFromBlockNo(blockno);
+        uint8_t sector = mfSectorNum(blockno);
         mf_print_sector_hdr(sector);
         mf_print_block(blockno, data);
         if (verbose) {
@@ -1321,8 +1321,8 @@ static int CmdHF14AMfNested(const char *Cmd) {
         if (e_sector == NULL) return PM3_EMALLOC;
 
         // add our known key
-        e_sector[GetSectorFromBlockNo(blockNo)].foundKey[keyType] = 1;
-        e_sector[GetSectorFromBlockNo(blockNo)].Key[keyType] = key64;
+        e_sector[mfSectorNum(blockNo)].foundKey[keyType] = 1;
+        e_sector[mfSectorNum(blockNo)].Key[keyType] = key64;
 
         //test current key and additional standard keys first
         // add parameter key
@@ -1574,8 +1574,8 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     if (e_sector == NULL) return PM3_EMALLOC;
 
     // add our known key
-    e_sector[GetSectorFromBlockNo(blockNo)].foundKey[keyType] = 1;
-    e_sector[GetSectorFromBlockNo(blockNo)].Key[keyType] = key64;
+    e_sector[mfSectorNum(blockNo)].foundKey[keyType] = 1;
+    e_sector[mfSectorNum(blockNo)].Key[keyType] = key64;
 
     //test current key and additional standard keys first
     // add parameter key
@@ -3710,7 +3710,7 @@ static int CmdHF14AMfEGetBlk(const char *Cmd) {
     uint8_t data[16] = {0x00};
     if (mfEmlGetMem(data, blockno, 1) == PM3_SUCCESS) {
 
-        uint8_t sector = GetSectorFromBlockNo(blockno);
+        uint8_t sector = mfSectorNum(blockno);
         mf_print_sector_hdr(sector);
         mf_print_block(blockno, data);
     }
@@ -4713,7 +4713,7 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t sector = GetSectorFromBlockNo(blockno);
+    uint8_t sector = mfSectorNum(blockno);
     mf_print_sector_hdr(sector);
     mf_print_block(blockno, data);
 
@@ -5919,7 +5919,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     data.nonce2 =  prng_successor(NT0, 31);;
     data.nr2 = bytes_to_num(outB + 8, 4);
     data.ar2 = bytes_to_num(outB + 12, 4);
-    data.sector = GetSectorFromBlockNo(outA[5]);
+    data.sector = mfSectorNum(outA[5]);
     data.keytype = outA[4];
     data.state = FIRST;
 
