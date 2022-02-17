@@ -489,17 +489,27 @@ int MFPGetVersion(bool activateField, bool leaveSignalON, uint8_t *dataout, int 
 // Mifare Memory Structure: up to 32 Sectors with 4 blocks each (1k and 2k cards),
 // plus evtl. 8 sectors with 16 blocks each (4k cards)
 uint8_t mfNumBlocksPerSector(uint8_t sectorNo) {
-    if (sectorNo < 32)
+    if (sectorNo < 32) {
         return 4;
-    else
+    } else {
         return 16;
+    }
 }
 
 uint8_t mfFirstBlockOfSector(uint8_t sectorNo) {
-    if (sectorNo < 32)
+    if (sectorNo < 32) {
         return sectorNo * 4;
-    else
+    } else {
         return 32 * 4 + (sectorNo - 32) * 16;
+    }
+}
+
+uint8_t mfSectorTrailerOfSector(uint8_t sectorNo) {
+    if (sectorNo < 32) {
+        return (sectorNo * 4) | 0x03;
+    } else {
+        return (32 * 4 + (sectorNo - 32) * 16) | 0x0f;
+    }
 }
 
 // assumes blockno is 0-255..
