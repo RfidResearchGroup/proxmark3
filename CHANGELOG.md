@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mf value`  - decode a value block (@iceman1001)
  - Changed `hf mf nested`: removed option `--single` redundant with usage of `--tblk` (@doegox)
  - Fixed `hf mf chk` single block mode (@doegox)
  - Fixed `hf mf fchk/chk` internal logic to load keys (@doegox)
