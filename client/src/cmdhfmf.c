@@ -6208,10 +6208,10 @@ static bool mfc_value(const uint8_t *d, uint32_t *val) {
     uint32_t b = MemLeToUint4byte(d + 8);
 
     int val_checks = (
-        (a == b) && (a == ~a_inv) &&
-        (d[12] == (~d[13] & 0xFF)) &&
-        (d[14] == (~d[15] & 0xFF))
-    );
+                         (a == b) && (a == ~a_inv) &&
+                         (d[12] == (~d[13] & 0xFF)) &&
+                         (d[14] == (~d[15] & 0xFF))
+                     );
 
     if (val) {
         *val = a;
@@ -6241,7 +6241,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
     uint32_t value = 0;
 
     if (mfc_value(data, &value))  {
-        PrintAndLogEx(SUCCESS, "Dec... " _YELLOW_("%" PRIu32 ), value);
+        PrintAndLogEx(SUCCESS, "Dec... " _YELLOW_("%" PRIu32), value);
         PrintAndLogEx(SUCCESS, "Hex... " _YELLOW_("0x%" PRIX32), value);
     } else {
         PrintAndLogEx(FAILED, "No value block detected");

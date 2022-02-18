@@ -4098,7 +4098,7 @@
         },
         "hf mf help": {
             "command": "hf mf help",
-            "description": "help this help list list mifare history hardnested nested attack for hardened mifare classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace acl decode and print mifare classic access rights bytes view display content from tag dump file",
+            "description": "help this help list list mifare history hardnested nested attack for hardened mifare classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace acl decode and print mifare classic access rights bytes value decode a value block view display content from tag dump file",
             "notes": [],
             "offline": true,
             "options": [],
@@ -4357,6 +4357,19 @@
                 "-r, --reset reset card"
             ],
             "usage": "hf mf supercard [-hr]"
+        },
+        "hf mf value": {
+            "command": "hf mf value",
+            "description": "decode of a mifare value block",
+            "notes": [
+                "hf mf value -d 87d612007829edff87d6120011ee11ee"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "-d, --data <hex> 16 hex bytes"
+            ],
+            "usage": "hf mf value [-h] -d <hex>"
         },
         "hf mf view": {
             "command": "hf mf view",
@@ -7162,10 +7175,10 @@
                 "--4205 target chip type em 4205",
                 "--4305 target chip type em 4305 (default)",
                 "--4369 target chip type em 4369",
-                "--4369 target chip type em 4469",
+                "--4469 target chip type em 4469",
                 "-p, --pwd <hex> optional - password, 4 bytes hex"
             ],
-            "usage": "lf em 4x05 wipe [-h] [--4205] [--4305] [--4369] [--4369] [-p <hex>]"
+            "usage": "lf em 4x05 wipe [-h] [--4205] [--4305] [--4369] [--4469] [-p <hex>]"
         },
         "lf em 4x05 write": {
             "command": "lf em 4x05 write",
@@ -10887,8 +10900,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 687,
+        "commands_extracted": 688,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-02-17T00:41:11"
+        "extracted_on": "2022-02-18T21:30:00"
     }
 }

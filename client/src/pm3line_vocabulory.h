@@ -305,6 +305,7 @@ const static vocabulory_t vocabulory[] = {
     { 0, "hf mf rdsc" }, 
     { 0, "hf mf restore" }, 
     { 0, "hf mf setmod" }, 
+    { 1, "hf mf value" }, 
     { 1, "hf mf view" }, 
     { 0, "hf mf wipe" }, 
     { 0, "hf mf wrbl" }, 
