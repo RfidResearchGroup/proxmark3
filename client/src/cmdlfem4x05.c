@@ -871,7 +871,7 @@ int CmdEM4x05Wipe(const char *Cmd) {
         arg_lit0(NULL, "4205", "target chip type EM 4205"),
         arg_lit0(NULL, "4305", "target chip type EM 4305 (default)"),
         arg_lit0(NULL, "4369", "target chip type EM 4369"),
-        arg_lit0(NULL, "4369", "target chip type EM 4469"),
+        arg_lit0(NULL, "4469", "target chip type EM 4469"),
         arg_str0("p", "pwd", "<hex>", "optional - password, 4 bytes hex"),
         arg_param_end
     };
