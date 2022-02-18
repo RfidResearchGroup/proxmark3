@@ -2254,7 +2254,7 @@ void DisablePrivacySlixLIso15693(uint8_t *password) {
     StartCountSspClk();
     uint32_t start_time = 0, eof_time = 0;
     // 4 == pass id.
-    int res = set_pass_15693_slixl(start_time, &eof_time, 0x10, password);
+    int res = set_pass_15693_slixl(start_time, &eof_time, 0x04, password);
     reply_ng(CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY, res, NULL, 0);
     switch_off();
 }
