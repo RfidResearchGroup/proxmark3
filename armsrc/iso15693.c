@@ -2248,15 +2248,36 @@ static uint32_t destroy_15693_slixl(uint32_t start_time, uint32_t *eof_time, uin
 }
 
 */
+
+// Sets a PRIVACY password to all ZEROS
 void DisablePrivacySlixLIso15693(uint8_t *password) {
     LED_D_ON();
     Iso15693InitReader();
     StartCountSspClk();
     uint32_t start_time = 0, eof_time = 0;
-    // 4 == pass id.
+
+    // Password identifier Password byte
+    // 0x04  Privacy
+    // 0x08  Destroy SLIX-L
+    // 0x10  EAS/AFI
     int res = set_pass_15693_slixl(start_time, &eof_time, 0x04, password);
     reply_ng(CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY, res, NULL, 0);
     switch_off();
 }
 
+// Sets a EAS/AFI password to all ZEROS
+void DisableEAS_AFISlixLIso15693(uint8_t *password) {
+    LED_D_ON();
+    Iso15693InitReader();
+    StartCountSspClk();
+    uint32_t start_time = 0, eof_time = 0;
+
+    // Password identifier Password byte
+    // 0x04  Privacy
+    // 0x08  Destroy SLIX-L
+    // 0x10  EAS/AFI
+    int res = set_pass_15693_slixl(start_time, &eof_time, 0x10, password);
+    reply_ng(CMD_HF_ISO15693_SLIX_L_DISABLE_AESAFI, res, NULL, 0);
+    switch_off();
+}
 
