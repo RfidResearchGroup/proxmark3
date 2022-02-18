@@ -158,11 +158,11 @@ extern bool g_tearoff_enabled;
 
 // Nibble logic
 #ifndef NIBBLE_HIGH
-# define NIBBLE_HIGH(b) ( (b & 0xF0) >> 4 )
+# define NIBBLE_HIGH(b) ( ((b) & 0xF0) >> 4 )
 #endif
 
 #ifndef NIBBLE_LOW
-# define NIBBLE_LOW(b)  ( b & 0x0F )
+# define NIBBLE_LOW(b)  ((b) & 0x0F )
 #endif
 
 #ifndef CRUMB
