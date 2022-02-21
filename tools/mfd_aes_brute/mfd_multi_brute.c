@@ -365,6 +365,13 @@ int main(int argc, char *argv[]) {
     }
 
     uint8_t  g_idx = atoi(argv[2]);
+
+    // -2 (zero index and last item is NULL);
+    if (g_idx > ARRAYLEN(generators) - 2) {
+        printf("generator index is out-of-range\n");
+        return 1;
+    }
+
     uint64_t start_time = atoi(argv[3]);
 
     const bool support_aesni = platform_aes_hw_available();
