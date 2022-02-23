@@ -247,6 +247,8 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV1") " )", major, minor);
     else if (major == 0x12 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
+    else if (major == 0x22 && minor == 0x00)
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
     else if (major == 0x42 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
     else if (major == 0x33 && minor == 0x00)
@@ -280,11 +282,15 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return DESFIRE_EV1;
     if (major == 0x12 && minor == 0x00)
         return DESFIRE_EV2;
+    if (major == 0x22 && minor == 0x00)
+        return DESFIRE_EV2;
+    if (major == 0x42 && minor == 0x00)
+        return DESFIRE_EV2;
     if (major == 0x33 && minor == 0x00)
         return DESFIRE_EV3;
     if (major == 0x30 && minor == 0x00)
         return DESFIRE_LIGHT;
-    if (major == 0x11 &&  minor == 0x00)
+    if (major == 0x11 && minor == 0x00)
         return PLUS_EV1;
     if (major == 0x10 && minor == 0x00)
         return NTAG413DNA;
