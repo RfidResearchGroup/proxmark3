@@ -1803,6 +1803,17 @@ bool CheckCardCipurse(void) {
 }
 
 static int CmdHFCipurseTest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf cipurse test",
+                  "Regression tests",
+                  "hf cipurse test");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     CIPURSETest(true);
     return PM3_SUCCESS;
 }
@@ -1885,7 +1896,7 @@ static command_t CommandTable[] = {
     {"updkey",    CmdHFCipurseUpdateKey,     IfPm3Iso14443a,  "Update key"},
     {"updakey",   CmdHFCipurseUpdateKeyAttr, IfPm3Iso14443a,  "Update key attributes"},
     {"default",   CmdHFCipurseDefault,       IfPm3Iso14443a,  "Set default key and file id for all the other commands"},
-    {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Tests"},
+    {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Regression tests"},
     {NULL, NULL, 0, NULL}
 };
 

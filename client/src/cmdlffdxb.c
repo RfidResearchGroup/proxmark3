@@ -208,7 +208,7 @@ static int CmdFDXBdemodBI(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Reserved/RFU:      %u", reservedCode);
     PrintAndLogEx(SUCCESS, "Animal Tag:        %s", animalBit ? _YELLOW_("True") : "False");
     PrintAndLogEx(SUCCESS, "Has extended data: %s [0x%X]", dataBlockBit ? _YELLOW_("True") : "False", extended);
-    PrintAndLogEx(SUCCESS, "CRC:           0x%04X - [%04X] - %s", crc_16, calcCrc, (calcCrc == crc_16) ? _GREEN_("Passed") : _RED_("Fail") );
+    PrintAndLogEx(SUCCESS, "CRC:           0x%04X - [%04X] - %s", crc_16, calcCrc, (calcCrc == crc_16) ? _GREEN_("ok") : _RED_("fail") );
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %d", preambleIndex, size);

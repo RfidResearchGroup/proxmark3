@@ -5561,6 +5561,17 @@ static int CmdHF14ADesDump(const char *Cmd) {
 }
 
 static int CmdHF14ADesTest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes test",
+                  "Regression crypto tests",
+                  "hf mfdes test");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     DesfireTest(true);
     return PM3_SUCCESS;
 }
@@ -5609,7 +5620,7 @@ static command_t CommandTable[] = {
     {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "Operations with value file (get/credit/limited credit/debit/clear)"},
     {"clearrecfile",     CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
-    {"test",             CmdHF14ADesTest,             AlwaysAvailable, "Test crypto"},
+    {"test",             CmdHF14ADesTest,             AlwaysAvailable, "Regression crypto tests"},
     {NULL, NULL, NULL, NULL}
 };
 
