@@ -83,9 +83,9 @@ static const APDUSpcCodeDescription_t UAPDpdateKeyAttrCodeDescriptions[] = {
 
 static const APDUSpcCodeDescription_t UAPDpdateKeyCodeDescriptions[] = {
     {0x6982, "Key is frozen or only the key itself has the rights to update" },
-    {0x6984, "key enc key is blocked or invalid" },
+    {0x6984, "Enc key is blocked or invalid" },
     {0x6985, "Deactivated file" },
-    {0x6A80, "invalid algo, key length or kvv" },
+    {0x6A80, "Invalid algo, key length or kvv" },
     {0x6A88, "Invalid key number (outside the range supported by the current DF)" }
 };
 
