@@ -332,8 +332,7 @@ void CIPURSEPrintInfoFile(uint8_t *data, size_t len) {
     }
 
     PrintAndLogEx(INFO, "--- " _CYAN_("CIPURSE Information") "---------------------");
-    PrintAndLogEx(INFO, "version........ " _YELLOW_("%d"), data[0]);
-    PrintAndLogEx(INFO, "revision....... " _YELLOW_("%d"), data[1]);
+    PrintAndLogEx(INFO, "Version........ " _YELLOW_("v%d.%d"), data[0], data[1]);
 
     if (len >= 3)
         CIPURSEPrintPersoMode(data[2]);
