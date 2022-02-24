@@ -151,7 +151,7 @@ int demodNedap(bool verbose) {
                       , customerCode
                       , sprint_hex_inrow(data, size / 8)
                      );
-        PrintAndLogEx(DEBUG, "Checksum (%s) 0x%04X",  _GREEN_("ok"), checksum);
+        PrintAndLogEx(DEBUG, "Checksum ( %s ) 0x%04X",  _GREEN_("ok"), checksum);
 
     } else {
         PrintAndLogEx(ERR, "Invalid idx (1:%02x - 2:%02x - 3:%02x - 4:%02x - 5:%02x)", idxC1, idxC2, idxC3, idxC4, idxC5);

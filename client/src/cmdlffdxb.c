@@ -581,7 +581,7 @@ int demodFDXB(bool verbose) {
 
     uint8_t c[] = {0, 0};
     compute_crc(CRC_11784, raw, sizeof(raw), &c[0], &c[1]);
-    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X (%s)", crc, (crc == (c[1] << 8 | c[0])) ? _GREEN_("ok") : _RED_("fail"));
+    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X ( %s )", crc, (crc == (c[1] << 8 | c[0])) ? _GREEN_("ok") : _RED_("fail"));
     // iceman: crc doesn't protect the extended data?
     PrintAndLogEx(SUCCESS, "Raw                " _GREEN_("%s"), sprint_hex(raw, 8));
 

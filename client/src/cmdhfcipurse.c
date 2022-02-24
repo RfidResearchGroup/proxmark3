@@ -377,12 +377,13 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
         res = CIPURSESelectFileEx(true, true, fileId, buf, bufSize, len, sw);
         if (res != 0 || *sw != 0x9000) {
             if (verbose) {
-                PrintAndLogEx(ERR, "Cipurse select file 0x%04x " _RED_("error") ". Card returns 0x%04x", fileId, *sw);
+                PrintAndLogEx(ERR, "Cipurse select file 0x%04x " _RED_("error"));
+                 PrintAndLogEx(ERR, "Card returns 0x%04x", fileId, *sw);
             }
             return PM3_ESOFT;
         }
         if (verbose) {
-            PrintAndLogEx(INFO, "Cipurse select file " _CYAN_("0x%04x ") _GREEN_("OK"), fileId);
+            PrintAndLogEx(INFO, "Cipurse select file " _YELLOW_("0x%04X ") " ( " _GREEN_("ok") " )", fileId);
         }
 
     } else if (selectDefaultFile) {

@@ -608,7 +608,7 @@ int flash_write(flash_file_t *ctx) {
             }
             fflush(stdout);
         }
-        PrintAndLogEx(NORMAL, " " _GREEN_("OK"));
+        PrintAndLogEx(NORMAL, " " _GREEN_("ok"));
         fflush(stdout);
     }
     return PM3_SUCCESS;

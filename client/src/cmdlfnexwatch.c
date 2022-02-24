@@ -237,12 +237,12 @@ int demodNexWatch(bool verbose) {
 
 
     if (parity == calc_parity) {
-        PrintAndLogEx(DEBUG, "          parity : %s (0x%X)", _GREEN_("ok"), parity);
+        PrintAndLogEx(DEBUG, "          parity : ( %s ) 0x%X", _GREEN_("ok"), parity);
     } else {
-        PrintAndLogEx(DEBUG, "          parity : %s (0x%X != 0x%X)", _RED_("fail"), parity, calc_parity);
+        PrintAndLogEx(DEBUG, "          parity : ( %s ) 0x%X != 0x%X", _RED_("fail"), parity, calc_parity);
     }
 
-    PrintAndLogEx(DEBUG, "        checksum : %s (0x%02X)", (m_idx < ARRAYLEN(items)) ? _GREEN_("ok") : _RED_("fail"), chk);
+    PrintAndLogEx(DEBUG, "        checksum : ( %s ) 0x%02X", (m_idx < ARRAYLEN(items)) ? _GREEN_("ok") : _RED_("fail"), chk);
 
     PrintAndLogEx(INFO, " Raw : " _YELLOW_("%08"PRIX32"%08"PRIX32"%08"PRIX32), raw1, raw2, raw3);
     return PM3_SUCCESS;

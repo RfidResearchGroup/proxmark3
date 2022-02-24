@@ -331,7 +331,7 @@ bool ParamLoadFromJson(struct tlvdb *tlv) {
         return false;
     }
 
-    PrintAndLogEx(SUCCESS, "Load params: json(%zu) (%s)", json_array_size(root), _GREEN_("OK"));
+    PrintAndLogEx(SUCCESS, "Load params: json(%zu) ( %s )", json_array_size(root), _GREEN_("ok"));
 
     for (int i = 0; i < json_array_size(root); i++) {
         json_t *data, *jtag, *jlength, *jvalue;
