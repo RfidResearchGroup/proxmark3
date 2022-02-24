@@ -571,10 +571,7 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
 
     if (verbose == false) {
-        if (bres)
-            PrintAndLogEx(INFO, "Authentication ( " _GREEN_("ok") " )");
-        else
-            PrintAndLogEx(ERR, "Authentication ( " _RED_("fail") " )");
+        PrintAndLogEx(INFO, "Authentication ( %s ) ", (bres) ?  _GREEN_("ok") :  _RED_("fail"));
     }
 
     DropField();
@@ -709,8 +706,8 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         arg_str0(NULL, "fid",     "<hex>", "File ID"),
         arg_int0("o",  "offset",  "<dec>", "Offset for reading data from file"),
         arg_lit0(NULL, "noauth",  "Read file without authentication"),
-        arg_str0(NULL, "sreq",    "<plain|mac|encode>", "communication reader-PICC security level (def: mac)"),
-        arg_str0(NULL, "sresp",   "<plain|mac|encode>", "communication PICC-reader security level (def: mac)"),
+        arg_str0(NULL, "sreq",    "<plain|mac|encode>", "Communication reader-PICC security level (def: mac)"),
+        arg_str0(NULL, "sresp",   "<plain|mac|encode>", "Communication PICC-reader security level (def: mac)"),
         arg_str0("d",  "data",    "<hex>", "Data to write to new file"),
         arg_lit0(NULL, "commit",  "Commit after write"),
         arg_param_end
@@ -775,7 +772,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
                       , keyId
                       , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
                      );
-        PrintAndLogEx(INFO, "data[%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
+        PrintAndLogEx(INFO, "Data [%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
     }
 
     if (noAuth == false) {
@@ -1014,7 +1011,7 @@ static int CmdHFCipurseWriteFileAttr(const char *Cmd) {
     SetAPDULogging(APDULogging);
 
     if (verbose) {
-        PrintAndLogEx(INFO, "attribtes data[%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
+        PrintAndLogEx(INFO, "Attribtes data[%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
         CIPURSEPrintFileUpdateAttr(hdata, hdatalen);
     }
 
@@ -1185,7 +1182,7 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
         arg_str0("k",  "key",     "<hex>", "Auth key"),
 
         arg_str0(NULL, "aid",     "<hex>", "Application ID (AID) ( 1..16 bytes )"),
-        arg_str0(NULL, "fid",     "<hex>", "file ID (FID) ( 2 bytes )"),
+        arg_str0(NULL, "fid",     "<hex>", "File ID (FID) ( 2 bytes )"),
         arg_lit0(NULL, "mfd",     "Select masterfile by empty id"),
 
         arg_str0("d",  "data",    "<hex>", "Data with DGI for create"),
@@ -1260,7 +1257,7 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
 
     if (verbose) {
         if (!noauth)
-            PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+            PrintAndLogEx(INFO, "Key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                           , keyId
                           , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
                          );
@@ -1367,7 +1364,7 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
             PrintAndLogEx(INFO, "Child file id " _CYAN_("%x"), childFileId);
 
         if (!noauth)
-            PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+            PrintAndLogEx(INFO, "Key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                           , keyId
                           , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
                          );
@@ -1463,26 +1460,26 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "show technical data"),
-        arg_int0("n",  NULL,      "<dec>", "key ID for authentication"),
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Show technical data"),
+        arg_int0("n",  NULL,      "<dec>", "Key ID for authentication"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
 
-        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
-        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
-        arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "Application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "File ID (FID)"),
+        arg_lit0(NULL, "mfd",     "Select masterfile by empty id"),
 
-        arg_int0(NULL, "newkeyn", "<dec>", "target key ID"),
-        arg_str0(NULL, "newkey",  "<hex 16 byte>", "new key"),
-        arg_str0(NULL, "newkeya", "<hex 1 byte>", "new key additional info. 0x00 by default"),
+        arg_int0(NULL, "newkeyn", "<dec>", "Target key ID"),
+        arg_str0(NULL, "newkey",  "<hex 16 byte>", "New key"),
+        arg_str0(NULL, "newkeya", "<hex 1 byte>", "New key additional info (def: 0x00)"),
 
-        arg_int0(NULL, "enckeyn", "<dec>", "encrypt key ID (must be equal to the key on the card)"),
-        arg_str0(NULL, "enckey",  "<hex 16 byte>", "encrypt key (must be equal to the key on the card)"),
+        arg_int0(NULL, "enckeyn", "<dec>", "Encrypt key ID (must be equal to the key on the card)"),
+        arg_str0(NULL, "enckey",  "<hex 16 byte>", "Encrypt key (must be equal to the key on the card)"),
 
-        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
-        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
-        arg_lit0(NULL, "no-auth", "execute without authentication"),
-        arg_lit0(NULL, "commit",  "commit "),
+        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "Communication reader-PICC security level"),
+        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "Communication PICC-reader security level"),
+        arg_lit0(NULL, "no-auth", "Execute without authentication"),
+        arg_lit0(NULL, "commit",  "Commit "),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1605,7 +1602,7 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
 
     if (verbose) {
         if (!noauth)
-            PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+            PrintAndLogEx(INFO, "Key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                           , keyId
                           , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
                          );
@@ -1661,21 +1658,21 @@ static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "show technical data"),
-        arg_int0("n",  NULL,      "<dec>", "key ID for authentication"),
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Show technical data"),
+        arg_int0("n",  NULL,      "<dec>", "Key ID for authentication"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
 
-        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
-        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
-        arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "Application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "File ID (FID)"),
+        arg_lit0(NULL, "mfd",     "Select masterfile by empty id"),
 
-        arg_int0(NULL, "trgkeyn", "<dec>", "target key ID"),
-        arg_str0(NULL, "attr",    "<hex 1 byte>", "key attributes 1 byte"),
-        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
-        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
-        arg_lit0(NULL, "no-auth", "execute without authentication"),
-        arg_lit0(NULL, "commit",  "commit "),
+        arg_int0(NULL, "trgkeyn", "<dec>", "Target key ID"),
+        arg_str0(NULL, "attr",    "<hex 1 byte>", "Key attributes 1 byte"),
+        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "Communication reader-PICC security level"),
+        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "Communication PICC-reader security level"),
+        arg_lit0(NULL, "no-auth", "Execute without authentication"),
+        arg_lit0(NULL, "commit",  "Commit "),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1753,7 +1750,7 @@ static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
 
     if (verbose) {
         if (!noauth)
-            PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+            PrintAndLogEx(INFO, "Key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                           , keyId
                           , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
                          );
