@@ -356,10 +356,10 @@ int flash_load(flash_file_t *ctx, bool force) {
     // We could not find proper version_information
     if (res == PM3_EUNDEF)
         PrintAndLogEx(WARNING, "Unable to check version_information");
-    PrintAndLogEx(INFO,  "Make sure to flash a correct and up-to-date version");
-    PrintAndLogEx(INFO,  "You can force flashing this firmware by using the option '--force'");
     if (force)
         return PM3_SUCCESS;
+    PrintAndLogEx(INFO,  "Make sure to flash a correct and up-to-date version");
+    PrintAndLogEx(INFO,  "You can force flashing this firmware by using the option '--force'");
 fail:
     flash_free(ctx);
     return res;
