@@ -288,6 +288,8 @@ elif [ "$SCRIPT" = "pm3-flash" ]; then
       while [ "$1" != "" ]; do
           if [ "$1" == "-b" ]; then
               ARGS+=("--unlock-bootloader")
+          elif [ "$1" == "--force" ]; then
+              ARGS+=("--force")
           else
               ARGS+=("--image" "$1")
           fi
@@ -320,7 +322,19 @@ elif [ "$SCRIPT" = "pm3-flash-all" ]; then
   FINDBTDONGLE=false
   FINDBTRFCOMM=false
   FINDBTDIRECT=false
-  CMD() { $CLIENT "--port" "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE" "--image" "$FULLIMAGE"; }
+
+
+  CMD() {
+      ARGS=("--port" "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE" "--image" "$FULLIMAGE")
+      shift;
+      while [ "$1" != "" ]; do
+          if [ "$1" == "--force" ]; then
+              ARGS+=("--force")
+          fi
+          shift;
+      done
+      $CLIENT "${ARGS[@]}";
+  }
   HELP() {
       cat << EOF
 Quick helper script for flashing a Proxmark device via USB
@@ -340,7 +354,17 @@ elif [ "$SCRIPT" = "pm3-flash-fullimage" ]; then
   FINDBTDONGLE=false
   FINDBTRFCOMM=false
   FINDBTDIRECT=false
-  CMD() { $CLIENT "--port" "$1" "--flash" "--image" "$FULLIMAGE"; }
+  CMD() {
+      ARGS=("--port" "$1" "--flash" "--image" "$FULLIMAGE")
+      shift;
+      while [ "$1" != "" ]; do
+          if [ "$1" == "--force" ]; then
+              ARGS+=("--force")
+          fi
+          shift;
+      done
+      $CLIENT "${ARGS[@]}";
+  }
   HELP() {
       cat << EOF
 Quick helper script for flashing a Proxmark device via USB
@@ -360,7 +384,17 @@ elif [ "$SCRIPT" = "pm3-flash-bootrom" ]; then
   FINDBTDONGLE=false
   FINDBTRFCOMM=false
   FINDBTDIRECT=false
-  CMD() { $CLIENT "--port" "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE"; }
+  CMD() {
+      ARGS=("--port" "$1" "--flash" "--unlock-bootloader" "--image" "$BOOTIMAGE")
+      shift;
+      while [ "$1" != "" ]; do
+          if [ "$1" == "--force" ]; then
+              ARGS+=("--force")
+          fi
+          shift;
+      done
+      $CLIENT "${ARGS[@]}";
+  }
   HELP() {
       cat << EOF
 Quick helper script for flashing a Proxmark device via USB

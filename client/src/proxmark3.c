@@ -576,7 +576,8 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      --incognito                         do not use history, prefs file nor log files");
         PrintAndLogEx(NORMAL, "\nOptions in flasher mode:");
         PrintAndLogEx(NORMAL, "      --flash                             flash Proxmark3, requires at least one --image");
-        PrintAndLogEx(NORMAL, "      --unlock-bootloader                 Enable flashing of bootloader area *DANGEROUS* (need --flash or --flash-info)");
+        PrintAndLogEx(NORMAL, "      --unlock-bootloader                 Enable flashing of bootloader area *DANGEROUS* (need --flash)");
+        PrintAndLogEx(NORMAL, "      --force                             Enable flashing even if firmware seems to not match client version");
         PrintAndLogEx(NORMAL, "      --image <imagefile>                 image to flash. Can be specified several times.");
         PrintAndLogEx(NORMAL, "\nExamples:");
         PrintAndLogEx(NORMAL, "\n  to run Proxmark3 client:\n");
@@ -602,7 +603,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
     }
 }
 
-static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[FLASH_MAX_FILES], bool can_write_bl) {
+static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[FLASH_MAX_FILES], bool can_write_bl, bool force) {
 
     int ret = PM3_EUNDEF;
     flash_file_t files[FLASH_MAX_FILES];
@@ -635,7 +636,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
     }
 
     for (int i = 0 ; i < num_files; ++i) {
-        ret = flash_load(&files[i]);
+        ret = flash_load(&files[i], force);
         if (ret != PM3_SUCCESS) {
             goto finish2;
         }
@@ -732,6 +733,7 @@ int main(int argc, char *argv[]) {
 
     bool flash_mode = false;
     bool flash_can_write_bl = false;
+    bool flash_force = false;
     bool debug_mode_forced = false;
     int flash_num_files = 0;
     char *flash_filenames[FLASH_MAX_FILES];
@@ -948,6 +950,12 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        // force flash even if firmware seems to not match client version
+        if (strcmp(argv[i], "--force") == 0) {
+            flash_force = true;
+            continue;
+        }
+
         // flash file
         if (strcmp(argv[i], "--image") == 0) {
             if (flash_num_files == FLASH_MAX_FILES) {
@@ -989,7 +997,7 @@ int main(int argc, char *argv[]) {
         speed = USART_BAUD_RATE;
 
     if (flash_mode) {
-        flash_pm3(port, flash_num_files, flash_filenames, flash_can_write_bl);
+        flash_pm3(port, flash_num_files, flash_filenames, flash_can_write_bl, flash_force);
         exit(EXIT_SUCCESS);
     }
 

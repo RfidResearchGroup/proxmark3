@@ -235,17 +235,6 @@ static int check_segs(flash_file_t *ctx, int can_write_bl, uint32_t flash_size) 
     return PM3_SUCCESS;
 }
 
-static int ask_confirmation(void) {
-    PrintAndLogEx(INFO,  "Make sure to flash a correct and up-to-date version");
-    PrintAndLogEx(NORMAL,  "Do you want to flash the current image? (yes/no)");
-    char answer[10];
-    if ((fgets (answer, sizeof(answer), stdin) == NULL) || (strncmp(answer, "yes", 3) != 0)) {
-        return PM3_EOPABORTED;
-    } else {
-        return PM3_SUCCESS;
-    }
-}
-
 static int print_and_validate_version(struct version_information_t *vi) {
     if (vi->magic != VERSION_INFORMATION_MAGIC)
         return PM3_EFILE;
@@ -255,7 +244,7 @@ static int print_and_validate_version(struct version_information_t *vi) {
     if (strlen(g_version_information.armsrc) == 9) {
         if (strncmp(vi->armsrc, g_version_information.armsrc, 9) != 0) {
             PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));
-            return ask_confirmation();
+            return PM3_EINVARG;
         } else {
             return PM3_SUCCESS;
         }
@@ -264,7 +253,7 @@ static int print_and_validate_version(struct version_information_t *vi) {
 }
 
 // Load an ELF file for flashing
-int flash_load(flash_file_t *ctx) {
+int flash_load(flash_file_t *ctx, bool force) {
     FILE *fd;
     Elf32_Ehdr_t *ehdr;
     Elf32_Shdr_t *shdrs = NULL;
@@ -364,13 +353,13 @@ int flash_load(flash_file_t *ctx) {
     }
     if (res == PM3_SUCCESS)
         return res;
-    if (res == PM3_EOPABORTED)
-        goto fail;
-    // We could not find proper version_information, so we ask for confirmation
-    PrintAndLogEx(WARNING, "Unable to check version_information");
-    res = ask_confirmation();
-    if (res == PM3_SUCCESS)
-        return res;
+    // We could not find proper version_information
+    if (res == PM3_EUNDEF)
+        PrintAndLogEx(WARNING, "Unable to check version_information");
+    PrintAndLogEx(INFO,  "Make sure to flash a correct and up-to-date version");
+    PrintAndLogEx(INFO,  "You can force flashing this firmware by using the option '--force'");
+    if (force)
+        return PM3_SUCCESS;
 fail:
     flash_free(ctx);
     return res;
