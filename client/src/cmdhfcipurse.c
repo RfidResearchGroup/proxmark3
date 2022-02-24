@@ -113,7 +113,11 @@ static int SelectAndPrintInfoFile(void) {
 
     if (len > 0) {
         PrintAndLogEx(INFO, "Info file ( " _GREEN_("ok") " )");
-        PrintAndLogEx(INFO, "[%zu]: %s", len, sprint_hex(buf, len));
+
+        PrintAndLogEx(INFO, " # | bytes                                           | ascii");
+        PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
+        print_hex_break(buf, len, 16);
+        PrintAndLogEx(NORMAL, "");
         CIPURSEPrintInfoFile(buf, len);
         PrintAndLogEx(INFO, "");
     }
@@ -149,7 +153,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     int res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
     if (res == PM3_SUCCESS && sw == 0x9000) {
         mfExist = true;
-        PrintAndLogEx(INFO, _CYAN_("MasterFile") " exist and can be selected.");
+        PrintAndLogEx(INFO, _YELLOW_("MasterFile") " exist and can be selected.");
 
         res = SelectAndPrintInfoFile();
         infoPrinted = (res == PM3_SUCCESS);
@@ -173,7 +177,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
         DropField();
         return res;
     }
-    PrintAndLogEx(INFO, "Application `AF F1` selected " _GREEN_("successfully"));
+    PrintAndLogEx(INFO, "Application `" _YELLOW_("AF F1") "` selected " _GREEN_("successfully"));
 
     if (sw != 0x9000) {
         if (sw == 0x0000) {
@@ -1276,7 +1280,8 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
 
     res = CIPURSECreateFile(hdata, hdatalen, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Create file command " _RED_("ERROR") ". Card returns:\n  0x%04x - %s", sw,
+        PrintAndLogEx(ERR, "Create file command " _RED_("ERROR"));
+        PrintAndLogEx(ERR, "0x%04x - %s", sw,
                       GetSpecificAPDUCodeDesc(SelectAPDUCodeDescriptions, ARRAYLEN(SelectAPDUCodeDescriptions), sw));
         DropField();
         return PM3_ESOFT;
@@ -1403,7 +1408,8 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     if (useChildFID) {
         res = CIPURSEDeleteFile(childFileId, buf, sizeof(buf), &len, &sw);
         if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Delete child file " _CYAN_("%04x ") _RED_("ERROR") ". Card returns:\n  0x%04x - %s", childFileId, sw,
+            PrintAndLogEx(ERR, "Delete child file " _CYAN_("%04x ") _RED_("ERROR"));
+            PrintAndLogEx(ERR, "0x%04x - %s", childFileId, sw,
                           GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw));
             DropField();
             return PM3_ESOFT;
@@ -1412,7 +1418,8 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     } else if (useFID) {
         res = CIPURSEDeleteFile(fileId, buf, sizeof(buf), &len, &sw);
         if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Delete file " _CYAN_("%04x ") _RED_("ERROR") ". Card returns:\n  0x%04x - %s", fileId, sw,
+            PrintAndLogEx(ERR, "Delete file " _CYAN_("%04x ") _RED_("ERROR"));
+            PrintAndLogEx(ERR, "0x%04x - %s", fileId, sw,
                           GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw));
             DropField();
             return PM3_ESOFT;
@@ -1421,7 +1428,8 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     } else {
         res = CIPURSEDeleteFileAID(aid, aidLen, buf, sizeof(buf), &len, &sw);
         if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Delete application " _CYAN_("%s ") _RED_("ERROR") ". Card returns:\n  0x%04x - %s",
+            PrintAndLogEx(ERR, "Delete application " _CYAN_("%s ") _RED_("ERROR"));
+            PrintAndLogEx(ERR, "0x%04x - %s",
                           sprint_hex_inrow(aid, aidLen),
                           sw,
                           GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw));
@@ -1617,7 +1625,8 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
 
     res = CIPURSEUpdateKey(encKeyId, newKeyId, keydata, sizeof(keydata), buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Update key command " _RED_("ERROR") ". Card returns:\n  0x%04x - %s", sw,
+        PrintAndLogEx(ERR, "Update key command " _RED_("ERROR"));
+        PrintAndLogEx(ERR, "0x%04x - %s", sw,
                       GetSpecificAPDUCodeDesc(UAPDpdateKeyCodeDescriptions, ARRAYLEN(UAPDpdateKeyCodeDescriptions), sw));
         DropField();
         return PM3_ESOFT;
@@ -1764,7 +1773,8 @@ static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
 
     res = CIPURSEUpdateKeyAttrib(trgKeyId, hdata[0], buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Update key attributes command " _RED_("ERROR") ". Card returns:\n  0x%04x - %s", sw,
+        PrintAndLogEx(ERR, "Update key attributes command " _RED_("ERROR"));
+        PrintAndLogEx(ERR, "0x%04x - %s", sw,
                       GetSpecificAPDUCodeDesc(UAPDpdateKeyAttrCodeDescriptions, ARRAYLEN(UAPDpdateKeyAttrCodeDescriptions), sw));
         DropField();
         return PM3_ESOFT;
