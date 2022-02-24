@@ -1899,7 +1899,7 @@
         },
         "hf cipurse help": {
             "command": "hf cipurse help",
-            "description": "help this help. test tests",
+            "description": "help this help. test regression tests",
             "notes": [],
             "offline": true,
             "options": [],
@@ -1965,11 +1965,15 @@
         },
         "hf cipurse test": {
             "command": "hf cipurse test",
-            "description": "[=] ------ cipurse tests ------ [=] kvv.............. passed [=] iso9797m2........ passed [=] smi.............. passed [=] mic.............. passed [=] auth............. passed [=] channel mac...... passed [=] channel encdec... passed [=] apdu............. passed [=] --------------------------- [+] tests [ ok ]",
-            "notes": [],
+            "description": "regression tests",
+            "notes": [
+                "hf cipurse test"
+            ],
             "offline": true,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "hf cipurse test [-h]"
         },
         "hf cipurse updakey": {
             "command": "hf cipurse updakey",
@@ -2016,7 +2020,7 @@
                 "--mfd select masterfile by empty id",
                 "--newkeyn <dec> target key id",
                 "--newkey <hex 16 byte> new key",
-                "--newkeya <hex 1 byte> new key additional info. 0x00 by default",
+                "--newkeya <hex 1 byte> new key additional info (def: 0x00)",
                 "--enckeyn <dec> encrypt key id (must be equal to the key on the card)",
                 "--enckey <hex 16 byte> encrypt key (must be equal to the key on the card)",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
@@ -5220,7 +5224,7 @@
         },
         "hf mfdes help": {
             "command": "hf mfdes help",
-            "description": "help this help list list desfire (iso 14443a) history test test crypto",
+            "description": "help this help list list desfire (iso 14443a) history test regression crypto tests",
             "notes": [],
             "offline": true,
             "options": [],
@@ -5459,11 +5463,15 @@
         },
         "hf mfdes test": {
             "command": "hf mfdes test",
-            "description": "[=] ------ desfire tests ------ [!] no space for crc. pos: 1 [=] crc16............. passed [!] no space for crc. pos: 2 [=] crc32............. passed [=] cmac subkeys...... passed [=] an10922 aes....... passed [=] an10922 2tdea..... passed [=] an10922 3tdea..... passed [=] cmac 3tdea........ passed [=] cmac 2tdea........ passed [=] cmac des.......... passed [=] ev2 session keys.. passed [=] ev2 iv calc....... passed [=] ev2 mac calc...... passed [=] trans session key. passed [=] lrp plaintexts.... passed [=] lrp updated keys.. passed [=] lrp eval.......... passed [=] lrp inc counter... passed [=] lrp encode........ passed [=] lrp decode........ passed [=] lrp subkeys....... passed [=] lrp cmac.......... passed [=] lrp session keys.. passed [=] --------------------------- [+] tests [ ok ]",
-            "notes": [],
+            "description": "regression crypto tests",
+            "notes": [
+                "hf mfdes test"
+            ],
             "offline": true,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "hf mfdes test [-h]"
         },
         "hf mfdes value": {
             "command": "hf mfdes value",
@@ -10902,6 +10910,6 @@
     "metadata": {
         "commands_extracted": 688,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-02-18T21:30:00"
+        "extracted_on": "2022-02-24T18:33:33"
     }
 }

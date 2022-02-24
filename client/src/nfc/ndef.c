@@ -515,7 +515,7 @@ static int ndefDecodePayloadSmartPoster(uint8_t *ndef, size_t ndeflen, bool prin
 
 
 typedef struct ndef_wifi_type_s {
-    const char* description;
+    const char *description;
     uint8_t bytes[2];
 } ndef_wifi_type_t;
 
@@ -527,9 +527,9 @@ static const ndef_wifi_type_t wifi_crypt_types[] = {
     {"AES/TKIP", {0x00, 0x0C}}
 };
 
-static const char* ndef_wifi_crypt_lookup(uint8_t *d) {
+static const char *ndef_wifi_crypt_lookup(uint8_t *d) {
     for (int i = 0; i < ARRAYLEN(wifi_crypt_types); ++i) {
-        if ( memcmp(d, wifi_crypt_types[i].bytes, 2) == 0) {
+        if (memcmp(d, wifi_crypt_types[i].bytes, 2) == 0) {
             return wifi_crypt_types[i].description;
         }
     }
@@ -546,9 +546,9 @@ static const ndef_wifi_type_t wifi_auth_types[] = {
     {"WPA/WPA2 PERSONAL", {0x00, 0x22}}
 };
 
-static const char* ndef_wifi_auth_lookup(uint8_t *d) {
+static const char *ndef_wifi_auth_lookup(uint8_t *d) {
     for (int i = 0; i < ARRAYLEN(wifi_auth_types); ++i) {
-        if ( memcmp(d, wifi_auth_types[i].bytes, 2) == 0) {
+        if (memcmp(d, wifi_auth_types[i].bytes, 2) == 0) {
             return wifi_auth_types[i].description;
         }
     }
@@ -568,16 +568,16 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
     size_t pos = 0;
     while (n) {
 
-        if ( ndef->Payload[pos] != 0x10 ) {
+        if (ndef->Payload[pos] != 0x10) {
             n -= 1;
             pos -= 1;
             continue;
         }
 
-        // VERSION 
+        // VERSION
         if (memcmp(&ndef->Payload[pos], "\x10\x4A", 2) == 0) {
             uint8_t len = 1;
-            PrintAndLogEx(INFO, "Version......... %s", sprint_hex(&ndef->Payload[pos + 2], len) );
+            PrintAndLogEx(INFO, "Version......... %s", sprint_hex(&ndef->Payload[pos + 2], len));
             n -= 2;
             n -= len;
             pos += 2;
@@ -588,21 +588,21 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
         if (memcmp(&ndef->Payload[pos], "\x10\x0E", 2) == 0) {
             //  10 0E 00 39
             uint8_t len = 2;
-            PrintAndLogEx(INFO, "Credential...... %s", sprint_hex(&ndef->Payload[pos + 2], len) );
+            PrintAndLogEx(INFO, "Credential...... %s", sprint_hex(&ndef->Payload[pos + 2], len));
             n -= 2;
             n -= len;
             pos += 2;
             pos += len;
         }
 
-        // AUTH_TYPE 
+        // AUTH_TYPE
         if (memcmp(&ndef->Payload[pos], "\x10\x03", 2) == 0) {
-            // 10 03 00 02 00 20 
+            // 10 03 00 02 00 20
             uint8_t len = 4;
             PrintAndLogEx(INFO, "Auth type....... %s ( " _YELLOW_("%s")" )",
-                sprint_hex(&ndef->Payload[pos + 2], len),
-                ndef_wifi_auth_lookup(&ndef->Payload[pos + 2])
-                );
+                          sprint_hex(&ndef->Payload[pos + 2], len),
+                          ndef_wifi_auth_lookup(&ndef->Payload[pos + 2])
+                         );
             n -= 2;
             n -= len;
             pos += 2;
@@ -614,9 +614,9 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
             // 10 0F 00 02 00 04
             uint8_t len = 4;
             PrintAndLogEx(INFO, "Crypt type...... %s ( " _YELLOW_("%s")" )",
-                sprint_hex(&ndef->Payload[pos + 2], len),
-                ndef_wifi_crypt_lookup(&ndef->Payload[pos + 2])
-                );
+                          sprint_hex(&ndef->Payload[pos + 2], len),
+                          ndef_wifi_crypt_lookup(&ndef->Payload[pos + 2])
+                         );
             n -= 2;
             n -= len;
             pos += 2;
@@ -627,7 +627,7 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
         if (memcmp(&ndef->Payload[pos], "\x10\x20", 2) == 0) {
             // 10 20 00 06 FF FF FF FF FF FF
             uint8_t len = ndef->Payload[pos + 3];
-            PrintAndLogEx(INFO, "MAC Address..... %s", sprint_hex_ascii(&ndef->Payload[pos + 4], len) );
+            PrintAndLogEx(INFO, "MAC Address..... %s", sprint_hex_ascii(&ndef->Payload[pos + 4], len));
             n -= 4;
             n -= len;
             pos += 4;
@@ -636,9 +636,9 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
 
         // NETWORK_IDX
         if (memcmp(&ndef->Payload[pos], "\x10\x26", 2) == 0) {
-            // 10 26 00 01 01 
+            // 10 26 00 01 01
             uint8_t len = 3;
-            PrintAndLogEx(INFO, "Network Index... %s", sprint_hex(&ndef->Payload[pos + 2], len) );
+            PrintAndLogEx(INFO, "Network Index... %s", sprint_hex(&ndef->Payload[pos + 2], len));
             n -= 2;
             n -= len;
             pos += 2;
@@ -647,9 +647,9 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
 
         // NETWORK_KEY
         if (memcmp(&ndef->Payload[pos], "\x10\x27", 2) == 0) {
-            // 10 27 00 10 74 72 69 73 74 61 6E 2D 73 70 72 69 6E 67 65 72 
+            // 10 27 00 10 74 72 69 73 74 61 6E 2D 73 70 72 69 6E 67 65 72
             uint8_t len = ndef->Payload[pos + 3];
-            PrintAndLogEx(INFO, "Network key..... %s", sprint_hex_ascii(&ndef->Payload[pos + 4], len) );
+            PrintAndLogEx(INFO, "Network key..... %s", sprint_hex_ascii(&ndef->Payload[pos + 4], len));
             n -= 4;
             n -= len;
             pos += 4;
@@ -657,9 +657,9 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
         }
         // NETWORK_NAME
         if (memcmp(&ndef->Payload[pos], "\x10\x45", 2) == 0) {
-        // 10 45 00 06 69 63 65 73 71 6C
+            // 10 45 00 06 69 63 65 73 71 6C
             uint8_t len = ndef->Payload[pos + 3];
-            PrintAndLogEx(INFO, "Network Name.... %s", sprint_hex_ascii(&ndef->Payload[pos + 4], len) );
+            PrintAndLogEx(INFO, "Network Name.... %s", sprint_hex_ascii(&ndef->Payload[pos + 4], len));
             n -= 4;
             n -= len;
             pos += 4;
@@ -670,27 +670,27 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
         // unknown the length.
         if (memcmp(&ndef->Payload[pos], "\x10\x2C", 2) == 0) {
             uint8_t len = 1;
-            PrintAndLogEx(INFO, "OOB Password......... %s", sprint_hex(&ndef->Payload[pos + 2], len) );
+            PrintAndLogEx(INFO, "OOB Password......... %s", sprint_hex(&ndef->Payload[pos + 2], len));
             n -= 2;
             n -= len;
             pos += 2;
             pos += len;
         }
         // VENDOR_EXT
-        // unknown the length.        
+        // unknown the length.
         if (memcmp(&ndef->Payload[pos], "\x10\x49", 2) == 0) {
             uint8_t len = 1;
-            PrintAndLogEx(INFO, "Vendor Ext......... %s", sprint_hex(&ndef->Payload[pos + 2], len) );
+            PrintAndLogEx(INFO, "Vendor Ext......... %s", sprint_hex(&ndef->Payload[pos + 2], len));
             n -= 2;
             n -= len;
             pos += 2;
             pos += len;
         }
         // VENDOR_WFA
-        // unknown the length.        
+        // unknown the length.
         if (memcmp(&ndef->Payload[pos], "\x10\x30\x2A", 3) == 0) {
             uint8_t len = 1;
-            PrintAndLogEx(INFO, "Vendor WFA......... %s", sprint_hex(&ndef->Payload[pos + 2], len) );
+            PrintAndLogEx(INFO, "Vendor WFA......... %s", sprint_hex(&ndef->Payload[pos + 2], len));
             n -= 2;
             n -= len;
             pos += 2;
@@ -699,14 +699,14 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
     }
 
     /*
-        ap-channel   0,  6  
-+        credential
+        ap-channel   0,  6
+    +        credential
         device-name
         mac-address
         manufacturer
         model-name
         model-number
-+        oob-password
+    +        oob-password
         primary-device-type
         rf-bands
         secondary-device-type-list
@@ -714,7 +714,7 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
         ssid
         uuid-enrollee
         uuid-registrar
-+        vendor-extension
+    +        vendor-extension
         version-1
      */
 

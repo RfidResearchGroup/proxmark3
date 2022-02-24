@@ -255,7 +255,7 @@ Check column "offline" for their availability.
 |`hf cipurse updkey      `|N       |`Update key`
 |`hf cipurse updakey     `|N       |`Update key attributes`
 |`hf cipurse default     `|N       |`Set default key and file id for all the other commands`
-|`hf cipurse test        `|Y       |`Tests`
+|`hf cipurse test        `|Y       |`Regression tests`
 
 
 ### hf epa
@@ -577,7 +577,7 @@ Check column "offline" for their availability.
 |`hf mfdes write         `|N       |`Write data to standard/backup/record/value file`
 |`hf mfdes value         `|N       |`Operations with value file (get/credit/limited credit/debit/clear)`
 |`hf mfdes clearrecfile  `|N       |`Clear record File`
-|`hf mfdes test          `|Y       |`Test crypto`
+|`hf mfdes test          `|Y       |`Regression crypto tests`
 
 
 ### hf seos

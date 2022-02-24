@@ -1638,7 +1638,7 @@ static void getTagLabel(uint8_t uid0, uint8_t uid1) {
     }
 }
 
-static void get_compact_tlv(uint8_t* d, uint8_t n) {
+static void get_compact_tlv(uint8_t *d, uint8_t n) {
     d++;
     n--;
 
@@ -1646,7 +1646,7 @@ static void get_compact_tlv(uint8_t* d, uint8_t n) {
         uint8_t tag = NIBBLE_HIGH(d[0]);
         uint8_t len = NIBBLE_LOW(d[0]);
 
-        switch(tag) {
+        switch (tag) {
             case 1:
                 PrintAndLogEx(INFO, "    %1x%1x  " _YELLOW_("%s") "   Country code in (ISO 3166-1)", tag, len, sprint_hex_inrow(d + 1, len));
                 // iso3166 script in cmdlffdb.c is buggy,  Åland, Australia not showing.  getline issues

@@ -378,7 +378,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
         if (res != 0 || *sw != 0x9000) {
             if (verbose) {
                 PrintAndLogEx(ERR, "Cipurse select file 0x%04x  ( %s )",  _RED_("fail"));
-                 PrintAndLogEx(ERR, "Card returns 0x%04x", fileId, *sw);
+                PrintAndLogEx(ERR, "Card returns 0x%04x", fileId, *sw);
             }
             return PM3_ESOFT;
         }
@@ -1434,7 +1434,7 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
             DropField();
             return PM3_ESOFT;
         }
-        PrintAndLogEx(INFO, "Delete application " _CYAN_("%s") " ( %s )",sprint_hex_inrow(aid, aidLen),  _GREEN_("ok"));
+        PrintAndLogEx(INFO, "Delete application " _CYAN_("%s") " ( %s )", sprint_hex_inrow(aid, aidLen),  _GREEN_("ok"));
     }
 
     if (needCommit) {
