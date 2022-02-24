@@ -3815,7 +3815,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
                     , poststr
                     , pre_tear
                     , post_tear
-                    , post_tear_check ? _GREEN_("OK") : _RED_("DETECTED")
+                    , post_tear_check ? _GREEN_("ok") : _RED_("DETECTED")
                 );
                 break;
             }
@@ -3826,7 +3826,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
                     , poststr
                     , pre_tear
                     , post_tear
-                    , post_tear_check ? _GREEN_("OK") : _RED_("DETECTED")
+                    , post_tear_check ? _GREEN_("ok") : _RED_("DETECTED")
                 );
 
 
@@ -3860,7 +3860,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
                     , poststr
                     , pre_tear
                     , post_tear
-                    , post_tear_check ? _GREEN_("OK") : _RED_("DETECTED")
+                    , post_tear_check ? _GREEN_("ok") : _RED_("DETECTED")
                 );
 
                 if ( post_tear_check  && b == initial_value) {
@@ -3908,7 +3908,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
                 , poststr
                 , pre_tear
                 , post_tear
-                , post_tear_check ? _GREEN_("OK") : _RED_("DETECTED")
+                , post_tear_check ? _GREEN_("ok") : _RED_("DETECTED")
             );
 
             if ( post_tear_check ) {

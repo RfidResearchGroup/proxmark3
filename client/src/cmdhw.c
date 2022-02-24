@@ -804,7 +804,7 @@ static int CmdPing(const char *Cmd) {
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
         if (len) {
             bool error = (memcmp(data, resp.data.asBytes, len) != 0);
-            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") " and content is %s", error ? _RED_("NOT ok") : _GREEN_("OK"));
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") " and content () %s )", error ? _RED_("fail") : _GREEN_("ok"));
         } else {
             PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received"));
         }

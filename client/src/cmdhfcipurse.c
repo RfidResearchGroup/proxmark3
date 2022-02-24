@@ -369,7 +369,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
             return PM3_ESOFT;
         }
         if (verbose) {
-            PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s ") _GREEN_("OK"), sprint_hex_inrow(aid, aidLen));
+            PrintAndLogEx(INFO, "Cipurse select application " _YELLOW_("%s ") " ( %s )", sprint_hex_inrow(aid, aidLen), _GREEN_("ok"));
         }
 
     } else if (useFID) {
@@ -377,7 +377,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
         res = CIPURSESelectFileEx(true, true, fileId, buf, bufSize, len, sw);
         if (res != 0 || *sw != 0x9000) {
             if (verbose) {
-                PrintAndLogEx(ERR, "Cipurse select file 0x%04x " _RED_("error"));
+                PrintAndLogEx(ERR, "Cipurse select file 0x%04x  ( %s )",  _RED_("fail"));
                  PrintAndLogEx(ERR, "Card returns 0x%04x", fileId, *sw);
             }
             return PM3_ESOFT;
@@ -396,7 +396,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
             return PM3_ESOFT;
         }
         if (verbose) {
-            PrintAndLogEx(INFO, "Cipurse select default file " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Cipurse select default file  ( " _GREEN_("ok") " )");
         }
 
     } else {
@@ -409,7 +409,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
             return PM3_ESOFT;
         }
         if (verbose) {
-            PrintAndLogEx(INFO, "Cipurse select default application " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Cipurse select default application ( " _GREEN_("ok") " )");
         }
     }
 
@@ -426,7 +426,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
             return PM3_ESOFT;
         }
         if (verbose) {
-            PrintAndLogEx(INFO, "Select child file " _CYAN_("0x%04x ") _GREEN_("OK"), childFileId);
+            PrintAndLogEx(INFO, "Select child file " _CYAN_("0x%04x ") " ( " _GREEN_("ok") " )", childFileId);
         }
     }
 
@@ -645,7 +645,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     }
 
     if (verbose) {
-        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s") " ( " _GREEN_("ok") " )", sprint_hex_inrow(aid, aidLen));
+        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s") " ( %s )", sprint_hex_inrow(aid, aidLen), _GREEN_("ok"));
         PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " offset " _YELLOW_("%zu") " key id " _YELLOW_("%d") " key " _YELLOW_("%s"), fileId, offset, keyId, sprint_hex(key, CIPURSE_AES_KEY_LENGTH));
     }
 
@@ -671,7 +671,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "Select file 0x%x ( " _GREEN_("ok") " )", fileId);
+        PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
 
     res = CIPURSEReadBinary(offset, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
@@ -768,7 +768,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
     }
 
     if (verbose) {
-        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s") " ( " _GREEN_("ok") " )", sprint_hex_inrow(aid, aidLen));
+        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s") " ( %s )", sprint_hex_inrow(aid, aidLen), _GREEN_("ok"));
         PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " offset " _YELLOW_("%zu") " key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                       , fileId
                       , offset
@@ -800,7 +800,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "Select file 0x%x ( " _GREEN_("ok") " )", fileId);
+        PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
 
     res = CIPURSEUpdateBinary(offset, hdata, hdatalen, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
@@ -816,7 +816,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
-            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
             PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
@@ -1074,7 +1074,7 @@ static int CmdHFCipurseWriteFileAttr(const char *Cmd) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
-            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
             PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
@@ -1293,10 +1293,10 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
-            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
-            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
     }
 
     DropField();
@@ -1437,17 +1437,17 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
             DropField();
             return PM3_ESOFT;
         }
-        PrintAndLogEx(INFO, "Delete application " _CYAN_("%s ") _GREEN_("OK"), sprint_hex_inrow(aid, aidLen));
+        PrintAndLogEx(INFO, "Delete application " _CYAN_("%s") " ( %s )",sprint_hex_inrow(aid, aidLen),  _GREEN_("ok"));
     }
 
     if (needCommit) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
-            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
-            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
     }
 
     DropField();
@@ -1638,10 +1638,10 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
-            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
-            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
     }
 
     DropField();
@@ -1786,10 +1786,10 @@ static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
-            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
-            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
     }
 
     DropField();

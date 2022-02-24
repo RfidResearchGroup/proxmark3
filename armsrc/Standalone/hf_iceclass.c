@@ -252,7 +252,7 @@ static int reader_attack_mode(void) {
 
         bool success = (mac_response_len == MAC_RESPONSES_SIZE);
         uint8_t num_mac = (mac_response_len >> 4);
-        Dbprintf("%u out of %d MAC obtained [%s]", num_mac, NUM_CSNS, (success) ? _GREEN_("ok") : _RED_("fail"));
+        Dbprintf("%u out of %d MAC obtained ( %s )", num_mac, NUM_CSNS, (success) ? _GREEN_("ok") : _RED_("fail"));
 
         size_t dumplen = NUM_CSNS * 24;
 

@@ -5281,7 +5281,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         PrintAndLogEx(WARNING, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
         got_first = false;
     } else {
-        PrintAndLogEx(INFO, "Authentication ( " _GREEN_("OK") " )");
+        PrintAndLogEx(INFO, "Authentication ( " _GREEN_("ok") " )");
     }
 
     // User supplied key
@@ -5290,7 +5290,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, userkey, sector0) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or the custom key is wrong");
         } else {
-            PrintAndLogEx(INFO, "Authentication ( " _GREEN_("OK") " )");
+            PrintAndLogEx(INFO, "Authentication ( " _GREEN_("ok") " )");
             got_first = true;
         }
     }
@@ -5765,7 +5765,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
             DropField();
             return res;
         }
-        PrintAndLogEx(SUCCESS, "Super card reset [ " _GREEN_("ok") " ]");
+        PrintAndLogEx(SUCCESS, "Super card reset ( " _GREEN_("ok") " )");
         return PM3_SUCCESS;
     }
 

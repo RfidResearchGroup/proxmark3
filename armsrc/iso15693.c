@@ -1589,9 +1589,9 @@ static void DbdecodeIso15693Answer(int len, uint8_t *d) {
         }
 
         if (CheckCrc15(d, len))
-            strncat(status, "[+] crc (" _GREEN_("OK") ")", DBD15STATLEN - strlen(status));
+            strncat(status, "[+] crc ( " _GREEN_("ok") " )", DBD15STATLEN - strlen(status));
         else
-            strncat(status, "[!] crc (" _RED_("fail") ")", DBD15STATLEN - strlen(status));
+            strncat(status, "[!] crc ( " _RED_("fail") " )", DBD15STATLEN - strlen(status));
 
         if (g_dbglevel >= DBG_ERROR) Dbprintf("%s", status);
     }

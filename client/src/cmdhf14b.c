@@ -191,7 +191,7 @@ static bool wait_cmd_14b(bool verbose, bool is_select, uint32_t timeout) {
             bool crc = check_crc(CRC_14443_B, data, len);
 
             PrintAndLogEx(SUCCESS, "received " _YELLOW_("%u") " bytes", len);
-            PrintAndLogEx(SUCCESS, "%s[%02X %02X] %s",
+            PrintAndLogEx(SUCCESS, "%s[%02X %02X] ( %s )",
                           sprint_hex(data, len - 2),
                           data[len - 2],
                           data[len - 1],
