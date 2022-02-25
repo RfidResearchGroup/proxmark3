@@ -287,6 +287,7 @@ static void SendVersion(void) {
         strncat(VersionString, "\n", sizeof(VersionString) - strlen(VersionString) - 1);
     }
 
+
     FormatVersionInformation(temp, sizeof(temp), "       os: ", &g_version_information);
     strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
     strncat(VersionString, "\n", sizeof(VersionString) - strlen(VersionString) - 1);

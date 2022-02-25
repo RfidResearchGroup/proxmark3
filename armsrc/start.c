@@ -28,6 +28,7 @@
 #endif
 #include "BigBuf.h"
 #include "string.h"
+#include "ticks.h"
 
 extern common_area_t g_common_area;
 extern uint32_t __data_src_start__[], __data_start__[], __data_end__[], __bss_start__[], __bss_end__[];
@@ -40,9 +41,15 @@ static void uncompress_data_section(void) {
     // uncompress data segment to RAM
     char *p = (char *)__data_src_start__;
     int res = LZ4_decompress_safe(p + 4, (char *)__data_start__, avail_in, avail_out);
-
-    if (res < 0)
-        return;
+    if (res < 0) {
+        while (true) {
+            LED_A_INV();
+            LED_B_INV();
+            LED_C_INV();
+            LED_D_INV();
+            SpinDelay(200);
+        }
+    }
     // save the size of the compressed data section
     g_common_area.arg1 = avail_in;
 }

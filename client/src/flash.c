@@ -29,6 +29,7 @@
 #include "at91sam7s512.h"
 #include "util_posix.h"
 #include "comms.h"
+#include "commonutil.h"
 
 #define FLASH_START            0x100000
 
@@ -84,12 +85,13 @@ static int chipid_to_mem_avail(uint32_t iChipID) {
 
 // Turn PHDRs into flasher segments, checking for PHDR sanity and merging adjacent
 // unaligned segments if needed
-static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr_t *phdrs, uint16_t num_phdrs, uint32_t flash_end) {
-    Elf32_Phdr_t *phdr = phdrs;
+static int build_segs_from_phdrs(flash_file_t *ctx, uint32_t flash_size) {
+    uint32_t flash_end  = FLASH_START + flash_size;
+    Elf32_Phdr_t *phdr = ctx->phdrs;
     flash_seg_t *seg;
     uint32_t last_end = 0;
 
-    ctx->segments = calloc(sizeof(flash_seg_t) * num_phdrs, sizeof(uint8_t));
+    ctx->segments = calloc(sizeof(flash_seg_t) * ctx->num_phdrs, sizeof(uint8_t));
     if (!ctx->segments) {
         PrintAndLogEx(ERR, "Out of memory");
         return PM3_EMALLOC;
@@ -98,7 +100,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr_t *phdr
     seg = ctx->segments;
 
     PrintAndLogEx(SUCCESS, "Loading usable ELF segments:");
-    for (int i = 0; i < num_phdrs; i++) {
+    for (int i = 0; i < ctx->num_phdrs; i++) {
         if (le32(phdr->p_type) != PT_LOAD) {
             phdr++;
             continue;
@@ -148,11 +150,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr_t *phdr
             PrintAndLogEx(ERR, "Error: Out of memory");
             return PM3_EMALLOC;
         }
-        if (fseek(fd, offset, SEEK_SET) < 0 || fread(data, 1, filesz, fd) != filesz) {
-            PrintAndLogEx(ERR, "Error while reading PHDR payload");
-            free(data);
-            return PM3_EFILE;
-        }
+        memcpy(data, ctx->elf + offset, filesz);
 
         uint32_t block_offset = paddr & (BLOCK_SIZE - 1);
         if (block_offset) {
@@ -208,7 +206,8 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr_t *phdr
 }
 
 // Sanity check segments and check for bootloader writes
-static int check_segs(flash_file_t *ctx, int can_write_bl, uint32_t flash_end) {
+static int check_segs(flash_file_t *ctx, int can_write_bl, uint32_t flash_size) {
+    uint32_t flash_end  = FLASH_START + flash_size;
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
 
@@ -236,92 +235,150 @@ static int check_segs(flash_file_t *ctx, int can_write_bl, uint32_t flash_end) {
     return PM3_SUCCESS;
 }
 
-// Load an ELF file and prepare it for flashing
-int flash_load(flash_file_t *ctx, const char *name, int can_write_bl, int flash_size) {
+static int print_and_validate_version(struct version_information_t *vi) {
+    if (vi->magic != VERSION_INFORMATION_MAGIC)
+        return PM3_EFILE;
+    char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+    FormatVersionInformation(temp, sizeof(temp), "", vi);
+    PrintAndLogEx(SUCCESS, _CYAN_("ELF file version") _YELLOW_(" %s"), temp);
+    if (strlen(g_version_information.armsrc) == 9) {
+        if (strncmp(vi->armsrc, g_version_information.armsrc, 9) != 0) {
+            PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));
+            return PM3_EINVARG;
+        } else {
+            return PM3_SUCCESS;
+        }
+    }
+    return PM3_EUNDEF;
+}
+
+// Load an ELF file for flashing
+int flash_load(flash_file_t *ctx, bool force) {
     FILE *fd;
-    Elf32_Ehdr_t ehdr;
-    Elf32_Phdr_t *phdrs = NULL;
-    uint16_t num_phdrs;
-    uint32_t flash_end  = FLASH_START + flash_size;
+    Elf32_Ehdr_t *ehdr;
+    Elf32_Shdr_t *shdrs = NULL;
+    uint8_t *shstr = NULL;
+     struct version_information_t *vi = NULL;
     int res = PM3_EUNDEF;
 
-    fd = fopen(name, "rb");
+    fd = fopen(ctx->filename, "rb");
     if (!fd) {
-        PrintAndLogEx(ERR, _RED_("Could not open file") " %s  >>> ", name);
+        PrintAndLogEx(ERR, _RED_("Could not open file") " %s  >>> ", ctx->filename);
         res = PM3_EFILE;
         goto fail;
     }
 
-    PrintAndLogEx(SUCCESS, _CYAN_("Loading ELF file") _YELLOW_(" %s"), name);
+    PrintAndLogEx(SUCCESS, _CYAN_("Loading ELF file") _YELLOW_(" %s"), ctx->filename);
 
-    if (fread(&ehdr, sizeof(ehdr), 1, fd) != 1) {
-        PrintAndLogEx(ERR, "Error while reading ELF file header");
+    // get filesize in order to malloc memory
+    fseek(fd, 0, SEEK_END);
+    long fsize = ftell(fd);
+    fseek(fd, 0, SEEK_SET);
+
+    if (fsize <= 0) {
+        PrintAndLogEx(ERR, "Error, when getting filesize");
+        res = PM3_EFILE;
+        fclose(fd);
+        goto fail;
+    }
+
+    ctx->elf = calloc(fsize, sizeof(uint8_t));
+    if (!ctx->elf) {
+        PrintAndLogEx(ERR, "Error, cannot allocate memory");
+        res = PM3_EMALLOC;
+        fclose(fd);
+        goto fail;
+    }
+
+    size_t bytes_read = fread(ctx->elf, 1, fsize, fd);
+    fclose(fd);
+
+    if (bytes_read != fsize) {
+        PrintAndLogEx(ERR, "Error, bytes read mismatch file size");
         res = PM3_EFILE;
         goto fail;
     }
-    if (memcmp(ehdr.e_ident, elf_ident, sizeof(elf_ident))
-            || le32(ehdr.e_version) != 1) {
+
+    ehdr = (Elf32_Ehdr_t *)ctx->elf;
+    if (memcmp(ehdr->e_ident, elf_ident, sizeof(elf_ident))
+            || le32(ehdr->e_version) != 1) {
         PrintAndLogEx(ERR, "Not an ELF file or wrong ELF type");
         res = PM3_EFILE;
         goto fail;
     }
-    if (le16(ehdr.e_type) != ET_EXEC) {
+    if (le16(ehdr->e_type) != ET_EXEC) {
         PrintAndLogEx(ERR, "ELF is not executable");
         res = PM3_EFILE;
         goto fail;
     }
-    if (le16(ehdr.e_machine) != EM_ARM) {
+    if (le16(ehdr->e_machine) != EM_ARM) {
         PrintAndLogEx(ERR, "Wrong ELF architecture");
         res = PM3_EFILE;
         goto fail;
     }
-    if (!ehdr.e_phnum || !ehdr.e_phoff) {
+    if (!ehdr->e_phnum || !ehdr->e_phoff) {
         PrintAndLogEx(ERR, "ELF has no PHDRs");
         res = PM3_EFILE;
         goto fail;
     }
-    if (le16(ehdr.e_phentsize) != sizeof(Elf32_Phdr_t)) {
+    if (le16(ehdr->e_phentsize) != sizeof(Elf32_Phdr_t)) {
         // could be a structure padding issue...
         PrintAndLogEx(ERR, "Either the ELF file or this code is made of fail");
         res = PM3_EFILE;
         goto fail;
     }
-    num_phdrs = le16(ehdr.e_phnum);
+    ctx->num_phdrs = le16(ehdr->e_phnum);
+    ctx->phdrs = (Elf32_Phdr_t *)(ctx->elf + le32(ehdr->e_phoff));
+    shdrs = (Elf32_Shdr_t *)(ctx->elf + le32(ehdr->e_shoff));
+    shdrs = (Elf32_Shdr_t *)(ctx->elf + le32(ehdr->e_shoff));
+    shstr = ctx->elf + le32(shdrs[ehdr->e_shstrndx].sh_offset);
 
-    phdrs = calloc(le16(ehdr.e_phnum) * sizeof(Elf32_Phdr_t), sizeof(uint8_t));
-    if (!phdrs) {
-        PrintAndLogEx(ERR, "Out of memory");
-        res = PM3_EMALLOC;
-        goto fail;
+    for (uint16_t i = 0; i < le16(ehdr->e_shnum); i++) {
+        if (strcmp(((char *)shstr) + shdrs[i].sh_name, ".version_information") == 0) {
+            vi = (struct version_information_t *)(ctx->elf + le32(shdrs[i].sh_offset));
+            res = print_and_validate_version(vi);
+            break;
+        }
+        if (strcmp(((char *)shstr) + shdrs[i].sh_name, ".bootphase1") == 0) {
+            uint32_t offset = *(uint32_t*)(ctx->elf + le32(shdrs[i].sh_offset) + le32(shdrs[i].sh_size) - 4);
+            if (offset >= le32(shdrs[i].sh_addr)) {
+                offset -= le32(shdrs[i].sh_addr);
+                if (offset < le32(shdrs[i].sh_size)) {
+                    vi = (struct version_information_t *)(ctx->elf + le32(shdrs[i].sh_offset) + offset);
+                    res = print_and_validate_version(vi);
+                }
+            }
+            break;
+        }
     }
-    if (fseek(fd, le32(ehdr.e_phoff), SEEK_SET) < 0) {
-        PrintAndLogEx(ERR, "Error while reading ELF PHDRs");
-        res = PM3_EFILE;
-        goto fail;
-    }
-    if (fread(phdrs, sizeof(Elf32_Phdr_t), num_phdrs, fd) != num_phdrs) {
-        res = PM3_EFILE;
-        PrintAndLogEx(ERR, "Error while reading ELF PHDRs");
-        goto fail;
-    }
+    if (res == PM3_SUCCESS)
+        return res;
+    // We could not find proper version_information
+    if (res == PM3_EUNDEF)
+        PrintAndLogEx(WARNING, "Unable to check version_information");
+    if (force)
+        return PM3_SUCCESS;
+    PrintAndLogEx(INFO,  "Make sure to flash a correct and up-to-date version");
+    PrintAndLogEx(INFO,  "You can force flashing this firmware by using the option '--force'");
+fail:
+    flash_free(ctx);
+    return res;
+}
 
-    res = build_segs_from_phdrs(ctx, fd, phdrs, num_phdrs, flash_end);
+// Prepare an ELF file for flashing
+int flash_prepare(flash_file_t *ctx, int can_write_bl, int flash_size) {
+    int res = PM3_EUNDEF;
+
+    res = build_segs_from_phdrs(ctx, flash_size);
     if (res != PM3_SUCCESS)
         goto fail;
-    res = check_segs(ctx, can_write_bl, flash_end);
+    res = check_segs(ctx, can_write_bl, flash_size);
     if (res != PM3_SUCCESS)
         goto fail;
 
-    free(phdrs);
-    fclose(fd);
-    ctx->filename = name;
     return PM3_SUCCESS;
 
 fail:
-    if (phdrs)
-        free(phdrs);
-    if (fd)
-        fclose(fd);
     flash_free(ctx);
     return res;
 }
@@ -618,6 +675,16 @@ int flash_write(flash_file_t *ctx) {
 void flash_free(flash_file_t *ctx) {
     if (!ctx)
         return;
+    if (ctx->filename != NULL) {
+        free(ctx->filename);
+        ctx->filename = NULL;
+    }
+    if (ctx->elf) {
+        free(ctx->elf);
+        ctx->elf = NULL;
+        ctx->phdrs = NULL;
+        ctx->num_phdrs = 0;
+    }
     if (ctx->segments) {
         for (int i = 0; i < ctx->num_segs; i++)
             free(ctx->segments[i].data);

@@ -58,6 +58,13 @@ if [ "$fullgitinfoextra" != "$fullgitinfo" ]; then
     fullgitinfo46="${fullgitinfo%"${fullgitinfoextra}"}"
     fullgitinfo="${fullgitinfo46}..."
 fi
+sha=$(
+    pm3path=$(dirname -- "$0")/..
+    cd "$pm3path" || return
+    # did we find the src?
+    [ -f armsrc/appmain.c ] || return
+    ls armsrc/*.[ch] common_arm/*.[ch]|grep -E -v "(disabled|version_pm3|fpga_version_info)"|xargs sha256sum|sha256sum|grep -o '^.........'
+)
 cat <<EOF
 #include "common.h"
 /* Generated file, do not edit */
@@ -74,5 +81,6 @@ const struct version_information_t SECTVERSINFO g_version_information = {
     $clean,
     "$fullgitinfo",
     "$ctime",
+    "$sha"
 };
 EOF

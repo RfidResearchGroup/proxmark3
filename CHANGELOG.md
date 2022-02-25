@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added detection of a possible mismatch between client and Proxmark3 image (@doegox)
  - Changed `hf 14a info` - added a ATR historical compact TLV decoder (@iceman1001)
  - Added `hf mf value` - decode a value block (@iceman1001)
  - Changed `hf mf nested` - removed option `--single` redundant with usage of `--tblk` (@doegox)
@@ -22,7 +23,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf_mf_uidbruteforce` - added support for S70, enhance UID length management (@cactuschibre)
  - Fixed build issues that may happen from building `mfd_aes_brute` (@linuxgemini)
  - Added silicon data parsing logic for NXP chips in `hf mfu info` (@linuxgemini)
- - Addes luascript `hf_mf_em_util.lua` - Script for emulator configuration (@nisgola)
+ - Added luascript `hf_mf_em_util.lua` - Script for emulator configuration (@nisgola)
  - Fixes `hf mf restore` - now takes bin/eml/json as dump files (@iceman1001)
  - Fixes `script run some_python_script` segfault on armhf architecture (@doegox)
  - Added `trace extract` - extract authentication parts from trace (@iceman1001)
@@ -37,7 +38,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added new standalone mode `lf_em4100rsww` (@zabszk)
  - Fixed `hf 15 slixdisable` wrong pass id (@r1ddl3rz)
 
-## [Frostbit.4.14831] [2022-01-11]
+## [Frostbit.4.14831][2022-01-11]
  - Changed Wiegand format lookup - now case-insensitive (@iceman1001)
  - Added new standalone mode `hf_15SNIFF` - Same as `hf_14ASNIFF` standalone mode for RDV4 - flashmem (@startrk1995)
  - Added `hf gallagher` commands for read/writing DESFire cards (@DarkMatterMatt)
