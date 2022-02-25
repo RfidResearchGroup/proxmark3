@@ -142,6 +142,7 @@ typedef enum {
     DESFIRE_MF3ICD40,
     DESFIRE_EV1,
     DESFIRE_EV2,
+    DESFIRE_EV2_XL,
     DESFIRE_EV3,
     DESFIRE_LIGHT,
     PLUS_EV1,
@@ -248,7 +249,7 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     else if (major == 0x12 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
     else if (major == 0x22 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2 XL") " )", major, minor);
     else if (major == 0x42 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
     else if (major == 0x33 && minor == 0x00)
@@ -283,7 +284,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
     if (major == 0x12 && minor == 0x00)
         return DESFIRE_EV2;
     if (major == 0x22 && minor == 0x00)
-        return DESFIRE_EV2;
+        return DESFIRE_EV2_XL;
     if (major == 0x42 && minor == 0x00)
         return DESFIRE_EV2;
     if (major == 0x33 && minor == 0x00)
@@ -661,6 +662,8 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         PrintAndLogEx(INFO, "\t1.4 - DESFire Ev1 MF3ICD21/41/81, EAL4+");
     if (major == 2 && minor == 0)
         PrintAndLogEx(INFO, "\t2.0 - DESFire Ev2, Originality check, proximity check, EAL5");
+    if (major == 2 && minor == 2)
+        PrintAndLogEx(INFO, "\t2.2 - DESFire Ev2 XL, Originality check, proximity check, EAL5");
     if (major == 3 && minor == 0)
         PrintAndLogEx(INFO, "\t3.0 - DESFire Ev3, Originality check, proximity check, badass EAL6 ?");
 
@@ -2179,24 +2182,40 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (verbose) {
-        if (DesfireMFSelected(selectway, id))
-            PrintAndLogEx(INFO, _CYAN_("PICC") " param ID: 0x%02x param[%d]: %s", paramid, paramlen, sprint_hex(param, paramlen));
-        else
-            PrintAndLogEx(INFO, _CYAN_("%s %06x") " param ID: 0x%02x param[%d]: %s", DesfireSelectWayToStr(selectway), id, paramid, paramlen, sprint_hex(param, paramlen));
+        if (DesfireMFSelected(selectway, id)) {
+            PrintAndLogEx(INFO, _CYAN_("PICC") " param ID: 0x%02x param[%d]: %s",
+                    paramid,
+                    paramlen,
+                    sprint_hex(param, paramlen)
+                );
+        } else {
+            PrintAndLogEx(INFO, _CYAN_("%s %06x") " param ID: 0x%02x param[%d]: %s", 
+                    DesfireSelectWayToStr(selectway),
+                    id,
+                    paramid,
+                    paramlen,
+                    sprint_hex(param, paramlen)
+                );
+        }
     }
 
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication ( %s )" _RED_("failed") " Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
+        PrintAndLogEx(FAILED, "Select or authentication ( %s ) Result [%d] %s %s", 
+                DesfireWayIDStr(selectway, id),
+                res,
+                DesfireAuthErrorToStr(res),
+                _RED_("failed")
+            );
         return res;
     }
 
     res = DesfireSetConfiguration(&dctx, paramid, param, paramlen);
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Set configuration 0x%02x ( %s )", _GREEN_("ok"), paramid);
+        PrintAndLogEx(SUCCESS, "Set configuration 0x%02x ( %s )", paramid, _GREEN_("ok"));
     } else {
-        PrintAndLogEx(FAILED, "Set configuration 0x%02x ( %s )", _RED_("failed"), paramid);
+        PrintAndLogEx(FAILED, "Set configuration 0x%02x ( %s )", paramid, _RED_("failed"));
     }
 
     DropField();
@@ -2605,7 +2624,7 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getuid",
                   "Get UID from card. Get the real UID if the random UID bit is on and get the same UID as in anticollision if not. Any card's key needs to be provided. ",
-                  "hf mfdes getuid    -> execute with default factory setup\n"
+                  "hf mfdes getuid                              -> execute with default factory setup\n"
                   "hf mfdes getuid --isoid df01 -t aes -s lrp   -> for desfire lights default settings");
 
     void *argtable[] = {
