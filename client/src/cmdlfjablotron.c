@@ -100,7 +100,7 @@ int demodJablotron(bool verbose) {
     uint8_t chksum = raw2 & 0xFF;
     bool isok = (chksum == jablontron_chksum(g_DemodBuffer));
 
-    PrintAndLogEx(DEBUG, "Checksum: %02X (%s)", chksum, isok ? _GREEN_("ok") : _RED_("Fail"));
+    PrintAndLogEx(DEBUG, "Checksum: %02X ( %s )", chksum, isok ? _GREEN_("ok") : _RED_("Fail"));
 
     id = DEC2BCD(id);
     // Printed format: 1410-nn-nnnn-nnnn

@@ -110,11 +110,11 @@ static int CmdLegicInfo(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, " " _CYAN_("CDF: System Area"));
     PrintAndLogEx(NORMAL, "------------------------------------------------------");
-    PrintAndLogEx(SUCCESS, "MCD: " _GREEN_("%02X") " MSN: " _GREEN_("%s") " MCC: " _GREEN_("%02X") " (%s)",
+    PrintAndLogEx(SUCCESS, "MCD: " _GREEN_("%02X") " MSN: " _GREEN_("%s") " MCC: " _GREEN_("%02X") " ( %s )",
                   data[0],
                   sprint_hex(data + 1, 3),
                   data[4],
-                  (calc_crc == crc) ? _GREEN_("OK") : _RED_("Fail")
+                  (calc_crc == crc) ? _GREEN_("ok") : _RED_("fail")
                  );
 
     // MCD = Manufacturer ID (should be list meaning something?)
@@ -265,12 +265,12 @@ static int CmdLegicInfo(const char *Cmd) {
                           (segment_flag & 0x4) >> 2,
                           (segment_flag & 0x8) >> 3
                          );
-            PrintAndLogEx(SUCCESS, "            | WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X (%s)",
+            PrintAndLogEx(SUCCESS, "            | WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X ( %s )",
                           wrp,
                           wrc,
                           ((data[i + 3] ^ crc) & 0x80) >> 7,
                           segCRC,
-                          (segCRC == segCalcCRC) ? _GREEN_("OK") : _RED_("Fail")
+                          (segCRC == segCalcCRC) ? _GREEN_("ok") : _RED_("fail")
                          );
 
             i += 5;

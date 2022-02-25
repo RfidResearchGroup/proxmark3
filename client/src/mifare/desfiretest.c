@@ -54,9 +54,9 @@ static bool TestCRC16(void) {
     res = res && (len == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "crc16............. " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "CRC16............. " _GREEN_("ok"));
     else
-        PrintAndLogEx(ERR, "crc16............. " _RED_("fail"));
+        PrintAndLogEx(ERR, "CRC16............. " _RED_("fail"));
 
     return res;
 }
@@ -81,9 +81,9 @@ static bool TestCRC32(void) {
     res = res && (len == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "crc32............. " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "CRC32............. " _GREEN_("ok"));
     else
-        PrintAndLogEx(ERR, "crc32............. " _RED_("fail"));
+        PrintAndLogEx(ERR, "CRC32............. " _RED_("fail"));
 
     return res;
 }
@@ -132,7 +132,7 @@ static bool TestCMACSubkeys(void) {
     res = res && (memcmp(sk2, sk2_3tdea, sizeof(sk2_3tdea)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "CMAC subkeys...... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "CMAC subkeys...... " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "CMAC subkeys...... " _RED_("fail"));
 
@@ -156,7 +156,7 @@ static bool TestAn10922KDFAES(void) {
     res = res && (memcmp(dctx.key, dkey, sizeof(dkey)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "An10922 AES....... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "An10922 AES....... " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "An10922 AES....... " _RED_("fail"));
 
@@ -178,7 +178,7 @@ static bool TestAn10922KDF2TDEA(void) {
     res = res && (memcmp(dctx.key, dkey, sizeof(dkey)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "An10922 2TDEA..... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "An10922 2TDEA..... " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "An10922 2TDEA..... " _RED_("fail"));
 
@@ -202,7 +202,7 @@ static bool TestAn10922KDF3TDEA(void) {
     res = res && (memcmp(dctx.key, dkey, sizeof(dkey)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "An10922 3TDEA..... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "An10922 3TDEA..... " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "An10922 3TDEA..... " _RED_("fail"));
 
@@ -246,7 +246,7 @@ static bool TestCMAC3TDEA(void) {
     res = res && (memcmp(cmac, cmac4, sizeof(cmac1)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "CMAC 3TDEA........ " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "CMAC 3TDEA........ " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR, "CMAC 3TDEA........ " _RED_("fail"));
 
@@ -290,7 +290,7 @@ static bool TestCMAC2TDEA(void) {
     res = res && (memcmp(cmac, cmac4, sizeof(cmac1)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "CMAC 2TDEA........ " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "CMAC 2TDEA........ " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR, "CMAC 2TDEA........ " _RED_("fail"));
 
@@ -330,7 +330,7 @@ static bool TestCMACDES(void) {
     res = res && (memcmp(cmac, cmac4, sizeof(cmac1)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "CMAC DES.......... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "CMAC DES.......... " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR, "CMAC DES.......... " _RED_("fail"));
 
@@ -357,7 +357,7 @@ static bool TestEV2SessionKeys(void) {
     res = res && (memcmp(sessionkey, sessionkeymac, sizeof(sessionkeymac)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "EV2 session keys.. " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "EV2 session keys.. " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "EV2 session keys.. " _RED_("fail"));
 
@@ -393,7 +393,7 @@ static bool TestEV2IVEncode(void) {
     res = res && (memcmp(iv, ivres2, sizeof(ivres2)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "EV2 IV calc....... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "EV2 IV calc....... " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "EV2 IV calc....... " _RED_("fail"));
 
@@ -453,7 +453,7 @@ static bool TestEV2MAC(void) {
     res = res && (memcmp(mac, macres4, sizeof(macres4)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "EV2 MAC calc...... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "EV2 MAC calc...... " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "EV2 MAC calc...... " _RED_("fail"));
 
@@ -477,7 +477,7 @@ static bool TestTransSessionKeys(void) {
     res = res && (memcmp(sessionkey, keyenc, sizeof(keyenc)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "Trans session key. " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "Trans session key. " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "Trans session key. " _RED_("fail"));
 
@@ -506,7 +506,7 @@ static bool TestLRPPlaintexts(void) {
     res = res && (memcmp(ctx.plaintexts[15], pt15, sizeof(pt15)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "LRP plaintexts.... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "LRP plaintexts.... " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "LRP plaintexts.... " _RED_("fail"));
 
@@ -532,7 +532,7 @@ static bool TestLRPUpdatedKeys(void) {
     res = res && (memcmp(ctx.updatedKeys[2], key2, sizeof(key2)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "LRP updated keys.. " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "LRP updated keys.. " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "LRP updated keys.. " _RED_("fail"));
 
@@ -588,7 +588,7 @@ static bool TestLRPEval(void) {
     res = res && (memcmp(y, y5, sizeof(y5)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "LRP eval.......... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "LRP eval.......... " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "LRP eval.......... " _RED_("fail"));
 
@@ -619,7 +619,7 @@ static bool TestLRPIncCounter(void) {
     res = res && (memcmp(ctr4, ctrr4, sizeof(ctrr4)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "LRP inc counter... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "LRP inc counter... " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "LRP inc counter... " _RED_("fail"));
 
@@ -687,7 +687,7 @@ static bool TestLRPEncode(void) {
     res = res && (memcmp(resp, res5, sizeof(res5)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "LRP encode........ " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "LRP encode........ " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "LRP encode........ " _RED_("fail"));
 
@@ -754,7 +754,7 @@ static bool TestLRPDecode(void) {
     res = res && (memcmp(resp, res5, sizeof(res5)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "LRP decode........ " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "LRP decode........ " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "LRP decode........ " _RED_("fail"));
 
@@ -794,7 +794,7 @@ static bool TestLRPSubkeys(void) {
     res = res && (memcmp(sk2, sk2r3, sizeof(sk2r3)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "LRP subkeys....... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "LRP subkeys....... " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "LRP subkeys....... " _RED_("fail"));
 
@@ -856,7 +856,7 @@ static bool TestLRPCMAC(void) {
     res = res && (memcmp(cmac, cmacres6, sizeof(cmacres6)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "LRP CMAC.......... " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "LRP CMAC.......... " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "LRP CMAC.......... " _RED_("fail"));
 
@@ -878,7 +878,7 @@ static bool TestLRPSessionKeys(void) {
     res = res && (memcmp(sessionkey, sessionkeyres, sizeof(sessionkeyres)) == 0);
 
     if (res)
-        PrintAndLogEx(INFO, "LRP session keys.. " _GREEN_("passed"));
+        PrintAndLogEx(INFO, "LRP session keys.. " _GREEN_("ok"));
     else
         PrintAndLogEx(ERR,  "LRP session keys.. " _RED_("fail"));
 
@@ -888,7 +888,7 @@ static bool TestLRPSessionKeys(void) {
 bool DesfireTest(bool verbose) {
     bool res = true;
 
-    PrintAndLogEx(INFO, "------ " _CYAN_("Desfire Tests") " ------");
+    PrintAndLogEx(INFO, "------ " _CYAN_("MIFARE DESFire tests") " ------");
 
     res = res && TestCRC16();
     res = res && TestCRC32();

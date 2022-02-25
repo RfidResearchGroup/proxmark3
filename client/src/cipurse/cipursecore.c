@@ -17,16 +17,15 @@
 //-----------------------------------------------------------------------------
 
 #include "cipursecore.h"
+#include <string.h>      // memcpy memset
 
 #include "commonutil.h"  // ARRAYLEN
 #include "comms.h"       // DropField
 #include "util_posix.h"  // msleep
-#include <string.h>      // memcpy memset
-
 #include "cmdhf14a.h"
-#include "emv/emvcore.h"
-#include "emv/emvjson.h"
-#include "iso7816/apduinfo.h"
+#include "../emv/emvcore.h"
+#include "../emv/emvjson.h"
+#include "../iso7816/apduinfo.h"       // sAPDU_t
 #include "ui.h"
 #include "util.h"
 
@@ -299,21 +298,24 @@ void CIPURSECSetActChannelSecurityLevels(CipurseChannelSecurityLevel req, Cipurs
 
 static void CIPURSEPrintPersoMode(uint8_t data) {
     if ((data & 0x01) == 0x01)
-        PrintAndLogEx(INFO, "Perso... " _YELLOW_("filesystem"));
+        PrintAndLogEx(INFO, "Perso.......... " _YELLOW_("filesystem"));
     if ((data & 0x02) == 0x02)
-        PrintAndLogEx(INFO, "Perso... " _YELLOW_("EMV"));
+        PrintAndLogEx(INFO, "Perso.......... " _YELLOW_("EMV"));
     if ((data & 0x04) == 0x04)
-        PrintAndLogEx(INFO, "Perso... " _YELLOW_("transaction supported"));
+        PrintAndLogEx(INFO, "Perso.......... " _YELLOW_("transaction supported"));
 }
 
 // 2021 iceman: what is the description text of profile L,S,T ?
 static void CIPURSEPrintProfileInfo(uint8_t data) {
+
+    PrintAndLogEx(INFO, "Profile........" NOLF);
     if ((data & 0x01) == 0x01)
-        PrintAndLogEx(INFO, "Profile... L");
+        PrintAndLogEx(NORMAL, " L" NOLF);
     if ((data & 0x02) == 0x02)
-        PrintAndLogEx(INFO, "Profile... S");
+        PrintAndLogEx(NORMAL, ", S" NOLF);
     if ((data & 0x04) == 0x04)
-        PrintAndLogEx(INFO, "Profile... T");
+        PrintAndLogEx(NORMAL, ", T" NOLF);
+    PrintAndLogEx(NORMAL, "");
 }
 
 static void CIPURSEPrintManufacturerInfo(uint8_t data) {
@@ -330,8 +332,7 @@ void CIPURSEPrintInfoFile(uint8_t *data, size_t len) {
     }
 
     PrintAndLogEx(INFO, "--- " _CYAN_("CIPURSE Information") "---------------------");
-    PrintAndLogEx(INFO, "version.... " _YELLOW_("%d"), data[0]);
-    PrintAndLogEx(INFO, "revision... " _YELLOW_("%d"), data[1]);
+    PrintAndLogEx(INFO, "Version........ " _YELLOW_("v%d.%d"), data[0], data[1]);
 
     if (len >= 3)
         CIPURSEPrintPersoMode(data[2]);

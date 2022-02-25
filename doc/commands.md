@@ -255,7 +255,7 @@ Check column "offline" for their availability.
 |`hf cipurse updkey      `|N       |`Update key`
 |`hf cipurse updakey     `|N       |`Update key attributes`
 |`hf cipurse default     `|N       |`Set default key and file id for all the other commands`
-|`hf cipurse test        `|Y       |`Tests`
+|`hf cipurse test        `|Y       |`Regression tests`
 
 
 ### hf epa
@@ -460,6 +460,7 @@ Check column "offline" for their availability.
 |`hf mf rdsc             `|N       |`Read MIFARE Classic sector`
 |`hf mf restore          `|N       |`Restore MIFARE Classic binary file to BLANK tag`
 |`hf mf setmod           `|N       |`Set MIFARE Classic EV1 load modulation strength`
+|`hf mf value            `|Y       |`Decode a value block`
 |`hf mf view             `|Y       |`Display content from tag dump file`
 |`hf mf wipe             `|N       |`Wipe card to zeros and default keys/acc`
 |`hf mf wrbl             `|N       |`Write MIFARE Classic block`
@@ -576,7 +577,7 @@ Check column "offline" for their availability.
 |`hf mfdes write         `|N       |`Write data to standard/backup/record/value file`
 |`hf mfdes value         `|N       |`Operations with value file (get/credit/limited credit/debit/clear)`
 |`hf mfdes clearrecfile  `|N       |`Clear record File`
-|`hf mfdes test          `|Y       |`Test crypto`
+|`hf mfdes test          `|Y       |`Regression crypto tests`
 
 
 ### hf seos

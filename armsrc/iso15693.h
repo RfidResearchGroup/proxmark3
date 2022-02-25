@@ -60,4 +60,5 @@ int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, ui
 void SetTag15693Uid(const uint8_t *uid);
 
 void DisablePrivacySlixLIso15693(uint8_t *password);
+void DisableEAS_AFISlixLIso15693(uint8_t *password);
 #endif

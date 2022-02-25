@@ -1899,7 +1899,7 @@
         },
         "hf cipurse help": {
             "command": "hf cipurse help",
-            "description": "help this help. test tests",
+            "description": "help this help. test regression tests",
             "notes": [],
             "offline": true,
             "options": [],
@@ -1965,11 +1965,15 @@
         },
         "hf cipurse test": {
             "command": "hf cipurse test",
-            "description": "[=] ------ cipurse tests ------ [=] kvv.............. passed [=] iso9797m2........ passed [=] smi.............. passed [=] mic.............. passed [=] auth............. passed [=] channel mac...... passed [=] channel encdec... passed [=] apdu............. passed [=] --------------------------- [+] tests [ ok ]",
-            "notes": [],
+            "description": "regression tests",
+            "notes": [
+                "hf cipurse test"
+            ],
             "offline": true,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "hf cipurse test [-h]"
         },
         "hf cipurse updakey": {
             "command": "hf cipurse updakey",
@@ -2016,7 +2020,7 @@
                 "--mfd select masterfile by empty id",
                 "--newkeyn <dec> target key id",
                 "--newkey <hex 16 byte> new key",
-                "--newkeya <hex 1 byte> new key additional info. 0x00 by default",
+                "--newkeya <hex 1 byte> new key additional info (def: 0x00)",
                 "--enckeyn <dec> encrypt key id (must be equal to the key on the card)",
                 "--enckey <hex 16 byte> encrypt key (must be equal to the key on the card)",
                 "--sreq <plain|mac(default)|encode> communication reader-picc security level",
@@ -4098,7 +4102,7 @@
         },
         "hf mf help": {
             "command": "hf mf help",
-            "description": "help this help list list mifare history hardnested nested attack for hardened mifare classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace acl decode and print mifare classic access rights bytes view display content from tag dump file",
+            "description": "help this help list list mifare history hardnested nested attack for hardened mifare classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace acl decode and print mifare classic access rights bytes value decode a value block view display content from tag dump file",
             "notes": [],
             "offline": true,
             "options": [],
@@ -4357,6 +4361,19 @@
                 "-r, --reset reset card"
             ],
             "usage": "hf mf supercard [-hr]"
+        },
+        "hf mf value": {
+            "command": "hf mf value",
+            "description": "decode of a mifare value block",
+            "notes": [
+                "hf mf value -d 87d612007829edff87d6120011ee11ee"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "-d, --data <hex> 16 hex bytes"
+            ],
+            "usage": "hf mf value [-h] -d <hex>"
         },
         "hf mf view": {
             "command": "hf mf view",
@@ -5207,7 +5224,7 @@
         },
         "hf mfdes help": {
             "command": "hf mfdes help",
-            "description": "help this help list list desfire (iso 14443a) history test test crypto",
+            "description": "help this help list list desfire (iso 14443a) history test regression crypto tests",
             "notes": [],
             "offline": true,
             "options": [],
@@ -5446,11 +5463,15 @@
         },
         "hf mfdes test": {
             "command": "hf mfdes test",
-            "description": "[=] ------ desfire tests ------ [!] no space for crc. pos: 1 [=] crc16............. passed [!] no space for crc. pos: 2 [=] crc32............. passed [=] cmac subkeys...... passed [=] an10922 aes....... passed [=] an10922 2tdea..... passed [=] an10922 3tdea..... passed [=] cmac 3tdea........ passed [=] cmac 2tdea........ passed [=] cmac des.......... passed [=] ev2 session keys.. passed [=] ev2 iv calc....... passed [=] ev2 mac calc...... passed [=] trans session key. passed [=] lrp plaintexts.... passed [=] lrp updated keys.. passed [=] lrp eval.......... passed [=] lrp inc counter... passed [=] lrp encode........ passed [=] lrp decode........ passed [=] lrp subkeys....... passed [=] lrp cmac.......... passed [=] lrp session keys.. passed [=] --------------------------- [+] tests [ ok ]",
-            "notes": [],
+            "description": "regression crypto tests",
+            "notes": [
+                "hf mfdes test"
+            ],
             "offline": true,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help this help"
+            ],
+            "usage": "hf mfdes test [-h]"
         },
         "hf mfdes value": {
             "command": "hf mfdes value",
@@ -7162,10 +7183,10 @@
                 "--4205 target chip type em 4205",
                 "--4305 target chip type em 4305 (default)",
                 "--4369 target chip type em 4369",
-                "--4369 target chip type em 4469",
+                "--4469 target chip type em 4469",
                 "-p, --pwd <hex> optional - password, 4 bytes hex"
             ],
-            "usage": "lf em 4x05 wipe [-h] [--4205] [--4305] [--4369] [--4369] [-p <hex>]"
+            "usage": "lf em 4x05 wipe [-h] [--4205] [--4305] [--4369] [--4469] [-p <hex>]"
         },
         "lf em 4x05 write": {
             "command": "lf em 4x05 write",
@@ -10887,8 +10908,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 687,
+        "commands_extracted": 688,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-02-17T00:41:11"
+        "extracted_on": "2022-02-24T18:33:33"
     }
 }

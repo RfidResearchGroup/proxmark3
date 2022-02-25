@@ -83,9 +83,9 @@ static const APDUSpcCodeDescription_t UAPDpdateKeyAttrCodeDescriptions[] = {
 
 static const APDUSpcCodeDescription_t UAPDpdateKeyCodeDescriptions[] = {
     {0x6982, "Key is frozen or only the key itself has the rights to update" },
-    {0x6984, "key enc key is blocked or invalid" },
+    {0x6984, "Enc key is blocked or invalid" },
     {0x6985, "Deactivated file" },
-    {0x6A80, "invalid algo, key length or kvv" },
+    {0x6A80, "Invalid algo, key length or kvv" },
     {0x6A88, "Invalid key number (outside the range supported by the current DF)" }
 };
 
@@ -113,7 +113,11 @@ static int SelectAndPrintInfoFile(void) {
 
     if (len > 0) {
         PrintAndLogEx(INFO, "Info file ( " _GREEN_("ok") " )");
-        PrintAndLogEx(INFO, "[%zu]: %s", len, sprint_hex(buf, len));
+
+        PrintAndLogEx(INFO, " # | bytes                                           | ascii");
+        PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
+        print_hex_break(buf, len, 16);
+        PrintAndLogEx(NORMAL, "");
         CIPURSEPrintInfoFile(buf, len);
         PrintAndLogEx(INFO, "");
     }
@@ -149,7 +153,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     int res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
     if (res == PM3_SUCCESS && sw == 0x9000) {
         mfExist = true;
-        PrintAndLogEx(INFO, _CYAN_("MasterFile") " exist and can be selected.");
+        PrintAndLogEx(INFO, _YELLOW_("MasterFile") " exist and can be selected.");
 
         res = SelectAndPrintInfoFile();
         infoPrinted = (res == PM3_SUCCESS);
@@ -173,7 +177,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
         DropField();
         return res;
     }
-    PrintAndLogEx(INFO, "Application `AF F1` selected " _GREEN_("successfully"));
+    PrintAndLogEx(INFO, "Application `" _YELLOW_("AF F1") "` selected " _GREEN_("successfully"));
 
     if (sw != 0x9000) {
         if (sw == 0x0000) {
@@ -365,7 +369,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
             return PM3_ESOFT;
         }
         if (verbose) {
-            PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s ") _GREEN_("OK"), sprint_hex_inrow(aid, aidLen));
+            PrintAndLogEx(INFO, "Cipurse select application " _YELLOW_("%s ") " ( %s )", sprint_hex_inrow(aid, aidLen), _GREEN_("ok"));
         }
 
     } else if (useFID) {
@@ -373,12 +377,13 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
         res = CIPURSESelectFileEx(true, true, fileId, buf, bufSize, len, sw);
         if (res != 0 || *sw != 0x9000) {
             if (verbose) {
-                PrintAndLogEx(ERR, "Cipurse select file 0x%04x " _RED_("error") ". Card returns 0x%04x", fileId, *sw);
+                PrintAndLogEx(ERR, "Cipurse select file 0x%04x  ( %s )",  _RED_("fail"));
+                PrintAndLogEx(ERR, "Card returns 0x%04x", fileId, *sw);
             }
             return PM3_ESOFT;
         }
         if (verbose) {
-            PrintAndLogEx(INFO, "Cipurse select file " _CYAN_("0x%04x ") _GREEN_("OK"), fileId);
+            PrintAndLogEx(INFO, "Cipurse select file " _YELLOW_("0x%04X ") " ( " _GREEN_("ok") " )", fileId);
         }
 
     } else if (selectDefaultFile) {
@@ -391,7 +396,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
             return PM3_ESOFT;
         }
         if (verbose) {
-            PrintAndLogEx(INFO, "Cipurse select default file " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Cipurse select default file  ( " _GREEN_("ok") " )");
         }
 
     } else {
@@ -404,7 +409,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
             return PM3_ESOFT;
         }
         if (verbose) {
-            PrintAndLogEx(INFO, "Cipurse select default application " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Cipurse select default application ( " _GREEN_("ok") " )");
         }
     }
 
@@ -421,7 +426,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
             return PM3_ESOFT;
         }
         if (verbose) {
-            PrintAndLogEx(INFO, "Select child file " _CYAN_("0x%04x ") _GREEN_("OK"), childFileId);
+            PrintAndLogEx(INFO, "Select child file " _CYAN_("0x%04x ") " ( " _GREEN_("ok") " )", childFileId);
         }
     }
 
@@ -566,10 +571,7 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
 
     if (verbose == false) {
-        if (bres)
-            PrintAndLogEx(INFO, "Authentication ( " _GREEN_("ok") " )");
-        else
-            PrintAndLogEx(ERR, "Authentication ( " _RED_("fail") " )");
+        PrintAndLogEx(INFO, "Authentication ( %s ) ", (bres) ?  _GREEN_("ok") :  _RED_("fail"));
     }
 
     DropField();
@@ -640,7 +642,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     }
 
     if (verbose) {
-        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s") " ( " _GREEN_("ok") " )", sprint_hex_inrow(aid, aidLen));
+        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s") " ( %s )", sprint_hex_inrow(aid, aidLen), _GREEN_("ok"));
         PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " offset " _YELLOW_("%zu") " key id " _YELLOW_("%d") " key " _YELLOW_("%s"), fileId, offset, keyId, sprint_hex(key, CIPURSE_AES_KEY_LENGTH));
     }
 
@@ -666,7 +668,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "Select file 0x%x ( " _GREEN_("ok") " )", fileId);
+        PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
 
     res = CIPURSEReadBinary(offset, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
@@ -704,8 +706,8 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         arg_str0(NULL, "fid",     "<hex>", "File ID"),
         arg_int0("o",  "offset",  "<dec>", "Offset for reading data from file"),
         arg_lit0(NULL, "noauth",  "Read file without authentication"),
-        arg_str0(NULL, "sreq",    "<plain|mac|encode>", "communication reader-PICC security level (def: mac)"),
-        arg_str0(NULL, "sresp",   "<plain|mac|encode>", "communication PICC-reader security level (def: mac)"),
+        arg_str0(NULL, "sreq",    "<plain|mac|encode>", "Communication reader-PICC security level (def: mac)"),
+        arg_str0(NULL, "sresp",   "<plain|mac|encode>", "Communication PICC-reader security level (def: mac)"),
         arg_str0("d",  "data",    "<hex>", "Data to write to new file"),
         arg_lit0(NULL, "commit",  "Commit after write"),
         arg_param_end
@@ -763,14 +765,14 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
     }
 
     if (verbose) {
-        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s") " ( " _GREEN_("ok") " )", sprint_hex_inrow(aid, aidLen));
+        PrintAndLogEx(INFO, "Cipurse select application " _CYAN_("%s") " ( %s )", sprint_hex_inrow(aid, aidLen), _GREEN_("ok"));
         PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " offset " _YELLOW_("%zu") " key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                       , fileId
                       , offset
                       , keyId
                       , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
                      );
-        PrintAndLogEx(INFO, "data[%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
+        PrintAndLogEx(INFO, "Data [%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
     }
 
     if (noAuth == false) {
@@ -795,7 +797,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "Select file 0x%x ( " _GREEN_("ok") " )", fileId);
+        PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
 
     res = CIPURSEUpdateBinary(offset, hdata, hdatalen, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
@@ -811,7 +813,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
-            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
             PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
@@ -1009,7 +1011,7 @@ static int CmdHFCipurseWriteFileAttr(const char *Cmd) {
     SetAPDULogging(APDULogging);
 
     if (verbose) {
-        PrintAndLogEx(INFO, "attribtes data[%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
+        PrintAndLogEx(INFO, "Attribtes data[%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
         CIPURSEPrintFileUpdateAttr(hdata, hdatalen);
     }
 
@@ -1069,7 +1071,7 @@ static int CmdHFCipurseWriteFileAttr(const char *Cmd) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
-            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
             PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
@@ -1180,7 +1182,7 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
         arg_str0("k",  "key",     "<hex>", "Auth key"),
 
         arg_str0(NULL, "aid",     "<hex>", "Application ID (AID) ( 1..16 bytes )"),
-        arg_str0(NULL, "fid",     "<hex>", "file ID (FID) ( 2 bytes )"),
+        arg_str0(NULL, "fid",     "<hex>", "File ID (FID) ( 2 bytes )"),
         arg_lit0(NULL, "mfd",     "Select masterfile by empty id"),
 
         arg_str0("d",  "data",    "<hex>", "Data with DGI for create"),
@@ -1255,7 +1257,7 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
 
     if (verbose) {
         if (!noauth)
-            PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+            PrintAndLogEx(INFO, "Key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                           , keyId
                           , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
                          );
@@ -1276,7 +1278,8 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
 
     res = CIPURSECreateFile(hdata, hdatalen, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Create file command " _RED_("ERROR") ". Card returns:\n  0x%04x - %s", sw,
+        PrintAndLogEx(ERR, "Create file command " _RED_("ERROR"));
+        PrintAndLogEx(ERR, "0x%04x - %s", sw,
                       GetSpecificAPDUCodeDesc(SelectAPDUCodeDescriptions, ARRAYLEN(SelectAPDUCodeDescriptions), sw));
         DropField();
         return PM3_ESOFT;
@@ -1287,10 +1290,10 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
-            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
-            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
     }
 
     DropField();
@@ -1361,7 +1364,7 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
             PrintAndLogEx(INFO, "Child file id " _CYAN_("%x"), childFileId);
 
         if (!noauth)
-            PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+            PrintAndLogEx(INFO, "Key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                           , keyId
                           , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
                          );
@@ -1403,7 +1406,8 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     if (useChildFID) {
         res = CIPURSEDeleteFile(childFileId, buf, sizeof(buf), &len, &sw);
         if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Delete child file " _CYAN_("%04x ") _RED_("ERROR") ". Card returns:\n  0x%04x - %s", childFileId, sw,
+            PrintAndLogEx(ERR, "Delete child file " _CYAN_("%04x ") _RED_("ERROR"));
+            PrintAndLogEx(ERR, "0x%04x - %s", childFileId, sw,
                           GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw));
             DropField();
             return PM3_ESOFT;
@@ -1412,7 +1416,8 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     } else if (useFID) {
         res = CIPURSEDeleteFile(fileId, buf, sizeof(buf), &len, &sw);
         if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Delete file " _CYAN_("%04x ") _RED_("ERROR") ". Card returns:\n  0x%04x - %s", fileId, sw,
+            PrintAndLogEx(ERR, "Delete file " _CYAN_("%04x ") _RED_("ERROR"));
+            PrintAndLogEx(ERR, "0x%04x - %s", fileId, sw,
                           GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw));
             DropField();
             return PM3_ESOFT;
@@ -1421,24 +1426,25 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     } else {
         res = CIPURSEDeleteFileAID(aid, aidLen, buf, sizeof(buf), &len, &sw);
         if (res != 0 || sw != 0x9000) {
-            PrintAndLogEx(ERR, "Delete application " _CYAN_("%s ") _RED_("ERROR") ". Card returns:\n  0x%04x - %s",
+            PrintAndLogEx(ERR, "Delete application " _CYAN_("%s ") _RED_("ERROR"));
+            PrintAndLogEx(ERR, "0x%04x - %s",
                           sprint_hex_inrow(aid, aidLen),
                           sw,
                           GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw));
             DropField();
             return PM3_ESOFT;
         }
-        PrintAndLogEx(INFO, "Delete application " _CYAN_("%s ") _GREEN_("OK"), sprint_hex_inrow(aid, aidLen));
+        PrintAndLogEx(INFO, "Delete application " _CYAN_("%s") " ( %s )", sprint_hex_inrow(aid, aidLen),  _GREEN_("ok"));
     }
 
     if (needCommit) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
-            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
-            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
     }
 
     DropField();
@@ -1454,26 +1460,26 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "show technical data"),
-        arg_int0("n",  NULL,      "<dec>", "key ID for authentication"),
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Show technical data"),
+        arg_int0("n",  NULL,      "<dec>", "Key ID for authentication"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
 
-        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
-        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
-        arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "Application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "File ID (FID)"),
+        arg_lit0(NULL, "mfd",     "Select masterfile by empty id"),
 
-        arg_int0(NULL, "newkeyn", "<dec>", "target key ID"),
-        arg_str0(NULL, "newkey",  "<hex 16 byte>", "new key"),
-        arg_str0(NULL, "newkeya", "<hex 1 byte>", "new key additional info. 0x00 by default"),
+        arg_int0(NULL, "newkeyn", "<dec>", "Target key ID"),
+        arg_str0(NULL, "newkey",  "<hex 16 byte>", "New key"),
+        arg_str0(NULL, "newkeya", "<hex 1 byte>", "New key additional info (def: 0x00)"),
 
-        arg_int0(NULL, "enckeyn", "<dec>", "encrypt key ID (must be equal to the key on the card)"),
-        arg_str0(NULL, "enckey",  "<hex 16 byte>", "encrypt key (must be equal to the key on the card)"),
+        arg_int0(NULL, "enckeyn", "<dec>", "Encrypt key ID (must be equal to the key on the card)"),
+        arg_str0(NULL, "enckey",  "<hex 16 byte>", "Encrypt key (must be equal to the key on the card)"),
 
-        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
-        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
-        arg_lit0(NULL, "no-auth", "execute without authentication"),
-        arg_lit0(NULL, "commit",  "commit "),
+        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "Communication reader-PICC security level"),
+        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "Communication PICC-reader security level"),
+        arg_lit0(NULL, "no-auth", "Execute without authentication"),
+        arg_lit0(NULL, "commit",  "Commit "),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1596,7 +1602,7 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
 
     if (verbose) {
         if (!noauth)
-            PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+            PrintAndLogEx(INFO, "Key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                           , keyId
                           , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
                          );
@@ -1617,7 +1623,8 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
 
     res = CIPURSEUpdateKey(encKeyId, newKeyId, keydata, sizeof(keydata), buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Update key command " _RED_("ERROR") ". Card returns:\n  0x%04x - %s", sw,
+        PrintAndLogEx(ERR, "Update key command " _RED_("ERROR"));
+        PrintAndLogEx(ERR, "0x%04x - %s", sw,
                       GetSpecificAPDUCodeDesc(UAPDpdateKeyCodeDescriptions, ARRAYLEN(UAPDpdateKeyCodeDescriptions), sw));
         DropField();
         return PM3_ESOFT;
@@ -1628,10 +1635,10 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
-            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
-            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
     }
 
     DropField();
@@ -1651,21 +1658,21 @@ static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a",  "apdu",    "show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "show technical data"),
-        arg_int0("n",  NULL,      "<dec>", "key ID for authentication"),
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Show technical data"),
+        arg_int0("n",  NULL,      "<dec>", "Key ID for authentication"),
         arg_str0("k",  "key",     "<hex>", "Auth key"),
 
-        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "application ID (AID)"),
-        arg_str0(NULL, "fid",     "<hex 2 bytes>", "file ID (FID)"),
-        arg_lit0(NULL, "mfd",     "select masterfile by empty id"),
+        arg_str0(NULL, "aid",     "<hex 1..16 bytes>", "Application ID (AID)"),
+        arg_str0(NULL, "fid",     "<hex 2 bytes>", "File ID (FID)"),
+        arg_lit0(NULL, "mfd",     "Select masterfile by empty id"),
 
-        arg_int0(NULL, "trgkeyn", "<dec>", "target key ID"),
-        arg_str0(NULL, "attr",    "<hex 1 byte>", "key attributes 1 byte"),
-        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "communication reader-PICC security level"),
-        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "communication PICC-reader security level"),
-        arg_lit0(NULL, "no-auth", "execute without authentication"),
-        arg_lit0(NULL, "commit",  "commit "),
+        arg_int0(NULL, "trgkeyn", "<dec>", "Target key ID"),
+        arg_str0(NULL, "attr",    "<hex 1 byte>", "Key attributes 1 byte"),
+        arg_str0(NULL, "sreq",    "<plain|mac(default)|encode>", "Communication reader-PICC security level"),
+        arg_str0(NULL, "sresp",   "<plain|mac(default)|encode>", "Communication PICC-reader security level"),
+        arg_lit0(NULL, "no-auth", "Execute without authentication"),
+        arg_lit0(NULL, "commit",  "Commit "),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1743,7 +1750,7 @@ static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
 
     if (verbose) {
         if (!noauth)
-            PrintAndLogEx(INFO, "key id " _YELLOW_("%d") " key " _YELLOW_("%s")
+            PrintAndLogEx(INFO, "Key id " _YELLOW_("%d") " key " _YELLOW_("%s")
                           , keyId
                           , sprint_hex(key, CIPURSE_AES_KEY_LENGTH)
                          );
@@ -1764,7 +1771,8 @@ static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
 
     res = CIPURSEUpdateKeyAttrib(trgKeyId, hdata[0], buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != 0x9000) {
-        PrintAndLogEx(ERR, "Update key attributes command " _RED_("ERROR") ". Card returns:\n  0x%04x - %s", sw,
+        PrintAndLogEx(ERR, "Update key attributes command " _RED_("ERROR"));
+        PrintAndLogEx(ERR, "0x%04x - %s", sw,
                       GetSpecificAPDUCodeDesc(UAPDpdateKeyAttrCodeDescriptions, ARRAYLEN(UAPDpdateKeyAttrCodeDescriptions), sw));
         DropField();
         return PM3_ESOFT;
@@ -1775,10 +1783,10 @@ static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
         if (res != 0 || sw != 0x9000)
-            PrintAndLogEx(WARNING, "Commit " _YELLOW_("ERROR") ". Card returns 0x%04x", sw);
+            PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
-            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
     }
 
     DropField();
@@ -1795,6 +1803,17 @@ bool CheckCardCipurse(void) {
 }
 
 static int CmdHFCipurseTest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf cipurse test",
+                  "Regression tests",
+                  "hf cipurse test");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     CIPURSETest(true);
     return PM3_SUCCESS;
 }
@@ -1877,7 +1896,7 @@ static command_t CommandTable[] = {
     {"updkey",    CmdHFCipurseUpdateKey,     IfPm3Iso14443a,  "Update key"},
     {"updakey",   CmdHFCipurseUpdateKeyAttr, IfPm3Iso14443a,  "Update key attributes"},
     {"default",   CmdHFCipurseDefault,       IfPm3Iso14443a,  "Set default key and file id for all the other commands"},
-    {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Tests"},
+    {"test",      CmdHFCipurseTest,          AlwaysAvailable, "Regression tests"},
     {NULL, NULL, 0, NULL}
 };
 

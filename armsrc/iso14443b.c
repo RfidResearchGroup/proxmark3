@@ -864,7 +864,7 @@ void SimulateIso14443bTag(uint8_t *pupi) {
                         }
                     } else {
                         if (g_dbglevel >= DBG_DEBUG) {
-                            DbpString("CRC passed");
+                            DbpString("CRC ok");
                         }
                     }
                     cardSTATE = SIM_IDLE;
@@ -1064,7 +1064,7 @@ void Simulate_iso14443b_srx_tag(uint8_t *uid) {
                         }
                     } else {
                         if (g_dbglevel >= DBG_DEBUG) {
-                            DbpString("CRC passed");
+                            DbpString("CRC ok");
                         }
                     }
                     cardSTATE = SIM_IDLE;

@@ -247,6 +247,8 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV1") " )", major, minor);
     else if (major == 0x12 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
+    else if (major == 0x22 && minor == 0x00)
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
     else if (major == 0x42 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
     else if (major == 0x33 && minor == 0x00)
@@ -280,11 +282,15 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return DESFIRE_EV1;
     if (major == 0x12 && minor == 0x00)
         return DESFIRE_EV2;
+    if (major == 0x22 && minor == 0x00)
+        return DESFIRE_EV2;
+    if (major == 0x42 && minor == 0x00)
+        return DESFIRE_EV2;
     if (major == 0x33 && minor == 0x00)
         return DESFIRE_EV3;
     if (major == 0x30 && minor == 0x00)
         return DESFIRE_LIGHT;
-    if (major == 0x11 &&  minor == 0x00)
+    if (major == 0x11 && minor == 0x00)
         return PLUS_EV1;
     if (major == 0x10 && minor == 0x00)
         return NTAG413DNA;
@@ -2182,15 +2188,15 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
+        PrintAndLogEx(FAILED, "Select or authentication ( %s )" _RED_("failed") " Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
     res = DesfireSetConfiguration(&dctx, paramid, param, paramlen);
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Set configuration 0x%02x " _GREEN_("ok") " ", paramid);
+        PrintAndLogEx(SUCCESS, "Set configuration 0x%02x ( %s )", _GREEN_("ok"), paramid);
     } else {
-        PrintAndLogEx(FAILED, "Set configuration 0x%02x " _RED_("failed") " ", paramid);
+        PrintAndLogEx(FAILED, "Set configuration 0x%02x ( %s )", _RED_("failed"), paramid);
     }
 
     DropField();
@@ -2326,9 +2332,9 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     DesfireSetCommMode(&dctx, DCMEncryptedPlain);
     res = DesfireChangeKey(&dctx, (DesfireMFSelected(selectway, id)) && (newkeynum == 0) && (dctx.keyNum == 0), newkeynum, newkeytype, newkeyver, newkey, oldkeytype, oldkey, true);
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Change key " _GREEN_("ok") " ");
+        PrintAndLogEx(SUCCESS, "Change key ( " _GREEN_("ok") " )");
     } else {
-        PrintAndLogEx(FAILED, "Change key " _RED_("failed") " ");
+        PrintAndLogEx(FAILED, "Change key ( " _RED_("failed") " )");
     }
     DesfireSetCommMode(&dctx, DCMEncrypted);
 
@@ -4298,7 +4304,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
+        PrintAndLogEx(FAILED, "Select or authentication ( %s )" _RED_("failed") " Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -4308,12 +4314,12 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     if (op != 0xff) {
         res = DesfireValueFileOperations(&dctx, fileid, op, &value);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire ValueFileOperations (0x%02x) command " _RED_("error") ". Result: %d", op, res);
+            PrintAndLogEx(ERR, "Desfire ValueFileOperations (0x%02x) command ( " _RED_("error") " ) Result: %d", op, res);
             DropField();
             return PM3_ESOFT;
         }
         if (verbose)
-            PrintAndLogEx(INFO, "Operation %s " _GREEN_("OK"), CLIGetOptionListStr(DesfireValueFileOperOpts, op));
+            PrintAndLogEx(INFO, "Operation ( %s )" _GREEN_("ok"), CLIGetOptionListStr(DesfireValueFileOperOpts, op));
 
         if (op == MFDES_GET_VALUE) {
             PrintAndLogEx(SUCCESS, "Value: " _GREEN_("%d (0x%08x)"), value, value);
@@ -4321,19 +4327,19 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             DesfireSetCommMode(&dctx, DCMMACed);
             res = DesfireCommitTransaction(&dctx, false, 0);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Desfire CommitTransaction command " _RED_("error") ". Result: %d", res);
+                PrintAndLogEx(ERR, "Desfire CommitTransaction command ( " _RED_("error") ") Result: %d", res);
                 DropField();
                 return PM3_ESOFT;
             }
             if (verbose)
-                PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+                PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
 
             PrintAndLogEx(SUCCESS, "Value changed " _GREEN_("successfully"));
         }
     } else {
         res = DesfireValueFileOperations(&dctx, fileid, MFDES_GET_VALUE, &value);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire GetValue command " _RED_("error") ". Result: %d", res);
+            PrintAndLogEx(ERR, "Desfire GetValue command ( " _RED_("error") ") Result: %d", res);
             DropField();
             return PM3_ESOFT;
         }
@@ -4345,7 +4351,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
 
         res = DesfireGetFileSettings(&dctx, fileid, buf, &buflen);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire GetFileSettings command " _RED_("error") ". Result: %d", res);
+            PrintAndLogEx(ERR, "Desfire GetFileSettings command ( " _RED_("error") " ) Result: %d", res);
             DropField();
             return PM3_ESOFT;
         }
@@ -4369,7 +4375,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         if (delta > 0) {
             res = DesfireValueFileOperations(&dctx, fileid, MFDES_DEBIT, &delta);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Desfire Debit operation " _RED_("error") ". Result: %d", res);
+                PrintAndLogEx(ERR, "Desfire Debit operation ( " _RED_("error") " ) Result: %d", res);
                 DropField();
                 return PM3_ESOFT;
             }
@@ -4380,7 +4386,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             DesfireSetCommMode(&dctx, DCMMACed);
             res = DesfireCommitTransaction(&dctx, false, 0);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Desfire CommitTransaction command " _RED_("error") ". Result: %d", res);
+                PrintAndLogEx(ERR, "Desfire CommitTransaction command ( " _RED_("error") " ) Result: %d", res);
                 DropField();
                 return PM3_ESOFT;
             }
@@ -5194,7 +5200,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
             readeridpushed = true;
             if (verbose)
-                PrintAndLogEx(INFO, "CommitReaderID " _GREEN_("OK"));
+                PrintAndLogEx(INFO, "CommitReaderID ( " _GREEN_("ok") " )");
         } else
             PrintAndLogEx(WARNING, "Desfire CommitReaderID command " _RED_("error") ". Result: %d", res);
     }
@@ -5281,7 +5287,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         if (verbose) {
             if (readeridpushed)
                 PrintAndLogEx(INFO, "TMC and TMV[%zu]: %s", resplen, sprint_hex(resp, resplen));
-            PrintAndLogEx(INFO, "Commit " _GREEN_("OK"));
+            PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
         }
 
         if (resplen == 4 + 8) {
@@ -5555,6 +5561,17 @@ static int CmdHF14ADesDump(const char *Cmd) {
 }
 
 static int CmdHF14ADesTest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes test",
+                  "Regression crypto tests",
+                  "hf mfdes test");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
     DesfireTest(true);
     return PM3_SUCCESS;
 }
@@ -5603,7 +5620,7 @@ static command_t CommandTable[] = {
     {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "Operations with value file (get/credit/limited credit/debit/clear)"},
     {"clearrecfile",     CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
-    {"test",             CmdHF14ADesTest,             AlwaysAvailable, "Test crypto"},
+    {"test",             CmdHF14ADesTest,             AlwaysAvailable, "Regression crypto tests"},
     {NULL, NULL, NULL, NULL}
 };
 

@@ -47,11 +47,11 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
             compute_crc(CRC_14443_A, barcode, barcode_len - 2, &b1, &b2);
             bool isok = (barcode[barcode_len - 1] == b1 && barcode[barcode_len - 2] == b2);
 
-            PrintAndLogEx(SUCCESS, "        Checksum : "_YELLOW_("%02X %02X")" - %s", b2, b1, (isok) ? _GREEN_("OK") : _RED_("fail"));
+            PrintAndLogEx(SUCCESS, "        Checksum : "_YELLOW_("%02X %02X")" ( %s )", b2, b1, (isok) ? _GREEN_("ok") : _RED_("fail"));
         } else {
             PrintAndLogEx(SUCCESS, "        Checksum : "_YELLOW_("too few data for checksum")" - " _RED_("fail"));
         }
-        PrintAndLogEx(SUCCESS, " Data len (bits) : "_YELLOW_("%zu")" - %s", barcode_len * 8, (barcode_len == 16 || barcode_len == 32) ? _GREEN_("OK") : _YELLOW_("warning"));
+        PrintAndLogEx(SUCCESS, " Data len (bits) : "_YELLOW_("%zu")" ( %s )", barcode_len * 8, (barcode_len == 16 || barcode_len == 32) ? _GREEN_("ok") : _YELLOW_("warning"));
         PrintAndLogEx(SUCCESS, "        Raw data : "_YELLOW_("%s"), sprint_hex(barcode, barcode_len));
         if (barcode_len < 4) // too few to go to next decoding stages
             return PM3_ESOFT;

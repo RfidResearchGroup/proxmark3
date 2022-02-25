@@ -359,9 +359,9 @@ int CmdEM4x50Login(const char *Cmd) {
 
     // print response
     if (resp.status == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Login " _GREEN_("ok"));
+        PrintAndLogEx(SUCCESS, "Login ( " _GREEN_("ok") " )");
     else
-        PrintAndLogEx(FAILED, "Login " _RED_("failed"));
+        PrintAndLogEx(FAILED, "Login ( " _RED_("failed") " )");
 
     return resp.status;
 }
@@ -966,7 +966,7 @@ int CmdEM4x50WritePwd(const char *Cmd) {
         return PM3_EFAILED;
     }
 
-    PrintAndLogEx(SUCCESS, "Writing new password %s (%s)"
+    PrintAndLogEx(SUCCESS, "Writing new password %s ( %s )"
                   , sprint_hex_inrow(npwd, sizeof(npwd))
                   , _GREEN_("ok")
                  );
@@ -1015,9 +1015,9 @@ int CmdEM4x50Wipe(const char *Cmd) {
     }
 
     if (resp.status == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Resetting password to 00000000 (" _GREEN_("ok") ")");
+        PrintAndLogEx(SUCCESS, "Resetting password to 00000000 ( " _GREEN_("ok") " )");
     } else {
-        PrintAndLogEx(FAILED, "Resetting password " _RED_("failed"));
+        PrintAndLogEx(FAILED, "Resetting password ( " _RED_("failed") " )");
         return PM3_ESOFT;
     }
 

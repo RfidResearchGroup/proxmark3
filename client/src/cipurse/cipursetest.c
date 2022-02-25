@@ -362,7 +362,7 @@ static bool TestAPDU(void) {
 bool CIPURSETest(bool verbose) {
     bool res = true;
 
-    PrintAndLogEx(INFO, "------ " _CYAN_("CIPURSE Tests") " ------");
+    PrintAndLogEx(INFO, "------ " _CYAN_("CIPURSE tests") " ------");
 
     res = res && TestKVV();
     res = res && TestISO9797M2();

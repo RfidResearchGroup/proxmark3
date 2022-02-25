@@ -1272,6 +1272,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             DisablePrivacySlixLIso15693(payload->pwd);
             break;
         }
+        case CMD_HF_ISO15693_SLIX_L_DISABLE_AESAFI: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            DisableEAS_AFISlixLIso15693(payload->pwd);
+            break;
+        }
 
 #endif
 

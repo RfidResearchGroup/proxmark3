@@ -48,11 +48,6 @@
 #define MIFARE_2K_MAXSECTOR 32
 #define MIFARE_4K_MAXSECTOR 40
 
-/* On some platforms, max() may already be defined */
-#ifndef max
-#define max(a, b)  ((a) > (b) ? (a) : (b))
-#endif
-
 static int CmdHelp(const char *Cmd);
 
 /*
@@ -1243,7 +1238,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
     if (singleSector) {
         uint8_t MinSectorsCnt = 0;
         // find a MIFARE type that can accommodate the provided block number
-        uint8_t s = max(mfSectorNum(trgBlockNo), mfSectorNum(blockNo));
+        uint8_t s = MAX(mfSectorNum(trgBlockNo), mfSectorNum(blockNo));
         if (s < MIFARE_MINI_MAXSECTOR) {
             MinSectorsCnt = MIFARE_MINI_MAXSECTOR;
         } else if (s < MIFARE_1K_MAXSECTOR) {
@@ -5286,7 +5281,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         PrintAndLogEx(WARNING, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
         got_first = false;
     } else {
-        PrintAndLogEx(INFO, "Authentication ( " _GREEN_("OK") " )");
+        PrintAndLogEx(INFO, "Authentication ( " _GREEN_("ok") " )");
     }
 
     // User supplied key
@@ -5295,7 +5290,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, userkey, sector0) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or the custom key is wrong");
         } else {
-            PrintAndLogEx(INFO, "Authentication ( " _GREEN_("OK") " )");
+            PrintAndLogEx(INFO, "Authentication ( " _GREEN_("ok") " )");
             got_first = true;
         }
     }
@@ -5770,7 +5765,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
             DropField();
             return res;
         }
-        PrintAndLogEx(SUCCESS, "Super card reset [ " _GREEN_("ok") " ]");
+        PrintAndLogEx(SUCCESS, "Super card reset ( " _GREEN_("ok") " )");
         return PM3_SUCCESS;
     }
 
@@ -6206,6 +6201,54 @@ static int CmdHF14AGen4View(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static bool mfc_value(const uint8_t *d, uint32_t *val) {
+    // values
+    uint32_t a = MemLeToUint4byte(d);
+    uint32_t a_inv = MemLeToUint4byte(d + 4);
+    uint32_t b = MemLeToUint4byte(d + 8);
+
+    int val_checks = (
+                         (a == b) && (a == ~a_inv) &&
+                         (d[12] == (~d[13] & 0xFF)) &&
+                         (d[14] == (~d[15] & 0xFF))
+                     );
+
+    if (val) {
+        *val = a;
+    }
+    return (val_checks);
+}
+
+static int CmdHF14AMfValue(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf value",
+                  "Decode of a MIFARE value block",
+                  "hf mf value -d 87D612007829EDFF87D6120011EE11EE\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "16 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int dlen = 0;
+    uint8_t data[16] = {0};
+    CLIGetHexWithReturn(ctx, 1, data, &dlen);
+    CLIParserFree(ctx);
+
+
+    uint32_t value = 0;
+
+    if (mfc_value(data, &value))  {
+        PrintAndLogEx(SUCCESS, "Dec... " _YELLOW_("%" PRIu32), value);
+        PrintAndLogEx(SUCCESS, "Hex... " _YELLOW_("0x%" PRIX32), value);
+    } else {
+        PrintAndLogEx(FAILED, "No value block detected");
+    }
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
     {"list",        CmdHF14AMfList,         AlwaysAvailable, "List MIFARE history"},
@@ -6232,6 +6275,7 @@ static command_t CommandTable[] = {
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},
     {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE Classic binary file to BLANK tag"},
     {"setmod",      CmdHf14AMfSetMod,       IfPm3Iso14443a,  "Set MIFARE Classic EV1 load modulation strength"},
+    {"value",       CmdHF14AMfValue,        AlwaysAvailable, "Decode a value block"},
     {"view",        CmdHF14AMfView,         AlwaysAvailable, "Display content from tag dump file"},
     {"wipe",        CmdHF14AMfWipe,         IfPm3Iso14443a,  "Wipe card to zeros and default keys/acc"},
     {"wrbl",        CmdHF14AMfWrBl,         IfPm3Iso14443a,  "Write MIFARE Classic block"},

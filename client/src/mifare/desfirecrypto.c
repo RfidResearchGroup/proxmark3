@@ -133,14 +133,18 @@ size_t DesfireGetMACLength(DesfireContext_t *ctx) {
 
 size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint8_t crclen) {
     size_t crcpos = datalen - 1;
-    while (crcpos > 0)
-        if (data[crcpos] == 0)
+
+    while (crcpos > 0) {
+        if (data[crcpos] == 0) {
             crcpos--;
-        else
+        } else  {
             break;
+        }
+    }
+
     crcpos++; // crc may be 0x00000000 or 0x0000
     if (crcpos < crclen) {
-        PrintAndLogEx(WARNING, "No space for crc. pos: %zu", crcpos);
+        PrintAndLogEx(WARNING, "No space for crc. pos %zu", crcpos);
         return 0;
     }
 
