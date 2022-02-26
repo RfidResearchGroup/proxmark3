@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added new public key (@anon)
+ - Changed start screen to be less intimidating (@iceman1001)
  - Added detection of a possible mismatch between client and Proxmark3 image (@doegox)
  - Changed `hf 14a info` - added a ATR historical compact TLV decoder (@iceman1001)
  - Added `hf mf value` - decode a value block (@iceman1001)
