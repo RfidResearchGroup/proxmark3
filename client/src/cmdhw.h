@@ -26,5 +26,6 @@ int CmdHW(const char *Cmd);
 
 int handle_tearoff(tearoff_params_t *params, bool verbose);
 void pm3_version(bool verbose, bool oneliner);
+void pm3_version_short(void);
 
 #endif

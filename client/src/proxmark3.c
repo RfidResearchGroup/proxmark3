@@ -41,7 +41,7 @@ static int mainret = PM3_ESOFT;
 
 #ifndef LIBPM3
 #define BANNERMSG1 ""
-#define BANNERMSG2 "   [ Iceman :snowflake: ]"
+#define BANNERMSG2 "   [ :snowflake: ]"
 #define BANNERMSG3 ""
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
@@ -231,7 +231,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     if (execCommand || script_cmds_file || stdinOnPipe)
         pm3_version(false, false);
     else
-        pm3_version(true, false);
+        pm3_version_short();
 
     if (script_cmds_file) {
 

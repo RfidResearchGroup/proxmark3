@@ -51,6 +51,7 @@
 
 extern struct version_information_t g_version_information;
 void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_info);
+void format_version_information_short(char *dst, int len, void *version_info);
 
 uint32_t reflect(uint32_t v, int b); // used in crc.c ...
 uint8_t reflect8(uint8_t b);         // dedicated 8bit reversal

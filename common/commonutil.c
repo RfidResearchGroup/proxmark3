@@ -53,6 +53,27 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
     strncat(dst, v->armsrc, len - strlen(dst) - 1);
 }
 
+void format_version_information_short(char *dst, int len, void *version_info) {
+    struct version_information_t *v = (struct version_information_t *)version_info;
+    dst[0] = 0;
+    if (v->magic != VERSION_INFORMATION_MAGIC) {
+        strncat(dst, "Missing/Invalid version information", len - strlen(dst) - 1);
+        return;
+    }
+    if (v->versionversion != 1) {
+        strncat(dst, "Version information not understood", len - strlen(dst) - 1);
+        return;
+    }
+    if (!v->present) {
+        strncat(dst, "Version information not available", len - strlen(dst) - 1);
+        return;
+    }
+
+    strncat(dst, v->gitversion, len - strlen(dst) - 1);
+    strncat(dst, " ", len - strlen(dst) - 1);
+    strncat(dst, v->buildtime, len - strlen(dst) - 1);
+}
+
 /*
  ref  http://www.csm.ornl.gov/~dunigan/crc.html
  Returns the value v with the bottom b [0,32] bits reflected.
