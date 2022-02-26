@@ -11,7 +11,7 @@
   - [Driver Installation ( Windows 7 )](#driver-installation--windows-7-)
   - [Download ProxSpace repo](#download-proxspace-repo)
   - [Launch ProxSpace](#launch-proxspace)
-  - [Clone the RRG/Iceman repository](#clone-the-rrgiceman-repository)
+  - [Clone the Iceman repository](#clone-the-iceman-repository)
   - [Compile and use the project](#compile-and-use-the-project)
   - [Done!](#done)
 - [Installing pre-compiled binaries with ProxSpace](#installing-pre-compiled-binaries-with-proxspace)
@@ -21,7 +21,7 @@
   - [X Server Installation](#x-server-installation)
   - [Windows Terminal Installation](#windows-terminal-installation)
   - [Dependencies](#dependencies)
-  - [Clone the RRG/Iceman repository](#clone-the-rrgiceman-repository-1)
+  - [Clone the Iceman repository](#clone-the-iceman-repository-1)
   - [Compile and use the project](#compile-and-use-the-project-1)
   - [Done!](#done-1)
 
@@ -81,7 +81,7 @@ You'll get a Bash prompt and your home directory should become the ProxSpace `pm
 
 Please note you will need to use `/` in paths as you are using Bash.
 
-## Clone the RRG/Iceman repository
+## Clone the Iceman repository
 ^[Top](#top)
 
 ```sh
@@ -174,7 +174,7 @@ _note_
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qtbase5-dev`.  
 If you don't need support for Python3 scripts in the Proxmark3 client, you can skip the installation of `libpython3-dev`.
 
-## Clone the RRG/Iceman repository
+## Clone the Iceman repository
 ^[Top](#top)
 
 ```sh

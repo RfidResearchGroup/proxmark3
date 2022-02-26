@@ -576,7 +576,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     bool is_keyok = (mbedtls_rsa_check_pubkey(rsa) == 0);
     PrintAndLogEx(
         (is_keyok) ? SUCCESS : FAILED,
-        "RRG/Iceman RSA public key check.... ( %s )",
+        "RDV4 RSA public key check.... ( %s )",
         (is_keyok) ?  _GREEN_("ok") : _RED_("fail")
     );
 
@@ -584,7 +584,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     if (verbose) {
         PrintAndLogEx(
             (is_keyok) ? SUCCESS : FAILED,
-            "RRG/Iceman RSA private key check... ( %s )",
+            "RDV4 RSA private key check... ( %s )",
             (is_keyok) ?  _GREEN_("ok") : _YELLOW_("N/A")
         );
     }

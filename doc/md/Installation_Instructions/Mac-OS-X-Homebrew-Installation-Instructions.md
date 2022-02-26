@@ -63,11 +63,11 @@ For more info, go to https://github.com/RfidResearchGroup/homebrew-proxmark3
 ## Upgrade HomeBrew tap formula
 ^[Top](#top)
 
-*This method is useful for those looking to run bleeding-edge versions of RRG/iceman's client. Keep this in mind when attempting to update your HomeBrew tap formula as this procedure could easily cause a build to break if an update is unstable on macOS.* 
+*This method is useful for those looking to run bleeding-edge versions of iceman's fork. Keep this in mind when attempting to update your HomeBrew tap formula as this procedure could easily cause a build to break if an update is unstable on macOS.* 
 
 Tested on macOS Mojave 10.14.4
 
-*Note: This assumes you have already installed RRG/iceman's fork from HomeBrew as mentioned above*
+*Note: This assumes you have already installed iceman's fork from HomeBrew as mentioned above*
 
 Force HomeBrew to pull the latest source from github
 

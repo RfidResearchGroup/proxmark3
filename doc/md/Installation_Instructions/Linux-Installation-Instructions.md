@@ -137,7 +137,7 @@ And a new `/dev/ttyACM0` should have appeared.
 
 Add current user to the proper group to get permission to use `/dev/ttyACM0`.
 
-This step can be done from the RRG/Iceman Proxmark3 repo with:
+This step can be done from the Iceman Proxmark3 repo with:
 
 ```sh
 make accessrights

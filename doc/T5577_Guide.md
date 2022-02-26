@@ -1,7 +1,7 @@
 # T5577 Introduction Guide
 <a id="Top"></a>
 
-### Based on RRG/Iceman Proxmark3 repo
+### Based on Iceman Proxmark3 repo
 
 ### Ver.1 8 Sep 2019
 ### Ver.2 7 March 2021

@@ -15,7 +15,7 @@ if [ "$1" = "--short" ]; then
 fi
 
 # if you are making your own fork,  change this line to reflect your fork-name
-fullgitinfo="RRG/Iceman"
+fullgitinfo="Iceman"
 # GIT status  0 = dirty,  1 = clean ,  2 = undecided
 clean=2
 

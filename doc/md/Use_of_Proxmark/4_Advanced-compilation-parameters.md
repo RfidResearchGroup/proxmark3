@@ -18,7 +18,7 @@
 The client and the Proxmark3 firmware should always be in sync.
 Nevertheless, the firmware can be tuned depending on the Proxmark3 platform and options.
 
-Indeed, the RRG/Iceman fork can be used on other Proxmark3 hardware platforms as well.
+Indeed, the Iceman fork can be used on other Proxmark3 hardware platforms as well.
 
 Via some definitions, you can adjust the firmware for a given platform, but also to add features like the support of the Blue Shark add-on or to select which standalone mode to embed.
 
@@ -94,7 +94,7 @@ If you have installed a Blue Shark add-on on your RDV4, define `PLATFORM_EXTRAS=
 ## STANDALONE
 ^[Top](#top)
 
-The RRG/Iceman repository gives you to easily choose which standalone mode to embed in the firmware.
+The Iceman repository gives you to easily choose which standalone mode to embed in the firmware.
 
 Here are the supported values you can assign to `STANDALONE` in `Makefile.platform`:
 

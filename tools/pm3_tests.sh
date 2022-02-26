@@ -211,7 +211,7 @@ function CheckExecute() {
   return $RESULT
 }
 
-echo -e "\n${C_BLUE}RRG/Iceman Proxmark3 test tool ${C_NC}\n"
+echo -e "\n${C_BLUE}Iceman Proxmark3 test tool ${C_NC}\n"
 
 echo -n "work directory: "
 pwd

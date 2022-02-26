@@ -24,7 +24,7 @@
 The client and the Proxmark3 firmware should always be in sync.
 Nevertheless, the firmware can be tuned depending on the Proxmark3 platform and options.
 
-Indeed, the RRG/Iceman fork can be used on other Proxmark3 hardware platforms as well.
+Indeed, the Iceman fork can be used on other Proxmark3 hardware platforms as well.
 
 Via some definitions, you can adjust the firmware for a given platform, but also to add features like the support of the Blue Shark add-on or to select which standalone mode to embed. To learn how to adjust the firmware, please read [Advanced compilation parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md).
 
