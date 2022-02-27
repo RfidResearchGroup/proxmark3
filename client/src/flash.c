@@ -258,7 +258,7 @@ int flash_load(flash_file_t *ctx, bool force) {
     Elf32_Ehdr_t *ehdr;
     Elf32_Shdr_t *shdrs = NULL;
     uint8_t *shstr = NULL;
-     struct version_information_t *vi = NULL;
+    struct version_information_t *vi = NULL;
     int res = PM3_EUNDEF;
 
     fd = fopen(ctx->filename, "rb");
@@ -346,7 +346,7 @@ int flash_load(flash_file_t *ctx, bool force) {
         }
 
         if (strcmp(((char *)shstr) + shdrs[i].sh_name, ".bootphase1") == 0) {
-            uint32_t offset = *(uint32_t*)(ctx->elf + le32(shdrs[i].sh_offset) + le32(shdrs[i].sh_size) - 4);
+            uint32_t offset = *(uint32_t *)(ctx->elf + le32(shdrs[i].sh_offset) + le32(shdrs[i].sh_size) - 4);
             if (offset >= le32(shdrs[i].sh_addr)) {
                 offset -= le32(shdrs[i].sh_addr);
                 if (offset < le32(shdrs[i].sh_size)) {

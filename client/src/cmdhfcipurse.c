@@ -1407,10 +1407,10 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
         res = CIPURSEDeleteFile(childFileId, buf, sizeof(buf), &len, &sw);
         if (res != 0 || sw != 0x9000) {
             PrintAndLogEx(ERR, "Delete child file " _CYAN_("%04x ") " %s", childFileId, _RED_("ERROR"));
-            PrintAndLogEx(ERR, "0x%04x - %s", 
-                    sw,
-                    GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw)
-                );
+            PrintAndLogEx(ERR, "0x%04x - %s",
+                          sw,
+                          GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw)
+                         );
             DropField();
             return PM3_ESOFT;
         }
@@ -1420,9 +1420,9 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
         if (res != 0 || sw != 0x9000) {
             PrintAndLogEx(ERR, "Delete file " _CYAN_("%04x ") " %s", fileId, _RED_("ERROR"));
             PrintAndLogEx(ERR, "0x%04x - %s",
-                    sw,
-                    GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw)
-                );
+                          sw,
+                          GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw)
+                         );
             DropField();
             return PM3_ESOFT;
         }
@@ -1432,9 +1432,9 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
         if (res != 0 || sw != 0x9000) {
             PrintAndLogEx(ERR, "Delete application " _CYAN_("%s ") " %s", sprint_hex_inrow(aid, aidLen), _RED_("ERROR"));
             PrintAndLogEx(ERR, "0x%04x - %s",
-                    sw,
-                    GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw)
-                );
+                          sw,
+                          GetSpecificAPDUCodeDesc(DeleteAPDUCodeDescriptions, ARRAYLEN(DeleteAPDUCodeDescriptions), sw)
+                         );
             DropField();
             return PM3_ESOFT;
         }
