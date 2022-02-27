@@ -193,7 +193,7 @@ function CheckExecute() {
   for I in $RETRY
   do
     RES=$(eval "$2")
-    if echo "$RES" | grep -q "$3"; then
+    if echo "$RES" | egrep -q "$3"; then
       echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
       return $RESULT
     fi
@@ -250,6 +250,7 @@ while true; do
       if ! CheckExecute "findbits_test test"               "tools/findbits_test.py 2>&1" "OK"; then break; fi
       if ! CheckExecute "pm3_eml_mfd test"                 "tools/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
       if ! CheckExecute "recover_pk test"                  "tools/recover_pk.py selftests 2>&1" "Tests:.*\[OK\]"; then break; fi
+      if ! CheckExecute "mkversion sha256 test"            "tools/mkversion.sh" '"[0-9a-f]{9}"'; then break; fi
     fi
     if $TESTALL || $TESTBOOTROM; then
       echo -e "\n${C_BLUE}Testing bootrom:${C_NC}"
@@ -380,8 +381,8 @@ while true; do
       if ! CheckExecute "reveng -w test"          "$CLIENTBIN -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
       if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen -t'" "Selftest OK"; then break; fi
       if ! CheckExecute "mfu keygen test"         "$CLIENTBIN -c 'hf mfu keygen --uid 11223344556677'" "80 B1 C2 71 D8 A0"; then break; fi
-      if ! CheckExecute "jooki encode test"       "$CLIENTBIN -c 'hf jooki encode -t'" "04 28 F4 DA F0 4A 81  ( ok )"; then break; fi
-      if ! CheckExecute "trace load/list 14a"     "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -1 -t 14a;'" "READBLOCK(8)"; then break; fi
+      if ! CheckExecute "jooki encode test"       "$CLIENTBIN -c 'hf jooki encode -t'" "04 28 F4 DA F0 4A 81  \( ok \)"; then break; fi
+      if ! CheckExecute "trace load/list 14a"     "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -1 -t 14a;'" "READBLOCK\(8\)"; then break; fi
       if ! CheckExecute "trace load/list x"       "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -x1 -t 14a;'" "0.0101840425"; then break; fi
       if ! CheckExecute "nfc decode test - oob"           "$CLIENTBIN -c 'nfc decode -d DA2010016170706C69636174696F6E2F766E642E626C7565746F6F74682E65702E6F6F62301000649201B96DFB0709466C65782032'" "Flex 2"; then break; fi
       if ! CheckExecute "nfc decode test - device info"   "$CLIENTBIN -c 'nfc decode -d d1025744690004536f6e79010752432d533338300220426c61636b204e46432052656164657220636f6e6e656374656420746f2050430310123e4567e89b12d3a45642665544000004124e464320506f72742d3130302076312e3032'" "NFC Port-100 v1.02"; then break; fi
@@ -442,10 +443,10 @@ while true; do
                                                                      "Fmt 26 FC: 123 Card: 1337 Parity: 11"; then break; fi
       if ! CheckExecute slow "lf T55 indala_224 test"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_224.pm3; lf search -1'" "Indala ID found"; then break; fi
       if ! CheckExecute slow "lf T55 indala_224 test2"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_224.pm3; lf indala demod'" \
-                                                                     "Indala (len 224)  Raw: 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"; then break; fi
+                                                                     "Indala \(len 224\)  Raw: 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"; then break; fi
       if ! CheckExecute slow "lf T55 io test"                    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_io.pm3; lf search -1'" "IO Prox ID found"; then break; fi
       if ! CheckExecute slow "lf T55 io test2"                   "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_io.pm3; lf io demod'" \
-                                                                     "IO Prox - XSF(01)01:01337, Raw: 007840603059cf3f ( ok )"; then break; fi
+                                                                     "IO Prox - XSF\(01\)01:01337, Raw: 007840603059cf3f \( ok \)"; then break; fi
       if ! CheckExecute slow "lf T55 jablotron test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_jablotron.pm3; lf search -1'" "Jablotron ID found"; then break; fi
       if ! CheckExecute slow "lf T55 jablotron test2"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_jablotron.pm3; lf jablotron demod'" \
                                                                      "Printed: 1410-00-0011-2233"; then break; fi
@@ -463,16 +464,16 @@ while true; do
                                                                      "Motorola - fmt: 26 FC: 258 Card: 2, Raw: A0000000A0002021"; then break; fi
       if ! CheckExecute slow "lf T55 nedap test"                 "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nedap.pm3; lf search -1'" "NEDAP ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nedap test2"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nedap.pm3; lf nedap demod'" \
-                                                                     "NEDAP (64b) - ID: 12345 subtype: 1 customer code: 291 / 0x123 Raw: FF82246508209953"; then break; fi
+                                                                     "NEDAP \(64b\) - ID: 12345 subtype: 1 customer code: 291 / 0x123 Raw: FF82246508209953"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch.pm3; lf search -1'" "NexWatch ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch test2"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch.pm3; lf nexwatch demod'" \
                                                                      "Raw : 5600000000213C9F8F150C00"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch_nexkey test"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_nexkey.pm3; lf search -1'" "NexWatch ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch_nexkey test2"      "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_nexkey.pm3; lf nexwatch demod'" \
-                                                                     "88bit id : 521512301 (0x1f15a56d)"; then break; fi
+                                                                     "88bit id : 521512301 \(0x1f15a56d\)"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch_quadrakey test"    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_quadrakey.pm3; lf search -1'" "NexWatch ID found"; then break; fi
       if ! CheckExecute slow "lf T55 nexwatch_quadrakey test2"   "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_nexwatch_quadrakey.pm3; lf nexwatch demod'" \
-                                                                     "88bit id : 521512301 (0x1f15a56d)"; then break; fi
+                                                                     "88bit id : 521512301 \(0x1f15a56d\)"; then break; fi
       if ! CheckExecute slow "lf T55 noralsy test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_noralsy.pm3; lf search -1'" "Noralsy ID found"; then break; fi
       if ! CheckExecute slow "lf T55 noralsy test2"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_noralsy.pm3; lf noralsy demod'" \
                                                                      "Noralsy - Card: 112233, Year: 2000, Raw: BB0214FF0110002233070000"; then break; fi
@@ -501,12 +502,12 @@ while true; do
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "at_enc"; then break; fi
       if ! CheckExecute slow retry ignore "hf mf hardnested long test"  "$CLIENTBIN -c 'hf mf hardnested -t --tk 000000000000'" "found:"; then break; fi
-      if ! CheckExecute slow "hf iclass loclass long test" "$CLIENTBIN -c 'hf iclass loclass --long'" "verified (ok)"; then break; fi
-      if ! CheckExecute slow "emv long test"               "$CLIENTBIN -c 'emv test -l'" "Test(s) \[ ok"; then break; fi
+      if ! CheckExecute slow "hf iclass loclass long test" "$CLIENTBIN -c 'hf iclass loclass --long'" "verified \(ok\)"; then break; fi
+      if ! CheckExecute slow "emv long test"               "$CLIENTBIN -c 'emv test -l'" "Test\(s\) \[ ok"; then break; fi
       if ! CheckExecute "hf iclass lookup test"            "$CLIENTBIN -c 'hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f $DICPATH/iclass_default_keys.dic'" \
                                                                       "valid key AE A6 84 A6 DA B2 32 78"; then break; fi
-      if ! CheckExecute "hf iclass loclass test"         "$CLIENTBIN -c 'hf iclass loclass --test'" "key diversification (ok)"; then break; fi
-      if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Test(s) \[ ok"; then break; fi
+      if ! CheckExecute "hf iclass loclass test"         "$CLIENTBIN -c 'hf iclass loclass --test'" "key diversification \(ok\)"; then break; fi
+      if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Test\(s\) \[ ok"; then break; fi
       if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \[ ok"; then break; fi
       if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \[ ok"; then break; fi
     fi
