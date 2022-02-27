@@ -110,17 +110,16 @@ proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image /tmp/my-bootrom.elf -
 ## flasher stops and warns you about firmware image
 ^[Top](#top)
 
-
-The Proxmark3 software and firmware is connected tightly. The strong recommendation is to use the client with a Proxmark3 device flashed with firmware images from same compilation time.  
-In the flash process you might get this message because the firmware images is downloaded or distributed and you have compiled your own client.  Ie,  not from same compilation time.
-To minimize the risks the flasher warns about it and stops.  
+The Proxmark3 software and firmware is connected tightly. The strong recommendation is to use the client with a Proxmark3 device flashed with firmware images from same source version.  
+In the flash process you might get this message because the firmware images is downloaded or distributed and you have compiled your own client from a different source version.  
+To minimize the risks the flasher warns about it and stops.
 
 ```
     Make sure to flash a correct and up-to-date version
     You can force flashing this firmware by using the option '--force'
 ```
 
-You will need to add the `--force`  in order to continue flashing. 
+If you know what you are doing and want to proceed despite the mismatch, you need to add the `--force` param in order to continue flashing.
 
 ```sh
 pm3-flash-all --force
