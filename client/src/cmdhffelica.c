@@ -2069,7 +2069,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
         return PM3_EOPABORTED;
     }
 
-    uint32_t tracelen = resp.oldarg[1];
+    uint16_t tracelen = resp.oldarg[1];
     if (tracelen == 0) {
         PrintAndLogEx(WARNING, "No trace data! Maybe not a FeliCa Lite card?");
         return PM3_ESOFT;
