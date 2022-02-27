@@ -106,6 +106,9 @@ or
 proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image /tmp/my-bootrom.elf --image /tmp/my-fullimage.elf
 ```
 
+If the flasher can't detect your Proxmark3 (especially the very first time you flash a new device), force it to enter the bootloader mode as following:  
+With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. You can release the button, two of the four LEDs should stay on. You're in bootloader mode, ready for the next step. In case the two LEDs don't stay on when you're releasing the button, you've a very old bootloader, start over and keep the button pressed during the whole flashing procedure.
+
 
 ## flasher stops and warns you about firmware image
 ^[Top](#top)
