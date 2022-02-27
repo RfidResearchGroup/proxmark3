@@ -364,7 +364,7 @@ uint64_t arg_get_u64_hexstr_def(CLIParserContext *ctx, uint8_t paramnum, uint64_
     int dlen = 0;
     int res = CLIParamHexToBuf(arg_get_str(ctx, paramnum), d, sizeof(d), &dlen);
     if (res == 0 && dlen > 0) {
-        for (uint8_t i = 0; i < dlen; i++) {
+        for (int i = 0; i < dlen; i++) {
             rv <<= 8;
             rv |= d[i];
         }
