@@ -49,7 +49,7 @@ static uint32_t felica_lasttime_prox2air_start;
 
 static void iso18092_setup(uint8_t fpga_minor_mode);
 static uint8_t felica_select_card(felica_card_select_t *card);
-static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed);
+static void TransmitFor18092_AsReader(uint8_t *frame, uint16_t len, uint32_t *timing, uint8_t power, uint8_t highspeed);
 static bool WaitForFelicaReply(uint16_t maxbytes);
 
 static void iso18092_set_timeout(uint32_t timeout) {
@@ -297,7 +297,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
 // Felica standard has a different file system, AFAIK,
 // 8-byte IDm, number of blocks, blocks numbers
 // number of blocks limited to 4 for FelicaLite(S)
-static void BuildFliteRdblk(const uint8_t *idm, int blocknum, const uint16_t *blocks) {
+static void BuildFliteRdblk(const uint8_t *idm, uint8_t blocknum, const uint16_t *blocks) {
     if (blocknum > 4 || blocknum <= 0)
         Dbprintf("Invalid number of blocks, %d != 4", blocknum);
 
@@ -350,7 +350,7 @@ static void BuildFliteRdblk(const uint8_t *idm, int blocknum, const uint16_t *bl
     AddCrc(frameSpace + 2, c - 2);
 }
 
-static void TransmitFor18092_AsReader(uint8_t *frame, int len, uint32_t *timing, uint8_t power, uint8_t highspeed) {
+static void TransmitFor18092_AsReader(uint8_t *frame, uint16_t len, uint32_t *timing, uint8_t power, uint8_t highspeed) {
     uint16_t flags = FPGA_MAJOR_MODE_HF_ISO18092;
     if (power)
         flags |= FPGA_HF_ISO18092_FLAG_READER;
