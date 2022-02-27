@@ -241,7 +241,7 @@ int CmdHFTune(const char *Cmd) {
     print_progress(0, max, style);
 
     // loop forever (till button pressed) if iter = 0 (default)
-    for (uint8_t i = 0; iter == 0 || i < iter; i++) {
+    for (uint32_t i = 0; iter == 0 || i < iter; i++) {
         if (kbd_enter_pressed()) {
             break;
         }

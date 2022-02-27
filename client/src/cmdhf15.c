@@ -1937,7 +1937,7 @@ static int CmdHF15Restore(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    int retries = arg_get_int_def(ctx, 7, 3);
+    uint32_t retries = arg_get_u32_def(ctx, 7, 3);
     int blocksize = arg_get_int_def(ctx, 8, 4);
     bool verbose = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
@@ -2040,7 +2040,7 @@ static int CmdHF15Restore(const char *Cmd) {
         memcpy(req + reqlen + 1, data + bytes, blocksize);
         AddCrc15(req, reqlen + 1 + blocksize);
 
-        uint8_t tried = 0;
+        uint32_t tried = 0;
         for (tried = 0; tried < retries; tried++) {
 
             retval = hf_15_write_blk(verbose, fast, req, (reqlen + 1 + blocksize + 2));

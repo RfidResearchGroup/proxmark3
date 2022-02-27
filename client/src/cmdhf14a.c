@@ -2651,6 +2651,11 @@ int CmdHF14ANdefRead(const char *Cmd) {
         DropField();
         return PM3_EMALLOC;
     }
+    if (ndef_size + offset > 0xFFFF) {
+        PrintAndLogEx(ERR, "NDEF size abnormally large in CmdHF14ANdef(). Aborting...\n");
+        DropField();
+        return PM3_EOVFLOW;
+    }
     for (uint16_t i = offset; i < ndef_size + offset; i += max_rapdu_size) {
         uint16_t segment_size = max_rapdu_size < ndef_size + offset - i ? max_rapdu_size : ndef_size + offset - i;
         keep_field_on = i < ndef_size + offset - max_rapdu_size;
