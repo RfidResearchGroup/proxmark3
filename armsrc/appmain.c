@@ -121,7 +121,7 @@ void send_wtx(uint16_t wtx) {
 // in ADC units (0 to 1023). Also a routine to sum up a number of samples and
 // return that.
 //-----------------------------------------------------------------------------
-static uint16_t ReadAdc(int ch) {
+static uint16_t ReadAdc(uint8_t ch) {
 
     // Note: ADC_MODE_PRESCALE and ADC_MODE_SAMPLE_HOLD_TIME are set to the maximum allowed value.
     // AMPL_HI is are high impedance (10MOhm || 1MOhm) output, the input capacitance of the ADC is 12pF (typical). This results in a time constant
@@ -147,11 +147,11 @@ static uint16_t ReadAdc(int ch) {
 }
 
 // was static - merlok
-uint16_t AvgAdc(int ch) {
+uint16_t AvgAdc(uint8_t ch) {
     return SumAdc(ch, 32) >> 5;
 }
 
-uint16_t SumAdc(int ch, int NbSamples) {
+uint16_t SumAdc(uint8_t ch, uint8_t NbSamples) {
     uint16_t a = 0;
     for (uint8_t i = 0; i < NbSamples; i++)
         a += ReadAdc(ch);
