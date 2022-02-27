@@ -35,7 +35,7 @@ jobs:
         run: brew tap RfidResearchGroup/proxmark3
 
       - name: Install dependencies
-        run: brew install readline qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl
+        run: brew install readline coreutils qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl
 
       - name: Fix linkings for qt5 and openssl
         working-directory: /usr/local/include
