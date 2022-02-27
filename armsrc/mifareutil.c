@@ -76,7 +76,7 @@ uint8_t mf_crypto1_encrypt4bit(struct Crypto1State *pcs, uint8_t data) {
 }
 
 // send X byte basic commands
-int mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing) {
+uint16_t mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing) {
 
     uint8_t dcmd[data_size + 3];
     dcmd[0] = cmd;
@@ -85,8 +85,8 @@ int mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *answe
 
     AddCrc14A(dcmd, data_size + 1);
     ReaderTransmit(dcmd, sizeof(dcmd), timing);
-    int len = ReaderReceive(answer, answer_parity);
-    if (!len) {
+    uint16_t len = ReaderReceive(answer, answer_parity);
+    if (len == 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("%02X Cmd failed. Card timeout.", cmd);
         len = ReaderReceive(answer, answer_parity);
     }
@@ -94,7 +94,7 @@ int mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *answe
 }
 
 // send 2 byte commands
-int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing) {
+uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data, uint8_t *answer, uint8_t *answer_parity, uint32_t *timing) {
     uint16_t pos;
     uint8_t dcmd[4] = {cmd, data, 0x00, 0x00};
     uint8_t ecmd[4] = {0x00, 0x00, 0x00, 0x00};
@@ -113,7 +113,7 @@ int mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd,
         ReaderTransmit(dcmd, sizeof(dcmd), timing);
     }
 
-    int len = ReaderReceive(answer, par);
+    uint16_t len = ReaderReceive(answer, par);
 
     if (answer_parity) *answer_parity = par[0];
 

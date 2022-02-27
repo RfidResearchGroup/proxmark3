@@ -145,7 +145,7 @@ void ReaderIso14443a(PacketCommandNG *c);
 void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing);
 void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing);
 void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *timing);
-int ReaderReceive(uint8_t *receivedAnswer, uint8_t *par);
+uint16_t ReaderReceive(uint8_t *receivedAnswer, uint8_t *par);
 
 void iso14443a_setup(uint8_t fpga_minor_mode);
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint8_t *res);

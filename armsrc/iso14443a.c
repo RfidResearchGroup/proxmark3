@@ -1818,7 +1818,7 @@ static void PrepareDelayedTransfer(uint16_t delay) {
 
     ts->buf[ts->max++] = 0x00;
 
-    for (uint16_t i = 0; i < ts->max; i++) {
+    for (uint32_t i = 0; i < ts->max; i++) {
         uint8_t bits_to_shift = ts->buf[i] & bitmask;
         ts->buf[i] = ts->buf[i] >> delay;
         ts->buf[i] = ts->buf[i] | (bits_shifted << (8 - delay));
@@ -2321,16 +2321,16 @@ void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing) {
     ReaderTransmitBitsPar(frame, len * 8, par, timing);
 }
 
-static int ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t offset, uint8_t *par) {
+static uint16_t ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t offset, uint8_t *par) {
     if (!GetIso14443aAnswerFromTag(receivedAnswer, par, offset))
-        return false;
+        return 0;
     LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
     return Demod.len;
 }
 
-int ReaderReceive(uint8_t *receivedAnswer, uint8_t *par) {
+uint16_t ReaderReceive(uint8_t *receivedAnswer, uint8_t *par) {
     if (!GetIso14443aAnswerFromTag(receivedAnswer, par, 0))
-        return false;
+        return 0;
     LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
     return Demod.len;
 }
@@ -2578,7 +2578,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
                 }
 
                 // finally, add the last bits and BCC of the UID
-                for (uint16_t i = collision_answer_offset; i < Demod.len * 8; i++, uid_resp_bits++) {
+                for (uint32_t i = collision_answer_offset; i < Demod.len * 8; i++, uid_resp_bits++) {
                     uint16_t UIDbit = (resp[i / 8] >> (i % 8)) & 0x01;
                     uid_resp[uid_resp_bits / 8] |= UIDbit << (uid_resp_bits % 8);
                 }
@@ -2972,7 +2972,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
             }
         } else {                    // want to send complete bytes only
             if ((param & ISO14A_TOPAZMODE)) {
-                uint16_t i = 0;
+                size_t i = 0;
                 ReaderTransmitBitsPar(&cmd[i++], 7, NULL, NULL);                        // first byte: 7 bits, no paritiy
                 while (i < len) {
                     ReaderTransmitBitsPar(&cmd[i++], 8, NULL, NULL);                    // following bytes: 8 bits, no paritiy
