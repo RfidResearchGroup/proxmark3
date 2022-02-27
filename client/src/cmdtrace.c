@@ -947,7 +947,7 @@ static int CmdTraceExtract(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") " bytes)", gs_traceLen);
+    PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%u") " bytes)", gs_traceLen);
     if (gs_traceLen == 0) {
         return PM3_SUCCESS;
     }
@@ -998,7 +998,7 @@ static int CmdTraceLoad(const char *Cmd) {
 
     gs_traceLen = (long)len;
 
-    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = " _YELLOW_("%lu") " bytes)", gs_traceLen);
+    PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = " _YELLOW_("%u") " bytes)", gs_traceLen);
     PrintAndLogEx(HINT, "try " _YELLOW_("`trace list -1 -t ...`") " to view trace.  Remember the " _YELLOW_("`-1`") " param");
     return PM3_SUCCESS;
 }
@@ -1178,7 +1178,7 @@ int CmdTraceList(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%lu") " bytes)", gs_traceLen);
+    PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%u") " bytes)", gs_traceLen);
     if (gs_traceLen == 0) {
         return PM3_SUCCESS;
     }
