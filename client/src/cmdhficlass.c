@@ -1338,7 +1338,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         BLOCK79ENCRYPTION aa1_encryption = (decrypted[(6 * 8) + 7] & 0x03);
 
-        uint32_t limit = MIN(applimit, decryptedlen / 8);
+        uint8_t limit = MIN(applimit, decryptedlen / 8);
 
         if (decryptedlen / 8 != applimit) {
             PrintAndLogEx(WARNING, "Actual file len " _YELLOW_("%zu") " vs HID app-limit len " _YELLOW_("%u"), decryptedlen, applimit * 8);
@@ -1347,9 +1347,9 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         //uint8_t numblocks4userid = GetNumberBlocksForUserId(decrypted + (6 * 8));
 
-        for (uint16_t blocknum = 0; blocknum < limit; ++blocknum) {
+        for (uint8_t blocknum = 0; blocknum < limit; ++blocknum) {
 
-            uint8_t idx = blocknum * 8;
+            uint16_t idx = blocknum * 8;
             memcpy(enc_data, decrypted + idx, 8);
 
             if (aa1_encryption == RFU || aa1_encryption == None)
@@ -1408,7 +1408,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
             char binstr[8 * 8 + 1] = {0};
             hextobinstring(binstr, hexstr);
-            uint8_t i = 0;
+            size_t i = 0;
             while (i < strlen(binstr) && binstr[i++] == '0');
 
             PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), binstr + i);
@@ -2449,7 +2449,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                 hex_to_buffer((uint8_t *)hexstr, dec_data, 8, sizeof(hexstr) - 1, 0, 0, true);
                 char binstr[64 + 1] = {0};
                 hextobinstring(binstr, hexstr);
-                uint8_t i = 0;
+                size_t i = 0;
                 while (i < strlen(binstr) && binstr[i++] == '0');
 
                 i &= 0x3C;
@@ -2907,12 +2907,12 @@ static int loadKeys(char *filename) {
         free(dump);
         return PM3_EFILE;
     }
-    uint8_t i = 0;
+    size_t i = 0;
     for (; i < bytes_read / 8; i++)
         memcpy(iClass_Key_Table[i], dump + (i * 8), 8);
 
     free(dump);
-    PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from %s", i, filename);
+    PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2zd") " keys from %s", i, filename);
     return PM3_SUCCESS;
 }
 
@@ -3456,7 +3456,7 @@ void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, 
     pthread_t threads[iclass_tc];
     iclass_thread_arg_t args[iclass_tc];
     // init thread arguments
-    for (uint8_t i = 0; i < iclass_tc; i++) {
+    for (size_t i = 0; i < iclass_tc; i++) {
         args[i].thread_idx = i;
         args[i].use_raw = use_raw;
         args[i].use_elite = use_elite;
@@ -3522,7 +3522,7 @@ void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elit
     pthread_t threads[iclass_tc];
     iclass_thread_arg_t args[iclass_tc];
     // init thread arguments
-    for (uint8_t i = 0; i < iclass_tc; i++) {
+    for (size_t i = 0; i < iclass_tc; i++) {
         args[i].thread_idx = i;
         args[i].use_raw = use_raw;
         args[i].use_elite = use_elite;
@@ -3534,7 +3534,7 @@ void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elit
         memcpy(args[i].cc_nr, CCNR, sizeof(args[i].cc_nr));
     }
 
-    for (int i = 0; i < iclass_tc; i++) {
+    for (size_t i = 0; i < iclass_tc; i++) {
         int res = pthread_create(&threads[i], NULL, bf_generate_mackey, (void *)&args[i]);
         if (res) {
             PrintAndLogEx(NORMAL, "");
