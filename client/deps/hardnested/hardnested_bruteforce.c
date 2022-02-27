@@ -216,15 +216,15 @@ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte) {
 
     uint8_t best_4[4] = {0};
     int sum_best = -1;
-    for (uint16_t n1 = 0; n1 < nonces_to_bruteforce; n1++) {
-        for (uint16_t n2 = 0; n2 < nonces_to_bruteforce; n2++) {
+    for (uint32_t n1 = 0; n1 < nonces_to_bruteforce; n1++) {
+        for (uint32_t n2 = 0; n2 < nonces_to_bruteforce; n2++) {
             if (n2 != n1) {
-                for (uint16_t n3 = 0; n3 < nonces_to_bruteforce; n3++) {
+                for (uint32_t n3 = 0; n3 < nonces_to_bruteforce; n3++) {
                     if ((n3 != n2 && n3 != n1) || nonces_to_bruteforce < 3
                             // && trailing_zeros(bf_test_nonce_2nd_byte[n1] ^ bf_test_nonce_2nd_byte[n2])
                             // > trailing_zeros(bf_test_nonce_2nd_byte[n2] ^ bf_test_nonce_2nd_byte[n3])
                        ) {
-                        for (uint16_t n4 = 0; n4 < nonces_to_bruteforce; n4++) {
+                        for (uint32_t n4 = 0; n4 < nonces_to_bruteforce; n4++) {
                             if ((n4 != n3 && n4 != n2 && n4 != n1) || nonces_to_bruteforce < 4
                                     // && trailing_zeros(bf_test_nonce_2nd_byte[n2] ^ bf_test_nonce_2nd_byte[n3])
                                     // > trailing_zeros(bf_test_nonce_2nd_byte[n3] ^ bf_test_nonce_2nd_byte[n4])
@@ -250,13 +250,13 @@ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte) {
     uint32_t bf_test_nonce_temp[4];
     uint8_t bf_test_nonce_par_temp[4];
     uint8_t bf_test_nonce_2nd_byte_temp[4];
-    for (uint8_t j = 0; j < 4 && j < nonces_to_bruteforce; j++) {
+    for (uint32_t j = 0; j < 4 && j < nonces_to_bruteforce; j++) {
         bf_test_nonce_temp[j] = bf_test_nonce[best_4[j]];
 
         bf_test_nonce_par_temp[j] = bf_test_nonce_par[best_4[j]];
         bf_test_nonce_2nd_byte_temp[j] = bf_test_nonce_2nd_byte[best_4[j]];
     }
-    for (uint8_t j = 0; j < 4 && j < nonces_to_bruteforce; j++) {
+    for (uint32_t j = 0; j < 4 && j < nonces_to_bruteforce; j++) {
         bf_test_nonce[j] = bf_test_nonce_temp[j];
         bf_test_nonce_par[j] = bf_test_nonce_par_temp[j];
         bf_test_nonce_2nd_byte[j] = bf_test_nonce_2nd_byte_temp[j];
@@ -382,7 +382,7 @@ static bool read_bench_data(statelist_t *test_candidates) {
         fclose(benchfile);
         return false;
     }
-    for (uint16_t i = 0; i < nonces_to_bruteforce && i < 256; i++) {
+    for (uint32_t i = 0; i < nonces_to_bruteforce && i < 256; i++) {
         bytes_read = fread(&bf_test_nonce[i], 1, sizeof(uint32_t), benchfile);
         if (bytes_read != sizeof(uint32_t)) {
             fclose(benchfile);
@@ -438,7 +438,7 @@ float brute_force_benchmark(void) {
 
     test_candidates[0].states[ODD_STATE] = calloc(1, (TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
     test_candidates[0].states[EVEN_STATE] = calloc(1, (TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
-    for (uint8_t i = 0; i < NUM_BRUTE_FORCE_THREADS - 1; i++) {
+    for (uint32_t i = 0; i < NUM_BRUTE_FORCE_THREADS - 1; i++) {
         test_candidates[i].next = test_candidates + i + 1;
         test_candidates[i + 1].states[ODD_STATE] = test_candidates[0].states[ODD_STATE];
         test_candidates[i + 1].states[EVEN_STATE] = test_candidates[0].states[EVEN_STATE];
@@ -450,7 +450,7 @@ float brute_force_benchmark(void) {
         return DEFAULT_BRUTE_FORCE_RATE;
     }
 
-    for (uint8_t i = 0; i < NUM_BRUTE_FORCE_THREADS; i++) {
+    for (uint32_t i = 0; i < NUM_BRUTE_FORCE_THREADS; i++) {
         test_candidates[i].len[ODD_STATE] = TEST_BENCH_SIZE;
         test_candidates[i].len[EVEN_STATE] = TEST_BENCH_SIZE;
         test_candidates[i].states[ODD_STATE][TEST_BENCH_SIZE] = -1;
