@@ -267,7 +267,7 @@ static uint32_t find_available_gallagher_aid(DesfireContext_t *ctx, bool verbose
 
         // Check if AID exists in aid_buf
         bool found = false;
-        for (uint8_t idx = 0; idx < aid_buf_len; idx += 3) {
+        for (size_t idx = 0; idx < aid_buf_len; idx += 3) {
 
             if (DesfireAIDByteToUint(&aid_buf[idx]) == aid) {
                 found = true;
@@ -834,7 +834,7 @@ static int hfgal_read_card(uint32_t aid, uint8_t *site_key, bool verbose, bool q
     }
 
     // Loop through each application in the CAD
-    for (uint8_t i = 0; i < num_entries * 6; i += 6) {
+    for (uint16_t i = 0; i < num_entries * 6; i += 6) {
         uint16_t region_code = cad[i + 0];
         uint16_t facility_code = (cad[i + 1] << 8) + cad[i + 2];
         uint32_t current_aid = cad_aid_byte_to_uint(&cad[i + 3]);
