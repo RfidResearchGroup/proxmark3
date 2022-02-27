@@ -122,14 +122,14 @@ uint8_t reversebytes(uint8_t b) {
 }
 
 void reverse_arraybytes(uint8_t *arr, size_t len) {
-    uint8_t i;
+    size_t i;
     for (i = 0; i < len ; i++) {
         arr[i] = reversebytes(arr[i]);
     }
 }
 
 void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len) {
-    uint8_t i;
+    size_t i;
     for (i = 0; i < len ; i++) {
         dest[i] = reversebytes(arr[i]);
     }
