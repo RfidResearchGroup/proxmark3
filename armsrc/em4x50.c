@@ -71,8 +71,8 @@
 #define EM4X50_TAG_MAX_NO_BYTES             136
 #define EM4X50_TIMEOUT_PULSE_EVAL           2500
 
-int g_High = 190;
-int g_Low = 60;
+uint8_t g_High = 190;
+uint8_t g_Low = 60;
 
 // indication whether a previous login has been successful, so operations
 // that require authentication can be handled
