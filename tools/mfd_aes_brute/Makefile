@@ -28,6 +28,7 @@ ifeq ($(USE_BREW),1)
 endif
 
 ifeq ($(USE_MACPORTS),1)
+    MYCFLAGS += -I$(MACPORTS_PREFIX)/lib/openssl-3 -I$(MACPORTS_PREFIX)/lib/openssl-1.1
     MYLDFLAGS += -L$(MACPORTS_PREFIX)/lib/openssl-3 -L$(MACPORTS_PREFIX)/lib/openssl-1.1
 endif
 
