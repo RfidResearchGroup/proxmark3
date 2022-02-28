@@ -23,7 +23,7 @@ endif
 
 # OS X needs linking to openssl
 ifeq ($(USE_BREW),1)
-    MYCFLAGS += -L$(BREW_PREFIX)/opt/openssl@3/include -L$(BREW_PREFIX)/opt/openssl@1.1/include
+    MYCFLAGS += -I$(BREW_PREFIX)/opt/openssl@3/include -I$(BREW_PREFIX)/opt/openssl@1.1/include
     MYLDFLAGS += -L$(BREW_PREFIX)/opt/openssl@3/lib -L$(BREW_PREFIX)/opt/openssl@1.1/lib
 endif
 
