@@ -166,7 +166,7 @@ hitag2crack/%: FORCE
 	$(Q)$(MAKE) --no-print-directory -C tools/hitag2crack $(patsubst hitag2crack/%,%,$@) DESTDIR=$(MYDESTDIR)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfkey nonce2key mf_nonce_brute hitag2crack style miscchecks release FORCE udev accessrights cleanifplatformchanged
+.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfkey nonce2key mf_nonce_brute mfd_aes_brute hitag2crack style miscchecks release FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
@@ -186,7 +186,7 @@ help:
 	@echo "+ mfkey           - Make tools/mfkey"
 	@echo "+ nonce2key       - Make tools/nonce2key"
 	@echo "+ mf_nonce_brute  - Make tools/mf_nonce_brute"
-	@echo "+ mf_aes_brute    - Make tools/mfd_aes_brute"
+	@echo "+ mfd_aes_brute   - Make tools/mfd_aes_brute"
 	@echo "+ hitag2crack     - Make tools/hitag2crack"
 	@echo "+ fpga_compress   - Make tools/fpga_compress"
 	@echo
