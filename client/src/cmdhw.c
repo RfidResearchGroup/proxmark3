@@ -1157,8 +1157,8 @@ void pm3_version_short(void) {
 
             if (armsrc_mismatch) {
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(WARNING, "  --> " _RED_("ARM firmware does not match the source at the time the client was compiled"));
-                PrintAndLogEx(WARNING,  " --> Make sure to flash a correct and up-to-date version");
+                PrintAndLogEx(WARNING, " --> " _RED_("ARM firmware does not match the source at the time the client was compiled"));
+                PrintAndLogEx(WARNING, " --> Make sure to flash a correct and up-to-date version");
             }
         }
     }
