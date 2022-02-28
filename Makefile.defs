@@ -119,6 +119,8 @@ endif
 ifeq ($(platform),Darwin)
   # their readline has strict-prototype issues
   DEFCFLAGS += -Wno-strict-prototypes
+  # some warnings about braced initializers on structs we want to ignore
+  DEFCFLAGS += -Wno-missing-braces
 else
   DEFCFLAGS += -Wstrict-prototypes
 endif
