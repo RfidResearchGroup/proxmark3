@@ -896,7 +896,7 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
     usedkeys[0] = 1;
 
     if (curaid != 0) {
-        FileList_t fileList = {0};
+        FileList_t fileList = {{0}};
         size_t filescount = 0;
         bool isopresent = 0;
         res = DesfireFillFileList(dctx, fileList, &filescount, &isopresent);
@@ -1705,7 +1705,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     }
 
     PICCInfo_t PICCInfo = {0};
-    AppListS AppList = {0};
+    AppListS AppList = {{0}};
     DesfireFillAppList(&dctx, &PICCInfo, AppList, false, false, false); // no deep scan, no scan files
 
     if (PICCInfo.freemem == 0xffffffff)
@@ -5384,7 +5384,7 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
         return res;
     }
 
-    FileList_t FileList = {0};
+    FileList_t FileList = {{0}};
     size_t filescount = 0;
     bool isopresent = false;
     res = DesfireFillFileList(&dctx, FileList, &filescount, &isopresent);
@@ -5459,7 +5459,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     }
 
     PICCInfo_t PICCInfo = {0};
-    AppListS AppList = {0};
+    AppListS AppList = {{0}};
     DesfireFillAppList(&dctx, &PICCInfo, AppList, !nodeep, scanfiles, true);
 
     printf("\33[2K\r"); // clear current line before printing
@@ -5530,7 +5530,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
         return res;
     }
 
-    FileList_t FileList = {0};
+    FileList_t FileList = {{0}};
     size_t filescount = 0;
     bool isopresent = false;
     res = DesfireFillFileList(&dctx, FileList, &filescount, &isopresent);

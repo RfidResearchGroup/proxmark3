@@ -55,7 +55,7 @@ void ClearAuthData(void) {
 
 static int gs_ntag_i2c_state = 0;
 static int gs_mfuc_state = 0;
-static uint8_t gs_mfuc_authdata[3][16] = {0};
+static uint8_t gs_mfuc_authdata[3][16] = {{0}};
 static uint8_t *gs_mfuc_key = NULL;
 
 /**
