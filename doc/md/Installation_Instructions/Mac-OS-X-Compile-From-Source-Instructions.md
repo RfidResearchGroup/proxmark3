@@ -42,7 +42,7 @@ vim Makefile.platform
 The following command has been shown to work on MacOS Big Sur with the 
 default Compiler Tools that comes installed on this release of the platform:
 ```bash
-make clean && CFLAGS="" make
+make clean && CFLAGS="-I /usr/local/opt/openssl/include" make
 ```
 If you have ``sudo`` rights, you can install the proxmark3 utilities into the system 
 path by running
