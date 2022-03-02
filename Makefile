@@ -263,12 +263,13 @@ udev:
 # you need to logout, relogin to get this access right correct.
 # Finally,  you might need to run the proxmark3 client under SUDO on some systems
 accessrights:
-ifneq ($(wildcard /etc/arch-release),) #If user is running ArchLinux
-	sudo usermod -aG uucp $(USER) #Use specific command and group
-	getent group bluetooth >/dev/null && sudo usermod -aG bluetooth $(USER) #Use specific command and group
+ifneq ($(wildcard /etc/arch-release),)
+#If user is running ArchLinux, use specific command and group
+	$(Q)sudo usermod -aG uucp $(USER)
+	$(Q)getent group bluetooth >/dev/null && sudo usermod -aG bluetooth $(USER) || true
 else
-	sudo adduser $(USER) dialout
-	getent group bluetooth >/dev/null && sudo adduser $(USER) bluetooth
+	$(Q)sudo adduser $(USER) dialout
+	$(Q)getent group bluetooth >/dev/null && sudo adduser $(USER) bluetooth || true
 endif
 
 # easy printing of MAKE VARIABLES
