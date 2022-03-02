@@ -21,6 +21,9 @@ endif
 # been here
 DEFSBEENHERE = true
 
+# USER not defined on some platforms like Archlinux
+USER ?= $(shell id -u -n)
+
 CP = cp -a
 GZIP = gzip
 MKDIR = mkdir -p
