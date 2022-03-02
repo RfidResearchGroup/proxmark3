@@ -37,6 +37,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 | [Linux - Important notes on ModemManager](/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md) | [Validating Proxmark3 Client Functionality](/doc/md/Use_of_Proxmark/1_Validation.md)|
 | [Mac OS X - Homebrew & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
 | [Mac OS X - MacPorts](/doc/md/Installation_Instructions/Mac-OS-X-MacPorts-Installation-Instructions.md) | [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
+| [Mac OS X - Setup and Build](/doc/md/Installation_Instructions/Mac-OS-X-Compile-From-Source-Instructions.md) ||
 | [Windows - Setup and Build](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md) ||
 | [Termux / Android - Setup and Build](/doc/termux_notes.md) ||
 | [Blue Shark Manual](/doc/bt_manual_v10.md) | [Command Cheat Sheet](/doc/cheatsheet.md)|
