@@ -30,7 +30,8 @@ Clone the repository by running the following:
 git clone https://github.com/RfidResearchGroup/proxmark3.git
 cd proxmark3
 ```
-Configure the build by editing ``Makefile.platform``:
+Configure the build by editing ``Makefile.platform`` 
+(this step is optional -- the default will suffice):
 ```bash
 cp Makefile.platform.sample Makefile.platform
 vim Makefile.platform
@@ -42,8 +43,10 @@ vim Makefile.platform
 The following command has been shown to work on MacOS Big Sur with the 
 default Compiler Tools that comes installed on this release of the platform:
 ```bash
-make clean && CFLAGS="-I /usr/local/opt/openssl/include" make
+make clean && CFLAGS="-I /usr/local/opt/openssl/include" make -j
 ```
+The rest of this section is an *optional* installation procedure. 
+
 If you have ``sudo`` rights, you can install the proxmark3 utilities into the system 
 path by running
 ```bash
