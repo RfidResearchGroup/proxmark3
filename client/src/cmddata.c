@@ -1951,7 +1951,7 @@ int CmdTuneSamples(const char *Cmd) {
 
             // 1% over threshold and supposedly non-RDV4
             if ((approx_vdd > approx_vdd_other_max * 1.01) && (!IfPm3Rdv4Fw())) {
-                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_GENERIC firmware on a RDV4"));
+                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3GENERIC firmware on a RDV4"));
                 PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
             }
             // 1% below threshold and supposedly RDV4
