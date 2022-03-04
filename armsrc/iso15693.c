@@ -1269,10 +1269,10 @@ void AcquireRawAdcSamplesIso15693(void) {
 // Returns: true if we received a EOF
 //          false if we are still waiting for some more
 //=============================================================================
-#define DEBUG 0
-#define FREQ_IS_484(f)    (f >= 26 && f <= 30)
-#define FREQ_IS_424(f)    (f >= 30 && f <= 34)
-#define FREQ_IS_0(f)    (f <= 24 || f >= 36)
+//#define DEBUG 1
+#define FREQ_IS_484(f)    ((f & 1) == 1)   //(f >= 26 && f <= 30)
+#define FREQ_IS_424(f)    ((f & 2) == 2)   //(f >= 30 && f <= 34)
+#define FREQ_IS_0(f)      ((f & 3) == 0)   // (f <= 24 || f >= 36)
 #define SEOF_COUNT(c, s)  ((s) ? (c >= 11 && c <= 13) : (c >= 44 && c <= 52))
 #define LOGIC_COUNT(c, s) ((s) ? (c >= 3 && c <= 6) : (c >= 13 && c <= 21))
 #define MAX_COUNT(c, s)   ((s) ? (c >= 13) : (c >= 52))
@@ -1320,7 +1320,7 @@ static void DecodeTagFSKInit(DecodeTagFSK_t *DecodeTag, uint8_t *data, uint16_t 
 
 // Performances of this function are crutial for stability
 // as it is called in real time for every samples
-static int inline __attribute__((always_inline)) Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *DecodeTag, bool recv_speed)
+static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *DecodeTag, bool recv_speed, int samples)
 {
 	switch(DecodeTag->state) {
 		case STATE_FSK_BEFORE_SOF:
@@ -1546,7 +1546,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     uint8_t cmd[ISO15693_MAX_COMMAND_LENGTH] = {0};
     DecodeReaderInit(&dreader, cmd, sizeof(cmd), jam_search_len, jam_search_string);
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE | FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ);
     LED_D_OFF();
 
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -1639,10 +1639,6 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
                 DecodeTagFSKReset(&dtagfsk);
                 reader_is_active = false;
                 expect_tag_answer = true;
-                if (expect_fsk_answer)
-                {
-                    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_FSK_READER | FPGA_HF_FSK_READER_OUTPUT_212_KHZ | FPGA_HF_FSK_READER_NOPOWER);
-                }
             } else if (Handle15693SampleFromReader(sniffdata & 0x01, &dreader)) {
 
                 uint32_t eof_time = dma_start_time + (samples * 16) + 16 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
@@ -1662,11 +1658,6 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
                 DecodeTagFSKReset(&dtagfsk);
                 reader_is_active = false;
                 expect_tag_answer = true;
-                if (expect_fsk_answer)
-                {
-                    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_FSK_READER | FPGA_HF_FSK_READER_OUTPUT_212_KHZ | FPGA_HF_FSK_READER_NOPOWER);
-
-                }
             } else {
                 reader_is_active = (dreader.state >= STATE_READER_RECEIVE_DATA_1_OUT_OF_4);
             }
@@ -1676,7 +1667,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
 
             if (!expect_fsk_answer)
             {
-                if (Handle15693SamplesFromTag(sniffdata >> 2, &dtag)) {
+                if (Handle15693SamplesFromTag((sniffdata >> 4) << 2, &dtag)) {
 
                     uint32_t eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
                     if (dtag.lastBit == SOF_PART2) {
@@ -1700,7 +1691,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
             }
             else
             {
-                if (Handle15693FSKSamplesFromTag(sniffdata >> 8, &dtagfsk, expect_fast_answer)) {
+                if (Handle15693FSKSamplesFromTag((sniffdata >> 2) & 0x3, &dtagfsk, expect_fast_answer, samples-fsksamples)) {
                     uint32_t eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
                     if (dtagfsk.lastBit == SOF) {
                         eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
@@ -1719,7 +1710,6 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
                     tag_is_active = false;
                     expect_fsk_answer = false;
 
-                    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE);
                 }
                 else if (Handle15693FSKSamplesFromTag(sniffdata & 0xFF, &dtagfsk, expect_fast_answer)) {
 
@@ -1741,7 +1731,6 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
                     tag_is_active = false;
                     expect_fsk_answer = false;
 
-                    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE);
                 } else {
                     tag_is_active = (dtagfsk.state >= STATE_FSK_RECEIVING_DATA_484);
                 }

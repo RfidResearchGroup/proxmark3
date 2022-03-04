@@ -106,14 +106,7 @@ thres|                          x x x x x x x x
 #define FPGA_HF_READER_SUBCARRIER_848_KHZ           (0<<4)
 #define FPGA_HF_READER_SUBCARRIER_424_KHZ           (1<<4)
 #define FPGA_HF_READER_SUBCARRIER_212_KHZ           (2<<4)
-
-#define FPGA_HF_FSK_READER_OUTPUT_1695_KHZ          (0<<0)
-#define FPGA_HF_FSK_READER_OUTPUT_848_KHZ           (1<<0)
-#define FPGA_HF_FSK_READER_OUTPUT_424_KHZ           (2<<0)
-#define FPGA_HF_FSK_READER_OUTPUT_212_KHZ           (3<<0)
-
-#define FPGA_HF_FSK_READER_NOPOWER                  (0<<4)
-#define FPGA_HF_FSK_READER_WITHPOWER                (1<<4)
+#define FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ     (3<<4)
 
 // Options for the HF simulated tag, how to modulate
 #define FPGA_HF_SIMULATOR_NO_MODULATION             0x0 // 0000
