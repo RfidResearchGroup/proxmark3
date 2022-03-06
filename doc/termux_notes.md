@@ -4,12 +4,6 @@
 ## Table of Contents
   * [ Requirements ](#requirements)
   * [ Notes ](#notes)
-  * [ Tested setups ](#tested-setups)
-    * OnePlus 5 (arm64, USB-C)
-    * Nexus 5X (arm64, USB-C)
-    * Xiaomi Mi Mix 2S (arm64, USB-C)
-    * OnePlus 5T (arm64, USB-C)
-    * Samsung Galaxy Tab S2 (arm64, MicroUSB)
   * [ Setup ](#setup)
     * [ Setting up Termux ](#setting-up-termux)
     * [ Install Proxmark3 package ](#install-proxmark3-package)
@@ -46,44 +40,13 @@ From official Proxmark3 wiki:
  > In any case, you would need a USB-C to A or USB-OTG cable to connect Proxmark3 to your Android device. Some Android devices may not supply enough power (USB-OTG = 100mA), and need a USB Y-cable and external battery, otherwise they will get strange failures.
 ref : https://github.com/Proxmark/proxmark3/wiki/android
 
-## Tested setups
-^[Top](#top)
-
-- OnePlus 5 (arm64, USB-C)
-
-  - [OmniROM (Android 9)](https://www.omnirom.org/)
-  - [OmniROM kernel](https://www.omnirom.org/)
-  - [Magisk 19.3](https://github.com/topjohnwu/Magisk/)
-
-- Nexus 5X (arm64, USB-C)
-
-  - [LineageOS (Android 8.1)](https://download.lineageos.org/)
-  - [LineageOS kernel](https://download.lineageos.org/)
-  - [Magisk 19.3](https://github.com/topjohnwu/Magisk/)
-  
-- Xiaomi Mi Mix 2S (arm64, USB-C)
-  - [LineageOS (Android 9.0)](https://download.lineageos.org/)
-  - [Magisk 20.3](https://github.com/topjohnwu/Magisk/)
-  
-- OnePlus 5T (arm64, USB-C)
-  - [LineageOS (Android 9.0)](https://download.lineageos.org/)
-  - [Franko Kernel](https://franco-lnx.net/)
-  - [Magisk 20.3](https://github.com/topjohnwu/Magisk/)
-  
-- Samsung Galaxy Tab S2 (arm64, MicroUSB)
-  - [LineageOS (Android 9.0)](https://download.lineageos.org/)
-  - [LineageOS kernel](https://download.lineageos.org/)
-  - [Magisk 20.3](https://github.com/topjohnwu/Magisk/)
-
-
-
 ## Setup
 ^[Top](#top)
 
 ### Setting up Termux
 ^[Top](#top)
 
-Install [Termux](https://play.google.com/store/apps/details?id=com.termux) and start it
+Install [Termux](https://f-droid.org/en/packages/com.termux/) and start it
 
 
 ### Install Proxmark3 package which follows tagged releases
@@ -93,16 +56,16 @@ Run the following commands:
 ```
 pkg install proxmark3
 ```
-### Install Proxmark3 package which offers a more up to date version from git `master` branch
+### Optional: Install Proxmark3 package which offers a more up to date version from git `master` branch
 Run the following commands:
 ```
 pkg install proxmark3-git
 ```
 ### Optional: Building Proxmark3 client from source
 ```
-pkg install make clang readline libc++ git
+pkg install make clang readline libc++ git binutils
 git clone https://github.com/RfidResearchGroup/proxmark3.git
-cd proxmark
+cd proxmark3
 make clean && make client
 ```
 
