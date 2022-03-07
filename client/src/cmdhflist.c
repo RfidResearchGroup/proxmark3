@@ -553,7 +553,7 @@ void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 snprintf(exp, size, "LOCKBLOCK");
                 return;
             case ISO15693_READ_MULTI_BLOCK:
-                snprintf(exp, size, "READ_MULTI_BLOCK");
+                snprintf(exp, size, "READ_MULTI_BLOCK(%d-%d)", cmd[2], (cmd[2] + cmd[3]));
                 return;
             case ISO15693_WRITE_MULTI_BLOCK:
                 snprintf(exp, size, "WRITE_MULTI_BLOCK");
