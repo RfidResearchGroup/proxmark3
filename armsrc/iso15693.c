@@ -1791,8 +1791,8 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     Dbprintf("  DecodeTag State........%d", dtag.state);
     Dbprintf("  DecodeTag byteCnt......%d", dtag.len);
     Dbprintf("  DecodeTag posCount.....%d", dtag.posCount);
-    Dbprintf("  DecodeTagFSK State........%d", dtagfsk.state);
-    Dbprintf("  DecodeTagFSK byteCnt......%d", dtagfsk.len);
+    Dbprintf("  DecodeTagFSK State.....%d", dtagfsk.state);
+    Dbprintf("  DecodeTagFSK byteCnt...%d", dtagfsk.len);
     Dbprintf("  DecodeTagFSK count.....%d", dtagfsk.count);
     Dbprintf("  DecodeReader State.....%d", dreader.state);
     Dbprintf("  DecodeReader byteCnt...%d", dreader.byteCount);
