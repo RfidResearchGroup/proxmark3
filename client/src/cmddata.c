@@ -2958,7 +2958,7 @@ static int CmdDiff(const char *Cmd) {
     }
 
     int res = PM3_SUCCESS;
-    uint8_t *inA, *inB;
+    uint8_t *inA = NULL, *inB = NULL;
     size_t datalenA = 0, datalenB = 0;
     // read file A
     if (fnlenA) {
