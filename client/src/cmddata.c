@@ -3082,7 +3082,7 @@ static int CmdDiff(const char *Cmd) {
     */
 
     size_t n = (datalenA > datalenB) ? datalenB : datalenA;
-    PrintAndLogEx(INFO, "data len:  %zu   A %zu  B %zu", n, datalenA, datalenB);
+    PrintAndLogEx(DEBUG, "data len:  %zu   A %zu  B %zu", n, datalenA, datalenB);
 
     if (inA == NULL)
         PrintAndLogEx(INFO, "inA null");
