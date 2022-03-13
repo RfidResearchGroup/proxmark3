@@ -148,17 +148,44 @@ bool CheckStringIsHEXValue(const char *value) {
     return true;
 }
 
-void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len,
+void ascii_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len,
+                     const size_t hex_max_len, const size_t min_str_len) {
+
+    if (buf == NULL) return;
+
+    char *tmp = (char *)buf;
+    memset(tmp, 0x00, hex_max_len);
+
+    size_t max_len = (hex_len > hex_max_len) ? hex_max_len : hex_len;
+
+    size_t i = 0;
+    for (i = 0; i < max_len; ++i, tmp++) {
+        char c = hex_data[i];
+        sprintf(tmp, "%c", ((c < 32) || (c == 127)) ? '.' : c);
+    }
+
+    size_t m = (min_str_len > i) ? min_str_len : 0;
+    if (m > hex_max_len)
+        m = hex_max_len;
+
+    for (; i < m; i++, tmp++)
+        sprintf(tmp, " ");
+
+    // remove last space
+    *tmp = '\0';
+}
+
+void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len,
                    const size_t min_str_len, const size_t spaces_between, bool uppercase) {
 
     if (buf == NULL) return;
 
     char *tmp = (char *)buf;
-    size_t i;
     memset(tmp, 0x00, hex_max_len);
 
     size_t max_len = (hex_len > hex_max_len) ? hex_max_len : hex_len;
 
+    size_t i;
     for (i = 0; i < max_len; ++i, tmp += 2 + spaces_between) {
         sprintf(tmp, (uppercase) ? "%02X" : "%02x", (unsigned int) hex_data[i]);
 
@@ -168,16 +195,15 @@ void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const size_t hex
 
     i *= (2 + spaces_between);
 
-    size_t mlen = min_str_len > i ? min_str_len : 0;
-    if (mlen > hex_max_len)
-        mlen = hex_max_len;
+    size_t m = min_str_len > i ? min_str_len : 0;
+    if (m > hex_max_len)
+        m = hex_max_len;
 
-    for (; i < mlen; i++, tmp += 1)
+    for (; i < m; i++, tmp++)
         sprintf(tmp, " ");
 
     // remove last space
     *tmp = '\0';
-    return;
 }
 
 // printing and converting functions

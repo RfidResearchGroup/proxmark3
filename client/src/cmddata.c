@@ -3090,7 +3090,7 @@ static int CmdDiff(const char *Cmd) {
     if (inB == NULL)
         PrintAndLogEx(INFO, "inB null");
 
-    int hdr_sln = (width * 3) + 1;
+    int hdr_sln = (width * 4) + 2;
     PrintAndLogEx(INFO, "");
 
     char hdr0[200] = " #  | " _CYAN_("A");
@@ -3106,7 +3106,7 @@ static int CmdDiff(const char *Cmd) {
 
     // index 4bytes, spaces, bar, bytes with ansi codes
     // (16 * 2 * 8 ) + 32 
-    char line[500] = {0};
+    char line[800] = {0};
 
     // print data diff loop
     for (int i = 0; i < n;  i += width ) {
@@ -3117,30 +3117,48 @@ static int CmdDiff(const char *Cmd) {
         // if ok,  just print
         if (diff == 0) {
             hex_to_buffer((uint8_t*)line, inA + i, width, width, 0, 1, true);
-            strcat(line + strlen(line), "| ");
+            ascii_to_buffer((uint8_t*)(line + strlen(line)), inA + i, width, width, 0);
+            strcat(line + strlen(line), " | ");
             hex_to_buffer((uint8_t*)(line + strlen(line)), inB + i, width, width, 0, 1, true);
+            ascii_to_buffer((uint8_t*)(line + strlen(line)), inB + i, width, width, 0);
         } else {
 
             char dlnA[240] = {0};
             char dlnB[240] = {0};
+            char dlnAii[180] = {0};
+            char dlnBii[180] = {0};
+
             memset(dlnA, 0, sizeof(dlnA));
             memset(dlnB, 0, sizeof(dlnB));
+            memset(dlnAii, 0, sizeof(dlnAii));
+            memset(dlnBii, 0, sizeof(dlnBii));
+
             // if diff,  time to find it
             for (int j = i; j < (i + width); j++) {
+                    
+                char ca = inA[j];
+                char cb = inB[j];
 
                 if (inA[j] != inB[j]) {
                     //PrintAndLogEx(INFO, "%02X -- %02X", inA[j], inB[j]);
                     // diff
                     sprintf(dlnA + strlen(dlnA), _GREEN_("%02X "), inA[j]);
                     sprintf(dlnB + strlen(dlnB), _RED_("%02X "), inB[j]);
+
+                    sprintf(dlnAii + strlen(dlnAii), _GREEN_("%c"), ((ca < 32) || (ca == 127)) ? '.' : ca);
+                    sprintf(dlnBii + strlen(dlnBii), _RED_("%c"), ((cb < 32) || (cb == 127)) ? '.' : cb);
+
                 } else {
                     //PrintAndLogEx(INFO, "%02X ++ %02X", inA[j], inB[j]);
                     // normal
                     sprintf(dlnA + strlen(dlnA), "%02X ", inA[j]);
                     sprintf(dlnB + strlen(dlnB), "%02X ", inB[j]);
+
+                    sprintf(dlnAii + strlen(dlnAii), "%c", ((ca < 32) || (ca == 127)) ? '.' : ca);
+                    sprintf(dlnBii + strlen(dlnBii), "%c", ((cb < 32) || (cb == 127)) ? '.' : cb);
                 }
             }
-            sprintf(line, "%s| %s", dlnA, dlnB);
+            sprintf(line, "%s%s | %s%s", dlnA, dlnAii, dlnB, dlnBii);
         }
         PrintAndLogEx(INFO, "%03X | %s", i, line);
     }
