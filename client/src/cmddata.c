@@ -2943,11 +2943,11 @@ static int CmdDiff(const char *Cmd) {
     }
 
     if (splenA > 32) {
-        PrintAndLogEx(WARNING, "SPIFFS filname A length is large than 32 bytes, got %zu", splenA);
+        PrintAndLogEx(WARNING, "SPIFFS filname A length is large than 32 bytes, got %d", splenA);
         return PM3_EINVARG;
     }
     if (splenB > 32) {
-        PrintAndLogEx(WARNING, "SPIFFS filname B length is large than 32 bytes, got %zu", splenB);
+        PrintAndLogEx(WARNING, "SPIFFS filname B length is large than 32 bytes, got %d", splenB);
         return PM3_EINVARG;
     }
 
