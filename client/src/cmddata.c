@@ -3106,7 +3106,7 @@ static int CmdDiff(const char *Cmd) {
 
     // index 4bytes, spaces, bar, bytes with ansi codes
     // (16 * 2 * 8 ) + 32 
-    char line[800] = {0};
+    char line[880] = {0};
 
     // print data diff loop
     for (int i = 0; i < n;  i += width ) {
