@@ -3061,6 +3061,7 @@ static int CmdDiff(const char *Cmd) {
             PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
             free(inA);
             free(inB);
+            free(d);
             return PM3_ETIMEOUT;
         }
 
