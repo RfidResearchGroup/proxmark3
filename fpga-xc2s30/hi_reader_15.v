@@ -245,11 +245,11 @@ begin
         if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_AMPLITUDE)
         begin
             if (subcarrier_frequency == `FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ)
-              begin
+            begin
                   // send amplitude + 2 bits fsk (2sc) signal + 2 bits reader signal
                   corr_i_out <= corr_amplitude[13:6];
                   corr_q_out <= {corr_amplitude[5:2], fskout, after_hysteresis_prev_prev, after_hysteresis_prev};
-              end
+            end
             else
             begin
                 // send amplitude plus 2 bits reader signal
@@ -279,9 +279,18 @@ begin
         end
         else if (minor_mode == `FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE)
         begin
-            // send amplitude
-            corr_i_out <= {2'b00, corr_amplitude[13:8]};
-            corr_q_out <= corr_amplitude[7:0];
+            if (subcarrier_frequency == `FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ)
+            begin
+                // send 2 bits fsk (2sc) signal + amplitude
+                corr_i_out <= {fskout, corr_amplitude[13:8]};
+                corr_q_out <= corr_amplitude[7:0];
+            end
+            else
+            begin
+                // send amplitude
+                corr_i_out <= {2'b00, corr_amplitude[13:8]};
+                corr_q_out <= corr_amplitude[7:0];
+            end
         end
         else if (minor_mode == `FPGA_HF_READER_MODE_RECEIVE_IQ)
         begin
