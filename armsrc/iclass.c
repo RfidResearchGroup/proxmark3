@@ -1264,7 +1264,7 @@ static bool iclass_send_cmd_with_retries(uint8_t *cmd, size_t cmdsize, uint8_t *
             return true;
         }
 
-        if (expected_size == GetIso15693AnswerFromTag(resp, max_resp_size, timeout, eof_time)) {
+        if (expected_size == GetIso15693AnswerFromTag(resp, max_resp_size, timeout, eof_time, false, true)) {
             return true;
         }
     }
@@ -1296,7 +1296,7 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
     // wakeup
     uint32_t start_time = GetCountSspClk();
     iclass_send_as_reader(act_all, 1, &start_time, eof_time);
-    int len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_ACTALL, eof_time);
+    int len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_ACTALL, eof_time, false, true);
     if (len < 0)
         return false;
 
@@ -1305,7 +1305,7 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
     iclass_send_as_reader(identify, 1, &start_time, eof_time);
 
     // expect a 10-byte response here, 8 byte anticollision-CSN and 2 byte CRC
-    len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
+    len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time, false, true);
     if (len != 10)
         return false;
 
@@ -1317,7 +1317,7 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
     iclass_send_as_reader(select, sizeof(select), &start_time, eof_time);
 
     // expect a 10-byte response here, 8 byte CSN and 2 byte CRC
-    len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
+    len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time, false, true);
     if (len != 10)
         return false;
 
@@ -1329,7 +1329,7 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
     iclass_send_as_reader(read_conf, sizeof(read_conf), &start_time, eof_time);
 
     // expect a 8-byte response here
-    len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
+    len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time, false, true);
     if (len != 10)
         return false;
 
@@ -1347,7 +1347,7 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
         iclass_send_as_reader(read_aia, sizeof(read_aia), &start_time, eof_time);
 
         // expect a 10-byte response here
-        len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
+        len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time, false, true);
         if (len != 10)
             return false;
 
@@ -1361,7 +1361,7 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
         iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, eof_time);
 
         // expect a 8-byte response here
-        len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
+        len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time, false, true);
         if (len != 8)
             return false;
 
@@ -1383,7 +1383,7 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
         iclass_send_as_reader(read_aia, sizeof(read_aia), &start_time, eof_time);
 
         // expect a 10-byte response here
-        len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time);
+        len = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time, false, true);
         if (len != 10)
             return false;
 
@@ -1870,7 +1870,7 @@ void iClass_WriteBlock(uint8_t *msg) {
             return;
         } else {
 
-            if (GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_UPDATE, &eof_time) == 10) {
+            if (GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_UPDATE, &eof_time, false, true) == 10) {
                 res = true;
                 break;
             }

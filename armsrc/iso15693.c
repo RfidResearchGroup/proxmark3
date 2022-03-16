@@ -967,20 +967,27 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
 /*
  *  Receive and decode the tag response, also log to tracebuffer
  */
-int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeout, uint32_t *eof_time) {
+int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeout, uint32_t *eof_time, bool fsk, bool recv_speed) {
 
     int samples = 0, ret = 0;
 
     // the Decoder data structure
     DecodeTag_t dtm = { 0 };
     DecodeTag_t *dt = &dtm;
-    DecodeTagInit(dt, response, max_len);
+
+    DecodeTagFSK_t dtfm = { 0 };
+    DecodeTagFSK_t *dtf = &dtfm;
+
+    if (!fsk)
+        DecodeTagInit(dt, response, max_len);
+    else
+        DecodeTagFSKInit(dtf, response, max_len);
 
     // wait for last transfer to complete
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY));
 
     // And put the FPGA in the appropriate mode
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_424_KHZ | FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ | FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE);
 
     // Setup and start DMA.
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
@@ -1036,56 +1043,102 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
             }
         }
 
-        if (Handle15693SamplesFromTag(tagdata, dt, true)) {
+        if (!fsk) {
+            if (Handle15693SamplesFromTag(tagdata & 0x3FFF, dt, recv_speed)) {
 
-            *eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM; // end of EOF
+                *eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM; // end of EOF
 
-            if (dt->lastBit == SOF_PART2) {
-                *eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
+                if (dt->lastBit == SOF_PART2) {
+                    *eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
+                }
+                if (dt->len > dt->max_len) {
+                    ret = -2; // buffer overflow
+                    Dbprintf("overflow (%d > %d", dt->len, dt->max_len);
+                }
+                break;
             }
-            if (dt->len > dt->max_len) {
-                ret = -2; // buffer overflow
-                Dbprintf("overflow (%d > %d", dt->len, dt->max_len);
+
+            // timeout
+            if (samples > timeout && dt->state < STATE_TAG_RECEIVING_DATA) {
+                ret = -3;
+                break;
             }
-            break;
         }
+        else {
+            if (Handle15693FSKSamplesFromTag(tagdata >> 14, dtf, recv_speed)) {
 
-        // timeout
-        if (samples > timeout && dt->state < STATE_TAG_RECEIVING_DATA) {
-            ret = -3;
-            break;
+                *eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM; // end of EOF
+
+                if (dtf->lastBit == SOF) {
+                    *eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
+                }
+                if (dtf->len > dtf->max_len) {
+                    ret = -2; // buffer overflow
+                    Dbprintf("overflow (%d > %d", dtf->len, dtf->max_len);
+                }
+                break;
+            }
+
+            // timeout
+            if (samples > timeout && dtf->state < STATE_FSK_RECEIVING_DATA_484) {
+                ret = -3;
+                break;
+            }
         }
-
     }
 
     FpgaDisableSscDma();
     FpgaDisableTracing();
 
-    uint32_t sof_time = *eof_time
-                        - (dt->len * 8 * 8 * 16) // time for byte transfers
-                        - (32 * 16)  // time for SOF transfer
-                        - (dt->lastBit != SOF_PART2 ? (32 * 16) : 0); // time for EOF transfer
+    uint32_t sof_time = *eof_time - (32 * 16);  // time for SOF transfer
 
-    if (g_dbglevel >= DBG_EXTENDED) {
-        Dbprintf("samples = %d, ret = %d, Decoder: state = %d, lastBit = %d, len = %d, bitCount = %d, posCount = %d, maxlen = %u",
-                 samples,
-                 ret,
-                 dt->state,
-                 dt->lastBit,
-                 dt->len,
-                 dt->bitCount,
-                 dt->posCount,
-                 dt->max_len
+    if (!fsk) {
+        sof_time -= (dt->len * 8 * 8 * 16) // time for byte transfers
+                    + (dt->lastBit != SOF_PART2 ? (32 * 16) : 0); // time for EOF transfer
+
+        if (g_dbglevel >= DBG_EXTENDED) {
+            Dbprintf("samples = %d, ret = %d, Decoder: state = %d, lastBit = %d, len = %d, bitCount = %d, posCount = %d, maxlen = %u",
+                     samples,
+                     ret,
+                     dt->state,
+                     dt->lastBit,
+                     dt->len,
+                     dt->bitCount,
+                     dt->posCount,
+                     dt->max_len
                 );
-        Dbprintf("timing: sof_time = %d, eof_time = %d", (sof_time * 4), (*eof_time * 4));
+            Dbprintf("timing: sof_time = %d, eof_time = %d", (sof_time * 4), (*eof_time * 4));
+        }
+    }
+    else {
+        sof_time -= (dtf->len * 8 * 8 * 16) // time for byte transfers
+                    + (dtf->lastBit != SOF ? (32 * 16) : 0); // time for EOF transfer
+
+        if (g_dbglevel >= DBG_EXTENDED) {
+            Dbprintf("samples = %d, ret = %d, FSK Decoder: state = %d, lastBit = %d, len = %d, bitCount = %d, count = %d, maxlen = %u",
+                     samples,
+                     ret,
+                     dtf->state,
+                     dtf->lastBit,
+                     dtf->len,
+                     dtf->bitCount,
+                     dtf->count,
+                     dtf->max_len
+                );
+            Dbprintf("timing: sof_time = %d, eof_time = %d", (sof_time * 4), (*eof_time * 4));
+        }
     }
 
     if (ret < 0) {
         return ret;
     }
 
-    LogTrace_ISO15693(dt->output, dt->len, (sof_time * 4), (*eof_time * 4), NULL, false);
-    return dt->len;
+    if (!fsk) {
+        LogTrace_ISO15693(dt->output, dt->len, (sof_time * 4), (*eof_time * 4), NULL, false);
+        return dt->len;
+    }
+    LogTrace_ISO15693(dtf->output, dtf->len, (sof_time * 4), (*eof_time * 4), NULL, false);
+    return dtf->len;
 }
 
 
@@ -1869,6 +1922,9 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
         start_time = GetCountSspClk();
     }
 
+    bool fsk = send[0] & ISO15_REQ_SUBCARRIER_TWO;
+	bool recv_speed = send[0] & ISO15_REQ_DATARATE_HIGH;
+
     if (speed_fast) {
         // high speed (1 out of 4)
         CodeIso15693AsReader(send, sendlen);
@@ -1889,13 +1945,13 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
         *eof_time = start_time + 32 * ((8 * ts->max) - 4); // subtract the 4 padding bits after EOF
         LogTrace_ISO15693(send, sendlen, (start_time * 4), (*eof_time * 4), NULL, true);
         if (recv != NULL) {
-            res = GetIso15693AnswerFromTag(recv, max_recv_len, timeout, eof_time);
+            res = GetIso15693AnswerFromTag(recv, max_recv_len, timeout, eof_time, fsk, recv_speed);
         }
     }
     return res;
 }
 
-int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time) {
+int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time, bool fsk, bool recv_speed) {
 
     CodeIso15693AsReaderEOF();
     tosend_t *ts = get_tosend();
@@ -1905,7 +1961,7 @@ int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, ui
 
     int res = 0;
     if (recv != NULL) {
-        res = GetIso15693AnswerFromTag(recv, max_recv_len, timeout, eof_time);
+        res = GetIso15693AnswerFromTag(recv, max_recv_len, timeout, eof_time, fsk, recv_speed);
     }
     return res;
 }
@@ -2335,10 +2391,13 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
         reply_mix(CMD_ACK, recvlen, 0, 0, NULL, 0);
     } else {
 
+        bool fsk = data[0] & ISO15_REQ_SUBCARRIER_TWO;
+        bool recv_speed = data[0] & ISO15_REQ_DATARATE_HIGH;
+
         // send a single EOF to get the tag response
         if (request_answer) {
             start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
-            recvlen = SendDataTagEOF((recv ? recvbuf : NULL), sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT, &eof_time);
+            recvlen = SendDataTagEOF((recv ? recvbuf : NULL), sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT, &eof_time, fsk, recv_speed);
         }
 
         if (recv) {
