@@ -661,10 +661,9 @@ static void DecodeTagInit(DecodeTag_t *tag, uint8_t *data, uint16_t max_len) {
 #define FREQ_IS_484(f)    ((f & 1) == 1)   //(f >= 26 && f <= 30)
 #define FREQ_IS_424(f)    ((f & 2) == 2)   //(f >= 30 && f <= 34)
 #define FREQ_IS_0(f)      ((f & 3) == 0)   // (f <= 24 || f >= 36)
-#define SEOF_COUNT(c, s)  ((s) ? (c >= 11 && c <= 13) : (c >= 44 && c <= 52))
-#define LOGIC_COUNT(c, s) ((s) ? (c >= 3 && c <= 6) : (c >= 13 && c <= 21))
+#define SEOF_COUNT(c, s)  ((s) ? (c >= 11 && c <= 13) : (c >= 45 && c <= 51))
+#define LOGIC_COUNT(c, s) ((s) ? (c >= 3 && c <= 6) : (c >= 14 && c <= 20))
 #define MAX_COUNT(c, s)   ((s) ? (c >= 13) : (c >= 52))
-#define MIN_COUNT(c, s)   ((s) ? (c <= 2) : (c <= 4))
 
 typedef struct DecodeTagFSK {
 	enum {
