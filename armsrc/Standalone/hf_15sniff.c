@@ -100,7 +100,7 @@ void RunMod(void) {
     Dbprintf(_YELLOW_("HF 15693 SNIFF started"));
     rdv40_spiffs_lazy_mount();
 
-    SniffIso15693(0, NULL);
+    SniffIso15693(0, NULL, false);
 
     Dbprintf("Stopped sniffing");
     SpinDelay(200);

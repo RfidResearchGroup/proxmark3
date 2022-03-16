@@ -1575,7 +1575,8 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
 	}
 	return false;
 }
-void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
+
+void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass) {
 
     LEDsoff();
     LED_A_ON();
@@ -1601,6 +1602,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     DecodeReaderInit(&dreader, cmd, sizeof(cmd), jam_search_len, jam_search_string);
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SNIFF_AMPLITUDE | FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ);
+
     LED_D_OFF();
 
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -1622,7 +1624,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
     bool reader_is_active = false;
     bool expect_tag_answer = false;
     bool expect_fsk_answer = false;
-    bool expect_fast_answer = false;
+    bool expect_fast_answer = true; // default to true is required for iClass
     int dma_start_time = 0;
 
     // Count of samples received so far, so that we can include timing
@@ -1686,8 +1688,11 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
                                         - 16 * 16; // time for EOF transfer
                     LogTrace_ISO15693(dreader.output, dreader.byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
 
-                    expect_fsk_answer = dreader.output[0] & ISO15_REQ_SUBCARRIER_TWO;
-                    expect_fast_answer = dreader.output[0] & ISO15_REQ_DATARATE_HIGH;
+                    if (!iclass) // Those flags don't exist in iClass
+                    {
+                        expect_fsk_answer = dreader.output[0] & ISO15_REQ_SUBCARRIER_TWO;
+                        expect_fast_answer = dreader.output[0] & ISO15_REQ_DATARATE_HIGH;
+                    }
                 }
                 // And ready to receive another command.
                 //DecodeReaderReset(&dreader); // already reseted
@@ -1704,9 +1709,11 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string) {
                                         - 32 * 16  // time for SOF transfer
                                         - 16 * 16; // time for EOF transfer
                     LogTrace_ISO15693(dreader.output, dreader.byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
-
-                    expect_fsk_answer = dreader.output[0] & ISO15_REQ_SUBCARRIER_TWO;
-                    expect_fast_answer = dreader.output[0] & ISO15_REQ_DATARATE_HIGH;
+                    if (!iclass) // Those flags don't exist in iClass
+                    {
+                        expect_fsk_answer = dreader.output[0] & ISO15_REQ_SUBCARRIER_TWO;
+                        expect_fast_answer = dreader.output[0] & ISO15_REQ_DATARATE_HIGH;
+                    }
                 }
                 // And ready to receive another command
                 //DecodeReaderReset(&dreader); // already reseted
