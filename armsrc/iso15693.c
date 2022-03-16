@@ -410,7 +410,7 @@ typedef struct {
 //-----------------------------------------------------------------------------
 // DEMODULATE tag answer
 //-----------------------------------------------------------------------------
-static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *tag) {
+static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *tag, bool recv_speed) {
 
     switch (tag->state) {
 
@@ -454,7 +454,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                 if (tag->posCount > 2) {
                     tag->threshold_half += amplitude; // keep track of average high value
                 }
-                if (tag->posCount == 10) {
+                if (tag->posCount == (recv_speed?10:40)) {
                     tag->threshold_half >>= 2; // (4 times 1/2 average)
                     tag->state = STATE_TAG_SOF_HIGH_END;
                 }
@@ -468,7 +468,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
 
         case STATE_TAG_SOF_HIGH_END: {
             // check for falling edge
-            if (tag->posCount == 13 && amplitude < tag->threshold_sof) {
+            if (tag->posCount == (recv_speed?13:52) && amplitude < tag->threshold_sof) {
                 tag->lastBit = SOF_PART1;  // detected 1st part of SOF (12 samples low and 12 samples high)
                 tag->shiftReg = 0;
                 tag->bitCount = 0;
@@ -480,7 +480,7 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                 LED_C_ON();
             } else {
                 tag->posCount++;
-                if (tag->posCount > 13) { // high phase too long
+                if (tag->posCount > (recv_speed?13:52)) { // high phase too long
                     tag->posCount = 0;
                     tag->previous_amplitude = amplitude;
                     tag->state = STATE_TAG_SOF_LOW;
@@ -496,13 +496,13 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                 tag->sum2 = 0;
             }
 
-            if (tag->posCount <= 4) {
+            if (tag->posCount <= (recv_speed?4:16)) {
                 tag->sum1 += amplitude;
             } else {
                 tag->sum2 += amplitude;
             }
 
-            if (tag->posCount == 8) {
+            if (tag->posCount == (recv_speed?8:32)) {
                 if (tag->sum1 > tag->threshold_half && tag->sum2 > tag->threshold_half) { // modulation in both halves
                     if (tag->lastBit == LOGIC0) {  // this was already part of EOF
                         tag->state = STATE_TAG_EOF;
@@ -583,13 +583,13 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                 tag->sum2 = 0;
             }
 
-            if (tag->posCount <= 4) {
+            if (tag->posCount <= (recv_speed?4:16)) {
                 tag->sum1 += amplitude;
             } else {
                 tag->sum2 += amplitude;
             }
 
-            if (tag->posCount == 8) {
+            if (tag->posCount == (recv_speed?8:32)) {
                 if (tag->sum1 > tag->threshold_half && tag->sum2 < tag->threshold_half) { // modulation in first half
                     tag->posCount = 0;
                     tag->state = STATE_TAG_EOF_TAIL;
@@ -610,13 +610,13 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                 tag->sum2 = 0;
             }
 
-            if (tag->posCount <= 4) {
+            if (tag->posCount <= (recv_speed?4:16)) {
                 tag->sum1 += amplitude;
             } else {
                 tag->sum2 += amplitude;
             }
 
-            if (tag->posCount == 8) {
+            if (tag->posCount == (recv_speed?8:32)) {
                 if (tag->sum1 < tag->threshold_half && tag->sum2 < tag->threshold_half) { // no modulation in both halves
                     LED_C_OFF();
                     return true;
@@ -1036,7 +1036,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
             }
         }
 
-        if (Handle15693SamplesFromTag(tagdata, dt)) {
+        if (Handle15693SamplesFromTag(tagdata, dt, true)) {
 
             *eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM; // end of EOF
 
@@ -1730,7 +1730,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
 
             if (!expect_fsk_answer)
             {
-                if (Handle15693SamplesFromTag((sniffdata >> 4) << 2, &dtag)) {
+                if (Handle15693SamplesFromTag((sniffdata >> 4) << 2, &dtag, expect_fast_answer)) {
 
                     uint32_t eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
                     if (dtag.lastBit == SOF_PART2) {
@@ -1786,7 +1786,6 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
                 }
             }
         }
-
     }
 
     FpgaDisableTracing();
