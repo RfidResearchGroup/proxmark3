@@ -54,7 +54,7 @@
 // *) signal decoding is unable to detect collisions.
 // *) add anti-collision support for inventory-commands
 // *) read security status of a block
-// *) sniffing and simulation do not support two subcarrier modes.
+// *) simulation do not support two subcarrier modes.
 // *) remove or refactor code under "deprecated"
 // *) document all the functions
 
