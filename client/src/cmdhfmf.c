@@ -962,7 +962,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
-        arg_str0("u", "uid",  "<hex>", "uid, 6 hex bytes"),
+        arg_str0("u", "uid",  "<hex>", "uid, 4 hex bytes"),
         arg_str0("f", "file", "<fn>", "specify dump filename (bin/eml/json)"),
         arg_str0("k", "kfn",  "<fn>", "key filename"),
         arg_lit0(NULL, "ka",  "use specified keyfile to authenticate"),
