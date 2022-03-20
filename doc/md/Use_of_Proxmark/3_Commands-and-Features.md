@@ -22,6 +22,10 @@ Please make sure you've gone through the following pages firstly:
 
 As seen before, for basic help type `help`. Or for help on a set of sub commands type the command followed by `help`. For example `hf mf help`.  Many commands uses the `-h` / `--help` parameter to show a help text.
 
+The Proxmark3 client now also supports tab-autocomplete in both commands and filenames. Like for instance `hf mf a<tab>`  will give you a list of three availble commands.  
+This feature is quite powerful and similar to your normal shell experiences.
+
+
 ## New Features in RDV4
 ^[Top](#top)
 

@@ -58,9 +58,10 @@ If all went well you should get some information about the firmware and memory u
   compiled with GCC 9.2.1 20191025 (release) [ARM/arm-9-branch revision 277599]
 
  [ FPGA ]
-  LF image built for 2s30vq100 on 2020-07-08 at 23:08:07
-  HF image built for 2s30vq100 on 2020-07-08 at 23:08:19
-  HF FeliCa image built for 2s30vq100 on 2020-07-08 at 23:08:30
+  LF image 2s30vq100 2022-03-20 09:28:32
+  HF image 2s30vq100 2022-03-20 09:02:07
+  HF FeliCa image 2s30vq100 2022-03-20 09:28:28
+  HF 15 image 2s30vq100 2022-03-20 09:01:59
 
  [ Hardware ]
   --= uC: AT91SAM7S512 Rev A
@@ -79,6 +80,7 @@ This `[usb] pm3 --> ` is the Proxmark3 interactive prompt.
 ^[Top](#top)
 
 For basic help type `help`. Or for help on a set of sub commands type the command followed by `help`. For example `hf mf help`.
+All commands now implement `-h` or `--help` parameter to give basic instructions on how to use the command.
 
 ### First tests
 ^[Top](#top)
