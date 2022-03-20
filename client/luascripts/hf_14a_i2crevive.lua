@@ -8,10 +8,10 @@ desc = [[
 This script tries to recover soft bricked ntag i2c tags through the use of raw commands
 ]]
 example = [[
-    1. script run hf_i2c_recovery
+    1. script run hf_14a_i2crevive
 ]]
 usage = [[
-script run hf_i2c_recovery
+script run hf_14a_i2crevive
 ]]
 arguments = [[
     -h      this help

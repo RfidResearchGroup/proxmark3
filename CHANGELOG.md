@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf_14a_i2crevive` Script, revives soft bricked i2c (@equipter)
  - Changed `hf mf view` - now prints all keys and all value blocks under the ´verbose´ param (@iceman1001)
  - Added a new OSX install guide (@maxieds)
  - Added new public key (@anon)
