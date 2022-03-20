@@ -117,7 +117,7 @@ uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t
 
     if (answer_parity) *answer_parity = par[0];
 
-    if (crypted == CRYPT_ALL) {
+    if (pcs && (crypted == CRYPT_ALL)) {
         if (len == 1) {
             uint16_t res = 0;
             res |= (crypto1_bit(pcs, 0, 0) ^ BIT(answer[0], 0)) << 0;
