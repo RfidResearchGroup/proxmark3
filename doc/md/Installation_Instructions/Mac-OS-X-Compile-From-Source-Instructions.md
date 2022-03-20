@@ -12,8 +12,7 @@
 ## Follow Homebrew developer instructions
 ^[Top](#top)
 
-Follow the instructions here [developer instructions](doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) and you are done. 
-
+Follow the instructions here [developer instructions](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md#homebrew-mac-os-x-developer-installation) and you are done. 
 
 ## (optional) Running without sudo
 ^[Top](#top)
