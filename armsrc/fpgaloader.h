@@ -29,6 +29,7 @@
 #define FPGA_BITSTREAM_LF 1
 #define FPGA_BITSTREAM_HF 2
 #define FPGA_BITSTREAM_HF_FELICA 3
+#define FPGA_BITSTREAM_HF_15 4
 
 /*
   Communication between ARM / FPGA is done inside armsrc/fpgaloader.c (function FpgaSendCommand)
@@ -77,6 +78,7 @@ thres|                          x x x x x x x x
 #define FPGA_MAJOR_MODE_HF_SNIFF                    (3<<6) // D
 #define FPGA_MAJOR_MODE_HF_ISO18092                 (4<<6) // D
 #define FPGA_MAJOR_MODE_HF_GET_TRACE                (5<<6) // D
+#define FPGA_MAJOR_MODE_HF_FSK_READER               (6<<6) // D
 
 // BOTH HF / LF
 #define FPGA_MAJOR_MODE_OFF                         (7<<6) // D
@@ -104,6 +106,7 @@ thres|                          x x x x x x x x
 #define FPGA_HF_READER_SUBCARRIER_848_KHZ           (0<<4)
 #define FPGA_HF_READER_SUBCARRIER_424_KHZ           (1<<4)
 #define FPGA_HF_READER_SUBCARRIER_212_KHZ           (2<<4)
+#define FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ     (3<<4)
 
 // Options for the HF simulated tag, how to modulate
 #define FPGA_HF_SIMULATOR_NO_MODULATION             0x0 // 0000

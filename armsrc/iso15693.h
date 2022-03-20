@@ -50,7 +50,7 @@ void SimTagIso15693(uint8_t *uid); // simulate an ISO15693 tag - greg
 void BruteforceIso15693Afi(uint32_t speed); // find an AFI of a tag - atrox
 void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data); // send arbitrary commands from CLI - atrox
 
-void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string);
+void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass);
 
 int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv,
                 uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time);

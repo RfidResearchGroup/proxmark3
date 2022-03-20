@@ -91,7 +91,7 @@ static uint8_t get_pagemap(const picopass_hdr_t *hdr) {
 // Both sides of communication!
 //=============================================================================
 void SniffIClass(uint8_t jam_search_len, uint8_t *jam_search_string) {
-    SniffIso15693(jam_search_len, jam_search_string);
+    SniffIso15693(jam_search_len, jam_search_string, true);
 }
 
 static void rotateCSN(const uint8_t *original_csn, uint8_t *rotated_csn) {

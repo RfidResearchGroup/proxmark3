@@ -1232,7 +1232,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO15693_SNIFF: {
-            SniffIso15693(0, NULL);
+            SniffIso15693(0, NULL, false);
             reply_ng(CMD_HF_ISO15693_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }

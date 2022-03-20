@@ -102,7 +102,7 @@ void RunMod(void) {
     rdv40_spiffs_lazy_mount();
 #endif
 
-    SniffIso15693(0, NULL);
+    SniffIso15693(0, NULL, false);
 
     Dbprintf("Stopped sniffing");
     SpinDelay(200);
