@@ -1,10 +1,19 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014 iZsh <izsh at fail0verflow.com>
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
-// This code is licensed to you under the terms of the GNU GPL, version 2 or,
-// at your option, any later version. See the LICENSE.txt file for the text of
-// the license.
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
+//
 // Butterworth low pass IIR filter
 // input: 8bit ADC signal, 1MS/s
 // output: 8bit value, Fc=20khz
@@ -26,6 +35,7 @@
 //
 // See details about its design see
 // https://fail0verflow.com/blog/2014/proxmark3-fpga-iir-filter.html
+
 module lp20khz_1MSa_iir_filter(input clk, input [7:0] adc_d, output rdy, output [7:0] out);
 
     // clk is 24MHz, the IIR filter is designed for 1MS/s

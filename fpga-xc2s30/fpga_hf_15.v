@@ -1,17 +1,24 @@
 //-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+//
 // The FPGA is responsible for interfacing between the A/D, the coil drivers,
 // and the ARM. In the low-frequency modes it passes the data straight
 // through, so that the ARM gets raw A/D samples over the SSP. In the high-
 // frequency modes, the FPGA might perform some demodulation first, to
 // reduce the amount of data that we must send to the ARM.
-//
-// I am not really an FPGA/ASIC designer, so I am sure that a lot of this
-// could be improved.
-//
-// Jonathan Westhues, March 2006
-// Added ISO14443-A support by Gerhard de Koning Gans, April 2008
-// iZsh <izsh at fail0verflow.com>, June 2014
-// Piwi, Feb 2019
 //-----------------------------------------------------------------------------
 
 
