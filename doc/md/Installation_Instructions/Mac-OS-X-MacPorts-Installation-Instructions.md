@@ -54,7 +54,7 @@ These instructions will show how to setup the environment on OSX to the point wh
 2. Install dependencies:
 
     ```
-    sudo port install readline qt5 qt5-qtbase pkgconfig arm-none-eabi-gcc arm-none-eabi-binutils lua52 coreutils
+    sudo port install readline qt5 qt5-qtbase pkgconfig arm-none-eabi-gcc arm-none-eabi-binutils lua52 coreutils openssl@3
     ```
 
 3. Clamp Python version for pkg-config
