@@ -14,7 +14,10 @@
   - [Run the client](#run-the-client)
   - [Next steps](#next-steps)
 - [Homebrew (Mac OS X), developer installation](#homebrew-mac-os-x-developer-installation)
-  - [Compile and use the project](#compile-and-use-the-project)
+- [Clone the Iceman repository](#clone-the-iceman-repository)
+  - [Compile the project](#compile-the-project)
+    - [the button trick](#the-button-trick)
+  - [Run it](#run-it)
 
 
 
@@ -148,18 +151,36 @@ brew install recode
 brew install astyle
 ```
 
-
-## Compile and use the project
+# Clone the Iceman repository
 ^[Top](#top)
 
-To use the compiled client, the only difference is that the Proxmark3 port is `/dev/tty.usbmodemiceman1`, so commands become:
+```sh
+git clone https://github.com/RfidResearchGroup/proxmark3.git
+cd proxmark3
+```
 
+## Compile the project
+^[Top](#top)
+
+Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
+From there, you can follow the original compilation instructions. 
+_Take extra note to instructions if you don't have a Proxmark3 RDV4 device._
+
+To flash on OS X, better to enter the bootloader mode manually, else you may experience errors.
+
+### the button trick
+^[Top](#top)
+With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. You can release the button, two of the four LEDs should stay on. You're in bootloader mode, ready for the next step. In case the two LEDs don't stay on when you're releasing the button, you've an old bootloader, start over and keep the button pressed during the whole flashing procedure.
+
+
+## Run it
+^[Top](#top)
+To use the compiled client, you can use `pm3` script, it is a wrapper of the proxmark3 client that handles automatic detection of your proxmark.
+```sh
+pm3
+```
+
+If you want to manually select serial port, remember that the Proxmark3 port is `/dev/tty.usbmodemiceman1`, so commands become:
 ```sh
 proxmark3 /dev/ttyACM0  =>  proxmark3 /dev/tty.usbmodemiceman1
 ```
-
-Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
-
-To flash on OS X, better to enter the bootloader mode manually, else you may experience errors.
-With your Proxmark3 unplugged from your machine, press and hold the button on your Proxmark3 as you plug it into a USB port. You can release the button, two of the four LEDs should stay on. You're in bootloader mode, ready for the next step. In case the two LEDs don't stay on when you're releasing the button, you've an old bootloader, start over and keep the button pressed during the whole flashing procedure.
-From there, you can follow the original compilation instructions.
