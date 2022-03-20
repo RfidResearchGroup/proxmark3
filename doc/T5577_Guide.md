@@ -66,6 +66,9 @@ the chip how to behave.
 
 ![](./t55xx_mem_map.png)
 
+ #### What is "Traceability Data"?
+
+ Traceability data is manufacturer-programmed (and locked) data that contains information related to the manufacture of the chip - presumably so that issues can be "traced back" to the point and date of manufacture.  It contains data such as the year and quarter of manufacture, the wafer number on which the chip was produced, and the die number on the wafer.   The traceabiltiy data occupies blocks 1 and 2 of Page 1, and is normally NOT writeable, although some T5577 clones will allow you to overwrite these blocks.   You can read the traceability data with the `lf t55xx trace` command.
  
 
 ## What data is on my T5577
@@ -713,3 +716,11 @@ it, we can follow the password section and update the config from
 ^[Top](#top)
 
 _to be written_
+
+
+
+## T5577 and Keysy
+
+The Keysy tag cloning tool (https://tinylabs.io/keysy/) uses T5577 tags that have a special "password" value (NOT the password described above) written in Block 6 that is tied to the traceability data.  The Keysy checks and computes the proper value for Block 6 and will not write to a tag that does not contain the proper value.   This DRM technology relies on the face that genuine T5577 chips cannot have their traceability data (Blocks 1 and 2 of Page 1) re-written and that the method to computer the proper value for Block 6 is proprietary, therefore compelling you to buy their branded tags.
+
+As noted earlier, certain T5577 clones DO allow you to overwrite the traceability data, thereby allowing a dump of a new Keysy tag to completely overwrite the entire memory and tricking the Keysy into using that tag.   This also implies that you should NEVER overwrite Block 6 on a Keysy tag, as doing so will prevent the use of the Keysy to program that tag in the future without restoring that value.
