@@ -681,7 +681,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         return res;
     }
 
-    if (cardtype == DESFIRE_EV2 ||
+    if (cardtype == DESFIRE_EV2 ||  cardtype == DESFIRE_EV2_XL ||
             cardtype == DESFIRE_LIGHT ||
             cardtype == DESFIRE_EV3 ||
             cardtype == NTAG413DNA) {
