@@ -556,7 +556,7 @@ void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 if (cmdsize == 6) {
                     snprintf(exp, size, "READ_MULTI_BLOCK(%d-%d)", cmd[2], (cmd[2] + cmd[3]));
                 } else {
-                    snprintf(exp, size, "READ_MULTI_BLOCK");
+                    snprintf(exp, size, "READ_MULTI_BLOCK(%d-%d)", cmd[10], (cmd[10] + cmd[11]));
                 }
                 return;
             case ISO15693_WRITE_MULTI_BLOCK:
