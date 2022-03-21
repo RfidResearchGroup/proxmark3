@@ -516,6 +516,7 @@ typedef struct {
 #define CMD_HF_ISO15693_SIMULATE                                          0x0311
 #define CMD_HF_ISO15693_SNIFF                                             0x0312
 #define CMD_HF_ISO15693_COMMAND                                           0x0313
+#define CMD_HF_ISO15693_COMMAND_NEXT                                      0x0314
 #define CMD_HF_ISO15693_FINDAFI                                           0x0315
 #define CMD_HF_ISO15693_CSETUID                                           0x0316
 #define CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY                            0x0317

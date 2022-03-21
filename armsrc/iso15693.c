@@ -2359,7 +2359,7 @@ void BruteforceIso15693Afi(uint32_t speed) {
 
 // Allows to directly send commands to the tag via the client
 // OBS:  doesn't turn off rf field afterwards.
-void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data) {
+void DirectTag15693Command(bool reset_tag, uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data) {
 
     LED_A_ON();
 
@@ -2384,7 +2384,7 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
     }
 
     uint32_t start_time = 0;
-    int recvlen = SendDataTag(data, datalen, true, speed, (recv ? recvbuf : NULL), sizeof(recvbuf), start_time, timeout, &eof_time);
+    int recvlen = SendDataTag(data, datalen, reset_tag, speed, (recv ? recvbuf : NULL), sizeof(recvbuf), start_time, timeout, &eof_time);
 
     if (recvlen == PM3_ETEAROFF) { // tearoff occurred
         reply_mix(CMD_ACK, recvlen, 0, 0, NULL, 0);
@@ -2406,10 +2406,6 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
             reply_mix(CMD_ACK, 1, 0, 0, NULL, 0);
         }
     }
-    // note: this prevents using hf 15 cmd with s option - which isn't implemented yet anyway
-    // also prevents hf 15 raw -k  keep_field on ...
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LED_D_OFF();
 }
 
 /*

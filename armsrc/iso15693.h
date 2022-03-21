@@ -48,7 +48,7 @@ void AcquireRawAdcSamplesIso15693(void);
 void ReaderIso15693(uint32_t parameter, iso15_card_select_t *p_card); // Simulate an ISO15693 reader - greg
 void SimTagIso15693(uint8_t *uid); // simulate an ISO15693 tag - greg
 void BruteforceIso15693Afi(uint32_t speed); // find an AFI of a tag - atrox
-void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data); // send arbitrary commands from CLI - atrox
+void DirectTag15693Command(bool reset_tag, uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data); // send arbitrary commands from CLI - atrox
 
 void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass);
 
