@@ -252,11 +252,9 @@ void CodeIso15693AsTag(const uint8_t *cmd, size_t len) {
     ts->buf[++ts->max] = 0x1D;  // 00011101
 
     // data
-    for (size_t i = 0; i < len; i += 2) {
+    for (size_t i = 0; i < len; i ++) {
         ts->buf[++ts->max] = encode_4bits[cmd[i] & 0xF];
         ts->buf[++ts->max] = encode_4bits[cmd[i] >> 4];
-        ts->buf[++ts->max] = encode_4bits[cmd[i + 1] & 0xF];
-        ts->buf[++ts->max] = encode_4bits[cmd[i + 1] >> 4];
     }
 
     // EOF
