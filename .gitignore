@@ -77,6 +77,7 @@ tools/mf_nonce_brute/mf_nonce_brute
 tools/mf_nonce_brute/mf_trace_brute
 tools/jtag_openocd/openocd_configuration
 tools/mfd_aes_brute/mfd_aes_brute
+tools/mfd_aes_brute/mfd_multi_brute
 tools/mfd_aes_brute/brute_key
 
 fpga/*
