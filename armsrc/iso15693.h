@@ -45,10 +45,10 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 
 //void RecordRawAdcSamplesIso15693(void);
 void AcquireRawAdcSamplesIso15693(void);
-void ReaderIso15693(iso15_card_select_t *p_card); // ISO15693 reader 
+void ReaderIso15693(iso15_card_select_t *p_card); // ISO15693 reader
 void SimTagIso15693(uint8_t *uid); // simulate an ISO15693 tag
-void BruteforceIso15693Afi(uint32_t speed); // find an AFI of a tag 
-void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data); // send arbitrary commands from CLI 
+void BruteforceIso15693Afi(uint32_t speed); // find an AFI of a tag
+void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data); // send arbitrary commands from CLI
 
 void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass);
 

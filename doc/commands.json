@@ -322,6 +322,29 @@
             ],
             "usage": "data detectclock [-hafnp]"
         },
+        "data diff": {
+            "command": "data diff",
+            "description": "diff takes a multitude of input data and makes a binary compare. it accepts filenames (filesystem or rdv4 flashmem spiffs), emulator memory, magic gen1",
+            "notes": [
+                "data diff -w 4 -a hf-mfu-01020304.bin -b hf-mfu-04030201.bin",
+                "data diff -a filea -b fileb",
+                "data diff -a filea --eb",
+                "data diff --fa filea -b fileb",
+                "data diff --fa filea --fb fileb",
+                "data diff --ea --cb"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help this help",
+                "-a <fn> input file name a",
+                "-b <fn> input file name b",
+                "--eb emulator memory <hf mf esave>",
+                "--fa <fn> input spiffs file a",
+                "--fb <fn> input spiffs file b",
+                "-w <4|8|16> width of data output"
+            ],
+            "usage": "data diff [-h] [-a <fn>] [-b <fn>] [--eb] [--fa <fn>] [--fb <fn>] [-w <4|8|16>]"
+        },
         "data dirthreshold": {
             "command": "data dirthreshold",
             "description": "max rising higher up-thres/ min falling lower down-thres, keep rest as prev.",
@@ -381,7 +404,7 @@
         },
         "data help": {
             "command": "data help",
-            "description": "help this help ----------- ------------------------- modulation------------------------- biphaserawdecode biphase decode bin stream in demodbuffer detectclock detect ask, fsk, nrz, psk clock rate of wave in graphbuffer fsktonrz convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode manchester decode binary stream in demodbuffer modulation identify lf signal for clock and modulation rawdemod demodulate the data in the graphbuffer and output binary ----------- ------------------------- graph------------------------- askedgedetect adjust graph for manual ask demod using the length of sample differences to detect the edge of a wave autocorr autocorrelation over window dirthreshold max rising higher up-thres/ min falling lower down-thres, keep rest as prev. decimate decimate samples undecimate un-decimate samples hide hide graph window hpf remove dc offset from trace iir apply iir buttersworth filter on plot data grid overlay grid on graph window ltrim trim samples from left of trace mtrim trim out samples from the specified start to the specified stop norm normalize max/min to +/-128 plot show graph window rtrim trim samples from right of trace setgraphmarkers set blue and orange marker in graph window shiftgraphzero shift 0 for graphed wave + or - shift value timescale set a timescale to get a differential reading between the yellow and purple markers as time duration zerocrossings count time between zero-crossings convertbitstream convert graphbuffer's 0/1 values to 127 / -127 getbitstream convert graphbuffer's >=1 values to 1 and <1 to 0 ----------- ------------------------- general------------------------- asn1 asn1 decoder bin2hex converts binary to hexadecimal clear clears bigbuf on deviceside and graph window hex2bin converts hexadecimal to binary load load contents of file into graph window print print the data in the demodbuffer save save signal trace data (from graph window) setdebugmode set debugging level on client side",
+            "description": "help this help ----------- ------------------------- modulation------------------------- biphaserawdecode biphase decode bin stream in demodbuffer detectclock detect ask, fsk, nrz, psk clock rate of wave in graphbuffer fsktonrz convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode manchester decode binary stream in demodbuffer modulation identify lf signal for clock and modulation rawdemod demodulate the data in the graphbuffer and output binary ----------- ------------------------- graph------------------------- askedgedetect adjust graph for manual ask demod using the length of sample differences to detect the edge of a wave autocorr autocorrelation over window dirthreshold max rising higher up-thres/ min falling lower down-thres, keep rest as prev. decimate decimate samples undecimate un-decimate samples hide hide graph window hpf remove dc offset from trace iir apply iir buttersworth filter on plot data grid overlay grid on graph window ltrim trim samples from left of trace mtrim trim out samples from the specified start to the specified stop norm normalize max/min to +/-128 plot show graph window rtrim trim samples from right of trace setgraphmarkers set blue and orange marker in graph window shiftgraphzero shift 0 for graphed wave + or - shift value timescale set a timescale to get a differential reading between the yellow and purple markers as time duration zerocrossings count time between zero-crossings convertbitstream convert graphbuffer's 0/1 values to 127 / -127 getbitstream convert graphbuffer's >=1 values to 1 and <1 to 0 ----------- ------------------------- general------------------------- asn1 asn1 decoder bin2hex converts binary to hexadecimal clear clears bigbuf on deviceside and graph window diff diff of input files hex2bin converts hexadecimal to binary load load contents of file into graph window print print the data in the demodbuffer save save signal trace data (from graph window) setdebugmode set debugging level on client side",
             "notes": [],
             "offline": true,
             "options": [],
@@ -10908,8 +10931,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 688,
+        "commands_extracted": 689,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-02-27T15:27:46"
+        "extracted_on": "2022-03-23T16:50:35"
     }
 }

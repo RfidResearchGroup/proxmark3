@@ -120,6 +120,7 @@ Check column "offline" for their availability.
 |`data bin2hex           `|Y       |`Converts binary to hexadecimal`
 |`data bitsamples        `|N       |`Get raw samples as bitstring`
 |`data clear             `|Y       |`Clears bigbuf on deviceside and graph window`
+|`data diff              `|Y       |`diff of input files`
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`
 |`data hex2bin           `|Y       |`Converts hexadecimal to binary`
 |`data load              `|Y       |`Load contents of file into graph window`

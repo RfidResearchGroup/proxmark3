@@ -2888,16 +2888,16 @@ static int CmdDiff(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data diff",
-                    "Diff takes a multitude of input data and makes a binary compare.\n"
-                    "It accepts filenames (filesystem or RDV4 flashmem SPIFFS), emulator memory, magic gen1",
-                    "data diff -w 4 -a hf-mfu-01020304.bin -b hf-mfu-04030201.bin\n"
-                    "data diff -a fileA -b fileB\n"
-                    "data diff -a fileA --eb\n"
+                  "Diff takes a multitude of input data and makes a binary compare.\n"
+                  "It accepts filenames (filesystem or RDV4 flashmem SPIFFS), emulator memory, magic gen1",
+                  "data diff -w 4 -a hf-mfu-01020304.bin -b hf-mfu-04030201.bin\n"
+                  "data diff -a fileA -b fileB\n"
+                  "data diff -a fileA --eb\n"
 //                    "data diff -a fileA --cb\n"
-                    "data diff --fa fileA -b fileB\n"
-                    "data diff --fa fileA --fb fileB\n"
-                    "data diff --ea --cb\n"
-                );
+                  "data diff --fa fileA -b fileB\n"
+                  "data diff --fa fileA --fb fileB\n"
+                  "data diff --ea --cb\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2937,7 +2937,7 @@ static int CmdDiff(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity check
-    if (IfPm3Rdv4Fw() == false && (splenA > 0 || splenB > 0) ) {
+    if (IfPm3Rdv4Fw() == false && (splenA > 0 || splenB > 0)) {
         PrintAndLogEx(WARNING, "No RDV4 Flashmemory available");
         return PM3_EINVARG;
     }
@@ -2952,7 +2952,7 @@ static int CmdDiff(const char *Cmd) {
     }
 
     //
-    if (width > 16 || width < 1 ) {
+    if (width > 16 || width < 1) {
         PrintAndLogEx(INFO, "Width out of range, using default 16 bytes width");
         width = 16;
     }
@@ -3111,19 +3111,19 @@ static int CmdDiff(const char *Cmd) {
 
     // print data diff loop
     int i;
-    for (i = 0; i < n;  i += width ) {
+    for (i = 0; i < n;  i += width) {
 
         memset(line, 0, sizeof(line));
 
-        int diff = memcmp(inA + i, inB + i, width);        
+        int diff = memcmp(inA + i, inB + i, width);
 
         // if ok,  just print
         if (diff == 0) {
-            hex_to_buffer((uint8_t*)line, inA + i, width, width, 0, 1, true);
-            ascii_to_buffer((uint8_t*)(line + strlen(line)), inA + i, width, width, 0);
+            hex_to_buffer((uint8_t *)line, inA + i, width, width, 0, 1, true);
+            ascii_to_buffer((uint8_t *)(line + strlen(line)), inA + i, width, width, 0);
             strcat(line + strlen(line), " | ");
-            hex_to_buffer((uint8_t*)(line + strlen(line)), inB + i, width, width, 0, 1, true);
-            ascii_to_buffer((uint8_t*)(line + strlen(line)), inB + i, width, width, 0);
+            hex_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, width, 0, 1, true);
+            ascii_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, width, 0);
         } else {
 
             char dlnA[240] = {0};
@@ -3138,7 +3138,7 @@ static int CmdDiff(const char *Cmd) {
 
             // if diff,  time to find it
             for (int j = i; j < (i + width); j++) {
-                    
+
                 char ca = inA[j];
                 char cb = inB[j];
 
@@ -3166,8 +3166,8 @@ static int CmdDiff(const char *Cmd) {
     // mod
 
 
-    // print different length 
-    bool tallestA = (datalenA > datalenB); 
+    // print different length
+    bool tallestA = (datalenA > datalenB);
     if (tallestA) {
         n = datalenA;
     } else {
@@ -3175,13 +3175,13 @@ static int CmdDiff(const char *Cmd) {
     }
 
     // print data diff loop
-    for (; i < n;  i += width ) {
+    for (; i < n;  i += width) {
 
         memset(line, 0, sizeof(line));
 
         if (tallestA) {
-            hex_to_buffer((uint8_t*)line, inA + i, width, width, 0, 1, true);
-            ascii_to_buffer((uint8_t*)(line + strlen(line)), inA + i, width, width, 0);
+            hex_to_buffer((uint8_t *)line, inA + i, width, width, 0, 1, true);
+            ascii_to_buffer((uint8_t *)(line + strlen(line)), inA + i, width, width, 0);
             strcat(line + strlen(line), " | ");
             for (int j = 0; j < width; j++) {
                 strcat(line + strlen(line), "-- ");
@@ -3198,8 +3198,8 @@ static int CmdDiff(const char *Cmd) {
                 strcat(line + strlen(line), ".");
             }
             strcat(line + strlen(line), " | ");
-            hex_to_buffer((uint8_t*)(line + strlen(line)), inB + i, width, width, 0, 1, true);
-            ascii_to_buffer((uint8_t*)(line + strlen(line)), inB + i, width, width, 0);
+            hex_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, width, 0, 1, true);
+            ascii_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, width, 0);
         }
 
         PrintAndLogEx(INFO, "%03X | %s", i, line);

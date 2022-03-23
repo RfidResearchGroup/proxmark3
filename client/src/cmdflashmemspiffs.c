@@ -90,7 +90,7 @@ out:
 }
 
 int flashmem_spiffs_download(char *fn, uint8_t fnlen, void **pdest, size_t *destlen) {
-       // get size from spiffs itself !
+    // get size from spiffs itself !
     clearCommandBuffer();
     SendCommandNG(CMD_SPIFFS_STAT, (uint8_t *)fn, fnlen);
     PacketResponseNG resp;
@@ -542,7 +542,7 @@ static int CmdFlashMemSpiFFSView(const char *Cmd) {
 
     int breaks = arg_get_int_def(ctx, 2, 32);
     CLIParserFree(ctx);
- 
+
     uint8_t *dump = NULL;
     size_t dumplen = 0;
     int res = flashmem_spiffs_download(fn, fnlen, (void **)&dump, &dumplen);

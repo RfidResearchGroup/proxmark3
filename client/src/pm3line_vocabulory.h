@@ -101,6 +101,7 @@ const static vocabulory_t vocabulory[] = {
     { 1, "data bin2hex" }, 
     { 0, "data bitsamples" }, 
     { 1, "data clear" }, 
+    { 1, "data diff" }, 
     { 0, "data hexsamples" }, 
     { 1, "data hex2bin" }, 
     { 1, "data load" }, 

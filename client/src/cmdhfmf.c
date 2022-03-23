@@ -261,7 +261,7 @@ static void mf_print_blocks(uint16_t n, uint8_t *d) {
 static int mf_print_keys(uint16_t n, uint8_t *d) {
 
     uint8_t sectors = 0;
-    switch(n) {
+    switch (n) {
         case MIFARE_MINI_MAXBLOCK:
             sectors = MIFARE_MINI_MAXSECTOR;
             break;
@@ -270,7 +270,7 @@ static int mf_print_keys(uint16_t n, uint8_t *d) {
             break;
         case MIFARE_4K_MAXBLOCK:
             sectors = MIFARE_4K_MAXSECTOR;
-            break;        
+            break;
         case MIFARE_1K_MAXBLOCK:
         default:
             sectors = MIFARE_1K_MAXSECTOR;
@@ -292,7 +292,7 @@ static int mf_print_keys(uint16_t n, uint8_t *d) {
     }
     printKeyTable(sectors, e_sector);
     free(e_sector);
-    return PM3_SUCCESS;    
+    return PM3_SUCCESS;
 }
 
 static void mf_print_values(uint16_t n, uint8_t *d) {
@@ -303,7 +303,7 @@ static void mf_print_values(uint16_t n, uint8_t *d) {
     uint8_t cnt = 0;
     uint32_t value = 0;
     for (uint16_t i = 0; i < n; i++) {
-    
+
         if (mfc_value(d + (i * MFBLOCK_SIZE), &value))  {
             PrintAndLogEx(INFO, "%03d | " _YELLOW_("%" PRIu32) " " _YELLOW_("0x%" PRIX32), i, value, value);
             ++cnt;
@@ -311,7 +311,7 @@ static void mf_print_values(uint16_t n, uint8_t *d) {
     }
 
     if (cnt) {
-        PrintAndLogEx(INFO, "Found %u value blocks in file", cnt);        
+        PrintAndLogEx(INFO, "Found %u value blocks in file", cnt);
         PrintAndLogEx(NORMAL, "");
     }
 }
@@ -3634,7 +3634,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
             snprintf(strB, sizeof(strB), "%012" PRIX64, e_sector[i].Key[1]);
 
         if (e_sector[i].foundKey[0] > 1) {
-            PrintAndLogEx(SUCCESS, " "_YELLOW_("%03d")" | %03d | " _GREEN_("%s")" | " _YELLOW_("%c")" | " _GREEN_("%s")" | " _YELLOW_("%c") 
+            PrintAndLogEx(SUCCESS, " "_YELLOW_("%03d")" | %03d | " _GREEN_("%s")" | " _YELLOW_("%c")" | " _GREEN_("%s")" | " _YELLOW_("%c")
                           , i
                           , mfSectorTrailerOfSector(i)
                           , strA, e_sector[i].foundKey[0]
@@ -3647,7 +3647,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
             if (start_sector == 0)
                 s = i;
 
-            PrintAndLogEx(SUCCESS, " "_YELLOW_("%03d")" | %03d | " _GREEN_("%s")" | " _YELLOW_("%d")" | " _GREEN_("%s")" | " _YELLOW_("%d") 
+            PrintAndLogEx(SUCCESS, " "_YELLOW_("%03d")" | %03d | " _GREEN_("%s")" | " _YELLOW_("%d")" | " _GREEN_("%s")" | " _YELLOW_("%d")
                           , s
                           , mfSectorTrailerOfSector(s)
                           , strA, e_sector[i].foundKey[0]

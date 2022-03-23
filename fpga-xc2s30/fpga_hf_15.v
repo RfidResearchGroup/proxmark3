@@ -207,9 +207,9 @@ hi_get_trace gt(
 // Major modes:
 //   000 --  HF 15 reader; subcarrier frequency and modulation depth selectable
 //   001 --  HF simulated tag
-//   010 --  
+//   010 --
 //   011 --  HF sniff
-//   100 --  
+//   100 --
 //   101 --  HF get trace
 //   110 --  unused
 //   111 --  FPGA_MAJOR_MODE_OFF
