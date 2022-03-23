@@ -5,7 +5,7 @@ Summary:        The Swiss Army Knife of RFID Research - RRG/Iceman repo
 
 License:        GPLv3+
 URL:            https://github.com/RfidResearchGroup/proxmark3
-Source0:        https://github.com/s00se/proxmark3/archive/refs/tags/v%{version}.tar.gz
+Source0:        https://github.com/RfidResearchGroup/proxmark3/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:	make, gcc, g++, readline-devel, arm-none-eabi-gcc, arm-none-eabi-newlib, bzip2-devel, libatomic, openssl-devel, python3-devel, jansson-devel, bluez-libs-devel, qt5-qtbase-devel
 Requires:	bzip2-libs, readline, python3, bluez, qt5-qtbase
@@ -25,6 +25,8 @@ make PLATFORM=PM3GENERIC SKIPLUASYSTEM=1
 
 %install
 make install PREFIX=%{buildroot}/usr UDEV_PREFIX=%{buildroot}/etc/udev/rules.d/
+chmod -x %{buildroot}/usr/share/proxmark3/firmware/fullimage.elf
+chmod -x %{buildroot}/usr/share/proxmark3/firmware/bootrom.elf
 
 %files
 %{_sysconfdir}/udev/rules.d/77-pm3-usb-device-blacklist.rules
