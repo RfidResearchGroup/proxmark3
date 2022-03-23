@@ -1506,7 +1506,7 @@ int CmdLFfind(const char *Cmd) {
                 }
             }
 
-            PrintAndLogEx(INPLACE, "Searching for COTAG tag...");
+            PrintAndLogEx(INPLACE, "Searching for COTAG tag...    ");
             if (readCOTAGUid()) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!");
                 if (search_cont) {
