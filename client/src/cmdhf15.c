@@ -1480,10 +1480,12 @@ static int CmdHF15Raw(const char *Cmd) {
     // arg: len, speed, recv?
     // arg0 (datalen,  cmd len?  .arg0 == crc?)
     // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
-    // arg2 (recv == 1 == expect a response)
+    // arg2 (recv == 1 == expect a response) |
+    //      (2 == field is already on, 0 == field is off)
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, datalen, fast, read_respone, data, datalen);
+    SendCommandMIX(CMD_HF_ISO15693_COMMAND, datalen, fast, (read_respone? 1 : 0) | (g_field_on ? 2 : 0), data, datalen);
+    g_field_on = true;
 
     if (read_respone) {
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {

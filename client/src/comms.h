@@ -29,7 +29,7 @@ extern "C" {
 #endif
 
 #ifndef DropField
-#define DropField() { clearCommandBuffer(); SetISODEPState(ISODEP_INACTIVE); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); }
+#define DropField() { clearCommandBuffer(); SetISODEPState(ISODEP_INACTIVE); SendCommandNG(CMD_HF_DROPFIELD, NULL, 0); g_field_on = false; }
 #endif
 
 #ifndef DropFieldEx

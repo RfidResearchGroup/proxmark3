@@ -32,6 +32,7 @@
 extern uint8_t g_debugMode;
 extern uint8_t g_printAndLog;
 extern bool g_pendingPrompt;
+extern bool g_field_on;
 
 #define PRINTANDLOG_PRINT 1
 #define PRINTANDLOG_LOG   2
