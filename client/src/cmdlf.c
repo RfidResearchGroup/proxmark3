@@ -1506,7 +1506,7 @@ int CmdLFfind(const char *Cmd) {
                 }
             }
 
-            PrintAndLogEx(INPLACE, "Searching for COTAG tag...    ");
+            PrintAndLogEx(INPLACE, "Searching for COTAG tag...");
             if (readCOTAGUid()) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!");
                 if (search_cont) {
@@ -1518,9 +1518,9 @@ int CmdLFfind(const char *Cmd) {
 
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(FAILED, _RED_("No data found!"));
-            PrintAndLogEx(INFO, "Signal looks like noise. Maybe not an LF tag?");
+            PrintAndLogEx(HINT, "Maybe not an LF tag?");
             PrintAndLogEx(NORMAL, "");
-            if (! search_cont) {
+            if (search_cont == 0) {
                 return PM3_ESOFT;
             }
         }
