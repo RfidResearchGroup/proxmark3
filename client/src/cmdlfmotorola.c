@@ -37,7 +37,7 @@ static int CmdHelp(const char *Cmd);
 int demodMotorola(bool verbose) {
     (void) verbose; // unused so far
     //PSK1
-    if (PSKDemod(32, 1, 100, true) != PM3_SUCCESS) {
+    if (PSKDemod(32, 1, 100, false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Motorola: PSK Demod failed");
         return PM3_ESOFT;
     }
