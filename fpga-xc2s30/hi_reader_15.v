@@ -16,7 +16,7 @@
 // modified to add support for iso15 2sc mode
 //
 
-module hi_reader(
+module hi_15_reader(
     ck_1356meg,
     pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4,
     adc_d, adc_clk,

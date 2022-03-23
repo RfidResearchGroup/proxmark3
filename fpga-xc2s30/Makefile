@@ -22,7 +22,7 @@ fpga_felica.ngc: fpga_felica.v fpga.ucf xst_felica.scr util.v hi_simulate.v hi_r
 	$(info [-] XST $@)
 	$(Q)$(XILINX_TOOLS_PREFIX)xst -ifn xst_felica.scr
 
-fpga_hf_15.ngc: fpga_hf_15.v fpga.ucf xst_hf.scr util.v hi_simulate.v hi_reader_15.v hi_iso14443a.v hi_sniffer.v hi_get_trace.v
+fpga_hf_15.ngc: fpga_hf_15.v fpga.ucf xst_hf_15.scr util.v hi_simulate.v hi_reader_15.v hi_sniffer.v hi_get_trace.v
 	$(Q)$(RM) $@
 	$(info [-] XST $@)
 	$(Q)$(XILINX_TOOLS_PREFIX)xst -ifn xst_hf_15.scr
