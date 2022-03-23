@@ -233,7 +233,7 @@ uint32_t BigBuf_get_traceLen(void) {
   by 'hf list -t raw', alternatively 'hf list -t <proto>' for protocol-specific
   annotation of commands/responses.
 **/
-bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool readerToTag) {
+bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool reader2tag) {
     if (tracing == false) {
         return false;
     }
@@ -268,7 +268,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
     hdr->timestamp = timestamp_start;
     hdr->duration = duration & 0xFFFF;
     hdr->data_len = iLen;
-    hdr->isResponse = !readerToTag;
+    hdr->isResponse = !reader2tag;
     trace_len += TRACELOG_HDR_LEN;
 
     // data bytes
@@ -298,11 +298,11 @@ bool LogTrace_ISO15693(const uint8_t *bytes, uint16_t len, uint32_t ts_start, ui
 }
 
 // specific LogTrace function for bitstreams: the partial byte size is stored in first parity byte. E.g. bitstream "1100 00100010" -> partial byte: 4 bits
-bool RAMFUNC LogTraceBits(const uint8_t *btBytes, uint16_t bitLen, uint32_t timestamp_start, uint32_t timestamp_end, bool readerToTag) {
+bool RAMFUNC LogTraceBits(const uint8_t *btBytes, uint16_t bitLen, uint32_t timestamp_start, uint32_t timestamp_end, bool reader2tag) {
     uint8_t parity[(nbytes(bitLen) - 1) / 8 + 1];
     memset(parity, 0x00, sizeof(parity));
     parity[0] = bitLen % 8;
-    return LogTrace(btBytes, nbytes(bitLen), timestamp_start, timestamp_end, parity, readerToTag);
+    return LogTrace(btBytes, nbytes(bitLen), timestamp_start, timestamp_end, parity, reader2tag);
 }
 
 // Emulator memory
