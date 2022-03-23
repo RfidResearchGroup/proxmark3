@@ -61,7 +61,7 @@ void RunMod(void) {
                 break;
             else if (state == STATE_READ) {
                 Iso15693InitReader();
-                ReaderIso15693(0, &card);
+                ReaderIso15693(&card);
 
                 if (card.uidlen == 0) {
                     LED_D_OFF();
