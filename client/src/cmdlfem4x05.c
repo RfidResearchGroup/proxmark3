@@ -1681,13 +1681,13 @@ int CmdEM4x05Unlock(const char *Cmd) {
         if (tries >= 5 && n == 0 && soon != late) {
 
             if (soon > late) {
-                PrintAndLogEx(INFO, "Tried %d times, soon:%i late:%i        => " _CYAN_("adjust +1 us >> %.0lf us"), tries, soon, late, start);
                 start++;
                 end++;
+                PrintAndLogEx(INFO, "Tried %d times, soon:%i late:%i        => " _CYAN_("adjust +1 us >> %.0lf us"), tries, soon, late, start);
             } else {
-                PrintAndLogEx(INFO, "Tried %d times, soon:%i late:%i        => " _CYAN_("adjust -1 us >> %.0lf us"), tries, soon, late, start);
                 start--;
                 end--;
+                PrintAndLogEx(INFO, "Tried %d times, soon:%i late:%i        => " _CYAN_("adjust -1 us >> %.0lf us"), tries, soon, late, start);
             }
             tries = 0;
             soon = 0;
@@ -1739,7 +1739,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
             if (my_auto) {
                 start += n;
                 PrintAndLogEx(INFO, "                                    => " _CYAN_("adjust +%.0lf us >> %.0lf us"), n, start);
-                n /= 2;
+                n = (int)(n / 2);
             } else {
                 soon++;
             }
@@ -1793,7 +1793,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
                     end = start;
                     start -= n;
                     PrintAndLogEx(INFO, "                                    => " _CYAN_("adjust -%.0lf us >> %.0lf us"), n, start);
-                    n /= 2;
+                    n = (int)(n / 2);
                 } else {
                     late++;
                 }
