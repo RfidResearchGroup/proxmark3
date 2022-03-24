@@ -133,7 +133,6 @@ static int CmdCOTAGReader(const char *Cmd) {
     int res = PM3_SUCCESS;
     while (!WaitForResponseTimeout(CMD_LF_COTAG_READ, &resp, 1000)) {
         timeout--;
-        PrintAndLogEx(NORMAL, "." NOLF);
         if (timeout == 0) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "command execution time out");

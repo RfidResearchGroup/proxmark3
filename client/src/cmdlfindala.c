@@ -162,14 +162,14 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
     // to reduce false_positives
     // let's check the ratio of zeros in the demod buffer.
     size_t cnt_zeros = 0;
-    for (size_t i=0; i< g_DemodBufferLen; i++) {
+    for (size_t i = 0; i < g_DemodBufferLen; i++) {
         if (g_DemodBuffer[i] == 0x00)
             ++cnt_zeros;
     }
 
     // if more than 95% zeros in the demodbuffer then assume its wrong
     int32_t stats = (int32_t)((cnt_zeros * 100 / g_DemodBufferLen));
-    if ( stats > 95) {
+    if (stats > 95) {
         return PM3_ESOFT;
     }
 

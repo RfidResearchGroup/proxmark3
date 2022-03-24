@@ -427,7 +427,12 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf wrbl",
-                  "Write MIFARE Classic block",
+                  "Write MIFARE Classic block with 16 hex bytes of data\n"
+                  " \n"
+                  "Sector 0 / Block 0 - Manufacturer block\n"
+                  "When writing to block 0 you must use a VALID block 0 data (UID, BCC, SAK, ATQA)\n"
+                  "Writing an invalid block 0 means rendering your Magic GEN2 card undetectable. \n"
+                  "Look in the magic_cards_notes.md file for help to resolve it.",
                   "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 000102030405060708090a0b0c0d0e0f"
                  );
     void *argtable[] = {
@@ -435,6 +440,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
         arg_int1(NULL, "blk", "<dec>", "block number"),
         arg_lit0("a", NULL, "input key type is key A (def)"),
         arg_lit0("b", NULL, "input key type is key B"),
+        arg_lit0(NULL, "force", "enforce block0 writes"),
         arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
         arg_str0("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
 
@@ -442,7 +448,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int b = arg_get_int_def(ctx, 1, 0);
+    int b = arg_get_int_def(ctx, 1, 1);
 
     uint8_t keytype = MF_KEY_A;
     if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
@@ -453,13 +459,15 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
         keytype = MF_KEY_B;;
     }
 
+    bool force = arg_get_lit(ctx, 4);
+
     int keylen = 0;
     uint8_t key[6] = {0};
-    CLIGetHexWithReturn(ctx, 4, key, &keylen);
+    CLIGetHexWithReturn(ctx, 5, key, &keylen);
 
     uint8_t block[MFBLOCK_SIZE] = {0x00};
     int blen = 0;
-    CLIGetHexWithReturn(ctx, 5, block, &blen);
+    CLIGetHexWithReturn(ctx, 6, block, &blen);
     CLIParserFree(ctx);
 
     if (blen != MFBLOCK_SIZE) {
@@ -470,6 +478,15 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     if (b > 255) {
         return PM3_EINVARG;
     }
+    if (b == 0 && force == false) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Targeting Sector 0 / Block 0 - Manufacturer block");
+        PrintAndLogEx(INFO, "Read the helptext for details before writing to this block");
+        PrintAndLogEx(INFO, "You must use param `" _YELLOW_("--force") "` to write to this block");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_EINVARG;
+    }
+
     uint8_t blockno = (uint8_t)b;
 
     PrintAndLogEx(INFO, "Writing block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));

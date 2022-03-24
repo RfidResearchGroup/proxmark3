@@ -4430,7 +4430,7 @@
         },
         "hf mf wrbl": {
             "command": "hf mf wrbl",
-            "description": "write mifare classic block",
+            "description": "write mifare classic block with 16 hex bytes of data sector 0 / block 0 - manufacturer block when writing to block 0 you must use a valid block 0 data (uid, bcc, sak, atqa) writing an invalid block 0 means rendering your magic gen2 card undetectable. look in the magic_cards_notes.md file for help to resolve it.",
             "notes": [
                 "hf mf wrbl --blk 1 -k ffffffffffff -d 000102030405060708090a0b0c0d0e0f"
             ],
@@ -4440,10 +4440,11 @@
                 "--blk <dec> block number",
                 "-a input key type is key a (def)",
                 "-b input key type is key b",
+                "--force enforce block0 writes",
                 "-k, --key <hex> key, 6 hex bytes",
                 "-d, --data <hex> bytes to write, 16 hex bytes"
             ],
-            "usage": "hf mf wrbl [-hab] --blk <dec> [-k <hex>] [-d <hex>]"
+            "usage": "hf mf wrbl [-hab] --blk <dec> [--force] [-k <hex>] [-d <hex>]"
         },
         "hf mfdes auth": {
             "command": "hf mfdes auth",
@@ -10933,6 +10934,6 @@
     "metadata": {
         "commands_extracted": 689,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-03-23T16:50:35"
+        "extracted_on": "2022-03-24T10:21:12"
     }
 }
