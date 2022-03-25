@@ -122,11 +122,14 @@ static int CmdT55xxCloneHelp(const char *Cmd) {
     PrintAndLogEx(NORMAL, _GREEN_("lf em 410x clone"));
 // todo:  implement restore
 //    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x05 write"));
-//    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x50 write"));
+//    PrintAndLogEx(NORMAL, _GREEN_("lf em 4x50 restore"));
     PrintAndLogEx(NORMAL, _GREEN_("lf fdxb clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf gallagher clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf gproxii clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf hid clone"));
+// todo:  implement restore
+//    PrintAndLogEx(NORMAL, _GREEN_("lf hitag clone"));
+    PrintAndLogEx(NORMAL, _GREEN_("lf idteck clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf indala clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf io clone"));
     PrintAndLogEx(NORMAL, _GREEN_("lf jablotron clone"));
