@@ -1,9 +1,17 @@
 MYSRCPATHS = ../../common ../../common/mbedtls
 MYSRCS = util_posix.c randoms.c
 MYINCLUDES =  -I../../include -I../../common -I../../common/mbedtls
-MYCFLAGS = -march=native -Ofast
+MYCFLAGS = -Ofast
 MYDEFS =
 MYLDLIBS = -lcrypto
+
+# A better way would be to just try compiling with march and seeing if we succeed
+cpu_arch = $(shell uname -m)
+ifneq ($(findstring arm64, $(cpu_arch)), )
+    MYCFLAGS += -mcpu=native
+else
+    MYCFLAGS += -march=native
+endif
 
 ifneq ($(SKIPPTHREAD),1)
     MYLDLIBS += -lpthread
