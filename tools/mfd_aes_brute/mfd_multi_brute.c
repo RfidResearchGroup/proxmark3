@@ -37,9 +37,15 @@
 #include <unistd.h>
 //#include <mbedtls/aes.h>
 #include "util_posix.h"
-#include "aes-ni.h"
-#include "detectaes.h"
 #include "randoms.h"
+
+#include "aes-ni.h"
+
+#if defined(__APPLE__) || defined(__MACH__)
+#else
+    #include "detectaes.h"
+#endif
+
 
 #define AEND  "\x1b[0m"
 #define _RED_(s) "\x1b[31m" s AEND
