@@ -61,6 +61,16 @@ THE SOFTWARE.
 #  endif
 #endif
 
+// ARM64 mandates implementation of NEON
+#if defined(__arm64__)
+#define COMPILER_HAS_SIMD_NEON
+#define arm_has_neon() (true)
+// ARMv7 or older, NEON is optional and autodetection is difficult
+#elif defined(__ARM_NEON)
+#define COMPILER_HAS_SIMD_NEON
+#define arm_has_neon() (false)
+#endif
+
 typedef enum {
     SIMD_AUTO,
 #if defined(COMPILER_HAS_SIMD_AVX512)
@@ -71,6 +81,9 @@ typedef enum {
     SIMD_AVX,
     SIMD_SSE2,
     SIMD_MMX,
+#endif
+#if defined(COMPILER_HAS_SIMD_NEON)
+    SIMD_NEON,
 #endif
     SIMD_NONE,
 } SIMDExecInstr;

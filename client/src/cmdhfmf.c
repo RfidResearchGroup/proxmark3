@@ -1874,6 +1874,9 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 #if defined(COMPILER_HAS_SIMD_AVX512)
         arg_lit0(NULL, "i5", "AVX512"),
 #endif
+#if defined(COMPILER_HAS_SIMD_NEON)
+        arg_lit0(NULL, "ie", "NEON"),
+#endif
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1931,6 +1934,9 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 #if defined(COMPILER_HAS_SIMD_AVX512)
     bool i5 = arg_get_lit(ctx, 20);
 #endif
+#if defined(COMPILER_HAS_SIMD_NEON)
+    bool ie = arg_get_lit(ctx, 16);
+#endif
     CLIParserFree(ctx);
 
     // set SIM instructions
@@ -1951,6 +1957,12 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     if (im)
         SetSIMDInstr(SIMD_MMX);
 #endif
+
+#if defined(COMPILER_HAS_SIMD_NEON)
+    if (ie)
+        SetSIMDInstr(SIMD_NEON);
+#endif
+
     if (in)
         SetSIMDInstr(SIMD_NONE);
 
@@ -2068,6 +2080,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 #if defined(COMPILER_HAS_SIMD_AVX512)
         arg_lit0(NULL, "i5", "AVX512"),
 #endif
+#if defined(COMPILER_HAS_SIMD_NEON)
+        arg_lit0(NULL, "ie", "NEON"),
+#endif
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2118,6 +2133,10 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 #if defined(COMPILER_HAS_SIMD_AVX512)
     bool i5 = arg_get_lit(ctx, 18);
 #endif
+#if defined(COMPILER_HAS_SIMD_NEON)
+    bool ie = arg_get_lit(ctx, 14);
+#endif
+
     CLIParserFree(ctx);
 
     //validations
@@ -2167,6 +2186,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (im)
         SetSIMDInstr(SIMD_MMX);
 #endif
+
+#if defined(COMPILER_HAS_SIMD_NEON)
+    if (ie)
+        SetSIMDInstr(SIMD_NEON);
+#endif
+
     if (in)
         SetSIMDInstr(SIMD_NONE);
 

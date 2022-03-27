@@ -3643,9 +3643,10 @@
                 "--is sse2",
                 "--ia avx",
                 "--i2 avx2",
-                "--i5 avx512"
+                "--i5 avx512",
+                "--ie neon"
             ],
-            "usage": "hf mf autopwn [-habslv] [-k <hex>] [-s <dec>] [-f <fn>] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
+            "usage": "hf mf autopwn [-habslv] [-k <hex>] [-s <dec>] [-f <fn>] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5] [--ie]"
         },
         "hf mf cgetblk": {
             "command": "hf mf cgetblk",
@@ -4122,9 +4123,10 @@
                 "--is sse2",
                 "--ia avx",
                 "--i2 avx2",
-                "--i5 avx512"
+                "--i5 avx512",
+                "--ie neon"
             ],
-            "usage": "hf mf hardnested [-habrstw] [-k <hex>] [--blk <dec>] [--tblk <dec>] [--ta] [--tb] [--tk <hex>] [-u <hex>] [-f <fn>] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
+            "usage": "hf mf hardnested [-habrstw] [-k <hex>] [--blk <dec>] [--tblk <dec>] [--ta] [--tb] [--tk <hex>] [-u <hex>] [-f <fn>] [--in] [--im] [--is] [--ia] [--i2] [--i5] [--ie]"
         },
         "hf mf help": {
             "command": "hf mf help",

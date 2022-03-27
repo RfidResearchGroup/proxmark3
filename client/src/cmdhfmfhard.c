@@ -102,6 +102,11 @@ static void get_SIMD_instruction_set(char *instruction_set) {
             strcpy(instruction_set, "MMX");
             break;
 #endif
+#if defined(COMPILER_HAS_SIMD_NEON)
+        case SIMD_NEON:
+            strcpy(instruction_set, "NEON");
+            break;
+#endif
         case SIMD_AUTO:
         case SIMD_NONE:
             strcpy(instruction_set, "no");
