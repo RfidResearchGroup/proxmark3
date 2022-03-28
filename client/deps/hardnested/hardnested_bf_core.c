@@ -74,6 +74,8 @@ THE SOFTWARE.
 #define MAX_BITSLICES 128
 #elif defined(__SSE2__)
 #define MAX_BITSLICES 128
+#elif defined(__ARM_NEON)
+#define MAX_BITSLICES 128
 #else // MMX or SSE or NOSIMD
 #define MAX_BITSLICES 64
 #endif
