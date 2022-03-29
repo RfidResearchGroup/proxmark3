@@ -568,7 +568,7 @@ void SetSIMDInstr(SIMDExecInstr instr) {
 static SIMDExecInstr GetSIMDInstr(void) {
     SIMDExecInstr instr;
 
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
     __builtin_cpu_init();
 #endif
 
@@ -577,7 +577,7 @@ static SIMDExecInstr GetSIMDInstr(void) {
         instr = SIMD_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2"))
             instr = SIMD_AVX2;
         else if (__builtin_cpu_supports("avx"))
@@ -617,7 +617,7 @@ uint64_t crack_states_bitsliced_dispatch(uint32_t cuid, uint8_t *best_first_byte
             crack_states_bitsliced_function_p = &crack_states_bitsliced_AVX512;
             break;
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         case SIMD_AVX2:
             crack_states_bitsliced_function_p = &crack_states_bitsliced_AVX2;
             break;
@@ -653,7 +653,7 @@ void bitslice_test_nonces_dispatch(uint32_t nonces_to_bruteforce, const uint32_t
             bitslice_test_nonces_function_p = &bitslice_test_nonces_AVX512;
             break;
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         case SIMD_AVX2:
             bitslice_test_nonces_function_p = &bitslice_test_nonces_AVX2;
             break;

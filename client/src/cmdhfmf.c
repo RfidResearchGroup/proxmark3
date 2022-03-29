@@ -1865,7 +1865,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         arg_lit0("w",  "wr",             "Acquire nonces and UID, and write them to file `hf-mf-<UID>-nonces.bin`"),
 
         arg_lit0(NULL, "in", "None (use CPU regular instruction set)"),
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         arg_lit0(NULL, "im", "MMX"),
         arg_lit0(NULL, "is", "SSE2"),
         arg_lit0(NULL, "ia", "AVX"),
@@ -1925,7 +1925,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     bool nonce_file_write = arg_get_lit(ctx, 14);
 
     bool in = arg_get_lit(ctx, 15);
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
     bool im = arg_get_lit(ctx, 16);
     bool is = arg_get_lit(ctx, 17);
     bool ia = arg_get_lit(ctx, 18);
@@ -1947,7 +1947,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         SetSIMDInstr(SIMD_AVX512);
 #endif
 
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
     if (i2)
         SetSIMDInstr(SIMD_AVX2);
     if (ia)
@@ -2071,7 +2071,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
 
         arg_lit0(NULL, "in", "None (use CPU regular instruction set)"),
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         arg_lit0(NULL, "im", "MMX"),
         arg_lit0(NULL, "is", "SSE2"),
         arg_lit0(NULL, "ia", "AVX"),
@@ -2124,7 +2124,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool m4 = arg_get_lit(ctx, 12);
 
     bool in = arg_get_lit(ctx, 13);
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
     bool im = arg_get_lit(ctx, 14);
     bool is = arg_get_lit(ctx, 15);
     bool ia = arg_get_lit(ctx, 16);
@@ -2176,7 +2176,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         SetSIMDInstr(SIMD_AVX512);
 #endif
 
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
     if (i2)
         SetSIMDInstr(SIMD_AVX2);
     if (ia)

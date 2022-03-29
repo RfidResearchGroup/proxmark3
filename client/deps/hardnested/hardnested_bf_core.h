@@ -55,8 +55,8 @@ THE SOFTWARE.
 #if ( defined (__i386__) || defined (__x86_64__) ) && \
     ( !defined(__APPLE__) || \
       (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1)) )
-#  define COMPILER_HAS_SIMD
-#  if defined(COMPILER_HAS_SIMD) && ((__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2))
+#  define COMPILER_HAS_SIMD_X86
+#  if defined(COMPILER_HAS_SIMD_X86) && ((__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2))
 #    define COMPILER_HAS_SIMD_AVX512
 #  endif
 #endif
@@ -76,7 +76,7 @@ typedef enum {
 #if defined(COMPILER_HAS_SIMD_AVX512)
     SIMD_AVX512,
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
     SIMD_AVX2,
     SIMD_AVX,
     SIMD_SSE2,

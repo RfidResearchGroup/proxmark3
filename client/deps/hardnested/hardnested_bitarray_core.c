@@ -329,7 +329,7 @@ uint32_t *malloc_bitarray_dispatch(uint32_t x) {
     if (__builtin_cpu_supports("avx512f")) malloc_bitarray_function_p = &malloc_bitarray_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) malloc_bitarray_function_p = &malloc_bitarray_AVX2;
         else if (__builtin_cpu_supports("avx")) malloc_bitarray_function_p = &malloc_bitarray_AVX;
         else if (__builtin_cpu_supports("sse2")) malloc_bitarray_function_p = &malloc_bitarray_SSE2;
@@ -352,7 +352,7 @@ void free_bitarray_dispatch(uint32_t *x) {
     if (__builtin_cpu_supports("avx512f")) free_bitarray_function_p = &free_bitarray_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) free_bitarray_function_p = &free_bitarray_AVX2;
         else if (__builtin_cpu_supports("avx")) free_bitarray_function_p = &free_bitarray_AVX;
         else if (__builtin_cpu_supports("sse2")) free_bitarray_function_p = &free_bitarray_SSE2;
@@ -375,7 +375,7 @@ uint32_t bitcount_dispatch(uint32_t a) {
     if (__builtin_cpu_supports("avx512f")) bitcount_function_p = &bitcount_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) bitcount_function_p = &bitcount_AVX2;
         else if (__builtin_cpu_supports("avx")) bitcount_function_p = &bitcount_AVX;
         else if (__builtin_cpu_supports("sse2")) bitcount_function_p = &bitcount_SSE2;
@@ -398,7 +398,7 @@ uint32_t count_states_dispatch(uint32_t *bitarray) {
     if (__builtin_cpu_supports("avx512f")) count_states_function_p = &count_states_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) count_states_function_p = &count_states_AVX2;
         else if (__builtin_cpu_supports("avx")) count_states_function_p = &count_states_AVX;
         else if (__builtin_cpu_supports("sse2")) count_states_function_p = &count_states_SSE2;
@@ -421,7 +421,7 @@ void bitarray_AND_dispatch(uint32_t *A, uint32_t *B) {
     if (__builtin_cpu_supports("avx512f")) bitarray_AND_function_p = &bitarray_AND_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) bitarray_AND_function_p = &bitarray_AND_AVX2;
         else if (__builtin_cpu_supports("avx")) bitarray_AND_function_p = &bitarray_AND_AVX;
         else if (__builtin_cpu_supports("sse2")) bitarray_AND_function_p = &bitarray_AND_SSE2;
@@ -444,7 +444,7 @@ void bitarray_low20_AND_dispatch(uint32_t *A, uint32_t *B) {
     if (__builtin_cpu_supports("avx512f")) bitarray_low20_AND_function_p = &bitarray_low20_AND_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) bitarray_low20_AND_function_p = &bitarray_low20_AND_AVX2;
         else if (__builtin_cpu_supports("avx")) bitarray_low20_AND_function_p = &bitarray_low20_AND_AVX;
         else if (__builtin_cpu_supports("sse2")) bitarray_low20_AND_function_p = &bitarray_low20_AND_SSE2;
@@ -467,7 +467,7 @@ uint32_t count_bitarray_AND_dispatch(uint32_t *A, uint32_t *B) {
     if (__builtin_cpu_supports("avx512f")) count_bitarray_AND_function_p = &count_bitarray_AND_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) count_bitarray_AND_function_p = &count_bitarray_AND_AVX2;
         else if (__builtin_cpu_supports("avx")) count_bitarray_AND_function_p = &count_bitarray_AND_AVX;
         else if (__builtin_cpu_supports("sse2")) count_bitarray_AND_function_p = &count_bitarray_AND_SSE2;
@@ -490,7 +490,7 @@ uint32_t count_bitarray_low20_AND_dispatch(uint32_t *A, uint32_t *B) {
     if (__builtin_cpu_supports("avx512f")) count_bitarray_low20_AND_function_p = &count_bitarray_low20_AND_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) count_bitarray_low20_AND_function_p = &count_bitarray_low20_AND_AVX2;
         else if (__builtin_cpu_supports("avx")) count_bitarray_low20_AND_function_p = &count_bitarray_low20_AND_AVX;
         else if (__builtin_cpu_supports("sse2")) count_bitarray_low20_AND_function_p = &count_bitarray_low20_AND_SSE2;
@@ -513,7 +513,7 @@ void bitarray_AND4_dispatch(uint32_t *A, uint32_t *B, uint32_t *C, uint32_t *D) 
     if (__builtin_cpu_supports("avx512f")) bitarray_AND4_function_p = &bitarray_AND4_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) bitarray_AND4_function_p = &bitarray_AND4_AVX2;
         else if (__builtin_cpu_supports("avx")) bitarray_AND4_function_p = &bitarray_AND4_AVX;
         else if (__builtin_cpu_supports("sse2")) bitarray_AND4_function_p = &bitarray_AND4_SSE2;
@@ -536,7 +536,7 @@ void bitarray_OR_dispatch(uint32_t *A, uint32_t *B) {
     if (__builtin_cpu_supports("avx512f")) bitarray_OR_function_p = &bitarray_OR_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) bitarray_OR_function_p = &bitarray_OR_AVX2;
         else if (__builtin_cpu_supports("avx")) bitarray_OR_function_p = &bitarray_OR_AVX;
         else if (__builtin_cpu_supports("sse2")) bitarray_OR_function_p = &bitarray_OR_SSE2;
@@ -559,7 +559,7 @@ uint32_t count_bitarray_AND2_dispatch(uint32_t *A, uint32_t *B) {
     if (__builtin_cpu_supports("avx512f")) count_bitarray_AND2_function_p = &count_bitarray_AND2_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) count_bitarray_AND2_function_p = &count_bitarray_AND2_AVX2;
         else if (__builtin_cpu_supports("avx")) count_bitarray_AND2_function_p = &count_bitarray_AND2_AVX;
         else if (__builtin_cpu_supports("sse2")) count_bitarray_AND2_function_p = &count_bitarray_AND2_SSE2;
@@ -582,7 +582,7 @@ uint32_t count_bitarray_AND3_dispatch(uint32_t *A, uint32_t *B, uint32_t *C) {
     if (__builtin_cpu_supports("avx512f")) count_bitarray_AND3_function_p = &count_bitarray_AND3_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) count_bitarray_AND3_function_p = &count_bitarray_AND3_AVX2;
         else if (__builtin_cpu_supports("avx")) count_bitarray_AND3_function_p = &count_bitarray_AND3_AVX;
         else if (__builtin_cpu_supports("sse2")) count_bitarray_AND3_function_p = &count_bitarray_AND3_SSE2;
@@ -605,7 +605,7 @@ uint32_t count_bitarray_AND4_dispatch(uint32_t *A, uint32_t *B, uint32_t *C, uin
     if (__builtin_cpu_supports("avx512f")) count_bitarray_AND4_function_p = &count_bitarray_AND4_AVX512;
     else
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         if (__builtin_cpu_supports("avx2")) count_bitarray_AND4_function_p = &count_bitarray_AND4_AVX2;
         else if (__builtin_cpu_supports("avx")) count_bitarray_AND4_function_p = &count_bitarray_AND4_AVX;
         else if (__builtin_cpu_supports("sse2")) count_bitarray_AND4_function_p = &count_bitarray_AND4_SSE2;

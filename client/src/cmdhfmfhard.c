@@ -88,7 +88,7 @@ static void get_SIMD_instruction_set(char *instruction_set) {
             strcpy(instruction_set, "AVX512F");
             break;
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
         case SIMD_AVX2:
             strcpy(instruction_set, "AVX2");
             break;
