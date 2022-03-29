@@ -1077,11 +1077,11 @@ static int CmdHF14aDesChk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes chk",
                   "Checks keys with MIFARE DESFire card.",
-                  "hf mfdes chk -a 123456 -k 000102030405060708090a0b0c0d0e0f  -> check key on aid 0x123456\n"
+                  "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f  -> check key on aid 0x123456\n"
                   "hf mfdes chk -d mfdes_default_keys                          -> check keys from dictionary against all existing aid on card\n"
-                  "hf mfdes chk -d mfdes_default_keys -a 123456        -> check keys from dictionary against aid 0x123456\n"
-                  "hf mfdes chk -a 123456 --pattern1b -j keys          -> check all 1-byte keys pattern on aid 0x123456 and save found keys to json\n"
-                  "hf mfdes chk -a 123456 --pattern2b --startp2b FA00  -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00");
+                  "hf mfdes chk -d mfdes_default_keys --aid 123456        -> check keys from dictionary against aid 0x123456\n"
+                  "hf mfdes chk --aid 123456 --pattern1b -j keys          -> check all 1-byte keys pattern on aid 0x123456 and save found keys to json\n"
+                  "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00  -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00");
 
     void *argtable[] = {
         arg_param_begin,

@@ -4573,11 +4573,11 @@
             "command": "hf mfdes chk",
             "description": "checks keys with mifare desfire card.",
             "notes": [
-                "hf mfdes chk -a 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on aid 0x123456",
+                "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on aid 0x123456",
                 "hf mfdes chk -d mfdes_default_keys -> check keys from dictionary against all existing aid on card",
-                "hf mfdes chk -d mfdes_default_keys -a 123456 -> check keys from dictionary against aid 0x123456",
-                "hf mfdes chk -a 123456 --pattern1b -j keys -> check all 1-byte keys pattern on aid 0x123456 and save found keys to json",
-                "hf mfdes chk -a 123456 --pattern2b --startp2b fa00 -> check all 2-byte keys pattern on aid 0x123456. start from key fa00fa00...fa00"
+                "hf mfdes chk -d mfdes_default_keys --aid 123456 -> check keys from dictionary against aid 0x123456",
+                "hf mfdes chk --aid 123456 --pattern1b -j keys -> check all 1-byte keys pattern on aid 0x123456 and save found keys to json",
+                "hf mfdes chk --aid 123456 --pattern2b --startp2b fa00 -> check all 2-byte keys pattern on aid 0x123456. start from key fa00fa00...fa00"
             ],
             "offline": false,
             "options": [
@@ -10939,6 +10939,6 @@
     "metadata": {
         "commands_extracted": 689,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-03-26T19:01:37"
+        "extracted_on": "2022-03-29T16:50:55"
     }
 }
