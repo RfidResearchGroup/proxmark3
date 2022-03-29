@@ -10,10 +10,13 @@ target_include_directories(pm3rrg_rdv4_hardnested_nosimd PRIVATE
         ../../include
         ../src)
 
+target_compile_definitions(pm3rrg_rdv4_hardnested_nosimd PRIVATE NOSIMD_BUILD)
+
 ## CPU-specific code
 ## These are mostly for x86-based architectures, which is not useful for many Android devices.
 ## Mingw platforms: AMD64
 set(X86_CPUS x86 x86_64 i686 AMD64)
+set(ARM64_CPUS arm64 aarch64)
 
 message(STATUS "CMAKE_SYSTEM_PROCESSOR := ${CMAKE_SYSTEM_PROCESSOR}")
 
@@ -104,6 +107,24 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST X86_CPUS)
             $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_avx>
             $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_avx2>
             $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_avx512>)
+elseif ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST ARM64_CPUS)
+    message(STATUS "Building optimised arm64 binaries")
+
+    ## arm64 / NEON
+    add_library(pm3rrg_rdv4_hardnested_neon OBJECT
+            hardnested/hardnested_bf_core.c
+            hardnested/hardnested_bitarray_core.c)
+
+    target_compile_options(pm3rrg_rdv4_hardnested_neon PRIVATE -Wall -Werror -O3)
+    set_property(TARGET pm3rrg_rdv4_hardnested_neon PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+    target_include_directories(pm3rrg_rdv4_hardnested_neon PRIVATE
+            ../../common
+            ../../include
+            ../src)
+
+    set(SIMD_TARGETS
+            $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_neon>)
 else ()
     message(STATUS "Not building optimised targets")
     set(SIMD_TARGETS)

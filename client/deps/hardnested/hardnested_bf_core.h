@@ -55,10 +55,20 @@ THE SOFTWARE.
 #if ( defined (__i386__) || defined (__x86_64__) ) && \
     ( !defined(__APPLE__) || \
       (defined(__APPLE__) && (__clang_major__ > 8 || __clang_major__ == 8 && __clang_minor__ >= 1)) )
-#  define COMPILER_HAS_SIMD
-#  if defined(COMPILER_HAS_SIMD) && ((__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2))
+#  define COMPILER_HAS_SIMD_X86
+#  if defined(COMPILER_HAS_SIMD_X86) && ((__GNUC__ >= 5) && (__GNUC__ > 5 || __GNUC_MINOR__ > 2))
 #    define COMPILER_HAS_SIMD_AVX512
 #  endif
+#endif
+
+// ARM64 mandates implementation of NEON
+#if defined(__arm64__)
+#define COMPILER_HAS_SIMD_NEON
+#define arm_has_neon() (true)
+// ARMv7 or older, NEON is optional and autodetection is difficult
+#elif defined(__ARM_NEON)
+#define COMPILER_HAS_SIMD_NEON
+#define arm_has_neon() (false)
 #endif
 
 typedef enum {
@@ -66,11 +76,14 @@ typedef enum {
 #if defined(COMPILER_HAS_SIMD_AVX512)
     SIMD_AVX512,
 #endif
-#if defined(COMPILER_HAS_SIMD)
+#if defined(COMPILER_HAS_SIMD_X86)
     SIMD_AVX2,
     SIMD_AVX,
     SIMD_SSE2,
     SIMD_MMX,
+#endif
+#if defined(COMPILER_HAS_SIMD_NEON)
+    SIMD_NEON,
 #endif
     SIMD_NONE,
 } SIMDExecInstr;
