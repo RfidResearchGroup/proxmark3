@@ -165,7 +165,7 @@ def get_version():
 def remove_ansi_escape_codes(text):
     """Remove ANSI escape sequences that may be left in the text."""
     re_ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -/]*[@-~]')
-    return re_ansi_escape.sub('', str(text)).lower()
+    return re_ansi_escape.sub('', str(text))
 
 
 def remove_extra_whitespace(text):
