@@ -10,7 +10,7 @@ target_include_directories(pm3rrg_rdv4_hardnested_nosimd PRIVATE
         ../../include
         ../src)
 
-target_compile_definitions(pm3rrg_rdv4_hardnested_nosimd NOSIMD_BUILD)
+target_compile_definitions(pm3rrg_rdv4_hardnested_nosimd PRIVATE NOSIMD_BUILD)
 
 ## CPU-specific code
 ## These are mostly for x86-based architectures, which is not useful for many Android devices.
