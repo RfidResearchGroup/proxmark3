@@ -5,13 +5,22 @@ MYDEFS =
 MYSRCS = hardnested_bruteforce.c
 
 cpu_arch = $(shell uname -m)
+
+IS_SIMD_ARCH =
 ifneq ($(findstring 86, $(cpu_arch)), )
-    MULTIARCHSRCS = hardnested_bf_core.c hardnested_bitarray_core.c
+    IS_SIMD_ARCH=x86
 endif
 ifneq ($(findstring amd64, $(cpu_arch)), )
-    MULTIARCHSRCS = hardnested_bf_core.c hardnested_bitarray_core.c
+    IS_SIMD_ARCH=x86
 endif
 ifneq ($(findstring arm64, $(cpu_arch)), )
+    IS_SIMD_ARCH=arm64
+endif
+ifneq ($(findstring aarch64, $(cpu_arch)), )
+    IS_SIMD_ARCH=arm64
+endif
+
+ifneq ($(IS_SIMD_ARCH), )
     MULTIARCHSRCS = hardnested_bf_core.c hardnested_bitarray_core.c
 endif
 ifeq ($(MULTIARCHSRCS), )
@@ -21,7 +30,7 @@ endif
 LIB_A = libhardnested.a
 
 MYOBJS = $(MYSRCS:%.c=$(OBJDIR)/%.o)
-ifneq ($(findstring arm64, $(cpu_arch)), )
+ifeq ($(IS_SIMD_ARCH), arm64)
 	MYOBJS += $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_NOSIMD.o) \
 				$(MULTIARCHSRCS:%.c=$(OBJDIR)/%_NEON.o)
 else
@@ -41,8 +50,8 @@ HARD_SWITCH_SSE2 = -mmmx -msse2 -mno-avx -mno-avx2
 HARD_SWITCH_AVX = -mmmx -msse2 -mavx -mno-avx2
 HARD_SWITCH_AVX2 = -mmmx -msse2 -mavx -mavx2
 HARD_SWITCH_AVX512 = -mmmx -msse2 -mavx -mavx2 -mavx512f
-ifneq ($(findstring arm64, $(cpu_arch)), )
-	SUPPORTS_AVX512=0
+ifeq ($(IS_SIMD_ARCH), arm64)
+	SUPPORTS_AVX512=False
 	HARD_SWITCH_NOSIMD = -DNOSIMD_BUILD
 endif
 ifeq "$(SUPPORTS_AVX512)" "True"

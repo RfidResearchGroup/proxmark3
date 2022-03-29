@@ -62,7 +62,7 @@ THE SOFTWARE.
 #endif
 
 // ARM64 mandates implementation of NEON
-#if defined(__arm64__)
+#if defined(__arm64__) || defined(__aarch64__)
 #define COMPILER_HAS_SIMD_NEON
 #define arm_has_neon() (true)
 // ARMv7 or older, NEON is optional and autodetection is difficult
