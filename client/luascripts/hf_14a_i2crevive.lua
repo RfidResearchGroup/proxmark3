@@ -34,14 +34,17 @@ local function i2cR()
     return {
     [0] = 'hf 14a raw -k -a -b 7 40',
     [1] = 'hf 14a raw -k -a 43',
-    [2] = 'hf 14a raw -c -a A2005380712A',
+    [2] = 'hf 14a raw -c -a A203E1106D00',
     [3] = 'hf 14a raw -k -a -b 7 40',
     [4] = 'hf 14a raw -k -a 43',
-    [5] = 'hf 14a raw -c -a A2010200D980',
+    [5] = 'hf 14a raw -c -a A20244000F00',
     [6] = 'hf 14a raw -k -a -b 7 40',
     [7] = 'hf 14a raw -k -a 43',
-    [8] = 'hf 14a raw -c -a A2025B480000',
-    [9] = 'hf 14a raw -c -a 5000',
+    [8] = 'hf 14a raw -c -a A2E20000FF00',
+    [9] = 'hf 14a raw -k -a -b 7 40',
+    [10] = 'hf 14a raw -k -a 43',
+    [11] = 'hf 14a raw -c -a A2E3000000E3',
+    [12] = 'hf 14a raw -c -a 5000',
     }
 end
 
