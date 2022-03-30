@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Updated hf_14a_i2crevive.lua - fixed broken apdus (@Equipter)
  - Use 128 bit slices whenever ARM NEON is available to speed up hardnested (@Doridian)
  - Fixed compilation of mfd_aes_brute on Apple M1 based Macs (@Doridian)
  - Changed calculation of companion ARM firmware hash to be uniform accross platforms (@Doridian)
