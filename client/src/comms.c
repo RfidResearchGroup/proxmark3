@@ -414,6 +414,15 @@ __attribute__((force_align_arg_pointer))
                         }
                     }
                 }
+                else if ((!error) && (length == 0)) { // we received an empty frame
+                    if (rx.ng)
+                        rx.length = 0; // set received length to 0
+                    else {  // old frames can't be empty
+                        PrintAndLogEx(WARNING, "Received empty MIX packet frame (length: 0x00)");
+
+                        error = true;
+                    }
+                }
                 if (!error) {                        // Get the postamble
                     res = uart_receive(sp, (uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), &rxlen);
                     if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseNGPostamble))) {
