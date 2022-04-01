@@ -17,6 +17,7 @@ target_compile_definitions(pm3rrg_rdv4_hardnested_nosimd PRIVATE NOSIMD_BUILD)
 ## Mingw platforms: AMD64
 set(X86_CPUS x86 x86_64 i686 AMD64)
 set(ARM64_CPUS arm64 aarch64)
+set(ARM32_CPUS armel armhf)
 
 message(STATUS "CMAKE_SYSTEM_PROCESSOR := ${CMAKE_SYSTEM_PROCESSOR}")
 
@@ -116,6 +117,26 @@ elseif ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST ARM64_CPUS)
             hardnested/hardnested_bitarray_core.c)
 
     target_compile_options(pm3rrg_rdv4_hardnested_neon PRIVATE -Wall -Werror -O3)
+    set_property(TARGET pm3rrg_rdv4_hardnested_neon PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+    target_include_directories(pm3rrg_rdv4_hardnested_neon PRIVATE
+            ../../common
+            ../../include
+            ../src)
+
+    set(SIMD_TARGETS
+            $<TARGET_OBJECTS:pm3rrg_rdv4_hardnested_neon>)
+elseif ("${CMAKE_SYSTEM_PROCESSOR}" IN_LIST ARM32_CPUS)
+    message(STATUS "Building optimised arm binaries")
+
+    ## arm64 / NEON
+    add_library(pm3rrg_rdv4_hardnested_neon OBJECT
+            hardnested/hardnested_bf_core.c
+            hardnested/hardnested_bitarray_core.c)
+
+    target_compile_options(pm3rrg_rdv4_hardnested_neon PRIVATE -Wall -Werror -O3)
+    target_compile_options(pm3rrg_rdv4_hardnested_neon BEFORE PRIVATE
+            -mfpu=neon)
     set_property(TARGET pm3rrg_rdv4_hardnested_neon PROPERTY POSITION_INDEPENDENT_CODE ON)
 
     target_include_directories(pm3rrg_rdv4_hardnested_neon PRIVATE

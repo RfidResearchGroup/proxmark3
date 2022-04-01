@@ -13,6 +13,9 @@ endif
 ifneq ($(findstring amd64, $(cpu_arch)), )
     IS_SIMD_ARCH=x86
 endif
+ifneq ($(findstring arm, $(cpu_arch)), )
+    IS_SIMD_ARCH=arm
+endif
 ifneq ($(findstring arm64, $(cpu_arch)), )
     IS_SIMD_ARCH=arm64
 endif
@@ -24,13 +27,14 @@ ifneq ($(IS_SIMD_ARCH), )
     MULTIARCHSRCS = hardnested_bf_core.c hardnested_bitarray_core.c
 endif
 ifeq ($(MULTIARCHSRCS), )
+    MYCFLAGS += -DNOSIMD_BUILD
     MYSRCS += hardnested_bf_core.c hardnested_bitarray_core.c
 endif
 
 LIB_A = libhardnested.a
 
 MYOBJS = $(MYSRCS:%.c=$(OBJDIR)/%.o)
-ifeq ($(IS_SIMD_ARCH), arm64)
+ifneq ($(findstring arm, $(IS_SIMD_ARCH)), )
 	MYOBJS += $(MULTIARCHSRCS:%.c=$(OBJDIR)/%_NOSIMD.o) \
 				$(MULTIARCHSRCS:%.c=$(OBJDIR)/%_NEON.o)
 else
@@ -52,6 +56,11 @@ HARD_SWITCH_AVX2 = -mmmx -msse2 -mavx -mavx2
 HARD_SWITCH_AVX512 = -mmmx -msse2 -mavx -mavx2 -mavx512f
 ifeq ($(IS_SIMD_ARCH), arm64)
 	SUPPORTS_AVX512=False
+	HARD_SWITCH_NOSIMD = -DNOSIMD_BUILD
+endif
+ifeq ($(IS_SIMD_ARCH), arm)
+	SUPPORTS_AVX512=False
+	HARD_SWITCH_NEON = -mfpu=neon
 	HARD_SWITCH_NOSIMD = -DNOSIMD_BUILD
 endif
 ifeq "$(SUPPORTS_AVX512)" "True"
