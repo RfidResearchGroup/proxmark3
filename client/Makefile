@@ -566,6 +566,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdhfmfhard.c \
 		cmdhfmfu.c \
 		cmdhfmfp.c \
+		cmdhfntag424.c \
 		cmdhfseos.c \
 		cmdhfst.c \
 		cmdhfst25ta.c \
