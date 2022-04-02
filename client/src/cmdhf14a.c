@@ -2403,7 +2403,7 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Starting the APDU finder [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
 
-    bool inc_p1 = true;
+    bool inc_p1 = false;
     bool skip_ins = false;
     uint64_t all_sw[256][256] = { { 0 } };
     uint64_t sw_occurrences = 0;

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf 14a apdu` - now don't skip first P2 iteration (@iceman1001)
  - Added `hf ntag424` - skeleton with SDM (@iceman1001)
  - Updated hf_14a_i2crevive.lua - fixed broken apdus (@Equipter)
  - Use 128 bit slices whenever ARM NEON is available to speed up hardnested (@Doridian)
