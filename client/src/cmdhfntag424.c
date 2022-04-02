@@ -68,7 +68,7 @@ static int CmdHF_ntag424_view(const char *Cmd) {
                 PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
                 return PM3_EMALLOC;
             }
-            res = loadFileJSON(filename, (void *)dump, MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH, &bytes_read, NULL);
+            res = loadFileJSON(filename, (void *)dump, NTAG424_MAX_BYTES, &bytes_read, NULL);
             break;
         }
         case EML:
@@ -96,7 +96,9 @@ static int CmdHF_ntag424_view(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-
+//
+// Original from  https://github.com/rfidhacking/node-sdm/
+//
 typedef struct sdm_picc_s {
     uint8_t tag;
     uint8_t uid[7];
