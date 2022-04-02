@@ -221,7 +221,7 @@ int CmdLFCommandRead(const char *Cmd) {
                   " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters"),
                   "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110                           --> probing for Hitag 1/S\n"
                   "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000                           --> probing for Hitag 2\n"
-                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -q -s 2000 -@             --> probing for Hitag 2, oscilloscope style\n"
+                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -s 2000 -@                --> probing for Hitag 2, oscilloscope style\n"
                   "lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -c W0S00000010000E  --> probing for Hitag (us)\n"
                  );
 
