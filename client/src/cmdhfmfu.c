@@ -4011,7 +4011,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     // Get tag type
     TagTypeUL_t tagtype = GetHF14AMfU_Type();
     if (tagtype == UL_ERROR) {
-        PrintAndLogEx(WARNING, "No Ultraligth / NTAG based tag found");
+        PrintAndLogEx(WARNING, "No Ultralight / NTAG based tag found");
         return PM3_ESOFT;
     }
 
