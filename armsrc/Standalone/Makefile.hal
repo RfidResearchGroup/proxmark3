@@ -65,7 +65,8 @@ define KNOWN_STANDALONE_DEFINITIONS
 | HF_14ASNIFF     | 14a sniff to flashmem                  |
 | (RDV4 only)     |                                        |
 +----------------------------------------------------------+
-| HF_14BSNIFF     | 14b sniff                              |
+| HF_14BSNIFF     | 14b sniff to flashmem (rdv4) or ram    |
+|                 |                                        |
 +----------------------------------------------------------+
 | HF_15SNIFF      | 15693 sniff to flashmem (rdv4) or ram  |
 |                 |                                        |
