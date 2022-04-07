@@ -62,8 +62,8 @@ define KNOWN_STANDALONE_DEFINITIONS
 | LF_THAREXDE     | Simulate/read EM4x50 tags              |
 | (RDV4 only)     | storing in flashmem                    |
 +----------------------------------------------------------+
-| HF_14ASNIFF     | 14a sniff to flashmem                  |
-| (RDV4 only)     |                                        |
+| HF_14ASNIFF     | 14a sniff to flashmem (rdv4) or ram    |
+|                 |                                        |
 +----------------------------------------------------------+
 | HF_14BSNIFF     | 14b sniff to flashmem (rdv4) or ram    |
 |                 |                                        |
@@ -122,7 +122,7 @@ STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RSWW LF_EM4
 STANDALONE_MODES += HF_14ASNIFF HF_14BSNIFF HF_15SNIFF HF_AVEFUL HF_BOG HF_COLIN HF_CRAFTBYTE HF_ICECLASS HF_LEGIC HF_LEGICSIM HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_TCPRST HF_TMUDFORD HF_YOUNG HF_REBLAY DANKARMULTI
 STANDALONE_MODES_REQ_BT := HF_REBLAY
 STANDALONE_MODES_REQ_SMARTCARD :=
-STANDALONE_MODES_REQ_FLASH := LF_HIDFCBRUTE LF_ICEHID LF_NEXID LF_THAREXDE HF_14ASNIFF HF_BOG HF_COLIN HF_ICECLASS HF_MFCSIM HF_LEGICSIM
+STANDALONE_MODES_REQ_FLASH := LF_HIDFCBRUTE LF_ICEHID LF_NEXID LF_THAREXDE HF_BOG HF_COLIN HF_ICECLASS HF_MFCSIM HF_LEGICSIM
 ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)
     STANDALONE_PLATFORM_DEFS += -DWITH_STANDALONE_$(STANDALONE)
     ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES_REQ_SMARTCARD)),)
