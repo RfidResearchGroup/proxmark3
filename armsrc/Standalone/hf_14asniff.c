@@ -137,5 +137,8 @@ void RunMod(void) {
 
     Dbprintf("-=[ exit ]=-");
     LEDsoff();
+#ifdef WITH_FLASH
     DownloadTraceInstructions();
+#endif
+    
 }
