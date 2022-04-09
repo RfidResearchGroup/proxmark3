@@ -233,8 +233,13 @@
      <item>
       <widget class="QLabel" name="label_10">
        <property name="text">
-        <string>Press H in plot window to show keystrokes</string>
+        <string>Press `H` in plot window to show keystrokes</string>
        </property>
+       <property name="font">
+         <font>
+          <italic>true</italic>
+         </font>
+        </property>
       </widget>
      </item>
      <item>
