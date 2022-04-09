@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget_overlays">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab">
       <property name="focusPolicy">
@@ -227,6 +227,13 @@
       <widget class="QPushButton" name="pushButton_sticky">
        <property name="text">
         <string>Restore</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_10">
+       <property name="text">
+        <string>Press H in plot window to show keystrokes</string>
        </property>
       </widget>
      </item>
