@@ -631,7 +631,9 @@ int CmdLFConfig(const char *Cmd) {
     if (use_134)
         config.divisor = LF_DIVISOR_134;
 
-    config.averaging = (avg == 1);
+    // check if the config.averaging is not set by if(reset){...}
+    if (config.averaging == -1)
+        config.averaging = (avg == 1);
 
     if (bps > -1) {
         // bps is limited to 8
