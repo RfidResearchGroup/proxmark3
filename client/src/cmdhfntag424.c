@@ -201,6 +201,22 @@ static int CmdHF_ntag424_info(const char *Cmd) {
 
     PrintAndLogEx(INFO, "not implemented yet");
     PrintAndLogEx(INFO, "Feel free to contribute!");
+
+
+    // has hardcoded application and three files.
+
+
+    /*
+        // Check if the tag reponds to APDUs.
+        PrintAndLogEx(INFO, "Sending a test APDU (select file command) to check if the tag is responding to APDU");
+        param_gethex_to_eol("00a404000aa000000440000101000100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
+        int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, true, false, response, sizeof(response), &response_n);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Tag did not respond to a test APDU (select file command). Aborting...");
+            return res;
+        }
+    */
+
     return PM3_SUCCESS;
 }
 
@@ -211,7 +227,8 @@ static command_t CommandTable[] = {
     {"help",     CmdHelp,                AlwaysAvailable,  "This help"},
     {"-----------", CmdHelp,             IfPm3Iso14443a,   "----------------------- " _CYAN_("operations") " -----------------------"},
     {"info",     CmdHF_ntag424_info,     IfPm3Iso14443a,   "Tag information"},
-    {"ndefread", CmdHF_ntag424_sdm,      IfPm3Iso14443a,   "Prints NDEF records from card"},
+//     {"ndefread", CmdHF_ntag424_sdm,      IfPm3Iso14443a,   "Prints NDEF records from card"},
+    {"sdm",      CmdHF_ntag424_sdm,      IfPm3Iso14443a,   "Prints NDEF records from card"},
     {"view",     CmdHF_ntag424_view,     AlwaysAvailable,  "Display content from tag dump file"},
     {NULL, NULL, NULL, NULL}
 };

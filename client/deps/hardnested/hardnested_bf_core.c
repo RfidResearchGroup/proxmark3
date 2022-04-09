@@ -589,11 +589,11 @@ static SIMDExecInstr GetSIMDInstr(void) {
         else
 #endif
 #if defined(COMPILER_HAS_SIMD_NEON)
-    if (arm_has_neon())
-        instr = SIMD_NEON;
-    else
+            if (arm_has_neon())
+                instr = SIMD_NEON;
+            else
 #endif
-            instr = SIMD_NONE;
+                instr = SIMD_NONE;
 
     return instr;
 }

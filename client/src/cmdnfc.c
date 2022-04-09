@@ -39,25 +39,24 @@ void print_type4_cc_info(uint8_t *d, uint8_t n) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "------------ " _CYAN_("Capability Container file") " ------------");
-    PrintAndLogEx(SUCCESS, " len      %u bytes (" _GREEN_("0x%02X") ")", d[1], d[1]);
-    PrintAndLogEx(SUCCESS, " version  %s (" _GREEN_("0x%02X") ")", (d[2] == 0x20) ? "v2.0" : "v1.0", d[2]);
-
+    PrintAndLogEx(SUCCESS, " Version... %s ( " _GREEN_("0x%02X") " )", (d[2] == 0x20) ? "v2.0" : "v1.0", d[2]);
+    PrintAndLogEx(SUCCESS, " Len....... %u bytes ( " _GREEN_("0x%02X") " )", d[1], d[1]);
     uint16_t maxr = (d[3] << 8 | d[4]);
-    PrintAndLogEx(SUCCESS, " max bytes read  %u bytes ( 0x%04X )", maxr, maxr);
+    PrintAndLogEx(SUCCESS, " Max bytes read  %u bytes ( 0x%04X )", maxr, maxr);
     uint16_t maxw = (d[5] << 8 | d[6]);
-    PrintAndLogEx(SUCCESS, " max bytes write %u bytes ( 0x%04X )", maxw, maxw);
+    PrintAndLogEx(SUCCESS, " Max bytes write %u bytes ( 0x%04X )", maxw, maxw);
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, " NDEF file control TLV  {");
-    PrintAndLogEx(SUCCESS, "    (t) type of file  ( %02X )", d[7]);
-    PrintAndLogEx(SUCCESS, "    (v)               ( %02X )", d[8]);
-    PrintAndLogEx(SUCCESS, "    file id           ( %02X%02X )", d[9], d[10]);
+    PrintAndLogEx(SUCCESS, " NDEF file control TLV");
+    PrintAndLogEx(SUCCESS, "    (t) type of file.... %02X", d[7]);
+    PrintAndLogEx(SUCCESS, "    (v) ................ %02X", d[8]);
+    PrintAndLogEx(SUCCESS, "    file id............. %02X%02X", d[9], d[10]);
 
     uint16_t maxndef = (d[11] << 8 | d[12]);
-    PrintAndLogEx(SUCCESS, "    max NDEF filesize   %u bytes ( 0x%04X )", maxndef, maxndef);
-    PrintAndLogEx(SUCCESS, "    ----- " _CYAN_("access rights") " -------");
+    PrintAndLogEx(SUCCESS, "    Max NDEF filesize... %u bytes ( 0x%04X )", maxndef, maxndef);
+    PrintAndLogEx(SUCCESS, "    " _CYAN_("Access rights"));
     PrintAndLogEx(SUCCESS, "    read   ( %02X ) protection: %s", d[13], ((d[13] & 0x80) == 0x80) ? _RED_("enabled") : _GREEN_("disabled"));
     PrintAndLogEx(SUCCESS, "    write  ( %02X ) protection: %s", d[14], ((d[14] & 0x80) == 0x80) ? _RED_("enabled") : _GREEN_("disabled"));
-    PrintAndLogEx(SUCCESS, " }");
+    PrintAndLogEx(SUCCESS, "");
     PrintAndLogEx(SUCCESS, "----------------- " _CYAN_("raw") " -----------------");
     PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow(d, n));
     PrintAndLogEx(NORMAL, "");

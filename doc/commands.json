@@ -1554,7 +1554,7 @@
             "command": "hf 15 raw",
             "description": "Sends raw bytes over ISO-15693 to card",
             "notes": [
-                "hf 15 raw -c -d 260100 -> add crc",
+                "hf 15 raw -sc -d 260100 -> add crc",
                 "hf 15 raw -krc -d 260100 -> add crc, keep field on, skip response"
             ],
             "offline": false,
@@ -1564,9 +1564,10 @@
                 "-c, --crc calculate and append CRC",
                 "-k keep signal field ON after receive",
                 "-r do not read response",
+                "-s active signal field ON with select",
                 "-d, --data <hex> raw bytes to send"
             ],
-            "usage": "hf 15 raw [-h2ckr] -d <hex>"
+            "usage": "hf 15 raw [-h2ckrs] -d <hex>"
         },
         "hf 15 rdbl": {
             "command": "hf 15 rdbl",
@@ -2661,7 +2662,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } gallagher { Gallagher DESFire RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } jooki { Jooki RFIDs... } iclass { ICLASS RFIDs... } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } waveshare { Waveshare NFC ePaper... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } gallagher { Gallagher DESFire RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } jooki { Jooki RFIDs... } iclass { ICLASS RFIDs... } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } waveshare { Waveshare NFC ePaper... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags",
             "notes": [],
             "offline": true,
             "options": [],
@@ -4573,7 +4574,7 @@
             "notes": [
                 "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on aid 0x123456",
                 "hf mfdes chk -d mfdes_default_keys -> check keys from dictionary against all existing aid on card",
-                "hf mfdes chk -d mfdes_default_keys -a 123456 -> check keys from dictionary against aid 0x123456",
+                "hf mfdes chk -d mfdes_default_keys --aid 123456 -> check keys from dictionary against aid 0x123456",
                 "hf mfdes chk --aid 123456 --pattern1b -j keys -> check all 1-byte keys pattern on aid 0x123456 and save found keys to json",
                 "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00 -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00"
             ],
@@ -6056,6 +6057,52 @@
             ],
             "usage": "hf mfu wrbl [-hl] [-k <hex>] -b <dec> -d <hex> [--force]"
         },
+        "hf ntag424 help": {
+            "command": "hf ntag424 help",
+            "description": "help This help view Display content from tag dump file",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf ntag424 info": {
+            "command": "hf ntag424 info",
+            "description": "Get info about NXP NTAG424 DNA Family styled tag.",
+            "notes": [
+                "hf ntag424 info"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf ntag424 info [-h]"
+        },
+        "hf ntag424 sdm": {
+            "command": "hf ntag424 sdm",
+            "description": "Validate a SDM message",
+            "notes": [
+                "hf ntag424 sdm"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf ntag424 sdm [-h]"
+        },
+        "hf ntag424 view": {
+            "command": "hf ntag424 view",
+            "description": "Print a NTAG 424 DNA dump file (bin/eml/json)",
+            "notes": [
+                "hf ntag424 view -f hf-ntag424-01020304-dump.bin"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> Filename of dump",
+                "-v, --verbose Verbose output"
+            ],
+            "usage": "hf ntag424 view [-hv] -f <fn>"
+        },
         "hf plot": {
             "command": "hf plot",
             "description": "Plots HF signal after RF signal path and A/D conversion.",
@@ -6468,8 +6515,8 @@
             "command": "hw connect",
             "description": "Connects to a Proxmark3 device via specified serial port. Baudrate here is only for physical UART or UART-BT, NOT for USB-CDC or blue shark add-on",
             "notes": [
-                "hw connect -p /dev/ttyacm0",
-                "hw connect -p /dev/ttyacm0 -b 115200"
+                "hw connect -p /dev/ttyACM0",
+                "hw connect -p /dev/ttyACM0 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -10935,12 +10982,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 689,
+        "commands_extracted": 693,
         "extracted_by": "PM3Help2JSON v1.00",
-<<<<<<< HEAD
-        "extracted_on": "2022-03-29T16:50:55"
-=======
-        "extracted_on": "2022-03-29T16:48:37"
->>>>>>> 9caf62db1 (Remove force lowercasing of commands.json)
+        "extracted_on": "2022-04-09T16:34:40"
     }
 }

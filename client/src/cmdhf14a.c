@@ -2459,17 +2459,17 @@ retry_ins:
                         }
 
                         if (verbose == true || sw != 0x6e00) {
-                            PrintAndLogEx(log_level, "Got response for APDU \"%s\": %04X (%s)", 
-                                    sprint_hex_inrow(command, command_n + i),
-                                    sw,
-                                    GetAPDUCodeDescription(sw >> 8, sw & 0xff)
-                                );
+                            PrintAndLogEx(log_level, "Got response for APDU \"%s\": %04X (%s)",
+                                          sprint_hex_inrow(command, command_n + i),
+                                          sw,
+                                          GetAPDUCodeDescription(sw >> 8, sw & 0xff)
+                                         );
 
                             if (response_n > 2) {
                                 PrintAndLogEx(SUCCESS, "Response data is: %s | %s",
-                                    sprint_hex_inrow(response, response_n - 2),
-                                    sprint_ascii(response, response_n - 2)
-                                );
+                                              sprint_hex_inrow(response, response_n - 2),
+                                              sprint_ascii(response, response_n - 2)
+                                             );
                             }
                         }
                     }

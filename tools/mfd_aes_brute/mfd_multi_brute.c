@@ -43,7 +43,7 @@
 
 #if defined(__APPLE__) || defined(__MACH__)
 #else
-    #include "detectaes.h"
+#include "detectaes.h"
 #endif
 
 
@@ -383,11 +383,11 @@ int main(int argc, char *argv[]) {
     printf("Crypto algo............ " _GREEN_("%s") "\n", algostr);
     printf("LCR Random generator... " _GREEN_("%s") "\n", generators[g_idx].Name);
 
-    #if defined(__APPLE__) || defined(__MACH__)
-    #else
-        bool support_aesni = platform_aes_hw_available();
-        printf("AES-NI detected........ " _GREEN_("%s") "\n", (support_aesni) ? "yes" : "no");
-    #endif
+#if defined(__APPLE__) || defined(__MACH__)
+#else
+    bool support_aesni = platform_aes_hw_available();
+    printf("AES-NI detected........ " _GREEN_("%s") "\n", (support_aesni) ? "yes" : "no");
+#endif
 
     printf("Starting timestamp..... ");
     print_time(start_time);

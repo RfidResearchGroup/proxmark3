@@ -581,6 +581,18 @@ Check column "offline" for their availability.
 |`hf mfdes test          `|Y       |`Regression crypto tests`
 
 
+### hf ntag424
+
+ { NXP NTAG 4242 DNA RFIDs...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf ntag424 help        `|Y       |`This help`
+|`hf ntag424 info        `|N       |`Tag information`
+|`hf ntag424 sdm         `|N       |`Prints NDEF records from card`
+|`hf ntag424 view        `|Y       |`Display content from tag dump file`
+
+
 ### hf seos
 
  { SEOS RFIDs...                       }

@@ -430,7 +430,7 @@ static command_t CommandTable[] = {
     {"mfp",         CmdHFMFP,         AlwaysAvailable, "{ MIFARE Plus RFIDs...                }"},
     {"mfu",         CmdHFMFUltra,     AlwaysAvailable, "{ MIFARE Ultralight RFIDs...          }"},
     {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...             }"},
-    {"ntag424",     CmdHF_ntag424,    AlwaysAvailable, "{ NXP NTAG 4242 DNA RFIDs...          }"},    
+    {"ntag424",     CmdHF_ntag424,    AlwaysAvailable, "{ NXP NTAG 4242 DNA RFIDs...          }"},
     {"seos",        CmdHFSeos,        AlwaysAvailable, "{ SEOS RFIDs...                       }"},
     {"st25ta",      CmdHFST25TA,      AlwaysAvailable, "{ ST25TA RFIDs...                     }"},
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                   }"},

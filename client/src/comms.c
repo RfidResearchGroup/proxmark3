@@ -413,8 +413,7 @@ __attribute__((force_align_arg_pointer))
                             }
                         }
                     }
-                }
-                else if ((!error) && (length == 0)) { // we received an empty frame
+                } else if ((!error) && (length == 0)) { // we received an empty frame
                     if (rx.ng)
                         rx.length = 0; // set received length to 0
                     else {  // old frames can't be empty
