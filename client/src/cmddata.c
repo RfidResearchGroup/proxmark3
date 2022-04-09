@@ -1731,17 +1731,17 @@ static uint8_t getByte(uint8_t bits_per_sample, BitstreamOut_t *b) {
 }
 
 int getSamples(uint32_t n, bool verbose) {
-    return getSamplesEx(0, n, verbose);
+    return getSamplesEx(0, n, verbose, false);
 }
 
-int getSamplesEx(uint32_t start, uint32_t end, bool verbose) {
+int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_config) {
 
     if (end < start) {
         PrintAndLogEx(WARNING, "error, end (%u) is smaller than start (%u)", end, start);
         return PM3_EINVARG;
     }
 
-    //If we get all but the last byte in bigbuf,
+    // If we get all but the last byte in bigbuf,
     // we don't have to worry about remaining trash
     // in the last byte in case the bits-per-sample
     // does not line up on byte boundaries
@@ -1766,8 +1766,8 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose) {
 
     uint8_t bits_per_sample = 8;
 
-    //Old devices without this feature would send 0 at arg[0]
-    if (response.oldarg[0] > 0) {
+    // Old devices without this feature would send 0 at arg[0]
+    if (response.oldarg[0] > 0 && (ignore_lf_config == false)) {
         sample_config *sc = (sample_config *) response.data.asBytes;
         if (verbose) PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") " bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
         bits_per_sample = sc->bits_per_sample;

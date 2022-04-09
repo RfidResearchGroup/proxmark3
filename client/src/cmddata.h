@@ -85,7 +85,7 @@ void save_restoreDB(uint8_t saveOpt);// option '1' to save g_DemodBuffer any oth
 int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveGrph, bool verbose);
 
 int getSamples(uint32_t n, bool verbose);
-int getSamplesEx(uint32_t start, uint32_t end, bool verbose);
+int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_config);
 
 void setClockGrid(uint32_t clk, int offset);
 int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down);
