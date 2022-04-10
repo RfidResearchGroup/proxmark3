@@ -746,11 +746,10 @@ int lf_sniff(bool verbose, uint32_t samples) {
     struct p {
         uint32_t samples : 31;
         bool     verbose : 1;
-    } PACKED;
+    } PACKED payload;
 
-    struct p payload;
+    payload.samples = (samples & 0xFFFF);
     payload.verbose = verbose;
-    payload.samples = samples;
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
@@ -758,7 +757,7 @@ int lf_sniff(bool verbose, uint32_t samples) {
     if (gs_lf_threshold_set) {
         WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp);
     } else {
-        if (!WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500)) {
+        if (WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500) == false) {
             PrintAndLogEx(WARNING, "(lf_read) command execution time out");
             return PM3_ETIMEOUT;
         }
@@ -791,7 +790,7 @@ int CmdLFSniff(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t samples = arg_get_u32_def(ctx, 1, 0);
+    uint32_t samples = (arg_get_u32_def(ctx, 1, 0) & 0xFFFF);
     bool verbose = arg_get_lit(ctx, 2);
     bool cm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
