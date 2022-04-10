@@ -173,7 +173,11 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
         data.buffer = BigBuf_get_addr();
     }
 
-    //
+    // reset data stream
+    data.numbits = 0;
+    data.position = 0;
+
+    // reset samples
     samples.dec_counter = 0;
     samples.sum = 0;
     samples.counter = *sample_size;
