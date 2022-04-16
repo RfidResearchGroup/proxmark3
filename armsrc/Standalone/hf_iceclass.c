@@ -20,9 +20,6 @@
 // Created for the live streamed talk 'DEFCON 28 Wireless Village-Omikron and Iceman - Ghosting the PACS-man: New Tools and Techniques'
 // https://www.youtube.com/watch?v=ghiHXK4GEzE
 //
-//  I created a youtube video demonstrating the HF_ICECLASS standalone mode
-//  https://youtu.be/w_1GnAscNIU
-//
 //
 
 #include "standalone.h" // standalone definitions
