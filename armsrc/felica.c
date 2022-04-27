@@ -560,7 +560,7 @@ void felica_sendraw(PacketCommandNG *c) {
         if ((param & FELICA_APPEND_CRC)) {
             // Don't append crc on empty bytearray...
             if (len > 0) {
-                AddCrc(buf, len);
+                AddCrc(buf + 2, len);
             }
         }
         if (g_dbglevel >= DBG_DEBUG) {
