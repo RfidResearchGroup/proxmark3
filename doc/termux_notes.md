@@ -18,10 +18,8 @@
   * [ TCP bridge method ](#tcp-bridge-method)
     * [ USB connection ](#usb-connection)
     * [ USB-UART bridge application ](#usb-uart-bridge-application)
-    * [ Setting up usb socket ](#setting-up-usb-socket)
     * [ Bluetooth connection ](#bluetooth-connection)
     * [ BT-UART bridge application ](#bt-uart-bridge-application)
-    * [ Setting up bt socket ](#setting-up-bt-socket)
     * [ Termux connection ](#termux-connection)
 
 ## Requirements
@@ -133,14 +131,18 @@ However, it is fully integrated with phone's network, so we need to talk to the 
 ### USB-UART Bridge Application
 ^[Top](#top)
 
-Install [this free app](https://play.google.com/store/apps/details?id=com.hardcodedjoy.tcpuart) on the Play Store
-
-### Setting up usb socket
-^[Top](#top)
+Install [this free TCPUART app](https://play.google.com/store/apps/details?id=com.hardcodedjoy.tcpuart) on the Play Store
 
 The app lets you choose the baudrate. Default value (115 200 baud) is fine.
 Plug the PM3 in and click connect.
 Set the toggle in server mode and choose a random port not used by system (e.g. 4321) and start the server.
+
+Alternatively, use the [paid version of the BT/USB/TCP Bridge app](https://play.google.com/store/apps/details?id=masar.bluetoothbridge.pro) which includes USB bridge as well.
+
+In this app, select TCP server as 'Device A' and choose an unused port (e.g. 4321).
+Choose your registered PM3 device as 'Device B' -> 'Connect to USB device'.
+Ensure 'Retransmission' is set to 'both ways'.
+It is possible to record the config as autostart, cf 'Settings' -> 'Autostart setting'.
 
 ### Bluetooth connection
 ^[Top](#top)
@@ -150,13 +152,11 @@ Set the toggle in server mode and choose a random port not used by system (e.g. 
 
 Install [this free app](https://play.google.com/store/apps/details?id=masar.bb) or [the paid version](https://play.google.com/store/apps/details?id=masar.bluetoothbridge.pro) (which includes usb bridge)
 
-### Setting up bt socket
-^[Top](#top)
-
 You need to pair the proxmark3 in the Android settings.
-In the app choose your registered PM3 device as 'device A'.
-Select TCP server as 'Device B' and choose an unused port (e.g. 4321).
+In the app, select TCP server as 'Device A' and choose an unused port (e.g. 4321).
+Choose your registered PM3 device as 'Device B' -> 'Connect to classic Bluetooth device'.
 Ensure 'Retransmission' is set to 'both ways'.
+It is possible to record the config as autostart, cf 'Settings' -> 'Autostart setting'.
 
 ### Termux connection
 ^[Top](#top)
