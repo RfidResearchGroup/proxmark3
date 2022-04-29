@@ -913,16 +913,18 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_LF_EM410X_WATCH, res, NULL, 0);
             break;
         }
-        case CMD_LF_EM410X_WRITE: {
+        case CMD_LF_EM410X_CLONE: {
             struct p {
-                uint8_t card;
+                bool Q5;
+                bool EM;
                 uint8_t clock;
                 uint32_t high;
                 uint32_t low;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            int res = copy_em410x_to_t55xx(payload->card, payload->clock, payload->high, payload->low, true);
-            reply_ng(CMD_LF_EM410X_WRITE, res, NULL, 0);
+            uint8_t card = payload->Q5 ? 0 : (payload->EM ? 2 : 1);
+            int res = copy_em410x_to_t55xx(card, payload->clock, payload->high, payload->low, true);
+            reply_ng(CMD_LF_EM410X_CLONE, res, NULL, 0);
             break;
         }
         case CMD_LF_TI_READ: {

@@ -455,7 +455,7 @@ typedef struct {
 #define CMD_LF_SIMULATE_BIDIR                                             0x020E
 #define CMD_SET_ADC_MUX                                                   0x020F
 #define CMD_LF_HID_CLONE                                                  0x0210
-#define CMD_LF_EM410X_WRITE                                               0x0211
+#define CMD_LF_EM410X_CLONE                                               0x0211
 #define CMD_LF_T55XX_READBL                                               0x0214
 #define CMD_LF_T55XX_WRITEBL                                              0x0215
 #define CMD_LF_T55XX_RESET_READ                                           0x0216

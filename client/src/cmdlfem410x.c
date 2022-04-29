@@ -630,16 +630,18 @@ static int CmdEM410xSpoof(const char *Cmd) {
 static int CmdEM410xClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x clone",
-                  "Writes EM410x ID to a T55x7 or Q5/T5555 tag",
-                  "lf em 410x clone --id 0F0368568B        -> write T55x7 tag\n"
-                  "lf em 410x clone --id 0F0368568B --q5   -> write Q5/T5555 tag"
+                  "clone a EM410x ID to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "lf em 410x clone --id 0F0368568B        -> encode for T55x7 tag\n"
+                  "lf em 410x clone --id 0F0368568B --q5   -> encode for Q5/T5555 tag\n"
+                  "lf em 410x clone --id 0F0368568B --em   -> encode for EM4305/4469"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0(NULL, "clk", "<dec>", "<16|32|40|64> clock (default 64)"),
         arg_str1(NULL, "id", "<hex>", "EM Tag ID number (5 hex bytes)"),
-        arg_lit0(NULL, "q5", "specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
+        arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -650,9 +652,19 @@ static int CmdEM410xClone(const char *Cmd) {
     uint8_t uid[5] = {0};
     CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
     bool q5 = arg_get_lit(ctx, 3);
+    bool em = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     uint64_t id = bytes_to_num(uid, uid_len);
+    if (id == 0) {
+        PrintAndLogEx(ERR, "Cardnumber can't be zero");
+        return PM3_EINVARG;
+    }
+
+    if (q5 && em) {
+        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
 
     // Allowed clock rates: 16, 32, 40 and 64
     if ((clk != 16) && (clk != 32) && (clk != 64) && (clk != 40)) {
@@ -665,29 +677,27 @@ static int CmdEM410xClone(const char *Cmd) {
         snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
     }
 
-    PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with EM Tag ID " _GREEN_("%010" PRIX64) " (RF/%d)", cardtype, id, clk);
-    // NOTE: We really should pass the clock in as a separate argument, but to
-    //   provide for backwards-compatibility for older firmware, and to avoid
-    //   having to add another argument to CMD_LF_EM410X_WRITE, we just store
-    //   the clock rate in bits 8-15 of the card value
+    PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with EM Tag ID " _GREEN_("%010" PRIX64) " (RF/%d)", q5 ? "Q5/T5555" : (em ? "EM4305/4469" : "T55x7"), id, clk);
 
     struct {
-        uint8_t card;
+        bool Q5;
+        bool EM;
         uint8_t clock;
         uint32_t high;
         uint32_t low;
-    } PACKED params;
+    } PACKED payload;
 
-    params.card = (q5) ? 0 : 1;
-    params.clock = clk;
-    params.high = (uint32_t)(id >> 32);
-    params.low = (uint32_t)id;
+    payload.Q5 = q5;
+    payload.EM = em;
+    payload.clock = clk;
+    payload.high = (uint32_t)(id >> 32);
+    payload.low = (uint32_t)id;
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM410X_WRITE, (uint8_t *)&params, sizeof(params));
+    SendCommandNG(CMD_LF_EM410X_CLONE, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
-    WaitForResponse(CMD_LF_EM410X_WRITE, &resp);
+    WaitForResponse(CMD_LF_EM410X_CLONE, &resp);
     switch (resp.status) {
         case PM3_SUCCESS: {
             PrintAndLogEx(SUCCESS, "Done");

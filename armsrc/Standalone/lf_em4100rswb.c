@@ -62,7 +62,7 @@
 #endif
 
 #define LF_CLOCK 64 // for 125kHz
-#define LF_RWSB_T55XX_TYPE 1 // Tag type: 0 - T5555, 1-T55x7
+#define LF_RWSB_T55XX_TYPE 1 // Tag type: 0 - T5555, 1-T55x7, 2-EM4x05
 
 #define LF_RWSB_UNKNOWN_RESULT 0
 #define LF_RWSB_BRUTE_STOPED 1

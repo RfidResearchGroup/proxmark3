@@ -2295,10 +2295,10 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
         if (g_dbglevel == DBG_DEBUG) {
             Dbprintf("# | data ( EM4x05 )");
             Dbprintf("--+----------------");
-            Dbprintf("0 | ", data[0]);
-            Dbprintf("1 | ", data[1]);
-            Dbprintf("2 | ", data[2]);
-            Dbprintf("3 | ", data[3]);
+            Dbprintf("0 | %08x", data[0]);
+            Dbprintf("1 | %08x", data[1]);
+            Dbprintf("2 | %08x", data[2]);
+            Dbprintf("3 | %08x", data[3]);
             Dbprintf("--+----------------");
         }
         //WriteEM4x05(data, 0, last_block + 1);
@@ -2325,6 +2325,14 @@ void CopyVikingtoT55xx(uint8_t *blocks, bool q5, bool em, bool ledcontrol) {
     // Program the data blocks for supplied ID and the block 0 config
     if (em) {
         Dbprintf("Clone Viking to EM4x05 is untested and disabled until verified");
+        if (g_dbglevel == DBG_DEBUG) {
+            Dbprintf("# | data ( EM4x05 )");
+            Dbprintf("--+----------------");
+            Dbprintf("0 | %08x", data[0]);
+            Dbprintf("1 | %08x", data[1]);
+            Dbprintf("2 | %08x", data[2]);
+            Dbprintf("--+----------------");
+        }
         //WriteEM4x05(data, 0, 3);
     } else {
         WriteT55xx(data, 0, 3, ledcontrol);
@@ -2413,15 +2421,29 @@ int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t i
 
     if (card == 1) { // T55x7
         data[0] = clockbits | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT);
+    } else if (card == 2) { // EM4x05
+        data[0] = (EM4x05_SET_BITRATE(clock) | EM4x05_MODULATION_MANCHESTER | EM4x05_SET_NUM_BLOCKS(2));
     } else { // T5555 (Q5)
         data[0] = T5555_SET_BITRATE(clock) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
     }
-
-    WriteT55xx(data, 0, 3, ledcontrol);
+    if (card == 2) {
+        Dbprintf("Clone EM410x to EM4x05 is untested and disabled until verified");
+        if (g_dbglevel == DBG_DEBUG) {
+            Dbprintf("# | data ( EM4x05 )");
+            Dbprintf("--+----------------");
+            Dbprintf("0 | %08x", data[0]);
+            Dbprintf("1 | %08x", data[1]);
+            Dbprintf("2 | %08x", data[2]);
+            Dbprintf("--+----------------");
+        }
+        //WriteEM4x05(data, 0, 3);
+    } else {
+        WriteT55xx(data, 0, 3, ledcontrol);
+    }
 
     if (ledcontrol) LEDsoff();
     Dbprintf("Tag %s written with 0x%08x%08x\n",
-             card ? "T55x7" : "T5555",
+             card == 0 ? "T5555" : (card == 1 ? "T55x7" : "EM4x05"),
              (uint32_t)(id >> 32),
              (uint32_t)id);
     return PM3_SUCCESS;
