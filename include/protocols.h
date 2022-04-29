@@ -593,6 +593,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // em4x05 & em4x69 chip configuration register definitions
 #define EM4x05_GET_BITRATE(x)           ((((x) & 0x3F) * 2) + 2)
+// Note: only data rates 8, 16, 32, 40(*) and 64 are supported. (*) only with EM4305 330pF
 #define EM4x05_SET_BITRATE(x)           (((x) - 2) / 2)
 #define EM4x05_MODULATION_NRZ           0x00000000
 #define EM4x05_MODULATION_MANCHESTER    0x00000040

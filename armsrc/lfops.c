@@ -2235,14 +2235,15 @@ static void WriteT55xx(const uint32_t *blockdata, uint8_t startblock, uint8_t nu
         T55xxWriteBlock((uint8_t *)&cmd, ledcontrol);
     }
 }
-/* disabled until verified.
+
 static void WriteEM4x05(uint32_t *blockdata, uint8_t startblock, uint8_t numblocks) {
     for (uint8_t i = numblocks + startblock; i > startblock; i--) {
-        EM4xWriteWord(i - 1, blockdata[i - 1], 0, false);
+        if (i - 1 > 4) {
+            blockdata[i - 1 - startblock] = reflect(blockdata[i - 1 - startblock], 32);
+        }
+        EM4xWriteWord(i - 1, blockdata[i - 1 - startblock], 0, 0, false);
     }
 }
-*/
-
 
 // Copy HID id to card and setup block 0 config
 void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool q5, bool em, bool ledcontrol) {
@@ -2286,22 +2287,23 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     if (q5) {
         data[0] = T5555_SET_BITRATE(50) | T5555_MODULATION_FSK2 | T5555_INVERT_OUTPUT | last_block << T5555_MAXBLOCK_SHIFT;
     } else if (em) {
+        // Note: data rate 50 is not supported by EM4x05
         data[0] = (EM4x05_SET_BITRATE(50) | EM4x05_MODULATION_FSK2 | EM4x05_INVERT | EM4x05_SET_NUM_BLOCKS(last_block));
     }
 
     if (ledcontrol) LED_D_ON();
     if (em) {
-        Dbprintf("Clone HID Prox to EM4x05 is untested and disabled until verified");
         if (g_dbglevel == DBG_DEBUG) {
             Dbprintf("# | data ( EM4x05 )");
             Dbprintf("--+----------------");
-            Dbprintf("0 | %08x", data[0]);
-            Dbprintf("1 | %08x", data[1]);
-            Dbprintf("2 | %08x", data[2]);
-            Dbprintf("3 | %08x", data[3]);
+            Dbprintf("4 | %08x", data[0]);
+            Dbprintf("5 | %08x", data[1]);
+            Dbprintf("6 | %08x", data[2]);
+            Dbprintf("7 | %08x", data[3]);
             Dbprintf("--+----------------");
         }
-        //WriteEM4x05(data, 0, last_block + 1);
+        Dbprintf("Clone HID Prox to EM4x05 is untested and disabled until verified");
+        //WriteEM4x05(data, 4, last_block + 1);
     } else {
         WriteT55xx(data, 0, last_block + 1, ledcontrol);
     }
@@ -2324,16 +2326,15 @@ void CopyVikingtoT55xx(uint8_t *blocks, bool q5, bool em, bool ledcontrol) {
 
     // Program the data blocks for supplied ID and the block 0 config
     if (em) {
-        Dbprintf("Clone Viking to EM4x05 is untested and disabled until verified");
         if (g_dbglevel == DBG_DEBUG) {
             Dbprintf("# | data ( EM4x05 )");
             Dbprintf("--+----------------");
-            Dbprintf("0 | %08x", data[0]);
-            Dbprintf("1 | %08x", data[1]);
-            Dbprintf("2 | %08x", data[2]);
+            Dbprintf("4 | %08x", data[0]);
+            Dbprintf("5 | %08x", data[1]);
+            Dbprintf("6 | %08x", data[2]);
             Dbprintf("--+----------------");
         }
-        //WriteEM4x05(data, 0, 3);
+        WriteEM4x05(data, 4, 3);
     } else {
         WriteT55xx(data, 0, 3, ledcontrol);
     }
@@ -2427,16 +2428,15 @@ int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t i
         data[0] = T5555_SET_BITRATE(clock) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
     }
     if (card == 2) {
-        Dbprintf("Clone EM410x to EM4x05 is untested and disabled until verified");
         if (g_dbglevel == DBG_DEBUG) {
             Dbprintf("# | data ( EM4x05 )");
             Dbprintf("--+----------------");
-            Dbprintf("0 | %08x", data[0]);
-            Dbprintf("1 | %08x", data[1]);
-            Dbprintf("2 | %08x", data[2]);
+            Dbprintf("4 | %08x", data[0]);
+            Dbprintf("5 | %08x", data[1]);
+            Dbprintf("6 | %08x", data[2]);
             Dbprintf("--+----------------");
         }
-        //WriteEM4x05(data, 0, 3);
+        WriteEM4x05(data, 4, 3);
     } else {
         WriteT55xx(data, 0, 3, ledcontrol);
     }

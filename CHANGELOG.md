@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added support to clone Viking and EM410x on EM4x05 (@doegox)
  - Fixed `lf config --reset` - averaging is set to 1 rather than 0 (@wh201906)
  - Added standalone mode for sniffing 14b (@jacopo-j)
  - Fixed `hf 14a apdu` - now don't skip first P2 iteration (@iceman1001)
