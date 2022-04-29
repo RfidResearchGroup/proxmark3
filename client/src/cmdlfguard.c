@@ -246,9 +246,9 @@ static int CmdGuardClone(const char *Cmd) {
                   "clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
                   "The facility-code is 8-bit and the card number is 20-bit.  Larger values are truncated.\n"
                   "Currently work only on 26 | 36 bit format",
-                  "lf gproxii clone --fmt 26 --fc 123 --cn 1337\n"
-                  "lf gproxii clone --q5 --fmt 26 --fc 123 --cn 1337   -> encode for Q5/T5555 tag\n"
-                  "lf gproxii clone --em --fmt 26 --fc 123 --cn 1337   -> encode for EM4305/4469"
+                  "lf gproxii clone --fmt 26 --fc 123 --cn 1337       -> encode for T55x7 tag\n"
+                  "lf gproxii clone --fmt 26 --fc 123 --cn 1337 --q5  -> encode for Q5/T5555 tag\n"
+                  "lf gproxii clone --fmt 26 --fc 123 --cn 1337 --em  -> encode for EM4305/4469"
                  );
 
     void *argtable[] = {

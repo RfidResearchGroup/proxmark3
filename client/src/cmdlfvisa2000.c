@@ -189,7 +189,7 @@ static int CmdVisa2kClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf visa2000 clone",
                   "clone a Visa2000 tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
-                  "lf visa2000 clone --cn 112233\n"
+                  "lf visa2000 clone --cn 112233           -> encode for T55x7 tag\n"
                   "lf visa2000 clone --cn 112233 --q5      -> encode for Q5/T5555 tag\n"
                   "lf visa2000 clone --cn 112233 --em      -> encode for EM4305/4469"
                  );

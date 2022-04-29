@@ -322,11 +322,11 @@ static int CmdHIDClone(const char *Cmd) {
     CLIParserInit(&ctx, "lf hid clone",
                   "clone a HID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
                   "Tag must be on the antenna when issuing this command.",
-                  "lf hid clone -r 2006ec0c86                      -> write raw value (HID 10301 26 bit)\n"
-                  "lf hid clone -r 2e0ec00c87                      -> write raw value (HID Corporate 35 bit)\n"
-                  "lf hid clone -r 01f0760643c3                    -> write raw value (HID P10001 40 bit)\n"
-                  "lf hid clone -r 01400076000c86                  -> write raw value (HID Corporate 48 bit)\n"
-                  "lf hid clone -w H10301 --fc 118 --cn 1603       -> write raw value (HID 10301 26 bit)\n"
+                  "lf hid clone -r 2006ec0c86                      -> write raw value for T55x7 tag (HID 10301 26 bit)\n"
+                  "lf hid clone -r 2e0ec00c87                      -> write raw value for T55x7 tag (HID Corporate 35 bit)\n"
+                  "lf hid clone -r 01f0760643c3                    -> write raw value for T55x7 tag (HID P10001 40 bit)\n"
+                  "lf hid clone -r 01400076000c86                  -> write raw value for T55x7 tag (HID Corporate 48 bit)\n"
+                  "lf hid clone -w H10301 --fc 118 --cn 1603       -> HID 10301 26 bit, encode for T55x7 tag\n"
                   "lf hid clone -w H10301 --fc 118 --cn 1603 --q5  -> HID 10301 26 bit, encode for Q5/T5555 tag\n"
                   "lf hid clone -w H10301 --fc 118 --cn 1603 --em  -> HID 10301 26 bit, encode for EM4305/4469"
                  );

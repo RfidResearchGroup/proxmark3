@@ -235,8 +235,8 @@ static int CmdPyramidClone(const char *Cmd) {
                   "clone a Farpointe/Pyramid tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
                   "The facility-code is 8-bit and the card number is 16-bit. Larger values are truncated.\n"
                   "Currently only works on 26bit",
-                  "lf pyramid clone --fc 123 --cn 11223\n"
-                  "lf pyramid clone --raw 0001010101010101010440013223921c\n"
+                  "lf pyramid clone --fc 123 --cn 11223       -> encode for T55x7 tag\n"
+                  "lf pyramid clone --raw 0001010101010101010440013223921c -> idem, raw mode\n"
                   "lf pyramid clone --fc 123 --cn 11223 --q5  -> encode for Q5/T5555 tag\n"
                   "lf pyramid clone --fc 123 --cn 11223 --em  -> encode for EM4305/4469\n"
                  );

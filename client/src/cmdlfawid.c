@@ -333,10 +333,10 @@ static int CmdAWIDClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf awid clone",
                   "clone a AWID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag",
-                  "lf awid clone --fmt 26 --fc 123 --cn 1337\n"
-                  "lf awid clone --fmt 50 --fc 2001 --cn 13371337\n"
-                  "lf awid clone --q5 --fmt 26 --fc 123 --cn 1337   -> encode for Q5/T5555 tag\n"
-                  "lf awid clone --em --fmt 26 --fc 123 --cn 1337   -> encode for EM4305/4469"
+                  "lf awid clone --fmt 26 --fc 123 --cn 1337       -> encode for T55x7 tag\n"
+                  "lf awid clone --fmt 50 --fc 2001 --cn 13371337  -> encode long fmt for T55x7 tag\n"
+                  "lf awid clone --fmt 26 --fc 123 --cn 1337 --q5  -> encode for Q5/T5555 tag\n"
+                  "lf awid clone --fmt 26 --fc 123 --cn 1337 --em  -> encode for EM4305/4469"
                  );
 
     void *argtable[] = {

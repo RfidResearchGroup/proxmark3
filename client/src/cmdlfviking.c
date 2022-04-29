@@ -112,7 +112,7 @@ static int CmdVikingClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf viking clone",
                   "clone a Viking AM tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
-                  "lf viking clone --cn 01A337\n"
+                  "lf viking clone --cn 01A337        -> encode for T55x7 tag\n"
                   "lf viking clone --cn 01A337 --q5   -> encode for Q5/T5555 tag\n"
                   "lf viking clone --cn 112233 --em   -> encode for EM4305/4469"
                  );

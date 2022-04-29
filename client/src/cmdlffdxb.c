@@ -703,10 +703,10 @@ static int CmdFdxBClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf fdxb clone",
                   "clone a FDX-B tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
-                  "lf fdxb clone --country 999 --national 1337 --animal\n"
-                  "lf fdxb clone --country 999 --national 1337 --extended 016A\n"
-                  "lf fdxb clone --q5 --country 999 --national 1337   -> encode for Q5/T5555 tag\n"
-                  "lf fdxb clone --em --country 999 --national 1337   -> encode for EM4305/4469"
+                  "lf fdxb clone --country 999 --national 1337 --animal        -> encode for T55x7 tag, with animal bit\n"
+                  "lf fdxb clone --country 999 --national 1337 --extended 016A -> encode for T55x7 tag, with extended data\n"
+                  "lf fdxb clone --country 999 --national 1337 --q5            -> encode for Q5/T5555 tag\n"
+                  "lf fdxb clone --country 999 --national 1337 --em            -> encode for EM4305/4469"
                  );
 
     void *argtable[] = {

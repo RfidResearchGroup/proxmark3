@@ -174,10 +174,10 @@ static int CmdGallagherClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf gallagher clone",
                   "clone a GALLAGHER tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
-                  "lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32\n"
-                  "lf gallagher clone --q5 --raw 0FFD5461A9DA1346B2D1AC32 -> encode for Q5/T5555 tag\n"
-                  "lf gallagher clone --em --raw 0FFD5461A9DA1346B2D1AC32 -> encode for EM4305/4469\n"
-                  "lf gallagher clone --rc 0 --fc 9876 --cn 1234 --il 1"
+                  "lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32      -> encode for T55x7 tag\n"
+                  "lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32 --q5 -> encode for Q5/T5555 tag\n"
+                  "lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32 --em -> encode for EM4305/4469\n"
+                  "lf gallagher clone --rc 0 --fc 9876 --cn 1234 --il 1   -> encode for T55x7 tag from decoded data"
                  );
 
     void *argtable[] = {

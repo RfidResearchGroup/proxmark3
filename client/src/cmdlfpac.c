@@ -220,10 +220,10 @@ static int CmdPacClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf pac clone",
                   "clone a PAC/Stanley tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
-                  "lf pac clone --cn CD4F5552\n"
+                  "lf pac clone --cn CD4F5552           -> encode for T55x7 tag\n"
                   "lf pac clone --cn CD4F5552 --q5      -> encode for Q5/T5555 tag\n"
                   "lf pac clone --cn CD4F5552 --em      -> encode for EM4305/4469\n"
-                  "lf pac clone --raw FF2049906D8511C593155B56D5B2649F"
+                  "lf pac clone --raw FF2049906D8511C593155B56D5B2649F -> encode for T55x7 tag, raw mode"
                  );
 
     void *argtable[] = {

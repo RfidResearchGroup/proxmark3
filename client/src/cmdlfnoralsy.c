@@ -158,7 +158,7 @@ static int CmdNoralsyClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf noralsy clone",
                   "clone a Noralsy tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
-                  "lf noralsy clone --cn 112233\n"
+                  "lf noralsy clone --cn 112233           -> encode for T55x7 tag\n"
                   "lf noralsy clone --cn 112233 --q5      -> encode for Q5/T5555 tag\n"
                   "lf noralsy clone --cn 112233 --em      -> encode for EM4305/4469"
                  );

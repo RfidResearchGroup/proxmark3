@@ -194,9 +194,9 @@ static int CmdMotorolaClone(const char *Cmd) {
     CLIParserInit(&ctx, "lf motorola clone",
                   "clone Motorola UID to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
                   "defaults to 64 bit format",
-                  "lf motorola clone --raw a0000000a0002021\n"
-                  "lf motorola clone --q5 --raw a0000000a0002021   -> encode for Q5/T5555 tag\n"
-                  "lf motorola clone --em --raw a0000000a0002021   -> encode for EM4305/4469"
+                  "lf motorola clone --raw a0000000a0002021       -> encode for T55x7 tag\n"
+                  "lf motorola clone --raw a0000000a0002021 --q5  -> encode for Q5/T5555 tag\n"
+                  "lf motorola clone --raw a0000000a0002021 --em  -> encode for EM4305/4469"
                  );
 
     void *argtable[] = {

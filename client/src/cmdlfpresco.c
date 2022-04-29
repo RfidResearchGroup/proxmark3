@@ -170,7 +170,7 @@ static int CmdPrescoClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf presco clone",
                   "clone a presco tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
-                  "lf presco clone -d 018363467\n"
+                  "lf presco clone -d 018363467           -> encode for T55x7 tag\n"
                   "lf presco clone -d 018363467 --q5      -> encode for Q5/T5555 tag\n"
                   "lf presco clone -d 018363467 --em      -> encode for EM4305/4469"
                  );

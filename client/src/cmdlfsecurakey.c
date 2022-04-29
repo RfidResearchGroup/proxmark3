@@ -171,9 +171,9 @@ static int CmdSecurakeyClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf securakey clone",
                   "clone a Securakey tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
-                  "lf securakey clone --raw 7FCB400001ADEA5344300000\n"
-                  "lf securakey clone --q5 --raw 7FCB400001ADEA5344300000 -> encode for Q5/T5555 tag\n"
-                  "lf securakey clone --em --raw 7FCB400001ADEA5344300000 -> encode for EM4305/4469"
+                  "lf securakey clone --raw 7FCB400001ADEA5344300000      -> encode for T55x7 tag\n"
+                  "lf securakey clone --raw 7FCB400001ADEA5344300000 --q5 -> encode for Q5/T5555 tag\n"
+                  "lf securakey clone --raw 7FCB400001ADEA5344300000 --em -> encode for EM4305/4469"
                  );
 
     void *argtable[] = {
