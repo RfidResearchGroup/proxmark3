@@ -1554,7 +1554,7 @@
             "command": "hf 15 raw",
             "description": "Sends raw bytes over ISO-15693 to card",
             "notes": [
-                "hf 15 raw -sc -d 260100 -> add crc",
+                "hf 15 raw -c -d 260100 -> add crc",
                 "hf 15 raw -krc -d 260100 -> add crc, keep field on, skip response"
             ],
             "offline": false,
@@ -1564,10 +1564,9 @@
                 "-c, --crc calculate and append CRC",
                 "-k keep signal field ON after receive",
                 "-r do not read response",
-                "-s active signal field ON with select",
                 "-d, --data <hex> raw bytes to send"
             ],
-            "usage": "hf 15 raw [-h2ckrs] -d <hex>"
+            "usage": "hf 15 raw [-h2ckr] -d <hex>"
         },
         "hf 15 rdbl": {
             "command": "hf 15 rdbl",
@@ -6774,10 +6773,10 @@
             "command": "lf awid clone",
             "description": "clone a AWID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag",
             "notes": [
-                "lf awid clone --fmt 26 --fc 123 --cn 1337",
-                "lf awid clone --fmt 50 --fc 2001 --cn 13371337",
-                "lf awid clone --q5 --fmt 26 --fc 123 --cn 1337 -> encode for Q5/T5555 tag",
-                "lf awid clone --em --fmt 26 --fc 123 --cn 1337 -> encode for EM4305/4469"
+                "lf awid clone --fmt 26 --fc 123 --cn 1337 -> encode for T55x7 tag",
+                "lf awid clone --fmt 50 --fc 2001 --cn 13371337 -> encode long fmt for T55x7 tag",
+                "lf awid clone --fmt 26 --fc 123 --cn 1337 --q5 -> encode for Q5/T5555 tag",
+                "lf awid clone --fmt 26 --fc 123 --cn 1337 --em -> encode for EM4305/4469"
             ],
             "offline": false,
             "options": [
@@ -6857,7 +6856,7 @@
             "notes": [
                 "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110 -> probing for Hitag 1/S",
                 "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -> probing for Hitag 2",
-                "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -q -s 2000 -@ -> probing for Hitag 2, oscilloscope style",
+                "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -s 2000 -@ -> probing for Hitag 2, oscilloscope style",
                 "lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -c W0S00000010000E -> probing for Hitag (us)"
             ],
             "offline": false,
@@ -7002,19 +7001,21 @@
         },
         "lf em 410x clone": {
             "command": "lf em 410x clone",
-            "description": "Writes EM410x ID to a T55x7 or Q5/T5555 tag",
+            "description": "clone a EM410x ID to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
-                "lf em 410x clone --id 0F0368568B -> write T55x7 tag",
-                "lf em 410x clone --id 0F0368568B --q5 -> write Q5/T5555 tag"
+                "lf em 410x clone --id 0F0368568B -> encode for T55x7 tag",
+                "lf em 410x clone --id 0F0368568B --q5 -> encode for Q5/T5555 tag",
+                "lf em 410x clone --id 0F0368568B --em -> encode for EM4305/4469"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "--clk <dec> <16|32|40|64> clock (default 64)",
                 "--id <hex> EM Tag ID number (5 hex bytes)",
-                "--q5 specify writing to Q5/T5555 tag"
+                "--q5 optional - specify writing to Q5/T5555 tag",
+                "--em optional - specify writing to EM4305/4469 tag"
             ],
-            "usage": "lf em 410x clone [-h] [--clk <dec>] --id <hex> [--q5]"
+            "usage": "lf em 410x clone [-h] [--clk <dec>] --id <hex> [--q5] [--em]"
         },
         "lf em 410x demod": {
             "command": "lf em 410x demod",
@@ -7614,10 +7615,10 @@
             "command": "lf fdxb clone",
             "description": "clone a FDX-B tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
-                "lf fdxb clone --country 999 --national 1337 --animal",
-                "lf fdxb clone --country 999 --national 1337 --extended 016A",
-                "lf fdxb clone --q5 --country 999 --national 1337 -> encode for Q5/T5555 tag",
-                "lf fdxb clone --em --country 999 --national 1337 -> encode for EM4305/4469"
+                "lf fdxb clone --country 999 --national 1337 --animal -> encode for T55x7 tag, with animal bit",
+                "lf fdxb clone --country 999 --national 1337 --extended 016A -> encode for T55x7 tag, with extended data",
+                "lf fdxb clone --country 999 --national 1337 --q5 -> encode for Q5/T5555 tag",
+                "lf fdxb clone --country 999 --national 1337 --em -> encode for EM4305/4469"
             ],
             "offline": false,
             "options": [
@@ -7685,10 +7686,10 @@
             "command": "lf gallagher clone",
             "description": "clone a GALLAGHER tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
-                "lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32",
-                "lf gallagher clone --q5 --raw 0FFD5461A9DA1346B2D1AC32 -> encode for Q5/T5555 tag",
-                "lf gallagher clone --em --raw 0FFD5461A9DA1346B2D1AC32 -> encode for EM4305/4469",
-                "lf gallagher clone --rc 0 --fc 9876 --cn 1234 --il 1"
+                "lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32 -> encode for T55x7 tag",
+                "lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32 --q5 -> encode for Q5/T5555 tag",
+                "lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32 --em -> encode for EM4305/4469",
+                "lf gallagher clone --rc 0 --fc 9876 --cn 1234 --il 1 -> encode for T55x7 tag from decoded data"
             ],
             "offline": false,
             "options": [
@@ -7758,9 +7759,9 @@
             "command": "lf gproxii clone",
             "description": "clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag. The facility-code is 8-bit and the card number is 20-bit. Larger values are truncated. Currently work only on 26 | 36 bit format",
             "notes": [
-                "lf gproxii clone --fmt 26 --fc 123 --cn 1337",
-                "lf gproxii clone --q5 --fmt 26 --fc 123 --cn 1337 -> encode for Q5/T5555 tag",
-                "lf gproxii clone --em --fmt 26 --fc 123 --cn 1337 -> encode for EM4305/4469"
+                "lf gproxii clone --fmt 26 --fc 123 --cn 1337 -> encode for T55x7 tag",
+                "lf gproxii clone --fmt 26 --fc 123 --cn 1337 --q5 -> encode for Q5/T5555 tag",
+                "lf gproxii clone --fmt 26 --fc 123 --cn 1337 --em -> encode for EM4305/4469"
             ],
             "offline": false,
             "options": [
@@ -7859,11 +7860,11 @@
             "command": "lf hid clone",
             "description": "clone a HID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag. Tag must be on the antenna when issuing this command.",
             "notes": [
-                "lf hid clone -r 2006ec0c86 -> write raw value (HID 10301 26 bit)",
-                "lf hid clone -r 2e0ec00c87 -> write raw value (HID Corporate 35 bit)",
-                "lf hid clone -r 01f0760643c3 -> write raw value (HID P10001 40 bit)",
-                "lf hid clone -r 01400076000c86 -> write raw value (HID Corporate 48 bit)",
-                "lf hid clone -w H10301 --fc 118 --cn 1603 -> write raw value (HID 10301 26 bit)",
+                "lf hid clone -r 2006ec0c86 -> write raw value for T55x7 tag (HID 10301 26 bit)",
+                "lf hid clone -r 2e0ec00c87 -> write raw value for T55x7 tag (HID Corporate 35 bit)",
+                "lf hid clone -r 01f0760643c3 -> write raw value for T55x7 tag (HID P10001 40 bit)",
+                "lf hid clone -r 01400076000c86 -> write raw value for T55x7 tag (HID Corporate 48 bit)",
+                "lf hid clone -w H10301 --fc 118 --cn 1603 -> HID 10301 26 bit, encode for T55x7 tag",
                 "lf hid clone -w H10301 --fc 118 --cn 1603 --q5 -> HID 10301 26 bit, encode for Q5/T5555 tag",
                 "lf hid clone -w H10301 --fc 118 --cn 1603 --em -> HID 10301 26 bit, encode for EM4305/4469"
             ],
@@ -8338,9 +8339,9 @@
             "command": "lf jablotron clone",
             "description": "clone a Jablotron tag to a T55x7, Q5/T5555 or EM4305/4469 tag. Tag must be on the antenna when issuing this command.",
             "notes": [
-                "lf jablotron clone --cn 01b669",
-                "lf jablotron clone --q5 --cn 01b669 -> encode for Q5/T5555 tag",
-                "lf jablotron clone --em --cn 01b669 -> encode for EM4305/4469"
+                "lf jablotron clone --cn 01b669 -> encode for T55x7 tag",
+                "lf jablotron clone --cn 01b669 --q5 -> encode for Q5/T5555 tag",
+                "lf jablotron clone --cn 01b669 --em -> encode for EM4305/4469"
             ],
             "offline": false,
             "options": [
@@ -8465,9 +8466,9 @@
             "command": "lf motorola clone",
             "description": "clone Motorola UID to a T55x7, Q5/T5555 or EM4305/4469 tag. defaults to 64 bit format",
             "notes": [
-                "lf motorola clone --raw a0000000a0002021",
-                "lf motorola clone --q5 --raw a0000000a0002021 -> encode for Q5/T5555 tag",
-                "lf motorola clone --em --raw a0000000a0002021 -> encode for EM4305/4469"
+                "lf motorola clone --raw a0000000a0002021 -> encode for T55x7 tag",
+                "lf motorola clone --raw a0000000a0002021 --q5 -> encode for Q5/T5555 tag",
+                "lf motorola clone --raw a0000000a0002021 --em -> encode for EM4305/4469"
             ],
             "offline": false,
             "options": [
@@ -8675,7 +8676,7 @@
             "command": "lf noralsy clone",
             "description": "clone a Noralsy tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
-                "lf noralsy clone --cn 112233",
+                "lf noralsy clone --cn 112233 -> encode for T55x7 tag",
                 "lf noralsy clone --cn 112233 --q5 -> encode for Q5/T5555 tag",
                 "lf noralsy clone --cn 112233 --em -> encode for EM4305/4469"
             ],
@@ -8741,10 +8742,10 @@
             "command": "lf pac clone",
             "description": "clone a PAC/Stanley tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
-                "lf pac clone --cn CD4F5552",
+                "lf pac clone --cn CD4F5552 -> encode for T55x7 tag",
                 "lf pac clone --cn CD4F5552 --q5 -> encode for Q5/T5555 tag",
                 "lf pac clone --cn CD4F5552 --em -> encode for EM4305/4469",
-                "lf pac clone --raw FF2049906D8511C593155B56D5B2649F"
+                "lf pac clone --raw FF2049906D8511C593155B56D5B2649F -> encode for T55x7 tag, raw mode"
             ],
             "offline": false,
             "options": [
@@ -8808,9 +8809,9 @@
             "command": "lf paradox clone",
             "description": "clone a paradox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
-                "lf paradox clone --raw 0f55555695596a6a9999a59a",
-                "lf paradox clone -r 0f55555695596a6a9999a59a --q5 -> encode for Q5/T5555 tag",
-                "lf paradox clone -r 0f55555695596a6a9999a59a --em -> encode for EM4305/4469"
+                "lf paradox clone --raw 0f55555695596a6a9999a59a -> encode for T55x7 tag",
+                "lf paradox clone --raw 0f55555695596a6a9999a59a --q5 -> encode for Q5/T5555 tag",
+                "lf paradox clone --raw 0f55555695596a6a9999a59a --em -> encode for EM4305/4469"
             ],
             "offline": false,
             "options": [
@@ -8926,7 +8927,7 @@
             "command": "lf presco clone",
             "description": "clone a presco tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
-                "lf presco clone -d 018363467",
+                "lf presco clone -d 018363467 -> encode for T55x7 tag",
                 "lf presco clone -d 018363467 --q5 -> encode for Q5/T5555 tag",
                 "lf presco clone -d 018363467 --em -> encode for EM4305/4469"
             ],
@@ -8991,8 +8992,8 @@
             "command": "lf pyramid clone",
             "description": "clone a Farpointe/Pyramid tag to a T55x7, Q5/T5555 or EM4305/4469 tag. The facility-code is 8-bit and the card number is 16-bit. Larger values are truncated. Currently only works on 26bit",
             "notes": [
-                "lf pyramid clone --fc 123 --cn 11223",
-                "lf pyramid clone --raw 0001010101010101010440013223921c",
+                "lf pyramid clone --fc 123 --cn 11223 -> encode for T55x7 tag",
+                "lf pyramid clone --raw 0001010101010101010440013223921c -> idem, raw mode",
                 "lf pyramid clone --fc 123 --cn 11223 --q5 -> encode for Q5/T5555 tag",
                 "lf pyramid clone --fc 123 --cn 11223 --em -> encode for EM4305/4469"
             ],
@@ -9094,9 +9095,9 @@
             "command": "lf securakey clone",
             "description": "clone a Securakey tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
-                "lf securakey clone --raw 7FCB400001ADEA5344300000",
-                "lf securakey clone --q5 --raw 7FCB400001ADEA5344300000 -> encode for Q5/T5555 tag",
-                "lf securakey clone --em --raw 7FCB400001ADEA5344300000 -> encode for EM4305/4469"
+                "lf securakey clone --raw 7FCB400001ADEA5344300000 -> encode for T55x7 tag",
+                "lf securakey clone --raw 7FCB400001ADEA5344300000 --q5 -> encode for Q5/T5555 tag",
+                "lf securakey clone --raw 7FCB400001ADEA5344300000 --em -> encode for EM4305/4469"
             ],
             "offline": false,
             "options": [
@@ -9702,7 +9703,7 @@
             "command": "lf viking clone",
             "description": "clone a Viking AM tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
-                "lf viking clone --cn 01A337",
+                "lf viking clone --cn 01A337 -> encode for T55x7 tag",
                 "lf viking clone --cn 01A337 --q5 -> encode for Q5/T5555 tag",
                 "lf viking clone --cn 112233 --em -> encode for EM4305/4469"
             ],
@@ -9765,7 +9766,7 @@
             "command": "lf visa2000 clone",
             "description": "clone a Visa2000 tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
-                "lf visa2000 clone --cn 112233",
+                "lf visa2000 clone --cn 112233 -> encode for T55x7 tag",
                 "lf visa2000 clone --cn 112233 --q5 -> encode for Q5/T5555 tag",
                 "lf visa2000 clone --cn 112233 --em -> encode for EM4305/4469"
             ],
@@ -10984,6 +10985,6 @@
     "metadata": {
         "commands_extracted": 693,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-04-09T16:34:40"
+        "extracted_on": "2022-04-29T14:32:43"
     }
 }

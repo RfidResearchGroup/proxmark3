@@ -740,7 +740,7 @@ static int NxpSysInfo(uint8_t *uid) {
         } else {
             PrintAndLogEx(NORMAL, "");
 
-            
+
             if (resp.length < 2) {
                 PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is not active");
             } else {
