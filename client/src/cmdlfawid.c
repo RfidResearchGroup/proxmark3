@@ -373,6 +373,7 @@ static int CmdAWIDClone(const char *Cmd) {
 
     // EM4305
     if (em) {
+        PrintAndLogEx(WARNING, "Beware some EM4305 tags don't support FSK and datarate = RF/50, check your tag copy!");
         blocks[0] = EM4305_AWID_CONFIG_BLOCK;
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }
@@ -390,6 +391,14 @@ static int CmdAWIDClone(const char *Cmd) {
     blocks[1] = bytebits_to_byte(bits, 32);
     blocks[2] = bytebits_to_byte(bits + 32, 32);
     blocks[3] = bytebits_to_byte(bits + 64, 32);
+
+    // EM4305
+    if (em) {
+        // invert FSK data
+        for (uint8_t i = 1; i < ARRAYLEN(blocks) ; i++) {
+                blocks[i] = blocks[i] ^ 0xFFFFFFFF;
+        }
+    }
 
     free(bits);
 

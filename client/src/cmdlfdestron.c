@@ -182,6 +182,7 @@ static int CmdDestronClone(const char *Cmd) {
 
     // EM4305
     if (em) {
+        PrintAndLogEx(WARNING, "Beware some EM4305 tags don't support FSK and datarate = RF/50, check your tag copy!");
         blocks[0] = EM4305_DESTRON_CONFIG_BLOCK;
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }

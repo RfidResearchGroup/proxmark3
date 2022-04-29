@@ -275,7 +275,12 @@ static int CmdParadoxClone(const char *Cmd) {
 
     // EM4305
     if (em) {
+        PrintAndLogEx(WARNING, "Beware some EM4305 tags don't support FSK and datarate = RF/50, check your tag copy!");
         blocks[0] = EM4305_PARADOX_CONFIG_BLOCK;
+        // invert FSK data
+        for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+                blocks[i] = blocks[i] ^ 0xFFFFFFFF;
+        }
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }
 

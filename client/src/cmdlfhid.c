@@ -419,6 +419,7 @@ static int CmdHIDClone(const char *Cmd) {
 
     // EM4305
     if (em) {
+        PrintAndLogEx(WARNING, "Beware some EM4305 tags don't support FSK and datarate = RF/50, check your tag copy!");
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }
 
