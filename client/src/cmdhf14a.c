@@ -1470,7 +1470,9 @@ typedef enum {
     MTPLUS = 8,
     MTULTRALIGHT = 16,
     HID_SEOS = 32,
-    MTOTHER = 64
+    MTOTHER = 64,
+    MTEMV = 128,
+    MTFUDAN = 256,
 } nxp_mifare_type_t;
 
 // Based on NXP AN10833 Rev 3.6 and NXP AN10834 Rev 4.1
@@ -1577,6 +1579,9 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
                     if ((atqa & 0x0001) == 0x0001) {
                         printTag("HID SEOS (smartmx / javacard)");
                         type |= HID_SEOS;
+                    } else if ((atqa & 0x0004) == 0x0004) {
+                        printTag("EMV");
+                        type |= MTEMV;
                     } else {
                         printTag("MIFARE Plus EV1 2K/4K in SL3");
                         printTag("MIFARE Plus S 2K/4K in SL3");
@@ -1592,6 +1597,20 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
         } else if ((sak & 0x04) == 0x04) {
             printTag("Any MIFARE CL1");
             type |= MTDESFIRE;
+        } else if ((sak & 0x0A) == 0x0A) {
+
+            if ((atqa & 0x0003) == 0x0003) {
+                // Uses Shanghai algo
+                printTag("FM11RF005SH (FUDAN Shanghai Metro)");
+                type |= MTFUDAN;
+            } else if ((atqa & 0x0005) == 0x0005) {
+                printTag("FM11RF005M (FUDAN MIFARE Classic clone)");
+                type |= MTFUDAN;
+            }
+        } 
+        else if ((sak & 0x53) == 0x53) {
+            printTag("FM11RF08SH (FUDAN)");
+            type |= MTFUDAN;
         } else {
             printTag("MIFARE Ultralight");
             printTag("MIFARE Ultralight C");
@@ -1760,6 +1779,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isMifareUltralight = false;
     bool isST = false;
     bool isEMV = false;
+    bool isFUDAN = false;
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
@@ -1772,6 +1792,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
         if ((nxptype & MTOTHER) == MTOTHER)
             isMifareClassic = true;
+
+        if ((nxptype & MTFUDAN) == MTFUDAN)
+            isFUDAN = true;
+
+        if ((nxptype & MTEMV) == MTEMV)
+            isEMV = true;
 
     } else {
 
@@ -1792,6 +1818,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                 if ((nxptype & MTOTHER) == MTOTHER)
                     isMifareClassic = true;
+
+                if ((nxptype & MTFUDAN) == MTFUDAN)
+                    isFUDAN = true;
+
+                if ((nxptype & MTEMV) == MTEMV)
+                    isEMV = true;
 
                 break;
             case 0x05: // Infineon
@@ -1860,12 +1892,14 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         break;
                     }
                     case 0x0A: {
-                        if (card.atqa[0] == 0x03)
-                            // Uses MIFARE Crypto-1 algo
-                            printTag("FM11RF005M (FUDAN MIFARE Classic clone)");
-                        else if (card.atqa[0] == 0x05)
+                        if (card.atqa[0] == 0x03) {
                             // Uses Shanghai algo
                             printTag("FM11RF005SH (FUDAN Shanghai Metro)");
+
+                        } else if (card.atqa[0] == 0x05) {
+                            // Uses MIFARE Crypto-1 algo
+                            printTag("FM11RF005M (FUDAN MIFARE Classic clone)");
+                        }
                         break;
                     }
                     case 0x20: {
@@ -1878,6 +1912,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     }
                     case 0x38: {
                         printTag("Nokia 6212 or 6131");
+                        break;
+                    }
+                    case 0x53: {
+                        printTag("FM11RF08SH (FUDAN)");
                         break;
                     }
                     case 0x98: {
@@ -2258,6 +2296,19 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (isEMV)
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv search -s`"));
+
+    if (isFUDAN) {
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf 14a raw`") " - since FUDAN is different");
+        PrintAndLogEx(HINT, "  hf 14a raw -a -b 7 -p 26");
+        PrintAndLogEx(HINT, "  hf 14a raw -p -c 3000");
+        PrintAndLogEx(HINT, "  hf 14a raw -p -c 3001");
+        PrintAndLogEx(HINT, "  hf 14a raw -p -c 3002");
+        PrintAndLogEx(HINT, "  hf 14a raw -p -c 3003");
+        PrintAndLogEx(HINT, "  hf 14a raw -p -c 3004");
+        PrintAndLogEx(HINT, "  hf 14a raw -p -c 3005");
+        PrintAndLogEx(HINT, "  hf 14a raw -p -c 3006");
+        PrintAndLogEx(HINT, "  hf 14a raw -c 3007");
+    }
 
     PrintAndLogEx(NORMAL, "");
     DropField();
