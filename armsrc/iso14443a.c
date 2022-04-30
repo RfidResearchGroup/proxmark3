@@ -2538,6 +2538,10 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
                 return 0;
             }
 
+            if (GetATQA(resp, resp_par, false, false) == false) {
+                return 0;
+            }
+
             p_card->sak = 0x0A;
             p_card->uidlen = 4;
             return 1;
