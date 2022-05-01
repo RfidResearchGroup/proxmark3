@@ -10,17 +10,17 @@
   * [ PC-like method ](#pc-like-method)
     * [ Specific requirements ](#specific-requirements)
     * [ USB_ACM ](#usb_acm)
-    * [ Enable the driver ](#enable-the-driver)
-    * [ Building the kernel ](#building-the-kernel)
-    * [ Flashing the kernel ](#flashing-the-kernel)
-    * [ Testing ](#testing)
-    * [ Troubleshooting ](#troubleshooting)
+      * [ Enable the driver ](#enable-the-driver)
+      * [ Building the kernel ](#building-the-kernel)
+      * [ Flashing the kernel ](#flashing-the-kernel)
+      * [ Testing ](#testing)
+      * [ Troubleshooting ](#troubleshooting)
   * [ TCP bridge method ](#tcp-bridge-method)
     * [ USB connection ](#usb-connection)
-    * [ USB-UART bridge application ](#usb-uart-bridge-application)
+      * [ USB-UART bridge application ](#usb-uart-bridge-application)
     * [ Bluetooth connection ](#bluetooth-connection)
-    * [ BT-UART bridge application ](#bt-uart-bridge-application)
-    * [ Termux connection ](#termux-connection)
+      * [ BT-UART bridge application ](#bt-uart-bridge-application)
+    * [ TCP connection ](#tcp-connection)
 
 ## Requirements
 ^[Top](#top)
@@ -104,7 +104,7 @@ If using a custom kernel, refer to the build instructions provided by its mainta
 
 You can flash the kernel however it suits you. On the tested device, this was achieved using [TWRP](https://twrp.me/), the most popular custom recovery
 
-### Testing
+#### Testing
 ^[Top](#top)
 
 Open Termux and start the Proxmark3 client:
@@ -113,7 +113,7 @@ tsudo proxmark3/client/proxmark3 /dev/ttyACM0
 ```
 Everything should work just like if it was your PC!
 
-### Troubleshooting
+#### Troubleshooting
 ^[Top](#top)
 
 - `dmesg | grep usb` - useful debug info
@@ -128,7 +128,7 @@ However, it is fully integrated with phone's network, so we need to talk to the 
 ### USB connection
 ^[Top](#top)
 
-### USB-UART Bridge Application
+#### USB-UART Bridge Application
 ^[Top](#top)
 
 Install [this free TCPUART app](https://play.google.com/store/apps/details?id=com.hardcodedjoy.tcpuart) on the Play Store
@@ -147,7 +147,7 @@ It is possible to record the config as autostart, cf 'Settings' -> 'Autostart se
 ### Bluetooth connection
 ^[Top](#top)
 
-### BT-UART Bridge Application
+#### BT-UART Bridge Application
 ^[Top](#top)
 
 Install [this free app](https://play.google.com/store/apps/details?id=masar.bb) or [the paid version](https://play.google.com/store/apps/details?id=masar.bluetoothbridge.pro) (which includes usb bridge)
@@ -158,7 +158,7 @@ Choose your registered PM3 device as 'Device B' -> 'Connect to classic Bluetooth
 Ensure 'Retransmission' is set to 'both ways'.
 It is possible to record the config as autostart, cf 'Settings' -> 'Autostart setting'.
 
-### Termux connection
+### TCP connection
 ^[Top](#top)
 
 Start a new session, then:
@@ -196,3 +196,56 @@ Solution:
 Make sure you have installed a firmware with BTADDON compiled. 
 See: https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#platform_extras  
 
+## Compiling and Flashing a Proxmark3 Firmware from non-root Android
+
+READ ME:
+* If you can compile and flash your device from a PC, do it! It's probably much confortable than following this method.
+* Flashing is possible only via USB-UART, *not* via BT-UART
+* Avoid flashing the Bootloader from non-root Android as the connection is probably less stable than with pure USB and you don't want to brick your device...
+
+### Compiling the Proxmark3 Firmware
+
+Assuming we're using the Github repo sources as explained above.
+
+```
+pkg install make clang readline libc++ git binutils
+cd
+git clone https://github.com/RfidResearchGroup/proxmark3.git
+cd proxmark3
+make clean && make -j client
+```
+
+Termux doesn't have the ARM cross-compiler, so we'll install a Debian within Termux with https://github.com/sp4rkie/debian-on-termux
+
+```
+$ pkg install debootstrap proot wget
+$ wget -q https://raw.githubusercontent.com/sp4rkie/debian-on-termux/master/debian_on_termux_10.sh
+$ sh debian_on_termux_10.sh
+```
+When launched the first time, the script will install the Debian. If called later, it will reuse the same installation and will be much quicker.
+At this point we should be on a Debian root prompt. We install only the requirements to compile the Proxmark3 firmware.
+```
+# apt-get install -y --no-install-recommends make gcc g++ libc6-dev gcc-arm-none-eabi libnewlib-dev
+# cd /data/data/com.termux/files/home
+# cd proxmark3
+# make -j fullimage
+# exit
+```
+At this point we're back to the Termux prompt.
+
+### Flashing the Proxmark3 Firmware
+
+Plug the Proxmark3 while pressing the button, to enter into bootloader mode manually.
+
+Activate the USB-UART to TCP Bridge with one of the applications as explained above.
+
+```
+cd proxmark3
+./client/proxmark3 tcp:localhost:<chosenPort> --flash --image armsrc/obj/fullimage.elf
+```
+Once the Proxmark3 has rebooted, reconnect it to the bridge in the app.
+The freshly flashed device is now ready to be used.
+
+```
+./client/proxmark3 tcp:localhost:<chosenPort>
+```
