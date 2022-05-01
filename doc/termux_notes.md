@@ -21,7 +21,11 @@
     * [ Bluetooth connection ](#bluetooth-connection)
       * [ BT-UART bridge application ](#bt-uart-bridge-application)
     * [ TCP connection ](#tcp-connection)
-
+    * [Troubleshooting](#troubleshooting-1)
+      * [BTADDON Missing in Firmware of PM3](#btaddon-missing-in-firmware-of-pm3)
+  * [Compiling and Flashing a Proxmark3 Firmware from non-root Android](#compiling-and-flashing-a-proxmark3-firmware-from-non-root-android)
+    * [Compiling the Proxmark3 Firmware](#compiling-the-proxmark3-firmware)
+    * [Flashing the Proxmark3 Firmware](#flashing-the-proxmark3-firmware)
 ## Requirements
 ^[Top](#top)
 
