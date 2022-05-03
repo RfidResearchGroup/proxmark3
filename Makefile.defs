@@ -56,6 +56,7 @@ INSTALLSHARERELPATH ?= share/proxmark3
 INSTALLFWRELPATH ?=    share/proxmark3/firmware
 INSTALLTOOLSRELPATH ?= share/proxmark3/tools
 INSTALLDOCSRELPATH ?=  share/doc/proxmark3
+export INSTALLSUDO
 
 platform = $(shell uname)
 DETECTED_OS=$(platform)

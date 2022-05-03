@@ -66,15 +66,15 @@ endif
 install: all
 ifneq (,$(INSTALLTOOLS))
 	    $(info [@] Installing $(BINS) to $(DESTDIR)$(PREFIX)...)
-	    $(Q)$(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)
-	    $(Q)$(CP) $(INSTALLTOOLS) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)
+	    $(Q)$(INSTALLSUDO) $(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)
+	    $(Q)$(INSTALLSUDO) $(CP) $(INSTALLTOOLS) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)
 endif
 	@true
 
 uninstall:
 ifneq (,$(INSTALLTOOLS))
 	    $(info [@] Uninstalling $(BINS) from $(DESTDIR)$(PREFIX)...)
-	    $(Q)$(RM) $(foreach tool,$(INSTALLTOOLS),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)$(PATHSEP)$(notdir $(tool)))
+	    $(Q)$(INSTALLSUDO) $(RM) $(foreach tool,$(INSTALLTOOLS),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)$(PATHSEP)$(notdir $(tool)))
 endif
 	@true
 

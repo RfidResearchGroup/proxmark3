@@ -11,3 +11,6 @@ PLATFORM=PM3RDV4
 # Install package "ccache" -> Debian/Ubuntu: /usr/lib/ccache, Fedora/CentOS/RHEL: /usr/lib64/ccache
 # And uncomment the following line
 #export PATH := /usr/lib64/ccache:/usr/lib/ccache:${PATH}
+
+# To install with sudo:
+INSTALLSUDO=sudo
