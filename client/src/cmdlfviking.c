@@ -266,28 +266,51 @@ uint64_t getVikingBits(uint32_t id) {
     return ret;
 }
 
+static bool isValidVikingChecksum(uint8_t *src) {
+    uint32_t checkCalc = bytebits_to_byte(src, 8) ^
+                         bytebits_to_byte(src + 8, 8) ^
+                         bytebits_to_byte(src + 16, 8) ^
+                         bytebits_to_byte(src + 24, 8) ^
+                         bytebits_to_byte(src + 32, 8) ^
+                         bytebits_to_byte(src + 40, 8) ^
+                         bytebits_to_byte(src + 48, 8) ^
+                         bytebits_to_byte(src + 56, 8) ^
+                         0xA8;
+    return checkCalc == 0;
+}
+
 // find viking preamble 0xF200 in already demoded data
 int detectViking(uint8_t *src, size_t *size) {
     //make sure buffer has data
     if (*size < 64) return -2;
+    size_t tsize = *size;
     size_t startIdx = 0;
+    bool preamblefound = false;
     uint8_t preamble[] = {1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    if (!preambleSearch(src, preamble, sizeof(preamble), size, &startIdx))
-        return -4; //preamble not found
-
-    uint32_t checkCalc = bytebits_to_byte(src + startIdx, 8) ^
-                         bytebits_to_byte(src + startIdx + 8, 8) ^
-                         bytebits_to_byte(src + startIdx + 16, 8) ^
-                         bytebits_to_byte(src + startIdx + 24, 8) ^
-                         bytebits_to_byte(src + startIdx + 32, 8) ^
-                         bytebits_to_byte(src + startIdx + 40, 8) ^
-                         bytebits_to_byte(src + startIdx + 48, 8) ^
-                         bytebits_to_byte(src + startIdx + 56, 8);
-
-    if (checkCalc != 0xA8) return -5;
-    if (*size != 64) return -6;
-    //return start position
-    return (int)startIdx;
+    if (preambleSearch(src, preamble, sizeof(preamble), size, &startIdx)) {
+        preamblefound = true;
+        if (*size != 64) return -6;
+        if (isValidVikingChecksum(src + startIdx)) {
+            //return start position
+            return (int)startIdx;
+        }
+    }
+    // Invert bits and try again
+    *size = tsize;
+    for (uint32_t i = 0; i < *size; i++) src[i] ^= 1;
+    if (preambleSearch(src, preamble, sizeof(preamble), size, &startIdx)) {
+        preamblefound = true;
+        if (*size != 64) return -6;
+        if (isValidVikingChecksum(src + startIdx)) {
+            //return start position
+            return (int)startIdx;
+        }
+    }
+    // Restore buffer
+    *size = tsize;
+    for (uint32_t i = 0; i < *size; i++) src[i] ^= 1;
+    if (preamblefound)
+        return -5;
+    else
+        return -4;
 }
-
-
