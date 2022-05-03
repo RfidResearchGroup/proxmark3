@@ -330,7 +330,7 @@ static int CmdIOProxClone(const char *Cmd) {
     if (em) {
         // invert FSK data
         for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-                blocks[i] = blocks[i] ^ 0xFFFFFFFF;
+            blocks[i] = blocks[i] ^ 0xFFFFFFFF;
         }
     }
 

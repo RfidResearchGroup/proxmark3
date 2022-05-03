@@ -2302,7 +2302,7 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
         data[0] = (EM4x05_SET_BITRATE(50) | EM4x05_MODULATION_FSK2 | EM4x05_SET_NUM_BLOCKS(last_block));
         // EM4x05_INVERT not available on EM4305, so let's invert manually
         for (uint8_t i = 1; i <= last_block ; i++) {
-                data[i] = data[i] ^ 0xFFFFFFFF;
+            data[i] = data[i] ^ 0xFFFFFFFF;
         }
     }
 

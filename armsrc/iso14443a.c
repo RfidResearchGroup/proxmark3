@@ -2522,13 +2522,13 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
     }
 
     // 11RF005SH or 11RF005M, Read UID again
-    if (p_card && p_card->atqa[1] == 0x00 ) {
+    if (p_card && p_card->atqa[1] == 0x00) {
 
-        if ((p_card->atqa[0]==0x03) || (p_card->atqa[0]==0x05)) {
+        if ((p_card->atqa[0] == 0x03) || (p_card->atqa[0] == 0x05)) {
 
-            // Read real UID 
+            // Read real UID
             uint8_t fudan_read[] = { 0x30, 0x01, 0x8B, 0xB9};
-            ReaderTransmit(fudan_read, sizeof(fudan_read), NULL); 
+            ReaderTransmit(fudan_read, sizeof(fudan_read), NULL);
             ReaderReceive(resp, resp_par);
 
             memcpy(p_card->uid, resp, 4);

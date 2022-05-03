@@ -331,7 +331,7 @@ static int CmdPyramidClone(const char *Cmd) {
         blocks[0] = EM4305_PYRAMID_CONFIG_BLOCK;
         // invert FSK data
         for (uint8_t i = 1; i < ARRAYLEN(blocks) ; i++) {
-                blocks[i] = blocks[i] ^ 0xFFFFFFFF;
+            blocks[i] = blocks[i] ^ 0xFFFFFFFF;
         }
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }
