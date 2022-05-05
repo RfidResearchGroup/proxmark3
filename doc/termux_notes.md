@@ -219,18 +219,17 @@ cd proxmark3
 make clean && make -j client
 ```
 
-Termux doesn't have the ARM cross-compiler, so we'll install a Debian within Termux with https://github.com/sp4rkie/debian-on-termux
+Termux doesn't have the ARM cross-compiler, so we'll install a Debian within Termux.
 
 ```
-$ pkg install debootstrap proot wget
-$ wget -q https://raw.githubusercontent.com/sp4rkie/debian-on-termux/master/debian_on_termux_10.sh
-$ sh debian_on_termux_10.sh
+$ pkg install proot-distro
+$ proot-distro install debian
+$ proot-distro login debian --termux-home
 ```
-When launched the first time, the script will install the Debian. If called later, it will reuse the same installation and will be much quicker.
-At this point we should be on a Debian root prompt. We install only the requirements to compile the Proxmark3 firmware.
+At this point we should be on a Debian root prompt in the user directory. We install only the requirements to compile the Proxmark3 firmware.
 ```
+# apt-get update
 # apt-get install -y --no-install-recommends make gcc g++ libc6-dev gcc-arm-none-eabi libnewlib-dev
-# cd /data/data/com.termux/files/home
 # cd proxmark3
 # make -j fullimage
 # exit
