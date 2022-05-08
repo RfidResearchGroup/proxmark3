@@ -2547,7 +2547,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         PrintAndLogEx(INFO, "ISO file ID  %s", (data[4] & 0x20) ? "enabled" : "disabled");
         if ((data[4] & 0x20)) {
             PrintAndLogEx(INFO, "ISO file ID  0x%04x", MemLeToUint2byte(&data[5]));
-            PrintAndLogEx(INFO, "DF Name[%02zu]  %s | %s\n", dfnamelen, sprint_ascii(dfname, dfnamelen), sprint_hex (dfname, dfnamelen));
+            PrintAndLogEx(INFO, "DF Name[%02d]  %s | %s\n", dfnamelen, sprint_ascii(dfname, dfnamelen), sprint_hex (dfname, dfnamelen));
         }
         PrintKeySettings(data[3], data[4], true, true);
         PrintAndLogEx(INFO, "---------------------------");
