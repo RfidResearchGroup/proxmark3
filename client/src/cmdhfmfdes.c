@@ -2415,6 +2415,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         arg_str0(NULL, "aid",     "<hex>", "Application ID for create. Mandatory. (3 hex bytes, big endian)"),
         arg_str0(NULL, "fid",     "<hex>", "ISO file ID. Forbidden values: 0000 3F00, 3FFF, FFFF. (2 hex bytes, big endian)"),
         arg_str0(NULL, "dfname",  "<string>", "ISO DF Name (1..16 chars)"),
+        arg_str0(NULL, "dfhex",   "<hex>", "ISO DF Name as hex (1..16 bytes)"),
         arg_str0(NULL, "ks1",     "<hex>", "Key settings 1 (1 hex byte). Application Master Key Settings (def: 0x0F)"),
         arg_str0(NULL, "ks2",     "<hex>", "Key settings 2 (1 hex byte). (def: 0x0E)"),
         arg_str0(NULL, "dstalgo", "<DES|2TDEA|3TDEA|AES>",  "Application key crypt algo (def: DES)"),
@@ -2451,27 +2452,33 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     int dfnamelen = 16;
     CLIGetStrWithReturn(ctx, 14, dfname, &dfnamelen);
 
+    if (dfnamelen == 0) // no text DF Name supplied
+    {
+        dfnamelen = 16;
+        CLIGetHexWithReturn(ctx, 15, dfname, &dfnamelen);
+    }
+
     uint32_t ks1 = 0x0f;
-    if (CLIGetUint32Hex(ctx, 15, 0x0f, &ks1, NULL, 1, "Key settings 1 must have 1 byte length")) {
+    if (CLIGetUint32Hex(ctx, 16, 0x0f, &ks1, NULL, 1, "Key settings 1 must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t ks2 = 0x0e;
     bool ks2present = false;
-    if (CLIGetUint32Hex(ctx, 16, 0x0e, &ks2, &ks2present, 1, "Key settings 2 must have 1 byte length")) {
+    if (CLIGetUint32Hex(ctx, 17, 0x0e, &ks2, &ks2present, 1, "Key settings 2 must have 1 byte length")) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     int dstalgo = T_DES;
-    if (CLIGetOptionList(arg_get_str(ctx, 17), DesfireAlgoOpts, &dstalgo)) {
+    if (CLIGetOptionList(arg_get_str(ctx, 18), DesfireAlgoOpts, &dstalgo)) {
         CLIParserFree(ctx);
         return PM3_ESOFT;
     }
 
-    int keycount = arg_get_int_def(ctx, 18, 0x0e);
-    bool noauth = arg_get_lit(ctx, 19);
+    int keycount = arg_get_int_def(ctx, 19, 0x0e);
+    bool noauth = arg_get_lit(ctx, 20);
 
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
@@ -2540,7 +2547,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         PrintAndLogEx(INFO, "ISO file ID  %s", (data[4] & 0x20) ? "enabled" : "disabled");
         if ((data[4] & 0x20)) {
             PrintAndLogEx(INFO, "ISO file ID  0x%04x", MemLeToUint2byte(&data[5]));
-            PrintAndLogEx(INFO, "DF Name[%02zu]  %s\n", strnlen((char *)&data[7], 16), (char *)&data[7]);
+            PrintAndLogEx(INFO, "DF Name[%02zu]  %s | %s\n", dfnamelen, sprint_ascii(dfname, dfnamelen), sprint_hex (dfname, dfnamelen));
         }
         PrintKeySettings(data[3], data[4], true, true);
         PrintAndLogEx(INFO, "---------------------------");
