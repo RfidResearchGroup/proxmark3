@@ -28,10 +28,10 @@ The application and files have some special needs in order for the standands to 
 
 ### Step 1 Create Application
 
-While what i beleive the App ID and File IDs dont matter (for EV1 and later)
+While i beleive the App ID and File IDs dont matter (for EV1 and later)
 I did find a reference to using the values in this example.
 
-The Application MUST have the DFName of D2760000850101
+The Application MUST have the DFName of D2760000850101..
 Note: That is the hex/binary data that needs to be stored!
 
     DF Name         : D2760000850101            <- **Important MUST be D2760000850101**  
@@ -47,7 +47,7 @@ Note: That is the hex/binary data that needs to be stored!
 Result  
 ```    [+] Desfire application 000001 successfully created```
 
-### Step 2 Create the Capability Container file (CC File)
+### Step 2 Create the Compatibility Container file (CC File)
 
 The CC File is a standard file to store the needed NDEF information to find your NDEF records.  This example will contrain the setup for a single NDEF record.
 Note: You can define more then one NDEF data file if needed (not covered in this example)
@@ -58,14 +58,14 @@ Note: You can define more then one NDEF data file if needed (not covered in this
     Size            : 0F (15 bytes)             <- May need to be longer in more advanced setups.
     Comms           : Plain                     <- **Important the file MUST support plain communication mode**
     Permissions     : E000                      <- **Read Free** write change etc key 0)  
-                                                    Note: To allow public update set Write to E as well.
+                                                    Note: To allow public update, set Write to E as well.
                                                           All keys should be set as per normal desfire rules.
 
 CC File (E103) example
 
     000F20003B00340406E10400FF00FF
 
-Usefull Items in the CC File
+Usefull items in the CC File
 
     000F20003B00340406 E104 00FF 00 FF
                          |    |      |
@@ -78,7 +78,7 @@ Usefull Items in the CC File
 
 ***Proxmark Commands***  
 
-Create the CC File  
+Create the CC file  
 
     hf mfdes createfile --aid 000001 --fid 01 --isofid E103 --amode plain --size 00000F --rrights free --wrights key0 --rwrights key0 --chrights key0 -n 0 -t aes -k 00000000000000000000000000000000 -m plain  
 
@@ -98,7 +98,7 @@ Result:
     [=] File size        : 15 (0xF) bytes
     [+] Standard data file 01 in the app 000001 created successfully
 
-Write the CC Record to the file  
+Write the CC record to the file  
 
     hf mfdes write --aid 000001 --fid 01 -d 000F20003B00340406E10400FF00FF -n 0 -t aes -k 00000000000000000000000000000000 -m plain
 
@@ -106,7 +106,7 @@ Result
 
     [=] Write data file 01 success
 
-Check the contents of the CC file (note: no-auth was selected to ensure we can read without authentication as needed)  
+Check the contents of the CC file (note: no-auth was selected to ensure we can read without authentication, as needed for normal ndef discovery)  
 
     hf mfdes read --no-auth --aid 000001 --fid 01
 
