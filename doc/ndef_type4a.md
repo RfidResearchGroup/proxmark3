@@ -28,10 +28,10 @@ The application and files have some special needs in order for the standands to 
 
 ### Step 1 Create Application
 
-While i beleive the App ID and File IDs dont matter (for EV1 and later)
+While I beleive the App ID and File IDs dont matter (for EV1 and later)
 I did find a reference to using the values in this example.
 
-The Application MUST have the DFName of D2760000850101..
+The Application MUST have the DFName of D2760000850101  
 Note: That is the hex/binary data that needs to be stored!
 
     DF Name         : D2760000850101            <- **Important MUST be D2760000850101**  
@@ -70,7 +70,7 @@ Usefull items in the CC File
     000F20003B00340406 E104 00FF 00 FF
                          |    |      |
                          |    |       --- 00 = Write allowed, FF = Read Only 
-                         |     ---------- The maxium size of the NDEF record (set to the NDEF record size)
+                         |     ---------- The maxium size of the NDEF record (set to the NDEF record file size)
                           --------------- The ISO 2 byte File ID for the NDEF Record file
                           
 
