@@ -633,7 +633,7 @@ void RunMod(void) {
         mode = bb[0];
     }
 
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
     BigBuf_Clear_ext(false);
 
     StandAloneMode();
