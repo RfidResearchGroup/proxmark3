@@ -2477,7 +2477,7 @@ void  __attribute__((noreturn)) AppMain(void) {
     SpinDelay(100);
     BigBuf_initialize();
 
-    for (uint32_t *p = _stack_start; p < _stack_end - 0x200; ++p) {
+    for (uint32_t *p = _stack_start; p + 0x200 < _stack_end ; ++p) {
         *p = 0xdeadbeef;
     }
 
