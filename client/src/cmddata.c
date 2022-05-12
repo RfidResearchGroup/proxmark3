@@ -1510,10 +1510,10 @@ static int CmdRawDemod(const char *Cmd) {
     };
 
     //
-    size_t n = MIN(strlen(Cmd), 4);
-    char tmp[7];
+    char tmp[5];
+    size_t n = MIN(strlen(Cmd), sizeof(tmp) - 1);
     memset(tmp, 0, sizeof(tmp));
-    strncpy(tmp, Cmd, n);
+    strncpy(tmp, Cmd, sizeof(tmp) - 1);
 
     CLIExecWithReturn(ctx, tmp, argtable, false);
     bool ab = arg_get_lit(ctx, 1);
