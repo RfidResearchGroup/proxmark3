@@ -2577,7 +2577,7 @@ char *GetPskCfStr(uint32_t id, bool q5) {
 }
 
 char *GetBitRateStr(uint32_t id, bool xmode) {
-    static char buf[25];
+    static char buf[32];
 
     char *retStr = buf;
     if (xmode) { //xmode bitrate calc is same as em4x05 calc

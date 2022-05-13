@@ -2476,7 +2476,7 @@ void  __attribute__((noreturn)) AppMain(void) {
 
     SpinDelay(100);
     BigBuf_initialize();
-
+    #pragma GCC diagnostic ignored "-Warray-bounds"
     for (uint32_t *p = _stack_start; p < _stack_end - 0x200; ++p) {
         *p = 0xdeadbeef;
     }
