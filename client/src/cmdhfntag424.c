@@ -52,39 +52,12 @@ static int CmdHF_ntag424_view(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    // reserve memory
+    // read dump file
     uint8_t *dump = NULL;
-    size_t bytes_read = 0;
-    int res = 0;
-    DumpFileType_t dftype = getfiletype(filename);
-    switch (dftype) {
-        case BIN: {
-            res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
-            break;
-        }
-        case JSON: {
-            dump = calloc(NTAG424_MAX_BYTES, sizeof(uint8_t));
-            if (dump == NULL) {
-                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-                return PM3_EMALLOC;
-            }
-            res = loadFileJSON(filename, (void *)dump, NTAG424_MAX_BYTES, &bytes_read, NULL);
-            break;
-        }
-        case EML:
-            res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
-            break;
-        case DICTIONARY: {
-            PrintAndLogEx(ERR, "Error: Only BIN/EML/JSON formats allowed");
-            free(dump);
-            return PM3_EINVARG;
-        }
-    }
-
+    size_t bytes_read = NTAG424_MAX_BYTES;
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, NTAG424_MAX_BYTES);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-        free(dump);
-        return PM3_EFILE;
+        return res;
     }
 
     if (verbose) {

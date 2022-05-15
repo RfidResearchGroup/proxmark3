@@ -2534,40 +2534,12 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         free(fptr);
     }
 
-    // reserve memory
+    // read dump file
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
-    int res = 0;
-    DumpFileType_t dftype = getfiletype(filename);
-    switch (dftype) {
-        case BIN: {
-            res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
-            break;
-        }
-        case EML: {
-            res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
-            break;
-        }
-        case JSON: {
-            dump = calloc(MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH, sizeof(uint8_t));
-            if (dump == NULL) {
-                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-                return PM3_EMALLOC;
-            }
-            res = loadFileJSON(filename, (void *)dump, MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH, &bytes_read, NULL);
-            break;
-        }
-        case DICTIONARY: {
-            PrintAndLogEx(ERR, "Error: Only BIN/JSON formats allowed");
-            free(dump);
-            return PM3_EINVARG;
-        }
-    }
-
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH));
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-        free(dump);
-        return PM3_EFILE;
+        return res;
     }
 
     if (bytes_read < MFU_DUMP_PREFIX_LENGTH) {
@@ -4176,39 +4148,12 @@ static int CmdHF14AMfuView(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    // reserve memory
+    // read dump file
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
-    int res = 0;
-    DumpFileType_t dftype = getfiletype(filename);
-    switch (dftype) {
-        case BIN: {
-            res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
-            break;
-        }
-        case JSON: {
-            dump = calloc(MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH, sizeof(uint8_t));
-            if (dump == NULL) {
-                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-                return PM3_EMALLOC;
-            }
-            res = loadFileJSON(filename, (void *)dump, MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH, &bytes_read, NULL);
-            break;
-        }
-        case EML:
-            res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
-            break;
-        case DICTIONARY: {
-            PrintAndLogEx(ERR, "Error: Only BIN/EML/JSON formats allowed");
-            free(dump);
-            return PM3_EINVARG;
-        }
-    }
-
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH));
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-        free(dump);
-        return PM3_EFILE;
+        return res;
     }
 
     if (bytes_read < MFU_DUMP_PREFIX_LENGTH) {

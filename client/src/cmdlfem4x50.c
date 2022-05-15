@@ -134,35 +134,15 @@ static void print_info_result(uint8_t *data, bool verbose) {
 
 static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len, size_t *bytes_read) {
 
+    // read dump file
     uint8_t *dump = NULL;
-    int res = PM3_SUCCESS;
-    DumpFileType_t dftype = getfiletype(filename);
-    switch (dftype) {
-        case BIN: {
-            res = loadFile_safe(filename, ".bin", (void **)&dump, bytes_read);
-            break;
-        }
-        case EML: {
-            res = loadFileEML_safe(filename, (void **)&dump, bytes_read);
-            break;
-        }
-        case JSON: {
-            dump =  calloc(DUMP_FILESIZE, sizeof(uint8_t));
-            if (dump == NULL) {
-                PrintAndLogEx(ERR, "error, cannot allocate memory ");
-                return PM3_EMALLOC;
-            }
-            res = loadFileJSON(filename, (void *)dump, DUMP_FILESIZE, bytes_read, NULL);
-            break;
-        }
-        case DICTIONARY: {
-            free(dump);
-            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
-            return PM3_EINVARG;
-        }
+    *bytes_read = 0;
+    int res = pm3_load_dump(filename, (void **)&dump, bytes_read, DUMP_FILESIZE);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
-    if ((res != PM3_SUCCESS) && (*bytes_read != DUMP_FILESIZE)) {
+    if (*bytes_read != DUMP_FILESIZE) {
         free(dump);
         return PM3_EFILE;
     }

@@ -2957,77 +2957,25 @@ static int CmdDiff(const char *Cmd) {
         width = 16;
     }
 
+    // if user supplied dump file,  time to load it
     int res = PM3_SUCCESS;
     uint8_t *inA = NULL, *inB = NULL;
     size_t datalenA = 0, datalenB = 0;
     // read file A
     if (fnlenA) {
-
-        // if user supplied dump file,  time to load it
-        DumpFileType_t dftype = getfiletype(filenameA);
-        switch (dftype) {
-            case BIN: {
-                res = loadFile_safe(filenameA, ".bin", (void **)&inA, &datalenA);
-                break;
-            }
-            case EML: {
-                res = loadFileEML_safe(filenameA, (void **)&inA, &datalenA);
-                break;
-            }
-            case JSON: {
-                inA =  calloc(2048, sizeof(uint8_t));
-                if (inA == NULL) {
-                    PrintAndLogEx(ERR, "error, cannot allocate memory ");
-                    return PM3_EMALLOC;
-                }
-                res = loadFileJSON(filenameA, (void *)inA, 2048, &datalenA, NULL);
-                break;
-            }
-            case DICTIONARY: {
-                free(inA);
-                PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
-                return PM3_EINVARG;
-            }
-        }
-
+        // read dump file
+        res = pm3_load_dump(filenameA, (void **)&inA, &datalenA, 2048);
         if (res != PM3_SUCCESS) {
-            free(inA);
-            return PM3_EFILE;
+            return res;
         }
     }
 
     // read file B
     if (fnlenB) {
-        // if user supplied dump file,  time to load it
-        DumpFileType_t dftype = getfiletype(filenameB);
-        switch (dftype) {
-            case BIN: {
-                res = loadFile_safe(filenameB, ".bin", (void **)&inB, &datalenB);
-                break;
-            }
-            case EML: {
-                res = loadFileEML_safe(filenameB, (void **)&inB, &datalenB);
-                break;
-            }
-            case JSON: {
-                inB = calloc(2048, sizeof(uint8_t));
-                if (inB == NULL) {
-                    PrintAndLogEx(ERR, "error, cannot allocate memory ");
-                    return PM3_EMALLOC;
-                }
-                res = loadFileJSON(filenameB, (void *)inB, 2048, &datalenB, NULL);
-                break;
-            }
-            case DICTIONARY: {
-                free(inB);
-                PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
-                return PM3_EINVARG;
-            }
-        }
-
+        // read dump file
+        res = pm3_load_dump(filenameB, (void **)&inB, &datalenB, 2048);
         if (res != PM3_SUCCESS) {
-            free(inB);
-            return PM3_EFILE;
+            return res;
         }
     }
 

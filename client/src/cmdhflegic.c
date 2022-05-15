@@ -912,53 +912,26 @@ static int CmdLegicRestore(const char *Cmd) {
 
     legic_print_type(card.cardsize, 0);
 
-    // set up buffer
-    uint8_t *data = NULL;
+    // read dump file
+    uint8_t *dump = NULL;
     size_t bytes_read = 0;
-    int res = 0;
-    DumpFileType_t dftype = getfiletype(filename);
-    switch (dftype) {
-        case BIN: {
-            res = loadFile_safe(filename, ".bin", (void **)&data, &bytes_read);
-            break;
-        }
-        case EML: {
-            res = loadFileEML_safe(filename, (void **)&data, &bytes_read);
-            break;
-        }
-        case JSON: {
-            data = calloc(LEGIC_PRIME_MIM1024, sizeof(uint8_t));
-            if (data == NULL) {
-                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-                return PM3_EMALLOC;
-            }
-            res = loadFileJSON(filename, (void *)data, LEGIC_PRIME_MIM1024, &bytes_read, NULL);
-            break;
-        }
-        case DICTIONARY: {
-            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
-            free(data);
-            return PM3_EINVARG;
-        }
-    }
-
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, LEGIC_PRIME_MIM1024);
     if (res != PM3_SUCCESS) {
-        free(data);
-        return PM3_EFILE;
+        return res;
     }
 
     // validation
     if (card.cardsize != bytes_read) {
         PrintAndLogEx(WARNING, "Fail, filesize and cardsize is not equal. [%u != %zu]", card.cardsize, bytes_read);
-        free(data);
+        free(dump);
         return PM3_EFILE;
     }
 
     if (shall_obsfuscate) {
-        if (legic_xor(data, card.cardsize) == false) {
+        if (legic_xor(dump, card.cardsize) == false) {
             PrintAndLogEx(FAILED, "Obsfuscate failed, exiting...");
             PrintAndLogEx(HINT, "Try running command without `--ob` parameter");
-            free(data);
+            free(dump);
             return PM3_EFAILED;
         }
     }
@@ -983,7 +956,7 @@ static int CmdLegicRestore(const char *Cmd) {
         payload->offset = i;
         payload->iv = 0x55;
         payload->len = len;
-        memcpy(payload->data, data + i, len);
+        memcpy(payload->data, dump + i, len);
 
         clearCommandBuffer();
         SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t *)payload, sizeof(legic_packet_t) + len);
@@ -995,7 +968,7 @@ static int CmdLegicRestore(const char *Cmd) {
             PrintAndLogEx(NORMAL, "." NOLF);
             if (timeout > 10) {
                 PrintAndLogEx(WARNING, "\ncommand execution time out");
-                free(data);
+                free(dump);
                 return PM3_ETIMEOUT;
             }
         }
@@ -1003,13 +976,13 @@ static int CmdLegicRestore(const char *Cmd) {
 
         if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Failed writing tag");
-            free(data);
+            free(dump);
             return PM3_ERFTRANS;
         }
         PrintAndLogEx(SUCCESS, "Wrote chunk [offset %zu | len %zu | total %zu", i, len, i + len);
     }
 
-    free(data);
+    free(dump);
     PrintAndLogEx(SUCCESS, "Done!");
     return PM3_SUCCESS;
 }
@@ -1037,39 +1010,12 @@ static int CmdLegicELoad(const char *Cmd) {
     bool shall_obsfuscate = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    // set up buffer
-    uint8_t *data = NULL;
+    // read dump file
+    uint8_t *dump = NULL;
     size_t bytes_read = 0;
-    int res = 0;
-    DumpFileType_t dftype = getfiletype(filename);
-    switch (dftype) {
-        case BIN: {
-            res = loadFile_safe(filename, ".bin", (void **)&data, &bytes_read);
-            break;
-        }
-        case EML: {
-            res = loadFileEML_safe(filename, (void **)&data, &bytes_read);
-            break;
-        }
-        case JSON: {
-            data = calloc(LEGIC_PRIME_MIM1024, sizeof(uint8_t));
-            if (data == NULL) {
-                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-                return PM3_EMALLOC;
-            }
-            res = loadFileJSON(filename, (void *)data, LEGIC_PRIME_MIM1024, &bytes_read, NULL);
-            break;
-        }
-        case DICTIONARY: {
-            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
-            free(data);
-            return PM3_EINVARG;
-        }
-    }
-
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, LEGIC_PRIME_MIM1024);
     if (res != PM3_SUCCESS) {
-        free(data);
-        return PM3_EFILE;
+        return res;
     }
 
     // validation
@@ -1077,18 +1023,18 @@ static int CmdLegicELoad(const char *Cmd) {
             bytes_read != LEGIC_PRIME_MIM256 &&
             bytes_read != LEGIC_PRIME_MIM1024) {
         PrintAndLogEx(ERR, "File content error. Read %zu bytes", bytes_read);
-        free(data);
+        free(dump);
         return PM3_EFILE;
     }
 
     if (shall_obsfuscate) {
-        legic_xor(data, bytes_read);
+        legic_xor(dump, bytes_read);
     }
 
     PrintAndLogEx(SUCCESS, "Uploading to emulator memory");
-    legic_seteml(data, 0, bytes_read);
+    legic_seteml(dump, 0, bytes_read);
 
-    free(data);
+    free(dump);
     PrintAndLogEx(SUCCESS, "Done!");
     return PM3_SUCCESS;
 }
@@ -1330,39 +1276,12 @@ static int CmdLegicView(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
-    // reserve memory
+    // read dump file
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
-    int res = 0;
-    DumpFileType_t dftype = getfiletype(filename);
-    switch (dftype) {
-        case BIN: {
-            res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
-            break;
-        }
-        case JSON: {
-            dump = calloc(LEGIC_PRIME_MIM1024, sizeof(uint8_t));
-            if (dump == NULL) {
-                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-                return PM3_EMALLOC;
-            }
-            res = loadFileJSON(filename, (void *)dump, LEGIC_PRIME_MIM1024, &bytes_read, NULL);
-            break;
-        }
-        case EML:
-            res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
-            break;
-        case DICTIONARY: {
-            PrintAndLogEx(ERR, "Error: Only BIN/EML/JSON formats allowed");
-            free(dump);
-            return PM3_EINVARG;
-        }
-    }
-
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, LEGIC_PRIME_MIM1024);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-        free(dump);
-        return PM3_EFILE;
+        return res;
     }
 
     PrintAndLogEx(NORMAL, "");

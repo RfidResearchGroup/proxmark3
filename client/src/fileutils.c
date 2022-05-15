@@ -1911,7 +1911,6 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
 
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", fn);
-        PrintAndLogEx(INFO, "%d", res);
         free(*pdump);
         return PM3_EFILE;
     }

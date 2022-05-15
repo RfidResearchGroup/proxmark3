@@ -2359,43 +2359,17 @@ static int CmdT55xxRestore(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    size_t dlen = 0;
-    void *dump = NULL;
-    DumpFileType_t dftype = getfiletype(filename);
-    switch (dftype) {
-        case BIN: {
-            res = loadFile_safe(filename, ".bin", (void **)&dump, &dlen);
-            break;
-        }
-        case EML: {
-            res = loadFileEML_safe(filename, (void **)&dump, &dlen);
-            break;
-        }
-        case JSON: {
-            dump = calloc(T55x7_BLOCK_COUNT * 4, sizeof(uint8_t));
-            if (dump == NULL) {
-                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-                return PM3_EMALLOC;
-            }
-            res = loadFileJSON(filename, dump, T55x7_BLOCK_COUNT * 4, &dlen, NULL);
-            break;
-        }
-        case DICTIONARY: {
-            PrintAndLogEx(ERR, "Error: Only BIN/EML/JSON formats allowed");
-            free(dump);
-            return PM3_EINVARG;
-        }
-    }
-
-    //sanity checks of file processing
+    // read dump file
+    uint8_t *dump = NULL;
+    size_t bytes_read = 0;
+    res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (T55x7_BLOCK_COUNT * 4));
     if (res != PM3_SUCCESS) {
-        free(dump);
         return res;
     }
 
-    if (dlen != T55x7_BLOCK_COUNT * 4) {
+    if (bytes_read != (T55x7_BLOCK_COUNT * 4)) {
         free(dump);
-        PrintAndLogEx(FAILED, "wrong length of dump file. Expected 48 bytes, got %zu", dlen);
+        PrintAndLogEx(FAILED, "wrong length of dump file. Expected 48 bytes, got %zu", bytes_read);
         return PM3_EFILE;
     }
 
@@ -2407,8 +2381,9 @@ static int CmdT55xxRestore(const char *Cmd) {
     char wcmd[100];
     char pwdopt [14] = {0}; // p XXXXXXXX
 
-    if (usepwd)
+    if (usepwd) {
         snprintf(pwdopt, sizeof(pwdopt), "-p %08X", password);
+    }
 
     uint32_t *data = (uint32_t *) dump;
     uint8_t idx;
@@ -2423,7 +2398,7 @@ static int CmdT55xxRestore(const char *Cmd) {
     //    write blocks 1..3 page 1
     //    update downlink mode (if needed) and write b 0
     downlink_mode = 0;
-    if ((((data[11] >> 28) & 0xf) == 6) || (((data[11] >> 28) & 0xf) == 9))
+    if ((((data[11] >> 28) & 0xF) == 6) || (((data[11] >> 28) & 0xF) == 9))
         downlink_mode = (data[11] >> 10) & 3;
 
     // write out blocks 1-7 page 0

@@ -5345,7 +5345,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
     if (fnlen > 0) {
 
-        // reserve memory
+        // read dump file
         uint8_t *dump = NULL;
         size_t bytes_read = 0;
         int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK));

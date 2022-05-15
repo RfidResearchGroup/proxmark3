@@ -1000,38 +1000,12 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    size_t bytes_read = 2048;
+    // read dump file
     uint8_t *dump = NULL;
-    int res = 0;
-    DumpFileType_t dftype = getfiletype(filename);
-    switch (dftype) {
-        case BIN: {
-            res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
-            break;
-        }
-        case EML: {
-            res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
-            break;
-        }
-        case JSON: {
-            dump = calloc(2048, sizeof(uint8_t));
-            if (dump == NULL) {
-                PrintAndLogEx(ERR, "error, cannot allocate memory ");
-                return PM3_EMALLOC;
-            }
-            res = loadFileJSON(filename, (void *)dump, 2048, &bytes_read, NULL);
-            break;
-        }
-        case DICTIONARY: {
-            free(dump);
-            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
-            return PM3_EINVARG;
-        }
-    }
-
+    size_t bytes_read = 2048;
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, 2048);
     if (res != PM3_SUCCESS) {
-        free(dump);
-        return PM3_EFILE;
+        return res;
     }
 
     uint8_t *newdump = realloc(dump, bytes_read);
@@ -1243,35 +1217,10 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     // if user supplied dump file,  time to load it
     if (fnlen > 0) {
 
-        DumpFileType_t dftype = getfiletype(filename);
-        switch (dftype) {
-            case BIN: {
-                res = loadFile_safe(filename, ".bin", (void **)&decrypted, &decryptedlen);
-                break;
-            }
-            case EML: {
-                res = loadFileEML_safe(filename, (void **)&decrypted, &decryptedlen);
-                break;
-            }
-            case JSON: {
-                decrypted =  calloc(2048, sizeof(uint8_t));
-                if (decrypted == NULL) {
-                    PrintAndLogEx(ERR, "error, cannot allocate memory ");
-                    return PM3_EMALLOC;
-                }
-                res = loadFileJSON(filename, (void *)decrypted, 2048, &decryptedlen, NULL);
-                break;
-            }
-            case DICTIONARY: {
-                free(decrypted);
-                PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
-                return PM3_EINVARG;
-            }
-        }
-
+        // read dump file
+        res = pm3_load_dump(filename, (void **)&decrypted, &decryptedlen, 2048);
         if (res != PM3_SUCCESS) {
-            free(decrypted);
-            return PM3_EFILE;
+            return res;
         }
 
         have_file = true;
@@ -2157,38 +2106,12 @@ static int CmdHFiClassRestore(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    size_t bytes_read = 2048;
+    // read dump file
     uint8_t *dump = NULL;
-    int res = PM3_SUCCESS;
-    DumpFileType_t dftype = getfiletype(filename);
-    switch (dftype) {
-        case BIN: {
-            res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
-            break;
-        }
-        case EML: {
-            res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
-            break;
-        }
-        case JSON: {
-            dump =  calloc(2048, sizeof(uint8_t));
-            if (dump == NULL) {
-                PrintAndLogEx(ERR, "error, cannot allocate memory ");
-                return PM3_EMALLOC;
-            }
-            res = loadFileJSON(filename, (void *)dump, 2048, &bytes_read, NULL);
-            break;
-        }
-        case DICTIONARY: {
-            free(dump);
-            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
-            return PM3_EINVARG;
-        }
-    }
-
+    size_t bytes_read = 2048;
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, 2048);
     if (res != PM3_SUCCESS) {
-        free(dump);
-        return PM3_EFILE;
+        return res;
     }
 
     if (bytes_read == 0) {
@@ -2693,38 +2616,12 @@ static int CmdHFiClassView(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    size_t bytes_read = 2048;
+    // read dump file
     uint8_t *dump = NULL;
-    int res = 0;
-    DumpFileType_t dftype = getfiletype(filename);
-    switch (dftype) {
-        case BIN: {
-            res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
-            break;
-        }
-        case EML: {
-            res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
-            break;
-        }
-        case JSON: {
-            dump = calloc(2048, sizeof(uint8_t));
-            if (dump == NULL) {
-                PrintAndLogEx(ERR, "error, cannot allocate memory ");
-                return PM3_EMALLOC;
-            }
-            res = loadFileJSON(filename, (void *)dump, 2048, &bytes_read, NULL);
-            break;
-        }
-        case DICTIONARY: {
-            free(dump);
-            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
-            return PM3_EINVARG;
-        }
-    }
-
+    size_t bytes_read = 2048;
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, 2048);
     if (res != PM3_SUCCESS) {
-        free(dump);
-        return PM3_EFILE;
+        return res;
     }
 
     if (verbose) {
