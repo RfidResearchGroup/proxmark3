@@ -297,6 +297,12 @@ static int MADInfoByteDecode(const uint8_t *sector, bool swapmad, int mad_ver, b
     return info;
 }
 
+void MADPrintHeader(void) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("MIFARE App Directory Information") " ----------------");
+    PrintAndLogEx(INFO, "-----------------------------------------------------");
+}
+
 int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMAD2) {
     open_mad_file(&mad_known_aids, verbose);
 

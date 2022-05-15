@@ -262,6 +262,11 @@ static void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose) {
     }
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
     PrintAndLogEx(HINT, _CYAN_("cyan") " = value block with decoded value");
+
+    // MAD detection
+    if (memcmp(d + (3 * MFBLOCK_SIZE), g_mifare_mad_key, 6) == 0) {
+        PrintAndLogEx(HINT, "MAD key detected. Try " _YELLOW_("`hf mf mad`") " for more details");
+    }
     PrintAndLogEx(NORMAL, "");
 }
 
@@ -3722,6 +3727,11 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
     } else {
         PrintAndLogEx(SUCCESS, "( " _YELLOW_("0") ":Failed / " _YELLOW_("1") ":Success )");
     }
+
+    // MAD detection
+    if (e_sector[MF_MAD1_SECTOR].foundKey[0] && e_sector[MF_MAD1_SECTOR].Key[MF_KEY_A] == 0xA0A1A2A3A4A5) {
+        PrintAndLogEx(HINT, "MAD key detected. Try " _YELLOW_("`hf mf mad`") " for more details");
+    }
     PrintAndLogEx(NORMAL, "");
 }
 
@@ -5395,6 +5405,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         arg_lit0("b",  "keyb",     "use key B for access printing sectors (by default: key A)"),
         arg_lit0(NULL, "be",       "(optional, BigEndian)"),
         arg_lit0(NULL, "dch",      "decode Card Holder information"),
+        arg_str0("f", "file", "<fn>", "load dump file and decode MAD"),        
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5409,7 +5420,76 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     bool swapmad = arg_get_lit(ctx, 5);
     bool decodeholder = arg_get_lit(ctx, 6);
 
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
+
+    if (fnlen > 0) {
+
+        // reserve memory
+        uint8_t *dump = NULL;
+        size_t bytes_read = 0;
+        int res = 0;
+        DumpFileType_t dftype = getfiletype(filename);
+        switch (dftype) {
+            case BIN: {
+                res = loadFile_safe(filename, ".bin", (void **)&dump, &bytes_read);
+                break;
+            }
+            case EML: {
+                res = loadFileEML_safe(filename, (void **)&dump, &bytes_read);
+                break;
+            }
+            case JSON: {
+                dump = calloc(MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK, sizeof(uint8_t));
+                if (dump == NULL) {
+                    PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                    return PM3_EMALLOC;
+                }
+                res = loadFileJSON(filename, (void *)dump, MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, &bytes_read, NULL);
+                break;
+            }
+            case DICTIONARY: {
+                PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
+                free(dump);
+                return PM3_EINVARG;
+            }
+        }
+
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
+            free(dump);
+            return PM3_EFILE;
+        }
+
+        uint16_t block_cnt = MIN(MIFARE_1K_MAXBLOCK, (bytes_read / MFBLOCK_SIZE));
+        if (bytes_read == 320)
+            block_cnt = MIFARE_MINI_MAXBLOCK;
+        else if (bytes_read == 2048)
+            block_cnt = MIFARE_2K_MAXBLOCK;
+        else if (bytes_read == 4096)
+            block_cnt = MIFARE_4K_MAXBLOCK;
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
+            PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
+        }
+
+        // MAD detection
+        if (memcmp(dump + (3 * MFBLOCK_SIZE), g_mifare_mad_key, 6) != 0) {
+            PrintAndLogEx(FAILED, "No MAD key was detected in the dump file");
+            free(dump);
+            return PM3_ESOFT;
+        }
+
+        MADPrintHeader();
+        bool haveMAD2 = false;
+        MAD1DecodeAndPrint(dump, swapmad, verbose, &haveMAD2);
+        free(dump);
+        return PM3_SUCCESS;
+    }
+
 
     uint8_t sector0[16 * 4] = {0};
     uint8_t sector10[16 * 4] = {0};
@@ -5438,9 +5518,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("MIFARE App Directory Information") " ----------------");
-    PrintAndLogEx(INFO, "-----------------------------------------------------");
+    MADPrintHeader();
 
     bool haveMAD2 = false;
     MAD1DecodeAndPrint(sector0, swapmad, verbose, &haveMAD2);
