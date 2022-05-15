@@ -28,5 +28,5 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose);
 int MADDFDecodeAndPrint(uint32_t short_aid);
 int MADCardHolderInfoDecode(uint8_t *data, size_t datalen, bool verbose);
 void MADPrintHeader(void);
-
+bool HasMADKey(uint8_t *d);
 #endif // _MAD_H_

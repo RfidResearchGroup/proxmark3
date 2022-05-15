@@ -83,7 +83,7 @@ DumpFileType_t getfiletype(const char *filename) {
         } else if (str_endswith(s, "json")) {
             o = JSON;
         } else if (str_endswith(s, "dic")) {
-            o = DICTIONARY;
+            o = DICTIONARY; 
         } else {
             // mfd, trc, trace is binary
             o = BIN;
@@ -1879,4 +1879,42 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
     }
     free(filename);
     return PM3_SUCCESS;
+}
+
+int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen) {
+
+    int res = 0;
+    DumpFileType_t dftype = getfiletype(fn);
+    switch (dftype) {
+        case BIN: {
+            res = loadFile_safe(fn, ".bin", pdump, dumplen);
+            break;
+        }
+        case EML: {
+            res = loadFileEML_safe(fn, pdump, dumplen);
+            break;
+        }
+        case JSON: {
+            *pdump = calloc(maxdumplen, sizeof(uint8_t));
+            if (*pdump == NULL) {
+                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                return PM3_EMALLOC;
+            }
+            res = loadFileJSON(fn, *pdump, maxdumplen, dumplen, NULL);
+            break;
+        }
+        case DICTIONARY: {
+            PrintAndLogEx(ERR, "Error: Only BIN/EML/JSON formats allowed");
+            return PM3_EINVARG;
+        }
+    }
+
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", fn);
+        PrintAndLogEx(INFO, "%d", res);
+        free(*pdump);
+        return PM3_EFILE;
+    }
+
+    return res;
 }

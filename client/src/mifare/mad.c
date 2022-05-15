@@ -24,6 +24,7 @@
 #include "util.h"
 #include "fileutils.h"
 #include "jansson.h"
+#include "mifaredefault.h"
 
 // https://www.nxp.com/docs/en/application-note/AN10787.pdf
 static json_t *mad_known_aids = NULL;
@@ -395,4 +396,11 @@ int MADDFDecodeAndPrint(uint32_t short_aid) {
     print_aid_description(mad_known_aids, short_aid, fmt, false);
     close_mad_file(mad_known_aids);
     return PM3_SUCCESS;
+}
+
+bool HasMADKey(uint8_t *d) {
+    if (d == NULL)
+        return false;
+
+    return (memcmp(d + (3 * MFBLOCK_SIZE), g_mifare_mad_key, 6) != 0);
 }

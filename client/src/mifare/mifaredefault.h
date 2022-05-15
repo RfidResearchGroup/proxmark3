@@ -21,6 +21,8 @@
 
 #include "common.h"
 
+#define MFBLOCK_SIZE 16
+
 static const uint64_t g_mifare_default_keys[] = {
     0xffffffffffff, // Default key (first key used by program if no user defined key)
     0x000000000000, // Blank key
