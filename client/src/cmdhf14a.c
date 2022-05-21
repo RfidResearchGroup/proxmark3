@@ -1579,15 +1579,17 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
                     if ((atqa & 0x0001) == 0x0001) {
                         printTag("HID SEOS (smartmx / javacard)");
                         type |= HID_SEOS;
-                    } else if ((atqa & 0x0004) == 0x0004) {
-                        printTag("EMV");
-                        type |= MTEMV;
                     } else {
                         printTag("MIFARE Plus EV1 2K/4K in SL3");
                         printTag("MIFARE Plus S 2K/4K in SL3");
                         printTag("MIFARE Plus X 2K/4K in SL3");
                         printTag("MIFARE Plus SE 1K");
                         type |= MTPLUS;
+                    }
+
+                    if ((atqa & 0x0004) == 0x0004) {
+                        printTag("EMV");
+                        type |= MTEMV;
                     }
                 }
 
