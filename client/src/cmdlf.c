@@ -137,7 +137,15 @@ static int CmdLFTune(const char *Cmd) {
         PrintAndLogEx(ERR, "freq must be between 47 and 600");
         return PM3_EINVARG;
     }
-    divisor = LF_FREQ2DIV(freq);
+
+    if (divisor != LF_DIVISOR_125 && freq != 125) {
+        PrintAndLogEx(ERR, "Select either `divisor` or `frequency`");
+        return PM3_EINVARG;
+    }
+
+    if (freq != 125)
+        divisor = LF_FREQ2DIV(freq);
+
 
     if ((is_bar + is_mix + is_value) > 1) {
         PrintAndLogEx(ERR, "Select only one output style");
