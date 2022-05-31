@@ -102,8 +102,8 @@ static int sdm_generator(void) {
 
     sdm_picc_t o = {0};
     o.tag  = dec_txt[0];
-    memcpy(o.uid, dec_txt + 1, 8);
-    memcpy(o.cnt, dec_txt + 8, 3);
+    memcpy(o.uid, dec_txt + 1, sizeof(o.uid));
+    memcpy(o.cnt, dec_txt + 8, sizeof(o.cnt));
     o.cnt_int = MemLeToUint3byte(o.cnt);
 
     PrintAndLogEx(INFO, "Decypted text");
