@@ -2529,7 +2529,10 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             // Read real UID
             uint8_t fudan_read[] = { 0x30, 0x01, 0x8B, 0xB9};
             ReaderTransmit(fudan_read, sizeof(fudan_read), NULL);
-            ReaderReceive(resp, resp_par);
+            if (!ReaderReceive(resp, resp_par)) {
+                Dbprintf("Card didn't answer to select all");
+                return 0;
+            }
 
             memcpy(p_card->uid, resp, 4);
 
