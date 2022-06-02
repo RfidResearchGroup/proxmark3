@@ -402,5 +402,5 @@ bool HasMADKey(uint8_t *d) {
     if (d == NULL)
         return false;
 
-    return (memcmp(d + (3 * MFBLOCK_SIZE), g_mifare_mad_key, 6) != 0);
+    return (memcmp(d + (3 * MFBLOCK_SIZE), g_mifare_mad_key, sizeof(g_mifare_mad_key)) == 0);
 }

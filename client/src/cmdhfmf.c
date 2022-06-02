@@ -5367,7 +5367,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         }
 
         // MAD detection
-        if (HasMADKey(dump)) {
+        if (HasMADKey(dump) == false) {
             PrintAndLogEx(FAILED, "No MAD key was detected in the dump file");
             free(dump);
             return PM3_ESOFT;
