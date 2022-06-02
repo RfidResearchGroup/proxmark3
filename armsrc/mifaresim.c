@@ -824,7 +824,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                     break;
                 }
 
-                // case MFEMUL_WORK => if Cmd is Read, Write, Inc, Dec, Restore, Transfert
+                // case MFEMUL_WORK => if Cmd is Read, Write, Inc, Dec, Restore, Transfer
                 if (receivedCmd_len == 4 && (receivedCmd_dec[0] == ISO14443A_CMD_READBLOCK
                                              || receivedCmd_dec[0] == ISO14443A_CMD_WRITEBLOCK
                                              || receivedCmd_dec[0] == MIFARE_CMD_INC
@@ -1050,6 +1050,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                     } else {
                         EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
                         FpgaDisableTracing();
+                        cardSTATE_TO_IDLE();
                         if (g_dbglevel >= DBG_EXTENDED)
                             Dbprintf("[MFEMUL_WORK] RCV RATS => NACK");
                     }
@@ -1073,7 +1074,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                     } else {
                         EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
                         FpgaDisableTracing();
-
+                        cardSTATE_TO_IDLE();
                         if (g_dbglevel >= DBG_EXTENDED)
                             Dbprintf("[MFEMUL_WORK] RCV NXP DESELECT => NACK");
                     }
