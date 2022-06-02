@@ -503,7 +503,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     uint8_t mM = 0; //moebius_modifier for collection storage
 
     // Authenticate response - nonce
-    uint8_t rAUTH_NT[4];
+    uint8_t rAUTH_NT[4] = {0,0,0,1};
     uint8_t rAUTH_NT_keystream[4];
     uint32_t nonce = 0;
 
@@ -587,8 +587,9 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
         // WUPA in HALTED state or REQA or WUPA in any other state
         if (receivedCmd_len == 1 && ((receivedCmd[0] == ISO14443A_CMD_REQA && cardSTATE != MFEMUL_HALTED) || receivedCmd[0] == ISO14443A_CMD_WUPA)) {
             selTimer = GetTickCount();
-            if (g_dbglevel >= DBG_EXTENDED)
-                Dbprintf("EmSendPrecompiledCmd(&responses[ATQA]);");
+            if (g_dbglevel >= DBG_EXTENDED) {
+                //Dbprintf("EmSendPrecompiledCmd(&responses[ATQA]);");
+            }
             EmSendPrecompiledCmd(&responses[ATQA]);
 
             FpgaDisableTracing();
@@ -727,7 +728,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
             case MFEMUL_WORK: {
 
                 if (g_dbglevel >= DBG_EXTENDED) {
-                    Dbprintf("[MFEMUL_WORK] Enter in case");
+                    // Dbprintf("[MFEMUL_WORK] Enter in case");
                 }
 
                 if (receivedCmd_len == 0) {
@@ -788,7 +789,15 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                         EmSendCmd(rAUTH_NT, sizeof(rAUTH_NT));
                         FpgaDisableTracing();
 
-                        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Reader authenticating for block %d (0x%02x) with key %c - nonce: %02X - ciud: %02X", receivedCmd_dec[1], receivedCmd_dec[1], (cardAUTHKEY == 0) ? 'A' : 'B', rAUTH_NT, cuid);
+                        if (g_dbglevel >= DBG_EXTENDED) {
+                            Dbprintf("[MFEMUL_WORK] Reader authenticating for block %d (0x%02x) with key %c - nonce: %08X - cuid: %08X",
+                                receivedCmd_dec[1],
+                                receivedCmd_dec[1],
+                                (cardAUTHKEY == 0) ? 'A' : 'B',
+                                nonce,
+                                cuid
+                            );
+                        }
                     } else {
                         // nested authentication
                         /*
@@ -801,7 +810,13 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                         EmSendCmdPar(response, 4, response_par);
                         FpgaDisableTracing();
 
-                        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Reader doing nested authentication for block %d (0x%02x) with key %c", receivedCmd_dec[1], receivedCmd_dec[1], (cardAUTHKEY == 0) ? 'A' : 'B');
+                        if (g_dbglevel >= DBG_EXTENDED) {
+                            Dbprintf("[MFEMUL_WORK] Reader doing nested authentication for block %d (0x%02x) with key %c",
+                                receivedCmd_dec[1],
+                                receivedCmd_dec[1],
+                                (cardAUTHKEY == 0) ? 'A' : 'B'
+                            );
+                        }
                     }
 
                     cardSTATE = MFEMUL_AUTH1;
