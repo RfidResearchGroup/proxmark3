@@ -4128,7 +4128,7 @@
         },
         "hf mf help": {
             "command": "hf mf help",
-            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace acl Decode and print MIFARE Classic access rights bytes value Decode a value block view Display content from tag dump file",
+            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace acl Decode and print MIFARE Classic access rights bytes value Value blocks view Display content from tag dump file",
             "notes": [],
             "offline": true,
             "options": [],
@@ -4171,9 +4171,10 @@
                 "-k, --key <key> key for printing sectors",
                 "-b, --keyb use key B for access printing sectors (by default: key A)",
                 "--be (optional, BigEndian)",
-                "--dch decode Card Holder information"
+                "--dch decode Card Holder information",
+                "-f, --file <fn> load dump file and decode MAD"
             ],
-            "usage": "hf mf mad [-hvb] [--aid <aid>] [-k <key>] [--be] [--dch]"
+            "usage": "hf mf mad [-hvb] [--aid <aid>] [-k <key>] [--be] [--dch] [-f <fn>]"
         },
         "hf mf nack": {
             "command": "hf mf nack",
@@ -4390,16 +4391,28 @@
         },
         "hf mf value": {
             "command": "hf mf value",
-            "description": "Decode of a MIFARE value block",
+            "description": "MIFARE Classic value data commands",
             "notes": [
+                "hf mf value --blk 16 -k FFFFFFFFFFFF --set 1000",
+                "hf mf value --blk 16 -k FFFFFFFFFFFF --inc 10",
+                "hf mf value --blk 16 -k FFFFFFFFFFFF --dec 10 -b",
+                "hf mf value --blk 16 -k FFFFFFFFFFFF --get -b",
                 "hf mf value -d 87D612007829EDFF87D6120011EE11EE"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-d, --data <hex> 16 hex bytes"
+                "-k, --key <hex> key, 6 hex bytes",
+                "-a input key type is key A (def)",
+                "-b input key type is key B",
+                "--inc <dec> Incremenet value by X (0 - 2147483647)",
+                "--dec <dec> Dcrement value by X (0 - 2147483647)",
+                "--set <dec> Set value to X (-2147483647 - 2147483647)",
+                "--get Get value from block",
+                "--blk <dec> block number",
+                "-d, --data <hex> block data to extract values from (16 hex bytes)"
             ],
-            "usage": "hf mf value [-h] -d <hex>"
+            "usage": "hf mf value [-hab] [-k <hex>] [--inc <dec>] [--dec <dec>] [--set <dec>] [--get] [--blk <dec>] [-d <hex>]"
         },
         "hf mf view": {
             "command": "hf mf view",
@@ -4700,13 +4713,14 @@
                 "--aid <hex> Application ID for create. Mandatory. (3 hex bytes, big endian)",
                 "--fid <hex> ISO file ID. Forbidden values: 0000 3F00, 3FFF, FFFF. (2 hex bytes, big endian)",
                 "--dfname <string> ISO DF Name (1..16 chars)",
+                "--dfhex <hex> ISO DF Name as hex (1..16 bytes)",
                 "--ks1 <hex> Key settings 1 (1 hex byte). Application Master Key Settings (def: 0x0F)",
                 "--ks2 <hex> Key settings 2 (1 hex byte). (def: 0x0E)",
                 "--dstalgo <DES|2TDEA|3TDEA|AES> Application key crypt algo (def: DES)",
                 "--numkeys <dec> Number of keys 0x00..0x0e (def: 0x0E)",
                 "--no-auth Execute without authentication"
             ],
-            "usage": "hf mfdes createapp [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--rawdata <hex>] [--aid <hex>] [--fid <hex>] [--dfname <string>] [--ks1 <hex>] [--ks2 <hex>] [--dstalgo <DES|2TDEA|3TDEA|AES>] [--numkeys <dec>] [--no-auth]"
+            "usage": "hf mfdes createapp [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--rawdata <hex>] [--aid <hex>] [--fid <hex>] [--dfname <string>] [--dfhex <hex>] [--ks1 <hex>] [--ks2 <hex>] [--dstalgo <DES|2TDEA|3TDEA|AES>] [--numkeys <dec>] [--no-auth]"
         },
         "hf mfdes createfile": {
             "command": "hf mfdes createfile",
@@ -10983,8 +10997,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 693,
+        "commands_extracted": 696,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-04-29T14:32:43"
+        "extracted_on": "2022-06-06T05:54:04"
     }
 }

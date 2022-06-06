@@ -5323,7 +5323,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         arg_lit0("b",  "keyb",     "use key B for access printing sectors (by default: key A)"),
         arg_lit0(NULL, "be",       "(optional, BigEndian)"),
         arg_lit0(NULL, "dch",      "decode Card Holder information"),
-        arg_str0("f", "file", "<fn>", "load dump file and decode MAD"),        
+        arg_str0("f", "file", "<fn>", "load dump file and decode MAD"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -6295,7 +6295,7 @@ static int CmdHF14AGen4View(const char *Cmd) {
 static int CmdHF14AMfValue(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mf value1",
+    CLIParserInit(&ctx, "hf mf value",
                   "MIFARE Classic value data commands\n",
                   "hf mf value --blk 16 -k FFFFFFFFFFFF --set 1000\n"
                   "hf mf value --blk 16 -k FFFFFFFFFFFF --inc 10\n"
@@ -6319,7 +6319,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     uint8_t blockno = (uint8_t)arg_get_int_def(ctx, 8, 1);
-    
+
     uint8_t keytype = MF_KEY_A;
     if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
         CLIParserFree(ctx);
@@ -6333,18 +6333,18 @@ static int CmdHF14AMfValue(const char *Cmd) {
     uint8_t key[6] = {0};
     CLIGetHexWithReturn(ctx, 1, key, &keylen);
 
-/*
-    Value    /Value   Value    BLK /BLK BLK /BLK
-    00000000 FFFFFFFF 00000000 10  EF   10  EF
-    BLK is used to referece where the backup come from, I suspect its just the current block for the actual value ?
-    increment and decrement are an unsigned value
-    set value is a signed value
+    /*
+        Value    /Value   Value    BLK /BLK BLK /BLK
+        00000000 FFFFFFFF 00000000 10  EF   10  EF
+        BLK is used to referece where the backup come from, I suspect its just the current block for the actual value ?
+        increment and decrement are an unsigned value
+        set value is a signed value
 
-    We are getting signed and/or bigger values to allow a defult to be set meaning users did not supply that option.
-*/
+        We are getting signed and/or bigger values to allow a defult to be set meaning users did not supply that option.
+    */
     int64_t incval = (int64_t)arg_get_u64_def(ctx, 4, -1); // Inc by -1 is invalid, so not set.
     int64_t decval = (int64_t)arg_get_u64_def(ctx, 5, -1); // Inc by -1 is invalid, so not set.
-    int64_t setval = (int64_t)arg_get_u64_def(ctx, 6, 0x7FFFFFFFFFFFFFFF ); // out of bounds (for int32) so not set
+    int64_t setval = (int64_t)arg_get_u64_def(ctx, 6, 0x7FFFFFFFFFFFFFFF);  // out of bounds (for int32) so not set
     bool getval = arg_get_lit(ctx, 7);
     uint8_t block[MFBLOCK_SIZE] = {0x00};
     int dlen = 0;
@@ -6362,7 +6362,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
     if (incval != -1) {
         optionsprovided++;
         action = 0;
-        if ((incval <=0) || (incval > 2147483647)) {
+        if ((incval <= 0) || (incval > 2147483647)) {
             PrintAndLogEx(WARNING, "increment value must be between 1 and 2147483647. Got %lli", incval);
             return PM3_EINVARG;
         } else
@@ -6393,25 +6393,25 @@ static int CmdHF14AMfValue(const char *Cmd) {
         optionsprovided++;
         action = 4;
         if (dlen != 16) {
-            PrintAndLogEx(WARNING,"date length must be 16 hex bytes long, got %d",dlen);
+            PrintAndLogEx(WARNING, "date length must be 16 hex bytes long, got %d", dlen);
             return PM3_EINVARG;
         }
     }
 
     if (optionsprovided > 1) { // more then one option provided
-        PrintAndLogEx(WARNING,"must have one and only one of --inc, --dec, --set or --data");
+        PrintAndLogEx(WARNING, "must have one and only one of --inc, --dec, --set or --data");
         return PM3_EINVARG;
     }
 
     // dont want to write value data and break something
-    if ((blockno == 0) || (mfIsSectorTrailer (blockno))) {
+    if ((blockno == 0) || (mfIsSectorTrailer(blockno))) {
         PrintAndLogEx(WARNING, "invlaid block number, should be a data block ");
         return PM3_EINVARG;
     }
 
     if (action < 3) {
         if (action <= 1) { // increment/decrement value
-            memcpy (block, (uint8_t *)&value, 4);
+            memcpy(block, (uint8_t *)&value, 4);
             uint8_t cmddata[26];
             memcpy(cmddata, key, sizeof(key));  // Key == 6 data went to 10, so lets offset 9 for inc/dec
             if (action == 0)
@@ -6487,7 +6487,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
                 PrintAndLogEx(FAILED, "No value block detected");
             }
         } else {
-                PrintAndLogEx(FAILED, "failed to read value block");
+            PrintAndLogEx(FAILED, "failed to read value block");
         }
     }
 
