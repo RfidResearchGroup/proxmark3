@@ -3890,6 +3890,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
     uint8_t block_width = 16;
     uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
+    uint8_t hdr_len = 0;
 
     if (m0) {
         block_cnt = MIFARE_MINI_MAXBLOCK;
@@ -3902,6 +3903,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
     } else if (mu) {
         block_cnt = MFU_MAX_BLOCKS;
         block_width = MFU_BLOCK_SIZE;
+        hdr_len = MFU_DUMP_PREFIX_LENGTH;
     } else {
         PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
         return PM3_EINVARG;
@@ -3916,7 +3918,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
     uint8_t *data = NULL;
     size_t bytes_read = 0;
-    int res = pm3_load_dump(filename, (void **)&data, &bytes_read, (MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK));
+    int res = pm3_load_dump(filename, (void **)&data, &bytes_read, (block_width * block_cnt + hdr_len));
     if (res != PM3_SUCCESS) {
         return res;
     }

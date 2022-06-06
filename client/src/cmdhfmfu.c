@@ -4106,7 +4106,7 @@ static int CmdHF14AMfuEView(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint16_t blocks = MFU_MAX_BLOCKS;
-    uint16_t bytes = MFU_MAX_BYTES;
+    uint16_t bytes = MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH;
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
