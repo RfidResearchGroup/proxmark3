@@ -23,19 +23,20 @@
 #endif
 
 #include "tlv.h"
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 
-#define TLV_TAG_CLASS_MASK  0xc0
+
+#define TLV_TAG_CLASS_MASK  0xC0
 #define TLV_TAG_COMPLEX     0x20
-#define TLV_TAG_VALUE_MASK  0x1f
-#define TLV_TAG_VALUE_CONT  0x1f
+#define TLV_TAG_VALUE_MASK  0x1F
+#define TLV_TAG_VALUE_CONT  0x1F
 #define TLV_TAG_INVALID     0
 
 #define TLV_LEN_LONG        0x80
-#define TLV_LEN_MASK        0x7f
+#define TLV_LEN_MASK        0x7F
 #define TLV_LEN_INVALID     (~0)
 
 // http://radek.io/2012/11/10/magical-container_of-macro/

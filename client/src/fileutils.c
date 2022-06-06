@@ -83,7 +83,7 @@ DumpFileType_t getfiletype(const char *filename) {
         } else if (str_endswith(s, "json")) {
             o = JSON;
         } else if (str_endswith(s, "dic")) {
-            o = DICTIONARY; 
+            o = DICTIONARY;
         } else {
             // mfd, trc, trace is binary
             o = BIN;
@@ -1916,4 +1916,11 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
     }
 
     return res;
+}
+
+int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, size_t blocksize) {
+    saveFile(fn, ".bin", d, n);
+    saveFileEML(fn, d, n, blocksize);
+    saveFileJSON(fn, jsft, d, n, NULL);
+    return PM3_SUCCESS;
 }

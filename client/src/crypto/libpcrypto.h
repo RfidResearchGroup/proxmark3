@@ -61,5 +61,7 @@ void bin_xor(uint8_t *d1, const uint8_t *d2, size_t len);
 void AddISO9797M2Padding(uint8_t *ddata, size_t *ddatalen, uint8_t *sdata, size_t sdatalen, size_t blocklen);
 size_t FindISO9797M2PaddingDataLen(const uint8_t *data, size_t datalen);
 
+// BLOWFISH
+int blowfish_decrypt(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length);
 
 #endif /* libpcrypto.h */

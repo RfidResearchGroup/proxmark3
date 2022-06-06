@@ -33,6 +33,7 @@
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/error.h>
+#include <mbedtls/blowfish.h>
 #include "util.h"
 #include "ui.h"
 
@@ -612,5 +613,22 @@ size_t FindISO9797M2PaddingDataLen(const uint8_t *data, size_t datalen) {
         if (data[i - 1] != 0x00)
             return 0;
     }
+    return 0;
+}
+
+
+int blowfish_decrypt(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
+    uint8_t iiv[16] = {0x00 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    if (iv)
+        memcpy(iiv, iv, 16);
+
+    mbedtls_blowfish_context blow;
+    mbedtls_blowfish_init(&blow);
+    if (mbedtls_blowfish_setkey(&blow, key, 64))
+        return 1;
+    if (mbedtls_blowfish_crypt_cbc(&blow, MBEDTLS_BLOWFISH_DECRYPT, length, iiv, input, output))
+        return 2;
+    mbedtls_blowfish_free(&blow);
+
     return 0;
 }

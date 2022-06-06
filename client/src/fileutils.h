@@ -272,4 +272,5 @@ DumpFileType_t getfiletype(const char *filename);
  */
 int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen);
 
+int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, size_t blocksize);
 #endif // FILEUTILS_H
