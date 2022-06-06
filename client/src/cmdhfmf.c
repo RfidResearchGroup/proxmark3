@@ -6299,9 +6299,9 @@ static int CmdHF14AMfValue(const char *Cmd) {
                   "MIFARE Classic value data commands\n",
                   "hf mf value --blk 16 -k FFFFFFFFFFFF --set 1000\n"
                   "hf mf value --blk 16 -k FFFFFFFFFFFF --inc 10\n"
-                  "hf mf value --blk 16 -k FFFFFFFFFFFF --dec 10 -b\n"
-                  "hf mf value --blk 16 -k FFFFFFFFFFFF --get -b\n"
-                  "hf mf value -d 87D612007829EDFF87D6120011EE11EE\n"
+                  "hf mf value --blk 16 -k FFFFFFFFFFFF -b --dec 10\n"
+                  "hf mf value --blk 16 -k FFFFFFFFFFFF -b --get\n"
+                  "hf mf value --get -d 87D612007829EDFF87D6120011EE11EE\n"
                  );
     void *argtable[] = {
         arg_param_begin,
