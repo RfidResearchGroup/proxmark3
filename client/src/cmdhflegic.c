@@ -33,6 +33,7 @@ static int CmdHelp(const char *Cmd);
 #define LEGIC_PRIME_MIM22   22
 #define LEGIC_PRIME_MIM256  256
 #define LEGIC_PRIME_MIM1024 1024
+#define LEGIC_BLOCK_SIZE    8
 
 static bool legic_xor(uint8_t *data, uint16_t cardsize) {
 
@@ -873,9 +874,7 @@ static int CmdLegicDump(const char *Cmd) {
         FillFileNameByUID(filename, data, "-dump", 4);
     }
 
-    saveFile(filename, ".bin", data, readlen);
-    saveFileEML(filename, data, readlen, 8);
-    saveFileJSON(filename, jsfLegic, data, readlen, NULL);
+    pm3_save_dump(filename, data, readlen, jsfLegic, LEGIC_BLOCK_SIZE);
     free(data);
     return PM3_SUCCESS;
 }
@@ -1111,9 +1110,7 @@ static int CmdLegicESave(const char *Cmd) {
         legic_xor(data, numofbytes);
     }
 
-    saveFile(filename, ".bin", data, numofbytes);
-    saveFileEML(filename, data, numofbytes, 8);
-    saveFileJSON(filename, jsfLegic, data, numofbytes, NULL);
+    pm3_save_dump(filename, data, numofbytes, jsfLegic, LEGIC_BLOCK_SIZE);
     return PM3_SUCCESS;
 }
 

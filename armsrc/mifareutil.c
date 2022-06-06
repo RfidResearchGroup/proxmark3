@@ -468,8 +468,8 @@ int mifare_classic_value(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
     uint8_t command = MIFARE_CMD_INC;
-    
-    if (action == 0x01) 
+
+    if (action == 0x01)
         command = MIFARE_CMD_DEC;
 
     // Send increment or decrement command
@@ -510,7 +510,7 @@ int mifare_classic_value(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo
         len = mifare_sendcmd_short(pcs, 1, MIFARE_CMD_TRANSFER, blockNo, receivedAnswer, receivedAnswerPar, NULL);
         if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
-                return 1;
+            return 1;
         }
     }
 

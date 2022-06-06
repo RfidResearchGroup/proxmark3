@@ -858,9 +858,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
             FillFileNameByUID(fptr, data, "-dump", 4);
         }
 
-        saveFile(filename, ".bin", data, 48);
-        saveFileEML(filename, data, 48, 4);
-        saveFileJSON(filename, jsfHitag, data, 48, NULL);
+        pm3_save_dump(filename, data, 48, jsfHitag, 4);
     */
     return PM3_SUCCESS;
 }

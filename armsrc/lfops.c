@@ -2242,7 +2242,7 @@ static void WriteEM4x05(uint32_t *blockdata, uint8_t startblock, uint8_t numbloc
         Dbprintf("--+----------------");
     }
 
-    for (uint8_t i = startblock; i < startblock + numblocks; i++) {
+    for (uint8_t i = startblock; i < (uint8_t)(startblock + numblocks); i++) {
         if (i > 4) {
             blockdata[i - startblock] = reflect(blockdata[i - startblock], 32);
         }

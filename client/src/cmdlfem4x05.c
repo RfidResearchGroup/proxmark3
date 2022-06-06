@@ -692,9 +692,9 @@ int CmdEM4x05Dump(const char *Cmd) {
     } else {
     }
 
-    if (success == PM3_SUCCESS) { // all ok save dump to file
-        // saveFileEML will add .eml extension to filename
-        // saveFile (binary) passes in the .bin extension.
+    // all ok save dump to file
+    if (success == PM3_SUCCESS) {
+
         if (strcmp(filename, "") == 0) {
 
             if (card_type == EM_4369) {
@@ -707,9 +707,10 @@ int CmdEM4x05Dump(const char *Cmd) {
 
         }
         PrintAndLogEx(NORMAL, "");
-        saveFileJSON(filename, (card_type == EM_4369 || card_type == EM_4469) ? jsfEM4x69 : jsfEM4x05, (uint8_t *)data, 16 * sizeof(uint32_t), NULL);
-        saveFileEML(filename, (uint8_t *)data, 16 * sizeof(uint32_t), sizeof(uint32_t));
-        saveFile(filename, ".bin", data, sizeof(data));
+        if (card_type == EM_4369 || card_type == EM_4469)
+            pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x69, 4);
+        else
+            pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x05, 4);
     }
     PrintAndLogEx(NORMAL, "");
     return success;

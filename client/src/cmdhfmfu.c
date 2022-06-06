@@ -2451,9 +2451,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         FillFileNameByUID(filename, uid, "-dump", sizeof(uid));
     }
     uint16_t datalen = pages * MFU_BLOCK_SIZE + MFU_DUMP_PREFIX_LENGTH;
-    saveFile(filename, ".bin", (uint8_t *)&dump_file_data, datalen);
-    saveFileEML(filename, (uint8_t *)&dump_file_data, datalen, MFU_BLOCK_SIZE);
-    saveFileJSON(filename, jsfMfuMemory, (uint8_t *)&dump_file_data, datalen, NULL);
+    pm3_save_dump(filename, (uint8_t *)&dump_file_data, datalen, jsfMfuMemory, MFU_BLOCK_SIZE);
 
     if (is_partial)
         PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
@@ -3243,7 +3241,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "------------------.---------------");
-    PrintAndLogEx(INFO, " Using UID : %s", sprint_hex(uid, 7));
+    PrintAndLogEx(INFO, " Using UID : " _YELLOW_("%s"), sprint_hex(uid, 7));
     PrintAndLogEx(INFO, "----------------------------------");
     PrintAndLogEx(INFO, " algo            | pwd      | pack");
     PrintAndLogEx(INFO, "-----------------+----------+-----");

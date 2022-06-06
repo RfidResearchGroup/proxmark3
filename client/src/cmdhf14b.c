@@ -1445,9 +1445,7 @@ static int CmdHF14BDump(const char *Cmd) {
     }
 
     size_t datalen = (blocks + 1) * 4;
-    saveFile(filename, ".bin", data, datalen);
-    saveFileEML(filename, data, datalen, 4);
-    saveFileJSON(filename, jsf14b, data, datalen, NULL);
+    pm3_save_dump(filename, data, datalen, jsf14b, 4);
     return switch_off_field_14b();
 }
 /*

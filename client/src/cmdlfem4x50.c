@@ -257,9 +257,7 @@ int CmdEM4x50ESave(const char *Cmd) {
         FillFileNameByUID(fptr, (uint8_t *)&data[4 * EM4X50_DEVICE_ID], "-dump", 4);
     }
 
-    saveFile(filename, ".bin", data, DUMP_FILESIZE);
-    saveFileEML(filename, data, DUMP_FILESIZE, 4);
-    saveFileJSON(filename, jsfEM4x50, data, DUMP_FILESIZE, NULL);
+    pm3_save_dump(filename, data, DUMP_FILESIZE, jsfEM4x50, 4);
     return PM3_SUCCESS;
 }
 
@@ -798,9 +796,7 @@ int CmdEM4x50Dump(const char *Cmd) {
         memcpy(data + (i * 4), words[i].byte, 4);
     }
 
-    saveFile(filename, ".bin", data, sizeof(data));
-    saveFileEML(filename, data, sizeof(data), 4);
-    saveFileJSON(filename, jsfEM4x50, data, sizeof(data), NULL);
+    pm3_save_dump(filename, data, sizeof(data), jsfEM4x50, 4);
     return PM3_SUCCESS;
 }
 

@@ -39,7 +39,7 @@
 #include "graph.h"
 #include "crc16.h"             // iso15 crc
 #include "cmddata.h"           // getsamples
-#include "fileutils.h"         // savefileEML
+#include "fileutils.h"         // pm3_save_dump
 #include "cliparser.h"
 #include "util_posix.h"        // msleep
 
@@ -1429,9 +1429,7 @@ static int CmdHF15Dump(const char *Cmd) {
     }
 
     size_t datalen = blocknum * 4;
-    saveFile(filename, ".bin", data, datalen);
-    saveFileEML(filename, data, datalen, 4);
-    saveFileJSON(filename, jsf15, data, datalen, NULL);
+    pm3_save_dump(filename, data, datalen, jsf15, 4);
     return PM3_SUCCESS;
 }
 
@@ -1975,44 +1973,19 @@ static int CmdHF15Restore(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "Using block size... %d", blocksize);
 
+
+    // read dump file
+    uint8_t *dump = NULL;
+    size_t bytes_read = 0;
     // 4bytes * 256 blocks.  Should be enough..
-    uint8_t *data = NULL;
-    size_t datalen = 0;
-    int res = PM3_SUCCESS;
-    DumpFileType_t dftype = getfiletype(filename);
-    switch (dftype) {
-        case BIN: {
-            res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
-            break;
-        }
-        case EML: {
-            res = loadFileEML_safe(filename, (void **)&data, &datalen);
-            break;
-        }
-        case JSON: {
-            data = calloc(4 * 256, sizeof(uint8_t));
-            if (data == NULL) {
-                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-                return PM3_EMALLOC;
-            }
-            res = loadFileJSON(filename, (void *)data, 256 * 4, &datalen, NULL);
-            break;
-        }
-        case DICTIONARY: {
-            PrintAndLogEx(ERR, "Error: Only BIN/JSON/EML formats allowed");
-            free(data);
-            return PM3_EINVARG;
-        }
-    }
-
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (4 * 256));
     if (res != PM3_SUCCESS) {
-        free(data);
-        return PM3_EFILE;
+        return res;
     }
 
-    if ((datalen % blocksize) != 0) {
-        PrintAndLogEx(WARNING, "datalen %zu isn't dividable with blocksize %d", datalen, blocksize);
-        free(data);
+    if ((bytes_read % blocksize) != 0) {
+        PrintAndLogEx(WARNING, "datalen %zu isn't dividable with blocksize %d", bytes_read, blocksize);
+        free(dump);
         return PM3_ESOFT;
     }
 
@@ -2023,11 +1996,11 @@ static int CmdHF15Restore(const char *Cmd) {
     int retval = PM3_SUCCESS;
     size_t bytes = 0;
     uint16_t i = 0;
-    while (bytes < datalen) {
+    while (bytes < bytes_read) {
 
         req[reqlen] = i;
         // copy over the data to the request
-        memcpy(req + reqlen + 1, data + bytes, blocksize);
+        memcpy(req + reqlen + 1, dump + bytes, blocksize);
         AddCrc15(req, reqlen + 1 + blocksize);
 
         uint32_t tried = 0;
@@ -2042,7 +2015,7 @@ static int CmdHF15Restore(const char *Cmd) {
         }
 
         if (tried >= retries) {
-            free(data);
+            free(dump);
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(FAILED, "restore failed. Too many retries.");
             return retval;
@@ -2050,7 +2023,7 @@ static int CmdHF15Restore(const char *Cmd) {
         bytes += blocksize;
         i++;
     }
-    free(data);
+    free(dump);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "done");
