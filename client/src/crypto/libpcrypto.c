@@ -618,7 +618,7 @@ size_t FindISO9797M2PaddingDataLen(const uint8_t *data, size_t datalen) {
 
 
 int blowfish_decrypt(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
-    uint8_t iiv[16] = {0x00 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t iiv[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     if (iv)
         memcpy(iiv, iv, 16);
 
