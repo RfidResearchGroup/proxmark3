@@ -6293,30 +6293,204 @@ static int CmdHF14AGen4View(const char *Cmd) {
 }
 
 static int CmdHF14AMfValue(const char *Cmd) {
+
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mf value",
-                  "Decode of a MIFARE value block",
+    CLIParserInit(&ctx, "hf mf value1",
+                  "MIFARE Classic value data commands\n",
+                  "hf mf value --blk 16 -k FFFFFFFFFFFF --set 1000\n"
+                  "hf mf value --blk 16 -k FFFFFFFFFFFF --inc 10\n"
+                  "hf mf value --blk 16 -k FFFFFFFFFFFF --dec 10 -b\n"
+                  "hf mf value --blk 16 -k FFFFFFFFFFFF --get -b\n"
                   "hf mf value -d 87D612007829EDFF87D6120011EE11EE\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("d", "data", "<hex>", "16 hex bytes"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_lit0("a", NULL, "input key type is key A (def)"),
+        arg_lit0("b", NULL, "input key type is key B"),
+        arg_u64_0(NULL, "inc", "<dec>", "Incremenet value by X (0 - 2147483647)"),
+        arg_u64_0(NULL, "dec", "<dec>", "Dcrement value by X (0 - 2147483647)"),
+        arg_u64_0(NULL, "set", "<dec>", "Set value to X (-2147483647 - 2147483647)"),
+        arg_lit0(NULL, "get", "Get value from block"),
+        arg_int0(NULL, "blk", "<dec>", "block number"),
+        arg_str0("d", "data", "<hex>", "block data to extract values from (16 hex bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
+    uint8_t blockno = (uint8_t)arg_get_int_def(ctx, 8, 1);
+    
+    uint8_t keytype = MF_KEY_A;
+    if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 3)) {
+        keytype = MF_KEY_B;;
+    }
+
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 1, key, &keylen);
+
+/*
+    Value    /Value   Value    BLK /BLK BLK /BLK
+    00000000 FFFFFFFF 00000000 10  EF   10  EF
+    BLK is used to referece where the backup come from, I suspect its just the current block for the actual value ?
+    increment and decrement are an unsigned value
+    set value is a signed value
+
+    We are getting signed and/or bigger values to allow a defult to be set meaning users did not supply that option.
+*/
+    int64_t incval = (int64_t)arg_get_u64_def(ctx, 4, -1); // Inc by -1 is invalid, so not set.
+    int64_t decval = (int64_t)arg_get_u64_def(ctx, 5, -1); // Inc by -1 is invalid, so not set.
+    int64_t setval = (int64_t)arg_get_u64_def(ctx, 6, 0x7FFFFFFFFFFFFFFF ); // out of bounds (for int32) so not set
+    bool getval = arg_get_lit(ctx, 7);
+    uint8_t block[MFBLOCK_SIZE] = {0x00};
     int dlen = 0;
     uint8_t data[16] = {0};
-    CLIGetHexWithReturn(ctx, 1, data, &dlen);
+    CLIGetHexWithReturn(ctx, 9, data, &dlen);
     CLIParserFree(ctx);
 
-    int32_t value = 0;
-    if (mfc_value(data, &value))  {
-        PrintAndLogEx(SUCCESS, "Dec... " _YELLOW_("%" PRIi32), value);
-        PrintAndLogEx(SUCCESS, "Hex... " _YELLOW_("0x%" PRIX32), value);
-    } else {
-        PrintAndLogEx(FAILED, "No value block detected");
+    uint8_t action = 3; // 0 Increment, 1 - Decrement, 2 - Set, 3 - Get, 4 - Decode from data
+    uint32_t value = 0;
+    uint8_t isok = true;
+
+    // Need to check we only have 1 of inc/dec/set and get the value from the selected option
+    int optionsprovided = 0;
+
+    if (incval != -1) {
+        optionsprovided++;
+        action = 0;
+        if ((incval <=0) || (incval > 2147483647)) {
+            PrintAndLogEx(WARNING, "increment value must be between 1 and 2147483647. Got %lli", incval);
+            return PM3_EINVARG;
+        } else
+            value = (uint32_t)incval;
     }
+
+    if (decval != -1) {
+        optionsprovided++;
+        action = 1;
+        if ((decval <= 0) || (decval > 2147483647)) {
+            PrintAndLogEx(WARNING, "decrement value must be between 1 and 2147483647. Got %lli", decval);
+            return PM3_EINVARG;
+        } else
+            value = (uint32_t)decval;
+    }
+
+    if (setval != 0x7FFFFFFFFFFFFFFF) {
+        optionsprovided++;
+        action = 2;
+        if ((setval < -2147483647) || (setval > 2147483647)) {
+            PrintAndLogEx(WARNING, "set value must be between -2147483647 and 2147483647. Got %lli", setval);
+            return PM3_EINVARG;
+        } else
+            value = (uint32_t)setval;
+    }
+
+    if (dlen != 0)  {
+        optionsprovided++;
+        action = 4;
+        if (dlen != 16) {
+            PrintAndLogEx(WARNING,"date length must be 16 hex bytes long, got %d",dlen);
+            return PM3_EINVARG;
+        }
+    }
+
+    if (optionsprovided > 1) { // more then one option provided
+        PrintAndLogEx(WARNING,"must have one and only one of --inc, --dec, --set or --data");
+        return PM3_EINVARG;
+    }
+
+    // dont want to write value data and break something
+    if ((blockno == 0) || (mfIsSectorTrailer (blockno))) {
+        PrintAndLogEx(WARNING, "invlaid block number, should be a data block ");
+        return PM3_EINVARG;
+    }
+
+    if (action < 3) {
+        if (action <= 1) { // increment/decrement value
+            memcpy (block, (uint8_t *)&value, 4);
+            uint8_t cmddata[26];
+            memcpy(cmddata, key, sizeof(key));  // Key == 6 data went to 10, so lets offset 9 for inc/dec
+            if (action == 0)
+                PrintAndLogEx(INFO, "value increment by : %d", value);
+            else
+                PrintAndLogEx(INFO, "value decrement by : %d", value);
+
+            PrintAndLogEx(INFO, "Writing block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
+
+            cmddata[9] = action; // 00 if increment, 01 if decrement.
+            memcpy(cmddata + 10, block, sizeof(block));
+
+            clearCommandBuffer();
+            SendCommandMIX(CMD_HF_MIFARE_VALUE, blockno, keytype, 0, cmddata, sizeof(cmddata));
+
+            PacketResponseNG resp;
+            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+                PrintAndLogEx(FAILED, "Command execute timeout");
+                return PM3_ETIMEOUT;
+            }
+            isok  = resp.oldarg[0] & 0xff;
+        } else { // set value
+            // To set a value block (or setup) we can use the normal mifare classic write block
+            // So build the command options can call CMD_HF_MIFARE_WRITEBL
+            PrintAndLogEx(INFO, "set value to : %d", (int32_t)value);
+
+            uint8_t writedata[26] = {0x00};
+            int32_t invertvalue = value ^ 0xFFFFFFFF;
+            memcpy(writedata, key, sizeof(key));
+            memcpy(writedata + 10, (uint8_t *)&value, 4);
+            memcpy(writedata + 14, (uint8_t *)&invertvalue, 4);
+            memcpy(writedata + 18, (uint8_t *)&value, 4);
+            writedata[22] = blockno;
+            writedata[23] = (blockno ^ 0xFF);
+            writedata[24] = blockno;
+            writedata[25] = (blockno ^ 0xFF);
+
+            clearCommandBuffer();
+            SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, keytype, 0, writedata, sizeof(writedata));
+
+            PacketResponseNG resp;
+            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+                PrintAndLogEx(FAILED, "Command execute timeout");
+                return PM3_ETIMEOUT;
+            }
+            isok  = resp.oldarg[0] & 0xff;
+        }
+
+        if (isok) {
+            PrintAndLogEx(SUCCESS, "Update ... : " _GREEN_("success"));
+            getval = true; // all ok so set flag to read current value
+        } else {
+            PrintAndLogEx(FAILED, "Update ... : " _RED_("failed"));
+        }
+    }
+
+    // If all went well getval will be true, so read the current value and display
+    if (getval) {
+        int32_t readvalue;
+        int res = -1;
+
+        if (action == 4) {
+            res = PM3_SUCCESS; // alread have data from command line
+        } else {
+            res =  mfReadBlock(blockno, keytype, key, data);
+        }
+
+        if (res == PM3_SUCCESS) {
+            if (mfc_value(data, &readvalue))  {
+                PrintAndLogEx(SUCCESS, "Dec ...... : " _YELLOW_("%" PRIi32), readvalue);
+                PrintAndLogEx(SUCCESS, "Hex ...... : " _YELLOW_("0x%" PRIX32), readvalue);
+            } else {
+                PrintAndLogEx(FAILED, "No value block detected");
+            }
+        } else {
+                PrintAndLogEx(FAILED, "failed to read value block");
+        }
+    }
+
     return PM3_SUCCESS;
 }
 
@@ -6346,7 +6520,7 @@ static command_t CommandTable[] = {
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},
     {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE Classic binary file to BLANK tag"},
     {"setmod",      CmdHf14AMfSetMod,       IfPm3Iso14443a,  "Set MIFARE Classic EV1 load modulation strength"},
-    {"value",       CmdHF14AMfValue,        AlwaysAvailable, "Decode a value block"},
+    {"value",       CmdHF14AMfValue,        AlwaysAvailable, "Value blocks"},
     {"view",        CmdHF14AMfView,         AlwaysAvailable, "Display content from tag dump file"},
     {"wipe",        CmdHF14AMfWipe,         IfPm3Iso14443a,  "Wipe card to zeros and default keys/acc"},
     {"wrbl",        CmdHF14AMfWrBl,         IfPm3Iso14443a,  "Write MIFARE Classic block"},

@@ -446,6 +446,70 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     set_tracing(false);
 }
 
+void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
+    // params
+    uint8_t blockNo = arg0;
+    uint8_t keyType = arg1;
+    uint64_t ui64Key = 0;
+    uint8_t blockdata[16] = {0x00};
+
+    ui64Key = bytes_to_num(datain, 6);
+    memcpy(blockdata, datain + 10, 16);
+
+    // variables
+    uint8_t action = datain[9];
+    uint8_t isOK = 0;
+    uint8_t uid[10] = {0x00};
+    uint32_t cuid = 0;
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs;
+    pcs = &mpcs;
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
+    clear_trace();
+    set_tracing(true);
+
+    LED_A_ON();
+    LED_B_OFF();
+    LED_C_OFF();
+
+    while (true) {
+        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
+            break;
+        };
+
+        if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
+            break;
+        };
+
+        if (mifare_classic_value(pcs, cuid, blockNo, blockdata, action)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+            break;
+        };
+
+        if (mifare_classic_halt(pcs, cuid)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Halt error");
+            break;
+        };
+
+        isOK = 1;
+        break;
+    }
+
+    crypto1_deinit(pcs);
+
+    if (g_dbglevel >= 2) DbpString("WRITE BLOCK FINISHED");
+
+    reply_mix(CMD_ACK, isOK, 0, 0, 0, 0);
+
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+    set_tracing(false);
+}
+
 // Arg0   : Block to write to.
 // Arg1   : 0 = use no authentication.
 //          1 = use 0x1A authentication.

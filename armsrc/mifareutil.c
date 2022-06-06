@@ -456,6 +456,67 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     return 0;
 }
 
+int mifare_classic_value(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData, uint8_t action) {
+    // variables
+    uint16_t len = 0;
+    uint32_t pos = 0;
+    uint8_t par[3] = {0x00, 0x00, 0x00}; // enough for 18 Bytes to send
+    uint8_t res = 0;
+
+    uint8_t d_block[18], d_block_enc[18];
+    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+    uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
+
+    uint8_t command = MIFARE_CMD_INC;
+    
+    if (action == 0x01) 
+        command = MIFARE_CMD_DEC;
+
+    // Send increment or decrement command
+    len = mifare_sendcmd_short(pcs, 1, command, blockNo, receivedAnswer, receivedAnswerPar, NULL);
+
+    if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+        return 1;
+    }
+
+    memcpy(d_block, blockData, 4);
+    AddCrc14A(d_block, 4);
+
+    // crypto
+    for (pos = 0; pos < 6; pos++) {
+        d_block_enc[pos] = crypto1_byte(pcs, 0x00, 0) ^ d_block[pos];
+        par[pos >> 3] |= (((filter(pcs->odd) ^ oddparity8(d_block[pos])) & 0x01) << (7 - (pos & 0x0007)));
+    }
+
+    ReaderTransmitPar(d_block_enc, 6, par, NULL);
+
+    // Receive the response NO Response means OK ... i.e. NOT NACK
+    len = ReaderReceive(receivedAnswer, receivedAnswerPar);
+
+    if (len != 0) { // Something not right, len == 0 (no response is ok as its waiting for transfer
+        res = 0;
+        res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 0)) << 0;
+        res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 1)) << 1;
+        res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 2)) << 2;
+        res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 3)) << 3;
+
+        if ((len != 1) || (res != 0x0A)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd send data2 Error: %02x", res);
+            return 2;
+        }
+    } else {
+        // send trnasfer (commit the change)
+        len = mifare_sendcmd_short(pcs, 1, MIFARE_CMD_TRANSFER, blockNo, receivedAnswer, receivedAnswerPar, NULL);
+        if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+                return 1;
+        }
+    }
+
+    return 0;
+}
+
 int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
     // variables
     uint16_t len = 0;
