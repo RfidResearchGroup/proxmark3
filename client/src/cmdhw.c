@@ -427,8 +427,10 @@ static int CmdDbg(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw dbg",
                   "Set device side debug level output.\n"
-                  "Note: option -4, this option may cause malfunction itself",
-                  "hw dbg -1\n"
+                  "Note: option `-4`, this option may cause malfunction itself by\n"
+                  "introducing delays in time critical functions like simulation or sniffing",
+                  "hw dbg    --> get current log level\n"
+                  "hw dbg -1 --> set log level to _error_\n"
                  );
 
     void *argtable[] = {
@@ -453,19 +455,52 @@ static int CmdDbg(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t dbg = 0;
-    if (lv0)
-        dbg = 0;
-    else if (lv1)
-        dbg = 1;
-    else if (lv2)
-        dbg = 2;
-    else if (lv3)
-        dbg = 3;
-    else if (lv4)
-        dbg = 4;
+    clearCommandBuffer();
+    SendCommandNG(CMD_GET_DBGMODE, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_GET_DBGMODE, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "Failed to get current device debug level");
+        return PM3_ETIMEOUT;
+    }
+    uint8_t curr = resp.data.asBytes[0];
 
-    SendCommandNG(CMD_SET_DBGMODE, &dbg, sizeof(dbg));
+    char dbglvlstr[20] = {0};
+    switch (curr) {
+        case DBG_NONE:
+            sprintf(dbglvlstr, "none");
+            break;
+        case DBG_ERROR:
+            sprintf(dbglvlstr, "error");
+            break;
+        case DBG_INFO:
+            sprintf(dbglvlstr, "info");
+            break;
+        case DBG_DEBUG:
+            sprintf(dbglvlstr, "debug");
+            break;
+        case DBG_EXTENDED:
+            sprintf(dbglvlstr, "extended");
+            break;
+    }
+    PrintAndLogEx(INFO, "  Current debug log level..... %d ( " _YELLOW_("%s")" )", curr, dbglvlstr);
+
+
+    if ((lv0 + lv1 + lv2 + lv3 + lv4) == 1) {
+        uint8_t dbg = 0;
+        if (lv0)
+            dbg = 0;
+        else if (lv1)
+            dbg = 1;
+        else if (lv2)
+            dbg = 2;
+        else if (lv3)
+            dbg = 3;
+        else if (lv4)
+            dbg = 4;
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_SET_DBGMODE, &dbg, sizeof(dbg));
+    }
     return PM3_SUCCESS;
 }
 

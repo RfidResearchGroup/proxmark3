@@ -782,6 +782,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_SET_DBGMODE, PM3_SUCCESS, NULL, 0);
             break;
         }
+        case CMD_GET_DBGMODE: {
+            reply_ng(CMD_GET_DBGMODE, PM3_SUCCESS, (uint8_t *)&g_dbglevel, 1);
+            break;
+        }
         case CMD_SET_TEAROFF: {
             struct p {
                 uint16_t delay_us;
@@ -860,6 +864,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 bool     verbose : 1;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
+
             uint32_t bits = SniffLF(payload->verbose, payload->samples, true);
             reply_ng(CMD_LF_SNIFF_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
