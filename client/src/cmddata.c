@@ -2235,7 +2235,7 @@ int CmdSave(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data save",
-                  "Save trace from graph window , i.e. the GraphBuffer\n"
+                  "Save signal trace from graph window , i.e. the GraphBuffer\n"
                   "This is a text file with number -127 to 127.  With the option `w` you can save it as wave file\n"
                   "Filename should be without file extension",
                   "data save -f myfilename         -> save graph buffer to file\n"
@@ -2256,8 +2256,12 @@ int CmdSave(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     // CLIGetStrWithReturn(ctx, 2, (uint8_t *)filename, &fnlen);
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-
     CLIParserFree(ctx);
+
+    if (g_GraphTraceLen == 0) {
+        PrintAndLogEx(WARNING, "Graphbuffer is empty, nothing to save");
+        return PM3_SUCCESS;
+    }
 
     if (as_wave)
         return saveFileWAVE(filename, g_GraphBuffer, g_GraphTraceLen);
