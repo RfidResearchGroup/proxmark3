@@ -372,11 +372,15 @@ static int CmdHFFidoRegister(const char *cmd) {
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "auth command: ");
     char command[500] = {0};
-    sprintf(command, "hf fido auth --kh %s", sprint_hex_inrow(&buf[67], keyHandleLen));
-    if (chlen)
-        sprintf(command + strlen(command), " --%s %s", cpplain ? "cp" : "cpx", cpplain ? (char *)cdata : sprint_hex_inrow(cdata, 32));
-    if (applen)
-        sprintf(command + strlen(command), " --%s %s", applain ? "cp" : "cpx", applain ? (char *)adata : sprint_hex_inrow(adata, 32));
+    snprintf(command, sizeof(command), "hf fido auth --kh %s", sprint_hex_inrow(&buf[67], keyHandleLen));
+    if (chlen) {
+        size_t command_len = strlen(command);
+        snprintf(command + command_len, sizeof(command) - command_len, " --%s %s", cpplain ? "cp" : "cpx", cpplain ? (char *)cdata : sprint_hex_inrow(cdata, 32));
+    }
+    if (applen) {
+        size_t command_len = strlen(command);
+        snprintf(command + command_len, sizeof(command) - command_len, " --%s %s", applain ? "cp" : "cpx", applain ? (char *)adata : sprint_hex_inrow(adata, 32));
+    }
     PrintAndLogEx(INFO, "%s", command);
 
     if (root) {
