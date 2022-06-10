@@ -634,7 +634,8 @@ static int CmdHF14ACUIDs(const char *Cmd) {
         } else {
             char uid_string[20];
             for (uint16_t m = 0; m < card->uidlen; m++) {
-                sprintf(&uid_string[2 * m], "%02X", card->uid[m]);
+                int offset = 2 * m;
+                snprintf(uid_string + offset, sizeof(uid_string) - offset, "%02X", card->uid[m]);
             }
             PrintAndLogEx(SUCCESS, "%s", uid_string);
         }
@@ -1377,7 +1378,8 @@ static int waitCmd(bool i_select, uint32_t timeout, bool verbose) {
             bool crc = check_crc(CRC_14443_A, data, len);
 
             char s[16];
-            sprintf(s,
+            snprintf(s,
+                    sizeof(s),
                     (crc) ? _GREEN_("%02X %02X") : _RED_("%02X %02X"),
                     data[len - 2],
                     data[len - 1]

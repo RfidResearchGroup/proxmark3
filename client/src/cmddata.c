@@ -1967,11 +1967,11 @@ int CmdTuneSamples(const char *Cmd) {
     memset(judgement, 0, sizeof(judgement));
     // LF evaluation
     if (package->peak_v < LF_UNUSABLE_V)
-        sprintf(judgement, _RED_("UNUSABLE"));
+        snprintf(judgement, sizeof(judgement), _RED_("UNUSABLE"));
     else if (package->peak_v < LF_MARGINAL_V)
-        sprintf(judgement, _YELLOW_("MARGINAL"));
+        snprintf(judgement, sizeof(judgement), _YELLOW_("MARGINAL"));
     else
-        sprintf(judgement, _GREEN_("OK"));
+        snprintf(judgement, sizeof(judgement), _GREEN_("OK"));
 
     PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna is %s", judgement);
 
@@ -1988,11 +1988,11 @@ int CmdTuneSamples(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", hfq);
     }
     if (package->v_hf < HF_UNUSABLE_V)
-        sprintf(judgement, _RED_("UNUSABLE"));
+        snprintf(judgement, sizeof(judgement), _RED_("UNUSABLE"));
     else if (package->v_hf < HF_MARGINAL_V)
-        sprintf(judgement, _YELLOW_("MARGINAL"));
+        snprintf(judgement, sizeof(judgement), _YELLOW_("MARGINAL"));
     else
-        sprintf(judgement, _GREEN_("OK"));
+        snprintf(judgement, sizeof(judgement), _GREEN_("OK"));
 
     PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna is %s", judgement);
     PrintAndLogEx(NORMAL, "\n(*) Q factor must be measured without tag on the antenna");
@@ -3094,23 +3094,28 @@ static int CmdDiff(const char *Cmd) {
                 char ca = inA[j];
                 char cb = inB[j];
 
+                int dlnALen = strlen(dlnA);
+                int dlnBLen = strlen(dlnB);
+                int dlnAiiLen = strlen(dlnAii);
+                int dlnBiiLen = strlen(dlnBii);
+
                 if (inA[j] != inB[j]) {
 
                     // diff / add colors
-                    sprintf(dlnA + strlen(dlnA), _GREEN_("%02X "), inA[j]);
-                    sprintf(dlnB + strlen(dlnB), _RED_("%02X "), inB[j]);
-                    sprintf(dlnAii + strlen(dlnAii), _GREEN_("%c"), ((ca < 32) || (ca == 127)) ? '.' : ca);
-                    sprintf(dlnBii + strlen(dlnBii), _RED_("%c"), ((cb < 32) || (cb == 127)) ? '.' : cb);
+                    snprintf(dlnA + dlnALen, sizeof(dlnA) - dlnALen, _GREEN_("%02X "), inA[j]);
+                    snprintf(dlnB + dlnBLen, sizeof(dlnB) - dlnBLen, _RED_("%02X "), inB[j]);
+                    snprintf(dlnAii + dlnAiiLen, sizeof(dlnAii) - dlnAiiLen, _GREEN_("%c"), ((ca < 32) || (ca == 127)) ? '.' : ca);
+                    snprintf(dlnBii + dlnBiiLen, sizeof(dlnBii) - dlnBiiLen, _RED_("%c"), ((cb < 32) || (cb == 127)) ? '.' : cb);
 
                 } else {
                     // normal
-                    sprintf(dlnA + strlen(dlnA), "%02X ", inA[j]);
-                    sprintf(dlnB + strlen(dlnB), "%02X ", inB[j]);
-                    sprintf(dlnAii + strlen(dlnAii), "%c", ((ca < 32) || (ca == 127)) ? '.' : ca);
-                    sprintf(dlnBii + strlen(dlnBii), "%c", ((cb < 32) || (cb == 127)) ? '.' : cb);
+                    snprintf(dlnA + dlnALen, sizeof(dlnA) - dlnALen, "%02X ", inA[j]);
+                    snprintf(dlnB + dlnBLen, sizeof(dlnB) - dlnBLen, "%02X ", inB[j]);
+                    snprintf(dlnAii + dlnAiiLen, sizeof(dlnAii) - dlnAiiLen, "%c", ((ca < 32) || (ca == 127)) ? '.' : ca);
+                    snprintf(dlnBii + dlnBiiLen, sizeof(dlnBii) - dlnBiiLen, "%c", ((cb < 32) || (cb == 127)) ? '.' : cb);
                 }
             }
-            sprintf(line, "%s%s | %s%s", dlnA, dlnAii, dlnB, dlnBii);
+            snprintf(line, sizeof(line), "%s%s | %s%s", dlnA, dlnAii, dlnB, dlnBii);
         }
         PrintAndLogEx(INFO, "%03X | %s", i, line);
     }

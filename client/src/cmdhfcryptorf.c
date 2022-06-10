@@ -410,8 +410,7 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
 
     if (fnlen < 1) {
         PrintAndLogEx(INFO, "Using UID as filename");
-        char *fptr = filename;
-        fptr += sprintf(fptr, "hf-cryptorf-");
+        char *fptr = filename + snprintf(filename, sizeof(filename), "hf-cryptorf-");
         FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
     }
 
@@ -524,8 +523,7 @@ static int CmdHFCryptoRFESave(const char *Cmd) {
     // user supplied filename?
     if (fnlen < 1) {
         PrintAndLogEx(INFO, "Using UID as filename");
-        char *fptr = filename;
-        fptr += sprintf(fptr, "hf-cryptorf-");
+        char *fptr = filename + snprintf(filename, sizeof(filename), "hf-cryptorf-");
         FillFileNameByUID(fptr, data, "-dump", 4);
     }
 

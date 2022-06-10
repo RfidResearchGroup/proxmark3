@@ -1406,9 +1406,9 @@ static int CmdHF15Dump(const char *Cmd) {
     for (int i = 0; i < blocknum; i++) {
         char lck[16] = {0};
         if (mem[i].lock) {
-            sprintf(lck, _RED_("%d"), mem[i].lock);
+            snprintf(lck, sizeof(lck), _RED_("%d"), mem[i].lock);
         } else {
-            sprintf(lck, "%d", mem[i].lock);
+            snprintf(lck, sizeof(lck), "%d", mem[i].lock);
         }
         PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s"
                       , i
@@ -1624,9 +1624,9 @@ static int CmdHF15Readmulti(const char *Cmd) {
     for (int i = start; i < stop; i += 5) {
         char lck[16] = {0};
         if (data[i]) {
-            sprintf(lck, _RED_("%d"), data[i]);
+            snprintf(lck, sizeof(lck), _RED_("%d"), data[i]);
         } else {
-            sprintf(lck, "%d", data[i]);
+            snprintf(lck, sizeof(lck), "%d", data[i]);
         }
         PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s", currblock, currblock, sprint_hex(data + i + 1, 4), lck, sprint_ascii(data + i + 1, 4));
         currblock++;
@@ -1746,9 +1746,9 @@ static int CmdHF15Readblock(const char *Cmd) {
     // print response
     char lck[16] = {0};
     if (data[1]) {
-        sprintf(lck, _RED_("%d"), data[1]);
+        snprintf(lck, sizeof(lck), _RED_("%d"), data[1]);
     } else {
-        sprintf(lck, "%d", data[1]);
+        snprintf(lck, sizeof(lck), "%d", data[1]);
     }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "      #%3d  |lck| ascii", block);

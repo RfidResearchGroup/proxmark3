@@ -494,48 +494,31 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
 }
 
 // get SRx chip model (from UID) // from ST Microelectronics
-static char *get_st_chip_model(uint8_t data) {
-    static char model[20];
-    char *retStr = model;
-    memset(model, 0, sizeof(model));
-
+static const char *get_st_chip_model(uint8_t data) {
     switch (data) {
         case 0x0:
-            sprintf(retStr, "SRIX4K (Special)");
-            break;
+            return "SRIX4K (Special)";
         case 0x2:
-            sprintf(retStr, "SR176");
-            break;
+            return "SR176";
         case 0x3:
-            sprintf(retStr, "SRIX4K");
-            break;
+            return "SRIX4K";
         case 0x4:
-            sprintf(retStr, "SRIX512");
-            break;
+            return "SRIX512";
         case 0x6:
-            sprintf(retStr, "SRI512");
-            break;
+            return "SRI512";
         case 0x7:
-            sprintf(retStr, "SRI4K");
-            break;
+            return "SRI4K";
         case 0xC:
-            sprintf(retStr, "SRT512");
-            break;
+            return "SRT512";
         default :
-            sprintf(retStr, "Unknown");
-            break;
+            return "Unknown";
     }
-    return retStr;
 }
 
-static char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uint8_t blk) {
-
-    static char str[16];
-    char *s = str;
-    sprintf(s, " ");
-
+#define ST_LOCK_INFO_EMPTY " "
+static const char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uint8_t blk) {
     if (blk > 15) {
-        return s;
+        return ST_LOCK_INFO_EMPTY;
     }
 
     uint8_t mask = 0;
@@ -571,12 +554,12 @@ static char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uint8_t b
                     mask = 0x80;
                     break;
                 default:
-                    return s;
+                    return ST_LOCK_INFO_EMPTY;
             }
             if ((lockbytes[1] & mask) == 0) {
-                sprintf(s, _RED_("1"));
+                return _RED_("1");
             }
-            return s;
+            return ST_LOCK_INFO_EMPTY;
         }
         case 0x4:   // SRIX512
         case 0x6:   // SRI512
@@ -642,9 +625,9 @@ static char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uint8_t b
                     break;
             }
             if ((lockbytes[b] & mask) == 0) {
-                sprintf(s, _RED_("1"));
+                return _RED_("1");
             }
-            return s;
+            return ST_LOCK_INFO_EMPTY;
         }
         case 0x2: {  // SR176
             //need data[2]
@@ -684,14 +667,14 @@ static char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uint8_t b
             }
             // iceman:  this is opposite!  need sample to test with.
             if ((lockbytes[0] & mask)) {
-                sprintf(s, _RED_("1"));
+                return _RED_("1");
             }
-            return s;
+            return ST_LOCK_INFO_EMPTY;
         }
         default:
             break;
     }
-    return s;
+    return ST_LOCK_INFO_EMPTY;
 }
 
 static uint8_t get_st_chipid(const uint8_t *uid) {
@@ -1258,7 +1241,7 @@ static int CmdHF14BWriteSri(const char *Cmd) {
 
     char str[36];
     memset(str, 0x00, sizeof(str));
-    sprintf(str, "--sr -c --data %02x%02x%02x%02x%02x%02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
+    snprintf(str, sizeof(str), "--sr -c --data %02x%02x%02x%02x%02x%02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
     return CmdHF14BCmdRaw(str);
 }
 
@@ -1439,8 +1422,7 @@ static int CmdHF14BDump(const char *Cmd) {
     // save to file
     if (fnlen < 1) {
         PrintAndLogEx(INFO, "using UID as filename");
-        char *fptr = filename;
-        fptr += sprintf(fptr, "hf-14b-");
+        char *fptr = filename + snprintf(filename, sizeof(filename), "hf-14b-");
         FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
     }
 
