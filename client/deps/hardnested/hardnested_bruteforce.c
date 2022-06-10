@@ -173,8 +173,8 @@ crack_states_thread(void *x) {
 
                 char progress_text[80];
                 char keystr[19];
-                sprintf(keystr, "%012" PRIX64 "  ", key);
-                sprintf(progress_text, "Brute force phase completed.  Key found: " _GREEN_("%s"), keystr);
+                snprintf(keystr, sizeof(keystr), "%012" PRIX64 "  ", key);
+                snprintf(progress_text, sizeof(progress_text), "Brute force phase completed.  Key found: " _GREEN_("%s"), keystr);
                 hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, 0.0, 0);
                 break;
             } else if (keys_found) {
@@ -182,7 +182,7 @@ crack_states_thread(void *x) {
             } else {
                 if (!thread_arg->silent) {
                     char progress_text[80];
-                    sprintf(progress_text, "Brute force phase: %6.02f%%\t", 100.0 * (float)num_keys_tested / (float)(thread_arg->maximum_states));
+                    snprintf(progress_text, sizeof(progress_text), "Brute force phase: %6.02f%%\t", 100.0 * (float)num_keys_tested / (float)(thread_arg->maximum_states));
                     float remaining_bruteforce = thread_arg->nonces[thread_arg->best_first_bytes[0]].expected_num_brute_force - (float)num_keys_tested / 2;
                     hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, remaining_bruteforce, 5000);
                 }

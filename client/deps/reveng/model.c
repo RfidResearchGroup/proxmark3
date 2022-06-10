@@ -107,7 +107,7 @@ char *mtostr(const model_t *model) {
     checkstr = ptostr(model->check, P_RTJUST, 4);
     magicstr = ptostr(model->magic, P_RTJUST, 4);
 
-    sprintf(strbuf, "%lu", plen(model->spoly));
+    snprintf(strbuf, sizeof(strbuf), "%lu", plen(model->spoly));
     size =
         82
         + strlen(strbuf)
@@ -120,26 +120,26 @@ char *mtostr(const model_t *model) {
         + (magicstr && *magicstr ? strlen(magicstr) : 6)
         + (model->name && *model->name ? 2 + strlen(model->name) : 6);
     if ((string = calloc(size, sizeof(uint8_t)))) {
-        sprintf(strbuf, "\"%s\"", model->name);
-        sprintf(string,
-                "width=%lu  "
-                "poly=0x%s  "
-                "init=0x%s  "
-                "refin=%s  "
-                "refout=%s  "
-                "xorout=0x%s  "
-                "check=0x%s  "
-                "residue=0x%s  "
-                "name=%s",
-                plen(model->spoly),
-                polystr && *polystr ? polystr : "(none)",
-                initstr && *initstr ? initstr :  "(none)",
-                (model->flags & P_REFIN) ? "true" : "false",
-                (model->flags & P_REFOUT) ? "true" : "false",
-                xorotstr && *xorotstr ? xorotstr : "(none)",
-                checkstr && *checkstr ? checkstr : "(none)",
-                magicstr && *magicstr ? magicstr : "(none)",
-                (model->name && *model->name) ? strbuf : "(none)");
+        snprintf(strbuf, sizeof(strbuf), "\"%s\"", model->name);
+        snprintf(string, size * sizeof(uint8_t),
+                 "width=%lu  "
+                 "poly=0x%s  "
+                 "init=0x%s  "
+                 "refin=%s  "
+                 "refout=%s  "
+                 "xorout=0x%s  "
+                 "check=0x%s  "
+                 "residue=0x%s  "
+                 "name=%s",
+                 plen(model->spoly),
+                 polystr && *polystr ? polystr : "(none)",
+                 initstr && *initstr ? initstr :  "(none)",
+                 (model->flags & P_REFIN) ? "true" : "false",
+                 (model->flags & P_REFOUT) ? "true" : "false",
+                 xorotstr && *xorotstr ? xorotstr : "(none)",
+                 checkstr && *checkstr ? checkstr : "(none)",
+                 magicstr && *magicstr ? magicstr : "(none)",
+                 (model->name && *model->name) ? strbuf : "(none)");
     }
     free(polystr);
     free(initstr);
