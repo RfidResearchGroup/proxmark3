@@ -386,7 +386,7 @@ static int CmdUsartBtPin(const char *Cmd) {
     }
 
     char string[6 + sizeof(pin)] = {0};
-    sprintf(string, "AT+PIN%s", pin);
+    snprintf(string, sizeof(string), "AT+PIN%s", pin);
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     size_t len = 0;
     int ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 600);

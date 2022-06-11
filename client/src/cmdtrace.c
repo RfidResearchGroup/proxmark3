@@ -436,18 +436,21 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
              * we use format timestamp, newline, offset (0x000000), pseudo header, data
              * `text2pcap -t "%S." -l 264 -n <input-text-file> <output-pcapng-file>`
              */
-            char line[(hdr->data_len * 3) + 1];
-            char *ptr = &line[0];
+            size_t line_len = (hdr->data_len * 3) + 1;
+            char line[line_len];
+            char *ptr = line;
 
             for (int i = 0; i < hdr->data_len ; i++) {
-                ptr += sprintf(ptr, "%02x ", hdr->frame[i]);
+                int n = snprintf(ptr, line_len, "%02x ", hdr->frame[i]);
+                ptr += n;
+                line_len -= n;
             }
 
             char data_len_str[5];
             char temp_str1[3] = {0};
             char temp_str2[3] = {0};
 
-            sprintf(data_len_str, "%04x", hdr->data_len);
+            snprintf(data_len_str, sizeof(data_len_str), "%04x", hdr->data_len);
             memmove(temp_str1, data_len_str, 2);
             memmove(temp_str2, data_len_str + 2, 2);
 
@@ -572,11 +575,11 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     if (data_len == 0) {
         if (protocol == ICLASS && duration == 2048) {
-            sprintf(line[0], "<SOF>");
+            snprintf(line[0], sizeof(line[0]), "<SOF>");
         } else if (protocol == ISO_15693 && duration == 512) {
-            sprintf(line[0], "<EOF>");
+            snprintf(line[0], sizeof(line[0]), "<EOF>");
         } else {
-            sprintf(line[0], "<empty trace - possible error>");
+            snprintf(line[0], sizeof(line[0]), "<empty trace - possible error>");
         }
     }
     uint8_t partialbytebuff = 0;
@@ -636,13 +639,15 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             char *pos1 = line[(data_len - 1) / 18] + (((data_len - 1) % 18) * 4) + offset - 1;
             (*pos1) = '[';
             char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) + offset - 2;
-            sprintf(pos2, "%c", ']');
+            (*pos2) = ']';
+            (*(pos2 + 1)) = '\0';
         } else {
             if (crcStatus == 0 || crcStatus == 1) {
                 char *pos1 = line[(data_len - 2) / 18] + (((data_len - 2) % 18) * 4) - 1;
                 (*pos1) = '[';
                 char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) - 1;
-                sprintf(pos2, "%c", ']');
+                (*pos2) = ']';
+                (*(pos2 + 1)) = '\0';
             }
         }
     }
