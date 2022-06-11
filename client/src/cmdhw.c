@@ -93,6 +93,9 @@ static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
         case 0x27050240:
             asBuff = "AT91SAM7S16 Rev A";
             break;
+        default:
+            asBuff = "Unknown";
+            break;
     }
     PrintAndLogEx(NORMAL, "    MCU....... " _YELLOW_("%s"), asBuff);
 
