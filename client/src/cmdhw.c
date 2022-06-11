@@ -37,62 +37,61 @@
 static int CmdHelp(const char *Cmd);
 
 static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
-    char asBuff[120];
-    memset(asBuff, 0, sizeof(asBuff));
+    const char *asBuff;
     switch (iChipID) {
         case 0x270B0A40:
-            sprintf(asBuff, "AT91SAM7S512 Rev A");
+            asBuff = "AT91SAM7S512 Rev A";
             break;
         case 0x270B0A4F:
-            sprintf(asBuff, "AT91SAM7S512 Rev B");
+            asBuff = "AT91SAM7S512 Rev B";
             break;
         case 0x270D0940:
-            sprintf(asBuff, "AT91SAM7S256 Rev A");
+            asBuff = "AT91SAM7S256 Rev A";
             break;
         case 0x270B0941:
-            sprintf(asBuff, "AT91SAM7S256 Rev B");
+            asBuff = "AT91SAM7S256 Rev B";
             break;
         case 0x270B0942:
-            sprintf(asBuff, "AT91SAM7S256 Rev C");
+            asBuff = "AT91SAM7S256 Rev C";
             break;
         case 0x270B0943:
-            sprintf(asBuff, "AT91SAM7S256 Rev D");
+            asBuff = "AT91SAM7S256 Rev D";
             break;
         case 0x270C0740:
-            sprintf(asBuff, "AT91SAM7S128 Rev A");
+            asBuff = "AT91SAM7S128 Rev A";
             break;
         case 0x270A0741:
-            sprintf(asBuff, "AT91SAM7S128 Rev B");
+            asBuff = "AT91SAM7S128 Rev B";
             break;
         case 0x270A0742:
-            sprintf(asBuff, "AT91SAM7S128 Rev C");
+            asBuff = "AT91SAM7S128 Rev C";
             break;
         case 0x270A0743:
-            sprintf(asBuff, "AT91SAM7S128 Rev D");
+            asBuff = "AT91SAM7S128 Rev D";
             break;
         case 0x27090540:
-            sprintf(asBuff, "AT91SAM7S64 Rev A");
+            asBuff = "AT91SAM7S64 Rev A";
             break;
         case 0x27090543:
-            sprintf(asBuff, "AT91SAM7S64 Rev B");
+            asBuff = "AT91SAM7S64 Rev B";
             break;
         case 0x27090544:
-            sprintf(asBuff, "AT91SAM7S64 Rev C");
+            asBuff = "AT91SAM7S64 Rev C";
             break;
         case 0x27080342:
-            sprintf(asBuff, "AT91SAM7S321 Rev A");
+            asBuff = "AT91SAM7S321 Rev A";
             break;
         case 0x27080340:
-            sprintf(asBuff, "AT91SAM7S32 Rev A");
+            asBuff = "AT91SAM7S32 Rev A";
             break;
         case 0x27080341:
-            sprintf(asBuff, "AT91SAM7S32 Rev B");
+            asBuff = "AT91SAM7S32 Rev B";
             break;
         case 0x27050241:
-            sprintf(asBuff, "AT9SAM7S161 Rev A");
+            asBuff = "AT9SAM7S161 Rev A";
             break;
         case 0x27050240:
-            sprintf(asBuff, "AT91SAM7S16 Rev A");
+            asBuff = "AT91SAM7S16 Rev A";
             break;
     }
     PrintAndLogEx(NORMAL, "    MCU....... " _YELLOW_("%s"), asBuff);
@@ -140,210 +139,224 @@ static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
 }
 
 static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
-    char asBuff[120];
-    memset(asBuff, 0, sizeof(asBuff));
+    const char *asBuff;
     uint32_t mem_avail = 0;
     PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Hardware") " ]");
 
     switch (iChipID) {
         case 0x270B0A40:
-            sprintf(asBuff, "AT91SAM7S512 Rev A");
+            asBuff = "AT91SAM7S512 Rev A";
             break;
         case 0x270B0A4F:
-            sprintf(asBuff, "AT91SAM7S512 Rev B");
+            asBuff = "AT91SAM7S512 Rev B";
             break;
         case 0x270D0940:
-            sprintf(asBuff, "AT91SAM7S256 Rev A");
+            asBuff = "AT91SAM7S256 Rev A";
             break;
         case 0x270B0941:
-            sprintf(asBuff, "AT91SAM7S256 Rev B");
+            asBuff = "AT91SAM7S256 Rev B";
             break;
         case 0x270B0942:
-            sprintf(asBuff, "AT91SAM7S256 Rev C");
+            asBuff = "AT91SAM7S256 Rev C";
             break;
         case 0x270B0943:
-            sprintf(asBuff, "AT91SAM7S256 Rev D");
+            asBuff = "AT91SAM7S256 Rev D";
             break;
         case 0x270C0740:
-            sprintf(asBuff, "AT91SAM7S128 Rev A");
+            asBuff = "AT91SAM7S128 Rev A";
             break;
         case 0x270A0741:
-            sprintf(asBuff, "AT91SAM7S128 Rev B");
+            asBuff = "AT91SAM7S128 Rev B";
             break;
         case 0x270A0742:
-            sprintf(asBuff, "AT91SAM7S128 Rev C");
+            asBuff = "AT91SAM7S128 Rev C";
             break;
         case 0x270A0743:
-            sprintf(asBuff, "AT91SAM7S128 Rev D");
+            asBuff = "AT91SAM7S128 Rev D";
             break;
         case 0x27090540:
-            sprintf(asBuff, "AT91SAM7S64 Rev A");
+            asBuff = "AT91SAM7S64 Rev A";
             break;
         case 0x27090543:
-            sprintf(asBuff, "AT91SAM7S64 Rev B");
+            asBuff = "AT91SAM7S64 Rev B";
             break;
         case 0x27090544:
-            sprintf(asBuff, "AT91SAM7S64 Rev C");
+            asBuff = "AT91SAM7S64 Rev C";
             break;
         case 0x27080342:
-            sprintf(asBuff, "AT91SAM7S321 Rev A");
+            asBuff = "AT91SAM7S321 Rev A";
             break;
         case 0x27080340:
-            sprintf(asBuff, "AT91SAM7S32 Rev A");
+            asBuff = "AT91SAM7S32 Rev A";
             break;
         case 0x27080341:
-            sprintf(asBuff, "AT91SAM7S32 Rev B");
+            asBuff = "AT91SAM7S32 Rev B";
             break;
         case 0x27050241:
-            sprintf(asBuff, "AT9SAM7S161 Rev A");
+            asBuff = "AT9SAM7S161 Rev A";
             break;
         case 0x27050240:
-            sprintf(asBuff, "AT91SAM7S16 Rev A");
+            asBuff = "AT91SAM7S16 Rev A";
+            break;
+        default:
+            asBuff = "Unknown";
             break;
     }
     PrintAndLogEx(NORMAL, "  --= uC: " _YELLOW_("%s"), asBuff);
 
     switch ((iChipID & 0xE0) >> 5) {
         case 1:
-            sprintf(asBuff, "ARM946ES");
+            asBuff = "ARM946ES";
             break;
         case 2:
-            sprintf(asBuff, "ARM7TDMI");
+            asBuff = "ARM7TDMI";
             break;
         case 4:
-            sprintf(asBuff, "ARM920T");
+            asBuff = "ARM920T";
             break;
         case 5:
-            sprintf(asBuff, "ARM926EJS");
+            asBuff = "ARM926EJS";
+            break;
+        default:
+            asBuff = "Unknown";
             break;
     }
     PrintAndLogEx(NORMAL, "  --= Embedded Processor: %s", asBuff);
 
     switch ((iChipID & 0xF0000) >> 16) {
         case 1:
-            sprintf(asBuff, "1K bytes");
+            asBuff = "1K bytes";
             break;
         case 2:
-            sprintf(asBuff, "2K bytes");
+            asBuff = "2K bytes";
             break;
         case 3:
-            sprintf(asBuff, "6K bytes");
+            asBuff = "6K bytes";
             break;
         case 4:
-            sprintf(asBuff, "112K bytes");
+            asBuff = "112K bytes";
             break;
         case 5:
-            sprintf(asBuff, "4K bytes");
+            asBuff = "4K bytes";
             break;
         case 6:
-            sprintf(asBuff, "80K bytes");
+            asBuff = "80K bytes";
             break;
         case 7:
-            sprintf(asBuff, "160K bytes");
+            asBuff = "160K bytes";
             break;
         case 8:
-            sprintf(asBuff, "8K bytes");
+            asBuff = "8K bytes";
             break;
         case 9:
-            sprintf(asBuff, "16K bytes");
+            asBuff = "16K bytes";
             break;
         case 10:
-            sprintf(asBuff, "32K bytes");
+            asBuff = "32K bytes";
             break;
         case 11:
-            sprintf(asBuff, "64K bytes");
+            asBuff = "64K bytes";
             break;
         case 12:
-            sprintf(asBuff, "128K bytes");
+            asBuff = "128K bytes";
             break;
         case 13:
-            sprintf(asBuff, "256K bytes");
+            asBuff = "256K bytes";
             break;
         case 14:
-            sprintf(asBuff, "96K bytes");
+            asBuff = "96K bytes";
             break;
         case 15:
-            sprintf(asBuff, "512K bytes");
+            asBuff = "512K bytes";
+            break;
+        default:
+            asBuff = "Unknown";
             break;
     }
     PrintAndLogEx(NORMAL, "  --= Internal SRAM size: %s", asBuff);
 
     switch ((iChipID & 0xFF00000) >> 20) {
         case 0x19:
-            sprintf(asBuff, "AT91SAM9xx Series");
+            asBuff = "AT91SAM9xx Series";
             break;
         case 0x29:
-            sprintf(asBuff, "AT91SAM9XExx Series");
+            asBuff = "AT91SAM9XExx Series";
             break;
         case 0x34:
-            sprintf(asBuff, "AT91x34 Series");
+            asBuff = "AT91x34 Series";
             break;
         case 0x37:
-            sprintf(asBuff, "CAP7 Series");
+            asBuff = "CAP7 Series";
             break;
         case 0x39:
-            sprintf(asBuff, "CAP9 Series");
+            asBuff = "CAP9 Series";
             break;
         case 0x3B:
-            sprintf(asBuff, "CAP11 Series");
+            asBuff = "CAP11 Series";
             break;
         case 0x40:
-            sprintf(asBuff, "AT91x40 Series");
+            asBuff = "AT91x40 Series";
             break;
         case 0x42:
-            sprintf(asBuff, "AT91x42 Series");
+            asBuff = "AT91x42 Series";
             break;
         case 0x55:
-            sprintf(asBuff, "AT91x55 Series");
+            asBuff = "AT91x55 Series";
             break;
         case 0x60:
-            sprintf(asBuff, "AT91SAM7Axx Series");
+            asBuff = "AT91SAM7Axx Series";
             break;
         case 0x61:
-            sprintf(asBuff, "AT91SAM7AQxx Series");
+            asBuff = "AT91SAM7AQxx Series";
             break;
         case 0x63:
-            sprintf(asBuff, "AT91x63 Series");
+            asBuff = "AT91x63 Series";
             break;
         case 0x70:
-            sprintf(asBuff, "AT91SAM7Sxx Series");
+            asBuff = "AT91SAM7Sxx Series";
             break;
         case 0x71:
-            sprintf(asBuff, "AT91SAM7XCxx Series");
+            asBuff = "AT91SAM7XCxx Series";
             break;
         case 0x72:
-            sprintf(asBuff, "AT91SAM7SExx Series");
+            asBuff = "AT91SAM7SExx Series";
             break;
         case 0x73:
-            sprintf(asBuff, "AT91SAM7Lxx Series");
+            asBuff = "AT91SAM7Lxx Series";
             break;
         case 0x75:
-            sprintf(asBuff, "AT91SAM7Xxx Series");
+            asBuff = "AT91SAM7Xxx Series";
             break;
         case 0x92:
-            sprintf(asBuff, "AT91x92 Series");
+            asBuff = "AT91x92 Series";
             break;
         case 0xF0:
-            sprintf(asBuff, "AT75Cxx Series");
+            asBuff = "AT75Cxx Series";
+            break;
+        default:
+            asBuff = "Unknown";
             break;
     }
     PrintAndLogEx(NORMAL, "  --= Architecture identifier: %s", asBuff);
 
     switch ((iChipID & 0x70000000) >> 28) {
         case 0:
-            sprintf(asBuff, "ROM");
+            asBuff = "ROM";
             break;
         case 1:
-            sprintf(asBuff, "ROMless or on-chip Flash");
+            asBuff = "ROMless or on-chip Flash";
             break;
         case 2:
-            sprintf(asBuff, "Embedded flash memory");
+            asBuff = "Embedded flash memory";
             break;
         case 3:
-            sprintf(asBuff, "ROM and Embedded flash memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size");
+            asBuff = "ROM and Embedded flash memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size";
             break;
         case 4:
-            sprintf(asBuff, "SRAM emulating ROM");
+            asBuff = "SRAM emulating ROM";
+            break;
+        default:
+            asBuff = "Unknown";
             break;
     }
     switch ((iChipID & 0xF00) >> 8) {
@@ -388,34 +401,34 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     /*
     switch ((iChipID & 0xF000) >> 12) {
         case 0:
-            sprintf(asBuff, "None");
+            asBuff = "None");
             break;
         case 1:
-            sprintf(asBuff, "8K bytes");
+            asBuff = "8K bytes");
             break;
         case 2:
-            sprintf(asBuff, "16K bytes");
+            asBuff = "16K bytes");
             break;
         case 3:
-            sprintf(asBuff, "32K bytes");
+            asBuff = "32K bytes");
             break;
         case 5:
-            sprintf(asBuff, "64K bytes");
+            asBuff = "64K bytes");
             break;
         case 7:
-            sprintf(asBuff, "128K bytes");
+            asBuff = "128K bytes");
             break;
         case 9:
-            sprintf(asBuff, "256K bytes");
+            asBuff = "256K bytes");
             break;
         case 10:
-            sprintf(asBuff, "512K bytes");
+            asBuff = "512K bytes");
             break;
         case 12:
-            sprintf(asBuff, "1024K bytes");
+            asBuff = "1024K bytes");
             break;
         case 14:
-            sprintf(asBuff, "2048K bytes");
+            asBuff = "2048K bytes");
             break;
     }
     PrintAndLogEx(NORMAL, "  --= Second nonvolatile program memory size: %s", asBuff);
@@ -464,22 +477,25 @@ static int CmdDbg(const char *Cmd) {
     }
     uint8_t curr = resp.data.asBytes[0];
 
-    char dbglvlstr[20] = {0};
+    const char* dbglvlstr;
     switch (curr) {
         case DBG_NONE:
-            sprintf(dbglvlstr, "none");
+            dbglvlstr = "none";
             break;
         case DBG_ERROR:
-            sprintf(dbglvlstr, "error");
+            dbglvlstr = "error";
             break;
         case DBG_INFO:
-            sprintf(dbglvlstr, "info");
+            dbglvlstr = "info";
             break;
         case DBG_DEBUG:
-            sprintf(dbglvlstr, "debug");
+            dbglvlstr = "debug";
             break;
         case DBG_EXTENDED:
-            sprintf(dbglvlstr, "extended");
+            dbglvlstr = "extended";
+            break;
+        default:
+            dbglvlstr = "unknown";
             break;
     }
     PrintAndLogEx(INFO, "  Current debug log level..... %d ( " _YELLOW_("%s")" )", curr, dbglvlstr);

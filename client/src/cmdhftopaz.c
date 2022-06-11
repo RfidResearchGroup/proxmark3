@@ -388,7 +388,8 @@ static void topaz_print_dynamic_data(void) {
                 uint8_t *block_data = &topaz_tag.dynamic_memory[(blockno - 0x0F) * 8];
                 char lockbits[9];
                 for (uint16_t j = 0; j < 8; j++) {
-                    sprintf(&line[3 * j], "%02x ", block_data[j]);
+                    int offset = 3 * j;
+                    snprintf(line + offset, sizeof(line) - offset, "%02x ", block_data[j]);
                     lockbits[j] = topaz_byte_is_locked(blockno * 8 + j) ? 'y' : 'n';
                 }
                 lockbits[8] = '\0';
@@ -458,7 +459,8 @@ int CmdHFTopazInfo(const char *Cmd) {
     for (uint16_t i = 0; i <= 0x0c; i++) {
         char lockbits[9];
         for (uint16_t j = 0; j < 8; j++) {
-            sprintf(&line[3 * j], "%02x ", topaz_tag.data_blocks[i][j] /*rall_response[2 + 8*i + j]*/);
+            int offset = 3 * j;
+            snprintf(line + offset, sizeof(line) - offset, "%02x ", topaz_tag.data_blocks[i][j] /*rall_response[2 + 8*i + j]*/);
             lockbits[j] = topaz_byte_is_locked(i * 8 + j) ? 'y' : 'n';
         }
         lockbits[8] = '\0';
@@ -468,7 +470,8 @@ int CmdHFTopazInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Static Reserved block " _YELLOW_("0x0D")":");
     for (uint16_t j = 0; j < 8; j++) {
-        sprintf(&line[3 * j], "%02x ", topaz_tag.data_blocks[0x0d][j]);
+        int offset = 3 * j;
+        snprintf(line + offset, sizeof(line) - offset, "%02x ", topaz_tag.data_blocks[0x0d][j]);
     }
     PrintAndLogEx(NORMAL, "-------+--------+-------------------------+------------");
     PrintAndLogEx(NORMAL, "  0x%02x | 0x%02x   | %s|   %-3s", 0x0d, 0x0d * 8, line, "n/a");
@@ -476,7 +479,8 @@ int CmdHFTopazInfo(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Static Lockbits and OTP Bytes:");
     for (uint16_t j = 0; j < 8; j++) {
-        sprintf(&line[3 * j], "%02x ", topaz_tag.data_blocks[0x0e][j]);
+        int offset = 3 * j;
+        snprintf(line + offset, sizeof(line) - offset, "%02x ", topaz_tag.data_blocks[0x0e][j]);
     }
     PrintAndLogEx(NORMAL, "-------+--------+-------------------------+------------");
     PrintAndLogEx(NORMAL, "  0x%02x | 0x%02x   | %s|   %-3s", 0x0e, 0x0e * 8, line, "n/a");
