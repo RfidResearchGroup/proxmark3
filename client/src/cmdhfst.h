@@ -21,6 +21,6 @@
 
 #include "common.h"
 
-char *get_st_chip_model(uint8_t pc);
+const char *get_st_chip_model(uint8_t pc);
 
 #endif
