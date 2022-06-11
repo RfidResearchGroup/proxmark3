@@ -206,7 +206,7 @@ int JsonSaveTLVTree(json_t *root, json_t *elm, const char *path, struct tlvdb *t
 
         if (AppDataName) {
             char appdatalink[200] = {0};
-            sprintf(appdatalink, "$.ApplicationData.%s", AppDataName);
+            snprintf(appdatalink, sizeof(appdatalink), "$.ApplicationData.%s", AppDataName);
             JsonSaveBufAsHex(root, appdatalink, (uint8_t *)tlvpelm->value, tlvpelm->len);
         }
 

@@ -552,6 +552,8 @@ if (NOT SKIPPYTHON EQUAL 1)
 endif (NOT SKIPPYTHON EQUAL 1)
 message(STATUS "===================================================================")
 
+add_definitions(-DHAVE_SNPRINTF)
+
 add_executable(proxmark3
         ${PM3_ROOT}/client/src/proxmark3.c
         ${TARGET_SOURCES}

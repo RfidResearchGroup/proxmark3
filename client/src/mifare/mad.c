@@ -101,7 +101,7 @@ static const char *mad_json_get_str(json_t *data, const char *name) {
 
 static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool verbose) {
     char lmad[7] = {0};
-    sprintf(lmad, "0x%04x", aid); // must be lowercase
+    snprintf(lmad, sizeof(lmad), "0x%04x", aid); // must be lowercase
 
     json_t *elm = NULL;
 
@@ -132,8 +132,9 @@ static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool ver
     const char *integrator = mad_json_get_str(elm, "system_integrator");
 
     if (application && company) {
-        char result[4 + strlen(application) + strlen(company)];
-        sprintf(result, " %s [%s]", application, company);
+        size_t result_len = 4 + strlen(application) + strlen(company);
+        char result[result_len];
+        snprintf(result, result_len, " %s [%s]", application, company);
         PrintAndLogEx(INFO, fmt, result);
     }
 
@@ -334,7 +335,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
             PrintAndLogEx(INFO, (ibs == i) ? _MAGENTA_(" %02d [%04X] (continuation)") : " %02d [%04X] (continuation)", i, aid);
         } else {
             char fmt[30];
-            sprintf(fmt, (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i, aid, "%s");
+            snprintf(fmt, sizeof(fmt), (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i, aid, "%s");
             print_aid_description(mad_known_aids, aid, fmt, verbose);
             prev_aid = aid;
         }
@@ -378,7 +379,7 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
             PrintAndLogEx(INFO, (ibs == i) ? _MAGENTA_(" %02d [%04X] (continuation)") : " %02d [%04X] (continuation)", i + 16, aid);
         } else {
             char fmt[30];
-            sprintf(fmt, (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i + 16, aid, "%s");
+            snprintf(fmt, sizeof(fmt), (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i + 16, aid, "%s");
             print_aid_description(mad_known_aids, aid, fmt, verbose);
             prev_aid = aid;
         }
@@ -392,7 +393,7 @@ int MADDFDecodeAndPrint(uint32_t short_aid) {
     open_mad_file(&mad_known_aids, false);
 
     char fmt[50];
-    sprintf(fmt, "  MAD AID Function 0x%04X    :" _YELLOW_("%s"), short_aid, "%s");
+    snprintf(fmt, sizeof(fmt), "  MAD AID Function 0x%04X    :" _YELLOW_("%s"), short_aid, "%s");
     print_aid_description(mad_known_aids, short_aid, fmt, false);
     close_mad_file(mad_known_aids);
     return PM3_SUCCESS;

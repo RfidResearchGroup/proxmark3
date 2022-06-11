@@ -275,7 +275,7 @@ static const char *aiddf_json_get_str(json_t *data, const char *name) {
 
 static int print_aiddf_description(json_t *root, uint8_t aid[3], char *fmt, bool verbose) {
     char laid[7] = {0};
-    sprintf(laid, "%02x%02x%02x", aid[2], aid[1], aid[0]); // must be lowercase
+    snprintf(laid, sizeof(laid), "%02x%02x%02x", aid[2], aid[1], aid[0]); // must be lowercase
 
     json_t *elm = NULL;
 
@@ -307,8 +307,9 @@ static int print_aiddf_description(json_t *root, uint8_t aid[3], char *fmt, bool
     const char *type = aiddf_json_get_str(elm, "Type");
 
     if (name && vendor) {
-        char result[5 + strlen(name) + strlen(vendor)];
-        sprintf(result, " %s [%s]", name, vendor);
+        size_t result_len = 5 + strlen(name) + strlen(vendor);
+        char result[result_len];
+        snprintf(result, result_len, " %s [%s]", name, vendor);
         PrintAndLogEx(INFO, fmt, result);
     }
 
@@ -332,7 +333,7 @@ int AIDDFDecodeAndPrint(uint8_t aid[3]) {
     open_aiddf_file(&df_known_aids, false);
 
     char fmt[80];
-    sprintf(fmt, "  DF AID Function %02X%02X%02X     :" _YELLOW_("%s"), aid[2], aid[1], aid[0], "%s");
+    snprintf(fmt, sizeof(fmt), "  DF AID Function %02X%02X%02X     :" _YELLOW_("%s"), aid[2], aid[1], aid[0], "%s");
     print_aiddf_description(df_known_aids, aid, fmt, false);
     close_aiddf_file(df_known_aids);
     return PM3_SUCCESS;

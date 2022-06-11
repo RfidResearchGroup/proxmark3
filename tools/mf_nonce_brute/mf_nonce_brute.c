@@ -153,17 +153,17 @@ static void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const siz
 
     if (buf == NULL) return;
 
-    char *tmp = (char *)buf;
+    char *tmp_base = (char *)buf;
+    char *tmp = tmp_base;
     size_t i;
-    memset(tmp, 0x00, hex_max_len);
 
     size_t max_len = (hex_len > hex_max_len) ? hex_max_len : hex_len;
 
     for (i = 0; i < max_len; ++i, tmp += 2 + spaces_between) {
-        sprintf(tmp, (uppercase) ? "%02X" : "%02x", (unsigned int) hex_data[i]);
+        snprintf(tmp, hex_max_len - (tmp - tmp_base), (uppercase) ? "%02X" : "%02x", (unsigned int) hex_data[i]);
 
         for (size_t j = 0; j < spaces_between; j++)
-            sprintf(tmp + 2 + j, " ");
+            snprintf(tmp + 2 + j, hex_max_len - (2 + j + (tmp - tmp_base)), " ");
     }
 
     i *= (2 + spaces_between);
@@ -173,11 +173,10 @@ static void hex_to_buffer(const uint8_t *buf, const uint8_t *hex_data, const siz
         mlen = hex_max_len;
 
     for (; i < mlen; i++, tmp += 1)
-        sprintf(tmp, " ");
+        snprintf(tmp, hex_max_len - (tmp - tmp_base), " ");
 
     // remove last space
     *tmp = '\0';
-    return;
 }
 
 static char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t min_str_len) {

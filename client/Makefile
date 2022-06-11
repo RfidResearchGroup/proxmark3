@@ -402,6 +402,8 @@ ifeq ($(SWIG_PYTHON_FOUND),1)
     PM3CFLAGS += -DHAVE_PYTHON_SWIG
 endif
 
+PM3CFLAGS += -DHAVE_SNPRINTF
+
 CXXFLAGS ?= -Wall -Werror -O3
 PM3CXXFLAGS = $(CXXFLAGS)
 PM3CXXFLAGS += -I../include -I./include
@@ -414,6 +416,8 @@ ifeq ($(QT_FOUND),1)
         PM3CXXFLAGS += -fPIC -std=c++11
     endif
 endif
+
+PM3CXXFLAGS += -DHAVE_SNPRINTF
 
 LDFLAGS ?= $(DEFLDFLAGS)
 PM3LDFLAGS = $(LDFLAGS)

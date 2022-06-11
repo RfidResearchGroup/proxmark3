@@ -452,15 +452,15 @@ static int ndefDecodePayloadDeviceInfo(uint8_t *payload, size_t len) {
     // record.uuid_string = '123e4567-e89b-12d3-a456-426655440000'
     //  8-4-4-4-12
     char uuid[37] = {0};
-    sprintf(uuid, "%s-", sprint_hex_inrow(p, 4));
+    snprintf(uuid, sizeof(uuid), "%s-", sprint_hex_inrow(p, 4));
     p += 4;
-    sprintf(uuid + strlen(uuid), "%s-", sprint_hex_inrow(p, 2));
+    snprintf(uuid + strlen(uuid), sizeof(uuid) - strlen(uuid), "%s-", sprint_hex_inrow(p, 2));
     p += 2;
-    sprintf(uuid + strlen(uuid), "%s-", sprint_hex_inrow(p, 2));
+    snprintf(uuid + strlen(uuid), sizeof(uuid) - strlen(uuid), "%s-", sprint_hex_inrow(p, 2));
     p += 2;
-    sprintf(uuid + strlen(uuid), "%s-", sprint_hex_inrow(p, 2));
+    snprintf(uuid + strlen(uuid), sizeof(uuid) - strlen(uuid), "%s-", sprint_hex_inrow(p, 2));
     p += 2;
-    sprintf(uuid + strlen(uuid), "%s", sprint_hex_inrow(p, 6));
+    snprintf(uuid + strlen(uuid), sizeof(uuid) - strlen(uuid), "%s", sprint_hex_inrow(p, 6));
     p += 6;
     PrintAndLogEx(INFO, "UUID.......... " _YELLOW_("%s"), uuid);
     p++;

@@ -75,7 +75,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         return INVALID_SERIAL_PORT;
     }
     // Copy the input "com?" to "\\.\COM?" format
-    sprintf(acPortName, "\\\\.\\%s", pcPortName);
+    snprintf(acPortName, sizeof(acPortName), "\\\\.\\%s", pcPortName);
     _strupr(acPortName);
 
     // Try to open the serial port

@@ -224,7 +224,7 @@ struct tlvdb *GetPANFromTrack2(const struct tlv *track2) {
         return NULL;
 
     for (int i = 0; i < track2->len; ++i, tmp += 2)
-        sprintf(tmp, "%02x", (unsigned int)track2->value[i]);
+        snprintf(tmp, sizeof(track2Hex) - (tmp - track2Hex), "%02x", (unsigned int)track2->value[i]);
 
     int posD = strchr(track2Hex, 'd') - track2Hex;
     if (posD < 1)
@@ -253,7 +253,7 @@ struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2) {
         return NULL;
 
     for (int i = 0; i < track2->len; ++i, tmp += 2)
-        sprintf(tmp, "%02x", (unsigned int)track2->value[i]);
+        snprintf(tmp, sizeof(track2Hex) - (tmp - track2Hex), "%02x", (unsigned int)track2->value[i]);
 
     int posD = strchr(track2Hex, 'd') - track2Hex;
     if (posD < 1)
