@@ -156,11 +156,12 @@ static int CmdLFHitagList(const char *Cmd) {
         int j;
         for (j = 0; j < len; j++) {
 
+            int offset = j * 4;
             //if((parityBits >> (len - j - 1)) & 0x01) {
             if (isResponse && (oddparity8(frame[j]) != ((parityBits >> (len - j - 1)) & 0x01))) {
-                sprintf(line + (j * 4), "%02x!  ", frame[j]);
+                snprintf(line + offset, sizeof(line) - offset, "%02x!  ", frame[j]);
             } else {
-                sprintf(line + (j * 4), "%02x   ", frame[j]);
+                snprintf(line + offset, sizeof(line) - offset, "%02x   ", frame[j]);
             }
         }
 
@@ -853,8 +854,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
         PacketResponseNG resp;
         uint8_t *data = resp.data.asBytes;
         if (fnlen < 1) {
-            char *fptr = filename;
-            fptr += sprintf(fptr, "lf-hitag-");
+            char *fptr = filename + snprintf(filename, sizeof(filename), "lf-hitag-");
             FillFileNameByUID(fptr, data, "-dump", 4);
         }
 
