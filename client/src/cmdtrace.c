@@ -436,14 +436,16 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
              * we use format timestamp, newline, offset (0x000000), pseudo header, data
              * `text2pcap -t "%S." -l 264 -n <input-text-file> <output-pcapng-file>`
              */
-            size_t line_len = (hdr->data_len * 3) + 1;
+            int line_len = (hdr->data_len * 3) + 1;
             char line[line_len];
             char *ptr = line;
 
             for (int i = 0; i < hdr->data_len ; i++) {
-                int n = snprintf(ptr, line_len, "%02x ", hdr->frame[i]);
-                ptr += n;
-                line_len -= n;
+                ptr += snprintf(ptr, line_len, "%02x ", hdr->frame[i]);
+                line_len -= 3;
+                if (line_len <= 0) {
+                    break;
+                }
             }
 
             char data_len_str[5];
