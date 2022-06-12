@@ -81,9 +81,11 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
             PrintAndLogEx(FAILED, "Error in step %" PRId64 ", Return code: %" PRId64, resp.oldarg[0], resp.oldarg[1]);
         } else {
             size_t nonce_length = resp.oldarg[1];
+            size_t nonce_length_bytes = 2 * nonce_length + 1;
             char *nonce = (char *) calloc(2 * nonce_length + 1, sizeof(uint8_t));
             for (int j = 0; j < nonce_length; j++) {
-                sprintf(nonce + (2 * j), "%02X", resp.data.asBytes[j]);
+                int nonce_offset = 2 * j;
+                snprintf(nonce + nonce_offset, (nonce_length_bytes * sizeof(uint8_t)) - nonce_offset, "%02X", resp.data.asBytes[j]);
             }
             // print nonce
             PrintAndLogEx(SUCCESS, "Length: %zu, Nonce: %s", nonce_length, nonce);

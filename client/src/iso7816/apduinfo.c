@@ -296,7 +296,7 @@ const APDUCode_t *GetAPDUCode(uint8_t sw1, uint8_t sw2) {
     int mineq = ARRAYLEN(APDUCodeTable);
     int mineqindx = 0;
 
-    sprintf(buf, "%02X%02X", sw1, sw2);
+    snprintf(buf, sizeof(buf), "%02X%02X", sw1, sw2);
 
     for (int i = 0; i < ARRAYLEN(APDUCodeTable); i++) {
         int res = CodeCmp(APDUCodeTable[i].ID, buf);

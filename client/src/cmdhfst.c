@@ -23,55 +23,37 @@
 #define TIMEOUT 2000
 
 // get ST Microelectronics chip model (from UID)
-char *get_st_chip_model(uint8_t pc) {
-    static char model[40];
-    char *s = model;
-    memset(model, 0, sizeof(model));
+const char *get_st_chip_model(uint8_t pc) {
     switch (pc) {
         case 0x0:
-            sprintf(s, "SRIX4K (Special)");
-            break;
+            return "SRIX4K (Special)";
         case 0x2:
-            sprintf(s, "SR176");
-            break;
+            return "SR176";
         case 0x3:
-            sprintf(s, "SRIX4K");
-            break;
+            return "SRIX4K";
         case 0x4:
-            sprintf(s, "SRIX512");
-            break;
+            return "SRIX512";
         case 0x6:
-            sprintf(s, "SRI512");
-            break;
+            return "SRI512";
         case 0x7:
-            sprintf(s, "SRI4K");
-            break;
+            return "SRI4K";
         case 0xC:
-            sprintf(s, "SRT512");
-            break;
+            return "SRT512";
         case 0xC4:
-            sprintf(s, "ST25TA64K");
-            break;
+            return "ST25TA64K";
         case 0xE2:
-            sprintf(s, "ST25??? IKEA Rothult");
-            break;
+            return "ST25??? IKEA Rothult";
         case 0xE3:
-            sprintf(s, "ST25TA02KB");
-            break;
+            return "ST25TA02KB";
         case 0xE4:
-            sprintf(s, "ST25TA512B");
-            break;
+            return "ST25TA512B";
         case 0xA3:
-            sprintf(s, "ST25TA02KB-P");
-            break;
+            return "ST25TA02KB-P";
         case 0xF3:
-            sprintf(s, "ST25TA02KB-D");
-            break;
-        default :
-            sprintf(s, "Unknown");
-            break;
+            return "ST25TA02KB-D";
+        default:
+            return "Unknown";
     }
-    return s;
 }
 /*
 // print UID info from SRx chips (ST Microelectronics)

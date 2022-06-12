@@ -25,7 +25,7 @@ static int makerandom(char *hex, unsigned int len, int fd) {
     }
 
     for (i = 0; i < len; i++) {
-        sprintf(hex + (2 * i), "%02X", raw[i]);
+        snprintf(hex + (2 * i), 3, "%02X", raw[i]);
     }
 
     return 1;
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
         makerandom(key, 6, urandomfd);
         makerandom(uid, 4, urandomfd);
         makerandom(nR, 4, urandomfd);
-        sprintf(filename, "keystream.key-%s.uid-%s.nR-%s", key, uid, nR);
+        snprintf(filename, sizeof(filename), "keystream.key-%s.uid-%s.nR-%s", key, uid, nR);
 
         FILE *fp = fopen(filename, "w");
         if (!fp) {

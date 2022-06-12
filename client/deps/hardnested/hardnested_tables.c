@@ -200,7 +200,7 @@ static inline uint32_t count_states(uint32_t *bitset) {
 
 static void write_bitflips_file(odd_even_t odd_even, uint16_t bitflip, int sum_a0, uint32_t *bitset, uint32_t count) {
     char filename[80];
-    sprintf(filename, "bitflip_%d_%03" PRIx16 "_sum%d_states.bin", odd_even, bitflip, sum_a0);
+    snprintf(filename, sizeof(filename), "bitflip_%d_%03" PRIx16 "_sum%d_states.bin", odd_even, bitflip, sum_a0);
     FILE *outfile = fopen(filename, "wb");
     fwrite(&count, 1, sizeof(count), outfile);
     fwrite(bitset, 1, sizeof(uint32_t) * (1 << 19), outfile);

@@ -76,8 +76,8 @@ static void create_table(struct table *tt, int d_1, int d_2) {
     }
 
     // create the path
-//    sprintf(tt->path, "/Volumes/2tb/%02X/%02X.bin", d_1 & 0xff, d_2 & 0xff);
-    sprintf(tt->path, "table/%02x/%02x.bin", d_1 & 0xff, d_2 & 0xff);
+//    snprintf(tt->path, sizeof(tt->path), "/Volumes/2tb/%02X/%02X.bin", d_1 & 0xff, d_2 & 0xff);
+    snprintf(tt->path, sizeof(tt->path), "table/%02x/%02x.bin", d_1 & 0xff, d_2 & 0xff);
 }
 
 
@@ -341,12 +341,12 @@ static void makedirs(void) {
     }
 
     for (i = 0; i < 0x100; i++) {
-        sprintf(path, "table/%02x", i);
+        snprintf(path, sizeof(path), "table/%02x", i);
         if (mkdir(path, 0755)) {
             printf("cannot make dir %s\n", path);
             exit(1);
         }
-        sprintf(path, "sorted/%02x", i);
+        snprintf(path, sizeof(path), "sorted/%02x", i);
         if (mkdir(path, 0755)) {
             printf("cannot make dir %s\n", path);
             exit(1);
@@ -387,7 +387,7 @@ static void *sorttable(void *dd) {
             printf("sorttable: processing bytes 0x%02x/0x%02x\n", i, j);
 
             // open file, stat it and mmap it
-            sprintf(infile, "table/%02x/%02x.bin", i, j);
+            snprintf(infile, sizeof(infile), "table/%02x/%02x.bin", i, j);
 
             fdin = open(infile, O_RDONLY);
             if (fdin <= 0) {
@@ -424,7 +424,7 @@ static void *sorttable(void *dd) {
             qsort_r(table, numentries, DATASIZE, datacmp, dummy);
 
             // write to file
-            sprintf(outfile, "sorted/%02x/%02x.bin", i, j);
+            snprintf(outfile, sizeof(outfile), "sorted/%02x/%02x.bin", i, j);
             fdout = open(outfile, O_WRONLY | O_CREAT, 0644);
             if (fdout <= 0) {
                 printf("cannot create outfile %s\n", outfile);

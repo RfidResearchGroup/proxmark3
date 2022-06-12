@@ -102,8 +102,11 @@ void FillFileNameByUID(char *filenamePrefix, const uint8_t *uid, const char *ext
 
     int len = strlen(filenamePrefix);
 
-    for (int j = 0; j < uidlen; j++)
-        sprintf(filenamePrefix + len + j * 2, "%02X", uid[j]);
+    for (int j = 0; j < uidlen; j++) {
+        // This is technically not the safest option, but there is no way to make this work without changing the function signature
+        // Possibly todo for future PR, but given UID lenghts are defined by program and not variable, should not be an issue
+        snprintf(filenamePrefix + len + j * 2, 3, "%02X", uid[j]);
+    }
 
     strcat(filenamePrefix, ext);
 }
@@ -153,15 +156,15 @@ void ascii_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len
 
     if (buf == NULL) return;
 
-    char *tmp = (char *)buf;
-    memset(tmp, 0x00, hex_max_len);
+    char *tmp_base = (char *)buf;
+    char *tmp = tmp_base;
 
     size_t max_len = (hex_len > hex_max_len) ? hex_max_len : hex_len;
 
     size_t i = 0;
     for (i = 0; i < max_len; ++i, tmp++) {
         char c = hex_data[i];
-        sprintf(tmp, "%c", ((c < 32) || (c == 127)) ? '.' : c);
+        snprintf(tmp, hex_max_len - (tmp - tmp_base), "%c", ((c < 32) || (c == 127)) ? '.' : c);
     }
 
     size_t m = (min_str_len > i) ? min_str_len : 0;
@@ -169,7 +172,7 @@ void ascii_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len
         m = hex_max_len;
 
     for (; i < m; i++, tmp++)
-        sprintf(tmp, " ");
+        snprintf(tmp, hex_max_len - (tmp - tmp_base), " ");
 
     // remove last space
     *tmp = '\0';
@@ -180,17 +183,17 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
 
     if (buf == NULL) return;
 
-    char *tmp = (char *)buf;
-    memset(tmp, 0x00, hex_max_len);
+    char *tmp_base = (char *)buf;
+    char *tmp = tmp_base;
 
     size_t max_len = (hex_len > hex_max_len) ? hex_max_len : hex_len;
 
     size_t i;
     for (i = 0; i < max_len; ++i, tmp += 2 + spaces_between) {
-        sprintf(tmp, (uppercase) ? "%02X" : "%02x", (unsigned int) hex_data[i]);
+        snprintf(tmp, hex_max_len - (tmp - tmp_base), (uppercase) ? "%02X" : "%02x", (unsigned int) hex_data[i]);
 
         for (size_t j = 0; j < spaces_between; j++)
-            sprintf(tmp + 2 + j, " ");
+            snprintf(tmp + 2 + j, hex_max_len - ((tmp + 2 + j) - tmp_base), " ");
     }
 
     i *= (2 + spaces_between);
@@ -200,7 +203,7 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
         m = hex_max_len;
 
     for (; i < m; i++, tmp++)
-        sprintf(tmp, " ");
+        snprintf(tmp, hex_max_len - (tmp - tmp_base), " ");
 
     // remove last space
     *tmp = '\0';
@@ -233,7 +236,6 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
 
     if (mod) {
         char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
-        memset(buf, 0, sizeof(buf));
         hex_to_buffer((uint8_t *)buf, data + i, mod, (sizeof(buf) - 1), 0, 1, true);
 
         // add the spaces...
@@ -255,8 +257,7 @@ static void print_buffer_ex(const uint8_t *data, const size_t len, int level, ui
             break;
         }
         // (16 * 3) + (16) +  + 1
-        memset(buf, 0, sizeof(buf));
-        sprintf(buf, "%*s%02x: ", (level * 4), " ", i);
+        snprintf(buf, sizeof(buf), "%*s%02x: ", (level * 4), " ", i);
 
         hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, breaks, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
         snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, breaks));
@@ -267,8 +268,7 @@ static void print_buffer_ex(const uint8_t *data, const size_t len, int level, ui
     uint8_t mod = len % breaks;
 
     if (mod) {
-        memset(buf, 0, sizeof(buf));
-        sprintf(buf, "%*s%02x: ", (level * 4), " ", i);
+        snprintf(buf, sizeof(buf), "%*s%02x: ", (level * 4), " ", i);
         hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, mod, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
 
         // add the spaces...
@@ -420,11 +420,10 @@ char *sprint_bin(const uint8_t *data, const size_t len) {
 
 char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
     static char buf[UTIL_BUFFER_SIZE_SPRINT];
-    char *tmp = buf;
     memset(buf, 0x00, UTIL_BUFFER_SIZE_SPRINT);
     size_t max_len = (len > 1010) ? 1010 : len;
 
-    snprintf(tmp, UTIL_BUFFER_SIZE_SPRINT, "%s| ", sprint_hex(data, max_len));
+    snprintf(buf, sizeof(buf), "%s| ", sprint_hex(data, max_len));
 
     size_t i = 0;
     size_t pos = (max_len * 3) + 2;
@@ -435,7 +434,7 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
         if ((c < 32) || (c == 127))
             c = '.';
 
-        sprintf(tmp + pos + i, "%c",  c);
+        snprintf(buf + pos + i, sizeof(buf) - (pos + 1), "%c",  c);
         ++i;
     }
     return buf;
@@ -891,7 +890,7 @@ int binarraytohex(char *target, const size_t targetlen, const char *source, size
                 if (t >= targetlen - 2) {
                     return r;
                 }
-                sprintf(target + t, "%X", x);
+                snprintf(target + t, targetlen - t, "%X", x);
                 t++;
                 r += 4;
                 x = 0;
@@ -902,7 +901,7 @@ int binarraytohex(char *target, const size_t targetlen, const char *source, size
                 if (t >= targetlen - 5) {
                     return r;
                 }
-                sprintf(target + t, "%X[%i]", x, i);
+                snprintf(target + t, targetlen - t, "%X[%i]", x, i);
                 t += 4;
                 r += i;
                 x = 0;
@@ -913,7 +912,7 @@ int binarraytohex(char *target, const size_t targetlen, const char *source, size
                 if (t >= targetlen - 2) {
                     return r;
                 }
-                sprintf(target + t, " ");
+                snprintf(target + t, targetlen - t, " ");
                 t++;
             }
             r++;

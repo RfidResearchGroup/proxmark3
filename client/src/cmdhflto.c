@@ -683,8 +683,7 @@ static int CmdHfLTODump(const char *Cmd) {
     }
 
     if (strlen(filename) == 0) {
-        char *fptr = filename;
-        fptr += sprintf(fptr, "hf-lto-");
+        char *fptr = filename + snprintf(filename, sizeof(filename), "hf-lto-");
         FillFileNameByUID(fptr, dump, "-dump", 5);
     }
     saveFile(filename, ".bin", dump, dump_len);

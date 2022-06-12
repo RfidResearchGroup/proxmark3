@@ -1521,10 +1521,11 @@ static void mf_get_paritybinstr(char *s, uint32_t val, uint8_t par) {
     num_to_bytes(val, sizeof(uint32_t), foo);
     for (uint8_t i = 0; i < 4; i++) {
         if (oddparity8(foo[i]) != ((par >> (7 - (i & 0x0007))) & 0x01))
-            sprintf(s++, "1");
+            *(s++) = '1';
         else
-            sprintf(s++, "0");
+            *(s++) = '0';
     }
+    s[0] = '\0';
 }
 
 bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen, const uint64_t *dicKeys, uint32_t dicKeysCount) {

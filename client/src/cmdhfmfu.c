@@ -103,23 +103,18 @@ static uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
 
 //------------------------------------
 // get version nxp product type
-static char *getProductTypeStr(uint8_t id) {
-
+static const char *getProductTypeStr(uint8_t id) {
     static char buf[20];
-    char *retStr = buf;
 
     switch (id) {
         case 3:
-            sprintf(retStr, "%02X, Ultralight", id);
-            break;
+            return "Ultralight";
         case 4:
-            sprintf(retStr, "%02X, NTAG", id);
-            break;
+            return "NTAG";
         default:
-            sprintf(retStr, "%02X, unknown", id);
-            break;
+            snprintf(buf, sizeof(buf), "%02X, unknown", id);
+            return buf;
     }
-    return buf;
 }
 
 static int ul_print_nxp_silicon_info(uint8_t *card_uid) {
@@ -160,10 +155,9 @@ static int ul_print_nxp_silicon_info(uint8_t *card_uid) {
   the LSBit is set to '0' if the size is exactly 2^n
   and set to '1' if the storage size is between 2^n and 2^(n+1).
 */
-static char *getUlev1CardSizeStr(uint8_t fsize) {
+static const char *getUlev1CardSizeStr(uint8_t fsize) {
 
     static char buf[40];
-    char *retStr = buf;
     memset(buf, 0, sizeof(buf));
 
     uint16_t usize = 1 << ((fsize >> 1) + 1);
@@ -171,9 +165,9 @@ static char *getUlev1CardSizeStr(uint8_t fsize) {
 
     // is  LSB set?
     if (fsize & 1)
-        sprintf(retStr, "%02X, (%u <-> %u bytes)", fsize, usize, lsize);
+        snprintf(buf, sizeof(buf), "%02X, (%u <-> %u bytes)", fsize, usize, lsize);
     else
-        sprintf(retStr, "%02X, (%u bytes)", fsize, lsize);
+        snprintf(buf, sizeof(buf), "%02X, (%u bytes)", fsize, lsize);
     return buf;
 }
 
@@ -551,34 +545,38 @@ static int ndef_print_CC(uint8_t *data) {
     uint8_t cc_minor = (data[1] & 0x30) >> 4;
     uint8_t cc_major = (data[1] & 0xC0) >> 6;
 
-    char wStr[50];
-    memset(wStr, 0, sizeof(wStr));
+    const char *wStr;
     switch (cc_write) {
         case 0:
-            sprintf(wStr, "Write access granted without any security");
+            wStr = "Write access granted without any security";
             break;
         case 1:
-            sprintf(wStr, "RFU");
+            wStr = "RFU";
             break;
         case 2:
-            sprintf(wStr, "Proprietary");
+            wStr = "Proprietary";
             break;
         case 3:
-            sprintf(wStr, "No write access");
+            wStr = "No write access";
+            break;
+        default:
+            wStr = "Unknown";
             break;
     }
-    char rStr[46];
-    memset(rStr, 0, sizeof(rStr));
+    const char *rStr;
     switch (cc_read) {
         case 0:
-            sprintf(rStr, "Read access granted without any security");
+            rStr = "Read access granted without any security";
             break;
         case 1:
         case 3:
-            sprintf(rStr, "RFU");
+            rStr = "RFU";
             break;
         case 2:
-            sprintf(rStr, "Proprietary");
+            rStr = "Proprietary";
+            break;
+        default:
+            rStr = "Unknown";
             break;
     }
 
@@ -1329,7 +1327,7 @@ static int mfu_fingerprint(TagTypeUL_t tagtype, bool hasAuthKey, uint8_t *authke
 
             if (item->Pwd) {
                 char s[40] = {0};
-                sprintf(s, item->hint, item->Pwd(uid));
+                snprintf(s, sizeof(s), item->hint, item->Pwd(uid));
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", s);
             } else {
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", item->hint);
@@ -2708,12 +2706,13 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     CLIParserFree(ctx);
 
-    char *nc = calloc(strlen(Cmd) + 6, 1);
+    size_t nc_len = strlen(Cmd) + 6;
+    char *nc = calloc(nc_len, 1);
     if (nc == NULL) {
         return CmdHF14AMfELoad(Cmd);
     }
 
-    sprintf(nc, "%s --ul", Cmd);
+    snprintf(nc, nc_len, "%s --ul", Cmd);
     int res = CmdHF14AMfELoad(nc);
     free(nc);
 
@@ -3913,10 +3912,10 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
     PrintAndLogEx(INFO, "hf 14a raw -s -c 3e00              -->  read tearing 0");
     PrintAndLogEx(NORMAL, "");
     char read_cnt_str[30];
-    sprintf(read_cnt_str, "hf 14a raw -s -c 39%02x", counter);
+    snprintf(read_cnt_str, sizeof(read_cnt_str), "hf 14a raw -s -c 39%02x", counter);
     CommandReceived(read_cnt_str);
     char read_tear_str[30];
-    sprintf(read_tear_str, "hf 14a raw -s -c 3e%02x", counter);
+    snprintf(read_tear_str, sizeof(read_tear_str), "hf 14a raw -s -c 3e%02x", counter);
     CommandReceived(read_tear_str);
     return PM3_SUCCESS;
 }

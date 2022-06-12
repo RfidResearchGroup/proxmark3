@@ -887,7 +887,7 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
     char expirycd = emrtd_calculate_check_digit(expiry);
 
     char kmrz[25];
-    sprintf(kmrz, "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
+    snprintf(kmrz, sizeof(kmrz), "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
     PrintAndLogEx(DEBUG, "kmrz.............. " _GREEN_("%s"), kmrz);
 
     uint8_t kseed[20] = { 0x00 };
@@ -1281,16 +1281,16 @@ static void emrtd_print_issuance(char *data, bool ascii) {
 
 static void emrtd_print_personalization_timestamp(uint8_t *data) {
     char str_date[0x0F] = { 0x00 };
-    strcpy(str_date, sprint_hex_inrow(data, 0x07));
+    strncpy(str_date, sprint_hex_inrow(data, 0x07), sizeof(str_date) - 1);
     char final_date[20] = { 0x00 };
-    sprintf(final_date, "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", str_date, str_date + 4, str_date + 6, str_date + 8, str_date + 10, str_date + 12);
+    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", str_date, str_date + 4, str_date + 6, str_date + 8, str_date + 10, str_date + 12);
 
     PrintAndLogEx(SUCCESS, "Personalization at....: " _YELLOW_("%s"), final_date);
 }
 
 static void emrtd_print_unknown_timestamp_5f85(uint8_t *data) {
     char final_date[20] = { 0x00 };
-    sprintf(final_date, "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", data, data + 4, data + 6, data + 8, data + 10, data + 12);
+    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", data, data + 4, data + 6, data + 8, data + 10, data + 12);
 
     PrintAndLogEx(SUCCESS, "Unknown timestamp 5F85: " _YELLOW_("%s"), final_date);
     PrintAndLogEx(HINT, "This is very likely the personalization timestamp, but it is using an undocumented tag.");
@@ -1433,11 +1433,12 @@ static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen) {
 
     bool is_jpg = (data[offset] == 0xFF);
 
-    char *fn = calloc(strlen(dg_table[EF_DG2].filename) + 4 + 1, sizeof(uint8_t));
+    size_t fn_len = strlen(dg_table[EF_DG2].filename) + 4 + 1;
+    char *fn = calloc(fn_len, sizeof(uint8_t));
     if (fn == NULL)
         return PM3_EMALLOC;
 
-    sprintf(fn, "%s.%s", dg_table[EF_DG2].filename, (is_jpg) ? "jpg" : "jp2");
+    snprintf(fn, fn_len * sizeof(uint8_t), "%s.%s", dg_table[EF_DG2].filename, (is_jpg) ? "jpg" : "jp2");
 
     PrintAndLogEx(DEBUG, "image filename `" _YELLOW_("%s") "`", fn);
 
@@ -1492,11 +1493,12 @@ static int emrtd_print_ef_dg5_info(uint8_t *data, size_t datalen) {
 
     bool is_jpg = (data[offset] == 0xFF);
 
-    char *fn = calloc(strlen(dg_table[EF_DG5].filename) + 4 + 1, sizeof(uint8_t));
+    size_t fn_len = strlen(dg_table[EF_DG5].filename) + 4 + 1;
+    char *fn = calloc(fn_len, sizeof(uint8_t));
     if (fn == NULL)
         return PM3_EMALLOC;
 
-    sprintf(fn, "%s.%s", dg_table[EF_DG5].filename, (is_jpg) ? "jpg" : "jp2");
+    snprintf(fn, fn_len * sizeof(uint8_t), "%s.%s", dg_table[EF_DG5].filename, (is_jpg) ? "jpg" : "jp2");
 
     PrintAndLogEx(DEBUG, "image filename `" _YELLOW_("%s") "`", fn);
 

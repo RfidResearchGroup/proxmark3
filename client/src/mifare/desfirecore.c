@@ -322,12 +322,11 @@ const char *DesfireSelectWayToStr(DesfireISOSelectWay way) {
 
 char *DesfireWayIDStr(DesfireISOSelectWay way, uint32_t id) {
     static char str[200] = {0};
-    memset(str, 0, sizeof(str));
 
     if (way == ISWMF || way == ISWDFName)
-        sprintf(str, "%s", DesfireSelectWayToStr(way));
+        snprintf(str, sizeof(str), "%s", DesfireSelectWayToStr(way));
     else
-        sprintf(str, "%s %0*x", DesfireSelectWayToStr(way), (way == ISW6bAID) ? 6 : 4, id);
+        snprintf(str, sizeof(str), "%s %0*x", DesfireSelectWayToStr(way), (way == ISW6bAID) ? 6 : 4, id);
 
     return str;
 }
@@ -2296,10 +2295,9 @@ static const char *GetDesfireKeyType(uint8_t keytype) {
 
 const char *GetDesfireAccessRightStr(uint8_t right) {
     static char int_access_str[200];
-    memset(int_access_str, 0, sizeof(int_access_str));
 
     if (right <= 0x0d) {
-        sprintf(int_access_str, "key 0x%02x", right);
+        snprintf(int_access_str, sizeof(int_access_str), "key 0x%02x", right);
         return int_access_str;
     }
 

@@ -719,18 +719,13 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
         snprintf(cbar,  collen,  "%s", bar);
     }
 
-    size_t olen = strlen(cbar) + 40;
-    char *out = (char *)calloc(olen, sizeof(uint8_t));
-
     switch (style) {
         case STYLE_BAR: {
-            sprintf(out, "%s", cbar);
-            printf("\b%c[2K\r[" _YELLOW_("=")"] %s", 27, out);
+            printf("\b%c[2K\r[" _YELLOW_("=")"] %s", 27, cbar);
             break;
         }
         case STYLE_MIXED: {
-            sprintf(out, "%s [ %zu mV / %2u V / %2u Vmax ]", cbar, count, (uint32_t)(count / 1000), (uint32_t)(max / 1000));
-            printf("\b%c[2K\r[" _YELLOW_("=")"] %s", 27, out);
+            printf("\b%c[2K\r[" _YELLOW_("=")"] %s [ %zu mV / %2u V / %2u Vmax ]", 27, cbar, count, (uint32_t)(count / 1000), (uint32_t)(max / 1000));
             break;
         }
         case STYLE_VALUE: {
@@ -739,7 +734,6 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
         }
     }
     fflush(stdout);
-    free(out);
     free(bar);
     free(cbar);
 }

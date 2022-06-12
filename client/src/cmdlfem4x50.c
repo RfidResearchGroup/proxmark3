@@ -50,31 +50,32 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr) {
 
     for (int i = fwr; i <= lwr; i++) {
 
-        char s[50] = {0};
+        const char* s;
         switch (i) {
             case EM4X50_DEVICE_PASSWORD:
-                sprintf(s, _YELLOW_("password, write only"));
+                s = _YELLOW_("password, write only");
                 break;
             case EM4X50_PROTECTION:
-                sprintf(s, _YELLOW_("protection cfg (locked)"));
+                s = _YELLOW_("protection cfg (locked)");
                 break;
             case EM4X50_CONTROL:
-                sprintf(s, _YELLOW_("control cfg (locked)"));
+                s = _YELLOW_("control cfg (locked)");
                 break;
             case EM4X50_DEVICE_SERIAL:
-                sprintf(s, _YELLOW_("device serial number (read only)"));
+                s = _YELLOW_("device serial number (read only)");
                 break;
             case EM4X50_DEVICE_ID:
-                sprintf(s, _YELLOW_("device identification (read only)"));
+                s = _YELLOW_("device identification (read only)");
                 break;
             default:
-                sprintf(s, "user data");
+                s = "user data";
                 break;
         }
 
         char r[30] = {0};
         for (int j = 3; j >= 0; j--) {
-            sprintf(r + strlen(r), "%02x ", reflect8(words[i].byte[j]));
+            int offset = strlen(r);
+            snprintf(r + offset, sizeof(r) - offset, "%02x ", reflect8(words[i].byte[j]));
         }
 
         PrintAndLogEx(INFO, " %2i | " _GREEN_("%s") "| %s| %s",
@@ -708,7 +709,8 @@ int CmdEM4x50Reader(const char *Cmd) {
                 char r[30];
                 memset(r, 0, sizeof(r));
                 for (int j = 3; j >= 0; j--) {
-                    sprintf(r + strlen(r), "%02x ", reflect8(words[i].byte[j]));
+                    int offset = strlen(r);
+                    snprintf(r + offset, sizeof(r) - offset, "%02x ", reflect8(words[i].byte[j]));
                 }
 
                 PrintAndLogEx(INFO, _GREEN_(" %s") "| %s", sprint_hex(words[i].byte, 4), r);
@@ -786,8 +788,7 @@ int CmdEM4x50Dump(const char *Cmd) {
     // user supplied filename?
     if (fnLen == 0) {
         PrintAndLogEx(INFO, "Using UID as filename");
-        char *fptr = filename;
-        fptr += sprintf(fptr, "lf-4x50-");
+        char *fptr = filename + snprintf(filename, sizeof(filename), "lf-4x50-");
         FillFileNameByUID(fptr, words[EM4X50_DEVICE_ID].byte, "-dump", 4);
     }
 
@@ -1083,8 +1084,7 @@ int CmdEM4x50Restore(const char *Cmd) {
 
     if (uidLen) {
         PrintAndLogEx(INFO, "Using UID as filename");
-        char *fptr = filename;
-        fptr += sprintf(fptr, "lf-4x50-");
+        char *fptr = filename + snprintf(filename, sizeof(filename), "lf-4x50-");
         FillFileNameByUID(fptr, uid, "-dump", 4);
     }
 

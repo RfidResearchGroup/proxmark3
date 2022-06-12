@@ -19,18 +19,26 @@
 
 #include <stdio.h>
 
+
+#define ISO15693_SPRINTUID_BUFLEN (3 * 8 + 1)
+
 // returns a string representation of the UID
 // UID is transmitted and stored LSB first, displayed MSB first
 // dest    char* buffer, where to put the UID, if NULL a static buffer is returned
 // uid[]     the UID in transmission order
 // return: ptr to string
 char *iso15693_sprintUID(char *dest, uint8_t *uid) {
-    static char tempbuf[3 * 8 + 1] = {0};
+    static char tempbuf[ISO15693_SPRINTUID_BUFLEN] = {0};
     if (dest == NULL)
         dest = tempbuf;
 
     if (uid) {
-        sprintf(dest, "%02X %02X %02X %02X %02X %02X %02X %02X",
+#ifdef HAVE_SNPRINTF
+        snprintf(dest, ISO15693_SPRINTUID_BUFLEN,
+#else
+        sprintf(dest,
+#endif
+                "%02X %02X %02X %02X %02X %02X %02X %02X",
                 uid[7], uid[6], uid[5], uid[4],
                 uid[3], uid[2], uid[1], uid[0]
                );

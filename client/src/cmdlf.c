@@ -234,7 +234,7 @@ int CmdLFCommandRead(const char *Cmd) {
                  );
 
     char div_str[70] = {0};
-    sprintf(div_str, "Extra symbol definition and duration (up to %i)", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
+    snprintf(div_str, sizeof(div_str), "Extra symbol definition and duration (up to %i)", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
 
     void *argtable[] = {
         arg_param_begin,
@@ -571,7 +571,7 @@ int CmdLFConfig(const char *Cmd) {
                  );
 
     char div_str[70] = {0};
-    sprintf(div_str, "Manually set freq divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
+    snprintf(div_str, sizeof(div_str), "Manually set freq divisor. %d -> 134 kHz, %d -> 125 kHz", LF_DIVISOR_134, LF_DIVISOR_125);
 
     void *argtable[] = {
         arg_param_begin,
