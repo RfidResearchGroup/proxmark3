@@ -637,7 +637,7 @@
         },
         "data save": {
             "command": "data save",
-            "description": "Save trace from graph window , i.e. the GraphBuffer This is a text file with number -127 to 127. With the option `w` you can save it as wave file Filename should be without file extension",
+            "description": "Save signal trace from graph window , i.e. the GraphBuffer This is a text file with number -127 to 127. With the option `w` you can save it as wave file Filename should be without file extension",
             "notes": [
                 "data save -f myfilename -> save graph buffer to file",
                 "data save --wave -f myfilename -> save graph buffer to wave file"
@@ -4395,9 +4395,9 @@
             "notes": [
                 "hf mf value --blk 16 -k FFFFFFFFFFFF --set 1000",
                 "hf mf value --blk 16 -k FFFFFFFFFFFF --inc 10",
-                "hf mf value --blk 16 -k FFFFFFFFFFFF --dec 10 -b",
-                "hf mf value --blk 16 -k FFFFFFFFFFFF --get -b",
-                "hf mf value -d 87D612007829EDFF87D6120011EE11EE"
+                "hf mf value --blk 16 -k FFFFFFFFFFFF -b --dec 10",
+                "hf mf value --blk 16 -k FFFFFFFFFFFF -b --get",
+                "hf mf value --get -d 87D612007829EDFF87D6120011EE11EE"
             ],
             "offline": true,
             "options": [
@@ -6541,9 +6541,10 @@
         },
         "hw dbg": {
             "command": "hw dbg",
-            "description": "Set device side debug level output. Note: option -4, this option may cause malfunction itself",
+            "description": "Set device side debug level output. Note: option `-4`, this option may cause malfunction itself by introducing delays in time critical functions like simulation or sniffing",
             "notes": [
-                "hw dbg -1"
+                "hw dbg -> get current log level",
+                "hw dbg -1 -> set log level to _error_"
             ],
             "offline": false,
             "options": [
@@ -10997,8 +10998,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 696,
+        "commands_extracted": 693,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-06-06T05:54:04"
+        "extracted_on": "2022-06-12T09:54:12"
     }
 }
