@@ -1196,23 +1196,79 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     set_tracing(false);
 }
 
-void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key) {
-
-    LEDsoff();
+static void MifareFastStaticNestedImpl(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t* key, uint32_t* nt1, uint32_t* nt2, uint32_t* cuid, bool firstGet, int16_t* isOK) {
 
     uint64_t ui64Key = 0;
     ui64Key = bytes_to_num(key, 6);
     uint16_t len;
-    uint8_t uid[10] = {0x00};
-    uint32_t cuid = 0, nt1, nt2;
-    uint32_t target_nt = 0, target_ks = 0;
-    uint8_t par[1] = {0x00};
-    uint8_t receivedAnswer[10] = {0x00};
+    uint8_t uid[10] = { 0x00 };
+    uint8_t par[1] = { 0x00 };
+    uint8_t receivedAnswer[10] = { 0x00 };
 
-    struct Crypto1State mpcs = {0, 0};
-    struct Crypto1State *pcs;
+    struct Crypto1State mpcs = { 0, 0 };
+    struct Crypto1State* pcs;
     pcs = &mpcs;
 
+    *isOK = 0;
+    LED_C_ON();
+
+    for (uint8_t retry = 0; retry < 3 && (*isOK == 0); retry++) {
+
+        WDT_HIT();
+
+        // prepare next select. No need to power down the card.
+        if (mifare_classic_halt(pcs, *cuid)) {
+            if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Halt error");
+            retry--;
+            continue;
+        }
+
+        if (!iso14443a_select_card(uid, NULL, cuid, true, 0, true)) {
+            if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Can't select card");
+            retry--;
+            continue;
+        };
+
+        // First authentication. Normal auth.
+        if (mifare_classic_authex(pcs, *cuid, blockNo, keyType, ui64Key, AUTH_FIRST, nt1, NULL)) {
+            if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth1 error");
+            retry--;
+            continue;
+        };
+
+        // not first get, we need auth again...
+        if (!firstGet) {
+            if (mifare_classic_authex(pcs, *cuid, blockNo, keyType, ui64Key, AUTH_NESTED, NULL, NULL)) {
+                if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth1 again error");
+                retry--;
+                continue;
+            };
+        }
+
+        // second authentication. Nested auth
+        len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
+        if (len != 4) {
+            if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth2 error len=%d", len);
+            continue;
+        };
+
+        *nt2 = bytes_to_num(receivedAnswer, 4);
+        *isOK = 1;
+    }
+
+    LED_C_OFF();
+
+    crypto1_deinit(pcs);
+}
+
+void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t* key) {
+
+    int16_t isOK;
+    uint32_t cuid;
+    uint32_t nt1_1, nt2_1;
+    uint32_t nt1_2, nt2_2;
+
+    LEDsoff();
     LED_A_ON();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -1222,76 +1278,43 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
     clear_trace();
     set_tracing(true);
 
-    int16_t isOK = 0;
-    LED_C_ON();
-
-    for (uint8_t retry = 0; retry < 3 && (isOK == 0); retry++) {
-
-        WDT_HIT();
-
-        // prepare next select. No need to power down the card.
-        if (mifare_classic_halt(pcs, cuid)) {
-            if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Halt error");
-            retry--;
-            continue;
-        }
-
-        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-            if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Can't select card");
-            retry--;
-            continue;
-        };
-
-        // First authentication. Normal auth.
-        if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, NULL)) {
-            if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth1 error");
-            retry--;
-            continue;
-        };
-
-        // second authentication. Nested auth
-        len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
-        if (len != 4) {
-            if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth2 error len=%d", len);
-            continue;
-        };
-
-        nt2 = bytes_to_num(receivedAnswer, 4);
-        target_nt = prng_successor(nt1, 160);
-        target_ks = nt2 ^ target_nt;
-        isOK = 1;
-
-        if (g_dbglevel >= DBG_DEBUG) Dbprintf("Testing nt1=%08x nt2enc=%08x nt2par=%02x  ks=%08x", nt1, nt2, par[0], target_ks);
+    MifareFastStaticNestedImpl(blockNo, keyType, targetBlockNo, targetKeyType, key, &nt1_1, &nt2_1, &cuid, true, &isOK);
+    if (isOK) {
+        MifareFastStaticNestedImpl(blockNo, keyType, targetBlockNo, targetKeyType, key, &nt1_2, &nt2_2, &cuid, false, &isOK);
     }
-
-    LED_C_OFF();
-
-    crypto1_deinit(pcs);
 
     struct p {
         int16_t isOK;
         uint8_t block;
         uint8_t keytype;
         uint8_t cuid[4];
-        uint8_t nt[4];
-        uint8_t ks[4];
+        uint8_t nt1_1[4];
+        uint8_t nt2_1[4];
+        // new nt
+        uint8_t nt1_2[4];
+        uint8_t nt2_2[4];
     } PACKED payload;
     payload.isOK = isOK;
     payload.block = targetBlockNo;
     payload.keytype = targetKeyType;
 
     memcpy(payload.cuid, &cuid, 4);
-    memcpy(payload.nt, &target_nt, 4);
-    memcpy(payload.ks, &target_ks, 4);
+
+    // copy nonces to response body.
+    memcpy(payload.nt1_1, &nt1_1, 4);
+    memcpy(payload.nt2_1, &nt2_1, 4);
+    memcpy(payload.nt1_2, &nt1_2, 4);
+    memcpy(payload.nt2_2, &nt2_2, 4);
 
     LED_B_ON();
-    reply_ng(CMD_HF_MIFARE_STATIC_NESTED, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
+    reply_ng(CMD_HF_MIFARE_STATIC_NESTED, PM3_SUCCESS, (uint8_t*)&payload, sizeof(payload));
     LED_B_OFF();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
 }
+
 //-----------------------------------------------------------------------------
 // MIFARE check keys. key count up to 85.
 //
