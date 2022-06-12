@@ -1264,7 +1264,7 @@ static void MifareFastStaticNestedImpl(uint8_t blockNo, uint8_t keyType, uint8_t
 void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key) {
 
     int16_t isOK;
-    uint32_t cuid;
+    uint32_t cuid = 0;
     uint32_t nt1_1 = 0, nt2_1 = 0;
     uint32_t nt1_2 = 0, nt2_2 = 0;
 
