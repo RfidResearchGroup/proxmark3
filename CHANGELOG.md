@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mf staticnested` - significant speedups by using two encrypted nonces (@xianglin1998)
  - Change use of `sprintf` in code to `snprintf` to fix compilation on macOS (@Doridian)
  - Change `hf mf mad` - it now takes a dump file for offline MAD decoding (@iceman1001)
  - Fixed Standalone mode  hf_iceclass - wrong fpga image set (@iceman1001)
