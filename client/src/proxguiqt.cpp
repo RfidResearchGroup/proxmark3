@@ -690,7 +690,7 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
     painter->drawPath(penPath);
     char str[200];
     snprintf(str, sizeof(str), "max=%d  min=%d  mean=%" PRId64 "  n=%u/%zu  CursorAVal=[%d]  CursorBVal=[%d]",
-            vMax, vMin, vMean, g_GraphStop - g_GraphStart, len, buffer[CursorAPos], buffer[CursorBPos]);
+             vMax, vMin, vMean, g_GraphStop - g_GraphStart, len, buffer[CursorAPos], buffer[CursorBPos]);
     painter->drawText(20, annotationRect.bottom() - 23 - 20 * graphNum, str);
     //clock_t end = clock();
     //double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
@@ -810,18 +810,18 @@ void Plot::paintEvent(QPaintEvent *event) {
         }
     }
     snprintf(str, sizeof(str), "@%u..%u  dt=%i %szoom=%2.2f  CursorAPos=%u  CursorBPos=%u  GridX=%lf  GridY=%lf (%s) GridXoffset=%lf",
-            g_GraphStart,
-            g_GraphStop,
-            CursorBPos - CursorAPos,
-            scalestr,
-            g_GraphPixelsPerPoint,
-            CursorAPos,
-            CursorBPos,
-            g_PlotGridXdefault,
-            g_PlotGridYdefault,
-            g_GridLocked ? "Locked" : "Unlocked",
-            g_GridOffset
-           );
+             g_GraphStart,
+             g_GraphStop,
+             CursorBPos - CursorAPos,
+             scalestr,
+             g_GraphPixelsPerPoint,
+             CursorAPos,
+             CursorBPos,
+             g_PlotGridXdefault,
+             g_PlotGridYdefault,
+             g_GridLocked ? "Locked" : "Unlocked",
+             g_GridOffset
+            );
     painter.setPen(WHITE);
     painter.drawText(20, infoRect.bottom() - 3, str);
 }

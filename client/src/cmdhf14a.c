@@ -1379,11 +1379,11 @@ static int waitCmd(bool i_select, uint32_t timeout, bool verbose) {
 
             char s[16];
             snprintf(s,
-                    sizeof(s),
-                    (crc) ? _GREEN_("%02X %02X") : _RED_("%02X %02X"),
-                    data[len - 2],
-                    data[len - 1]
-                   );
+                     sizeof(s),
+                     (crc) ? _GREEN_("%02X %02X") : _RED_("%02X %02X"),
+                     data[len - 2],
+                     data[len - 1]
+                    );
 
             PrintAndLogEx(SUCCESS, "%s[ %s ]",  sprint_hex(data, len - 2), s);
         } else {

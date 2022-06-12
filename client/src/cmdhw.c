@@ -480,7 +480,7 @@ static int CmdDbg(const char *Cmd) {
     }
     uint8_t curr = resp.data.asBytes[0];
 
-    const char* dbglvlstr;
+    const char *dbglvlstr;
     switch (curr) {
         case DBG_NONE:
             dbglvlstr = "none";

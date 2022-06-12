@@ -38,10 +38,10 @@ char *iso15693_sprintUID(char *dest, uint8_t *uid) {
 #else
         sprintf(dest,
 #endif
-                "%02X %02X %02X %02X %02X %02X %02X %02X",
-                uid[7], uid[6], uid[5], uid[4],
-                uid[3], uid[2], uid[1], uid[0]
-               );
+                 "%02X %02X %02X %02X %02X %02X %02X %02X",
+                 uid[7], uid[6], uid[5], uid[4],
+                 uid[3], uid[2], uid[1], uid[0]
+                );
     }
     return dest;
 }

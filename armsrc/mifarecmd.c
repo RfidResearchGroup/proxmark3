@@ -1196,7 +1196,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     set_tracing(false);
 }
 
-static void MifareFastStaticNestedImpl(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t* key, uint32_t* nt1, uint32_t* nt2, uint32_t* cuid, bool firstGet, int16_t* isOK) {
+static void MifareFastStaticNestedImpl(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key, uint32_t *nt1, uint32_t *nt2, uint32_t *cuid, bool firstGet, int16_t *isOK) {
 
     uint64_t ui64Key = 0;
     ui64Key = bytes_to_num(key, 6);
@@ -1206,7 +1206,7 @@ static void MifareFastStaticNestedImpl(uint8_t blockNo, uint8_t keyType, uint8_t
     uint8_t receivedAnswer[10] = { 0x00 };
 
     struct Crypto1State mpcs = { 0, 0 };
-    struct Crypto1State* pcs;
+    struct Crypto1State *pcs;
     pcs = &mpcs;
 
     *isOK = 0;
@@ -1261,7 +1261,7 @@ static void MifareFastStaticNestedImpl(uint8_t blockNo, uint8_t keyType, uint8_t
     crypto1_deinit(pcs);
 }
 
-void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t* key) {
+void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key) {
 
     int16_t isOK;
     uint32_t cuid;
@@ -1307,7 +1307,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
     memcpy(payload.nt2_2, &nt2_2, 4);
 
     LED_B_ON();
-    reply_ng(CMD_HF_MIFARE_STATIC_NESTED, PM3_SUCCESS, (uint8_t*)&payload, sizeof(payload));
+    reply_ng(CMD_HF_MIFARE_STATIC_NESTED, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
     LED_B_OFF();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

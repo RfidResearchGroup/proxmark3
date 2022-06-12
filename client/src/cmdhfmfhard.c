@@ -1713,7 +1713,7 @@ static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even
                               byte2,
                               num_common);
                 if (failstr[0] == '\0') {
-                     snprintf(failstr, sizeof(failstr), "Other 1st Byte %s, all_bitflips_match(), no match", odd_even ? "odd" : "even");
+                    snprintf(failstr, sizeof(failstr), "Other 1st Byte %s, all_bitflips_match(), no match", odd_even ? "odd" : "even");
                 }
             }
 # endif

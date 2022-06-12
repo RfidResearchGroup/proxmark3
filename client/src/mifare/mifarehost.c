@@ -581,11 +581,11 @@ out:
 }
 
 
-int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t* resultKey) {
+int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey) {
 
     uint32_t uid;
     StateList_t statelists[2];
-    struct Crypto1State* p1, * p2, * p3, * p4;
+    struct Crypto1State *p1, * p2, * p3, * p4;
 
     struct {
         uint8_t block;
@@ -602,7 +602,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBl
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_STATIC_NESTED, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFARE_STATIC_NESTED, (uint8_t *)&payload, sizeof(payload));
 
     if (!WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_NESTED, &resp, 2000))
         return PM3_ETIMEOUT;
@@ -621,7 +621,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBl
         uint8_t nt1_2[4];
         uint8_t nt2_2[4];
     } PACKED;
-    struct p* package = (struct p*)resp.data.asBytes;
+    struct p *package = (struct p *)resp.data.asBytes;
 
     // error during collecting static nested information
     if (package->isOK == 0) return PM3_EUNDEF;
@@ -651,8 +651,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBl
                 dist = 161;
             }
         }
-    }
-    else {
+    } else {
         level = 0;
     }
 
@@ -677,7 +676,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBl
         pthread_create(&t, NULL, nested_worker_thread, &statelists[0]);
 
         // wait for thread to terminate:
-        pthread_join(t, (void*)&statelists[0].head.slhead);
+        pthread_join(t, (void *)&statelists[0].head.slhead);
 
         // the first 16 Bits of the cryptostate already contain part of our key.
         p1 = p3 = statelists[0].head.slhead;
@@ -698,8 +697,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBl
         p3->even = -1;
         statelists[0].len = p3 - statelists[0].head.slhead;
         statelists[0].tail.sltail = --p3;
-    }
-    else { // fast decrypt static nested
+    } else { // fast decrypt static nested
 
         PrintAndLogEx(SUCCESS, "Fast staticnested decrypt running...");
 
@@ -729,7 +727,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBl
 
         // wait for threads to terminate:
         for (uint8_t i = 0; i < 2; i++)
-            pthread_join(thread_id[i], (void*)&statelists[i].head.slhead);
+            pthread_join(thread_id[i], (void *)&statelists[i].head.slhead);
 
         // the first 16 Bits of the cryptostate already contain part of our key.
         // Create the intersection of the two lists based on these 16 Bits and
@@ -755,8 +753,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBl
                     p4++;
                     p2++;
                 }
-            }
-            else {
+            } else {
                 while (Compare16Bits(p1, p2) == -1) p1++;
                 while (Compare16Bits(p1, p2) == 1) p2++;
             }
@@ -791,7 +788,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBl
     uint32_t maxkeysinblock = IfPm3Flash() ? 1000 : KEYS_IN_BLOCK;
     uint32_t max_keys_chunk = keycnt > maxkeysinblock ? maxkeysinblock : keycnt;
 
-    uint8_t* mem = calloc((maxkeysinblock * 6) + 5, sizeof(uint8_t));
+    uint8_t *mem = calloc((maxkeysinblock * 6) + 5, sizeof(uint8_t));
     if (mem == NULL) {
         free(statelists[0].head.slhead);
         return PM3_EMALLOC;
@@ -803,10 +800,10 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBl
     mem[3] = ((max_keys_chunk >> 8) & 0xFF);
     mem[4] = (max_keys_chunk & 0xFF);
 
-    uint8_t* p_keyblock = mem + 5;
+    uint8_t *p_keyblock = mem + 5;
 
     uint8_t destfn[32];
-    strncpy((char*)destfn, "static_nested_000.bin", sizeof(destfn) - 1);
+    strncpy((char *)destfn, "static_nested_000.bin", sizeof(destfn) - 1);
 
     uint64_t start_time = msclock();
     for (uint32_t i = 0; i < keycnt; i += max_keys_chunk) {
@@ -836,15 +833,14 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBl
             mem[4] = (chunk & 0xFF);
 
             // upload to flash.
-            res = flashmem_spiffs_load((char*)destfn, mem, 5 + (chunk * 6));
+            res = flashmem_spiffs_load((char *)destfn, mem, 5 + (chunk * 6));
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "\nSPIFFS upload failed");
                 free(mem);
                 return res;
             }
             res = mfCheckKeys_file(destfn, &key64);
-        }
-        else {
+        } else {
             res = mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, chunk, p_keyblock, &key64);
         }
 
@@ -857,13 +853,12 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBl
 
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _GREEN_("%s") "]",
-                package->block,
-                package->keytype ? 'B' : 'A',
-                sprint_hex(resultKey, 6)
-            );
+                          package->block,
+                          package->keytype ? 'B' : 'A',
+                          sprint_hex(resultKey, 6)
+                         );
             return PM3_SUCCESS;
-        }
-        else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
+        } else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
             PrintAndLogEx(NORMAL, "");
             free(mem);
             return res;
@@ -878,9 +873,9 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t* key, uint8_t trgBl
 
 out:
     PrintAndLogEx(SUCCESS, "\ntarget block:%3u key type: %c",
-        package->block,
-        package->keytype ? 'B' : 'A'
-    );
+                  package->block,
+                  package->keytype ? 'B' : 'A'
+                 );
 
     free(statelists[0].head.slhead);
 

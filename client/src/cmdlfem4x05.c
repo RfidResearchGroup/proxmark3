@@ -1993,7 +1993,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
     bool fwd = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    const char* cmdText;
+    const char *cmdText;
     char dataText[100];
     char blkAddr[4];
     char bits[80];
@@ -2120,7 +2120,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                             cmdText = "Disable";
                             strncpy(blkAddr, " ",  sizeof(blkAddr));
                             tmpValue = em4x05_Sniff_GetBlock(&bits[11], fwd);
-                           snprintf(dataText, sizeof(dataText), "%08X", tmpValue);
+                            snprintf(dataText, sizeof(dataText), "%08X", tmpValue);
                         }
 
                         //  bits[bitidx] = 0;

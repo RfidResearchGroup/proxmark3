@@ -50,7 +50,7 @@ static void print_result(const em4x50_word_t *words, int fwr, int lwr) {
 
     for (int i = fwr; i <= lwr; i++) {
 
-        const char* s;
+        const char *s;
         switch (i) {
             case EM4X50_DEVICE_PASSWORD:
                 s = _YELLOW_("password, write only");
