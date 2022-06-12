@@ -1708,7 +1708,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
                         e_sector[sectorNo].foundKey[trgKeyType] = 1;
                         e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
 
-                        mfCheckKeys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false);
+                        // mfCheckKeys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false);
                         continue;
                     default :
                         PrintAndLogEx(ERR, "unknown error.\n");
@@ -1743,7 +1743,9 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
             SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
 
             PacketResponseNG resp;
-            if (!WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) continue;
+            if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500) == false) {
+                continue;
+            }
 
             if (resp.status != PM3_SUCCESS) continue;
 
@@ -2507,6 +2509,9 @@ noValidKeyFound:
     // Iterate over each sector and key(A/B)
     for (current_sector_i = 0; current_sector_i < sector_cnt; current_sector_i++) {
         for (current_key_type_i = 0; current_key_type_i < 2; current_key_type_i++) {
+
+            if (has_staticnonce == NONCE_STATIC)
+                goto tryStaticnested;
 
             // If the key is already known, just skip it
             if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
