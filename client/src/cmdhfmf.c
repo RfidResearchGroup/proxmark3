@@ -2510,11 +2510,11 @@ noValidKeyFound:
     for (current_sector_i = 0; current_sector_i < sector_cnt; current_sector_i++) {
         for (current_key_type_i = 0; current_key_type_i < 2; current_key_type_i++) {
 
-            if (has_staticnonce == NONCE_STATIC)
-                goto tryStaticnested;
-
             // If the key is already known, just skip it
             if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
+
+                if (has_staticnonce == NONCE_STATIC)
+                    goto tryStaticnested;
 
                 // Try the found keys are reused
                 if (bytes_to_num(tmp_key, 6) != 0) {
