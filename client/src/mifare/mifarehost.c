@@ -557,7 +557,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             free(statelists[1].head.slhead);
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(SUCCESS, "\ntarget block %4u key type %c -- found valid key [ " _GREEN_("%s") " ]",
+            PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c -- found valid key [ " _GREEN_("%s") " ]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex_inrow(resultKey, 6)
@@ -570,7 +570,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     }
 
 out:
-    PrintAndLogEx(SUCCESS, "\ntarget block %4u key type %c",
+    PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c",
                   package->block,
                   package->keytype ? 'B' : 'A'
                  );
@@ -604,119 +604,36 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_STATIC_NESTED, (uint8_t *)&payload, sizeof(payload));
 
-    if (!WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_NESTED, &resp, 2000))
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_NESTED, &resp, 2000) == false)
         return PM3_ETIMEOUT;
 
     if (resp.status != PM3_SUCCESS)
         return resp.status;
 
     struct p {
-        int16_t isOK;
         uint8_t block;
         uint8_t keytype;
         uint8_t cuid[4];
-        uint8_t nt1_1[4];
-        uint8_t nt2_1[4];
-        // new nt
-        uint8_t nt1_2[4];
-        uint8_t nt2_2[4];
+        uint8_t nt_a[4];
+        uint8_t ks_a[4];
+        uint8_t nt_b[4];
+        uint8_t ks_b[4];
     } PACKED;
     struct p *package = (struct p *)resp.data.asBytes;
 
-    // error during collecting static nested information
-    if (package->isOK == 0) return PM3_EUNDEF;
-
-    uint32_t nt1_1, nt2_1;
-    uint32_t nt1_2, nt2_2;
-    uint32_t dist = 160;
-
     memcpy(&uid, package->cuid, sizeof(package->cuid));
-    memcpy(&nt1_1, package->nt1_1, 4);
-    memcpy(&nt2_1, package->nt2_1, 4);
-    memcpy(&nt1_2, package->nt1_2, 4);
-    memcpy(&nt2_2, package->nt2_2, 4);
 
-    // is fast decrypt supported?
-    uint8_t level = 0;
-    if (nt2_1 != nt2_2) {
-        level = 1;
-        // check level(staticnested)
-        if (nt1_1 == 0x01200145) {
-            level = 1;
-        }
-        if (nt1_1 == 0x009080A2) {
-            level = 2;
-            if (trgKeyType == 1) {
-                // if level is 2 and recover keyb, we must use 161 dist first.
-                dist = 161;
-            }
-        }
-    } else {
-        level = 0;
+    for (uint8_t i = 0; i < 2; i++) {
+        statelists[i].blockNo = package->block;
+        statelists[i].keyType = package->keytype;
+        statelists[i].uid = uid;
     }
 
-    PrintAndLogEx(SUCCESS, "Auto detect staticnested level %d", level);
+    memcpy(&statelists[0].nt_enc, package->nt_a, sizeof(package->nt_a));
+    memcpy(&statelists[0].ks1, package->ks_a, sizeof(package->ks_a));
 
-    uint32_t ntp_1 = prng_successor(nt1_1, dist);
-    uint32_t ks1_1 = nt2_1 ^ ntp_1;
-
-    // normal static nested
-    if (level == 0) {
-        statelists[0].blockNo = package->block;
-        statelists[0].keyType = package->keytype;
-        statelists[0].uid = uid;
-
-        memcpy(&statelists[0].nt_enc, &ntp_1, sizeof(ntp_1));
-        memcpy(&statelists[0].ks1, &ks1_1, sizeof(ks1_1));
-
-        // calc keys
-        pthread_t t;
-
-        // create and run worker thread
-        pthread_create(&t, NULL, nested_worker_thread, &statelists[0]);
-
-        // wait for thread to terminate:
-        pthread_join(t, (void *)&statelists[0].head.slhead);
-
-        // the first 16 Bits of the cryptostate already contain part of our key.
-        p1 = p3 = statelists[0].head.slhead;
-
-        // create key candidates.
-        while (p1 <= statelists[0].tail.sltail) {
-            struct Crypto1State savestate;
-            savestate = *p1;
-            while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
-                *p3 = *p1;
-                lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
-                p3++;
-                p1++;
-            }
-        }
-
-        p3->odd = -1;
-        p3->even = -1;
-        statelists[0].len = p3 - statelists[0].head.slhead;
-        statelists[0].tail.sltail = --p3;
-    } else { // fast decrypt static nested
-
-        PrintAndLogEx(SUCCESS, "Fast staticnested decrypt running...");
-
-        for (uint8_t i = 0; i < 2; i++) {
-            statelists[i].blockNo = package->block;
-            statelists[i].keyType = package->keytype;
-            statelists[i].uid = uid;
-        }
-
-        dist += 160;
-
-        uint32_t ntp_2 = prng_successor(nt1_2, dist);
-        uint32_t ks1_2 = nt2_2 ^ ntp_2;
-
-        memcpy(&statelists[0].nt_enc, &ntp_1, sizeof(ntp_1));
-        memcpy(&statelists[0].ks1, &ks1_1, sizeof(ks1_1));
-
-        memcpy(&statelists[1].nt_enc, &ntp_2, sizeof(ntp_2));
-        memcpy(&statelists[1].ks1, &ks1_2, sizeof(ks1_2));
+    memcpy(&statelists[1].nt_enc, package->nt_b, sizeof(package->nt_b));
+    memcpy(&statelists[1].ks1, package->ks_b, sizeof(package->ks_b));
 
         // calc keys
         pthread_t thread_id[2];
@@ -774,7 +691,48 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         qsort(statelists[1].head.keyhead, statelists[1].len, sizeof(uint64_t), compare_uint64);
         // Create the intersection
         statelists[0].len = intersection(statelists[0].head.keyhead, statelists[1].head.keyhead);
+
+
+/*
+
+    memcpy(&uid, package->cuid, sizeof(package->cuid));
+
+    statelists[0].blockNo = package->block;
+    statelists[0].keyType = package->keytype;
+    statelists[0].uid = uid;
+
+    memcpy(&statelists[0].nt_enc, package->nt, sizeof(package->nt));
+    memcpy(&statelists[0].ks1, package->ks, sizeof(package->ks));
+
+    // calc keys
+    pthread_t t;
+
+    // create and run worker thread
+    pthread_create(&t, NULL, nested_worker_thread, &statelists[0]);
+
+    // wait for thread to terminate:
+    pthread_join(t, (void *)&statelists[0].head.slhead);
+
+    // the first 16 Bits of the cryptostate already contain part of our key.
+    p1 = p3 = statelists[0].head.slhead;
+
+    // create key candidates.
+    while (p1 <= statelists[0].tail.sltail) {
+        struct Crypto1State savestate;
+        savestate = *p1;
+        while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
+            *p3 = *p1;
+            lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
+            p3++;
+            p1++;
+        }
     }
+
+    p3->odd = -1;
+    p3->even = -1;
+    statelists[0].len = p3 - statelists[0].head.slhead;
+    statelists[0].tail.sltail = --p3;
+*/
 
     uint32_t keycnt = statelists[0].len;
     if (keycnt == 0) goto out;
@@ -782,13 +740,19 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") " key candidates", keycnt);
 
     memset(resultKey, 0, 6);
-    uint64_t key64 = -1;
 
     // The list may still contain several key candidates. Test each of them with mfCheckKeys
     uint32_t maxkeysinblock = IfPm3Flash() ? 1000 : KEYS_IN_BLOCK;
     uint32_t max_keys_chunk = keycnt > maxkeysinblock ? maxkeysinblock : keycnt;
 
-    uint8_t *mem = calloc((maxkeysinblock * 6) + 5, sizeof(uint8_t));
+    uint8_t *mem = NULL;
+    uint8_t *p_keyblock = NULL;
+
+    // if RDV4 and more than 10 candidate keys
+    if (IfPm3Flash() && keycnt > 70) {
+
+        // used for mfCheckKeys_file, which needs a header
+        mem = calloc((maxkeysinblock * 6) + 5, sizeof(uint8_t));
     if (mem == NULL) {
         free(statelists[0].head.slhead);
         return PM3_EMALLOC;
@@ -800,10 +764,19 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     mem[3] = ((max_keys_chunk >> 8) & 0xFF);
     mem[4] = (max_keys_chunk & 0xFF);
 
-    uint8_t *p_keyblock = mem + 5;
+        p_keyblock = mem + 5;
+    } else {
 
-    uint8_t destfn[32];
-    strncpy((char *)destfn, "static_nested_000.bin", sizeof(destfn) - 1);
+        // used for mfCheckKeys, which adds its own header.
+        mem = calloc((maxkeysinblock * 6), sizeof(uint8_t));
+        if (mem == NULL) {
+            free(statelists[0].head.slhead);
+            return PM3_EMALLOC;
+        }
+        p_keyblock = mem;
+    }
+
+    uint8_t fn[26] = "static_nested_000.bin";
 
     uint64_t start_time = msclock();
     for (uint32_t i = 0; i < keycnt; i += max_keys_chunk) {
@@ -817,7 +790,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         }
 
         int res = 0;
-        key64 = 0;
+        uint64_t key64 = 0;
         uint32_t chunk = keycnt - i > max_keys_chunk ? max_keys_chunk : keycnt - i;
 
         // copy x keys to device.
@@ -827,21 +800,21 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         }
 
         // check a block of generated key candidates.
-        if (IfPm3Flash() && keycnt > 10) {
+        if (IfPm3Flash() && keycnt > 70) {
 
             mem[3] = ((chunk >> 8) & 0xFF);
             mem[4] = (chunk & 0xFF);
 
             // upload to flash.
-            res = flashmem_spiffs_load((char *)destfn, mem, 5 + (chunk * 6));
+            res = flashmem_spiffs_load((char *)fn, mem, 5 + (chunk * 6));
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "\nSPIFFS upload failed");
                 free(mem);
                 return res;
             }
-            res = mfCheckKeys_file(destfn, &key64);
+            res = mfCheckKeys_file(fn, &key64);
         } else {
-            res = mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, false, chunk, p_keyblock, &key64);
+            res = mfCheckKeys(statelists[0].blockNo, statelists[0].keyType, true, chunk, mem, &key64);
         }
 
         if (res == PM3_SUCCESS) {
@@ -851,11 +824,13 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
 
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, "target block:%3u key type: %c  -- found valid key [ " _GREEN_("%s") "]",
+            if (IfPm3Flash() && keycnt > 70)
+                PrintAndLogEx(NORMAL, "");
+
+            PrintAndLogEx(SUCCESS, "target block %4u key type %c -- found valid key [ " _GREEN_("%s") " ]",
                           package->block,
                           package->keytype ? 'B' : 'A',
-                          sprint_hex(resultKey, 6)
+                          sprint_hex_inrow(resultKey, 6)
                          );
             return PM3_SUCCESS;
         } else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
@@ -872,17 +847,14 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     free(mem);
 
 out:
-    PrintAndLogEx(SUCCESS, "\ntarget block:%3u key type: %c",
+
+    PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c",
                   package->block,
                   package->keytype ? 'B' : 'A'
                  );
 
     free(statelists[0].head.slhead);
-
-    if (level != 0) {
         free(statelists[1].head.slhead);
-    }
-
     return PM3_ESOFT;
 }
 
