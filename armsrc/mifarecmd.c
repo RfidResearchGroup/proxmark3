@@ -1196,12 +1196,15 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     set_tracing(false);
 }
 
-static void MifareFastStaticNestedImpl(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key, uint32_t *nt1, uint32_t *nt2, uint32_t *cuid, bool firstGet, int16_t *isOK) {
+void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key) {
 
-    uint64_t ui64Key = 0;
-    ui64Key = bytes_to_num(key, 6);
+    LEDsoff();
+
+    uint64_t ui64Key = bytes_to_num(key, 6);
     uint16_t len;
     uint8_t uid[10] = { 0x00 };
+    uint32_t cuid = 0, nt1 = 0, nt2 = 0, nt3 = 0;
+    uint32_t target_nt[2] = {0x00}, target_ks[2] = {0x00};
     uint8_t par[1] = { 0x00 };
     uint8_t receivedAnswer[10] = { 0x00 };
 
@@ -1209,66 +1212,6 @@ static void MifareFastStaticNestedImpl(uint8_t blockNo, uint8_t keyType, uint8_t
     struct Crypto1State *pcs;
     pcs = &mpcs;
 
-    *isOK = 0;
-    LED_C_ON();
-
-    for (uint8_t retry = 0; retry < 3 && (*isOK == 0); retry++) {
-
-        WDT_HIT();
-
-        // prepare next select. No need to power down the card.
-        if (mifare_classic_halt(pcs, *cuid)) {
-            if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Halt error");
-            retry--;
-            continue;
-        }
-
-        if (!iso14443a_select_card(uid, NULL, cuid, true, 0, true)) {
-            if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Can't select card");
-            retry--;
-            continue;
-        };
-
-        // First authentication. Normal auth.
-        if (mifare_classic_authex(pcs, *cuid, blockNo, keyType, ui64Key, AUTH_FIRST, nt1, NULL)) {
-            if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth1 error");
-            retry--;
-            continue;
-        };
-
-        // not first get, we need auth again...
-        if (!firstGet) {
-            if (mifare_classic_authex(pcs, *cuid, blockNo, keyType, ui64Key, AUTH_NESTED, NULL, NULL)) {
-                if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth1 again error");
-                retry--;
-                continue;
-            };
-        }
-
-        // second authentication. Nested auth
-        len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
-        if (len != 4) {
-            if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth2 error len=%d", len);
-            continue;
-        };
-
-        *nt2 = bytes_to_num(receivedAnswer, 4);
-        *isOK = 1;
-    }
-
-    LED_C_OFF();
-
-    crypto1_deinit(pcs);
-}
-
-void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key) {
-
-    int16_t isOK;
-    uint32_t cuid = 0;
-    uint32_t nt1_1 = 0, nt2_1 = 0;
-    uint32_t nt1_2 = 0, nt2_2 = 0;
-
-    LEDsoff();
     LED_A_ON();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -1278,38 +1221,94 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
     clear_trace();
     set_tracing(true);
 
-    MifareFastStaticNestedImpl(blockNo, keyType, targetBlockNo, targetKeyType, key, &nt1_1, &nt2_1, &cuid, true, &isOK);
-    if (isOK) {
-        MifareFastStaticNestedImpl(blockNo, keyType, targetBlockNo, targetKeyType, key, &nt1_2, &nt2_2, &cuid, false, &isOK);
+    int16_t isOK = PM3_ESOFT;
+    LED_C_ON();
+
+    // Main loop - get crypted nonces for target sector
+    for (uint8_t rtr = 0; rtr < 2; rtr++) { 
+        
+        if (mifare_classic_halt(pcs, cuid)) {
+            continue;
+        }
+
+        if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == false) {
+            continue;
+        };
+
+        // first colleciton
+        if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, NULL)) {
+            continue;
+        };
+
+        // pre-generate nonces
+        if (keyType == 1 && nt1 == 0x009080A2) {
+            target_nt[0] = prng_successor(nt1, 161);
+            target_nt[1] = prng_successor(nt1, 321);
+        } else {
+            target_nt[0] = prng_successor(nt1, 160);
+            target_nt[1] = prng_successor(nt1, 320);
+        }
+
+        len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
+        if (len != 4) {
+            continue;
+        };
+      
+        nt2 = bytes_to_num(receivedAnswer, 4);
+        target_ks[0] = nt2 ^ target_nt[0];
+        
+        // second colleciton
+
+        if (mifare_classic_halt(pcs, cuid)) {
+            continue;
+        }
+
+        if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == false) {
+            continue;
+        };
+
+        if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, NULL)) {
+            continue;
+        };
+
+        if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_NESTED, NULL, NULL)) {
+            continue;
+        };
+
+        len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
+        if (len != 4) {
+            continue;
+        };
+        nt3 = bytes_to_num(receivedAnswer, 4);
+        target_ks[1] = nt3 ^ target_nt[1];
+
+        isOK = PM3_SUCCESS;
     }
 
+    LED_C_OFF();
+
+    crypto1_deinit(pcs);
+
     struct p {
-        int16_t isOK;
         uint8_t block;
         uint8_t keytype;
         uint8_t cuid[4];
-        uint8_t nt1_1[4];
-        uint8_t nt2_1[4];
-        // new nt
-        uint8_t nt1_2[4];
-        uint8_t nt2_2[4];
+        uint8_t nt_a[4];
+        uint8_t ks_a[4];
+        uint8_t nt_b[4];
+        uint8_t ks_b[4];
     } PACKED payload;
-    payload.isOK = isOK;
     payload.block = targetBlockNo;
     payload.keytype = targetKeyType;
 
     memcpy(payload.cuid, &cuid, 4);
-
-    // copy nonces to response body.
-    memcpy(payload.nt1_1, &nt1_1, 4);
-    memcpy(payload.nt2_1, &nt2_1, 4);
-    memcpy(payload.nt1_2, &nt1_2, 4);
-    memcpy(payload.nt2_2, &nt2_2, 4);
+    memcpy(payload.nt_a, &target_nt[0], 4);
+    memcpy(payload.ks_a, &target_ks[0], 4);
+    memcpy(payload.nt_b, &target_nt[1], 4);
+    memcpy(payload.ks_b, &target_ks[1], 4);
 
     LED_B_ON();
-    reply_ng(CMD_HF_MIFARE_STATIC_NESTED, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
-    LED_B_OFF();
-
+    reply_ng(CMD_HF_MIFARE_STATIC_NESTED, isOK, (uint8_t *)&payload, sizeof(payload));
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
