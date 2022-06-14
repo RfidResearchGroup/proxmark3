@@ -181,9 +181,17 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             return PM3_SUCCESS;
         }
 
-        if (cmdsize > 10 && (memcmp(cmd, "\x6a\x02\xC8\x01\x00\x03\x00\x02\x79", 9) == 0)) {
-            snprintf(exp, size, "ECP");
-            return PM3_SUCCESS;
+        if (cmdsize >= 7 && cmd[0] == ECP_HEADER) {
+            // Second byte of ECP frame indicates its version
+            // Version 0x01 payload is 7 bytes long (including crc)
+            // Version 0x02 payload is 15 bytes long (including crc)
+            if (cmd[1] == 0x01 && cmdsize == 7) {
+                snprintf(exp, size, "ECP1");
+                return PM3_SUCCESS;
+            } else if (cmd[1] == 0x02 && cmdsize == 15) {
+                snprintf(exp, size, "ECP2");
+                return PM3_SUCCESS;
+            }
         }
 
         gs_ntag_i2c_state = 0;
