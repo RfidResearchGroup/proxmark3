@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf 14a reader --ecp` to work consistently (@kormax)
  - Change `trace list -t 14a` to annotate ECP frames of all valid V1 and V2 formats (@kormax)
  - Changed `hf mf staticnested` - significant speedups by using two encrypted nonces (@xianglin1998)
  - Change use of `sprintf` in code to `snprintf` to fix compilation on macOS (@Doridian)

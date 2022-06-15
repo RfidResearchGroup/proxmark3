@@ -2441,7 +2441,8 @@ static void iso14a_set_ATS_times(const uint8_t *ats) {
 
 static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_magsafe) {
 
-#define ECP_DELAY 15
+#define ECP_DELAY 10           
+#define ECP_RETRY_TIMEOUT 100    
 #define WUPA_RETRY_TIMEOUT 10    // 10ms
 
     // 0x26 - REQA
@@ -2457,12 +2458,14 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_mags
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
 
+    bool first_try = true;
+    uint32_t retry_timeout = use_ecp ? ECP_RETRY_TIMEOUT : WUPA_RETRY_TIMEOUT;
     uint32_t start_time = GetTickCount();
     int len;
 
     // we may need several tries if we did send an unknown command or a wrong authentication before...
     do {
-        if (use_ecp) {
+        if (use_ecp && !first_try) {
             uint8_t ecp[] = { 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8};
             ReaderTransmit(ecp, sizeof(ecp), NULL);
             SpinDelay(ECP_DELAY);
@@ -2476,12 +2479,13 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_mags
             }
         }
 
-
         // Broadcast for a card, WUPA (0x52) will force response from all cards in the field
         ReaderTransmitBitsPar(wupa, 7, NULL, NULL);
         // Receive the ATQA
         len = ReaderReceive(resp, resp_par);
-    } while (len == 0 && GetTickCountDelta(start_time) <= WUPA_RETRY_TIMEOUT);
+        
+        first_try = false;
+    } while (len == 0 && GetTickCountDelta(start_time) <= retry_timeout);
 
     iso14a_set_timeout(save_iso14a_timeout);
     return len;
