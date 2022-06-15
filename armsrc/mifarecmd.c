@@ -1241,7 +1241,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
         };
 
         // pre-generate nonces
-        if (keyType == 1 && nt1 == 0x009080A2) {
+        if (targetKeyType == 1 && nt1 == 0x009080A2) {
             target_nt[0] = prng_successor(nt1, 161);
             target_nt[1] = prng_successor(nt1, 321);
         } else {
