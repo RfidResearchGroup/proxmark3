@@ -3071,10 +3071,10 @@ static int CmdDiff(const char *Cmd) {
 
         // if ok,  just print
         if (diff == 0) {
-            hex_to_buffer((uint8_t *)line, inA + i, width, width, 0, 1, true);
+            hex_to_buffer((uint8_t *)line, inA + i, width, sizeof(line), 0, 1, true);
             ascii_to_buffer((uint8_t *)(line + strlen(line)), inA + i, width, width, 0);
-            strcat(line + strlen(line), " | ");
-            hex_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, width, 0, 1, true);
+            strncat(line + strlen(line), " | ", 3);
+            hex_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, sizeof(line), 0, 1, true);
             ascii_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, width, 0);
         } else {
 
@@ -3137,26 +3137,26 @@ static int CmdDiff(const char *Cmd) {
         memset(line, 0, sizeof(line));
 
         if (tallestA) {
-            hex_to_buffer((uint8_t *)line, inA + i, width, width, 0, 1, true);
-            ascii_to_buffer((uint8_t *)(line + strlen(line)), inA + i, width, width, 0);
+            hex_to_buffer((uint8_t *)line, inA + i, width,  sizeof(line), 0, 1, true);
+            ascii_to_buffer((uint8_t *)(line + strlen(line)), inA + i, width,  sizeof(line), 0);
             strcat(line + strlen(line), " | ");
             for (int j = 0; j < width; j++) {
-                strcat(line + strlen(line), "-- ");
+                strncat(line + strlen(line), "-- ", 3);
             }
             for (int j = 0; j < width; j++) {
-                strcat(line + strlen(line), ".");
+                strncat(line + strlen(line), ".", 1);
             }
         } else {
 
             for (int j = 0; j < width; j++) {
-                strcat(line + strlen(line), "-- ");
+                strncat(line + strlen(line), "-- ", 3);
             }
             for (int j = 0; j < width; j++) {
-                strcat(line + strlen(line), ".");
+                strncat(line + strlen(line), ".", 1);
             }
-            strcat(line + strlen(line), " | ");
-            hex_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, width, 0, 1, true);
-            ascii_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, width, 0);
+            strncat(line + strlen(line), " | ", 3);
+            hex_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width,  sizeof(line), 0, 1, true);
+            ascii_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width,  sizeof(line), 0);
         }
 
         PrintAndLogEx(INFO, "%03X | %s", i, line);
