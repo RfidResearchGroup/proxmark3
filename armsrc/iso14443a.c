@@ -2455,6 +2455,12 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_mags
         wupa[0] = MAGSAFE_CMD_WUPA_4;
     }
 
+    if (use_ecp) {
+        // We drop the field to bring the phone back into an 'IDLE' state
+        switch_off();
+        set_tracing(true);
+    }
+
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
 
