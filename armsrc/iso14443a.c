@@ -2445,6 +2445,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_mags
 #define ECP_RETRY_TIMEOUT 100    
 #define WUPA_RETRY_TIMEOUT 10    // 10ms
 
+
     // 0x26 - REQA
     // 0x52 - WAKE-UP
     // 0x7A - MAGESAFE WAKE UP
@@ -2453,6 +2454,14 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_mags
     // if magsafe, set it outofbounds
     if (use_magsafe) {
         wupa[0] = MAGSAFE_CMD_WUPA_4;
+    }
+
+    if (use_ecp) {
+        // In case a device was already selected, we send a S-BLOCK deselect to bring it into an idle state so it can be selected again
+        uint8_t deselect_cmd[] = {0xc2, 0xe0, 0xb4};
+        ReaderTransmit(deselect_cmd, sizeof(deselect_cmd), NULL);
+        // Read response if present
+        ReaderReceive(resp, resp_par);
     }
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
