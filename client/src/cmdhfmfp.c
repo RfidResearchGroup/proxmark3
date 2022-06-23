@@ -1372,7 +1372,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
     if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
-        return 2;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -1392,7 +1392,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
         if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD or doesn't have MAD on default keys");
-            return 2;
+            return PM3_ESOFT;
         }
 
         MAD2DecodeAndPrint(sector10, swapmad, verbose);
@@ -1403,7 +1403,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
         size_t madlen = 0;
         if (MADDecode(sector0, sector10, mad, &madlen, swapmad)) {
             PrintAndLogEx(ERR, "can't decode MAD");
-            return 10;
+            return PM3_EWRONGANSWER;
         }
 
         // copy default NDEF key
