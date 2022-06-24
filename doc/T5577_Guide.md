@@ -22,6 +22,8 @@
 | [The configuration Block – Block 0 Page 0](#the-configuration-block-block-0-page-0) |
 | [Exercise 2](#exercise-2)                                                           |
 | [The configuration Block – Block 3 Page 1](#the-configuration-block-block-3-page-1) |
+| [Sniffing commands](#sniffing-commands) |
+| [T5577 and Keysy](#t5577-and-keysy) |
 
 # Part 1
 ^[Top](#top)
@@ -721,6 +723,7 @@ _to be written_
 
 
 ## Sniffing commands
+^[Top](#top)
 
 Some readers work with cards via T55xx commands (read/write/etc) and think that they are safe)
 The password in this case is sent in clear text.
@@ -740,6 +743,7 @@ So) There is a sniff command to get this command from the buffer or the field:
 
 
 ## T5577 and Keysy
+^[Top](#top)
 
 The Keysy tag cloning tool (https://tinylabs.io/keysy/) uses T5577 tags that have a special "password" value (NOT the password described above) written in Block 6 that is tied to the traceability data.  The Keysy checks and computes the proper value for Block 6 and will not write to a tag that does not contain the proper value.   This DRM technology relies on the face that genuine T5577 chips cannot have their traceability data (Blocks 1 and 2 of Page 1) re-written and that the method to computer the proper value for Block 6 is proprietary, therefore compelling you to buy their branded tags.
 
