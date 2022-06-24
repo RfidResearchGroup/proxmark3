@@ -726,20 +726,17 @@ Some readers work with cards via T55xx commands (read/write/etc) and think that 
 The password in this case is sent in clear text.
 So) There is a sniff command to get this command from the buffer or the field:
 
-    ```
     [usb] pm3 --> lf t55xx sniff
-    ```
+
     result:
-    ```
-                                                                 
+                               
     [=] T55xx command detection
     [+] Downlink mode           |  password  |   Data   | blk | page |  0  |  1  | raw
-    [+] ------------------------+------------+----------+-----+------+-----+-+-------------------------------------------------------------------------------
+    [+] ------------------------+------------+----------+-----+------+-----+-+---------------------------------------------
     [+] Default write/pwd read  | [FFxxxxxx] | FFxxxxxx |  6  |   0  |  16 |  45 | 1011111111101xxxxxxxxxxxxxxxx100000110
     [+] Default write/pwd read  | [FFxxxxxx] | FFxxxxxx |  6  |   0  |  17 |  46 | 1011111111101xxxxxxxxxxxxxxxx100000110
-    [+] -----------------------------------------------------------------------------------------------------------------------------------------------------
-                                                                 
-    ```
+    [+] -------------------------------------------------------------------------------------------------------------------
+
 
 
 ## T5577 and Keysy
