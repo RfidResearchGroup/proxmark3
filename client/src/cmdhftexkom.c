@@ -40,8 +40,8 @@ static int CmdHFTexkomReader(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-//    uint8_t param = 0;
-//    SendCommandNG(CMD_HF_TEXKOM_READER, (uint8_t *)&param, sizeof(uint8_t));
+    uint32_t samplesCount = 40000;
+    SendCommandNG(CMD_HF_ACQ_RAW_ADC, (uint8_t *)&samplesCount, sizeof(uint32_t));
 
     return PM3_SUCCESS;
 }

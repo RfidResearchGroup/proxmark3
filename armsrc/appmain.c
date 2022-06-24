@@ -33,6 +33,7 @@
 #include "legicrf.h"
 #include "BigBuf.h"
 #include "iclass_cmd.h"
+#include "hfops.h"
 #include "iso14443a.h"
 #include "iso14443b.h"
 #include "iso15693.h"
@@ -1380,6 +1381,15 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_FELICALITE_DUMP: {
             felica_dump_lite_s();
+            break;
+        }
+#endif
+
+#ifdef WITH_GENERAL_HF
+        case CMD_HF_ACQ_RAW_ADC: {
+            uint32_t samplesCount = 0;
+            memcpy(&samplesCount, packet->data.asBytes, 4);
+            HfReadADC(samplesCount);
             break;
         }
 #endif

@@ -511,6 +511,7 @@ typedef struct {
 
 // For the 13.56 MHz tags
 #define CMD_HF_ISO15693_ACQ_RAW_ADC                                       0x0300
+#define CMD_HF_ACQ_RAW_ADC                                                0x0301
 #define CMD_HF_SRI_READ                                                   0x0303
 #define CMD_HF_ISO14443B_COMMAND                                          0x0305
 #define CMD_HF_ISO15693_READER                                            0x0310

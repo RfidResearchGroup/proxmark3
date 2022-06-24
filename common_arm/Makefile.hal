@@ -143,6 +143,9 @@ ifneq ($(SKIP_ZX8211),1)
 endif
 
 # common HF support
+ifneq ($(SKIP_HF),1)
+    PLATFORM_DEFS += -DWITH_GENERAL_HF
+endif
 ifneq ($(SKIP_ISO15693),1)
     PLATFORM_DEFS += -DWITH_ISO15693
 endif

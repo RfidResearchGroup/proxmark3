@@ -35,6 +35,7 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
              -ffunction-sections -fdata-sections
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
+SRC_HF = hfops.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
 #UNUSED: mifaresniff.c
@@ -132,6 +133,7 @@ THUMBSRC = start.c \
 	$(SRC_EM4x50) \
     $(SRC_EM4x70) \
     $(SRC_SPIFFS) \
+    $(SRC_HF) \
     $(SRC_ISO14443a) \
     $(SRC_ISO14443b) \
     $(SRC_CRAPTO1) \
