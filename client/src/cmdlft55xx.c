@@ -4027,8 +4027,8 @@ static int CmdT55xxSniff(const char *Cmd) {
     // Headings
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _CYAN_("T55xx command detection"));
-    PrintAndLogEx(SUCCESS, "Downlink mode         | password |   Data   | blk | page |  0  |  1  | raw");
-    PrintAndLogEx(SUCCESS, "----------------------+----------+----------+-----+------+-----+-----+-------------------------------------------------------------------------------");
+    PrintAndLogEx(SUCCESS, "Downlink mode           |  password  |   Data   | blk | page |  0  |  1  | raw");
+    PrintAndLogEx(SUCCESS, "------------------------+------------+----------+-----+------+-----+-----+-------------------------------------------------------------------------------");
 
     idx = 0;
     // loop though sample buffer
@@ -4164,11 +4164,15 @@ static int CmdT55xxSniff(const char *Cmd) {
                         }
                         have_data = true;
                         modeText = "Default pwd write";
-                        snprintf(pwdText, sizeof(pwdText), "%08X", usedPassword);
+                        snprintf(pwdText, sizeof(pwdText), " %08X", usedPassword);
                         snprintf(dataText, sizeof(dataText), "%08X", blockData);
                     }
 
-                    // Default Write (or password read ??)
+                    // Default Write or password read ???
+                    // the most confusing command. 
+                    // if the token is with a password - all is OK, 
+                    // if not - read command with a password will lead to write the shifted password to the memory and:
+                    //    IF the most bit of the data is `1` ----> IT LEADS TO LOCK this block of the memory
                     if (dataLen == 38) {
                         t55sniff_trim_samples(pulseBuffer, &pulseIdx, 38);
 
@@ -4180,6 +4184,12 @@ static int CmdT55xxSniff(const char *Cmd) {
                             if (data[i] == '1')
                                 blockData |= 1;
                         }
+                        for (uint8_t i = 2; i <= 33; i++) {
+                            usedPassword <<= 1;
+                            if (data[i] == '1') {
+                                usedPassword |= 1;
+                            }
+                        }
                         blockAddr = 0;
                         for (uint8_t i = 35; i <= 37; i++) {
                             blockAddr <<= 1;
@@ -4187,7 +4197,8 @@ static int CmdT55xxSniff(const char *Cmd) {
                                 blockAddr |= 1;
                         }
                         have_data = true;
-                        modeText = "Default write";
+                        modeText = "Default write/pwd read";
+                        snprintf(pwdText, sizeof(pwdText), "[%08X]", usedPassword);
                         snprintf(dataText, sizeof(dataText), "%08X", blockData);
                     }
                 }
@@ -4224,7 +4235,7 @@ static int CmdT55xxSniff(const char *Cmd) {
                         }
                         have_data = true;
                         modeText = "Leading 0 pwd write";
-                        snprintf(pwdText, sizeof(pwdText), "%08X", usedPassword);
+                        snprintf(pwdText, sizeof(pwdText), " %08X", usedPassword);
                         snprintf(dataText, sizeof(dataText), "%08X", blockData);
                     }
                 }
@@ -4234,9 +4245,9 @@ static int CmdT55xxSniff(const char *Cmd) {
         // Print results
         if (have_data) {
             if (blockAddr == 7)
-                PrintAndLogEx(SUCCESS, "%-20s  | "_GREEN_("%8s")" | "_YELLOW_("%8s")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
+                PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_YELLOW_("%8s")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
             else
-                PrintAndLogEx(SUCCESS, "%-20s  | "_GREEN_("%8s")" | "_GREEN_("%8s")" |  "_GREEN_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
+                PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_GREEN_("%8s")" |  "_GREEN_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
         }
     }
 
