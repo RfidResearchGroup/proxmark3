@@ -720,7 +720,7 @@ it, we can follow the password section and update the config from
 _to be written_
 
 
-## sniffing commands
+## Sniffing commands
 
 Some readers work with cards via T55xx commands (read/write/etc) and think that they are safe)
 The password in this case is sent in clear text.
