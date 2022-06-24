@@ -462,7 +462,9 @@ required, please do not proceed.
     
     ***Reading a T5577 block with a password when a password is not
     enabled can result in locking the card. Please only use read with a
-    password when it is known that a password is in use.***
+    password when it is known that a password is in use.
+    
+    At least don't use block 0 for this and password with `1` in the most significant bit***
     
     The proxmark3 has a safety check\!
     ```
@@ -717,6 +719,27 @@ it, we can follow the password section and update the config from
 
 _to be written_
 
+
+## sniffing commands
+
+Some readers work with cards via T55xx commands (read/write/etc) and think that they are safe)
+The password in this case is sent in clear text.
+So) There is a sniff command to get this command from the buffer or the field:
+
+    ```
+    [usb] pm3 --> lf t55xx sniff
+    ```
+    result:
+    ```
+                                                                 
+    [=] T55xx command detection
+    [+] Downlink mode           |  password  |   Data   | blk | page |  0  |  1  | raw
+    [+] ------------------------+------------+----------+-----+------+-----+-+-------------------------------------------------------------------------------
+    [+] Default write/pwd read  | [FFxxxxxx] | FFxxxxxx |  6  |   0  |  16 |  45 | 1011111111101xxxxxxxxxxxxxxxx100000110
+    [+] Default write/pwd read  | [FFxxxxxx] | FFxxxxxx |  6  |   0  |  17 |  46 | 1011111111101xxxxxxxxxxxxxxxx100000110
+    [+] -----------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                 
+    ```
 
 
 ## T5577 and Keysy
