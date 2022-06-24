@@ -66,6 +66,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added new standalone mode `lf_em4100rsww` (@zabszk)
  - Fixed `hf 15 slixdisable` wrong pass id (@r1ddl3rz)
  - Added 122 new keys from Flipper Zero community to `mfc_default_keys.dic` (@UberGuidoZ)
+ - Added showing password for the read command in the `lf t55xx sniff` command (@merlokk)
 
 ## [Frostbit.4.14831][2022-01-11]
  - Changed Wiegand format lookup - now case-insensitive (@iceman1001)
