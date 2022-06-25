@@ -1389,7 +1389,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_ACQ_RAW_ADC: {
             uint32_t samplesCount = 0;
             memcpy(&samplesCount, packet->data.asBytes, 4);
-            HfReadADC(samplesCount);
+            HfReadADC(samplesCount, true);
             break;
         }
 #endif

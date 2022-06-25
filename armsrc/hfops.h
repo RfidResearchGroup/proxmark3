@@ -21,7 +21,7 @@
 
 #include "common.h"
 
-int HfReadADC(uint32_t samplesCount);
+int HfReadADC(uint32_t samplesCount, bool ledcontrol);
 
 
 #endif
