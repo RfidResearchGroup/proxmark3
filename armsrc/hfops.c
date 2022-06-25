@@ -55,8 +55,6 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
 
     if (ledcontrol) LED_A_ON();
 
-    uint32_t samples = 0;
-    //uint32_t dma_start_time = 0;
     uint16_t *upTo = dma->buf;
 
     uint32_t sbs = samplesCount;
@@ -71,11 +69,13 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
         if (behindBy == 0)
             continue;
 
-        samples++;
-        if (samples == 1) {
-            // DMA has transferred the very first data
-            //dma_start_time = GetCountSspClk() & 0xfffffff0;
-        }
+        uint16_t sample = *upTo;
+        logSample(sample & 0xff, 1, 8, false);
+        logSample((sample >> 8) & 0xff, 1, 8, false);
+        upTo++;
+
+        if (getSampleCounter() >= samplesCount)
+            break;
 
         if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                // we have read all of the DMA buffer content.
             upTo = dma->buf;                                     // start reading the circular buffer from the beginning
@@ -97,12 +97,6 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
                 WDT_HIT();
             }
         }
-
-
-        logSample(50, 1, 8, false);
-
-        if (getSampleCounter() >= samplesCount)
-            break;
     }
 
     FpgaDisableSscDma();
@@ -112,10 +106,9 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
-    reply_ng(CMD_HF_ACQ_RAW_ADC, PM3_SUCCESS, NULL, 0);
+    uint32_t scnt = getSampleCounter();
+    reply_ng(CMD_HF_ACQ_RAW_ADC, PM3_SUCCESS, (uint8_t*)&scnt, 4);
     if (ledcontrol) LEDsoff();
-
-    Dbprintf("-- samples: %d", getSampleCounter());
 
     return 0;
 }

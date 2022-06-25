@@ -51,7 +51,9 @@ static int CmdHFTexkomReader(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    getSamples(samplesCount, true);
+    uint32_t size = (resp.data.asDwords[0]);
+    if (size > 0)
+        getSamples(samplesCount, true);
 
     return PM3_SUCCESS;
 }
