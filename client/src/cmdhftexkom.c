@@ -26,6 +26,7 @@
 #include "comms.h"
 #include "ui.h"
 #include "cmdhf14a.h" 
+#include "cmddata.h" 
 
 static int CmdHFTexkomReader(const char *Cmd) {
     CLIParserContext *ctx;
@@ -49,6 +50,8 @@ static int CmdHFTexkomReader(const char *Cmd) {
         PrintAndLogEx(WARNING, "(hf texkom reader) command execution time out");
         return PM3_ETIMEOUT;
     }
+
+    getSamples(samplesCount, true);
 
     return PM3_SUCCESS;
 }

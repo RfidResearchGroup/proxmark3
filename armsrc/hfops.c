@@ -26,6 +26,7 @@
 #include "dbprint.h"
 #include "util.h"
 #include "commonutil.h"
+#include "lfsampling.h"
 
 
 int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
@@ -57,6 +58,9 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
     uint32_t samples = 0;
     //uint32_t dma_start_time = 0;
     uint16_t *upTo = dma->buf;
+
+    uint32_t sbs = samplesCount;
+    initSampleBuffer(&sbs);
 
     for (;;) {
         if (BUTTON_PRESS()) {
@@ -95,8 +99,10 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
         }
 
 
+        logSample(50, 1, 8, false);
 
-
+        if (getSampleCounter() >= samplesCount)
+            break;
     }
 
     FpgaDisableSscDma();
@@ -109,7 +115,7 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
     reply_ng(CMD_HF_ACQ_RAW_ADC, PM3_SUCCESS, NULL, 0);
     if (ledcontrol) LEDsoff();
 
-    DbpString("HfReadADC " _GREEN_("success"));
+    Dbprintf("-- samples: %d", getSampleCounter());
 
     return 0;
 }
