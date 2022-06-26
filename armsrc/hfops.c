@@ -18,6 +18,7 @@
 
 #include "hfops.h"
 
+#include <string.h>
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
@@ -33,15 +34,19 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
     if (ledcontrol) LEDsoff();
 
     BigBuf_Clear_ext(false);
+    // connect Demodulated Signal to ADC:
+    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     // And put the FPGA in the appropriate mode
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ | FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE);
 
     // Setup and start DMA.
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf16_t *dma = get_dma16();
+    memset((uint8_t *) dma->buf, 0, DMA_BUFFER_SIZE);
 
     // Setup and start DMA.
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
@@ -69,33 +74,41 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
         if (behindBy == 0)
             continue;
 
-        uint16_t sample = *upTo;
-        logSample(sample & 0xff, 1, 8, false);
-        logSample((sample >> 8) & 0xff, 1, 8, false);
-        upTo++;
+        // FPGA side:
+        // corr_i_out <= {2'b00, corr_amplitude[13:8]};
+        // corr_q_out <= corr_amplitude[7:0];
+        // ci = upTo >> 8, cq = upTo
+        volatile uint16_t sample = *upTo++;
+        //if (sample & 0xc000) {
+        //    Dbprintf("sample!!!! %d \r\n", getSampleCounter());
+        //    break;
+        //}
+
+        logSample((sample >> 6) & 0xff, 1, 8, false);
 
         if (getSampleCounter() >= samplesCount)
             break;
 
         if (upTo >= dma->buf + DMA_BUFFER_SIZE) {                // we have read all of the DMA buffer content.
             upTo = dma->buf;                                     // start reading the circular buffer from the beginning
+        }
 
-            // DMA Counter Register had reached 0, already rotated.
-            if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
+        // DMA Counter Register had reached 0, already rotated.
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
 
-                // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
-                    AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
-                    AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-                }
-                // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
-                    AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
-                    AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
-                }
-
-                WDT_HIT();
+            // primary buffer was stopped
+            if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
+                AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
+                Dbprintf("blew\r\n");
             }
+            // secondary buffer sets as primary, secondary buffer was stopped
+            if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
+                AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+            }
+
+            WDT_HIT();
         }
     }
 
