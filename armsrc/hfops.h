@@ -23,5 +23,4 @@
 
 int HfReadADC(uint32_t samplesCount, bool ledcontrol);
 
-
 #endif
