@@ -38,7 +38,7 @@ inline uint32_t GetGraphBuffer(uint32_t indx) {
         return g_GraphBuffer[indx] + 128;
 }
 
-static uint32_t TexkomSearchStart(uint32_t indx, uint8_t threshold) {
+static uint32_t TexkomSearchStart(uint32_t indx, uint32_t threshold) {
     // one bit length = 27, minimal noise = 60
     uint32_t lownoisectr = 0;
     for (uint32_t i = indx; i < g_GraphTraceLen; i++) {
@@ -56,6 +56,26 @@ static uint32_t TexkomSearchStart(uint32_t indx, uint8_t threshold) {
     return 0;
 }
 
+static uint32_t TexkomSearchLength(uint32_t indx, uint32_t threshold) {
+    // one bit length = 27, minimal noise = 60
+    uint32_t lownoisectr = 0;
+    uint32_t datalen = 0;
+    for (uint32_t i = indx; i < g_GraphTraceLen; i++) {
+        if (lownoisectr > 60) {
+            break;
+        } else {
+            if (GetGraphBuffer(i) > threshold) {
+                lownoisectr = 0;
+                datalen = i - indx + 27;
+            } else {
+                lownoisectr++;
+            }
+        }
+    }
+
+    return datalen;
+}
+
 static uint32_t TexkomSearchMax(uint32_t indx, uint32_t len) {
     uint32_t res = 0;
 
@@ -68,6 +88,22 @@ static uint32_t TexkomSearchMax(uint32_t indx, uint32_t len) {
     }
 
     return res;
+}
+
+static bool TexkomCorrelate(uint32_t indx, uint32_t threshold) {
+    if (indx < 2 || indx + 2 > g_GraphTraceLen)
+        return false;
+
+    uint32_t g1 = GetGraphBuffer(indx - 2);
+    uint32_t g2 = GetGraphBuffer(indx - 1);
+    uint32_t g3 = GetGraphBuffer(indx);
+    uint32_t g4 = GetGraphBuffer(indx + 1);
+    uint32_t g5 = GetGraphBuffer(indx + 2);
+
+    return (
+        (g3 > threshold) &&
+        (g3 >= g2) && (g3 >= g1) && (g3 > g4) && (g3 > g5)
+    );
 }
 
 static int CmdHFTexkomReader(const char *Cmd) {
@@ -107,14 +143,38 @@ static int CmdHFTexkomReader(const char *Cmd) {
         if (sindx == 0 || sindx > samplesCount - 5)
             break;
 
+        uint32_t slen = TexkomSearchLength(sindx, TEXKOM_NOISE_THRESHOLD);
+        if (slen == 0)
+            continue;
+
         uint32_t maxlvl = TexkomSearchMax(sindx, 1760);
         if (maxlvl < TEXKOM_NOISE_THRESHOLD) {
             sindx += 1700;
             continue;
         }
-        PrintAndLogEx(WARNING, "--- indx: %d, max: %d", sindx, maxlvl);
-      
 
+        uint32_t noiselvl = maxlvl / 5;
+        if (noiselvl < TEXKOM_NOISE_THRESHOLD)
+            noiselvl = TEXKOM_NOISE_THRESHOLD;
+
+        PrintAndLogEx(WARNING, "--- indx: %d, len: %d, max: %d, noise: %d", sindx, slen, maxlvl, noiselvl);
+      
+        uint32_t implengths[256] = {};
+        uint32_t implengthslen = 0;
+        uint32_t impulseindx = 0;
+        uint32_t impulsecnt = 0;
+        for (uint32_t i = 0; i < slen; i++) {
+            if (TexkomCorrelate(sindx + i, noiselvl)) {
+                impulsecnt++;
+
+                if (impulseindx != 0) {
+                    if (implengthslen < 256)
+                        implengths[implengthslen++] = sindx + i - impulseindx;
+                }
+                impulseindx = sindx + i;
+            }
+        }
+        PrintAndLogEx(WARNING, "--- impulses: %d, lenarray: %d, [%d,%d]", impulsecnt, implengthslen, implengths[0], implengths[1]);
 
     }
 
