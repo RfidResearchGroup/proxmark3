@@ -142,7 +142,6 @@ static bool TexkomCalculateBitLengths(uint32_t* data, uint32_t len, uint32_t* hi
             lenlow++;
         }
     }
-PrintAndLogEx(WARNING, "--- min: %d, middle: %d, max: %d", dmin, dmiddle, dmax);
 
     *hi = sumhi / lenhi;
     *low = sumlow / lenlow;
@@ -354,7 +353,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
         if (noiselvl < TEXKOM_NOISE_THRESHOLD)
             noiselvl = TEXKOM_NOISE_THRESHOLD;
 
-        PrintAndLogEx(WARNING, "--- indx: %d, len: %d, max: %d, noise: %d", sindx, slen, maxlvl, noiselvl);
+        //PrintAndLogEx(WARNING, "--- indx: %d, len: %d, max: %d, noise: %d", sindx, slen, maxlvl, noiselvl);
       
         uint32_t implengths[256] = {};
         uint32_t implengthslen = 0;
@@ -371,7 +370,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
                 impulseindx = sindx + i;
             }
         }
-        PrintAndLogEx(WARNING, "--- impulses: %d, lenarray: %d, [%d,%d]", impulsecnt, implengthslen, implengths[0], implengths[1]);
+        //PrintAndLogEx(WARNING, "--- impulses: %d, lenarray: %d, [%d,%d]", impulsecnt, implengthslen, implengths[0], implengths[1]);
 
         // check if it TK-17 modulation
         // 65 impulses and 64 intervals
@@ -388,7 +387,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
             continue;
 
         uint32_t threshold = (hilength - lowlength) / 3 + 1;
-        PrintAndLogEx(WARNING, "--- hi: %d, low: %d, threshold: %d", hilength, lowlength, threshold);
+        //PrintAndLogEx(WARNING, "--- hi: %d, low: %d, threshold: %d", hilength, lowlength, threshold);
 
         bitstring[0] = 0;
         bool biterror = false;
@@ -398,7 +397,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
             else if (TexcomCalculateBit(implengths[i], lowlength, threshold))
                 strcat(bitstring, "0");
             else {
-                PrintAndLogEx(INFO, "ERROR string [%zu]: %s, bit: %d, blen: %d", strlen(bitstring), bitstring, i, implengths[i]);
+                //PrintAndLogEx(INFO, "ERROR string [%zu]: %s, bit: %d, blen: %d", strlen(bitstring), bitstring, i, implengths[i]);
                 //for (uint32_t j = 0; j < implengthslen; j++)
                 //    printf("%d,", implengths[j]);
                 //printf("\r\n");
