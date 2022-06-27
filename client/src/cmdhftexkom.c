@@ -248,15 +248,16 @@ inline int TexcomTK17Get2Bits(uint32_t len1, uint32_t len2) {
     if (xlen < 30)
         return 0;
     if (xlen < 50)
-        return 1;
-    if (xlen < 70)
         return 2;
+    if (xlen < 70)
+        return 1;
     return 3;
 }
 
 
 static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, bool verbose) {
     char bitstring[256] = {0};
+    char cbitstring[256] = {0};
 
     for (uint32_t i = 0; i < implengthslen; i = i + 2) {
         int dbit = TexcomTK17Get2Bits(implengths[i], implengths[i + 1]);
@@ -283,6 +284,16 @@ static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, bool 
 
     if (verbose)
         PrintAndLogEx(INFO, "TK17 raw bit string [%zu]: %s", strlen(bitstring), bitstring);
+
+    for (uint32_t i = 0; i < 8; i++) {
+        memcpy(&cbitstring[i * 8 + 0], &bitstring[i * 8 + 6], 2);
+        memcpy(&cbitstring[i * 8 + 2], &bitstring[i * 8 + 4], 2);
+        memcpy(&cbitstring[i * 8 + 4], &bitstring[i * 8 + 2], 2);
+        memcpy(&cbitstring[i * 8 + 6], &bitstring[i * 8 + 0], 2);
+    }
+
+    if (verbose)
+        PrintAndLogEx(INFO, "TK17 bit string [%zu]: %s", strlen(cbitstring), cbitstring);
 
 
     return strlen(bitstring) == 64;
