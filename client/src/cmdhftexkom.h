@@ -22,6 +22,14 @@
 #include "common.h"
 #include "pm3_cmd.h"
 
+enum TK17Bits {
+    TK17WrongBit,
+    TK17Bit00,
+    TK17Bit01,
+    TK17Bit10,
+    TK17Bit11
+};
+
 int CmdHFTexkom(const char *Cmd);
 
 #endif

@@ -244,16 +244,15 @@ static uint8_t TexcomTK17CRC(uint8_t* data) {
 inline int TexcomTK17Get2Bits(uint32_t len1, uint32_t len2) {
     uint32_t xlen = (len2 * 100) / (len1 + len2);
     if (xlen < 10 || xlen > 90)
-        return -1;
+        return TK17WrongBit;
     if (xlen < 30)
-        return 0;
+        return TK17Bit00;
     if (xlen < 50)
-        return 2;
+        return TK17Bit10;
     if (xlen < 70)
-        return 1;
-    return 3;
+        return TK17Bit01;
+    return TK17Bit11;
 }
-
 
 static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, char* bitstring, char* cbitstring, bool verbose) {
     bitstring[0] = 0;
@@ -261,20 +260,20 @@ static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, char*
 
     for (uint32_t i = 0; i < implengthslen; i = i + 2) {
         int dbit = TexcomTK17Get2Bits(implengths[i], implengths[i + 1]);
-        if (dbit < 0)
+        if (dbit == TK17WrongBit)
             return false;
         
         switch (dbit) {
-            case 0:
+            case TK17Bit00:
                 strcat(bitstring, "00");
                 break;
-            case 1:
+            case TK17Bit01:
                 strcat(bitstring, "01");
                 break;
-            case 2:
+            case TK17Bit10:
                 strcat(bitstring, "10");
                 break;
-            case 3:
+            case TK17Bit11:
                 strcat(bitstring, "11");
                 break;
             default:
