@@ -241,6 +241,52 @@ static uint8_t TexcomTK17CRC(uint8_t* data) {
     return dallas_crc8(ddata, 8);
 }
 
+inline int TexcomTK17Get2Bits(uint32_t len1, uint32_t len2) {
+    uint32_t xlen = (len2 * 100) / (len1 + len2);
+    if (xlen < 10 || xlen > 90)
+        return -1;
+    if (xlen < 30)
+        return 0;
+    if (xlen < 50)
+        return 1;
+    if (xlen < 70)
+        return 2;
+    return 3;
+}
+
+
+static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, bool verbose) {
+    char bitstring[256] = {0};
+
+    for (uint32_t i = 0; i < implengthslen; i = i + 2) {
+        int dbit = TexcomTK17Get2Bits(implengths[i], implengths[i + 1]);
+        if (dbit < 0)
+            return false;
+        
+        switch (dbit) {
+            case 0:
+                strcat(bitstring, "00");
+                break;
+            case 1:
+                strcat(bitstring, "01");
+                break;
+            case 2:
+                strcat(bitstring, "10");
+                break;
+            case 3:
+                strcat(bitstring, "11");
+                break;
+            default:
+                return false;
+        }
+    }
+
+    if (verbose)
+        PrintAndLogEx(INFO, "TK17 raw bit string [%d]: %s", strlen(bitstring), bitstring);
+
+
+    return strlen(bitstring) == 64;
+}
 
 static int CmdHFTexkomReader(const char *Cmd) {
     CLIParserContext *ctx;
@@ -270,7 +316,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
     uint32_t size = (resp.data.asDwords[0]);
     if (size > 0) {
-        if (getSamples(samplesCount, true) != PM3_SUCCESS) {
+        if (getSamples(samplesCount, false) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Get samples error");
             return PM3_EFAILED;
         };
@@ -318,11 +364,16 @@ static int CmdHFTexkomReader(const char *Cmd) {
         }
         PrintAndLogEx(WARNING, "--- impulses: %d, lenarray: %d, [%d,%d]", impulsecnt, implengthslen, implengths[0], implengths[1]);
 
+        // check if it TK-17 modulation
+        // 65 impulses and 64 intervals
+        if (impulsecnt == 65) {
+            if (TexcomTK17Decode(implengths, implengthslen, verbose))
+                break;
+        }
+
         uint32_t hilength = 0;
         uint32_t lowlength = 0;
-        uint32_t lenmax = 0;
-        uint32_t lenmin = 0;
-        if (!TexkomCalculateBitLengths(implengths, implengthslen, &hilength, &lowlength, &lenmax, &lenmin))
+        if (!TexkomCalculateBitLengths(implengths, implengthslen, &hilength, &lowlength, NULL, NULL))
             continue;
 
         uint32_t threshold = (hilength - lowlength) / 3 + 1;
@@ -331,11 +382,16 @@ static int CmdHFTexkomReader(const char *Cmd) {
         bitstring[0] = 0;
         bool biterror = false;
         for (uint32_t i = 0; i < implengthslen; i++) {
-            if (TexcomCalculateBit(implengths[i], hilength, MAX(threshold, lenmax - hilength)))
+            if (TexcomCalculateBit(implengths[i], hilength, threshold))
                 strcat(bitstring, "1");
             else if (TexcomCalculateBit(implengths[i], lowlength, threshold))
                 strcat(bitstring, "0");
             else {
+                PrintAndLogEx(INFO, "ERROR string [%d]: %s, bit: %d, blen: %d", strlen(bitstring), bitstring, i, implengths[i]);
+                //for (uint32_t j = 0; j < implengthslen; j++)
+                //    printf("%d,", implengths[j]);
+                //printf("\r\n");
+
                 biterror = true;
                 break;
             }
