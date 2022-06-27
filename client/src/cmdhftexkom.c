@@ -282,7 +282,7 @@ static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, bool 
     }
 
     if (verbose)
-        PrintAndLogEx(INFO, "TK17 raw bit string [%d]: %s", strlen(bitstring), bitstring);
+        PrintAndLogEx(INFO, "TK17 raw bit string [%zu]: %s", strlen(bitstring), bitstring);
 
 
     return strlen(bitstring) == 64;
@@ -387,7 +387,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
             else if (TexcomCalculateBit(implengths[i], lowlength, threshold))
                 strcat(bitstring, "0");
             else {
-                PrintAndLogEx(INFO, "ERROR string [%d]: %s, bit: %d, blen: %d", strlen(bitstring), bitstring, i, implengths[i]);
+                PrintAndLogEx(INFO, "ERROR string [%zu]: %s, bit: %d, blen: %d", strlen(bitstring), bitstring, i, implengths[i]);
                 //for (uint32_t j = 0; j < implengthslen; j++)
                 //    printf("%d,", implengths[j]);
                 //printf("\r\n");
@@ -401,7 +401,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
             continue;
 
         if (verbose)
-            PrintAndLogEx(INFO, "raw bit string [%d]: %s", strlen(bitstring), bitstring);
+            PrintAndLogEx(INFO, "raw bit string [%zu]: %s", strlen(bitstring), bitstring);
 
         // add trailing impulse (some tags just ignore it)
         if (strlen(bitstring) % 2 != 0) {
@@ -410,7 +410,6 @@ static int CmdHFTexkomReader(const char *Cmd) {
             else
                 strcat(bitstring, "1");
         }
-        PrintAndLogEx(INFO, "bs [%d]: %s", strlen(bitstring), bitstring);
 
         cbitstring[0] = 0;
         for (uint32_t i = 0; i < strlen(bitstring); i = i + 2) {
@@ -430,7 +429,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
             continue;
 
         if (verbose)
-            PrintAndLogEx(INFO, "bit string [%d]: %s", strlen(cbitstring), cbitstring);
+            PrintAndLogEx(INFO, "bit string [%zu]: %s", strlen(cbitstring), cbitstring);
 
         if (strlen(cbitstring) != 64)
             continue;
@@ -483,9 +482,9 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
     if (!codefound) {
         if (strlen(bitstring) > 0)
-            PrintAndLogEx(INFO, "last raw bit string [%d]: %s", strlen(bitstring), bitstring);
+            PrintAndLogEx(INFO, "last raw bit string [%zu]: %s", strlen(bitstring), bitstring);
         if (strlen(cbitstring) > 0)
-            PrintAndLogEx(INFO, "last bit string [%d]: %s", strlen(cbitstring), cbitstring);
+            PrintAndLogEx(INFO, "last bit string [%zu]: %s", strlen(cbitstring), cbitstring);
 
         PrintAndLogEx(ERR, "Texkom card is not found");
     }
