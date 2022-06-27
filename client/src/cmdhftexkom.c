@@ -119,7 +119,7 @@ static bool TexkomCalculateMaxMin(uint32_t* data, uint32_t len, uint32_t* dmax, 
     return (*dmax != 0) && (*dmin != 0xffffffff) && (*dmax > *dmin);
 }
 
-static bool TexkomCalculateBitLengths(uint32_t* data, uint32_t len, uint32_t* hi, uint32_t* low) {
+static bool TexkomCalculateBitLengths(uint32_t* data, uint32_t len, uint32_t* hi, uint32_t* low, uint32_t* lmax, uint32_t* lmin) {
     *hi = 0;
     *low = 0;
 
@@ -147,6 +147,11 @@ PrintAndLogEx(WARNING, "--- min: %d, middle: %d, max: %d", dmin, dmiddle, dmax);
     *hi = sumhi / lenhi;
     *low = sumlow / lenlow;
 
+    if (lmax != NULL)
+        *lmax = dmax;
+    if (lmin != NULL)
+        *lmin = dmin;
+
     return (*hi != 0) && (*low != 0) && (*hi > *low);
 }
 
@@ -170,7 +175,6 @@ static uint8_t TexcomTK13CRC(uint8_t* data) {
                 crc <<= 1;
     };
 
-    PrintAndLogEx(WARNING, "--- crc: %x", crc);
     return crc;
 }
 
@@ -316,7 +320,9 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
         uint32_t hilength = 0;
         uint32_t lowlength = 0;
-        if (!TexkomCalculateBitLengths(implengths, implengthslen, &hilength, &lowlength))
+        uint32_t lenmax = 0;
+        uint32_t lenmin = 0;
+        if (!TexkomCalculateBitLengths(implengths, implengthslen, &hilength, &lowlength, &lenmax, &lenmin))
             continue;
 
         uint32_t threshold = (hilength - lowlength) / 3 + 1;
@@ -325,7 +331,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
         bitstring[0] = 0;
         bool biterror = false;
         for (uint32_t i = 0; i < implengthslen; i++) {
-            if (TexcomCalculateBit(implengths[i], hilength, threshold))
+            if (TexcomCalculateBit(implengths[i], hilength, MAX(threshold, lenmax - hilength)))
                 strcat(bitstring, "1");
             else if (TexcomCalculateBit(implengths[i], lowlength, threshold))
                 strcat(bitstring, "0");
