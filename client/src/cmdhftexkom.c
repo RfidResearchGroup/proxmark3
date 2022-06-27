@@ -255,9 +255,9 @@ inline int TexcomTK17Get2Bits(uint32_t len1, uint32_t len2) {
 }
 
 
-static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, bool verbose) {
-    char bitstring[256] = {0};
-    char cbitstring[256] = {0};
+static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, char* bitstring, char* cbitstring, bool verbose) {
+    bitstring[0] = 0;
+    cbitstring[0] = 0;
 
     for (uint32_t i = 0; i < implengthslen; i = i + 2) {
         int dbit = TexcomTK17Get2Bits(implengths[i], implengths[i + 1]);
@@ -295,8 +295,7 @@ static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, bool 
     if (verbose)
         PrintAndLogEx(INFO, "TK17 bit string [%zu]: %s", strlen(cbitstring), cbitstring);
 
-
-    return strlen(bitstring) == 64;
+    return (strlen(bitstring) == 64) && (strncmp(cbitstring, "1111111111111111", 16) == 0);
 }
 
 static int CmdHFTexkomReader(const char *Cmd) {
@@ -378,8 +377,10 @@ static int CmdHFTexkomReader(const char *Cmd) {
         // check if it TK-17 modulation
         // 65 impulses and 64 intervals
         if (impulsecnt == 65) {
-            if (TexcomTK17Decode(implengths, implengthslen, verbose))
+            if (TexcomTK17Decode(implengths, implengthslen, bitstring, cbitstring, verbose)) {
+                codefound = true;
                 break;
+            }
         }
 
         uint32_t hilength = 0;
@@ -442,9 +443,14 @@ static int CmdHFTexkomReader(const char *Cmd) {
         if (verbose)
             PrintAndLogEx(INFO, "bit string [%zu]: %s", strlen(cbitstring), cbitstring);
 
-        if (strlen(cbitstring) != 64)
+        if ((strlen(cbitstring) != 64) || (strncmp(cbitstring, "1111111111111111", 16) != 0))
             continue;
 
+        codefound = true;
+        break;
+    }
+
+    if (codefound) {
         uint8_t tcode[8] = {0};
         for (uint32_t i = 0; i < strlen(cbitstring); i++) {
             tcode[i / 8] = (tcode[i / 8] << 1) | ((cbitstring[i] == '1') ? 1 : 0);
@@ -453,45 +459,40 @@ static int CmdHFTexkomReader(const char *Cmd) {
         if (verbose)
             PrintAndLogEx(INFO, "Hex code: %s", sprint_hex(tcode, 8));
 
-        if (tcode[0] != 0xff || tcode[1] != 0xff)
-            continue;
+        if (tcode[0] == 0xff && tcode[1] == 0xff) {
+            // decoding code
 
-        // decoding code
+            if (!verbose)
+                PrintAndLogEx(INFO, "Texkom: %s", sprint_hex(tcode, 8));
 
-        if (!verbose)
-            PrintAndLogEx(INFO, "Texkom: %s", sprint_hex(tcode, 8));
+            if (tcode[2] == 0x63) {
+                // TK13
+                PrintAndLogEx(INFO, "type: TK13");
+                PrintAndLogEx(INFO, "uid : %s", sprint_hex(&tcode[3], 4));
 
-        if (tcode[2] == 0x63) {
-            // TK13
-            PrintAndLogEx(INFO, "type: TK13");
-            PrintAndLogEx(INFO, "uid : %s", sprint_hex(&tcode[3], 4));
+                if (TexcomTK13CRC(&tcode[3]) == tcode[7])
+                    PrintAndLogEx(INFO, "crc : OK");
+                else
+                    PrintAndLogEx(WARNING, "crc : WRONG");
 
-            if (TexcomTK13CRC(&tcode[3]) == tcode[7])
-                PrintAndLogEx(INFO, "crc : OK");
-            else
-                PrintAndLogEx(WARNING, "crc : WRONG");
+            } else if (tcode[2] == 0xca) {
+                // TK17
+                PrintAndLogEx(INFO, "type: TK17");
+                PrintAndLogEx(INFO, "uid : %s", sprint_hex(&tcode[3], 4));
 
-        } else if (tcode[2] == 0xca) {
-            // TK17
-            PrintAndLogEx(INFO, "type: TK17");
-            PrintAndLogEx(INFO, "uid : %s", sprint_hex(&tcode[3], 4));
+                if (TexcomTK17CRC(&tcode[3]) == tcode[7])
+                    PrintAndLogEx(INFO, "crc : OK");
+                else
+                    PrintAndLogEx(WARNING, "crc : WRONG");
 
-            if (TexcomTK17CRC(&tcode[3]) == tcode[7])
-                PrintAndLogEx(INFO, "crc : OK");
-            else
-                PrintAndLogEx(WARNING, "crc : WRONG");
-
+            } else {
+                PrintAndLogEx(INFO, "type: unknown");
+                PrintAndLogEx(INFO, "uid : %s (maybe)", sprint_hex(&tcode[3], 4));
+            }
         } else {
-            PrintAndLogEx(INFO, "type: unknown");
-            PrintAndLogEx(INFO, "uid : %s (maybe)", sprint_hex(&tcode[3], 4));
+            PrintAndLogEx(ERR, "Code have no preamble FFFF: %s", sprint_hex(tcode, 8));
         }
-
-        
-        codefound = true;
-        break;
-    }
-
-    if (!codefound) {
+    } else {
         if (strlen(bitstring) > 0)
             PrintAndLogEx(INFO, "last raw bit string [%zu]: %s", strlen(bitstring), bitstring);
         if (strlen(cbitstring) > 0)
