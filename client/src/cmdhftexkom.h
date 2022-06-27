@@ -30,6 +30,12 @@ enum TK17Bits {
     TK17Bit11
 };
 
+enum TexkomModulation {
+    TexkomModError,
+    TexkomModTK13,
+    TexkomModTK17
+};
+
 int CmdHFTexkom(const char *Cmd);
 
 #endif

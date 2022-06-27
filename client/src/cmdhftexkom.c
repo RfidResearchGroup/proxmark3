@@ -333,7 +333,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
     char bitstring[256] = {0};
     char cbitstring[128] = {0};
-    bool codefound = false;
+    int codefound = TexkomModError;
     uint32_t sindx = 0;
     while (sindx < samplesCount - 5) {
         sindx = TexkomSearchStart(sindx, TEXKOM_NOISE_THRESHOLD);
@@ -377,7 +377,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
         // 65 impulses and 64 intervals
         if (impulsecnt == 65) {
             if (TexcomTK17Decode(implengths, implengthslen, bitstring, cbitstring, verbose)) {
-                codefound = true;
+                codefound = TexkomModTK17;
                 break;
             }
         }
@@ -445,11 +445,11 @@ static int CmdHFTexkomReader(const char *Cmd) {
         if ((strlen(cbitstring) != 64) || (strncmp(cbitstring, "1111111111111111", 16) != 0))
             continue;
 
-        codefound = true;
+        codefound = TexkomModTK13;
         break;
     }
 
-    if (codefound) {
+    if (codefound != TexkomModError) {
         uint8_t tcode[8] = {0};
         for (uint32_t i = 0; i < strlen(cbitstring); i++) {
             tcode[i / 8] = (tcode[i / 8] << 1) | ((cbitstring[i] == '1') ? 1 : 0);
@@ -464,29 +464,40 @@ static int CmdHFTexkomReader(const char *Cmd) {
             if (!verbose)
                 PrintAndLogEx(INFO, "Texkom: %s", sprint_hex(tcode, 8));
 
+            if (codefound == TexkomModTK13)
+                PrintAndLogEx(INFO, "modulation: TK13");
+            else if (codefound == TexkomModTK17)
+                PrintAndLogEx(INFO, "modulation: TK17");
+            else
+                PrintAndLogEx(INFO, "modulation: unknown");
+
             if (tcode[2] == 0x63) {
                 // TK13
-                PrintAndLogEx(INFO, "type: TK13");
-                PrintAndLogEx(INFO, "uid : %s", sprint_hex(&tcode[3], 4));
+                if (codefound != TexkomModTK13)
+                    PrintAndLogEx(WARNING, "  mod type: WRONG");
+                PrintAndLogEx(INFO, "type      : TK13");
+                PrintAndLogEx(INFO, "uid       : %s", sprint_hex(&tcode[3], 4));
 
                 if (TexcomTK13CRC(&tcode[3]) == tcode[7])
-                    PrintAndLogEx(INFO, "crc : OK");
+                    PrintAndLogEx(INFO, "crc       : OK");
                 else
-                    PrintAndLogEx(WARNING, "crc : WRONG");
+                    PrintAndLogEx(WARNING, "crc       : WRONG");
 
             } else if (tcode[2] == 0xca) {
                 // TK17
-                PrintAndLogEx(INFO, "type: TK17");
-                PrintAndLogEx(INFO, "uid : %s", sprint_hex(&tcode[3], 4));
+                if (codefound != TexkomModTK17)
+                    PrintAndLogEx(WARNING, "  mod type: WRONG");
+                PrintAndLogEx(INFO, "type      : TK17");
+                PrintAndLogEx(INFO, "uid       : %s", sprint_hex(&tcode[3], 4));
 
                 if (TexcomTK17CRC(&tcode[3]) == tcode[7])
-                    PrintAndLogEx(INFO, "crc : OK");
+                    PrintAndLogEx(INFO, "crc       : OK");
                 else
-                    PrintAndLogEx(WARNING, "crc : WRONG");
+                    PrintAndLogEx(WARNING, "crc       : WRONG");
 
             } else {
-                PrintAndLogEx(INFO, "type: unknown");
-                PrintAndLogEx(INFO, "uid : %s (maybe)", sprint_hex(&tcode[3], 4));
+                PrintAndLogEx(INFO, "type      : unknown");
+                PrintAndLogEx(INFO, "uid       : %s (maybe)", sprint_hex(&tcode[3], 4));
             }
         } else {
             PrintAndLogEx(ERR, "Code have no preamble FFFF: %s", sprint_hex(tcode, 8));
