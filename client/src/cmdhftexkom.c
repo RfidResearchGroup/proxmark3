@@ -188,7 +188,6 @@ static unsigned char dallas_crc8(const unsigned char *data, const unsigned int s
             inbyte >>= 1;
         }
     }
-    PrintAndLogEx(WARNING, "--crc %x", crc);
     return crc;
 }
 
@@ -196,46 +195,7 @@ static unsigned char dallas_crc8(const unsigned char *data, const unsigned int s
 static uint8_t TexcomTK17CRC(uint8_t *data) {
     uint8_t ddata[8] = {0x00, 0x00, 0x00, data[0], data[1], data[2], data[3], 0x00};
 
-    /*
-    	dallas (arrby) {
-    		var arrby2 = [];
-    		if (arrby.length < 8) {
-    			return "FF";
-    		}
-    		var n = 0;
-    		var n2 = 7;
-    		while (n < 7){
-    			arrby2[n] = arrby[n2];
-    			++n;
-    			--n2;
-    		}
-    		var n3 = 0;
-    		var n4 = 0;
-    		do {
-    			var n5 = 255 & arrby2[n3];
-    			var n6 = n4;
-    			for (var n7 = 0; n7 < 8; n7 = Number(n7 + 1)) {
-    				var n8 = 1 & (255 & (n6 ^ n5));
-    				n6 = 255 & n6 >> 1;
-    				n5 = 255 & n5 >> 1;
-    				if (n8 != 1) continue;
-    				n6 ^= 140;
-    			}
-    			if ((n3 = Number(n3 + 1)) >= 7) {
-    				return n6.toString(16).toUpperCase();
-    			}
-    			n4 = n6;
-    		} while (true);
-    	}
-    	tk17(arrby) {
-    		if(arrby.length < 8) {
-    			return "FF"
-    		}
-    		return this.dallas( [0x00, arrby[1], arrby[2], arrby[3], arrby[4], 0x00, 0x00, 0x00] )
-    	}
-    */
-
-    return dallas_crc8(ddata, 8);
+    return dallas_crc8(ddata, 7);
 }
 
 static bool TexcomTK13Decode(uint32_t *implengths, uint32_t implengthslen, char *bitstring, char *cbitstring, bool verbose) {
