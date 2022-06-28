@@ -394,6 +394,13 @@ static bool TexcomGeneralDecode(uint32_t* implengths, uint32_t implengthslen, ch
     return (!biterror && strlen(bitstring) > 0);
 }
 
+static void TexcomReverseCode(const uint8_t *code, int length, uint8_t *reverse_code) {
+    for (int i = 0; i < length; i++) {
+        reverse_code[i] = code[(length - 1) - i];
+    }
+};
+
+
 static int CmdHFTexkomReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf texkom reader",
@@ -473,7 +480,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
         //PrintAndLogEx(WARNING, "--- impulses: %d, lenarray: %d, [%d,%d]", impulsecnt, implengthslen, implengths[0], implengths[1]);
 
         // check if it TK-17 modulation
-        // 65 impulses and 64 intervals
+        // 65 impulses and 64 intervals (1 interval = 2 bits, interval length encoding) that represents 128 bit of card code
         if (impulsecnt == 65) {
             if (TexcomTK17Decode(implengths, implengthslen, bitstring, cbitstring, verbose)) {
                 codefound = TexkomModTK17;
@@ -481,6 +488,8 @@ static int CmdHFTexkomReader(const char *Cmd) {
             }
         }
 
+        // check if it TK-13 modulation
+        // it have 127 or 128 impulses and 128 double-intervals that represents 128 bit of card code
         if (impulsecnt == 127 || impulsecnt == 128) {
             if (TexcomTK13Decode(implengths, implengthslen, bitstring, cbitstring, verbose)) {
                 codefound = TexkomModTK13;
@@ -488,6 +497,8 @@ static int CmdHFTexkomReader(const char *Cmd) {
             }
         }
 
+        // general decoding. it thought that there is 2 types of intervals "long" (1) and "short" (0)
+        // and tries to decode sequence. shows only raw data
         if (verbose)
             TexcomGeneralDecode(implengths, implengthslen, genbitstring, verbose);
     }
@@ -498,14 +509,21 @@ static int CmdHFTexkomReader(const char *Cmd) {
             tcode[i / 8] = (tcode[i / 8] << 1) | ((cbitstring[i] == '1') ? 1 : 0);
         }
 
-        if (verbose)
+        uint8_t rtcode[8] = {0};
+        TexcomReverseCode(tcode, 8, rtcode);
+
+        if (verbose) {
             PrintAndLogEx(INFO, "Hex code: %s", sprint_hex(tcode, 8));
+            PrintAndLogEx(INFO, "Hex code reversed: %s", sprint_hex(rtcode, 8));
+        }
 
         if (tcode[0] == 0xff && tcode[1] == 0xff) {
             // decoding code
 
-            if (!verbose)
+            if (!verbose) {
                 PrintAndLogEx(INFO, "Texkom: %s", sprint_hex(tcode, 8));
+                PrintAndLogEx(INFO, "Texkom duplicator: %s", sprint_hex(rtcode, 8));
+            }
 
             if (codefound == TexkomModTK13)
                 PrintAndLogEx(INFO, "modulation: TK13");
