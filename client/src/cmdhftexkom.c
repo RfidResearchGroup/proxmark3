@@ -25,9 +25,9 @@
 #include "cmdparser.h"    // command_t
 #include "comms.h"
 #include "ui.h"
-#include "cmdhf14a.h" 
-#include "cmddata.h" 
-#include "graph.h" 
+#include "cmdhf14a.h"
+#include "cmddata.h"
+#include "graph.h"
 
 #define TEXKOM_NOISE_THRESHOLD (10)
 
@@ -101,12 +101,12 @@ static bool TexkomCorrelate(uint32_t indx, uint32_t threshold) {
     uint32_t g5 = GetGraphBuffer(indx + 2);
 
     return (
-        (g3 > threshold) &&
-        (g3 >= g2) && (g3 >= g1) && (g3 > g4) && (g3 > g5)
-    );
+               (g3 > threshold) &&
+               (g3 >= g2) && (g3 >= g1) && (g3 > g4) && (g3 > g5)
+           );
 }
 
-static bool TexkomCalculateMaxMin(uint32_t* data, uint32_t len, uint32_t* dmax, uint32_t* dmin) {
+static bool TexkomCalculateMaxMin(uint32_t *data, uint32_t len, uint32_t *dmax, uint32_t *dmin) {
     *dmax = 0;
     *dmin = 0xffffffff;
     for (size_t i = 0; i < len; i++) {
@@ -119,7 +119,7 @@ static bool TexkomCalculateMaxMin(uint32_t* data, uint32_t len, uint32_t* dmax, 
     return (*dmax != 0) && (*dmin != 0xffffffff) && (*dmax > *dmin);
 }
 
-static bool TexkomCalculateBitLengths(uint32_t* data, uint32_t len, uint32_t* hi, uint32_t* low, uint32_t* lmax, uint32_t* lmin) {
+static bool TexkomCalculateBitLengths(uint32_t *data, uint32_t len, uint32_t *hi, uint32_t *low, uint32_t *lmax, uint32_t *lmin) {
     *hi = 0;
     *low = 0;
 
@@ -155,19 +155,19 @@ static bool TexkomCalculateBitLengths(uint32_t* data, uint32_t len, uint32_t* hi
 }
 
 inline bool TexcomCalculateBit(uint32_t data, uint32_t bitlen, uint32_t threshold) {
-    return 
-        (data < (bitlen + threshold)) && 
+    return
+        (data < (bitlen + threshold)) &&
         (data > (bitlen - threshold));
 }
 
 // code from https://github.com/li0ard/crclib/blob/main/index.js
-static uint8_t TexcomTK13CRC(uint8_t* data) {
+static uint8_t TexcomTK13CRC(uint8_t *data) {
     uint8_t crc = 0;
     uint8_t indx = 0;
     while (indx < 4) {
         crc = crc ^ data[indx++];
 
-        for (uint8_t i = 0; i < 8; i++) 
+        for (uint8_t i = 0; i < 8; i++)
             if (crc & 0x80) {
                 crc = 0x31 ^ (crc << 1);
             } else
@@ -177,71 +177,68 @@ static uint8_t TexcomTK13CRC(uint8_t* data) {
     return crc;
 }
 
-static unsigned char dallas_crc8(const unsigned char * data, const unsigned int size)
-{
+static unsigned char dallas_crc8(const unsigned char *data, const unsigned int size) {
     unsigned char crc = 0;
-    for ( unsigned int i = 0; i < size; ++i )
-    {
+    for (unsigned int i = 0; i < size; ++i) {
         unsigned char inbyte = data[i];
-        for ( unsigned char j = 0; j < 8; ++j )
-        {
+        for (unsigned char j = 0; j < 8; ++j) {
             unsigned char mix = (crc ^ inbyte) & 0x01;
             crc >>= 1;
-            if ( mix ) crc ^= 0x8C;
+            if (mix) crc ^= 0x8C;
             inbyte >>= 1;
         }
     }
-PrintAndLogEx(WARNING, "--crc %x", crc);
+    PrintAndLogEx(WARNING, "--crc %x", crc);
     return crc;
 }
 
 // code from https://github.com/li0ard/crclib/blob/main/index.js
-static uint8_t TexcomTK17CRC(uint8_t* data) {
+static uint8_t TexcomTK17CRC(uint8_t *data) {
     uint8_t ddata[8] = {0x00, 0x00, 0x00, data[0], data[1], data[2], data[3], 0x00};
 
-/*
-	dallas (arrby) {
-		var arrby2 = [];
-		if (arrby.length < 8) {
-			return "FF";
-		}
-		var n = 0;
-		var n2 = 7;
-		while (n < 7){
-			arrby2[n] = arrby[n2];
-			++n;
-			--n2;
-		}
-		var n3 = 0;
-		var n4 = 0;
-		do {
-			var n5 = 255 & arrby2[n3];
-			var n6 = n4;
-			for (var n7 = 0; n7 < 8; n7 = Number(n7 + 1)) {
-				var n8 = 1 & (255 & (n6 ^ n5));
-				n6 = 255 & n6 >> 1;
-				n5 = 255 & n5 >> 1;
-				if (n8 != 1) continue;
-				n6 ^= 140;
-			}
-			if ((n3 = Number(n3 + 1)) >= 7) {
-				return n6.toString(16).toUpperCase();
-			}
-			n4 = n6;
-		} while (true);
-	}
-	tk17(arrby) {
-		if(arrby.length < 8) {
-			return "FF"
-		}
-		return this.dallas( [0x00, arrby[1], arrby[2], arrby[3], arrby[4], 0x00, 0x00, 0x00] )
-	}
-*/
+    /*
+    	dallas (arrby) {
+    		var arrby2 = [];
+    		if (arrby.length < 8) {
+    			return "FF";
+    		}
+    		var n = 0;
+    		var n2 = 7;
+    		while (n < 7){
+    			arrby2[n] = arrby[n2];
+    			++n;
+    			--n2;
+    		}
+    		var n3 = 0;
+    		var n4 = 0;
+    		do {
+    			var n5 = 255 & arrby2[n3];
+    			var n6 = n4;
+    			for (var n7 = 0; n7 < 8; n7 = Number(n7 + 1)) {
+    				var n8 = 1 & (255 & (n6 ^ n5));
+    				n6 = 255 & n6 >> 1;
+    				n5 = 255 & n5 >> 1;
+    				if (n8 != 1) continue;
+    				n6 ^= 140;
+    			}
+    			if ((n3 = Number(n3 + 1)) >= 7) {
+    				return n6.toString(16).toUpperCase();
+    			}
+    			n4 = n6;
+    		} while (true);
+    	}
+    	tk17(arrby) {
+    		if(arrby.length < 8) {
+    			return "FF"
+    		}
+    		return this.dallas( [0x00, arrby[1], arrby[2], arrby[3], arrby[4], 0x00, 0x00, 0x00] )
+    	}
+    */
 
     return dallas_crc8(ddata, 8);
 }
 
-static bool TexcomTK13Decode(uint32_t* implengths, uint32_t implengthslen, char* bitstring, char* cbitstring, bool verbose) {
+static bool TexcomTK13Decode(uint32_t *implengths, uint32_t implengthslen, char *bitstring, char *cbitstring, bool verbose) {
     bitstring[0] = 0;
     cbitstring[0] = 0;
 
@@ -275,7 +272,7 @@ static bool TexcomTK13Decode(uint32_t* implengths, uint32_t implengthslen, char*
 
     // add trailing impulse (some tags just ignore it)
     if (strlen(bitstring) % 2 != 0) {
-        if (bitstring[strlen(bitstring) - 1] == '1')            
+        if (bitstring[strlen(bitstring) - 1] == '1')
             strcat(bitstring, "0");
         else
             strcat(bitstring, "1");
@@ -316,7 +313,7 @@ inline int TexcomTK17Get2Bits(uint32_t len1, uint32_t len2) {
     return TK17Bit11;
 }
 
-static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, char* bitstring, char* cbitstring, bool verbose) {
+static bool TexcomTK17Decode(uint32_t *implengths, uint32_t implengthslen, char *bitstring, char *cbitstring, bool verbose) {
     bitstring[0] = 0;
     cbitstring[0] = 0;
 
@@ -324,7 +321,7 @@ static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, char*
         int dbit = TexcomTK17Get2Bits(implengths[i], implengths[i + 1]);
         if (dbit == TK17WrongBit)
             return false;
-        
+
         switch (dbit) {
             case TK17Bit00:
                 strcat(bitstring, "00");
@@ -359,8 +356,7 @@ static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, char*
     return (strlen(bitstring) == 64) && (strncmp(cbitstring, "1111111111111111", 16) == 0);
 }
 
-
-static bool TexcomGeneralDecode(uint32_t* implengths, uint32_t implengthslen, char* bitstring, bool verbose) {
+static bool TexcomGeneralDecode(uint32_t *implengths, uint32_t implengthslen, char *bitstring, bool verbose) {
     uint32_t hilength = 0;
     uint32_t lowlength = 0;
     if (!TexkomCalculateBitLengths(implengths, implengthslen, &hilength, &lowlength, NULL, NULL))
@@ -399,7 +395,6 @@ static void TexcomReverseCode(const uint8_t *code, int length, uint8_t *reverse_
         reverse_code[i] = code[(length - 1) - i];
     }
 };
-
 
 static int CmdHFTexkomReader(const char *Cmd) {
     CLIParserContext *ctx;
@@ -461,7 +456,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
             noiselvl = TEXKOM_NOISE_THRESHOLD;
 
         //PrintAndLogEx(WARNING, "--- indx: %d, len: %d, max: %d, noise: %d", sindx, slen, maxlvl, noiselvl);
-      
+
         uint32_t implengths[256] = {};
         uint32_t implengthslen = 0;
         uint32_t impulseindx = 0;

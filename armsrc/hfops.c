@@ -84,7 +84,7 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     uint32_t scnt = getSampleCounter();
-    reply_ng(CMD_HF_ACQ_RAW_ADC, PM3_SUCCESS, (uint8_t*)&scnt, 4);
+    reply_ng(CMD_HF_ACQ_RAW_ADC, PM3_SUCCESS, (uint8_t *)&scnt, 4);
     if (ledcontrol) LEDsoff();
 
     return 0;
