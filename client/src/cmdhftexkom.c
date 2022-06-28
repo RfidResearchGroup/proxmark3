@@ -191,6 +191,7 @@ static unsigned char dallas_crc8(const unsigned char * data, const unsigned int 
             inbyte >>= 1;
         }
     }
+PrintAndLogEx(WARNING, "--crc %x", crc);
     return crc;
 }
 
@@ -238,6 +239,68 @@ static uint8_t TexcomTK17CRC(uint8_t* data) {
 */
 
     return dallas_crc8(ddata, 8);
+}
+
+static bool TexcomTK13Decode(uint32_t* implengths, uint32_t implengthslen, char* bitstring, char* cbitstring, bool verbose) {
+    bitstring[0] = 0;
+    cbitstring[0] = 0;
+
+    uint32_t hilength = 0;
+    uint32_t lowlength = 0;
+    if (!TexkomCalculateBitLengths(implengths, implengthslen, &hilength, &lowlength, NULL, NULL))
+        return false;
+
+    uint32_t threshold = (hilength - lowlength) / 3 + 1;
+    //PrintAndLogEx(WARNING, "--- hi: %d, low: %d, threshold: %d", hilength, lowlength, threshold);
+
+    bool biterror = false;
+    for (uint32_t i = 0; i < implengthslen; i++) {
+        if (TexcomCalculateBit(implengths[i], hilength, threshold))
+            strcat(bitstring, "1");
+        else if (TexcomCalculateBit(implengths[i], lowlength, threshold))
+            strcat(bitstring, "0");
+        else {
+            //PrintAndLogEx(INFO, "ERROR string [%zu]: %s, bit: %d, blen: %d", strlen(bitstring), bitstring, i, implengths[i]);
+
+            biterror = true;
+            break;
+        }
+    }
+
+    if (biterror || strlen(bitstring) == 0)
+        return false;
+
+    if (verbose)
+        PrintAndLogEx(INFO, "raw bit string [%zu]: %s", strlen(bitstring), bitstring);
+
+    // add trailing impulse (some tags just ignore it)
+    if (strlen(bitstring) % 2 != 0) {
+        if (bitstring[strlen(bitstring) - 1] == '1')            
+            strcat(bitstring, "0");
+        else
+            strcat(bitstring, "1");
+    }
+
+    for (uint32_t i = 0; i < strlen(bitstring); i = i + 2) {
+        if (bitstring[i] == bitstring[i + 1]) {
+            cbitstring[0] = 0;
+            if (verbose)
+                PrintAndLogEx(WARNING, "Raw bit string have error at offset %d.", i);
+            break;
+        }
+        if (bitstring[i] == '1')
+            strcat(cbitstring, "1");
+        else
+            strcat(cbitstring, "0");
+    }
+
+    if (strlen(cbitstring) == 0)
+        return false;
+
+    if (verbose)
+        PrintAndLogEx(INFO, "bit string [%zu]: %s", strlen(cbitstring), cbitstring);
+
+    return ((strlen(cbitstring) == 64) && (strncmp(cbitstring, "1111111111111111", 16) == 0));
 }
 
 inline int TexcomTK17Get2Bits(uint32_t len1, uint32_t len2) {
@@ -296,6 +359,41 @@ static bool TexcomTK17Decode(uint32_t* implengths, uint32_t implengthslen, char*
     return (strlen(bitstring) == 64) && (strncmp(cbitstring, "1111111111111111", 16) == 0);
 }
 
+
+static bool TexcomGeneralDecode(uint32_t* implengths, uint32_t implengthslen, char* bitstring, bool verbose) {
+    uint32_t hilength = 0;
+    uint32_t lowlength = 0;
+    if (!TexkomCalculateBitLengths(implengths, implengthslen, &hilength, &lowlength, NULL, NULL))
+        return false;
+
+    uint32_t threshold = (hilength - lowlength) / 3 + 1;
+
+    bitstring[0] = 0;
+    bool biterror = false;
+    for (uint32_t i = 0; i < implengthslen; i++) {
+        if (TexcomCalculateBit(implengths[i], hilength, threshold))
+            strcat(bitstring, "1");
+        else if (TexcomCalculateBit(implengths[i], lowlength, threshold))
+            strcat(bitstring, "0");
+        else {
+            if (verbose) {
+                PrintAndLogEx(INFO, "ERROR string [%zu]: %s, bit: %d, blen: %d", strlen(bitstring), bitstring, i, implengths[i]);
+                printf("Length array: \r\n");
+                for (uint32_t j = 0; j < implengthslen; j++)
+                    printf("%d,", implengths[j]);
+                printf("\r\n");
+            }
+
+            biterror = true;
+            break;
+        }
+    }
+    if (verbose)
+        PrintAndLogEx(INFO, "General raw bit string [%zu]: %s", strlen(bitstring), bitstring);
+
+    return (!biterror && strlen(bitstring) > 0);
+}
+
 static int CmdHFTexkomReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf texkom reader",
@@ -304,11 +402,12 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("v",  "verbose",  "Verbose scan and output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = true;
+    bool verbose = arg_get_lit(ctx, 1);
 
     CLIParserFree(ctx);
 
@@ -332,6 +431,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
     char bitstring[256] = {0};
     char cbitstring[128] = {0};
+    char genbitstring[256] = {0};
     int codefound = TexkomModError;
     uint32_t sindx = 0;
     while (sindx < samplesCount - 5) {
@@ -381,71 +481,15 @@ static int CmdHFTexkomReader(const char *Cmd) {
             }
         }
 
-        uint32_t hilength = 0;
-        uint32_t lowlength = 0;
-        if (!TexkomCalculateBitLengths(implengths, implengthslen, &hilength, &lowlength, NULL, NULL))
-            continue;
-
-        uint32_t threshold = (hilength - lowlength) / 3 + 1;
-        //PrintAndLogEx(WARNING, "--- hi: %d, low: %d, threshold: %d", hilength, lowlength, threshold);
-
-        bitstring[0] = 0;
-        bool biterror = false;
-        for (uint32_t i = 0; i < implengthslen; i++) {
-            if (TexcomCalculateBit(implengths[i], hilength, threshold))
-                strcat(bitstring, "1");
-            else if (TexcomCalculateBit(implengths[i], lowlength, threshold))
-                strcat(bitstring, "0");
-            else {
-                //PrintAndLogEx(INFO, "ERROR string [%zu]: %s, bit: %d, blen: %d", strlen(bitstring), bitstring, i, implengths[i]);
-                //for (uint32_t j = 0; j < implengthslen; j++)
-                //    printf("%d,", implengths[j]);
-                //printf("\r\n");
-
-                biterror = true;
+        if (impulsecnt == 127 || impulsecnt == 128) {
+            if (TexcomTK13Decode(implengths, implengthslen, bitstring, cbitstring, verbose)) {
+                codefound = TexkomModTK13;
                 break;
             }
         }
 
-        if (biterror || strlen(bitstring) == 0)
-            continue;
-
         if (verbose)
-            PrintAndLogEx(INFO, "raw bit string [%zu]: %s", strlen(bitstring), bitstring);
-
-        // add trailing impulse (some tags just ignore it)
-        if (strlen(bitstring) % 2 != 0) {
-            if (bitstring[strlen(bitstring) - 1] == '1')            
-                strcat(bitstring, "0");
-            else
-                strcat(bitstring, "1");
-        }
-
-        cbitstring[0] = 0;
-        for (uint32_t i = 0; i < strlen(bitstring); i = i + 2) {
-            if (bitstring[i] == bitstring[i + 1]) {
-                cbitstring[0] = 0;
-                if (verbose)
-                    PrintAndLogEx(WARNING, "Raw bit string have error at offset %d.", i);
-                break;
-            }
-            if (bitstring[i] == '1')
-                strcat(cbitstring, "1");
-            else
-                strcat(cbitstring, "0");
-        }
-
-        if (strlen(cbitstring) == 0)
-            continue;
-
-        if (verbose)
-            PrintAndLogEx(INFO, "bit string [%zu]: %s", strlen(cbitstring), cbitstring);
-
-        if ((strlen(cbitstring) != 64) || (strncmp(cbitstring, "1111111111111111", 16) != 0))
-            continue;
-
-        codefound = TexkomModTK13;
-        break;
+            TexcomGeneralDecode(implengths, implengthslen, genbitstring, verbose);
     }
 
     if (codefound != TexkomModError) {
@@ -502,6 +546,8 @@ static int CmdHFTexkomReader(const char *Cmd) {
             PrintAndLogEx(ERR, "Code have no preamble FFFF: %s", sprint_hex(tcode, 8));
         }
     } else {
+        if (strlen(genbitstring) > 0)
+            PrintAndLogEx(INFO, "General decoding bitstring: %s", genbitstring);
         if (strlen(bitstring) > 0)
             PrintAndLogEx(INFO, "last raw bit string [%zu]: %s", strlen(bitstring), bitstring);
         if (strlen(cbitstring) > 0)
