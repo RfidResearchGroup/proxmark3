@@ -2661,7 +2661,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } gallagher { Gallagher DESFire RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } jooki { Jooki RFIDs... } iclass { ICLASS RFIDs... } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } waveshare { Waveshare NFC ePaper... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } gallagher { Gallagher DESFire RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } jooki { Jooki RFIDs... } iclass { ICLASS RFIDs... } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } texkom { Texkom RFIDs... } waveshare { Waveshare NFC ePaper... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags",
             "notes": [],
             "offline": true,
             "options": [],
@@ -6302,6 +6302,27 @@
             ],
             "usage": "hf st25ta sim [-h] -u <hex>"
         },
+        "hf texkom help": {
+            "command": "hf texkom help",
+            "description": "help This help",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf texkom reader": {
+            "command": "hf texkom reader",
+            "description": "Read a texkom tag",
+            "notes": [
+                "hf texkom reader"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose Verbose scan and output"
+            ],
+            "usage": "hf texkom reader [-hv]"
+        },
         "hf thinfilm help": {
             "command": "hf thinfilm help",
             "description": "help This help list List NFC Barcode / Thinfilm history - not correct",
@@ -6528,8 +6549,8 @@
             "command": "hw connect",
             "description": "Connects to a Proxmark3 device via specified serial port. Baudrate here is only for physical UART or UART-BT, NOT for USB-CDC or blue shark add-on",
             "notes": [
-                "hw connect -p /dev/ttyACM0",
-                "hw connect -p /dev/ttyACM0 -b 115200"
+                "hw connect -p /dev/ttyacm0",
+                "hw connect -p /dev/ttyacm0 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -10998,8 +11019,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 693,
+        "commands_extracted": 695,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-06-12T09:54:12"
+        "extracted_on": "2022-06-28T08:43:20"
     }
 }

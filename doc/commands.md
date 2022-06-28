@@ -646,6 +646,16 @@ Check column "offline" for their availability.
 |`hf topaz raw           `|N       |`Send raw hex data to tag`
 
 
+### hf texkom
+
+ { Texkom RFIDs...                     }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf texkom help         `|Y       |`This help`
+|`hf texkom reader       `|N       |`Act like a Texkom reader`
+
+
 ### hf waveshare
 
  { Waveshare NFC ePaper...             }
