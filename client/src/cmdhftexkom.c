@@ -38,6 +38,17 @@ inline uint32_t GetGraphBuffer(uint32_t indx) {
         return g_GraphBuffer[indx] + 128;
 }
 
+static uint32_t TexkomAVGField(void) {
+    if (g_GraphTraceLen == 0)
+        return 0;
+
+    uint64_t vsum = 0;
+    for (uint32_t i = 0; i < g_GraphTraceLen; i++)
+        vsum += GetGraphBuffer(i);
+
+    return vsum / g_GraphTraceLen;
+}
+
 static uint32_t TexkomSearchStart(uint32_t indx, uint32_t threshold) {
     // one bit length = 27, minimal noise = 60
     uint32_t lownoisectr = 0;
@@ -398,8 +409,11 @@ static int CmdHFTexkomReader(const char *Cmd) {
     uint32_t sindx = 0;
     while (sindx < samplesCount - 5) {
         sindx = TexkomSearchStart(sindx, TEXKOM_NOISE_THRESHOLD);
-        if (sindx == 0 || sindx > samplesCount - 5)
+        if (sindx == 0 || sindx > samplesCount - 5) {
+            if (TexkomAVGField() > 30)
+                PrintAndLogEx(WARNING, "Too noisy environment. Try to move the tag from the antenna a bit.");
             break;
+        }
 
         uint32_t slen = TexkomSearchLength(sindx, TEXKOM_NOISE_THRESHOLD);
         if (slen == 0)
