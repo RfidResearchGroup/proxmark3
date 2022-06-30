@@ -79,6 +79,7 @@ static uint16_t rx_frame_from_fpga(void) {
             return AT91C_BASE_SSC->SSC_RHR;
         }
     }
+    return 0;
 }
 
 //-----------------------------------------------------------------------------

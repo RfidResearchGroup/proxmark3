@@ -635,104 +635,104 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     memcpy(&statelists[1].nt_enc, package->nt_b, sizeof(package->nt_b));
     memcpy(&statelists[1].ks1, package->ks_b, sizeof(package->ks_b));
 
-        // calc keys
-        pthread_t thread_id[2];
-
-        // create and run worker threads
-        for (uint8_t i = 0; i < 2; i++)
-            pthread_create(thread_id + i, NULL, nested_worker_thread, &statelists[i]);
-
-        // wait for threads to terminate:
-        for (uint8_t i = 0; i < 2; i++)
-            pthread_join(thread_id[i], (void *)&statelists[i].head.slhead);
-
-        // the first 16 Bits of the cryptostate already contain part of our key.
-        // Create the intersection of the two lists based on these 16 Bits and
-        // roll back the cryptostate
-        p1 = p3 = statelists[0].head.slhead;
-        p2 = p4 = statelists[1].head.slhead;
-
-        while (p1 <= statelists[0].tail.sltail && p2 <= statelists[1].tail.sltail) {
-            if (Compare16Bits(p1, p2) == 0) {
-
-                struct Crypto1State savestate;
-                savestate = *p1;
-                while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
-                    *p3 = *p1;
-                    lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
-                    p3++;
-                    p1++;
-                }
-                savestate = *p2;
-                while (Compare16Bits(p2, &savestate) == 0 && p2 <= statelists[1].tail.sltail) {
-                    *p4 = *p2;
-                    lfsr_rollback_word(p4, statelists[1].nt_enc ^ statelists[1].uid, 0);
-                    p4++;
-                    p2++;
-                }
-            } else {
-                while (Compare16Bits(p1, p2) == -1) p1++;
-                while (Compare16Bits(p1, p2) == 1) p2++;
-            }
-        }
-
-        p3->odd = -1;
-        p3->even = -1;
-        p4->odd = -1;
-        p4->even = -1;
-        statelists[0].len = p3 - statelists[0].head.slhead;
-        statelists[1].len = p4 - statelists[1].head.slhead;
-        statelists[0].tail.sltail = --p3;
-        statelists[1].tail.sltail = --p4;
-
-        // the statelists now contain possible keys. The key we are searching for must be in the
-        // intersection of both lists
-        qsort(statelists[0].head.keyhead, statelists[0].len, sizeof(uint64_t), compare_uint64);
-        qsort(statelists[1].head.keyhead, statelists[1].len, sizeof(uint64_t), compare_uint64);
-        // Create the intersection
-        statelists[0].len = intersection(statelists[0].head.keyhead, statelists[1].head.keyhead);
-
-
-/*
-
-    memcpy(&uid, package->cuid, sizeof(package->cuid));
-
-    statelists[0].blockNo = package->block;
-    statelists[0].keyType = package->keytype;
-    statelists[0].uid = uid;
-
-    memcpy(&statelists[0].nt_enc, package->nt, sizeof(package->nt));
-    memcpy(&statelists[0].ks1, package->ks, sizeof(package->ks));
-
     // calc keys
-    pthread_t t;
+    pthread_t thread_id[2];
 
-    // create and run worker thread
-    pthread_create(&t, NULL, nested_worker_thread, &statelists[0]);
+    // create and run worker threads
+    for (uint8_t i = 0; i < 2; i++)
+        pthread_create(thread_id + i, NULL, nested_worker_thread, &statelists[i]);
 
-    // wait for thread to terminate:
-    pthread_join(t, (void *)&statelists[0].head.slhead);
+    // wait for threads to terminate:
+    for (uint8_t i = 0; i < 2; i++)
+        pthread_join(thread_id[i], (void *)&statelists[i].head.slhead);
 
     // the first 16 Bits of the cryptostate already contain part of our key.
+    // Create the intersection of the two lists based on these 16 Bits and
+    // roll back the cryptostate
     p1 = p3 = statelists[0].head.slhead;
+    p2 = p4 = statelists[1].head.slhead;
 
-    // create key candidates.
-    while (p1 <= statelists[0].tail.sltail) {
-        struct Crypto1State savestate;
-        savestate = *p1;
-        while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
-            *p3 = *p1;
-            lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
-            p3++;
-            p1++;
+    while (p1 <= statelists[0].tail.sltail && p2 <= statelists[1].tail.sltail) {
+        if (Compare16Bits(p1, p2) == 0) {
+
+            struct Crypto1State savestate;
+            savestate = *p1;
+            while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
+                *p3 = *p1;
+                lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
+                p3++;
+                p1++;
+            }
+            savestate = *p2;
+            while (Compare16Bits(p2, &savestate) == 0 && p2 <= statelists[1].tail.sltail) {
+                *p4 = *p2;
+                lfsr_rollback_word(p4, statelists[1].nt_enc ^ statelists[1].uid, 0);
+                p4++;
+                p2++;
+            }
+        } else {
+            while (Compare16Bits(p1, p2) == -1) p1++;
+            while (Compare16Bits(p1, p2) == 1) p2++;
         }
     }
 
     p3->odd = -1;
     p3->even = -1;
+    p4->odd = -1;
+    p4->even = -1;
     statelists[0].len = p3 - statelists[0].head.slhead;
+    statelists[1].len = p4 - statelists[1].head.slhead;
     statelists[0].tail.sltail = --p3;
-*/
+    statelists[1].tail.sltail = --p4;
+
+    // the statelists now contain possible keys. The key we are searching for must be in the
+    // intersection of both lists
+    qsort(statelists[0].head.keyhead, statelists[0].len, sizeof(uint64_t), compare_uint64);
+    qsort(statelists[1].head.keyhead, statelists[1].len, sizeof(uint64_t), compare_uint64);
+    // Create the intersection
+    statelists[0].len = intersection(statelists[0].head.keyhead, statelists[1].head.keyhead);
+
+
+    /*
+
+        memcpy(&uid, package->cuid, sizeof(package->cuid));
+
+        statelists[0].blockNo = package->block;
+        statelists[0].keyType = package->keytype;
+        statelists[0].uid = uid;
+
+        memcpy(&statelists[0].nt_enc, package->nt, sizeof(package->nt));
+        memcpy(&statelists[0].ks1, package->ks, sizeof(package->ks));
+
+        // calc keys
+        pthread_t t;
+
+        // create and run worker thread
+        pthread_create(&t, NULL, nested_worker_thread, &statelists[0]);
+
+        // wait for thread to terminate:
+        pthread_join(t, (void *)&statelists[0].head.slhead);
+
+        // the first 16 Bits of the cryptostate already contain part of our key.
+        p1 = p3 = statelists[0].head.slhead;
+
+        // create key candidates.
+        while (p1 <= statelists[0].tail.sltail) {
+            struct Crypto1State savestate;
+            savestate = *p1;
+            while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
+                *p3 = *p1;
+                lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
+                p3++;
+                p1++;
+            }
+        }
+
+        p3->odd = -1;
+        p3->even = -1;
+        statelists[0].len = p3 - statelists[0].head.slhead;
+        statelists[0].tail.sltail = --p3;
+    */
 
     uint32_t keycnt = statelists[0].len;
     if (keycnt == 0) goto out;
@@ -753,16 +753,16 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
 
         // used for mfCheckKeys_file, which needs a header
         mem = calloc((maxkeysinblock * 6) + 5, sizeof(uint8_t));
-    if (mem == NULL) {
-        free(statelists[0].head.slhead);
-        return PM3_EMALLOC;
-    }
+        if (mem == NULL) {
+            free(statelists[0].head.slhead);
+            return PM3_EMALLOC;
+        }
 
-    mem[0] = statelists[0].keyType;
-    mem[1] = statelists[0].blockNo;
-    mem[2] = 1;
-    mem[3] = ((max_keys_chunk >> 8) & 0xFF);
-    mem[4] = (max_keys_chunk & 0xFF);
+        mem[0] = statelists[0].keyType;
+        mem[1] = statelists[0].blockNo;
+        mem[2] = 1;
+        mem[3] = ((max_keys_chunk >> 8) & 0xFF);
+        mem[4] = (max_keys_chunk & 0xFF);
 
         p_keyblock = mem + 5;
     } else {
@@ -854,7 +854,7 @@ out:
                  );
 
     free(statelists[0].head.slhead);
-        free(statelists[1].head.slhead);
+    free(statelists[1].head.slhead);
     return PM3_ESOFT;
 }
 

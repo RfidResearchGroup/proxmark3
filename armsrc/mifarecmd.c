@@ -1225,8 +1225,8 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
     LED_C_ON();
 
     // Main loop - get crypted nonces for target sector
-    for (uint8_t rtr = 0; rtr < 2; rtr++) { 
-        
+    for (uint8_t rtr = 0; rtr < 2; rtr++) {
+
         if (mifare_classic_halt(pcs, cuid)) {
             continue;
         }
@@ -1253,10 +1253,10 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
         if (len != 4) {
             continue;
         };
-      
+
         nt2 = bytes_to_num(receivedAnswer, 4);
         target_ks[0] = nt2 ^ target_nt[0];
-        
+
         // second colleciton
 
         if (mifare_classic_halt(pcs, cuid)) {

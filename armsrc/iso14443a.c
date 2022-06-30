@@ -2441,8 +2441,8 @@ static void iso14a_set_ATS_times(const uint8_t *ats) {
 
 static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_magsafe) {
 
-#define ECP_DELAY 10           
-#define ECP_RETRY_TIMEOUT 100    
+#define ECP_DELAY 10
+#define ECP_RETRY_TIMEOUT 100
 #define WUPA_RETRY_TIMEOUT 10    // 10ms
 
 
@@ -2492,7 +2492,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_mags
         ReaderTransmitBitsPar(wupa, 7, NULL, NULL);
         // Receive the ATQA
         len = ReaderReceive(resp, resp_par);
-        
+
         first_try = false;
     } while (len == 0 && GetTickCountDelta(start_time) <= retry_timeout);
 

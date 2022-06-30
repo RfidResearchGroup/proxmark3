@@ -4169,8 +4169,8 @@ static int CmdT55xxSniff(const char *Cmd) {
                     }
 
                     // Default Write or password read ???
-                    // the most confusing command. 
-                    // if the token is with a password - all is OK, 
+                    // the most confusing command.
+                    // if the token is with a password - all is OK,
                     // if not - read command with a password will lead to write the shifted password to the memory and:
                     //    IF the most bit of the data is `1` ----> IT LEADS TO LOCK this block of the memory
                     if (dataLen == 38) {
