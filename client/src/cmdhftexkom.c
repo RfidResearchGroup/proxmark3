@@ -31,7 +31,7 @@
 
 #define TEXKOM_NOISE_THRESHOLD (10)
 
-inline uint32_t GetGraphBuffer(uint32_t indx) {
+static inline uint32_t GetGraphBuffer(uint32_t indx) {
     if (g_GraphBuffer[indx] < -128)
         return 0;
     else
@@ -154,8 +154,11 @@ static bool TexkomCalculateBitLengths(uint32_t *data, uint32_t len, uint32_t *hi
         }
     }
 
-    *hi = sumhi / lenhi;
-    *low = sumlow / lenlow;
+    if (lenhi)
+        *hi = sumhi / lenhi;
+
+    if (lenlow)
+        *low = sumlow / lenlow;
 
     if (lmax != NULL)
         *lmax = dmax;
@@ -165,7 +168,7 @@ static bool TexkomCalculateBitLengths(uint32_t *data, uint32_t len, uint32_t *hi
     return (*hi != 0) && (*low != 0) && (*hi > *low);
 }
 
-inline bool TexcomCalculateBit(uint32_t data, uint32_t bitlen, uint32_t threshold) {
+static inline bool TexcomCalculateBit(uint32_t data, uint32_t bitlen, uint32_t threshold) {
     return
         (data < (bitlen + threshold)) &&
         (data > (bitlen - threshold));
