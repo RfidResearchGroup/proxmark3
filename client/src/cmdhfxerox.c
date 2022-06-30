@@ -15,60 +15,60 @@
 #define TIMEOUT 2000
 
 
-#define c2l(c,l)	(l =((unsigned long)(*((c)++)))    , \
-			 l|=((unsigned long)(*((c)++)))<< 8L, \
-			 l|=((unsigned long)(*((c)++)))<<16L, \
-			 l|=((unsigned long)(*((c)++)))<<24L)
+#define c2l(c,l)	(l = ((unsigned long)(*((c)++))), \
+			 l |= ((unsigned long)(*((c)++))) << 8L, \
+			 l |= ((unsigned long)(*((c)++))) << 16L, \
+			 l |= ((unsigned long)(*((c)++))) << 24L)
 
 /* NOTE - c is not incremented as per c2l */
 #define c2ln(c,l1,l2,n)	{ \
-			c+=n; \
-			l1=l2=0; \
+			c += n; \
+			l1 = l2 = 0; \
 			switch (n) { \
-			case 8: l2 =((unsigned long)(*(--(c))))<<24L; \
-			case 7: l2|=((unsigned long)(*(--(c))))<<16L; \
-			case 6: l2|=((unsigned long)(*(--(c))))<< 8L; \
-			case 5: l2|=((unsigned long)(*(--(c))));     \
-			case 4: l1 =((unsigned long)(*(--(c))))<<24L; \
-			case 3: l1|=((unsigned long)(*(--(c))))<<16L; \
-			case 2: l1|=((unsigned long)(*(--(c))))<< 8L; \
-			case 1: l1|=((unsigned long)(*(--(c))));     \
+			case 8: l2 = ((unsigned long)(*(--(c)))) << 24L; \
+			case 7: l2 |= ((unsigned long)(*(--(c)))) << 16L; \
+			case 6: l2 |= ((unsigned long)(*(--(c)))) << 8L; \
+			case 5: l2 |= ((unsigned long)(*(--(c)))); \
+			case 4: l1 = ((unsigned long)(*(--(c)))) << 24L; \
+			case 3: l1 |= ((unsigned long)(*(--(c)))) << 16L; \
+			case 2: l1 |= ((unsigned long)(*(--(c)))) << 8L; \
+			case 1: l1 |= ((unsigned long)(*(--(c)))); \
 				} \
 			}
 
-#define l2c(l,c)	(*((c)++)=(unsigned char)(((l)     )&0xff), \
-			 *((c)++)=(unsigned char)(((l)>> 8L)&0xff), \
-			 *((c)++)=(unsigned char)(((l)>>16L)&0xff), \
-			 *((c)++)=(unsigned char)(((l)>>24L)&0xff))
+#define l2c(l,c)	(*((c)++) = (uint8_t)(((l)) & 0xff), \
+			 *((c)++) = (uint8_t)(((l) >> 8L) & 0xff), \
+			 *((c)++) = (uint8_t)(((l) >> 16L) & 0xff), \
+			 *((c)++) = (uint8_t)(((l) >> 24L) & 0xff))
 
 /* NOTE - c is not incremented as per l2c */
 #define l2cn(l1,l2,c,n)	{ \
-			c+=n; \
+			c += n; \
 			switch (n) { \
-			case 8: *(--(c))=(unsigned char)(((l2)>>24L)&0xff); \
-			case 7: *(--(c))=(unsigned char)(((l2)>>16L)&0xff); \
-			case 6: *(--(c))=(unsigned char)(((l2)>> 8L)&0xff); \
-			case 5: *(--(c))=(unsigned char)(((l2)     )&0xff); \
-			case 4: *(--(c))=(unsigned char)(((l1)>>24L)&0xff); \
-			case 3: *(--(c))=(unsigned char)(((l1)>>16L)&0xff); \
-			case 2: *(--(c))=(unsigned char)(((l1)>> 8L)&0xff); \
-			case 1: *(--(c))=(unsigned char)(((l1)     )&0xff); \
+			case 8: *(--(c)) = (uint8_t)(((l2) >> 24L) & 0xff); \
+			case 7: *(--(c)) = (uint8_t)(((l2) >> 16L) & 0xff); \
+			case 6: *(--(c)) = (uint8_t)(((l2) >> 8L) & 0xff); \
+			case 5: *(--(c)) = (uint8_t)(((l2)) & 0xff); \
+			case 4: *(--(c)) = (uint8_t)(((l1) >> 24L) & 0xff); \
+			case 3: *(--(c)) = (uint8_t)(((l1) >> 16L) & 0xff); \
+			case 2: *(--(c)) = (uint8_t)(((l1) >> 8L) & 0xff); \
+			case 1: *(--(c)) = (uint8_t)(((l1)) & 0xff); \
 				} \
 			}
 
 /* NOTE - c is not incremented as per n2l */
 #define n2ln(c,l1,l2,n)	{ \
-			c+=n; \
-			l1=l2=0; \
+			c += n; \
+			l1 = l2 = 0; \
 			switch (n) { \
-			case 8: l2 =((unsigned long)(*(--(c))))    ; \
-			case 7: l2|=((unsigned long)(*(--(c))))<< 8; \
-			case 6: l2|=((unsigned long)(*(--(c))))<<16; \
-			case 5: l2|=((unsigned long)(*(--(c))))<<24; \
-			case 4: l1 =((unsigned long)(*(--(c))))    ; \
-			case 3: l1|=((unsigned long)(*(--(c))))<< 8; \
-			case 2: l1|=((unsigned long)(*(--(c))))<<16; \
-			case 1: l1|=((unsigned long)(*(--(c))))<<24; \
+			case 8: l2 = ((unsigned long)(*(--(c)))); \
+			case 7: l2 |= ((unsigned long)(*(--(c)))) << 8; \
+			case 6: l2 |= ((unsigned long)(*(--(c)))) << 16; \
+			case 5: l2 |= ((unsigned long)(*(--(c)))) << 24; \
+			case 4: l1 = ((unsigned long)(*(--(c)))); \
+			case 3: l1 |= ((unsigned long)(*(--(c)))) << 8; \
+			case 2: l1 |= ((unsigned long)(*(--(c)))) << 16; \
+			case 1: l1 |= ((unsigned long)(*(--(c)))) << 24; \
 				} \
 			}
 
@@ -76,36 +76,36 @@
 #define l2nn(l1,l2,c,n)	{ \
 			c+=n; \
 			switch (n) { \
-			case 8: *(--(c))=(unsigned char)(((l2)    )&0xff); \
-			case 7: *(--(c))=(unsigned char)(((l2)>> 8)&0xff); \
-			case 6: *(--(c))=(unsigned char)(((l2)>>16)&0xff); \
-			case 5: *(--(c))=(unsigned char)(((l2)>>24)&0xff); \
-			case 4: *(--(c))=(unsigned char)(((l1)    )&0xff); \
-			case 3: *(--(c))=(unsigned char)(((l1)>> 8)&0xff); \
-			case 2: *(--(c))=(unsigned char)(((l1)>>16)&0xff); \
-			case 1: *(--(c))=(unsigned char)(((l1)>>24)&0xff); \
+			case 8: *(--(c)) = (uint8_t)(((l2)) & 0xff); \
+			case 7: *(--(c)) = (uint8_t)(((l2) >> 8) & 0xff); \
+			case 6: *(--(c)) = (uint8_t)(((l2) >> 16) & 0xff); \
+			case 5: *(--(c)) = (uint8_t)(((l2) >> 24) & 0xff); \
+			case 4: *(--(c)) = (uint8_t)(((l1)) & 0xff); \
+			case 3: *(--(c)) = (uint8_t)(((l1) >> 8) & 0xff); \
+			case 2: *(--(c)) = (uint8_t)(((l1) >> 16) & 0xff); \
+			case 1: *(--(c)) = (uint8_t)(((l1) >> 24) & 0xff); \
 				} \
 			}
 
-#define n2l(c,l)        (l =((unsigned long)(*((c)++)))<<24L, \
-                         l|=((unsigned long)(*((c)++)))<<16L, \
-                         l|=((unsigned long)(*((c)++)))<< 8L, \
-                         l|=((unsigned long)(*((c)++))))
+#define n2l(c,l)        (l = ((unsigned long)(*((c)++))) << 24L, \
+                         l |= ((unsigned long)(*((c)++))) << 16L, \
+                         l |= ((unsigned long)(*((c)++))) << 8L, \
+                         l |= ((unsigned long)(*((c)++))))
 
-#define l2n(l,c)        (*((c)++)=(unsigned char)(((l)>>24L)&0xff), \
-                         *((c)++)=(unsigned char)(((l)>>16L)&0xff), \
-                         *((c)++)=(unsigned char)(((l)>> 8L)&0xff), \
-                         *((c)++)=(unsigned char)(((l)     )&0xff))
+#define l2n(l,c)        (*((c)++) = (uint8_t)(((l) >> 24L) & 0xff), \
+                         *((c)++) = (uint8_t)(((l) >> 16L) & 0xff), \
+                         *((c)++) = (uint8_t)(((l) >> 8L) & 0xff), \
+                         *((c)++) = (uint8_t)(((l)) & 0xff))
 
 #define C_RC2(n) \
-	t=(x0+(x1& ~x3)+(x2&x3)+ *(p0++))&0xffff; \
-	x0=(t<<1)|(t>>15); \
-	t=(x1+(x2& ~x0)+(x3&x0)+ *(p0++))&0xffff; \
-	x1=(t<<2)|(t>>14); \
-	t=(x2+(x3& ~x1)+(x0&x1)+ *(p0++))&0xffff; \
-	x2=(t<<3)|(t>>13); \
-	t=(x3+(x0& ~x2)+(x1&x2)+ *(p0++))&0xffff; \
-	x3=(t<<5)|(t>>11);
+	t = (x0 + (x1 & ~x3) + (x2 & x3) + *(p0++)) & 0xffff; \
+	x0 = (t << 1) | (t >> 15); \
+	t = (x1 + (x2 & ~x0) + (x3 & x0) + *(p0++)) & 0xffff; \
+	x1 = (t << 2) | (t >> 14); \
+	t = (x2 + (x3 & ~x1) + (x0 & x1) + *(p0++)) & 0xffff; \
+	x2 = (t << 3) | (t >> 13); \
+	t = (x3 + (x0 & ~x2) + (x1 & x2) + *(p0++)) & 0xffff; \
+	x3 = (t << 5) | (t >> 11);
 
 #define RC2_ENCRYPT	1
 #define RC2_DECRYPT	0
@@ -116,7 +116,7 @@ typedef struct rc2_key_st {
     RC2_INT data[64];
 } RC2_KEY;
 
-static const unsigned char key_table[256] = {
+static const uint8_t lut[256] = {
     0xd9, 0x78, 0xf9, 0xc4, 0x19, 0xdd, 0xb5, 0xed, 0x28, 0xe9, 0xfd, 0x79,
     0x4a, 0xa0, 0xd8, 0x9d, 0xc6, 0x7e, 0x37, 0x83, 0x2b, 0x76, 0x53, 0x8e,
     0x62, 0x4c, 0x64, 0x88, 0x44, 0x8b, 0xfb, 0xa2, 0x17, 0x9a, 0x59, 0xf5,
@@ -141,7 +141,7 @@ static const unsigned char key_table[256] = {
     0xfe, 0x7f, 0xc1, 0xad,
 };
 
-static const unsigned char var_list[] = {0x1c, 0x1e, 0x20, 0x26, 0x28, 0x2a, 0x2c, 0x2e};
+static const uint8_t var_list[] = {0x1c, 0x1e, 0x20, 0x26, 0x28, 0x2a, 0x2c, 0x2e};
 
 
 static int CmdHelp(const char *Cmd);
@@ -162,8 +162,10 @@ void RC2_set_key(RC2_KEY *key, int len, const unsigned char *data, int bits) {
 
     if (len > 128)
         len = 128;
+
     if (bits <= 0)
         bits = 1024;
+
     if (bits > 1024)
         bits = 1024;
 
@@ -174,7 +176,7 @@ void RC2_set_key(RC2_KEY *key, int len, const unsigned char *data, int bits) {
     d = k[len - 1];
     j = 0;
     for (i = len; i < 128; i++, j++) {
-        d = key_table[(k[j] + d) & 0xff];
+        d = lut[(k[j] + d) & 0xff];
         k[i] = d;
     }
 
@@ -184,10 +186,10 @@ void RC2_set_key(RC2_KEY *key, int len, const unsigned char *data, int bits) {
     i = 128 - j;
     c = (0xff >> (-bits & 0x07));
 
-    d = key_table[k[i] & c];
+    d = lut[k[i] & c];
     k[i] = d;
     while (i--) {
-        d = key_table[k[i + j] ^ d];
+        d = lut[k[i + j] ^ d];
         k[i] = d;
     }
 
@@ -268,7 +270,9 @@ void RC2_decrypt(unsigned long *d, RC2_KEY *key) {
         x0 = (t - (x1 & ~x3) - (x2 & x3) - * (p0--)) & 0xffff;
 
         if (--i == 0) {
-            if (--n == 0) break;
+            if (--n == 0)
+                break;
+
             i = (n == 2) ? 6 : 5;
 
             x3 = (x3 - p1[x2 & 0x3f]) & 0xffff;
@@ -290,9 +294,11 @@ void RC2_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
     unsigned long tin[2];
 
     if (encrypt) {
+
         c2l(iv, tout0);
         c2l(iv, tout1);
         iv -= 8;
+        
         for (l -= 8; l >= 0; l -= 8) {
             c2l(in, tin0);
             c2l(in, tin1);
@@ -306,6 +312,7 @@ void RC2_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
             tout1 = tin[1];
             l2c(tout1, out);
         }
+
         if (l != -8) {
             c2ln(in, tin0, tin1, l + 8);
             tin0 ^= tout0;
@@ -318,12 +325,16 @@ void RC2_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
             tout1 = tin[1];
             l2c(tout1, out);
         }
+
         l2c(tout0, iv);
         l2c(tout1, iv);
+
     } else {
+
         c2l(iv, xor0);
         c2l(iv, xor1);
         iv -= 8;
+
         for (l -= 8; l >= 0; l -= 8) {
             c2l(in, tin0);
             tin[0] = tin0;
@@ -337,6 +348,7 @@ void RC2_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
             xor0 = tin0;
             xor1 = tin1;
         }
+
         if (l != -8) {
             c2l(in, tin0);
             tin[0] = tin0;
@@ -349,6 +361,7 @@ void RC2_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
             xor0 = tin0;
             xor1 = tin1;
         }
+
         l2c(xor0, iv);
         l2c(xor1, iv);
     }
@@ -371,7 +384,7 @@ static int switch_off_field(void) {
 static int findXerox(iso14b_card_select_t *card, bool disconnect) {
 
     if (card == NULL)
-        return false;
+        return PM3_EINVARG;
 
     int8_t retry = 3;
     while (retry--) {
@@ -385,11 +398,7 @@ static int findXerox(iso14b_card_select_t *card, bool disconnect) {
         SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
-            /*
-            PrintAndLogEx(INFO, "%X %X %X %X %X %I64X %I64X %I64X %X %X %X %c",
-            resp.cmd, resp.length, resp.magic, resp.status, resp.crc, resp.oldarg[0], resp.oldarg[1], resp.oldarg[2],
-            resp.data.asBytes[0], resp.data.asBytes[1], resp.data.asBytes[2], resp.ng ? 't' : 'f');
-            */
+
             if (resp.oldarg[0] == 0) {
                 memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
             }
@@ -399,13 +408,15 @@ static int findXerox(iso14b_card_select_t *card, bool disconnect) {
 
 //    switch_off_field();
     PrintAndLogEx(FAILED, "command execution timeout");
-    return -1;
+    return PM3_ESOFT;
 }
 
-static uint8_t info_blocks[] = {0x15, 0x16, 0x17, 0x18, 0x22};
-static const char *c_type[] = {"drum", "yellow", "magenta", "cyan", "black"};
+static uint8_t info_blocks[] = { 0x15, 0x16, 0x17, 0x18, 0x22 };
+static const char *c_type[] = { "drum", "yellow", "magenta", "cyan", "black" };
 
-static inline char dec_digit(uint8_t dig) { return (dig <= 9) ? dig + '0' : '?'; }
+static inline char dec_digit(uint8_t dig) { 
+    return (dig <= 9) ? dig + '0' : '?';
+}
 
 static void gen_pn(uint8_t *data, char *pn) {
     pn[0]  = dec_digit(data[0] >> 4);
@@ -443,9 +454,11 @@ static int CmdHFXeroxInfo(const char *Cmd) {
 
     iso14b_card_select_t card;
     int status = findXerox(&card, false);
-    if (status != 0) {
+    if (status != PM3_SUCCESS) {
         switch_off_field();
-        if (verbose) PrintAndLogEx(FAILED, "Fuji/Xerox tag select failed");
+        if (verbose) {
+            PrintAndLogEx(FAILED, "Fuji/Xerox tag select failed");
+        }
         return PM3_ERFTRANS;
     }
 
@@ -555,7 +568,8 @@ static int CmdHFXeroxDump(const char *Cmd) {
 
     iso14b_card_select_t card;
     int status = findXerox(&card, false);	// remain RF on
-    if (status != 0) {
+    if (status != PM3_SUCCESS) {
+        free(packet);        
         switch_off_field();
         return PM3_ERFTRANS;
     }
@@ -718,7 +732,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
 
     size_t datalen = blocknum * 4;
     saveFile(filename, ".bin", data, datalen);
-//    saveFileEML(filename, data, datalen, 4);
+    saveFileEML(filename, data, datalen, 4);
 //    saveFileJSON(filename, jsf15, data, datalen, NULL);
     return PM3_SUCCESS;
 }
