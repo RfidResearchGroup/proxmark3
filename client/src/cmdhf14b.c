@@ -283,6 +283,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         arg_lit0("s", "std", "activate field, use ISO14B select"),
         arg_lit0(NULL, "sr", "activate field, use SRx ST select"),
         arg_lit0(NULL, "cts", "activate field, use ASK C-ticket select"),
+        arg_lit0(NULL, "xrx", "activate field, use Fuji/Xerox select"),
         arg_lit0("c", "crc", "calculate and append CRC"),
         arg_lit0("r", NULL, "do not read response from card"),
         arg_int0("t", "timeout", "<dec>", "timeout in ms"),
@@ -296,10 +297,11 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     bool select_std = arg_get_lit(ctx, 2);
     bool select_sr = arg_get_lit(ctx, 3);
     bool select_cts = arg_get_lit(ctx, 4);
-    bool add_crc = arg_get_lit(ctx, 5);
-    bool read_reply = (arg_get_lit(ctx, 6) == false);
-    int user_timeout = arg_get_int_def(ctx, 7, -1);
-    bool verbose = arg_get_lit(ctx, 8);
+    bool select_xrx = arg_get_lit(ctx, 5);
+    bool add_crc = arg_get_lit(ctx, 6);
+    bool read_reply = (arg_get_lit(ctx, 7) == false);
+    int user_timeout = arg_get_int_def(ctx, 8, -1);
+    bool verbose = arg_get_lit(ctx, 9);
 
     uint32_t flags = ISO14B_CONNECT;
     if (add_crc) {
@@ -318,11 +320,15 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         flags |= (ISO14B_SELECT_CTS | ISO14B_CLEARTRACE);
         if (verbose)
             PrintAndLogEx(INFO, "using ASK/C-ticket select");
+    } else if (select_xrx) {
+        flags |= (ISO14B_SELECT_XRX | ISO14B_CLEARTRACE);
+        if (verbose)
+            PrintAndLogEx(INFO, "using Fuji/Xerox select");
     }
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     int datalen = 0;
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 9), data, sizeof(data), &datalen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 10), data, sizeof(data), &datalen);
     if (res && verbose) {
         PrintAndLogEx(INFO, "called with no raw bytes");
     }
@@ -393,6 +399,12 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         success = wait_cmd_14b(verbose, true, user_timeout);
         if (verbose && success)
             PrintAndLogEx(SUCCESS, "Got response for ASK/C-ticket select");
+    }
+
+    if (select_xrx) {
+        success = wait_cmd_14b(verbose, true, user_timeout);
+        if (verbose && success)
+            PrintAndLogEx(SUCCESS, "Got response for Fuji/Xerox select");
     }
 
     // get back response from the raw bytes you sent.

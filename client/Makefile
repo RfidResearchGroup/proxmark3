@@ -578,6 +578,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdhftopaz.c \
 		cmdhftexkom.c \
 		cmdhfwaveshare.c \
+		cmdhfxerox.c \
 		cmdhw.c \
 		cmdlf.c \
 		cmdlfawid.c \
