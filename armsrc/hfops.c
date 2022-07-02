@@ -92,8 +92,29 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
 }
 
 static uint32_t HfEncodeTkm(uint8_t *uid, uint8_t modulation) {
+    uint32_t len = 0;
+    if (modulation == 0) {
+        // TK-13
+        // 74ns 1 field cycle,
+        // 100  field cycle = impulse (13 bytes)
+        // 1000 field cycle = `1`     (125 bytes)
+        // 500  field cycle = `0`     (63 bytes)
+        // `1` - 125, 63
+        // `0` - 63, 125
 
-    return 0;
+        len = 2;
+    } else {
+        // TK-17
+        // 74ns 1 field cycle,
+        // `00` -
+        // `01` -
+        // `10` -
+        // `11` -
+
+
+    }
+
+    return len;
 }
 
 int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
@@ -110,6 +131,9 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
     }
 
     LED_C_ON();
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K);
 
     int vHf = 0; // in mV
     bool button_pressed = false;
@@ -130,8 +154,27 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
             continue;
         }
 
+        SpinDelay(10);
+        for (int j = 0; j < 13;) {
+            if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+                AT91C_BASE_SSC->SSC_THR = 0xff;
+                j++;
+            }
+        }
+        for (int j = 0; j < 125;) {
+            if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+                AT91C_BASE_SSC->SSC_THR = 0x00;
+                j++;
+            }
+        }
+        for (int j = 0; j < 13;) {
+            if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+                AT91C_BASE_SSC->SSC_THR = 0xff;
+                j++;
+            }
+        }
 
-        // TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
+        SpinDelay(100);
     }
 
     switch_off();
