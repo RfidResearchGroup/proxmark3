@@ -574,6 +574,15 @@ static int CmdHFTexkomSim(const char *Cmd) {
 
     // <texkom 8bytes><modulation 1b><timeout 4b>
     uint8_t data[13] = {0};
+    data[0] = 0xFF;
+    data[1] = 0xFF;
+    data[2] = 0x63;
+    data[3] = 0x8C;
+    data[4] = 0x7D;
+    data[5] = 0xC4;
+    data[6] = 0x55;
+    data[7] = 0x53;
+
     data[8] = modulation;
     memcpy(&data[9], &cmdtimeout, 4);
     clearCommandBuffer();

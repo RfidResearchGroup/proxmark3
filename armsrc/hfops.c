@@ -91,7 +91,7 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
     return 0;
 }
 
-static uint32_t HfEncodeTkm(uint8_t *uid, uint8_t modulation) {
+static uint32_t HfEncodeTkm(uint8_t *uid, uint8_t modulation, uint8_t *data) {
     uint32_t len = 0;
     if (modulation == 0) {
         // TK-13
@@ -101,6 +101,21 @@ static uint32_t HfEncodeTkm(uint8_t *uid, uint8_t modulation) {
         // 500  field cycle = `0`     (63 bytes)
         // `1` - 125, 63
         // `0` - 63, 125
+
+        int indx = 0;
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if (((uid[i] << j) & 0x80) != 0) {
+                    // `1`
+                    data[indx++] = 125;
+                    data[indx++] = 63;
+                } else {
+                    // `0`
+                    data[indx++] = 63;
+                    data[indx++] = 125;
+                }
+            }
+        }
 
         len = 2;
     } else {
@@ -123,7 +138,8 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
 
     LEDsoff();
 
-    uint32_t elen = HfEncodeTkm(uid, modulation);
+    uint8_t* data = BigBuf_calloc(256);
+    uint32_t elen = HfEncodeTkm(uid, modulation, data);
     if (elen == 0) {
         DbpString("encode error");
         reply_ng(CMD_HF_TEXKOM_SIMULATE, PM3_EAPDU_ENCODEFAIL, NULL, 0);
@@ -155,22 +171,18 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
         }
 
         SpinDelay(10);
-        for (int j = 0; j < 13;) {
-            if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-                AT91C_BASE_SSC->SSC_THR = 0xff;
-                j++;
+        for (int i = 0; i < elen; i++) {
+            for (int j = 0; j < 13;) {
+                if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+                    AT91C_BASE_SSC->SSC_THR = 0xff;
+                    j++;
+                }
             }
-        }
-        for (int j = 0; j < 125;) {
-            if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-                AT91C_BASE_SSC->SSC_THR = 0x00;
-                j++;
-            }
-        }
-        for (int j = 0; j < 13;) {
-            if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-                AT91C_BASE_SSC->SSC_THR = 0xff;
-                j++;
+            for (int j = 0; j < data[i];) {
+                if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+                    AT91C_BASE_SSC->SSC_THR = 0x00;
+                    j++;
+                }
             }
         }
 
