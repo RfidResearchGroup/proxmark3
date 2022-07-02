@@ -19,6 +19,7 @@
 #include "hfops.h"
 
 #include <string.h>
+#include "appmain.h"
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
@@ -90,4 +91,55 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
     return 0;
 }
 
+static uint32_t HfEncodeTkm(uint8_t *uid, uint8_t modulation) {
 
+    return 0;
+}
+
+int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
+    // free eventually allocated BigBuf memory
+    BigBuf_free_keep_EM();
+
+    LEDsoff();
+
+    uint32_t elen = HfEncodeTkm(uid, modulation);
+    if (elen == 0) {
+        DbpString("encode error");
+        reply_ng(CMD_HF_TEXKOM_SIMULATE, PM3_EAPDU_ENCODEFAIL, NULL, 0);
+        return PM3_EAPDU_ENCODEFAIL;
+    }
+
+    LED_C_ON();
+
+    int vHf = 0; // in mV
+    bool button_pressed = false;
+    bool exit_loop = false;
+    while (exit_loop == false) {
+
+        button_pressed = BUTTON_PRESS();
+        if (button_pressed || data_available())
+            break;
+
+        WDT_HIT();
+
+        vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+        if (vHf > MF_MINFIELDV) {
+            LED_A_ON();
+        } else {
+            LED_A_OFF();
+            continue;
+        }
+
+
+        // TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
+    }
+
+    switch_off();
+
+    if (button_pressed)
+        DbpString("button pressed");
+
+    reply_ng(CMD_HF_TEXKOM_SIMULATE, PM3_SUCCESS, NULL, 0);
+
+    return PM3_SUCCESS;
+}

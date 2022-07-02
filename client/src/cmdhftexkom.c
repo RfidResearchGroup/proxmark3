@@ -550,12 +550,57 @@ static int CmdHFTexkomReader(const char *Cmd) {
 }
 
 
+static int CmdHFTexkomSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf texkom sim",
+                  "Simulate a texkom tag",
+                  "hf texkom sim");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v",  "verbose",  "Verbose work"),
+        arg_lit0("t",  "tk17",  "Use TK-17 modulation (TK-13 by default)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool verbose = arg_get_lit(ctx, 1);
+    uint32_t cmdtimeout = 0;
+    uint8_t modulation = 0; // tk-13
+    if (arg_get_lit(ctx, 2))
+        modulation = 1; //tk-17
+
+    CLIParserFree(ctx);
+
+    // <texkom 8bytes><modulation 1b><timeout 4b>
+    uint8_t data[13] = {0};
+    data[8] = modulation;
+    memcpy(&data[9], &cmdtimeout, 4);
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_TEXKOM_SIMULATE, data, sizeof(data));
+
+    if (cmdtimeout > 0 && cmdtimeout < 2800) {
+        PacketResponseNG resp;
+        if (!WaitForResponseTimeout(CMD_HF_TEXKOM_SIMULATE, &resp, 3000)) {
+            if (verbose)
+                PrintAndLogEx(WARNING, "(hf texkom simulate) command execution time out");
+            return PM3_ETIMEOUT;
+        }
+        PrintAndLogEx(INFO, "simulate command execution done");
+    } else {
+        PrintAndLogEx(INFO, "simulate command started");
+    }
+
+    return PM3_SUCCESS;
+}
+
+
 static int CmdHelp(const char *Cmd);
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable,  "This help"},
     {"reader",  CmdHFTexkomReader,  IfPm3Iso14443a,   "Act like a Texkom reader"},
-    //{"sim",     CmdHFTexkomSim,     IfPm3Iso14443a,   "Simulate a Texkom tag"},
+    {"sim",     CmdHFTexkomSim,     IfPm3Iso14443a,   "Simulate a Texkom tag"},
     //{"write",   CmdHFTexkomWrite,   IfPm3Iso14443a,   "Write a Texkom tag"},
     {NULL,      NULL,               0, NULL}
 };

@@ -1392,6 +1392,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             HfReadADC(samplesCount, true);
             break;
         }
+        case CMD_HF_TEXKOM_SIMULATE: {
+            uint32_t timeout = 0;
+            memcpy(&timeout, &packet->data.asBytes[9], 4);
+            HfWriteTkm(packet->data.asBytes, packet->data.asBytes[8], timeout);
+            break;
+        }
+
 #endif
 
 #ifdef WITH_ISO14443a
