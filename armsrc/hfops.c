@@ -156,6 +156,7 @@ static uint32_t HfEncodeTkm(uint8_t *uid, uint8_t modulation, uint8_t *data) {
         // 74ns 1 field cycle,
         // carrier frequency is fc/64 (212kHz), 4.7 mks
         // 0 --- 8 --- 12-15 --- 18-19 --- 26-28 --- 32
+        // DO NOT NORMALIZE!!!! it must be with some error like this!!!!
         // `00` -- 1-25-1-5
         // `01` -- 1-12-1-18 
         // `10` -- 1-17-1-13
