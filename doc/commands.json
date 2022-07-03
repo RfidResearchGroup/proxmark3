@@ -6324,6 +6324,27 @@
             ],
             "usage": "hf texkom reader [-hv]"
         },
+        "hf texkom sim": {
+            "command": "hf texkom sim",
+            "description": "Simulate a texkom tag",
+            "notes": [
+                "hf texkom sim",
+                "",
+                "hf texkom sim --raw FFFF638C7DC45553 -> simulate TK13 tag with id 8C7DC455",
+                "hf texkom sim --tk17 --raw FFFFCA17F31EC512 -> simulate TK17 tag with id 17F31EC5",
+                "hf texkom sim --id 8C7DC455 -> simulate TK13 tag with id 8C7DC455",
+                "hf texkom sim --id 8C7DC455 --tk17 -> simulate TK17 tag with id 17F31EC5"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose Verbose work",
+                "-t, --tk17 Use TK-17 modulation (TK-13 by default)",
+                "--raw <hex 8 bytes> Raw data for texkom card, 8 bytes. Manual modulation select.",
+                "--id <hex 4 bytes> Raw data for texkom card, 8 bytes. Manual modulation select."
+            ],
+            "usage": "hf texkom sim [-hvt] [--raw <hex 8 bytes>] [--id <hex 4 bytes>]"
+        },
         "hf thinfilm help": {
             "command": "hf thinfilm help",
             "description": "help This help list List NFC Barcode / Thinfilm history - not correct",
@@ -6585,8 +6606,8 @@
             "command": "hw connect",
             "description": "Connects to a Proxmark3 device via specified serial port. Baudrate here is only for physical UART or UART-BT, NOT for USB-CDC or blue shark add-on",
             "notes": [
-                "hw connect -p /dev/ttyACM0",
-                "hw connect -p /dev/ttyACM0 -b 115200"
+                "hw connect -p /dev/ttyacm0",
+                "hw connect -p /dev/ttyacm0 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -11055,8 +11076,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 698,
+        "commands_extracted": 699,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-06-30T19:19:33"
+        "extracted_on": "2022-07-03T21:31:15"
     }
 }

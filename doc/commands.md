@@ -654,6 +654,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf texkom help         `|Y       |`This help`
 |`hf texkom reader       `|N       |`Act like a Texkom reader`
+|`hf texkom sim          `|N       |`Simulate a Texkom tag`
 
 
 ### hf xerox
