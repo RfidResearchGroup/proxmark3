@@ -554,12 +554,16 @@ static int CmdHFTexkomSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf texkom sim",
                   "Simulate a texkom tag",
-                  "hf texkom sim");
+                  "hf texkom sim \r\n"
+                  "hf texkom sim --raw FFFF638C7DC45553 -> simulate TK13 tag with id 8C7DC455\r\n"
+                  "hf texkom sim --id 8C7DC455 -> simulate TK13 tag with id 8C7DC455");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v",  "verbose",  "Verbose work"),
-        arg_lit0("t",  "tk17",  "Use TK-17 modulation (TK-13 by default)"),
+        arg_lit0("t",  "tk17",     "Use TK-17 modulation (TK-13 by default)"),
+        arg_str0(NULL, "raw",      "<hex 8 bytes>", "Raw data for texkom card, 8 bytes. Manual modulation select."),
+        arg_str0(NULL, "id",       "<hex 4 bytes>", "Raw data for texkom card, 8 bytes. Manual modulation select."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -570,18 +574,43 @@ static int CmdHFTexkomSim(const char *Cmd) {
     if (arg_get_lit(ctx, 2))
         modulation = 1; //tk-17
 
+    uint8_t rawdata[250] = {0};
+    int rawdatalen = 0;
+    CLIGetHexWithReturn(ctx, 3, rawdata, &rawdatalen);
+
+    uint8_t iddata[250] = {0};
+    int iddatalen = 0;
+    CLIGetHexWithReturn(ctx, 4, iddata, &iddatalen);
+
     CLIParserFree(ctx);
+
+    if (rawdatalen == 0 && iddatalen == 0) {
+        PrintAndLogEx(ERR, "<raw data> or <id> must be specified to simulate");
+        return PM3_EINVARG;
+    }
+
+    if (iddatalen > 0 && iddatalen != 4) {
+        PrintAndLogEx(ERR, "<id> must be 4 bytes long instead of: %d", iddatalen);
+        return PM3_EINVARG;
+    }
+
+    if (iddatalen == 4) {
+        rawdata[0] = 0xff;
+        rawdata[1] = 0xff;
+        rawdata[2] = (modulation == 0) ? 0x63 : 0xca;
+        memcpy(&rawdata[3], iddata, 4);
+        rawdata[7] = (modulation == 0) ? TexcomTK13CRC(iddata) : TexcomTK17CRC(iddata);
+        rawdatalen = 8;
+    }
+
+    if (rawdatalen > 0 && rawdatalen != 8) {
+        PrintAndLogEx(ERR, "<raw data> must be 8 bytes long instead of: %d", rawdatalen);
+        return PM3_EINVARG;
+    }
 
     // <texkom 8bytes><modulation 1b><timeout 4b>
     uint8_t data[13] = {0};
-    data[0] = 0xFF;
-    data[1] = 0xFF;
-    data[2] = 0x63;
-    data[3] = 0x8C;
-    data[4] = 0x7D;
-    data[5] = 0xC4;
-    data[6] = 0x55;
-    data[7] = 0x53;
+    memcpy(data, rawdata, 8);
 
     data[8] = modulation;
     memcpy(&data[9], &cmdtimeout, 4);
