@@ -96,6 +96,7 @@ static uint32_t HfEncodeTkm(uint8_t *uid, uint8_t modulation, uint8_t *data) {
     if (modulation == 0) {
         // TK-13
         // 74ns 1 field cycle,
+        // carrier frequency is fc/64 (212kHz), 4.7 mks
         // 100  field cycle = impulse (13 bytes)
         // 1000 field cycle = `1`     (125 bytes)
         // 500  field cycle = `0`     (63 bytes)
@@ -171,7 +172,7 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
             continue;
         }
 
-        SpinDelay(10);
+        SpinDelay(5);
         for (int i = 0; i < elen; i++) {
             for (int j = 0; j < 1;) {
                 if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
@@ -188,8 +189,6 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
                 }
             }
         }
-
-        SpinDelay(100);
     }
 
     switch_off();
