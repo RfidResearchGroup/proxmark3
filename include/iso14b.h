@@ -50,6 +50,13 @@ typedef enum ISO14B_COMMAND {
     ISO14B_SELECT_XRX = (1 << 12),
 } iso14b_command_t;
 
+typedef enum ISO14B_TYPE {
+    ISO14B_NONE = 0,
+    ISO14B_STANDARD = 1,
+    ISO14B_SR = 2,
+    ISO14B_CT = 4,
+} iso14b_type_t;
+
 typedef struct {
     uint16_t flags;      // the ISO14B_COMMAND enum
     uint32_t timeout;
