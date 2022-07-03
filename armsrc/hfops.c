@@ -154,12 +154,46 @@ static uint32_t HfEncodeTkm(uint8_t *uid, uint8_t modulation, uint8_t *data) {
     } else {
         // TK-17
         // 74ns 1 field cycle,
-        // `00` -
-        // `01` -
-        // `10` -
-        // `11` -
+        // carrier frequency is fc/64 (212kHz), 4.7 mks
+        // 0 --- 8 --- 12-15 --- 18-19 --- 26-28 --- 32
+        // `00` -- 1-25-1-5
+        // `01` -- 1-12-1-18 
+        // `10` -- 1-17-1-13
+        // `11` -- 1-7-1-23
 
-
+        EncodeInit();
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j += 2) {
+                uint8_t twobit = ((uid[i] >> j) & 0x03);
+                if (twobit == 0x00) {
+                    // `00`
+                    EncodeAddBit(data, 1, 1);
+                    EncodeAddBit(data, 0, 25);
+                    EncodeAddBit(data, 1, 1);
+                    EncodeAddBit(data, 0, 5);
+                } else if (twobit == 0x01) {
+                    // `01`
+                    EncodeAddBit(data, 1, 1);
+                    EncodeAddBit(data, 0, 12);
+                    EncodeAddBit(data, 1, 1);
+                    EncodeAddBit(data, 0, 18);
+                } else if (twobit == 0x02) {
+                    // `10`
+                    EncodeAddBit(data, 1, 1);
+                    EncodeAddBit(data, 0, 17);
+                    EncodeAddBit(data, 1, 1);
+                    EncodeAddBit(data, 0, 13);
+                } else { // twobit == 0x03
+                    // `11`
+                    EncodeAddBit(data, 1, 1);
+                    EncodeAddBit(data, 0, 7);
+                    EncodeAddBit(data, 1, 1);
+                    EncodeAddBit(data, 0, 23);
+                }
+            }
+        }
+        EncodeAddBit(data, 1, 1);
+        len = EncodeFinish(data);
     }
 
     return len;
