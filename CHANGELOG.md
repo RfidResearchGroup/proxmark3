@@ -71,6 +71,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added 122 new keys from Flipper Zero community to `mfc_default_keys.dic` (@UberGuidoZ)
  - Added showing password for the read command in the `lf t55xx sniff` command (@merlokk)
  - Added reading texcom tk13 and tk17 tags with `hf texkom read` command (@merlokk @iceman1001)
+ - Added simulating texcom tk13 and tk17 tags with `hf texkom sim` command (@merlokk)
 
 ## [Frostbit.4.14831][2022-01-11]
  - Changed Wiegand format lookup - now case-insensitive (@iceman1001)
