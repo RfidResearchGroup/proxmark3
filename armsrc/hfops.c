@@ -117,7 +117,7 @@ static uint32_t HfEncodeTkm(uint8_t *uid, uint8_t modulation, uint8_t *data) {
             }
         }
 
-        len = 2;
+        len = indx;
     } else {
         // TK-17
         // 74ns 1 field cycle,
@@ -150,6 +150,7 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K);
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
 
     int vHf = 0; // in mV
     bool button_pressed = false;
@@ -172,6 +173,9 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
 
         SpinDelay(10);
         for (int i = 0; i < elen; i++) {
+            if (data[i] == 0)
+                data[i] = 10;
+
             for (int j = 0; j < 13;) {
                 if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
                     AT91C_BASE_SSC->SSC_THR = 0xff;
