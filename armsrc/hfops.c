@@ -156,6 +156,7 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
     int vHf = 0; // in mV
     bool button_pressed = false;
     bool exit_loop = false;
+    bool field_on = false;
     while (exit_loop == false) {
 
         button_pressed = BUTTON_PRESS();
@@ -166,13 +167,20 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
 
         vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
         if (vHf > MF_MINFIELDV) {
-            LED_A_ON();
+            if (!field_on) {
+                LED_A_ON();
+                SpinDelay(50);
+            }
+            field_on = true;
         } else {
-            LED_A_OFF();
+            if (field_on) {
+                LED_A_OFF();
+            }
+            field_on = false;
             continue;
         }
 
-        SpinDelay(5);
+        SpinDelay(3);
         for (int i = 0; i < elen; i++) {
             for (int j = 0; j < 1;) {
                 if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
