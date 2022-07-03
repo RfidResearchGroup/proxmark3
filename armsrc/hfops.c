@@ -91,34 +91,66 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
     return 0;
 }
 
+uint8_t encode_acc = 0;
+uint8_t encode_acc_bit_count = 0;
+uint32_t encode_indx = 0;
+
+static void EncodeInit(void) {
+    encode_acc = 0;
+    encode_acc_bit_count = 0;
+    encode_indx = 0;
+}
+
+static void EncodeAddBit(uint8_t* data, uint8_t bit, uint8_t bit_count) {
+    for (int i = 0; i < bit_count; i++) {
+        encode_acc = (encode_acc << 1) | (bit & 0x01);
+        encode_acc_bit_count++;
+        if (encode_acc_bit_count > 7) {
+            data[encode_indx++] = encode_acc;
+            encode_acc = 0;
+            encode_acc_bit_count = 0;
+        }
+    }
+}
+
+static uint32_t EncodeFinish(uint8_t* data) {
+    if (encode_acc_bit_count > 0) {
+        encode_acc = encode_acc << (8 - encode_acc_bit_count);
+        data[encode_indx++] = encode_acc;
+    }
+
+    return encode_indx;
+}
+
 static uint32_t HfEncodeTkm(uint8_t *uid, uint8_t modulation, uint8_t *data) {
     uint32_t len = 0;
     if (modulation == 0) {
         // TK-13
         // 74ns 1 field cycle,
         // carrier frequency is fc/64 (212kHz), 4.7 mks
-        // 100  field cycle = impulse (13 bytes)
-        // 1000 field cycle = `1`     (125 bytes)
-        // 500  field cycle = `0`     (63 bytes)
-        // `1` - 125, 63
-        // `0` - 63, 125
+        // 100  field cycle = impulse  1.6 ( 1 bit from real tag)
+        // 1000 field cycle = `1`     15.6 (17 bit from real tag)
+        // 500  field cycle = `0`      7.8 ( 7 bit from real tag)
 
-        int indx = 0;
+        EncodeInit();
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 if (((uid[i] << j) & 0x80) != 0) {
                     // `1`
-                    data[indx++] = 1;
-                    data[indx++] = 0;
+                    EncodeAddBit(data, 1, 1);
+                    EncodeAddBit(data, 0, 17);
+                    EncodeAddBit(data, 1, 1);
+                    EncodeAddBit(data, 0, 7);
                 } else {
                     // `0`
-                    data[indx++] = 0;
-                    data[indx++] = 1;
+                    EncodeAddBit(data, 1, 1);
+                    EncodeAddBit(data, 0, 7);
+                    EncodeAddBit(data, 1, 1);
+                    EncodeAddBit(data, 0, 17);
                 }
             }
         }
-
-        len = indx;
+        len = EncodeFinish(data);
     } else {
         // TK-17
         // 74ns 1 field cycle,
@@ -181,20 +213,10 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
         }
 
         SpinDelay(3);
-        for (int i = 0; i < elen; i++) {
-            for (int j = 0; j < 1;) {
-                if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-                    AT91C_BASE_SSC->SSC_THR = 0x80;
-                    j++;
-                }
-            }
-            if (data[i] > 0) {
-                for (int j = 0; j < data[i];) {
-                    if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-                        AT91C_BASE_SSC->SSC_THR = 0x00;
-                        j++;
-                    }
-                }
+        for (int i = 0; i < elen;) {
+            if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+                AT91C_BASE_SSC->SSC_THR = data[i];
+                i++;
             }
         }
     }
