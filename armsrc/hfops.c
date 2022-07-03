@@ -101,7 +101,7 @@ static void EncodeInit(void) {
     encode_indx = 0;
 }
 
-static void EncodeAddBit(uint8_t* data, uint8_t bit, uint8_t bit_count) {
+static void EncodeAddBit(uint8_t *data, uint8_t bit, uint8_t bit_count) {
     for (int i = 0; i < bit_count; i++) {
         encode_acc = (encode_acc << 1) | (bit & 0x01);
         encode_acc_bit_count++;
@@ -113,7 +113,7 @@ static void EncodeAddBit(uint8_t* data, uint8_t bit, uint8_t bit_count) {
     }
 }
 
-static uint32_t EncodeFinish(uint8_t* data) {
+static uint32_t EncodeFinish(uint8_t *data) {
     if (encode_acc_bit_count > 0) {
         encode_acc = encode_acc << (8 - encode_acc_bit_count);
         data[encode_indx++] = encode_acc;
@@ -158,7 +158,7 @@ static uint32_t HfEncodeTkm(uint8_t *uid, uint8_t modulation, uint8_t *data) {
         // 0 --- 8 --- 12-15 --- 18-19 --- 26-28 --- 32
         // DO NOT NORMALIZE!!!! it must be with some error like this!!!!
         // `00` -- 1-25-1-5
-        // `01` -- 1-12-1-18 
+        // `01` -- 1-12-1-18
         // `10` -- 1-17-1-13
         // `11` -- 1-7-1-23
 
@@ -206,7 +206,7 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
 
     LEDsoff();
 
-    uint8_t* data = BigBuf_calloc(256);
+    uint8_t *data = BigBuf_calloc(256);
     uint32_t elen = HfEncodeTkm(uid, modulation, data);
     if (elen == 0) {
         DbpString("encode error");
