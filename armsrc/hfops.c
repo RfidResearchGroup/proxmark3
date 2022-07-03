@@ -107,12 +107,12 @@ static uint32_t HfEncodeTkm(uint8_t *uid, uint8_t modulation, uint8_t *data) {
             for (int j = 0; j < 8; j++) {
                 if (((uid[i] << j) & 0x80) != 0) {
                     // `1`
-                    data[indx++] = 125;
-                    data[indx++] = 63;
+                    data[indx++] = 1;
+                    data[indx++] = 0;
                 } else {
                     // `0`
-                    data[indx++] = 63;
-                    data[indx++] = 125;
+                    data[indx++] = 0;
+                    data[indx++] = 1;
                 }
             }
         }
@@ -149,7 +149,7 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
     LED_C_ON();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_424K);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_212K);
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
 
     int vHf = 0; // in mV
@@ -173,19 +173,18 @@ int HfWriteTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
 
         SpinDelay(10);
         for (int i = 0; i < elen; i++) {
-            if (data[i] == 0)
-                data[i] = 10;
-
-            for (int j = 0; j < 13;) {
+            for (int j = 0; j < 1;) {
                 if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-                    AT91C_BASE_SSC->SSC_THR = 0xff;
+                    AT91C_BASE_SSC->SSC_THR = 0x80;
                     j++;
                 }
             }
-            for (int j = 0; j < data[i];) {
-                if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
-                    AT91C_BASE_SSC->SSC_THR = 0x00;
-                    j++;
+            if (data[i] > 0) {
+                for (int j = 0; j < data[i];) {
+                    if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
+                        AT91C_BASE_SSC->SSC_THR = 0x00;
+                        j++;
+                    }
                 }
             }
         }
