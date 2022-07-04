@@ -189,7 +189,8 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
     size_t max_len = (hex_len > hex_max_len) ? hex_max_len : hex_len;
 
     size_t i;
-    for (i = 0; i < max_len; ++i, tmp += 2 + spaces_between) {
+    for (i = 0; i < max_len && (tmp - tmp_base); ++i, tmp += 2 + spaces_between) {
+
         snprintf(tmp, hex_max_len - (tmp - tmp_base), (uppercase) ? "%02X" : "%02x", (unsigned int) hex_data[i]);
 
         for (size_t j = 0; j < spaces_between; j++)
