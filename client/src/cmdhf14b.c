@@ -440,7 +440,7 @@ static bool get_14b_UID(uint8_t *d, iso14b_type_t *found_type) {
 
         if (resp.oldarg[0] == 0) {
             memcpy(d, resp.data.asBytes, sizeof(iso14b_card_select_t));
-            *found_type = ISO14B_SELECT_SR;
+            *found_type = ISO14B_SR;
             return true;
         }
     }
