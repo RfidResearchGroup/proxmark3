@@ -597,11 +597,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
 
 // Reboot into bootloader
 int flash_reboot_bootloader(char *serial_port_name) {
-    int ret;
-
-    ret = enter_bootloader(serial_port_name);
-
-    return ret;
+    return enter_bootloader(serial_port_name);
 }
 
 static int write_block(uint32_t address, uint8_t *data, uint32_t length) {
