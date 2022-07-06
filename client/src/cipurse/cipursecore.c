@@ -412,10 +412,14 @@ void CIPURSEPrintDGI(uint8_t *dgi, size_t dgilen) {
         }
 
         for (int i = 0; i < len / 20; i++) {
-            PrintAndLogEx(INFO, "Key[%d]............ %s", i + 1, sprint_hex_inrow(&dgi[3 + i * 20 + 0], 16));
-            PrintAndLogEx(INFO, " Additional info.. 0x%02x", dgi[3 + i * 20 + 16]);
+
             uint8_t kvv[CIPURSE_KVV_LENGTH] = {0};
-            CipurseCGetKVV(&dgi[3 + i * 20 + 0], kvv);
+            uint8_t aeskey[16] = {0};
+            memcpy(aeskey, &dgi[3 + i * 20 + 0], sizeof(aeskey));
+
+            PrintAndLogEx(INFO, "Key[%d]............ %s", i + 1, sprint_hex_inrow(aeskey, sizeof(aeskey)));
+            PrintAndLogEx(INFO, " Additional info.. 0x%02x", dgi[3 + i * 20 + 16]);
+            CipurseCGetKVV(aeskey, kvv);
             bool kvvvalid = (memcmp(kvv, &dgi[3 + i * 20 + 17], 3) == 0);
             PrintAndLogEx(INFO, " KVV.............. %s (%s)", sprint_hex_inrow(&dgi[3 + i * 20 + 17], 3), (kvvvalid) ? _GREEN_("valid") : _RED_("invalid"));
         }
