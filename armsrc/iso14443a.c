@@ -927,9 +927,13 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
     (void)b;
 
     uint8_t flip = 0;
-    uint16_t checker = 0;
+    uint16_t checker = 4000;
     for (;;) {
+
         WDT_HIT();
+
+        // ever 3 * 4000,  check if we got any data from client
+        // takes long time,  usually messes with simualtion
         if (flip == 3) {
             if (data_available())
                 return false;
@@ -937,14 +941,14 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
             flip = 0;
         }
 
-        if (checker >= 3000) {
+        // button press, takes a bit time, might mess with simualtion
+        if (checker-- == 0) {
             if (BUTTON_PRESS())
                 return false;
 
             flip++;
-            checker = 0;
+            checker = 4000;
         }
-        ++checker;
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -2461,7 +2465,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_mags
         uint8_t deselect_cmd[] = {0xc2, 0xe0, 0xb4};
         ReaderTransmit(deselect_cmd, sizeof(deselect_cmd), NULL);
         // Read response if present
-        ReaderReceive(resp, resp_par);
+        (void) ReaderReceive(resp, resp_par);
     }
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
