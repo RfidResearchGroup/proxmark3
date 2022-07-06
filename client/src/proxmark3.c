@@ -699,34 +699,18 @@ finish2:
 }
 
 static int reboot_bootloader_pm3(char *serial_port_name) {
-
-    int ret = PM3_EUNDEF;
-
     if (serial_port_name == NULL) {
         PrintAndLogEx(ERR, "You must specify a port.\n");
         return PM3_EINVARG;
     }
 
-    if (OpenProxmark(&g_session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
-        PrintAndLogEx(NORMAL, _GREEN_(" found"));
-    } else {
+    if (OpenProxmark(&g_session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED) == false) {
         PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
-        ret = PM3_ETIMEOUT;
-        goto finish2;
+        return PM3_ETIMEOUT;
     }
 
-    ret = flash_reboot_bootloader(serial_port_name);
-    return ret;
-
-finish2:
-    if (ret == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, _CYAN_("All done"));
-    else if (ret == PM3_EOPABORTED)
-        PrintAndLogEx(FAILED, "Aborted by user");
-    else
-        PrintAndLogEx(ERR, "Aborted on error");
-    PrintAndLogEx(INFO, "\nHave a nice day!");
-    return ret;
+    PrintAndLogEx(NORMAL, _GREEN_(" found"));
+    return flash_reboot_bootloader(serial_port_name);
 }
 
 #endif //LIBPM3
