@@ -1388,7 +1388,7 @@ static int CmdHF14BDump(const char *Cmd) {
         return switch_off_field_14b();
     }
 
-    if (select_cardtype == ISO14B_CT) {
+    if (select_cardtype == ISO14B_STANDARD) {
         // Have to figure out how large one of these are..
         PrintAndLogEx(FAILED, "Dumping Standard ISO14443-B tags is not implemented yet.");
         // print_std_blocks(data, cardsize);
