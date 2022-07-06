@@ -568,15 +568,22 @@ static int CmdHFTexkomSim(const char *Cmd) {
         arg_lit0("t",  "tk17",     "Use TK-17 modulation (TK-13 by default)"),
         arg_str0(NULL, "raw",      "<hex 8 bytes>", "Raw data for texkom card, 8 bytes. Manual modulation select."),
         arg_str0(NULL, "id",       "<hex 4 bytes>", "Raw data for texkom card, 8 bytes. Manual modulation select."),
+        arg_int0(NULL, "timeout",  "<dec, ms>", "Simulation timeout in the ms. If not specified or 0 - infinite. Command can be skipped by pressing the button"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
+    // <texkom data 8bytes><modulation type 1b><timeout ms 4b>
+    struct p {
+        uint8_t data[8];
+        uint8_t modulation;
+        uint32_t timeout;
+    } PACKED payload = {};
+
     bool verbose = arg_get_lit(ctx, 1);
-    uint32_t cmdtimeout = 0;
-    uint8_t modulation = 0; // tk-13
+    payload.modulation = 0; // tk-13
     if (arg_get_lit(ctx, 2))
-        modulation = 1; //tk-17
+        payload.modulation = 1; //tk-17
 
     uint8_t rawdata[250] = {0};
     int rawdatalen = 0;
@@ -585,6 +592,8 @@ static int CmdHFTexkomSim(const char *Cmd) {
     uint8_t iddata[250] = {0};
     int iddatalen = 0;
     CLIGetHexWithReturn(ctx, 4, iddata, &iddatalen);
+
+    payload.timeout = arg_get_int_def(ctx, 5, 0);
 
     CLIParserFree(ctx);
 
@@ -601,9 +610,9 @@ static int CmdHFTexkomSim(const char *Cmd) {
     if (iddatalen == 4) {
         rawdata[0] = 0xff;
         rawdata[1] = 0xff;
-        rawdata[2] = (modulation == 0) ? 0x63 : 0xCA;
+        rawdata[2] = (payload.modulation == 0) ? 0x63 : 0xCA;
         memcpy(&rawdata[3], iddata, 4);
-        rawdata[7] = (modulation == 0) ? TexcomTK13CRC(iddata) : TexcomTK17CRC(iddata);
+        rawdata[7] = (payload.modulation == 0) ? TexcomTK13CRC(iddata) : TexcomTK17CRC(iddata);
         rawdatalen = 8;
     }
 
@@ -612,33 +621,12 @@ static int CmdHFTexkomSim(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    //iceman,  use a struct 
-    /*
-    struct p {
-        uint8_t modulation;
-        uint32_t timeout;
-        uint8_t data[8];
-    } PACKED payload;
+    memcpy(payload.data, rawdata, 8);
 
-    payload.modulation = modulation;
-    payload.timeout = cmdtimeout;
-    memcpy(payload.data, rawdata, sizeof(payload.data));
-
+    clearCommandBuffer();
     SendCommandNG(CMD_HF_TEXKOM_SIMULATE, (uint8_t*)&payload, sizeof(payload));
 
-    // Iceman,   cmdtimeout is always 0.  You never set it
-    */
-
-    // <texkom 8bytes><modulation 1b><timeout 4b>
-    uint8_t data[13] = {0};
-    memcpy(data, rawdata, 8);
-
-    data[8] = modulation;
-    memcpy(&data[9], &cmdtimeout, 4);
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_TEXKOM_SIMULATE, data, sizeof(data));
-
-    if (cmdtimeout > 0 && cmdtimeout < 2800) {
+    if (payload.timeout > 0 && payload.timeout < 2800) {
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_TEXKOM_SIMULATE, &resp, 3000) == false) {
             if (verbose) {
