@@ -20,19 +20,29 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <mbedtls/asn1.h>
-#include "ui.h"  // Print...
+#include <string.h>     // memcpy
+#include "ui.h"         // Print...
 #include "emv/tlv.h"
 #include "asn1dump.h"
 #include "util.h"
 
+
 int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *rval, uint8_t *sval) {
-    if (!signature || !signaturelen || !rval || !sval)
+
+    if (!signature || !signaturelen || !rval || !sval) {
         return PM3_EINVARG;
+    }
+
+    uint8_t *p = calloc(sizeof(uint8_t), signaturelen);
+    if (p == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    memcpy(p, signature, signaturelen);
+    const unsigned char *end = p + signaturelen;
 
     int res = PM3_SUCCESS;
-    unsigned char *p = signature;
-    const unsigned char *end = p + signaturelen;
-    size_t len;
+    size_t len = 0;
     mbedtls_mpi xmpi;
 
     if ((res = mbedtls_asn1_get_tag(&p, end, &len, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE)) == 0) {
@@ -61,11 +71,14 @@ int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *r
             goto exit;
 
         // check size
-        if (end != p)
+        if (end != p) {
+            free(p);
             return PM3_ESOFT;
+        }
     }
 
 exit:
+//    free(p);
     return res;
 }
 
