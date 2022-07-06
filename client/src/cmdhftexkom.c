@@ -599,7 +599,7 @@ static int CmdHFTexkomSim(const char *Cmd) {
     if (iddatalen == 4) {
         rawdata[0] = 0xff;
         rawdata[1] = 0xff;
-        rawdata[2] = (modulation == 0) ? 0x63 : 0xca;
+        rawdata[2] = (modulation == 0) ? 0x63 : 0xCA;
         memcpy(&rawdata[3], iddata, 4);
         rawdata[7] = (modulation == 0) ? TexcomTK13CRC(iddata) : TexcomTK17CRC(iddata);
         rawdatalen = 8;
@@ -609,6 +609,23 @@ static int CmdHFTexkomSim(const char *Cmd) {
         PrintAndLogEx(ERR, "<raw data> must be 8 bytes long instead of: %d", rawdatalen);
         return PM3_EINVARG;
     }
+
+    //iceman,  use a struct 
+    /*
+    struct p {
+        uint8_t modulation;
+        uint32_t timeout;
+        uint8_t data[8];
+    } PACKED payload;
+
+    payload.modulation = modulation;
+    payload.timeout = cmdtimeout;
+    memcpy(payload.data, rawdata, sizeof(payload.data));
+
+    SendCommandNG(CMD_HF_TEXKOM_SIMULATE, (uint8_t*)&payload, sizeof(payload));
+
+    // Iceman,   cmdtimeout is always 0.  You never set it
+    */
 
     // <texkom 8bytes><modulation 1b><timeout 4b>
     uint8_t data[13] = {0};
@@ -621,9 +638,10 @@ static int CmdHFTexkomSim(const char *Cmd) {
 
     if (cmdtimeout > 0 && cmdtimeout < 2800) {
         PacketResponseNG resp;
-        if (!WaitForResponseTimeout(CMD_HF_TEXKOM_SIMULATE, &resp, 3000)) {
-            if (verbose)
+        if (WaitForResponseTimeout(CMD_HF_TEXKOM_SIMULATE, &resp, 3000) == false) {
+            if (verbose) {
                 PrintAndLogEx(WARNING, "(hf texkom simulate) command execution time out");
+            }
             return PM3_ETIMEOUT;
         }
         PrintAndLogEx(INFO, "simulate command execution done");
