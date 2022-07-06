@@ -37,9 +37,10 @@ int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *r
     if (p == NULL) {
         return PM3_EMALLOC;
     }
-
+   
     memcpy(p, signature, signaturelen);
-    const unsigned char *end = p + signaturelen;
+    uint8_t *p_tmp = p;
+    const uint8_t *end = p + signaturelen;
 
     int res = PM3_SUCCESS;
     size_t len = 0;
@@ -72,13 +73,15 @@ int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *r
 
         // check size
         if (end != p) {
-            free(p);
+            free(p_tmp);
+            end = NULL;
             return PM3_ESOFT;
         }
     }
 
 exit:
-//    free(p);
+    free(p_tmp);
+    end = NULL;
     return res;
 }
 
