@@ -278,14 +278,20 @@ static void print_buffer_ex(const uint8_t *data, const size_t len, int level, ui
     char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
     int i;
     for (i = 0; i < len; i += breaks) {
+
+        memset(buf, 0x00, sizeof(buf));
+
         if (len - i < breaks) { // incomplete block, will be treated out of the loop
             break;
         }
+
         // (16 * 3) + (16) +  + 1
         snprintf(buf, sizeof(buf), "%*s%02x: ", (level * 4), " ", i);
 
         hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, breaks, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
+
         snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, breaks));
+        
         PrintAndLogEx(INFO, "%s", buf);
     }
 
