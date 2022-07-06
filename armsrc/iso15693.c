@@ -1673,7 +1673,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
             dma_start_time = GetCountSspClk() & 0xfffffff0;
         }
 
-        volatile uint16_t sniffdata;
+        volatile uint16_t sniffdata = 0;
         volatile uint16_t sniffdata_prev = sniffdata;
         sniffdata = *upTo++;
 
