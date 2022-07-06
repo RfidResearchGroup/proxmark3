@@ -224,6 +224,7 @@ int HfSimulateTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
     bool exit_loop = false;
     bool field_on = false;
 
+    uint32_t startTime = GetTickCount();
     while (exit_loop == false) {
 
         button_pressed = BUTTON_PRESS();
@@ -232,6 +233,9 @@ int HfSimulateTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
         }
 
         WDT_HIT();
+
+        if (startTime > 0 && startTime + timeout < GetTickCount())
+            break;
 
         // in mV
         int vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
@@ -261,7 +265,7 @@ int HfSimulateTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
     switch_off();
 
     if (button_pressed)
-        DbpString("button pressed");
+        DbpString("Exit by press button");
 
     reply_ng(CMD_HF_TEXKOM_SIMULATE, PM3_SUCCESS, NULL, 0);
 

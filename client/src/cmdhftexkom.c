@@ -627,6 +627,7 @@ static int CmdHFTexkomSim(const char *Cmd) {
     SendCommandNG(CMD_HF_TEXKOM_SIMULATE, (uint8_t*)&payload, sizeof(payload));
 
     if (payload.timeout > 0 && payload.timeout < 2800) {
+        PrintAndLogEx(INFO, "simulate command started");
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_TEXKOM_SIMULATE, &resp, 3000) == false) {
             if (verbose) {
@@ -636,7 +637,7 @@ static int CmdHFTexkomSim(const char *Cmd) {
         }
         PrintAndLogEx(INFO, "simulate command execution done");
     } else {
-        PrintAndLogEx(INFO, "simulate command started");
+        PrintAndLogEx(INFO, "simulate command started...");
     }
 
     return PM3_SUCCESS;
