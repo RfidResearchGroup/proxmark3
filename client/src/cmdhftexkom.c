@@ -117,7 +117,7 @@ static bool TexkomCorrelate(uint32_t indx, uint32_t threshold) {
            );
 }
 
-static bool TexkomCalculateMaxMin(uint32_t *data, uint32_t len, uint32_t *dmax, uint32_t *dmin) {
+static bool TexkomCalculateMaxMin(const uint32_t *data, uint32_t len, uint32_t *dmax, uint32_t *dmin) {
     *dmax = 0;
     *dmin = 0xffffffff;
     for (size_t i = 0; i < len; i++) {
@@ -175,7 +175,7 @@ static inline bool TexcomCalculateBit(uint32_t data, uint32_t bitlen, uint32_t t
 }
 
 // code from https://github.com/li0ard/crclib/blob/main/index.js
-static uint8_t TexcomTK13CRC(uint8_t *data) {
+static uint8_t TexcomTK13CRC(const uint8_t *data) {
     uint8_t crc = 0;
     uint8_t indx = 0;
     while (indx < 4) {
@@ -348,10 +348,12 @@ static bool TexcomGeneralDecode(uint32_t *implengths, uint32_t implengthslen, ch
         else {
             if (verbose) {
                 PrintAndLogEx(INFO, "ERROR string [%zu]: %s, bit: %d, blen: %d", strlen(bitstring), bitstring, i, implengths[i]);
-                printf("Length array: \r\n");
-                for (uint32_t j = 0; j < implengthslen; j++)
-                    printf("%d,", implengths[j]);
-                printf("\r\n");
+
+                PrintAndLogEx(INFO, "Length array:");
+                for (uint32_t j = 0; j < implengthslen; j++) {
+                    PrintAndLogEx(NORMAL, "%u, " NOLF, implengths[j]);
+                }
+                PrintAndLogEx(NORMAL, "");
             }
 
             biterror = true;
