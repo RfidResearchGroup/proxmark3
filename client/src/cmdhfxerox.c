@@ -418,7 +418,7 @@ static inline char dec_digit(uint8_t dig) {
     return (dig <= 9) ? dig + '0' : '?';
 }
 
-static void gen_pn(uint8_t *data, char *pn) {
+static void gen_pn(const uint8_t *data, char *pn) {
     pn[0]  = dec_digit(data[0] >> 4);
     pn[1]  = dec_digit(data[0] & 0xF);
     pn[2]  = dec_digit(data[1] >> 4);
