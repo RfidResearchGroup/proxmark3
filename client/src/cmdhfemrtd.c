@@ -2083,6 +2083,11 @@ int infoHF_EMRTD_offline(const char *path) {
         return PM3_ESOFT;
     }
 
+    // coverity scan CID 395630,  
+    if (data != NULL) {
+        return PM3_ESOFT;
+    }
+
     res = emrtd_parse_ef_sod_hashes(data, datalen, *dg_hashes_sod, &hash_algo);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail.");
