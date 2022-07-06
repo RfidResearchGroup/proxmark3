@@ -1393,9 +1393,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_TEXKOM_SIMULATE: {
-            uint32_t timeout = 0;
-            memcpy(&timeout, &packet->data.asBytes[9], 4);
-            HfWriteTkm(packet->data.asBytes, packet->data.asBytes[8], timeout);
+            struct p {
+                uint8_t data[8];
+                uint8_t modulation;
+                uint32_t timeout;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            HfSimulateTkm(payload->data, payload->modulation, payload->timeout);
             break;
         }
 
