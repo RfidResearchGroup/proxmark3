@@ -521,6 +521,10 @@ int read_texkom_uid(bool loop, bool verbose) {
         // decoding code
         if (card.tcode[0] == 0xff && card.tcode[1] == 0xff) {
 
+            if (loop == false) {
+                PrintAndLogEx(NORMAL, "");
+            }
+                
             bool crc = (TexcomTK13CRC(&card.tcode[3]) == card.tcode[7]);
 
             if (card.tcode[2] == 0x63) {
@@ -536,8 +540,10 @@ int read_texkom_uid(bool loop, bool verbose) {
                     PrintAndLogEx(INFO, "CRC...... %s",  (crc) ?  _GREEN_("ok") : _RED_("fail"));
                 }
             }
-            PrintAndLogEx(INFO, "Raw... %s", sprint_hex(card.tcode, 8));
-            PrintAndLogEx(INFO, "Raw Reversed... %s", sprint_hex(card.rtcode, 8));
+            if (verbose) {
+                PrintAndLogEx(INFO, "Raw... %s", sprint_hex(card.tcode, 8));
+                PrintAndLogEx(INFO, "Raw Reversed... %s", sprint_hex(card.rtcode, 8));
+            }
         }
 
     } while (loop && kbd_enter_pressed() == false);
@@ -549,7 +555,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf texkom reader",
                   "Read a texkom tag",
-                  "hf texkom reader"
+                  "hf texkom reader\n"
                   "hf texkom reader -@   -> continuous reader mode"
                   );
 
