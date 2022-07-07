@@ -454,6 +454,8 @@ char *sprint_bin(const uint8_t *data, const size_t len) {
 char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
     static char buf[UTIL_BUFFER_SIZE_SPRINT + 20] = {0};
     memset(buf, 0x00, sizeof(buf));    
+
+    char *tmp = buf;
     size_t max_len = (len > 1010) ? 1010 : len;
 
     int ret = snprintf(buf, sizeof(buf) - 1, "%s| ", sprint_hex(data, max_len));
@@ -466,16 +468,17 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 
     while (i < max_len) {
         char c = data[i];
-        buf[pos + i]  = ((c < 32) || (c == 127)) ? '.' : 'c';
+        tmp[pos + i]  = ((c < 32) || (c == 127)) ? '.' : c;
         ++i;
     }
-
 out:
     return buf;
 }
 
 char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_str_len) {
     static char buf[UTIL_BUFFER_SIZE_SPRINT] = {0};
+    memset(buf, 0x00, sizeof(buf));
+
     char *tmp = buf;
     size_t max_len = (len > 1010) ? 1010 : len;
     size_t i = 0;
