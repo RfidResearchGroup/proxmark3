@@ -234,7 +234,7 @@ int HfSimulateTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
 
         WDT_HIT();
 
-        if (startTime > 0 && startTime + timeout < GetTickCount())
+        if (timeout > 0 && startTime + timeout < GetTickCount())
             break;
 
         // in mV

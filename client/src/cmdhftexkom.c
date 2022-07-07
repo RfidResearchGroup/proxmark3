@@ -574,7 +574,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
     if (cm) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
-        return read_texkom_uid(cm, true);
+        return read_texkom_uid(cm, verbose);
     }
 
     uint32_t samplesCount = 30000;
