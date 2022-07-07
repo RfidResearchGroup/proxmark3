@@ -570,12 +570,12 @@ static int CmdHFTexkomReader(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 1);
     bool cm = arg_get_lit(ctx, 2);
 
-    if (cm) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
-    }
     CLIParserFree(ctx);
 
-//    return read_texkom_uid(cm, true);
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+        return read_texkom_uid(cm, true);
+    }
 
     uint32_t samplesCount = 30000;
     clearCommandBuffer();
@@ -583,7 +583,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_HF_ACQ_RAW_ADC, &resp, 2500)) {
-        PrintAndLogEx(WARNING, "(hf texkom reader) command execution time out");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
