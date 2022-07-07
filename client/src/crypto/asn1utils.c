@@ -37,7 +37,7 @@ int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *r
     if (p == NULL) {
         return PM3_EMALLOC;
     }
-   
+
     memcpy(p, signature, signaturelen);
     uint8_t *p_tmp = p;
     const uint8_t *end = p + signaturelen;

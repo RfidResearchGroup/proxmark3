@@ -298,7 +298,7 @@ void RC2_cbc_encrypt(const unsigned char *in, unsigned char *out, long length,
         c2l(iv, tout0);
         c2l(iv, tout1);
         iv -= 8;
-        
+
         for (l -= 8; l >= 0; l -= 8) {
             c2l(in, tin0);
             c2l(in, tin1);
@@ -414,7 +414,7 @@ static int findXerox(iso14b_card_select_t *card, bool disconnect) {
 static uint8_t info_blocks[] = { 0x15, 0x16, 0x17, 0x18, 0x22 };
 static const char *c_type[] = { "drum", "yellow", "magenta", "cyan", "black" };
 
-static inline char dec_digit(uint8_t dig) { 
+static inline char dec_digit(uint8_t dig) {
     return (dig <= 9) ? dig + '0' : '?';
 }
 
@@ -569,7 +569,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
     iso14b_card_select_t card;
     int status = findXerox(&card, false);	// remain RF on
     if (status != PM3_SUCCESS) {
-        free(packet);        
+        free(packet);
         switch_off_field();
         return PM3_ERFTRANS;
     }

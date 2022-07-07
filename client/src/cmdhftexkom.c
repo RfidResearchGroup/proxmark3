@@ -372,7 +372,7 @@ static void TexcomReverseCode(const uint8_t *code, int length, uint8_t *reverse_
     }
 };
 
-static int texkom_get_type(texkom_card_select_t* card, bool verbose) {
+static int texkom_get_type(texkom_card_select_t *card, bool verbose) {
 
     if (card == NULL) {
         return PM3_EINVARG;
@@ -474,7 +474,7 @@ static int texkom_get_type(texkom_card_select_t* card, bool verbose) {
         if (verbose)
             TexcomGeneralDecode(implengths, implengthslen, genbitstring, verbose);
     }
-    
+
     if (found != TexkomModError) {
 
         for (uint32_t i = 0; i < strlen(cbitstring); i++) {
@@ -483,7 +483,7 @@ static int texkom_get_type(texkom_card_select_t* card, bool verbose) {
 
         TexcomReverseCode(card->tcode, sizeof(card->tcode), card->rtcode);
         return PM3_SUCCESS;
-    } 
+    }
     return PM3_ESOFT;
 }
 
@@ -524,20 +524,20 @@ int read_texkom_uid(bool loop, bool verbose) {
             if (loop == false) {
                 PrintAndLogEx(NORMAL, "");
             }
-                
+
             bool crc = (TexcomTK13CRC(&card.tcode[3]) == card.tcode[7]);
 
             if (card.tcode[2] == 0x63) {
                 PrintAndLogEx(INFO, "TYPE..... TK13");
                 PrintAndLogEx(INFO, "UID...... " _GREEN_("%s"), sprint_hex(&card.tcode[3], 4));
                 if (verbose) {
-                    PrintAndLogEx(INFO, "CRC...... %s",  (crc) ?  _GREEN_("ok") : _RED_("fail"));
+                    PrintAndLogEx(INFO, "CRC...... %s", (crc) ?  _GREEN_("ok") : _RED_("fail"));
                 }
             } else if (card.tcode[2] == 0xCA) {
                 PrintAndLogEx(INFO, "TYPE..... TK17");
                 PrintAndLogEx(INFO, "UID...... " _GREEN_("%s"), sprint_hex(&card.tcode[3], 4));
                 if (verbose) {
-                    PrintAndLogEx(INFO, "CRC...... %s",  (crc) ?  _GREEN_("ok") : _RED_("fail"));
+                    PrintAndLogEx(INFO, "CRC...... %s", (crc) ?  _GREEN_("ok") : _RED_("fail"));
                 }
             }
             if (verbose) {
@@ -557,7 +557,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
                   "Read a texkom tag",
                   "hf texkom reader\n"
                   "hf texkom reader -@   -> continuous reader mode"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -813,7 +813,7 @@ static int CmdHFTexkomSim(const char *Cmd) {
     memcpy(payload.data, rawdata, 8);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_TEXKOM_SIMULATE, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_TEXKOM_SIMULATE, (uint8_t *)&payload, sizeof(payload));
 
     if (payload.timeout > 0 && payload.timeout < 2800) {
         PrintAndLogEx(INFO, "simulate command started");

@@ -207,6 +207,7 @@ Check column "offline" for their availability.
 |`hf 14b sniff           `|N       |`Eavesdrop ISO-14443-B`
 |`hf 14b rdbl            `|N       |`Read SRI512/SRIX4x block`
 |`hf 14b sriwrite        `|N       |`Write data to a SRI512 or SRIX4K tag`
+|`hf 14b view            `|Y       |`Display content from tag dump file`
 
 
 ### hf 15

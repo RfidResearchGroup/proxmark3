@@ -165,7 +165,7 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
-    // texkom 
+    // texkom
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for TEXKOM tag...");
     if (read_texkom_uid(false, false) == PM3_SUCCESS) {

@@ -1295,7 +1295,7 @@
         },
         "hf 14b help": {
             "command": "hf 14b help",
-            "description": "help This help list List ISO-14443-B history",
+            "description": "help This help list List ISO-14443-B history view Display content from tag dump file",
             "notes": [],
             "offline": true,
             "options": [],
@@ -1445,6 +1445,20 @@
                 "--sb special block write at end of memory (0xFF)"
             ],
             "usage": "hf 14b sriwrite [-h] [-b <dec>] -d <hex> [--512] [--4k] [--sb]"
+        },
+        "hf 14b view": {
+            "command": "hf 14b view",
+            "description": "Print a ISO14443-B dump file (bin/eml/json)",
+            "notes": [
+                "hf 14b view -f hf-14b-01020304-dump.bin"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of dump",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf 14b view [-hv] -f <fn>"
         },
         "hf 15 csetuid": {
             "command": "hf 15 csetuid",
@@ -6315,14 +6329,16 @@
             "command": "hf texkom reader",
             "description": "Read a texkom tag",
             "notes": [
-                "hf texkom reader"
+                "hf texkom reader",
+                "hf texkom reader -@ -> continuous reader mode"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose scan and output"
+                "-v, --verbose Verbose scan and output",
+                "-@ optional - continuous reader mode"
             ],
-            "usage": "hf texkom reader [-hv]"
+            "usage": "hf texkom reader [-hv@]"
         },
         "hf texkom sim": {
             "command": "hf texkom sim",
@@ -6341,9 +6357,10 @@
                 "-v, --verbose Verbose work",
                 "-t, --tk17 Use TK-17 modulation (TK-13 by default)",
                 "--raw <hex 8 bytes> Raw data for texkom card, 8 bytes. Manual modulation select.",
-                "--id <hex 4 bytes> Raw data for texkom card, 8 bytes. Manual modulation select."
+                "--id <hex 4 bytes> Raw data for texkom card, 8 bytes. Manual modulation select.",
+                "--timeout <dec, ms> Simulation timeout in the ms. If not specified or 0 - infinite. Command can be skipped by pressing the button"
             ],
-            "usage": "hf texkom sim [-hvt] [--raw <hex 8 bytes>] [--id <hex 4 bytes>]"
+            "usage": "hf texkom sim [-hvt] [--raw <hex 8 bytes>] [--id <hex 4 bytes>] [--timeout <dec, ms>]"
         },
         "hf thinfilm help": {
             "command": "hf thinfilm help",
@@ -11076,8 +11093,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 699,
+        "commands_extracted": 700,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-07-03T21:31:15"
+        "extracted_on": "2022-07-07T21:17:54"
     }
 }
