@@ -1865,14 +1865,18 @@ int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
         if (4 == slot) {
             FpgaDisableTracing();
 
-            DbpString("no answer to anticollision");
+            if (g_dbglevel >= DBG_DEBUG) {
+                DbpString("no answer to anticollision");
+            }
             return 1;
         }
     }
 
     retlen = Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), iso14b_timeout, &eof_time);
 
-    Dbprintf("anticollision uid %llx", uid);
+    if (g_dbglevel >= DBG_DEBUG) {
+        Dbprintf("anticollision uid %llx", uid);
+    }
 
     // ATQB too short?
     if (retlen < 18) {

@@ -447,13 +447,16 @@ int read_xerox_uid(bool loop, bool verbose) {
             if (status != PM3_SUCCESS) {
                 continue;
             }
-        }
+        } else {
 
-        if (loop == false) {
-            PrintAndLogEx(NORMAL, "");
+            if (status == PM3_SUCCESS) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(SUCCESS, " UID    : %s", sprint_hex(card.uid, card.uidlen));
+                PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
+            } else {
+                return PM3_ESOFT;
+            }
         }
-        PrintAndLogEx(SUCCESS, " UID    : %s", sprint_hex(card.uid, card.uidlen));
-        PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
 
     } while (loop && kbd_enter_pressed() == false);
 
