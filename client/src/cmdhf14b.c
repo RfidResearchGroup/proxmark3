@@ -1181,6 +1181,7 @@ static int CmdHF14BReader(const char *Cmd) {
     CLIParserInit(&ctx, "hf 14b reader",
                   "Act as a 14443B reader to identify a tag",
                   "hf 14b reader\n"
+                  "hf 14b reader -@   -> continuous reader mode"
                  );
 
     void *argtable[] = {

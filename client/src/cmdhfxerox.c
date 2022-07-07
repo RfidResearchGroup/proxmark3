@@ -437,11 +437,62 @@ static void gen_pn(const uint8_t *data, char *pn) {
     pn[12] = 0;
 }
 
+int read_xerox_uid(bool loop, bool verbose) {
+
+    do {
+        iso14b_card_select_t card;
+        int status = findXerox(&card, true);
+
+        if (loop) {
+            if (status != PM3_SUCCESS) {
+                continue;
+            }
+        }
+
+        if (loop == false) {
+            PrintAndLogEx(NORMAL, "");
+        }
+        PrintAndLogEx(SUCCESS, " UID    : %s", sprint_hex(card.uid, card.uidlen));
+        PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
+
+    } while (loop && kbd_enter_pressed() == false);
+
+    return PM3_SUCCESS;
+}
+
+static int CmdHFXeroxReader(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf xerox reader",
+                  "Act as a 14443B reader to identify a tag",
+                  "hf xerox reader\n"
+                  "hf xerox reader -@ \n"
+                );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
+    bool cm = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    return read_xerox_uid(cm, verbose);
+}
+
 static int CmdHFXeroxInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf xerox info",
-                  "Act as a reader.",
-                  "hf xerox info");
+                  "Tag information for ISO/IEC 14443 type B / XEROX based tags",
+                  "hf xerox info"
+                );
 
     void *argtable[] = {
         arg_param_begin,
@@ -495,7 +546,9 @@ static int CmdHFXeroxInfo(const char *Cmd) {
             resp.cmd, resp.length, resp.magic, resp.status, resp.crc, resp.oldarg[0], resp.oldarg[1], resp.oldarg[2],
             resp.data.asBytes[0], resp.data.asBytes[1], resp.data.asBytes[2], resp.ng ? 't' : 'f');
             */
-            if (/*resp.status != 0 ||*/ resp.length < 7) {	// 14b raw command send data_len instead of status
+
+            // 14b raw command send data_len instead of status
+            if (/*resp.status != 0 ||*/ resp.length < 7) {
                 PrintAndLogEx(FAILED, "retrying one more time");
                 continue;
             }
@@ -738,9 +791,10 @@ static int CmdHFXeroxDump(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,         AlwaysAvailable, "This help"},
-    {"info",    CmdHFXeroxInfo,  IfPm3Iso14443b,  "Short info on Fuji/Xerox tag"},
-    {"dump",    CmdHFXeroxDump,  IfPm3Iso14443b,  "Read all memory pages of an Fuji/Xerox tag, save to file"},
+    {"help",    CmdHelp,           AlwaysAvailable, "This help"},
+    {"info",    CmdHFXeroxInfo,    IfPm3Iso14443b,  "Short info on Fuji/Xerox tag"},
+    {"reader",  CmdHFXeroxReader,  IfPm3Iso14443b,  "Act like a Fuji/Xerox reader"},
+    {"dump",    CmdHFXeroxDump,    IfPm3Iso14443b,  "Read all memory pages of an Fuji/Xerox tag, save to file"},
 //    {"rdbl",    CmdHFXeroxRdBl,  IfPm3Iso14443b,  "Read Fuji/Xerox block"},
 //    {"wrbl",    CmdHFXeroxWrBl,  IfPm3Iso14443b,  "Write Fuji/Xerox block"},
     {NULL, NULL, NULL, NULL}
