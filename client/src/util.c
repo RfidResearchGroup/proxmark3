@@ -94,13 +94,19 @@ static char b2s(uint8_t v, bool uppercase) {
     // clear higher bits
     v &= 0xF;
 
-    switch(v) {
-        case 0xA : return (uppercase ? 'A' : 'a') ;
-        case 0xB : return (uppercase ? 'B' : 'b') ;
-        case 0xC : return (uppercase ? 'C' : 'c') ;
-        case 0xD : return (uppercase ? 'D' : 'd') ;
-        case 0xE : return (uppercase ? 'E' : 'e') ;
-        case 0xF : return (uppercase ? 'F' : 'f') ;
+    switch (v) {
+        case 0xA :
+            return (uppercase ? 'A' : 'a') ;
+        case 0xB :
+            return (uppercase ? 'B' : 'b') ;
+        case 0xC :
+            return (uppercase ? 'C' : 'c') ;
+        case 0xD :
+            return (uppercase ? 'D' : 'd') ;
+        case 0xE :
+            return (uppercase ? 'E' : 'e') ;
+        case 0xF :
+            return (uppercase ? 'F' : 'f') ;
         default:
             return (char)(v + 0x30);
     }
@@ -201,12 +207,12 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
     if (buf == NULL || hex_len < 1)
         return;
 
-    // 1. hex string length.  
+    // 1. hex string length.
     // 2. byte array to be converted to string
     //
 
     size_t max_byte_len = (hex_len > hex_max_len) ? hex_max_len : hex_len;
-    size_t max_str_len = (max_byte_len * ( 2 + spaces_between )) + 1;
+    size_t max_str_len = (max_byte_len * (2 + spaces_between)) + 1;
     char *tmp_base = (char *)buf;
     char *tmp = tmp_base;
 
@@ -291,7 +297,7 @@ static void print_buffer_ex(const uint8_t *data, const size_t len, int level, ui
         hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, breaks, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
 
         snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, breaks));
-        
+
         PrintAndLogEx(INFO, "%s", buf);
     }
 
@@ -453,13 +459,13 @@ char *sprint_bin(const uint8_t *data, const size_t len) {
 
 char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
     static char buf[UTIL_BUFFER_SIZE_SPRINT + 20] = {0};
-    memset(buf, 0x00, sizeof(buf));    
+    memset(buf, 0x00, sizeof(buf));
 
     char *tmp = buf;
     size_t max_len = (len > 1010) ? 1010 : len;
 
     int ret = snprintf(buf, sizeof(buf) - 1, "%s| ", sprint_hex(data, max_len));
-    if ( ret < 0) {
+    if (ret < 0) {
         goto out;
     }
 
@@ -767,7 +773,7 @@ int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
 
     int bg, en;
 
-    if (param_getptr(line, &bg, &en, paramnum)) 
+    if (param_getptr(line, &bg, &en, paramnum))
         return 1;
 
     *datalen = 0;

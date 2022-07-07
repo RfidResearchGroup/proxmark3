@@ -43,7 +43,7 @@
 #define APDU_TIMEOUT    2000
 
 // for static arrays
-#define ST25TB_SR_BLOCK_SIZE 4 
+#define ST25TB_SR_BLOCK_SIZE 4
 
 // iso14b apdu input frame length
 static uint16_t apdu_frame_length = 0;
@@ -458,7 +458,7 @@ static bool get_14b_UID(uint8_t *d, iso14b_type_t *found_type) {
         }
     }
 
-    // test CT 
+    // test CT
     packet.flags = (ISO14B_CONNECT | ISO14B_SELECT_CTS | ISO14B_DISCONNECT);
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
@@ -2164,7 +2164,7 @@ static command_t CommandTable[] = {
     {"sniff",       CmdHF14BSniff,    IfPm3Iso14443b,  "Eavesdrop ISO-14443-B"},
     {"rdbl",        CmdHF14BSriRdBl,  IfPm3Iso14443b,  "Read SRI512/SRIX4x block"},
     {"sriwrite",    CmdHF14BWriteSri, IfPm3Iso14443b,  "Write data to a SRI512 or SRIX4K tag"},
-    {"view",        CmdHF14BView,     AlwaysAvailable, "Display content from tag dump file"},    
+    {"view",        CmdHF14BView,     AlwaysAvailable, "Display content from tag dump file"},
 // {"valid",     srix4kValid,      AlwaysAvailable, "srix4k checksum test"},
     {NULL, NULL, NULL, NULL}
 };

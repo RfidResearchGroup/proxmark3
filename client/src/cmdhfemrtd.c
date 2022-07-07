@@ -716,7 +716,7 @@ static const uint8_t jpeg_header[4] = { 0xFF, 0xD8, 0xFF, 0xE0 };
 static const uint8_t jpeg2k_header[6] = { 0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50 };
 
 static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const char *path) {
-    size_t offset; 
+    size_t offset;
     int datalen = 0;
 
     // This is a hacky impl that just looks for the image header. I'll improve it eventually.
@@ -2083,7 +2083,7 @@ int infoHF_EMRTD_offline(const char *path) {
         return PM3_ESOFT;
     }
 
-    // coverity scan CID 395630,  
+    // coverity scan CID 395630,
     if (data != NULL) {
         return PM3_ESOFT;
     }
