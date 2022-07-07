@@ -372,22 +372,204 @@ static void TexcomReverseCode(const uint8_t *code, int length, uint8_t *reverse_
     }
 };
 
+static int texkom_get_type(texkom_card_select_t* card, bool verbose) {
+
+    if (card == NULL) {
+        return PM3_EINVARG;
+    }
+
+    // get samples from tag.
+
+    uint32_t samplesCount = 30000;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ACQ_RAW_ADC, (uint8_t *)&samplesCount, sizeof(uint32_t));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ACQ_RAW_ADC, &resp, 2500) == false) {
+        if (verbose) {
+            PrintAndLogEx(WARNING, "command execution time out");
+        }
+        return PM3_ETIMEOUT;
+    }
+
+    uint32_t size = (resp.data.asDwords[0]);
+    if (size > 0) {
+        if (getSamples(samplesCount, false) != PM3_SUCCESS) {
+            if (verbose)
+                PrintAndLogEx(ERR, "Get samples error");
+
+            return PM3_EFAILED;
+        };
+    }
+
+    // decode samples to 8 bytes
+    char bitstring[256] = {0};
+    char cbitstring[128] = {0};
+    char genbitstring[256] = {0};
+    int found = TexkomModError;
+    uint32_t sindx = 0;
+
+    while (sindx < samplesCount - 5) {
+
+        sindx = TexkomSearchStart(sindx, TEXKOM_NOISE_THRESHOLD);
+        if (sindx == 0 || sindx > samplesCount - 5) {
+            if (TexkomAVGField() > 30 && verbose) {
+                PrintAndLogEx(WARNING, "Too noisy environment. Try to move the tag from the antenna a bit.");
+            }
+            break;
+        }
+
+        uint32_t slen = TexkomSearchLength(sindx, TEXKOM_NOISE_THRESHOLD);
+        if (slen == 0) {
+            continue;
+        }
+
+        uint32_t maxlvl = TexkomSearchMax(sindx, 1760);
+        if (maxlvl < TEXKOM_NOISE_THRESHOLD) {
+            sindx += 1700;
+            continue;
+        }
+
+        uint32_t noiselvl = maxlvl / 5;
+        if (noiselvl < TEXKOM_NOISE_THRESHOLD) {
+            noiselvl = TEXKOM_NOISE_THRESHOLD;
+        }
+
+        uint32_t implengths[256] = {};
+        uint32_t implengthslen = 0;
+        uint32_t impulseindx = 0;
+        uint32_t impulsecnt = 0;
+        for (uint32_t i = 0; i < slen; i++) {
+            if (TexkomCorrelate(sindx + i, noiselvl)) {
+                impulsecnt++;
+
+                if (impulseindx != 0) {
+                    if (implengthslen < 256) {
+                        implengths[implengthslen++] = sindx + i - impulseindx;
+                    }
+                }
+                impulseindx = sindx + i;
+            }
+        }
+
+        // check if it TK-17 modulation
+        // 65 impulses and 64 intervals (1 interval = 2 bits, interval length encoding) that represents 128 bit of card code
+        if (impulsecnt == 65) {
+            if (TexcomTK17Decode(implengths, implengthslen, bitstring, cbitstring, verbose)) {
+                found = TexkomModTK17;
+                break;
+            }
+        }
+
+        // check if it TK-13 modulation
+        // it have 127 or 128 impulses and 128 double-intervals that represents 128 bit of card code
+        if (impulsecnt == 127 || impulsecnt == 128) {
+            if (TexcomTK13Decode(implengths, implengthslen, bitstring, cbitstring, verbose)) {
+                found = TexkomModTK13;
+                break;
+            }
+        }
+
+        // general decoding. it thought that there is 2 types of intervals "long" (1) and "short" (0)
+        // and tries to decode sequence. shows only raw data
+        if (verbose)
+            TexcomGeneralDecode(implengths, implengthslen, genbitstring, verbose);
+    }
+    
+    if (found != TexkomModError) {
+
+        for (uint32_t i = 0; i < strlen(cbitstring); i++) {
+            card->tcode[i / 8] = (card->tcode[i / 8] << 1) | ((cbitstring[i] == '1') ? 1 : 0);
+        }
+
+        TexcomReverseCode(card->tcode, sizeof(card->tcode), card->rtcode);
+        return PM3_SUCCESS;
+    } 
+    return PM3_ESOFT;
+}
+
+int read_texkom_uid(bool loop, bool verbose) {
+
+    do {
+        texkom_card_select_t card;
+
+        int res = texkom_get_type(&card, verbose);
+
+        if (loop) {
+            if (res != PM3_SUCCESS) {
+                continue;
+            }
+        } else {
+            switch (res) {
+                case PM3_EFAILED:
+                case PM3_EINVARG:
+                    return res;
+                case PM3_ETIMEOUT:
+                    if (verbose) {
+                        PrintAndLogEx(WARNING, "command execution time out");
+                    }
+                    return res;
+                case PM3_ESOFT:
+                    if (verbose) {
+                        PrintAndLogEx(WARNING, "texkom card select failed");
+                    }
+                    return PM3_ESOFT;
+                default:
+                    break;
+            }
+        }
+
+        // decoding code
+        if (card.tcode[0] == 0xff && card.tcode[1] == 0xff) {
+
+            bool crc = (TexcomTK13CRC(&card.tcode[3]) == card.tcode[7]);
+
+            if (card.tcode[2] == 0x63) {
+                PrintAndLogEx(INFO, "TYPE..... TK13");
+                PrintAndLogEx(INFO, "UID...... " _GREEN_("%s"), sprint_hex(&card.tcode[3], 4));
+                if (verbose) {
+                    PrintAndLogEx(INFO, "CRC...... %s",  (crc) ?  _GREEN_("ok") : _RED_("fail"));
+                }
+            } else if (card.tcode[2] == 0xCA) {
+                PrintAndLogEx(INFO, "TYPE..... TK17");
+                PrintAndLogEx(INFO, "UID...... " _GREEN_("%s"), sprint_hex(&card.tcode[3], 4));
+                if (verbose) {
+                    PrintAndLogEx(INFO, "CRC...... %s",  (crc) ?  _GREEN_("ok") : _RED_("fail"));
+                }
+            }
+            PrintAndLogEx(INFO, "Raw... %s", sprint_hex(card.tcode, 8));
+            PrintAndLogEx(INFO, "Raw Reversed... %s", sprint_hex(card.rtcode, 8));
+        }
+
+    } while (loop && kbd_enter_pressed() == false);
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHFTexkomReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf texkom reader",
                   "Read a texkom tag",
-                  "hf texkom reader");
+                  "hf texkom reader"
+                  "hf texkom reader -@   -> continuous reader mode"
+                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v",  "verbose",  "Verbose scan and output"),
+        arg_lit0("@", NULL, "optional - continuous reader mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(ctx, 1);
+    bool cm = arg_get_lit(ctx, 2);
 
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
     CLIParserFree(ctx);
+
+//    return read_texkom_uid(cm, true);
 
     uint32_t samplesCount = 30000;
     clearCommandBuffer();
@@ -494,7 +676,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
         if (tcode[0] == 0xff && tcode[1] == 0xff) {
             // decoding code
 
-            if (!verbose) {
+            if (verbose == false) {
                 PrintAndLogEx(INFO, "Texkom: %s", sprint_hex(tcode, 8));
                 PrintAndLogEx(INFO, "Texkom duplicator: %s", sprint_hex(rtcode, 8));
             }
@@ -508,8 +690,9 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
             if (tcode[2] == 0x63) {
                 // TK13
-                if (codefound != TexkomModTK13)
+                if (codefound != TexkomModTK13) {
                     PrintAndLogEx(WARNING, "  mod type: WRONG");
+                }
                 PrintAndLogEx(INFO, "type      : TK13");
                 PrintAndLogEx(INFO, "uid       : %s", sprint_hex(&tcode[3], 4));
 
@@ -518,10 +701,11 @@ static int CmdHFTexkomReader(const char *Cmd) {
                 else
                     PrintAndLogEx(WARNING, "crc       : WRONG");
 
-            } else if (tcode[2] == 0xca) {
+            } else if (tcode[2] == 0xCA) {
                 // TK17
-                if (codefound != TexkomModTK17)
+                if (codefound != TexkomModTK17) {
                     PrintAndLogEx(WARNING, "  mod type: WRONG");
+                }
                 PrintAndLogEx(INFO, "type      : TK17");
                 PrintAndLogEx(INFO, "uid       : %s", sprint_hex(&tcode[3], 4));
 
@@ -550,7 +734,6 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-
 
 static int CmdHFTexkomSim(const char *Cmd) {
     CLIParserContext *ctx;
@@ -642,7 +825,6 @@ static int CmdHFTexkomSim(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-
 
 static int CmdHelp(const char *Cmd);
 

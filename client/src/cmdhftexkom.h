@@ -36,6 +36,13 @@ enum TexkomModulation {
     TexkomModTK17
 };
 
-int CmdHFTexkom(const char *Cmd);
+typedef struct {
+    uint8_t tcode[8];
+    uint8_t rtcode[8];
+    uint8_t tagtype;
+} PACKED texkom_card_select_t;
 
+
+int CmdHFTexkom(const char *Cmd);
+int read_texkom_uid(bool loop, bool verbose);
 #endif
