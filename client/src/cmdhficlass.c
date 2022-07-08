@@ -87,7 +87,7 @@ static int cmp_uint32(const void *a, const void *b) {
 
 bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *tmac, uint8_t *key) {
 
-    iclass_prekey_t *prekey = calloc(ICLASS_KEYS_MAX, sizeof(iclass_prekey_t));
+    iclass_prekey_t *prekey = calloc(ICLASS_KEYS_MAX * 2, sizeof(iclass_prekey_t));
     if (prekey == NULL) {
         return false;
     }
@@ -97,17 +97,20 @@ bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *
     memcpy(ccnr + 8, rmac, 4);
 
     GenerateMacKeyFrom(csn, ccnr, false, false, (uint8_t *)iClass_Key_Table, ICLASS_KEYS_MAX, prekey);
-    qsort(prekey, ICLASS_KEYS_MAX, sizeof(iclass_prekey_t), cmp_uint32);
+    GenerateMacKeyFrom(csn, ccnr, false, true, (uint8_t *)iClass_Key_Table, ICLASS_KEYS_MAX, prekey + ICLASS_KEYS_MAX);
+    qsort(prekey, ICLASS_KEYS_MAX * 2, sizeof(iclass_prekey_t), cmp_uint32);
 
     iclass_prekey_t lookup;
     memcpy(lookup.mac, tmac, 4);
 
     // binsearch
-    iclass_prekey_t *item = (iclass_prekey_t *) bsearch(&lookup, prekey, ICLASS_KEYS_MAX, sizeof(iclass_prekey_t), cmp_uint32);
+    iclass_prekey_t *item = (iclass_prekey_t *) bsearch(&lookup, prekey, ICLASS_KEYS_MAX * 2, sizeof(iclass_prekey_t), cmp_uint32);
     if (item != NULL) {
         memcpy(key, item->key, 8);
+        free(prekey);
         return true;
     }
+    free(prekey);
     return false;
 }
 
@@ -2443,8 +2446,9 @@ static int CmdHFiClass_loclass(const char *Cmd) {
 }
 
 static void detect_credential(uint8_t *data, bool *legacy, bool *se, bool *sr) {
-    char* r1 = strstr((char*)data + (5 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF");
-    char* r2 = strstr((char*)data + (11 * 8), "\x05\x00\x05\x00");
+    bool r1 = !memcmp(data + (5 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
+    uint8_t pattern[] = {0x05, 0x00, 0x05, 0x00};
+    bool r2 = byte_strstr(data + (11 * 8), 6 * 8, pattern, sizeof(pattern)) != -1;
 
     *legacy = (r1) && (data[6 * 8] != 0x30);
     *se = (r2) && (data[6 * 8] == 0x30);
@@ -2458,40 +2462,31 @@ static void printIclassSIO(uint8_t *iclass_dump) {
     bool isLegacy, isSE, isSR;
     detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
 
-    uint8_t pattern[] = {0x05, 0x00, 0x05, 0x00};
+    uint8_t *sio_start = 0;
     if (isSE) {
-
-        int dlen = byte_strstr(iclass_dump + (6 * 8), 8*8, pattern, sizeof(pattern));
-        if (dlen) {
-
-            dlen += sizeof(pattern);
-
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
-            print_hex_noascii_break(iclass_dump + (6*8), dlen, 32);
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
-            asn1_print(iclass_dump + (6 * 8), dlen, "  ");
-            PrintAndLogEx(NORMAL, "");
-        }
+        sio_start = iclass_dump + (6 * 8);
+    } else if (isSR) {
+        sio_start = iclass_dump + (10 * 8);
+    } else {
+        return;
     }
 
-    if (isSR) {
-
-        int dlen = byte_strstr(iclass_dump + (10 * 8), 8*8, pattern, sizeof(pattern));
-
-        if (dlen) {
-            dlen += sizeof(pattern);
-
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
-            print_hex_noascii_break(iclass_dump + (10*8), dlen, 32);
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
-            asn1_print(iclass_dump + (10 * 8), dlen, "  ");
-            PrintAndLogEx(NORMAL, "");
-        }
+    uint8_t pattern[] = {0x05, 0x00, 0x05, 0x00};
+    int dlen = byte_strstr(sio_start, 8 * 8, pattern, sizeof(pattern));
+    if (dlen == -1) {
+        return;
     }
+
+    dlen += sizeof(pattern);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
+    print_hex_noascii_break(sio_start, dlen, 32);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
+    asn1_print(sio_start, dlen, "  ");
+    PrintAndLogEx(NORMAL, "");
+
 }
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
@@ -2536,8 +2531,10 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     */
     uint8_t pagemap = get_pagemap(hdr);
 
-    bool isLegacy, isSE, isSR;
-    detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
+    bool isLegacy = false, isSE = false, isSR = false;
+    if (filemaxblock >= 17) {
+        detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
+    }
 
     int i = startblock;
     PrintAndLogEx(NORMAL, "");
@@ -2553,6 +2550,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     if (i != 1)
         PrintAndLogEx(INFO, "  ......");
 
+    bool in_repeated_block = false;
     while (i <= endblock) {
         uint8_t *blk = iclass_dump + (i * 8);
 
@@ -2594,21 +2592,17 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 
         const char *lockstr = (bl_lock) ? _RED_("x") : " ";
 
+        const char *block_info;
+        bool regular_print_block = false;
         if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
             const char *info_nonks[] = {"CSN", "Config", "AIA", "User"};
-            const char *s = info_nonks[3];
             if (i < 3) {
-                s = info_nonks[i];
+                block_info = info_nonks[i];
+            } else {
+                block_info = info_nonks[3];
             }
 
-            PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s "
-                          , i
-                          , i
-                          , sprint_hex_ascii(blk, 8)
-                          , lockstr
-                          , s
-                         );
-
+            regular_print_block = true;
         } else {
             const char *info_ks[] = {"CSN", "Config", "E-purse", "Debit", "Credit", "AIA", "User"};
 
@@ -2640,13 +2634,40 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
                               , lockstr
                              );
             } else {
-                const char *s = info_ks[6];
                 if (i < 6) {
-                    s = info_ks[i];
+                    block_info = info_ks[i];
+                } else {
+                    block_info = info_ks[6];
                 }
-                PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s ", i, i, sprint_hex_ascii(blk, 8), lockstr, s);
+
+                regular_print_block = true;
             }
         }
+
+        if (regular_print_block) {
+            // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
+            // but the blocks in between are replaced with a single line of "*"
+            if (i > 6 && i < (endblock - 1) && !in_repeated_block && !memcmp(blk, blk - 8, 8) &&
+                    !memcmp(blk, blk + 8, 8) && !memcmp(blk, blk + 16, 8)) {
+                // we're in a user block that isn't the first user block nor last two user blocks,
+                // and the current block data is the same as the previous and next two block
+                in_repeated_block = true;
+                PrintAndLogEx(INFO, "*");
+            } else if (in_repeated_block && (memcmp(blk, blk + 8, 8) || i == endblock)) {
+                // in a repeating block, but the next block doesn't match anymore, or we're at the end block
+                in_repeated_block = false;
+            }
+            if (!in_repeated_block) {
+                PrintAndLogEx(INFO,
+                              "%3d/0x%02X | %s | %s | %s ",
+                              i,
+                              i,
+                              sprint_hex_ascii(blk, 8),
+                              lockstr,
+                              block_info);
+            }
+        }
+
         i++;
     }
     PrintAndLogEx(INFO, "---------+-------------------------+----------+---+----------------");
@@ -3534,8 +3555,6 @@ void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elit
 
     for (int i = 0; i < iclass_tc; i++)
         pthread_join(threads[i], NULL);
-
-    PrintAndLogEx(NORMAL, "");
 }
 
 // print diversified keys
@@ -4127,4 +4146,3 @@ int info_iclass(void) {
 
     return PM3_SUCCESS;
 }
-
