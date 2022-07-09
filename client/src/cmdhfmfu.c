@@ -437,7 +437,7 @@ static int ul_fudan_check(void) {
     if (!ul_select(&card))
         return UL_ERROR;
 
-    uint8_t cmd[4] = {0x30, 0x00, 0x02, 0xa7}; //wrong crc on purpose  should be 0xa8
+    uint8_t cmd[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa7}; //wrong crc on purpose  should be 0xa8
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
     PacketResponseNG resp;
