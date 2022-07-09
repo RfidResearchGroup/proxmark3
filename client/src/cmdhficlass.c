@@ -1732,7 +1732,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         payload.start_block = 3;
         payload.req.do_auth = false;
     } else {
-        payload.start_block = 6;
+        payload.start_block = 5;
     }
 
     clearCommandBuffer();
@@ -2587,7 +2587,8 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     }
     PrintAndLogEx(INFO, "---------+-------------------------+----------+---+----------------");
     if (isLegacy)
-    PrintAndLogEx(HINT, _YELLOW_("yellow") " = legacy credential");
+        PrintAndLogEx(HINT, _YELLOW_("yellow") " = legacy credential");
+
     if (isSE || isSR)
         PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO / SR credential");
 
