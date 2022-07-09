@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf fudan` skeleton commands (@iceman1001)
  - Added `--reboot-to-bootloader` arg to pm3
  - Changed `hf 14b raw` - now supports selecting Fuji/Xerox tag (@horror)
  - Added `hf xerox dump` - dump a Fuji/Xerox tag (@horror)
