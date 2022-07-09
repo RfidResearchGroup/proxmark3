@@ -361,6 +361,10 @@ int CmdHFSniff(const char *Cmd) {
     params.skipRatio = arg_get_int_def(ctx, 4, 0);
     CLIParserFree(ctx);
 
+    if (params.skipMode != HF_SNOOP_SKIP_NONE)
+        PrintAndLogEx(INFO, "Skip mode. Function: %s, each: %d sample", 
+            CLIGetOptionListStr(HFSnoopSkipModeOpts, params.skipMode), params.skipRatio * 2);
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_SNIFF, (uint8_t *)&params, sizeof(params));
 
