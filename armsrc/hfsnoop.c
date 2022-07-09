@@ -70,6 +70,7 @@ static void RAMFUNC skipSniff(uint8_t *dest, uint16_t dsize, uint8_t skipMode, u
                     *dest = accum;
                 dest++;
                 dsize --;
+                accum = 0;
             }
         }
     }
