@@ -46,13 +46,13 @@ static void RAMFUNC skipSniff(uint8_t *dest, uint16_t dsize, uint8_t skipMode, u
                 case HF_SNOOP_SKIP_MAX:
                     if (accum < (val & 0xff))
                         accum = val & 0xff;
-                    if (accum < (val << 8))
-                        accum = val << 8;
+                    if (accum < (val >> 8))
+                        accum = val >> 8;
                 case HF_SNOOP_SKIP_MIN:
                     if (accum > (val & 0xff))
                         accum = val & 0xff;
-                    if (accum > (val << 8))
-                        accum = val << 8;
+                    if (accum > (val >> 8))
+                        accum = val >> 8;
                 case HF_SNOOP_SKIP_AVG:
                         accum += (val & 0xff) + (val >> 8);
                 default: { // HF_SNOOP_SKIP_DROP and the rest 
@@ -75,7 +75,7 @@ static void RAMFUNC skipSniff(uint8_t *dest, uint16_t dsize, uint8_t skipMode, u
                 }
                 dest++;
                 dsize --;
-                accum = 0;
+                accum = (skipMode == HF_SNOOP_SKIP_MIN) ? 0xffffffff : 0;
             }
         }
     }
