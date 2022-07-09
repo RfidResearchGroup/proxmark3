@@ -2363,23 +2363,21 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
             if (memcmp(dec_data, empty, 8) != 0) {
 
                 //todo:  remove preamble/sentinel
-
-                uint32_t top = 0, mid, bot;
-                mid = bytes_to_num(dec_data, 4);
-                bot = bytes_to_num(dec_data + 4, 4);
+                uint32_t top = 0, mid = 0, bot = 0;
 
                 char hexstr[16 + 1] = {0};
                 hex_to_buffer((uint8_t *)hexstr, dec_data, 8, sizeof(hexstr) - 1, 0, 0, true);
-                char binstr[64 + 1] = {0};
-                hextobinstring(binstr, hexstr);
-                size_t i = 0;
-                while (i < strlen(binstr) && binstr[i++] == '0');
+                hexstring_to_u96(&top, &mid, &bot, hexstr);
 
-                i &= 0x3C;
-                PrintAndLogEx(SUCCESS, "      bin : %s", binstr + i);
+                char binstr[64 + 1];
+                hextobinstring(binstr, hexstr);
+                char *pbin = binstr;
+                while (strlen(pbin) && *(++pbin) == '0');
+
+                PrintAndLogEx(SUCCESS, "      bin : %s", pbin);
                 PrintAndLogEx(INFO, "");
                 PrintAndLogEx(INFO, "------------------------------ " _CYAN_("wiegand") " -------------------------------");
-                wiegand_message_t packed = initialize_message_object(top, mid, bot, strlen(binstr + i));
+                wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
                 HIDTryUnpack(&packed);
             } else {
                 PrintAndLogEx(INFO, "no credential found");
