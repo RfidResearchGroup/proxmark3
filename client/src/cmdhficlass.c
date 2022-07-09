@@ -38,6 +38,7 @@
 #include "proxendian.h"
 #include "iclass_cmd.h"
 
+#define PICOPASS_BLOCK_SIZE    8
 #define NUM_CSNS               9
 #define ICLASS_KEYS_MAX        8
 #define ICLASS_AUTH_RETRY      10
@@ -1076,9 +1077,7 @@ static int CmdHFiClassESave(const char *Cmd) {
         FillFileNameByUID(fptr, dump, "-dump", 8);
     }
 
-    saveFile(filename, ".bin", dump, bytes);
-    saveFileEML(filename, dump, bytes, 8);
-    saveFileJSON(filename, jsfIclass, dump, bytes, NULL);
+    pm3_save_dump(filename, dump, bytes, jsfIclass, PICOPASS_BLOCK_SIZE);
     free(dump);
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
@@ -1325,9 +1324,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         strcat(fptr, "hf-iclass-");
         FillFileNameByUID(fptr, hdr->csn, "-dump-decrypted", sizeof(hdr->csn));
 
-        saveFile(fptr, ".bin", decrypted, decryptedlen);
-        saveFileEML(fptr, decrypted, decryptedlen, 8);
-        saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen, NULL);
+        pm3_save_dump(fptr, decrypted, decryptedlen, jsfIclass, PICOPASS_BLOCK_SIZE);
 
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
 
@@ -1879,9 +1876,8 @@ write_dump:
 
     // save the dump to .bin file
     PrintAndLogEx(SUCCESS, "saving dump file - %u blocks read", bytes_got / 8);
-    saveFile(filename, ".bin", tag_data, bytes_got);
-    saveFileEML(filename, tag_data, bytes_got, 8);
-    saveFileJSON(filename, jsfIclass, tag_data, bytes_got, NULL);
+
+    pm3_save_dump(filename, tag_data, bytes_got, jsfIclass, PICOPASS_BLOCK_SIZE);
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass decrypt -f") "` to decrypt dump file");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
@@ -2480,10 +2476,10 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     int i = startblock;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------------------------- " _CYAN_("Tag memory") " ---------------------------");
+    PrintAndLogEx(INFO, "--------------------------- " _CYAN_("Tag memory") " ----------------------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, " block#  | data                    | ascii    |lck| info");
-    PrintAndLogEx(INFO, "---------+-------------------------+----------+---+--------------");
+    PrintAndLogEx(INFO, "---------+-------------------------+----------+---+----------------");
     PrintAndLogEx(INFO, "  0/0x00 | " _GREEN_("%s") "| " _GREEN_("%s") " |   | CSN "
                   , sprint_hex(iclass_dump, 8)
                   , sprint_ascii(iclass_dump, 8)
@@ -2491,9 +2487,9 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 
     if (i != 1)
         PrintAndLogEx(INFO, "  ......");
-
-    uint8_t fb1 = (iclass_dump + (6 * 8))[0];
-    uint8_t fb2 = (iclass_dump + (10 * 8))[0];
+    bool isLegacy = (memcmp(iclass_dump + (7 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8));
+    bool isSE = (memcmp(iclass_dump + (12 * 8) + 4, "\x05\x00\x05\x00", 4) == 0);
+    bool isSR = (memcmp(iclass_dump + (16 * 8) + 3, "\x05\x00\x05\x00\x00", 5) == 0);
 
     while (i <= endblock) {
         uint8_t *blk = iclass_dump + (i * 8);
@@ -2554,7 +2550,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
         } else {
             const char *info_ks[] = {"CSN", "Config", "E-purse", "Debit", "Credit", "AIA", "User"};
 
-            if (i >= 6 && i <= 9 && fb1 != 0x30) {
+            if (i >= 6 && i <= 9 && isLegacy && isSE == false) {
                 // legacy credential
                 PrintAndLogEx(INFO, "%3d/0x%02X | " _YELLOW_("%s") "| " _YELLOW_("%s") " | %s | User / Cred "
                               , i
@@ -2563,7 +2559,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
                               , sprint_ascii(blk, 8)
                               , lockstr
                              );
-            } else if (i >= 6 && i <= 11 && fb1 == 0x30) {
+            } else if (i >= 6 && i <= 13 && isSE) {
                 // SIO credential
                 PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | User / SIO"
                               , i
@@ -2572,9 +2568,9 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
                               , sprint_ascii(blk, 8)
                               , lockstr
                              );
-            } else if (i >= 10 && i <= 16 && fb2 == 0x30) {
+            } else if (i >= 10 && i <= 16 && isSR) {
                 // SIO credential
-                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | User / SIO"
+                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | User / SIO / SR"
                               , i
                               , i
                               , sprint_hex(blk, 8)
@@ -2591,9 +2587,12 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
         }
         i++;
     }
-    PrintAndLogEx(INFO, "---------+-------------------------+----------+---+--------------");
+    PrintAndLogEx(INFO, "---------+-------------------------+----------+---+----------------");
+    if (isLegacy)
     PrintAndLogEx(HINT, _YELLOW_("yellow") " = legacy credential");
-    PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO credential");
+    if (isSE || isSR)
+        PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO / SR credential");
+
     PrintAndLogEx(NORMAL, "");
 }
 
