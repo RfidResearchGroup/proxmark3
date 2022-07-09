@@ -47,6 +47,7 @@ typedef enum {
     jsfEM4x69,
     jsfEM4x50,
     jsfFido,
+    jsfFudan,
 } JSONFileType;
 
 typedef enum {

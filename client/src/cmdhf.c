@@ -49,6 +49,7 @@
 #include "cmdhfwaveshare.h" // Waveshare
 #include "cmdhftexkom.h"    // Texkom
 #include "cmdhfxerox.h"     // Xerox
+#include "cmdhffudan.h"     // Fudan cards
 #include "cmdtrace.h"       // trace list
 #include "ui.h"
 #include "proxgui.h"
@@ -439,6 +440,7 @@ static command_t CommandTable[] = {
     {"emrtd",       CmdHFeMRTD,       AlwaysAvailable, "{ Machine Readable Travel Document... }"},
     {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / FeliCa RFIDs...          }"},
     {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators...    }"},
+    {"fudan",       CmdHFFudan,       AlwaysAvailable, "{ Fudan RFIDs...                      }"},    
     {"gallagher",   CmdHFGallagher,   AlwaysAvailable, "{ Gallagher DESFire RFIDs...          }"},
     {"ksx6924",     CmdHFKSX6924,     AlwaysAvailable, "{ KS X 6924 (T-Money, Snapper+) RFIDs }"},
     {"jooki",       CmdHF_Jooki,      AlwaysAvailable, "{ Jooki RFIDs...                      }"},

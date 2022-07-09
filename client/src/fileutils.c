@@ -396,6 +396,19 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             break;
         }
+        case jsfFudan: {
+            iso14a_mf_extdump_t *xdump = (iso14a_mf_extdump_t *)(void *) data;
+            JsonSaveStr(root, "FileType", "fudan");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", xdump->card_info.uid, xdump->card_info.uidlen);
+            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", xdump->card_info.atqa, 2);
+            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &(xdump->card_info.sak), 1);
+            for (size_t i = 0; i < (xdump->dumplen / 4); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * 4], 4);
+            }
+            break;
+        }
         case jsfMfuMemory: {
             JsonSaveStr(root, "FileType", "mfu");
 
@@ -1099,6 +1112,28 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             size_t len = 0;
             JsonLoadBufAsHex(root, blocks, &udata[sptr], 16, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+        }
+
+        *datalen = sptr;
+    }
+
+    if (!strcmp(ctype, "fudan")) {
+        size_t sptr = 0;
+        for (int i = 0; i < 256; i++) {
+            if (sptr + 4 > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            char blocks[30] = {0};
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+
+            size_t len = 0;
+            JsonLoadBufAsHex(root, blocks, &udata[sptr], 4, &len);
             if (!len)
                 break;
 

@@ -365,7 +365,7 @@ endif
 CFLAGS ?= $(DEFCFLAGS)
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS)
-PM3CFLAGS += -I./src -I./include -I../include -I../common -I../common_fpga $(PM3INCLUDES) $(INCLUDES)
+PM3CFLAGS += -g -I./src -I./include -I../include -I../common -I../common_fpga $(PM3INCLUDES) $(INCLUDES)
 # WIP Testing
 #PM3CFLAGS += -std=c11 -pedantic
 
@@ -557,6 +557,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdhfemrtd.c \
 		cmdhffelica.c \
 		cmdhffido.c \
+		cmdhffudan.c \
 		cmdhfgallagher.c \
 		cmdhfksx6924.c \
 		cmdhfcipurse.c \

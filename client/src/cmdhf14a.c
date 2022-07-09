@@ -18,9 +18,9 @@
 #include "cmdhf14a.h"
 #include <ctype.h>
 #include <string.h>
-#include "cmdparser.h"    // command_t
-#include "commonutil.h"   // ARRAYLEN
-#include "comms.h"        // clearCommandBuffer
+#include "cmdparser.h"      // command_t
+#include "commonutil.h"     // ARRAYLEN
+#include "comms.h"          // clearCommandBuffer
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "cmdhfmf.h"
@@ -29,9 +29,9 @@
 #include "emv/emvcore.h"
 #include "ui.h"
 #include "crc16.h"
-#include "util_posix.h"  // msclock
+#include "util_posix.h"    // msclock
 #include "aidsearch.h"
-#include "cmdhf.h"       // handle HF plot
+#include "cmdhf.h"         // handle HF plot
 #include "cliparser.h"
 #include "protocols.h"     // definitions of ISO14A/7816 protocol, MAGIC_GEN_1A
 #include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
@@ -2301,7 +2301,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv search -s`"));
 
     if (isFUDAN) {
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf 14a raw`") " - since FUDAN is different");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf fudan dump`"));
+        /*
         PrintAndLogEx(HINT, "  hf 14a raw -a -b 7 -k 26");
         PrintAndLogEx(HINT, "  hf 14a raw -k -c 3000");
         PrintAndLogEx(HINT, "  hf 14a raw -k -c 3001");
@@ -2311,6 +2312,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "  hf 14a raw -k -c 3005");
         PrintAndLogEx(HINT, "  hf 14a raw -k -c 3006");
         PrintAndLogEx(HINT, "  hf 14a raw -c 3007");
+        */
     }
 
     PrintAndLogEx(NORMAL, "");
