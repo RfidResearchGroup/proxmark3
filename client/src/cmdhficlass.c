@@ -1343,26 +1343,24 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         if (has_values) {
 
             //todo:  remove preamble/sentinel
-            uint32_t top = 0, mid, bot;
-            mid = bytes_to_num(decrypted + (8 * 7), 4);
-            bot = bytes_to_num(decrypted + (8 * 7) + 4, 4);
+            uint32_t top = 0, mid = 0, bot = 0;
 
             PrintAndLogEx(INFO, "Block 7 decoder");
 
             char hexstr[16 + 1] = {0};
             hex_to_buffer((uint8_t *)hexstr, decrypted + (8 * 7), 8, sizeof(hexstr) - 1, 0, 0, true);
+            hexstring_to_u96(&top, &mid, &bot, hexstr);
 
-            char binstr[8 * 8 + 1] = {0};
+            char binstr[64 + 1];
             hextobinstring(binstr, hexstr);
-            size_t i = 0;
-            while (i < strlen(binstr) && binstr[i++] == '0');
+            char *pbin = binstr;
+            while (strlen(pbin) && *(++pbin) == '0');
 
-            PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), binstr + i);
+            PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), pbin);
 
             PrintAndLogEx(INFO, "Wiegand decode");
-            wiegand_message_t packed = initialize_message_object(top, mid, bot, strlen(binstr + i));
+            wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
             HIDTryUnpack(&packed);
-
         } else {
             PrintAndLogEx(INFO, "No credential found");
         }

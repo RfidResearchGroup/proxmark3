@@ -158,6 +158,7 @@ int CmdWiegandDecode(const char *Cmd) {
         PrintAndLogEx(ERR, "empty input");
         return PM3_EINVARG;
     }
+
     wiegand_message_t packed = initialize_message_object(top, mid, bot, blen);
     HIDTryUnpack(&packed);
     return PM3_SUCCESS;
