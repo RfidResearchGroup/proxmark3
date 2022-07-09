@@ -301,6 +301,23 @@ int CmdHFTune(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+typedef enum {
+    HF_SNOOP_SKIP_NONE = 0x00,
+    HF_SNOOP_SKIP_DROP = 0x01, 
+    HF_SNOOP_SKIP_MAX = 0x02,
+    HF_SNOOP_SKIP_MIN = 0x03,
+    HF_SNOOP_SKIP_AVG = 0x04
+} HFSnoopSkipMode;
+
+const CLIParserOption HFSnoopSkipModeOpts[] = {
+    {HF_SNOOP_SKIP_NONE, "none"},
+    {HF_SNOOP_SKIP_DROP, "drop"},
+    {HF_SNOOP_SKIP_MAX,  "min"},
+    {HF_SNOOP_SKIP_MIN,  "max"},
+    {HF_SNOOP_SKIP_AVG,  "avg"},
+    {0,    NULL},
+};
+
 // Collects pars of u8,
 // uses 16bit transfers from FPGA for speed
 // Takes all available bigbuff memory
@@ -317,8 +334,10 @@ int CmdHFSniff(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_0(NULL, "sp", "<dec>", "skip sample pairs"),
-        arg_u64_0(NULL, "st", "<dec>", "skip number of triggers"),
+        arg_u64_0(NULL, "sp",    "<dec>", "skip sample pairs"),
+        arg_u64_0(NULL, "st",    "<dec>", "skip number of triggers"),
+        arg_str0(NULL,  "smode", "[none|drop|min|max|avg]", "Skip mode. It switches on the function that applies to several samples before they saved to memory"),
+        arg_int0(NULL,  "sratio",  "<dec, ms>", "Skip ratio. It applied the function above to (ratio * 2) samples. For ratio = 1 it 2 samples."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -326,10 +345,20 @@ int CmdHFSniff(const char *Cmd) {
     struct {
         uint32_t samplesToSkip;
         uint32_t triggersToSkip;
+        uint8_t skipMode;
+        uint8_t skipRatio;
     } PACKED params;
 
     params.samplesToSkip = arg_get_u32_def(ctx, 1, 0);
     params.triggersToSkip = arg_get_u32_def(ctx, 2, 0);
+    int smode = 0;
+    if (CLIGetOptionList(arg_get_str(ctx, 3), HFSnoopSkipModeOpts, &smode))
+        return PM3_EINVARG;
+
+    if (smode > 0)
+        params.skipMode = smode;
+
+    params.skipRatio = arg_get_int_def(ctx, 4, 0);
     CLIParserFree(ctx);
 
     clearCommandBuffer();
