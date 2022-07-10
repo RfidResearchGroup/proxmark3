@@ -2430,6 +2430,16 @@ static int CmdHFiClass_loclass(const char *Cmd) {
     return bruteforceFileNoKeys(filename);
 }
 
+static void detect_credential(uint8_t *data, bool *legacy, bool *se, bool *sr) {
+    char* r1 = strstr((char*)data + (5 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF");
+    char* r2 = strstr((char*)data + (11 * 8), "\x05\x00\x05\x00");
+
+    *legacy = (r1) && (data[6 * 8] != 0x30);
+    *se = (r2) && (data[6 * 8] == 0x30);
+    *sr = (r2) && (data[10 * 8] == 0x30);
+    r1 = NULL, r2 = NULL;
+}
+
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
 
     picopass_hdr_t *hdr = (picopass_hdr_t *)iclass_dump;
@@ -2471,8 +2481,11 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     );
     */
     uint8_t pagemap = get_pagemap(hdr);
-    int i = startblock;
 
+    bool isLegacy, isSE, isSR;
+    detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
+
+    int i = startblock;
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------------------- " _CYAN_("Tag memory") " ----------------------------");
     PrintAndLogEx(NORMAL, "");
@@ -2485,9 +2498,6 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 
     if (i != 1)
         PrintAndLogEx(INFO, "  ......");
-    bool isLegacy = (memcmp(iclass_dump + (7 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8));
-    bool isSE = (memcmp(iclass_dump + (12 * 8) + 4, "\x05\x00\x05\x00", 4) == 0);
-    bool isSR = (memcmp(iclass_dump + (16 * 8) + 3, "\x05\x00\x05\x00\x00", 5) == 0);
 
     while (i <= endblock) {
         uint8_t *blk = iclass_dump + (i * 8);
@@ -2557,9 +2567,9 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
                               , sprint_ascii(blk, 8)
                               , lockstr
                              );
-            } else if (i >= 6 && i <= 13 && isSE) {
+            } else if (i >= 6 && i <= 12 && isSE) {
                 // SIO credential
-                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | User / SIO"
+                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | User / SIO / SE"
                               , i
                               , i
                               , sprint_hex(blk, 8)
