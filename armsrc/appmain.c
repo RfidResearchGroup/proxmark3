@@ -1784,11 +1784,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p {
                 uint32_t samplesToSkip;
                 uint32_t triggersToSkip;
+                uint8_t skipMode;
+                uint8_t skipRatio;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
 
             uint16_t len = 0;
-            int res = HfSniff(payload->samplesToSkip, payload->triggersToSkip, &len);
+            int res = HfSniff(payload->samplesToSkip, payload->triggersToSkip, &len, payload->skipMode, payload->skipRatio);
 
             struct {
                 uint16_t len;

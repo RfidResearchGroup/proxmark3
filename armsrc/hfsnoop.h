@@ -18,6 +18,13 @@
 
 #include "proxmark3_arm.h"
 
-int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len);
+// what to do with skipped data
+#define HF_SNOOP_SKIP_NONE (0)
+#define HF_SNOOP_SKIP_DROP (1)
+#define HF_SNOOP_SKIP_MAX  (2)
+#define HF_SNOOP_SKIP_MIN  (3)
+#define HF_SNOOP_SKIP_AVG  (4)
+
+int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint8_t skipMode, uint8_t skipRatio);
 void HfPlotDownload(void);
 #endif
