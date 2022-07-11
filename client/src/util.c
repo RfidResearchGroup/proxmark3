@@ -276,6 +276,31 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
     }
 }
 
+void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t breaks) {
+    if (data == NULL || len == 0 || breaks == 0) return;
+
+    int i;
+    for (i = 0; i < len; i += breaks) {
+        if (len - i < breaks) { // incomplete block, will be treated out of the loop
+            break;
+        }
+        PrintAndLogEx(INFO, "%s", sprint_hex_inrow_spaces(data + i, breaks, 0));
+    }
+
+    // the last odd bytes
+    uint8_t mod = len % breaks;
+
+    if (mod) {
+        char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
+        hex_to_buffer((uint8_t *)buf, data + i, mod, (sizeof(buf) - 1), 0, 0, true);
+
+        // add the spaces...
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%*s", ((breaks - mod) * 3), " ");
+        PrintAndLogEx(INFO, "%s", buf);
+    }
+}
+
+
 static void print_buffer_ex(const uint8_t *data, const size_t len, int level, uint8_t breaks) {
 
     if (len < 1)
@@ -1208,4 +1233,28 @@ inline uint64_t leadingzeros64(uint64_t a) {
     PrintAndLogEx(FAILED, "Was not compiled with fct bitcount64");
     return 0;
 #endif
+}
+
+
+int byte_strstr(uint8_t* src, size_t srclen, uint8_t* pattern, size_t plen) {
+
+    size_t max = srclen - plen + 1;
+
+    for (size_t i = 0; i < max; i++) {
+
+        // compare only first byte
+        if (src[i] != pattern[0]) 
+            continue;
+        
+        // try to match rest of the pattern
+        for (int j = plen - 1; j >= 1; j--) {
+
+            if (src[i + j] != pattern[j]) 
+                break;
+
+            if (j == 1)
+                return i;
+        }
+    }
+    return -1;
 }

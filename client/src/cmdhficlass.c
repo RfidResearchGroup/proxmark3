@@ -37,6 +37,8 @@
 #include "cmdsmartcard.h"   // smart select fct
 #include "proxendian.h"
 #include "iclass_cmd.h"
+#include "crypto/asn1utils.h"      // ASN1 decoder
+
 
 #define PICOPASS_BLOCK_SIZE    8
 #define NUM_CSNS               9
@@ -56,6 +58,7 @@ static uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 static uint8_t zeros[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static int CmdHelp(const char *Cmd);
+static void printIclassSIO(uint8_t *iclass_dump);
 
 static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
     { 0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78 },
@@ -1139,6 +1142,11 @@ static int CmdHFiClassEView(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     printIclassDumpContents(dump, 1, blocks, bytes);
+
+    if (verbose) {
+        printIclassSIO(dump);
+    }
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -1327,6 +1335,10 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         pm3_save_dump(fptr, decrypted, decryptedlen, jsfIclass, PICOPASS_BLOCK_SIZE);
 
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
+
+        if (verbose) {
+            printIclassSIO(decrypted);
+        }
 
         PrintAndLogEx(NORMAL, "");
 
@@ -2440,6 +2452,48 @@ static void detect_credential(uint8_t *data, bool *legacy, bool *se, bool *sr) {
     r1 = NULL, r2 = NULL;
 }
 
+// print ASN1 decoded array in TLV view
+static void printIclassSIO(uint8_t *iclass_dump) {
+
+    bool isLegacy, isSE, isSR;
+    detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
+
+    uint8_t pattern[] = {0x05, 0x00, 0x05, 0x00};
+    if (isSE) {
+
+        int dlen = byte_strstr(iclass_dump + (6 * 8), 8*8, pattern, sizeof(pattern));
+        if (dlen) {
+
+            dlen += sizeof(pattern);
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
+            print_hex_noascii_break(iclass_dump + (6*8), dlen, 32);
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
+            asn1_print(iclass_dump + (6 * 8), dlen, "  ");
+            PrintAndLogEx(NORMAL, "");
+        }
+    }
+
+    if (isSR) {
+
+        int dlen = byte_strstr(iclass_dump + (10 * 8), 8*8, pattern, sizeof(pattern));
+
+        if (dlen) {
+            dlen += sizeof(pattern);
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
+            print_hex_noascii_break(iclass_dump + (10*8), dlen, 32);
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
+            asn1_print(iclass_dump + (10 * 8), dlen, "  ");
+            PrintAndLogEx(NORMAL, "");
+        }
+    }
+}
+
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
 
     picopass_hdr_t *hdr = (picopass_hdr_t *)iclass_dump;
@@ -2599,7 +2653,10 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     if (isLegacy)
         PrintAndLogEx(HINT, _YELLOW_("yellow") " = legacy credential");
 
-    if (isSE || isSR)
+    if (isSE)
+        PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO / SE credential");
+
+    if (isSR)
         PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO / SR credential");
 
     PrintAndLogEx(NORMAL, "");
@@ -2650,6 +2707,11 @@ static int CmdHFiClassView(const char *Cmd) {
     print_picopass_header((picopass_hdr_t *) dump);
     print_picopass_info((picopass_hdr_t *) dump);
     printIclassDumpContents(dump, startblock, endblock, bytes_read);
+
+    if (verbose) {
+        printIclassSIO(dump);
+    }
+
     free(dump);
     return PM3_SUCCESS;
 }

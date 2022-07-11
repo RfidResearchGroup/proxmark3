@@ -67,6 +67,8 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len,
 
 void print_hex(const uint8_t *data, const size_t len);
 void print_hex_break(const uint8_t *data, const size_t len, const uint8_t breaks);
+void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t breaks);
+
 char *sprint_hex(const uint8_t *data, const size_t len);
 char *sprint_hex_inrow(const uint8_t *data, const size_t len);
 char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t min_str_len);
@@ -143,4 +145,5 @@ uint64_t bitcount64(uint64_t a);
 uint32_t leadingzeros32(uint32_t a);
 uint64_t leadingzeros64(uint64_t a);
 
+int byte_strstr(uint8_t* src, size_t srclen, uint8_t* pattern, size_t plen);
 #endif
