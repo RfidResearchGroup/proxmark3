@@ -323,7 +323,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
 // buffer too small to print the full key,
 // so we give just a hint that one of the default keys was used
 //                        snprintf(exp, size, "AUTH-2 KEY: " _YELLOW_("%s"), sprint_hex(gs_mfuc_key, 16));
-                        snprintf(exp, size, "AUTH-2 KEY: " _YELLOW_("%02x%02x%02x%02x..."), gs_mfuc_key[0], gs_mfuc_key[1], gs_mfuc_key[2], gs_mfuc_key[3]);
+                        snprintf(exp, size, "AUTH-2 KEY: " _GREEN_("%02X%02X%02X%02X..."), gs_mfuc_key[0], gs_mfuc_key[1], gs_mfuc_key[2], gs_mfuc_key[3]);
                     } else {
                         snprintf(exp, size, "AUTH-2");
                     }
@@ -334,7 +334,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 break;
             case MIFARE_ULEV1_AUTH:
                 if (cmdsize == 7)
-                    snprintf(exp, size, "PWD-AUTH KEY: " _YELLOW_("0x%02x%02x%02x%02x"), cmd[1], cmd[2], cmd[3], cmd[4]);
+                    snprintf(exp, size, "PWD-AUTH KEY: " _GREEN_("0x%02X%02X%02X%02X"), cmd[1], cmd[2], cmd[3], cmd[4]);
                 else
                     snprintf(exp, size, "PWD-AUTH");
                 break;
