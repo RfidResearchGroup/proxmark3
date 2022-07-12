@@ -163,7 +163,8 @@ static void *malloc_bitslice(size_t x) {
 }
 #define free_bitslice(x) free(x)
 #else
-#define malloc_bitslice(x) memalign(MAX_BITSLICES / 8, (x))
+//#define malloc_bitslice(x) memalign(MAX_BITSLICES / 8, (x))
+#define malloc_bitslice(x) __builtin_assume_aligned(memalign(MAX_BITSLICES / 8, (x)), MAX_BITSLICES / 8);
 #define free_bitslice(x) free(x)
 #endif
 
