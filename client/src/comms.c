@@ -834,7 +834,7 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
             return false;
         }
         case FPGA_MEM: {
-            SendCommandMIX(CMD_FPGAMEM_DOWNLOAD, start_index, bytes, 0, NULL, 0);
+            SendCommandNG(CMD_FPGAMEM_DOWNLOAD, NULL, 0);
             return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FPGAMEM_DOWNLOADED);
         }
     }
@@ -856,8 +856,8 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
             if (response->cmd == CMD_ACK)
                 return true;
-            // Spiffs download is converted to NG,
-            if (response->cmd == CMD_SPIFFS_DOWNLOAD)
+            // Spiffs // fpgamem-plot download is converted to NG,
+            if (response->cmd == CMD_SPIFFS_DOWNLOAD || response->cmd == CMD_FPGAMEM_DOWNLOAD)
                 return true;
 
             // sample_buf is a array pointer, located in data.c

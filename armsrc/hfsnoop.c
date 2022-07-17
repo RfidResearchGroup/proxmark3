@@ -209,6 +209,6 @@ void HfPlotDownload(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     // Trigger a finish downloading signal with an ACK frame
-    reply_mix(CMD_ACK, 1, 0, FPGA_TRACE_SIZE, 0, 0);
+    reply_ng(CMD_FPGAMEM_DOWNLOAD, PM3_SUCCESS, NULL, 0);
     LED_B_OFF();
 }

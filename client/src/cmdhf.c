@@ -416,10 +416,10 @@ int CmdHFSniff(const char *Cmd) {
 
 int handle_hf_plot(void) {
 
-    uint8_t buf[FPGA_TRACE_SIZE];
+    uint8_t buf[FPGA_TRACE_SIZE] = {0};
 
     PacketResponseNG response;
-    if (!GetFromDevice(FPGA_MEM, buf, FPGA_TRACE_SIZE, 0, NULL, 0, &response, 4000, true)) {
+    if (GetFromDevice(FPGA_MEM, buf, FPGA_TRACE_SIZE, 0, NULL, 0, &response, 4000, true) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
