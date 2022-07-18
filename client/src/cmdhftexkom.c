@@ -577,14 +577,16 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("g",  "gbuffer",  "Get data from graph buffer"),
         arg_lit0("v",  "verbose",  "Verbose scan and output"),
         arg_lit0("@", NULL, "optional - continuous reader mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = arg_get_lit(ctx, 1);
-    bool cm = arg_get_lit(ctx, 2);
+    bool gbuffer = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool cm = arg_get_lit(ctx, 3);
 
     CLIParserFree(ctx);
 
@@ -594,21 +596,25 @@ static int CmdHFTexkomReader(const char *Cmd) {
     }
 
     uint32_t samplesCount = 30000;
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_ACQ_RAW_ADC, (uint8_t *)&samplesCount, sizeof(uint32_t));
+    if (gbuffer) {
+        samplesCount = g_GraphTraceLen;
+    } else {
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ACQ_RAW_ADC, (uint8_t *)&samplesCount, sizeof(uint32_t));
 
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_HF_ACQ_RAW_ADC, &resp, 2500)) {
-        PrintAndLogEx(WARNING, "command execution time out");
-        return PM3_ETIMEOUT;
-    }
+        PacketResponseNG resp;
+        if (!WaitForResponseTimeout(CMD_HF_ACQ_RAW_ADC, &resp, 2500)) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
 
-    uint32_t size = (resp.data.asDwords[0]);
-    if (size > 0) {
-        if (getSamples(samplesCount, false) != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Get samples error");
-            return PM3_EFAILED;
-        };
+        uint32_t size = (resp.data.asDwords[0]);
+        if (size > 0) {
+            if (getSamples(samplesCount, false) != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Get samples error");
+                return PM3_EFAILED;
+            };
+        }
     }
 
     char bitstring[256] = {0};
