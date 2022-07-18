@@ -309,7 +309,7 @@ static bool TexcomTK15Decode(uint32_t *implengths, uint32_t implengthslen, char 
     if (implengthslen > 2 && implengthslen % 2 != 0) {
         int lastimplen = implengths[implengthslen - 1];
         bool prevbit = (implengths[implengthslen - 3] > implengths[implengthslen - 2]);
-        bool thesamebit = (abs(lastimplen - implengths[implengthslen - 3]) < abs(lastimplen - implengths[implengthslen - 2]));
+        bool thesamebit = (abs(lastimplen - (int)implengths[implengthslen - 3]) < abs(lastimplen - (int)implengths[implengthslen - 2]));
         
         if (prevbit ^ !thesamebit) {
             strcat(bitstring, "10");
