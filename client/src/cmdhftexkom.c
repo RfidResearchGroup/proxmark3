@@ -191,6 +191,13 @@ static uint8_t TexcomTK13CRC(const uint8_t *data) {
     return crc;
 }
 
+static uint8_t MMBITCRC(const uint8_t *data) {
+    return
+        (data[0] & 0x0f) ^ ((data[0] >> 4) & 0x0f) ^
+        (data[1] & 0x0f) ^ ((data[1] >> 4) & 0x0f) ^
+        (data[2] & 0x0f) ^ ((data[2] >> 4) & 0x0f);
+}
+
 static unsigned char dallas_crc8(const unsigned char *data, const unsigned int size) {
     unsigned char crc = 0;
     for (unsigned int i = 0; i < size; ++i) {
@@ -536,6 +543,13 @@ int read_texkom_uid(bool loop, bool verbose) {
             } else if (card.tcode[2] == 0xCA) {
                 PrintAndLogEx(INFO, "TYPE..... TK17");
                 PrintAndLogEx(INFO, "UID...... " _GREEN_("%s"), sprint_hex(&card.tcode[3], 4));
+                if (verbose) {
+                    PrintAndLogEx(INFO, "CRC...... %s", (crc) ?  _GREEN_("ok") : _RED_("fail"));
+                }
+            } else if (card.tcode[2] == 0xFF && card.tcode[3] == 0xFF) {
+                PrintAndLogEx(INFO, "TYPE..... MMBIT");
+                PrintAndLogEx(INFO, "UID...... " _GREEN_("%s"), sprint_hex(&card.tcode[4], 3));
+                crc = (MMBITCRC(&card.tcode[4]) == card.tcode[7] >> 4);
                 if (verbose) {
                     PrintAndLogEx(INFO, "CRC...... %s", (crc) ?  _GREEN_("ok") : _RED_("fail"));
                 }
