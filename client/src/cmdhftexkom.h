@@ -33,6 +33,7 @@ enum TK17Bits {
 enum TexkomModulation {
     TexkomModError,
     TexkomModTK13,
+    TexkomModTK15,
     TexkomModTK17
 };
 
