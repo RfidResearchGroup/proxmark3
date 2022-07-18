@@ -775,7 +775,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
                 PrintAndLogEx(INFO, "modulation: unknown");
 
             if (tcode[2] == 0x63) {
-                // TK13
+                // TK13 and TK15. differs only by timings. TK15 has impulse 0 and 1 lengths very close to each other.
                 if (codefound == TexkomModTK13)
                     PrintAndLogEx(INFO, "type      : TK13");
                 else if (codefound == TexkomModTK15)
