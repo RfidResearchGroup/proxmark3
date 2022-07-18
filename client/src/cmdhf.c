@@ -351,19 +351,24 @@ int CmdHFSniff(const char *Cmd) {
 
     params.samplesToSkip = arg_get_u32_def(ctx, 1, 0);
     params.triggersToSkip = arg_get_u32_def(ctx, 2, 0);
+
     int smode = 0;
-    if (CLIGetOptionList(arg_get_str(ctx, 3), HFSnoopSkipModeOpts, &smode))
+    if (CLIGetOptionList(arg_get_str(ctx, 3), HFSnoopSkipModeOpts, &smode)) {
+        CLIParserFree(ctx);
         return PM3_EINVARG;
+    }
 
-    if (smode > 0)
-        params.skipMode = smode;
-
+    params.skipMode = smode;
     params.skipRatio = arg_get_int_def(ctx, 4, 0);
+
     CLIParserFree(ctx);
 
-    if (params.skipMode != HF_SNOOP_SKIP_NONE)
+    if (params.skipMode != HF_SNOOP_SKIP_NONE) {
         PrintAndLogEx(INFO, "Skip mode. Function: %s, each: %d sample", 
-            CLIGetOptionListStr(HFSnoopSkipModeOpts, params.skipMode), params.skipRatio * 2);
+            CLIGetOptionListStr(HFSnoopSkipModeOpts, params.skipMode),
+            params.skipRatio * 2
+        );
+    }
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_SNIFF, (uint8_t *)&params, sizeof(params));
@@ -383,6 +388,7 @@ int CmdHFSniff(const char *Cmd) {
                 PrintAndLogEx(INFO, "Button pressed, user aborted");
                 break;
             }
+
             if (resp.status == PM3_SUCCESS) {
 
                 struct r {
