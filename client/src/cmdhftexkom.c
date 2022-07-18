@@ -767,7 +767,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
             if (codefound == TexkomModTK13)
                 PrintAndLogEx(INFO, "modulation: TK13");
-            if (codefound == TexkomModTK15)
+            else if (codefound == TexkomModTK15)
                 PrintAndLogEx(INFO, "modulation: TK15");
             else if (codefound == TexkomModTK17)
                 PrintAndLogEx(INFO, "modulation: TK17");
