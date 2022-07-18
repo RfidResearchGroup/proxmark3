@@ -721,6 +721,18 @@ static int CmdHFTexkomReader(const char *Cmd) {
                 else
                     PrintAndLogEx(WARNING, "crc       : WRONG");
 
+            } else if (tcode[2] == 0xFF && tcode[3] == 0xFF) {
+                // MMBIT
+                if (codefound != TexkomModTK13) {
+                    PrintAndLogEx(WARNING, "  mod type: WRONG");
+                }
+                PrintAndLogEx(INFO, "type      : MMBIT");
+                PrintAndLogEx(INFO, "uid       : %s", sprint_hex(&tcode[4], 3));
+
+                if (MMBITCRC(&tcode[4]) == tcode[7] >> 4)
+                    PrintAndLogEx(INFO, "crc       : OK");
+                else
+                    PrintAndLogEx(WARNING, "crc       : WRONG");
             } else if (tcode[2] == 0xCA) {
                 // TK17
                 if (codefound != TexkomModTK17) {
