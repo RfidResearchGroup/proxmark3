@@ -347,13 +347,15 @@ int CmdHFSniff(const char *Cmd) {
         uint32_t triggersToSkip;
         uint8_t skipMode;
         uint8_t skipRatio;
-    } PACKED params;
+    } PACKED params = {0};
 
     params.samplesToSkip = arg_get_u32_def(ctx, 1, 0);
     params.triggersToSkip = arg_get_u32_def(ctx, 2, 0);
     int smode = 0;
-    if (CLIGetOptionList(arg_get_str(ctx, 3), HFSnoopSkipModeOpts, &smode))
+    if (CLIGetOptionList(arg_get_str(ctx, 3), HFSnoopSkipModeOpts, &smode)) {
+        CLIParserFree(ctx);
         return PM3_EINVARG;
+    }
 
     if (smode > 0)
         params.skipMode = smode;
