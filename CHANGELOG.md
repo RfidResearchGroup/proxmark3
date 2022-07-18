@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added mmbit-002 (kibi-002, kb5004xk1) russian tag to `hf texkom read` command (@merlokk)
  - Added `hf sniff --smode` skip/group adc data to consume less memory. Now it can sniff very long signals (@merlokk)
  - Added `hf fudan` skeleton commands (@iceman1001)
  - Added `--reboot-to-bootloader` arg to pm3
