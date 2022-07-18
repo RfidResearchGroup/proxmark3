@@ -2032,6 +2032,7 @@ static int CmdLoad(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "file to load"),
+        arg_lit0("n",  "no-fix",  "Load data from wile without any transformations"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2039,6 +2040,9 @@ static int CmdLoad(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool nofix = arg_get_lit(ctx, 2);
+
     CLIParserFree(ctx);
 
     char *path = NULL;
@@ -2069,12 +2073,14 @@ static int CmdLoad(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " samples", g_GraphTraceLen);
 
-    uint8_t bits[g_GraphTraceLen];
-    size_t size = getFromGraphBuf(bits);
+    if (nofix == false) {
+        uint8_t bits[g_GraphTraceLen];
+        size_t size = getFromGraphBuf(bits);
 
-    removeSignalOffset(bits, size);
-    setGraphBuf(bits, size);
-    computeSignalProperties(bits, size);
+        removeSignalOffset(bits, size);
+        setGraphBuf(bits, size);
+        computeSignalProperties(bits, size);
+    }
 
     setClockGrid(0, 0);
     g_DemodBufferLen = 0;
