@@ -193,9 +193,11 @@ static uint8_t TexcomTK13CRC(const uint8_t *data) {
 
 static uint8_t MMBITCRC(const uint8_t *data) {
     return
-        (data[0] & 0x0f) ^ ((data[0] >> 4) & 0x0f) ^
-        (data[1] & 0x0f) ^ ((data[1] >> 4) & 0x0f) ^
-        (data[2] & 0x0f) ^ ((data[2] >> 4) & 0x0f);
+        (( (data[0] & 0x0f) ^ ((data[0] >> 4) & 0x0f) ^
+           (data[1] & 0x0f) ^ ((data[1] >> 4) & 0x0f) ^
+           (data[2] & 0x0f) ^ ((data[2] >> 4) & 0x0f)
+         ) ^ 0x0f
+        ) & 0x0f;
 }
 
 static unsigned char dallas_crc8(const unsigned char *data, const unsigned int size) {
