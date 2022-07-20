@@ -482,8 +482,8 @@ int mfdes_kdf_input_gallagher(uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint3
     }
 
     int len = 0;
-    // If the keyNo == 1, then omit the UID.
-    if (keyNo != 1) {
+    // If the keyNo == 1 or the aid is 000000, then omit the UID.
+    if (keyNo != 1 && aid != 0x000000) {
         if (*kdfInputLen < (4 + uidLen)) {
             return PM3_EINVARG;
         }
