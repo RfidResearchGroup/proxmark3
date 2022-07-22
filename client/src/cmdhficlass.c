@@ -2553,6 +2553,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     if (i != 1)
         PrintAndLogEx(INFO, "  ......");
 
+    bool in_repeated_block = false;
     while (i <= endblock) {
         uint8_t *blk = iclass_dump + (i * 8);
 
@@ -2594,21 +2595,17 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 
         const char *lockstr = (bl_lock) ? _RED_("x") : " ";
 
+        const char *block_info;
+        bool regular_print_block = false;
         if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
             const char *info_nonks[] = {"CSN", "Config", "AIA", "User"};
-            const char *s = info_nonks[3];
             if (i < 3) {
-                s = info_nonks[i];
+                block_info = info_nonks[i];
+            } else {
+                block_info = info_nonks[3];
             }
 
-            PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s "
-                          , i
-                          , i
-                          , sprint_hex_ascii(blk, 8)
-                          , lockstr
-                          , s
-                         );
-
+            regular_print_block = true;
         } else {
             const char *info_ks[] = {"CSN", "Config", "E-purse", "Debit", "Credit", "AIA", "User"};
 
@@ -2640,13 +2637,40 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
                               , lockstr
                              );
             } else {
-                const char *s = info_ks[6];
                 if (i < 6) {
-                    s = info_ks[i];
+                    block_info = info_ks[i];
+                } else {
+                    block_info = info_ks[6];
                 }
-                PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s ", i, i, sprint_hex_ascii(blk, 8), lockstr, s);
+
+                regular_print_block = true;
             }
         }
+
+        if (regular_print_block) {
+            // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
+            // but the blocks in between are replaced with a single line of "*"
+            if (i > 6 && i < (endblock - 1) && !in_repeated_block && !memcmp(blk, blk - 8, 8) &&
+                    !memcmp(blk, blk + 8, 8) && !memcmp(blk, blk + 16, 8)) {
+                // we're in a user block that isn't the first user block nor last two user blocks,
+                // and the current block data is the same as the previous and next two block
+                in_repeated_block = true;
+                PrintAndLogEx(INFO, "*");
+            } else if (in_repeated_block && (memcmp(blk, blk + 8, 8) || i == endblock)) {
+                // in a repeating block, but the next block doesn't match anymore, or we're at the end block
+                in_repeated_block = false;
+            }
+            if (!in_repeated_block) {
+                PrintAndLogEx(INFO,
+                              "%3d/0x%02X | %s | %s | %s ",
+                              i,
+                              i,
+                              sprint_hex_ascii(blk, 8),
+                              lockstr,
+                              block_info);
+            }
+        }
+
         i++;
     }
     PrintAndLogEx(INFO, "---------+-------------------------+----------+---+----------------");
@@ -4127,4 +4151,3 @@ int info_iclass(void) {
 
     return PM3_SUCCESS;
 }
-
