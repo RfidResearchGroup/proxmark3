@@ -591,8 +591,8 @@ static void mem_app_config(const picopass_hdr_t *hdr) {
 
     PrintAndLogEx(INFO, "------------------------- " _CYAN_("KeyAccess") " ------------------------");
     PrintAndLogEx(INFO, " * Kd, Debit key, AA1    Kc, Credit key, AA2 *");
-    uint8_t book = isset(mem, 0x20);
-    if (book) {
+    uint8_t keyAccess = isset(mem, 0x01);
+    if (keyAccess) {
         PrintAndLogEx(INFO, "    Read A....... debit");
         PrintAndLogEx(INFO, "    Read B....... credit");
         PrintAndLogEx(INFO, "    Write A...... debit");
@@ -2446,8 +2446,9 @@ static int CmdHFiClass_loclass(const char *Cmd) {
 }
 
 static void detect_credential(uint8_t *data, bool *legacy, bool *se, bool *sr) {
-    char* r1 = strstr((char*)data + (5 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF");
-    char* r2 = strstr((char*)data + (11 * 8), "\x05\x00\x05\x00");
+    bool r1 = !memcmp(data + (5 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
+    uint8_t pattern[] = {0x05, 0x00, 0x05, 0x00};
+    bool r2 = byte_strstr(data + (11 * 8), 6 * 8, pattern, sizeof(pattern)) != -1;
 
     *legacy = (r1) && (data[6 * 8] != 0x30);
     *se = (r2) && (data[6 * 8] == 0x30);
@@ -2461,40 +2462,31 @@ static void printIclassSIO(uint8_t *iclass_dump) {
     bool isLegacy, isSE, isSR;
     detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
 
-    uint8_t pattern[] = {0x05, 0x00, 0x05, 0x00};
+    uint8_t *sio_start;
     if (isSE) {
-
-        int dlen = byte_strstr(iclass_dump + (6 * 8), 8*8, pattern, sizeof(pattern));
-        if (dlen) {
-
-            dlen += sizeof(pattern);
-
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
-            print_hex_noascii_break(iclass_dump + (6*8), dlen, 32);
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
-            asn1_print(iclass_dump + (6 * 8), dlen, "  ");
-            PrintAndLogEx(NORMAL, "");
-        }
+        sio_start = iclass_dump + (6 * 8);
+    } else if (isSR) {
+        sio_start = iclass_dump + (10 * 8);
+    } else {
+        return;
     }
 
-    if (isSR) {
-
-        int dlen = byte_strstr(iclass_dump + (10 * 8), 8*8, pattern, sizeof(pattern));
-
-        if (dlen) {
-            dlen += sizeof(pattern);
-
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
-            print_hex_noascii_break(iclass_dump + (10*8), dlen, 32);
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
-            asn1_print(iclass_dump + (10 * 8), dlen, "  ");
-            PrintAndLogEx(NORMAL, "");
-        }
+    uint8_t pattern[] = {0x05, 0x00, 0x05, 0x00};
+    int dlen = byte_strstr(sio_start, 8 * 8, pattern, sizeof(pattern));
+    if (dlen == -1) {
+        return;
     }
+
+    dlen += sizeof(pattern);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
+    print_hex_noascii_break(sio_start, dlen, 32);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
+    asn1_print(sio_start, dlen, "  ");
+    PrintAndLogEx(NORMAL, "");
+
 }
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
@@ -2539,8 +2531,10 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     */
     uint8_t pagemap = get_pagemap(hdr);
 
-    bool isLegacy, isSE, isSR;
-    detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
+    bool isLegacy = false, isSE = false, isSR = false;
+    if (filemaxblock >= 17) {
+        detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
+    }
 
     int i = startblock;
     PrintAndLogEx(NORMAL, "");
@@ -4128,4 +4122,3 @@ int info_iclass(void) {
 
     return PM3_SUCCESS;
 }
-

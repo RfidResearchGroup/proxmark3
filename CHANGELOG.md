@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Changed `hf iclass list` to display matched keys on the CHECK command rather than the card response, and made it check for elite keys too (@nvx)
+ - Fixed `hf iclass info` and `hf iclass view` key access info looking at the wrong card config bit (@nvx)
  - Added `hf gallagher decode` command and fix Gallagher diversification for card master key (@nvx)
  - Added mmbit-002 (kibi-002, kb5004xk1) russian tag to `hf texkom read` command (@merlokk)
  - Added `hf sniff --smode` skip/group adc data to consume less memory. Now it can sniff very long signals (@merlokk)
