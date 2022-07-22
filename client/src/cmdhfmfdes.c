@@ -149,6 +149,15 @@ typedef enum {
     NTAG413DNA,
 } nxp_cardtype_t;
 
+typedef enum {
+    DESFIRE_UNKNOWN_PROD = 0,
+    DESFIRE_PHYSICAL,
+    DESFIRE_LIGHT_PHYSICAL,
+    DESFIRE_MICROCONTROLLER,
+    DESFIRE_JAVACARD,
+    DESFIRE_HCE,
+} nxp_producttype_t;
+
 typedef struct dfname {
     uint8_t aid[3];
     uint8_t fid[2];
@@ -297,6 +306,43 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return NTAG413DNA;
     return DESFIRE_UNKNOWN;
 }
+
+// ref:  https://www.nxp.com/docs/en/application-note/AN12343.pdf  p7
+static nxp_producttype_t getProductType(uint8_t *versionhw) {
+
+    uint8_t product = versionhw[2];
+
+    if (product == 0x01)
+        return DESFIRE_PHYSICAL;
+    if (product == 0x08)
+        return DESFIRE_LIGHT_PHYSICAL;
+    if (product == 0x81 || product == 0x83)
+        return DESFIRE_MICROCONTROLLER;
+    if (product == 0x91)
+        return DESFIRE_JAVACARD;
+    if (product == 0xA1)
+        return DESFIRE_HCE;
+    return DESFIRE_UNKNOWN_PROD;
+}
+
+static const char* getProductTypeStr(uint8_t *versionhw) {
+
+    uint8_t product = versionhw[2];
+
+    if (product == 0x01)
+        return "MIFARE DESFire native IC (physical card)";
+    if (product == 0x08)
+        return "MIFARE DESFire Light native IC (physical card)";
+    if (product == 0x81 || product == 0x83)
+        return "MIFARE DESFire implementation on microcontroller (physical card)";
+    if (product == 0x91)
+        return "MIFARE DESFire applet on Java card / secure element";
+    if (product == 0xA1)
+        return "MIFARE DESFire HCE (MIFARE 2GO)";
+    return "UNKNOWN PROD";
+}
+
+
 
 static int mfdes_get_info(mfdes_info_res_t *info) {
     SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
@@ -627,6 +673,12 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(info.uid, info.uidlen));
     PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(info.details + 7, 5));
     PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), info.details[12], info.details[13]);
+
+    nxp_producttype_t prodtype = getProductType(info.versionHW);
+    if (prodtype != DESFIRE_UNKNOWN_PROD) {
+        PrintAndLogEx(SUCCESS, "     Product type: %s", getProductTypeStr(info.versionHW));
+    }
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
     PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info.versionHW, sizeof(info.versionHW)));
@@ -646,7 +698,6 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  info.versionSW[3], info.versionSW[4]);
     PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(info.versionSW[5]));
     PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(info.versionSW[6], false));
-
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("Card capabilities") " ---------------------------------");
     uint8_t major = info.versionSW[3];
