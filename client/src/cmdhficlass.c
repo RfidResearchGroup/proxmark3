@@ -588,8 +588,8 @@ static void mem_app_config(const picopass_hdr_t *hdr) {
 
     PrintAndLogEx(INFO, "------------------------- " _CYAN_("KeyAccess") " ------------------------");
     PrintAndLogEx(INFO, " * Kd, Debit key, AA1    Kc, Credit key, AA2 *");
-    uint8_t book = isset(mem, 0x20);
-    if (book) {
+    uint8_t keyAccess = isset(mem, 0x01);
+    if (keyAccess) {
         PrintAndLogEx(INFO, "    Read A....... debit");
         PrintAndLogEx(INFO, "    Read B....... credit");
         PrintAndLogEx(INFO, "    Write A...... debit");
