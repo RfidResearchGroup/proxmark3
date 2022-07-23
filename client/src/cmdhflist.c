@@ -884,18 +884,40 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             for (uint8_t i = 0; i < 2; i++, pos++) {
                 bool found_annotation = true;
 
+                uint8_t *data = cmd + pos + 1;
+                // if the byte prior to the command is 90 the command is wrapped, so data starts 3 bytes later
+                if (i > 0 && cmd[pos - 1] == 0x90) {
+                    data += 3;
+                }
+                uint8_t data_size = 0;
+                if (cmdsize > (data - cmd)) {
+                    data_size = cmdsize - (data - cmd);
+                }
+
                 switch (cmd[pos]) {
                     case MFDES_CREATE_APPLICATION:
-                        snprintf(exp, size, "CREATE APPLICATION");
+                        if (data_size >= 3) {
+                            snprintf(exp, size, "CREATE APPLICATION (appId %06x)", MemLeToUint3byte(data));
+                        } else {
+                            snprintf(exp, size, "CREATE APPLICATION");
+                        }
                         break;
                     case MFDES_DELETE_APPLICATION:
-                        snprintf(exp, size, "DELETE APPLICATION");
+                        if (data_size >= 3) {
+                            snprintf(exp, size, "DELETE APPLICATION (appId %06x)", MemLeToUint3byte(data));
+                        } else {
+                            snprintf(exp, size, "DELETE APPLICATION");
+                        }
                         break;
                     case MFDES_GET_APPLICATION_IDS:
                         snprintf(exp, size, "GET APPLICATION IDS");
                         break;
                     case MFDES_SELECT_APPLICATION:
-                        snprintf(exp, size, "SELECT APPLICATION");
+                        if (data_size >= 3) {
+                            snprintf(exp, size, "SELECT APPLICATION (appId %06x)", MemLeToUint3byte(data));
+                        } else {
+                            snprintf(exp, size, "SELECT APPLICATION");
+                        }
                         break;
                     case MFDES_FORMAT_PICC:
                         snprintf(exp, size, "FORMAT PICC");
@@ -904,31 +926,67 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         snprintf(exp, size, "GET VERSION");
                         break;
                     case MFDES_READ_DATA:
-                        snprintf(exp, size, "READ DATA");
+                        if (data_size >= 7) {
+                            snprintf(exp, size, "READ DATA (fileId %02x, offset %d, len %d)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                        } else {
+                            snprintf(exp, size, "READ DATA");
+                        }
                         break;
                     case MFDES_WRITE_DATA:
-                        snprintf(exp, size, "WRITE DATA");
+                        if (data_size >= 7) {
+                            snprintf(exp, size, "WRITE DATA (fileId %02x, offset %d, len %d)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                        } else {
+                            snprintf(exp, size, "WRITE DATA");
+                        }
                         break;
                     case MFDES_GET_VALUE:
-                        snprintf(exp, size, "GET VALUE");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "GET VALUE (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "GET VALUE");
+                        }
                         break;
                     case MFDES_CREDIT:
-                        snprintf(exp, size, "CREDIT");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "CREDIT (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "CREDIT");
+                        }
                         break;
                     case MFDES_DEBIT:
-                        snprintf(exp, size, "DEBIT");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "DEBIT (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "DEBIT");
+                        }
                         break;
                     case MFDES_LIMITED_CREDIT:
-                        snprintf(exp, size, "LIMITED CREDIT");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "LIMITED CREDIT (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "LIMITED CREDIT");
+                        }
                         break;
                     case MFDES_WRITE_RECORD:
-                        snprintf(exp, size, "WRITE RECORD");
+                        if (data_size >= 7) {
+                            snprintf(exp, size, "WRITE RECORD (fileId %02x, offset %d, len %d)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                        } else {
+                            snprintf(exp, size, "WRITE RECORD");
+                        }
                         break;
                     case MFDES_READ_RECORDS:
-                        snprintf(exp, size, "READ RECORDS");
+                        if (data_size >= 7) {
+                            snprintf(exp, size, "READ RECORDS (fileId %02x, offset %d, len %d)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                        } else {
+                            snprintf(exp, size, "READ RECORDS");
+                        }
                         break;
                     case MFDES_CLEAR_RECORD_FILE:
-                        snprintf(exp, size, "CLEAR RECORD FILE");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "CLEAR RECORD FILE (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "CLEAR RECORD FILE");
+                        }
                         break;
                     case MFDES_COMMIT_TRANSACTION:
                         snprintf(exp, size, "COMMIT TRANSACTION");
@@ -949,57 +1007,87 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         snprintf(exp, size, "GET ISOFILE IDS");
                         break;
                     case MFDES_GET_FILE_SETTINGS:
-                        snprintf(exp, size, "GET FILE SETTINGS");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "GET FILE SETTINGS (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "GET FILE SETTINGS");
+                        }
                         break;
                     case MFDES_CHANGE_FILE_SETTINGS:
-                        snprintf(exp, size, "CHANGE FILE SETTINGS");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "CHANGE FILE SETTINGS (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "CHANGE FILE SETTINGS");
+                        }
                         break;
                     case MFDES_CREATE_STD_DATA_FILE:
-                        snprintf(exp, size, "CREATE STD DATA FILE");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "CREATE STD DATA FILE (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "CREATE STD DATA FILE");
+                        }
                         break;
                     case MFDES_CREATE_BACKUP_DATA_FILE:
-                        snprintf(exp, size, "CREATE BACKUP DATA FILE");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "CREATE BACKUP DATA FILE (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "CREATE BACKUP DATA FILE");
+                        }
                         break;
                     case MFDES_CREATE_VALUE_FILE:
-                        snprintf(exp, size, "CREATE VALUE FILE");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "CREATE VALUE FILE (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "CREATE VALUE FILE");
+                        }
                         break;
                     case MFDES_CREATE_LINEAR_RECORD_FILE:
-                        snprintf(exp, size, "CREATE LINEAR RECORD FILE");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "CREATE LINEAR RECORD FILE (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "CREATE LINEAR RECORD FILE");
+                        }
                         break;
                     case MFDES_CREATE_CYCLIC_RECORD_FILE:
-                        snprintf(exp, size, "CREATE CYCLIC RECORD FILE");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "CREATE CYCLIC RECORD FILE (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "CREATE CYCLIC RECORD FILE");
+                        }
                         break;
                     case MFDES_CREATE_TRANS_MAC_FILE:
-                        snprintf(exp, size, "CREATE TRANSACTION MAC FILE");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "CREATE TRANSACTION MAC FILE (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "CREATE TRANSACTION MAC FILE");
+                        }
                         break;
                     case MFDES_DELETE_FILE:
-                        snprintf(exp, size, "DELETE FILE");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "DELETE FILE (fileId %02x)", data[0]);
+                        } else {
+                            snprintf(exp, size, "DELETE FILE");
+                        }
                         break;
                     case MFDES_AUTHENTICATE:
-                        if (cmdsize > 6) {
-                            //Assume wrapped
-                            snprintf(exp, size, "AUTH NATIVE (keyNo %d)", cmd[pos + 4]);
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "AUTH NATIVE (keyNo %d)", data[0]);
                         } else {
-                            //Assume unwrapped
-                            snprintf(exp, size, "AUTH NATIVE (keyNo %d)", cmd[pos + 1]);
+                            snprintf(exp, size, "AUTH NATIVE");
                         }
                         break;  // AUTHENTICATE_NATIVE
                     case MFDES_AUTHENTICATE_ISO:
-                        if (cmdsize > 6) {
-                            //Assume wrapped
-                            snprintf(exp, size, "AUTH ISO (keyNo %d)", cmd[pos + 4]);
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "AUTH ISO (keyNo %d)", data[0]);
                         } else {
-                            //Assume unwrapped
-                            snprintf(exp, size, "AUTH ISO (keyNo %d)", cmd[pos + 1]);
+                            snprintf(exp, size, "AUTH ISO");
                         }
                         break;  // AUTHENTICATE_STANDARD
                     case MFDES_AUTHENTICATE_AES:
-                        if (cmdsize > 6) {
-                            //Assume wrapped
-                            snprintf(exp, size, "AUTH AES (keyNo %d)", cmd[pos + 4]);
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "AUTH AES (keyNo %d)", data[0]);
                         } else {
-                            //Assume unwrapped
-                            snprintf(exp, size, "AUTH AES (keyNo %d)", cmd[pos + 1]);
+                            snprintf(exp, size, "AUTH AES");
                         }
                         break;
                     case MFDES_AUTHENTICATE_EV2F:
@@ -1015,10 +1103,18 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         snprintf(exp, size, "GET KEY SETTINGS");
                         break;
                     case MFDES_CHANGE_KEY:
-                        snprintf(exp, size, "CHANGE KEY");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "CHANGE KEY (keyNo %d)", data[0]);
+                        } else {
+                            snprintf(exp, size, "CHANGE KEY");
+                        }
                         break;
                     case MFDES_GET_KEY_VERSION:
-                        snprintf(exp, size, "GET KEY VERSION");
+                        if (data_size >= 1) {
+                            snprintf(exp, size, "GET KEY VERSION (keyNo %d)", data[0]);
+                        } else {
+                            snprintf(exp, size, "GET KEY VERSION");
+                        }
                         break;
                     case MFDES_ADDITIONAL_FRAME:
                         snprintf(exp, size, "AUTH FRAME / NEXT FRAME");
