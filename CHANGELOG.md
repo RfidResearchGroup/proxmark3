@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf iclass view` and related to suppress consecutive blocks with repeated contents with a `-z` flag, or `prefs set output --dense` (@nvx)
  - Changed `hf iclass list` to display matched keys on the CHECK command rather than the card response, and made it check for elite keys too (@nvx)
  - Fixed `hf iclass info` and `hf iclass view` key access info looking at the wrong card config bit (@nvx)
  - Added `hf gallagher decode` command and fix Gallagher diversification for card master key (@nvx)
