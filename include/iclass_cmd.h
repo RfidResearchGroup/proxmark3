@@ -82,6 +82,7 @@ typedef struct {
 typedef struct {
     iclass_auth_req_t req;
     uint8_t data[8];
+    uint8_t mac[4];
 } PACKED iclass_writeblock_req_t;
 
 // iCLASS dump data structure
