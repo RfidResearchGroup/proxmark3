@@ -2476,13 +2476,17 @@ static int CmdHFiClass_loclass(const char *Cmd) {
 
 static void detect_credential(uint8_t *data, bool *legacy, bool *se, bool *sr) {
     bool r1 = !memcmp(data + (5 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
-    uint8_t pattern[] = {0x05, 0x00, 0x05, 0x00};
-    bool r2 = byte_strstr(data + (11 * 8), 6 * 8, pattern, sizeof(pattern)) != -1;
+
+    uint8_t pattern_se[] = {0x05, 0x00};
+    bool r2 = byte_strstr(data + (6 * 8), 6 * 8, pattern_se, sizeof(pattern_se)) != -1;
+
+    uint8_t pattern_sr[] = {0x05, 0x00, 0x05, 0x00};
+    bool r3 = byte_strstr(data + (11 * 8), 6 * 8, pattern_sr, sizeof(pattern_sr)) != -1;
 
     *legacy = (r1) && (data[6 * 8] != 0x30);
     *se = (r2) && (data[6 * 8] == 0x30);
-    *sr = (r2) && (data[10 * 8] == 0x30);
-    r1 = NULL, r2 = NULL;
+    *sr = (r3) && (data[10 * 8] == 0x30);
+    r1 = NULL, r2 = NULL, r3 = NULL;
 }
 
 // print ASN1 decoded array in TLV view
@@ -2491,22 +2495,29 @@ static void printIclassSIO(uint8_t *iclass_dump) {
     bool isLegacy, isSE, isSR;
     detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
 
+    int dlen = 0;
     uint8_t *sio_start;
     if (isSE) {
+
         sio_start = iclass_dump + (6 * 8);
+        uint8_t pattern_se[] = {0x05, 0x00};
+        dlen = byte_strstr(sio_start, 8 * 8, pattern_se, sizeof(pattern_se));
+        if (dlen == -1) {
+            return;
+        }
+        dlen += sizeof(pattern_se);
     } else if (isSR) {
+
         sio_start = iclass_dump + (10 * 8);
+        uint8_t pattern_sr[] = {0x05, 0x00, 0x05, 0x00};
+        dlen = byte_strstr(sio_start, 8 * 8, pattern_sr, sizeof(pattern_sr));
+        if (dlen == -1) {
+            return;
+        }
+        dlen += sizeof(pattern_sr);
     } else {
         return;
     }
-
-    uint8_t pattern[] = {0x05, 0x00, 0x05, 0x00};
-    int dlen = byte_strstr(sio_start, 8 * 8, pattern, sizeof(pattern));
-    if (dlen == -1) {
-        return;
-    }
-
-    dlen += sizeof(pattern);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
@@ -2515,7 +2526,6 @@ static void printIclassSIO(uint8_t *iclass_dump) {
     PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
     asn1_print(sio_start, dlen, "  ");
     PrintAndLogEx(NORMAL, "");
-
 }
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize, bool dense_output) {
@@ -2686,7 +2696,8 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
                 // in a repeating block, but the next block doesn't match anymore, or we're at the end block
                 in_repeated_block = false;
             }
-            if (!in_repeated_block) {
+
+            if (in_repeated_block == false) {
                 PrintAndLogEx(INFO,
                               "%3d/0x%02X | %s | %s | %s ",
                               i,
