@@ -660,6 +660,10 @@ static int CmdHFiClassSniff(const char *Cmd) {
     bool jam_epurse_update = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
+    if (jam_epurse_update) {
+        PrintAndLogEx(INFO, "Sniff with jam of iCLASS e-purse updates...");
+    }
+
     const uint8_t update_epurse_sequence[2] = {0x87, 0x02};
 
     struct {
@@ -2659,7 +2663,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
                 // we're in a user block that isn't the first user block nor last two user blocks,
                 // and the current block data is the same as the previous and next two block
                 in_repeated_block = true;
-                PrintAndLogEx(INFO, "*");
+                PrintAndLogEx(INFO, "  ......");
             } else if (in_repeated_block && (memcmp(blk, blk + 8, 8) || i == endblock)) {
                 // in a repeating block, but the next block doesn't match anymore, or we're at the end block
                 in_repeated_block = false;
@@ -3564,6 +3568,8 @@ void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elit
 
     for (int i = 0; i < iclass_tc; i++)
         pthread_join(threads[i], NULL);
+
+    PrintAndLogEx(NORMAL, "");
 }
 
 // print diversified keys
