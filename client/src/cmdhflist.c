@@ -464,10 +464,17 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
                 curr_state = PICO_NONE;
                 break;
             case ICLASS_CMD_CHECK:
-                snprintf(exp, size, "CHECK");
                 curr_state = PICO_AUTH_MACS;
                 memcpy(rmac, cmd + 1, 4);
                 memcpy(tmac, cmd + 5, 4);
+
+                uint8_t key[8];
+                if (check_known_default(csn, epurse, rmac, tmac, key)) {
+                    snprintf(exp, size, "CHECK ( %s )", sprint_hex_inrow(key, 8));
+                } else {
+                    snprintf(exp, size, "CHECK");
+                }
+
                 break;
             case ICLASS_CMD_READ4:
                 snprintf(exp, size, "READ4(%d)", cmd[1]);
@@ -516,11 +523,7 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
         } else if (curr_state == PICO_AUTH_EPURSE) {
             memcpy(epurse, cmd, 8);
         } else if (curr_state == PICO_AUTH_MACS) {
-
-            uint8_t key[8];
-            if (check_known_default(csn, epurse, rmac, tmac, key)) {
-                snprintf(exp, size, "( " _GREEN_("%s") " )", sprint_hex_inrow(key, 8));
-            }
+            snprintf(exp, size, _GREEN_("CHECK SUCCESS"));
             curr_state = PICO_NONE;
         }
     }
