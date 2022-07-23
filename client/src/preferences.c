@@ -63,6 +63,7 @@ int preferences_load(void) {
     g_session.overlay.w = g_session.plot.w;
     g_session.overlay_sliders = true;
     g_session.show_hints = true;
+    g_session.dense_output = false;
 
     g_session.bar_mode = STYLE_VALUE;
     setDefaultPath(spDefault, "");
@@ -184,6 +185,8 @@ void preferences_save_callback(json_t *root) {
     }
 
     JsonSaveBoolean(root, "show.hints", g_session.show_hints);
+
+    JsonSaveBoolean(root, "output.dense", g_session.dense_output);
 
     JsonSaveBoolean(root, "os.supports.colors", g_session.supports_colors);
 
@@ -318,6 +321,9 @@ void preferences_load_callback(json_t *root) {
 
     if (json_unpack_ex(root, &up_error, 0, "{s:b}", "show.hints", &b1) == 0)
         g_session.show_hints = (bool)b1;
+
+    if (json_unpack_ex(root, &up_error, 0, "{s:b}", "output.dense", &b1) == 0)
+        g_session.dense_output = (bool)b1;
 
     if (json_unpack_ex(root, &up_error, 0, "{s:b}", "os.supports.colors", &b1) == 0)
         g_session.supports_colors = (bool)b1;
@@ -515,6 +521,11 @@ static void showBarModeState(prefShowOpt_t opt) {
         default:
             PrintAndLogEx(INFO, "   %s barmode............... "_RED_("unknown"), prefShowMsg(opt));
     }
+}
+
+static void showOutputState(prefShowOpt_t opt) {
+    PrintAndLogEx(INFO, "   %s output................. %s", prefShowMsg(opt),
+                  g_session.dense_output ? _GREEN_("dense") : _WHITE_("normal"));
 }
 
 static void showClientExeDelayState(void) {
@@ -738,6 +749,49 @@ static int setCmdDeviceDebug (const char *Cmd)
 }
 */
 
+static int setCmdOutput(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs set output",
+                  "Set dump output style to condense consecutive repeated data",
+                  "prefs set output --normal --> sets the output style to normal\n"
+                  "prefs set output --dense  --> sets the output style to dense"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "normal", "normal output"),
+        arg_lit0(NULL, "dense", "dense output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_off = arg_get_lit(ctx, 1);
+    bool use_on = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if ((use_off + use_on) > 1) {
+        PrintAndLogEx(FAILED, "Can only set one option");
+        return PM3_EINVARG;
+    }
+
+    bool new_value = g_session.dense_output;
+    if (use_off) {
+        new_value = false;
+    }
+    if (use_on) {
+        new_value = true;
+    }
+
+    if (g_session.dense_output != new_value) {
+        showOutputState(prefShowOLD);
+        g_session.dense_output = new_value;
+        showOutputState(prefShowNEW);
+        preferences_save();
+    } else {
+        showOutputState(prefShowNone);
+    }
+
+    return PM3_SUCCESS;
+}
 
 static int setCmdExeDelay(const char *Cmd) {
     CLIParserContext *ctx;
@@ -1044,6 +1098,22 @@ static int getCmdDebug(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int getCmdOutput(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get output",
+                  "Get preference of dump output style",
+                  "prefs get output"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    showOutputState(prefShowNone);
+    return PM3_SUCCESS;
+}
+
 static int getCmdPlotSlider(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs get plotsliders",
@@ -1119,6 +1189,7 @@ static command_t CommandTableGet[] = {
     //  {"devicedebug",      getCmdDeviceDebug,   AlwaysAvailable, "Get device debug level"},
     {"emoji",            getCmdEmoji,         AlwaysAvailable, "Get emoji display preference"},
     {"hints",            getCmdHint,          AlwaysAvailable, "Get hint display preference"},
+    {"output",           getCmdOutput,        AlwaysAvailable, "Get dump output style preference"},
     {"plotsliders",      getCmdPlotSlider,    AlwaysAvailable, "Get plot slider display preference"},
     {NULL, NULL, NULL, NULL}
 };
@@ -1133,7 +1204,8 @@ static command_t CommandTableSet[] = {
     {"hints",            setCmdHint,          AlwaysAvailable, "Set hint display"},
     {"savepaths",        setCmdSavePaths,     AlwaysAvailable, "... to be adjusted next ... "},
     //  {"devicedebug",      setCmdDeviceDebug,   AlwaysAvailable, "Set device debug level"},
-    {"plotsliders", setCmdPlotSliders,         AlwaysAvailable, "Set plot slider display"},
+    {"output",           setCmdOutput,        AlwaysAvailable, "Set dump output style"},
+    {"plotsliders",      setCmdPlotSliders,   AlwaysAvailable, "Set plot slider display"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -1189,6 +1261,7 @@ static int CmdPrefShow(const char *Cmd) {
 //    showDeviceDebugState(prefShowNone);
     showBarModeState(prefShowNone);
     showClientExeDelayState();
+    showOutputState(prefShowNone);
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;

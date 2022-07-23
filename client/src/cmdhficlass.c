@@ -38,6 +38,7 @@
 #include "proxendian.h"
 #include "iclass_cmd.h"
 #include "crypto/asn1utils.h"      // ASN1 decoder
+#include "preferences.h"
 
 
 #define PICOPASS_BLOCK_SIZE    8
@@ -1100,6 +1101,7 @@ static int CmdHFiClassEView(const char *Cmd) {
         arg_param_begin,
         arg_int0("s", "size", "<256|2048>", "number of bytes to save (default 256)"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1107,6 +1109,7 @@ static int CmdHFiClassEView(const char *Cmd) {
     uint16_t blocks = 32;
     uint16_t bytes = arg_get_int_def(ctx, 1, 256);
     bool verbose = arg_get_lit(ctx, 2);
+    bool dense_output = g_session.dense_output || arg_get_lit(ctx, 3);
     blocks = bytes / 8;
 
     CLIParserFree(ctx);
@@ -1141,7 +1144,7 @@ static int CmdHFiClassEView(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    printIclassDumpContents(dump, 1, blocks, bytes);
+    printIclassDumpContents(dump, 1, blocks, bytes, dense_output);
 
     if (verbose) {
         printIclassSIO(dump);
@@ -1174,6 +1177,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         arg_str0("k", "key", "<hex>", "3DES transport key"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "d6", "decode as block 6"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(clictx, Cmd, argtable, false);
@@ -1197,6 +1201,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     bool verbose = arg_get_lit(clictx, 4);
     bool use_decode6 = arg_get_lit(clictx, 5);
+    bool dense_output = g_session.dense_output || arg_get_lit(clictx, 6);
     CLIParserFree(clictx);
 
     // sanity checks
@@ -1334,7 +1339,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         pm3_save_dump(fptr, decrypted, decryptedlen, jsfIclass, PICOPASS_BLOCK_SIZE);
 
-        printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
+        printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen, dense_output);
 
         if (verbose) {
             printIclassSIO(decrypted);
@@ -1561,6 +1566,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "raw, the key is interpreted as raw block 3/4"),
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1644,6 +1650,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     bool elite = arg_get_lit(ctx, 6);
     bool rawkey = arg_get_lit(ctx, 7);
     bool use_replay = arg_get_lit(ctx, 8);
+    bool dense_output = g_session.dense_output || arg_get_lit(ctx, 9);
 
     CLIParserFree(ctx);
 
@@ -1876,7 +1883,7 @@ write_dump:
         PrintAndLogEx(INFO, "Reading AA2 failed. dumping AA1 data to file");
 
     // print the dump
-    printIclassDumpContents(tag_data, 1, (bytes_got / 8), bytes_got);
+    printIclassDumpContents(tag_data, 1, (bytes_got / 8), bytes_got, dense_output);
 
     // use CSN as filename
     if (filename[0] == 0) {
@@ -2494,7 +2501,7 @@ static void printIclassSIO(uint8_t *iclass_dump) {
     }
 }
 
-void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
+void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize, bool dense_output) {
 
     picopass_hdr_t *hdr = (picopass_hdr_t *)iclass_dump;
 //    picopass_ns_hdr_t *ns_hdr = (picopass_ns_hdr_t *)iclass_dump;
@@ -2649,8 +2656,8 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 
         if (regular_print_block) {
             // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
-            // but the blocks in between are replaced with a single line of "*"
-            if (i > 6 && i < (endblock - 1) && !in_repeated_block && !memcmp(blk, blk - 8, 8) &&
+            // but the blocks in between are replaced with a single line of "*" if dense_output is enabled
+            if (dense_output && i > 6 && i < (endblock - 1) && !in_repeated_block && !memcmp(blk, blk - 8, 8) &&
                     !memcmp(blk, blk + 8, 8) && !memcmp(blk, blk + 16, 8)) {
                 // we're in a user block that isn't the first user block nor last two user blocks,
                 // and the current block data is the same as the previous and next two block
@@ -2699,6 +2706,7 @@ static int CmdHFiClassView(const char *Cmd) {
         arg_int0(NULL, "first", "<dec>", "Begin printing from this block (default block 6)"),
         arg_int0(NULL, "last", "<dec>", "End printing at this block (default 0, ALL)"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2710,6 +2718,7 @@ static int CmdHFiClassView(const char *Cmd) {
     int startblock = arg_get_int_def(ctx, 2, 0);
     int endblock = arg_get_int_def(ctx, 3, 0);
     bool verbose = arg_get_lit(ctx, 4);
+    bool dense_output = g_session.dense_output || arg_get_lit(ctx, 5);
 
     CLIParserFree(ctx);
 
@@ -2730,7 +2739,7 @@ static int CmdHFiClassView(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     print_picopass_header((picopass_hdr_t *) dump);
     print_picopass_info((picopass_hdr_t *) dump);
-    printIclassDumpContents(dump, startblock, endblock, bytes_read);
+    printIclassDumpContents(dump, startblock, endblock, bytes_read, dense_output);
 
     if (verbose) {
         printIclassSIO(dump);

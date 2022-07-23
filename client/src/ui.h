@@ -47,6 +47,7 @@ typedef struct {
     bool pm3_present;
     bool help_dump_mode;
     bool show_hints;
+    bool dense_output;
     bool window_changed; // track if plot/overlay pos/size changed to save on exit
     qtWindow_t plot;
     qtWindow_t overlay;
