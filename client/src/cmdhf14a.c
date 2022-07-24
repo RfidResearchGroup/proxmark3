@@ -2371,16 +2371,23 @@ int infoHF14A4Applications(bool verbose) {
     return found;
 }
 
-static uint64_t inc_sw_error_occurrence(uint16_t sw, uint64_t all_sw[256][256]) {
+static uint32_t inc_sw_error_occurrence(uint16_t sw, uint32_t *all_sw) {
     uint8_t sw1 = (uint8_t)(sw >> 8);
     uint8_t sw2 = (uint8_t)(0xff & sw);
+
+    // Don't count successes
     if (sw1 == 0x90 && sw2 == 0x00) {
-        return 0; // Don't count successes.
+        return 0;
     }
-    if (sw1 == 0x6d && sw2 == 0x00) {
-        return 0xffffffffffffffffULL; // Always max "Instruction not supported".
+ 
+    // Always max "Instruction not supported"
+    if (sw1 == 0x6D && sw2 == 0x00) {
+        return 0xFFFFFFFFUL;
     }
-    return ++all_sw[sw1][sw2];
+
+    all_sw[(sw1 * 256) + sw2]++;
+
+    return all_sw[(sw1 * 256) + sw2];
 }
 
 static int CmdHf14AFindapdu(const char *Cmd) {
@@ -2416,20 +2423,26 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     int cla_len = 0;
     uint8_t cla_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 1, cla_arg, &cla_len);
+
     int ins_len = 0;
     uint8_t ins_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 2, ins_arg, &ins_len);
+
     int p1_len = 0;
     uint8_t p1_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 3, p1_arg, &p1_len);
+
     int p2_len = 0;
     uint8_t p2_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 4, p2_arg, &p2_len);
+
     uint64_t reset_time = arg_get_u64_def(ctx, 5, 5 * 60);
-    uint64_t error_limit = arg_get_u64_def(ctx, 6, 512);
+    uint32_t error_limit = arg_get_u64_def(ctx, 6, 512);
+
     int ignore_ins_len = 0;
     uint8_t ignore_ins_arg[250] = {0};
     CLIGetHexWithReturn(ctx, 7, ignore_ins_arg, &ignore_ins_len);
+
     bool with_le = arg_get_lit(ctx, 8);
     bool verbose = arg_get_lit(ctx, 9);
 
@@ -2441,7 +2454,8 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     uint8_t ins = ins_arg[0];
     uint8_t p1 = p1_arg[0];
     uint8_t p2 = p2_arg[0];
-    uint8_t response[PM3_CMD_DATA_SIZE];
+
+    uint8_t response[PM3_CMD_DATA_SIZE] = {0};
     int response_n = 0;
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
@@ -2461,8 +2475,9 @@ static int CmdHf14AFindapdu(const char *Cmd) {
 
     bool inc_p1 = false;
     bool skip_ins = false;
-    uint64_t all_sw[256][256] = { { 0 } };
-    uint64_t sw_occurrences = 0;
+    uint32_t all_sw[256][256] = { { 0 } };
+    uint32_t sw_occurrences = 0;
+
     uint64_t t_start = msclock();
     uint64_t t_last_reset = msclock();
 
@@ -2484,6 +2499,7 @@ retry_ins:
                         break;
                     }
                 }
+
                 if (skip_ins) {
                     skip_ins = false;
                     continue;
@@ -2504,8 +2520,9 @@ retry_ins:
                         activate_field = true;
                         goto retry_ins;
                     }
+
                     uint16_t sw = get_sw(response, response_n);
-                    sw_occurrences = inc_sw_error_occurrence(sw, all_sw);
+                    sw_occurrences = inc_sw_error_occurrence(sw, all_sw[0]);
 
                     // Show response.
                     if (sw_occurrences < error_limit) {
@@ -2530,15 +2547,19 @@ retry_ins:
                         }
                     }
                 }
-                activate_field = false; // Do not reativate the filed until the next reset.
+                // Do not reativate the filed until the next reset.
+                activate_field = false;
             } while (++ins != ins_arg[0]);
+
             // Increment P1/P2 in an alternating fashion.
             if (inc_p1) {
                 p1++;
             } else {
                 p2++;
             }
+
             inc_p1 = !inc_p1;
+
             // Check if re-selecting the card is needed.
             uint64_t t_since_last_reset = ((msclock() - t_last_reset) / 1000);
             if (t_since_last_reset > reset_time) {
@@ -2548,9 +2569,12 @@ retry_ins:
                 PrintAndLogEx(INFO, "Last reset was %" PRIu64 " seconds ago. Resetting the tag to prevent timeout issues", t_since_last_reset);
             }
             PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
+
         } while (p1 != p1_arg[0] || p2 != p2_arg[0]);
+
         cla++;
         PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
+
     } while (cla != cla_arg[0]);
 
 out:
