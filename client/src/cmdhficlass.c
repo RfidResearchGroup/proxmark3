@@ -3598,7 +3598,6 @@ void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elit
     for (int i = 0; i < iclass_tc; i++)
         pthread_join(threads[i], NULL);
 
-    PrintAndLogEx(NORMAL, "");
 }
 
 // print diversified keys
