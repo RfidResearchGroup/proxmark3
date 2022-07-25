@@ -33,7 +33,7 @@
 // Example width set to 50 to allow help descriptions to align.  approx line 93
 
 int CLIParserInit(CLIParserContext **ctx, const char *vprogramName, const char *vprogramHint, const char *vprogramHelp) {
-    *ctx = malloc(sizeof(CLIParserContext));
+    *ctx = calloc(sizeof(CLIParserContext), sizeof(uint8_t));
     if (!*ctx) {
         PrintAndLogEx(ERR, "ERROR: Insufficient memory\n");
         return 2;
