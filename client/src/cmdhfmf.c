@@ -3866,6 +3866,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "ul", "MIFARE Ultralight family"),
+        arg_lit0("a", "amiibo", "Treat MIFARE Ultralight as Amiibo"),
         arg_int0("q", "qty", "<dec>", "manually set number of blocks (overrides)"),
         arg_param_end
     };
@@ -3880,8 +3881,9 @@ int CmdHF14AMfELoad(const char *Cmd) {
     bool m2 = arg_get_lit(ctx, 4);
     bool m4 = arg_get_lit(ctx, 5);
     bool mu = arg_get_lit(ctx, 6);
+    bool ma = arg_get_lit(ctx, 7);
 
-    int numblks = arg_get_int_def(ctx, 7, -1);
+    int numblks = arg_get_int_def(ctx, 8, -1);
 
     CLIParserFree(ctx);
 
@@ -3891,6 +3893,10 @@ int CmdHF14AMfELoad(const char *Cmd) {
         return PM3_EINVARG;
     } else if ((m0 + m1 + m2 + m4 + mu) == 0) {
         m1 = true;
+    }
+    if (ma && !mu) {
+        PrintAndLogEx(WARNING, "Amiibo only valid with MIFARE Ultralight Family");
+        return PM3_EINVARG;
     }
 
     uint8_t block_width = 16;
@@ -3936,12 +3942,35 @@ int CmdHF14AMfELoad(const char *Cmd) {
     }
 
     // convert plain or old mfu format to new format
+    uint8_t uid[7] = {0, 0, 0, 0, 0, 0, 0};
     if (block_width == MFU_BLOCK_SIZE) {
         res = convert_mfu_dump_format(&data, &bytes_read, true);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
             free(data);
             return res;
+        }
+
+        if (ma) {
+            uint8_t *d = data + hdr_len;
+            uid[0] = d[0];
+            uid[1] = d[1];
+            uid[2] = d[2];
+            uid[3] = d[4];
+            uid[4] = d[5];
+            uid[5] = d[6];
+            uid[6] = d[7];
+            uint32_t *p = (uint32_t *) d;
+            if (p[133] == 0) { // pwd
+                uint32_t u1 = (uid[1] << 24) | (uid[2] << 16) | (uid[3] << 8) | uid[4];
+                uint32_t u2 = (uid[3] << 24) | (uid[4] << 16) | (uid[5] << 8) | uid[6];
+                p[133] = BSWAP_32(u1 ^ u2 ^ 0xaa55aa55);
+                PrintAndLogEx(INFO, "recalculated PWD: %04X", p[133]);
+            }
+            if (p[134] == 0) { // ack
+                p[134] = 0x80808080;
+                PrintAndLogEx(INFO, "patched ACK: %04X", p[134]);
+            }
         }
 
         mfu_dump_t *mfu_dump = (mfu_dump_t *)data;
@@ -3983,7 +4012,11 @@ int CmdHF14AMfELoad(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     if (block_width == MFU_BLOCK_SIZE) {
-        PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mfu sim -h`"));
+        if (!ma) {
+            PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mfu sim -h`"));
+        } else {
+            PrintAndLogEx(HINT, "You are ready to simulate an Amiibo.  Try " _YELLOW_("`hf mfu sim -t 7 -u %02X%02X%02X%02X%02X%02X%02X`"), uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]);
+        }
         // MFU / NTAG
         if ((cnt != block_cnt)) {
             PrintAndLogEx(WARNING, "Warning, Ultralight/Ntag file content, Loaded %d blocks of expected %d blocks into emulator memory", cnt, block_cnt);

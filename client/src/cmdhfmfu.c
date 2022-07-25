@@ -2695,12 +2695,14 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
                   "Load emulator memory with data from (bin/eml/json) dump file\n",
                   "hf mfu eload -f hf-mfu-04010203040506.bin\n"
                   "hf mfu eload -f hf-mfu-04010203040506.bin -q 57   -> load 57 blocks from myfile"
+                  "hf mfu eload -f hf-mfu-04010203040506.bin -a -> load myfile and treat as Amiibo"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Filename of dump"),
         arg_int0("q", "qty", "<dec>", "Number of blocks to load from eml file"),
+        arg_lit0("a", "amiibo", "Treat dump as Amiibo"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
