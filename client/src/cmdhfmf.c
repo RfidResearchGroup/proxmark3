@@ -3421,18 +3421,22 @@ void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, boo
 static int CmdHF14AMfSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf sim",
-                  "Simulate MIFARE Classic card",
+                  "Simulate MIFARE Classic family type based upon\n"
+                  "ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n"
+                  "from emulator memory.  See `hf mf eload` first.\n"
+                  "The UID from emulator memory will be used if not specified.",
                   "hf mf sim --mini                    --> MIFARE Mini\n"
                   "hf mf sim --1k                      --> MIFARE Classic 1k (default)\n"
                   "hf mf sim --1k -u 0a0a0a0a          --> MIFARE Classic 1k with 4b UID\n"
                   "hf mf sim --1k -u 11223344556677    --> MIFARE Classic 1k with 7b UID\n"
                   "hf mf sim --1k -u 11223344 -i -x    --> Perform reader attack in interactive mode\n"
                   "hf mf sim --2k                      --> MIFARE 2k\n"
-                  "hf mf sim --4k                      --> MIFARE 4k");
+                  "hf mf sim --4k                      --> MIFARE 4k"
+                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("u", "uid", "<hex>", "UID 4,7 or 10bytes. If not specified, the UID 4b/7b from emulator memory will be used"),
+        arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),

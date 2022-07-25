@@ -2716,6 +2716,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
     int res = CmdHF14AMfELoad(nc);
     free(nc);
 
+    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfu sim -t 7`") " to simulate an Amiibo.");
     return res;
 }
 //
@@ -2727,9 +2728,11 @@ static int CmdHF14AMfUSim(const char *Cmd) {
                   "Simulate MIFARE Ultralight family type based upon\n"
                   "ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n"
                   "from emulator memory.  See `hf mfu eload` first. \n"
+                  "The UID from emulator memory will be used if not specified.\n"
                   "See `hf 14a sim -h` to see available types. You want 2 or 7 usually.",
                   "hf mfu sim -t 2 --uid 11223344556677        -> MIFARE Ultralight\n"
-                  "hf mfu sim -t 7 --uid 11223344556677 -n 5   -> AMIIBO (NTAG 215),  pack 0x8080"
+                  "hf mfu sim -t 7 --uid 11223344556677 -n 5   -> Amiibo (NTAG 215),  pack 0x8080\n"
+                  "hf mfu sim -t 7                             -> Amiibo (NTAG 215),  pack 0x8080"
                  );
 
     void *argtable[] = {
