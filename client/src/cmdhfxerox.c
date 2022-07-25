@@ -470,7 +470,7 @@ static int CmdHFXeroxReader(const char *Cmd) {
                   "Act as a 14443B reader to identify a tag",
                   "hf xerox reader\n"
                   "hf xerox reader -@ \n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -495,7 +495,7 @@ static int CmdHFXeroxInfo(const char *Cmd) {
     CLIParserInit(&ctx, "hf xerox info",
                   "Tag information for ISO/IEC 14443 type B / XEROX based tags",
                   "hf xerox info"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,

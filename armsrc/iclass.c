@@ -1850,17 +1850,17 @@ void iClass_WriteBlock(uint8_t *msg) {
         if (payload->req.use_replay) {
             memcpy(write + 10, payload->mac, sizeof(payload->mac));
         } else {
-        // Secure tags uses MAC
-        uint8_t wb[9];
-        wb[0] = payload->req.blockno;
-        memcpy(wb + 1, payload->data, 8);
+            // Secure tags uses MAC
+            uint8_t wb[9];
+            wb[0] = payload->req.blockno;
+            memcpy(wb + 1, payload->data, 8);
 
-        if (payload->req.use_credit_key)
-            doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
-        else
-            doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
+            if (payload->req.use_credit_key)
+                doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
+            else
+                doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
 
-        memcpy(write + 10, mac, sizeof(mac));
+            memcpy(write + 10, mac, sizeof(mac));
         }
     }
 

@@ -58,7 +58,7 @@ static void RAMFUNC skipSniff(uint8_t *dest, uint16_t dsize, uint8_t skipMode, u
                 case HF_SNOOP_SKIP_AVG:
                     accum += (val & 0xff) + (val & 0xff);
                     break;
-                default: { // HF_SNOOP_SKIP_DROP and the rest 
+                default: { // HF_SNOOP_SKIP_DROP and the rest
                     if (ratioindx == 0)
                         accum = val & 0xff;
                 }

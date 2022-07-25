@@ -1236,20 +1236,20 @@ inline uint64_t leadingzeros64(uint64_t a) {
 }
 
 
-int byte_strstr(uint8_t* src, size_t srclen, uint8_t* pattern, size_t plen) {
+int byte_strstr(uint8_t *src, size_t srclen, uint8_t *pattern, size_t plen) {
 
     size_t max = srclen - plen + 1;
 
     for (size_t i = 0; i < max; i++) {
 
         // compare only first byte
-        if (src[i] != pattern[0]) 
+        if (src[i] != pattern[0])
             continue;
-        
+
         // try to match rest of the pattern
         for (int j = plen - 1; j >= 1; j--) {
 
-            if (src[i + j] != pattern[j]) 
+            if (src[i + j] != pattern[j])
                 break;
 
             if (j == 1)

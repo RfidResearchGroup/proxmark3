@@ -303,7 +303,7 @@ int CmdHFTune(const char *Cmd) {
 
 typedef enum {
     HF_SNOOP_SKIP_NONE = 0x00,
-    HF_SNOOP_SKIP_DROP = 0x01, 
+    HF_SNOOP_SKIP_DROP = 0x01,
     HF_SNOOP_SKIP_MAX = 0x02,
     HF_SNOOP_SKIP_MIN = 0x03,
     HF_SNOOP_SKIP_AVG = 0x04
@@ -364,10 +364,10 @@ int CmdHFSniff(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (params.skipMode != HF_SNOOP_SKIP_NONE) {
-        PrintAndLogEx(INFO, "Skip mode. Function: %s, each: %d sample", 
-            CLIGetOptionListStr(HFSnoopSkipModeOpts, params.skipMode),
-            params.skipRatio * 2
-        );
+        PrintAndLogEx(INFO, "Skip mode. Function: %s, each: %d sample",
+                      CLIGetOptionListStr(HFSnoopSkipModeOpts, params.skipMode),
+                      params.skipRatio * 2
+                     );
     }
 
     clearCommandBuffer();
@@ -479,7 +479,7 @@ static command_t CommandTable[] = {
     {"emrtd",       CmdHFeMRTD,       AlwaysAvailable, "{ Machine Readable Travel Document... }"},
     {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / FeliCa RFIDs...          }"},
     {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators...    }"},
-    {"fudan",       CmdHFFudan,       AlwaysAvailable, "{ Fudan RFIDs...                      }"},    
+    {"fudan",       CmdHFFudan,       AlwaysAvailable, "{ Fudan RFIDs...                      }"},
     {"gallagher",   CmdHFGallagher,   AlwaysAvailable, "{ Gallagher DESFire RFIDs...          }"},
     {"ksx6924",     CmdHFKSX6924,     AlwaysAvailable, "{ KS X 6924 (T-Money, Snapper+) RFIDs }"},
     {"jooki",       CmdHF_Jooki,      AlwaysAvailable, "{ Jooki RFIDs...                      }"},

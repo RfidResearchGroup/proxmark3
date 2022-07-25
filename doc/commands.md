@@ -43,6 +43,7 @@ Check column "offline" for their availability.
 |`prefs get savepaths    `|Y       |`Get file folder  `
 |`prefs get emoji        `|Y       |`Get emoji display preference`
 |`prefs get hints        `|Y       |`Get hint display preference`
+|`prefs get output       `|Y       |`Get dump output style preference`
 |`prefs get plotsliders  `|Y       |`Get plot slider display preference`
 
 
@@ -60,6 +61,7 @@ Check column "offline" for their availability.
 |`prefs set emoji        `|Y       |`Set emoji display`
 |`prefs set hints        `|Y       |`Set hint display`
 |`prefs set savepaths    `|Y       |`... to be adjusted next ... `
+|`prefs set output       `|Y       |`Set dump output style`
 |`prefs set plotsliders  `|Y       |`Set plot slider display`
 
 
@@ -335,6 +337,7 @@ Check column "offline" for their availability.
 |`hf gallagher clone     `|N       |`Add Gallagher credentials to a DESFire card`
 |`hf gallagher delete    `|N       |`Delete Gallagher credentials from a DESFire card`
 |`hf gallagher diversifykey`|Y       |`Diversify Gallagher key`
+|`hf gallagher decode    `|Y       |`Decode Gallagher credential block`
 
 
 ### hf ksx6924
@@ -666,6 +669,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf xerox help          `|Y       |`This help`
 |`hf xerox info          `|N       |`Short info on Fuji/Xerox tag`
+|`hf xerox reader        `|N       |`Act like a Fuji/Xerox reader`
 |`hf xerox dump          `|N       |`Read all memory pages of an Fuji/Xerox tag, save to file`
 
 

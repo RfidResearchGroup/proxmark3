@@ -655,7 +655,7 @@ int CmdHF14ASim(const char *Cmd) {
                   "hf 14a sim -t 4                     -> ISO/IEC 14443-4\n"
                   "hf 14a sim -t 5                     -> MIFARE Tnp3xxx\n"
                   "hf 14a sim -t 6                     -> MIFARE Mini\n"
-                  "hf 14a sim -t 7                     -> AMIIBO (NTAG 215),  pack 0x8080\n"
+                  "hf 14a sim -t 7                     -> Amiibo (NTAG 215),  pack 0x8080\n"
                   "hf 14a sim -t 8                     -> MIFARE Classic 4k\n"
                   "hf 14a sim -t 9                     -> FM11RF005SH Shanghai Metro\n"
                   "hf 14a sim -t 10                    -> ST25TA IKEA Rothult\n");
@@ -663,7 +663,7 @@ int CmdHF14ASim(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int1("t", "type", "<1-10> ", "Simulation type to use"),
-        arg_str0("u", "uid", "<hex>", "4, 7 or 10 byte UID"),
+        arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
         arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks have been read by reader. 0 = infinite"),
         arg_lit0("x",  NULL, "Performs the 'reader attack', nr/ar attack against a reader"),
         arg_lit0(NULL, "sk", "Fill simulator keys from found keys"),
@@ -2379,7 +2379,7 @@ static uint32_t inc_sw_error_occurrence(uint16_t sw, uint32_t *all_sw) {
     if (sw1 == 0x90 && sw2 == 0x00) {
         return 0;
     }
- 
+
     // Always max "Instruction not supported"
     if (sw1 == 0x6D && sw2 == 0x00) {
         return 0xFFFFFFFFUL;

@@ -193,9 +193,9 @@ static uint8_t TexcomTK13CRC(const uint8_t *data) {
 
 static uint8_t MMBITCRC(const uint8_t *data) {
     return
-        (( (data[0] & 0x0f) ^ ((data[0] >> 4) & 0x0f) ^
-           (data[1] & 0x0f) ^ ((data[1] >> 4) & 0x0f) ^
-           (data[2] & 0x0f) ^ ((data[2] >> 4) & 0x0f)
+        (((data[0] & 0x0f) ^ ((data[0] >> 4) & 0x0f) ^
+          (data[1] & 0x0f) ^ ((data[1] >> 4) & 0x0f) ^
+          (data[2] & 0x0f) ^ ((data[2] >> 4) & 0x0f)
          ) ^ 0x0f
         ) & 0x0f;
 }
@@ -310,7 +310,7 @@ static bool TexcomTK15Decode(uint32_t *implengths, uint32_t implengthslen, char 
         int lastimplen = implengths[implengthslen - 1];
         bool prevbit = (implengths[implengthslen - 3] > implengths[implengthslen - 2]);
         bool thesamebit = (abs(lastimplen - (int)implengths[implengthslen - 3]) < abs(lastimplen - (int)implengths[implengthslen - 2]));
-        
+
         if (prevbit ^ !thesamebit) {
             strcat(bitstring, "10");
             strcat(cbitstring, "1");
