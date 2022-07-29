@@ -887,6 +887,39 @@ static int l_detect_prng(lua_State *L) {
     return 1;
 }
 /*
+ * @brief l_keygen_algoB is a function to calculate pwd/pack using UID, by algo B
+ * @param L
+ * @return
+ */
+static int l_keygen_algoB(lua_State *L) {
+    //Check number of arguments
+    int n = lua_gettop(L);
+    if (n != 1)  {
+        return returnToLuaWithError(L, "Only UID");
+    }
+
+    size_t size;
+    uint32_t tmp;
+    const char *p_uid = luaL_checklstring(L, 1, &size);
+    if (size != 14)
+        return returnToLuaWithError(L, "Wrong size of UID, got %d bytes, expected 14", (int) size);
+
+    uint8_t uid[7] = {0, 0, 0, 0, 0, 0, 0};
+
+    for (int i = 0; i < 14; i += 2) {
+        sscanf(&p_uid[i], "%02x", &tmp);
+        uid[i / 2] = tmp & 0xFF;
+    }
+
+    uint32_t pwd = ul_ev1_pwdgenB(uid);
+    uint16_t pack = ul_ev1_packgenB(uid);
+
+    lua_pushunsigned(L, pwd);
+    lua_pushunsigned(L, pack);
+    return 2;
+}
+
+/*
  * @brief l_keygen_algoD is a function to calculate pwd/pack using UID, by algo D
  * @param L
  * @return
@@ -1196,6 +1229,19 @@ static int l_ndefparse(lua_State *L) {
     return 1;
 }
 
+static int l_ul_read_uid(lua_State *L) {
+    uint8_t uid[7] = { 0, 0, 0, 0, 0, 0, 0 };
+    int res = ul_read_uid(uid);
+    if (res != PM3_SUCCESS) {
+        return returnToLuaWithError(L, "Failed to read Ultralight/NTAG UID");
+    }
+    char buf[15];
+    memset(buf, 0, sizeof(buf));
+    snprintf(buf, sizeof(buf), "%02X%02X%02X%02X%02X%02X%02X", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]);
+    lua_pushstring(L, buf);
+    return 1;
+}
+
 static int l_remark(lua_State *L) {
     //Check number of arguments
     int n = lua_gettop(L);
@@ -1340,7 +1386,7 @@ int set_pm3_libraries(lua_State *L) {
         {"hardnested",                  l_hardnested},
         {"detect_prng",                 l_detect_prng},
 //        {"keygen.algoA",                l_keygen_algoA},
-//        {"keygen.algoB",                l_keygen_algoB},
+        {"keygen_algo_b",               l_keygen_algoB},
 //        {"keygen.algoC",                l_keygen_algoC},
         {"keygen_algo_d",               l_keygen_algoD},
         {"t55xx_readblock",             l_T55xx_readblock},
@@ -1354,6 +1400,7 @@ int set_pm3_libraries(lua_State *L) {
         {"rem",                         l_remark},
         {"em4x05_read",                 l_em4x05_read},
         {"em4x50_read",                 l_em4x50_read},
+        {"ul_read_uid",                 l_ul_read_uid},
         {NULL, NULL}
     };
 
