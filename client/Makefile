@@ -289,6 +289,7 @@ ifneq ($(SKIPQT),1)
     QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs Qt5Core Qt5Widgets 2>/dev/null)
     MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/moc
     UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/uic
+    QMAKE = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/qmake
     ifneq ($(QTLDLIBS),)
         QT5_FOUND = 1
     else
@@ -297,6 +298,7 @@ ifneq ($(SKIPQT),1)
         QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs QtCore QtGui 2>/dev/null)
         MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=moc_location QtCore)
         UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=uic_location QtCore)
+        QMAKE = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=exec_prefix QtCore)/bin/qmake
     endif
     ifeq ($(QTLDLIBS),)
         # if both pkg-config commands failed, search in common places
@@ -313,6 +315,7 @@ ifneq ($(SKIPQT),1)
             endif
             MOC = $(QTDIR)/bin/moc
             UIC = $(QTDIR)/bin/uic
+            QMAKE = $(QTDIR)/bin/qmake
         endif
     endif
     ifneq ($(QTLDLIBS),)
@@ -437,9 +440,9 @@ ifeq ($(SKIPQT),1)
 else
     ifeq ($(QT_FOUND),1)
         ifeq ($(QT5_FOUND),1)
-            $(info GUI support:       QT5 found, enabled ($(shell QT_SELECT=5 qmake -v 2>/dev/null|grep -o 'Qt version.*')))
+            $(info GUI support:       QT5 found, enabled ($(shell QT_SELECT=5 $(QMAKE) -v 2>/dev/null|grep -o 'Qt version.*')))
         else
-            $(info GUI support:       QT4 found, enabled ($(shell QT_SELECT=4 qmake -v 2>/dev/null|grep -o 'Qt version.*')))
+            $(info GUI support:       QT4 found, enabled ($(shell QT_SELECT=4 $(QMAKE) -v 2>/dev/null|grep -o 'Qt version.*')))
         endif
     else
         $(info GUI support:       QT not found, disabled)
