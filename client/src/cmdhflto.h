@@ -21,6 +21,7 @@
 
 #include "common.h"
 
+int reader_lto(bool loop, bool verbose);
 int infoLTO(bool verbose);
 int dumpLTO(uint8_t *dump, bool verbose);
 int restoreLTO(uint8_t *dump, bool verbose);
