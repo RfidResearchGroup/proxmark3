@@ -26,8 +26,8 @@
 #include "comms.h"
 #include "cmdhf14a.h"
 #include "cmddata.h"
-#include "mifare.h"     // xiso 
-#include "cmdhf.h"      // 
+#include "mifare.h"     // xiso
+#include "cmdhf.h"      //
 #include "fileutils.h"  // saveFile
 #include "ui.h"
 #include "commonutil.h" // MemLeToUint2byte
@@ -66,7 +66,7 @@ static void fudan_print_blocks(uint16_t n, uint8_t *d) {
     PrintAndLogEx(NORMAL, "");
 }
 
-static char* GenerateFilename(iso14a_card_select_t *card, const char *prefix, const char *suffix) {
+static char *GenerateFilename(iso14a_card_select_t *card, const char *prefix, const char *suffix) {
     if (card == NULL) {
         return NULL;
     }
@@ -98,7 +98,7 @@ static fudan_type_t fudan_detected(iso14a_card_select_t *card) {
         return FM11RF08SH;
     }
     return FUDAN_NONE;
-}    
+}
 
 static int fudan_get_type(iso14a_card_select_t *card, bool verbose) {
 
@@ -211,7 +211,7 @@ static int CmdHFFudanReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose",  "Verbose scan and output"),
+        arg_lit0("v",  "verbose",  "verbose output"),
         arg_lit0("@", NULL, "optional - continuous reader mode"),
         arg_param_end
     };
@@ -223,9 +223,10 @@ static int CmdHFFudanReader(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (cm) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
-        return read_fudan_uid(cm, verbose);
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");        
     }
+
+    read_fudan_uid(cm, verbose);
 
     DropField();
     return PM3_SUCCESS;
@@ -237,7 +238,7 @@ static int CmdHFFudanDump(const char *Cmd) {
                   "Dump FUDAN tag to binary file\n"
                   "If no <name> given, UID will be used as filename",
                   "hf fudan dump -f mydump        --> dump using filename\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -257,7 +258,7 @@ static int CmdHFFudanDump(const char *Cmd) {
     int res = fudan_get_type(&card, false);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "failed to select a fudan card. Exiting...");
-        DropField();        
+        DropField();
         return PM3_SUCCESS;
     }
 
@@ -265,14 +266,14 @@ static int CmdHFFudanDump(const char *Cmd) {
     fudan_type_t t = fudan_detected(&card);
     if (t == FUDAN_NONE) {
         PrintAndLogEx(FAILED, "failed to detect a fudan card. Exiting...");
-        DropField();        
+        DropField();
         return PM3_SUCCESS;
     }
 
     // detect card size
     // 512b, 8kbits
     uint8_t num_blocks = MAX_FUDAN_05_BLOCKS;
-    switch(t) {
+    switch (t) {
         case FM11RF008M:
             num_blocks = MAX_FUDAN_08_BLOCKS;
             break;
@@ -286,19 +287,7 @@ static int CmdHFFudanDump(const char *Cmd) {
 
     uint8_t carddata[num_blocks * MAX_FUDAN_BLOCK_SIZE];
 
-/*
-    PrintAndLogEx(HINT, "  hf 14a raw -a -b 7 -k 26");
-    PrintAndLogEx(HINT, "  hf 14a raw -k -c 3000");
-    PrintAndLogEx(HINT, "  hf 14a raw -k -c 3001");
-    PrintAndLogEx(HINT, "  hf 14a raw -k -c 3002");
-    PrintAndLogEx(HINT, "  hf 14a raw -k -c 3003");
-    PrintAndLogEx(HINT, "  hf 14a raw -k -c 3004");
-    PrintAndLogEx(HINT, "  hf 14a raw -k -c 3005");
-    PrintAndLogEx(HINT, "  hf 14a raw -k -c 3006");
-    PrintAndLogEx(HINT, "  hf 14a raw -c 3007");
-*/
-
-    // 
+    //
     uint16_t flags = (ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS | ISO14A_RAW);
     uint32_t argtimeout = 0;
     uint32_t numbits = 0;
@@ -306,7 +295,7 @@ static int CmdHFFudanDump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "." NOLF);
     // dump memory
     for (uint8_t b = 0; b < num_blocks; b++) {
-        
+
         // read block
         uint8_t cmd[4] = {ISO14443A_CMD_READBLOCK, b, 0x00, 0x00};
         AddCrc14A(cmd, 2);
@@ -328,13 +317,13 @@ static int CmdHFFudanDump(const char *Cmd) {
                     PrintAndLogEx(FAILED, "could not read block %2d", b);
                 }
             } else {
-                PrintAndLogEx(NORMAL, "");                
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(WARNING, "command execute timeout when trying to read block %2d", b);
             }
         }
 
     }
-    DropField();        
+    DropField();
 
     PrintAndLogEx(SUCCESS, "\nSucceeded in dumping all blocks");
 
@@ -360,6 +349,107 @@ static int CmdHFFudanDump(const char *Cmd) {
     saveFileJSON(dataFilename, jsfFudan, (uint8_t *)&xdump, sizeof(xdump), NULL);
     return PM3_SUCCESS;
 }
+
+static int CmdHFFudanWrBl(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf fudan wrbl",
+                  "Write fudan block with 4 hex bytes of data\n",
+                  "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 01020304"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1(NULL, "blk", "<dec>", "block number"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_str0("d", "data", "<hex>", "bytes to write, 4 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int b = arg_get_int_def(ctx, 1, 1);
+
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 2, key, &keylen);
+
+    uint8_t block[MAX_FUDAN_BLOCK_SIZE] = {0x00};
+    int blen = 0;
+    CLIGetHexWithReturn(ctx, 3, block, &blen);
+    CLIParserFree(ctx);
+
+    if (blen != MAX_FUDAN_BLOCK_SIZE) {
+        PrintAndLogEx(WARNING, "block data must include 4 HEX bytes. Got %i", blen);
+        return PM3_EINVARG;
+    }
+
+    if (b > 255) {
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(SUCCESS, "Not implemented yet. Feel free to contribute!");
+
+    /*
+
+    uint8_t blockno = (uint8_t)b;
+
+    PrintAndLogEx(INFO, "Writing block no %d, key %s", blockno, sprint_hex_inrow(key, sizeof(key)));
+    PrintAndLogEx(INFO, "data: %s", sprint_hex(block, sizeof(block)));
+
+    uint8_t data[26];
+    memcpy(data, key, sizeof(key));
+    memcpy(data + 10, block, sizeof(block));
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, 0, 0, data, sizeof(data));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(FAILED, "Command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    uint8_t isok  = resp.oldarg[0] & 0xff;
+    if (isok) {
+        PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
+        PrintAndLogEx(HINT, "try `" _YELLOW_("hf fudan rdbl") "` to verify");
+    } else {
+        PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
+    }
+    */
+    return PM3_SUCCESS;
+}
+
+static int CmdHFFudanRdBl(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf fudan rdbl",
+                  "Read fudan block",
+                  "hf fudan rdbl --blk 0 -k FFFFFFFFFFFF\n"
+                  "hf fudan rdbl --blk 3 -v\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1(NULL, "blk", "<dec>", "block number"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int b = arg_get_int_def(ctx, 1, 0);
+
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 2, key, &keylen);
+//    bool verbose = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (b > 255) {
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(SUCCESS, "Not implemented yet. Feel free to contribute!");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 
 static int CmdHFFudanView(const char *Cmd) {
 
@@ -400,11 +490,11 @@ static int CmdHelp(const char *Cmd);
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable,  "This help"},
     {"reader",  CmdHFFudanReader,   IfPm3Iso14443a,   "Act like a fudan reader"},
-    {"dump",    CmdHFFudanDump,     IfPm3Iso14443a,   "Dump FUDAN tag to binary file"},    
+    {"dump",    CmdHFFudanDump,     IfPm3Iso14443a,   "Dump FUDAN tag to binary file"},
     //{"sim",    CmdHFFudanSim,     IfPm3Iso14443a,   "Simulate a fudan tag"},
-    //{"rdbl",   CmdHFFudanRead,    IfPm3Iso14443a,   "Read a fudan tag"},
-    {"view",    CmdHFFudanView,      AlwaysAvailable, "Display content from tag dump file"},    
-    //{"wrbl",   CmdHFFudanWrite,   IfPm3Iso14443a,   "Write a fudan tag"},
+    {"rdbl",    CmdHFFudanRdBl,     IfPm3Iso14443a,   "Read a fudan tag"},
+    {"view",    CmdHFFudanView,     AlwaysAvailable,  "Display content from tag dump file"},
+    {"wrbl",    CmdHFFudanWrBl,     IfPm3Iso14443a,   "Write a fudan tag"},
     {NULL,      NULL,               0, NULL}
 };
 
