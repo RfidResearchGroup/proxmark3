@@ -627,6 +627,9 @@ static int CmdLFHitagReader(const char *Cmd) {
 
         // block3, 1 byte
         printHitag2Configuration(data[4 * 3]);
+
+        // print data
+        print_hex_break(data, 48, 4);
     }
     return PM3_SUCCESS;
 }
@@ -820,17 +823,14 @@ static int CmdLFHitag2Dump(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    uint8_t filename[FILE_PATH_SIZE] = {0};
+
     int fnlen = 0;
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), filename, sizeof(filename), &fnlen);
-    if (res != 0) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     uint8_t key[6];
     int keylen = 0;
-    res = CLIParamHexToBuf(arg_get_str(ctx, 2), key, sizeof(key), &keylen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), key, sizeof(key), &keylen);
     if (res != 0) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -844,22 +844,22 @@ static int CmdLFHitag2Dump(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(WARNING, "to be implemented...");
+    PrintAndLogEx(SUCCESS, "Dumping tag memory...");
 
-    /*
-        PrintAndLogEx(SUCCESS, "Dumping tag memory...");
+    clearCommandBuffer();
+    //SendCommandNG(CMD_LF_HITAG_DUMP, &htd, sizeof(htd));
+    PacketResponseNG resp;
+    uint8_t *data = resp.data.asBytes;
 
-        clearCommandBuffer();
-        //SendCommandNG(CMD_LF_HITAG_DUMP, &htd, sizeof(htd));
-        PacketResponseNG resp;
-        uint8_t *data = resp.data.asBytes;
-        if (fnlen < 1) {
-            char *fptr = filename + snprintf(filename, sizeof(filename), "lf-hitag-");
-            FillFileNameByUID(fptr, data, "-dump", 4);
-        }
+    if (fnlen < 1) {
+        char *fptr = filename;
+        fptr += snprintf(filename, sizeof(filename), "lf-hitag-");
+        FillFileNameByUID(fptr, data, "-dump", 4);
+    }
 
-        pm3_save_dump(filename, data, 48, jsfHitag, 4);
-    */
+    print_hex_break(data, 48, 4);
+
+    pm3_save_dump(filename, data, 48, jsfHitag, 4);
     return PM3_SUCCESS;
 }
 
