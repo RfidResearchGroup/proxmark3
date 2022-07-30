@@ -3432,7 +3432,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
                   "hf mf sim --1k -u 11223344 -i -x    --> Perform reader attack in interactive mode\n"
                   "hf mf sim --2k                      --> MIFARE 2k\n"
                   "hf mf sim --4k                      --> MIFARE 4k"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -3651,6 +3651,7 @@ static int CmdHF14AMfKeyBrute(const char *Cmd) {
 void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
     return printKeyTableEx(sectorscnt, e_sector, 0);
 }
+
 void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {
     char strA[12 + 1] = {0};
     char strB[12 + 1] = {0};
@@ -6529,7 +6530,7 @@ static command_t CommandTable[] = {
     {"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (MIFARE Classic EV1 only)"},
     {"rdbl",        CmdHF14AMfRdBl,         IfPm3Iso14443a,  "Read MIFARE Classic block"},
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},
-    {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE Classic binary file to BLANK tag"},
+    {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE Classic binary file to tag"},
     {"setmod",      CmdHf14AMfSetMod,       IfPm3Iso14443a,  "Set MIFARE Classic EV1 load modulation strength"},
     {"value",       CmdHF14AMfValue,        AlwaysAvailable, "Value blocks"},
     {"view",        CmdHF14AMfView,         AlwaysAvailable, "Display content from tag dump file"},
