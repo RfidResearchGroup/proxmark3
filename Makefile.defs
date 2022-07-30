@@ -78,9 +78,13 @@ else
 endif
 
 ifeq ($(USE_BREW),1)
-  BREW_PREFIX = $(shell brew --prefix 2>/dev/null)
-  ifeq ($(strip $(BREW_PREFIX)),)
-    USE_BREW = 0
+  ifneq ($(strip $(HOMEBREW_PREFIX)),)
+    BREW_PREFIX = $(HOMEBREW_PREFIX)
+  else
+    BREW_PREFIX = $(shell brew --prefix 2>/dev/null)
+    ifeq ($(strip $(BREW_PREFIX)),)
+      USE_BREW = 0
+    endif
   endif
 endif
 

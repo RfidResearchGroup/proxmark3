@@ -37,8 +37,7 @@ OBJDIR = obj
 ifeq ($(USE_BREW),1)
 	INCLUDES += -I$(BREW_PREFIX)/include
 	LDLIBS += -L$(BREW_PREFIX)/lib
-	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt/lib/pkgconfig
-	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/opt/qt5/lib/pkgconfig
+	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/lib/pkgconfig:$(BREW_PREFIX)/opt/qt/lib/pkgconfig:$(BREW_PREFIX)/opt/qt5/lib/pkgconfig
 endif
 
 ifdef ($(USE_MACPORTS),1)
@@ -479,7 +478,7 @@ ifeq ($(SKIPPYTHON),1)
         $(info Python3 library:   skipped)
 else
     ifeq ($(PYTHON_FOUND),1)
-        $(info Python3 library:   Python3 v$(shell pkg-config --modversion python3) found, enabled)
+        $(info Python3 library:   Python3 v$(shell $(PKG_CONFIG_ENV) pkg-config --modversion python3) found, enabled)
     else
         $(info Python3 library:   Python3 not found, disabled)
     endif
