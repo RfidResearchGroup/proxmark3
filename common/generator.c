@@ -486,7 +486,7 @@ uint32_t lf_t55xx_white_pwdgen(uint32_t id) {
 int mfdes_kdf_input_gallagher(uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint32_t aid, uint8_t *kdfInputOut, uint8_t *kdfInputLen) {
     if (uid == NULL || (uidLen != 4 && uidLen != 7) || keyNo > 2 || kdfInputOut == NULL || kdfInputLen == NULL) {
         if (g_debugMode) {
-            PrintAndLogEx(WARNING, "Invalid arguments");
+            prnt("Invalid arguments");
         }
         return PM3_EINVARG;
     }
@@ -548,8 +548,9 @@ int mfc_algo_touch_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *
 //------------------------------------
 // Self tests
 //------------------------------------
-int generator_selftest(void) {
 
+int generator_selftest(void) {
+#ifndef ON_DEVICE
 #define NUM_OF_TEST     8
 
     PrintAndLogEx(INFO, "PWD / KEY generator selftest");
@@ -621,6 +622,8 @@ int generator_selftest(void) {
     PrintAndLogEx(success ? SUCCESS : WARNING, "ID  | 0x00000080            | %08"PRIx32 " - %s", lf_id, success ? "OK" : "->00018383<--");
 
     PrintAndLogEx(SUCCESS, "------------------- Selftest %s", (testresult == NUM_OF_TEST) ? "OK" : "fail");
+
+#endif
     return PM3_SUCCESS;
 }
 
