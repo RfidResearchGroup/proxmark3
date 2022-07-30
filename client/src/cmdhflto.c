@@ -201,6 +201,31 @@ static int lto_rdbl(uint8_t blk, uint8_t *block_response, uint8_t *block_cnt_res
     return PM3_SUCCESS;
 }
 
+/*
+static int lto_rdbl_ext(uint16_t blk, uint8_t *block_response, uint8_t *block_cnt_response, bool verbose) {
+
+    if (blk && 0x) {
+        blk &= 0xFE;
+    }
+
+    uint16_t resp_len = 18;
+    uint8_t rdbl_ext_cmd[] = {0x21 , blk & 0xFF, (blk >> 8) & 0xFF};
+    uint8_t rdbl_cnt_cmd[] = {0x80};
+
+    int status = lto_send_cmd_raw(rdbl_ext_cmd, sizeof(rdbl_ext_cmd), block_response, &resp_len, true, false, verbose);
+    if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
+        return PM3_EWRONGANSWER; // READ BLOCK failed
+    }
+
+    status = lto_send_cmd_raw(rdbl_cnt_cmd, sizeof(rdbl_cnt_cmd), block_cnt_response, &resp_len, false, false, verbose);
+    if (status == PM3_ETIMEOUT || status == PM3_ESOFT) {
+        return PM3_EWRONGANSWER; // READ BLOCK CONTINUE failed
+    }
+
+    return PM3_SUCCESS;
+}
+*/
+
 static int CmdHfLTOInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf lto info",
