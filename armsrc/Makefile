@@ -152,7 +152,8 @@ THUMBSRC = start.c \
     BigBuf.c \
     ticks.c \
     clocks.c \
-    hfsnoop.c
+    hfsnoop.c \
+    generator.c
 
 
 # These are to be compiled in ARM mode

@@ -27,10 +27,20 @@
 #include "common.h"       //BSWAP_32/64
 #include "util.h"
 #include "pm3_cmd.h"
-#include "ui.h"
+#include "crc16.h"        // crc16 ccitt
 #include "mbedtls/sha1.h"
 #include "mbedtls/md5.h"
-#include "crc16.h"        // crc16 ccitt
+#include "mbedtls/cmac.h"
+#include "mbedtls/cipher.h"
+#include "mbedtls/md.h"
+
+#ifndef ON_DEVICE
+#include "ui.h"
+# define prnt(args...) PrintAndLogEx(DEBUG, ## args );
+#else
+# include "dbprint.h"
+# define prnt Dbprintf
+#endif
 
 // Implementation tips:
 // For each implementation of the algos, I recommend adding a self test for easy "simple unit" tests when Travis CI / Appveyor runs.

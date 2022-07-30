@@ -34,6 +34,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "protocols.h"
+#include "generator.h"
 
 #define MAX_ISO14A_TIMEOUT 524288
 
@@ -1104,6 +1105,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
             // READ_SIG
             memcpy(rSIGN, mfu_header->signature, 32);
             AddCrc14A(rSIGN, sizeof(rSIGN) - 2);
+
         }
         break;
         case 8: { // MIFARE Classic 4k
@@ -1642,7 +1644,13 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
             // PWD stored in dump now
             uint8_t pwd[4];
             emlGetMemBt(pwd, (pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
+            if (memcmp(pwd, "\x00\x00\x00\x00", 4) == 0) {
+                Uint4byteToMemLe(pwd, ul_ev1_pwdgenB(data));
+                Dbprintf("Calc pwd... %02X %02X %02X %02X", pwd[0], pwd[1], pwd[2] ,pwd[3]);
+            }
+
             if (memcmp(receivedCmd + 1, pwd, 4) == 0) {
+
                 uint8_t pack[4];
                 emlGetMemBt(pack, pages * 4 + MFU_DUMP_PREFIX_LENGTH, 2);
                 if (memcmp(pack, "\x00\x00\x00\x00", 4) == 0) {
