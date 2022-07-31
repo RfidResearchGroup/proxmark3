@@ -1433,42 +1433,7 @@ static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen) {
         return PM3_ESOFT;
     }
 
-    bool is_jpg = (data[offset] == 0xFF);
-
-    size_t fn_len = strlen(dg_table[EF_DG2].filename) + 4 + 1;
-    char *fn = calloc(fn_len, sizeof(uint8_t));
-    if (fn == NULL)
-        return PM3_EMALLOC;
-
-    snprintf(fn, fn_len * sizeof(uint8_t), "%s.%s", dg_table[EF_DG2].filename, (is_jpg) ? "jpg" : "jp2");
-
-    PrintAndLogEx(DEBUG, "image filename `" _YELLOW_("%s") "`", fn);
-
-    char *path;
-    if (searchHomeFilePath(&path, NULL, fn, false) != PM3_SUCCESS) {
-        free(fn);
-        return PM3_EFILE;
-    }
-    free(fn);
-
-    // remove old file
-    if (fileExists(path)) {
-        PrintAndLogEx(DEBUG, "Delete old temp file `" _YELLOW_("%s") "`", path);
-        remove(path);
-    }
-
-    // temp file.
-    PrintAndLogEx(DEBUG, "Save temp file `" _YELLOW_("%s") "`", path);
-    saveFile(path, "", data + offset, datalen);
-
-    PrintAndLogEx(DEBUG, "view temp file `" _YELLOW_("%s") "`", path);
-    ShowPictureWindow(path);
-    msleep(500);
-
-    // delete temp file
-    PrintAndLogEx(DEBUG, "Deleting temp file `" _YELLOW_("%s") "`", path);
-    remove(path);
-    //free(path);
+    ShowPictureWindow(data + offset, datalen);
     return PM3_SUCCESS;
 }
 
@@ -1493,42 +1458,7 @@ static int emrtd_print_ef_dg5_info(uint8_t *data, size_t datalen) {
         return PM3_ESOFT;
     }
 
-    bool is_jpg = (data[offset] == 0xFF);
-
-    size_t fn_len = strlen(dg_table[EF_DG5].filename) + 4 + 1;
-    char *fn = calloc(fn_len, sizeof(uint8_t));
-    if (fn == NULL)
-        return PM3_EMALLOC;
-
-    snprintf(fn, fn_len * sizeof(uint8_t), "%s.%s", dg_table[EF_DG5].filename, (is_jpg) ? "jpg" : "jp2");
-
-    PrintAndLogEx(DEBUG, "image filename `" _YELLOW_("%s") "`", fn);
-
-    char *path;
-    if (searchHomeFilePath(&path, NULL, fn, false) != PM3_SUCCESS) {
-        free(fn);
-        return PM3_EFILE;
-    }
-    free(fn);
-
-    // remove old file
-    if (fileExists(path)) {
-        PrintAndLogEx(DEBUG, "Delete old temp file `" _YELLOW_("%s") "`", path);
-        remove(path);
-    }
-
-    // temp file.
-    PrintAndLogEx(DEBUG, "Save temp file `" _YELLOW_("%s") "`", path);
-    saveFile(path, "", data + offset, datalen);
-
-    PrintAndLogEx(DEBUG, "view temp file `" _YELLOW_("%s") "`", path);
-    ShowPictureWindow(path);
-    msleep(500);
-
-    // delete temp file
-    PrintAndLogEx(DEBUG, "Deleting temp file `" _YELLOW_("%s") "`", path);
-    remove(path);
-    //free(path);
+    ShowPictureWindow(data + offset, datalen);
     return PM3_SUCCESS;
 }
 
@@ -1915,7 +1845,7 @@ static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
     return PM3_SUCCESS;
 }
 
-int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
+int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available, bool only_fast) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
     uint8_t ssc[8] = { 0x00 };
@@ -2001,7 +1931,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
             PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
-        if (dg->fastdump && !dg->pace && !dg->eac) {
+        if (((dg->fastdump && only_fast) || !only_fast) && !dg->pace && !dg->eac) {
             if (emrtd_select_and_read(response, &resplen, dg->fileid, ks_enc, ks_mac, ssc, BAC)) {
                 if (dg->parser != NULL)
                     dg->parser(response, resplen);
@@ -2263,6 +2193,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars (passports only)"),
         arg_str0(NULL, "path", "<dirpath>", "display info from offline dump stored in dirpath"),
+        arg_lit0("i", "images", "show images"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2329,6 +2260,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     }
     uint8_t path[FILENAME_MAX] = { 0x00 };
     bool is_offline = CLIParamStrToBuf(arg_get_str(ctx, 5), path, sizeof(path), &slen) == 0 && slen > 0;
+    bool show_images = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
     if ((! IfPm3Iso14443()) && (! is_offline)) {
         PrintAndLogEx(WARNING, "Only offline mode is available");
@@ -2344,7 +2276,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
         if (g_debugMode >= 2) {
             SetAPDULogging(true);
         }
-        int res = infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
+        int res = infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC, !show_images);
         SetAPDULogging(restore_apdu_logging);
         return res;
     }

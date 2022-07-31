@@ -32,7 +32,7 @@ void HideGraphWindow(void);
 void RepaintGraphWindow(void);
 
 // hook up picture viewer
-void ShowPictureWindow(char *fn);
+void ShowPictureWindow(uint8_t *data, int len);
 void ShowBase64PictureWindow(char *b64);
 void HidePictureWindow(void);
 void RepaintPictureWindow(void);
