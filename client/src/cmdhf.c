@@ -141,7 +141,7 @@ int CmdHFSearch(const char *Cmd) {
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for Topaz tag...");
     if (IfPm3Iso14443a()) {
-        if (readTopazUid(false) == PM3_SUCCESS) {
+        if (readTopazUid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
             res = PM3_SUCCESS;
         }
