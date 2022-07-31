@@ -400,7 +400,12 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
     if (select_status == 3) {
         PrintAndLogEx(INFO, "E->Card doesn't support standard iso14443-3 anticollision");
-        PrintAndLogEx(SUCCESS, "\tATQA : %02X %02X", card->atqa[1], card->atqa[0]);
+        // identify TOPAZ
+        if (card->atqa[1] == 0x0C && card->atqa[0] == 0x00) {
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
+        } else {
+            PrintAndLogEx(SUCCESS, "\tATQA : %02X %02X", card->atqa[1], card->atqa[0]);
+        }
         return 1;
     }
 
@@ -511,7 +516,14 @@ static int CmdHF14AReader(const char *Cmd) {
             if (select_status == 3) {
                 if (!(silent && continuous)) {
                     PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
-                    PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
+
+                    // identify TOPAZ
+                    if (card.atqa[1] == 0x0C && card.atqa[0] == 0x00) {
+                        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
+                    } else {
+                        PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
+                    }
+
                 }
                 DropField();
                 res = PM3_ESOFT;
@@ -1763,7 +1775,16 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (select_status == 3) {
         PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
-        PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
+
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
+        }
+
+        // identify TOPAZ
+        if (card.atqa[1] == 0x0C && card.atqa[0] == 0x00) {
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
+        }
+
         DropField();
         return select_status;
     }
