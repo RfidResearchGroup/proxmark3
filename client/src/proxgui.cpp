@@ -67,11 +67,13 @@ extern "C" void RepaintGraphWindow(void) {
 
 
 // hook up picture viewer
-extern "C" void ShowPictureWindow(char *fn) {
+extern "C" void ShowPictureWindow(uint8_t *data, int len) {
     // No support for jpeg2000 in Qt Image since a while...
     // https://doc.qt.io/qt-5/qtimageformats-index.html
-    if (strlen(fn) > 4 && !strcmp(fn + strlen(fn) - 4, ".jp2"))
+    QImage img = QImage::fromData(data, len);
+    if (img.isNull()) {
         return;
+    }
     if (!gui) {
         // Show a notice if X11/XQuartz isn't available
 #if defined(__MACH__) && defined(__APPLE__)
@@ -82,7 +84,7 @@ extern "C" void ShowPictureWindow(char *fn) {
         return;
     }
 
-    gui->ShowPictureWindow(fn);
+    gui->ShowPictureWindow(img);
 }
 
 extern "C" void ShowBase64PictureWindow(char *b64) {

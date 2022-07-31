@@ -65,8 +65,8 @@ void ProxGuiQT::HideGraphWindow(void) {
 }
 
 // emit picture viewer signals
-void ProxGuiQT::ShowPictureWindow(char *fn) {
-    emit ShowPictureWindowSignal(fn);
+void ProxGuiQT::ShowPictureWindow(const QImage &img) {
+    emit ShowPictureWindowSignal(img);
 }
 
 void ProxGuiQT::ShowBase64PictureWindow(char *b64) {
@@ -116,23 +116,13 @@ void ProxGuiQT::_HideGraphWindow(void) {
 }
 
 // picture viewer
-void ProxGuiQT::_ShowPictureWindow(char *fn) {
+void ProxGuiQT::_ShowPictureWindow(const QImage &img) {
 
     if (!plotapp)
         return;
 
-    if (fn == NULL)
+    if (img.isNull())
         return;
-
-    size_t slen = strlen(fn);
-    if (slen == 0)
-        return;
-
-    char *myfn = (char *)calloc(slen + 1, sizeof(uint8_t));
-    if (myfn == NULL)
-        return;
-
-    memcpy(myfn, fn, slen);
 
     if (!pictureWidget) {
 
@@ -143,12 +133,7 @@ void ProxGuiQT::_ShowPictureWindow(char *fn) {
         pictureWidget = new PictureWidget();
     }
 
-    QPixmap pm;
-    if (pm.load(myfn) == false) {
-        qWarning("Failed to load %s", myfn);
-    }
-    free(myfn);
-    free(fn);
+    QPixmap pm = QPixmap::fromImage(img);
 
     //QPixmap newPixmap = pm.scaled(QSize(50,50),  Qt::KeepAspectRatio);
     //pm = pm.scaled(pictureController->lbl_pm->size(),  Qt::KeepAspectRatio);
@@ -264,7 +249,7 @@ void ProxGuiQT::MainLoop() {
     connect(this, SIGNAL(ExitSignal()), this, SLOT(_Exit()));
 
     // hook up picture viewer signals
-    connect(this, SIGNAL(ShowPictureWindowSignal(char *)), this, SLOT(_ShowPictureWindow(char *)));
+    connect(this, SIGNAL(ShowPictureWindowSignal(const QImage &)), this, SLOT(_ShowPictureWindow(const QImage &)));
     connect(this, SIGNAL(ShowBase64PictureWindowSignal(char *)), this, SLOT(_ShowBase64PictureWindow(char *)));
     connect(this, SIGNAL(RepaintPictureWindowSignal()), this, SLOT(_RepaintPictureWindow()));
     connect(this, SIGNAL(HidePictureWindowSignal()), this, SLOT(_HidePictureWindow()));
