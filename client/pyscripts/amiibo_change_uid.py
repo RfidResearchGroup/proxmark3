@@ -1,3 +1,6 @@
+# Requirements:
+# python3 -m pip install pyamiibo
+
 import sys
 from amiibo import AmiiboDump, AmiiboMasterKey
 
