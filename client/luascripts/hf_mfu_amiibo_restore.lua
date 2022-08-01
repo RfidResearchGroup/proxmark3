@@ -133,7 +133,7 @@ local function main(args)
 
     print('generating new Amiibo binary for NTAG215 '..ansicolors.green..uid)
     core.clearCommandBuffer()
-    core.console(('script run amiibo_change_uid %s %s %s %sresources/key_retail.bin'):format(uid, tmp, tmp2, core.ewd()))
+    core.console(('script run amiibo_change_uid %s %s %s %s'):format(uid, tmp, tmp2, core.search_file('resources/key_retail', '.bin')))
 
     -- let's sanity check the output
     hex, err = utils.ReadDumpFile(tmp2)
