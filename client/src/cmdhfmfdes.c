@@ -5046,7 +5046,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
                   "Write data from file. Key needs to be provided or flag --no-auth set (depend on file settings).",
                   "In the mode with CommitReaderID to decode previous reader id command needs to read transaction counter via dump/read command and specify --trkey\n"
                   "\n"
-                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> write file: app=123456, file=01, offset=0, get file type from card. use default channel settings from `default` command\n"
+                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> AID 123456, file=01, offset=0, get file type from card. use default channel settings from `default` command\n"
                   "hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --0ffset 000100 -> write data to std file with offset 0x100\n"
                   "hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --commit -> write data to backup file with commit\n"
                   "hf mfdes write --aid 123456 --fid 01 --type value -d 00000001 -> increment value file\n"
@@ -5394,9 +5394,10 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 static int CmdHF14ADesLsFiles(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes lsfiles",
-                  "Show file list. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
-                  "hf mfdes lsfiles --aid 123456     -> show file list for: app=123456 with defaults from `default` command"
-                  "hf mfdes lsfiles --isoid df01 --no-auth    -> show files from desfire light");
+                  "This commands List files inside application AID / ISOID.\n"
+                  "Master key needs to be provided or flag --no-auth set (depend on cards settings).",
+                  "hf mfdes lsfiles --aid 123456            -> AID 123456, list files using `default` command creds\n"
+                  "hf mfdes lsfiles --isoid df01 --no-auth  -> list files for DESFire light");
 
     void *argtable[] = {
         arg_param_begin,
