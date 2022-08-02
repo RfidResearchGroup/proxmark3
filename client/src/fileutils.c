@@ -1952,6 +1952,11 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
 }
 
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, size_t blocksize) {
+    if (n == 0) {
+        PrintAndLogEx(INFO, "No data to save. Skipping...");
+        return PM3_EINVARG;
+    }
+
     saveFile(fn, ".bin", d, n);
     saveFileEML(fn, d, n, blocksize);
     saveFileJSON(fn, jsft, d, n, NULL);
