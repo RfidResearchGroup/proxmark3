@@ -331,7 +331,7 @@ static bool TexcomTK15Decode(uint32_t *implengths, uint32_t implengthslen, char 
     return ((strlen(cbitstring) == 64) && (strncmp(cbitstring, "1111111111111111", 16) == 0));
 }
 
-inline int TexcomTK17Get2Bits(uint32_t len1, uint32_t len2) {
+static inline int TexcomTK17Get2Bits(uint32_t len1, uint32_t len2) {
     uint32_t xlen = (len2 * 100) / (len1 + len2);
     if (xlen < 10 || xlen > 90)
         return TK17WrongBit;
