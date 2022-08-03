@@ -7,6 +7,7 @@
 # Table of Contents
 - [Mac OS X - Homebrew automatic installation](#mac-os-x---homebrew-automatic-installation)
 - [Table of Contents](#table-of-contents)
+  - [macOS Ventura Beta users](#macos-ventura-beta-users)
   - [Apple Silicon (M1) Notes](#apple-silicon-m1-notes)
   - [Install Proxmark3 tools](#install-proxmark3-tools)
   - [Upgrade HomeBrew tap formula](#upgrade-homebrew-tap-formula)
@@ -19,6 +20,18 @@
     - [the button trick](#the-button-trick)
   - [Run it](#run-it)
 
+
+
+## macOS Ventura Beta users
+^[Top](#top)
+
+Users of macOS Ventura Beta can no longer use Xcode versions lower than 14.0. (*Technically* they can by `Show Package Contents` and running `/Contents/MacOS/Xcode` but this is not recommended or recognized by Brew installations)
+
+Therefore you need to download Xcode 14.0 Beta and open it to install the correct Command Line Tools. (https://developer.apple.com/download/all/)
+
+Important: you need to rename `Xcode-beta.app` to `Xcode.app` (Note: If you still need Xcode 13.0 for signing and uploading apps to App Store rename `Xcode.app` to `Xcode-2.app`).
+
+Continue installation as detailed below.
 
 
 ## Apple Silicon (M1) Notes
