@@ -29,6 +29,7 @@ Early users of macOS Ventura and Xcode 14.0 might run into an error saying that 
 
 If (and only if) you run into that error, here is the fix:
 - RE-download the *latest* Command Line Tools of Xcode Beta 14 and install them (again). (https://developer.apple.com/download/all/)
+- Run `sudo xcode-select -s /Applications/Xcode-beta.app` in Terminal.
 - Proceed with Brew installation
 That should normally fix the issue.
 
