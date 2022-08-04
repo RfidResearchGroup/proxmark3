@@ -25,14 +25,17 @@
 ## macOS Ventura Beta users
 ^[Top](#top)
 
-Users of macOS Ventura Beta can no longer use Xcode versions lower than 14.0. (*Technically* they can by `Show Package Contents` and running `/Contents/MacOS/Xcode` but this is not recommended or recognized by Brew installations)
+Early users of macOS Ventura and Xcode 14.0 might run into an error saying that Xcode 14.0 is out-of-date (even though you have the latest Xcode Beta installed).
 
-Therefore you need to download Xcode 14.0 Beta and open it to install the correct Command Line Tools. (https://developer.apple.com/download/all/)
+If (and only if) you run into that error, here is the fix:
+- RE-download the *latest* Command Line Tools of Xcode Beta 14 and install them (again). (https://developer.apple.com/download/all/)
+- Proceed with Brew installation
+That should normally fix the issue.
 
-Important: you need to rename `Xcode-beta.app` to `Xcode.app` (Note: If you still need Xcode 13.0 for signing and uploading apps to App Store rename `Xcode.app` to `Xcode-2.app`).
-
-Continue installation as detailed below.
-
+Alternatively, and only if the issue still persists after following the steps above, you can use this *temporary and ugly* fix:
+- Try renaming `Xcode-beta.app` to `Xcode.app` (Note: If you still need Xcode 13.0 for signing and uploading apps to App Store rename `Xcode.app` to `Xcode-2.app`)
+- Proceed with Brew installation
+- IMPORTANT: Reverse renaming done in first step.
 
 ## Apple Silicon (M1) Notes
 ^[Top](#top)
