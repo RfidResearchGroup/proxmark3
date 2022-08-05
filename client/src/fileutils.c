@@ -1102,19 +1102,21 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     if (!strcmp(ctype, "mfcard")) {
         size_t sptr = 0;
         for (int i = 0; i < 256; i++) {
+            char blocks[30] = {0};
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+
+            size_t len = 0;
+            uint8_t block[16];
+            JsonLoadBufAsHex(root, blocks, block, 16, &len);
+            if (!len)
+                break;
+
             if (sptr + 16 > maxdatalen) {
                 retval = PM3_EMALLOC;
                 goto out;
             }
 
-            char blocks[30] = {0};
-            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
-
-            size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &udata[sptr], 16, &len);
-            if (!len)
-                break;
-
+            memcpy(&udata[sptr], block, 16);
             sptr += len;
         }
 
@@ -1934,6 +1936,9 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
                 return PM3_EMALLOC;
             }
             res = loadFileJSON(fn, *pdump, maxdumplen, dumplen, NULL);
+            if (res != PM3_SUCCESS) {
+                free(*pdump);
+            }
             break;
         }
         case DICTIONARY: {
@@ -1944,7 +1949,6 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
 
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", fn);
-        free(*pdump);
         return PM3_EFILE;
     }
 
