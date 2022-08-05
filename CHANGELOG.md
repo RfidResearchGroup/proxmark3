@@ -3,12 +3,14 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added json topaz file format (@iceman1001)
+ - Added `hf topaz rdbl,  wrbl, view` commands (@iceman1001)
  - Added more details to the annotations of `hf mfdes list` output (@nvx)
  - Changed `hf iclass view` and related to suppress consecutive blocks with repeated contents with a `-z` flag, or `prefs set output --dense` (@nvx)
  - Changed `hf iclass list` to display matched keys on the CHECK command rather than the card response, and made it check for elite keys too (@nvx)
  - Fixed `hf iclass info` and `hf iclass view` key access info looking at the wrong card config bit (@nvx)
  - Added `hf gallagher decode` command and fix Gallagher diversification for card master key (@nvx)
- - Added mmbit-002 (kibi-002, kb5004xk1) russian tag to `hf texkom read` command (@merlokk)
+ - Changed `hf texkom reader` - now supports mmbit-002 (kibi-002, kb5004xk1) russian tag (@merlokk)
  - Added `hf sniff --smode` skip/group adc data to consume less memory. Now it can sniff very long signals (@merlokk)
  - Added `hf fudan` skeleton commands (@iceman1001)
  - Added `--reboot-to-bootloader` arg to pm3

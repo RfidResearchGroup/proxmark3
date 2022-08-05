@@ -606,14 +606,13 @@ static int ndef_print_CC(uint8_t *data) {
     uint8_t mlrule = (data[3] & 0x06) >> 1;
     uint8_t mbread = (data[3] & 0x01);
 
-    PrintAndLogEx(SUCCESS, "  Additional feature information");
-    PrintAndLogEx(SUCCESS, "  %02X", data[3]);
+    PrintAndLogEx(SUCCESS, "  %02X: Additional feature information", data[3]);    
     PrintAndLogEx(SUCCESS, "  00000000");
-    PrintAndLogEx(SUCCESS, "  xxx      - %02X: RFU ( %s )", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
-    PrintAndLogEx(SUCCESS, "     x     - %02X: %s special frame", sf, (sf) ? "support" : "don\'t support");
-    PrintAndLogEx(SUCCESS, "      x    - %02X: %s lock block", lb, (lb) ? "support" : "don\'t support");
-    PrintAndLogEx(SUCCESS, "       xx  - %02X: RFU ( %s )", mlrule, (mlrule == 0) ? _GREEN_("ok") : _RED_("fail"));
-    PrintAndLogEx(SUCCESS, "         x - %02X: IC %s multiple block reads", mbread, (mbread) ? "support" : "don\'t support");
+    PrintAndLogEx(SUCCESS, "  xxx..... - %02X: RFU ( %s )", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
+    PrintAndLogEx(SUCCESS, "  ...x.... - %02X: %s special frame", sf, (sf) ? "support" : "don\'t support");
+    PrintAndLogEx(SUCCESS, "  ....x... - %02X: %s lock block", lb, (lb) ? "support" : "don\'t support");
+    PrintAndLogEx(SUCCESS, "  .....xx. - %02X: RFU ( %s )", mlrule, (mlrule == 0) ? _GREEN_("ok") : _RED_("fail"));
+    PrintAndLogEx(SUCCESS, "  .......x - %02X: IC %s multiple block reads", mbread, (mbread) ? "support" : "don\'t support");
     return PM3_SUCCESS;
 }
 
@@ -3243,7 +3242,8 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "------------------.---------------");
-    PrintAndLogEx(INFO, " Using UID : " _YELLOW_("%s"), sprint_hex(uid, 7));
+    PrintAndLogEx(INFO, " Using UID 4b: " _YELLOW_("%s"), sprint_hex(uid, 4));
+    PrintAndLogEx(INFO, " Using UID 7b: " _YELLOW_("%s"), sprint_hex(uid, 7));    
     PrintAndLogEx(INFO, "----------------------------------");
     PrintAndLogEx(INFO, " algo            | pwd      | pack");
     PrintAndLogEx(INFO, "-----------------+----------+-----");

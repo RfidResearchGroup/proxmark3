@@ -1036,21 +1036,22 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
             case 0x01: {
                 indx++;
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF Lock Control") " ---");
                 if (len != 3) {
-                    PrintAndLogEx(WARNING, "NDEF Lock Control block size must be 3 instead of %d.", len);
+                    PrintAndLogEx(WARNING, "NDEF Lock Control block size must be 3 instead of %d", len);
                 } else {
                     uint8_t pages_addr = (ndef[indx] >> 4) & 0x0f;
                     uint8_t byte_offset = ndef[indx] & 0x0f;
                     uint8_t Size = ndef[indx + 1];
                     uint8_t BytesLockedPerLockBit = (ndef[indx + 2] >> 4) & 0x0f;
                     uint8_t bytes_per_page = ndef[indx + 2] & 0x0f;
-                    PrintAndLogEx(SUCCESS, " Pages addr (number of pages)... %d", pages_addr);
-                    PrintAndLogEx(SUCCESS, "Byte offset (number of bytes)... %d", byte_offset);
-                    PrintAndLogEx(SUCCESS, "Size in bits of the lock area %d. bytes approx %d", Size, Size / 8);
-                    PrintAndLogEx(SUCCESS, "       Number of bytes / page... %d", bytes_per_page);
-                    PrintAndLogEx(SUCCESS, "Bytes Locked Per LockBit");
-                    PrintAndLogEx(SUCCESS, "   number of bytes that each dynamic lock bit is able to lock: %d", BytesLockedPerLockBit);
+                    PrintAndLogEx(SUCCESS, " Pages addr (number of pages).... %d", pages_addr);
+                    PrintAndLogEx(SUCCESS, " Byte offset (number of bytes)... %d", byte_offset);
+                    PrintAndLogEx(SUCCESS, " Lock Area size in bits.......... %d ( %d bytes )", Size, Size / 8);
+                    PrintAndLogEx(SUCCESS, "        Number of bytes / page... %d", bytes_per_page);
+                    PrintAndLogEx(SUCCESS, " Bytes Locked Per LockBit");
+                    PrintAndLogEx(SUCCESS, "  number of bytes that each dynamic lock bit locks... %d", BytesLockedPerLockBit);
                 }
                 indx += len;
                 break;
@@ -1058,18 +1059,19 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
             case 0x02: {
                 indx++;
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
-                PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF Memory Control") " ---");
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF Memory Control") " ---");                
                 if (len != 3) {
-                    PrintAndLogEx(WARNING, "NDEF Memory Control block size must be 3 instead of %d.", len);
+                    PrintAndLogEx(WARNING, "NDEF Memory Control block size must be 3 instead of %d", len);
                 } else {
                     uint8_t pages_addr = (ndef[indx] >> 4) & 0x0f;
                     uint8_t byte_offset = ndef[indx] & 0x0f;
                     uint8_t Size = ndef[indx + 1];
                     uint8_t bytes_per_page = ndef[indx + 2] & 0x0f;
-                    PrintAndLogEx(SUCCESS, " Pages addr (number of pages) : %d", pages_addr);
-                    PrintAndLogEx(SUCCESS, "Byte offset (number of bytes) : %d", byte_offset);
-                    PrintAndLogEx(SUCCESS, "Size in bits of the reserved area : %d. bytes approx: %d", Size, Size / 8);
-                    PrintAndLogEx(SUCCESS, "       Number of bytes / page : %d", bytes_per_page);
+                    PrintAndLogEx(SUCCESS, "Pages addr (number of pages).... %d", pages_addr);
+                    PrintAndLogEx(SUCCESS, "Byte offset (number of bytes)... %d", byte_offset);
+                    PrintAndLogEx(SUCCESS, "Reserved area size in bits...... %d ( %d bytes )", Size, Size / 8);
+                    PrintAndLogEx(SUCCESS, "       Number of bytes / page... %d", bytes_per_page);
                 }
                 indx += len;
                 break;
@@ -1077,6 +1079,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
             case 0x03: {
                 indx++;
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF Message") " ---");
                 if (len == 0) {
                     PrintAndLogEx(SUCCESS, "Found NDEF message w zero length");
@@ -1094,6 +1097,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
             case 0xfd: {
                 indx++;
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "--- " _CYAN_("Proprietary info") " ---");
                 PrintAndLogEx(SUCCESS, "  Can't decode, skipping %d bytes", len);
                 indx += len;
