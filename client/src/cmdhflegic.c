@@ -34,6 +34,7 @@ static int CmdHelp(const char *Cmd);
 #define LEGIC_PRIME_MIM256  256
 #define LEGIC_PRIME_MIM1024 1024
 #define LEGIC_BLOCK_SIZE    8
+#define LEGIC_PACKET_SIZE   (PM3_CMD_DATA_SIZE - sizeof(legic_packet_t))
 
 static bool legic_xor(uint8_t *data, uint16_t cardsize) {
 
@@ -737,9 +738,9 @@ void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 
     // fast push mode
     g_conn.block_after_ACK = true;
-    for (size_t i = offset; i < numofbytes; i += (PM3_CMD_DATA_SIZE - sizeof(legic_packet_t))) {
+    for (size_t i = offset; i < numofbytes; i += LEGIC_PACKET_SIZE) {
 
-        size_t len = MIN((numofbytes - i), (PM3_CMD_DATA_SIZE - sizeof(legic_packet_t)));
+        size_t len = MIN((numofbytes - i), LEGIC_PACKET_SIZE);
         if (len == numofbytes - i) {
             // Disable fast mode on last packet
             g_conn.block_after_ACK = false;
@@ -943,9 +944,9 @@ static int CmdLegicRestore(const char *Cmd) {
     // transfer to device
     PacketResponseNG resp;
     // 7 = skip UID bytes and MCC
-    for (size_t i = 7; i < bytes_read; i += PM3_CMD_DATA_SIZE) {
+    for (size_t i = 7; i < bytes_read; i += LEGIC_PACKET_SIZE) {
 
-        size_t len = MIN((bytes_read - i), PM3_CMD_DATA_SIZE);
+        size_t len = MIN((bytes_read - i), LEGIC_PACKET_SIZE);
         if (len == bytes_read - i) {
             // Disable fast mode on last packet
             g_conn.block_after_ACK = false;
@@ -1209,11 +1210,11 @@ static int CmdLegicWipe(const char *Cmd) {
 
     // transfer to device
     PacketResponseNG resp;
-    for (size_t i = 7; i < card.cardsize; i += PM3_CMD_DATA_SIZE) {
+    for (size_t i = 7; i < card.cardsize; i += LEGIC_PACKET_SIZE) {
 
         PrintAndLogEx(NORMAL, "." NOLF);
 
-        size_t len = MIN((card.cardsize - i), PM3_CMD_DATA_SIZE);
+        size_t len = MIN((card.cardsize - i), LEGIC_PACKET_SIZE);
         if (len == card.cardsize - i) {
             // Disable fast mode on last packet
             g_conn.block_after_ACK = false;
