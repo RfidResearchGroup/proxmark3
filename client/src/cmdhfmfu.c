@@ -607,7 +607,7 @@ static int ndef_print_CC(uint8_t *data) {
     uint8_t mbread = (data[3] & 0x01);
 
     PrintAndLogEx(SUCCESS, "  %02X: Additional feature information", data[3]);    
-    PrintAndLogEx(SUCCESS, "  00000000");
+    PrintAndLogEx(SUCCESS, "  %s", sprint_bin(&data[3], 1));
     PrintAndLogEx(SUCCESS, "  xxx..... - %02X: RFU ( %s )", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
     PrintAndLogEx(SUCCESS, "  ...x.... - %02X: %s special frame", sf, (sf) ? "support" : "don\'t support");
     PrintAndLogEx(SUCCESS, "  ....x... - %02X: %s lock block", lb, (lb) ? "support" : "don\'t support");

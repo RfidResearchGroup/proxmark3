@@ -404,6 +404,8 @@ char *sprint_bytebits_bin_break(const uint8_t *data, const size_t len, const uin
 
     // 3072 + end of line characters if broken at 8 bits
     static char buf[MAX_BIN_BREAK_LENGTH] = {0};
+    memset(buf, 0, sizeof(buf));
+
     char *tmp = buf;
 
     // loop through the out_index to make sure we don't go too far
