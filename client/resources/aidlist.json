@@ -2206,5 +2206,61 @@
         "Name": "SL Resekort",
         "Description": "transport card",
         "Type": "transport"
+    },
+    {
+        "AID": "4F53452E5641532E3031",
+        "Vendor": "Apple, Google",
+        "Country": "",
+        "Name": "Value-Added Services (OSE.VAS.01)",
+        "Description": "Used by Apple VAS and Google SmartTap",
+        "Type": "loyalty"
+    },
+    {
+        "AID": "A000000476D0000101",
+        "Vendor": "Google",
+        "Country": "",
+        "Name": "Google SmartTap 1.3 (Deprecated)",
+        "Description": "",
+        "Type": "loyalty"
+    },
+    {
+        "AID": "A000000476D0000111",
+        "Vendor": "Google",
+        "Country": "",
+        "Name": "Google SmartTap 2.0",
+        "Description": "",
+        "Type": "loyalty"
+    },
+    {
+        "AID": "A0000002480400",
+        "Vendor": "ISO/IEC JTC1/SC17",
+        "Country": "",
+        "Name": "Personal identification (mDL)",
+        "Description": "ISO/IEC 18013-5:2021 compliant Mobile driving licence (mDL) application.",
+        "Type": "identity"
+    },
+    {
+        "AID": "A000000676",
+        "Vendor": "Blackboard",
+        "Country": "United States",
+        "Name": "Student ID",
+        "Description": "Student ID cards",
+        "Type": "identity"
+    },
+    {
+        "AID": "A000000809434343444B467631",
+        "Vendor": "Car Connectivity Consortium (CCC)",
+        "Country": "",
+        "Name": "Digital Car Key",
+        "Description": "",
+        "Type": "access"
+    },
+    {
+        "AID": "A0000008580101",
+        "Vendor": "Apple",
+        "Country": "",
+        "Name": "Apple Home Key",
+        "Description": "NFC Home Key for select HomeKit-compatible locks",
+        "Type": "access"
     }
 ]
