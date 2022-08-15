@@ -182,14 +182,29 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
         }
 
         if (cmdsize >= 7 && cmd[0] == ECP_HEADER) {
-            // Second byte of ECP frame indicates its version
-            // Version 0x01 payload is 7 bytes long (including crc)
-            // Version 0x02 payload is 15 bytes long (including crc)
+            // Byte 0 is a header
+            // Byte 1 indicates format version
+            // Version 0x01 format is 7 bytes long (including crc)
+            // Version 0x02 format is at least 7 bytes long (including crc). First 4 bits of byte 2 define extra payload length
             if (cmd[1] == 0x01 && cmdsize == 7) {
                 snprintf(exp, size, "ECP1");
                 return PM3_SUCCESS;
-            } else if (cmd[1] == 0x02 && cmdsize == 15) {
-                snprintf(exp, size, "ECP2");
+            } else if (cmd[1] == 0x02 && cmdsize == (cmd[2] & 0x0f) + 7) {
+                // Byte 3 is the reader type
+                switch(cmd[3]) {
+                    case 0x01:
+                        snprintf(exp, size, "ECP2 (Transit)");
+                        break;
+                    case 0x02:
+                        snprintf(exp, size, "ECP2 (Access)");
+                        break;
+                    case 0x03:
+                        snprintf(exp, size, "ECP2 (Identity)");
+                        break;
+                    default:
+                        snprintf(exp, size, "ECP2");
+                        break;
+                }
                 return PM3_SUCCESS;
             }
         }
