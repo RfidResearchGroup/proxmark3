@@ -56,10 +56,11 @@ static char cur_dump_file[22] = {0};
 
 static bool fill_eml_from_file(char *dumpfile) {
     // check file exist
-    if (!exists_in_spiffs(dumpfile)) {
+    if (exists_in_spiffs(dumpfile) == false) {
         Dbprintf(_RED_("Dump file %s not found!"), dumpfile);
         return false;
     }
+
     //check dumpfile size
     uint32_t size = size_in_spiffs(dumpfile);
     if (size != DUMP_SIZE) {
@@ -67,9 +68,12 @@ static bool fill_eml_from_file(char *dumpfile) {
         BigBuf_free();
         return false;
     }
+
     //read and load dump file
-    if (g_dbglevel >= DBG_INFO)
+    if (g_dbglevel >= DBG_INFO) {
         Dbprintf(_YELLOW_("Found dump file %s. Uploading to emulator memory..."), dumpfile);
+    }
+
     emlClearMem();
     uint8_t *emCARD = BigBuf_get_EM_addr();
     rdv40_spiffs_read_as_filetype(dumpfile, emCARD, size, RDV40_SPIFFS_SAFETY_SAFE);
@@ -77,7 +81,7 @@ static bool fill_eml_from_file(char *dumpfile) {
 }
 
 static bool write_file_from_eml(char *dumpfile) {
-    if (!exists_in_spiffs(dumpfile)) {
+    if (exists_in_spiffs(dumpfile) == false) {
         Dbprintf(_RED_("Dump file %s not found!"), dumpfile);
         return false;
     }
@@ -99,14 +103,18 @@ void RunMod(void) {
 
     bool flag_has_dumpfile = false;
     for (int i = 1;; i++) {
+
         //Exit! usbcommand break
         if (data_available()) break;
 
-        //Infinite loop
+        // infinite loop
         if (i > 15) {
-            if (!flag_has_dumpfile)
-                break; //still no dump file found
-            i = 1;     //next loop
+            // still no dump file found
+            if (flag_has_dumpfile == false) {                
+                break; 
+            }
+            // next loop
+            i = 1;
         }
 
         //Indicate which card will be simulated
@@ -115,7 +123,7 @@ void RunMod(void) {
         //Try to load dump form flash
         sprintf(cur_dump_file, HF_MFCSIM_DUMPFILE_SIM, i);
         Dbprintf(_YELLOW_("[Slot: %d] Try to load dump file: %s"), i, cur_dump_file);
-        if (!fill_eml_from_file(cur_dump_file)) {
+        if (fill_eml_from_file(cur_dump_file) == false) {
             Dbprintf(_YELLOW_("[Slot: %d] Dump load Failed, Next one!"), i);
             LEDsoff();
             continue;
@@ -145,8 +153,10 @@ void RunMod(void) {
         }
         Dbprintf(_YELLOW_("[Slot: %d] Write Success! Change to next one!"), i);
     }
-    if (!flag_has_dumpfile)
+
+    if (flag_has_dumpfile == false) {
         Dbprintf("No dump file found!");
+    }
     Dbprintf("Breaked! Exit standalone mode!");
     SpinErr(15, 200, 3);
     return;

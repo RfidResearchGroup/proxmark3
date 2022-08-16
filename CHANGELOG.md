@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed bad memory handling in MifareSim device side (@iceman1001)
  - Added json topaz file format (@iceman1001)
  - Added `hf topaz rdbl,  wrbl, view` commands (@iceman1001)
  - Added more details to the annotations of `hf mfdes list` output (@nvx)

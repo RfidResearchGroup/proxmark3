@@ -486,6 +486,13 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     uint8_t *rats = NULL;
     uint8_t rats_len = 0;
 
+
+    // if fct is called with NULL we need to assign some memory since this pointer is passaed around
+    uint8_t datain_tmp[10] = {0};
+    if (datain == NULL) {
+        datain = datain_tmp;
+    }
+
     //Here, we collect UID,sector,keytype,NT,AR,NR,NT2,AR2,NR2
     // This will be used in the reader-only attack.
 
