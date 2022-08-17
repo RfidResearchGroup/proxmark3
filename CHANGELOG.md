@@ -84,6 +84,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed - AID limitations when using Gallagher key diversification (@DarkMatterMatt)
  - Added new standalone mode `lf_em4100rsww` (@zabszk)
  - Fixed `hf 15 slixdisable` wrong pass id (@r1ddl3rz)
+ - Added `script run hf_mf_hid_sim.lua` 
 
 
 ## [Frostbit.4.14831][2022-01-11]
