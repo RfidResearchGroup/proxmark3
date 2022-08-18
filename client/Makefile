@@ -365,6 +365,7 @@ endif
 
 #######################################################################################################
 CFLAGS ?= $(DEFCFLAGS)
+CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS)
 PM3CFLAGS += -g -I./src -I./include -I../include -I../common -I../common_fpga $(PM3INCLUDES) $(INCLUDES)
@@ -407,6 +408,7 @@ endif
 PM3CFLAGS += -DHAVE_SNPRINTF
 
 CXXFLAGS ?= -Wall -Werror -O3
+CXXFLAGS += $(MYDEFS) $(MYCXXFLAGS) $(MYINCLUDES)
 PM3CXXFLAGS = $(CXXFLAGS)
 PM3CXXFLAGS += -I../include -I./include
 
@@ -422,6 +424,7 @@ endif
 PM3CXXFLAGS += -DHAVE_SNPRINTF
 
 LDFLAGS ?= $(DEFLDFLAGS)
+LDFLAGS += $(MYLDFLAGS)
 PM3LDFLAGS = $(LDFLAGS)
 ifeq ($(platform),Darwin)
     PM3LDFLAGS += -framework Foundation -framework AppKit
@@ -753,7 +756,7 @@ all-static: $(BINS)
 
 proxmark3: $(OBJS) $(STATICLIBS) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] LD $@)
-	$(Q)$(LD) $(PM3LDFLAGS) $(OBJS) $(STATICLIBS) $(LDLIBS) -o $@
+	$(Q)$(LD) $(PM3CFLAGS) $(PM3LDFLAGS) $(OBJS) $(STATICLIBS) $(LDLIBS) -o $@
 
 src/proxgui.cpp: src/ui/ui_overlays.h src/ui/ui_image.h
 
