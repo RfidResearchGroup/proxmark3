@@ -172,7 +172,7 @@ static void decode_print_st(uint16_t blockno, uint8_t *data) {
         PrintAndLogEx(INFO, "  # | Access rights");
         PrintAndLogEx(INFO, "----+-----------------------------------------------------------------");
 
-        if (! mfValidateAccessConditions(&data[6])) {
+        if (mfValidateAccessConditions(&data[6]) == false) {
             PrintAndLogEx(WARNING, _RED_("Invalid Access Conditions"));
         }
 
@@ -365,7 +365,7 @@ static int CmdHF14AMfAcl(const char *Cmd) {
     if (memcmp(acl, "\xFF\x07\x80", 3) == 0) {
         PrintAndLogEx(INFO, "ACL... " _GREEN_("%s") " (transport configuration)", sprint_hex(acl, sizeof(acl)));
     }
-    if (! mfValidateAccessConditions(acl)) {
+    if (mfValidateAccessConditions(acl) == false) {
         PrintAndLogEx(ERR, _RED_("Invalid Access Conditions, NEVER write these on a card!"));
     }
     PrintAndLogEx(NORMAL, "");
@@ -1153,7 +1153,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 }
 
                 // ensure access right isn't messed up.
-                if (! mfValidateAccessConditions(&bldata[6])) {
+                if (mfValidateAccessConditions(&bldata[6]) == false) {
                     PrintAndLogEx(WARNING, "Invalid Access Conditions on sector %i, replacing by default values", s);
                     memcpy(bldata + 6, "\xFF\x07\x80\x69", 4);
                 }
@@ -5392,6 +5392,9 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
+    if (g_session.pm3_present == false) 
+        return PM3_ENOTTY;
+
 
     uint8_t sector0[16 * 4] = {0};
     uint8_t sector10[16 * 4] = {0};
@@ -6422,6 +6425,10 @@ static int CmdHF14AMfValue(const char *Cmd) {
     }
 
     if (action < 3) {
+
+        if (g_session.pm3_present == false) 
+            return PM3_ENOTTY;
+
         if (action <= 1) { // increment/decrement value
             memcpy(block, (uint8_t *)&value, 4);
             uint8_t cmddata[26];
@@ -6488,7 +6495,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
         if (action == 4) {
             res = PM3_SUCCESS; // alread have data from command line
         } else {
-            res =  mfReadBlock(blockno, keytype, key, data);
+            res = mfReadBlock(blockno, keytype, key, data);
         }
 
         if (res == PM3_SUCCESS) {
@@ -6525,7 +6532,7 @@ static command_t CommandTable[] = {
     {"auth4",       CmdHF14AMfAuth4,        IfPm3Iso14443a,  "ISO14443-4 AES authentication"},
     {"acl",         CmdHF14AMfAcl,          AlwaysAvailable, "Decode and print MIFARE Classic access rights bytes"},
     {"dump",        CmdHF14AMfDump,         IfPm3Iso14443a,  "Dump MIFARE Classic tag to binary file"},
-    {"mad",         CmdHF14AMfMAD,          IfPm3Iso14443a,  "Checks and prints MAD"},
+    {"mad",         CmdHF14AMfMAD,          AlwaysAvailable, "Checks and prints MAD"},
     {"ndefread",    CmdHFMFNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
     {"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (MIFARE Classic EV1 only)"},
     {"rdbl",        CmdHF14AMfRdBl,         IfPm3Iso14443a,  "Read MIFARE Classic block"},
