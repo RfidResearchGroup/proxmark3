@@ -414,9 +414,9 @@ int reader_lto(bool loop, bool verbose) {
     int ret = PM3_SUCCESS;
 
     do {
-        uint8_t serial[5];
+        uint8_t serial[5] = {0};
         uint8_t serial_len = sizeof(serial);
-        uint8_t type_info[2];
+        uint8_t type_info[2] = {0};
 
         lto_switch_off_field();
         lto_switch_on_field();
