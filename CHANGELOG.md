@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change Client Makefile to respect global flags (@blshkv)
+ - Change Makefile, honors global CC values (@blshkv)
  - Fixed bad memory handling in MifareSim device side (@iceman1001)
  - Added json topaz file format (@iceman1001)
  - Added `hf topaz rdbl,  wrbl, view` commands (@iceman1001)
