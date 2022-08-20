@@ -51,7 +51,7 @@
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
 
-#define status(x) ( ((uint16_t)(0x91<<8)) + (uint16_t)x )
+#define status(x) ( ((uint16_t)(0x91 << 8)) + (uint16_t)x )
 /*
 static uint8_t desdefaultkeys[3][8] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, //Official
     {0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47},
@@ -341,8 +341,6 @@ static const char *getProductTypeStr(uint8_t *versionhw) {
         return "MIFARE DESFire HCE (MIFARE 2GO)";
     return "UNKNOWN PROD";
 }
-
-
 
 static int mfdes_get_info(mfdes_info_res_t *info) {
     SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
@@ -1776,18 +1774,20 @@ static int CmdHF14aDesMAD(const char *Cmd) {
         }
     }
 
+    PrintAndLogEx(SUCCESS, _CYAN_("Issuer"));
+
     if (foundFFFFFF) {
         res = DesfireSelectAIDHexNoFieldOn(&dctx, 0xffffff);
         if (res == PM3_SUCCESS) {
             uint32_t madver = 0;
             res = DesfireValueFileOperations(&dctx, 0x00, MFDES_GET_VALUE, &madver);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "MAD version   : " _RED_("n/a"));
+                PrintAndLogEx(SUCCESS, "MAD version... " _RED_("n/a"));
             } else {
                 if (madver == 3)
-                    PrintAndLogEx(SUCCESS, "MAD version   : " _GREEN_("3"));
+                    PrintAndLogEx(SUCCESS, "MAD version... " _GREEN_("3"));
                 else
-                    PrintAndLogEx(WARNING, "MAD version   : " _YELLOW_("%d"), madver);
+                    PrintAndLogEx(WARNING, "MAD version... " _YELLOW_("%d"), madver);
             }
 
             uint8_t data[250] = {0};
@@ -1795,10 +1795,10 @@ static int CmdHF14aDesMAD(const char *Cmd) {
 
             res = DesfireReadFile(&dctx, 01, 0x000000, 0, data, &datalen);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "Card Holder   : " _RED_("n/a"));
+                PrintAndLogEx(SUCCESS, "Card Holder... " _RED_("n/a"));
             } else {
                 if (datalen > 0) {
-                    PrintAndLogEx(SUCCESS, "Card Holder   : ");
+                    PrintAndLogEx(SUCCESS, "Card Holder... ");
                     if (verbose) {
                         print_buffer_with_offset(data, datalen, 0, true);
                         PrintAndLogEx(NORMAL, "");
@@ -1806,7 +1806,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
                     MADCardHolderInfoDecode(data, datalen, verbose);
                     PrintAndLogEx(NORMAL, "");
                 } else {
-                    PrintAndLogEx(SUCCESS, "Card Holder   : " _YELLOW_("none"));
+                    PrintAndLogEx(SUCCESS, "Card Holder... " _YELLOW_("none"));
                 }
             }
 
@@ -1830,16 +1830,41 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     }
 
     size_t madappcount = 0;
-    PrintAndLogEx(SUCCESS, "Applications  : ");
+    PrintAndLogEx(SUCCESS, "");
+    PrintAndLogEx(SUCCESS, _CYAN_("Applications"));
     for (int i = 0; i < PICCInfo.appCount; i++) {
         if ((AppList[i].appNum & 0xf00000) == 0xf00000) {
             DesfirePrintMADAID(AppList[i].appNum, verbose);
+
+            // read file 0, 1, 2
+            res = DesfireSelectAIDHexNoFieldOn(&dctx, AppList[i].appNum);
+            if (res == PM3_SUCCESS) {
+                uint8_t buf[APDU_RES_LEN] = {0};
+                size_t buflen = 0;
+
+                res = DesfireGetFileIDList(&dctx, buf, &buflen);
+                if (res != PM3_SUCCESS) {
+                    PrintAndLogEx(ERR, "Desfire GetFileIDList command " _RED_("error") ". Result: %d", res);
+                    DropField();
+                    return PM3_ESOFT;
+                }
+
+                if (buflen > 0) {
+                    for (int j = 0; j < buflen; j++) {
+                        PrintAndLogEx(INFO, "  File ID... %02x", buf[j]);
+                    }
+                }
+            }
+
             madappcount++;
         }
     }
 
-    if (madappcount == 0)
+    if (madappcount == 0) {
         PrintAndLogEx(SUCCESS, "There is no MAD applications on the card");
+        DropField();
+        return PM3_SUCCESS;
+    }
 
     DropField();
     return PM3_SUCCESS;
@@ -3492,6 +3517,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
 
     DesfirePrintFileSettings(buf, buflen);
 
+    PrintAndLogEx(NORMAL, "");
     DropField();
     return PM3_SUCCESS;
 }

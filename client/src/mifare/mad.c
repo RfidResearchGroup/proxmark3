@@ -125,6 +125,7 @@ static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool ver
         PrintAndLogEx(INFO, fmt, " (unknown)");
         return PM3_ENODATA;
     }
+
     const char *vmad = mad_json_get_str(elm, "mad");
     const char *application = mad_json_get_str(elm, "application");
     const char *company = mad_json_get_str(elm, "company");
@@ -132,7 +133,7 @@ static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool ver
     const char *integrator = mad_json_get_str(elm, "system_integrator");
 
     if (application && company) {
-        size_t result_len = 4 + strlen(application) + strlen(company);
+        size_t result_len = 6 + strlen(application) + strlen(company);
         char result[result_len];
         snprintf(result, result_len, " %s [%s]", application, company);
         PrintAndLogEx(INFO, fmt, result);
@@ -389,12 +390,12 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
     return PM3_SUCCESS;
 }
 
-int MADDFDecodeAndPrint(uint32_t short_aid) {
+int MADDFDecodeAndPrint(uint32_t short_aid, bool verbose) {
     open_mad_file(&mad_known_aids, false);
 
-    char fmt[50];
+    char fmt[128];
     snprintf(fmt, sizeof(fmt), "  MAD AID Function 0x%04X    :" _YELLOW_("%s"), short_aid, "%s");
-    print_aid_description(mad_known_aids, short_aid, fmt, false);
+    print_aid_description(mad_known_aids, short_aid, fmt, verbose);
     close_mad_file(mad_known_aids);
     return PM3_SUCCESS;
 }
