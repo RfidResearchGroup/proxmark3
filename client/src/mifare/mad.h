@@ -29,4 +29,5 @@ int MADDFDecodeAndPrint(uint32_t short_aid, bool verbose);
 int MADCardHolderInfoDecode(uint8_t *data, size_t datalen, bool verbose);
 void MADPrintHeader(void);
 bool HasMADKey(uint8_t *d);
+int DetectHID(uint8_t *d, uint16_t manufacture);
 #endif // _MAD_H_

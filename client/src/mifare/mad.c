@@ -406,3 +406,18 @@ bool HasMADKey(uint8_t *d) {
 
     return (memcmp(d + (3 * MFBLOCK_SIZE), g_mifare_mad_key, sizeof(g_mifare_mad_key)) == 0);
 }
+
+int DetectHID(uint8_t *d, uint16_t manufacture) {
+    if (d == NULL)
+        return -1;
+
+    // find HID
+    for (int i = 1; i < 16; i++) {
+        uint16_t aid = madGetAID(d, false, 1, i);
+        if (aid == manufacture) {
+            return i;
+        }
+    }
+
+    return -1;
+}

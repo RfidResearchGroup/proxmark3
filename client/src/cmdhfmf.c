@@ -35,6 +35,8 @@
 #include "crapto1/crapto1.h"    // prng_successor
 #include "cmdhf14a.h"           // exchange APDU
 #include "crypto/libpcrypto.h"
+#include "wiegand_formats.h"
+#include "wiegand_formatutils.h"
 
 #define MIFARE_4K_MAXBLOCK 256
 #define MIFARE_2K_MAXBLOCK 128
@@ -5388,6 +5390,41 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         MADPrintHeader();
         bool haveMAD2 = false;
         MAD1DecodeAndPrint(dump, swapmad, verbose, &haveMAD2);
+
+        int sector = DetectHID(dump, 0x484d);
+        if (sector > -1) {
+
+            // decode it
+            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(INFO, _CYAN_("HID PACS detected"));
+
+            uint8_t pacs_sector[MFBLOCK_SIZE * 3] = {0};
+            memcpy(pacs_sector, dump + (sector * 4 * 16), sizeof(pacs_sector));
+
+            if (pacs_sector[16] == 0x02) {
+
+                PrintAndLogEx(SUCCESS, "Raw...... " _GREEN_("%s"), sprint_hex_inrow(pacs_sector + 24, 8));
+
+                //todo:  remove preamble/sentinel
+                uint32_t top = 0, mid = 0, bot = 0;
+                char hexstr[16 + 1] = {0};
+                hex_to_buffer((uint8_t *)hexstr, pacs_sector + 24, 8, sizeof(hexstr) - 1, 0, 0, true);
+                hexstring_to_u96(&top, &mid, &bot, hexstr);
+
+                PrintAndLogEx(INFO, "top %x %x %x", top, mid, bot);
+
+                char binstr[64 + 1];
+                hextobinstring(binstr, hexstr);
+                char *pbin = binstr;
+                while (strlen(pbin) && *(++pbin) == '0');
+
+                PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s"), pbin);
+
+                PrintAndLogEx(INFO, "Wiegand decode");
+                wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
+                HIDTryUnpack(&packed);
+            }
+        }
         free(dump);
         return PM3_SUCCESS;
     }
