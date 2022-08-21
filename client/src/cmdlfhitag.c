@@ -850,6 +850,8 @@ static int CmdLFHitag2Dump(const char *Cmd) {
     //SendCommandNG(CMD_LF_HITAG_DUMP, &htd, sizeof(htd));
     PacketResponseNG resp;
     uint8_t *data = resp.data.asBytes;
+    if (data == NULL)
+        return PM3_ESOFT;
 
     if (fnlen < 1) {
         char *fptr = filename;
