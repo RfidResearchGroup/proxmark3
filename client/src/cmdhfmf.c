@@ -5411,8 +5411,6 @@ static int CmdHF14AMfMAD(const char *Cmd) {
                 hex_to_buffer((uint8_t *)hexstr, pacs_sector + 24, 8, sizeof(hexstr) - 1, 0, 0, true);
                 hexstring_to_u96(&top, &mid, &bot, hexstr);
 
-                PrintAndLogEx(INFO, "top %x %x %x", top, mid, bot);
-
                 char binstr[64 + 1];
                 hextobinstring(binstr, hexstr);
                 char *pbin = binstr;
