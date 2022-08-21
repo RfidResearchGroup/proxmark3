@@ -131,24 +131,17 @@ bool set_nonlinear_field(wiegand_message_t *data, uint64_t value, uint8_t numBit
 static uint8_t get_length_from_header(wiegand_message_t *data) {
     /**
      * detect if message has "preamble" / "sentinel bit"
-     *
+     * Right now we just calculate the highest bit set
+     * 37 bit formats is hard to detect since it doesnt have a sentinel bit
      */
-
-
     uint8_t len = 0;
     uint32_t hfmt = 0; // for calculating card length
 
     if ((data->Top & 0x000FFFFF) > 0) { // > 64 bits
         hfmt = data->Top & 0x000FFFFF;
         len = 64;
-    } else if ((data->Mid & 0xFFFFFFC0) > 0) { // < 63-38 bits
-        hfmt = data->Mid & 0xFFFFFFC0;
-        len = 32;
-    } else if (data->Mid && (data->Mid & 0x00000020) == 0) { // 37 bits;
-        hfmt = 0;
-        len = 37;
-    } else if ((data->Mid & 0x0000001F) > 0) { // 36-32 bits
-        hfmt = data->Mid & 0x0000001F;
+    } else if (data->Mid > 0) { // < 63-32 bits
+        hfmt = data->Mid;
         len = 32;
     } else {
         hfmt = data->Bot;
@@ -159,8 +152,11 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
         hfmt >>= 1;
         len++;
     }
+
+    // everything less than 26 bits found, assume 26 bits
     if (len < 26)
         len = 26;
+
     return len;
 }
 
