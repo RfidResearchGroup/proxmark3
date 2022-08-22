@@ -141,8 +141,25 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
         hfmt = data->Top & 0x000FFFFF;
         len = 64;
     } else if (data->Mid > 0) { // < 63-32 bits
-        hfmt = data->Mid;
-        len = 32;
+
+        // detect HID format b38 set
+        if (data->Mid & 0xFFFFFFC0) {
+            hfmt = data->Mid;
+            len = 32;
+        } else {
+
+            printf("hid preamble detected\n");
+            len = 32; 
+
+            if ((data->Mid ^ 0x20) == 0) { hfmt = data->Bot; len = 0; } 
+            else if ((data->Mid & 0x10) == 0) { hfmt = data->Mid & 0x1F; } 
+            else if ((data->Mid & 0x08) == 0) { hfmt = data->Mid & 0x0F; } 
+            else if ((data->Mid & 0x04) == 0) { hfmt = data->Mid & 0x07; } 
+            else if ((data->Mid & 0x02) == 0) { hfmt = data->Mid & 0x03; } 
+            else if ((data->Mid & 0x01) == 0) { hfmt = data->Mid & 0x01; } 
+            else { hfmt = data->Mid & 0x3F;} 
+        }
+
     } else {
         hfmt = data->Bot;
         len = 0;

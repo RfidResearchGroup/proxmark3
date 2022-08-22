@@ -894,7 +894,7 @@ static int CmdAutoCorr(const char *Cmd) {
     }
 
     if (window >= g_GraphTraceLen) {
-        PrintAndLogEx(WARNING, "window must be smaller than trace (" _YELLOW_("%zu") " samples)", g_GraphTraceLen);
+        PrintAndLogEx(WARNING, "window must be smaller than trace ( " _YELLOW_("%zu") " samples )", g_GraphTraceLen);
         return PM3_EINVARG;
     }
 

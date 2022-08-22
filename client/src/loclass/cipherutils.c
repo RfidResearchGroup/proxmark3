@@ -198,9 +198,9 @@ static int testBitStream(void) {
     }
 
     if (memcmp(input, output, sizeof(input)) == 0) {
-        PrintAndLogEx(SUCCESS, "    Bitstream test 1 (%s)", _GREEN_("ok"));
+        PrintAndLogEx(SUCCESS, "    Bitstream test 1 ( %s )", _GREEN_("ok"));
     } else {
-        PrintAndLogEx(FAILED, "    Bitstream test 1 (%s)", _RED_("failed"));
+        PrintAndLogEx(FAILED, "    Bitstream test 1 ( %s )", _RED_("fail"));
         uint8_t i;
         for (i = 0 ; i < ARRAYLEN(input) ; i++) {
             PrintAndLogEx(NORMAL, "    IN %02x, OUT %02x", input[i], output[i]);
@@ -228,9 +228,9 @@ static int testReversedBitstream(void) {
     }
 
     if (memcmp(input, output, sizeof(input)) == 0) {
-        PrintAndLogEx(SUCCESS, "    Bitstream test 2 (%s)", _GREEN_("ok"));
+        PrintAndLogEx(SUCCESS, "    Bitstream test 2 ( %s )", _GREEN_("ok"));
     } else {
-        PrintAndLogEx(FAILED, "    Bitstream test 2 (%s)", _RED_("failed"));
+        PrintAndLogEx(FAILED, "    Bitstream test 2 ( %s )", _RED_("fail"));
         uint8_t i;
         for (i = 0 ; i < ARRAYLEN(input) ; i++) {
             PrintAndLogEx(NORMAL, "    IN %02x, MIDDLE: %02x, OUT %02x", input[i], reverse[i], output[i]);

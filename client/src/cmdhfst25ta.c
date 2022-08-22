@@ -46,7 +46,7 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     PrintAndLogEx(SUCCESS, "------------ " _CYAN_("ST System file") " ------------");
 
     uint16_t len = (d[0] << 8 | d[1]);
-    PrintAndLogEx(SUCCESS, " len      %u bytes (" _GREEN_("0x%04X") ")", len, len);
+    PrintAndLogEx(SUCCESS, " len      %u bytes ( " _GREEN_("0x%04X") " )", len, len);
 
     if (d[2] == 0x80) {
         PrintAndLogEx(SUCCESS, " ST reserved  ( 0x%02X )", d[2]);
@@ -98,7 +98,7 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     PrintAndLogEx(SUCCESS, "      Device#  " _YELLOW_("%s"), sprint_hex_inrow(d + 10, 5));
 
     uint16_t mem = (d[0xF] << 8 | d[0x10]);
-    PrintAndLogEx(SUCCESS, " Memory Size - 1   %u bytes (" _GREEN_("0x%04X") ")", mem, mem);
+    PrintAndLogEx(SUCCESS, " Memory Size - 1   %u bytes ( " _GREEN_("0x%04X") " )", mem, mem);
 
     PrintAndLogEx(SUCCESS, " IC Reference code %u ( 0x%02X )", d[0x12], d[0x12]);
 

@@ -72,7 +72,7 @@ static int test_genkey(unsigned int keylength, unsigned char *msg, size_t msg_le
     }
 
     free(tmp2);
-    PrintAndLogEx(SUCCESS, "passed (" _GREEN_("%" PRIu64) " ms)", msclock() - ms);
+    PrintAndLogEx(SUCCESS, "passed ( " _GREEN_("%" PRIu64) " ms )", msclock() - ms);
 
 free_tmp:
     free(tmp);

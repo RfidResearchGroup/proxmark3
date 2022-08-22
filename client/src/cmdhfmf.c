@@ -5150,7 +5150,7 @@ static int CmdHf14AMfSetMod(const char *Cmd) {
     if (resp.status == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Change ( " _GREEN_("ok") " )");
     else
-        PrintAndLogEx(FAILED, "Change (" _GREEN_("fail") " )");
+        PrintAndLogEx(FAILED, "Change ( " _RED_("fail") " )");
 
     return resp.status;
 }

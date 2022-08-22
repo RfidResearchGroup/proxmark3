@@ -1377,7 +1377,7 @@ static int CmdHF15Dump(const char *Cmd) {
 
             if (CheckCrc15(recv, resp.length) == false) {
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(FAILED, "crc (" _RED_("fail") ")");
+                PrintAndLogEx(FAILED, "crc ( " _RED_("fail") " )");
                 continue;
             }
 
@@ -1603,7 +1603,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     uint8_t *data = resp.data.asBytes;
 
     if (CheckCrc15(data, resp.length) == false) {
-        PrintAndLogEx(FAILED, "crc (" _RED_("fail") ")");
+        PrintAndLogEx(FAILED, "crc ( " _RED_("fail") " )");
         return PM3_ESOFT;
     }
 
@@ -1734,7 +1734,7 @@ static int CmdHF15Readblock(const char *Cmd) {
     uint8_t *data = resp.data.asBytes;
 
     if (CheckCrc15(data, resp.length) == false) {
-        PrintAndLogEx(FAILED, "crc (" _RED_("fail") ")");
+        PrintAndLogEx(FAILED, "crc ( " _RED_("fail") " )");
         return PM3_ESOFT;
     }
 
@@ -1785,7 +1785,7 @@ static int hf_15_write_blk(bool verbose, bool fast, uint8_t *req, uint8_t reqlen
     uint8_t *recv = resp.data.asBytes;
     if (CheckCrc15(recv, resp.length) == false) {
         if (verbose) {
-            PrintAndLogEx(FAILED, "crc (" _RED_("fail") ")");
+            PrintAndLogEx(FAILED, "crc ( " _RED_("fail") " )");
         }
         return PM3_ESOFT;
     }
@@ -2103,10 +2103,10 @@ static int CmdHF15CSetUID(const char *Cmd) {
     }
 
     if (memcmp(revuid, payload.uid, 8) != 0) {
-        PrintAndLogEx(FAILED, "setting new UID (" _RED_("failed") ")");
+        PrintAndLogEx(FAILED, "setting new UID ( " _RED_("fail") " )");
         return PM3_ESOFT;
     } else {
-        PrintAndLogEx(SUCCESS, "setting new UID (" _GREEN_("ok") ")");
+        PrintAndLogEx(SUCCESS, "setting new UID ( " _GREEN_("ok") " )");
         return PM3_SUCCESS;
     }
 }

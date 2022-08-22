@@ -841,7 +841,7 @@ static int hfgal_read_card(uint32_t aid, uint8_t *site_key, bool verbose, bool q
 
         if (verbose) {
             if (region_code > 0 || facility_code > 0 || current_aid > 0) {
-                PrintAndLogEx(INFO, "Reading AID: " _YELLOW_("%06X") ", region: " _YELLOW_("%c") " (" _YELLOW_("%u") "), facility: " _YELLOW_("%u"),
+                PrintAndLogEx(INFO, "Reading AID: " _YELLOW_("%06X") ", region: " _YELLOW_("%c") " ( " _YELLOW_("%u") " ), facility: " _YELLOW_("%u"),
                               current_aid,
                               'A' + region_code,
                               region_code,
@@ -861,7 +861,7 @@ static int hfgal_read_card(uint32_t aid, uint8_t *site_key, bool verbose, bool q
         }
         PM3_RET_IF_ERR_MAYBE_MSG(res, !quiet, "Failed reading card application credentials");
 
-        PrintAndLogEx(SUCCESS, "Gallagher (AID %06X) - region: " _GREEN_("%c") " (" _GREEN_("%u") ")"
+        PrintAndLogEx(SUCCESS, "Gallagher (AID %06X) - region: " _GREEN_("%c") " ( " _GREEN_("%u") " )"
                       ", facility: " _GREEN_("%u")
                       ", card number: " _GREEN_("%u")
                       ", issue level: " _GREEN_("%u"),
@@ -1298,7 +1298,7 @@ static int CmdGallagherDecode(const char *cmd) {
     GallagherCredentials_t creds = {0};
     gallagher_decode_creds(data_buf, &creds);
 
-    PrintAndLogEx(SUCCESS, "Gallagher - region: " _GREEN_("%c") " (" _GREEN_("%u") ")"
+    PrintAndLogEx(SUCCESS, "Gallagher - region: " _GREEN_("%c") " ( " _GREEN_("%u") " )"
                   ", facility: " _GREEN_("%u")
                   ", card number: " _GREEN_("%u")
                   ", issue level: " _GREEN_("%u"),

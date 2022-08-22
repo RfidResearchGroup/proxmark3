@@ -939,7 +939,7 @@ int CmdEM4x50WritePwd(const char *Cmd) {
         return PM3_SUCCESS;
 
     if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Writing password (" _RED_("failed") ")");
+        PrintAndLogEx(FAILED, "Writing password ( " _RED_("fail") " )");
         return PM3_EFAILED;
     }
 

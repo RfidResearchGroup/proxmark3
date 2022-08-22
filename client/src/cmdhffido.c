@@ -639,7 +639,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
                     PrintAndLogEx(WARNING, "Other signature check error: %x %s", (res < 0) ? -res : res, ecdsa_get_error(res));
                 }
             } else {
-                PrintAndLogEx(SUCCESS, "Signature is (" _GREEN_("ok") " )");
+                PrintAndLogEx(SUCCESS, "Signature is ( " _GREEN_("ok") " )");
             }
         } else {
             PrintAndLogEx(WARNING, "No public key provided. can't check signature.");
