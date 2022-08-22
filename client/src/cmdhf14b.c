@@ -290,7 +290,7 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         arg_lit0("c", "crc", "calculate and append CRC"),
         arg_lit0("r", NULL, "do not read response from card"),
         arg_int0("t", "timeout", "<dec>", "timeout in ms"),
-        arg_lit0("v", "verbose", "verbose"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_str0("d", "data", "<hex>", "data, bytes to send"),
         arg_param_end
     };
@@ -931,7 +931,7 @@ static int CmdHF14Binfo(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("s",  "aidsearch", "checks if AIDs from aidlist.json is present on the card and prints information about found AIDs"),
-        arg_lit0("v", "verbose", "verbose"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1186,12 +1186,12 @@ static int CmdHF14BReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("s", "silent", "silent (no messages)"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("@", NULL, "optional - continuous reader mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = (arg_get_lit(ctx, 1) == false);
+    bool verbose = arg_get_lit(ctx, 1);
     bool cm = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
@@ -2203,20 +2203,25 @@ int readHF14B(bool loop, bool verbose) {
     do {
         // try std 14b (atqb)
         if (HF14B_std_reader(verbose))
-            return PM3_SUCCESS;
+            if (loop)
+                continue;
 
         // try ST Microelectronics 14b
         if (HF14B_st_reader(verbose))
-            return PM3_SUCCESS;
+            if (loop)
+                continue;
 
         // try ASK CT 14b
         if (HF14B_ask_ct_reader(verbose))
-            return PM3_SUCCESS;
+            if (loop)
+                continue;
 
         // try unknown 14b read commands (to be identified later)
         // could be read of calypso, CEPAS, moneo, or pico pass.
         if (HF14B_other_reader(verbose))
-            return PM3_SUCCESS;
+            if (loop)
+                continue;
+
 
     } while (loop && kbd_enter_pressed() == false);
 

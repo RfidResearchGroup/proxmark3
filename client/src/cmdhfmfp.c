@@ -461,7 +461,7 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v", "verbose", "Verbose mode"),
+        arg_lit0("v", "verbose", "Verbose output"),
         arg_str1(NULL, "ki",  "<hex>", " Key number, 2 hex bytes"),
         arg_str0(NULL, "key", "<hex>", " Key, 16 hex bytes"),
         arg_param_end

@@ -1817,7 +1817,7 @@ static int CmdSamples(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0("n", NULL, "<dec>", "num of samples (512 - 40000)"),
-        arg_lit0("v", "verbose", "verbose"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

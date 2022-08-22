@@ -628,7 +628,7 @@ int CmdEM4x50Info(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
-        arg_lit0("v", "verbose", "additional output of data section"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
 
