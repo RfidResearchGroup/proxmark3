@@ -606,7 +606,7 @@ static int ndef_print_CC(uint8_t *data) {
     uint8_t mlrule = (data[3] & 0x06) >> 1;
     uint8_t mbread = (data[3] & 0x01);
 
-    PrintAndLogEx(SUCCESS, "  %02X: Additional feature information", data[3]);    
+    PrintAndLogEx(SUCCESS, "  %02X: Additional feature information", data[3]);
     PrintAndLogEx(SUCCESS, "  %s", sprint_bin(&data[3], 1));
     PrintAndLogEx(SUCCESS, "  xxx..... - %02X: RFU ( %s )", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
     PrintAndLogEx(SUCCESS, "  ...x.... - %02X: %s special frame", sf, (sf) ? "support" : "don\'t support");
@@ -3243,7 +3243,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
 
     PrintAndLogEx(INFO, "------------------.---------------");
     PrintAndLogEx(INFO, " Using UID 4b: " _YELLOW_("%s"), sprint_hex(uid, 4));
-    PrintAndLogEx(INFO, " Using UID 7b: " _YELLOW_("%s"), sprint_hex(uid, 7));    
+    PrintAndLogEx(INFO, " Using UID 7b: " _YELLOW_("%s"), sprint_hex(uid, 7));
     PrintAndLogEx(INFO, "----------------------------------");
     PrintAndLogEx(INFO, " algo            | pwd      | pack");
     PrintAndLogEx(INFO, "-----------------+----------+-----");

@@ -238,7 +238,7 @@ static int topaz_write_erase8_block(uint8_t blockno, uint8_t *block_data) {
     }
 
     if (memcmp(block_data, response + 1, 8) == 0) {
-        return PM3_SUCCESS;        
+        return PM3_SUCCESS;
     }
     return PM3_ESOFT;
 }
@@ -331,13 +331,13 @@ static int topaz_print_CC(uint8_t *data) {
 // b1, b0 write
 // 00 always, 01 rfo, 10 proprietary, 11 never
 
-// vs 
+// vs
 
 // NFC Forum Type 2 docs,   where
 // b7654 = major version
 // b3219 = minor version
 
-// CC write / read access 
+// CC write / read access
 // (data[3] & 0xF0) ? "(RFU)" : "Read access granted without any security",
 // (data[3] & 0x0F) == 0 ? "Write access granted without any security" : (data[3] & 0x0F) == 0x0F ? "No write access granted at all" : "(RFU)");
     uint8_t cc_major = (data[1] & 0xF0) >> 4;
@@ -397,7 +397,7 @@ static int topaz_print_CC(uint8_t *data) {
     PrintAndLogEx(SUCCESS, "  ....x... - %02X: %s lock block", lb, (lb) ? "support" : "don\'t support");
     PrintAndLogEx(SUCCESS, "  .....xx. - %02X: RFU ( %s )", mlrule, (mlrule == 0) ? _GREEN_("ok") : _RED_("fail"));
     PrintAndLogEx(SUCCESS, "  .......x - %02X: IC %s multiple block reads", mbread, (mbread) ? "support" : "don\'t support");
-    PrintAndLogEx(SUCCESS,"");
+    PrintAndLogEx(SUCCESS, "");
 
     return PM3_SUCCESS;
 }
@@ -457,7 +457,7 @@ static void topaz_print_control_TLVs(uint8_t *memory) {
     uint16_t next_lockable_byte = 0x0f * 8; // first byte after static memory area
 
     while (*TLV_ptr != 0x03 && *TLV_ptr != 0xFD && *TLV_ptr != 0xFE) {
-        
+
         // all Lock Control TLVs shall be present before the NDEF message TLV, the proprietary TLV (and the Terminator TLV)
         get_TLV(&TLV_ptr, &TLV_type, &TLV_length, &TLV_value);
 
@@ -556,7 +556,7 @@ static void topaz_print_dynamic_data(void) {
     }
 
     PrintAndLogEx(SUCCESS, "Dynamic Data blocks:");
-    
+
     if (topaz_read_dynamic_data() == PM3_SUCCESS) {
 
         PrintAndLogEx(SUCCESS, "block# | Data                    |lck");
@@ -587,7 +587,7 @@ static void printTopazDumpContents(uint8_t *dump, size_t size) {
 
     topaz_tag_t *t = (topaz_tag_t *)dump;
 
-    // uses a global var for all 
+    // uses a global var for all
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Static data blocks :");
     PrintAndLogEx(SUCCESS, "block#      | data                    |lck| info");
@@ -598,7 +598,7 @@ static void printTopazDumpContents(uint8_t *dump, size_t size) {
 
     for (uint8_t i = 0; i <= 0x0C; i++) {
 
-        if (i == 0) 
+        if (i == 0)
             block_info = topaz_ks[i];
         else
             block_info = topaz_ks[1];
@@ -606,12 +606,12 @@ static void printTopazDumpContents(uint8_t *dump, size_t size) {
         const char *lockstr = (topaz_byte_is_locked(i * 8)) ? _RED_("x") : " ";
 
         PrintAndLogEx(SUCCESS, " %3u / 0x%02x | %s| %s | %s",
-            i,
-            i,
-            sprint_hex(&t->data_blocks[i][0], 8),
-            lockstr,
-            block_info
-        );
+                      i,
+                      i,
+                      sprint_hex(&t->data_blocks[i][0], 8),
+                      lockstr,
+                      block_info
+                     );
     }
 
     PrintAndLogEx(SUCCESS, " %3u / 0x%02x | %s|   | %s", 0x0D, 0x0D, sprint_hex(&t->data_blocks[0x0D][0], 8), topaz_ks[2]);
@@ -626,7 +626,7 @@ static int CmdHFTopazReader(const char *Cmd) {
                   "Read UID from Topaz tags",
                   "hf topaz reader\n"
                   "hf topaz reader -@     -> Continuous mode\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -675,7 +675,7 @@ int CmdHFTopazInfo(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    
+
     int status = readTopazUid(false, verbose);
     if (status != PM3_SUCCESS) {
         return status;
@@ -689,15 +689,15 @@ int CmdHFTopazInfo(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "      %s", sprint_bin(topaz_tag.HR01, 1));
     PrintAndLogEx(SUCCESS, "      ...x.... - %s / %s",
-                (topaz_tag.HR01[0] & 0xF0) == 0x10 ? _GREEN_("TOPAZ tag") : "",
-                (topaz_tag.HR01[0] & 0xF0) == 0x10 ? _GREEN_("Type 1 NDEF") : ""
-                );
-    PrintAndLogEx(SUCCESS, "      .......x - %s memory map", ((topaz_tag.HR01[0] & 0x0F) == 0x01) ? "Static" : "Dynamic" );
+                  (topaz_tag.HR01[0] & 0xF0) == 0x10 ? _GREEN_("TOPAZ tag") : "",
+                  (topaz_tag.HR01[0] & 0xF0) == 0x10 ? _GREEN_("Type 1 NDEF") : ""
+                 );
+    PrintAndLogEx(SUCCESS, "      .......x - %s memory map", ((topaz_tag.HR01[0] & 0x0F) == 0x01) ? "Static" : "Dynamic");
     PrintAndLogEx(SUCCESS, "");
     PrintAndLogEx(SUCCESS, " Lock bytes... %02X%02X",
-            topaz_tag.data_blocks[0x0e][0],
-            topaz_tag.data_blocks[0x0e][1]
-            );
+                  topaz_tag.data_blocks[0x0e][0],
+                  topaz_tag.data_blocks[0x0e][1]
+                 );
 
     PrintAndLogEx(SUCCESS, " OTP.......... %s", sprint_hex(&topaz_tag.data_blocks[0x0e][2], 6));
     PrintAndLogEx(NORMAL, "");
@@ -792,12 +792,12 @@ static int CmdHFTopazDump(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
-    
+
     int status = readTopazUid(false, false);
     if (status != PM3_SUCCESS) {
         return status;
     }
-    printTopazDumpContents((uint8_t*)&topaz_tag, sizeof(topaz_tag_t));
+    printTopazDumpContents((uint8_t *)&topaz_tag, sizeof(topaz_tag_t));
 
     bool set_dynamic = false;
     if (topaz_set_cc_dynamic(&topaz_tag.data_blocks[1][0]) == PM3_SUCCESS) {
@@ -807,10 +807,10 @@ static int CmdHFTopazDump(const char *Cmd) {
 
         topaz_print_lifecycle_state(&topaz_tag.data_blocks[1][0]);
 
-        NDEFDecodeAndPrint(&topaz_tag.data_blocks[1][4], 
-            (topaz_tag.HR01[0] == 1) ? (12 * 8) : 476
-            , true
-        );        
+        NDEFDecodeAndPrint(&topaz_tag.data_blocks[1][4],
+                           (topaz_tag.HR01[0] == 1) ? (12 * 8) : 476
+                           , true
+                          );
     }
 
     PrintAndLogEx(INFO, "-------------------------------------------------------------");
@@ -827,7 +827,7 @@ static int CmdHFTopazDump(const char *Cmd) {
         pm3_save_dump(filename, (uint8_t *)&topaz_tag, sizeof(topaz_tag_t) + topaz_tag.size, jsfTopaz, TOPAZ_BLOCK_SIZE);
     else
         pm3_save_dump(filename, (uint8_t *)&topaz_tag, sizeof(topaz_tag_t), jsfTopaz, TOPAZ_BLOCK_SIZE);
-        
+
     if (set_dynamic) {
         free(topaz_tag.dynamic_memory);
     }
@@ -868,12 +868,12 @@ static int CmdHFTopazView(const char *Cmd) {
 
         topaz_print_lifecycle_state(&topaz_tag.data_blocks[1][0]);
 
-        NDEFDecodeAndPrint(&topaz_tag.data_blocks[1][4], 
-            (topaz_tag.HR01[0] == 1) ? (12 * 8) : 476
-            , true
-        );
+        NDEFDecodeAndPrint(&topaz_tag.data_blocks[1][4],
+                           (topaz_tag.HR01[0] == 1) ? (12 * 8) : 476
+                           , true
+                          );
 
-        PrintAndLogEx(INFO, "%s", sprint_hex(&topaz_tag.data_blocks[1][4], (12*8)));
+        PrintAndLogEx(INFO, "%s", sprint_hex(&topaz_tag.data_blocks[1][4], (12 * 8)));
 
         free(topaz_tag.dynamic_memory);
     }
@@ -946,7 +946,7 @@ static int CmdHFTopazWrBl(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (dlen != 8 ) {
+    if (dlen != 8) {
         PrintAndLogEx(WARNING, "Wrong data length. Expect 8, got %d", dlen);
         return PM3_EINVARG;
     }
@@ -957,9 +957,9 @@ static int CmdHFTopazWrBl(const char *Cmd) {
     int res = topaz_write_erase8_block(blockno, data);
 
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )" );
+        PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
     } else {
-        PrintAndLogEx(WARNING, "Write ( " _RED_("fail") " )" );
+        PrintAndLogEx(WARNING, "Write ( " _RED_("fail") " )");
     }
 
     topaz_switch_off_field();
@@ -977,9 +977,9 @@ static command_t CommandTable[] = {
     {"sim",     CmdHFTopazSim,      IfPm3Iso14443a,  "Simulate Topaz tag"},
     {"sniff",   CmdHFTopazSniff,    IfPm3Iso14443a,  "Sniff Topaz reader-tag communication"},
     {"raw",     CmdHFTopazRaw,      IfPm3Iso14443a,  "Send raw hex data to tag"},
-    {"rdbl",    CmdHFTopazRdBl,     IfPm3Iso14443a,  "Read block"},    
+    {"rdbl",    CmdHFTopazRdBl,     IfPm3Iso14443a,  "Read block"},
     {"view",    CmdHFTopazView,     AlwaysAvailable, "Display content from tag dump file"},
-    {"wrbl",    CmdHFTopazWrBl,     IfPm3Iso14443a,  "Write block"},    
+    {"wrbl",    CmdHFTopazWrBl,     IfPm3Iso14443a,  "Write block"},
     {NULL,      NULL,               0, NULL}
 };
 
@@ -1055,20 +1055,20 @@ int readTopazUid(bool loop, bool verbose) {
         // printing
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%02X %02X %02X %02X %02X %02X %02X"),
-                    topaz_tag.uid[6],
-                    topaz_tag.uid[5],
-                    topaz_tag.uid[4],
-                    topaz_tag.uid[3],
-                    topaz_tag.uid[2],
-                    topaz_tag.uid[1],
-                    topaz_tag.uid[0]);
+                      topaz_tag.uid[6],
+                      topaz_tag.uid[5],
+                      topaz_tag.uid[4],
+                      topaz_tag.uid[3],
+                      topaz_tag.uid[2],
+                      topaz_tag.uid[1],
+                      topaz_tag.uid[0]);
 
         PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), atqa[1], atqa[0]);
 
         topaz_tag.HR01[0] = rid_response[0];
         topaz_tag.HR01[1] = rid_response[1];
 
-   } while (loop && kbd_enter_pressed() == false);
+    } while (loop && kbd_enter_pressed() == false);
 
     topaz_switch_off_field();
     return res;

@@ -108,7 +108,7 @@ local function main(args)
     -- only deal with missing PWD and PACK, or with 56 emu hdr
     if #hex ~= 1064 and #hex ~= 1080 and #hex ~= 1192 then return oops('Expecting either a plain binary or emulator dump') end
 
-    local amiibo_offset = (#hex == 1064 or #hex == 1080) and 0 or 112 
+    local amiibo_offset = (#hex == 1064 or #hex == 1080) and 0 or 112
     local amiibo_info = hex:sub(amiibo_offset + 169, amiibo_offset + 169 + 15):lower()
     local amiibo_game = amiibo_info:sub(1, 3)
     local amiibo_type = amiibo_info:sub(7, 8)

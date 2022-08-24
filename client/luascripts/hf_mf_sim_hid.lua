@@ -1,4 +1,4 @@
--- 
+--
 -- hf_mf_sim_hid.lua - A tool to clone a large number of tags at once.
 -- Adapted from lf_hid_bulkclone.lua
 -- Created 16.08.2022
@@ -110,7 +110,7 @@ end
   hex.  This should be easy enough to extend to non 26bit formats
 ]]--
 local function cardHex(i, f)
-    
+
     fac = lshift(f, 16)
     id = bor(i, fac)
     stream = toBits(id, 24)

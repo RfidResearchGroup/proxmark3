@@ -110,8 +110,8 @@ void RunMod(void) {
         // infinite loop
         if (i > 15) {
             // still no dump file found
-            if (flag_has_dumpfile == false) {                
-                break; 
+            if (flag_has_dumpfile == false) {
+                break;
             }
             // next loop
             i = 1;

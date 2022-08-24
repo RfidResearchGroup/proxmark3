@@ -2440,7 +2440,7 @@ static void DesfirePrintShortFileTypeSettings(FileSettings_t *fsettings) {
                           fsettings->limitedCredit,
                           fsettings->value,
                           fsettings->value
-                    );
+                         );
             break;
         }
         case 0x03:
@@ -2450,7 +2450,7 @@ static void DesfirePrintShortFileTypeSettings(FileSettings_t *fsettings) {
                           fsettings->maxRecordCount,
                           fsettings->recordSize,
                           fsettings->recordSize
-                    );
+                         );
             break;
         }
         case 0x05: {
@@ -2568,16 +2568,16 @@ static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t 
             if (create) {
                 PrintAndLogEx(INFO, "Value............ %d / 0x%08X", value, value);
                 PrintAndLogEx(INFO, "Limited credit... %d - %s"
-                    , limited_credit_enabled
-                    , ((limited_credit_enabled & 1) != 0) ? "enabled" : "disabled"
-                );
+                              , limited_credit_enabled
+                              , ((limited_credit_enabled & 1) != 0) ? "enabled" : "disabled"
+                             );
             } else {
                 PrintAndLogEx(INFO, "Limited credit... %d - %s %d (0x%08X)"
-                    , limited_credit_enabled
-                    , ((limited_credit_enabled & 1) != 0) ? "enabled" : "disabled"
-                    , value
-                    , value
-                );
+                              , limited_credit_enabled
+                              , ((limited_credit_enabled & 1) != 0) ? "enabled" : "disabled"
+                              , value
+                              , value
+                             );
             }
             PrintAndLogEx(INFO, "GetValue access... %s", ((limited_credit_enabled & 0x02) != 0) ? "Free" : "Not Free");
 

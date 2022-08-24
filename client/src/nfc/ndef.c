@@ -1060,7 +1060,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 indx++;
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF Memory Control") " ---");                
+                PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF Memory Control") " ---");
                 if (len != 3) {
                     PrintAndLogEx(WARNING, "NDEF Memory Control block size must be 3 instead of %d", len);
                 } else {

@@ -638,14 +638,14 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             JsonSaveStr(root, "FileType", "topaz");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", tag->uid, sizeof(tag->uid));
             JsonSaveBufAsHexCompact(root, "$.Card.H0R1", tag->HR01, sizeof(tag->HR01));
-            JsonSaveBufAsHexCompact(root, "$.Card.Size", (uint8_t *)&(tag->size), 2);
+            JsonSaveBufAsHexCompact(root, "$.Card.Size", (uint8_t *) & (tag->size), 2);
             for (size_t i = 0; i < TOPAZ_STATIC_MEMORY / 8; i++) {
                 char path[PATH_MAX_LENGTH] = {0};
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, &tag->data_blocks[i][0], TOPAZ_BLOCK_SIZE);
             }
-  
-            // ICEMAN todo:  add dynamic memory.  
+
+            // ICEMAN todo:  add dynamic memory.
             // uint16_z Size
             // uint8_t *dynamic_memory;
 
@@ -1296,13 +1296,13 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     if (!strcmp(ctype, "legic")) {
         JsonLoadBufAsHex(root, "$.raw", udata, maxdatalen, datalen);
     }
-      
+
     if (!strcmp(ctype, "topaz")) {
 
         topaz_tag_t *mem = (topaz_tag_t *)udata;
         JsonLoadBufAsHex(root, "$.Card.UID", mem->uid, sizeof(mem->uid), datalen);
         JsonLoadBufAsHex(root, "$.Card.HR01", mem->HR01, sizeof(mem->HR01), datalen);
-        JsonLoadBufAsHex(root, "$.Card.Size", (uint8_t *)&(mem->size), 2, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Size", (uint8_t *) & (mem->size), 2, datalen);
 
         size_t sptr = 0;
         for (int i = 0; i < (TOPAZ_STATIC_MEMORY / 8); i++) {
@@ -1322,7 +1322,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             sptr += len;
 
-            // ICEMAN todo:  add dynamic memory.  
+            // ICEMAN todo:  add dynamic memory.
             // uint16_z Size
             // uint8_t *dynamic_memory;
         }

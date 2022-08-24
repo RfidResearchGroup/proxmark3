@@ -223,7 +223,7 @@ static int CmdHFFudanReader(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (cm) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");        
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
     read_fudan_uid(cm, verbose);

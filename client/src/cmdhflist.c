@@ -191,7 +191,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 return PM3_SUCCESS;
             } else if (cmd[1] == 0x02 && cmdsize == (cmd[2] & 0x0f) + 7) {
                 // Byte 3 is the reader type
-                switch(cmd[3]) {
+                switch (cmd[3]) {
                     case 0x01:
                         snprintf(exp, size, "ECP2 (Transit)");
                         break;
