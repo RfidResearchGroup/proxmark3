@@ -2188,7 +2188,7 @@ void SimTagIso15693(uint8_t *uid) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
-            // Build GET_SYSTEM_INFO command
+            // Build GET_SYSTEM_INFO response
             uint8_t resp_sysinfo[CMD_SYSINFO_RESP] = {0};
 
             resp_sysinfo[0] = 0;    // Response flags.
@@ -2226,7 +2226,7 @@ void SimTagIso15693(uint8_t *uid) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
-            // Build GET_SYSTEM_INFO command
+            // Build READ_BLOCK response
             uint8_t resp_readblock[CMD_READBLOCK_RESP] = {0};
 
             resp_readblock[0] = 0;    // Response flags.
