@@ -1259,9 +1259,12 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_ISO15693_SIMULATE: {
             struct p {
                 uint8_t uid[8];
+                uint8_t block_size;
+                int data_length;
+                uint8_t data[PM3_CMD_BLOB_SIZE];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            SimTagIso15693(payload->uid);
+            SimTagIso15693(payload->uid, payload->block_size, payload->data_length, payload->data);
             break;
         }
         case CMD_HF_ISO15693_CSETUID: {

@@ -27,6 +27,10 @@
 
 #define PM3_CMD_DATA_SIZE 512
 #define PM3_CMD_DATA_SIZE_MIX ( PM3_CMD_DATA_SIZE - 3 * sizeof(uint64_t) )
+/* To be used for commands with a big blob of data along with some other data (for which 32 bytes
+ * is put aside, so if there is more of it this is unsuitable).
+ */
+#define PM3_CMD_BLOB_SIZE ( PM3_CMD_DATA_SIZE - 32 )
 
 typedef struct {
     uint64_t cmd;
