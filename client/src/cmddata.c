@@ -2032,7 +2032,8 @@ static int CmdLoad(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "file to load"),
-        arg_lit0("n",  "no-fix",  "Load data from wile without any transformations"),
+        arg_lit0("b", "bin", "binary file"),
+        arg_lit0("n",  "no-fix",  "Load data from file without any transformations"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2040,9 +2041,8 @@ static int CmdLoad(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-
-    bool nofix = arg_get_lit(ctx, 2);
-
+    bool is_bin = arg_get_lit(ctx, 2);
+    bool nofix = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     char *path = NULL;
@@ -2052,8 +2052,13 @@ static int CmdLoad(const char *Cmd) {
         }
     }
 
-    FILE *f = fopen(path, "r");
-    if (!f) {
+    FILE *f;
+    if (is_bin)
+        f = fopen(path, "rb");
+    else
+        f = fopen(path, "r");
+
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "couldn't open '%s'", path);
         free(path);
         return PM3_EFILE;
@@ -2061,13 +2066,25 @@ static int CmdLoad(const char *Cmd) {
     free(path);
 
     g_GraphTraceLen = 0;
-    char line[80];
-    while (fgets(line, sizeof(line), f)) {
-        g_GraphBuffer[g_GraphTraceLen] = atoi(line);
-        g_GraphTraceLen++;
 
-        if (g_GraphTraceLen >= MAX_GRAPH_TRACE_LEN)
-            break;
+    if (is_bin) {
+        uint8_t val[2];
+        while (fread(val, 1, 1, f)) {
+            g_GraphBuffer[g_GraphTraceLen] = val[0] - 127;
+            g_GraphTraceLen++;
+
+            if (g_GraphTraceLen >= MAX_GRAPH_TRACE_LEN)
+                break;
+        }
+    } else {
+        char line[80];
+        while (fgets(line, sizeof(line), f)) {
+            g_GraphBuffer[g_GraphTraceLen] = atoi(line);
+            g_GraphTraceLen++;
+
+            if (g_GraphTraceLen >= MAX_GRAPH_TRACE_LEN)
+                break;
+        }
     }
     fclose(f);
 
