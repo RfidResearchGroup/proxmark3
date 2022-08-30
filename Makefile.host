@@ -86,8 +86,8 @@ $(BINDIR)/$(LIB_A): $(MYOBJS) $(MYCXXOBJS)
 	$(Q)$(RANLIB) $@
 
 $(BINDIR)/% : $(OBJDIR)/%.o $(MYOBJS) $(MYCXXOBJS) $(MYLIBS)
-	$(info [=] LD $(notdir $@))
-	$(Q)$(LD) $(LDFLAGS) $(MYOBJS) $(MYCXXOBJS) $< -o $@ $(MYLIBS) $(MYLDLIBS)
+	$(info [=] CXX $(notdir $@))
+	$(Q)$(CXX) $(LDFLAGS) $(MYOBJS) $(MYCXXOBJS) $< -o $@ $(MYLIBS) $(MYLDLIBS)
 
 %.o: %.c
 $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d | $(OBJDIR)
