@@ -116,7 +116,6 @@
 #define CMD_READ_RESP       13
 #define CMD_INV_RESP        12
 #define CMD_SYSINFO_RESP    17
-#define CMD_READBLOCK_RESP  7
 
 //#define Crc(data, len)        Crc(CRC_15693, (data), (len))
 #define CheckCrc15(data, len)   check_crc(CRC_15693, (data), (len))
