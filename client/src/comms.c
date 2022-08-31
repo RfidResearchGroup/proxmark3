@@ -856,6 +856,8 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
             if (response->cmd == CMD_ACK)
                 return true;
+            if (response->cmd == CMD_SPIFFS_DOWNLOAD && response->status == PM3_EMALLOC)
+                return false;
             // Spiffs // fpgamem-plot download is converted to NG,
             if (response->cmd == CMD_SPIFFS_DOWNLOAD || response->cmd == CMD_FPGAMEM_DOWNLOAD)
                 return true;

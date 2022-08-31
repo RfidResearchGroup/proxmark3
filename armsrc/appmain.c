@@ -2166,20 +2166,26 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint32_t size = packet->oldarg[1];
 
             uint8_t *buff = BigBuf_malloc(size);
-            rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)buff, size, RDV40_SPIFFS_SAFETY_SAFE);
+            if (buff == NULL) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf ("Could not allocate buffer");
+                // Trigger a finish downloading signal with an PM3_EMALLOC
+                reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_EMALLOC, NULL, 0);
+            } else {
+                rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)buff, size, RDV40_SPIFFS_SAFETY_SAFE);
+                // arg0 = filename
+                // arg1 = size
+                // arg2 = RFU
 
-            // arg0 = filename
-            // arg1 = size
-            // arg2 = RFU
-
-            for (size_t i = 0; i < size; i += PM3_CMD_DATA_SIZE) {
-                size_t len = MIN((size - i), PM3_CMD_DATA_SIZE);
-                int result = reply_old(CMD_SPIFFS_DOWNLOADED, i, len, 0, buff + i, len);
-                if (result != PM3_SUCCESS)
-                    Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
+                for (size_t i = 0; i < size; i += PM3_CMD_DATA_SIZE) {
+                    size_t len = MIN((size - i), PM3_CMD_DATA_SIZE);
+                    int result = reply_old(CMD_SPIFFS_DOWNLOADED, i, len, 0, buff + i, len);
+                    if (result != PM3_SUCCESS)
+                        Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
+                }
+                // Trigger a finish downloading signal with an ACK frame
+                reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_SUCCESS, NULL, 0);
+                BigBuf_free ();
             }
-            // Trigger a finish downloading signal with an ACK frame
-            reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }

@@ -433,15 +433,41 @@ int rdv40_spiffs_lazy_mount_rollback(int changed) {
 // statement or some function taking function parameters
 // TODO : forbid writing to a filename which already exists as lnk !
 // TODO : forbid writing to a filename.lnk which already exists without lnk !
+// Note: Writing in 8192 byte chucks helps to ensure "free space" has been erased by GC (Garbage collection)
 int rdv40_spiffs_write(const char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
-        write_to_spiffs(filename, src, size);
+        uint16_t idx;
+        if (size <= 8192) {
+            // write small file
+            write_to_spiffs(filename, src, size);
+            size = 0;
+        } else { //
+            // write first 8192 bytes
+            // need to write the first chuck of data, then append
+            write_to_spiffs(filename, src, 8192);
+        }
+        // append remaing 8192 byte chuncks
+        for (idx = 1; idx < (size / 8192);  idx++) {
+            append_to_spiffs(filename, &src[8192 * idx], 8192);
+        }
+        // append remaing bytes
+        if (((int64_t)size - (8192 * idx)) > 0) {
+            append_to_spiffs(filename, &src[8192 * idx], size - (8192 * idx));
+        }
     )
 }
 
 int rdv40_spiffs_append(const char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
-        append_to_spiffs(filename, src, size);
+        uint16_t idx;
+        // Append any 8192 byte chunks
+        for (idx = 0; idx < (size/8192);  idx++) {
+            append_to_spiffs(filename, &src[8192 * idx], 8192);
+        }
+        // Append remain bytes
+        if (((int64_t)size - (8192 * idx)) > 0) {
+            append_to_spiffs(filename, &src[8192 * idx], size - (8192 * idx));
+        }
     )
 }
 
