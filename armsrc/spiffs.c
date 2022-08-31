@@ -436,7 +436,7 @@ int rdv40_spiffs_lazy_mount_rollback(int changed) {
 // Note: Writing in 8192 byte chucks helps to ensure "free space" has been erased by GC (Garbage collection)
 int rdv40_spiffs_write(const char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
-        uint16_t idx;
+        uint32_t idx;
         if (size <= 8192) {
             // write small file
             write_to_spiffs(filename, src, size);
@@ -459,7 +459,7 @@ int rdv40_spiffs_write(const char *filename, uint8_t *src, uint32_t size, RDV40S
 
 int rdv40_spiffs_append(const char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
-        uint16_t idx;
+        uint32_t idx;
         // Append any 8192 byte chunks
         for (idx = 0; idx < (size/8192);  idx++) {
             append_to_spiffs(filename, &src[8192 * idx], 8192);
