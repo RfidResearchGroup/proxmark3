@@ -88,7 +88,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `hf 15 slixdisable` wrong pass id (@r1ddl3rz)
  - Added `script run hf_mf_hid_sim.lua` (@micsen)
  - Added `hf 15 sim --blocksize` - configure block size for simulation (@markus-oehme-pg40)
- - Added `hf 15 sim --image` - specify memory image for simulation (@markus-oehme-pg40)
+ - Added `hf 15 eload` - specify memory image for ISO15693 simulation (@markus-oehme-pg40)
 
 
 ## [Frostbit.4.14831][2022-01-11]
