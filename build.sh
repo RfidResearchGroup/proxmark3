@@ -71,7 +71,7 @@ function os {
             ask "  2: MacPorts (port)"
             askn "Enter a selection: "
             read -r PKG_MGR_RESPONSE
-            case "${PKG_MGR_RESPONSE,,}" in 
+            case "$(tr '[:upper:]' '[:lower:]' <<< "${PKG_MGR_RESPONSE}")" in 
                 "port"|"2")
                     pkgmgr_port
                     ;;
@@ -107,7 +107,7 @@ function askInstall {
     # TODO: better communicate to the user that saying no will cancel the installation
     askn "Would you like to install them automatically? [Y/n]: "
     read -r INSTALL_DEPS_RESPONSE
-    if [[ "${INSTALL_DEPS_RESPONSE,,}" == "n" ]]; then
+    if [[ $(tr '[:upper:]' '[:lower:]' <<< "${INSTALL_DEPS_RESPONSE}") == "n" ]]; then
         error "Missing dependencies"
         error "Exiting."
         exit 1
@@ -179,7 +179,7 @@ function installDeps {
                     # TODO: better communicate to the user that saying no will cancel the installation
                     askn "Are you okay with this [Y/n]: "
                     read -r SET_DEFAULTS_RESPONSE
-                    if [[ "${SET_DEFAULTS_RESPONSE,,}" == "n" ]]; then
+                    if [[ $(tr '[:upper:]' '[:lower:]' <<< "${SET_DEFAULTS_RESPONSE}") == "n" ]]; then
                         error "Did not set package defaults"
                         error "Exiting."
                         exit 1
