@@ -33,7 +33,7 @@ function pkgmgr_brew() {
 
 function pkgmgr_port() {
     MACOS_PKGMGR="port"
-    DEPENDENCIES=(readline qt5 qt5-qtbase pkgconfig arm-none-eabi-gcc arm-none-eabi-binutils lua52 coreutils openssl@3)
+    DEPENDENCIES=(readline qt5 qt5-qtbase pkgconfig arm-none-eabi-gcc arm-none-eabi-binutils lua52 coreutils openssl@3 python39 cython39)
 }
 
 function os {
@@ -96,56 +96,109 @@ function os {
     fi
 }
 
-function ensureInstalled {
+function askInstall {
+    echo
+    info "The following dependencies are required to be installed:"
+    info "  ${DEPENDENCIES[*]}"
+    if [[ "${MACOS_PKGMGR}" == "brew" ]]; then
+        info "The following tap needs to be added to brew:"
+        info "  ${BREW_TAP}"
+    fi
+    # TODO: better communicate to the user that saying no will cancel the installation
+    askn "Would you like to install them automatically? [Y/n]: "
+    read -r INSTALL_DEPS_RESPONSE
+    if [[ "${INSTALL_DEPS_RESPONSE,,}" == "n" ]]; then
+        error "Missing dependencies"
+        error "Exiting."
+        exit 1
+    fi
+}
+
+function logInstallFailedAndExit {
+    error "Package manager command unsuccessful"
+    exit 1
+}
+
+function installDeps {
     case "${DISTRO}" in
         "arch") 
-            # --no-confirm is dangerous on macos
-            sudo pacman -Sy "$@" --needed
+            # Pacman -Q doesn't check groups
+            mapfile -t REAL_DEPENDENCIES <<< "$(pacman -Sgq base-devel)"
+            for i in "${DEPENDENCIES[@]}"; do
+                [[ "${i}" != "base-devel" ]] && REAL_DEPENDENCIES+=("${i}")
+            done
+            if ! pacman -Qq "${REAL_DEPENDENCIES[@]}" &> /dev/null && askInstall; then
+                # --no-confirm is dangerous with pacman
+                sudo pacman -Sy "${DEPENDENCIES[@]}" --needed || logInstallFailedAndExit
+            fi
             ;;
-        "debian") 
-            sudo apt-get update
-            sudo apt-get install --no-install-recommends -y "$@"
+        "debian")
+            if ! dpkg -s "${DEPENDENCIES[@]}" &> /dev/null && askInstall; then
+                sudo apt-get update || logInstallFailedAndExit
+                sudo apt-get install --no-install-recommends -y "${DEPENDENCIES[@]}" || logInstallFailedAndExit
+            fi
             ;;
         "fedora") 
-            sudo dnf install -y "$@"
+            # if ; then
+            #     askInstall && sudo dnf install -y "${DEPENDENCIES[@]}" || logInstallFailedAndExit
+            # fi
             ;;
         "suse") 
-            sudo zypper install "$@"
+            sudo zypper install "${DEPENDENCIES[@]}" || logInstallFailedAndExit
             ;;
         "macos")
             case "${MACOS_PKGMGR}" in 
                 "brew")
-                    brew install "$@"
+                    if ! brew list "${DEPENDENCIES[@]}" &> /dev/null && askInstall; then 
+                        if brew tap | grep "${BREW_TAP}"; then
+                            brew tap "${BREW_TAP}" || logInstallFailedAndExit
+                        fi                    
+                        brew install "${DEPENDENCIES[@]}" || logInstallFailedAndExit
+                    fi
                     ;;
                 "port")
-                    sudo port install "$@"
+                    # Port has no propper way of checking if a package is installed
+                    # This is incredibly frustrating
+                    NEEDS_INSTALLATION=()
+                    INSTALLED=$(port installed "${DEPENDENCIES[@]}" | tail -n +2 | sed "s/^  //" | cut -d " " -f 1)
+                    for package in "${INSTALLED[@]}"; do
+                        # Hack to see if a string is in an array
+                        # shellcheck disable=SC2076 # Intentionally not a regex check
+                        if ! [[ " ${DEPENDENCIES[*]} " =~ " ${package} " ]]; then
+                            NEEDS_INSTALLATION+=("${package}")
+                        fi
+                    done
+                    if [[ -n "${NEEDS_INSTALLATION[*]}" ]] && askInstall; then
+                        sudo port install "${NEEDS_INSTALLATION[@]}" || logInstallFailedAndExit
+                    fi
+
+                    # Set python version defaults
+                    # TODO: Check if we've already done this
+                    info "python39 and cython39 are required to be set as defaults."
+                    info "This will create symlinks in /opt/local/lib/pkgconfig and run port select."
+                    # TODO: better communicate to the user that saying no will cancel the installation
+                    askn "Are you okay with this [Y/n]: "
+                    read -r SET_DEFAULTS_RESPONSE
+                    if [[ "${SET_DEFAULTS_RESPONSE,,}" == "n" ]]; then
+                        error "Did not set package defaults"
+                        error "Exiting."
+                        exit 1
+                    fi
+                    sudo port select --set python python39
+                    sudo port select --set python3 python39
+                    sudo port select --set cython cython39
+                    sudo ln -svf /opt/local/lib/pkgconfig/python3.pc  /opt/local/lib/pkgconfig/python-3.9.pc
+                    sudo ln -svf /opt/local/lib/pkgconfig/python3-embed.pc  /opt/local/lib/pkgconfig/python-3.9-embed.pc
                     ;;
             esac
             ;;
-        esac
-}
-
-function installDeps {
-    info "This script will install the following packages:"
-    info "  ${DEPENDENCIES[*]}"
-    askn "Are you okay with this [Y/n]: "
-    read -r INSTALL_DEPS_RESPONSE
-    if [[ ${INSTALL_DEPS_RESPONSE,,} == "n" ]]; then
-        exit 0
-    fi
-    echo
-    if [[ "${MACOS_PKGMGR}" == "brew" ]]; then
-        info "Tapping ${BREW_TAP}"
-        brew tap "${BREW_TAP}"
-    fi
-    ensureInstalled "${DEPENDENCIES[@]}"
+    esac
 }
 
 echo
 info "PM3 build script"
 os
 
-echo
 installDeps
 
 cloneRepo
