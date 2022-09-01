@@ -1111,7 +1111,6 @@ static int CmdHF15Sim(const char *Cmd) {
         arg_param_begin,
         arg_str1("u", "uid", "<8b hex>", "UID eg E011223344556677"),
         arg_int0("b", "blocksize", "<dec>", "block size, defaults to 4"),
-        arg_str0("i", "image", "<fn>", "Memory image to load, defaults to zeros"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1119,8 +1118,6 @@ static int CmdHF15Sim(const char *Cmd) {
     struct {
         uint8_t uid[8];
         uint8_t block_size;
-        int image_length;
-        uint8_t image[PM3_CMD_BLOB_SIZE];
     } PACKED payload;
 
     int uidlen = 0;
@@ -1131,34 +1128,8 @@ static int CmdHF15Sim(const char *Cmd) {
     }
 
     payload.block_size = arg_get_int_def(ctx, 2, 4);
-
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
-    if (fnlen > 0) {
-        uint8_t *image = NULL;
-        size_t image_len = 0;
-        if (loadFile_safe(filename, "", (void **)&image, &image_len) != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Could not open file " _YELLOW_("%s"), filename);
-            return PM3_EIO;
-        }
-
-        if (image_len > PM3_CMD_BLOB_SIZE) {
-            PrintAndLogEx(WARNING, "Memory image to large for us");
-            return PM3_EINVARG;
-        }
-        if (image_len % payload.block_size != 0) {
-            PrintAndLogEx(WARNING, "Memory image size not a multiple of the block size");
-            return PM3_EINVARG;
-        }
-        payload.image_length = image_len;
-        memcpy(payload.image, image, image_len);
-        free(image);
-    } else {
-        payload.image_length = -1;
-    }
 
     PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
     PrintAndLogEx(INFO, "press " _YELLOW_("`Pm3 button`") " to cancel");

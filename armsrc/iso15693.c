@@ -2113,7 +2113,7 @@ void EmlSetMemIso15693(uint8_t count, uint8_t *data, uint32_t offset) {
 
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
 // all demodulation performed in arm rather than host. - greg
-void SimTagIso15693(uint8_t *uid, uint8_t block_size, int image_length, uint8_t *image) {
+void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
@@ -2122,11 +2122,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size, int image_length, uint8_t 
 
     LED_A_ON();
 
-    if (image_length == -1) {
-        Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X block size %d with no image", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7], block_size);
-    } else {
-        Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X block size %d with 0x%X bytes image", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7], block_size, image_length);
-    }
+    Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X block size %d", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7], block_size);
 
     LED_C_ON();
 
@@ -2222,14 +2218,8 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size, int image_length, uint8_t 
             resp_sysinfo[10] = 0;    // DSFID
             resp_sysinfo[11] = 0;    // AFI
 
-             // Memory size.
-            if (image_length == -1) {
-                // use sensible default value if no image is provided
-                resp_sysinfo[12] = 0x1F;
-            } else {
-                resp_sysinfo[12] = image_length / block_size;
-            }
-            resp_sysinfo[13] = block_size - 1; // Memory size.
+            resp_sysinfo[12] = 0x1F; // Block count
+            resp_sysinfo[13] = block_size - 1; // Block size.
             resp_sysinfo[14] = 0x01; // IC reference.
 
             // CRC
@@ -2282,6 +2272,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size, int image_length, uint8_t 
                 resp_readblock[i] = 0;
             }
 
+            uint8_t *emCARD = BigBuf_get_EM_addr();
             resp_readblock[0] = 0;    // Response flags
             for (int j = 0; j < block_count; j++) {
                 // where to put the data of the current block
@@ -2291,8 +2282,8 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size, int image_length, uint8_t 
                 }
                 for (int i = 0; i < block_size; i++) {
                     // Block data
-                    if (block_size * (block_idx + j + 1) <= image_length) {
-                        resp_readblock[work_offset + security_offset + i] = image[block_size * (block_idx + j) + i];
+                    if (block_size * (block_idx + j + 1) <= CARD_MEMORY_SIZE) {
+                        resp_readblock[work_offset + security_offset + i] = emCARD[block_size * (block_idx + j) + i];
                     } else {
                         resp_readblock[work_offset + security_offset + i] = 0;
                     }
