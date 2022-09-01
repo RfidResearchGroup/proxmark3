@@ -2097,6 +2097,20 @@ void Iso15693InitTag(void) {
     StartCountSspClk();
 }
 
+
+void EmlClearIso15693(void) {
+    // Resetting the bitstream also frees the BigBuf memory, so we do this here to prevent
+    // an inconvenient reset in the future by Iso15693InitTag
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+    BigBuf_Clear_EM();
+    reply_ng(CMD_HF_ISO15693_EML_CLEAR, PM3_SUCCESS, NULL, 0);
+}
+
+void EmlSetMemIso15693(uint8_t count, uint8_t *data, uint32_t offset) {
+    uint8_t *emCARD = BigBuf_get_EM_addr();
+    memcpy(emCARD + offset, data, count);
+}
+
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
 // all demodulation performed in arm rather than host. - greg
 void SimTagIso15693(uint8_t *uid, uint8_t block_size, int image_length, uint8_t *image) {

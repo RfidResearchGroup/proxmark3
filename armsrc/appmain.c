@@ -1256,6 +1256,20 @@ static void PacketReceived(PacketCommandNG *packet) {
             ReaderIso15693(NULL);
             break;
         }
+        case CMD_HF_ISO15693_EML_CLEAR: {
+            EmlClearIso15693();
+            break;
+        }
+        case CMD_HF_ISO15693_EML_SETMEM: {
+            struct p {
+                uint32_t offset;
+                uint8_t count;
+                uint8_t data[];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            EmlSetMemIso15693(payload->count, payload->data, payload->offset);
+            break;
+        }
         case CMD_HF_ISO15693_SIMULATE: {
             struct p {
                 uint8_t uid[8];
