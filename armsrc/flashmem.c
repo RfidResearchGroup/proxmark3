@@ -22,6 +22,7 @@
 #include "ticks.h"
 #include "dbprint.h"
 #include "string.h"
+#include "spiffs.h"
 
 /* here: use NCPS2 @ PA10: */
 #define SPI_CSR_NUM      2
@@ -449,6 +450,9 @@ bool Flash_WipeMemoryPage(uint8_t page) {
     Flash_CheckBusy(BUSY_TIMEOUT);
 
     FlashStop();
+
+    // let spiffs check and update its info post flash erase
+    rdv40_spiffs_check ();
     return true;
 }
 // Wipes flash memory completely, fills with 0xFF

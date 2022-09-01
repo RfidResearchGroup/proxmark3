@@ -129,6 +129,8 @@ void rdv40_spiffs_safe_wipe(void);
 
 #define SPIFFS_ERR_TEST                 -10100
 
+// Amount of data to write/append to a file in one go.
+#define SPIFFS_WRITE_CHUNK_SIZE 8192
 
 // spiffs file descriptor index type. must be signed
 typedef s16_t spiffs_file;
