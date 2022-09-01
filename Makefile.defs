@@ -40,7 +40,6 @@ TARFLAGS += -C .. -f
 CROSS  ?= arm-none-eabi-
 CC ?= gcc
 CXX ?= g++
-LD = g++
 SH = sh
 BASH = bash
 PERL = perl
