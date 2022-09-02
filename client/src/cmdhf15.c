@@ -1080,7 +1080,7 @@ static int CmdHF15ELoad(const char *Cmd) {
 
         int tosend = MIN(chuncksize, bytes_read);
         if (hf15EmlSetMem(data + offset, tosend, offset) != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Can't set emulator memory at offest: 0x%x", offset);
+            PrintAndLogEx(FAILED, "Can't set emulator memory at offest: %zu / 0x%zx", offset);
             free(data);
             return PM3_ESOFT;
         }
