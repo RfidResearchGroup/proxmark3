@@ -1098,6 +1098,133 @@ static int CmdHF15ELoad(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF15ESave(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 esave",
+                  "Save emulator memory into three files (BIN/EML/JSON) ",
+                  "hf 15 esave -f hf-15-01020304"
+                  "hf 15 esave -b 8 -c 42 -f hf-15-01020304"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_int0("b", "blocksize", "<dec>", "block size, defaults to 4"),
+        arg_int0("c", "count", "<dec>", "number of blocks to export, defaults to all"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    int blocksize = arg_get_int_def(ctx, 2, 4);
+    int count = arg_get_int_def(ctx, 3, -1);
+    CLIParserFree(ctx);
+
+    int bytes = CARD_MEMORY_SIZE;
+    if (count > 0 && count * blocksize <= bytes) {
+        bytes = count * blocksize;
+    }
+
+    // reserve memory
+    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    PrintAndLogEx(INFO, "Downloading %u bytes from emulator memory", bytes);
+    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        free(dump);
+        return PM3_ETIMEOUT;
+    }
+
+    saveFile(filename, ".bin", dump, bytes);
+    saveFileEML(filename, dump, bytes, blocksize);
+    saveFileJSON(filename, jsf15, dump, bytes, NULL);
+    free(dump);
+    return PM3_SUCCESS;
+}
+
+static void print_hrule(int blocksize) {
+    PrintAndLogEx(INFO, "-----+" NOLF);
+    for (int i = 0; i < blocksize; i++) {
+        PrintAndLogEx(NORMAL, "---" NOLF);
+    }
+    PrintAndLogEx(NORMAL, "-+-" NOLF);
+    for (int i = 0; i < blocksize; i++) {
+        PrintAndLogEx(NORMAL, "-" NOLF);
+    }
+    PrintAndLogEx(NORMAL, "");
+}
+
+static void print_blocks_15693(uint8_t *data, uint16_t bytes, int blocksize) {
+    int blocks = bytes / blocksize;
+    PrintAndLogEx(NORMAL, "");
+    print_hrule(blocksize);
+    PrintAndLogEx(INFO, " blk | data  " NOLF);
+    for (int i = 2; i < blocksize; i++) {
+        PrintAndLogEx(NORMAL, "   " NOLF);
+    }
+    PrintAndLogEx(NORMAL, "| ascii");
+    print_hrule(blocksize);
+    for (uint16_t i = 0; i < blocks; i++) {
+        PrintAndLogEx(INFO, "%4d | %s ", i, sprint_hex_ascii(data + (i * blocksize), blocksize));
+
+    }
+    if (bytes % blocksize != 0)  {
+        // If there is something left over print it too
+        // This will have a broken layout, but should not happen anyway
+        PrintAndLogEx(INFO, "%4d | %s ", blocks, sprint_hex_ascii(data + (blocks * blocksize),
+                                                                  bytes % blocksize));
+    }
+    print_hrule(blocksize);
+    PrintAndLogEx(NORMAL, "");
+}
+
+static int CmdHF15EView(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 eview",
+                  "It displays emulator memory",
+                  "hf 15 eview\n"
+                  "hf 15 eview -b 8 -c 60\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("b", "blocksize", "<dec>", "block size, defaults to 4"),
+        arg_int0("c", "count", "<dec>", "number of blocks to display, defaults to all"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int blocksize = arg_get_int_def(ctx, 1, 4);
+    int count = arg_get_int_def(ctx, 2, -1);
+    CLIParserFree(ctx);
+
+    int bytes = CARD_MEMORY_SIZE;
+    if (count > 0 && count * blocksize <= bytes) {
+        bytes = count * blocksize;
+    }
+
+    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    PrintAndLogEx(INFO, "Downloading %u bytes from emulator memory", bytes);
+    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        free(dump);
+        return PM3_ETIMEOUT;
+    }
+
+    print_blocks_15693(dump, bytes, blocksize);
+    free(dump);
+    return PM3_SUCCESS;
+}
+
 // Simulation is still not working very good
 // helptext
 static int CmdHF15Sim(const char *Cmd) {
@@ -2289,7 +2416,9 @@ static command_t CommandTable[] = {
     {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO-15693 reader"},
     {"restore",     CmdHF15Restore,     IfPm3Iso15693,   "Restore from file to all memory pages of an ISO-15693 tag"},
     {"samples",     CmdHF15Samples,     IfPm3Iso15693,   "Acquire samples as reader (enables carrier, sends inquiry)"},
-    {"eload",       CmdHF15ELoad,       IfPm3Iso15693,   "Load image file to be used by 'sim' command"},
+    {"eload",       CmdHF15ELoad,       IfPm3Iso15693,   "Load image file into emulator to be used by 'sim' command"},
+    {"esave",       CmdHF15ESave,       IfPm3Iso15693,   "Save emulator memory into image file"},
+    {"eview",       CmdHF15EView,       IfPm3Iso15693,   "View emulator memory"},
     {"sim",         CmdHF15Sim,         IfPm3Iso15693,   "Fake an ISO-15693 tag"},
     {"slixdisable", CmdHF15SlixDisable, IfPm3Iso15693,   "Disable privacy mode on SLIX ISO-15693 tag"},
     {"wrbl",        CmdHF15Write,       IfPm3Iso15693,   "Write a block"},
