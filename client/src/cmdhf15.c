@@ -1043,7 +1043,7 @@ static int CmdHF15ELoad(const char *Cmd) {
 
     uint8_t *data = NULL;
     size_t bytes_read = 0;
-    int res = loadFile_safe(filename, ".bin", (void **)&data, &bytes_read);
+    int res = pm3_load_dump(filename, (void **)&data, &bytes_read, CARD_MEMORY_SIZE);
     if (res != PM3_SUCCESS) {
         return res;
     }
