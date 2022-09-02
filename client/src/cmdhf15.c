@@ -47,6 +47,7 @@
 #define Logic0                  Iso15693Logic0
 #define Logic1                  Iso15693Logic1
 #define FrameEOF                Iso15693FrameEOF
+#define CARD_MEMORY_SIZE        4096
 
 #ifndef Crc15
 # define Crc15(data, len)       Crc16ex(CRC_15693, (data), (len))
@@ -988,6 +989,115 @@ static int CmdHF15Reader(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int hf15EmlClear(void) {
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_EML_CLEAR, NULL, 0);
+    PacketResponseNG resp;
+    WaitForResponse(CMD_HF_ISO15693_EML_CLEAR, &resp);
+    return PM3_SUCCESS;
+}
+
+static int hf15EmlSetMem(uint8_t *data, uint8_t count, size_t offset) {
+    struct p {
+        uint32_t offset;
+        uint8_t count;
+        uint8_t data[];
+    } PACKED;
+
+    size_t size = count;
+    if (size > (PM3_CMD_DATA_SIZE - sizeof(struct p))) {
+        return PM3_ESOFT;
+    }
+
+    size_t paylen = sizeof(struct p) + size;
+    struct p *payload = calloc(1, paylen);
+
+    payload->offset = offset;
+    payload->count = count;
+    memcpy(payload->data, data, size);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_EML_SETMEM, (uint8_t *)payload, paylen);
+    free(payload);
+    return PM3_SUCCESS;
+}
+
+static int CmdHF15ELoad(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 eload",
+                  "Load memory image from file to be used with 'hf 15 sim'",
+                  "hf 15 eload -f hf-15-01020304.bin\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "filename of image"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
+
+    uint8_t *data = NULL;
+    size_t bytes_read = 0;
+    int res = loadFile_safe(filename, ".bin", (void **)&data, &bytes_read);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (bytes_read > CARD_MEMORY_SIZE) {
+        PrintAndLogEx(FAILED, "Memory image too large.");
+        free(data);
+        return PM3_EINVARG;
+    }
+    if (bytes_read == 0) {
+        PrintAndLogEx(FAILED, "Memory image empty.");
+        free(data);
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "Clearing emulator memory");
+    fflush(stdout);
+    hf15EmlClear();
+
+    PrintAndLogEx(INFO, "Uploading to emulator memory");
+    PrintAndLogEx(INFO, "." NOLF);
+
+    // fast push mode
+    g_conn.block_after_ACK = true;
+
+    int chuncksize = 64;
+    size_t offset = 0;
+
+    while (bytes_read > 0) {
+        if (bytes_read <= chuncksize) {
+            // Disable fast mode on last packet
+            g_conn.block_after_ACK = false;
+        }
+
+        int tosend = MIN(chuncksize, bytes_read);
+        if (hf15EmlSetMem(data + offset, tosend, offset) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Can't set emulator memory at offest: 0x%x", offset);
+            free(data);
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
+
+        offset += tosend;
+        bytes_read -= tosend;
+    }
+    free(data);
+    PrintAndLogEx(NORMAL, "");
+
+    PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf 15 sim -h`"));
+    PrintAndLogEx(INFO, "Done!");
+    return PM3_SUCCESS;
+}
+
 // Simulation is still not working very good
 // helptext
 static int CmdHF15Sim(const char *Cmd) {
@@ -1000,22 +1110,26 @@ static int CmdHF15Sim(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("u", "uid", "<8b hex>", "UID eg E011223344556677"),
+        arg_int0("b", "blocksize", "<dec>", "block size, defaults to 4"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     struct {
         uint8_t uid[8];
+        uint8_t block_size;
     } PACKED payload;
 
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
-    CLIParserFree(ctx);
-
     if (uidlen != 8) {
         PrintAndLogEx(WARNING, "UID must include 16 HEX symbols");
         return PM3_EINVARG;
     }
+
+    payload.block_size = arg_get_int_def(ctx, 2, 4);
+    CLIParserFree(ctx);
+
 
     PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
     PrintAndLogEx(INFO, "press " _YELLOW_("`Pm3 button`") " to cancel");
@@ -2175,6 +2289,7 @@ static command_t CommandTable[] = {
     {"reader",      CmdHF15Reader,      IfPm3Iso15693,   "Act like an ISO-15693 reader"},
     {"restore",     CmdHF15Restore,     IfPm3Iso15693,   "Restore from file to all memory pages of an ISO-15693 tag"},
     {"samples",     CmdHF15Samples,     IfPm3Iso15693,   "Acquire samples as reader (enables carrier, sends inquiry)"},
+    {"eload",       CmdHF15ELoad,       IfPm3Iso15693,   "Load image file to be used by 'sim' command"},
     {"sim",         CmdHF15Sim,         IfPm3Iso15693,   "Fake an ISO-15693 tag"},
     {"slixdisable", CmdHF15SlixDisable, IfPm3Iso15693,   "Disable privacy mode on SLIX ISO-15693 tag"},
     {"wrbl",        CmdHF15Write,       IfPm3Iso15693,   "Write a block"},

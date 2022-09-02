@@ -116,7 +116,6 @@
 #define CMD_READ_RESP       13
 #define CMD_INV_RESP        12
 #define CMD_SYSINFO_RESP    17
-#define CMD_READBLOCK_RESP  7
 
 //#define Crc(data, len)        Crc(CRC_15693, (data), (len))
 #define CheckCrc15(data, len)   check_crc(CRC_15693, (data), (len))
@@ -2098,9 +2097,23 @@ void Iso15693InitTag(void) {
     StartCountSspClk();
 }
 
+
+void EmlClearIso15693(void) {
+    // Resetting the bitstream also frees the BigBuf memory, so we do this here to prevent
+    // an inconvenient reset in the future by Iso15693InitTag
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+    BigBuf_Clear_EM();
+    reply_ng(CMD_HF_ISO15693_EML_CLEAR, PM3_SUCCESS, NULL, 0);
+}
+
+void EmlSetMemIso15693(uint8_t count, uint8_t *data, uint32_t offset) {
+    uint8_t *emCARD = BigBuf_get_EM_addr();
+    memcpy(emCARD + offset, data, count);
+}
+
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
 // all demodulation performed in arm rather than host. - greg
-void SimTagIso15693(uint8_t *uid) {
+void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
@@ -2109,11 +2122,9 @@ void SimTagIso15693(uint8_t *uid) {
 
     LED_A_ON();
 
-    Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7]);
+    Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X block size %d", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7], block_size);
 
     LED_C_ON();
-
-
 
     enum { NO_FIELD, IDLE, ACTIVATED, SELECTED, HALTED } chip_state = NO_FIELD;
 
@@ -2188,7 +2199,7 @@ void SimTagIso15693(uint8_t *uid) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
-            // Build GET_SYSTEM_INFO command
+            // Build GET_SYSTEM_INFO response
             uint8_t resp_sysinfo[CMD_SYSINFO_RESP] = {0};
 
             resp_sysinfo[0] = 0;    // Response flags.
@@ -2207,8 +2218,8 @@ void SimTagIso15693(uint8_t *uid) {
             resp_sysinfo[10] = 0;    // DSFID
             resp_sysinfo[11] = 0;    // AFI
 
-            resp_sysinfo[12] = 0x1B; // Memory size.
-            resp_sysinfo[13] = 0x03; // Memory size.
+            resp_sysinfo[12] = 0x1F; // Block count
+            resp_sysinfo[13] = block_size - 1; // Block size.
             resp_sysinfo[14] = 0x01; // IC reference.
 
             // CRC
@@ -2221,28 +2232,72 @@ void SimTagIso15693(uint8_t *uid) {
             LogTrace_ISO15693(resp_sysinfo, CMD_SYSINFO_RESP, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
         }
 
-        // READ_BLOCK
-        if ((cmd[1] == ISO15693_READBLOCK)) {
+        // READ_BLOCK and READ_MULTI_BLOCK
+        if ((cmd[1] == ISO15693_READBLOCK) || (cmd[1] == ISO15693_READ_MULTI_BLOCK)) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
+            bool option = cmd[0] & ISO15_REQ_OPTION;
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
-            // Build GET_SYSTEM_INFO command
-            uint8_t resp_readblock[CMD_READBLOCK_RESP] = {0};
+            uint8_t block_idx = 0;
+            uint8_t block_count = 1;
+            if (cmd[1] == ISO15693_READBLOCK) {
+                if (cmd_len == 13) {
+                    // addressed mode
+                    block_idx= cmd[10];
+                } else if (cmd_len == 5) {
+                    // non-addressed mode
+                    block_idx = cmd[2];
+                }
+            } else if (cmd[1] == ISO15693_READ_MULTI_BLOCK) {
+                if (cmd_len == 14) {
+                    // addressed mode
+                    block_idx= cmd[10];
+                    block_count= cmd[11] + 1;
+                } else if (cmd_len == 6) {
+                    // non-addressed mode
+                    block_idx = cmd[2];
+                    block_count = cmd[3] + 1;
+                }
+            }
 
-            resp_readblock[0] = 0;    // Response flags.
-            resp_readblock[1] = 0;    // Block data.
-            resp_readblock[2] = 0;    // Block data.
-            resp_readblock[3] = 0;    // Block data.
-            resp_readblock[4] = 0;    // Block data.
+            // Build READ_(MULTI_)BLOCK response
+            int response_length = 3 + block_size * block_count;
+            int security_offset = 0;
+            if (option) {
+                response_length += block_count;
+                security_offset = 1;
+            }
+            uint8_t resp_readblock[response_length];
+            for (int i = 0; i < response_length; i++) {
+                resp_readblock[i] = 0;
+            }
+
+            uint8_t *emCARD = BigBuf_get_EM_addr();
+            resp_readblock[0] = 0;    // Response flags
+            for (int j = 0; j < block_count; j++) {
+                // where to put the data of the current block
+                int work_offset = 1 + j * (block_size + security_offset);
+                if (option) {
+                    resp_readblock[work_offset] = 0;    // Security status
+                }
+                for (int i = 0; i < block_size; i++) {
+                    // Block data
+                    if (block_size * (block_idx + j + 1) <= CARD_MEMORY_SIZE) {
+                        resp_readblock[work_offset + security_offset + i] = emCARD[block_size * (block_idx + j) + i];
+                    } else {
+                        resp_readblock[work_offset + security_offset + i] = 0;
+                    }
+                }
+            }
 
             // CRC
-            AddCrc15(resp_readblock, 5);
-            CodeIso15693AsTag(resp_readblock, CMD_READBLOCK_RESP);
+            AddCrc15(resp_readblock, response_length - 2);
+            CodeIso15693AsTag(resp_readblock, response_length);
 
             tosend_t *ts = get_tosend();
 
             TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
-            LogTrace_ISO15693(resp_readblock, CMD_READBLOCK_RESP, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
+            LogTrace_ISO15693(resp_readblock, response_length, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
         }
     }
 

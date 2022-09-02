@@ -523,6 +523,8 @@ typedef struct {
 #define CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY                            0x0317
 #define CMD_HF_ISO15693_SLIX_L_DISABLE_AESAFI                             0x0318
 #define CMD_HF_TEXKOM_SIMULATE                                            0x0320
+#define CMD_HF_ISO15693_EML_CLEAR                                         0x0330
+#define CMD_HF_ISO15693_EML_SETMEM                                        0x0331
 
 #define CMD_LF_SNIFF_RAW_ADC                                              0x0360
 
