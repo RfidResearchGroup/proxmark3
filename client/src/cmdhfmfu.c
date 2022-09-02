@@ -4027,6 +4027,9 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
         }
     }
 
+    // The following read will read in blocks of 16 bytes.
+    // ensure maxsize is rounded up to a multiple of 16
+    maxsize = maxsize + (16 - (maxsize % 16));
     // allocate mem
     uint8_t *records = calloc(maxsize, sizeof(uint8_t));
     if (records == NULL) {
