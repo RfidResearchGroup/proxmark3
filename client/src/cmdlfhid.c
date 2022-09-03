@@ -81,6 +81,7 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
     }
 
     lf_hidsim_t payload;
+    payload.Q5 = false;
     payload.hi2 = packed.Top;
     payload.hi = packed.Mid;
     payload.lo = packed.Bot;
@@ -483,7 +484,7 @@ static int CmdHIDBrute(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v", "verbose",             "verbose logging, show all tries"),
+        arg_lit0("v", "verbose",             "verbose output"),
         arg_str1("w", "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
         arg_u64_0(NULL, "fc",     "<dec>",    "facility code"),
         arg_u64_0(NULL, "cn",     "<dec>",    "card number to start with"),
