@@ -887,9 +887,9 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
             break;
         }
 
-        if (!have_uid) { // need a full select cycle to get the uid first
+        if (have_uid == false) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
-            if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+            if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Can't select card (ALL)");
                 continue;
             }
@@ -908,7 +908,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
             }
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
-            if (!iso14443a_fast_select_card(uid, cascade_levels)) {
+            if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Can't select card (UID)");
                 continue;
             }

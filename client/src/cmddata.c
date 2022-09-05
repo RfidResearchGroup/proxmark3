@@ -2767,13 +2767,19 @@ static int print_modulation(lf_modulation_t b) {
 
 static int try_detect_modulation(void) {
 
-    lf_modulation_t tests[6];
+#define LF_NUM_OF_TESTS     6
+
+    lf_modulation_t tests[LF_NUM_OF_TESTS];
+    for (int i=0; i< ARRAYLEN(tests); i++) {
+        memset(&tests[i], 0, sizeof(lf_modulation_t));
+    }
+
     int clk = 0, firstClockEdge = 0;
-    uint8_t hits = 0, ans = 0;
-    uint8_t fc1 = 0, fc2 = 0;
+    uint8_t hits = 0, fc1 = 0, fc2 = 0;
     bool st = false;
 
-    ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
+
+    uint8_t ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
 
     if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
 

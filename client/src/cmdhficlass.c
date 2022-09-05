@@ -664,14 +664,15 @@ static int CmdHFiClassSniff(const char *Cmd) {
         PrintAndLogEx(INFO, "Sniff with jam of iCLASS e-purse updates...");
     }
 
-    const uint8_t update_epurse_sequence[2] = {0x87, 0x02};
-
     struct {
         uint8_t jam_search_len;
         uint8_t jam_search_string[2];
     } PACKED payload;
 
+    memset(&payload, 0, sizeof(payload));
+
     if (jam_epurse_update) {
+        const uint8_t update_epurse_sequence[2] = {0x87, 0x02};
         payload.jam_search_len = sizeof(update_epurse_sequence);
         memcpy(payload.jam_search_string, update_epurse_sequence, sizeof(payload.jam_search_string));
     }

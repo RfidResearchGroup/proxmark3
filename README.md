@@ -200,7 +200,7 @@ The official PM3-GUI from Gaucho will not work. Not to mention is quite old and 
 
 ## Official channels
 Where do you find the community?
-   - [RFID Hacking community discord server](https://discord.gg/xEvexdKmpF)
+   - [RFID Hacking community discord server](https://discord.gg/iceman)
    - [Proxmark3 IRC channel](https://web.libera.chat/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
    - [Proxmark3 forum](http://www.proxmark.org/forum/index.php)
