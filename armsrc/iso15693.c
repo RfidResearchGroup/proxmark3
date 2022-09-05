@@ -2240,29 +2240,19 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         // READ_BLOCK and READ_MULTI_BLOCK
         if ((cmd[1] == ISO15693_READBLOCK) || (cmd[1] == ISO15693_READ_MULTI_BLOCK)) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
+            bool addressed = cmd[0] & ISO15_REQ_ADDRESS;
             bool option = cmd[0] & ISO15_REQ_OPTION;
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
-            uint8_t block_idx = 0;
+            uint8_t address_offset = 0;
+            if (addressed) {
+                address_offset = 8;
+            }
+
+            uint8_t block_idx = cmd[2 + address_offset];
             uint8_t block_count = 1;
-            if (cmd[1] == ISO15693_READBLOCK) {
-                if (cmd_len == 13) {
-                    // addressed mode
-                    block_idx= cmd[10];
-                } else if (cmd_len == 5) {
-                    // non-addressed mode
-                    block_idx = cmd[2];
-                }
-            } else if (cmd[1] == ISO15693_READ_MULTI_BLOCK) {
-                if (cmd_len == 14) {
-                    // addressed mode
-                    block_idx= cmd[10];
-                    block_count= cmd[11] + 1;
-                } else if (cmd_len == 6) {
-                    // non-addressed mode
-                    block_idx = cmd[2];
-                    block_count = cmd[3] + 1;
-                }
+            if (cmd[1] == ISO15693_READ_MULTI_BLOCK) {
+                block_count = cmd[3 + address_offset] + 1;
             }
 
             // Build READ_(MULTI_)BLOCK response
