@@ -2294,6 +2294,47 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
             LogTrace_ISO15693(resp_readblock, response_length, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
         }
+
+        // WRITE_BLOCK and WRITE_MULTI_BLOCK
+        if ((cmd[1] == ISO15693_WRITEBLOCK) || (cmd[1] == ISO15693_WRITE_MULTI_BLOCK)) {
+            bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
+            bool addressed = cmd[0] & ISO15_REQ_ADDRESS;
+            uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
+
+            uint8_t address_offset = 0;
+            if (addressed) {
+                address_offset = 8;
+            }
+
+            uint8_t block_idx = cmd[2 + address_offset];
+            uint8_t block_count = 1;
+            uint8_t multi_offset = 0;
+            if (cmd[1] == ISO15693_WRITE_MULTI_BLOCK) {
+                block_count = cmd[3 + address_offset] + 1;
+                multi_offset = 1;
+            }
+            uint8_t *data = cmd + 3 + address_offset + multi_offset;
+
+            // write data
+            EmlSetMemIso15693(block_count * block_size, data, block_idx * block_size);
+
+            // Build WRITE_(MULTI_)BLOCK response
+            int response_length = 3;
+            uint8_t resp_writeblock[response_length];
+            for (int i = 0; i < response_length; i++) {
+                resp_writeblock[i] = 0;
+            }
+            resp_writeblock[0] = 0;    // Response flags
+
+            // CRC
+            AddCrc15(resp_writeblock, response_length - 2);
+            CodeIso15693AsTag(resp_writeblock, response_length);
+
+            tosend_t *ts = get_tosend();
+
+            TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
+            LogTrace_ISO15693(resp_writeblock, response_length, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
+        }
     }
 
     switch_off();
