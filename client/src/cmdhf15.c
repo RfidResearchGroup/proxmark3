@@ -1169,7 +1169,7 @@ static void print_blocks_15693(uint8_t *data, uint16_t bytes, int blocksize) {
     }
     PrintAndLogEx(NORMAL, "| ascii");
     print_hrule(blocksize);
-    for (uint16_t i = 0; i < blocks; i++) {
+    for (int i = 0; i < blocks; i++) {
         PrintAndLogEx(INFO, "%4d | %s ", i, sprint_hex_ascii(data + (i * blocksize), blocksize));
 
     }
