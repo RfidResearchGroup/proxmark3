@@ -2263,9 +2263,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 security_offset = 1;
             }
             uint8_t resp_readblock[response_length];
-            for (int i = 0; i < response_length; i++) {
-                resp_readblock[i] = 0;
-            }
+            memset(resp_readblock, 0, response_length);
 
             resp_readblock[0] = 0;    // Response flags
             for (int j = 0; j < block_count; j++) {
@@ -2279,9 +2277,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                     EmlGetMemIso15693(block_size, resp_readblock + (work_offset + security_offset),
                                       block_size * (block_idx + j));
                 } else {
-                    for (int i = 0; i < block_size; i++) {
-                        resp_readblock[work_offset + security_offset + i] = 0;
-                    }
+                    memset(resp_readblock + work_offset + security_offset, 0, block_size);
                 }
             }
 
@@ -2321,9 +2317,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             // Build WRITE_(MULTI_)BLOCK response
             int response_length = 3;
             uint8_t resp_writeblock[response_length];
-            for (int i = 0; i < response_length; i++) {
-                resp_writeblock[i] = 0;
-            }
+            memset(resp_writeblock, 0, response_length);
             resp_writeblock[0] = 0;    // Response flags
 
             // CRC
