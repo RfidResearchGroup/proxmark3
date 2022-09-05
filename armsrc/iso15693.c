@@ -2111,6 +2111,11 @@ void EmlSetMemIso15693(uint8_t count, uint8_t *data, uint32_t offset) {
     memcpy(emCARD + offset, data, count);
 }
 
+void EmlGetMemIso15693(uint8_t count, uint8_t *output, uint32_t offset) {
+    uint8_t *emCARD = BigBuf_get_EM_addr();
+    memcpy(output, emCARD + offset, count);
+}
+
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
 // all demodulation performed in arm rather than host. - greg
 void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
@@ -2272,7 +2277,6 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 resp_readblock[i] = 0;
             }
 
-            uint8_t *emCARD = BigBuf_get_EM_addr();
             resp_readblock[0] = 0;    // Response flags
             for (int j = 0; j < block_count; j++) {
                 // where to put the data of the current block
@@ -2280,11 +2284,12 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 if (option) {
                     resp_readblock[work_offset] = 0;    // Security status
                 }
-                for (int i = 0; i < block_size; i++) {
-                    // Block data
-                    if (block_size * (block_idx + j + 1) <= CARD_MEMORY_SIZE) {
-                        resp_readblock[work_offset + security_offset + i] = emCARD[block_size * (block_idx + j) + i];
-                    } else {
+                // Block data
+                if (block_size * (block_idx + j + 1) <= CARD_MEMORY_SIZE) {
+                    EmlGetMemIso15693(block_size, resp_readblock + (work_offset + security_offset),
+                                      block_size * (block_idx + j));
+                } else {
+                    for (int i = 0; i < block_size; i++) {
                         resp_readblock[work_offset + security_offset + i] = 0;
                     }
                 }
