@@ -1146,26 +1146,16 @@ static int CmdHF15ESave(const char *Cmd) {
 }
 
 static void print_hrule(int blocksize) {
-    PrintAndLogEx(INFO, "-----+" NOLF);
-    for (int i = 0; i < blocksize; i++) {
-        PrintAndLogEx(NORMAL, "---" NOLF);
-    }
-    PrintAndLogEx(NORMAL, "-+-" NOLF);
-    for (int i = 0; i < blocksize; i++) {
-        PrintAndLogEx(NORMAL, "-" NOLF);
-    }
-    PrintAndLogEx(NORMAL, "");
+    char dashes[] = "------------------------------------------------------------";
+    PrintAndLogEx(INFO, "-----+%.*s-+-%.*s-", 3*blocksize, dashes, blocksize, dashes);
 }
 
 static void print_blocks_15693(uint8_t *data, uint16_t bytes, int blocksize) {
     int blocks = bytes / blocksize;
     PrintAndLogEx(NORMAL, "");
     print_hrule(blocksize);
-    PrintAndLogEx(INFO, " blk | data  " NOLF);
-    for (int i = 2; i < blocksize; i++) {
-        PrintAndLogEx(NORMAL, "   " NOLF);
-    }
-    PrintAndLogEx(NORMAL, "| ascii");
+    char spaces[] = "                                                            ";
+    PrintAndLogEx(INFO, " blk | data %.*s| ascii", MAX(0, 3*blocksize - 5), spaces);
     print_hrule(blocksize);
     for (int i = 0; i < blocks; i++) {
         PrintAndLogEx(INFO, "%4d | %s ", i, sprint_hex_ascii(data + (i * blocksize), blocksize));
