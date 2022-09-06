@@ -2111,6 +2111,11 @@ void EmlSetMemIso15693(uint8_t count, uint8_t *data, uint32_t offset) {
     memcpy(emCARD + offset, data, count);
 }
 
+void EmlGetMemIso15693(uint8_t count, uint8_t *output, uint32_t offset) {
+    uint8_t *emCARD = BigBuf_get_EM_addr();
+    memcpy(output, emCARD + offset, count);
+}
+
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
 // all demodulation performed in arm rather than host. - greg
 void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
@@ -2235,29 +2240,19 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         // READ_BLOCK and READ_MULTI_BLOCK
         if ((cmd[1] == ISO15693_READBLOCK) || (cmd[1] == ISO15693_READ_MULTI_BLOCK)) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
+            bool addressed = cmd[0] & ISO15_REQ_ADDRESS;
             bool option = cmd[0] & ISO15_REQ_OPTION;
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
-            uint8_t block_idx = 0;
+            uint8_t address_offset = 0;
+            if (addressed) {
+                address_offset = 8;
+            }
+
+            uint8_t block_idx = cmd[2 + address_offset];
             uint8_t block_count = 1;
-            if (cmd[1] == ISO15693_READBLOCK) {
-                if (cmd_len == 13) {
-                    // addressed mode
-                    block_idx= cmd[10];
-                } else if (cmd_len == 5) {
-                    // non-addressed mode
-                    block_idx = cmd[2];
-                }
-            } else if (cmd[1] == ISO15693_READ_MULTI_BLOCK) {
-                if (cmd_len == 14) {
-                    // addressed mode
-                    block_idx= cmd[10];
-                    block_count= cmd[11] + 1;
-                } else if (cmd_len == 6) {
-                    // non-addressed mode
-                    block_idx = cmd[2];
-                    block_count = cmd[3] + 1;
-                }
+            if (cmd[1] == ISO15693_READ_MULTI_BLOCK) {
+                block_count = cmd[3 + address_offset] + 1;
             }
 
             // Build READ_(MULTI_)BLOCK response
@@ -2268,11 +2263,8 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 security_offset = 1;
             }
             uint8_t resp_readblock[response_length];
-            for (int i = 0; i < response_length; i++) {
-                resp_readblock[i] = 0;
-            }
+            memset(resp_readblock, 0, response_length);
 
-            uint8_t *emCARD = BigBuf_get_EM_addr();
             resp_readblock[0] = 0;    // Response flags
             for (int j = 0; j < block_count; j++) {
                 // where to put the data of the current block
@@ -2280,13 +2272,12 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 if (option) {
                     resp_readblock[work_offset] = 0;    // Security status
                 }
-                for (int i = 0; i < block_size; i++) {
-                    // Block data
-                    if (block_size * (block_idx + j + 1) <= CARD_MEMORY_SIZE) {
-                        resp_readblock[work_offset + security_offset + i] = emCARD[block_size * (block_idx + j) + i];
-                    } else {
-                        resp_readblock[work_offset + security_offset + i] = 0;
-                    }
+                // Block data
+                if (block_size * (block_idx + j + 1) <= CARD_MEMORY_SIZE) {
+                    EmlGetMemIso15693(block_size, resp_readblock + (work_offset + security_offset),
+                                      block_size * (block_idx + j));
+                } else {
+                    memset(resp_readblock + work_offset + security_offset, 0, block_size);
                 }
             }
 
@@ -2298,6 +2289,45 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
             TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
             LogTrace_ISO15693(resp_readblock, response_length, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
+        }
+
+        // WRITE_BLOCK and WRITE_MULTI_BLOCK
+        if ((cmd[1] == ISO15693_WRITEBLOCK) || (cmd[1] == ISO15693_WRITE_MULTI_BLOCK)) {
+            bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
+            bool addressed = cmd[0] & ISO15_REQ_ADDRESS;
+            uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
+
+            uint8_t address_offset = 0;
+            if (addressed) {
+                address_offset = 8;
+            }
+
+            uint8_t block_idx = cmd[2 + address_offset];
+            uint8_t block_count = 1;
+            uint8_t multi_offset = 0;
+            if (cmd[1] == ISO15693_WRITE_MULTI_BLOCK) {
+                block_count = cmd[3 + address_offset] + 1;
+                multi_offset = 1;
+            }
+            uint8_t *data = cmd + 3 + address_offset + multi_offset;
+
+            // write data
+            EmlSetMemIso15693(block_count * block_size, data, block_idx * block_size);
+
+            // Build WRITE_(MULTI_)BLOCK response
+            int response_length = 3;
+            uint8_t resp_writeblock[response_length];
+            memset(resp_writeblock, 0, response_length);
+            resp_writeblock[0] = 0;    // Response flags
+
+            // CRC
+            AddCrc15(resp_writeblock, response_length - 2);
+            CodeIso15693AsTag(resp_writeblock, response_length);
+
+            tosend_t *ts = get_tosend();
+
+            TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
+            LogTrace_ISO15693(resp_writeblock, response_length, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
         }
     }
 
