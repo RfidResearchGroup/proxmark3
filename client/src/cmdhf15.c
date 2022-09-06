@@ -1140,9 +1140,7 @@ static int CmdHF15ESave(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    saveFile(filename, ".bin", dump, bytes);
-    saveFileEML(filename, dump, bytes, blocksize);
-    saveFileJSON(filename, jsf15, dump, bytes, NULL);
+    pm3_save_dump(filename, dump, bytes, jsf15, blocksize);
     free(dump);
     return PM3_SUCCESS;
 }
