@@ -1487,6 +1487,7 @@ typedef enum {
     MTOTHER = 64,
     MTEMV = 128,
     MTFUDAN = 256,
+    MTISO18092 = 512,
 } nxp_mifare_type_t;
 
 // Based on NXP AN10833 Rev 3.6 and NXP AN10834 Rev 4.1
@@ -1499,6 +1500,13 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
         if ((sak & 0x19) == 0x19) {
             printTag("MIFARE Classic 2K");
             type |= MTCLASSIC;
+        } else if ((sak & 0x40) == 0x40) {
+            if ((atqa & 0x0110) == 0x0110)
+                printTag("P2P Support / Proprietary");
+            else
+                printTag("P2P Support / Android");
+
+            type |= MTISO18092;
         } else if ((sak & 0x38) == 0x38) {
             printTag("SmartMX with MIFARE Classic 4K");
             type |= MTCLASSIC;
@@ -1804,6 +1812,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isST = false;
     bool isEMV = false;
     bool isFUDAN = false;
+    bool isISO18092 = false;
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
@@ -1822,6 +1831,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
         if ((nxptype & MTEMV) == MTEMV)
             isEMV = true;
+
+        if ((nxptype & MTISO18092) == MTISO18092)
+            isISO18092 = true;
 
     } else {
 
@@ -2259,9 +2271,15 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             }
         }
     } else {
-        PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
-        if ((card.sak & 0x20) == 0x20) {
-            PrintAndLogEx(INFO, "--> SAK incorrectly claims that card supports RATS <--");
+
+        if (isISO18092) {
+            PrintAndLogEx(INFO, "proprietary iso18092 card found");
+        } else {
+
+            PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
+            if ((card.sak & 0x20) == 0x20) {
+                PrintAndLogEx(INFO, "--> SAK incorrectly claims that card supports RATS <--");
+            }
         }
         if (select_status == 1)
             select_status = 2;
