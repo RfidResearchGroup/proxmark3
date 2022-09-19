@@ -789,23 +789,24 @@ static void print_ct_blocks(uint8_t *data, size_t len) {
 
 static void print_sr_blocks(uint8_t *data, size_t len) {
 
-    size_t blocks = len / ST25TB_SR_BLOCK_SIZE;
+    size_t blocks = (len / ST25TB_SR_BLOCK_SIZE) -1 ;
+    uint8_t * systemblock = data + blocks * ST25TB_SR_BLOCK_SIZE ;
     uint8_t chipid = get_st_chipid(data);
     PrintAndLogEx(SUCCESS, _GREEN_("%s") " tag", get_st_chip_model(chipid));
 
-    PrintAndLogEx(DEBUG, "systemblock : %s", sprint_hex(data + (blocks * 4), 4));
-    PrintAndLogEx(DEBUG, "   otp lock : %02x %02x", data[(blocks * 4)], data[(blocks * 4) + 1]);
+    PrintAndLogEx(DEBUG, "systemblock : %s", sprint_hex(systemblock, ST25TB_SR_BLOCK_SIZE));
+    PrintAndLogEx(DEBUG, "   otp lock : %02x %02x", *systemblock, *(systemblock + 1));
 
     print_hdr();
 
-    for (int i = 0; i <= blocks; i++) {
+    for (int i = 0; i < blocks; i++) {
         PrintAndLogEx(INFO,
                       "%3d/0x%02X | %s | %s | %s",
                       i,
                       i,
-                      sprint_hex(data + (i * 4), 4),
-                      get_st_lock_info(chipid, data + (blocks * 4), i),
-                      sprint_ascii(data + (i * 4), 4)
+                      sprint_hex(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE),
+                      get_st_lock_info(chipid, systemblock, i),
+                      sprint_ascii(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE)
                      );
     }
 
@@ -813,9 +814,9 @@ static void print_sr_blocks(uint8_t *data, size_t len) {
                   "%3d/0x%02X | %s | %s | %s",
                   0xFF,
                   0xFF,
-                  sprint_hex(data + (0xFF * 4), 4),
-                  get_st_lock_info(chipid, data + (blocks * 4), 0xFF),
-                  sprint_ascii(data + (0xFF * 4), 4)
+                  sprint_hex(systemblock, ST25TB_SR_BLOCK_SIZE),
+                  get_st_lock_info(chipid, systemblock, 0xFF),
+                  sprint_ascii(systemblock, ST25TB_SR_BLOCK_SIZE)
                  );
 
     print_footer();
@@ -1405,18 +1406,18 @@ static int CmdHF14BDump(const char *Cmd) {
         // 1 = 4096
         // 2 = 512
         uint8_t cardtype = get_st_cardsize(card.uid);
-        uint8_t blocks = 0;
+        uint8_t lastblock = 0;
         uint16_t cardsize = 0;
 
         switch (cardtype) {
             case 2:
-                cardsize = (512 / 8) + 4;
-                blocks = 0x0F;
+                cardsize = (512 / 8) + ST25TB_SR_BLOCK_SIZE;
+                lastblock = 0x0F;
                 break;
             case 1:
             default:
-                cardsize = (4096 / 8) + 4;
-                blocks = 0x7F;
+                cardsize = (4096 / 8) + ST25TB_SR_BLOCK_SIZE;
+                lastblock = 0x7F;
                 break;
         }
 
@@ -1486,15 +1487,15 @@ static int CmdHF14BDump(const char *Cmd) {
                 // last read
                 if (blocknum == 0xFF) {
                     // we reserved space for this block after 0x0F and 0x7F,  ie 0x10, 0x80
-                    memcpy(data + (blocks * 4), recv, 4);
+                    memcpy(data + ((lastblock+1) * ST25TB_SR_BLOCK_SIZE), recv, ST25TB_SR_BLOCK_SIZE);
                     break;
                 }
-                memcpy(data + (blocknum * 4), recv, 4);
+                memcpy(data + (blocknum * ST25TB_SR_BLOCK_SIZE), recv, ST25TB_SR_BLOCK_SIZE);
 
 
                 retry = 0;
                 blocknum++;
-                if (blocknum > blocks) {
+                if (blocknum > lastblock) {
                     // read config block
                     blocknum = 0xFF;
                 }
@@ -1521,8 +1522,8 @@ static int CmdHF14BDump(const char *Cmd) {
             FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
         }
 
-        size_t datalen = (blocks + 1) * 4;
-        pm3_save_dump(filename, data, datalen, jsf14b, 4);
+        size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
+        pm3_save_dump(filename, data, datalen, jsf14b, ST25TB_SR_BLOCK_SIZE);
     }
 
     return switch_off_field_14b();
