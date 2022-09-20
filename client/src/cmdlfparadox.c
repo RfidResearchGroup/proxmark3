@@ -99,7 +99,7 @@ int demodParadox(bool verbose) {
     }
 
     uint32_t hi2 = 0, hi = 0, lo = 0;
-    uint8_t error = 0;
+    uint8_t errors = 0;
 
     // Remove manchester encoding from FSK bits, skip pre
     for (uint32_t i = idx + PARADOX_PREAMBLE_LEN; i < (idx + 96); i += 2) {
@@ -107,7 +107,7 @@ int demodParadox(bool verbose) {
         // not manchester data
         if (bits[i] == bits[i + 1]) {
             PrintAndLogEx(WARNING, "Error Manchester at %u", i);
-            error++;
+            errors++;
         }
 
         hi2 = (hi2 << 1) | (hi >> 31);
@@ -117,6 +117,10 @@ int demodParadox(bool verbose) {
         if (bits[i] && !bits[i + 1])  {
             lo |= 1;  // 10
         }
+    }
+
+    if (errors) {
+        PrintAndLogEx(WARNING, "Total Manchester Errors... %u", errors);
     }
 
     setDemodBuff(bits, size, idx);
