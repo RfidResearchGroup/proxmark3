@@ -787,11 +787,11 @@ static void print_ct_blocks(uint8_t *data, size_t len) {
 }
 */
 
-static void print_sr_blocks(uint8_t *data, size_t len) {
+static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid) {
 
     size_t blocks = (len / ST25TB_SR_BLOCK_SIZE) -1 ;
     uint8_t * systemblock = data + blocks * ST25TB_SR_BLOCK_SIZE ;
-    uint8_t chipid = get_st_chipid(data);
+    uint8_t chipid = get_st_chipid(uid);
     PrintAndLogEx(SUCCESS, _GREEN_("%s") " tag", get_st_chip_model(chipid));
 
     PrintAndLogEx(DEBUG, "systemblock : %s", sprint_hex(systemblock, ST25TB_SR_BLOCK_SIZE));
@@ -1426,7 +1426,6 @@ static int CmdHF14BDump(const char *Cmd) {
 
         // detect blocksize from card :)
         PrintAndLogEx(INFO, "reading tag memory from UID " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(card.uid, card.uidlen, 8), card.uidlen));
-
         iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 2);
         if (packet == NULL) {
             PrintAndLogEx(FAILED, "failed to allocate memory");
@@ -1513,7 +1512,7 @@ static int CmdHF14BDump(const char *Cmd) {
             return switch_off_field_14b();
         }
 
-        print_sr_blocks(data, cardsize);
+        print_sr_blocks(data, cardsize, card.uid);
 
         // save to file
         if (fnlen < 1) {
@@ -2104,6 +2103,28 @@ out:
     return res;
 }
 
+/* extract uid from filename
+ * filename must match '^hf-14b-[0-9A-F]{16}'
+ */ 
+uint8_t * get_uid_from_filename(const char *filename) {
+    static uint8_t uid[8]  ;
+    memset(uid, 0, 8) ;
+    char uidinhex[17] ;
+    if (strlen(filename)<23 || strncmp(filename, "hf-14b-", 7)) {
+        PrintAndLogEx(ERR, "can't get uid from filename '%s'. Expected format is hf-14b-<uid>...", filename);
+        return uid ;
+    }
+    // extract uid part from filename 
+    strncpy(uidinhex, filename+7, 16) ; uidinhex[16]='\0' ;
+    int len=hex_to_bytes(uidinhex, uid, 8);
+    if (len == 8)
+        return SwapEndian64(uid , 8, 8);
+    else {
+        PrintAndLogEx(ERR, "get_uid_from_filename failed: hex_to_bytes returned %d", len);
+        memset(uid, 0, 8);
+    }
+    return uid ;    
+}
 
 static int CmdHF14BView(const char *Cmd) {
 
@@ -2142,8 +2163,7 @@ static int CmdHF14BView(const char *Cmd) {
 
     // figure out a way to identify the different dump files.
     // STD/SR/CT is difference
-
-    print_sr_blocks(dump, bytes_read);
+    print_sr_blocks(dump, bytes_read, get_uid_from_filename(filename));
     //print_std_blocks(dump, bytes_read);
     //print_ct_blocks(dump, bytes_read);
 
