@@ -45,7 +45,7 @@ static const uint64_t g_mifare_default_keys[] = {
     0x0000014b5c31,
     0xb578f38a5c61,
     0x96a301bce267,
-    0xfc00018778f7,
+    0xfc00018778f7, // Public Transport
     0x6471a5ef2d1a, // SimonsVoss
     0x4E3552426B32, // ID06
     0x6A1987C40A21, // Salto
@@ -66,6 +66,8 @@ static const uint64_t g_mifare_default_keys[] = {
     0x857464D3AAD1, // HTC Eindhoven key
     0x08B386463229, // troika
     0xe00000000000, // icopy
+    0x199404281970, // NSP A
+    0x199404281998, // NSP B
 };
 
 static const uint8_t g_mifare_mad_key[] =  {0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5};
