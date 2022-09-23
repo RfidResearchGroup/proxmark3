@@ -64,6 +64,10 @@ f1d83f964314 # RKF RejskortDanmark KeyB
 # Access control system
 605F5E5D5C5B
 #
+#NSP Global keys A and B (uk housing access control)
+199404281970
+199404281998
+#
 # more Keys from mfc_default_keys.lua
 000000000001
 000000000002
@@ -1497,10 +1501,6 @@ fed791829013
 29a791829013
 668091829013
 00008627c10a
-#
-# keys from NSP Manchester University UK Accomodation Staff and students 
-199404281970
-199404281998
 #
 # easycard
 310D51E539CA
