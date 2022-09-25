@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added print flag to `hf iclass encode` (@natesales)
  - Added `hf 15 eview` and `hf 15 esave` - Retrieve emulator image for ISO15693 simulation (@markus-oehme-pg40)
  - Changed `hf 15 sim` - now supports reader writes (@markus-oehme-pg40)
  - Added `hf 15 eload` - specify memory image for ISO15693 simulation (@markus-oehme-pg40)
