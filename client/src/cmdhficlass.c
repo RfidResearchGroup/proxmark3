@@ -3759,6 +3759,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
         arg_u64_0(NULL, "fc", "<dec>", "facility code"),
         arg_u64_0(NULL, "cn", "<dec>", "card number"),
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
+        arg_lit0(NULL, "print", "print blocks instead of writing"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3786,6 +3787,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
     bool use_credit_key = arg_get_lit(ctx, 3);
     bool elite = arg_get_lit(ctx, 4);
     bool rawkey = arg_get_lit(ctx, 5);
+    bool print_blocks = arg_get_lit(ctx, 10);
 
     int enc_key_len = 0;
     uint8_t enc_key[16] = {0};
@@ -3918,16 +3920,19 @@ static int CmdHFiClassEncode(const char *Cmd) {
     }
 
     int isok = PM3_SUCCESS;
-    // write
     for (uint8_t i = 0; i < 4; i++) {
-        isok = iclass_write_block(6 + i, credential + (i * 8), NULL, key, use_credit_key, elite, rawkey, false, false, auth);
-        switch (isok) {
-            case PM3_SUCCESS:
-                PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _GREEN_("ok") " )  --> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
-                break;
-            default:
-                PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
-                break;
+        if (print_blocks) {
+            PrintAndLogEx(SUCCESS, "Block %d/0x0%x -> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
+        } else {
+            isok = iclass_write_block(6 + i, credential + (i * 8), NULL, key, use_credit_key, elite, rawkey, false, false, auth);
+            switch (isok) {
+                case PM3_SUCCESS:
+                    PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _GREEN_("ok") " )  --> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
+                    break;
+                default:
+                    PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
+                    break;
+            }
         }
     }
     return isok;
