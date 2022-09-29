@@ -10,6 +10,7 @@
 # blue gun EM4305 
 F9DCEBA0
 # chinese "handheld RFID writer" blue cloner from circa 2013 (also sold by xfpga.com)
+# ID/HID CARD COPER SK-663
 65857569
 # ref. http://kazus.ru/forums/showpost.php?p=1045937&postcount=77
 05D73B9F
@@ -25,6 +26,8 @@ A5B4C3D2
 1C0B5848
 # ref. http://www.proxmark.org/forum/viewtopic.php?pid=35075#p35075
 00434343
+# default PASS
+50415353
 # DNGR - DT default pwd
 444E4752
 4E457854
@@ -68,7 +71,6 @@ EEEEEEEE
 FFFFFFFF
 a0a1a2a3
 b0b1b2b3
-50415353
 00000001
 00000002
 0000000a
