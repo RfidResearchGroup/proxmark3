@@ -7,7 +7,7 @@
 # ref. http://www.proxmark.org/forum/viewtopic.php?pid=40662#p40662
 # default PROX
 50524F58
-# blue gun EM4305 
+# blue gun EM4305
 F9DCEBA0
 # chinese "handheld RFID writer" blue cloner from circa 2013 (also sold by xfpga.com)
 # ID/HID CARD COPER SK-663
@@ -50,8 +50,8 @@ C0F5009A
 07CEE75D
 #
 # prefered pwds of members in the community
-feedbeef
-deadc0de
+FEEDBEEF
+DEADC0DE
 # Default pwd, simple:
 00000000
 11111111
@@ -69,12 +69,12 @@ CCCCCCCC
 DDDDDDDD
 EEEEEEEE
 FFFFFFFF
-a0a1a2a3
-b0b1b2b3
+A0A1A2A3
+B0B1B2B3
 00000001
 00000002
-0000000a
-0000000b
+0000000A
+0000000B
 01020304
 02030405
 03040506
@@ -118,8 +118,10 @@ F0000000
 AABBCCDD
 BBCCDDEE
 CCDDEEFF
-0CB7E7FC # rfidler?
-FABADA11 # china?
+# rfidler?
+0CB7E7FC
+# china?
+FABADA11
 # 20 most common len==8
 87654321
 12341234
@@ -130,22 +132,33 @@ FABADA11 # china?
 11112222
 13131313
 10041004
+# pii
+31415926
 #
-31415926 # pii
-abcd1234
+ABCD1234
 20002000
 19721972
-aa55aa55 # amiboo
-55aa55aa # rev amiboo
-4f271149 # seeds ul-ev1
-07d7bb0b # seeds ul-ev1
-9636ef8f # seeds ul-ev1
-b5f44686 # seeds ul-ev1
-9E3779B9 # TEA
-C6EF3720 # TEA
-7854794A # xbox tea constant :)
-F1EA5EED # burtle
-69314718 # ln2
-57721566 # euler constant (dec)
-93C467E3 # euler constant (hex)
-27182818 # natural log
+# rev amiboo
+AA55AA55
+55AA55AA
+# seeds ul-ev1
+4F271149
+07D7BB0B
+9636EF8F
+B5F44686
+# TEA
+9E3779B9
+C6EF3720
+#
+# xbox tea constant :)
+7854794A
+# burtle
+F1EA5EED
+# ln2
+69314718
+# euler constant (dec)
+57721566
+# euler constant (hex)
+93C467E3
+# natural log
+27182818
