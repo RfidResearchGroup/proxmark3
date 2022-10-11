@@ -896,8 +896,43 @@ static bool Pack_MDI37(wiegand_card_t *card, wiegand_message_t *packed, bool pre
 
     set_linear_field(packed, card->FacilityCode, 3, 4);
     set_linear_field(packed, card->CardNumber, 7, 29);
-
+    
     set_bit_by_position(packed, evenparity32(get_linear_field(packed, 1, 18)), 0);
+    set_bit_by_position(packed, oddparity32(get_linear_field(packed, 18, 18)), 36);
+    if (preamble)
+        return add_HID_header(packed);
+    return true;
+}
+
+static bool Unpack_Omega(wiegand_message_t *packed, wiegand_card_t *card) {
+    memset(card, 0, sizeof(wiegand_card_t));
+
+    if (packed->Length != 37) return false; // Wrong length? Stop here.
+
+    card->FacilityCode = get_linear_field(packed, 3, 4);;
+    card->CardNumber = get_linear_field(packed, 7, 29);
+
+    // Only check odd parity
+    card->ParityValid =
+        get_bit_by_position(packed, 36) == oddparity32(get_linear_field(packed, 18, 18));
+    return true;
+}
+
+static bool Pack_Omega(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+    memset(packed, 0, sizeof(wiegand_message_t));
+
+    if (card->FacilityCode > 0x0000F) return false; // Can't encode FC.
+    if (card->CardNumber > 0x1FFFFFFF) return false; // Can't encode CN.
+    if (card->IssueLevel > 0) return false; // Not used in this format
+    if (card->OEM > 0) return false; // Not used in this format
+
+    packed->Length = 37; // Set number of bits
+
+    set_linear_field(packed, card->FacilityCode, 3, 4);
+    set_linear_field(packed, card->CardNumber, 7, 29);
+    
+    // Ignore even parity for Omegapoint Office
+    set_bit_by_position(packed, 0, 0);
     set_bit_by_position(packed, oddparity32(get_linear_field(packed, 18, 18)), 36);
     if (preamble)
         return add_HID_header(packed);
@@ -1403,6 +1438,7 @@ static const cardformat_t FormatTable[] = {
     {"P10004",  Pack_P10004,  Unpack_P10004,  "HID P10004 37-bit PCSC",     {1, 1, 0, 0, 0}}, // from @bthedorff; PR #1559
     {"HGen37",  Pack_HGeneric37, Unpack_HGeneric37,  "HID Generic 37-bit", {1, 0, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"MDI37",   Pack_MDI37,   Unpack_MDI37,   "PointGuard MDI 37-bit",         {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
+    {"Omega",   Pack_Omega,   Unpack_Omega,   "Omegapoint MDI 37-bit",         {1, 1, 0, 0, 1}}, // MDI37 but ignores parity check
     {"BQT38",   Pack_bqt38,   Unpack_bqt38,   "BQT 38-bit",                    {1, 1, 1, 0, 1}}, // from cardinfo.barkweb.com.au
     {"ISCS",    Pack_iscs38,  Unpack_iscs38,  "ISCS 38-bit",                   {1, 1, 0, 1, 1}}, // from cardinfo.barkweb.com.au
     {"PW39",    Pack_pw39,    Unpack_pw39,    "Pyramid 39-bit wiegand format", {1, 1, 0, 0, 1}},  // from cardinfo.barkweb.com.au
