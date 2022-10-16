@@ -5700,12 +5700,16 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf ndefformat",
                   "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF)\n"
-                  "If no <name> given, UID will be used as filename",
-                  "hf mf ndefformat --mini                        --> MIFARE Mini\n"
+                  "If no <name> given, UID will be used as filename. \n"
+                  "It will try default keys and MAD keys to detect if tag is already formatted in order to write.\n"
+                  "\n"
+                  "If not, it will try finding a key file based on your UID.  ie, if you ran autopwn before",
+                  "hf mf ndefformat\n"
+                  // "hf mf ndefformat --mini                        --> MIFARE Mini\n"
                   "hf mf ndefformat --1k                          --> MIFARE Classic 1k\n"
-                  "hf mf ndefformat --2k                          --> MIFARE 2k\n"
-                  "hf mf ndefformat --4k                          --> MIFARE 4k\n"
-                  "hf mf ndefformat --keys hf-mf-066C8B78-key.bin --> MIFARE 1k with keys from specified file\n"
+                  // "hf mf ndefformat --2k                          --> MIFARE 2k\n"
+                  // "hf mf ndefformat --4k                          --> MIFARE 4k\n"
+                  "hf mf ndefformat --keys hf-mf-01020304-key.bin --> MIFARE 1k with keys from specified file\n"
                  );
 
     void *argtable[] = {
