@@ -102,7 +102,7 @@ static s32_t rdv40_spiffs_llerase(u32_t addr, u32_t size) {
     FlashStop();
 
     // iceman:   SPIFFS_OK expands to 0,    erased is bool from Flash_Erase4k,  which returns TRUE if ok.
-    // so this return logic looks wrong.  
+    // so this return logic looks wrong.
     return (SPIFFS_OK == erased);
 }
 
@@ -152,15 +152,15 @@ int rdv40_spiffs_mount(void) {
     // int ret = SPIFFS_mount(&fs, &cfg, spiffs_work_buf, spiffs_fds,
     // sizeof(spiffs_fds), 0, 0, 0); cached version, experimental
     int ret = SPIFFS_mount(
-            &fs,
-            &cfg,
-            spiffs_work_buf,
-            spiffs_fds,
-            sizeof(spiffs_fds),
-            spiffs_cache_buf,
-            sizeof(spiffs_cache_buf),
-            0
-        );
+                  &fs,
+                  &cfg,
+                  spiffs_work_buf,
+                  spiffs_fds,
+                  sizeof(spiffs_fds),
+                  spiffs_cache_buf,
+                  sizeof(spiffs_cache_buf),
+                  0
+              );
 
     if (ret == SPIFFS_OK) {
         RDV40_SPIFFS_MOUNT_STATUS = RDV40_SPIFFS_MOUNTED;
@@ -437,23 +437,23 @@ int rdv40_spiffs_lazy_mount_rollback(int changed) {
 int rdv40_spiffs_write(const char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
         uint32_t idx;
-        if (size <= SPIFFS_WRITE_CHUNK_SIZE) {
-            // write small file
-            write_to_spiffs(filename, src, size);
-            size = 0;
-        } else { //
-            // write first SPIFFS_WRITE_CHUNK_SIZE bytes
-            // need to write the first chuck of data, then append
-            write_to_spiffs(filename, src, SPIFFS_WRITE_CHUNK_SIZE);
-        }
-        // append remaing SPIFFS_WRITE_CHUNK_SIZE byte chuncks
-        for (idx = 1; idx < (size / SPIFFS_WRITE_CHUNK_SIZE);  idx++) {
-            append_to_spiffs(filename, &src[SPIFFS_WRITE_CHUNK_SIZE * idx], SPIFFS_WRITE_CHUNK_SIZE);
-        }
-        // append remaing bytes
-        if (((int64_t)size - (SPIFFS_WRITE_CHUNK_SIZE * idx)) > 0) {
-            append_to_spiffs(filename, &src[SPIFFS_WRITE_CHUNK_SIZE * idx], size - (SPIFFS_WRITE_CHUNK_SIZE * idx));
-        }
+    if (size <= SPIFFS_WRITE_CHUNK_SIZE) {
+    // write small file
+    write_to_spiffs(filename, src, size);
+        size = 0;
+    } else { //
+        // write first SPIFFS_WRITE_CHUNK_SIZE bytes
+        // need to write the first chuck of data, then append
+        write_to_spiffs(filename, src, SPIFFS_WRITE_CHUNK_SIZE);
+    }
+    // append remaing SPIFFS_WRITE_CHUNK_SIZE byte chuncks
+    for (idx = 1; idx < (size / SPIFFS_WRITE_CHUNK_SIZE);  idx++) {
+    append_to_spiffs(filename, &src[SPIFFS_WRITE_CHUNK_SIZE * idx], SPIFFS_WRITE_CHUNK_SIZE);
+    }
+    // append remaing bytes
+    if (((int64_t)size - (SPIFFS_WRITE_CHUNK_SIZE * idx)) > 0) {
+    append_to_spiffs(filename, &src[SPIFFS_WRITE_CHUNK_SIZE * idx], size - (SPIFFS_WRITE_CHUNK_SIZE * idx));
+    }
     )
 }
 
@@ -461,13 +461,13 @@ int rdv40_spiffs_append(const char *filename, uint8_t *src, uint32_t size, RDV40
     RDV40_SPIFFS_SAFE_FUNCTION(
         uint32_t idx;
         // Append any SPIFFS_WRITE_CHUNK_SIZE byte chunks
-        for (idx = 0; idx < (size/SPIFFS_WRITE_CHUNK_SIZE);  idx++) {
-            append_to_spiffs(filename, &src[SPIFFS_WRITE_CHUNK_SIZE * idx], SPIFFS_WRITE_CHUNK_SIZE);
-        }
-        // Append remain bytes
-        if (((int64_t)size - (SPIFFS_WRITE_CHUNK_SIZE * idx)) > 0) {
-            append_to_spiffs(filename, &src[SPIFFS_WRITE_CHUNK_SIZE * idx], size - (SPIFFS_WRITE_CHUNK_SIZE * idx));
-        }
+    for (idx = 0; idx < (size / SPIFFS_WRITE_CHUNK_SIZE);  idx++) {
+    append_to_spiffs(filename, &src[SPIFFS_WRITE_CHUNK_SIZE * idx], SPIFFS_WRITE_CHUNK_SIZE);
+    }
+    // Append remain bytes
+    if (((int64_t)size - (SPIFFS_WRITE_CHUNK_SIZE * idx)) > 0) {
+    append_to_spiffs(filename, &src[SPIFFS_WRITE_CHUNK_SIZE * idx], size - (SPIFFS_WRITE_CHUNK_SIZE * idx));
+    }
     )
 }
 
@@ -547,7 +547,7 @@ int rdv40_spiffs_read_as_symlink(char *filename, uint8_t *dst, uint32_t size, RD
 
             read_from_spiffs((char *)linkdest, (uint8_t *)dst, size);
         )
-}
+        }
 
 // BEWARE ! This function is DESTRUCTIVE as it will UPDATE an existing symlink
 // Since it creates a .lnk extension file it may be minor to mistake the order of arguments

@@ -230,6 +230,9 @@ Check column "offline" for their availability.
 |`hf 15 reader           `|N       |`Act like an ISO-15693 reader`
 |`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO-15693 tag`
 |`hf 15 samples          `|N       |`Acquire samples as reader (enables carrier, sends inquiry)`
+|`hf 15 eload            `|N       |`Load image file into emulator to be used by 'sim' command`
+|`hf 15 esave            `|N       |`Save emulator memory into image file`
+|`hf 15 eview            `|N       |`View emulator memory`
 |`hf 15 sim              `|N       |`Fake an ISO-15693 tag`
 |`hf 15 slixdisable      `|N       |`Disable privacy mode on SLIX ISO-15693 tag`
 |`hf 15 wrbl             `|N       |`Write a block`
@@ -324,6 +327,20 @@ Check column "offline" for their availability.
 |`hf fido auth           `|N       |`FIDO U2F Authentication Message.`
 |`hf fido make           `|N       |`FIDO2 MakeCredential command.`
 |`hf fido assert         `|N       |`FIDO2 GetAssertion command.`
+
+
+### hf fudan
+
+ { Fudan RFIDs...                      }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf fudan help          `|Y       |`This help`
+|`hf fudan reader        `|N       |`Act like a fudan reader`
+|`hf fudan dump          `|N       |`Dump FUDAN tag to binary file`
+|`hf fudan rdbl          `|N       |`Read a fudan tag`
+|`hf fudan view          `|Y       |`Display content from tag dump file`
+|`hf fudan wrbl          `|N       |`Write a fudan tag`
 
 
 ### hf gallagher
@@ -430,11 +447,12 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf lto help            `|Y       |`This help`
 |`hf lto dump            `|N       |`Dump LTO-CM tag to file`
-|`hf lto restore         `|N       |`Restore dump file to LTO-CM tag`
 |`hf lto info            `|N       |`Tag information`
-|`hf lto rdbl            `|N       |`Read block`
-|`hf lto wrbl            `|N       |`Write block`
 |`hf lto list            `|Y       |`List LTO-CM history`
+|`hf lto rdbl            `|N       |`Read block`
+|`hf lto reader          `|N       |`Act like a LTO-CM reader`
+|`hf lto restore         `|N       |`Restore dump file to LTO-CM tag`
+|`hf lto wrbl            `|N       |`Write block`
 
 
 ### hf mf
@@ -458,12 +476,11 @@ Check column "offline" for their availability.
 |`hf mf auth4            `|N       |`ISO14443-4 AES authentication`
 |`hf mf acl              `|Y       |`Decode and print MIFARE Classic access rights bytes`
 |`hf mf dump             `|N       |`Dump MIFARE Classic tag to binary file`
-|`hf mf mad              `|N       |`Checks and prints MAD`
-|`hf mf ndefread         `|N       |`Prints NDEF records from card`
+|`hf mf mad              `|Y       |`Checks and prints MAD`
 |`hf mf personalize      `|N       |`Personalize UID (MIFARE Classic EV1 only)`
 |`hf mf rdbl             `|N       |`Read MIFARE Classic block`
 |`hf mf rdsc             `|N       |`Read MIFARE Classic sector`
-|`hf mf restore          `|N       |`Restore MIFARE Classic binary file to BLANK tag`
+|`hf mf restore          `|N       |`Restore MIFARE Classic binary file to tag`
 |`hf mf setmod           `|N       |`Set MIFARE Classic EV1 load modulation strength`
 |`hf mf value            `|Y       |`Value blocks`
 |`hf mf view             `|Y       |`Display content from tag dump file`
@@ -491,6 +508,8 @@ Check column "offline" for their availability.
 |`hf mf gen3blk          `|N       |`Overwrite manufacturer block`
 |`hf mf gen3freeze       `|N       |`Perma lock UID changes. irreversible`
 |`hf mf gview            `|N       |`View card`
+|`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
+|`hf mf ndefread         `|N       |`Prints NDEF records from card`
 
 
 ### hf mfp
@@ -642,12 +661,16 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf topaz help          `|Y       |`This help`
+|`hf topaz dump          `|N       |`Dump TOPAZ family tag to file`
 |`hf topaz list          `|Y       |`List Topaz history`
 |`hf topaz info          `|N       |`Tag information`
 |`hf topaz reader        `|N       |`Act like a Topaz reader`
-|`hf topaz sim           `|N       |`<UID> -- Simulate Topaz tag`
+|`hf topaz sim           `|N       |`Simulate Topaz tag`
 |`hf topaz sniff         `|N       |`Sniff Topaz reader-tag communication`
 |`hf topaz raw           `|N       |`Send raw hex data to tag`
+|`hf topaz rdbl          `|N       |`Read block`
+|`hf topaz view          `|Y       |`Display content from tag dump file`
+|`hf topaz wrbl          `|N       |`Write block`
 
 
 ### hf texkom
@@ -1282,6 +1305,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`nfc mf cread           `|N       |`read NFC Type MIFARE Classic Tag`
+|`nfc mf cformat         `|N       |`format MIFARE Classic Tag as NFC Tag`
 |`nfc mf pread           `|N       |`read NFC Type MIFARE Plus Tag`
 |`nfc mf help            `|Y       |`This help`
 

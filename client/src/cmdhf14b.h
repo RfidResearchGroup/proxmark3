@@ -25,7 +25,7 @@
 int CmdHF14B(const char *Cmd);
 int CmdHF14BNdefRead(const char *Cmd);
 
-uint8_t * get_uid_from_filename(const char *filename);
+uint8_t *get_uid_from_filename(const char *filename);
 int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool leave_signal_on, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, int user_timeout);
 int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card);
 

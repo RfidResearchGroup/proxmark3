@@ -2182,7 +2182,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint8_t *buff = BigBuf_malloc(size);
             if (buff == NULL) {
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf ("Could not allocate buffer");
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Could not allocate buffer");
                 // Trigger a finish downloading signal with an PM3_EMALLOC
                 reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_EMALLOC, NULL, 0);
             } else {
@@ -2199,7 +2199,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 }
                 // Trigger a finish downloading signal with an ACK frame
                 reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_SUCCESS, NULL, 0);
-                BigBuf_free ();
+                BigBuf_free();
             }
             LED_B_OFF();
             break;

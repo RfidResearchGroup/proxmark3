@@ -5706,7 +5706,7 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
                   "hf mf ndefformat --2k                          --> MIFARE 2k\n"
                   "hf mf ndefformat --4k                          --> MIFARE 4k\n"
                   "hf mf ndefformat --keys hf-mf-066C8B78-key.bin --> MIFARE 1k with keys from specified file\n"
-            );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -5774,9 +5774,9 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
 
     // init keys to default key
     uint8_t keyA[MIFARE_4K_MAXSECTOR][MFKEY_SIZE];
-    uint8_t keyB[MIFARE_4K_MAXSECTOR][MFKEY_SIZE]; 
-    
-    for (uint8_t i = 0; i < MIFARE_4K_MAXSECTOR; i++ ) {
+    uint8_t keyB[MIFARE_4K_MAXSECTOR][MFKEY_SIZE];
+
+    for (uint8_t i = 0; i < MIFARE_4K_MAXSECTOR; i++) {
         memcpy(keyA[i], g_mifare_default_key, sizeof(g_mifare_default_key));
         memcpy(keyB[i], g_mifare_default_key, sizeof(g_mifare_default_key));
     }
@@ -5785,15 +5785,15 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
     uint64_t key64 = 0;
 
     // check if we can authenticate to sector
-    if (mfCheckKeys(0, MF_KEY_A, true, 1, (uint8_t*)g_mifare_mad_key, &key64) == PM3_SUCCESS) {
+    if (mfCheckKeys(0, MF_KEY_A, true, 1, (uint8_t *)g_mifare_mad_key, &key64) == PM3_SUCCESS) {
 
         // if used,  assume KEY A is MAD/NDEF set.
         memcpy(keyA[0], g_mifare_mad_key, sizeof(g_mifare_mad_key));
         memcpy(keyB[0], g_mifare_mad_key_b, sizeof(g_mifare_mad_key_b));
-        for (uint8_t i = 1; i < MIFARE_4K_MAXSECTOR; i++ ) {
-           memcpy(keyA[i], g_mifare_ndef_key, sizeof(g_mifare_ndef_key));
+        for (uint8_t i = 1; i < MIFARE_4K_MAXSECTOR; i++) {
+            memcpy(keyA[i], g_mifare_ndef_key, sizeof(g_mifare_ndef_key));
         }
-    } 
+    }
 
     // Do we have a keyfile based from UID?
     if (strlen(keyFilename) == 0) {
@@ -5850,7 +5850,7 @@ skipfile:
         { 0x03, 0x00, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-        { 0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7, 0x7F, 0x07, 0x88, 0x40, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF },                        
+        { 0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7, 0x7F, 0x07, 0x88, 0x40, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF },
     };
 
     // main loop
@@ -5860,7 +5860,7 @@ skipfile:
             uint8_t b = (mfFirstBlockOfSector(i) + j);
             uint8_t block[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
-            switch(b) {
+            switch (b) {
                 case 0:
                     continue;
                 case 1:
@@ -5873,7 +5873,7 @@ skipfile:
                     memcpy(block, firstblocks[b], MFBLOCK_SIZE);
                     break;
                 default: {
-                    if (mfIsSectorTrailer(j) ) {
+                    if (mfIsSectorTrailer(j)) {
                         // ST NDEF
                         memcpy(block, firstblocks[7], MFBLOCK_SIZE);
                     }

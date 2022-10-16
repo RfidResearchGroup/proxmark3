@@ -789,8 +789,8 @@ static void print_ct_blocks(uint8_t *data, size_t len) {
 
 static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid) {
 
-    size_t blocks = (len / ST25TB_SR_BLOCK_SIZE) -1 ;
-    uint8_t * systemblock = data + blocks * ST25TB_SR_BLOCK_SIZE ;
+    size_t blocks = (len / ST25TB_SR_BLOCK_SIZE) - 1 ;
+    uint8_t *systemblock = data + blocks * ST25TB_SR_BLOCK_SIZE ;
     uint8_t chipid = get_st_chipid(uid);
     PrintAndLogEx(SUCCESS, _GREEN_("%s") " tag", get_st_chip_model(chipid));
 
@@ -1486,7 +1486,7 @@ static int CmdHF14BDump(const char *Cmd) {
                 // last read
                 if (blocknum == 0xFF) {
                     // we reserved space for this block after 0x0F and 0x7F,  ie 0x10, 0x80
-                    memcpy(data + ((lastblock+1) * ST25TB_SR_BLOCK_SIZE), recv, ST25TB_SR_BLOCK_SIZE);
+                    memcpy(data + ((lastblock + 1) * ST25TB_SR_BLOCK_SIZE), recv, ST25TB_SR_BLOCK_SIZE);
                     break;
                 }
                 memcpy(data + (blocknum * ST25TB_SR_BLOCK_SIZE), recv, ST25TB_SR_BLOCK_SIZE);
@@ -2105,25 +2105,26 @@ out:
 
 /* extract uid from filename
  * filename must match '^hf-14b-[0-9A-F]{16}'
- */ 
-uint8_t * get_uid_from_filename(const char *filename) {
+ */
+uint8_t *get_uid_from_filename(const char *filename) {
     static uint8_t uid[8]  ;
     memset(uid, 0, 8) ;
     char uidinhex[17] ;
-    if (strlen(filename)<23 || strncmp(filename, "hf-14b-", 7)) {
+    if (strlen(filename) < 23 || strncmp(filename, "hf-14b-", 7)) {
         PrintAndLogEx(ERR, "can't get uid from filename '%s'. Expected format is hf-14b-<uid>...", filename);
         return uid ;
     }
-    // extract uid part from filename 
-    strncpy(uidinhex, filename+7, 16) ; uidinhex[16]='\0' ;
-    int len=hex_to_bytes(uidinhex, uid, 8);
+    // extract uid part from filename
+    strncpy(uidinhex, filename + 7, 16) ;
+    uidinhex[16] = '\0' ;
+    int len = hex_to_bytes(uidinhex, uid, 8);
     if (len == 8)
-        return SwapEndian64(uid , 8, 8);
+        return SwapEndian64(uid, 8, 8);
     else {
         PrintAndLogEx(ERR, "get_uid_from_filename failed: hex_to_bytes returned %d", len);
         memset(uid, 0, 8);
     }
-    return uid ;    
+    return uid ;
 }
 
 static int CmdHF14BView(const char *Cmd) {

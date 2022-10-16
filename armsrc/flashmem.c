@@ -452,7 +452,7 @@ bool Flash_WipeMemoryPage(uint8_t page) {
     FlashStop();
 
     // let spiffs check and update its info post flash erase
-    rdv40_spiffs_check ();
+    rdv40_spiffs_check();
     return true;
 }
 // Wipes flash memory completely, fills with 0xFF

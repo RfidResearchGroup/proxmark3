@@ -2770,7 +2770,7 @@ static int try_detect_modulation(void) {
 #define LF_NUM_OF_TESTS     6
 
     lf_modulation_t tests[LF_NUM_OF_TESTS];
-    for (int i=0; i< ARRAYLEN(tests); i++) {
+    for (int i = 0; i < ARRAYLEN(tests); i++) {
         memset(&tests[i], 0, sizeof(lf_modulation_t));
     }
 

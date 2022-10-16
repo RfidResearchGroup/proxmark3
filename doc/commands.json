@@ -484,9 +484,11 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> file to load"
+                "-f, --file <fn> file to load",
+                "-b, --bin binary file",
+                "-n, --no-fix Load data from file without any transformations"
             ],
-            "usage": "data load [-h] -f <fn>"
+            "usage": "data load [-hbn] -f <fn>"
         },
         "data ltrim": {
             "command": "data ltrim",
@@ -631,7 +633,7 @@
             "options": [
                 "-h, --help This help",
                 "-n <dec> num of samples (512 - 40000)",
-                "-v, --verbose verbose"
+                "-v, --verbose verbose output"
             ],
             "usage": "data samples [-hv] [-n <dec>]"
         },
@@ -1223,7 +1225,7 @@
                 "hf 14a sim -t 4 -> ISO/IEC 14443-4",
                 "hf 14a sim -t 5 -> MIFARE Tnp3xxx",
                 "hf 14a sim -t 6 -> MIFARE Mini",
-                "hf 14a sim -t 7 -> AMIIBO (NTAG 215), pack 0x8080",
+                "hf 14a sim -t 7 -> Amiibo (NTAG 215), pack 0x8080",
                 "hf 14a sim -t 8 -> MIFARE Classic 4k",
                 "hf 14a sim -t 9 -> FM11RF005SH Shanghai Metro",
                 "hf 14a sim -t 10 -> ST25TA IKEA Rothult"
@@ -1232,7 +1234,7 @@
             "options": [
                 "-h, --help This help",
                 "-t, --type <1-10> Simulation type to use",
-                "-u, --uid <hex> 4, 7 or 10 byte UID",
+                "-u, --uid <hex> <4|7|10> hex bytes UID",
                 "-n, --num <dec> Exit simulation after <numreads> blocks have been read by reader. 0 = infinite",
                 "-x Performs the 'reader attack', nr/ar attack against a reader",
                 "--sk Fill simulator keys from found keys",
@@ -1311,7 +1313,7 @@
             "options": [
                 "-h, --help This help",
                 "-s, --aidsearch checks if AIDs from aidlist.json is present on the card and prints information about found AIDs",
-                "-v, --verbose verbose"
+                "-v, --verbose verbose output"
             ],
             "usage": "hf 14b info [-hsv]"
         },
@@ -1369,7 +1371,7 @@
                 "-c, --crc calculate and append CRC",
                 "-r do not read response from card",
                 "-t, --timeout <dec> timeout in ms",
-                "-v, --verbose verbose",
+                "-v, --verbose verbose output",
                 "-d, --data <hex> data, bytes to send"
             ],
             "usage": "hf 14b raw [-hkscrv] [--sr] [--cts] [--xrx] [-t <dec>] [-d <hex>]"
@@ -1391,15 +1393,16 @@
             "command": "hf 14b reader",
             "description": "Act as a 14443B reader to identify a tag",
             "notes": [
-                "hf 14b reader"
+                "hf 14b reader",
+                "hf 14b reader -@ -> continuous reader mode"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-s, --silent silent (no messages)",
+                "-v, --verbose verbose output",
                 "-@ optional - continuous reader mode"
             ],
-            "usage": "hf 14b reader [-hs@]"
+            "usage": "hf 14b reader [-hv@]"
         },
         "hf 14b sim": {
             "command": "hf 14b sim",
@@ -1504,6 +1507,49 @@
                 "-f, --file <fn> filename of dump"
             ],
             "usage": "hf 15 dump [-h*2o] [-u <hex>] [--ua] [-f <fn>]"
+        },
+        "hf 15 eload": {
+            "command": "hf 15 eload",
+            "description": "Load memory image from file to be used with 'hf 15 sim'",
+            "notes": [
+                "hf 15 eload -f hf-15-01020304.bin"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of image"
+            ],
+            "usage": "hf 15 eload [-h] -f <fn>"
+        },
+        "hf 15 esave": {
+            "command": "hf 15 esave",
+            "description": "Save emulator memory into three files (BIN/EML/JSON)",
+            "notes": [
+                "hf 15 esave -f hf-15-01020304hf 15 esave -b 8 -c 42 -f hf-15-01020304"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of dump",
+                "-b, --blocksize <dec> block size, defaults to 4",
+                "-c, --count <dec> number of blocks to export, defaults to all"
+            ],
+            "usage": "hf 15 esave [-h] -f <fn> [-b <dec>] [-c <dec>]"
+        },
+        "hf 15 eview": {
+            "command": "hf 15 eview",
+            "description": "It displays emulator memory",
+            "notes": [
+                "hf 15 eview",
+                "hf 15 eview -b 8 -c 60"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-b, --blocksize <dec> block size, defaults to 4",
+                "-c, --count <dec> number of blocks to display, defaults to all"
+            ],
+            "usage": "hf 15 eview [-h] [-b <dec>] [-c <dec>]"
         },
         "hf 15 findafi": {
             "command": "hf 15 findafi",
@@ -1680,9 +1726,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-u, --uid <8b hex> UID eg E011223344556677"
+                "-u, --uid <8b hex> UID eg E011223344556677",
+                "-b, --blocksize <dec> block size, defaults to 4"
             ],
-            "usage": "hf 15 sim [-h] -u <8b hex>"
+            "usage": "hf 15 sim [-h] -u <8b hex> [-b <dec>]"
         },
         "hf 15 slixdisable": {
             "command": "hf 15 slixdisable",
@@ -2133,9 +2180,10 @@
                 "-d, --dateofbirth <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars (passports only)",
-                "--path <dirpath> display info from offline dump stored in dirpath"
+                "--path <dirpath> display info from offline dump stored in dirpath",
+                "-i, --images show images"
             ],
-            "usage": "hf emrtd info [-h] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--path <dirpath>]"
+            "usage": "hf emrtd info [-hi] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--path <dirpath>]"
         },
         "hf emrtd list": {
             "command": "hf emrtd list",
@@ -2215,7 +2263,7 @@
                 "--sn <hex> number of service, 1 byte",
                 "--scl <hex> service code list, 2 bytes",
                 "-k, --key <hex> 3des key, 16 bytes",
-                "-v, --verbose verbose helptext"
+                "-v, --verbose verbose output"
             ],
             "usage": "hf felica auth1 [-hv] [--an <hex>] [--acl <hex>] [-i <hex>] [--sn <hex>] [--scl <hex>] [-k <hex>]"
         },
@@ -2232,7 +2280,7 @@
                 "-i <hex> set custom IDm",
                 "-c, --cc <hex> M3c card challenge, 8 bytes",
                 "-k, --key <hex> 3des M3c decryption key, 16 bytes",
-                "-v, --verbose verbose helptext"
+                "-v, --verbose verbose output"
             ],
             "usage": "hf felica auth2 [-hv] [-i <hex>] [-c <hex>] [-k <hex>]"
         },
@@ -2357,7 +2405,7 @@
                 "-h, --help This help",
                 "-i <hex> set custom IDm",
                 "-r <hex> set custom reserve",
-                "-v, --verbose verbose helptext"
+                "-v, --verbose verbose output"
             ],
             "usage": "hf felica resetmode [-hv] [-i <hex>] [-r <hex>]"
         },
@@ -2405,7 +2453,7 @@
                 "-h, --help This help",
                 "-i <hex> set custom IDm",
                 "-r <hex> set custom reserve",
-                "-v, --verbose verbose helptext"
+                "-v, --verbose verbose output"
             ],
             "usage": "hf felica rqspecver [-hv] [-i <hex>] [-r <hex>]"
         },
@@ -2586,6 +2634,86 @@
             ],
             "usage": "hf fido reg [-havt] [-f <fn>] [--cp <str>] [--ap <str>] [--cpx <hex>] [--apx <hex>]"
         },
+        "hf fudan dump": {
+            "command": "hf fudan dump",
+            "description": "Dump FUDAN tag to binary file If no <name> given, UID will be used as filename",
+            "notes": [
+                "hf fudan dump -f mydump -> dump using filename"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of dump"
+            ],
+            "usage": "hf fudan dump [-h] [-f <fn>]"
+        },
+        "hf fudan help": {
+            "command": "hf fudan help",
+            "description": "help This help view Display content from tag dump file",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf fudan rdbl": {
+            "command": "hf fudan rdbl",
+            "description": "Read fudan block",
+            "notes": [
+                "hf fudan rdbl --blk 0 -k FFFFFFFFFFFF",
+                "hf fudan rdbl --blk 3 -v"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--blk <dec> block number",
+                "-k, --key <hex> key, 6 hex bytes",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf fudan rdbl [-hv] --blk <dec> [-k <hex>]"
+        },
+        "hf fudan reader": {
+            "command": "hf fudan reader",
+            "description": "Read a fudan tag",
+            "notes": [
+                "hf fudan reader",
+                "hf fudan reader -@ -> continuous reader mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output",
+                "-@ optional - continuous reader mode"
+            ],
+            "usage": "hf fudan reader [-hv@]"
+        },
+        "hf fudan view": {
+            "command": "hf fudan view",
+            "description": "Print a FUDAN dump file (bin/eml/json)",
+            "notes": [
+                "hf fudan view -f hf-fudan-01020304-dump.bin"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of dump"
+            ],
+            "usage": "hf fudan view [-h] -f <fn>"
+        },
+        "hf fudan wrbl": {
+            "command": "hf fudan wrbl",
+            "description": "Write fudan block with 4 hex bytes of data",
+            "notes": [
+                "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 01020304"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--blk <dec> block number",
+                "-k, --key <hex> key, 6 hex bytes",
+                "-d, --data <hex> bytes to write, 4 hex bytes"
+            ],
+            "usage": "hf fudan wrbl [-h] --blk <dec> [-k <hex>] [-d <hex>]"
+        },
         "hf gallagher clone": {
             "command": "hf gallagher clone",
             "description": "Clone Gallagher credentials to a writable DESFire card Specify site key is required if using non-default key Key, lengths for the different crypto: DES 8 bytes 2TDEA or AES 16 bytes 3TDEA 24 bytes AID, default finds lowest available in range 0x??81F4, where ?? >= 0x20.",
@@ -2611,6 +2739,19 @@
                 "-v, --verbose Verbose mode"
             ],
             "usage": "hf gallagher clone [-hv] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] --rc <dec> --fc <dec> --cn <dec> --il <dec> [--aid <hex>] [--sitekey <hex>] [--cadkey <hex>] [--nocadupdate] [--noappcreate] [--apdu]"
+        },
+        "hf gallagher decode": {
+            "command": "hf gallagher decode",
+            "description": "Decode Gallagher credential block Credential block can be specified with or without the bitwise inverse.",
+            "notes": [
+                "hf gallagher decode --data A3B4B0C151B0A31B"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--data <hex> Credential block (8 or 16 bytes)"
+            ],
+            "usage": "hf gallagher decode [-h] --data <hex>"
         },
         "hf gallagher delete": {
             "command": "hf gallagher delete",
@@ -2650,7 +2791,7 @@
         },
         "hf gallagher help": {
             "command": "hf gallagher help",
-            "description": "help This help diversifykey Diversify Gallagher key",
+            "description": "help This help diversifykey Diversify Gallagher key decode Decode Gallagher credential block",
             "notes": [],
             "offline": true,
             "options": [],
@@ -2676,7 +2817,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } gallagher { Gallagher DESFire RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } jooki { Jooki RFIDs... } iclass { ICLASS RFIDs... } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } texkom { Texkom RFIDs... } xerox { Fuji/Xerox cartridge RFIDs... } waveshare { Waveshare NFC ePaper... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } jooki { Jooki RFIDs... } iclass { ICLASS RFIDs... } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } texkom { Texkom RFIDs... } xerox { Fuji/Xerox cartridge RFIDs... } waveshare { Waveshare NFC ePaper... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags",
             "notes": [],
             "offline": true,
             "options": [],
@@ -2768,9 +2909,10 @@
                 "--ci <dec> credit key index to select key from memory 'hf iclass managekeys'",
                 "--elite elite computations applied to key",
                 "--raw raw, the key is interpreted as raw block 3/4",
-                "--nr replay of NR/MAC"
+                "--nr replay of NR/MAC",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf iclass dump [-h] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr]"
+            "usage": "hf iclass dump [-hz] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr]"
         },
         "hf iclass eload": {
             "command": "hf iclass eload",
@@ -2853,9 +2995,10 @@
             "options": [
                 "-h, --help This help",
                 "-s, --size <256|2048> number of bytes to save (default 256)",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf iclass eview [-hv] [-s <256|2048>]"
+            "usage": "hf iclass eview [-hvz] [-s <256|2048>]"
         },
         "hf iclass help": {
             "command": "hf iclass help",
@@ -3072,9 +3215,10 @@
                 "-f, --file <fn> filename of dump (bin/eml/json)",
                 "--first <dec> Begin printing from this block (default block 6)",
                 "--last <dec> End printing at this block (default 0, ALL)",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf iclass view [-hv] -f <fn> [--first <dec>] [--last <dec>]"
+            "usage": "hf iclass view [-hvz] -f <fn> [--first <dec>] [--last <dec>]"
         },
         "hf iclass wrbl": {
             "command": "hf iclass wrbl",
@@ -3091,13 +3235,14 @@
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
                 "-b, --block <dec> The block number to read",
                 "-d, --data <hex> data to write as 8 hex bytes",
+                "-m, --mac <hex> replay mac data (4 hex bytes)",
                 "--credit key is assumed to be the credit key",
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key",
                 "--nr replay of NR/MAC",
                 "-v, --verbose verbose output"
             ],
-            "usage": "hf iclass wrbl [-hv] [-k <hex>] [--ki <dec>] -b <dec> -d <hex> [--credit] [--elite] [--raw] [--nr]"
+            "usage": "hf iclass wrbl [-hv] [-k <hex>] [--ki <dec>] -b <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr]"
         },
         "hf jooki clone": {
             "command": "hf jooki clone",
@@ -3575,6 +3720,19 @@
             ],
             "usage": "hf lto rdbl [-h] [--first <dec>] [--last <dec>]"
         },
+        "hf lto reader": {
+            "command": "hf lto reader",
+            "description": "Act as a LTO-CM reader. Look for LTO-CM tags until Enter or the pm3 button is pressed",
+            "notes": [
+                "hf lto reader -@ -> continuous reader mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-@ optional - continuous reader mode"
+            ],
+            "usage": "hf lto reader [-h@]"
+        },
         "hf lto restore": {
             "command": "hf lto restore",
             "description": "Restore data from dumpfile to LTO tag",
@@ -3646,7 +3804,7 @@
                 "-a Input key A (def)",
                 "-b Input key B",
                 "-f, --file <fn> filename of dictionary",
-                "-s, --slow Slower acquisition (required by some non standard cards)",
+                "--slow Slower acquisition (required by some non standard cards)",
                 "-l, --legacy legacy mode (use the slow `hf mf chk`)",
                 "-v, --verbose verbose output (statistics)",
                 "--mini MIFARE Classic Mini / S20",
@@ -3660,7 +3818,7 @@
                 "--i2 AVX2",
                 "--i5 AVX512"
             ],
-            "usage": "hf mf autopwn [-habslv] [-k <hex>] [-s <dec>] [-f <fn>] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
+            "usage": "hf mf autopwn [-hablv] [-k <hex>] [-s <dec>] [-f <fn>] [--slow] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
         },
         "hf mf cgetblk": {
             "command": "hf mf cgetblk",
@@ -4143,7 +4301,7 @@
         },
         "hf mf help": {
             "command": "hf mf help",
-            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace acl Decode and print MIFARE Classic access rights bytes value Value blocks view Display content from tag dump file",
+            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace acl Decode and print MIFARE Classic access rights bytes mad Checks and prints MAD value Value blocks view Display content from tag dump file",
             "notes": [],
             "offline": true,
             "options": [],
@@ -4178,7 +4336,7 @@
                 "hf mf mad --aid e103 -k ffffffffffff -b -> shows NDEF data if exists. read card with custom key and key B",
                 "hf mf mad --dch -k ffffffffffff -> decode CardHolder information"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help This help",
                 "-v, --verbose show technical data",
@@ -4203,6 +4361,27 @@
                 "-v, --verbose verbose output`"
             ],
             "usage": "hf mf nack [-hv]"
+        },
+        "hf mf ndefformat": {
+            "command": "hf mf ndefformat",
+            "description": "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF) If no <name> given, UID will be used as filename",
+            "notes": [
+                "hf mf ndefformat --mini -> MIFARE Mini",
+                "hf mf ndefformat --1k -> MIFARE Classic 1k",
+                "hf mf ndefformat --2k -> MIFARE 2k",
+                "hf mf ndefformat --4k -> MIFARE 4k",
+                "hf mf ndefformat --keys hf-mf-066C8B78-key.bin -> MIFARE 1k with keys from specified file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --keys <fn> filename of keys",
+                "--mini MIFARE Classic Mini / S20",
+                "--1k MIFARE Classic 1k / S50 (def)",
+                "--2k MIFARE Classic/Plus 2k",
+                "--4k MIFARE Classic 4k / S70"
+            ],
+            "usage": "hf mf ndefformat [-h] [-k <fn>] [--mini] [--1k] [--2k] [--4k]"
         },
         "hf mf ndefread": {
             "command": "hf mf ndefread",
@@ -4337,7 +4516,7 @@
         },
         "hf mf sim": {
             "command": "hf mf sim",
-            "description": "Simulate MIFARE Classic card",
+            "description": "Simulate MIFARE Classic family type based upon ISO/IEC 14443 type A tag with 4,7 or 10 byte UID from emulator memory. See `hf mf eload` first. The UID from emulator memory will be used if not specified.",
             "notes": [
                 "hf mf sim --mini -> MIFARE Mini",
                 "hf mf sim --1k -> MIFARE Classic 1k (default)",
@@ -4350,7 +4529,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-u, --uid <hex> UID 4,7 or 10bytes. If not specified, the UID 4b/7b from emulator memory will be used",
+                "-u, --uid <hex> <4|7|10> hex bytes UID",
                 "--mini MIFARE Classic Mini / S20",
                 "--1k MIFARE Classic 1k / S50",
                 "--2k MIFARE Classic/Plus 2k",
@@ -5347,9 +5526,10 @@
         },
         "hf mfdes lsfiles": {
             "command": "hf mfdes lsfiles",
-            "description": "Show file list. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
+            "description": "This commands List files inside application AID / ISOID. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
             "notes": [
-                "hf mfdes lsfiles --aid 123456 -> show file list for: app=123456 with defaults from `default` commandhf mfdes lsfiles --isoid df01 --no-auth -> show files from desfire light"
+                "hf mfdes lsfiles --aid 123456 -> AID 123456, list files using `default` command creds",
+                "hf mfdes lsfiles --isoid df01 --no-auth -> list files for DESFire light"
             ],
             "offline": false,
             "options": [
@@ -5567,7 +5747,7 @@
             "notes": [
                 "In the mode with CommitReaderID to decode previous reader id command needs to read transaction counter via dump/read command and specify --trkey",
                 "",
-                "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> write file: app=123456, file=01, offset=0, get file type from card. use default channel settings from `default` command",
+                "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> AID 123456, file=01, offset=0, get file type from card. use default channel settings from `default` command",
                 "hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --0ffset 000100 -> write data to std file with offset 0x100",
                 "hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --commit -> write data to backup file with commit",
                 "hf mfdes write --aid 123456 --fid 01 --type value -d 00000001 -> increment value file",
@@ -5805,7 +5985,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "--ki <hex> Key number, 2 hex bytes",
                 "--key <hex> Key, 16 hex bytes"
             ],
@@ -6037,10 +6217,11 @@
         },
         "hf mfu sim": {
             "command": "hf mfu sim",
-            "description": "Simulate MIFARE Ultralight family type based upon ISO/IEC 14443 type A tag with 4,7 or 10 byte UID from emulator memory. See `hf mfu eload` first. See `hf 14a sim -h` to see available types. You want 2 or 7 usually.",
+            "description": "Simulate MIFARE Ultralight family type based upon ISO/IEC 14443 type A tag with 4,7 or 10 byte UID from emulator memory. See `hf mfu eload` first. The UID from emulator memory will be used if not specified. See `hf 14a sim -h` to see available types. You want 2 or 7 usually.",
             "notes": [
                 "hf mfu sim -t 2 --uid 11223344556677 -> MIFARE Ultralight",
-                "hf mfu sim -t 7 --uid 11223344556677 -n 5 -> AMIIBO (NTAG 215), pack 0x8080"
+                "hf mfu sim -t 7 --uid 11223344556677 -n 5 -> Amiibo (NTAG 215), pack 0x8080",
+                "hf mfu sim -t 7 -> Amiibo (NTAG 215), pack 0x8080"
             ],
             "offline": false,
             "options": [
@@ -6209,9 +6390,11 @@
             "options": [
                 "-h, --help This help",
                 "--sp <dec> skip sample pairs",
-                "--st <dec> skip number of triggers"
+                "--st <dec> skip number of triggers",
+                "--smode [none|drop|min|max|avg] Skip mode. It switches on the function that applies to several samples before they saved to memory",
+                "--sratio <dec, ms> Skip ratio. It applied the function above to (ratio * 2) samples. For ratio = 1 it 2 samples."
             ],
-            "usage": "hf sniff [-h] [--sp <dec>] [--st <dec>]"
+            "usage": "hf sniff [-h] [--sp <dec>] [--st <dec>] [--smode [none|drop|min|max|avg]] [--sratio <dec, ms>]"
         },
         "hf st25ta help": {
             "command": "hf st25ta help",
@@ -6335,17 +6518,17 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
+                "-1 Use data from Graphbuffer",
                 "-v, --verbose Verbose scan and output",
                 "-@ optional - continuous reader mode"
             ],
-            "usage": "hf texkom reader [-hv@]"
+            "usage": "hf texkom reader [-h1v@]"
         },
         "hf texkom sim": {
             "command": "hf texkom sim",
             "description": "Simulate a texkom tag",
             "notes": [
                 "hf texkom sim",
-                "",
                 "hf texkom sim --raw FFFF638C7DC45553 -> simulate TK13 tag with id 8C7DC455",
                 "hf texkom sim --tk17 --raw FFFFCA17F31EC512 -> simulate TK17 tag with id 17F31EC5",
                 "hf texkom sim --id 8C7DC455 -> simulate TK13 tag with id 8C7DC455",
@@ -6417,9 +6600,22 @@
             ],
             "usage": "hf thinfilm sim [-h] -d <hex> [--raw]"
         },
+        "hf topaz dump": {
+            "command": "hf topaz dump",
+            "description": "Dump TOPAZ tag to binary file If no <name> given, UID will be used as filename",
+            "notes": [
+                "hf topaz dump"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of dump"
+            ],
+            "usage": "hf topaz dump [-h] [-f <fn>]"
+        },
         "hf topaz help": {
             "command": "hf topaz help",
-            "description": "help This help list List Topaz history",
+            "description": "help This help list List Topaz history view Display content from tag dump file",
             "notes": [],
             "offline": true,
             "options": [],
@@ -6465,7 +6661,7 @@
             "command": "hf topaz raw",
             "description": "Send raw hex data to Topaz tags",
             "notes": [
-                "hf topaz raw -> Not yet implemented"
+                "hf topaz raw"
             ],
             "offline": false,
             "options": [
@@ -6473,18 +6669,33 @@
             ],
             "usage": "hf topaz raw [-h]"
         },
-        "hf topaz reader": {
-            "command": "hf topaz reader",
-            "description": "Read UID from Topaz tags",
+        "hf topaz rdbl": {
+            "command": "hf topaz rdbl",
+            "description": "Read a block",
             "notes": [
-                "hf topaz reader"
+                "hf topaz rdbl -b 7"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output"
+                "-b, --block <dec> Block number to write"
             ],
-            "usage": "hf topaz reader [-hv]"
+            "usage": "hf topaz rdbl [-h] -b <dec>"
+        },
+        "hf topaz reader": {
+            "command": "hf topaz reader",
+            "description": "Read UID from Topaz tags",
+            "notes": [
+                "hf topaz reader",
+                "hf topaz reader -@ -> Continuous mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output",
+                "-@ optional - continuous reader mode"
+            ],
+            "usage": "hf topaz reader [-hv@]"
         },
         "hf topaz sim": {
             "command": "hf topaz sim",
@@ -6509,6 +6720,33 @@
                 "-h, --help This help"
             ],
             "usage": "hf topaz sniff [-h]"
+        },
+        "hf topaz view": {
+            "command": "hf topaz view",
+            "description": "Print a Topaz tag dump file (bin/eml/json)",
+            "notes": [
+                "hf topaz view -f hf-topaz-04010203-dump.bin"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of dump (bin/eml/json)"
+            ],
+            "usage": "hf topaz view [-h] -f <fn>"
+        },
+        "hf topaz wrbl": {
+            "command": "hf topaz wrbl",
+            "description": "Write a block",
+            "notes": [
+                "hf topaz wrbl -b 7 -d 1122334455667788"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-b, --block <dec> Block number to write",
+                "-d, --data <hex> Block data (8 hex bytes)"
+            ],
+            "usage": "hf topaz wrbl [-h] -b <dec> -d <hex>"
         },
         "hf tune": {
             "command": "hf tune",
@@ -6581,7 +6819,7 @@
         },
         "hf xerox info": {
             "command": "hf xerox info",
-            "description": "Act as a reader.",
+            "description": "Tag information for ISO/IEC 14443 type B / XEROX based tags",
             "notes": [
                 "hf xerox info"
             ],
@@ -6591,6 +6829,21 @@
                 "-v, --verbose verbose output"
             ],
             "usage": "hf xerox info [-hv]"
+        },
+        "hf xerox reader": {
+            "command": "hf xerox reader",
+            "description": "Act as a 14443B reader to identify a tag",
+            "notes": [
+                "hf xerox reader",
+                "hf xerox reader -@"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output",
+                "-@ optional - continuous reader mode"
+            ],
+            "usage": "hf xerox reader [-hv@]"
         },
         "hints": {
             "command": "hints",
@@ -6623,8 +6876,8 @@
             "command": "hw connect",
             "description": "Connects to a Proxmark3 device via specified serial port. Baudrate here is only for physical UART or UART-BT, NOT for USB-CDC or blue shark add-on",
             "notes": [
-                "hw connect -p /dev/ttyacm0",
-                "hw connect -p /dev/ttyacm0 -b 115200"
+                "hw connect -p /dev/ttyACM0",
+                "hw connect -p /dev/ttyACM0 -b 115200"
             ],
             "offline": true,
             "options": [
@@ -6875,7 +7128,7 @@
                 "--fc <dec> 8|16bit value facility code",
                 "--cn <dec> optional - card number to start with, max 65535",
                 "--delay <dec> optional - delay betweens attempts in ms. Default 1000ms",
-                "-v, --verbose verbose logging, show all tries"
+                "-v, --verbose verbose output"
             ],
             "usage": "lf awid brute [-hv] --fmt <dec> --fc <dec> [--cn <dec>] [--delay <dec>]"
         },
@@ -7495,7 +7748,7 @@
             "options": [
                 "-h, --help This help",
                 "-p, --pwd <hex> password, 4 hex bytes, lsb",
-                "-v, --verbose additional output of data section"
+                "-v, --verbose verbose output"
             ],
             "usage": "lf em 4x50 info [-hv] [-p <hex>]"
         },
@@ -7954,7 +8207,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose logging, show all tries",
+                "-v, --verbose verbose output",
                 "-w, --wiegand <format> see `wiegand list` for available formats",
                 "--fc <dec> facility code",
                 "--cn <dec> card number to start with",
@@ -10274,6 +10527,27 @@
             "options": [],
             "usage": ""
         },
+        "nfc mf cformat": {
+            "command": "nfc mf cformat",
+            "description": "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF) If no <name> given, UID will be used as filename",
+            "notes": [
+                "hf mf ndefformat --mini -> MIFARE Mini",
+                "hf mf ndefformat --1k -> MIFARE Classic 1k",
+                "hf mf ndefformat --2k -> MIFARE 2k",
+                "hf mf ndefformat --4k -> MIFARE 4k",
+                "hf mf ndefformat --keys hf-mf-066C8B78-key.bin -> MIFARE 1k with keys from specified file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --keys <fn> filename of keys",
+                "--mini MIFARE Classic Mini / S20",
+                "--1k MIFARE Classic 1k / S50 (def)",
+                "--2k MIFARE Classic/Plus 2k",
+                "--4k MIFARE Classic 4k / S70"
+            ],
+            "usage": "hf mf ndefformat [-h] [-k <fn>] [--mini] [--1k] [--2k] [--4k]"
+        },
         "nfc mf cread": {
             "command": "nfc mf cread",
             "description": "Prints NFC Data Exchange Format (NDEF)",
@@ -10500,6 +10774,18 @@
             ],
             "usage": "prefs get hints [-h]"
         },
+        "prefs get output": {
+            "command": "prefs get output",
+            "description": "Get preference of dump output style",
+            "notes": [
+                "prefs get output"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "prefs get output [-h]"
+        },
         "prefs get plotsliders": {
             "command": "prefs get plotsliders",
             "description": "Get preference of showing the plotslider control in the client",
@@ -10608,7 +10894,7 @@
         },
         "prefs set help": {
             "command": "prefs set help",
-            "description": "help This help barmode Set bar mode clientdebug Set client debug level clientdelay Set client execution delay color Set color support emoji Set emoji display hints Set hint display savepaths ... to be adjusted next ... plotsliders Set plot slider display",
+            "description": "help This help barmode Set bar mode clientdebug Set client debug level clientdelay Set client execution delay color Set color support emoji Set emoji display hints Set hint display savepaths ... to be adjusted next ... output Set dump output style plotsliders Set plot slider display",
             "notes": [],
             "offline": true,
             "options": [],
@@ -10627,6 +10913,21 @@
                 "--on show hints"
             ],
             "usage": "prefs set hints [-h] [--off] [--on]"
+        },
+        "prefs set output": {
+            "command": "prefs set output",
+            "description": "Set dump output style to condense consecutive repeated data",
+            "notes": [
+                "prefs set output --normal -> sets the output style to normal",
+                "prefs set output --dense -> sets the output style to dense"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--normal normal output",
+                "--dense dense output"
+            ],
+            "usage": "prefs set output [-h] [--normal] [--dense]"
         },
         "prefs set plotsliders": {
             "command": "prefs set plotsliders",
@@ -10748,7 +11049,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose"
+                "-v, --verbose verbose output"
             ],
             "usage": "smart info [-hv]"
         },
@@ -10803,7 +11104,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose"
+                "-v, --verbose verbose output"
             ],
             "usage": "smart reader [-hv]"
         },
@@ -11093,8 +11394,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 700,
+        "commands_extracted": 720,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-07-07T21:17:54"
+        "extracted_on": "2022-10-16T15:53:13"
     }
 }
