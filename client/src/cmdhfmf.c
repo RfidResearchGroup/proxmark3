@@ -19,21 +19,21 @@
 #include "cmdhfmf.h"
 #include <ctype.h>
 
-#include "cmdparser.h"    // command_t
-#include "commonutil.h"   // ARRAYLEN
-#include "comms.h"        // clearCommandBuffer
+#include "cmdparser.h"             // command_t
+#include "commonutil.h"            // ARRAYLEN
+#include "comms.h"                 // clearCommandBuffer
 #include "fileutils.h"
 #include "cmdtrace.h"
-#include "mifare/mifaredefault.h"          // mifare default key array
-#include "cliparser.h"          // argtable
-#include "hardnested_bf_core.h" // SetSIMDInstr
+#include "mifare/mifaredefault.h"  // mifare default key array
+#include "cliparser.h"             // argtable
+#include "hardnested_bf_core.h"    // SetSIMDInstr
 #include "mifare/mad.h"
 #include "nfc/ndef.h"
 #include "protocols.h"
-#include "util_posix.h"         // msclock
+#include "util_posix.h"            // msclock
 #include "cmdhfmfhard.h"
-#include "crapto1/crapto1.h"    // prng_successor
-#include "cmdhf14a.h"           // exchange APDU
+#include "crapto1/crapto1.h"       // prng_successor
+#include "cmdhf14a.h"              // exchange APDU
 #include "crypto/libpcrypto.h"
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
@@ -334,6 +334,23 @@ static void mf_print_sector_hdr(uint8_t sector) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "  # | sector " _GREEN_("%02d") " / " _GREEN_("0x%02X") "                                | ascii", sector, sector);
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+}
+
+static bool mf_write_block(uint8_t *key, uint8_t keytype, uint8_t blockno, uint8_t *block) {
+
+    uint8_t data[26];
+    memcpy(data, key, MFKEY_SIZE);
+    memcpy(data + 10, block, MFBLOCK_SIZE);
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, keytype, 0, data, sizeof(data));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(FAILED, "Command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    return (resp.oldarg[0] & 0xff);
 }
 
 static int CmdHF14AMfAcl(const char *Cmd) {
@@ -800,8 +817,8 @@ static int CmdHF14AMfDump(const char *Cmd) {
     // Read keys A from file
     size_t bytes_read;
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
-        bytes_read = fread(keyA[sectorNo], 1, 6, f);
-        if (bytes_read != 6) {
+        bytes_read = fread(keyA[sectorNo], 1, MFKEY_SIZE, f);
+        if (bytes_read != MFKEY_SIZE) {
             PrintAndLogEx(ERR, "File reading error.");
             fclose(f);
             return PM3_EFILE;
@@ -810,8 +827,8 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     // Read keys B from file
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
-        bytes_read = fread(keyB[sectorNo], 1, 6, f);
-        if (bytes_read != 6) {
+        bytes_read = fread(keyB[sectorNo], 1, MFKEY_SIZE, f);
+        if (bytes_read != MFKEY_SIZE) {
             PrintAndLogEx(ERR, "File reading error.");
             fclose(f);
             return PM3_EFILE;
@@ -5677,7 +5694,194 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFMFPersonalize(const char *cmd) {
+// https://www.nxp.com/docs/en/application-note/AN1305.pdf
+int CmdHFMFNDEFFormat(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf ndefformat",
+                  "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF)\n"
+                  "If no <name> given, UID will be used as filename",
+                  "hf mf ndefformat --mini                        --> MIFARE Mini\n"
+                  "hf mf ndefformat --1k                          --> MIFARE Classic 1k\n"
+                  "hf mf ndefformat --2k                          --> MIFARE 2k\n"
+                  "hf mf ndefformat --4k                          --> MIFARE 4k\n"
+                  "hf mf ndefformat --keys hf-mf-066C8B78-key.bin --> MIFARE 1k with keys from specified file\n"
+            );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "keys", "<fn>", "filename of keys"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int keyfnlen = 0;
+    char keyFilename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)keyFilename, FILE_PATH_SIZE, &keyfnlen);
+
+    bool m0 = arg_get_lit(ctx, 2);
+    bool m1 = arg_get_lit(ctx, 3);
+    bool m2 = arg_get_lit(ctx, 4);
+    bool m4 = arg_get_lit(ctx, 5);
+
+    CLIParserFree(ctx);
+
+    // validations
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
+    }
+
+    uint8_t numSectors = MIFARE_1K_MAXSECTOR;
+
+    if (m0) {
+        numSectors = MIFARE_MINI_MAXSECTOR;
+    } else if (m1) {
+        numSectors = MIFARE_1K_MAXSECTOR;
+    } else if (m2) {
+        numSectors = MIFARE_2K_MAXSECTOR;
+    } else if (m4) {
+        numSectors = MIFARE_4K_MAXSECTOR;
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;
+    }
+
+
+    // init keys to default key
+    uint8_t keyA[MIFARE_4K_MAXSECTOR][MFKEY_SIZE];
+    uint8_t keyB[MIFARE_4K_MAXSECTOR][MFKEY_SIZE]; 
+    
+    for (uint8_t i = 0; i < MIFARE_4K_MAXSECTOR; i++ ) {
+        memcpy(keyA[i], g_mifare_default_key, sizeof(g_mifare_default_key));
+        memcpy(keyB[i], g_mifare_default_key, sizeof(g_mifare_default_key));
+    }
+
+    // test if MAD key is used
+    uint64_t key64 = 0;
+
+    // check if we can authenticate to sector
+    if (mfCheckKeys(0, MF_KEY_A, true, 1, (uint8_t*)g_mifare_mad_key, &key64) == PM3_SUCCESS) {
+
+        // if used,  assume KEY A is MAD/NDEF set.
+        memcpy(keyA[0], g_mifare_mad_key, sizeof(g_mifare_mad_key));
+        memcpy(keyB[0], g_mifare_mad_key_b, sizeof(g_mifare_mad_key_b));
+        for (uint8_t i = 1; i < MIFARE_4K_MAXSECTOR; i++ ) {
+           memcpy(keyA[i], g_mifare_ndef_key, sizeof(g_mifare_ndef_key));
+        }
+    } 
+
+    // Do we have a keyfile based from UID?
+    if (strlen(keyFilename) == 0) {
+        char *fptr = GenerateFilename("hf-mf-", "-key.bin");
+        if (fptr) {
+            strcpy(keyFilename, fptr);
+        }
+        free(fptr);
+        DropField();
+    }
+
+    // load key file if exist
+    if (strlen(keyFilename)) {
+
+        FILE *f;
+        if ((f = fopen(keyFilename, "rb")) == NULL) {
+            // PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), keyFilename);
+            goto skipfile;
+        }
+
+        PrintAndLogEx(INFO, "Using `" _YELLOW_("%s") "`", keyFilename);
+
+        // Read keys A from file
+        size_t bytes_read;
+        for (uint8_t i = 0; i < numSectors; i++) {
+            bytes_read = fread(keyA[i], 1, MFKEY_SIZE, f);
+            if (bytes_read != MFKEY_SIZE) {
+                PrintAndLogEx(ERR, "File reading error.");
+                fclose(f);
+                return PM3_EFILE;
+            }
+        }
+
+        // Read keys B from file
+        for (uint8_t i = 0; i < numSectors; i++) {
+            bytes_read = fread(keyB[i], 1, MFKEY_SIZE, f);
+            if (bytes_read != MFKEY_SIZE) {
+                PrintAndLogEx(ERR, "File reading error.");
+                fclose(f);
+                return PM3_EFILE;
+            }
+        }
+
+        fclose(f);
+    }
+
+skipfile:
+
+    uint8_t firstblocks[8][16] = {
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+        { 0x14, 0x01, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1 },
+        { 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1, 0x03, 0xE1 },
+        { 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0x78, 0x77, 0x88, 0xC1, 0x89, 0xEC, 0xA9, 0x7F, 0x8C, 0x2A },
+        { 0x03, 0x00, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+        { 0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7, 0x7F, 0x07, 0x88, 0x40, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF },                        
+    };
+
+    // main loop
+    for (int i = 0; i < numSectors; i++) {
+        for (int j = 0; j < mfNumBlocksPerSector(j); j++) {
+
+            uint8_t b = (mfFirstBlockOfSector(i) + j);
+            uint8_t block[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+            switch(b) {
+                case 0:
+                    continue;
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                case 7:
+                    memcpy(block, firstblocks[b], MFBLOCK_SIZE);
+                    break;
+                default: {
+                    if (mfIsSectorTrailer(j) ) {
+                        // ST NDEF
+                        memcpy(block, firstblocks[7], MFBLOCK_SIZE);
+                    }
+                    break;
+                }
+
+            }
+
+            // write to card,  try B key first,  then A
+            if (mf_write_block(keyB[i], MF_KEY_B, b, block) == 0) {
+                // write failed try B key,
+                if (mf_write_block(keyA[i], MF_KEY_A, b, block) == 0) {
+                    return PM3_EFAILED;
+                }
+            }
+            PrintAndLogEx(INPLACE, "Formatting block %u", b);
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    
+    return PM3_SUCCESS;
+}
+
+
+static int CmdHFMFPersonalize(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf personalize",
                   "Personalize the UID of a MIFARE Classic EV1 card. This is only possible \n"
@@ -5700,7 +5904,7 @@ static int CmdHFMFPersonalize(const char *cmd) {
         arg_lit0(NULL, "f3", "UIDF3, single size NUID"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool use_a = arg_get_lit(ctx, 1);
     bool use_b = arg_get_lit(ctx, 2);
@@ -6568,7 +6772,6 @@ static command_t CommandTable[] = {
     {"acl",         CmdHF14AMfAcl,          AlwaysAvailable, "Decode and print MIFARE Classic access rights bytes"},
     {"dump",        CmdHF14AMfDump,         IfPm3Iso14443a,  "Dump MIFARE Classic tag to binary file"},
     {"mad",         CmdHF14AMfMAD,          AlwaysAvailable, "Checks and prints MAD"},
-    {"ndefread",    CmdHFMFNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
     {"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (MIFARE Classic EV1 only)"},
     {"rdbl",        CmdHF14AMfRdBl,         IfPm3Iso14443a,  "Read MIFARE Classic block"},
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},
@@ -6604,9 +6807,12 @@ static command_t CommandTable[] = {
     {"gen3freeze",  CmdHf14AGen3Freeze,     IfPm3Iso14443a,  "Perma lock UID changes. irreversible"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GTU") " --------------------------"},
     {"gview",       CmdHF14AGen4View,       IfPm3Iso14443a,  "View card"},
-//    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("i") " -----------------------"},
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("ndef") " -----------------------"},
 //    {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
+    {"ndefformat",  CmdHFMFNDEFFormat,      IfPm3Iso14443a,  "Format MIFARE Classic Tag as NFC Tag"},
+    {"ndefread",    CmdHFMFNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
     {NULL, NULL, NULL, NULL}
+
 };
 
 static int CmdHelp(const char *Cmd) {

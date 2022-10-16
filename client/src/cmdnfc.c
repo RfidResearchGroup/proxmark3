@@ -307,6 +307,10 @@ static int CmdNFCMFCRead(const char *Cmd) {
     return CmdHFMFNDEFRead(Cmd);
 }
 
+static int CmdNFCMFCFormat(const char *Cmd) {
+    return CmdHFMFNDEFFormat(Cmd);
+}
+
 static int CmdNFCMFPRead(const char *Cmd) {
     return CmdHFMFPNDEFRead(Cmd);
 }
@@ -318,7 +322,7 @@ static command_t CommandMFTable[] = {
     {"--------",    CmdNFCMFHelp,     AlwaysAvailable, "--------- " _CYAN_("NFC Type MIFARE Classic/Plus Tag") " --------"},
     {"cread",       CmdNFCMFCRead,    IfPm3Iso14443a,  "read NFC Type MIFARE Classic Tag"},
 //    {"cwrite",       CmdNFCMFCWrite,  IfPm3Iso14443a,  "write NFC Type MIFARE Classic Tag"},
-//    {"cformat",      CmdNFCMFCFormat, IfPm3Iso14443a,  "format MIFARE Classic Tag as NFC Tag"},
+    {"cformat",     CmdNFCMFCFormat,  IfPm3Iso14443a,  "format MIFARE Classic Tag as NFC Tag"},
     {"pread",       CmdNFCMFPRead,    IfPm3Iso14443a,  "read NFC Type MIFARE Plus Tag"},
     {"--------",    CmdNFCMFHelp,     AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdNFCMFHelp,     AlwaysAvailable, "This help"},
