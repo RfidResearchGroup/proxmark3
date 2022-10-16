@@ -5754,6 +5754,24 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
     }
 
 
+    // Select card to get UID/UIDLEN/ATQA/SAK information
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "iso14443a card select timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    uint64_t select_status = resp.oldarg[0];
+    if (select_status == 0) {
+        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        return select_status;
+    }
+
+    DropField();
+
+
     // init keys to default key
     uint8_t keyA[MIFARE_4K_MAXSECTOR][MFKEY_SIZE];
     uint8_t keyB[MIFARE_4K_MAXSECTOR][MFKEY_SIZE]; 
@@ -5876,7 +5894,7 @@ skipfile:
     }
 
     PrintAndLogEx(NORMAL, "");
-    
+
     return PM3_SUCCESS;
 }
 
