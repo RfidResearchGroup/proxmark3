@@ -248,28 +248,28 @@ ifeq ($(PLATFORM_CHANGED),true)
 	$(Q)$(MAKE) --no-print-directory -C recovery clean
 	$(Q)$(MAKE) --no-print-directory -C client clean
 	$(Q)$(MAKE) --no-print-directory -C tools/fpga_compress clean
-	$(Q)echo CACHED_PLATFORM=$(PLATFORM) > .Makefile.options.cache
-	$(Q)echo CACHED_PLATFORM_EXTRAS=$(PLATFORM_EXTRAS) >> .Makefile.options.cache
-	$(Q)echo CACHED_PLATFORM_DEFS=$(PLATFORM_DEFS) >> .Makefile.options.cache
+	$(Q)$(ECHO) CACHED_PLATFORM=$(PLATFORM) > .Makefile.options.cache
+	$(Q)$(ECHO) CACHED_PLATFORM_EXTRAS=$(PLATFORM_EXTRAS) >> .Makefile.options.cache
+	$(Q)$(ECHO) CACHED_PLATFORM_DEFS=$(PLATFORM_DEFS) >> .Makefile.options.cache
 endif
 
 # configure system to ignore PM3 device as a modem (ModemManager blacklist, effective *only* if ModemManager is not using _strict_ policy)
 # Read doc/md/ModemManager-Must-Be-Discarded.md for more info
 udev:
-	sudo cp -rf driver/77-pm3-usb-device-blacklist.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
-	sudo udevadm control --reload-rules
+	$(SUDO) cp -rf driver/77-pm3-usb-device-blacklist.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+	$(SUDO) udevadm control --reload-rules
 
-# configure system to add user to the dialout group
+# configure system to add user to the dialout group and if bluetooth group exists,  add user to it
 # you need to logout, relogin to get this access right correct.
 # Finally,  you might need to run the proxmark3 client under SUDO on some systems
 accessrights:
 ifneq ($(wildcard /etc/arch-release),)
 #If user is running ArchLinux, use specific command and group
-	$(Q)sudo usermod -aG uucp $(USER)
-	$(Q)getent group bluetooth >/dev/null && sudo usermod -aG bluetooth $(USER) || true
+	$(Q)$(SUDO) $(USERMOD) uucp $(USER)
+	$(Q)$(GETENT_BL) >/dev/null && $(SUDO) $(USERMOD) bluetooth $(USER) || true
 else
-	$(Q)sudo adduser $(USER) dialout
-	$(Q)getent group bluetooth >/dev/null && sudo adduser $(USER) bluetooth || true
+	$(Q)$(SUDO) $(ADDUSER) $(USER) dialout
+	$(Q)$(GETENT_BL) >/dev/null && $(SUDO) $(ADDUSER) $(USER) bluetooth || true
 endif
 
 # easy printing of MAKE VARIABLES
