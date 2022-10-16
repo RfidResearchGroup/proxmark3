@@ -780,7 +780,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
     }
     if (h24) {
         htf = WHT2F_CRYPTO;
-        memcpy(htd.pwd.password, key, 4);
+        memcpy(htd.pwd.password, key, 6);
         memcpy(htd.crypto.data, data, sizeof(data));
     }
     if (h27) {
