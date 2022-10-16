@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mf cwipe` - swapped the block0 data to genuine manufacture ones (@iceman1001)
  - Added `hf mf ndefformat` - format a MIFARE Classic tag as NFC tag with Data Exchange Format (NDEF) (@iceman1001)
  - Changed `hf 14b dump, view` to get correct chip type in case of SRT512 and friends (@DidierA)
  - Added `hf 15 eview` and `hf 15 esave` - Retrieve emulator image for ISO15693 simulation (@markus-oehme-pg40)
