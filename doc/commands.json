@@ -4364,24 +4364,11 @@
         },
         "hf mf ndefformat": {
             "command": "hf mf ndefformat",
-            "description": "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF) If no <name> given, UID will be used as filename",
-            "notes": [
-                "hf mf ndefformat --mini -> MIFARE Mini",
-                "hf mf ndefformat --1k -> MIFARE Classic 1k",
-                "hf mf ndefformat --2k -> MIFARE 2k",
-                "hf mf ndefformat --4k -> MIFARE 4k",
-                "hf mf ndefformat --keys hf-mf-066C8B78-key.bin -> MIFARE 1k with keys from specified file"
-            ],
+            "description": "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF) If no <name> given, UID will be used as filename. It will try default keys and MAD keys to detect if tag is already formatted in order to write.",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-k, --keys <fn> filename of keys",
-                "--mini MIFARE Classic Mini / S20",
-                "--1k MIFARE Classic 1k / S50 (def)",
-                "--2k MIFARE Classic/Plus 2k",
-                "--4k MIFARE Classic 4k / S70"
-            ],
-            "usage": "hf mf ndefformat [-h] [-k <fn>] [--mini] [--1k] [--2k] [--4k]"
+            "options": [],
+            "usage": ""
         },
         "hf mf ndefread": {
             "command": "hf mf ndefread",
@@ -4402,6 +4389,25 @@
                 "-f, --file <fn> save raw NDEF to file"
             ],
             "usage": "hf mf ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
+        },
+        "hf mf ndefwrite": {
+            "command": "hf mf ndefwrite",
+            "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.",
+            "notes": [
+                "hf mf ndefread -d 0300FE -> write empty record to tag",
+                "hf mf ndefread -f myfilename"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-d <hex> raw NDEF hex bytes",
+                "-f, --file <fn> write raw NDEF file to tag",
+                "--mini MIFARE Classic Mini / S20",
+                "--1k MIFARE Classic 1k / S50 (def)",
+                "--2k MIFARE Classic/Plus 2k",
+                "--4k MIFARE Classic 4k / S70"
+            ],
+            "usage": "hf mf ndefwrite [-h] [-d <hex>] [-f <fn>] [--mini] [--1k] [--2k] [--4k]"
         },
         "hf mf nested": {
             "command": "hf mf nested",
@@ -10529,24 +10535,11 @@
         },
         "nfc mf cformat": {
             "command": "nfc mf cformat",
-            "description": "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF) If no <name> given, UID will be used as filename",
-            "notes": [
-                "hf mf ndefformat --mini -> MIFARE Mini",
-                "hf mf ndefformat --1k -> MIFARE Classic 1k",
-                "hf mf ndefformat --2k -> MIFARE 2k",
-                "hf mf ndefformat --4k -> MIFARE 4k",
-                "hf mf ndefformat --keys hf-mf-066C8B78-key.bin -> MIFARE 1k with keys from specified file"
-            ],
+            "description": "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF) If no <name> given, UID will be used as filename. It will try default keys and MAD keys to detect if tag is already formatted in order to write.",
+            "notes": [],
             "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-k, --keys <fn> filename of keys",
-                "--mini MIFARE Classic Mini / S20",
-                "--1k MIFARE Classic 1k / S50 (def)",
-                "--2k MIFARE Classic/Plus 2k",
-                "--4k MIFARE Classic 4k / S70"
-            ],
-            "usage": "hf mf ndefformat [-h] [-k <fn>] [--mini] [--1k] [--2k] [--4k]"
+            "options": [],
+            "usage": ""
         },
         "nfc mf cread": {
             "command": "nfc mf cread",
@@ -11394,8 +11387,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 720,
+        "commands_extracted": 721,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-10-16T15:53:13"
+        "extracted_on": "2022-10-20T15:33:35"
     }
 }

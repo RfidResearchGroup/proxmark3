@@ -347,6 +347,7 @@ const static vocabulory_t vocabulory[] = {
     { 0, "hf mf gview" }, 
     { 0, "hf mf ndefformat" }, 
     { 0, "hf mf ndefread" }, 
+    { 0, "hf mf ndefwrite" }, 
     { 1, "hf mfp help" }, 
     { 0, "hf mfp info" }, 
     { 0, "hf mfp wrp" }, 

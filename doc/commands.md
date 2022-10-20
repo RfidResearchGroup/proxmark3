@@ -509,7 +509,8 @@ Check column "offline" for their availability.
 |`hf mf gen3freeze       `|N       |`Perma lock UID changes. irreversible`
 |`hf mf gview            `|N       |`View card`
 |`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
-|`hf mf ndefread         `|N       |`Prints NDEF records from card`
+|`hf mf ndefread         `|N       |`Read and print NDEF records from card`
+|`hf mf ndefwrite        `|N       |`Write NDEF records to card`
 
 
 ### hf mfp
