@@ -1094,7 +1094,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 indx += len;
                 break;
             }
-            case 0xfd: {
+            case 0xFD: {
                 indx++;
                 uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
                 PrintAndLogEx(NORMAL, "");
@@ -1103,7 +1103,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 indx += len;
                 break;
             }
-            case 0xfe: {
+            case 0xFE: {
                 PrintAndLogEx(SUCCESS, "NDEF Terminator detected");
                 return PM3_SUCCESS;
             }
