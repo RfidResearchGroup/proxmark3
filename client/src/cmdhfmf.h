@@ -28,6 +28,7 @@ int CmdHF14AMfELoad(const char *Cmd);    // used by "hf mfu eload"
 int CmdHF14AMfDbg(const char *Cmd);      // used by "hf mfu dbg"
 int CmdHFMFNDEFRead(const char *Cmd);    // used by "nfc mf cread"
 int CmdHFMFNDEFFormat(const char *Cmd);  // used by "nfc mf cformat"
+int CmdHFMFNDEFWrite(const char *Cmd);  // used by "nfc mf cwrite"
 
 void showSectorTable(sector_t *k_sector, uint8_t k_sectorsCount);
 void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, bool setEmulatorMem, bool verbose);
