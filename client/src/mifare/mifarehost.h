@@ -79,7 +79,7 @@ int mfCheckKeys_file(uint8_t *destfn, uint64_t *key);
 
 int mfKeyBrute(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint64_t *resultkey);
 
-int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data);
+int mfReadSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *data);
 int mfReadBlock(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t *data);
 
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount);
