@@ -5688,7 +5688,12 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     if (fnlen != 0) {
         saveFile(filename, ".bin", data, datalen);
     }
-    NDEFDecodeAndPrint(data, datalen, verbose);
+
+    res = NDEFDecodeAndPrint(data, datalen, verbose);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
+        res = NDEFRecordsDecodeAndPrint(data, datalen);
+    }
 
     PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -vv`") " for more details");
     return PM3_SUCCESS;
@@ -5847,7 +5852,8 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
         fclose(f);
     }
 
-skipfile: ;
+skipfile:
+    ;
 
     uint8_t firstblocks[8][16] = {
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
@@ -5971,7 +5977,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         return PM3_ENOTTY;
     }
 
-    if ((rawlen && fnlen) || (rawlen == 0 && fnlen == 0)  ) {
+    if ((rawlen && fnlen) || (rawlen == 0 && fnlen == 0)) {
         PrintAndLogEx(WARNING, "Please specify either raw hex or filename");
         return PM3_EINVARG;
     }
@@ -6020,9 +6026,9 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     while (bytes > 0) {
 
         uint8_t block[MFBLOCK_SIZE] = { 0x00 };
-        
+
         if (bytes < MFBLOCK_SIZE) {
-            memcpy(block, ptr_raw, bytes);            
+            memcpy(block, ptr_raw, bytes);
         } else {
             memcpy(block, ptr_raw, MFBLOCK_SIZE);
             ptr_raw += MFBLOCK_SIZE;
@@ -6980,7 +6986,7 @@ static command_t CommandTable[] = {
 //    {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
     {"ndefformat",  CmdHFMFNDEFFormat,      IfPm3Iso14443a,  "Format MIFARE Classic Tag as NFC Tag"},
     {"ndefread",    CmdHFMFNDEFRead,        IfPm3Iso14443a,  "Read and print NDEF records from card"},
-    {"ndefwrite",   CmdHFMFNDEFWrite,       IfPm3Iso14443a,  "Write NDEF records to card"},    
+    {"ndefwrite",   CmdHFMFNDEFWrite,       IfPm3Iso14443a,  "Write NDEF records to card"},
     {NULL, NULL, NULL, NULL}
 
 };
