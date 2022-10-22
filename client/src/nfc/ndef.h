@@ -22,6 +22,8 @@
 #include <stdbool.h>
 #include "common.h"
 
+#define NDEF_MFC_AID    0xE103
+
 typedef enum {
     tnfEmptyRecord          = 0x00,
     tnfWellKnownRecord      = 0x01,

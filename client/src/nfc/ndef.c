@@ -40,6 +40,7 @@
 #define NDEF_XVCARDTEXT   "text/x-vcard"
 
 
+
 static const char *TypeNameFormat_s[] = {
     "Empty Record",
     "Well Known Record",
@@ -117,7 +118,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef);
 
 static uint16_t ndefTLVGetLength(const uint8_t *data, size_t *indx) {
     uint16_t len = 0;
-    if (data[0] == 0xff) {
+    if (data[0] == 0xFF) {
         len = (data[1] << 8) + data[2];
         *indx += 3;
     } else {
@@ -1117,3 +1118,4 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
     }
     return PM3_SUCCESS;
 }
+ 

@@ -5570,6 +5570,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+
 int CmdHFMFNDEFRead(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -5607,9 +5608,9 @@ int CmdHFMFNDEFRead(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    uint16_t ndefAID = 0xE103;
+    uint16_t ndef_aid = NDEF_MFC_AID;
     if (aidlen == 2)
-        ndefAID = (aid[0] << 8) + aid[1];
+        ndef_aid = (aid[0] << 8) + aid[1];
 
     uint8_t ndefkey[6] = {0};
     memcpy(ndefkey, g_mifare_ndef_key, 6);
@@ -5659,7 +5660,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
 
     PrintAndLogEx(INFO, "reading data from tag");
     for (int i = 0; i < madlen; i++) {
-        if (ndefAID == mad[i]) {
+        if (ndef_aid == mad[i]) {
             uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
             if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector)) {
                 PrintAndLogEx(ERR, "error, reading sector %d ", i + 1);
@@ -5916,18 +5917,21 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf ndefwrite",
                   "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.\n",
-                  "hf mf ndefread -d 0300FE      -> write empty record to tag\n"
-                  "hf mf ndefread -f myfilename"
+                  "hf mf ndefwrite -d 0300FE      -> write empty record to tag\n"
+                  "hf mf ndefwrite -f myfilename\n"
+                  "hf mf ndefwrite -d 033fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031\n"
                  );
 
     void *argtable[] = {
-        arg_param_begin,
+        arg_param_begin,        
         arg_str0("d", NULL, "<hex>", "raw NDEF hex bytes"),
         arg_str0("f", "file", "<fn>", "write raw NDEF file to tag"),
+        arg_lit0("p", NULL, "fix NDEF record headers / terminator block if missing"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_lit0("v", "verbose", "verbose output"),        
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -5940,10 +5944,13 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    bool m0 = arg_get_lit(ctx, 3);
-    bool m1 = arg_get_lit(ctx, 4);
-    bool m2 = arg_get_lit(ctx, 5);
-    bool m4 = arg_get_lit(ctx, 6);
+    bool fix_msg = arg_get_lit(ctx, 3);
+
+    bool m0 = arg_get_lit(ctx, 4);
+    bool m1 = arg_get_lit(ctx, 5);
+    bool m2 = arg_get_lit(ctx, 6);
+    bool m4 = arg_get_lit(ctx, 7);
+    bool verbose = arg_get_lit(ctx, 8);
 
     CLIParserFree(ctx);
 
@@ -5970,7 +5977,9 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "Number of sectors selected: %u", numSectors);
+    if (verbose) {
+        PrintAndLogEx(INFO, "Number of sectors selected: %u", numSectors);
+    }
 
     if (g_session.pm3_present == false) {
         PrintAndLogEx(FAILED, "No Proxmark3 device present");
@@ -6010,6 +6019,53 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         free(dump);
     }
 
+    // Has raw bytes ndef message header?
+    switch(raw[0]) {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+        case 0x03:
+        case 0xFD:
+        case 0xFE:
+            break;
+        default: {
+            if (fix_msg == false) {
+                PrintAndLogEx(WARNING, "raw NDEF message doesn't have a proper header,  continuing...");
+            } else {
+                if (bytes + 2 > sizeof(raw)) {
+                    PrintAndLogEx(WARNING, "no room for header, exiting...");
+                    return PM3_EMALLOC;
+                }
+                uint8_t tmp_raw[4096];
+                memcpy(tmp_raw, raw, sizeof(tmp_raw));
+                raw[0] = 0x03;
+                raw[1] = bytes;
+                memcpy(raw + 2, tmp_raw, sizeof(raw) - 2 );
+                bytes += 2;
+                PrintAndLogEx(SUCCESS, "Added generic message header (0x03)");
+            }
+        }        
+    }
+
+    // Has raw bytes ndef a terminator block?
+    if (raw[bytes] != 0xFE) {
+        if (fix_msg == false) {
+            PrintAndLogEx(WARNING, "raw NDEF message doesn't have a terminator block,  continuing...");
+        } else {
+
+            if (bytes + 1 > sizeof(raw)) {
+                PrintAndLogEx(WARNING, "no room for terminator block, exiting...");
+                return PM3_EMALLOC;
+            }
+            raw[bytes++] = 0xFE;
+            PrintAndLogEx(SUCCESS, "Added terminator block (0xFE)");
+        }
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "raw: %s", sprint_hex(raw, bytes));
+    }
+
     // read MAD Sector 0, block1,2
     uint8_t sector0[MFBLOCK_SIZE * 4] = {0};
     if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, sector0)) {
@@ -6018,11 +6074,47 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    // decode MAD
+    uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+    size_t madlen = 0;
+    res = MADDecode(sector0, NULL, mad, &madlen, false);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "can't decode MAD");
+        return res;
+    }
+
     // how much memory do I have available ?
+    // Skip sector 0 since its used for MAD
+    uint8_t freemem[MIFARE_4K_MAXSECTOR] = {0};
+    uint16_t sum = 0;
+    uint8_t block_no = 0;
+    for (uint8_t i = 1; i < madlen; i++) {
+
+        freemem[i] =  (mad[i] == NDEF_MFC_AID);
+
+        if (freemem[i]) {
+
+            if (block_no == 0) {
+                block_no = mfFirstBlockOfSector(i);
+            }
+
+            PrintAndLogEx(INFO, "Sector %u is NDEF formatted", i);
+            sum += (MFBLOCK_SIZE * 3 );
+        }
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Total avail ndef mem... %u", sum);
+        PrintAndLogEx(INFO, "First block............ %u", block_no);
+    }
+
+    if (sum < bytes) {
+        PrintAndLogEx(WARNING, "Raw NDEF message is larger than available NDEF formatted memory");
+        return PM3_EINVARG;
+    }
 
     // main loop - write blocks
-    uint8_t *ptr_raw = raw;
-    uint8_t b = 4;
+    uint8_t *ptr_raw = raw;    
     while (bytes > 0) {
 
         uint8_t block[MFBLOCK_SIZE] = { 0x00 };
@@ -6035,20 +6127,21 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         }
 
         // write to card,  try B key first
-        if (mf_write_block(g_mifare_default_key, MF_KEY_B, b, block) == 0) {
+        if (mf_write_block(g_mifare_default_key, MF_KEY_B, block_no, block) == 0) {
 
             // try A key,
-            if (mf_write_block(g_mifare_ndef_key, MF_KEY_A, b, block) == 0) {
+            if (mf_write_block(g_mifare_ndef_key, MF_KEY_A, block_no, block) == 0) {
                 return PM3_EFAILED;
             }
         }
 
-        PrintAndLogEx(INPLACE, "%u", b);
+        PrintAndLogEx(INPLACE, "%u", block_no);
 
-        b++;
-        if (mfIsSectorTrailer(b)) {
-            b++;
+        block_no++;
+        if (mfIsSectorTrailer(block_no)) {
+            block_no++;
         }
+
         bytes -= MFBLOCK_SIZE;
     }
 
