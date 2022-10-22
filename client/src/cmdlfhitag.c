@@ -581,24 +581,24 @@ static int CmdLFHitagReader(const char *Cmd) {
     if (s01) {
         cmd = CMD_LF_HITAGS_READ;
         htf = RHTSF_CHALLENGE;
-        memcpy(htd.auth.NrAr, nrar, sizeof(nrar));
+        memcpy(htd.auth.NrAr, nrar, sizeof(htd.auth.NrAr));
     }
     if (s02) {
         cmd = CMD_LF_HITAGS_READ;
         htf = RHTSF_KEY;
-        memcpy(htd.crypto.key, key, sizeof(key));
+        memcpy(htd.crypto.key, key, sizeof(htd.crypto.key));
     }
     if (h21) {
         htf = RHT2F_PASSWORD;
-        memcpy(htd.pwd.password, key, 4);
+        memcpy(htd.pwd.password, key, sizeof(htd.pwd.password));
     }
     if (h22) {
         htf = RHT2F_AUTHENTICATE;
-        memcpy(htd.auth.NrAr, nrar, sizeof(nrar));
+        memcpy(htd.auth.NrAr, nrar, sizeof(htd.auth.NrAr));
     }
     if (h23) {
         htf = RHT2F_CRYPTO;
-        memcpy(htd.crypto.key, key, sizeof(key));
+        memcpy(htd.crypto.key, key, sizeof(htd.crypto.key));
     }
     if (h25) {
         htf = RHT2F_TEST_AUTH_ATTEMPTS;
@@ -770,22 +770,22 @@ static int CmdLFHitagWriter(const char *Cmd) {
 
     if (s03) {
         htf = WHTSF_CHALLENGE;
-        memcpy(htd.auth.NrAr, nrar, sizeof(nrar));
+        memcpy(htd.auth.NrAr, nrar, sizeof(htd.auth.NrAr));
         memcpy(htd.auth.data, data, sizeof(data));
     }
     if (s04) {
         htf = WHTSF_KEY;
-        memcpy(htd.crypto.key, key, sizeof(key));
+        memcpy(htd.crypto.key, key, sizeof(htd.crypto.key));
         memcpy(htd.crypto.data, data, sizeof(data));
     }
     if (h24) {
         htf = WHT2F_CRYPTO;
-        memcpy(htd.pwd.password, key, 6);
+        memcpy(htd.crypto.key, key, sizeof(htd.crypto.key));
         memcpy(htd.crypto.data, data, sizeof(data));
     }
     if (h27) {
         htf = WHT2F_PASSWORD;
-        memcpy(htd.pwd.password, key, 4);
+        memcpy(htd.pwd.password, key, sizeof(htd.pwd.password));
         memcpy(htd.crypto.data, data, sizeof(data));
     }
 
@@ -919,7 +919,6 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
     }
 
 }
-
 
 void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 }
