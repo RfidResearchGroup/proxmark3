@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `lf hitag` - keep inside the arrays for key/password/nrar (@iceman1001)
+ - Added `hf mf ndefwrite` - write raw NDEF records to MIFARE Classic tag (@iceman1001)
  - Changed `hf mf cwipe` - swapped the block0 data to genuine manufacture ones (@iceman1001)
  - Added `hf mf ndefformat` - format a MIFARE Classic tag as NFC tag with Data Exchange Format (NDEF) (@iceman1001)
  - Changed `hf 14b dump, view` to get correct chip type in case of SRT512 and friends (@DidierA)
