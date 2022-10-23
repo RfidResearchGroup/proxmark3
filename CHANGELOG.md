@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf mf ndefwrite` - now skips not ndef formatted sectors (@iceman1001)
  - Fixed `hf mf ndefread` - now skips not ndef formatted sectors correctly (@iceman1001)
  - Fixed `lf hitag` - keep inside the arrays for key/password/nrar (@iceman1001)
  - Added `hf mf ndefwrite` - write raw NDEF records to MIFARE Classic tag (@iceman1001)

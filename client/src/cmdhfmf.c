@@ -6139,9 +6139,15 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
 
         PrintAndLogEx(INPLACE, "%u", block_no);
 
+        // find next available block
         block_no++;
         if (mfIsSectorTrailer(block_no)) {
             block_no++;
+
+            // skip sectors which isn't ndef formatted
+            while ( freemem[mfSectorNum(block_no)] == 0 ) {
+                block_no++;
+            }
         }
 
         bytes -= MFBLOCK_SIZE;
