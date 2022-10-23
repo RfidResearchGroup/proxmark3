@@ -2004,12 +2004,15 @@ int CmdHF14BNdefRead(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     bool activate_field = true;
@@ -2096,7 +2099,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     if (fnlen != 0) {
         saveFile(filename, ".bin", response + 2, resplen - 4);
     }
-    res = NDEFRecordsDecodeAndPrint(response + 2, resplen - 4);
+    res = NDEFRecordsDecodeAndPrint(response + 2, resplen - 4, verbose);
 
 out:
     switch_off_field_14b();

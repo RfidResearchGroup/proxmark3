@@ -113,8 +113,8 @@ static const char *URI_s[] = {
     "urn:nfc:"                    // 0x23
 };
 
-static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen);
-static int ndefDecodePayload(NDEFHeader_t *ndef);
+static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen, bool verbose);
+static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose);
 
 static uint16_t ndefTLVGetLength(const uint8_t *data, size_t *indx) {
     uint16_t len = 0;
@@ -166,23 +166,25 @@ static int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header)
     return PM3_SUCCESS;
 }
 
-static int ndefPrintHeader(NDEFHeader_t *header) {
-    PrintAndLogEx(INFO, _CYAN_("Header info"));
+static int ndefPrintHeader(NDEFHeader_t *header, bool verbose) {
 
-    PrintAndLogEx(SUCCESS, "  %s ....... Message begin", STRBOOL(header->MessageBegin));
-    PrintAndLogEx(SUCCESS, "   %s ...... Message end", STRBOOL(header->MessageEnd));
-    PrintAndLogEx(SUCCESS, "    %s ..... Chunk flag", STRBOOL(header->ChunkFlag));
-    PrintAndLogEx(SUCCESS, "     %s .... Short record bit", STRBOOL(header->ShortRecordBit));
-    PrintAndLogEx(SUCCESS, "      %s ... ID Len present", STRBOOL(header->IDLenPresent));
-    PrintAndLogEx(SUCCESS, "");
+    if (verbose) {
+        PrintAndLogEx(INFO, _CYAN_("Header info"));
+        PrintAndLogEx(SUCCESS, "  %s ....... Message begin", STRBOOL(header->MessageBegin));
+        PrintAndLogEx(SUCCESS, "   %s ...... Message end", STRBOOL(header->MessageEnd));
+        PrintAndLogEx(SUCCESS, "    %s ..... Chunk flag", STRBOOL(header->ChunkFlag));
+        PrintAndLogEx(SUCCESS, "     %s .... Short record bit", STRBOOL(header->ShortRecordBit));
+        PrintAndLogEx(SUCCESS, "      %s ... ID Len present", STRBOOL(header->IDLenPresent));
+        PrintAndLogEx(SUCCESS, "");
 
-    PrintAndLogEx(SUCCESS, " Header length...... %zu", header->len);
-    PrintAndLogEx(SUCCESS, " Type length........ %zu", header->TypeLen);
-    PrintAndLogEx(SUCCESS, " Payload length..... %zu", header->PayloadLen);
-    PrintAndLogEx(SUCCESS, " ID length.......... %zu", header->IDLen);
-    PrintAndLogEx(SUCCESS, " Record length...... %zu", header->RecLen);
+        PrintAndLogEx(SUCCESS, " Header length...... %zu", header->len);
+        PrintAndLogEx(SUCCESS, " Type length........ %zu", header->TypeLen);
+        PrintAndLogEx(SUCCESS, " Payload length..... %zu", header->PayloadLen);
+        PrintAndLogEx(SUCCESS, " ID length.......... %zu", header->IDLen);
 
-    PrintAndLogEx(SUCCESS, " Type name format... [ 0x%02x ] " _YELLOW_("%s"), header->TypeNameFormat, TypeNameFormat_s[header->TypeNameFormat]);
+        PrintAndLogEx(SUCCESS, " Type name format... [ 0x%02x ] " _YELLOW_("%s"), header->TypeNameFormat, TypeNameFormat_s[header->TypeNameFormat]);
+        PrintAndLogEx(SUCCESS, " Record length...... %zu", header->RecLen);
+    }
     return PM3_SUCCESS;
 }
 
@@ -483,26 +485,27 @@ static int ndefDecodePayloadSmartPoster(uint8_t *ndef, size_t ndeflen, bool prin
         return res;
     }
 
-    if (verbose) {
-        ndefPrintHeader(&NDEFHeader);
-    }
+    ndefPrintHeader(&NDEFHeader, verbose);
 
     if (NDEFHeader.TypeLen && NDEFHeader.PayloadLen) {
-        ndefDecodePayload(&NDEFHeader);
+        ndefDecodePayload(&NDEFHeader, verbose);
     }
 
-    if (NDEFHeader.TypeLen) {
-        PrintAndLogEx(INFO, "Type data");
-        print_buffer(NDEFHeader.Type, NDEFHeader.TypeLen, 1);
+    if (verbose) {
+        if (NDEFHeader.TypeLen) {
+            PrintAndLogEx(INFO, "Type data");
+            print_buffer(NDEFHeader.Type, NDEFHeader.TypeLen, 1);
+        }
+        if (NDEFHeader.IDLen) {
+            PrintAndLogEx(INFO, "ID data");
+            print_buffer(NDEFHeader.ID, NDEFHeader.IDLen, 1);
+        }
+        if (NDEFHeader.PayloadLen) {
+            PrintAndLogEx(INFO, "Payload data");
+            print_buffer(NDEFHeader.Payload, NDEFHeader.PayloadLen, 1);
+        }
     }
-    if (NDEFHeader.IDLen) {
-        PrintAndLogEx(INFO, "ID data");
-        print_buffer(NDEFHeader.ID, NDEFHeader.IDLen, 1);
-    }
-    if (NDEFHeader.PayloadLen) {
-        PrintAndLogEx(INFO, "Payload data");
-        print_buffer(NDEFHeader.Payload, NDEFHeader.PayloadLen, 1);
-    }
+
     // recursive
     if (NDEFHeader.MessageEnd == false) {
         ndefDecodePayloadSmartPoster(ndef + NDEFHeader.RecLen, ndeflen - NDEFHeader.RecLen, false, false);
@@ -825,7 +828,7 @@ static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
     return PM3_SUCCESS;
 }
 
-static int ndefDecodePayload(NDEFHeader_t *ndef) {
+static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
 
     PrintAndLogEx(INFO, "");
     switch (ndef->TypeNameFormat) {
@@ -868,7 +871,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
             }
 
             if (!strncmp((char *)ndef->Type, "Sp", ndef->TypeLen)) {
-                ndefDecodePayloadSmartPoster(ndef->Payload, ndef->PayloadLen, true, false);
+                ndefDecodePayloadSmartPoster(ndef->Payload, ndef->PayloadLen, true, verbose);
             }
 
             if (!strncmp((char *)ndef->Type, "Di", ndef->TypeLen)) {
@@ -947,36 +950,39 @@ static int ndefDecodePayload(NDEFHeader_t *ndef) {
     return PM3_SUCCESS;
 }
 
-static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
+static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen, bool verbose) {
     NDEFHeader_t NDEFHeader = {0};
     int res = ndefDecodeHeader(ndefRecord, ndefRecordLen, &NDEFHeader);
     if (res != PM3_SUCCESS)
         return res;
 
-    ndefPrintHeader(&NDEFHeader);
+    ndefPrintHeader(&NDEFHeader, verbose);
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, _CYAN_("Payload info"));
 
-    if (NDEFHeader.TypeLen) {
-        PrintAndLogEx(INFO, "Type data");
-        print_buffer(NDEFHeader.Type, NDEFHeader.TypeLen, 1);
+    if (verbose) {
+        if (NDEFHeader.TypeLen) {
+            PrintAndLogEx(INFO, "Type data");
+            print_buffer(NDEFHeader.Type, NDEFHeader.TypeLen, 1);
+        }
+        if (NDEFHeader.IDLen) {
+            PrintAndLogEx(INFO, "ID data");
+            print_buffer(NDEFHeader.ID, NDEFHeader.IDLen, 1);
+        }
+        if (NDEFHeader.PayloadLen) {
+            PrintAndLogEx(INFO, "Payload data");
+            print_buffer(NDEFHeader.Payload, NDEFHeader.PayloadLen, 1);
+        }
     }
-    if (NDEFHeader.IDLen) {
-        PrintAndLogEx(INFO, "ID data");
-        print_buffer(NDEFHeader.ID, NDEFHeader.IDLen, 1);
-    }
-    if (NDEFHeader.PayloadLen) {
-        PrintAndLogEx(INFO, "Payload data");
-        print_buffer(NDEFHeader.Payload, NDEFHeader.PayloadLen, 1);
-    }
+
     if (NDEFHeader.TypeLen && NDEFHeader.PayloadLen) {
-        ndefDecodePayload(&NDEFHeader);
+        ndefDecodePayload(&NDEFHeader, verbose);
     }
 
     return PM3_SUCCESS;
 }
 
-int NDEFRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
+int NDEFRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen, bool verbose) {
     bool firstRec = true;
     size_t len = 0;
     size_t counter = 0;
@@ -1005,7 +1011,7 @@ int NDEFRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, _CYAN_("Record") " " _YELLOW_("%zu"), counter);
         PrintAndLogEx(INFO, "-----------------------------------------------------");
-        ndefRecordDecodeAndPrint(&ndefRecord[len], NDEFHeader.RecLen);
+        ndefRecordDecodeAndPrint(&ndefRecord[len], NDEFHeader.RecLen, verbose);
 
         len += NDEFHeader.RecLen;
 
@@ -1085,9 +1091,9 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 if (len == 0) {
                     PrintAndLogEx(SUCCESS, "Found NDEF message w zero length");
                 } else {
-                    PrintAndLogEx(SUCCESS, "Found NDEF message (%d bytes)", len);
+                    PrintAndLogEx(SUCCESS, "Found NDEF message ( " _YELLOW_("%d") " bytes )", len);
 
-                    int res = NDEFRecordsDecodeAndPrint(&ndef[indx], len);
+                    int res = NDEFRecordsDecodeAndPrint(&ndef[indx], len, verbose);
                     if (res != PM3_SUCCESS)
                         return res;
                 }
@@ -1118,4 +1124,3 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
     }
     return PM3_SUCCESS;
 }
- 

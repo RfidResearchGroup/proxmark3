@@ -1162,9 +1162,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> save raw NDEF to file"
+                "-f, --file <fn> save raw NDEF to file",
+                "-v, --verbose show technical data"
             ],
-            "usage": "hf 14a ndefread [-h] [-f <fn>]"
+            "usage": "hf 14a ndefread [-hv] [-f <fn>]"
         },
         "hf 14a raw": {
             "command": "hf 14a raw",
@@ -1348,9 +1349,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> save raw NDEF to file"
+                "-f, --file <fn> save raw NDEF to file",
+                "-v, --verbose show technical data"
             ],
-            "usage": "hf 14b ndefread [-h] [-f <fn>]"
+            "usage": "hf 14b ndefread [-hv] [-f <fn>]"
         },
         "hf 14b raw": {
             "command": "hf 14b raw",
@@ -4394,20 +4396,23 @@
             "command": "hf mf ndefwrite",
             "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.",
             "notes": [
-                "hf mf ndefread -d 0300FE -> write empty record to tag",
-                "hf mf ndefread -f myfilename"
+                "hf mf ndefwrite -d 0300FE -> write empty record to tag",
+                "hf mf ndefwrite -f myfilename",
+                "hf mf ndefwrite -d 033fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-d <hex> raw NDEF hex bytes",
                 "-f, --file <fn> write raw NDEF file to tag",
+                "-p fix NDEF record headers / terminator block if missing",
                 "--mini MIFARE Classic Mini / S20",
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
-                "--4k MIFARE Classic 4k / S70"
+                "--4k MIFARE Classic 4k / S70",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf mf ndefwrite [-h] [-d <hex>] [-f <fn>] [--mini] [--1k] [--2k] [--4k]"
+            "usage": "hf mf ndefwrite [-hpv] [-d <hex>] [-f <fn>] [--mini] [--1k] [--2k] [--4k]"
         },
         "hf mf nested": {
             "command": "hf mf nested",
@@ -6112,9 +6117,10 @@
             "options": [
                 "-h, --help This help",
                 "-l Swap entered key's endianness",
-                "-f, --file <fn> Save raw NDEF to file"
+                "-f, --file <fn> Save raw NDEF to file",
+                "-v, --verbose show technical data"
             ],
-            "usage": "hf mfu ndefread [-hl] [-k Replace default key for NDEF] [-f <fn>]"
+            "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>]"
         },
         "hf mfu otptear": {
             "command": "hf mfu otptear",
@@ -6454,9 +6460,10 @@
             "options": [
                 "-h, --help This help",
                 "-p, --pwd <hex> 16 byte read password",
-                "-f, --file <fn> save raw NDEF to file"
+                "-f, --file <fn> save raw NDEF to file",
+                "-v, --verbose show technical data"
             ],
-            "usage": "hf st25ta ndefread [-h] [-p <hex>] [-f <fn>]"
+            "usage": "hf st25ta ndefread [-hv] [-p <hex>] [-f <fn>]"
         },
         "hf st25ta protect": {
             "command": "hf st25ta protect",
@@ -10632,9 +10639,10 @@
             "options": [
                 "-h, --help This help",
                 "-l Swap entered key's endianness",
-                "-f, --file <fn> Save raw NDEF to file"
+                "-f, --file <fn> Save raw NDEF to file",
+                "-v, --verbose show technical data"
             ],
-            "usage": "hf mfu ndefread [-hl] [-k Replace default key for NDEF] [-f <fn>]"
+            "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>]"
         },
         "nfc type4a help": {
             "command": "nfc type4a help",
@@ -10654,9 +10662,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> save raw NDEF to file"
+                "-f, --file <fn> save raw NDEF to file",
+                "-v, --verbose show technical data"
             ],
-            "usage": "hf 14a ndefread [-h] [-f <fn>]"
+            "usage": "hf 14a ndefread [-hv] [-f <fn>]"
         },
         "nfc type4a st25taread": {
             "command": "nfc type4a st25taread",
@@ -10669,9 +10678,10 @@
             "options": [
                 "-h, --help This help",
                 "-p, --pwd <hex> 16 byte read password",
-                "-f, --file <fn> save raw NDEF to file"
+                "-f, --file <fn> save raw NDEF to file",
+                "-v, --verbose show technical data"
             ],
-            "usage": "hf st25ta ndefread [-h] [-p <hex>] [-f <fn>]"
+            "usage": "hf st25ta ndefread [-hv] [-p <hex>] [-f <fn>]"
         },
         "nfc type4b help": {
             "command": "nfc type4b help",
@@ -10691,9 +10701,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> save raw NDEF to file"
+                "-f, --file <fn> save raw NDEF to file",
+                "-v, --verbose show technical data"
             ],
-            "usage": "hf 14b ndefread [-h] [-f <fn>]"
+            "usage": "hf 14b ndefread [-hv] [-f <fn>]"
         },
         "prefs get barmode": {
             "command": "prefs get barmode",
@@ -11389,6 +11400,6 @@
     "metadata": {
         "commands_extracted": 721,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-10-20T15:33:35"
+        "extracted_on": "2022-10-23T00:39:16"
     }
 }

@@ -2633,12 +2633,15 @@ int CmdHF14ANdefRead(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     bool activate_field = true;
@@ -2828,7 +2831,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         saveFile(filename, ".bin", ndef_file, ndef_size);
     }
 
-    NDEFRecordsDecodeAndPrint(ndef_file, ndef_size);
+    NDEFRecordsDecodeAndPrint(ndef_file, ndef_size, verbose);
     free(ndef_file);
     return PM3_SUCCESS;
 }

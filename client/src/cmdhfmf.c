@@ -5693,11 +5693,15 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     res = NDEFDecodeAndPrint(data, datalen, verbose);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
-        res = NDEFRecordsDecodeAndPrint(data, datalen);
+        res = NDEFRecordsDecodeAndPrint(data, datalen, verbose);
     }
 
-    if (verbose2 == false) {
-        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -vv`") " for more details");
+    if (verbose == false) {
+        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -v`") " for more details");
+    } else {
+        if (verbose2 == false) {
+            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -vv`") " for more details");
+        }
     }
     return PM3_SUCCESS;
 }
@@ -5925,7 +5929,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
                  );
 
     void *argtable[] = {
-        arg_param_begin,        
+        arg_param_begin,
         arg_str0("d", NULL, "<hex>", "raw NDEF hex bytes"),
         arg_str0("f", "file", "<fn>", "write raw NDEF file to tag"),
         arg_lit0("p", NULL, "fix NDEF record headers / terminator block if missing"),
@@ -5933,7 +5937,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
-        arg_lit0("v", "verbose", "verbose output"),        
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -6021,8 +6025,8 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         free(dump);
     }
 
-    // Has raw bytes ndef message header?
-    switch(raw[0]) {
+    // Has raw bytes ndef message header?bytes
+    switch (raw[0]) {
         case 0x00:
         case 0x01:
         case 0x02:
@@ -6042,11 +6046,11 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
                 memcpy(tmp_raw, raw, sizeof(tmp_raw));
                 raw[0] = 0x03;
                 raw[1] = bytes;
-                memcpy(raw + 2, tmp_raw, sizeof(raw) - 2 );
+                memcpy(raw + 2, tmp_raw, sizeof(raw) - 2);
                 bytes += 2;
                 PrintAndLogEx(SUCCESS, "Added generic message header (0x03)");
             }
-        }        
+        }
     }
 
     // Has raw bytes ndef a terminator block?
@@ -6092,7 +6096,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     uint8_t block_no = 0;
     for (uint8_t i = 1; i < madlen; i++) {
 
-        freemem[i] =  (mad[i] == NDEF_MFC_AID);
+        freemem[i] = (mad[i] == NDEF_MFC_AID);
 
         if (freemem[i]) {
 
@@ -6100,8 +6104,10 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
                 block_no = mfFirstBlockOfSector(i);
             }
 
-            PrintAndLogEx(INFO, "Sector %u is NDEF formatted", i);
-            sum += (MFBLOCK_SIZE * 3 );
+            if (verbose) {
+                PrintAndLogEx(INFO, "Sector %u is NDEF formatted", i);
+            }
+            sum += (MFBLOCK_SIZE * 3);
         }
     }
 
@@ -6116,7 +6122,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     }
 
     // main loop - write blocks
-    uint8_t *ptr_raw = raw;    
+    uint8_t *ptr_raw = raw;
     while (bytes > 0) {
 
         uint8_t block[MFBLOCK_SIZE] = { 0x00 };
@@ -6145,7 +6151,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
             block_no++;
 
             // skip sectors which isn't ndef formatted
-            while ( freemem[mfSectorNum(block_no)] == 0 ) {
+            while (freemem[mfSectorNum(block_no)] == 0) {
                 block_no++;
             }
         }

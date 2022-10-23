@@ -114,7 +114,7 @@ static int CmdNfcDecode(const char *Cmd) {
         res = NDEFDecodeAndPrint(dump, bytes_read, verbose);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
-            res = NDEFRecordsDecodeAndPrint(dump, bytes_read);
+            res = NDEFRecordsDecodeAndPrint(dump, bytes_read, verbose);
         }
 
         free(dump);
@@ -123,7 +123,7 @@ static int CmdNfcDecode(const char *Cmd) {
         res = NDEFDecodeAndPrint(data, datalen, verbose);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
-            res = NDEFRecordsDecodeAndPrint(data, datalen);
+            res = NDEFRecordsDecodeAndPrint(data, datalen, verbose);
         }
     }
     return res;

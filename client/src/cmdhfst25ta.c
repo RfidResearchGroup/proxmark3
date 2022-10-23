@@ -287,6 +287,7 @@ int CmdHFST25TANdefRead(const char *Cmd) {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "16 byte read password"),
         arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -294,6 +295,7 @@ int CmdHFST25TANdefRead(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     if (pwdlen == 0) {
@@ -404,7 +406,7 @@ int CmdHFST25TANdefRead(const char *Cmd) {
     if (fnlen != 0) {
         saveFile(filename, ".bin", response + 2, resplen - 4);
     }
-    NDEFRecordsDecodeAndPrint(response + 2, resplen - 4);
+    NDEFRecordsDecodeAndPrint(response + 2, resplen - 4, verbose);
     return PM3_SUCCESS;
 }
 

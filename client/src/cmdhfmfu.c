@@ -3958,6 +3958,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
         arg_str0("k", "key", "Replace default key for NDEF", NULL),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
         arg_str0("f", "file", "<fn>", "Save raw NDEF to file"),
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3966,6 +3967,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     switch (keylen) {
@@ -4052,9 +4054,9 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     if (fnlen != 0) {
         saveFile(filename, ".bin", records, (size_t)maxsize);
     }
-    status = NDEFRecordsDecodeAndPrint(records, (size_t)maxsize);
+    status = NDEFRecordsDecodeAndPrint(records, (size_t)maxsize, verbose);
     if (status != PM3_SUCCESS) {
-        status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
+        status = NDEFDecodeAndPrint(records, (size_t)maxsize, verbose);
     }
 
     char *jooki = strstr((char *)records, "s.jooki.rocks/s/?s=");
