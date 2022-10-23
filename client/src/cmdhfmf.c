@@ -5659,10 +5659,10 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "reading data from tag");
-    for (int i = 0; i < madlen; i++) {
+    for (int i = 1; i <= madlen; i++) {
         if (ndef_aid == mad[i]) {
             uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
-            if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector)) {
+            if (mfReadSector(i, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector)) {
                 PrintAndLogEx(ERR, "error, reading sector %d ", i + 1);
                 return PM3_ESOFT;
             }
@@ -5675,7 +5675,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "");
 
-    if (!datalen) {
+    if (datalen == 0) {
         PrintAndLogEx(WARNING, "no NDEF data");
         return PM3_SUCCESS;
     }
@@ -5696,7 +5696,9 @@ int CmdHFMFNDEFRead(const char *Cmd) {
         res = NDEFRecordsDecodeAndPrint(data, datalen);
     }
 
-    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -vv`") " for more details");
+    if (verbose2 == false) {
+        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -vv`") " for more details");
+    }
     return PM3_SUCCESS;
 }
 

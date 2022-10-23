@@ -188,7 +188,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
     if (sector0 == NULL)
         return PM3_EINVARG;
 
-    uint8_t GPB = sector0[3 * 16 + 9];
+    uint8_t GPB = sector0[(3 * 16) + 9];
     if (verbose)
         PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x"), "GPB", GPB);
 
