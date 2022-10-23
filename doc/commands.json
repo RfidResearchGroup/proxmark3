@@ -10568,6 +10568,28 @@
             ],
             "usage": "hf mf ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
         },
+        "nfc mf cwrite": {
+            "command": "nfc mf cwrite",
+            "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.",
+            "notes": [
+                "hf mf ndefwrite -d 0300FE -> write empty record to tag",
+                "hf mf ndefwrite -f myfilename",
+                "hf mf ndefwrite -d 033fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-d <hex> raw NDEF hex bytes",
+                "-f, --file <fn> write raw NDEF file to tag",
+                "-p fix NDEF record headers / terminator block if missing",
+                "--mini MIFARE Classic Mini / S20",
+                "--1k MIFARE Classic 1k / S50 (def)",
+                "--2k MIFARE Classic/Plus 2k",
+                "--4k MIFARE Classic 4k / S70",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf mf ndefwrite [-hpv] [-d <hex>] [-f <fn>] [--mini] [--1k] [--2k] [--4k]"
+        },
         "nfc mf help": {
             "command": "nfc mf help",
             "description": "-------- --------- NFC Type MIFARE Classic/Plus Tag -------- -------- --------------------- General --------------------- help This help",
@@ -11398,8 +11420,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 721,
+        "commands_extracted": 722,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-10-23T00:39:16"
+        "extracted_on": "2022-10-23T01:18:01"
     }
 }

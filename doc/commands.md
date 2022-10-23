@@ -1305,8 +1305,9 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`nfc mf cread           `|N       |`read NFC Type MIFARE Classic Tag`
 |`nfc mf cformat         `|N       |`format MIFARE Classic Tag as NFC Tag`
+|`nfc mf cread           `|N       |`read NFC Type MIFARE Classic Tag`
+|`nfc mf cwrite          `|N       |`write NFC Type MIFARE Classic Tag`
 |`nfc mf pread           `|N       |`read NFC Type MIFARE Plus Tag`
 |`nfc mf help            `|Y       |`This help`
 
