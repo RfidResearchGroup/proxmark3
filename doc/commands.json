@@ -1074,6 +1074,29 @@
             ],
             "usage": "hf 14a apdu [-hsktde] [-m <head (CLA INS P1 P2) hex>] [-l <Le (int)>] <APDU (hex) | data (hex)> [<APDU (hex) | data (hex)>]..."
         },
+        "hf 14a apdufind": {
+            "command": "hf 14a apdufind",
+            "description": "Enumerate APDU's of ISO7816 protocol to find valid CLS/INS/P1/P2 commands. It loops all 256 possible values for each byte. The loop oder is INS -> P1/P2 (alternating) -> CLA. Tag must be on antenna before running.",
+            "notes": [
+                "hf 14a apdufind",
+                "hf 14a apdufind --cla 80",
+                "hf 14a apdufind --cla 80 --error-limit 20 --skip-ins a4 --skip-ins b0 --with-le"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-c, --cla <hex> Start value of CLASS (1 hex byte)",
+                "-i, --ins <hex> Start value of INSTRUCTION (1 hex byte)",
+                "--p1 <hex> Start value of P1 (1 hex byte)",
+                "--p2 <hex> Start value of P2 (1 hex byte)",
+                "-r, --reset <number> Minimum secondes before resetting the tag (to prevent timeout issues). Default is 5 minutes",
+                "-e, --error-limit <number> Maximum times an status word other than 0x9000 or 0x6D00 is shown. Default is 512.",
+                "-s, --skip-ins <hex> Do not test an instruction (can be specified multiple times)",
+                "-l, --with-le Search for APDUs with Le=0 (case 2S) as well",
+                "-v, --verbose Verbose output"
+            ],
+            "usage": "hf 14a apdufind [-hlv] [-c <hex>] [-i <hex>] [--p1 <hex>] [--p2 <hex>] [-r <number>] [-e <number>] [-s <hex>]..."
+        },
         "hf 14a chaining": {
             "command": "hf 14a chaining",
             "description": "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
@@ -1089,24 +1112,11 @@
         },
         "hf 14a config": {
             "command": "hf 14a config",
-            "description": "--------------------------------------------------------------------------------------- hf 14a apdufind available offline: no",
+            "description": "--------------------------------------------------------------------------------------- hf 14a cuids available offline: no",
             "notes": [],
             "offline": false,
             "options": [],
             "usage": ""
-        },
-        "hf 14a cuids": {
-            "command": "hf 14a cuids",
-            "description": "Collect n>0 ISO14443-a UIDs in one go",
-            "notes": [
-                "hf 14a cuids -n 5 -> Collect 5 UIDs"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-n, --num <dec> Number of UIDs to collect"
-            ],
-            "usage": "hf 14a cuids [-h] [-n <dec>]"
         },
         "hf 14a help": {
             "command": "hf 14a help",
@@ -1152,6 +1162,19 @@
             ],
             "usage": "hf 14a list [-h1fcrux] [--dict <file>]"
         },
+        "hf 14a ndefformat": {
+            "command": "hf 14a ndefformat",
+            "description": "Format ISO14443-a Tag as a NFC tag with Data Exchange Format (NDEF)",
+            "notes": [
+                "hf 14a ndefformat"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose show technical data"
+            ],
+            "usage": "hf 14a ndefformat [-hv]"
+        },
         "hf 14a ndefread": {
             "command": "hf 14a ndefread",
             "description": "Read NFC Data Exchange Format (NDEF) file on Type 4 NDEF tag",
@@ -1166,6 +1189,24 @@
                 "-v, --verbose show technical data"
             ],
             "usage": "hf 14a ndefread [-hv] [-f <fn>]"
+        },
+        "hf 14a ndefwrite": {
+            "command": "hf 14a ndefwrite",
+            "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.",
+            "notes": [
+                "hf 14a ndefwrite -d 0300FE -> write empty record to tag",
+                "hf 14a ndefwrite -f myfilename",
+                "hf 14a ndefwrite -d 033fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-d <hex> raw NDEF hex bytes",
+                "-f, --file <fn> write raw NDEF file to tag",
+                "-p fix NDEF record headers / terminator block if missing",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf 14a ndefwrite [-hpv] [-d <hex>] [-f <fn>]"
         },
         "hf 14a raw": {
             "command": "hf 14a raw",
@@ -10666,6 +10707,19 @@
             ],
             "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>]"
         },
+        "nfc type4a format": {
+            "command": "nfc type4a format",
+            "description": "Format ISO14443-a Tag as a NFC tag with Data Exchange Format (NDEF)",
+            "notes": [
+                "hf 14a ndefformat"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose show technical data"
+            ],
+            "usage": "hf 14a ndefformat [-hv]"
+        },
         "nfc type4a help": {
             "command": "nfc type4a help",
             "description": "-------- --------- NFC Forum Tag Type 4 ISO14443A ---------- -------- --------------------- General --------------------- help This help",
@@ -11420,8 +11474,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 722,
+        "commands_extracted": 725,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-10-23T01:18:01"
+        "extracted_on": "2022-10-24T16:21:33"
     }
 }

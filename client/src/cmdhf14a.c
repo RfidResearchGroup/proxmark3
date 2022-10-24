@@ -18,9 +18,9 @@
 #include "cmdhf14a.h"
 #include <ctype.h>
 #include <string.h>
-#include "cmdparser.h"      // command_t
-#include "commonutil.h"     // ARRAYLEN
-#include "comms.h"          // clearCommandBuffer
+#include "cmdparser.h"          // command_t
+#include "commonutil.h"         // ARRAYLEN
+#include "comms.h"              // clearCommandBuffer
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "cmdhfmf.h"
@@ -29,16 +29,18 @@
 #include "emv/emvcore.h"
 #include "ui.h"
 #include "crc16.h"
-#include "util_posix.h"    // msclock
+#include "util_posix.h"          // msclock
 #include "aidsearch.h"
-#include "cmdhf.h"         // handle HF plot
+#include "cmdhf.h"               // handle HF plot
 #include "cliparser.h"
-#include "protocols.h"     // definitions of ISO14A/7816 protocol, MAGIC_GEN_1A
-#include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
-#include "nfc/ndef.h"      // NDEFRecordsDecodeAndPrint
-#include "cmdnfc.h"        // print_type4_cc_info
-#include "fileutils.h"     // saveFile
-#include "atrs.h"          // getATRinfo
+#include "protocols.h"           // definitions of ISO14A/7816 protocol, MAGIC_GEN_1A
+#include "iso7816/apduinfo.h"    // GetAPDUCodeDescription
+#include "nfc/ndef.h"            // NDEFRecordsDecodeAndPrint
+#include "cmdnfc.h"              // print_type4_cc_info
+#include "fileutils.h"           // saveFile
+#include "atrs.h"                // getATRinfo
+#include "desfire.h"             // desfire enums
+#include "mifare/desfirecore.h"  // desfire context
 
 static bool APDUInFramingEnable = true;
 
@@ -2692,7 +2694,6 @@ int CmdHF14ANdefRead(const char *Cmd) {
     keep_field_on = true;
 
     // ---------------  CC file reading ----------------
-
     uint8_t aSELECT_FILE_CC[30];
     int aSELECT_FILE_CC_n = 0;
     if (backward_compatibility_v1) {
@@ -2733,7 +2734,10 @@ int CmdHF14ANdefRead(const char *Cmd) {
     memcpy(cc_data, response, sizeof(cc_data));
     uint8_t file_id[2] = {cc_data[9], cc_data[10]};
 
-    print_type4_cc_info(cc_data, sizeof(cc_data));
+    if (verbose) {
+        print_type4_cc_info(cc_data, sizeof(cc_data));
+    }
+
     uint16_t max_rapdu_size = (cc_data[3] << 8 | cc_data[4]) - 2;
     max_rapdu_size = max_rapdu_size < sizeof(response) - 2 ? max_rapdu_size : sizeof(response) - 2;
 
@@ -2760,7 +2764,6 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     // read first 2 bytes to get NDEF length
-
     uint8_t aREAD_NDEF[30];
     int aREAD_NDEF_n = 0;
     param_gethex_to_eol("00b0000002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
@@ -2836,21 +2839,442 @@ int CmdHF14ANdefRead(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int CmdHF14ANdefFormat(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a ndefformat",
+                  "Format ISO14443-a Tag as a NFC tag with Data Exchange Format (NDEF)",
+                  "hf 14a ndefformat\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (g_session.pm3_present == false)
+        return PM3_ENOTTY;
+
+    bool activate_field = true;
+    bool keep_field_on = false;
+    uint8_t response[PM3_CMD_DATA_SIZE];
+    int resplen = 0;
+
+    SetAPDULogging(false);
+
+    // step 1 - Select NDEF Tag application
+    uint8_t aSELECT_AID[80];
+    int aSELECT_AID_n = 0;
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
+    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (resplen < 2) {
+        return PM3_ESOFT;
+    }
+
+    bool have_application = true;
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != 0x9000) {
+        have_application = false;
+        PrintAndLogEx(INFO, "no NDEF application found");
+    } else {
+        PrintAndLogEx(INFO, "found ndef application");
+    }
+
+
+    // setup desfire authentication context
+    uint8_t empty_key[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    DesfireContext_t dctx;
+    dctx.secureChannel = DACNone;
+    DesfireSetKey(&dctx, 0, T_DES, empty_key);
+    DesfireSetKdf(&dctx, MFDES_KDF_ALGO_NONE, NULL, 0);
+    DesfireSetCommandSet(&dctx, DCCNativeISO);
+    DesfireSetCommMode(&dctx, DCMPlain);
+
+    // step 1 - create application
+    if (have_application == false) {
+        // "hf mfdes createapp --aid 000001 --fid E110 --ks1 0B --ks2 A1 --dfhex D2760000850101 -t des -n 0 -k 0000000000000000"
+        PrintAndLogEx(INFO, "creating NDEF application...");
+
+        // authenticae first to AID 00 00 00
+        res = DesfireSelectAndAuthenticateEx(&dctx, DACEV1, 0x000000, false, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(INFO, "failed empty auth..");
+            return res;
+        }
+
+        // create application
+        uint8_t dfname[] = {0xD2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01};
+        uint8_t ks1 = 0x0B;
+        uint8_t ks2 = 0xA1;           // bit FileID in ks2
+        uint32_t appid = 0x0000001;
+        uint16_t fileid = 0xE110;
+        uint8_t data[250] = {0};
+        size_t datalen = 0;
+
+        DesfireAIDUintToByte(appid, &data[0]);
+        data[3] = ks1;
+        data[4] = ks2;
+        Uint2byteToMemLe(&data[5], fileid);
+        memcpy(&data[7], dfname, sizeof(dfname));
+        datalen = 14;
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "---------------------------");
+            PrintAndLogEx(INFO, _CYAN_("Creating Application using:"));
+            PrintAndLogEx(INFO, "AID........... 0x%02X%02X%02X", data[2], data[1], data[0]);
+            PrintAndLogEx(INFO, "Key Set 1..... 0x%02X", data[3]);
+            PrintAndLogEx(INFO, "Key Set 2..... 0x%02X", data[4]);
+            PrintAndLogEx(INFO, "ISO file ID... %s", (data[4] & 0x20) ? "enabled" : "disabled");
+            if ((data[4] & 0x20)) {
+                PrintAndLogEx(INFO, "ISO file ID... 0x%04X", MemLeToUint2byte(&data[5]));
+                PrintAndLogEx(INFO, "DF Name[%02d]  %s | %s\n", 7, sprint_ascii(dfname, sizeof(dfname)), sprint_hex(dfname, sizeof(dfname)));
+            }
+            PrintKeySettings(data[3], data[4], true, true);
+            PrintAndLogEx(INFO, "---------------------------");
+        }
+
+        res = DesfireCreateApplication(&dctx, data, datalen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire CreateApplication command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        PrintAndLogEx(SUCCESS, "Desfire application %06x successfully " _GREEN_("created"), appid);
+
+
+        // step 2 - create capability container (CC File)
+
+        // authenticae to the new AID 00 00 01
+        uint8_t aes_key[] = {
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+        };
+        dctx.secureChannel = DACNone;
+        DesfireSetKey(&dctx, 0, T_AES, aes_key);
+        DesfireSetKdf(&dctx, MFDES_KDF_ALGO_NONE, NULL, 0);
+        DesfireSetCommandSet(&dctx, DCCNativeISO);
+        DesfireSetCommMode(&dctx, DCMPlain);
+        res = DesfireSelectAndAuthenticateEx(&dctx, DACEV1, 0x000001, false, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(INFO, "failed aid auth..");
+            return res;
+        }
+
+        // hf mfdes createfile --aid 000001 --fid 01 --isofid E103 --amode plain --size 00000F
+        // --rrights free --wrights key0 --rwrights key0 --chrights key0
+        //  -n 0 -t aes -k 00000000000000000000000000000000 -m plain
+        uint8_t fid = 0x01;
+        uint16_t isofid = 0xE103;
+        uint32_t fsize = 0x0F;
+        uint8_t filetype = 0x00;  // standard file
+
+        // file access mode:  plain 0x00
+        // read access:       free  0x0E
+        // write access:      key0  0x00
+        // r/w access:        key0  0x00
+        // change access:     key0  0x00
+        memset(data, 0x00, sizeof(data));
+        datalen = 0;
+
+        data[0] = fid;
+        data[1] = isofid & 0xff;
+        data[2] = (isofid >> 8) & 0xff;
+        datalen = 3;
+
+        uint8_t *settings = &data[datalen];
+        settings[0] = 0x00;
+        datalen++;
+
+        DesfireEncodeFileAcessMode(&settings[1], 0x0E, 0x00, 0x00, 0x00) ;
+        datalen += 2;
+
+        Uint3byteToMemLe(&data[datalen], fsize);
+        datalen += 3;
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%zu]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
+        }
+
+        DesfirePrintCreateFileSettings(filetype, data, datalen);
+
+        res = DesfireCreateFile(&dctx, filetype, data, datalen, true);  // check length only if we dont use raw mode
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire CreateFile command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        PrintAndLogEx(SUCCESS, "%s file %02x in the app %06x created " _GREEN_("successfully"), GetDesfireFileType(filetype), data[0], appid);
+
+
+
+        // hf mfdes write --aid 000001 --fid 01 -d 000F20003B00340406E10400FF00FF
+        // -n 0 -t aes -k 00000000000000000000000000000000 -m plain
+        res = DesfireSelectAndAuthenticateEx(&dctx, DACEV1, 0x000001, false, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(INFO, "failed aid auth..");
+            return res;
+        }
+
+        uint8_t fnum = 0x01;
+        uint32_t offset = 0;
+        uint8_t cc_data[] = {0x00, 0x0F, 0x20, 0x00, 0x3B, 0x00, 0x34, 0x04, 0x06, 0xE1, 0x04, 0x00, 0xFF, 0x00, 0x00};
+
+        res = DesfireWriteFile(&dctx, fnum, offset, sizeof(cc_data), cc_data);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire WriteFile command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "Write data file %02x " _GREEN_("success"), fnum);
+        }
+
+
+
+        // step 3 - create NDEF record file
+        // hf mfdes write --aid 000001 --fid 02 -d 000CD1010855016E78702E636F6DFE
+        // -n 0 -t aes -k 00000000000000000000000000000000 -m plain
+
+        fid = 0x02;
+        isofid = 0xE104;
+        fsize = 0xFF;
+        filetype = 0x00;  // standard file
+
+        // file access mode:  plain 0x00
+        // read access:       free  0x0E
+        // write access:      key0  0x00
+        // r/w access:        key0  0x00
+        // change access:     key0  0x00
+        memset(data, 0x00, sizeof(data));
+        datalen = 0;
+
+        data[0] = fid;
+        data[1] = isofid & 0xff;
+        data[2] = (isofid >> 8) & 0xff;
+        datalen = 3;
+
+        settings = &data[datalen];
+        settings[0] = 0x00;
+        datalen++;
+
+        DesfireEncodeFileAcessMode(&settings[1], 0x0E, 0x00, 0x00, 0x00) ;
+        datalen += 2;
+
+        Uint3byteToMemLe(&data[datalen], fsize);
+        datalen += 3;
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%zu]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
+        }
+
+        DesfirePrintCreateFileSettings(filetype, data, datalen);
+
+        res = DesfireCreateFile(&dctx, filetype, data, datalen, true);  // check length only if we dont use raw mode
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire CreateFile command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        PrintAndLogEx(SUCCESS, "%s file %02x in the app %06x created " _GREEN_("successfully"), GetDesfireFileType(filetype), data[0], appid);
+
+        DropField();
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "finished");
+    return PM3_SUCCESS;
+}
+
+
+int CmdHF14ANdefWrite(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a ndefwrite",
+                  "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.\n",
+                  "hf 14a ndefwrite -d 0300FE      -> write empty record to tag\n"
+                  "hf 14a ndefwrite -f myfilename\n"
+                  "hf 14a ndefwrite -d 003fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("d", NULL, "<hex>", "raw NDEF hex bytes"),
+        arg_str0("f", "file", "<fn>", "write raw NDEF file to tag"),
+        arg_lit0("p", NULL, "fix NDEF record headers / terminator block if missing"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t raw[256] = {0};
+    int rawlen = 0;
+    CLIGetHexWithReturn(ctx, 1, raw, &rawlen);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool fix_msg = arg_get_lit(ctx, 3);
+    bool verbose = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if (g_session.pm3_present == false) {
+        return PM3_ENOTTY;
+    }
+
+    if ((rawlen && fnlen) || (rawlen == 0 && fnlen == 0)) {
+        PrintAndLogEx(WARNING, "Please specify either raw hex or filename");
+        return PM3_EINVARG;
+    }
+
+    int res = PM3_SUCCESS;
+    int32_t bytes = rawlen;
+
+    // read dump file
+    if (fnlen) {
+        uint8_t *dump = NULL;
+        size_t bytes_read = 0;
+        res = pm3_load_dump(filename, (void **)&dump, &bytes_read, sizeof(raw));
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        memcpy(raw, dump, bytes_read);
+        bytes = bytes_read;
+        free(dump);
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Num of bytes... %i  (raw %i)", bytes, rawlen);
+    }
+
+    // Has raw bytes ndef message header?bytes
+    switch (raw[0]) {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+        case 0x03:
+        case 0xFD:
+        case 0xFE:
+            break;
+        default: {
+            if (fix_msg == false) {
+                PrintAndLogEx(WARNING, "raw NDEF message doesn't have a proper header,  continuing...");
+            } else {
+                if (bytes + 2 > sizeof(raw)) {
+                    PrintAndLogEx(WARNING, "no room for header, exiting...");
+                    return PM3_EMALLOC;
+                }
+                uint8_t tmp_raw[256];
+                memcpy(tmp_raw, raw, sizeof(tmp_raw));
+                raw[0] = 0x03;
+                raw[1] = bytes;
+                memcpy(raw + 2, tmp_raw, sizeof(raw) - 2);
+                bytes += 2;
+                PrintAndLogEx(SUCCESS, "Added generic message header (0x03)");
+            }
+        }
+    }
+
+    // Has raw bytes ndef a terminator block?
+    if (raw[bytes - 1] != 0xFE) {
+        if (fix_msg == false) {
+            PrintAndLogEx(WARNING, "raw NDEF message doesn't have a terminator block,  continuing...");
+        } else {
+
+            if (bytes + 1 > sizeof(raw)) {
+                PrintAndLogEx(WARNING, "no room for terminator block, exiting...");
+                return PM3_EMALLOC;
+            }
+            raw[bytes] = 0xFE;
+            bytes++;
+            PrintAndLogEx(SUCCESS, "Added terminator block (0xFE)");
+        }
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Num of Bytes... %u", bytes);
+        print_buffer(raw, bytes, 0);
+    }
+
+
+    // setup desfire authentication context
+    // authenticae to the new AID 00 00 01
+    uint8_t aes_key[] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    DesfireContext_t dctx;
+    dctx.secureChannel = DACNone;
+    DesfireSetKey(&dctx, 0, T_AES, aes_key);
+    DesfireSetKdf(&dctx, MFDES_KDF_ALGO_NONE, NULL, 0);
+    DesfireSetCommandSet(&dctx, DCCNativeISO);
+    DesfireSetCommMode(&dctx, DCMPlain);
+    res = DesfireSelectAndAuthenticateEx(&dctx, DACEV1, 0x000001, false, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(INFO, "failed aid auth..");
+        return res;
+    }
+
+    // write ndef file
+
+    // hf mfdes write --aid 000002 --fid 02 -
+    // -n 0 -t aes -k 00000000000000000000000000000000 -m plain
+    uint8_t fnum = 0x02;
+    uint32_t offset = 0;
+
+    res = DesfireWriteFile(&dctx, fnum, offset, bytes, raw);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire WriteFile command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Write data file %02x " _GREEN_("success"), fnum);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "finished");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
+    {"-----------", CmdHelp,              AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
     {"list",        CmdHF14AList,         AlwaysAvailable, "List ISO 14443-a history"},
-    {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
-    {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},
-    {"ndefread",    CmdHF14ANdefRead,     IfPm3Iso14443a,  "Read an NDEF file from ISO 14443-A Type 4 tag"},
-    {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "Collect n>0 ISO14443-a UIDs in one go"},
-    {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "Simulate ISO 14443-a tag"},
-    {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},
-    {"apdu",        CmdHF14AAPDU,         IfPm3Iso14443a,  "Send ISO 14443-4 APDU to tag"},
-    {"chaining",    CmdHF14AChaining,     IfPm3Iso14443a,  "Control ISO 14443-4 input chaining"},
-    {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
+    {"-----------", CmdHelp,              IfPm3Iso14443a,  "---------------------- " _CYAN_("operations") " ---------------------"},
     {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Iso14443a,  "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
     {"config",      CmdHf14AConfig,       IfPm3Iso14443a,  "Configure 14a settings (use with caution)"},
+    {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "Collect n>0 ISO14443-a UIDs in one go"},
+    {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
+    {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "Simulate ISO 14443-a tag"},
+    {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},
+    {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
+    {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},
+    {"-----------", CmdHelp,              IfPm3Iso14443a,  "------------------------- " _CYAN_("apdu") " -------------------------"},
+    {"apdu",        CmdHF14AAPDU,         IfPm3Iso14443a,  "Send ISO 14443-4 APDU to tag"},
     {"apdufind",    CmdHf14AFindapdu,     IfPm3Iso14443a,  "Enumerate APDUs - CLA/INS/P1P2"},
+    {"chaining",    CmdHF14AChaining,     IfPm3Iso14443a,  "Control ISO 14443-4 input chaining"},
+    {"-----------", CmdHelp,              IfPm3Iso14443a,  "------------------------- " _CYAN_("ndef") " -------------------------"},
+    {"ndefformat",  CmdHF14ANdefFormat,   IfPm3Iso14443a,  "Format ISO 14443-A as NFC Type 4 tag"},
+    {"ndefread",    CmdHF14ANdefRead,     IfPm3Iso14443a,  "Read an NDEF file from ISO 14443-A Type 4 tag"},
+    {"ndefwrite",   CmdHF14ANdefWrite,    IfPm3Iso14443a,  "Write NDEF records to ISO 14443-A tag"},
     {NULL, NULL, NULL, NULL}
 };
 

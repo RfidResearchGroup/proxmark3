@@ -223,20 +223,28 @@ static int CmdNFCST25TARead(const char *Cmd) {
     return CmdHFST25TANdefRead(Cmd);
 }
 
+static int CmdNFCType4AFormat(const char *Cmd) {
+    return CmdHF14ANdefFormat(Cmd);
+}
+
+static int CmdNFCType4AWrite(const char *Cmd) {
+    return CmdHF14ANdefWrite(Cmd);
+}
+
 static int CmdNFCType4AHelp(const char *Cmd);
 
 static command_t CommandNFCType4ATable[] = {
 
-    {"--------",     CmdNFCType4AHelp,  AlwaysAvailable, "--------- " _CYAN_("NFC Forum Tag Type 4 ISO14443A") " ----------"},
-//    {"format",     CmdNFCType4AFormat,  IfPm3Iso14443a,  "format ISO-14443-a tag as NFC Tag"},
-    {"read",         CmdNFCType4ARead,  IfPm3Iso14443a,  "read NFC Forum Tag Type 4 A"},
-//    {"write",        CmdNFCType4AWrite, IfPm3Iso14443a,  "write NFC Forum Tag Type 4 A"},
+    {"--------",     CmdNFCType4AHelp,   AlwaysAvailable, "--------- " _CYAN_("NFC Forum Tag Type 4 ISO14443A") " ----------"},
+    {"format",       CmdNFCType4AFormat, IfPm3Iso14443a,  "format ISO-14443-a tag as NFC Tag"},
+    {"read",         CmdNFCType4ARead,   IfPm3Iso14443a,  "read NFC Forum Tag Type 4 A"},
+    {"write",        CmdNFCType4AWrite,  IfPm3Iso14443a,  "write NFC Forum Tag Type 4 A"},
 //    {"mfdesread",    CmdNFCMFDESRead,   IfPm3Iso14443a,  "read NDEF from MIFARE DESfire"}, // hf mfdes ndefread
 //    {"mfdesformat",  CmdNFCMFDESFormat, IfPm3Iso14443a,  "format MIFARE DESfire as NFC Forum Tag Type 4"},
-    {"st25taread",   CmdNFCST25TARead,  IfPm3Iso14443a,  "read ST25TA as NFC Forum Tag Type 4"},
+    {"st25taread",   CmdNFCST25TARead,   IfPm3Iso14443a,  "read ST25TA as NFC Forum Tag Type 4"},
 
-    {"--------",     CmdNFCType4AHelp,  AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
-    {"help",         CmdNFCType4AHelp,  AlwaysAvailable, "This help"},
+    {"--------",     CmdNFCType4AHelp,   AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
+    {"help",         CmdNFCType4AHelp,   AlwaysAvailable, "This help"},
     {NULL, NULL, NULL, NULL}
 };
 

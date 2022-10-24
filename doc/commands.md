@@ -177,18 +177,20 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf 14a help            `|Y       |`This help`
 |`hf 14a list            `|Y       |`List ISO 14443-a history`
-|`hf 14a info            `|N       |`Tag information`
-|`hf 14a reader          `|N       |`Act like an ISO14443-a reader`
-|`hf 14a ndefread        `|N       |`Read an NDEF file from ISO 14443-A Type 4 tag`
-|`hf 14a cuids           `|N       |`Collect n>0 ISO14443-a UIDs in one go`
-|`hf 14a sim             `|N       |`Simulate ISO 14443-a tag`
-|`hf 14a sniff           `|N       |`sniff ISO 14443-a traffic`
-|`hf 14a apdu            `|N       |`Send ISO 14443-4 APDU to tag`
-|`hf 14a chaining        `|N       |`Control ISO 14443-4 input chaining`
-|`hf 14a raw             `|N       |`Send raw hex data to tag`
 |`hf 14a antifuzz        `|N       |`Fuzzing the anticollision phase.  Warning! Readers may react strange`
 |`hf 14a config          `|N       |`Configure 14a settings (use with caution)`
+|`hf 14a cuids           `|N       |`Collect n>0 ISO14443-a UIDs in one go`
+|`hf 14a info            `|N       |`Tag information`
+|`hf 14a sim             `|N       |`Simulate ISO 14443-a tag`
+|`hf 14a sniff           `|N       |`sniff ISO 14443-a traffic`
+|`hf 14a raw             `|N       |`Send raw hex data to tag`
+|`hf 14a reader          `|N       |`Act like an ISO14443-a reader`
+|`hf 14a apdu            `|N       |`Send ISO 14443-4 APDU to tag`
 |`hf 14a apdufind        `|N       |`Enumerate APDUs - CLA/INS/P1P2`
+|`hf 14a chaining        `|N       |`Control ISO 14443-4 input chaining`
+|`hf 14a ndefformat      `|N       |`Format ISO 14443-A as NFC Type 4 tag`
+|`hf 14a ndefread        `|N       |`Read an NDEF file from ISO 14443-A Type 4 tag`
+|`hf 14a ndefwrite       `|N       |`Write NDEF records to ISO 14443-A tag`
 
 
 ### hf 14b
@@ -1284,6 +1286,7 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
+|`nfc type4a format      `|N       |`format ISO-14443-a tag as NFC Tag`
 |`nfc type4a read        `|N       |`read NFC Forum Tag Type 4 A`
 |`nfc type4a st25taread  `|N       |`read ST25TA as NFC Forum Tag Type 4`
 |`nfc type4a help        `|Y       |`This help`
