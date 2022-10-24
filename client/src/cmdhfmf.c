@@ -6054,7 +6054,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     }
 
     // Has raw bytes ndef a terminator block?
-    if (raw[bytes] != 0xFE) {
+    if (raw[bytes - 1] != 0xFE) {
         if (fix_msg == false) {
             PrintAndLogEx(WARNING, "raw NDEF message doesn't have a terminator block,  continuing...");
         } else {
@@ -6063,13 +6063,15 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
                 PrintAndLogEx(WARNING, "no room for terminator block, exiting...");
                 return PM3_EMALLOC;
             }
-            raw[bytes++] = 0xFE;
+            raw[bytes] = 0xFE;
+            bytes++;
             PrintAndLogEx(SUCCESS, "Added terminator block (0xFE)");
         }
     }
 
     if (verbose) {
-        PrintAndLogEx(INFO, "raw: %s", sprint_hex(raw, bytes));
+        PrintAndLogEx(INFO, "Num of Bytes... %u", bytes);
+        print_buffer(raw, bytes, 0);
     }
 
     // read MAD Sector 0, block1,2
