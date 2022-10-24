@@ -1120,7 +1120,7 @@
         },
         "hf 14a help": {
             "command": "hf 14a help",
-            "description": "help This help list List ISO 14443-a history",
+            "description": "----------- ----------------------- General ----------------------- help This help list List ISO 14443-a history",
             "notes": [],
             "offline": true,
             "options": [],
@@ -1196,7 +1196,7 @@
             "notes": [
                 "hf 14a ndefwrite -d 0300FE -> write empty record to tag",
                 "hf 14a ndefwrite -f myfilename",
-                "hf 14a ndefwrite -d 033fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031"
+                "hf 14a ndefwrite -d 003fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031"
             ],
             "offline": false,
             "options": [
@@ -10759,6 +10759,24 @@
             ],
             "usage": "hf st25ta ndefread [-hv] [-p <hex>] [-f <fn>]"
         },
+        "nfc type4a write": {
+            "command": "nfc type4a write",
+            "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.",
+            "notes": [
+                "hf 14a ndefwrite -d 0300FE -> write empty record to tag",
+                "hf 14a ndefwrite -f myfilename",
+                "hf 14a ndefwrite -d 003fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-d <hex> raw NDEF hex bytes",
+                "-f, --file <fn> write raw NDEF file to tag",
+                "-p fix NDEF record headers / terminator block if missing",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf 14a ndefwrite [-hpv] [-d <hex>] [-f <fn>]"
+        },
         "nfc type4b help": {
             "command": "nfc type4b help",
             "description": "-------- --------- NFC Forum Tag Type 4 ISO14443B ------------- -------- --------------------- General --------------------- help This help",
@@ -11474,8 +11492,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 725,
+        "commands_extracted": 726,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-10-24T16:21:33"
+        "extracted_on": "2022-10-24T16:51:32"
     }
 }

@@ -717,6 +717,7 @@ const static vocabulory_t vocabulory[] = {
     { 1, "nfc type2 help" }, 
     { 0, "nfc type4a format" }, 
     { 0, "nfc type4a read" }, 
+    { 0, "nfc type4a write" }, 
     { 0, "nfc type4a st25taread" }, 
     { 1, "nfc type4a help" }, 
     { 0, "nfc type4b read" }, 

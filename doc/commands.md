@@ -1288,6 +1288,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`nfc type4a format      `|N       |`format ISO-14443-a tag as NFC Tag`
 |`nfc type4a read        `|N       |`read NFC Forum Tag Type 4 A`
+|`nfc type4a write       `|N       |`write NFC Forum Tag Type 4 A`
 |`nfc type4a st25taread  `|N       |`read ST25TA as NFC Forum Tag Type 4`
 |`nfc type4a help        `|Y       |`This help`
 
