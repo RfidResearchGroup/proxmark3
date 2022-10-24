@@ -3100,7 +3100,6 @@ int CmdHF14ANdefFormat(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-
 int CmdHF14ANdefWrite(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a ndefwrite",
@@ -3180,7 +3179,7 @@ int CmdHF14ANdefWrite(const char *Cmd) {
                 }
                 uint8_t tmp_raw[256];
                 memcpy(tmp_raw, raw, sizeof(tmp_raw));
-                raw[0] = 0x03;
+                raw[0] = 0x00;
                 raw[1] = bytes;
                 memcpy(raw + 2, tmp_raw, sizeof(raw) - 2);
                 bytes += 2;
