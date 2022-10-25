@@ -32,9 +32,7 @@ typedef struct {
 
 // general functions
 void EPA_Finish(void);
-size_t EPA_Parse_CardAccess(uint8_t *data,
-                            size_t length,
-                            pace_version_info_t *pace_info);
+size_t EPA_Parse_CardAccess(uint8_t *data, size_t length, pace_version_info_t *pace_info);
 int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length);
 int EPA_Setup(void);
 
@@ -44,5 +42,6 @@ int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce);
 
 void EPA_PACE_Collect_Nonce(PacketCommandNG *c);
 void EPA_PACE_Replay(PacketCommandNG *c);
+void EPA_PACE_Simulate(PacketCommandNG *c);
 
 #endif /* __EPA_H */

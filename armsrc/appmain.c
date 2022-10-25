@@ -1464,6 +1464,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             iso14443a_antifuzz(payload->flag);
             break;
         }
+        // EPA related
         case CMD_HF_EPA_COLLECT_NONCE: {
             EPA_PACE_Collect_Nonce(packet);
             break;
@@ -1472,6 +1473,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             EPA_PACE_Replay(packet);
             break;
         }
+        case CMD_HF_EPA_PACE_SIMULATE: {
+            EPA_PACE_Simulate(packet);
+            break;
+        }
+        
         case CMD_HF_MIFARE_READER: {
             struct p {
                 uint8_t first_run;

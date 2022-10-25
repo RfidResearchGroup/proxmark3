@@ -103,9 +103,10 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
 // perform the PACE protocol by replaying APDUs
 static int CmdHFEPAPACEReplay(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf epa preplay",
+    CLIParserInit(&ctx, "hf epa replay",
                   "Perform PACE protocol by replaying given APDUs",
-                  "hf epa preplay --mse 0022C1A4 --get 1068000000 --map 1086000002 --pka 1234ABCDEF --ma 1A2B3C4D");
+                  "hf epa replay --mse 0022C1A4 --get 1068000000 --map 1086000002 --pka 1234ABCDEF --ma 1A2B3C4D"
+            );
 
     void *argtable[] = {
         arg_param_begin,
@@ -207,10 +208,72 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// perform the PACE protocol by replaying APDUs
+static int CmdHFEPAPACESimulate(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf epa sim",
+                  "Simulate PACE protocol with given password pwd of type pty.\n"
+                  "The crypto is performed on pc or proxmark",
+                  "hf epa sim --pwd 112233445566\n"
+                  "hf epa sim --pc --pty 1 --pwd 112233445566"
+            );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit1(NULL, "pc",           "perform crypto on PC"),
+        arg_str1(NULL, "pty", "<hex>", "type of password"),
+        arg_str1("p",  "pwd", "<hex>", "password"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+//    bool use_pc = arg_get_lit(ctx, 1);
+//	uint8_t pwd_type = 0;
+
+    int plen = 0;
+    uint8_t pwd[6] = {0};
+    CLIGetHexWithReturn(ctx, 3, pwd, &plen);    
+
+    CLIParserFree(ctx);
+
+	PrintAndLogEx(INFO, "Starting PACE simulation...");
+
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_EPA_PACE_SIMULATE, 0, 0, 0, pwd, plen);
+
+	PacketResponseNG resp;
+	WaitForResponse(CMD_ACK, &resp);
+
+    uint32_t *data = resp.data.asDwords;
+
+	if (resp.oldarg[0] != 0) {
+		PrintAndLogEx(INFO, "\nPACE failed in step %u!", (uint32_t)resp.oldarg[0]);
+		PrintAndLogEx(INFO, "MSE Set AT: %u us", data[0]);
+		PrintAndLogEx(INFO, "GA Get Nonce: %u us", data[1]);
+		PrintAndLogEx(INFO, "GA Map Nonce: %u us", data[2]);
+		PrintAndLogEx(INFO, "GA Perform Key Agreement: %u us", data[3]);
+		PrintAndLogEx(INFO, "GA Mutual Authenticate: %u us", data[4]);
+		PrintAndLogEx(INFO, "----------------");
+	} else {
+		PrintAndLogEx(INFO, "PACE successful!");
+		PrintAndLogEx(INFO, "MSE Set AT: %u us", data[0]);
+		PrintAndLogEx(INFO, "GA Get Nonce: %u us", data[1]);
+		PrintAndLogEx(INFO, "GA Map Nonce: %u us", data[2]);
+		PrintAndLogEx(INFO, "GA Perform Key Agreement: %u us", data[3]);
+		PrintAndLogEx(INFO, "GA Mutual Authenticate: %u us", data[4]);
+		PrintAndLogEx(INFO, "----------------");
+	}
+
+	return PM3_SUCCESS;
+}
+
+
 static command_t CommandTable[] = {
     {"help",    CmdHelp,                   AlwaysAvailable, "This help"},
     {"cnonces", CmdHFEPACollectPACENonces, IfPm3Iso14443,   "Acquire encrypted PACE nonces of specific size"},
-    {"preplay", CmdHFEPAPACEReplay,        IfPm3Iso14443,   "Perform PACE protocol by replaying given APDUs"},
+    {"replay",  CmdHFEPAPACEReplay,        IfPm3Iso14443,   "Perform PACE protocol by replaying given APDUs"},
+    {"sim",     CmdHFEPAPACESimulate,	   IfPm3Iso14443,   "Simulate PACE protocol"},    
     {NULL, NULL, NULL, NULL}
 };
 
