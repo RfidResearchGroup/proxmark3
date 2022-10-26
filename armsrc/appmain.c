@@ -2313,6 +2313,30 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_OFF();
             break;
         }
+        case CMD_SPIFFS_ELOAD: {
+            LED_B_ON();
+
+            uint8_t *em = BigBuf_get_EM_addr();
+            if (em == NULL) {
+                reply_ng(CMD_SPIFFS_ELOAD, PM3_EMALLOC, NULL, 0);
+                LED_B_OFF();            
+                break;
+            } 
+
+            char *fn = (char *)packet->data.asBytes;
+
+            uint32_t size = size_in_spiffs(fn);
+            if (size == 0) {
+                reply_ng(CMD_SPIFFS_ELOAD, PM3_SUCCESS, NULL, 0);
+                LED_B_OFF();            
+                break;
+            }
+
+            rdv40_spiffs_read_as_filetype(fn, em, size, RDV40_SPIFFS_SAFETY_SAFE);
+            reply_ng(CMD_SPIFFS_ELOAD, PM3_SUCCESS, NULL, 0);
+            LED_B_OFF();            
+            break;
+        }
         case CMD_FLASHMEM_SET_SPIBAUDRATE: {
             if (packet->length != sizeof(uint32_t))
                 break;

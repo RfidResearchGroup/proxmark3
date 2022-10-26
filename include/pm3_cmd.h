@@ -416,16 +416,15 @@ typedef struct {
 #define CMD_SPIFFS_WIPE                                                   0x013A
 
 // This take a +0x2000 as they are high level helper and special functions
-// As the others, they may have safety level argument if it makkes sense
+// As the others, they may have safety level argument if it makes sense
 #define CMD_SPIFFS_PRINT_TREE                                             0x2130
 #define CMD_SPIFFS_GET_TREE                                               0x2131
 #define CMD_SPIFFS_TEST                                                   0x2132
 #define CMD_SPIFFS_PRINT_FSINFO                                           0x2133
 #define CMD_SPIFFS_DOWNLOAD                                               0x2134
 #define CMD_SPIFFS_DOWNLOADED                                             0x2135
+#define CMD_SPIFFS_ELOAD                                                  0x2136
 #define CMD_SPIFFS_CHECK                                                  0x3000
-// more ?
-
 
 // RDV40,  Smart card operations
 #define CMD_SMART_RAW                                                     0x0140

@@ -33,6 +33,8 @@
  *
  */
 
+#pragma GCC diagnostic ignored "-Wunused-variable"
+
 #include "common.h"
 
 #if defined(MBEDTLS_BIGNUM_C)
