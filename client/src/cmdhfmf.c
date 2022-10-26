@@ -3890,6 +3890,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "ul", "MIFARE Ultralight family"),
+        arg_lit0("m", "mem",  "use RDV4 spiffs"),
         arg_int0("q", "qty", "<dec>", "manually set number of blocks (overrides)"),
         arg_param_end
     };
@@ -3905,7 +3906,8 @@ int CmdHF14AMfELoad(const char *Cmd) {
     bool m4 = arg_get_lit(ctx, 5);
     bool mu = arg_get_lit(ctx, 6);
 
-    int numblks = arg_get_int_def(ctx, 7, -1);
+    bool use_spiffs = arg_get_lit(ctx, 7);
+    int numblks = arg_get_int_def(ctx, 8, -1);
 
     CLIParserFree(ctx);
 
@@ -3943,6 +3945,36 @@ int CmdHF14AMfELoad(const char *Cmd) {
     if (numblks > 0) {
         block_cnt = MIN(numblks, block_cnt);
         PrintAndLogEx(INFO, "overriding number of blocks, will use %d blocks ( %u bytes )", block_cnt, block_cnt * block_width);
+    }
+
+    // use RDV4 spiffs 
+    if (use_spiffs && IfPm3Flash() == false) {
+        PrintAndLogEx(WARNING, "Device not compiled to support spiffs");
+        return PM3_EINVARG;
+    }
+
+    if (use_spiffs) {
+
+        if (fnlen > 32) {
+            PrintAndLogEx(WARNING, "filename too long for spiffs, expected 32, got %u", fnlen);
+            return PM3_EINVARG;
+        }
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_SPIFFS_ELOAD, (uint8_t *)filename, fnlen);
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_SPIFFS_ELOAD, &resp, 2000) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Loading file from spiffs to emulatore memory failed");
+            return PM3_EFLASH;
+        }
+
+        PrintAndLogEx(SUCCESS, "File transfered from spiffs to device emulator memory");
+        return PM3_SUCCESS;
     }
 
     uint8_t *data = NULL;
@@ -4204,7 +4236,7 @@ static int CmdHF14AMfECFill(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf ecfill",
                   "Dump card and transfer the data to emulator memory.\n"
-                  "Keys must be laid in the emulator memory",
+                  "Keys must be in the emulator memory",
                   "hf mf ecfill          --> use key type A\n"
                   "hf mf ecfill --4k -b  --> target 4K card with key type B"
                  );

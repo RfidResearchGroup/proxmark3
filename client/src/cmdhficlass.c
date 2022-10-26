@@ -990,13 +990,14 @@ static int CmdHFiClassELoad(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass eload",
                   "Load emulator memory with data from (bin/eml/json) iCLASS dump file",
-                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
                   "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.eml\n"
+                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin -m\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "filename of dump (bin/eml/json)"),
+        arg_lit0("m", "mem",  "use RDV4 spiffs"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1011,7 +1012,38 @@ static int CmdHFiClassELoad(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    bool use_spiffs = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
+
+    // use RDV4 spiffs 
+    if (use_spiffs && IfPm3Flash() == false) {
+        PrintAndLogEx(WARNING, "Device not compiled to support spiffs");
+        return PM3_EINVARG;
+    }
+
+    if (use_spiffs) {
+
+        if (fnlen > 32) {
+            PrintAndLogEx(WARNING, "filename too long for spiffs, expected 32, got %u", fnlen);
+            return PM3_EINVARG;
+        }
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_SPIFFS_ELOAD, (uint8_t *)filename, fnlen);
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_SPIFFS_ELOAD, &resp, 2000) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Loading file from spiffs to emulatore memory failed");
+            return PM3_EFLASH;
+        }
+
+        PrintAndLogEx(SUCCESS, "File transfered from spiffs to device emulator memory");
+        return PM3_SUCCESS;
+    }
 
     // read dump file
     uint8_t *dump = NULL;
