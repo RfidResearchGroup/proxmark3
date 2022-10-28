@@ -7,6 +7,9 @@ RUN pacman-db-upgrade
 # bluez skipped, can't be installed in docker
 RUN pacman -S --noconfirm sudo git base-devel cmake libusb readline bzip2 arm-none-eabi-gcc arm-none-eabi-newlib python --needed
 
+RUN pacman -S --noconfirm python-pip
+RUN python3 -m pip install ansicolors sslcrypto
+
 # Create rrg user
 RUN useradd -ms /bin/bash rrg
 RUN passwd -d rrg
