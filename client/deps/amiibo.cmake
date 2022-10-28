@@ -19,7 +19,7 @@ target_link_libraries(pm3rrg_rdv4_amiibo PRIVATE
         m
         pm3rrg_rdv4_mbedtls)
 
-target_compile_options(pm3rrg_rdv4_amiibo PRIVATE -Wall -O3)
+target_compile_options(pm3rrg_rdv4_amiibo PRIVATE -Wall -Werror -O3)
 set_property(TARGET pm3rrg_rdv4_amiibo PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(pm3rrg_rdv4_amiibo PRIVATE amiitool
