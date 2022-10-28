@@ -3947,7 +3947,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         PrintAndLogEx(INFO, "overriding number of blocks, will use %d blocks ( %u bytes )", block_cnt, block_cnt * block_width);
     }
 
-    // use RDV4 spiffs 
+    // use RDV4 spiffs
     if (use_spiffs && IfPm3Flash() == false) {
         PrintAndLogEx(WARNING, "Device not compiled to support spiffs");
         return PM3_EINVARG;

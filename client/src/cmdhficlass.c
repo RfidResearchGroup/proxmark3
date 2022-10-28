@@ -1015,7 +1015,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     bool use_spiffs = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    // use RDV4 spiffs 
+    // use RDV4 spiffs
     if (use_spiffs && IfPm3Flash() == false) {
         PrintAndLogEx(WARNING, "Device not compiled to support spiffs");
         return PM3_EINVARG;

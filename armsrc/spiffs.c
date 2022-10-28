@@ -578,18 +578,18 @@ int rdv40_spiffs_make_symlink(char *linkdest, char *filename, RDV40SpiFFSSafetyL
 int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level) {
     RDV40_SPIFFS_SAFE_FUNCTION(
         RDV40SpiFFSFileType filetype = filetype_in_spiffs((char *)filename);
-        switch (filetype) {
-            case RDV40_SPIFFS_FILETYPE_REAL:
-                rdv40_spiffs_read((char *)filename, (uint8_t *)dst, size, level);
-                break;
-            case RDV40_SPIFFS_FILETYPE_SYMLINK:
-                rdv40_spiffs_read_as_symlink(filename, (uint8_t *)dst, size, level);
-                break;
-            case RDV40_SPIFFS_FILETYPE_BOTH:
-            case RDV40_SPIFFS_FILETYPE_UNKNOWN:
-            default:
-                break;
-        }
+    switch (filetype) {
+    case RDV40_SPIFFS_FILETYPE_REAL:
+        rdv40_spiffs_read((char *)filename, (uint8_t *)dst, size, level);
+            break;
+        case RDV40_SPIFFS_FILETYPE_SYMLINK:
+            rdv40_spiffs_read_as_symlink(filename, (uint8_t *)dst, size, level);
+            break;
+        case RDV40_SPIFFS_FILETYPE_BOTH:
+        case RDV40_SPIFFS_FILETYPE_UNKNOWN:
+        default:
+            break;
+    }
     )
 }
 

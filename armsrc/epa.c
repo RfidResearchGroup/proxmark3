@@ -594,42 +594,42 @@ int EPA_Setup(void) {
 }
 
 void EPA_PACE_Simulate(PacketCommandNG *c) {
- 
-	//---------Initializing---------
 
-	// Get password from arguments
-	unsigned char pwd[6];
-	memcpy(pwd, c->data.asBytes, 6);
+    //---------Initializing---------
 
-	// Set up communication with the card
-	int res = EPA_Setup();
-	if (res != 0){
-		EPA_PACE_Collect_Nonce_Abort(CMD_HF_EPA_PACE_SIMULATE, 1, res);
-		return;
-	}
+    // Get password from arguments
+    unsigned char pwd[6];
+    memcpy(pwd, c->data.asBytes, 6);
 
-	// Read EF.CardAccess
-	uint8_t card_access[210] = {0};
-	int card_access_length = EPA_Read_CardAccess(card_access, 210);
+    // Set up communication with the card
+    int res = EPA_Setup();
+    if (res != 0) {
+        EPA_PACE_Collect_Nonce_Abort(CMD_HF_EPA_PACE_SIMULATE, 1, res);
+        return;
+    }
 
-	// The response has to be at least this big to hold the OID
-	if (card_access_length < 18) {
-		EPA_PACE_Collect_Nonce_Abort(CMD_HF_EPA_PACE_SIMULATE, 2, card_access_length);
-		return;
-	}
+    // Read EF.CardAccess
+    uint8_t card_access[210] = {0};
+    int card_access_length = EPA_Read_CardAccess(card_access, 210);
 
-	// PACEInfo of the card
-	pace_version_info_t pace_version_info;
+    // The response has to be at least this big to hold the OID
+    if (card_access_length < 18) {
+        EPA_PACE_Collect_Nonce_Abort(CMD_HF_EPA_PACE_SIMULATE, 2, card_access_length);
+        return;
+    }
 
-	// Search for the PACE OID
-	res = EPA_Parse_CardAccess(card_access, card_access_length, &pace_version_info);
+    // PACEInfo of the card
+    pace_version_info_t pace_version_info;
 
-	if (res != 0 || pace_version_info.version == 0) {
-		EPA_PACE_Collect_Nonce_Abort(CMD_HF_EPA_PACE_SIMULATE, 3, res);
-		return;
-	}
-    
-	Dbprintf("Standardized Domain Parameter: %i", pace_version_info.parameter_id);
+    // Search for the PACE OID
+    res = EPA_Parse_CardAccess(card_access, card_access_length, &pace_version_info);
+
+    if (res != 0 || pace_version_info.version == 0) {
+        EPA_PACE_Collect_Nonce_Abort(CMD_HF_EPA_PACE_SIMULATE, 3, res);
+        return;
+    }
+
+    Dbprintf("Standardized Domain Parameter: %i", pace_version_info.parameter_id);
     DbpString("");
     DbpString("finished");
 }
