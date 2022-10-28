@@ -15,13 +15,10 @@
 # cmake client builds
 # of the different possible PLATFORM (PM3RDV4 / PM3GENERIC) and BTADDON combos
 
-sudo apt update
-sudo apt install -y python3-minimal
-sudo apt install -y python3-pip
-python3 -m pip install ansicolors sslcrypto
+sudo apt update && sudo apt upgrade -y
 
 # replace egrep to silence warning
-#sed -i 's/egrep/grep -E/g' tools/pm3_tests.sh
+sed -i 's/egrep/grep -E/g' tools/pm3_tests.sh
 
 # Makefile build tests
 make clean; make -j PLATFORM=PM3GENERIC; tools/pm3_tests.sh --long || exit 1
