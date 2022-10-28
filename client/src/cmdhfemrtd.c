@@ -1345,7 +1345,7 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
     } else if (mrz[0] == 'P') {
         PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Passport"));
     } else if (mrz[0] == 'A') {
-        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("German Residency Permit"));
+        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Residency Permit"));
     } else {
         PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Unknown"));
     }
