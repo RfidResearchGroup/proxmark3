@@ -2,7 +2,11 @@ FROM fedora:35
 
 ENV LANG C
 # qt5-qtbase-devel skipped
-RUN dnf install -y passwd sudo git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel bluez-libs-devel python3-devel openssl-devel libatomic
+RUN dnf install -y passwd sudo git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel bluez-libs-devel python3-devel openssl-devel libatomic findutils
+
+RUN yum -y update
+RUN yum -y install cmake python-pip
+RUN python3 -m pip install ansicolors sslcrypto
 
 # Create rrg user
 RUN useradd -ms /bin/bash rrg

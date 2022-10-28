@@ -1,9 +1,23 @@
+# Notes on run_tests.sh script
+This script does both strip the "recover_pk test" in pm3_tests.sh and then run a 
+bunch of different builds with make and cmake together with the different combos 
+of RDV4, GENERIC, BTADDON combos. 
+
+If all tests OK,  the script will finish.
+
+
 # Notes to run tests
+The script is to be run in proxmark root folder inside the docker env.
+
+```
+docker/fedora-35/run_tests.sh;
+``` 
+
+Or if you want to run single test,  
 
 ```
 sudo yum -y update
-sudo yum -y install cmake python-pip
-python3 -m pip install ansicolors sslcrypto
+make clean; make -j
 tools/pm3_tests.sh --long
 ```
 
