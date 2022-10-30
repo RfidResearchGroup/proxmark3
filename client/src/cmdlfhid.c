@@ -532,27 +532,30 @@ static int CmdHIDBrute(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (verbose) {
-        PrintAndLogEx(INFO, "Wiegand format#.. %i", format_idx);
-        PrintAndLogEx(INFO, "OEM#............. %u", cn_hi.OEM);
-        PrintAndLogEx(INFO, "ISSUE#........... %u", cn_hi.IssueLevel);
-        PrintAndLogEx(INFO, "Facility#........ %u", cn_hi.FacilityCode);
-        PrintAndLogEx(INFO, "Card#............ %" PRIu64, cn_hi.CardNumber);
+        PrintAndLogEx(INFO, "Wiegand format... %i", format_idx);
+        PrintAndLogEx(INFO, "OEM.............. %u", cn_hi.OEM);
+        PrintAndLogEx(INFO, "ISSUE............ %u", cn_hi.IssueLevel);
+        PrintAndLogEx(INFO, "Facility code.... %u", cn_hi.FacilityCode);
+        PrintAndLogEx(INFO, "Card number...... %" PRIu64, cn_hi.CardNumber);
+        PrintAndLogEx(INFO, "Delay............ " _YELLOW_("%d"), delay);
         switch (direction) {
             case 0:
-                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("BOTH") " delay " _YELLOW_("%d"), delay);
+                PrintAndLogEx(INFO, "Direction........ " _YELLOW_("BOTH"));
                 break;
             case 1:
-                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("UP") " delay " _YELLOW_("%d"), delay);
+                PrintAndLogEx(INFO, "Direction........ " _YELLOW_("UP"));
                 break;
             case 2:
-                PrintAndLogEx(INFO, "Brute-forcing direction: " _YELLOW_("DOWN") " delay " _YELLOW_("%d"), delay);
+                PrintAndLogEx(INFO, "Direction........ " _YELLOW_("DOWN"));
                 break;
             default:
                 break;
         }
     }
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Started brute-forcing HID Prox reader");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+    PrintAndLogEx(NORMAL, "");
     // copy values to low.
     cn_low = cn_hi;
 
@@ -563,7 +566,7 @@ static int CmdHIDBrute(const char *Cmd) {
     fin_hi = fin_low = false;
     do {
 
-        if (!g_session.pm3_present) {
+        if (g_session.pm3_present == false) {
             PrintAndLogEx(WARNING, "Device offline\n");
             return PM3_ENODATA;
         }
@@ -576,10 +579,10 @@ static int CmdHIDBrute(const char *Cmd) {
         // do one up
         if (direction != 2) {
             if (cn_hi.CardNumber < 0xFFFF) {
-                cn_hi.CardNumber++;
                 if (sendTry(format_idx, &cn_hi, delay, verbose) != PM3_SUCCESS) {
                     return PM3_ESOFT;
                 }
+                cn_hi.CardNumber++;
             } else {
                 fin_hi = true;
             }
