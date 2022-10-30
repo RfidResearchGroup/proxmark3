@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 
 ## [Radium.4.15864][2022-10-29]
+ - Changed `lf indala sim` - now accepts fc / cn (@iceman1001)
  - Added `lf indala brute`- brute forcing of 64b Indala ID (@iceman1001)
  - Added `hf 14a ndefwrite` - write raw NDEF records to TYPE4A tags (@iceman1001)
  - Changed ndef output to be more dense. Honors verbose now (@iceman1001)

@@ -8704,6 +8704,8 @@
             "description": "Enables simulation of Indala card with specified facility code and card number. Simulation runs until the button is pressed or another USB command is issued.",
             "notes": [
                 "lf indala sim --heden 888",
+                "lf indala sim --fc 123 --cn 1337",
+                "lf indala sim --fc 123 --cn 1337 --4041x",
                 "lf indala sim --raw a0000000a0002021",
                 "lf indala sim --raw 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"
             ],
@@ -8711,9 +8713,12 @@
             "options": [
                 "-h, --help This help",
                 "-r, --raw <hex> raw bytes",
-                "--heden <decimal> Cardnumber for Heden 2L format"
+                "--heden <decimal> Cardnumber for Heden 2L format",
+                "--fc <decimal> Facility code (26 bit H10301 format)",
+                "--cn <decimal> Card number (26 bit H10301 format)",
+                "--4041x Optional - specify Indala 4041X format, must use with fc and cn"
             ],
-            "usage": "lf indala sim [-h] [-r <hex>] [--heden <decimal>]"
+            "usage": "lf indala sim [-h] [-r <hex>] [--heden <decimal>] [--fc <decimal>] [--cn <decimal>] [--4041x]"
         },
         "lf io clone": {
             "command": "lf io clone",
@@ -11534,6 +11539,6 @@
     "metadata": {
         "commands_extracted": 728,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-10-29T22:52:55"
+        "extracted_on": "2022-10-30T15:28:49"
     }
 }

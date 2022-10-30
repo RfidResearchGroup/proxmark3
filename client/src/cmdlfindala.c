@@ -632,6 +632,8 @@ static int CmdIndalaSim(const char *Cmd) {
                   "Enables simulation of Indala card with specified facility code and card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf indala sim --heden 888\n"
+                  "lf indala sim --fc 123 --cn 1337 \n"
+                  "lf indala sim --fc 123 --cn 1337 --4041x\n"
                   "lf indala sim --raw a0000000a0002021\n"
                   "lf indala sim --raw 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"
                  );
@@ -640,8 +642,12 @@ static int CmdIndalaSim(const char *Cmd) {
         arg_param_begin,
         arg_str0("r", "raw", "<hex>", "raw bytes"),
         arg_int0(NULL, "heden", "<decimal>", "Cardnumber for Heden 2L format"),
+        arg_int0(NULL, "fc", "<decimal>", "Facility code (26 bit H10301 format)"),
+        arg_int0(NULL, "cn", "<decimal>", "Card number (26 bit H10301 format)"),
+        arg_lit0(NULL, "4041x", "Optional - specify Indala 4041X format, must use with fc and cn"),
         arg_param_end
     };
+
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     // raw param
@@ -652,17 +658,34 @@ static int CmdIndalaSim(const char *Cmd) {
 
     bool is_long_uid = (raw_len == 28);
 
+    bool fmt4041x = arg_get_lit(ctx, 5);
+
+
     int32_t cardnumber;
-    bool got_cn = false;
+    uint8_t fc = 0;
+    uint16_t cn = 0;
+    bool got_cn = false, got_26 = false;
+
     if (is_long_uid == false) {
 
         // Heden param
         cardnumber = arg_get_int_def(ctx, 2, -1);
         got_cn = (cardnumber != -1);
+
+        // 26b FC/CN param
+        fc = arg_get_int_def(ctx, 3, 0);
+        cn = arg_get_int_def(ctx, 4, 0);
+        got_26 = (fc != 0 && cn != 0);
     }
 
     CLIParserFree(ctx);
 
+    if ((got_26 == false) && fmt4041x) {
+        PrintAndLogEx(FAILED, "You must specify a facility code and card number when using 4041X format");
+        return PM3_EINVARG;
+    }
+
+    // if HEDEN fmt?
     if (got_cn) {
         encodeHeden2L(raw, cardnumber);
         raw_len = 8;
@@ -672,17 +695,47 @@ static int CmdIndalaSim(const char *Cmd) {
     uint8_t bs[224];
     memset(bs, 0x00, sizeof(bs));
 
+    // if RAW,  copy to bitstream
     uint8_t counter = 0;
     for (int32_t i = 0; i < raw_len; i++) {
-        uint8_t tmp = raw[i];
-        bs[counter++] = (tmp >> 7) & 1;
-        bs[counter++] = (tmp >> 6) & 1;
-        bs[counter++] = (tmp >> 5) & 1;
-        bs[counter++] = (tmp >> 4) & 1;
-        bs[counter++] = (tmp >> 3) & 1;
-        bs[counter++] = (tmp >> 2) & 1;
-        bs[counter++] = (tmp >> 1) & 1;
-        bs[counter++] = tmp & 1;
+        uint8_t b = raw[i];
+        bs[counter++] = (b >> 7) & 1;
+        bs[counter++] = (b >> 6) & 1;
+        bs[counter++] = (b >> 5) & 1;
+        bs[counter++] = (b >> 4) & 1;
+        bs[counter++] = (b >> 3) & 1;
+        bs[counter++] = (b >> 2) & 1;
+        bs[counter++] = (b >> 1) & 1;
+        bs[counter++] = b & 1;
+    }
+
+    counter = (raw_len * 8);
+
+    // HEDEN
+
+    // FC / CN  not HEDEN.
+    if (raw_len == 0 && got_26) {
+        // Bitstream generation, format select
+        int res = PM3_ESOFT;
+        if (fmt4041x) {
+            res = getIndalaBits4041x(fc, cn, bs);
+        } else {
+            res = getIndalaBits(fc, cn, bs);
+        }
+
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Error with tag bitstream generation.");
+            return res;
+        }
+
+        counter = INDALA_ARR_LEN;
+
+        PrintAndLogEx(SUCCESS, "Simulating " _YELLOW_("64 bit") " Indala FC " _YELLOW_("%u") " CN " _YELLOW_("%u"), fc, cn);
+    } else {
+        PrintAndLogEx(SUCCESS, "Simulating " _YELLOW_("%s") " Indala raw " _YELLOW_("%s")
+                      , (is_long_uid) ? "224 bit" : "64 bit"
+                      , sprint_hex_inrow(raw, counter)
+                     );
     }
 
     // a0 00 00 00 bd 98 9a 11
@@ -691,10 +744,7 @@ static int CmdIndalaSim(const char *Cmd) {
     // It has to send either 64bits (8bytes) or 224bits (28bytes).  Zero padding needed if not.
     // lf simpsk -1 -c 32 --fc 2 -d 0102030405060708
 
-    PrintAndLogEx(SUCCESS, "Simulating " _YELLOW_("%s") " Indala raw " _YELLOW_("%s")
-                  , (is_long_uid) ? "224 bit" : "64 bit"
-                  , sprint_hex_inrow(raw, raw_len)
-                 );
+
     PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
 
     // indala PSK,  clock 32, carrier 0
@@ -702,34 +752,31 @@ static int CmdIndalaSim(const char *Cmd) {
     payload->carrier = 2;
     payload->invert = 0;
     payload->clock = 32;
-    memcpy(payload->data, bs, raw_len * 8);
+    memcpy(payload->data, bs, counter);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + (raw_len * 8));
+    SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + counter);
     free(payload);
 
     PacketResponseNG resp;
     WaitForResponse(CMD_LF_PSK_SIMULATE, &resp);
 
     PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
+    if (resp.status != PM3_EOPABORTED) {
         return resp.status;
+    }
     return PM3_SUCCESS;
 }
 
 static int CmdIndalaClone(const char *Cmd) {
 
-    int32_t cardnumber;
-    uint8_t fc = 0;
-    uint16_t cn = 0;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf indala clone",
                   "clone Indala UID to T55x7 or Q5/T5555 tag using different known formats\n"
                   _RED_("\nWarning, encoding with FC/CN doesn't always work"),
-                  "lf indala clone --heden 888                --> use Heden 2L format\n"
-                  "lf indala clone --fc 123 --cn 1337         --> use standard 26b format\n"
-                  "lf indala clone --fc 123 --cn 1337 --4041x --> use 4041x format\n"
+                  "lf indala clone --heden 888\n"
+                  "lf indala clone --fc 123 --cn 1337\n"
+                  "lf indala clone --fc 123 --cn 1337 --4041x\n"
                   "lf indala clone -r a0000000a0002021\n"
                   "lf indala clone -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5");
 
@@ -751,11 +798,16 @@ static int CmdIndalaClone(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
 
     bool is_long_uid = (raw_len == 28);
+
     bool q5 = arg_get_lit(ctx, 5);
     bool em = arg_get_lit(ctx, 6);
     bool fmt4041x = arg_get_lit(ctx, 7);
 
+    int32_t cardnumber;
+    uint8_t fc = 0;
+    uint16_t cn = 0;
     bool got_cn = false, got_26 = false;
+
     if (is_long_uid == false) {
 
         // Heden param
@@ -774,7 +826,7 @@ static int CmdIndalaClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if ((!got_26) && fmt4041x) {
+    if ((got_26 == false) && fmt4041x) {
         PrintAndLogEx(FAILED, "You must specify a facility code and card number when using 4041X format");
         return PM3_EINVARG;
     }
