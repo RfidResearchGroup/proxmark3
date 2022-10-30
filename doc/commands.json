@@ -2272,11 +2272,11 @@
             "options": [],
             "usage": ""
         },
-        "hf epa preplay": {
-            "command": "hf epa preplay",
+        "hf epa replay": {
+            "command": "hf epa replay",
             "description": "Perform PACE protocol by replaying given APDUs",
             "notes": [
-                "hf epa preplay --mse 0022C1A4 --get 1068000000 --map 1086000002 --pka 1234ABCDEF --ma 1A2B3C4D"
+                "hf epa replay --mse 0022C1A4 --get 1068000000 --map 1086000002 --pka 1234ABCDEF --ma 1A2B3C4D"
             ],
             "offline": false,
             "options": [
@@ -2287,7 +2287,23 @@
                 "--pka <hex> pka APDU",
                 "--ma <hex> ma APDU"
             ],
-            "usage": "hf epa preplay [-h] --mse <hex> --get <hex> --map <hex> --pka <hex> --ma <hex>"
+            "usage": "hf epa replay [-h] --mse <hex> --get <hex> --map <hex> --pka <hex> --ma <hex>"
+        },
+        "hf epa sim": {
+            "command": "hf epa sim",
+            "description": "Simulate PACE protocol with given password pwd of type pty. The crypto is performed on pc or proxmark",
+            "notes": [
+                "hf epa sim --pwd 112233445566",
+                "hf epa sim --pc --pty 1 --pwd 112233445566"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--pc perform crypto on PC",
+                "--pty <hex> type of password",
+                "-p, --pwd <hex> password"
+            ],
+            "usage": "hf epa sim [-h] --pc --pty <hex> -p <hex>"
         },
         "hf felica auth1": {
             "command": "hf felica auth1",
@@ -2961,15 +2977,16 @@
             "command": "hf iclass eload",
             "description": "Load emulator memory with data from (bin/eml/json) iCLASS dump file",
             "notes": [
-                "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin",
-                "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.eml"
+                "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.eml",
+                "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin -m"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump (bin/eml/json)"
+                "-f, --file <fn> filename of dump (bin/eml/json)",
+                "-m, --mem use RDV4 spiffs"
             ],
-            "usage": "hf iclass eload [-h] -f <fn>"
+            "usage": "hf iclass eload [-hm] -f <fn>"
         },
         "hf iclass encode": {
             "command": "hf iclass encode",
@@ -4080,7 +4097,7 @@
         },
         "hf mf ecfill": {
             "command": "hf mf ecfill",
-            "description": "Dump card and transfer the data to emulator memory. Keys must be laid in the emulator memory",
+            "description": "Dump card and transfer the data to emulator memory. Keys must be in the emulator memory",
             "notes": [
                 "hf mf ecfill -> use key type A",
                 "hf mf ecfill --4k -b -> target 4K card with key type B"
@@ -4172,9 +4189,10 @@
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
                 "--ul MIFARE Ultralight family",
+                "-m, --mem use RDV4 spiffs",
                 "-q, --qty <dec> manually set number of blocks (overrides)"
             ],
-            "usage": "hf mf eload [-h] -f <fn> [--mini] [--1k] [--2k] [--4k] [--ul] [-q <dec>]"
+            "usage": "hf mf eload [-hm] -f <fn> [--mini] [--1k] [--2k] [--4k] [--ul] [-q <dec>]"
         },
         "hf mf esave": {
             "command": "hf mf esave",
@@ -8609,6 +8627,28 @@
             ],
             "usage": "lf indala altdemod [-hl]"
         },
+        "lf indala brute": {
+            "command": "lf indala brute",
+            "description": "Enables bruteforce of INDALA readers with specified facility code. This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step if cardnumber is not given, it starts with 1 and goes up to 65535",
+            "notes": [
+                "lf indala brute --fc 224",
+                "lf indala brute --fc 21 -d 2000",
+                "lf indala brute -v --fc 21 --cn 200 -d 2000",
+                "lf indala brute -v --fc 21 --cn 200 -d 2000 --up"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output",
+                "--fc <dec> facility code",
+                "--cn <dec> card number to start with",
+                "-d, --delay <dec> delay betweens attempts in ms. Default 1000ms",
+                "--up direction to increment card number. (default is both directions)",
+                "--down direction to decrement card number. (default is both directions)",
+                "--4041x specify Indala 4041X format"
+            ],
+            "usage": "lf indala brute [-hv] [--fc <dec>] [--cn <dec>] [-d <dec>] [--up] [--down] [--4041x]"
+        },
         "lf indala clone": {
             "command": "lf indala clone",
             "description": "clone Indala UID to T55x7 or Q5/T5555 tag using different known formats",
@@ -11492,8 +11532,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 726,
+        "commands_extracted": 728,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-10-24T16:51:32"
+        "extracted_on": "2022-10-29T22:52:55"
     }
 }

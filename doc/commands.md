@@ -275,7 +275,8 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf epa help            `|Y       |`This help`
 |`hf epa cnonces         `|N       |`Acquire encrypted PACE nonces of specific size`
-|`hf epa preplay         `|N       |`Perform PACE protocol by replaying given APDUs`
+|`hf epa replay          `|N       |`Perform PACE protocol by replaying given APDUs`
+|`hf epa sim             `|N       |`Simulate PACE protocol`
 
 
 ### hf emrtd
@@ -970,6 +971,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf indala help         `|Y       |`This help`
+|`lf indala brute        `|N       |`Demodulate an Indala tag (PSK1) from the GraphBuffer`
 |`lf indala demod        `|Y       |`Demodulate an Indala tag (PSK1) from the GraphBuffer`
 |`lf indala altdemod     `|Y       |`Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
 |`lf indala reader       `|N       |`Read an Indala tag from the antenna`

