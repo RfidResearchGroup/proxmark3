@@ -842,14 +842,17 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     uint8_t tries;
     mf_readblock_t payload;
+    uint8_t current_key;
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
+        current_key = MF_KEY_A;
         for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
             PrintAndLogEx(NORMAL, "." NOLF);
             fflush(stdout);
 
             payload.blockno = mfFirstBlockOfSector(sectorNo) + mfNumBlocksPerSector(sectorNo) - 1;
-            payload.keytype = MF_KEY_A;
-            memcpy(payload.key, keyA[sectorNo], sizeof(payload.key));
+            payload.keytype = current_key;
+
+            memcpy(payload.key, current_key == MF_KEY_A ? keyA[sectorNo] : keyB[sectorNo], sizeof(payload.key));
 
             clearCommandBuffer();
             SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
@@ -863,7 +866,10 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     rights[sectorNo][2] = ((data[7] & 0x40) >> 4) | ((data[8] & 0x4) >> 1) | ((data[8] & 0x40) >> 6); // C1C2C3 for data area 2
                     rights[sectorNo][3] = ((data[7] & 0x80) >> 5) | ((data[8] & 0x8) >> 2) | ((data[8] & 0x80) >> 7); // C1C2C3 for sector trailer
                     break;
-                } else if (tries == 2) { // on last try set defaults
+                } else if (tries == (MIFARE_SECTOR_RETRY / 2)) { // after 2 unsuccessful tries, give key B a go
+                    PrintAndLogEx(FAILED, "\ntrying with key B instead...", sectorNo);
+                    current_key = MF_KEY_B;
+                } else if (tries == MIFARE_SECTOR_RETRY) { // on last try set defaults
                     PrintAndLogEx(FAILED, "\ncould not get access rights for sector %2d. Trying with defaults...", sectorNo);
                     rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
                     rights[sectorNo][3] = 0x01;
@@ -882,13 +888,13 @@ static int CmdHF14AMfDump(const char *Cmd) {
     for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
         for (blockNo = 0; blockNo < mfNumBlocksPerSector(sectorNo); blockNo++) {
             bool received = false;
-
+            current_key = MF_KEY_A;
             for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
                 if (blockNo == mfNumBlocksPerSector(sectorNo) - 1) { // sector trailer. At least the Access Conditions can always be read with key A.
 
                     payload.blockno = mfFirstBlockOfSector(sectorNo) + blockNo;
-                    payload.keytype = MF_KEY_A;
-                    memcpy(payload.key, keyA[sectorNo], sizeof(payload.key));
+                    payload.keytype = current_key;
+                    memcpy(payload.key, current_key == MF_KEY_A ? keyA[sectorNo] : keyB[sectorNo], sizeof(payload.key));
 
                     clearCommandBuffer();
                     SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
@@ -898,7 +904,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     if ((rights[sectorNo][data_area] == 0x03) || (rights[sectorNo][data_area] == 0x05)) { // only key B would work
 
                         payload.blockno = mfFirstBlockOfSector(sectorNo) + blockNo;
-                        payload.keytype = 1;
+                        payload.keytype = MF_KEY_B;
                         memcpy(payload.key, keyB[sectorNo], sizeof(payload.key));
 
                         clearCommandBuffer();
@@ -911,8 +917,8 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     } else {                                                                              // key A would work
 
                         payload.blockno = mfFirstBlockOfSector(sectorNo) + blockNo;
-                        payload.keytype = MF_KEY_A;
-                        memcpy(payload.key, keyA[sectorNo], sizeof(payload.key));
+                        payload.keytype = current_key;
+                        memcpy(payload.key, current_key == MF_KEY_A ? keyA[sectorNo] : keyB[sectorNo], sizeof(payload.key));
 
                         clearCommandBuffer();
                         SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
@@ -923,6 +929,10 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     if (resp.status == PM3_SUCCESS) {
                         // break the re-try loop
                         break;
+                    }
+                    if ((current_key == MF_KEY_A) && (tries == (MIFARE_SECTOR_RETRY / 2))) {
+                        // Half the tries failed with key A. Swap for key B
+                        current_key = MF_KEY_B;
                     }
                 }
             }
