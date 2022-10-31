@@ -866,10 +866,10 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     rights[sectorNo][2] = ((data[7] & 0x40) >> 4) | ((data[8] & 0x4) >> 1) | ((data[8] & 0x40) >> 6); // C1C2C3 for data area 2
                     rights[sectorNo][3] = ((data[7] & 0x80) >> 5) | ((data[8] & 0x8) >> 2) | ((data[8] & 0x80) >> 7); // C1C2C3 for sector trailer
                     break;
-                } else if (tries == (MIFARE_SECTOR_RETRY / 2)) { // after 2 unsuccessful tries, give key B a go
+                } else if (tries == (MIFARE_SECTOR_RETRY / 2)) { // after half unsuccessful tries, give key B a go
                     PrintAndLogEx(FAILED, "\ntrying with key B instead...", sectorNo);
                     current_key = MF_KEY_B;
-                } else if (tries == MIFARE_SECTOR_RETRY) { // on last try set defaults
+                } else if (tries == (MIFARE_SECTOR_RETRY - 1)) { // on last try set defaults
                     PrintAndLogEx(FAILED, "\ncould not get access rights for sector %2d. Trying with defaults...", sectorNo);
                     rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
                     rights[sectorNo][3] = 0x01;
