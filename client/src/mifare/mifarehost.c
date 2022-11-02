@@ -80,7 +80,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_HF_MIFARE_READER, &resp, 2000)) {
                 if (resp.status == PM3_EOPABORTED) {
-                    return -1;
+                    return resp.status;
                 }
 
                 struct p {
@@ -1270,6 +1270,8 @@ int detect_classic_nackbug(bool verbose) {
 
     if (verbose)
         PrintAndLogEx(SUCCESS, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.\n");
+
+    PrintAndLogEx(INFO, "." NOLF);
 
     while (true) {
 

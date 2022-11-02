@@ -1043,7 +1043,7 @@ static int read_nonce_file(char *filename) {
 
     if (filename == NULL) {
         PrintAndLogEx(WARNING, "Filename is NULL");
-        return 1;
+        return PM3_EINVARG;
     }
     FILE *fnonces = NULL;
     char progress_text[80] = "";
@@ -1052,7 +1052,7 @@ static int read_nonce_file(char *filename) {
     num_acquired_nonces = 0;
     if ((fnonces = fopen(filename, "rb")) == NULL) {
         PrintAndLogEx(WARNING, "Could not open file " _YELLOW_("%s"), filename);
-        return 1;
+        return PM3_EFILE;
     }
 
     snprintf(progress_text, 80, "Reading nonces from file " _YELLOW_("%s"), filename);
@@ -1061,7 +1061,7 @@ static int read_nonce_file(char *filename) {
     if (bytes_read != 6) {
         PrintAndLogEx(ERR, "File reading error.");
         fclose(fnonces);
-        return 1;
+        return PM3_EFILE;
     }
     cuid = bytes_to_num(read_buf, 4);
     uint8_t trgBlockNo = bytes_to_num(read_buf + 4, 1);
@@ -1095,7 +1095,7 @@ static int read_nonce_file(char *filename) {
     }
     if (got_match == false) {
         PrintAndLogEx(FAILED, "No match for the First_Byte_Sum (%u), is the card a genuine MFC Ev1? ", first_byte_Sum);
-        return 1;
+        return PM3_ESOFT;
     }
     return PM3_SUCCESS;
 }
@@ -1417,7 +1417,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 
             if (WaitForResponseTimeout(CMD_ACK, &resp, 3000) == false) {
                 DropField();
-                return 1;
+                return PM3_ETIMEOUT;
             }
 
             // error during nested_hard
@@ -1432,7 +1432,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                 if ((fnonces = fopen(filename, "wb")) == NULL) {
                     PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), filename);
                     DropField();
-                    return 3;
+                    return PM3_EFILE;
                 }
 
                 snprintf(progress_text, 80, "Writing acquired nonces to binary file " _YELLOW_("%s"), filename);
@@ -1481,7 +1481,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 
                     if (got_match == false) {
                         PrintAndLogEx(FAILED, "No match for the First_Byte_Sum (%u), is the card a genuine MFC Ev1? ", first_byte_Sum);
-                        return 4;
+                        return PM3_EWRONGANSWER;
                     }
 
                     hardnested_stage |= CHECK_2ND_BYTES;
@@ -1515,7 +1515,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
                     fclose(fnonces);
                 }
                 DropField();
-                return 1;
+                return PM3_ETIMEOUT;
             }
 
             // error during nested_hard
@@ -2250,8 +2250,9 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
             init_nonce_memory();
             update_reduction_rate(0.0, true);
 
-            if (simulate_acquire_nonces() != PM3_SUCCESS) {
-                return 3;
+            int res = simulate_acquire_nonces();
+            if ( res != PM3_SUCCESS) {
+                return res;
             }
 
             set_test_state(best_first_bytes[0]);
@@ -2310,7 +2311,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
                     free_statelist_cache();
                     free_candidates_memory(candidates);
                     candidates = NULL;
-                    if (!key_found) {
+                    if (key_found == false) {
                         // update the statistics
                         nonces[best_first_bytes[0]].sum_a8_guess[j].prob = 0;
                         nonces[best_first_bytes[0]].sum_a8_guess[j].num_states = 0;
@@ -2341,7 +2342,9 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
             free_part_sum_bitarrays();
         }
         fclose(fstats);
+
     } else {
+
         start_time = msclock();
         print_progress_header();
         snprintf(progress_text, sizeof(progress_text), "Brute force benchmark: %1.0f million (2^%1.1f) keys/s", brute_force_per_second / 1000000, log(brute_force_per_second) / log(2.0));
@@ -2353,30 +2356,32 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
         init_nonce_memory();
         update_reduction_rate(0.0, true);
 
+        int res; 
         if (nonce_file_read) {  // use pre-acquired data from file nonces.bin
-            if (read_nonce_file(filename) != 0) {
+            res = read_nonce_file(filename);
+            if (res != PM3_SUCCESS) {
                 free_bitflip_bitarrays();
                 free_nonces_memory();
                 free_bitarray(all_bitflips_bitarray[ODD_STATE]);
                 free_bitarray(all_bitflips_bitarray[EVEN_STATE]);
                 free_sum_bitarrays();
                 free_part_sum_bitarrays();
-                return 3;
+                return res;
             }
             hardnested_stage = CHECK_1ST_BYTES | CHECK_2ND_BYTES;
             update_nonce_data(false);
             float brute_force_depth;
             shrink_key_space(&brute_force_depth);
         } else { // acquire nonces.
-            uint16_t is_OK = acquire_nonces(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_write, slow, filename);
-            if (is_OK != 0) {
+            res = acquire_nonces(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_write, slow, filename);
+            if (res != PM3_SUCCESS) {
                 free_bitflip_bitarrays();
                 free_nonces_memory();
                 free_bitarray(all_bitflips_bitarray[ODD_STATE]);
                 free_bitarray(all_bitflips_bitarray[EVEN_STATE]);
                 free_sum_bitarrays();
                 free_part_sum_bitarrays();
-                return is_OK;
+                return res;
             }
         }
 
@@ -2437,7 +2442,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
                 free_statelist_cache();
                 free_candidates_memory(candidates);
                 candidates = NULL;
-                if (!key_found) {
+                if (key_found == false) {
                     // update the statistics
                     nonces[best_first_bytes[0]].sum_a8_guess[j].prob = 0;
                     nonces[best_first_bytes[0]].sum_a8_guess[j].num_states = 0;
@@ -2453,5 +2458,5 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
         free_sum_bitarrays();
         free_part_sum_bitarrays();
     }
-    return 0;
+    return PM3_SUCCESS;
 }

@@ -852,7 +852,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
     uint64_t ui64Key = bytes_to_num(datain, 6);
     uint32_t cuid = 0;
-    int16_t isOK = 0;
+    int16_t isOK = PM3_SUCCESS;
     uint16_t num_nonces = 0;
     uint8_t nt_par_enc = 0;
     uint8_t cascade_levels = 0;
@@ -882,7 +882,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
         // Test if the action was cancelled
         if (BUTTON_PRESS()) {
-            isOK = 2;
+            isOK = PM3_EOPABORTED;
             field_off = true;
             break;
         }
@@ -917,7 +917,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
         if (slow)
             SpinDelayUs(HARDNESTED_PRE_AUTHENTICATION_LEADTIME);
 
-        uint32_t nt1;
+        uint32_t nt1 = 0;
         if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, NULL)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Auth1 error");
             continue;
@@ -939,7 +939,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
             memcpy(buf + i, receivedAnswer, 4);
             nt_par_enc = par_enc[0] & 0xf0;
         } else {
-            nt_par_enc |= par_enc[0]  >> 4;
+            nt_par_enc |= par_enc[0] >> 4;
             memcpy(buf + i + 4, receivedAnswer, 4);
             memcpy(buf + i + 8, &nt_par_enc, 1);
             i += 9;
@@ -2464,6 +2464,8 @@ OUT:
 }
 
 void MifareHasStaticNonce(void) {
+
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     // variables
     int retval = PM3_SUCCESS;

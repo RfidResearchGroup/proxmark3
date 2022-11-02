@@ -430,9 +430,9 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
     t1 = msclock() - t1;
 
     switch (isOK) {
-        case -1 :
-            PrintAndLogEx(WARNING, "button pressed, aborted");
-            return PM3_ESOFT;
+        case PM3_EOPABORTED:
+            PrintAndLogEx(WARNING, "button pressed or aborted via keyboard. aborted");
+            return PM3_EOPABORTED;
         case -2 :
             PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests)");
             return PM3_ESOFT;
@@ -443,9 +443,6 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
             PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
             PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour");
             return PM3_ESOFT;
-        case PM3_EOPABORTED :
-            PrintAndLogEx(WARNING, "aborted via keyboard");
-            return PM3_EOPABORTED;
         default :
             PrintAndLogEx(SUCCESS, "found valid key: "_GREEN_("%012" PRIx64), key);
             break;
@@ -1432,6 +1429,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                 PrintAndLogEx(ERR, "Unknown error.\n");
         }
         return PM3_SUCCESS;
+
     } else { // ------------------------------------  multiple sectors working
         uint64_t t1 = msclock();
 
@@ -1576,7 +1574,7 @@ jumptoend:
                 PrintAndLogEx(ERR, "Failed to save keys to file");
                 free(e_sector);
                 free(fptr);
-                return PM3_ESOFT;
+                return PM3_EFILE;
             }
             free(fptr);
         }
@@ -1606,7 +1604,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
         arg_lit0("a", NULL, "Input key specified is keyA (def)"),
         arg_lit0("b", NULL, "Input key specified is keyB"),
         arg_lit0("e", "emukeys", "Fill simulator keys from found keys"),
-        arg_lit0(NULL, "dumpkeys", "Dump found keys to file"),
+        arg_lit0(NULL, "dumpkeys", "Dump found keys to file"),      
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1634,7 +1632,6 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
 
     bool transferToEml = arg_get_lit(ctx, 9);
     bool createDumpFile = arg_get_lit(ctx, 10);
-
     CLIParserFree(ctx);
 
     //validations
@@ -1689,7 +1686,8 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     uint64_t t1 = msclock();
 
     e_sector = calloc(SectorsCnt, sizeof(sector_t));
-    if (e_sector == NULL) return PM3_EMALLOC;
+    if (e_sector == NULL) 
+        return PM3_EMALLOC;
 
     // add our known key
     e_sector[mfSectorNum(blockNo)].foundKey[keyType] = 1;
@@ -1825,7 +1823,7 @@ jumptoend:
             PrintAndLogEx(ERR, "Failed to save keys to file");
             free(e_sector);
             free(fptr);
-            return PM3_ESOFT;
+            return PM3_EFILE;
         }
         free(fptr);
     }
@@ -1987,8 +1985,9 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 
     if (nonce_file_write) {
         char *fptr = GenerateFilename("hf-mf-", "-nonces.bin");
-        if (fptr == NULL)
-            return 1;
+        if (fptr == NULL) {
+            return PM3_EFILE;
+        }
         strncpy(filename, fptr, FILE_PATH_SIZE - 1);
         free(fptr);
     }
@@ -2034,18 +2033,17 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 
     if (isOK) {
         switch (isOK) {
-            case 1 :
+            case PM3_ETIMEOUT :
                 PrintAndLogEx(ERR, "Error: No response from Proxmark3.\n");
                 break;
-            case 2 :
-                PrintAndLogEx(NORMAL, "Button pressed. Aborted.\n");
+            case PM3_EOPABORTED:
+                PrintAndLogEx(WARNING, "Button pressed. Aborted.\n");
                 break;
             default :
                 break;
         }
-        return 2;
     }
-    return 0;
+    return isOK;
 }
 
 static int CmdHF14AMfAutoPWN(const char *Cmd) {
@@ -2238,7 +2236,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     uint64_t select_status = resp.oldarg[0];
     if (select_status == 0) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
-        return select_status;
+        return PM3_ECARDEXCHANGE;
     }
 
     // store card info
@@ -2263,10 +2261,10 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (has_staticnonce == NONCE_NORMAL)  {
         prng_type = detect_classic_prng();
         if (prng_type < 0) {
-            PrintAndLogEx(FAILED, "\nNo tag detected or other tag communication error");
+            PrintAndLogEx(FAILED, "\nNo tag detected or other tag communication error (%u)", prng_type);
             free(e_sector);
             free(fptr);
-            return prng_type;
+            return PM3_ESOFT;
         }
     }
 
@@ -2490,8 +2488,8 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             isOK = mfDarkside(mfFirstBlockOfSector(sectorno), keytype + 0x60, &key64);
 
             switch (isOK) {
-                case -1 :
-                    PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
+                case PM3_EOPABORTED :
+                    PrintAndLogEx(WARNING, "\nButton pressed or aborted via keyboard");
                     goto noValidKeyFound;
                 case -2 :
                     PrintAndLogEx(FAILED, "\nCard is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).");
@@ -2502,9 +2500,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 case -4 :
                     PrintAndLogEx(FAILED, "\nCard is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
                     PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour.");
-                    goto noValidKeyFound;
-                case -5 :
-                    PrintAndLogEx(WARNING, "\naborted via keyboard.");
                     goto noValidKeyFound;
                 default :
                     PrintAndLogEx(SUCCESS, "\nFound valid key [ " _GREEN_("%012" PRIx64) " ]\n", key64);
@@ -2590,7 +2585,7 @@ noValidKeyFound:
                         clearCommandBuffer();
                         SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
 
-                        if (!WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) goto skipReadBKey;
+                        if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500) == false) goto skipReadBKey;
 
                         if (resp.status != PM3_SUCCESS) goto skipReadBKey;
 
@@ -2642,13 +2637,13 @@ tryNested:
                                 PrintAndLogEx(ERR, "\nError: No response from Proxmark3.");
                                 free(e_sector);
                                 free(fptr);
-                                return PM3_ESOFT;
+                                return isOK;
                             }
                             case PM3_EOPABORTED: {
                                 PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
                                 free(e_sector);
                                 free(fptr);
-                                return PM3_EOPABORTED;
+                                return isOK;
                             }
                             case PM3_EFAILED: {
                                 PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is probably not predictable).");
@@ -2679,7 +2674,7 @@ tryNested:
                                 PrintAndLogEx(ERR, "unknown Error.\n");
                                 free(e_sector);
                                 free(fptr);
-                                return PM3_ESOFT;
+                                return isOK;
                             }
                         }
 
@@ -2697,11 +2692,11 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                         DropField();
                         if (isOK) {
                             switch (isOK) {
-                                case 1: {
+                                case PM3_ETIMEOUT: {
                                     PrintAndLogEx(ERR, "\nError: No response from Proxmark3");
                                     break;
                                 }
-                                case 2: {
+                                case PM3_EOPABORTED: {
                                     PrintAndLogEx(NORMAL, "\nButton pressed, user aborted");
                                     break;
                                 }
@@ -2736,13 +2731,13 @@ tryStaticnested:
                                 PrintAndLogEx(ERR, "\nError: No response from Proxmark3");
                                 free(e_sector);
                                 free(fptr);
-                                return PM3_ESOFT;
+                                return isOK;
                             }
                             case PM3_EOPABORTED: {
                                 PrintAndLogEx(WARNING, "\nButton pressed, user aborted");
                                 free(e_sector);
                                 free(fptr);
-                                return PM3_EOPABORTED;
+                                return isOK;
                             }
                             case PM3_SUCCESS: {
                                 e_sector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmp_key, 6);
