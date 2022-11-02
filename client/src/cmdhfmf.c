@@ -864,8 +864,9 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     rights[sectorNo][3] = ((data[7] & 0x80) >> 5) | ((data[8] & 0x8) >> 2) | ((data[8] & 0x80) >> 7); // C1C2C3 for sector trailer
                     break;
                 } else if (tries == (MIFARE_SECTOR_RETRY / 2)) { // after half unsuccessful tries, give key B a go
-                    PrintAndLogEx(FAILED, "\ntrying with key B instead...", sectorNo);
+                    PrintAndLogEx(WARNING, "\ntrying with key B instead...", sectorNo);
                     current_key = MF_KEY_B;
+                    PrintAndLogEx(INFO, "." NOLF);
                 } else if (tries == (MIFARE_SECTOR_RETRY - 1)) { // on last try set defaults
                     PrintAndLogEx(FAILED, "\ncould not get access rights for sector %2d. Trying with defaults...", sectorNo);
                     rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
@@ -930,6 +931,9 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     if ((current_key == MF_KEY_A) && (tries == (MIFARE_SECTOR_RETRY / 2))) {
                         // Half the tries failed with key A. Swap for key B
                         current_key = MF_KEY_B;
+
+                        // clear out keyA since it failed.
+                        memset(keyA[sectorNo], 0x00, sizeof(keyA[sectorNo]));
                     }
                 }
             }
