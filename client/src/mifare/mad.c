@@ -317,7 +317,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
 
     int ibs = MADInfoByteDecode(sector, swapmad, 1, verbose);
 
-    if (ibs) {
+    if (ibs > 0) {
         PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02x"), ibs);
     } else {
         PrintAndLogEx(WARNING, "Card publisher " _RED_("not") " present " _YELLOW_("0x%02x"), ibs);
@@ -360,7 +360,7 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
     }
 
     int ibs = MADInfoByteDecode(sector, swapmad, 2, verbose);
-    if (ibs) {
+    if (ibs > 0) {
         PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02x"), ibs);
     } else {
         PrintAndLogEx(WARNING, "Card publisher " _RED_("not") " present " _YELLOW_("0x%02x"), ibs);
