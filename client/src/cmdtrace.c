@@ -573,7 +573,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     //2 Not crc-command
 
     //--- Draw the data column
-    char line[18][120] = {{0}};
+    char line[18][140] = {{0}};
 
     if (data_len == 0) {
         if (protocol == ICLASS && duration == 2048) {
@@ -633,6 +633,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     }
 
+    uint8_t crc_format_string_offset = 0;
     if (markCRCBytes) {
         //CRC-command
         if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAGS)) && (data_len > 1)) {
@@ -644,12 +645,38 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             (*pos2) = ']';
             (*(pos2 + 1)) = '\0';
         } else {
+
             if (crcStatus == 0 || crcStatus == 1) {
-                char *pos1 = line[(data_len - 2) / 18] + (((data_len - 2) % 18) * 4) - 1;
-                (*pos1) = '[';
-                char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) - 1;
-                (*pos2) = ']';
-                (*(pos2 + 1)) = '\0';
+                char *pos1 = line[(data_len - 2) / 18];
+                pos1 += (((data_len - 2) % 18) * 4) - 1;
+
+                (*(pos1 + 6 + 1)) = '\0';
+
+                char *cb_str = str_dup(pos1 + 1);
+
+                if (hdr->isResponse) {
+                    if (g_session.supports_colors) {
+                        if (crcStatus == 0) {
+                            snprintf(pos1, 24, " " _RED_("%s") " ", cb_str);
+                        } else {
+                            snprintf(pos1, 24, " " _GREEN_("%s") " ", cb_str);
+                        }
+                        crc_format_string_offset = 9;
+                    } else {
+                        snprintf(pos1, 9, "[%s]", cb_str);
+                    }
+                } else {
+                    if (g_session.supports_colors) {
+                        if (crcStatus == 0) {
+                            snprintf(pos1, 24, AEND " " _RED_("%s") " ", cb_str);
+                        } else {
+                            snprintf(pos1, 24, AEND " " _GREEN_("%s") " ", cb_str);
+                        }
+                        crc_format_string_offset = 13;
+                    } else {
+                        snprintf(pos1, 9, "[%s]", cb_str);
+                    }
+                }
             }
         }
     }
@@ -777,17 +804,19 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             if (hdr->isResponse) {
                 // tag row
                 if (use_us) {
-                    PrintAndLogEx(NORMAL, " %10.1f | %10.1f | Tag |%-72s | %s| %s",
+                    PrintAndLogEx(NORMAL, " %10.1f | %10.1f | Tag |%-*s | %s| %s",
                                   (float)time1 / 13.56,
                                   (float)time2 / 13.56,
+                                  72 + crc_format_string_offset,
                                   line[j],
                                   (j == num_lines - 1) ? crc : "    ",
                                   (j == num_lines - 1) ? explanation : ""
                                  );
                 } else {
-                    PrintAndLogEx(NORMAL, " %10u | %10u | Tag |%-72s | %s| %s",
+                    PrintAndLogEx(NORMAL, " %10u | %10u | Tag |%-*s | %s| %s",
                                   (hdr->timestamp - first_hdr->timestamp),
                                   (end_of_transmission_timestamp - first_hdr->timestamp),
+                                  72 + crc_format_string_offset,
                                   line[j],
                                   (j == num_lines - 1) ? crc : "    ",
                                   (j == num_lines - 1) ? explanation : ""
@@ -797,18 +826,20 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 // reader row
                 if (use_us) {
                     PrintAndLogEx(NORMAL,
-                                  _YELLOW_(" %10.1f") " | " _YELLOW_("%10.1f") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                                  _YELLOW_(" %10.1f") " | " _YELLOW_("%10.1f") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
                                   (float)time1 / 13.56,
                                   (float)time2 / 13.56,
+                                  72 + crc_format_string_offset,
                                   line[j],
                                   (j == num_lines - 1) ? crc : "    ",
                                   (j == num_lines - 1) ? explanation : ""
                                  );
                 } else {
                     PrintAndLogEx(NORMAL,
-                                  _YELLOW_(" %10u") " | " _YELLOW_("%10u") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                                  _YELLOW_(" %10u") " | " _YELLOW_("%10u") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
                                   (hdr->timestamp - first_hdr->timestamp),
                                   (end_of_transmission_timestamp - first_hdr->timestamp),
+                                  72 + crc_format_string_offset,
                                   line[j],
                                   (j == num_lines - 1) ? crc : "    ",
                                   (j == num_lines - 1) ? explanation : ""
@@ -819,13 +850,15 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
         } else {
             if (hdr->isResponse) {
-                PrintAndLogEx(NORMAL, "            |            |     |%-72s | %s| %s",
+                PrintAndLogEx(NORMAL, "            |            |     |%-*s | %s| %s",
+                              72 + crc_format_string_offset,
                               line[j],
                               (j == num_lines - 1) ? crc : "    ",
                               (j == num_lines - 1) ? explanation : ""
                              );
             } else {
-                PrintAndLogEx(NORMAL, "            |            |     |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                PrintAndLogEx(NORMAL, "            |            |     |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                              72 + crc_format_string_offset,
                               line[j],
                               (j == num_lines - 1) ? crc : "    ",
                               (j == num_lines - 1) ? explanation : ""
@@ -839,7 +872,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             memset(explanation, 0x00, sizeof(explanation));
             annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen, hdr->isResponse);
             uint8_t crcc = iso14443A_CRC_check(hdr->isResponse, mfData, mfDataLen);
-            PrintAndLogEx(NORMAL, "            |            |  *  |%-72s | %-4s| %s",
+            PrintAndLogEx(NORMAL, "            |            |  *  |%-*s | %-4s| %s",
+                          72 + crc_format_string_offset,
                           sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
                           (crcc == 0 ? "!crc" : (crcc == 1 ? " ok " : "    ")),
                           explanation);
