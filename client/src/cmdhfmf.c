@@ -115,14 +115,14 @@ static int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
         DropField();
-        return 0;
+        return PM3_ERFTRANS;
     }
 
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
     memcpy(uid, card.uid, card.uidlen * sizeof(uint8_t));
     *uidlen = card.uidlen;
-    return 1;
+    return PM3_SUCCESS;
 }
 
 static char *GenerateFilename(const char *prefix, const char *suffix) {
@@ -133,8 +133,8 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
     int uidlen = 0;
     char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid) * 2 + 1,  sizeof(uint8_t));
 
-    GetHFMF14AUID(uid, &uidlen);
-    if (!uidlen) {
+    int res = GetHFMF14AUID(uid, &uidlen);
+    if (res != PM3_SUCCESS || !uidlen) {
         PrintAndLogEx(WARNING, "No tag found.");
         free(fptr);
         return NULL;
@@ -234,7 +234,7 @@ static bool mfc_value(const uint8_t *d, int32_t *val) {
     if (val) {
         *val = a;
     }
-    return (val_checks);
+    return val_checks;
 }
 static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
     if (blockno == 0) {
@@ -788,7 +788,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     uint64_t select_status = resp.oldarg[0];
     if (select_status == 0) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
-        return select_status;
+        return PM3_SUCCESS;
     }
 
     // store card info
@@ -4907,7 +4907,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     uint64_t select_status = resp.oldarg[0];
     if (select_status == 0) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
-        return select_status;
+        return PM3_SUCCESS;
     }
 
     // store card info
@@ -5058,7 +5058,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
 
     if (select_status == 0) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
-        return select_status;
+        return PM3_ERFTRANS;
     }
 
     iso14a_card_select_t card;
@@ -5826,7 +5826,7 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
     uint64_t select_status = resp.oldarg[0];
     if (select_status == 0) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
-        return select_status;
+        return PM3_SUCCESS;
     }
 
     DropField();
@@ -6834,7 +6834,7 @@ static int CmdHF14AGen4View(const char *Cmd) {
 
     if (select_status == 0) {
         PrintAndLogEx(WARNING, "iso14443a card select failed");
-        return select_status;
+        return PM3_SUCCESS;
     }
 
     iso14a_card_select_t card;
