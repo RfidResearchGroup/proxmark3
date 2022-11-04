@@ -198,7 +198,7 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     if (res) {
         if (!silentMode) PrintAndLogEx(ERR, "Exchange raw error: %d", res);
         if (dropFieldIfError) DropField();
-        return 2;
+        return PM3_ERFTRANS;
     }
 
     if (verbose)
@@ -207,19 +207,19 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     if (datalen < 1) {
         if (!silentMode) PrintAndLogEx(ERR, "Card response wrong length: %d", datalen);
         if (dropFieldIfError) DropField();
-        return 3;
+        return PM3_EWRONGANSWER;
     }
 
     if (data[0] != 0x90) {
         if (!silentMode) PrintAndLogEx(ERR, "Card response error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
         if (dropFieldIfError) DropField();
-        return 3;
+        return PM3_EWRONGANSWER;
     }
 
     if (datalen != 19) { // code 1b + 16b + crc 2b
         if (!silentMode) PrintAndLogEx(ERR, "Card response must be 19 bytes long instead of: %d", datalen);
         if (dropFieldIfError) DropField();
-        return 3;
+        return PM3_EWRONGANSWER;
     }
 
     aes_decode(NULL, key, &data[1], RndB, 16);
@@ -242,7 +242,7 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     if (res) {
         if (!silentMode) PrintAndLogEx(ERR, "Exchange raw error: %d", res);
         if (dropFieldIfError) DropField();
-        return 4;
+        return PM3_ERFTRANS;
     }
 
     if (verbose)
@@ -262,7 +262,7 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
             PrintAndLogEx(ERR, "RndA   card: %s", sprint_hex(&raw[4], 16));
         }
         if (dropFieldIfError) DropField();
-        return 5;
+        return PM3_EWRONGANSWER;
     }
 
     if (verbose) {
@@ -319,7 +319,7 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     if (verbose)
         PrintAndLogEx(INFO, "Authentication OK");
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int intExchangeRAW14aPlus(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
