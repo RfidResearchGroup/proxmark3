@@ -6961,7 +6961,7 @@ static int CmdHF14AGen4Load(const char *cmd) {
             PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
             PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
         } else {
-            PrintAndLogEx(INFO, "Read %zu blocks from emulator memory", block_cnt);
+            PrintAndLogEx(INFO, "Read %d blocks from emulator memory", block_cnt);
         }
     }
 
