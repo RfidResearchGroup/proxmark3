@@ -4303,6 +4303,64 @@
             ],
             "usage": "hf mf gen3uid [-h] [-u <hex>]"
         },
+        "hf mf ggetblk": {
+            "command": "hf mf ggetblk",
+            "description": "Get block data from magic gen4 GTU card.",
+            "notes": [
+                "hf mf ggetblk --blk 0 -> get block 0 (manufacturer)",
+                "hf mf ggetblk --blk 3 -v -> get block 3, decode sector trailer"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-b, --blk <dec> block number",
+                "-v, --verbose verbose output",
+                "-p, --pwd <hex> password 4bytes"
+            ],
+            "usage": "hf mf ggetblk [-hv] -b <dec> [-p <hex>]"
+        },
+        "hf mf gload": {
+            "command": "hf mf gload",
+            "description": "Load magic gen4 gtu card with data from (bin/eml/json) dump file or from emulator memory.",
+            "notes": [
+                "hf mf gload --emu",
+                "hf mf gload -f hf-mf-01020304.eml",
+                "hf mf gload -p AABBCCDD --4k -v -f hf-mf-01020304-dump.bin",
+                "",
+                "Card must be configured beforehand with `script run hf_mf_ultimatecard`.",
+                "Blocks are 16 bytes long."
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--mini MIFARE Classic Mini / S20",
+                "--1k MIFARE Classic 1k / S50 (def)",
+                "--2k MIFARE Classic/Plus 2k",
+                "--4k MIFARE Classic 4k / S70",
+                "-p, --pwd <hex> password 4bytes",
+                "-v, --verbose verbose output",
+                "-f, --file <fn> filename of dump",
+                "--emu from emulator memory",
+                "--start <dec> index of block to start writing (default 0)",
+                "--end <dec> index of block to end writing (default last block)"
+            ],
+            "usage": "hf mf gload [-hv] [--mini] [--1k] [--2k] [--4k] [-p <hex>] [-f <fn>] [--emu] --start <dec> --end <dec>"
+        },
+        "hf mf gsetblk": {
+            "command": "hf mf gsetblk",
+            "description": "Set block data on a magic gen4 GTU card",
+            "notes": [
+                "hf mf gsetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-b, --blk <dec> block number",
+                "-d, --data <hex> bytes to write, 16 hex bytes",
+                "-p, --pwd <hex> password 4bytes"
+            ],
+            "usage": "hf mf gsetblk [-h] -b <dec> [-d <hex>] [-p <hex>]"
+        },
         "hf mf gview": {
             "command": "hf mf gview",
             "description": "View `magic gen4 gtu` card memory",
@@ -11537,8 +11595,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 728,
+        "commands_extracted": 731,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-10-30T15:28:49"
+        "extracted_on": "2022-11-05T18:17:23"
     }
 }

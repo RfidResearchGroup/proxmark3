@@ -510,6 +510,9 @@ Check column "offline" for their availability.
 |`hf mf gen3uid          `|N       |`Set UID without changing manufacturer block`
 |`hf mf gen3blk          `|N       |`Overwrite manufacturer block`
 |`hf mf gen3freeze       `|N       |`Perma lock UID changes. irreversible`
+|`hf mf ggetblk          `|N       |`Read block from card`
+|`hf mf gload            `|N       |`Load dump to card`
+|`hf mf gsetblk          `|N       |`Write block to card`
 |`hf mf gview            `|N       |`View card`
 |`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
 |`hf mf ndefread         `|N       |`Read and print NDEF records from card`

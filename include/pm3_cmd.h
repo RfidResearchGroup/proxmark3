@@ -676,6 +676,7 @@ typedef struct {
 
 // Gen 4 GTU magic cards
 #define CMD_HF_MIFARE_G4_RDBL                                             0x0860
+#define CMD_HF_MIFARE_G4_WRBL                                             0x0861
 
 #define CMD_UNKNOWN                                                       0xFFFF
 
