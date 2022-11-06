@@ -1181,6 +1181,29 @@ int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data) {
     return PM3_SUCCESS;
 }
 
+int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data) {
+    struct p {
+        uint8_t blockno;
+        uint8_t pwd[4];
+        uint8_t data[16];
+    } PACKED payload;
+    payload.blockno = blockno;
+    memcpy(payload.pwd, pwd, sizeof(payload.pwd));
+    memcpy(payload.data, data, sizeof(payload.data));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_G4_WRBL, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_WRBL, &resp, 1500)) {
+        if (resp.status != PM3_SUCCESS) {
+            return PM3_EUNDEF;
+        }
+    } else {
+        PrintAndLogEx(WARNING, "command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+    return PM3_SUCCESS;
+}
 
 // variables
 uint32_t cuid = 0;    // uid part used for crypto1.
