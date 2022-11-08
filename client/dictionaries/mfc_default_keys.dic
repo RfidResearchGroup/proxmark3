@@ -607,7 +607,6 @@ B725F9CBF183
 11428B5BCE0F
 18971D893494
 25D60050BF6E
-3FA7217EC575
 44F0B5FBE344
 7B296F353C6B
 8553263F4FF0
@@ -621,6 +620,9 @@ D4FE03CE5B09
 D4FE03CE5B0A
 D4FE03CE5B0F
 E241E8AFCBAF
+# Transport system Argentina - SUBE
+# Shared key - sec 3 blk 15
+3FA7217EC575
 #
 # Data from forum post
 123F8888F322
@@ -1893,6 +1895,6 @@ FFFFFFAAAAAA
 # Added by VideoMan.
 # Random Hotel A Key Sec 0 Blk 3 - KABA Lock
 3111A3A303EB
-# Transport system Uruguay
-# Shared key
+# Transport system Uruguay - STM
+# Shared key - sec 0 blk 3
 D144BD193063
