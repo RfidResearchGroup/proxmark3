@@ -6788,7 +6788,7 @@ static int CmdHF14AGen4GetBlk(const char *cmd) {
 
     PrintAndLogEx(NORMAL, "Block: %x", blockno) ;
 
-    int res = mfG4GetBlock(pwd, blockno, data);
+    int res = mfG4GetBlock(pwd, blockno, data, MAGIC_INIT | MAGIC_OFF);
     if (res) {
         PrintAndLogEx(ERR, "Can't read block. error=%d", res);
         return PM3_ESOFT;
@@ -6980,7 +6980,7 @@ static int CmdHF14AGen4Load(const char *cmd) {
         fflush(stdout);
 
         // write block
-        if (mfG4SetBlock(pwd, blockno, data + (blockno * MFBLOCK_SIZE)) !=  PM3_SUCCESS) {
+        if (mfG4SetBlock(pwd, blockno, data + (blockno * MFBLOCK_SIZE), MAGIC_INIT | MAGIC_OFF) !=  PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Can't set magic card block: %d", blockno);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             if (data != NULL) free(data);
@@ -7047,7 +7047,7 @@ static int CmdHF14AGen4SetBlk(const char *cmd) {
     PrintAndLogEx(INFO, "Writing block number:%2d data:%s", b, sprint_hex_inrow(data, sizeof(data)));
 
     uint8_t blockno = (uint8_t)b;
-    int res = mfG4SetBlock(pwd, blockno, data);
+    int res = mfG4SetBlock(pwd, blockno, data, MAGIC_INIT | MAGIC_OFF);
     if (res) {
         PrintAndLogEx(ERR, "Can't write block. error=%d", res);
         return PM3_ESOFT;
@@ -7164,7 +7164,7 @@ static int CmdHF14AGen4View(const char *Cmd) {
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
 
-        if (mfG4GetBlock(pwd, i, dump + (i * MFBLOCK_SIZE)) !=  PM3_SUCCESS) {
+        if (mfG4GetBlock(pwd, i, dump + (i * MFBLOCK_SIZE), MAGIC_INIT | MAGIC_OFF) !=  PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Can't get magic card block: %u", i);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);

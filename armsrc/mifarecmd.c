@@ -2684,88 +2684,105 @@ OUT:
     BigBuf_free();
 }
 
-void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd) {
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-    clear_trace();
-    set_tracing(true);
+// read or write block to GEN4 GTU tag
+void MifareG4ReadWriteBlk(uint8_t rw, uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t workFlags) {
+    bool  read = rw & 0x1 & 0xFF ;
+    bool write = rw & 0x2 & 0xFF ;
 
-    int retval = PM3_SUCCESS;
-    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
-    uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
-    uint8_t *uid = BigBuf_malloc(10);
-    if (iso14443a_select_card(uid, NULL, NULL, true, 0, true) == false) {
-        retval = PM3_ESOFT;
-        goto OUT;
-    }
-
-    LED_B_ON();
-    uint32_t save_iso14a_timeout = iso14a_get_timeout();
-    iso14a_set_timeout(13560000 / 1000 / (8 * 16) * 1000); // 2 seconds timeout
-
-    uint8_t cmd[] = { 0xCF, 0x00, 0x00, 0x00, 0x00, 0xCE, blockno, 0x00, 0x00};
-
-    memcpy(cmd + 1, pwd, 4);
-
-    AddCrc14A(cmd, sizeof(cmd) - 2);
-
-    ReaderTransmit(cmd, sizeof(cmd), NULL);
-    int res = ReaderReceive(buf, par);
-    if (res != 18) {
-        retval = PM3_ESOFT;
-    }
-    iso14a_set_timeout(save_iso14a_timeout);
-    LED_B_OFF();
-
-OUT:
-    reply_ng(CMD_HF_MIFARE_G4_RDBL, retval, buf, 18);
-    // turns off
-    OnSuccessMagic();
-    BigBuf_free();
-}
-
-void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data) {
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-    clear_trace();
-    set_tracing(true);
+    bool setup = workFlags & MAGIC_INIT & 0xFF ;
+    bool  done = workFlags & MAGIC_OFF  & 0xFF ;
 
     int res = 0;
     int retval = PM3_SUCCESS;
-    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
-    uint8_t *uid = BigBuf_malloc(10);
-    if (iso14443a_select_card(uid, NULL, NULL, true, 0, true) == false) {
-        retval = PM3_ESOFT;
+    if (buf == NULL) {
+        retval = PM3_EMALLOC;
         goto OUT;
     }
 
-    LED_B_ON();
-    uint32_t save_iso14a_timeout = iso14a_get_timeout();
-    iso14a_set_timeout(13560000 / 1000 / (8 * 16) * 1000); // 2 seconds timeout
+    // check args
+    if (write && (data == NULL)) {
+        retval = PM3_EINVARG;
+        goto OUT;
+    }
 
-    uint8_t cmd[] = { 0xCF, 0x00, 0x00, 0x00, 0x00, 0xCD, blockno,
+    if (!(read || write)) {
+        retval = PM3_EINVARG;
+        goto OUT;
+    }
+
+    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+    if (par == NULL) {
+        retval = PM3_EMALLOC;
+        goto OUT;
+    }
+
+    if (setup) {
+        uint8_t *uid = BigBuf_malloc(10);
+        if (uid == NULL) {
+            retval = PM3_EMALLOC;
+            goto OUT;
+        }
+        iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+        clear_trace();
+        set_tracing(true);
+
+        if (iso14443a_select_card(uid, NULL, NULL, true, 0, true) == false) {
+            retval = PM3_ESOFT;
+            goto OUT;
+        }
+    }
+
+    LED_B_ON();
+
+    static uint32_t save_iso14a_timeout;
+    if (setup) {
+        save_iso14a_timeout = iso14a_get_timeout();
+        iso14a_set_timeout(13560000 / 1000 / (8 * 16) * 1000); // 2 seconds timeout
+    }
+
+    uint8_t cmd[] = { 0xCF, 0x00, 0x00, 0x00, 0x00, (write ? 0xCD : 0xCE), blockno,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00
                     };
 
     memcpy(cmd + 1, pwd, 4);
-    memcpy(cmd + 7, data, 16);
+    if (write) memcpy(cmd + 7, data, 16);
 
-    AddCrc14A(cmd, sizeof(cmd) - 2);
+    size_t crc_pos = read ? 7 : (sizeof(cmd) - 2) ;
+    AddCrc14A(cmd, crc_pos);
 
-    ReaderTransmit(cmd, sizeof(cmd), NULL);
+    ReaderTransmit(cmd, crc_pos + 2, NULL);
     res = ReaderReceive(buf, par);
-    if ((res != 4) || (memcmp(buf, "\x90\x00\xfd\x07", 4) != 0)) {
+
+    if (write) {
+        if ((res != 4) || (memcmp(buf, "\x90\x00\xfd\x07", 4) != 0)) {
+            retval = PM3_ESOFT;
+        }
+    } else if (res != 18) {
         retval = PM3_ESOFT;
     }
-    iso14a_set_timeout(save_iso14a_timeout);
+
+    if (done || retval != 0) iso14a_set_timeout(save_iso14a_timeout);
     LED_B_OFF();
 
 OUT:
-    reply_ng(CMD_HF_MIFARE_G4_WRBL, retval, buf, res);
+    reply_ng(write ? CMD_HF_MIFARE_G4_WRBL : CMD_HF_MIFARE_G4_RDBL, retval, buf, res);
     // turns off
-    OnSuccessMagic();
+    if (done || retval != 0) FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+    if (done || retval != 0) set_tracing(false);
     BigBuf_free();
+}
+
+void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd, uint8_t workFlags) {
+    MifareG4ReadWriteBlk(0x1, blockno, pwd, NULL, workFlags) ;
+}
+
+void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t workFlags) {
+    MifareG4ReadWriteBlk(0x2, blockno, pwd, data, workFlags) ;
 }
 
 void MifareSetMod(uint8_t *datain) {

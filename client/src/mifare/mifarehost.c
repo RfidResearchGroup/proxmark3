@@ -1158,13 +1158,15 @@ int mfGen3Freeze(void) {
     }
 }
 
-int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data) {
+int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags) {
     struct p {
         uint8_t blockno;
         uint8_t pwd[4];
+        uint8_t workFlags;
     } PACKED payload;
     payload.blockno = blockno;
     memcpy(payload.pwd, pwd, sizeof(payload.pwd));
+    payload.workFlags = workFlags;
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_G4_RDBL, (uint8_t *)&payload, sizeof(payload));
@@ -1181,15 +1183,17 @@ int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data) {
     return PM3_SUCCESS;
 }
 
-int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data) {
+int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags) {
     struct p {
         uint8_t blockno;
         uint8_t pwd[4];
         uint8_t data[16];
+        uint8_t workFlags;
     } PACKED payload;
     payload.blockno = blockno;
     memcpy(payload.pwd, pwd, sizeof(payload.pwd));
     memcpy(payload.data, data, sizeof(payload.data));
+    payload.workFlags = workFlags;
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_G4_WRBL, (uint8_t *)&payload, sizeof(payload));
