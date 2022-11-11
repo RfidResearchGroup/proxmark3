@@ -864,7 +864,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     rights[sectorNo][3] = ((data[7] & 0x80) >> 5) | ((data[8] & 0x8) >> 2) | ((data[8] & 0x80) >> 7); // C1C2C3 for sector trailer
                     break;
                 } else if (tries == (MIFARE_SECTOR_RETRY / 2)) { // after half unsuccessful tries, give key B a go
-                    PrintAndLogEx(WARNING, "\ntrying with key B instead...", sectorNo);
+                    PrintAndLogEx(WARNING, "\ntrying with key B instead...");
                     current_key = MF_KEY_B;
                     PrintAndLogEx(INFO, "." NOLF);
                 } else if (tries == (MIFARE_SECTOR_RETRY - 1)) { // on last try set defaults
@@ -6935,12 +6935,14 @@ static int CmdHF14AGen4Load(const char *cmd) {
             PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
             return PM3_EMALLOC;
         }
+
         PrintAndLogEx(INFO, "downloading emulator memory");
-        if (!GetFromDevice(BIG_BUF_EML, data, block_cnt * MFBLOCK_SIZE, 0, NULL, 0, NULL, 2500, false)) {
+        if (GetFromDevice(BIG_BUF_EML, data, block_cnt * MFBLOCK_SIZE, 0, NULL, 0, NULL, 2500, false) == false) {
             PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
             free(data);
             return PM3_ETIMEOUT;
         }
+
     } else {
         // read from file
         int res = pm3_load_dump(filename, (void **)&data, &bytes_read, (MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK));
@@ -6950,7 +6952,7 @@ static int CmdHF14AGen4Load(const char *cmd) {
 
         // check file size corresponds to card size.
         if (bytes_read != (block_cnt * MFBLOCK_SIZE))  {
-            PrintAndLogEx(ERR, "File content error. Read %zu bytes, expected %zu", bytes_read, block_cnt * MFBLOCK_SIZE);
+            PrintAndLogEx(ERR, "File content error. Read %zu bytes, expected %i", bytes_read, block_cnt * MFBLOCK_SIZE);
             if (data != NULL) free(data);
             return PM3_EFILE;
         }
@@ -6983,7 +6985,7 @@ static int CmdHF14AGen4Load(const char *cmd) {
         if (mfG4SetBlock(pwd, blockno, data + (blockno * MFBLOCK_SIZE)) !=  PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Can't set magic card block: %d", blockno);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
-            if (data != NULL) free(data);
+            free(data);
             return PM3_ESOFT;
         }
     }
