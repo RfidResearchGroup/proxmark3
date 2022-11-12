@@ -1761,7 +1761,7 @@ static int CmdHFiClassDump(const char *Cmd) {
 
     //
     if (force) {
-        pagemap |= PICOPASS_NON_SECURE_PAGEMODE;
+        pagemap == PICOPASS_NON_SECURE_PAGEMODE;
         PrintAndLogEx(INFO, "Forcing NON SECURE PAGE dumping");
     }
 
