@@ -1841,19 +1841,22 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf hardnested",
                   "Nested attack for hardened MIFARE Classic cards.\n"
+                  "if card is EV1, command can detect and use known key see example below\n"
+                  "\n"
                   "`--i<X>`  set type of SIMD instructions. Without this flag programs autodetect it.\n"
                   " or \n"
                   "    hf mf hardnested -r --tk [known target key]\n"
                   "Add the known target key to check if it is present in the remaining key space\n"
                   "    hf mf hardnested --blk 0 -a -k A0A1A2A3A4A5 --tblk 4 --ta --tk FFFFFFFFFFFF\n"
                   ,
+                  "hf mf hardnested --tblk 4 --ta     --> works for MFC EV1\n"
                   "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta\n"
                   "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -w\n"
                   "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -f nonces.bin -w -s\n"
                   "hf mf hardnested -r\n"
                   "hf mf hardnested -r --tk a0a1a2a3a4a5\n"
                   "hf mf hardnested -t --tk a0a1a2a3a4a5\n"
-                  "hf mf hardnested --blk 0 -a -k a0a1a2a3a4a5 --tblk 4 --ta --tk FFFFFFFFFFFF"
+                  "hf mf hardnested --blk 0 -a -k a0a1a2a3a4a5 --tblk 4 --ta --tk FFFFFFFFFFFF\n"
                  );
 
     void *argtable[] = {
@@ -1976,7 +1979,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         SetSIMDInstr(SIMD_NONE);
 
 
-    bool know_target_key = (trg_keylen);
+    bool known_target_key = (trg_keylen);
 
     if (nonce_file_read) {
         char *fptr = GenerateFilename("hf-mf-", "-nonces.bin");
@@ -2000,7 +2003,15 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         snprintf(filename, FILE_PATH_SIZE, "hf-mf-%s-nonces.bin", uid);
     }
 
-    if (know_target_key == false && nonce_file_read == false) {
+    // detect MFC EV1 Signature
+    if (detect_mfc_ev1_signature() && keylen == 0) {
+        PrintAndLogEx(INFO, "MIFARE Classic EV1 card detected");
+        blockno = 69;
+        keytype = MF_KEY_B;
+        memcpy(key, g_mifare_signature_key_b, sizeof(g_mifare_signature_key_b));
+    }
+
+    if (known_target_key == false && nonce_file_read == false) {
 
         // check if tag doesn't have static nonce
         if (detect_classic_static_nonce() == NONCE_STATIC) {
@@ -2021,7 +2032,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
                   trg_blockno,
                   (trg_keytype == MF_KEY_B) ? 'B' : 'A',
                   trg_key[0], trg_key[1], trg_key[2], trg_key[3], trg_key[4], trg_key[5],
-                  know_target_key ? "" : " (not set)"
+                  known_target_key ? "" : " (not set)"
                  );
     PrintAndLogEx(INFO, "File action: " _YELLOW_("%s") ", Slow: " _YELLOW_("%s") ", Tests: " _YELLOW_("%d"),
                   nonce_file_write ? "write" : nonce_file_read ? "read" : "none",
@@ -2029,7 +2040,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
                   tests);
 
     uint64_t foundkey = 0;
-    int16_t isOK = mfnestedhard(blockno, keytype, key, trg_blockno, trg_keytype, know_target_key ? trg_key : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
+    int16_t isOK = mfnestedhard(blockno, keytype, key, trg_blockno, trg_keytype, known_target_key ? trg_key : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
 
     if ((tests == 0) && IfPm3Iso14443a()) {
         DropField();
@@ -2105,7 +2116,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    bool know_target_key = (keylen == 6);
+    bool known_key = (keylen == 6);
 
     uint8_t sectorno = arg_get_u32_def(ctx, 2, 0);
 
@@ -2223,10 +2234,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     int bytes;
     // Settings
     int prng_type = PM3_EUNDEF;
-    int has_staticnonce;
     uint8_t num_found_keys = 0;
 
-// ------------------------------
+    // ------------------------------
 
     // Select card to get UID/UIDLEN/ATQA/SAK information
     clearCommandBuffer();
@@ -2247,6 +2257,14 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
+
+    // detect MFC EV1 Signature
+    bool is_ev1 = detect_mfc_ev1_signature();
+    if (is_ev1) {
+        // hidden sectors on MFC EV1
+        sector_cnt += 2;
+    }
+
     // create/initialize key storage structure
     uint32_t e_sector_size = sector_cnt > sectorno ? sector_cnt : sectorno + 1;
     res = initSectorTable(&e_sector, e_sector_size);
@@ -2255,11 +2273,31 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
+    if (is_ev1) {
+        PrintAndLogEx(INFO, "MIFARE Classic EV1 card detected");
+        // Store the keys
+        e_sector[16].Key[MF_KEY_A] = bytes_to_num((uint8_t *)g_mifare_signature_key_a, sizeof(g_mifare_signature_key_a));
+        e_sector[16].foundKey[MF_KEY_A] = 'D';
+
+        e_sector[17].Key[MF_KEY_A] = bytes_to_num((uint8_t *)g_mifare_signature_key_a, sizeof(g_mifare_signature_key_a));
+        e_sector[17].foundKey[MF_KEY_A] = 'D';
+        e_sector[17].Key[MF_KEY_B] = bytes_to_num((uint8_t *)g_mifare_signature_key_b, sizeof(g_mifare_signature_key_b));
+        e_sector[17].foundKey[MF_KEY_B] = 'D';
+
+        // use found key if not supplied
+        if (known_key == false) {
+            known_key = true;
+            sectorno = 17;
+            keytype = MF_KEY_B;
+            memcpy(key, g_mifare_signature_key_b, sizeof(g_mifare_signature_key_b));
+        }
+    }
+
     // read uid to generate a filename for the key file
     char *fptr = GenerateFilename("hf-mf-", "-key.bin");
 
     // check if tag doesn't have static nonce
-    has_staticnonce = detect_classic_static_nonce();
+    int has_staticnonce = detect_classic_static_nonce();
 
     // card prng type (weak=1 / hard=0 / select/card comm error = negative value)
     if (has_staticnonce == NONCE_NORMAL)  {
@@ -2276,7 +2314,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (verbose) {
         PrintAndLogEx(INFO, "======================= " _YELLOW_("SETTINGS") " =======================");
         PrintAndLogEx(INFO, " card sectors .. " _YELLOW_("%d"), sector_cnt);
-        PrintAndLogEx(INFO, " key supplied .. " _YELLOW_("%s"), know_target_key ? "True" : "False");
+        PrintAndLogEx(INFO, " key supplied .. " _YELLOW_("%s"), known_key ? "True" : "False");
         PrintAndLogEx(INFO, " known sector .. " _YELLOW_("%d"), sectorno);
         PrintAndLogEx(INFO, " keytype ....... " _YELLOW_("%c"), (keytype == MF_KEY_B) ? 'B' : 'A');
         PrintAndLogEx(INFO, " known key ..... " _YELLOW_("%s"), sprint_hex(key, sizeof(key)));
@@ -2298,7 +2336,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     uint64_t t1 = msclock();
 
     // check the user supplied key
-    if (know_target_key == false) {
+    if (known_key == false) {
         PrintAndLogEx(WARNING, "no known key was supplied, key recovery might fail");
     } else {
         if (verbose) {
@@ -2318,7 +2356,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
             ++num_found_keys;
         } else {
-            know_target_key = false;
+            known_key = false;
             PrintAndLogEx(FAILED, "Key is wrong. Can't authenticate to sector"_RED_("%3d") " key type "_RED_("%c") " key " _RED_("%s"),
                           sectorno,
                           (keytype == MF_KEY_B) ? 'B' : 'A',
@@ -2336,9 +2374,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                         e_sector[i].foundKey[j] = 'U';
 
                         // If the user supplied secctor / keytype was wrong --> just be nice and correct it ;)
-                        if (know_target_key == false) {
+                        if (known_key == false) {
                             num_to_bytes(e_sector[i].Key[j], 6, key);
-                            know_target_key = true;
+                            known_key = true;
                             sectorno = i;
                             keytype = j;
                             PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
@@ -2364,7 +2402,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         }
     }
 
-    bool load_success = true;
+     bool load_success = true;
     // Load the dictionary
     if (has_filename) {
         res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 6, &key_cnt);
@@ -2461,9 +2499,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 num_to_bytes(e_sector[i].Key[j], 6, tmp_key);
 
                 // Store valid credentials for the nested / hardnested attack if none exist
-                if (know_target_key == false) {
+                if (known_key == false) {
                     num_to_bytes(e_sector[i].Key[j], 6, key);
-                    know_target_key = true;
+                    known_key = true;
                     sectorno = i;
                     keytype = j;
                     PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
@@ -2483,7 +2521,8 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     }
 
     // Check if at least one sector key was found
-    if (know_target_key == false) {
+    if (known_key == false) {
+
         // Check if the darkside attack can be used
         if (prng_type && has_staticnonce != NONCE_STATIC) {
             if (verbose) {
@@ -2520,6 +2559,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                           key64
                          );
         } else {
+
 noValidKeyFound:
             PrintAndLogEx(FAILED, "No usable key was found!");
             free(keyBlock);

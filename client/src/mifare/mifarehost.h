@@ -80,7 +80,7 @@ int mfCheckKeys_file(uint8_t *destfn, uint64_t *key);
 int mfKeyBrute(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint64_t *resultkey);
 
 int mfReadSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *data);
-int mfReadBlock(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t *data);
+int mfReadBlock(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *data);
 
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount);
 int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount);
@@ -104,7 +104,9 @@ int detect_classic_prng(void);
 int detect_classic_nackbug(bool verbose);
 int detect_mf_magic(bool is_mfc);
 int detect_classic_static_nonce(void);
-int detect_mfc_ev1_signature(uint8_t *signature);
+bool detect_mfc_ev1_signature(void);
+int read_mfc_ev1_signature(uint8_t *signature);
+
 
 void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted);
 #endif
