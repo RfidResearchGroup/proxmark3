@@ -677,6 +677,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                         snprintf(pos1, 9, "[%s]", cb_str);
                     }
                 }
+                free(cb_str);
             }
         }
     }

@@ -35,6 +35,8 @@
 #include "util_posix.h"         // msclock
 #include "cmdparser.h"          // detection of flash capabilities
 #include "cmdflashmemspiffs.h"  // upload to flash mem
+#include "mifaredefault.h"      // default keys
+
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;
@@ -880,7 +882,7 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t 
     return PM3_SUCCESS;
 }
 
-int mfReadBlock(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
+int mfReadBlock(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *data) {
     mf_readblock_t payload = {
         .blockno = blockNo,
         .keytype = keyType
@@ -1421,15 +1423,20 @@ int detect_mf_magic(bool is_mfc) {
     return isGeneration;
 }
 
-int detect_mfc_ev1_signature(uint8_t *signature) {
+bool detect_mfc_ev1_signature(void) {
+    uint64_t key = 0;
+    int res = mfCheckKeys(69, MF_KEY_B, false, 1, (uint8_t*)g_mifare_signature_key_b, &key);
+    return (res == PM3_SUCCESS);
+}
+
+int read_mfc_ev1_signature(uint8_t *signature) {
     if (signature == NULL) {
         return PM3_EINVARG;
     }
     uint8_t sign[32] = {0};
-    uint8_t key[] = {0x4b, 0x79, 0x1b, 0xea, 0x7b, 0xcc};
-    int res = mfReadBlock(69, 1, key, sign);
+    int res = mfReadBlock(69, MF_KEY_B, g_mifare_signature_key_b, sign);
     if (res == PM3_SUCCESS) {
-        res = mfReadBlock(70, 1, key, sign + 16);
+        res = mfReadBlock(70, MF_KEY_B, g_mifare_signature_key_b, sign + 16);
         if (res ==  PM3_SUCCESS) {
             memcpy(signature, sign, sizeof(sign));
         }

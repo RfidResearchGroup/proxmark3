@@ -2318,7 +2318,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
 
         uint8_t signature[32] = {0};
-        res = detect_mfc_ev1_signature(signature);
+        res = read_mfc_ev1_signature(signature);
         if (res == PM3_SUCCESS) {
             mfc_ev1_print_signature(card.uid, card.uidlen, signature, sizeof(signature));
         }
