@@ -1607,6 +1607,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         arg_lit0(NULL, "raw", "raw, the key is interpreted as raw block 3/4"),
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0(NULL, "force", "force unsecure card read"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1691,6 +1692,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     bool rawkey = arg_get_lit(ctx, 7);
     bool use_replay = arg_get_lit(ctx, 8);
     bool dense_output = g_session.dense_output || arg_get_lit(ctx, 9);
+    bool force = arg_get_lit(ctx, 10);
 
     CLIParserFree(ctx);
 
@@ -1755,6 +1757,12 @@ static int CmdHFiClassDump(const char *Cmd) {
             app_limit1 = hdr->conf.app_limit;
             app_limit2 = card_app2_limit[type];
         }
+    }
+
+    //
+    if (force) {
+        pagemap |= PICOPASS_NON_SECURE_PAGEMODE;
+        PrintAndLogEx(INFO, "Forcing NON SECURE PAGE dumping");
     }
 
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
@@ -3773,7 +3781,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass encode",
-                  "Encode binary wiegand to block 7\n"
+                  "Encode binary wiegand to block 7,8,9\n"
                   "Use either --bin or --wiegand/--fc/--cn",
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337\n"
                   "hf iclass encode --fc 31 --cn 337 --ki 0                            -> FC 31 CN 337\n"
@@ -3925,8 +3933,12 @@ static int CmdHFiClassEncode(const char *Cmd) {
             return PM3_ESOFT;
         }
 
+        // iceman: only for formats w length smaller than 37. 
+        // Needs a check.
+
+        // increase length to allow setting bit just above real data
+        packed.Length++;
         // Set sentinel bit
-        packed.Length++;// increase length to allow setting bit just above real data
         set_bit_by_position(&packed, true, 0);
 
 #ifdef HOST_LITTLE_ENDIAN
@@ -3958,7 +3970,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _GREEN_("ok") " )  --> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
                 break;
             default:
-                PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
+                PrintAndLogEx(INFO, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
                 break;
         }
     }
