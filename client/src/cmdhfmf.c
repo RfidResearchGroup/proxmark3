@@ -2402,7 +2402,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         }
     }
 
-     bool load_success = true;
+    bool load_success = true;
     // Load the dictionary
     if (has_filename) {
         res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 6, &key_cnt);
@@ -7022,8 +7022,13 @@ static int CmdHF14AGen4Load(const char *cmd) {
         fflush(stdout);
 
         // write block
-        if (mfG4SetBlock(pwd, blockno, data + (blockno * MFBLOCK_SIZE), MAGIC_INIT | MAGIC_OFF) !=  PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Can't set magic card block: %d", blockno);
+        uint8_t flags = 0 ;
+        if (blockno == start) flags |= MAGIC_INIT ;
+        if (blockno == end)   flags |= MAGIC_OFF ;
+
+        int res=mfG4SetBlock(pwd, blockno, data + (blockno * MFBLOCK_SIZE), flags);
+        if ( res !=  PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Can't set magic card block: %d. error=%d", blockno, res);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(data);
             return PM3_ESOFT;
@@ -7163,31 +7168,6 @@ static int CmdHF14AGen4View(const char *Cmd) {
     }
     PrintAndLogEx(SUCCESS, "View magic gen4 GTU MIFARE Classic " _GREEN_("%s"), s);
 
-    // Select card to get UID/UIDLEN information
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "iso14443a card select timeout");
-        return PM3_ETIMEOUT;
-    }
-
-    /*
-        0: couldn't read
-        1: OK, with ATS
-        2: OK, no ATS
-        3: proprietary Anticollision
-    */
-    uint64_t select_status = resp.oldarg[0];
-
-    if (select_status == 0) {
-        PrintAndLogEx(WARNING, "iso14443a card select failed");
-        return PM3_SUCCESS;
-    }
-
-    iso14a_card_select_t card;
-    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
-
     // reserve memory
     uint16_t bytes = block_cnt * MFBLOCK_SIZE;
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
@@ -7206,8 +7186,13 @@ static int CmdHF14AGen4View(const char *Cmd) {
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
 
-        if (mfG4GetBlock(pwd, i, dump + (i * MFBLOCK_SIZE), MAGIC_INIT | MAGIC_OFF) !=  PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Can't get magic card block: %u", i);
+        uint8_t flags = 0 ;
+        if (i == 0)            flags |= MAGIC_INIT ;
+        if (i+1 == block_cnt)  flags |= MAGIC_OFF ;
+
+        int res = mfG4GetBlock(pwd, i, dump + (i * MFBLOCK_SIZE), flags);
+        if ( res !=  PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Can't get magic card block: %u. error=%d", i, res);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);
             return PM3_ESOFT;
