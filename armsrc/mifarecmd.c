@@ -2685,9 +2685,8 @@ OUT:
 }
 
 void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd, uint8_t workFlags) {
-
-    bool setup = workFlags & MAGIC_INIT & 0xFF ;
-    bool  done = workFlags & MAGIC_OFF  & 0xFF ;
+    bool setup = ((workFlags & MAGIC_INIT) == MAGIC_INIT) ;
+    bool  done = ((workFlags & MAGIC_OFF)  == MAGIC_OFF) ;
 
     int res = 0;
     int retval = PM3_SUCCESS;
@@ -2756,8 +2755,8 @@ OUT:
 }
 
 void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t workFlags) {
-    bool setup = workFlags & MAGIC_INIT & 0xFF ;
-    bool  done = workFlags & MAGIC_OFF  & 0xFF ;
+    bool setup = ((workFlags & MAGIC_INIT) == MAGIC_INIT) ;
+    bool  done = ((workFlags & MAGIC_OFF)  == MAGIC_OFF) ;
 
     int res = 0;
     int retval = PM3_SUCCESS;
