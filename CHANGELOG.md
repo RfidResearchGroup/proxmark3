@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added requirements.txt file to tools folder. Minimum to run pm3_tests.sh (@iceman1001)
  - Changed `hf mf hardnested` - now can detect and use MFC EV1 signature sector key (@iceman1001)
  - Changed `hf mf autopwn` - now can detect and use MFC EV1 signature sector key (@iceman1001)
  - Fixed `pm3` shell script now automatically detects WSL2 with USBIPD serial ports (@iceman1001)

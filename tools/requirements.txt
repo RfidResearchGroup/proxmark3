@@ -1,0 +1,2 @@
+ansicolors==1.1.8
+sslcrypto==5.3
