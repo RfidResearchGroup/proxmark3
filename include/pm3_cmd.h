@@ -773,10 +773,14 @@ typedef struct {
 // Got bad CRC                          client/pm3: error in transfer of data,  crc mismatch.
 #define PM3_ECRC              -24
 
+// STATIC Nonce detect                  pm3:  when collecting nonces for hardnested
+#define PM3_ESTATIC_NONCE     -25
+
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program
 #define PM3_EFATAL            -99
+
 
 // LF
 #define LF_FREQ2DIV(f) ((int)(((12000.0 + (f)/2.0)/(f))-1))

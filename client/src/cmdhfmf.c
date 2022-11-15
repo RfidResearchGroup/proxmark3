@@ -2054,6 +2054,9 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
             case PM3_EOPABORTED:
                 PrintAndLogEx(WARNING, "Button pressed. Aborted.\n");
                 break;
+            case PM3_ESTATIC_NONCE:
+                PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted.\n");
+                break;
             default :
                 break;
         }
@@ -2742,6 +2745,10 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                 }
                                 case PM3_EOPABORTED: {
                                     PrintAndLogEx(NORMAL, "\nButton pressed, user aborted");
+                                    break;
+                                }
+                                case PM3_ESTATIC_NONCE: {
+                                    PrintAndLogEx(ERR, "\nError: Static encrypted nonce detected. Aborted.\n");
                                     break;
                                 }
                                 default: {

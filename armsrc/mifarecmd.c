@@ -775,7 +775,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
 
         if (!have_uid) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
-            if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+            if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireNonces: Can't select card (ALL)");
                 continue;
             }
@@ -794,7 +794,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
             }
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
-            if (!iso14443a_fast_select_card(uid, cascade_levels)) {
+            if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireNonces: Can't select card (UID)");
                 continue;
             }
@@ -878,6 +878,9 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
     LED_C_ON();
 
+    uint8_t prev_enc_nt[] = {0,0,0,0};
+    uint8_t prev_counter = 0;
+
     for (uint16_t i = 0; i <= PM3_CMD_DATA_SIZE - 9;) {
 
         // Test if the action was cancelled
@@ -944,6 +947,22 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
             memcpy(buf + i + 8, &nt_par_enc, 1);
             i += 9;
         }
+
+
+        if (prev_enc_nt[0] == receivedAnswer[0] &&
+            prev_enc_nt[1] == receivedAnswer[1] &&
+            prev_enc_nt[2] == receivedAnswer[2] &&
+            prev_enc_nt[3] == receivedAnswer[3]
+        ) {
+            prev_counter++;
+        }
+        memcpy(prev_enc_nt, receivedAnswer, 4);
+        if (prev_counter == 5) {
+            if (g_dbglevel >= DBG_EXTENDED) DbpString("Static encrypted nonce detected, exiting...");
+            isOK = PM3_ESTATIC_NONCE;
+            break;
+        }
+
     }
 
     LED_C_OFF();
@@ -952,7 +971,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
     reply_old(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
     LED_B_OFF();
 
-    if (g_dbglevel >= 3) DbpString("AcquireEncryptedNonces finished");
+    if (g_dbglevel >= DBG_ERROR) DbpString("AcquireEncryptedNonces finished");
 
     if (field_off) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1030,7 +1049,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
                 continue;
             }
 
-            if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+            if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == 0) {
                 if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Can't select card");
                 rtr--;
                 continue;
