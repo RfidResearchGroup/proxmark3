@@ -44,36 +44,36 @@ example =[[
 
 Set a new password of SUDO using the default password of DNGR:
 
-    script run hf_mfu_next -x pass -p DNGR -n SUDO
+    script run hf_ntag_dt -x pass -p DNGR -n SUDO
 
 Enable password protection from hex block 04 onwards (User memory):
 
-    script run hf_mfu_next -x protect -p DNGR -a 04 
+    script run hf_ntag_dt -x protect -p DNGR -a 04 
 
 Enable password protection from hex block E3 onwards (Configuration Pages):
 
-    script run hf_mfu_next -x protect -p DNGR -a E3
+    script run hf_ntag_dt -x protect -p DNGR -a E3
 
 Disable password protection:
 
-    script run hf_mfu_next -x protect -p DNGR -a FF
+    script run hf_ntag_dt -x protect -p DNGR -a FF
 
 Enable the counter and enable read + write password protection on password protected pages 
 (protected block start page specified using -x protect mode):
 
-    script run hf_mfu_next -x conf -p DNGR -c enable -m rw
+    script run hf_ntag_dt -x conf -p DNGR -c enable -m rw
 
 Disable the counter and enable write only password protection on password protected pages
 (protected block start specified using -x protect mode):
 
-    script run hf_mfu_next -x conf -p DNGR -c disable -m w
+    script run hf_ntag_dt -x conf -p DNGR -c disable -m w
 
 ]]
 usage = [[
 
-    script run hf_mfu_next -x pass -p <password> -n <new_password>
-    script run hf_mfu_next -x protect -p <password> -a <auth0_block>
-    script run hf_mfu_next -x conf -p <password> -c <enable/disable> -m <r/rw>
+    script run hf_ntag_dt -x pass -p <password> -n <new_password>
+    script run hf_ntag_dt -x protect -p <password> -a <auth0_block>
+    script run hf_ntag_dt -x conf -p <password> -c <enable/disable> -m <r/rw>
 
 ]]
 arguments = [[
