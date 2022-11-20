@@ -763,7 +763,7 @@ static int CmdStandalone(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint8_t arg = arg_get_u32(ctx, 1);
+    uint8_t arg = arg_get_u32_def(ctx, 1, 1);
     CLIParserFree(ctx);
     clearCommandBuffer();
     SendCommandNG(CMD_STANDALONE, (uint8_t *)&arg, sizeof(arg));
@@ -938,7 +938,7 @@ static int CmdPing(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t len = arg_get_u32(ctx, 1);
+    uint32_t len = arg_get_u32_def(ctx, 1, 32);
     CLIParserFree(ctx);
 
     if (len > PM3_CMD_DATA_SIZE)
