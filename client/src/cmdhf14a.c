@@ -670,7 +670,7 @@ int CmdHF14ASim(const char *Cmd) {
                   "hf 14a sim -t 4                 -> ISO/IEC 14443-4\n"
                   "hf 14a sim -t 5                 -> MIFARE Tnp3xxx\n"
                   "hf 14a sim -t 6                 -> MIFARE Mini\n"
-                  "hf 14a sim -t 7                 -> MFUEV1 / NTAG 215 Amiibo\n"
+                  "hf 14a sim -t 7                 -> MFU EV1 / NTAG 215 Amiibo\n"
                   "hf 14a sim -t 8                 -> MIFARE Classic 4k\n"
                   "hf 14a sim -t 9                 -> FM11RF005SH Shanghai Metro\n"
                   "hf 14a sim -t 10                -> ST25TA IKEA Rothult\n");
@@ -687,7 +687,7 @@ int CmdHF14ASim(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int tagtype = arg_get_int(ctx, 1);
+    int tagtype = arg_get_int_def(ctx, 1, 1);
 
     int uid_len = 0;
     uint8_t uid[10] = {0};
@@ -727,6 +727,11 @@ int CmdHF14ASim(const char *Cmd) {
 
     CLIParserFree(ctx);
 
+    if (tagtype > 10) {
+        PrintAndLogEx(ERR, "Undefined tag %d", tagtype);
+        return PM3_EINVARG;
+    }
+
     sector_t *k_sector = NULL;
     uint8_t k_sectorsCount = 40;
 
@@ -752,7 +757,7 @@ int CmdHF14ASim(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
     bool keypress = kbd_enter_pressed();
-    while (!keypress) {
+    while (keypress == false) {
 
         if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0) continue;
         if (resp.status != PM3_SUCCESS) break;

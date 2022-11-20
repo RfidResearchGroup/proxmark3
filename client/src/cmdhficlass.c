@@ -706,7 +706,7 @@ static int CmdHFiClassSim(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int sim_type = arg_get_int(ctx, 1);
+    int sim_type = arg_get_int_def(ctx, 1, 3);
 
     int csn_len = 0;
     uint8_t csn[8] = {0};

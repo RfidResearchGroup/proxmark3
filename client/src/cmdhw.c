@@ -597,7 +597,7 @@ static int CmdLCD(const char *Cmd) {
     int r_len = 0;
     uint8_t raw[1] = {0};
     CLIGetHexWithReturn(ctx, 1, raw, &r_len);
-    int j = arg_get_int(ctx, 2);
+    int j = arg_get_int_def(ctx, 2, 1);
     if (j < 1) {
         PrintAndLogEx(WARNING, "Count must be larger than zero");
         return PM3_EINVARG;
