@@ -1570,10 +1570,10 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize,
 
     // get UID
     if (MifareAuthState == masNone) {
-        if (isResponse && cmdsize == 5 ) {
+        if (isResponse && cmdsize == 5) {
             ClearAuthData();
             AuthData.uid = bytes_to_num(&cmd[0], 4);
-        }        
+        }
         if (cmdsize == 9 && cmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && cmd[1] == 0x70) {
             ClearAuthData();
             AuthData.uid = bytes_to_num(&cmd[2], 4);

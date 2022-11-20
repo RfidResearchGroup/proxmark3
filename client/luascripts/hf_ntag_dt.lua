@@ -27,7 +27,7 @@ Default hf mfu info:
 [=]   PACK [230/0xE6]: 00 00       - (cannot be read)
 [=]   RFU  [230/0xE6]:       00 00 - (cannot be read)
 ----------------------------------------------------------------------
-  
+
 Default blocks 0xE0 to 0xE6:
 -------------------------------------
 [=] 224/0xE0 | 00 00 00 00 | 0 | ....
@@ -48,7 +48,7 @@ Set a new password of SUDO using the default password of DNGR:
 
 Enable password protection from hex block 04 onwards (User memory):
 
-    script run hf_ntag_dt -x protect -p DNGR -a 04 
+    script run hf_ntag_dt -x protect -p DNGR -a 04
 
 Enable password protection from hex block E3 onwards (Configuration Pages):
 
@@ -58,7 +58,7 @@ Disable password protection:
 
     script run hf_ntag_dt -x protect -p DNGR -a FF
 
-Enable the counter and enable read + write password protection on password protected pages 
+Enable the counter and enable read + write password protection on password protected pages
 (protected block start page specified using -x protect mode):
 
     script run hf_ntag_dt -x conf -p DNGR -c enable -m rw
@@ -154,7 +154,7 @@ local function main(args)
                 command = 'hf mfu wrbl -b 228 -d 80050000 -k '..passwd
                 msg('Disabling counter and setting read/write password protection on protected pages : \n\n'..command)
                 core.console(command)
-            end        
+            end
         end
     elseif mode == 'protect' then
         command = 'hf mfu wrbl -k '..passwd..' -b 227 -d 040000'..auth0_block

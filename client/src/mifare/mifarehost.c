@@ -1425,7 +1425,7 @@ int detect_mf_magic(bool is_mfc) {
 
 bool detect_mfc_ev1_signature(void) {
     uint64_t key = 0;
-    int res = mfCheckKeys(69, MF_KEY_B, false, 1, (uint8_t*)g_mifare_signature_key_b, &key);
+    int res = mfCheckKeys(69, MF_KEY_B, false, 1, (uint8_t *)g_mifare_signature_key_b, &key);
     return (res == PM3_SUCCESS);
 }
 

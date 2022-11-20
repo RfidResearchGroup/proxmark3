@@ -878,7 +878,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
     LED_C_ON();
 
-    uint8_t prev_enc_nt[] = {0,0,0,0};
+    uint8_t prev_enc_nt[] = {0, 0, 0, 0};
     uint8_t prev_counter = 0;
 
     for (uint16_t i = 0; i <= PM3_CMD_DATA_SIZE - 9;) {
@@ -950,10 +950,10 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
 
         if (prev_enc_nt[0] == receivedAnswer[0] &&
-            prev_enc_nt[1] == receivedAnswer[1] &&
-            prev_enc_nt[2] == receivedAnswer[2] &&
-            prev_enc_nt[3] == receivedAnswer[3]
-        ) {
+                prev_enc_nt[1] == receivedAnswer[1] &&
+                prev_enc_nt[2] == receivedAnswer[2] &&
+                prev_enc_nt[3] == receivedAnswer[3]
+           ) {
             prev_counter++;
         }
         memcpy(prev_enc_nt, receivedAnswer, 4);
@@ -2849,7 +2849,7 @@ OUT:
     if (done || retval != 0) FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     if (done || retval != 0) set_tracing(false);
-    BigBuf_free();    
+    BigBuf_free();
 }
 
 void MifareSetMod(uint8_t *datain) {

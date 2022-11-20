@@ -1842,7 +1842,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf hardnested",
                   "Nested attack for hardened MIFARE Classic cards.\n"
                   "if card is EV1, command can detect and use known key see example below\n"
-                  "\n"
+                  " \n"
                   "`--i<X>`  set type of SIMD instructions. Without this flag programs autodetect it.\n"
                   " or \n"
                   "    hf mf hardnested -r --tk [known target key]\n"
@@ -7033,8 +7033,8 @@ static int CmdHF14AGen4Load(const char *cmd) {
         if (blockno == start) flags |= MAGIC_INIT ;
         if (blockno == end)   flags |= MAGIC_OFF ;
 
-        int res=mfG4SetBlock(pwd, blockno, data + (blockno * MFBLOCK_SIZE), flags);
-        if ( res !=  PM3_SUCCESS) {
+        int res = mfG4SetBlock(pwd, blockno, data + (blockno * MFBLOCK_SIZE), flags);
+        if (res !=  PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Can't set magic card block: %d. error=%d", blockno, res);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(data);
@@ -7195,10 +7195,10 @@ static int CmdHF14AGen4View(const char *Cmd) {
 
         uint8_t flags = 0 ;
         if (i == 0)            flags |= MAGIC_INIT ;
-        if (i+1 == block_cnt)  flags |= MAGIC_OFF ;
+        if (i + 1 == block_cnt)  flags |= MAGIC_OFF ;
 
         int res = mfG4GetBlock(pwd, i, dump + (i * MFBLOCK_SIZE), flags);
-        if ( res !=  PM3_SUCCESS) {
+        if (res !=  PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Can't get magic card block: %u. error=%d", i, res);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);

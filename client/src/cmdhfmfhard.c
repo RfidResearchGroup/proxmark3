@@ -2251,7 +2251,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
             update_reduction_rate(0.0, true);
 
             int res = simulate_acquire_nonces();
-            if ( res != PM3_SUCCESS) {
+            if (res != PM3_SUCCESS) {
                 return res;
             }
 
@@ -2356,7 +2356,7 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
         init_nonce_memory();
         update_reduction_rate(0.0, true);
 
-        int res; 
+        int res;
         if (nonce_file_read) {  // use pre-acquired data from file nonces.bin
             res = read_nonce_file(filename);
             if (res != PM3_SUCCESS) {
