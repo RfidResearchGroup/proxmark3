@@ -669,7 +669,7 @@ int CmdHF14ASim(const char *Cmd) {
                   "hf 14a sim -t 4                     -> ISO/IEC 14443-4\n"
                   "hf 14a sim -t 5                     -> MIFARE Tnp3xxx\n"
                   "hf 14a sim -t 6                     -> MIFARE Mini\n"
-                  "hf 14a sim -t 7                     -> Amiibo (NTAG 215),  pack 0x8080\n"
+                  "hf 14a sim -t 7                     -> MIFARE Ultralight EV1, Amiibo (NTAG 215),  pack 0x8080\n"
                   "hf 14a sim -t 8                     -> MIFARE Classic 4k\n"
                   "hf 14a sim -t 9                     -> FM11RF005SH Shanghai Metro\n"
                   "hf 14a sim -t 10                    -> ST25TA IKEA Rothult\n");
