@@ -715,7 +715,7 @@ int CmdHF14ASim(const char *Cmd) {
         useUIDfromEML = false;
     }
 
-    uint8_t exitAfterNReads = arg_get_int(ctx, 3);
+    uint8_t exitAfterNReads = arg_get_int_def(ctx, 3, 0);
 
     if (arg_get_lit(ctx, 4)) {
         flags |= FLAG_NR_AR_ATTACK;
