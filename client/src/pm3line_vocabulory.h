@@ -379,6 +379,7 @@ const static vocabulory_t vocabulory[] = {
     { 1, "hf mfu view" }, 
     { 0, "hf mfu wrbl" }, 
     { 0, "hf mfu eload" }, 
+    { 0, "hf mfu esave" }, 
     { 0, "hf mfu eview" }, 
     { 0, "hf mfu sim" }, 
     { 0, "hf mfu setpwd" }, 
