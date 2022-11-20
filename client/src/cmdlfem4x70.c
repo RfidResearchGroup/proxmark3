@@ -165,7 +165,7 @@ int CmdEM4x70Write(const char *Cmd) {
 
     CLIParserInit(&ctx, "lf em 4x70 write",
                   "Write EM4x70\n",
-                  "lf em 4x70 write -b 15 -d c0de -> write 'c0de' to block 15\n"
+                  "lf em 4x70 write -b 15 -d c0de       -> write 'c0de' to block 15\n"
                   "lf em 4x70 write -b 15 -d c0de --par -> adds parity bit to commands\n"
                  );
 
@@ -181,7 +181,7 @@ int CmdEM4x70Write(const char *Cmd) {
 
     etd.parity = arg_get_lit(ctx, 1);
 
-    int addr = arg_get_int(ctx, 2);
+    int addr = arg_get_int_def(ctx, 2, 1);
 
     int word_len = 0;
     uint8_t word[2] = {0x0};
@@ -190,12 +190,12 @@ int CmdEM4x70Write(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (addr < 0 || addr >= EM4X70_NUM_BLOCKS) {
-        PrintAndLogEx(FAILED, "block has to be within range [0, 15]");
+        PrintAndLogEx(FAILED, "block has to be within range [0, 15] got: %d", addr);
         return PM3_EINVARG;
     }
 
     if (word_len != 2) {
-        PrintAndLogEx(FAILED, "word/data length must be 2 bytes instead of %d", word_len);
+        PrintAndLogEx(FAILED, "word/data length must be 2 bytes. got: %d", word_len);
         return PM3_EINVARG;
     }
 

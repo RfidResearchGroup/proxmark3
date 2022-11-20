@@ -2730,8 +2730,8 @@ static int CmdHF14AMfUSim(const char *Cmd) {
                   "The UID from emulator memory will be used if not specified.\n"
                   "See `hf 14a sim -h` to see available types. You want 2 or 7 usually.",
                   "hf mfu sim -t 2 --uid 11223344556677        -> MIFARE Ultralight\n"
-                  "hf mfu sim -t 7 --uid 11223344556677 -n 5   -> MFUEV1 / NTAG 215 Amiibo\n"
-                  "hf mfu sim -t 7                             -> MFUEV1 / NTAG 215 Amiibo"
+                  "hf mfu sim -t 7 --uid 11223344556677 -n 5   -> MFU EV1 / NTAG 215 Amiibo\n"
+                  "hf mfu sim -t 7                             -> MFU EV1 / NTAG 215 Amiibo"
                  );
 
     void *argtable[] = {
