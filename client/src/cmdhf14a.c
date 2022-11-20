@@ -662,17 +662,18 @@ static int CmdHF14ACUIDs(const char *Cmd) {
 int CmdHF14ASim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a sim",
-                  "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID",
-                  "hf 14a sim -t 1 --uid 11223344      -> MIFARE Classic 1k\n"
-                  "hf 14a sim -t 2                     -> MIFARE Ultralight\n"
-                  "hf 14a sim -t 3                     -> MIFARE Desfire\n"
-                  "hf 14a sim -t 4                     -> ISO/IEC 14443-4\n"
-                  "hf 14a sim -t 5                     -> MIFARE Tnp3xxx\n"
-                  "hf 14a sim -t 6                     -> MIFARE Mini\n"
-                  "hf 14a sim -t 7                     -> MIFARE Ultralight EV1, Amiibo (NTAG 215),  pack 0x8080\n"
-                  "hf 14a sim -t 8                     -> MIFARE Classic 4k\n"
-                  "hf 14a sim -t 9                     -> FM11RF005SH Shanghai Metro\n"
-                  "hf 14a sim -t 10                    -> ST25TA IKEA Rothult\n");
+                  "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n"
+                  "Use type 7 for Mifare Ultralight EV1, Amiibo (NTAG215 pack 0x8080)",
+                  "hf 14a sim -t 1 --uid 11223344  -> MIFARE Classic 1k\n"
+                  "hf 14a sim -t 2                 -> MIFARE Ultralight\n"
+                  "hf 14a sim -t 3                 -> MIFARE Desfire\n"
+                  "hf 14a sim -t 4                 -> ISO/IEC 14443-4\n"
+                  "hf 14a sim -t 5                 -> MIFARE Tnp3xxx\n"
+                  "hf 14a sim -t 6                 -> MIFARE Mini\n"
+                  "hf 14a sim -t 7                 -> MFUEV1 / NTAG 215 Amiibo\n"
+                  "hf 14a sim -t 8                 -> MIFARE Classic 4k\n"
+                  "hf 14a sim -t 9                 -> FM11RF005SH Shanghai Metro\n"
+                  "hf 14a sim -t 10                -> ST25TA IKEA Rothult\n");
 
     void *argtable[] = {
         arg_param_begin,
