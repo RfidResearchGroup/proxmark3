@@ -1088,8 +1088,8 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
              protocol);
     char example[200] = {0};
     snprintf(example, sizeof(example) - 1,
-             "%s list -f              -> show frame delay times\n"
-             "%s list -1              -> use trace buffer ",
+             "%s list --frame      -> show frame delay times\n"
+             "%s list -1           -> use trace buffer ",
              alias, alias);
     char fullalias[100] = {0};
     snprintf(fullalias, sizeof(fullalias) - 1, "%s list", alias);
@@ -1098,20 +1098,20 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("1", "buffer", "use data from trace buffer"),
-        arg_lit0("f", NULL, "show frame delay times"),
+        arg_lit0(NULL, "frame", "show frame delay times"),
         arg_lit0("c", NULL, "mark CRC bytes"),
         arg_lit0("r", NULL, "show relative times (gap and duration)"),
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
                  "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
-        arg_str0(NULL, "dict", "<file>", "use dictionary keys file"),
+        arg_str0("f", "file", "<fn>", "filename of dictionary"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
     char args[128] = {0};
-    snprintf(args, sizeof(args), "-t %s ", protocol);
+    snprintf(args, sizeof(args), "-c -t %s ", protocol);
     strncat(args, Cmd, sizeof(args) - strlen(args) - 1);
     return CmdTraceList(args);
 }
@@ -1141,22 +1141,22 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t thinfilm -> interpret as " _YELLOW_("Thinfilm") "\n"
                   "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") "\n"
                   "\n"
-                  "trace list -t mf --dict <mfc_default_keys>    -> use dictionary keys file\n"
-                  "trace list -t 14a -f                          -> show frame delay times\n"
-                  "trace list -t 14a -1                          -> use trace buffer "
+                  "trace list -t mf -f mfc_default_keys.dic     -> use default dictionary file\n"
+                  "trace list -t 14a --frame                    -> show frame delay times\n"
+                  "trace list -t 14a -1                         -> use trace buffer "
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("1", "buffer", "use data from trace buffer"),
-        arg_lit0("f", NULL, "show frame delay times"),
+        arg_lit0(NULL, "frame", "show frame delay times"),
         arg_lit0("c", NULL, "mark CRC bytes"),
         arg_lit0("r", NULL, "show relative times (gap and duration)"),
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
                  "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
         arg_str0("t", "type", NULL, "protocol to annotate the trace"),
-        arg_str0(NULL, "dict", "<fn>", "use dictionary keys file"),
+        arg_str0("f", "file", "<fn>", "filename of dictionary"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
