@@ -4025,7 +4025,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         }
 
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Loading file from spiffs to emulatore memory failed");
+            PrintAndLogEx(FAILED, "Loading file from spiffs to emulator memory failed");
             return PM3_EFLASH;
         }
 

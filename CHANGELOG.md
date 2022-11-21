@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mfu esave` - saves emulator memory to mfu dump file (@DidierA)
  - Added luascript `hf_mfu_ntag` - Script for configuring NTAG216 configuration pages (@flamebarke)
  - Changed `hf mf hardnested` - a detection for static encrypted nonces (@iceman1001)
  - Added requirements.txt file to tools folder. Minimum to run pm3_tests.sh (@iceman1001)

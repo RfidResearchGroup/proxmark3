@@ -868,22 +868,22 @@
             "command": "emv list",
             "description": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "emv list -f -> show frame delay times",
+                "emv list --frame -> show frame delay times",
                 "emv list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "emv list [-h1fcrux] [--dict <file>]"
+            "usage": "emv list [-h1crux] [--frame] [-f <fn>]"
         },
         "emv pse": {
             "command": "emv pse",
@@ -1145,22 +1145,22 @@
             "command": "hf 14a list",
             "description": "Alias of `trace list -t 14a` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf 14a list -f -> show frame delay times",
+                "hf 14a list --frame -> show frame delay times",
                 "hf 14a list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf 14a list [-h1fcrux] [--dict <file>]"
+            "usage": "hf 14a list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf 14a ndefformat": {
             "command": "hf 14a ndefformat",
@@ -1259,7 +1259,7 @@
         },
         "hf 14a sim": {
             "command": "hf 14a sim",
-            "description": "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID",
+            "description": "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID Use type 7 for Mifare Ultralight EV1, Amiibo (NTAG215 pack 0x8080)",
             "notes": [
                 "hf 14a sim -t 1 --uid 11223344 -> MIFARE Classic 1k",
                 "hf 14a sim -t 2 -> MIFARE Ultralight",
@@ -1267,7 +1267,7 @@
                 "hf 14a sim -t 4 -> ISO/IEC 14443-4",
                 "hf 14a sim -t 5 -> MIFARE Tnp3xxx",
                 "hf 14a sim -t 6 -> MIFARE Mini",
-                "hf 14a sim -t 7 -> Amiibo (NTAG 215), pack 0x8080",
+                "hf 14a sim -t 7 -> MFU EV1 / NTAG 215 Amiibo",
                 "hf 14a sim -t 8 -> MIFARE Classic 4k",
                 "hf 14a sim -t 9 -> FM11RF005SH Shanghai Metro",
                 "hf 14a sim -t 10 -> ST25TA IKEA Rothult"
@@ -1363,22 +1363,22 @@
             "command": "hf 14b list",
             "description": "Alias of `trace list -t 14b` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf 14b list -f -> show frame delay times",
+                "hf 14b list --frame -> show frame delay times",
                 "hf 14b list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf 14b list [-h1fcrux] [--dict <file>]"
+            "usage": "hf 14b list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf 14b ndefread": {
             "command": "hf 14b ndefread",
@@ -1637,22 +1637,22 @@
             "command": "hf 15 list",
             "description": "Alias of `trace list -t 15` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf 15 list -f -> show frame delay times",
+                "hf 15 list --frame -> show frame delay times",
                 "hf 15 list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf 15 list [-h1fcrux] [--dict <file>]"
+            "usage": "hf 15 list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf 15 raw": {
             "command": "hf 15 raw",
@@ -2232,22 +2232,22 @@
             "command": "hf emrtd list",
             "description": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf emrtd list -f -> show frame delay times",
+                "hf emrtd list --frame -> show frame delay times",
                 "hf emrtd list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf emrtd list [-h1fcrux] [--dict <file>]"
+            "usage": "hf emrtd list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf epa cnonces": {
             "command": "hf epa cnonces",
@@ -2367,22 +2367,22 @@
             "command": "hf felica list",
             "description": "Alias of `trace list -t felica` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf felica list -f -> show frame delay times",
+                "hf felica list --frame -> show frame delay times",
                 "hf felica list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf felica list [-h1fcrux] [--dict <file>]"
+            "usage": "hf felica list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf felica litedump": {
             "command": "hf felica litedump",
@@ -2635,22 +2635,22 @@
             "command": "hf fido list",
             "description": "Alias of `trace list -t 14a` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf fido list -f -> show frame delay times",
+                "hf fido list --frame -> show frame delay times",
                 "hf fido list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf fido list [-h1fcrux] [--dict <file>]"
+            "usage": "hf fido list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf fido make": {
             "command": "hf fido make",
@@ -2969,9 +2969,10 @@
                 "--elite elite computations applied to key",
                 "--raw raw, the key is interpreted as raw block 3/4",
                 "--nr replay of NR/MAC",
-                "-z, --dense dense dump output style"
+                "-z, --dense dense dump output style",
+                "--force force unsecure card read"
             ],
-            "usage": "hf iclass dump [-hz] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr]"
+            "usage": "hf iclass dump [-hz] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr] [--force]"
         },
         "hf iclass eload": {
             "command": "hf iclass eload",
@@ -2990,7 +2991,7 @@
         },
         "hf iclass encode": {
             "command": "hf iclass encode",
-            "description": "Encode binary wiegand to block 7 Use either --bin or --wiegand/--fc/--cn",
+            "description": "Encode binary wiegand to block 7,8,9 Use either --bin or --wiegand/--fc/--cn",
             "notes": [
                 "hf iclass encode --bin 10001111100000001010100011 --ki 0 -> FC 31 CN 337",
                 "hf iclass encode --fc 31 --cn 337 --ki 0 -> FC 31 CN 337",
@@ -3084,22 +3085,22 @@
             "command": "hf iclass list",
             "description": "Alias of `trace list -t iclass` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf iclass list -f -> show frame delay times",
+                "hf iclass list --frame -> show frame delay times",
                 "hf iclass list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf iclass list [-h1fcrux] [--dict <file>]"
+            "usage": "hf iclass list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf iclass loclass": {
             "command": "hf iclass loclass",
@@ -3573,22 +3574,22 @@
             "command": "hf legic list",
             "description": "Alias of `trace list -t legic` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf legic list -f -> show frame delay times",
+                "hf legic list --frame -> show frame delay times",
                 "hf legic list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf legic list [-h1fcrux] [--dict <file>]"
+            "usage": "hf legic list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf legic rdbl": {
             "command": "hf legic rdbl",
@@ -3695,22 +3696,22 @@
             "command": "hf list",
             "description": "Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf list -f -> show frame delay times",
+                "hf list --frame -> show frame delay times",
                 "hf list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf list [-h1fcrux] [--dict <file>]"
+            "usage": "hf list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf lto dump": {
             "command": "hf lto dump",
@@ -3749,22 +3750,22 @@
             "command": "hf lto list",
             "description": "Alias of `trace list -t lto` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf lto list -f -> show frame delay times",
+                "hf lto list --frame -> show frame delay times",
                 "hf lto list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf lto list [-h1fcrux] [--dict <file>]"
+            "usage": "hf lto list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf lto rdbl": {
             "command": "hf lto rdbl",
@@ -4344,7 +4345,7 @@
                 "--start <dec> index of block to start writing (default 0)",
                 "--end <dec> index of block to end writing (default last block)"
             ],
-            "usage": "hf mf gload [-hv] [--mini] [--1k] [--2k] [--4k] [-p <hex>] [-f <fn>] [--emu] --start <dec> --end <dec>"
+            "usage": "hf mf gload [-hv] [--mini] [--1k] [--2k] [--4k] [-p <hex>] [-f <fn>] [--emu] [--start <dec>] [--end <dec>]"
         },
         "hf mf gsetblk": {
             "command": "hf mf gsetblk",
@@ -4382,8 +4383,9 @@
         },
         "hf mf hardnested": {
             "command": "hf mf hardnested",
-            "description": "Nested attack for hardened MIFARE Classic cards. `--i<X>` set type of SIMD instructions. Without this flag programs autodetect it. or hf mf hardnested -r --tk [known target key] Add the known target key to check if it is present in the remaining key space hf mf hardnested --blk 0 -a -k A0A1A2A3A4A5 --tblk 4 --ta --tk FFFFFFFFFFFF",
+            "description": "Nested attack for hardened MIFARE Classic cards. if card is EV1, command can detect and use known key see example below `--i<X>` set type of SIMD instructions. Without this flag programs autodetect it. or hf mf hardnested -r --tk [known target key] Add the known target key to check if it is present in the remaining key space hf mf hardnested --blk 0 -a -k A0A1A2A3A4A5 --tblk 4 --ta --tk FFFFFFFFFFFF",
             "notes": [
+                "hf mf hardnested --tblk 4 --ta -> works for MFC EV1",
                 "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta",
                 "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -w",
                 "hf mf hardnested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta -f nonces.bin -w -s",
@@ -4430,22 +4432,22 @@
             "command": "hf mf list",
             "description": "Alias of `trace list -t mf` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf mf list -f -> show frame delay times",
+                "hf mf list --frame -> show frame delay times",
                 "hf mf list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf mf list [-h1fcrux] [--dict <file>]"
+            "usage": "hf mf list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf mf mad": {
             "command": "hf mf mad",
@@ -5609,22 +5611,22 @@
             "command": "hf mfdes list",
             "description": "Alias of `trace list -t des` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf mfdes list -f -> show frame delay times",
+                "hf mfdes list --frame -> show frame delay times",
                 "hf mfdes list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf mfdes list [-h1fcrux] [--dict <file>]"
+            "usage": "hf mfdes list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf mfdes lsapp": {
             "command": "hf mfdes lsapp",
@@ -6171,17 +6173,35 @@
             ],
             "usage": "hf mfu eload [-h] -f <fn> [-q <dec>]"
         },
-        "hf mfu eview": {
-            "command": "hf mfu eview",
-            "description": "It displays emulator memory",
+        "hf mfu esave": {
+            "command": "hf mfu esave",
+            "description": "Saves emulator memory to a MIFARE Ultralight/NTAG dump file (bin/eml/json) By default number of pages saved depends on defined tag type. You can overrife this with option --end.",
             "notes": [
-                "hf mfu eview"
+                "hf mfu esave",
+                "hf mfu esave --end 255 -> saves whole memory",
+                "hf mfu esave -f hf-mfu-04010203040506-dump.json"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-e, --end <dec> index of last block",
+                "-f, --file <fn> filename of dump"
             ],
-            "usage": "hf mfu eview [-h]"
+            "usage": "hf mfu esave [-h] [-e <dec>] [-f <fn>]"
+        },
+        "hf mfu eview": {
+            "command": "hf mfu eview",
+            "description": "Displays emulator memory By default number of pages shown depends on defined tag type. You can overrife this with option --end.",
+            "notes": [
+                "hf mfu eview",
+                "hf mfu eview --end 255 -> dumps whole memory"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-e, --end <dec> index of last block"
+            ],
+            "usage": "hf mfu eview [-h] [-e <dec>]"
         },
         "hf mfu help": {
             "command": "hf mfu help",
@@ -6349,8 +6369,8 @@
             "description": "Simulate MIFARE Ultralight family type based upon ISO/IEC 14443 type A tag with 4,7 or 10 byte UID from emulator memory. See `hf mfu eload` first. The UID from emulator memory will be used if not specified. See `hf 14a sim -h` to see available types. You want 2 or 7 usually.",
             "notes": [
                 "hf mfu sim -t 2 --uid 11223344556677 -> MIFARE Ultralight",
-                "hf mfu sim -t 7 --uid 11223344556677 -n 5 -> Amiibo (NTAG 215), pack 0x8080",
-                "hf mfu sim -t 7 -> Amiibo (NTAG 215), pack 0x8080"
+                "hf mfu sim -t 7 --uid 11223344556677 -n 5 -> MFU EV1 / NTAG 215 Amiibo",
+                "hf mfu sim -t 7 -> MFU EV1 / NTAG 215 Amiibo"
             ],
             "offline": false,
             "options": [
@@ -6491,22 +6511,22 @@
             "command": "hf seos list",
             "description": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf seos list -f -> show frame delay times",
+                "hf seos list --frame -> show frame delay times",
                 "hf seos list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf seos list [-h1fcrux] [--dict <file>]"
+            "usage": "hf seos list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf sniff": {
             "command": "hf sniff",
@@ -6549,22 +6569,22 @@
             "command": "hf st25ta list",
             "description": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf st25ta list -f -> show frame delay times",
+                "hf st25ta list --frame -> show frame delay times",
                 "hf st25ta list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf st25ta list [-h1fcrux] [--dict <file>]"
+            "usage": "hf st25ta list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf st25ta ndefread": {
             "command": "hf st25ta ndefread",
@@ -6699,22 +6719,22 @@
             "command": "hf thinfilm list",
             "description": "Alias of `trace list -t thinfilm` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf thinfilm list -f -> show frame delay times",
+                "hf thinfilm list --frame -> show frame delay times",
                 "hf thinfilm list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf thinfilm list [-h1fcrux] [--dict <file>]"
+            "usage": "hf thinfilm list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf thinfilm sim": {
             "command": "hf thinfilm sim",
@@ -6770,22 +6790,22 @@
             "command": "hf topaz list",
             "description": "Alias of `trace list -t topaz` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf topaz list -f -> show frame delay times",
+                "hf topaz list --frame -> show frame delay times",
                 "hf topaz list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf topaz list [-h1fcrux] [--dict <file>]"
+            "usage": "hf topaz list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf topaz raw": {
             "command": "hf topaz raw",
@@ -8513,22 +8533,22 @@
             "command": "lf hitag list",
             "description": "Alias of `trace list -t hitag2` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "lf hitag list -f -> show frame delay times",
+                "lf hitag list --frame -> show frame delay times",
                 "lf hitag list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "lf hitag list [-h1fcrux] [--dict <file>]"
+            "usage": "lf hitag list [-h1crux] [--frame] [-f <fn>]"
         },
         "lf hitag reader": {
             "command": "lf hitag reader",
@@ -11258,22 +11278,22 @@
             "command": "smart list",
             "description": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "smart list -f -> show frame delay times",
+                "smart list --frame -> show frame delay times",
                 "smart list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "--dict <file> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "smart list [-h1fcrux] [--dict <file>]"
+            "usage": "smart list [-h1crux] [--frame] [-f <fn>]"
         },
         "smart raw": {
             "command": "smart raw",
@@ -11380,24 +11400,24 @@
                 "trace list -t thinfilm -> interpret as Thinfilm",
                 "trace list -t topaz -> interpret as Topaz",
                 "",
-                "trace list -t mf --dict <mfc_default_keys> -> use dictionary keys file",
-                "trace list -t 14a -f -> show frame delay times",
+                "trace list -t mf -f mfc_default_keys.dic -> use default dictionary file",
+                "trace list -t 14a --frame -> show frame delay times",
                 "trace list -t 14a -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
-                "-f show frame delay times",
+                "--frame show frame delay times",
                 "-c mark CRC bytes",
                 "-r show relative times (gap and duration)",
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
                 "-t, --type <string> protocol to annotate the trace",
-                "--dict <fn> use dictionary keys file"
+                "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "trace list [-h1fcrux] [-t <string>] [--dict <fn>]"
+            "usage": "trace list [-h1crux] [--frame] [-t <string>] [-f <fn>]"
         },
         "trace load": {
             "command": "trace load",
@@ -11595,8 +11615,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 731,
+        "commands_extracted": 732,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-11-05T18:17:23"
+        "extracted_on": "2022-11-20T20:19:15"
     }
 }

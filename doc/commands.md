@@ -557,7 +557,8 @@ Check column "offline" for their availability.
 |`hf mfu restore         `|N       |`Restore a dump onto a MFU MAGIC tag`
 |`hf mfu view            `|Y       |`Display content from tag dump file`
 |`hf mfu wrbl            `|N       |`Write block`
-|`hf mfu eload           `|N       |`Load Ultralight .eml dump file into emulator memory`
+|`hf mfu eload           `|N       |`Load Ultralight dump file into emulator memory`
+|`hf mfu esave           `|N       |`Save Ultralight dump file from emulator memory`
 |`hf mfu eview           `|N       |`View emulator memory`
 |`hf mfu sim             `|N       |`Simulate MIFARE Ultralight from emulator memory`
 |`hf mfu setpwd          `|N       |`Set 3DES key - Ultralight-C`

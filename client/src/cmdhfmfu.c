@@ -2718,6 +2718,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
     PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfu sim -t 7`") " to simulate an Amiibo.");
     return res;
 }
+
 //
 //  Simulate tag
 //
@@ -4098,39 +4099,133 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     return status;
 }
 
-static int CmdHF14AMfuEView(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfu eview",
-                  "It displays emulator memory",
-                  "hf mfu eview"
-                 );
+// utility function. Retrieves emulator memory
+static int GetMfuDumpFromEMul(mfu_dump_t **buf) {
 
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    uint16_t blocks = MFU_MAX_BLOCKS;
-    uint16_t bytes = MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH;
-
-    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    uint8_t *dump = malloc(sizeof(mfu_dump_t));
     if (dump == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
 
     PrintAndLogEx(INFO, "downloading from emulator memory");
-    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF_EML, dump, sizeof(mfu_dump_t), 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
         return PM3_ETIMEOUT;
     }
 
-    printMFUdumpEx((mfu_dump_t *)dump, blocks, 0);
+    *buf = (mfu_dump_t *)dump ;
+    return PM3_SUCCESS ;
+}
+
+static int CmdHF14AMfuEView(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu eview",
+                  "Displays emulator memory\n"
+                  "By default number of pages shown depends on defined tag type.\n"
+                  "You can override this with option --end.",
+                  "hf mfu eview\n"
+                  "hf mfu eview --end 255 -> dumps whole memory"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("e", "end", "<dec>", "index of last block"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int end = arg_get_int_def(ctx, 1, -1);
+    CLIParserFree(ctx);
+
+    bool override_end = (end != -1) ;
+
+    if (override_end && (end < 0 || end > MFU_MAX_BLOCKS)) {
+        PrintAndLogEx(WARNING, "Invalid value for end:%d. Must be be positive integer < %d.", end, MFU_MAX_BLOCKS);
+        return PM3_EINVARG ;
+    }
+
+    mfu_dump_t *dump ;
+    int res = GetMfuDumpFromEMul(&dump) ;
+    if (res != PM3_SUCCESS) {
+        return res ;
+    }
+
+    if (override_end) {
+        ++end ;
+    } else { 
+        end = dump->pages ;
+    }
+
+    printMFUdumpEx(dump, end, 0);
     free(dump);
     return PM3_SUCCESS;
+}
+
+static int CmdHF14AMfuESave(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu esave",
+                  "Saves emulator memory to a MIFARE Ultralight/NTAG dump file (bin/eml/json)\n"
+                  "By default number of pages saved depends on defined tag type.\n"
+                  "You can override this with option --end.",
+                  "hf mfu esave\n"
+                  "hf mfu esave --end 255 -> saves whole memory\n"
+                  "hf mfu esave -f hf-mfu-04010203040506-dump.json"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("e", "end", "<dec>", "index of last block"),
+        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int end = arg_get_int_def(ctx, 1, -1);
+
+    char filename[FILE_PATH_SIZE];
+    int fnlen = 0 ;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    CLIParserFree(ctx);
+
+    bool override_end = (end != -1) ;
+
+    if (override_end && (end < 0 || end > MFU_MAX_BLOCKS)) {
+        PrintAndLogEx(WARNING, "Invalid value for end:%d. Must be be positive integer <= %d.", end, MFU_MAX_BLOCKS);
+        return PM3_EINVARG ;
+    }
+
+    // get dump from memory
+    mfu_dump_t *dump ;
+    int res = GetMfuDumpFromEMul(&dump) ;
+    if (res != PM3_SUCCESS) {
+        return res ;
+    }
+
+    // initialize filename
+    if (fnlen < 1) {
+        PrintAndLogEx(INFO, "Using UID as filename");
+        uint8_t uid[7] = {0};
+        memcpy(uid, (uint8_t *) & (dump->data), 3);
+        memcpy(uid + 3, (uint8_t *) & (dump->data) + 4, 4);
+        strcat(filename, "hf-mfu-");
+        FillFileNameByUID(filename, uid, "-dump", sizeof(uid));
+    }
+
+    if (override_end) {
+        end ++ ;
+    } else {
+        end = dump->pages ;
+    }
+
+    // save dump. Last block contains PACK + RFU
+    uint16_t datalen = (end + 1) * MFU_BLOCK_SIZE + MFU_DUMP_PREFIX_LENGTH;
+    res = pm3_save_dump(filename, (uint8_t *)dump, datalen, jsfMfuMemory, MFU_BLOCK_SIZE);
+
+    free(dump);
+    return res;
 }
 
 static int CmdHF14AMfuView(const char *Cmd) {
@@ -4247,7 +4342,8 @@ static command_t CommandTable[] = {
     {"view",     CmdHF14AMfuView,           AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",     CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
     {"---------", CmdHelp,                  IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
-    {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "Load Ultralight .eml dump file into emulator memory"},
+    {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "Load Ultralight dump file into emulator memory"},
+    {"esave",    CmdHF14AMfuESave,          IfPm3Iso14443a,  "Save Ultralight dump file from emulator memory"},
     {"eview",    CmdHF14AMfuEView,          IfPm3Iso14443a,  "View emulator memory"},
     {"sim",      CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate MIFARE Ultralight from emulator memory"},
     {"---------", CmdHelp,                  IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},
