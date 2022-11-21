@@ -4889,7 +4889,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
-        arg_lit0(NULL, "emu", "from emulator memory"),
+        arg_lit0(NULL, "emu", "to emulator memory"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -7217,6 +7217,196 @@ static int CmdHF14AGen4View(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// save contents of Gent4 GTU card to file / emulator
+static int CmdHF14AGen4Save(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf gsave",
+                  "Save `magic gen4 gtu` card memory into three files (BIN/EML/JSON)"
+                  "or into emulator memory",
+                  "hf mf gsave\n"
+                  "hf mf gsave --4k\n"
+                  "hf mf gsave -p DEADBEEF -f hf-mf-01020304.json"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_str0("p", "pwd", "<hex>", "password 4bytes"),
+        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_lit0(NULL, "emu", "to emulator memory"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool m0 = arg_get_lit(ctx, 1);
+    bool m1 = arg_get_lit(ctx, 2);
+    bool m2 = arg_get_lit(ctx, 3);
+    bool m4 = arg_get_lit(ctx, 4);
+
+    int pwd_len = 0;
+    uint8_t pwd[4] = {0};
+    CLIGetHexWithReturn(ctx, 5, pwd, &pwd_len);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    
+    bool fill_emulator = arg_get_lit(ctx,7);
+    CLIParserFree(ctx);
+
+    // validations
+    if (pwd_len != 4 && pwd_len != 0) {
+        PrintAndLogEx(FAILED, "Must specify 4 bytes, got " _YELLOW_("%u"), pwd_len);
+        return PM3_EINVARG;
+    }
+
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
+    }
+
+    char s[6];
+    memset(s, 0, sizeof(s));
+    uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
+    if (m0) {
+        block_cnt = MIFARE_MINI_MAXBLOCK;
+        strncpy(s, "Mini", 5);
+    } else if (m1) {
+        block_cnt = MIFARE_1K_MAXBLOCK;
+        strncpy(s, "1K", 3);
+    } else if (m2) {
+        block_cnt = MIFARE_2K_MAXBLOCK;
+        strncpy(s, "2K", 3);
+    } else if (m4) {
+        block_cnt = MIFARE_4K_MAXBLOCK;
+        strncpy(s, "4K", 3);
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;
+    }
+    PrintAndLogEx(SUCCESS, "Dumping magic gen4 GTU MIFARE Classic " _GREEN_("%s") " card memory", s);
+    PrintAndLogEx(INFO, "." NOLF);
+
+    // Select card to get UID/UIDLEN information
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "iso14443a card select timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    /*
+        0: couldn't read
+        1: OK, with ATS
+        2: OK, no ATS
+        3: proprietary Anticollision
+    */
+    uint64_t select_status = resp.oldarg[0];
+    if (select_status == 0) {
+        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        return PM3_SUCCESS;
+    }
+
+    // store card info
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    // reserve memory
+    uint16_t bytes = block_cnt * MFBLOCK_SIZE;
+    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    for (uint16_t i = 0; i < block_cnt; i++) {
+
+        // 4k READs can be long, so we split status each 64 blocks.
+        if (i % 64 == 0) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "" NOLF) ;
+        }
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
+
+        uint8_t flags = 0 ;
+        if (i == 0)            flags |= MAGIC_INIT ;
+        if (i + 1 == block_cnt)  flags |= MAGIC_OFF ;
+
+        int res = mfG4GetBlock(pwd, i, dump + (i * MFBLOCK_SIZE), flags);
+        if (res !=  PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Can't get magic card block: %u. error=%d", i, res);
+            PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
+            free(dump);
+            return PM3_ESOFT;
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    
+    if (fill_emulator) {
+        PrintAndLogEx(INFO, "uploading to emulator memory" NOLF);
+        // fast push mode
+        g_conn.block_after_ACK = true;
+        
+        size_t offset = 0;
+        int       cnt = 0;
+        uint16_t bytes_left = bytes ;
+
+        while (bytes_left > 0 && cnt < block_cnt) {
+            // 4k writes can be long, so we split status each 64 blocks.
+            if (cnt % 64 == 0) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(INFO, "" NOLF) ;
+            }
+            PrintAndLogEx(NORMAL, "." NOLF);
+            fflush(stdout);
+
+            if (bytes_left == MFBLOCK_SIZE) {
+                // Disable fast mode on last packet
+                g_conn.block_after_ACK = false;
+            }
+
+            if (mfEmlSetMem_xt(dump + offset, cnt, 1, MFBLOCK_SIZE) != PM3_SUCCESS) {
+                PrintAndLogEx(FAILED, "Can't set emulator mem at block: %3d", cnt);
+                free(dump);
+                return PM3_ESOFT;
+            }
+
+            cnt++;
+            offset += MFBLOCK_SIZE;
+            bytes_left -= MFBLOCK_SIZE;
+        }
+        
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", bytes);
+    }
+
+    // user supplied filename?
+    if (fnlen < 1) {
+        char *fptr = filename;
+        fptr += snprintf(fptr, sizeof(filename), "hf-mf-");
+        FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
+    }
+
+    saveFile(filename, ".bin", dump, bytes);
+    saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
+    iso14a_mf_extdump_t xdump;
+    xdump.card_info = card;
+    xdump.dump = dump;
+    xdump.dumplen = bytes;
+    saveFileJSON(filename, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
+
+    free(dump);
+    return PM3_SUCCESS;
+}
+
+
 static int CmdHF14AMfValue(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -7479,6 +7669,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GTU") " --------------------------"},
     {"ggetblk",     CmdHF14AGen4GetBlk,     IfPm3Iso14443a,  "Read block from card"},
     {"gload",       CmdHF14AGen4Load,       IfPm3Iso14443a,  "Load dump to card"},
+    {"gsave",       CmdHF14AGen4Save,       IfPm3Iso14443a,  "Save dump from card into file or emulator"},
     {"gsetblk",     CmdHF14AGen4SetBlk,     IfPm3Iso14443a,  "Write block to card"},
     {"gview",       CmdHF14AGen4View,       IfPm3Iso14443a,  "View card"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("ndef") " -----------------------"},
