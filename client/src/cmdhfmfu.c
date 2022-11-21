@@ -4102,7 +4102,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
 // utility function. Retrieves emulator memory
 static int GetMfuDumpFromEMul(mfu_dump_t **buf) {
 
-    uint8_t *dump = malloc(sizeof(mfu_dump_t));
+    uint8_t *dump = calloc(MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH, sizeof(uint8_t));
     if (dump == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
