@@ -69,7 +69,7 @@ static int CmdHFKSX6924Balance(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("k", "keep", "keep field ON for next command"),
-        arg_lit0("a", "apdu", "show APDU reqests and responses"),
+        arg_lit0("a", "apdu", "Show APDU requests and responses"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -102,7 +102,7 @@ static int CmdHFKSX6924Info(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("k", "keep", "keep field ON for next command"),
-        arg_lit0("a", "apdu", "show APDU reqests and responses"),
+        arg_lit0("a", "apdu", "Show APDU requests and responses"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -224,7 +224,7 @@ static int CmdHFKSX6924Select(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a", "apdu", "show APDU reqests and responses"),
+        arg_lit0("a", "apdu", "Show APDU requests and responses"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -252,8 +252,8 @@ static int CmdHFKSX6924Initialize(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("k",  "keep", "keep field ON for next command"),
-        arg_lit0("a",  "apdu", "show APDU reqests and responses"),
-        arg_str1(NULL, NULL,  "<mpda 4byte hex>", NULL),
+        arg_lit0("a",  "apdu", "Show APDU requests and responses"),
+        arg_str1(NULL, NULL,  "<Mpda 4 bytes hex>", NULL),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -269,7 +269,7 @@ static int CmdHFKSX6924Initialize(const char *Cmd) {
     SetAPDULogging(APDULogging);
 
     if (datalen != 4) {
-        PrintAndLogEx(WARNING, "Mpda parameter must be 4 byte long (eg: 000003e8)");
+        PrintAndLogEx(WARNING, "Mpda parameter must be 4 bytes long (eg: 000003e8)");
         return PM3_EINVARG;
     }
 
@@ -305,7 +305,7 @@ static int CmdHFKSX6924PRec(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("k",   "keep", "keep field ON for next command"),
-        arg_lit0("a",   "apdu", "show APDU reqests and responses"),
+        arg_lit0("a",   "apdu", "Show APDU requests and responses"),
         arg_str1(NULL,  NULL,  "<record 1byte HEX>", NULL),
         arg_param_end
     };

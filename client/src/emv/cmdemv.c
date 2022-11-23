@@ -140,7 +140,7 @@ static int CmdEMVSearch(const char *Cmd) {
         arg_param_begin,
         arg_lit0("sS",  "select",  "Activate field and select card"),
         arg_lit0("kK",  "keep",    "Keep field ON for next command"),
-        arg_lit0("aA",  "apdu",    "Show APDU reqests and responses"),
+        arg_lit0("aA",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_param_end
@@ -196,7 +196,7 @@ static int CmdEMVPPSE(const char *Cmd) {
         arg_lit0("kK",  "keep",    "Keep field ON for next command"),
         arg_lit0("1",   "pse",     "PSE (1PAY.SYS.DDF01) mode"),
         arg_lit0("2",   "ppse",    "PPSE (2PAY.SYS.DDF01) mode (def)"),
-        arg_lit0("aA",  "apdu",    "Show APDU reqests and responses"),
+        arg_lit0("aA",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_param_end
@@ -255,7 +255,7 @@ static int CmdEMVGPO(const char *Cmd) {
         arg_lit0("kK",  "keep",    "Keep field ON for next command"),
         arg_lit0("pP",  "params",  "Load parameters from `emv_defparams.json` file for PDOLdata making from PDOL and parameters"),
         arg_lit0("mM",  "make",    "Make PDOLdata from PDOL (tag 9F38) and parameters (def: uses default parameters)"),
-        arg_lit0("aA",  "apdu",    "Show APDU reqests and responses"),
+        arg_lit0("aA",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_strx0(NULL,  NULL,     "<hex>", "PDOLdata/PDOL"),
@@ -362,7 +362,7 @@ static int CmdEMVReadRecord(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("kK",  "keep",    "Keep field ON for next command"),
-        arg_lit0("aA",  "apdu",    "Show APDU reqests and responses"),
+        arg_lit0("aA",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_strx1(NULL,  NULL,     "<hex>", "<SFI 1 byte><SFIrecord 1 byte"),
@@ -426,7 +426,7 @@ static int CmdEMVAC(const char *Cmd) {
         arg_str0("dD",  "decision", "<aac|tc|arqc>", "Terminal decision. aac - declined, tc - approved, arqc - online authorisation requested"),
         arg_lit0("pP",  "params",   "Load parameters from `emv_defparams.json` file for CDOLdata making from CDOL and parameters"),
         arg_lit0("mM",  "make",     "Make CDOLdata from CDOL (tag 8C and 8D) and parameters (def: use default parameters)"),
-        arg_lit0("aA",  "apdu",     "Show APDU reqests and responses"),
+        arg_lit0("aA",  "apdu",     "Show APDU requests and responses"),
         arg_lit0("tT",  "tlv",      "TLV decode results of selected applets"),
         arg_lit0("wW",  "wired",    "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_strx1(NULL,  NULL,      "<hex>", "CDOLdata/CDOL"),
@@ -544,7 +544,7 @@ static int CmdEMVGenerateChallenge(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("kK",  "keep",    "Keep field ON for next command"),
-        arg_lit0("aA",  "apdu",    "Show APDU reqests and responses"),
+        arg_lit0("aA",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_param_end
     };
@@ -598,7 +598,7 @@ static int CmdEMVInternalAuthenticate(const char *Cmd) {
         arg_lit0("kK",  "keep",    "Keep field ON for next command"),
         arg_lit0("pP",  "params",  "Load parameters from `emv_defparams.json` file for DDOLdata making from DDOL and parameters"),
         arg_lit0("mM",  "make",    "Make DDOLdata from DDOL (tag 9F49) and parameters (def: use default parameters)"),
-        arg_lit0("aA",  "apdu",    "Show APDU reqests and responses"),
+        arg_lit0("aA",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("tT",  "tlv",     "TLV decode results of selected applets"),
         arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_strx1(NULL,  NULL,     "<hex>", "DDOLdata/DDOL"),
@@ -823,7 +823,7 @@ static int CmdEMVExec(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("sS",  "select",   "Activate field and select card"),
-        arg_lit0("aA",  "apdu",     "Show APDU reqests and responses"),
+        arg_lit0("aA",  "apdu",     "Show APDU requests and responses"),
         arg_lit0("tT",  "tlv",      "TLV decode results"),
         arg_lit0("jJ",  "jload",    "Load transaction parameters from `emv_defparams.json` file"),
         arg_lit0("fF",  "forceaid", "Force search AID. Search AID instead of execute PPSE"),
@@ -1448,7 +1448,7 @@ static int CmdEMVScan(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("aA",  "apdu",     "Show APDU reqests and responses"),
+        arg_lit0("aA",  "apdu",     "Show APDU requests and responses"),
         arg_lit0("tT",  "tlv",      "TLV decode results"),
         arg_lit0("eE",  "extract",  "Extract TLV elements and fill Application Data"),
         arg_lit0("jJ",  "jload",    "Load transaction parameters from `emv_defparams.json` file"),
@@ -1872,7 +1872,7 @@ static int CmdEMVRoca(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("tT",  "selftest", "Self test"),
-        arg_lit0("aA",  "apdu",     "Show APDU reqests and responses"),
+        arg_lit0("aA",  "apdu",     "Show APDU requests and responses"),
         arg_lit0("wW",  "wired",    "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_param_end
     };
