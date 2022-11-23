@@ -66,6 +66,16 @@ typedef struct {
     uint8_t rfu[8];
 } PACKED _ksx6924_internal_purse_info_t;
 
+typedef struct {
+    uint8_t ALGep;
+    uint8_t VKep;
+    uint8_t BALep[4];   // uint32_t big-endian
+    uint8_t IDcenter;
+    uint8_t IDep[8];    // bcd
+    uint8_t NTep[4];
+    uint8_t Sign1[4];
+} PACKED _ksx6924_initialize_card_response_t;
+
 // Declares a structure for simple enums.
 #define MAKE_ENUM_TYPE(KEY_TYPE) \
    struct _ksx6924_enum_ ## KEY_TYPE { \
@@ -446,7 +456,7 @@ bool KSX6924GetBalance(uint32_t *result) {
 /**
  * Perform transaction initialization.
  */
-bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t mpda4, uint8_t *result) {
+bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t mpda4, uint8_t *result, size_t *result_len) {
 
     if (result == NULL) {
         return false;
@@ -472,9 +482,68 @@ bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t 
 
     //*result = ntohl(*(uint32_t*)(arr));
     memcpy(result, arr, rlen + 2); // skip 2 sw bytes
+    memcpy(result_len, &rlen, sizeof(size_t));
     return true;
 }
 
+/**
+ * Parses Initialize Card response
+ */
+bool KSX6924ParseInitializeCardResponse(const uint8_t *initCardResponse, size_t resp_len, struct ksx6924_initialize_card_response *ret) {
+
+    memset(ret, 0, sizeof(struct ksx6924_initialize_card_response));
+
+    if (resp_len != sizeof(_ksx6924_initialize_card_response_t)) {
+        // Invalid size!
+        PrintAndLogEx(FAILED, "Expected %ld bytes, got %ld\n", sizeof(_ksx6924_initialize_card_response_t), resp_len);
+        return false;
+    }
+
+    const _ksx6924_initialize_card_response_t *internalInitCardResponse = (const _ksx6924_initialize_card_response_t *)initCardResponse;
+
+    // Simple copies
+    ret->ALGep = internalInitCardResponse->ALGep;
+    ret->VKep = internalInitCardResponse->VKep;
+    ret->IDcenter = internalInitCardResponse->IDcenter;
+
+    // Fields that need rewriting
+    hex_to_buffer(ret->IDep, internalInitCardResponse->IDep,
+                  sizeof(internalInitCardResponse->IDep),
+                  sizeof(ret->IDep) - 1,
+                  0,    // min_str_len
+                  0,    // spaces_between
+                  false // uppercase
+                 );
+
+    ret->BALep = MemBeToUint4byte((uint8_t *)internalInitCardResponse->BALep);
+    ret->NTep = MemBeToUint4byte((uint8_t *)internalInitCardResponse->NTep);
+
+    memcpy(&ret->Sign1, &internalInitCardResponse->Sign1, 4);
+
+    // TODO
+    return true;
+};
+
+/**
+ * Prints out a Initialize Card response
+ */
+void KSX6924PrintInitializeCardResponse(const struct ksx6924_initialize_card_response *response) {
+
+    if (response == NULL) {
+        return;
+    }
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("KS X 6924 Initialize Card Response") " ---------------------------");
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "  ALGep (Algorithm Identifier)........ %02x ( %s )", response->ALGep, KSX6924LookupAlg(response->ALGep, KSX6924_UNKNOWN));
+    PrintAndLogEx(INFO, "  VKep (Version of Key) .............. %02x", response->VKep);
+    PrintAndLogEx(INFO, "  BALep (Balance...................... %" PRIu32, response->BALep);
+    PrintAndLogEx(INFO, "  IDcenter (Issuer ID) ............... %02x ( %s )", response->IDcenter, KSX6924LookupTMoneyIDCenter(response->IDcenter, KSX6924_UNKNOWN));
+    PrintAndLogEx(INFO, "  IDep (Card number) ................. %s", response->IDep);
+    PrintAndLogEx(INFO, "  NTep (Number of Transaction + 1) ... %" PRIu32, response->NTep);
+    PrintAndLogEx(INFO, "  Sign1 .............................. %s", sprint_hex(response->Sign1, sizeof(response->Sign1)));
+    PrintAndLogEx(INFO, "");
+}
 
 /**
  * Issues a proprietary "get record" command (CLA=90, INS=4C).

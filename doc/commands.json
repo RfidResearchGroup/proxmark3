@@ -3390,20 +3390,6 @@
             ],
             "usage": "hf jooki sim [-h] [-b <base64>]"
         },
-        "hf ksx6924 balance": {
-            "command": "hf ksx6924 balance",
-            "description": "Gets the current purse balance",
-            "notes": [
-                "hf ksx6924 balance"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-k, --keep keep field ON for next command",
-                "-a, --apdu show APDU reqests and responses"
-            ],
-            "usage": "hf ksx6924 balance [-hka]"
-        },
         "hf ksx6924 help": {
             "command": "hf ksx6924 help",
             "description": "help This help",
@@ -3411,6 +3397,19 @@
             "offline": true,
             "options": [],
             "usage": ""
+        },
+        "hf ksx6924 select": {
+            "command": "hf ksx6924 select",
+            "description": "Selects KS X 6924 application, and leaves field up",
+            "notes": [
+                "hf ksx6924 select"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses"
+            ],
+            "usage": "hf ksx6924 select [-ha]"
         },
         "hf ksx6924 info": {
             "command": "hf ksx6924 info",
@@ -3422,23 +3421,37 @@
             "options": [
                 "-h, --help This help",
                 "-k, --keep keep field ON for next command",
-                "-a, --apdu show APDU reqests and responses"
+                "-a, --apdu Show APDU requests and responses"
             ],
             "usage": "hf ksx6924 info [-hka]"
         },
-        "hf ksx6924 initialize": {
-            "command": "hf ksx6924 initialize",
-            "description": "Perform transaction initialization (mpda)",
+        "hf ksx6924 balance": {
+            "command": "hf ksx6924 balance",
+            "description": "Gets the current purse balance",
             "notes": [
-                "hf ksx6924 initialize 000003e8 -> mpda"
+                "hf ksx6924 balance"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-k, --keep keep field ON for next command",
-                "-a, --apdu show APDU reqests and responses"
+                "-a, --apdu Show APDU requests and responses"
             ],
-            "usage": "hf ksx6924 initialize [-hka] <mpda 4byte hex>"
+            "usage": "hf ksx6924 balance [-hka]"
+        },
+        "hf ksx6924 init": {
+            "command": "hf ksx6924 init",
+            "description": "Perform transaction initialization (mpda)",
+            "notes": [
+                "hf ksx6924 init 000003e8 -> Mpda"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --keep keep field ON for next command",
+                "-a, --apdu Show APDU requests and responses"
+            ],
+            "usage": "hf ksx6924 init [-hka] <Mpda 4 bytes hex>"
         },
         "hf ksx6924 prec": {
             "command": "hf ksx6924 prec",
@@ -3450,23 +3463,11 @@
             "options": [
                 "-h, --help This help",
                 "-k, --keep keep field ON for next command",
-                "-a, --apdu show APDU reqests and responses"
+                "-a, --apdu Show APDU requests and responses"
             ],
             "usage": "hf ksx6924 prec [-hka] <record 1byte HEX>"
         },
-        "hf ksx6924 select": {
-            "command": "hf ksx6924 select",
-            "description": "Selects KS X 6924 application, and leaves field up",
-            "notes": [
-                "hf ksx6924 select"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-a, --apdu show APDU reqests and responses"
-            ],
-            "usage": "hf ksx6924 select [-ha]"
-        },
+        
         "hf legic crc": {
             "command": "hf legic crc",
             "description": "Calculates the legic crc8/crc16 on the given data",

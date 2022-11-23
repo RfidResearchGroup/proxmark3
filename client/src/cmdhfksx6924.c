@@ -245,9 +245,9 @@ static int CmdHFKSX6924Select(const char *Cmd) {
 
 static int CmdHFKSX6924Initialize(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf ksx6924 initialize",
-                  "Perform transaction initialization (mpda)",
-                  "hf ksx6924 initialize 000003e8 -> mpda\n");
+    CLIParserInit(&ctx, "hf ksx6924 init",
+                  "Perform transaction initialization with Mpda (Money of Purchase Transaction)",
+                  "hf ksx6924 init 000003e8 -> Mpda\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -278,14 +278,22 @@ static int CmdHFKSX6924Initialize(const char *Cmd) {
         goto end;
     }
 
-    PrintAndLogEx(SUCCESS, "Initialize Card : Mpda -> %02X %02X %02X %02X", data[0], data[1], data[2], data[3]);
-
-    uint8_t response[25] = {0};
-    if (KSX6924InitializeCard(data[0], data[1], data[2], data[3], response)) {
-        PrintAndLogEx(SUCCESS, "Response : %s", sprint_hex(response, sizeof(response)));
-    } else {
-        PrintAndLogEx(FAILED, "Initialize Card Error");
+    uint8_t resp[APDU_RES_LEN] = {0};
+    size_t resp_len = 0;
+    if (KSX6924InitializeCard(data[0], data[1], data[2], data[3], resp, &resp_len) == false) {
+        goto end;
     }
+
+    uint8_t *r = resp;
+    struct ksx6924_initialize_card_response initCardResponse;
+    bool ret = KSX6924ParseInitializeCardResponse(r, resp_len, &initCardResponse);
+
+    if (!ret) {
+        PrintAndLogEx(FAILED, "Error parsing KS X 6924 initialize card response");
+        goto end;
+    }
+
+    KSX6924PrintInitializeCardResponse(&initCardResponse);
 
 end:
     if (keep == false) {
@@ -348,11 +356,11 @@ end:
 
 static command_t CommandTable[] = {
     {"help",       CmdHelp,                AlwaysAvailable, "This help"},
-    {"balance",    CmdHFKSX6924Balance,    IfPm3Iso14443a,  "Get current purse balance"},
-    {"info",       CmdHFKSX6924Info,       IfPm3Iso14443a,  "Get info about a KS X 6924 (T-Money, Snapper+) transit card"},
-    {"initialize", CmdHFKSX6924Initialize, IfPm3Iso14443a,  "Perform transaction initialization (Mpda)"},
-    {"prec",       CmdHFKSX6924PRec,       IfPm3Iso14443a,  "Send proprietary get record command (CLA=90, INS=4C)"},
     {"select",     CmdHFKSX6924Select,     IfPm3Iso14443a,  "Select application, and leave field up"},
+    {"info",       CmdHFKSX6924Info,       IfPm3Iso14443a,  "Get info about a KS X 6924 (T-Money, Snapper+) transit card"},
+    {"balance",    CmdHFKSX6924Balance,    IfPm3Iso14443a,  "Get current purse balance"},
+    {"init",       CmdHFKSX6924Initialize, IfPm3Iso14443a,  "Perform transaction initialization with Mpda"},
+    {"prec",       CmdHFKSX6924PRec,       IfPm3Iso14443a,  "Send proprietary get record command (CLA=90, INS=4C)"},
     {NULL, NULL, NULL, NULL}
 };
 
