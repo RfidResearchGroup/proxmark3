@@ -31,31 +31,31 @@ or write a files hex bytes to sector 0 or 1 on the NTAG I2C PLUS 2K tag.
 example =[[
 
     Read block 04 from sector 1:
-    script run hf_ntagi2c_plus2k -m r -s 1 -b 04
+    script run hf_i2c_plus_2k_utils -m r -s 1 -b 04
     
     Write FFFFFFFF to block A0 sector 1:
-    script run hf_ntagi2c_plus2k -m w -s 1 -b A0 -d FFFFFFFF
+    script run hf_i2c_plus_2k_utils -m w -s 1 -b A0 -d FFFFFFFF
 
     Dump sector 1 user memory to console and file:
-    script run hf_ntag12c_plus2k -m d -s 1
+    script run hf_i2c_plus_2k_utils -m d -s 1
 
     Write a files hex bytes to sector 1 starting at block 04:
-    script run hf_ntagi2c_plus2k -m f -s 1 -f data.txt
+    script run hf_i2c_plus_2k_utils -m f -s 1 -f data.txt
 
 ]]
 usage = [[
 
     Read mode: 
-    script run hf_ntagi2c_plus2k -m r -s <sector> -b <block (hex)>
+    script run hf_i2c_plus_2k_utils -m r -s <sector> -b <block (hex)>
     
     Write mode: 
-    script run hf_ntagi2c_plus2k -m w -s <sector> -b <block (hex)> -d <data (hex)>
+    script run hf_i2c_plus_2k_utils -m w -s <sector> -b <block (hex)> -d <data (hex)>
     
     Dump mode:
-    script run hf_ntagi2c_plus2k -m d -s <sector>
+    script run hf_i2c_plus_2k_utils -m d -s <sector>
     
     File mode:
-    script run hf_ntagi2c_plus2k -m f -s <sector> -f <file>
+    script run hf_i2c_plus_2k_utils -m f -s <sector> -f <file>
 
 ]]
 arguments = [[
