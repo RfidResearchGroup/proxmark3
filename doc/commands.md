@@ -367,11 +367,11 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf ksx6924 help        `|Y       |`This help`
-|`hf ksx6924 balance     `|N       |`Get current purse balance`
-|`hf ksx6924 info        `|N       |`Get info about a KS X 6924 (T-Money, Snapper+) transit card`
-|`hf ksx6924 initialize  `|N       |`Perform transaction initialization (Mpda)`
-|`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
 |`hf ksx6924 select      `|N       |`Select application, and leave field up`
+|`hf ksx6924 info        `|N       |`Get info about a KS X 6924 (T-Money, Snapper+) transit card`
+|`hf ksx6924 balance     `|N       |`Get current purse balance`
+|`hf ksx6924 init        `|N       |`Perform transaction initialization with Mpda (Money of Purchase Transaction)`
+|`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
 
 
 ### hf jooki

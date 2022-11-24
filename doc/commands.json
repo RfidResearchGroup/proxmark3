@@ -761,7 +761,7 @@
             "options": [
                 "-h, --help This help",
                 "-k, -K, --keep Keep field ON for next command",
-                "-a, -A, --apdu Show APDU reqests and responses",
+                "-a, -A, --apdu Show APDU requests and responses",
                 "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
             "usage": "emv challenge [-hkaw]"
@@ -777,7 +777,7 @@
             "options": [
                 "-h, --help This help",
                 "-s, -S, --select Activate field and select card",
-                "-a, -A, --apdu Show APDU reqests and responses",
+                "-a, -A, --apdu Show APDU requests and responses",
                 "-t, -T, --tlv TLV decode results",
                 "-j, -J, --jload Load transaction parameters from `emv_defparams.json` file",
                 "-f, -F, --forceaid Force search AID. Search AID instead of execute PPSE",
@@ -807,7 +807,7 @@
                 "-d, -D, --decision <aac|tc|arqc> Terminal decision. aac - declined, tc - approved, arqc - online authorisation requested",
                 "-p, -P, --params Load parameters from `emv_defparams.json` file for CDOLdata making from CDOL and parameters",
                 "-m, -M, --make Make CDOLdata from CDOL (tag 8C and 8D) and parameters (def: use default parameters)",
-                "-a, -A, --apdu Show APDU reqests and responses",
+                "-a, -A, --apdu Show APDU requests and responses",
                 "-t, -T, --tlv TLV decode results of selected applets",
                 "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> CDOLdata/CDOL"
@@ -828,7 +828,7 @@
                 "-k, -K, --keep Keep field ON for next command",
                 "-p, -P, --params Load parameters from `emv_defparams.json` file for PDOLdata making from PDOL and parameters",
                 "-m, -M, --make Make PDOLdata from PDOL (tag 9F38) and parameters (def: uses default parameters)",
-                "-a, -A, --apdu Show APDU reqests and responses",
+                "-a, -A, --apdu Show APDU requests and responses",
                 "-t, -T, --tlv TLV decode results of selected applets",
                 "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> PDOLdata/PDOL"
@@ -857,7 +857,7 @@
                 "-k, -K, --keep Keep field ON for next command",
                 "-p, -P, --params Load parameters from `emv_defparams.json` file for DDOLdata making from DDOL and parameters",
                 "-m, -M, --make Make DDOLdata from DDOL (tag 9F49) and parameters (def: use default parameters)",
-                "-a, -A, --apdu Show APDU reqests and responses",
+                "-a, -A, --apdu Show APDU requests and responses",
                 "-t, -T, --tlv TLV decode results of selected applets",
                 "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> DDOLdata/DDOL"
@@ -899,7 +899,7 @@
                 "-k, -K, --keep Keep field ON for next command",
                 "-1, --pse PSE (1PAY.SYS.DDF01) mode",
                 "-2, --ppse PPSE (2PAY.SYS.DDF01) mode (def)",
-                "-a, -A, --apdu Show APDU reqests and responses",
+                "-a, -A, --apdu Show APDU requests and responses",
                 "-t, -T, --tlv TLV decode results of selected applets",
                 "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
@@ -916,7 +916,7 @@
             "options": [
                 "-h, --help This help",
                 "-k, -K, --keep Keep field ON for next command",
-                "-a, -A, --apdu Show APDU reqests and responses",
+                "-a, -A, --apdu Show APDU requests and responses",
                 "-t, -T, --tlv TLV decode results of selected applets",
                 "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> <SFI 1 byte><SFIrecord 1 byte"
@@ -934,7 +934,7 @@
             "options": [
                 "-h, --help This help",
                 "-t, -T, --selftest Self test",
-                "-a, -A, --apdu Show APDU reqests and responses",
+                "-a, -A, --apdu Show APDU requests and responses",
                 "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
             "usage": "emv roca [-htaw]"
@@ -949,7 +949,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-a, -A, --apdu Show APDU reqests and responses",
+                "-a, -A, --apdu Show APDU requests and responses",
                 "-t, -T, --tlv TLV decode results",
                 "-e, -E, --extract Extract TLV elements and fill Application Data",
                 "-j, -J, --jload Load transaction parameters from `emv_defparams.json` file",
@@ -976,7 +976,7 @@
                 "-h, --help This help",
                 "-s, -S, --select Activate field and select card",
                 "-k, -K, --keep Keep field ON for next command",
-                "-a, -A, --apdu Show APDU reqests and responses",
+                "-a, -A, --apdu Show APDU requests and responses",
                 "-t, -T, --tlv TLV decode results of selected applets",
                 "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
@@ -2575,7 +2575,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-a, --apdu Show APDU reqests and responses",
+                "-a, --apdu Show APDU requests and responses",
                 "-v, --verbose Verbose mode. vv - show full certificates data",
                 "-c, --cbor Show CBOR decoded data",
                 "-l, --list Add CredentialId from json to allowList",
@@ -2596,7 +2596,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-a, --apdu Show APDU reqests and responses",
+                "-a, --apdu Show APDU requests and responses",
                 "-v, --verbose Verbose mode",
                 "default mode: dont-enforce-user-presence-and-sign",
                 "-u, --user mode: enforce-user-presence-and-sign",
@@ -2662,7 +2662,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-a, --apdu Show APDU reqests and responses",
+                "-a, --apdu Show APDU requests and responses",
                 "-v, --verbose Verbose mode. vv - show full certificates data",
                 "-t, --tlv Show DER certificate contents in TLV representation",
                 "-c, --cbor Show CBOR decoded data",
@@ -3391,20 +3391,6 @@
             ],
             "usage": "hf jooki sim [-h] [-b <base64>]"
         },
-        "hf ksx6924 balance": {
-            "command": "hf ksx6924 balance",
-            "description": "Gets the current purse balance",
-            "notes": [
-                "hf ksx6924 balance"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-k, --keep keep field ON for next command",
-                "-a, --apdu show APDU reqests and responses"
-            ],
-            "usage": "hf ksx6924 balance [-hka]"
-        },
         "hf ksx6924 help": {
             "command": "hf ksx6924 help",
             "description": "help This help",
@@ -3412,6 +3398,19 @@
             "offline": true,
             "options": [],
             "usage": ""
+        },
+        "hf ksx6924 select": {
+            "command": "hf ksx6924 select",
+            "description": "Selects KS X 6924 application, and leaves field up",
+            "notes": [
+                "hf ksx6924 select"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses"
+            ],
+            "usage": "hf ksx6924 select [-ha]"
         },
         "hf ksx6924 info": {
             "command": "hf ksx6924 info",
@@ -3423,23 +3422,37 @@
             "options": [
                 "-h, --help This help",
                 "-k, --keep keep field ON for next command",
-                "-a, --apdu show APDU reqests and responses"
+                "-a, --apdu Show APDU requests and responses"
             ],
             "usage": "hf ksx6924 info [-hka]"
         },
-        "hf ksx6924 initialize": {
-            "command": "hf ksx6924 initialize",
-            "description": "Perform transaction initialization (mpda)",
+        "hf ksx6924 balance": {
+            "command": "hf ksx6924 balance",
+            "description": "Gets the current purse balance",
             "notes": [
-                "hf ksx6924 initialize 000003e8 -> mpda"
+                "hf ksx6924 balance"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-k, --keep keep field ON for next command",
-                "-a, --apdu show APDU reqests and responses"
+                "-a, --apdu Show APDU requests and responses"
             ],
-            "usage": "hf ksx6924 initialize [-hka] <mpda 4byte hex>"
+            "usage": "hf ksx6924 balance [-hka]"
+        },
+        "hf ksx6924 init": {
+            "command": "hf ksx6924 init",
+            "description": "Perform transaction initialization (mpda)",
+            "notes": [
+                "hf ksx6924 init 000003e8 -> Mpda"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --keep keep field ON for next command",
+                "-a, --apdu Show APDU requests and responses"
+            ],
+            "usage": "hf ksx6924 init [-hka] <Mpda 4 bytes hex>"
         },
         "hf ksx6924 prec": {
             "command": "hf ksx6924 prec",
@@ -3451,23 +3464,11 @@
             "options": [
                 "-h, --help This help",
                 "-k, --keep keep field ON for next command",
-                "-a, --apdu show APDU reqests and responses"
+                "-a, --apdu Show APDU requests and responses"
             ],
             "usage": "hf ksx6924 prec [-hka] <record 1byte HEX>"
         },
-        "hf ksx6924 select": {
-            "command": "hf ksx6924 select",
-            "description": "Selects KS X 6924 application, and leaves field up",
-            "notes": [
-                "hf ksx6924 select"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-a, --apdu show APDU reqests and responses"
-            ],
-            "usage": "hf ksx6924 select [-ha]"
-        },
+        
         "hf legic crc": {
             "command": "hf legic crc",
             "description": "Calculates the legic crc8/crc16 on the given data",

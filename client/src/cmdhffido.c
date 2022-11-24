@@ -413,7 +413,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a",  "apdu",      "Show APDU reqests and responses"),
+        arg_lit0("a",  "apdu",      "Show APDU requests and responses"),
         arg_lit0("v",  "verbose",   "Verbose mode"),
         arg_rem("default mode:",    "dont-enforce-user-presence-and-sign"),
         arg_lit0("u",  "user",      "mode: enforce-user-presence-and-sign"),
@@ -675,7 +675,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a", "apdu", "Show APDU reqests and responses"),
+        arg_lit0("a", "apdu", "Show APDU requests and responses"),
         arg_litn("v", "verbose", 0, 2, "Verbose mode. vv - show full certificates data"),
         arg_lit0("t", "tlv",  "Show DER certificate contents in TLV representation"),
         arg_lit0("c", "cbor", "Show CBOR decoded data"),
@@ -794,7 +794,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a", "apdu", "Show APDU reqests and responses"),
+        arg_lit0("a", "apdu", "Show APDU requests and responses"),
         arg_litn("v", "verbose", 0, 2, "Verbose mode. vv - show full certificates data"),
         arg_lit0("c", "cbor", "Show CBOR decoded data"),
         arg_lit0("l", "list", "Add CredentialId from json to allowList"),

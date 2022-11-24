@@ -53,6 +53,18 @@ struct ksx6924_purse_info {
     uint8_t rfu[8];
 };
 
+// Convenience structure for representing purse information.  Actual on-card
+// format is in _ksx6924_initialize_card_response_t.
+struct ksx6924_initialize_card_response {
+    uint8_t ALGep;
+    uint8_t VKep;
+    uint32_t BALep;
+    uint8_t IDcenter;
+    uint8_t IDep[17]; // hex digits + null terminator
+    uint32_t NTep;
+    uint8_t Sign1[4];
+};
+
 // Get card type description
 const char *KSX6924LookupCardType(uint8_t key, const char *defaultValue);
 
@@ -94,7 +106,13 @@ bool KSX6924TrySelect(void);
 bool KSX6924GetBalance(uint32_t *result);
 
 // Perform transaction initialization.
-bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t mpda4, uint8_t *result);
+bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t mpda4, uint8_t *result, size_t *result_len);
+
+// Parses Initialize Card response
+bool KSX6924ParseInitializeCardResponse(const uint8_t *initCardResponse, size_t resp_len, struct ksx6924_initialize_card_response *ret);
+
+// Prints out a Initialize Card response
+void KSX6924PrintInitializeCardResponse(const struct ksx6924_initialize_card_response *response);
 
 // Proprietary get record command. Function unknown.
 // result must be 10 bytes long.
