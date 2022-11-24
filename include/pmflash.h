@@ -28,7 +28,7 @@
 // 0x3E000 - 1 4kb sector = settings
 // 0x3D000 - 1 4kb sector = default T55XX keys dictionary
 // 0x3B000 - 1 4kb sector = default ICLASS keys dictionary
-// 0x39000 - 2 4kb sectors = default MFC keys dictionary
+// 0x38000 - 3 4kb sectors = default MFC keys dictionary
 //
 #ifndef FLASH_MEM_BLOCK_SIZE
 # define FLASH_MEM_BLOCK_SIZE   256
@@ -79,7 +79,7 @@
 
 // Reserved space for MIFARE Keys = 8 kb
 #ifndef DEFAULT_MF_KEYS_OFFSET
-# define DEFAULT_MF_KEYS_LEN (0x2000)
+# define DEFAULT_MF_KEYS_LEN (0x3000)
 # define DEFAULT_MF_KEYS_OFFSET (DEFAULT_ICLASS_KEYS_OFFSET - DEFAULT_MF_KEYS_LEN)
 # define DEFAULT_MF_KEYS_MAX ((DEFAULT_MF_KEYS_LEN - 2) / 6)
 #endif
