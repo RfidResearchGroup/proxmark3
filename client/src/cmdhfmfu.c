@@ -4102,20 +4102,20 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
 // utility function. Retrieves emulator memory
 static int GetMfuDumpFromEMul(mfu_dump_t **buf) {
 
-    uint8_t *dump = malloc(sizeof(mfu_dump_t));
+    mfu_dump_t *dump = calloc(1, sizeof(mfu_dump_t));
     if (dump == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
 
     PrintAndLogEx(INFO, "downloading from emulator memory");
-    if (!GetFromDevice(BIG_BUF_EML, dump, sizeof(mfu_dump_t), 0, NULL, 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF_EML, (uint8_t *)dump, MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
         return PM3_ETIMEOUT;
     }
 
-    *buf = (mfu_dump_t *)dump ;
+    *buf = dump ;
     return PM3_SUCCESS ;
 }
 
