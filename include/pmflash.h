@@ -77,7 +77,7 @@
 # define DEFAULT_ICLASS_KEYS_MAX ((DEFAULT_ICLASS_KEYS_LEN - 2) / 8)
 #endif
 
-// Reserved space for MIFARE Keys = 8 kb
+// Reserved space for MIFARE Keys = 12 kb
 #ifndef DEFAULT_MF_KEYS_OFFSET
 # define DEFAULT_MF_KEYS_LEN (0x3000)
 # define DEFAULT_MF_KEYS_OFFSET (DEFAULT_ICLASS_KEYS_OFFSET - DEFAULT_MF_KEYS_LEN)
