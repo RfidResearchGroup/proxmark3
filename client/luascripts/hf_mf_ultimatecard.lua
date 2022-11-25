@@ -228,7 +228,6 @@ local function read_config()
 	if ulmode == '03' then versionstr = 'Ultralight'
 	elseif ulmode == '02' then versionstr = 'Ultralight-C'
 	elseif cversion == '0004030101000B03' then versionstr = 'UL EV1 48b'
-	elseif cversion == '0004030101000B03' then versionstr = 'UL EV1 48b'
 	elseif cversion == '0004030101000E03' then versionstr = 'UL EV1 128b'
 	elseif cversion == '0004040101000B03' then versionstr = 'NTAG 210'
 	elseif cversion == '0004040101000E03' then versionstr = 'NTAG 212'
@@ -845,86 +844,101 @@ local function set_type(tagtype)
     end
 end
 ---
+-- returns true if b is the index of a sector trailer
+local function mfIsSectorTrailer(b)
+    n=b+1
+    if (n < 32*4 ) then 
+        if  (n % 4 ==  0) then return true 
+        else return false
+        end
+    end
+
+    if (n % 16 == 0) then return true 
+    end
+
+    return false
+end
+---
 -- wipe tag
 local function wipe(wtype)
     local info = connect()
     if not info then return false, "Can't select card" end
     if wtype == '0' then
-	print('Starting Mifare Wipe')
+        print('Starting Mifare Wipe')
         send("CF".._key.."F000000000000002000978009102DABC19101011121314151604000800")
         send("CF".._key.."CD000102030404080400000000000000BEAF")
-	local err, msg, resp
-	local cmd_empty = 'CF'.._key..'CD%02X00000000000000000000000000000000'
-	local cmd_cfg1 = 'CF'.._key..'CD%02XFFFFFFFFFFFFFF078069FFFFFFFFFFFF'
-	for b = 1, 0xFB do
-		if b == 0x03 or b == 0x07 or b == 0x0B or b == 0x0F or b == 0x13 or b == 0x17 or b == 0x1B or b == 0x1F or b == 0x23 or b == 0x27 or b == 0x2B or b == 0x2F or b == 0x33 or b == 0x37 or b == 0x3B or b == 0x3F then
-			local cmd = (cmd_cfg1):format(b)
-			resp = send(cmd)
-		else
-			local cmd = (cmd_empty):format(b)
-			resp = send(cmd)
-		end
-	        if resp == nil then
-	            io.write('\nwrote block '..b, ' failed\n')
-	            err = true
-	        else
-	            io.write('.')
-	        end
-	        io.flush()
-	end
-	print('\n')
-	err, msg = set_type(3)
-	if err == nil then return err, msg end
-	lib14a.disconnect()
-	return true, 'Ok'
+        local err, msg, resp
+        local cmd_empty = 'CF'.._key..'CD%02X00000000000000000000000000000000'
+        local cmd_trail = 'CF'.._key..'CD%02XFFFFFFFFFFFFFF078069FFFFFFFFFFFF'
+        for b = 1, 0xFF do
+            if mfIsSectorTrailer(b) then
+                local cmd = (cmd_trail):format(b)
+                resp = send(cmd)
+            else
+                local cmd = (cmd_empty):format(b)
+                resp = send(cmd)
+            end
+            if resp == nil then
+                io.write('\nwrote block '..b, ' failed\n')
+                err = true
+            else
+                io.write('.')
+            end
+            io.flush()
+        end
+        print('\n')
+        err, msg = set_type(3)
+        if err == nil then return err, msg end
+        lib14a.disconnect()
+        return true, 'Ok'
     elseif wtype == '1' then
-	print('Starting Ultralight Wipe')
-	local err, msg, resp
-	local cmd_empty = 'A2%02X00000000'
-	local cmd_cfg1  = 'A2%02X000000FF'
-	local cmd_cfg2  = 'A2%02X00050000'
-	print('Wiping tag')
-	local info = connect()
-	if not info then return false, "Can't select card" end
+        print('Starting Ultralight Wipe')
+        local err, msg, resp
+        local cmd_empty = 'A2%02X00000000'
+        local cmd_cfg1  = 'A2%02X000000FF'
+        local cmd_cfg2  = 'A2%02X00050000'
+        print('Wiping tag')
+        local info = connect()
+        if not info then return false, "Can't select card" end
         send("CF".._key.."F001010000000003000978009102DABC19101011121314151644000001")
-	for b = 3, 0xFB do
-		--configuration block 0
-		if b == 0x29 or b == 0x83 or b == 0xe3 then
-	            local cmd = (cmd_cfg1):format(b)
-	            resp = send(cmd)
-	        --configuration block 1
-	        elseif b == 0x2a or b == 0x84 or b == 0xe4 then
-	            local cmd = (cmd_cfg2):format(b)
-	            resp = send(cmd)
-	        else
-	            resp = send(cmd_empty:format(b))
-	        end
-	        if resp == '04' or #resp == 0 then
-	            io.write('\nwrote block '..b, ' failed\n')
-	            err = true
-	        else
-	            io.write('.')
-	        end
-	        io.flush()
-	end
-	io.write('\r\n')
-	lib14a.disconnect()
-	print('\n')
-	if err then return nil, "Tag locked down, "..err_lock end
-	-- set NTAG213 default values
-	err, msg = set_type(14)
-	if err == nil then return err, msg end
-	--set UID
-	err, msg = write_uid('04112233445566')
-	if err == nil then return err, msg end
-	--set NTAG pwd
-	err, msg = write_ntagpwd('FFFFFFFF')
-	if err == nil then return err, msg end
-	--set pack
-	err, msg = write_pack('0000')
-	if err == nil then return err, msg end
-	lib14a.disconnect()
-	return true, 'Ok'
+        for b = 3, 0xFB do
+            --configuration block 0
+            if b == 0x29 or b == 0x83 or b == 0xe3 then
+                local cmd = (cmd_cfg1):format(b)
+                resp = send(cmd)
+                --configuration block 1
+            elseif b == 0x2a or b == 0x84 or b == 0xe4 then
+                local cmd = (cmd_cfg2):format(b)
+                resp = send(cmd)
+            else
+                resp = send(cmd_empty:format(b))
+            end
+            if resp == '04' or #resp == 0 then
+                io.write('\nwrote block '..b, ' failed\n')
+                err = true
+            else
+                io.write('.')
+            end
+            io.flush()
+        end
+        io.write('\r\n')
+        lib14a.disconnect()
+        print('\n')
+        if err then return nil, "Tag locked down, "..err_lock end
+        -- set NTAG213 default values
+        err, msg = set_type(14)
+        if err == nil then return err, msg end
+        --set UID
+        err, msg = write_uid('04112233445566')
+        if err == nil then return err, msg end
+        --set NTAG pwd
+        err, msg = write_ntagpwd('FFFFFFFF')
+        if err == nil then return err, msg end
+        --set pack
+        err, msg = write_pack('0000')
+        if err == nil then return err, msg end
+        lib14a.disconnect()
+        return true, 'Ok'
     else oops('Use 0 for Mifare wipe or 1 for Ultralight wipe')
     end
 end

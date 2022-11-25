@@ -2356,6 +2356,7 @@ void MifareCIdent(bool is_mfc) {
     uint8_t rats[4] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 };
     uint8_t rdblf0[4] = { ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
     uint8_t rdbl00[4] = { ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
+    uint8_t gen4GetConf[8] = { GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0}; 
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_malloc(10);
@@ -2388,6 +2389,26 @@ void MifareCIdent(bool is_mfc) {
 
     int res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
     if (res == 2) {
+
+        // Check for Magic Gen4 GTU with default password :
+        // Get config should return 30 bytes.
+        AddCrc14A(gen4GetConf, sizeof(gen4GetConf) - 2);
+        ReaderTransmit(gen4GetConf, sizeof(gen4GetConf), NULL);
+        res = ReaderReceive(buf, par);
+        if (res == 32) {
+            isGen = MAGIC_GEN_4GTU;
+            goto OUT;
+        }
+    }
+
+    // reset card
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    SpinDelay(40);
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
+    res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+    if (res == 2) {
+
         if (cuid == 0xAA55C396) {
             isGen = MAGIC_GEN_UNFUSED;
             goto OUT;
@@ -2746,7 +2767,7 @@ void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd, uint8_t workFlags) {
         iso14a_set_timeout(13560000 / 1000 / (8 * 16) * 1000); // 2 seconds timeout
     }
 
-    uint8_t cmd[] = { 0xCF, 0x00, 0x00, 0x00, 0x00, 0xCE, blockno,
+    uint8_t cmd[] = { GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_READ, blockno,
                       0x00, 0x00
                     };
 
@@ -2822,7 +2843,7 @@ void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t work
         iso14a_set_timeout(13560000 / 1000 / (8 * 16) * 1000); // 2 seconds timeout
     }
 
-    uint8_t cmd[] = { 0xCF, 0x00, 0x00, 0x00, 0x00, 0xCD, blockno,
+    uint8_t cmd[] = { GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_WRITE, blockno,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00

@@ -252,6 +252,25 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_SUPER         6
 #define MAGIC_NTAG21X       7
 #define MAGIC_GEN_3         8
+#define MAGIC_GEN_4GTU      9
+
+// Commands for configuration of Gen4 GTU cards.
+// see https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/magic_cards_notes.md
+#define GEN_4GTU_CMD    0xCF // Prefix for all commands, followed by pasword (4b)
+#define GEN_4GTU_SHADOW 0x32 // Configure GTU shadow mode
+#define GEN_4GTU_ATS    0x34 // Configure ATS
+#define GEN_4GTU_ATQA   0x35 // Configure ATQA/SAK (swap ATQA bytes)
+#define GEN_4GTU_UIDLEN 0x68 // Configure UID length
+#define GEN_4GTU_ULEN   0x69 // (De)Activate Ultralight mode
+#define GEN_4GTU_ULMODE 0x6A // Select Ultralight mode
+#define GEN_4GTU_GETCNF 0xC6 // Dump configuration
+#define GEN_4GTU_TEST   0xCC // Factory test, returns 6666
+#define GEN_4GTU_WRITE  0xCD // Backdoor write 16b block
+#define GEN_4GTU_READ   0xCE // Backdoor read 16b block
+#define GEN_4GTU_SETCNF 0xF0 // Configure all params in one cmd
+#define GEN_4GTU_FUSCNF 0xF1 // Configure all params in one cmd and fuse the configuration permanently
+#define GEN_4GTU_CHPWD  0xFE // change password
+
 /**
 06 00 = INITIATE
 0E xx = SELECT ID (xx = Chip-ID)

@@ -1408,6 +1408,9 @@ int detect_mf_magic(bool is_mfc) {
         case MAGIC_GEN_3:
             PrintAndLogEx(SUCCESS, "Magic capabilities : possibly " _GREEN_("Gen 3 / APDU"));
             break;
+        case MAGIC_GEN_4GTU:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GTU"));
+            break;
         case MAGIC_GEN_UNFUSED:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));
             break;
