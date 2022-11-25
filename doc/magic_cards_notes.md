@@ -998,9 +998,14 @@ Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 ### Identify
 ^[Top](#top) ^^[Gen4](#g4top)
 
-👉 **TODO** Tag doesn't get identified correctly by latest Proxmark3 client (it might get mislabeled as MFC Gen2/CUID, Gen3/APDU or NTAG21x Modifiable, depending on configured UID/ATQA/SAK/ATS)
+👉 **TODO** If the password is not default, Tag doesn't get identified correctly by latest Proxmark3 client (it might get mislabeled as MFC Gen2/CUID, Gen3/APDU or NTAG21x Modifiable, depending on configured UID/ATQA/SAK/ATS)
 
-One can identify manually such card if the password is still the default one, with the command to get the current configuration:
+```
+hf 14a info
+[+] Magic capabilities : Gen 4 GTU
+```
+
+The card will be identified only if the password is the default one. One can identify manually such card if the password is still the default one, with the command to get the current configuration:
 ```
 hf 14a raw -s -c -t 1000 CF00000000C6
 ```
@@ -1108,6 +1113,14 @@ Default `<passwd>`: `00000000`
 ```
 # view contents of tag memory:
 hf mf gview
+# Read a specific block via backdoor command:
+hf mf ggetblk 
+# Write a specific block via backdoor command:
+hf mf gsetblk 
+# Load dump to tag:
+hf mf gload 
+# Save dump from tag:
+hf mf gsave
 ```
 👉 **TODO** `hf mf gview` is currently missing Ultralight memory maps 
 
@@ -1119,6 +1132,8 @@ hf 14a raw -s -c -t 1000 CF00000000CE01
 hf 14a raw -s -c -t 1000 CF00000000CE02
 ...
 ```
+
+👉 **TODO** In Mifare Ultralight / NTAG mode, the special writes (option -s, -e, -r) do not apply. Use `script run hf_mf_ultimatecard` for UID and signature, and `hf mfu wrbl` for PWD and PACK. 
 
 ### Change ATQA / SAK
 ^[Top](#top) ^^[Gen4](#g4top)
