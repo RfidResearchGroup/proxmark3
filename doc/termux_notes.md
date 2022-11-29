@@ -30,10 +30,11 @@
 ^[Top](#top)
 
 - Android phone
-- [Termux](https://play.google.com/store/apps/details?id=com.termux)
-- Proxmark3 RDV4 (https://www.proxmark.com/proxmark-3-hardware/proxmark-3-rdv4)
-- Blueshark Standalone Module (Bluetooth ONLY) (https://www.proxmark.com/proxmark-news/proxmark3-blueshark-bluetooth-released)
-- Proxmark with BTADDON compiled Firmware (Bluetooth ONLY) (https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#platform_extras)
+- [F-Droid](https://f-droid.org/)
+- [Termux](https://f-droid.org/en/packages/com.termux/)
+- [Proxmark3 RDV4](https://www.proxmark.com/proxmark-3-hardware/proxmark-3-rdv4)
+- [Blueshark Standalone Module](https://www.proxmark.com/proxmark-news/proxmark3-blueshark-bluetooth-released) **(ONLY if using Bluetooth)**
+- [Proxmark with BTADDON compiled Firmware](https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#platform_extras) **(ONLY if using Bluetooth)**
 
 
 ## Notes
@@ -48,8 +49,9 @@ ref : https://github.com/Proxmark/proxmark3/wiki/android
 ### Setting up Termux
 ^[Top](#top)
 
-Install [Termux](https://f-droid.org/en/packages/com.termux/) and start it
+Use [F-Droid](https://f-droid.org/) to install [Termux](https://f-droid.org/en/packages/com.termux/) and start it.
 
+It is recommended to use the F-Droid version of Termux as it will be the latest. The [Play Store version](https://play.google.com/store/apps/details?id=com.termux) is not maintained (as stated in the description: "Updates over Google Play [are] currently halted due to technical reasons").
 
 ### Install Proxmark3 package which follows tagged releases
 ^[Top](#top)
