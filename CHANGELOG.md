@@ -16,6 +16,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `trace list -t mf` - now also finds UID if anticollision is partial captured, to be used for mfkey (@iceman1001)
  - Added `hf mf gload, gsave, ggetblk, gsetblk` for Gen4 GTU in mifare classic mode (@DidierA)
  - Fixed SPI flash overflow when loading dictionnaries into flash. Breaking change: added 1 more sector for Mifare - dictionnaries should be loaded again (@jmichelp)
+ - Fixed `lf hitag dump` - Should now work as described in the command help (@natmchugh)
 
 ## [Radium.4.15864][2022-10-29]
  - Changed `lf indala sim` - now accepts fc / cn (@iceman1001)
