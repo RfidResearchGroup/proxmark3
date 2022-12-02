@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `trace list -r` (relative times) not working unless `-u` (microseconds) was specified, and made `--frame` respect `-u` and `-r` options (@nvx)
  - Added detection of magic Gen4 GTU (@DidierA)
  - Added luascript `hf_i2c_plus_2k_utils` - Script for dumping/modifying user memory of sectors 0 and 1 (@flamebarke) 
  - Added `hf mfu esave` - saves emulator memory to mfu dump file (@DidierA)
