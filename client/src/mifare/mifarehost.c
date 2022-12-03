@@ -36,7 +36,9 @@
 #include "cmdparser.h"          // detection of flash capabilities
 #include "cmdflashmemspiffs.h"  // upload to flash mem
 #include "mifaredefault.h"      // default keys
-
+#include "protocol_vigik.h"     // VIGIK struct
+#include "crypto/libpcrypto.h"
+#include "util.h" // xor
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;
@@ -1445,4 +1447,247 @@ int read_mfc_ev1_signature(uint8_t *signature) {
         }
     }
     return res;
+}
+
+int convert_mfc_2_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen) {
+    if (in == NULL || out == NULL)
+        return PM3_EINVARG;
+
+    uint8_t blockno = 0;
+    while (ilen) {
+
+        if (mfIsSectorTrailer(blockno) == false) {
+            memcpy(out, in, MFBLOCK_SIZE);
+        }
+        blockno++;
+        out += MFBLOCK_SIZE;
+        in += MFBLOCK_SIZE;
+        ilen -= MFBLOCK_SIZE;
+        *olen += MFBLOCK_SIZE;
+    }
+    return PM3_SUCCESS;    
+}
+
+int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
+
+    // iso9796
+    // Exponent V = 2  
+    // n = The public modulus n is the product of the secret prime factors p and q. Its length is 1024 bits.
+
+
+    // calc SHA1
+/*
+    uint8_t mask[128] = {0};
+    uint8_t *pmask = mask;
+    int mask_cnt;
+    for (mask_cnt = 0; mask_cnt < sizeof(mask); mask_cnt += 4) {
+        uint8_t seed[13] = {0};
+        sprintf((char*)seed, "seed%08u", mask_cnt);
+        sha1hash(seed, 12, pmask);
+        pmask += 4;
+    }
+*/
+
+    PrintAndLogEx(INFO, "Raw...");
+    print_hex_noascii_break(uid, uidlen, MFBLOCK_SIZE * 2);
+
+
+    // t = 0xBC  = Implicitly known
+    // t = 0xCC  = look at byte before to determine hash function
+    // uint8_t T[] = {0x33, 0xCC};
+
+    // Success decrypt would mean  0x4b BB ... BB BA padding
+    // padding, message,  hash, 8 bits or 16 bits
+
+    // signature = h( C || M1 || h(M2) )
+    // 1024 - 786 - 160 - 16 -1
+    // salt C 
+    // message M = 96 bytes,  768 bits
+    // sha1 hash H = 20 bytes, 160 bits
+    // padding = 20 bytes, 96 bits
+
+
+// ref:  MIFARE Classic EV1 Originality Signature Validation
+#define PUBLIC_VIGIK_KEYLEN 128
+
+    const vigik_pk_t vigik_rsa_pk[5] = {
+        {"La Poste Service Universel", "AB9953CBFCCD9375B6C028ADBAB7584BED15B9CA037FADED9765996F9EA1AB983F3041C90DA3A198804FF90D5D872A96A4988F91F2243B821E01C5021E3ED4E1BA83B7CFECAB0E766D8563164DE0B2412AE4E6EA63804DF5C19C7AA78DC14F608294D732D7C8C67A88C6F84C0F2E3FAFAE34084349E11AB5953AC68729D07715"},
+        {"La Poste Autres Services", "A6D99B8D902893B04F3F8DE56CB6BF24338FEE897C1BCE6DFD4EBD05B7B1A07FD2EB564BB4F7D35DBFE0A42966C2C137AD156E3DAB62904592BCA20C0BC7B8B1E261EF82D53F52D203843566305A49A22062DECC38C2FE3864CAD08E79219487651E2F79F1C9392B48CAFE1BFFAFF4802AE451E7A283E55A4026AD1E82DF1A15"},
+        {"France Telecom", "C44DBCD92F9DCF42F4902A87335DBB35D2FF530CDB09814CFA1F4B95A1BD018D099BC6AB69F667B4922AE1ED826E72951AA3E0EAAA7D49A695F04F8CDAAE2D18D10D25BD529CBB05ABF070DC7C041EC35C2BA7F58CC4C349983CC6E11A5CBE828FB8ECBC26F08E1094A6B44C8953C8E1BAFD214DF3E69F430A98CCC75C03669D"},
+        {"EDF-GDF", "B35193DBD2F88A21CDCFFF4BF84F7FC036A991A363DCB3E802407A5E5879DC2127EECFC520779E79E911394882482C87D09A88B0711CBC2973B77FFDAE40EA0001F595072708C558B484AB89D02BCBCB971FF1B80371C0BE30CB13661078078BB68EBCCA524B9DD55EBF7D47D9355AFC95511350CC1103A5DEE847868848B235"},
+        {"demo", "BCEB2EB02E1C8E9999BC9603F8F91DA6084EA6E7C75BD18DD0CDBEDB21DA29F19E7311259DB0D190B1920186A8126B582D13ABA69958763ADA8F79F162C7379D6109D2C94AA2E041B383A74BBF17FFCC145760AA8B58BE3C00C52BA3BD05A9D0BE5BA503E6721FC4066D37A89BF072C97BABB26CF6B29633043DB4746F9D2175"},
+    };
+
+    uint8_t i;
+    bool is_valid = false;
+
+    mbedtls_mpi RN, E;
+    mbedtls_mpi_init(&RN);
+
+    // exponent 2
+    mbedtls_mpi_init(&E);
+    mbedtls_mpi_add_int(&E, &E, 2);
+
+    for (i = 0; i < ARRAYLEN(vigik_rsa_pk); i++) {
+
+        PrintAndLogEx(INFO, "\n\n--- RSA PUBLIC KEY ---\n");
+        int dl = 0;
+        uint8_t n[PUBLIC_VIGIK_KEYLEN];
+        param_gethex_to_eol(vigik_rsa_pk[i].n, 0, n, PUBLIC_VIGIK_KEYLEN, &dl);
+
+        // convert
+        mbedtls_mpi N, s, sqr, res;
+        mbedtls_mpi_init(&N);
+        mbedtls_mpi_init(&s);
+        mbedtls_mpi_init(&sqr);
+        mbedtls_mpi_init(&res);
+
+        mbedtls_mpi_read_binary(&N, (const unsigned char*)n, PUBLIC_VIGIK_KEYLEN);
+
+/*
+        uint8_t demo_sig[128];
+        param_gethex_to_eol("0C0C62D3523F2DA3972679D0348D9A5038E93AE3D19E97DF875DCC046B2637DBCE7D4CCC5967529AB96D27B6D9B41F5456E65EEA328FDB7DAE6F4E7DA0CFC1CFF8AB5A80CC7C9B9F487EC2B590CBC2F31AFDC5CF9C3478B93C46D575A0E08D21D965A9C4FCAFE3562D64B1C30706AF0D43288156DA3FF990CB040D5C0863F262", 0, demo_sig, 128, &dl);
+        mbedtls_mpi_read_binary(&s, (const unsigned char*)demo_sig, 128);
+*/
+        mbedtls_mpi_read_binary(&s, (const unsigned char*)signature, signature_len);
+
+        // check is sign < (N/2)
+        mbedtls_mpi n_2;
+        mbedtls_mpi_init(&n_2);
+        mbedtls_mpi_copy(&n_2, &N);
+        mbedtls_mpi_shift_r(&n_2, 1);
+    
+        bool is_less =  (mbedtls_mpi_cmp_mpi(&s, &n_2) > 0) ? false : true;
+        PrintAndLogEx(INFO, "z < (N/2) ..... %s", (is_less) ? _GREEN_("YES") : _RED_("NO"));
+
+        mbedtls_mpi_free(&n_2);
+        if (is_less) {
+            mbedtls_mpi_exp_mod(&sqr, &s, &E, &N, &RN);
+        }
+            
+        /*
+            if v is even and
+            ⎯ if J* mod 8 = 1, then f* = n–J*.
+            ⎯ if J* mod 8 = 4, then f* = J*,
+            ⎯ if J* mod 8 = 6, then f* = 2J*,
+            ⎯ if J* mod 8 = 7, then f* = 2(n–J*),
+        */
+        uint8_t b2 = mbedtls_mpi_get_bit(&sqr, 2);
+        uint8_t b1 = mbedtls_mpi_get_bit(&sqr, 1);
+        uint8_t b0 = mbedtls_mpi_get_bit(&sqr, 0);
+        uint8_t lsb = (b2 << 2) | (b1 << 1) | b0;
+
+        switch (lsb) {
+            case 1:
+                mbedtls_mpi_sub_mpi(&res, &N, &sqr);
+                break;
+            case 4:
+                mbedtls_mpi_copy(&res, &sqr);
+                break;
+            case 6:
+                mbedtls_mpi_mul_int(&res, &sqr, 2);
+                break;
+            case 7:
+                mbedtls_mpi foo;
+                mbedtls_mpi_init(&foo);
+                mbedtls_mpi_sub_mpi(&foo, &N, &sqr);
+                mbedtls_mpi_mul_int(&res, &foo, 2);
+                mbedtls_mpi_free(&foo);
+                break;
+        }
+
+        PrintAndLogEx(INFO, "LSB............ " _GREEN_("%u"), lsb);
+        mbedtls_mpi_write_file( "E = 0x", &E, 16, NULL );
+        mbedtls_mpi_write_file( "N = 0x", &N, 16, NULL );
+        mbedtls_mpi_write_file( "[=] signature...... ", &s, 16, NULL );        
+        mbedtls_mpi_write_file( "[=] square mod n... ", &sqr, 16, NULL );
+        mbedtls_mpi_write_file( "[=] n-fs........... ", &res, 16, NULL );
+        // mbedtls_mpi_write_file( "masked ", &, 16, NULL );
+
+        uint8_t nfs[128] = {0};
+        int bar = mbedtls_mpi_write_binary(&res, nfs, sizeof(nfs));
+        if (bar != 0)
+            PrintAndLogEx(INFO, "FOO... %i", bar);
+
+        PrintAndLogEx(INFO, "converted to byte array");
+        print_hex_noascii_break(nfs, sizeof(nfs), 32);
+
+        /*
+        for (int x = 0; x < uidlen; x++) {
+            nfs[x] ^= uid[x];
+        }
+
+        PrintAndLogEx(INFO, "xored set");        
+        print_hex_noascii_break(nfs, uidlen, 32);
+        */
+
+        mbedtls_mpi_free(&N);
+        mbedtls_mpi_free(&s);
+        mbedtls_mpi_free(&res);
+        /*
+        int ret = 0;
+        is_valid = (ret == 0);
+        if (is_valid)
+            break;
+        */
+    }
+    mbedtls_mpi_free(&RN);
+    mbedtls_mpi_free(&E);
+
+    return PM3_ESOFT;
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
+    PrintAndLogEx(INFO, "RSA: 1024bit");
+    
+    if (is_valid == false || i == ARRAYLEN(vigik_rsa_pk)) {
+        PrintAndLogEx(INFO, "Signature:");
+        print_hex_noascii_break(signature, signature_len,  MFBLOCK_SIZE * 2);
+        PrintAndLogEx(SUCCESS, "Signature verification: " _RED_("failed"));
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "Signature public key name: " _YELLOW_("%s"), vigik_rsa_pk[i].desc);
+    PrintAndLogEx(INFO, "Signature public key value:");
+    PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n);
+    PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 64);
+    PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 128);
+    PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 192);
+    
+    PrintAndLogEx(INFO, "Signature:");
+    print_hex_noascii_break(signature, signature_len,  MFBLOCK_SIZE * 2);
+
+    PrintAndLogEx(SUCCESS, "Signature verification: " _GREEN_("successful"));
+
+    return PM3_SUCCESS;
+}
+
+int vigik_annotate(uint8_t *d) {
+    if (d == NULL)
+        return PM3_EINVARG;
+    
+    mfc_vigik_t *foo = (mfc_vigik_t*)d;
+
+    PrintAndLogEx(INFO, "Manufacture......... %s", sprint_hex(foo->b0, sizeof(foo->b0)));
+    PrintAndLogEx(INFO, "MAD................. %s", sprint_hex(foo->mad, sizeof(foo->mad)));
+    PrintAndLogEx(INFO, "Counters............ %u", foo->counters);
+    PrintAndLogEx(INFO, "rtf................. %s", sprint_hex(foo->rtf, sizeof(foo->rtf)));
+    PrintAndLogEx(INFO, "Service code........ 0x%08x / %u ", foo->service_code, foo->service_code);
+    PrintAndLogEx(INFO, "Info flag........... %u -", foo->info_flag); // ,  sprint_bin(foo->info_flag, 1));
+    PrintAndLogEx(INFO, "Key version......... %u", foo->key_version);
+    PrintAndLogEx(INFO, "PTR Counter......... %u", foo->ptr_counter);
+    PrintAndLogEx(INFO, "Counter num......... %u", foo->counter_num);
+    PrintAndLogEx(INFO, "Slot access date.... %s", sprint_hex(foo->slot_access_date, sizeof(foo->slot_access_date)));
+    PrintAndLogEx(INFO, "Slot dst duration... %u", foo->slot_dst_duration);
+    PrintAndLogEx(INFO, "Other Slots......... %s", sprint_hex(foo->other_slots, sizeof(foo->other_slots)));
+    PrintAndLogEx(INFO, "Services counter.... %u", foo->services_counter);
+    PrintAndLogEx(INFO, "Loading date........ %s", sprint_hex(foo->loading_date, sizeof(foo->loading_date)));
+    PrintAndLogEx(INFO, "Reserverd null...... %u", foo->reserved_null);
+    PrintAndLogEx(INFO, "----------------------------------------------------------------");
+    PrintAndLogEx(INFO, "");
+    vigik_verify(d, 96, foo->rsa_signature, sizeof(foo->rsa_signature));
+    PrintAndLogEx(INFO, "----------------------------------------------------------------");
+    PrintAndLogEx(INFO, "");
+    return PM3_SUCCESS;
+
 }

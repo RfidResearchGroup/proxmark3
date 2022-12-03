@@ -5528,6 +5528,13 @@ static int CmdHF14AMfMAD(const char *Cmd) {
                 HIDTryUnpack(&packed);
             }
         }
+
+        sector = DetectHID(dump, 0x4910);
+        if (sector > -1) {
+            // decode it
+            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
+        }
         free(dump);
         return PM3_SUCCESS;
     }
@@ -5657,7 +5664,6 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-
 
 int CmdHFMFNDEFRead(const char *Cmd) {
 
@@ -6790,6 +6796,50 @@ static int CmdHF14AMfView(const char *Cmd) {
 
     if (verbose) {
         mf_print_keys(block_cnt, dump);
+    }
+
+    int sector = DetectHID(dump, 0x4910);
+    if (sector > -1) {
+        // decode it
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
+
+        // decode MAD
+        uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+        size_t madlen = 0;
+        res = MADDecode(dump, NULL, mad, &madlen, false);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "can't decode MAD");
+            return res;
+        }
+
+        // allocate memory
+        uint8_t* d = calloc(bytes_read, sizeof(uint8_t));
+        if (d == NULL) {
+            return PM3_EMALLOC;
+        }
+        uint16_t dlen = 0;
+
+        // vigik struture sector 0
+        uint8_t *pdump = dump;
+
+        memcpy(d + dlen, pdump, MFBLOCK_SIZE * 3);
+        dlen += MFBLOCK_SIZE * 3;
+        pdump += (MFBLOCK_SIZE * 4);  // skip sectortrailer
+
+        // extract memory from MAD sectors
+        for (int i = 0; i <= madlen; i++) {
+            if (0x4910 == mad[i] || 0x4916 == mad[i]) {
+                memcpy(d + dlen, pdump, MFBLOCK_SIZE * 3);
+                dlen += MFBLOCK_SIZE * 3;
+            }
+
+            pdump += (MFBLOCK_SIZE * 4);  // skip sectortrailer
+        }
+
+//          convert_mfc_2_arr(pdump, bytes_read, d, &dlen);
+        vigik_annotate(d);
+        free(d);
     }
 
     free(dump);
