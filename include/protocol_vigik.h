@@ -38,7 +38,8 @@ typedef struct mfc_vigik_s {
 
 typedef struct vigik_pk_s {
     const char *desc;
-    const char *n;    
+    uint16_t code;
+    const char *n;
 } vigik_pk_t;
 
 #endif

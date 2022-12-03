@@ -1468,6 +1468,24 @@ int convert_mfc_2_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen) 
     return PM3_SUCCESS;    
 }
 
+static const vigik_pk_t vigik_rsa_pk[] = {
+    {"La Poste Service Universel", 0x07AA, "AB9953CBFCCD9375B6C028ADBAB7584BED15B9CA037FADED9765996F9EA1AB983F3041C90DA3A198804FF90D5D872A96A4988F91F2243B821E01C5021E3ED4E1BA83B7CFECAB0E766D8563164DE0B2412AE4E6EA63804DF5C19C7AA78DC14F608294D732D7C8C67A88C6F84C0F2E3FAFAE34084349E11AB5953AC68729D07715"},
+    {"La Poste Autres Services", 0x07AB, "A6D99B8D902893B04F3F8DE56CB6BF24338FEE897C1BCE6DFD4EBD05B7B1A07FD2EB564BB4F7D35DBFE0A42966C2C137AD156E3DAB62904592BCA20C0BC7B8B1E261EF82D53F52D203843566305A49A22062DECC38C2FE3864CAD08E79219487651E2F79F1C9392B48CAFE1BFFAFF4802AE451E7A283E55A4026AD1E82DF1A15"},
+    {"France Telecom", 0x07AC, "C44DBCD92F9DCF42F4902A87335DBB35D2FF530CDB09814CFA1F4B95A1BD018D099BC6AB69F667B4922AE1ED826E72951AA3E0EAAA7D49A695F04F8CDAAE2D18D10D25BD529CBB05ABF070DC7C041EC35C2BA7F58CC4C349983CC6E11A5CBE828FB8ECBC26F08E1094A6B44C8953C8E1BAFD214DF3E69F430A98CCC75C03669D"},
+    {"EDF-GDF", 0x07AD, "B35193DBD2F88A21CDCFFF4BF84F7FC036A991A363DCB3E802407A5E5879DC2127EECFC520779E79E911394882482C87D09A88B0711CBC2973B77FFDAE40EA0001F595072708C558B484AB89D02BCBCB971FF1B80371C0BE30CB13661078078BB68EBCCA524B9DD55EBF7D47D9355AFC95511350CC1103A5DEE847868848B235"},
+    {"demo", 0x0000, "BCEB2EB02E1C8E9999BC9603F8F91DA6084EA6E7C75BD18DD0CDBEDB21DA29F19E7311259DB0D190B1920186A8126B582D13ABA69958763ADA8F79F162C7379D6109D2C94AA2E041B383A74BBF17FFCC145760AA8B58BE3C00C52BA3BD05A9D0BE5BA503E6721FC4066D37A89BF072C97BABB26CF6B29633043DB4746F9D2175"},
+    {NULL, 0, NULL}
+};
+
+const char *vigik_get_service(uint16_t service_code) {
+    for (int i = 0; i < ARRAYLEN(vigik_rsa_pk); ++i)
+        if (service_code == vigik_rsa_pk[i].code)
+            return vigik_rsa_pk[i].desc;
+
+    //No match, return default
+    return vigik_rsa_pk[ARRAYLEN(vigik_rsa_pk) - 1].desc;
+}
+
 int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
 
     // iso9796
@@ -1510,14 +1528,6 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
 // ref:  MIFARE Classic EV1 Originality Signature Validation
 #define PUBLIC_VIGIK_KEYLEN 128
 
-    const vigik_pk_t vigik_rsa_pk[5] = {
-        {"La Poste Service Universel", "AB9953CBFCCD9375B6C028ADBAB7584BED15B9CA037FADED9765996F9EA1AB983F3041C90DA3A198804FF90D5D872A96A4988F91F2243B821E01C5021E3ED4E1BA83B7CFECAB0E766D8563164DE0B2412AE4E6EA63804DF5C19C7AA78DC14F608294D732D7C8C67A88C6F84C0F2E3FAFAE34084349E11AB5953AC68729D07715"},
-        {"La Poste Autres Services", "A6D99B8D902893B04F3F8DE56CB6BF24338FEE897C1BCE6DFD4EBD05B7B1A07FD2EB564BB4F7D35DBFE0A42966C2C137AD156E3DAB62904592BCA20C0BC7B8B1E261EF82D53F52D203843566305A49A22062DECC38C2FE3864CAD08E79219487651E2F79F1C9392B48CAFE1BFFAFF4802AE451E7A283E55A4026AD1E82DF1A15"},
-        {"France Telecom", "C44DBCD92F9DCF42F4902A87335DBB35D2FF530CDB09814CFA1F4B95A1BD018D099BC6AB69F667B4922AE1ED826E72951AA3E0EAAA7D49A695F04F8CDAAE2D18D10D25BD529CBB05ABF070DC7C041EC35C2BA7F58CC4C349983CC6E11A5CBE828FB8ECBC26F08E1094A6B44C8953C8E1BAFD214DF3E69F430A98CCC75C03669D"},
-        {"EDF-GDF", "B35193DBD2F88A21CDCFFF4BF84F7FC036A991A363DCB3E802407A5E5879DC2127EECFC520779E79E911394882482C87D09A88B0711CBC2973B77FFDAE40EA0001F595072708C558B484AB89D02BCBCB971FF1B80371C0BE30CB13661078078BB68EBCCA524B9DD55EBF7D47D9355AFC95511350CC1103A5DEE847868848B235"},
-        {"demo", "BCEB2EB02E1C8E9999BC9603F8F91DA6084EA6E7C75BD18DD0CDBEDB21DA29F19E7311259DB0D190B1920186A8126B582D13ABA69958763ADA8F79F162C7379D6109D2C94AA2E041B383A74BBF17FFCC145760AA8B58BE3C00C52BA3BD05A9D0BE5BA503E6721FC4066D37A89BF072C97BABB26CF6B29633043DB4746F9D2175"},
-    };
-
     uint8_t i;
     bool is_valid = false;
 
@@ -1529,6 +1539,9 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
     mbedtls_mpi_add_int(&E, &E, 2);
 
     for (i = 0; i < ARRAYLEN(vigik_rsa_pk); i++) {
+        if (vigik_rsa_pk[i].desc == NULL) {
+            break;
+        }
 
         PrintAndLogEx(INFO, "\n\n--- RSA PUBLIC KEY ---\n");
         int dl = 0;
@@ -1552,6 +1565,7 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
         mbedtls_mpi_read_binary(&s, (const unsigned char*)signature, signature_len);
 
         // check is sign < (N/2)
+/*        
         mbedtls_mpi n_2;
         mbedtls_mpi_init(&n_2);
         mbedtls_mpi_copy(&n_2, &N);
@@ -1561,9 +1575,10 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
         PrintAndLogEx(INFO, "z < (N/2) ..... %s", (is_less) ? _GREEN_("YES") : _RED_("NO"));
 
         mbedtls_mpi_free(&n_2);
-        if (is_less) {
+*/
+//        if (is_less) {
             mbedtls_mpi_exp_mod(&sqr, &s, &E, &N, &RN);
-        }
+//        }
             
         /*
             if v is even and
@@ -1631,6 +1646,7 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
             break;
         */
     }
+
     mbedtls_mpi_free(&RN);
     mbedtls_mpi_free(&E);
 
@@ -1665,14 +1681,14 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
 int vigik_annotate(uint8_t *d) {
     if (d == NULL)
         return PM3_EINVARG;
-    
+
     mfc_vigik_t *foo = (mfc_vigik_t*)d;
 
     PrintAndLogEx(INFO, "Manufacture......... %s", sprint_hex(foo->b0, sizeof(foo->b0)));
     PrintAndLogEx(INFO, "MAD................. %s", sprint_hex(foo->mad, sizeof(foo->mad)));
     PrintAndLogEx(INFO, "Counters............ %u", foo->counters);
     PrintAndLogEx(INFO, "rtf................. %s", sprint_hex(foo->rtf, sizeof(foo->rtf)));
-    PrintAndLogEx(INFO, "Service code........ 0x%08x / %u ", foo->service_code, foo->service_code);
+    PrintAndLogEx(INFO, "Service code........ 0x%08x / %u  - " _YELLOW_("%s"), foo->service_code, foo->service_code, vigik_get_service(foo->service_code));
     PrintAndLogEx(INFO, "Info flag........... %u -", foo->info_flag); // ,  sprint_bin(foo->info_flag, 1));
     PrintAndLogEx(INFO, "Key version......... %u", foo->key_version);
     PrintAndLogEx(INFO, "PTR Counter......... %u", foo->ptr_counter);
@@ -1682,7 +1698,7 @@ int vigik_annotate(uint8_t *d) {
     PrintAndLogEx(INFO, "Other Slots......... %s", sprint_hex(foo->other_slots, sizeof(foo->other_slots)));
     PrintAndLogEx(INFO, "Services counter.... %u", foo->services_counter);
     PrintAndLogEx(INFO, "Loading date........ %s", sprint_hex(foo->loading_date, sizeof(foo->loading_date)));
-    PrintAndLogEx(INFO, "Reserverd null...... %u", foo->reserved_null);
+    PrintAndLogEx(INFO, "Reserved null....... %u", foo->reserved_null);
     PrintAndLogEx(INFO, "----------------------------------------------------------------");
     PrintAndLogEx(INFO, "");
     vigik_verify(d, 96, foo->rsa_signature, sizeof(foo->rsa_signature));
