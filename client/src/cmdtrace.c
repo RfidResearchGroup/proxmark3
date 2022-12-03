@@ -683,7 +683,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     // Draw the CRC column
-    const char *crcstrings[] = { "!crc", " ok ", "    ", "A ok", "B ok" };
+    const char *crcstrings[] = { _RED_(" !! "), _GREEN_(" ok "), "    ", _GREEN_("A ok"), _GREEN_("B ok") };
     const char *crc = crcstrings[crcStatus];
 
     // mark short bytes (less than 8 Bit + Parity)
@@ -876,7 +876,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             PrintAndLogEx(NORMAL, "            |            |  *  |%-*s | %-4s| %s",
                           72 + crc_format_string_offset,
                           sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
-                          (crcc == 0 ? "!crc" : (crcc == 1 ? " ok " : "    ")),
+                          (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
                           explanation);
         }
     }
