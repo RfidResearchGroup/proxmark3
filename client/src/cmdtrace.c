@@ -815,8 +815,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                                  );
                 } else {
                     PrintAndLogEx(NORMAL, " %10u | %10u | Tag |%-*s | %s| %s",
-                                  (hdr->timestamp - first_hdr->timestamp),
-                                  (end_of_transmission_timestamp - first_hdr->timestamp),
+                                  time1,
+                                  time2,
                                   72 + crc_format_string_offset,
                                   line[j],
                                   (j == num_lines - 1) ? crc : "    ",
@@ -838,8 +838,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 } else {
                     PrintAndLogEx(NORMAL,
                                   _YELLOW_(" %10u") " | " _YELLOW_("%10u") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
-                                  (hdr->timestamp - first_hdr->timestamp),
-                                  (end_of_transmission_timestamp - first_hdr->timestamp),
+                                  time1,
+                                  time2,
                                   72 + crc_format_string_offset,
                                   line[j],
                                   (j == num_lines - 1) ? crc : "    ",
@@ -889,11 +889,26 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
         tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
 
-        PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): " _YELLOW_("%d"),
-                      (end_of_transmission_timestamp - first_hdr->timestamp),
-                      (next_hdr->timestamp - first_hdr->timestamp),
-                      "   ",
-                      (next_hdr->timestamp - end_of_transmission_timestamp));
+        uint32_t time1 = end_of_transmission_timestamp - first_hdr->timestamp;
+        uint32_t time2 = next_hdr->timestamp - first_hdr->timestamp;
+        if (prev_eot) {
+            time1 = 0;
+            time2 = next_hdr->timestamp - end_of_transmission_timestamp;
+        }
+
+        if (use_us) {
+            PrintAndLogEx(NORMAL, " %10.1f | %10.1f | %s |fdt (Frame Delay Time): " _YELLOW_("%.1f"),
+                (float)time1 / 13.56,
+                (float)time2 / 13.56,
+                "   ",
+                (float)(next_hdr->timestamp - end_of_transmission_timestamp) / 13.56);
+        } else {
+            PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): " _YELLOW_("%d"),
+                time1,
+                time2,
+                "   ",
+                (next_hdr->timestamp - end_of_transmission_timestamp));
+        }
     }
 
     return tracepos;
