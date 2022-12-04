@@ -1505,17 +1505,15 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
     // Exponent V = 2  
     // n = The public modulus n is the product of the secret prime factors p and q. Its length is 1024 bits.
 
-    PrintAndLogEx(INFO, "Raw");
-    print_hex_noascii_break(uid, uidlen, MFBLOCK_SIZE * 2);
+    if (g_debugMode == DEBUG) {
+        PrintAndLogEx(INFO, "Raw");
+        print_hex_noascii_break(uid, uidlen, MFBLOCK_SIZE * 2);
 
-    PrintAndLogEx(INFO, "Raw signature");
-    print_hex_noascii_break(signature, signature_len, MFBLOCK_SIZE * 2);
-
-    
+        PrintAndLogEx(INFO, "Raw signature");
+        print_hex_noascii_break(signature, signature_len, MFBLOCK_SIZE * 2);
+    }
     uint8_t rev_sig[128];
     reverse_array(signature, signature_len, rev_sig);
-
-//    param_gethex_to_eol("27f2850cd5e114b3c5f4cd12cd6e0d4f0b1fce9f75c991f482024c6b1f4a19b29063d722ef76a3710f02cdbd5196825162ac402e3641b5ce7374d9e358280283d4e30479f5285785ac61152d0e4611b28fbadbf6b4ba8aa7374b87fb5ea8c0ba51e41dcf50e96b65336a11e379342048ed66a61c8351051f9bad308249b3fb00", 0, rev_sig, 128, &rv);
 
     PrintAndLogEx(INFO, "Raw signature reverse");
     print_hex_noascii_break(rev_sig, signature_len, MFBLOCK_SIZE * 2);
@@ -1553,13 +1551,10 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
         mbedtls_mpi_init(&E);
         mbedtls_mpi_add_int(&E, &E, 2);
 
-
-        PrintAndLogEx(INFO, "\n\n--- RSA PUBLIC KEY ---\n");
         int dl = 0;
         uint8_t n[PUBLIC_VIGIK_KEYLEN];
         memset(n, 0, sizeof(n));
         param_gethex_to_eol(vigik_rsa_pk[i].n, 0, n, PUBLIC_VIGIK_KEYLEN, &dl);
-
 
         // convert
         mbedtls_mpi N, s, sqr, res;
@@ -1580,12 +1575,14 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
         mbedtls_mpi_copy(&n_2, &N);
         mbedtls_mpi_shift_r(&n_2, 1);
         bool is_less =  (mbedtls_mpi_cmp_mpi(&s, &n_2) > 0) ? false : true;
-        PrintAndLogEx(INFO, "z < (N/2) ..... %s", (is_less) ? _GREEN_("YES") : _RED_("NO"));
+        PrintAndLogEx(DEBUG, "z < (N/2) ..... %s", (is_less) ? _GREEN_("YES") : _RED_("NO"));
         mbedtls_mpi_free(&n_2);
 
 
         if (is_less) {
             mbedtls_mpi_exp_mod(&sqr, &s, &E, &N, &RN);
+        } else {
+            continue;
         }
 
         /*
@@ -1641,39 +1638,56 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
                 break;
             }
             default: {
-                break;
+                continue;
             }
         }
 
-        PrintAndLogEx(INFO, "LSB............ " _GREEN_("%u"), lsb);
-        mbedtls_mpi_write_file( "[=] N.............. ", &N, 16, NULL );
-        mbedtls_mpi_write_file( "[=] signature...... ", &s, 16, NULL );        
-        mbedtls_mpi_write_file( "[=] square mod n... ", &sqr, 16, NULL );
-        mbedtls_mpi_write_file( "[=] n-fs........... ", &res, 16, NULL );
+        PrintAndLogEx(DEBUG, "LSB............ " _GREEN_("%u"), lsb);
+        if (g_debugMode == DEBUG) {
+            mbedtls_mpi_write_file( "[=] N.............. ", &N, 16, NULL );
+            mbedtls_mpi_write_file( "[=] signature...... ", &s, 16, NULL );        
+            mbedtls_mpi_write_file( "[=] square mod n... ", &sqr, 16, NULL );
+            mbedtls_mpi_write_file( "[=] n-fs........... ", &res, 16, NULL );
+        }
+
 
         uint8_t nfs[128] = {0};
-        int bar = mbedtls_mpi_write_binary(&res, nfs, sizeof(nfs));
+        mbedtls_mpi_write_binary(&res, nfs, sizeof(nfs));
 
-        // xor 
+        // xor 0xDC01
+        int count_zero = 0;
         for (int x = 0; x < sizeof(nfs); x +=2) {
             nfs[x] ^= 0xDC;
             nfs[x+1] ^= 0x01;
+
+            if (nfs[x] == 0x00)
+                count_zero++;
+            if (nfs[x + 1] == 0x00)
+                count_zero++;
         }
 
-        PrintAndLogEx(INFO, "Message XOR 0xDC01");
-        print_hex_noascii_break(nfs, sizeof(nfs), 32);
-        PrintAndLogEx(INFO, "\n");
+        if (count_zero > 10)  {
+            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(INFO, "Message XORED");
+            print_hex_noascii_break(nfs, sizeof(nfs), 32);
+            PrintAndLogEx(INFO, "\n");
+            is_valid = true;
+            break;
+        }
 
-        if (bar == 12054235) {
+        /*
+        if (bar == 0) {
             typedef struct vigik_rsa_s {
                 uint8_t rsa[127];
                 uint8_t hash;
             } vigik_rsa_t;
 
-            vigik_rsa_t *ts = (vigik_rsa_t*)nfs;
-            if ( ts->hash == 0xCC ) {
-                PrintAndLogEx(INFO, "Hash byte... 0x%02X", ts->hash);
-                switch(ts->rsa[126]) {
+            vigik_rsa_t ts;
+            memcpy(&ts, nfs, sizeof(ts));
+
+            if ( ts.hash == 0xCC ) {
+                PrintAndLogEx(INFO, "Hash byte... 0x%02X", ts.hash);
+                switch(ts.rsa[126]) {
                     case 0x11:
                         PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - SHA1");                    
                         break;
@@ -1687,32 +1701,23 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
                         PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - " _RED_("err"));
                         break;
                 }
-            } else if ( ts->hash == 0xBC) {
-                PrintAndLogEx(INFO, "Hash byte... 0x%02X - " _GREEN_("implict"), ts->hash);
+            } else if ( ts.hash == 0xBC) {
+                PrintAndLogEx(INFO, "Hash byte... 0x%02X - " _GREEN_("implict"), ts.hash);
             } else {
-                PrintAndLogEx(INFO, "Hash byte... 0x%02x - " _RED_("err"), ts->hash);
+                PrintAndLogEx(INFO, "Hash byte... 0x%02x - " _RED_("err"), ts.hash);
             }
 
             PrintAndLogEx(INFO, "Message w padding");
-            print_hex_noascii_break(ts->rsa, sizeof(ts->rsa) - 20, 32);
-
+            print_hex_noascii_break(ts.rsa, sizeof(ts.rsa) - 20, 32);
         }
+        */
     
         mbedtls_mpi_free(&N);
         mbedtls_mpi_free(&s);
         mbedtls_mpi_free(&res);
         mbedtls_mpi_free(&RN);
         mbedtls_mpi_free(&E);
-
-        /*
-        int ret = 0;
-        is_valid = (ret == 0);
-        if (is_valid)
-            break;
-        */
     }
-
-    return PM3_ESOFT;
 
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
