@@ -844,14 +844,39 @@ static int CmdLFHitag2Dump(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Dumping tag memory...");
+    hitag_function htf;
+    hitag_data htd;
+    memset(&htd, 0, sizeof(htd));
 
+    if (keylen == 6) {
+        htf = RHT2F_CRYPTO;
+        memcpy(htd.crypto.key, key, sizeof(htd.crypto.key));
+        PrintAndLogEx(INFO, "Authenticating in crypto mode");
+    } else {
+        htf = RHT2F_PASSWORD;
+        memcpy(htd.pwd.password, key, sizeof(htd.pwd.password));
+        PrintAndLogEx(INFO, "Authenticating in password mode");
+    }
+    
+    uint16_t cmd = CMD_LF_HITAG_READER;
     clearCommandBuffer();
-    //SendCommandNG(CMD_LF_HITAG_DUMP, &htd, sizeof(htd));
+    SendCommandMIX(cmd, htf, 0, 0, &htd, sizeof(htd));
     PacketResponseNG resp;
+  
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.oldarg[0] == false) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
+        return PM3_ESOFT;
+    }
     uint8_t *data = resp.data.asBytes;
+
     if (data == NULL)
         return PM3_ESOFT;
+
+    PrintAndLogEx(SUCCESS, "Dumping tag memory...");
 
     if (fnlen < 1) {
         char *fptr = filename;
