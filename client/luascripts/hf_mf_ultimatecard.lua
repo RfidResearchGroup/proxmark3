@@ -186,7 +186,7 @@ local function read_config()
     atqaf = atqa1..' '..atqa2
     cardtype, cardprotocol, gtustr, atsstr = 'unknown', 'unknown', 'unknown', 'unknown'
     if magicconfig == nil then lib14a.disconnect(); return nil, "can't read configuration, "..err_lock end
-    if #magicconfig ~= 64 then lib14a.disconnect(); return nil, "partial read of configuration, "..err_lock end
+    if #magicconfig ~= 64 and #magicconfig ~= 68 then lib14a.disconnect(); return nil, "partial read of configuration, "..err_lock end
     if gtumode == '00' then gtustr = 'Pre-write/Shadow Mode'
     elseif gtumode == '01' then gtustr = 'Restore Mode'
     elseif gtumode == '02' then gtustr = 'Disabled'

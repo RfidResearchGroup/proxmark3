@@ -2391,11 +2391,11 @@ void MifareCIdent(bool is_mfc) {
     if (res == 2) {
 
         // Check for Magic Gen4 GTU with default password :
-        // Get config should return 30 bytes.
+        // Get config should return 30 or 32 bytes
         AddCrc14A(gen4GetConf, sizeof(gen4GetConf) - 2);
         ReaderTransmit(gen4GetConf, sizeof(gen4GetConf), NULL);
         res = ReaderReceive(buf, par);
-        if (res == 32) {
+        if (res == 32 || res == 34) {
             isGen = MAGIC_GEN_4GTU;
             goto OUT;
         }
