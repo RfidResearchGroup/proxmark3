@@ -236,13 +236,13 @@ static bool mfc_value(const uint8_t *d, int32_t *val) {
     }
     return val_checks;
 }
-static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
-    if (blockno == 0) {
+
+static void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose) {
+     if (blockno == 0) {
         PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
     } else if (mfIsSectorTrailer(blockno)) {
         PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
     } else {
-
         int32_t value = 0;
         if (verbose && mfc_value(d, &value)) {
             PrintAndLogEx(INFO, "%3d | " _CYAN_("%s") " %"PRIi32, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE), value);
@@ -252,15 +252,37 @@ static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
     }
 }
 
+static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
+    uint8_t sectorno = mfSectorNum(blockno);
+
+    char secstr[6] = "     ";
+    if (mfFirstBlockOfSector(sectorno) == blockno) {
+        sprintf(secstr, " %3d ", sectorno);
+    }
+
+    if (blockno == 0) {
+        PrintAndLogEx(INFO, "%s| %3d | " _RED_("%s"), secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
+    } else if (mfIsSectorTrailer(blockno)) {
+        PrintAndLogEx(INFO, "%s| %3d | " _YELLOW_("%s"), secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
+    } else {
+        int32_t value = 0;
+        if (verbose && mfc_value(d, &value)) {
+            PrintAndLogEx(INFO, "%s| %3d | " _CYAN_("%s") " %"PRIi32, secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE), value);
+        } else {
+            PrintAndLogEx(INFO, "%s| %3d | %s ", secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
+        }
+    }
+}
+
 static void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose) {
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
-    PrintAndLogEx(INFO, "blk | data                                            | ascii");
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    PrintAndLogEx(INFO, "-----+-----+-------------------------------------------------+-----------------");
+    PrintAndLogEx(INFO, " sec | blk | data                                            | ascii");
+    PrintAndLogEx(INFO, "-----+-----+-------------------------------------------------+-----------------");
     for (uint16_t i = 0; i < n; i++) {
         mf_print_block(i, d + (i * MFBLOCK_SIZE), verbose);
     }
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    PrintAndLogEx(INFO, "-----+-----+-------------------------------------------------+-----------------");
     PrintAndLogEx(HINT, _CYAN_("cyan") " = value block with decoded value");
 
     // MAD detection
@@ -589,7 +611,7 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
 
         uint8_t sector = mfSectorNum(blockno);
         mf_print_sector_hdr(sector);
-        mf_print_block(blockno, data, verbose);
+        mf_print_block_one(blockno, data, verbose);
         if (verbose) {
             decode_print_st(blockno, data);
         }
@@ -652,7 +674,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
 
         mf_print_sector_hdr(sector);
         for (int i = 0; i < blocks; i++) {
-            mf_print_block(start + i, data + (i * MFBLOCK_SIZE), verbose);
+            mf_print_block_one(start + i, data + (i * MFBLOCK_SIZE), verbose);
         }
 
         if (verbose) {
@@ -3821,7 +3843,7 @@ static int CmdHF14AMfEGetBlk(const char *Cmd) {
 
         uint8_t sector = mfSectorNum(blockno);
         mf_print_sector_hdr(sector);
-        mf_print_block(blockno, data, verbose);
+        mf_print_block_one(blockno, data, verbose);
     }
     if (verbose) {
         decode_print_st(blockno, data);
@@ -3863,7 +3885,7 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     for (int i = 0; i < blocks; i++) {
         int res = mfEmlGetMem(data, start + i, 1);
         if (res == PM3_SUCCESS) {
-            mf_print_block(start + i, data, verbose);
+            mf_print_block_one(start + i, data, verbose);
         }
     }
     if (verbose) {
@@ -4811,7 +4833,7 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
 
     uint8_t sector = mfSectorNum(blockno);
     mf_print_sector_hdr(sector);
-    mf_print_block(blockno, data, verbose);
+    mf_print_block_one(blockno, data, verbose);
 
     if (verbose) {
         decode_print_st(blockno, data);
@@ -4864,7 +4886,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
             PrintAndLogEx(ERR, "Can't read block. %d error=%d", start + i, res);
             return PM3_ESOFT;
         }
-        mf_print_block(start + i, data, verbose);
+        mf_print_block_one(start + i, data, verbose);
     }
     if (verbose) {
         decode_print_st(start + blocks - 1, data);
@@ -6893,7 +6915,7 @@ static int CmdHF14AGen4GetBlk(const char *cmd) {
 
     uint8_t sector = mfSectorNum(blockno);
     mf_print_sector_hdr(sector);
-    mf_print_block(blockno, data, verbose);
+    mf_print_block_one(blockno, data, verbose);
 
     if (verbose) {
         decode_print_st(blockno, data);
