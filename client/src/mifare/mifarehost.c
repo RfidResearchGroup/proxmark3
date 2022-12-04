@@ -39,6 +39,7 @@
 #include "protocol_vigik.h"     // VIGIK struct
 #include "crypto/libpcrypto.h"
 #include "util.h" // xor
+#include "mbedtls/sha1.h"       // SHA1
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;
@@ -1470,10 +1471,16 @@ int convert_mfc_2_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen) 
 
 static const vigik_pk_t vigik_rsa_pk[] = {
     {"La Poste Service Universel", 0x07AA, "AB9953CBFCCD9375B6C028ADBAB7584BED15B9CA037FADED9765996F9EA1AB983F3041C90DA3A198804FF90D5D872A96A4988F91F2243B821E01C5021E3ED4E1BA83B7CFECAB0E766D8563164DE0B2412AE4E6EA63804DF5C19C7AA78DC14F608294D732D7C8C67A88C6F84C0F2E3FAFAE34084349E11AB5953AC68729D07715"},
+    {"La Poste Service Universel", 0x07AA, "1577D02987C63A95B51AE149430834AEAF3F2E0F4CF8C6887AC6C8D732D79482604FC18DA77A9CC1F54D8063EAE6E42A41B2E04D1663856D760EABECCFB783BAE1D43E1E02C5011E823B24F2918F98A4962A875D0DF94F8098A1A30DC941303F98ABA19E6F996597EDAD7F03CAB915ED4B58B7BAAD28C0B67593CDFCCB5399AB"},
+
     {"La Poste Autres Services", 0x07AB, "A6D99B8D902893B04F3F8DE56CB6BF24338FEE897C1BCE6DFD4EBD05B7B1A07FD2EB564BB4F7D35DBFE0A42966C2C137AD156E3DAB62904592BCA20C0BC7B8B1E261EF82D53F52D203843566305A49A22062DECC38C2FE3864CAD08E79219487651E2F79F1C9392B48CAFE1BFFAFF4802AE451E7A283E55A4026AD1E82DF1A15"},
+    {"La Poste Autres Services", 0x07AB, "151adf821ead26405ae583a2e751e42a80f4afff1bfeca482b39c9f1792f1e65879421798ed0ca6438fec238ccde6220a2495a3066358403d2523fd582ef61e2b1b8c70b0ca2bc92459062ab3d6e15ad37c1c26629a4e0bf5dd3f7b44b56ebd27fa0b1b705bd4efd6dce1b7c89ee8f3324bfb66ce58d3f4fb09328908d9bd9a6"},
+
     {"France Telecom", 0x07AC, "C44DBCD92F9DCF42F4902A87335DBB35D2FF530CDB09814CFA1F4B95A1BD018D099BC6AB69F667B4922AE1ED826E72951AA3E0EAAA7D49A695F04F8CDAAE2D18D10D25BD529CBB05ABF070DC7C041EC35C2BA7F58CC4C349983CC6E11A5CBE828FB8ECBC26F08E1094A6B44C8953C8E1BAFD214DF3E69F430A98CCC75C03669D"},
+    {"France Telecom", 0x07AC, "9d66035cc7cc980a439fe6f34d21fdbae1c853894cb4a694108ef026bcecb88f82be5c1ae1c63c9849c3c48cf5a72b5cc31e047cdc70f0ab05bb9c52bd250dd1182daeda8c4ff095a6497daaeae0a31a95726e82ede12a92b467f669abc69b098d01bda1954b1ffa4c8109db0c53ffd235bb5d33872a90f442cf9d2fd9bc4dc4"},
+
     {"EDF-GDF", 0x07AD, "B35193DBD2F88A21CDCFFF4BF84F7FC036A991A363DCB3E802407A5E5879DC2127EECFC520779E79E911394882482C87D09A88B0711CBC2973B77FFDAE40EA0001F595072708C558B484AB89D02BCBCB971FF1B80371C0BE30CB13661078078BB68EBCCA524B9DD55EBF7D47D9355AFC95511350CC1103A5DEE847868848B235"},
-    {"demo", 0x0000, "BCEB2EB02E1C8E9999BC9603F8F91DA6084EA6E7C75BD18DD0CDBEDB21DA29F19E7311259DB0D190B1920186A8126B582D13ABA69958763ADA8F79F162C7379D6109D2C94AA2E041B383A74BBF17FFCC145760AA8B58BE3C00C52BA3BD05A9D0BE5BA503E6721FC4066D37A89BF072C97BABB26CF6B29633043DB4746F9D2175"},
+    {"EDF-GDF", 0x07AD, "35b248888647e8dea50311cc50135195fc5a35d9477dbf5ed59d4b52cabc8eb68b0778106613cb30bec07103b8f11f97cbcb2bd089ab84b458c508270795f50100ea40aefd7fb77329bc1c71b0889ad0872c4882483911e9799e7720c5cfee2721dc79585e7a4002e8b3dc63a391a936c07f4ff84bffcfcd218af8d2db9351b3"},
     {NULL, 0, NULL}
 };
 
@@ -1486,29 +1493,32 @@ const char *vigik_get_service(uint16_t service_code) {
     return vigik_rsa_pk[ARRAYLEN(vigik_rsa_pk) - 1].desc;
 }
 
+static void reverse_array(const uint8_t *src, int src_len, uint8_t *dest) {
+    for (int i = 0; i < src_len; i++) {
+        dest[i] = src[(src_len - 1) - i];
+    }
+};
+
 int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
 
     // iso9796
     // Exponent V = 2  
     // n = The public modulus n is the product of the secret prime factors p and q. Its length is 1024 bits.
 
-
-    // calc SHA1
-/*
-    uint8_t mask[128] = {0};
-    uint8_t *pmask = mask;
-    int mask_cnt;
-    for (mask_cnt = 0; mask_cnt < sizeof(mask); mask_cnt += 4) {
-        uint8_t seed[13] = {0};
-        sprintf((char*)seed, "seed%08u", mask_cnt);
-        sha1hash(seed, 12, pmask);
-        pmask += 4;
-    }
-*/
-
-    PrintAndLogEx(INFO, "Raw...");
+    PrintAndLogEx(INFO, "Raw");
     print_hex_noascii_break(uid, uidlen, MFBLOCK_SIZE * 2);
 
+    PrintAndLogEx(INFO, "Raw signature");
+    print_hex_noascii_break(signature, signature_len, MFBLOCK_SIZE * 2);
+
+    
+    uint8_t rev_sig[128];
+    reverse_array(signature, signature_len, rev_sig);
+
+//    param_gethex_to_eol("27f2850cd5e114b3c5f4cd12cd6e0d4f0b1fce9f75c991f482024c6b1f4a19b29063d722ef76a3710f02cdbd5196825162ac402e3641b5ce7374d9e358280283d4e30479f5285785ac61152d0e4611b28fbadbf6b4ba8aa7374b87fb5ea8c0ba51e41dcf50e96b65336a11e379342048ed66a61c8351051f9bad308249b3fb00", 0, rev_sig, 128, &rv);
+
+    PrintAndLogEx(INFO, "Raw signature reverse");
+    print_hex_noascii_break(rev_sig, signature_len, MFBLOCK_SIZE * 2);
 
     // t = 0xBC  = Implicitly known
     // t = 0xCC  = look at byte before to determine hash function
@@ -1531,22 +1541,25 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
     uint8_t i;
     bool is_valid = false;
 
-    mbedtls_mpi RN, E;
-    mbedtls_mpi_init(&RN);
-
-    // exponent 2
-    mbedtls_mpi_init(&E);
-    mbedtls_mpi_add_int(&E, &E, 2);
-
     for (i = 0; i < ARRAYLEN(vigik_rsa_pk); i++) {
         if (vigik_rsa_pk[i].desc == NULL) {
             break;
         }
 
+        mbedtls_mpi RN, E;
+        mbedtls_mpi_init(&RN);
+
+        // exponent 2 = even
+        mbedtls_mpi_init(&E);
+        mbedtls_mpi_add_int(&E, &E, 2);
+
+
         PrintAndLogEx(INFO, "\n\n--- RSA PUBLIC KEY ---\n");
         int dl = 0;
         uint8_t n[PUBLIC_VIGIK_KEYLEN];
+        memset(n, 0, sizeof(n));
         param_gethex_to_eol(vigik_rsa_pk[i].n, 0, n, PUBLIC_VIGIK_KEYLEN, &dl);
+
 
         // convert
         mbedtls_mpi N, s, sqr, res;
@@ -1557,29 +1570,24 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
 
         mbedtls_mpi_read_binary(&N, (const unsigned char*)n, PUBLIC_VIGIK_KEYLEN);
 
-/*
-        uint8_t demo_sig[128];
-        param_gethex_to_eol("0C0C62D3523F2DA3972679D0348D9A5038E93AE3D19E97DF875DCC046B2637DBCE7D4CCC5967529AB96D27B6D9B41F5456E65EEA328FDB7DAE6F4E7DA0CFC1CFF8AB5A80CC7C9B9F487EC2B590CBC2F31AFDC5CF9C3478B93C46D575A0E08D21D965A9C4FCAFE3562D64B1C30706AF0D43288156DA3FF990CB040D5C0863F262", 0, demo_sig, 128, &dl);
-        mbedtls_mpi_read_binary(&s, (const unsigned char*)demo_sig, 128);
-*/
-        mbedtls_mpi_read_binary(&s, (const unsigned char*)signature, signature_len);
+        //mbedtls_mpi_read_binary(&s, (const unsigned char*)signature, signature_len);
+        mbedtls_mpi_read_binary(&s, (const unsigned char*)rev_sig, signature_len);
 
         // check is sign < (N/2)
-/*        
+        
         mbedtls_mpi n_2;
         mbedtls_mpi_init(&n_2);
         mbedtls_mpi_copy(&n_2, &N);
         mbedtls_mpi_shift_r(&n_2, 1);
-    
         bool is_less =  (mbedtls_mpi_cmp_mpi(&s, &n_2) > 0) ? false : true;
         PrintAndLogEx(INFO, "z < (N/2) ..... %s", (is_less) ? _GREEN_("YES") : _RED_("NO"));
-
         mbedtls_mpi_free(&n_2);
-*/
-//        if (is_less) {
+
+
+        if (is_less) {
             mbedtls_mpi_exp_mod(&sqr, &s, &E, &N, &RN);
-//        }
-            
+        }
+
         /*
             if v is even and
             ⎯ if J* mod 8 = 1, then f* = n–J*.
@@ -1592,6 +1600,25 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
         uint8_t b0 = mbedtls_mpi_get_bit(&sqr, 0);
         uint8_t lsb = (b2 << 2) | (b1 << 1) | b0;
 
+        /*
+        //1
+        mbedtls_mpi_sub_mpi(&res, &N, &sqr);
+        mbedtls_mpi_write_file( "[=] 1... ", &res, 16, NULL );
+        // 4
+        mbedtls_mpi_copy(&res, &sqr);
+        mbedtls_mpi_write_file( "[=] 4... ", &res, 16, NULL );
+        // 6
+        mbedtls_mpi_mul_int(&res, &sqr, 2);
+        mbedtls_mpi_write_file( "[=] 6... ", &res, 16, NULL );
+        // 7
+        mbedtls_mpi foo;
+        mbedtls_mpi_init(&foo);
+        mbedtls_mpi_sub_mpi(&foo, &N, &sqr);
+        mbedtls_mpi_mul_int(&res, &foo, 2);
+        mbedtls_mpi_free(&foo);
+        mbedtls_mpi_write_file( "[=] 7... ", &res, 16, NULL );
+        */
+
         switch (lsb) {
             case 1:
                 mbedtls_mpi_sub_mpi(&res, &N, &sqr);
@@ -1603,42 +1630,75 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
                 mbedtls_mpi_mul_int(&res, &sqr, 2);
                 break;
             case 7:
-                mbedtls_mpi foo;
-                mbedtls_mpi_init(&foo);
-                mbedtls_mpi_sub_mpi(&foo, &N, &sqr);
-                mbedtls_mpi_mul_int(&res, &foo, 2);
-                mbedtls_mpi_free(&foo);
+                mbedtls_mpi foo2;
+                mbedtls_mpi_init(&foo2);
+                mbedtls_mpi_sub_mpi(&foo2, &N, &sqr);
+                mbedtls_mpi_mul_int(&res, &foo2, 2);
+                mbedtls_mpi_free(&foo2);
+                break;
+            default:
                 break;
         }
 
         PrintAndLogEx(INFO, "LSB............ " _GREEN_("%u"), lsb);
-        mbedtls_mpi_write_file( "E = 0x", &E, 16, NULL );
-        mbedtls_mpi_write_file( "N = 0x", &N, 16, NULL );
+        mbedtls_mpi_write_file( "[=] N.............. ", &N, 16, NULL );
         mbedtls_mpi_write_file( "[=] signature...... ", &s, 16, NULL );        
         mbedtls_mpi_write_file( "[=] square mod n... ", &sqr, 16, NULL );
         mbedtls_mpi_write_file( "[=] n-fs........... ", &res, 16, NULL );
-        // mbedtls_mpi_write_file( "masked ", &, 16, NULL );
 
         uint8_t nfs[128] = {0};
         int bar = mbedtls_mpi_write_binary(&res, nfs, sizeof(nfs));
-        if (bar != 0)
-            PrintAndLogEx(INFO, "FOO... %i", bar);
 
-        PrintAndLogEx(INFO, "converted to byte array");
-        print_hex_noascii_break(nfs, sizeof(nfs), 32);
-
-        /*
-        for (int x = 0; x < uidlen; x++) {
-            nfs[x] ^= uid[x];
+        // xor 
+        for (int x = 0; x < sizeof(nfs); x +=2) {
+            nfs[x] ^= 0xDC;
+            nfs[x+1] ^= 0x01;
         }
 
-        PrintAndLogEx(INFO, "xored set");        
-        print_hex_noascii_break(nfs, uidlen, 32);
-        */
+        PrintAndLogEx(INFO, "Message XOR 0xDC01");
+        print_hex_noascii_break(nfs, sizeof(nfs), 32);
+        PrintAndLogEx(INFO, "\n");
 
+        if (bar == 12054235) {
+            typedef struct vigik_rsa_s {
+                uint8_t rsa[127];
+                uint8_t hash;
+            } vigik_rsa_t;
+
+            vigik_rsa_t *ts = (vigik_rsa_t*)nfs;
+            if ( ts->hash == 0xCC ) {
+                PrintAndLogEx(INFO, "Hash byte... 0x%02X", ts->hash);
+                switch(ts->rsa[126]) {
+                    case 0x11:
+                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - SHA1");                    
+                        break;
+                    case 0x22:
+                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - RIPEMD");       
+                        break;
+                    case 0x33:
+                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - SHA1");
+                        break;
+                    default:
+                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - " _RED_("err"));
+                        break;
+                }
+            } else if ( ts->hash == 0xBC) {
+                PrintAndLogEx(INFO, "Hash byte... 0x%02X - " _GREEN_("implict"), ts->hash);
+            } else {
+                PrintAndLogEx(INFO, "Hash byte... 0x%02x - " _RED_("err"), ts->hash);
+            }
+
+            PrintAndLogEx(INFO, "Message w padding");
+            print_hex_noascii_break(ts->rsa, sizeof(ts->rsa) - 20, 32);
+
+        }
+    
         mbedtls_mpi_free(&N);
         mbedtls_mpi_free(&s);
         mbedtls_mpi_free(&res);
+        mbedtls_mpi_free(&RN);
+        mbedtls_mpi_free(&E);
+
         /*
         int ret = 0;
         is_valid = (ret == 0);
@@ -1646,9 +1706,6 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
             break;
         */
     }
-
-    mbedtls_mpi_free(&RN);
-    mbedtls_mpi_free(&E);
 
     return PM3_ESOFT;
 
