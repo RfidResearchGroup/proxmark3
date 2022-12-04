@@ -1620,24 +1620,29 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
         */
 
         switch (lsb) {
-            case 1:
+            case 1: {
                 mbedtls_mpi_sub_mpi(&res, &N, &sqr);
                 break;
-            case 4:
+            }
+            case 4: {
                 mbedtls_mpi_copy(&res, &sqr);
                 break;
-            case 6:
+            }
+            case 6: {
                 mbedtls_mpi_mul_int(&res, &sqr, 2);
                 break;
-            case 7:
+            }
+            case 7: {
                 mbedtls_mpi foo2;
                 mbedtls_mpi_init(&foo2);
                 mbedtls_mpi_sub_mpi(&foo2, &N, &sqr);
                 mbedtls_mpi_mul_int(&res, &foo2, 2);
                 mbedtls_mpi_free(&foo2);
                 break;
-            default:
+            }
+            default: {
                 break;
+            }
         }
 
         PrintAndLogEx(INFO, "LSB............ " _GREEN_("%u"), lsb);
