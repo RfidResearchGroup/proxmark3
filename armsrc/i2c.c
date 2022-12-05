@@ -54,7 +54,7 @@ static void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 #define I2C_DELAY_XCLK(x) I2CSpinDelayClk((x))
 
 // The SIM module v4 supports up to 384 bytes for the length.
-#define  ISO7816_MAX_FRAME 260
+#define  ISO7816_MAX_FRAME 270
 
 // try i2c bus recovery at 100kHz = 5us high, 5us low
 void I2C_recovery(void) {
