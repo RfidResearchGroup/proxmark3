@@ -19,7 +19,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed SPI flash overflow when loading dictionnaries into flash. Breaking change: added 1 more sector for Mifare - dictionnaries should be loaded again (@jmichelp)
  - Fixed `lf hitag dump` - Should now work as described in the command help (@natmchugh)
  - Fixed wired smartcard APDU chaining logic and allow 256 bytes ADPU payload. Need SIM firmware 4.12 to work (jmichel@)
- - SIM module firmware 4.12 to accomodate with the new APDU payload size (sentinel@)
 
 ## [Radium.4.15864][2022-10-29]
  - Changed `lf indala sim` - now accepts fc / cn (@iceman1001)
