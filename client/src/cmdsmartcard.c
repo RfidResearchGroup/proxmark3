@@ -337,7 +337,7 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
         }
         int ofs = totallen;
         maxoutlen -= totallen;
-        PrintAndLogEx(INFO, "Keeping data (%d bytes): %s", ofs, sprint_hex(out, ofs));
+        PrintAndLogEx(DEBUG, "Keeping data (%d bytes): %s", ofs, sprint_hex(out, ofs));
 
         int len = out[datalen - 1];
         if (len == 0 || len > MAX_APDU_SIZE) {
