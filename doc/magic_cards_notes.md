@@ -1009,7 +1009,7 @@ The card will be identified only if the password is the default one. One can ide
 ```
 hf 14a raw -s -c -t 1000 CF00000000C6
 ```
-If the card is an Ultimate Magic Card, it returns 30 bytes.
+If the card is an Ultimate Magic Card, it returns 30 or 32 bytes.
 ### Magic commands
 ^[Top](#top) ^^[Gen4](#g4top)
 
@@ -1133,7 +1133,7 @@ hf 14a raw -s -c -t 1000 CF00000000CE02
 ...
 ```
 
-👉 **TODO** In Mifare Ultralight / NTAG mode, the special writes (option -s, -e, -r) do not apply. Use `script run hf_mf_ultimatecard` for UID and signature, and `hf mfu wrbl` for PWD and PACK. 
+👉 **TODO** In Mifare Ultralight / NTAG mode, the special writes (`hf mfu restore` option `-s`, `-e`, `-r`) do not apply. Use `script run hf_mf_ultimatecard` for UID and signature, and `hf mfu wrbl` for PWD and PACK. 
 
 ### Change ATQA / SAK
 ^[Top](#top) ^^[Gen4](#g4top)
