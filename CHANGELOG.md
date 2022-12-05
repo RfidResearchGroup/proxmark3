@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `sc upgrade` updated firmware v4.12 (RDV40) (@sentiprox)
+ - Fixed contact interface / smartcard APDU chaining logic and allow 256 bytes ADPU payload. Need SIM firmware 4.12 to work (@jmichel)
+ - Fixed `lf hitag dump` - Should now work as described in the command help (@natmchugh)
+ - Fixed SPI flash overflow when loading dictionnaries into flash. Breaking change: added 1 more sector for Mifare - dictionnaries should be loaded again (@jmichelp)
+ - Added `hf mf gload, gsave, ggetblk, gsetblk` for Gen4 GTU in mifare classic mode (@DidierA)
  - Fixed `trace list -r` (relative times) not working unless `-u` (microseconds) was specified, and made `--frame` respect `-u` and `-r` options (@nvx)
  - Added detection of magic Gen4 GTU (@DidierA)
  - Added luascript `hf_i2c_plus_2k_utils` - Script for dumping/modifying user memory of sectors 0 and 1 (@flamebarke) 
@@ -15,10 +20,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `pm3` shell script now automatically detects WSL2 with USBIPD serial ports (@iceman1001)
  - Fixed `trace list -c` - annotation of CRC bytes now is colored or squared if no ansi colors is supported (@iceman1001)
  - Fixed `trace list -t mf` - now also finds UID if anticollision is partial captured, to be used for mfkey (@iceman1001)
- - Added `hf mf gload, gsave, ggetblk, gsetblk` for Gen4 GTU in mifare classic mode (@DidierA)
- - Fixed SPI flash overflow when loading dictionnaries into flash. Breaking change: added 1 more sector for Mifare - dictionnaries should be loaded again (@jmichelp)
- - Fixed `lf hitag dump` - Should now work as described in the command help (@natmchugh)
- - Fixed wired smartcard APDU chaining logic and allow 256 bytes ADPU payload. Need SIM firmware 4.12 to work (jmichel@)
 
 ## [Radium.4.15864][2022-10-29]
  - Changed `lf indala sim` - now accepts fc / cn (@iceman1001)
