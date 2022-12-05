@@ -53,7 +53,8 @@ static void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 #define I2C_DELAY_2CLK    I2CSpinDelayClk(2)
 #define I2C_DELAY_XCLK(x) I2CSpinDelayClk((x))
 
-#define  ISO7618_MAX_FRAME 260
+// The SIM module v4 supports up to 384 bytes for the length.
+#define  ISO7816_MAX_FRAME 260
 
 // try i2c bus recovery at 100kHz = 5us high, 5us low
 void I2C_recovery(void) {
@@ -445,6 +446,7 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
 
     bool bBreak = true;
     uint16_t readcount = 0;
+    uint16_t recv_len = 0;
 
     do {
         if (!I2C_Start())
@@ -484,11 +486,34 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
 
         len--;
 
-        // The first byte in response is the message length
-        if (!readcount && (len > *data)) {
-            len = *data;
+        // Starting firmware v4 the length is encoded on the first two bytes.
+        // This only applies if command is I2C_DEVICE_CMD_READ.
+        if (device_cmd == I2C_DEVICE_CMD_READ) {
+            switch (readcount) {
+                case 0:
+                    // Length (MSB)
+                    recv_len = (*data) << 8;
+                    break;
+                case 1:
+                    // Length (LSB)
+                    recv_len += *data;
+                    // Adjust len if needed
+                    if (len > recv_len) {
+                        len = recv_len;
+                    }
+                    break;
+                default:
+                    // Data byte received
+                    data++;
+                    break;
+            }
         } else {
-            data++;
+            // Length is encoded on 1 byte
+            if ((readcount == 0) && (len > *data)) {
+                len = *data;
+            } else {
+                data++;
+            }
         }
         readcount++;
 
@@ -501,8 +526,8 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
 
     I2C_Stop();
 
-    // return bytecount - first byte (which is length byte)
-    return --readcount;
+    // return bytecount - bytes encoding length
+    return readcount - (device_cmd == I2C_DEVICE_CMD_READ ? 2 : 1);
 }
 
 int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
@@ -612,10 +637,14 @@ bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t d
 void I2C_print_status(void) {
     DbpString(_CYAN_("Smart card module (ISO 7816)"));
     uint8_t maj, min;
-    if (I2C_get_version(&maj, &min) == PM3_SUCCESS)
+    if (I2C_get_version(&maj, &min) == PM3_SUCCESS) {
         Dbprintf("  version................. " _YELLOW_("v%x.%02d"), maj, min);
-    else
+        if (maj < 4) {
+            DbpString("    " _RED_("Outdated firmware.") " Please upgrade to v4.x or above.");
+        }
+    } else {
         DbpString("  version................. " _RED_("FAILED"));
+    }
 }
 
 int I2C_get_version(uint8_t *maj, uint8_t *min) {
@@ -736,7 +765,7 @@ void SmartCardRaw(smart_card_raw_t *p) {
     LED_D_ON();
 
     uint16_t len = 0;
-    uint8_t *resp = BigBuf_malloc(ISO7618_MAX_FRAME);
+    uint8_t *resp = BigBuf_malloc(ISO7816_MAX_FRAME);
     // check if alloacted...
     smartcard_command_t flags = p->flags;
 
@@ -780,7 +809,7 @@ void SmartCardRaw(smart_card_raw_t *p) {
         }
 
         // read bytes from module
-        len = ISO7618_MAX_FRAME;
+        len = ISO7816_MAX_FRAME;
         res = sc_rx_bytes(resp, &len);
         if (res) {
             LogTrace(resp, len, 0, 0, NULL, false);

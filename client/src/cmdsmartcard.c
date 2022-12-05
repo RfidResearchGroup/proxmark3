@@ -329,10 +329,15 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
     }
 
     if (needGetData == true) {
-        // Don't discard data we already received except the SW code
+        // Don't discard data we already received except the SW code.
+        // If we only received 1 byte, this is the echo of INS, we discard it.
         totallen -= 2;
+        if (totallen == 1) {
+            totallen = 0;
+        }
         int ofs = totallen;
         maxoutlen -= totallen;
+        PrintAndLogEx(INFO, "Keeping data (%d bytes): %s", ofs, sprint_hex(out, ofs));
 
         int len = out[datalen - 1];
         if (len == 0 || len > MAX_APDU_SIZE) {
