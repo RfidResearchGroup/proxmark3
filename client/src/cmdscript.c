@@ -407,7 +407,7 @@ static int CmdScriptRun(const char *Cmd) {
         }
 
         // optional but recommended
-        Py_SetProgramName(program);
+        //Py_SetProgramName(program);
 #ifdef HAVE_PYTHON_SWIG
         // hook Proxmark3 API
         PyImport_AppendInittab("_pm3", PyInit__pm3);
