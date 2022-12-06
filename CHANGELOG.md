@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Moved to non-deprecated API to initialize Python interpreter (jmichel@)
  - Changed `sc upgrade` updated firmware v4.12 (RDV40) (@sentiprox)
  - Fixed contact interface / smartcard APDU chaining logic and allow 256 bytes ADPU payload. Need SIM firmware 4.12 to work (@jmichel)
  - Fixed `lf hitag dump` - Should now work as described in the command help (@natmchugh)

@@ -412,22 +412,28 @@ static int CmdScriptRun(const char *Cmd) {
         // hook Proxmark3 API
         PyImport_AppendInittab("_pm3", PyInit__pm3);
 #endif
-        Py_Initialize();
+        PyConfig py_conf;
+        PyConfig_InitIsolatedConfig(&py_conf);
 
         //int argc, char ** argv
         char *argv[128];
-        int argc = split(arguments, argv);
-        wchar_t *py_args[argc + 1];
-        py_args[0] = Py_DecodeLocale(filename, NULL);
-        for (int i = 0; i < argc; i++) {
-            py_args[i + 1] = Py_DecodeLocale(argv[i], NULL);
-        }
+        argv[0] = filename;
+        int argc = split(arguments, &argv[1]);
+        PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
+        // Despite being isolated we probably want to allow users to use
+        // the Python packages they installed on their user directory as well
+        // as obey env variables.
+        py_conf.use_environment = 1;
+        py_conf.user_site_directory = 1;
+        // Setting this pre-intializes Python implictly which will change the config
+        PyConfig_SetString(&py_conf, &py_conf.program_name, program);
 
-        PySys_SetArgv(argc + 1, py_args);
+        Py_InitializeFromConfig(&py_conf);
 
         // clean up
+        PyConfig_Clear(&py_conf);
         for (int i = 0; i < argc; ++i) {
-            free(argv[i]);
+            free(argv[i + 1]);
         }
 
         // setup search paths.
