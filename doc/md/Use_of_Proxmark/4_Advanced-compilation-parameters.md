@@ -166,7 +166,7 @@ a series of `SKIP_*` allow to skip some of the functionalities and to get a smal
 |SKIP_NFCBARCODE=1    | 1.4kb
 |SKIP_HFSNIFF=1       | 0.5kb
 |SKIP_HFPLOT=1        | 0.3kb
-|SKIP_ZX8211=1        | unknown yet
+|SKIP_ZX8211=1        | 0.3kb
 
 So for example, at the time of writing, this is a valid `Makefile.platform` compiling an image for 256k:
 ```
