@@ -399,34 +399,26 @@ static int CmdScriptRun(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "executing python " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
 
-        wchar_t *program = Py_DecodeLocale(filename, NULL);
-        if (program == NULL) {
-            PrintAndLogEx(ERR, "could not decode " _YELLOW_("%s"), filename);
-            free(script_path);
-            return PM3_ESOFT;
-        }
-
-        // optional but recommended
-        //Py_SetProgramName(program);
 #ifdef HAVE_PYTHON_SWIG
         // hook Proxmark3 API
         PyImport_AppendInittab("_pm3", PyInit__pm3);
 #endif
         PyConfig py_conf;
         PyConfig_InitIsolatedConfig(&py_conf);
+        // Despite being isolated we probably want to allow users to use
+        // the Python packages they installed on their user directory as well
+        // as system ones. But it seems isolated mode still enforces them off.
+        py_conf.use_environment = 1;
+        py_conf.user_site_directory = 1;
 
         //int argc, char ** argv
         char *argv[128];
         argv[0] = filename;
         int argc = split(arguments, &argv[1]);
+        // The following line will implicitly pre-initialize Python
         PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
-        // Despite being isolated we probably want to allow users to use
-        // the Python packages they installed on their user directory as well
-        // as obey env variables.
-        py_conf.use_environment = 1;
-        py_conf.user_site_directory = 1;
-        // Setting this pre-intializes Python implictly which will change the config
-        PyConfig_SetString(&py_conf, &py_conf.program_name, program);
+        // This is required by Proxspace to work with an isolated Python configuration
+        PyConfig_SetBytesString(&py_conf, &py_conf.home, getenv("PYTHONHOME"));
 
         Py_InitializeFromConfig(&py_conf);
 
@@ -447,7 +439,6 @@ static int CmdScriptRun(const char *Cmd) {
         }
         int ret = Pm3PyRun_SimpleFileNoExit(f, filename);
         Py_Finalize();
-        PyMem_RawFree(program);
         free(script_path);
         if (ret) {
             PrintAndLogEx(WARNING, "\nfinished " _YELLOW_("%s") " with exception", filename);
