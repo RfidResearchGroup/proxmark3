@@ -208,12 +208,15 @@ static bool I2C_Start(void) {
     SDA_H;
     I2C_DELAY_1CLK;
     SCL_H;
-    if (!WaitSCL_H()) return false;
+    if (!WaitSCL_H())
+        return false;
 
     I2C_DELAY_2CLK;
 
-    if (!SCL_read) return false;
-    if (!SDA_read) return false;
+    if (!SCL_read)
+        return false;
+    if (!SDA_read)
+        return false;
 
     SDA_L;
     I2C_DELAY_2CLK;
@@ -228,8 +231,9 @@ static bool I2C_WaitForSim(void) {
 
     // 8051 speaks with smart card.
     // 1000*50*3.07 = 153.5ms
-    // 1byte transfer == 1ms  with max frame being 256bytes
-    return WaitSCL_H_delay(1000 * 300);
+    // 1000*90*3.07 = 276.3ms
+    // 1byte transfer == 1ms with max frame being 256bytes
+    return WaitSCL_H_delay(1000 * 90);
 }
 
 // send i2c STOP
