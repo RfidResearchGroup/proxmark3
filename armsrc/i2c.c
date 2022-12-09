@@ -167,7 +167,7 @@ static bool WaitSCL_H_delay(uint32_t delay) {
 // 5000 * 3.07us = 15350us. 15.35ms
 // 15000 * 3.07us = 46050us. 46.05ms
 static bool WaitSCL_H(void) {
-    return WaitSCL_H_delay(15000);
+    return WaitSCL_H_delay(5000);
 }
 
 static bool WaitSCL_L_delay(uint32_t delay) {
@@ -179,19 +179,21 @@ static bool WaitSCL_L_delay(uint32_t delay) {
     }
     return false;
 }
+
 // 5000 * 3.07us = 15350us. 15.35ms
+// 15000 * 3.07us = 46050us. 46.05ms
 static bool WaitSCL_L(void) {
-    return WaitSCL_L_delay(15000);
+    return WaitSCL_L_delay(5000);
 }
 
 // Wait max 1800ms or until SCL goes LOW.
 // It timeout reading response from card
 // Which ever comes first
 static bool WaitSCL_L_timeout(void) {
-    volatile uint32_t delay = 1700;
+    volatile uint32_t delay = 200;
     while (delay--) {
         // exit on SCL LOW
-        if (!SCL_read)
+        if (SCL_read == false)
             return true;
 
         WaitMS(1);
