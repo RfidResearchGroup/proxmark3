@@ -522,7 +522,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart upgrade",
                   "Upgrade RDV4 sim module firmware",
-                  "smart upgrade -f sim012.bin"
+                  "smart upgrade -f sim013.bin"
                  );
 
     void *argtable[] = {

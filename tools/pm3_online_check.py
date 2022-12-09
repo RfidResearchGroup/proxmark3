@@ -122,7 +122,7 @@ def pm3_lf_t55xx(child):
 def pm3_flash_sm(child):
     try:
         print("[+] Updating smart card fw")
-        child.sendline('smart upgrade -f sim012.bin')
+        child.sendline('smart upgrade -f sim013.bin')
         i = child.expect('pm3 --> ')
         msg = escape_ansi(str(child.before))
         print("================")
