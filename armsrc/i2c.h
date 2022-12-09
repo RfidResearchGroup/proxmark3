@@ -31,7 +31,7 @@
 #define I2C_DEVICE_CMD_SEND_T0      0x07
 
 void I2C_recovery(void);
-void I2C_init(void);
+void I2C_init(bool has_ticks);
 void I2C_Reset(void);
 void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA);
 

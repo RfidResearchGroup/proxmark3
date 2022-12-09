@@ -91,7 +91,7 @@ void I2C_recovery(void) {
         DbpString("I2C bus recovery complete");
 }
 
-void I2C_init(void) {
+void I2C_init(bool has_ticks) {
     // Configure reset pin, close up pull up, push-pull output, default high
     AT91C_BASE_PIOA->PIO_PPUDR = GPIO_RST;
     AT91C_BASE_PIOA->PIO_MDDR = GPIO_RST;
@@ -105,6 +105,10 @@ void I2C_init(void) {
 
     AT91C_BASE_PIOA->PIO_OER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
     AT91C_BASE_PIOA->PIO_PER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
+
+    if (has_ticks) {
+        WaitMS(2);
+    }
 
     bool isok = (SCL_read && SDA_read);
     if (isok == false)
@@ -133,7 +137,7 @@ void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
 // Note: the SIM_Adapter will not enter the main program after power up. Please run this function before use SIM_Adapter.
 void I2C_Reset_EnterMainProgram(void) {
     StartTicks();
-    I2C_init();
+    I2C_init(true);
     I2C_SetResetStatus(0, 0, 0);
     WaitMS(30);
     I2C_SetResetStatus(1, 0, 0);
@@ -146,7 +150,7 @@ void I2C_Reset_EnterMainProgram(void) {
 // Reserve for firmware update.
 void I2C_Reset_EnterBootloader(void) {
     StartTicks();
-    I2C_init();
+    I2C_init(true);
     I2C_SetResetStatus(0, 1, 1);
     WaitMS(100);
     I2C_SetResetStatus(1, 1, 1);
