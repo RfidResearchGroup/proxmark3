@@ -714,11 +714,12 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
 
     // read bytes from module
     uint16_t len = sizeof(card_ptr->atr);
+    if (sc_rx_bytes(card_ptr->atr, &len) == false)
+        return false;
+
     if (len > sizeof(card_ptr->atr)) {
         len = sizeof(card_ptr->atr);
     }
-    if (sc_rx_bytes(card_ptr->atr, &len) == false)
-        return false;
 
     uint8_t pos_td = 1;
     if ((card_ptr->atr[1] & 0x10) == 0x10) pos_td++;
