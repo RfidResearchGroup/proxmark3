@@ -6212,7 +6212,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     uint8_t freemem[MIFARE_4K_MAXSECTOR] = {0};
     uint16_t sum = 0;
     uint8_t block_no = 0;
-    for (uint8_t i = 1; i < madlen; i++) {
+    for (uint8_t i = 1; i < (madlen & 0xFF); i++) {
 
         freemem[i] = (mad[i] == NDEF_MFC_AID);
 
