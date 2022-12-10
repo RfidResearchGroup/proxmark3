@@ -267,6 +267,10 @@ ifneq ($(wildcard /etc/arch-release),)
 #If user is running ArchLinux, use specific command and group
 	$(Q)$(SUDO) $(USERMOD) uucp $(USER)
 	$(Q)$(GETENT_BL) >/dev/null && $(SUDO) $(USERMOD) bluetooth $(USER) || true
+else ifneq ($(wildcard /etc/fedora-release),)
+# If the user is running Fedora, use `usermod` with the dialout group
+	$(Q)$(SUDO) $(USERMOD) dialout $(USER)
+	$(Q)$(GETENT_BL) >/dev/null && $(SUDO) $(USERMOD) bluetooth $(USER) || true
 else
 	$(Q)$(SUDO) $(ADDUSER) $(USER) dialout
 	$(Q)$(GETENT_BL) >/dev/null && $(SUDO) $(ADDUSER) $(USER) bluetooth || true
