@@ -24,6 +24,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `pm3` shell script now automatically detects WSL2 with USBIPD serial ports (@iceman1001)
  - Fixed `trace list -c` - annotation of CRC bytes now is colored or squared if no ansi colors is supported (@iceman1001)
  - Fixed `trace list -t mf` - now also finds UID if anticollision is partial captured, to be used for mfkey (@iceman1001)
+ - Fixed `make accessrights` on Fedora (@mooey5775)
 
 ## [Radium.4.15864][2022-10-29]
  - Changed `lf indala sim` - now accepts fc / cn (@iceman1001)
