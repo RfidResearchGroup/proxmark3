@@ -104,7 +104,8 @@ typedef enum {
     RESP_INDEX_RATS,
     RESP_INDEX_VERSION,
     RESP_INDEX_SIGNATURE,
-    RESP_INDEX_PPS
+    RESP_INDEX_PPS,
+    RESP_INDEX_PACK,
 } resp_index_t;
 
 #ifndef AddCrc14A
