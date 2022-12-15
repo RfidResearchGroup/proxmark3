@@ -349,26 +349,50 @@ int CmdEM4x50Brute(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 brute",
                   "Tries to bruteforce the password of a EM4x50 card.\n"
-                  "Function can be stopped by pressing pm3 button.",
-                  "lf em 4x50 brute --first 12330000 --last 12340000   -> tries pwds from 0x12330000 to 0x1234000000\n"
+                  "Function can be stopped by pressing pm3 button.\n",
+
+                  "lf em 4x50 brute --mode range --begin 12330000 --end 12340000 -> tries pwds from 0x12330000 to 0x12340000\n"
+                  "lf em 4x50 brute --mode charset --digits --uppercase -> tries all combinations of ASCII codes for digits and uppercase letters\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL, "first", "<hex>", "first password (start), 4 bytes, lsb"),
-        arg_str1(NULL, "last", "<hex>",   "last password (stop), 4 bytes, lsb"),
+        arg_str1(NULL, "mode", "<str>", "Bruteforce mode (range|charset)"),
+        arg_str0(NULL, "begin", "<hex>",   "Range mode - start of the key range"),
+        arg_str0(NULL, "end", "<hex>",   "Range mode - end of the key range"),
+        arg_lit0(NULL, "digits",  "Charset mode - include ASCII codes for digits"),
+        arg_lit0(NULL, "uppercase",  "Charset mode - include ASCII codes for uppercase letters"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    int first_len = 0;
-    uint8_t first[4] = {0, 0, 0, 0};
-    CLIGetHexWithReturn(ctx, 1, first, &first_len);
-    int last_len = 0;
-    uint8_t last[4] = {0, 0, 0, 0};
-    CLIGetHexWithReturn(ctx, 2, last, &last_len);
-    CLIParserFree(ctx);
 
+    em4x50_data_t etd;
+
+    int mode_len = 64;
+    char mode[64];
+    CLIGetStrWithReturn(ctx, 1, (uint8_t*) mode, &mode_len);
+    PrintAndLogEx(INFO, "Chosen mode: %s", mode);
+
+    if(strcmp(mode, "range") == 0){
+        etd.bruteforce_mode = BRUTEFORCE_MODE_RANGE;
+    } else if(strcmp(mode, "charset") == 0){
+        etd.bruteforce_mode = BRUTEFORCE_MODE_CHARSET;
+    } else {
+        PrintAndLogEx(FAILED, "unknown bruteforce mode: %s", mode);
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "Chosen mode2: %d", etd.bruteforce_mode);
+
+    // int first_len = 0;
+    // uint8_t first[4] = {0, 0, 0, 0};
+    //  CLIGetHexWithReturn(ctx, 1, first, &first_len);
+    //  int last_len = 0;
+    //  uint8_t last[4] = {0, 0, 0, 0};
+    //  CLIGetHexWithReturn(ctx, 2, last, &last_len);
+    CLIParserFree(ctx);
+/*
     if (first_len != 4) {
         PrintAndLogEx(FAILED, "password length must be 4 bytes");
         return PM3_EINVARG;
@@ -410,7 +434,7 @@ int CmdEM4x50Brute(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", resp.data.asDwords[0]);
     else
         PrintAndLogEx(WARNING, "brute pwd failed");
-
+*/
     return PM3_SUCCESS;
 }
 
