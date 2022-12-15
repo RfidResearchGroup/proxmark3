@@ -166,7 +166,7 @@ pm3 --> smart upgrade -f /usr/local/share/proxmark3/firmware/sim013.bin
 pm3 --> smart upgrade -f /usr/share/proxmark3/firmware/sim013.bin
 ```
 
-If you didn't install the PRoxmark but you're working from the sources directory and depending how you launch the client, your working directory might be the root of the repository:
+If you didn't install the Proxmark but you're working from the sources directory and depending how you launch the client, your working directory might be the root of the repository:
 
 ```
 ./pm3 ...
