@@ -431,9 +431,8 @@ static int CmdScriptRun(const char *Cmd) {
         PyConfig_Clear(&py_conf);
 #else
         wchar_t *py_args[argc + 1];
-        py_args[0] = Py_DecodeLocale(filename, NULL);
-        for (int i = 0; i < argc; i++) {
-            py_args[i + 1] = Py_DecodeLocale(argv[i], NULL);
+        for (int i = 0; i <= argc; i++) {
+            py_args[i] = Py_DecodeLocale(argv[i], NULL);
         }
 
         PySys_SetArgv(argc + 1, py_args);
