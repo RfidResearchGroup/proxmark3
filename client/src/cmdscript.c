@@ -403,7 +403,7 @@ static int CmdScriptRun(const char *Cmd) {
         // hook Proxmark3 API
         PyImport_AppendInittab("_pm3", PyInit__pm3);
 #endif
-#if PY_MINOR_VERSION >= 10
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 10
         PyConfig py_conf;
         PyConfig_InitIsolatedConfig(&py_conf);
         // Despite being isolated we probably want to allow users to use
@@ -419,7 +419,7 @@ static int CmdScriptRun(const char *Cmd) {
         char *argv[128];
         argv[0] = filename;
         int argc = split(arguments, &argv[1]);
-#if PY_MINOR_VERSION >= 10
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 10
         // The following line will implicitly pre-initialize Python
         PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
         // This is required by Proxspace to work with an isolated Python configuration
