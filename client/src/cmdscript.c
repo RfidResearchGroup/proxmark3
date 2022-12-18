@@ -403,7 +403,9 @@ static int CmdScriptRun(const char *Cmd) {
         // hook Proxmark3 API
         PyImport_AppendInittab("_pm3", PyInit__pm3);
 #endif
-#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 10
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
+	Py_Initialize();
+#else
         PyConfig py_conf;
         PyConfig_InitIsolatedConfig(&py_conf);
         // Despite being isolated we probably want to allow users to use
@@ -411,15 +413,22 @@ static int CmdScriptRun(const char *Cmd) {
         // as system ones. But it seems isolated mode still enforces them off.
         py_conf.use_environment = 1;
         py_conf.user_site_directory = 1;
-#else
-	Py_Initialize();
 #endif
 
         //int argc, char ** argv
         char *argv[128];
         argv[0] = filename;
         int argc = split(arguments, &argv[1]);
-#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 10
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
+        wchar_t *py_args[argc + 1];
+        for (int i = 0; i <= argc; i++) {
+            py_args[i] = Py_DecodeLocale(argv[i], NULL);
+        }
+
+        PySys_SetArgv(argc + 1, py_args);
+
+        // clean up
+#else
         // The following line will implicitly pre-initialize Python
         PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
         // This is required by Proxspace to work with an isolated Python configuration
@@ -429,15 +438,6 @@ static int CmdScriptRun(const char *Cmd) {
 
         // clean up
         PyConfig_Clear(&py_conf);
-#else
-        wchar_t *py_args[argc + 1];
-        for (int i = 0; i <= argc; i++) {
-            py_args[i] = Py_DecodeLocale(argv[i], NULL);
-        }
-
-        PySys_SetArgv(argc + 1, py_args);
-
-        // clean up
 #endif
         for (int i = 0; i < argc; ++i) {
             free(argv[i + 1]);
