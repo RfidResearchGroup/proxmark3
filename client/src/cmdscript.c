@@ -426,8 +426,6 @@ static int CmdScriptRun(const char *Cmd) {
         }
 
         PySys_SetArgv(argc + 1, py_args);
-
-        // clean up
 #else
         // The following line will implicitly pre-initialize Python
         PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
@@ -453,6 +451,12 @@ static int CmdScriptRun(const char *Cmd) {
             return PM3_ESOFT;
         }
         int ret = Pm3PyRun_SimpleFileNoExit(f, filename);
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
+        // Py_DecodeLocale() allocates memory that needs to be free'd
+        for (int i = 0; i < argc + 1; i++) {
+            PyMem_RawFree(py_args[i]);
+        }
+#endif
         Py_Finalize();
         free(script_path);
         if (ret) {
