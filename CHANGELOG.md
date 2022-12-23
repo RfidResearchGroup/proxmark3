@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added PIV aid to resource file (@jmichel)
  - Fixed failing compilation on Proxspace environment due to how python is initialized (@jmichel)
  - Fixed length check in sim module communications (@jmichel)
  - Changed timings in i2c.c when communicating with sim module (@iceman1001)
