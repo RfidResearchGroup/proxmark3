@@ -67,7 +67,7 @@ typedef struct {
 // structure and database for uid -> tagtype lookups
 typedef struct {
     uint64_t uid;
-    int mask; // how many MSB bits used
+    uint64_t mask; // how many MSB bits used, or mask itself if larger than 64
     const char *desc;
 } productName_t;
 
@@ -90,17 +90,22 @@ static const productName_t uidmapping[] = {
     // E0 04 xx
     //   04 = Manufacturer code (Philips/NXP)
     //   XX = IC id (Chip ID Family)
-    //I-Code SLI SL2 ICS20 [IC id = 01]
-    //I-Code SLI-S         [IC id = 02]
-    //I-Code SLI-L         [IC id = 03]
-    //I-Code SLIX          [IC id = 01 + bit36 set to 1 (starting from bit0 - different from normal SLI)]
+    //I-Code SLI SL2 ICS20 [IC id = 01 + bit35 set to 0 + bit36 set to 0]
+    //I-Code SLIX          [IC id = 01 + bit35 set to 0 + bit36 set to 1]
     //I-Code SLIX2         [IC id = 01 + bit35 set to 1 + bit36 set to 0]
+    //I-Code SLI-S         [IC id = 02 + bit36 set to 0]
     //I-Code SLIX-S        [IC id = 02 + bit36 set to 1]
+    //I-Code SLI-L         [IC id = 03 + bit36 set to 0]
     //I-Code SLIX-L        [IC id = 03 + bit36 set to 1]
     { 0xE004000000000000LL, 16, "NXP Semiconductors Germany (Philips)" },
     { 0xE004010000000000LL, 24, "NXP(Philips); IC SL2 ICS20/ICS21(SLI) ICS2002/ICS2102(SLIX) ICS2602(SLIX2)" },
-    { 0xE004020000000000LL, 24, "NXP(Philips); IC SL2 ICS53/ICS54(SLI-S) ICS5302/ICS5402(SLIX-S)" },
-    { 0xE004030000000000LL, 24, "NXP(Philips); IC SL2 ICS50/ICS51(SLI-L) ICS5002/ICS5102(SLIX-L)" },
+    { 0xE004010000000000LL, 0xFFFFFF1800000000LL, "NXP(Philips); IC SL2 ICS20/ICS21(SLI)" },
+    { 0xE004011000000000LL, 0xFFFFFF1800000000LL, "NXP(Philips); IC SL2 ICS2002/ICS2102(SLIX)" },
+    { 0xE004010800000000LL, 0xFFFFFF1800000000LL, "NXP(Philips); IC SL2 ICS2602(SLIX2)" },
+    { 0xE004020000000000LL, 0xFFFFFF1000000000LL, "NXP(Philips); IC SL2 ICS53/ICS54(SLI-S)" },
+    { 0xE004021000000000LL, 0xFFFFFF1000000000LL, "NXP(Philips); ICS5302/ICS5402(SLIX-S)" },
+    { 0xE004030000000000LL, 0xFFFFFF1000000000LL, "NXP(Philips); IC SL2 ICS50/ICS51(SLI-L)" },
+    { 0xE004031000000000LL, 0xFFFFFF1000000000LL, "NXP(Philips); ICS5002/ICS5102(SLIX-L)" },
 
     // E0 05 XX .. .. ..
     //   05 = Manufacturer code (Infineon)
@@ -364,7 +369,11 @@ static const char *getTagInfo_15(uint8_t *uid) {
     int i = 0, best = -1;
     memcpy(&myuid, uid, sizeof(uint64_t));
     while (uidmapping[i].mask > 0) {
-        mask = (~0ULL) << (64 - uidmapping[i].mask);
+        if (uidmapping[i].mask > 64) {
+            mask = uidmapping[i].mask;
+        } else {
+            mask = (~0ULL) << (64 - uidmapping[i].mask);
+        }
         if ((myuid & mask) == uidmapping[i].uid) {
             if (best == -1) {
                 best = i;
