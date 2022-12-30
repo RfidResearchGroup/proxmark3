@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Improved NXP SLI/SLIX series tag identification (@nvx)
+ - Fixed buffer overflow in "lf em 4x05 sniff" (@HeinrichsH)
  - Fixed potential NULL array printing (@jmichel)
  - Added PIV aid to resource file (@jmichel)
  - Fixed failing compilation on Proxspace environment due to how python is initialized (@jmichel)
