@@ -146,4 +146,11 @@ uint32_t leadingzeros32(uint32_t a);
 uint64_t leadingzeros64(uint64_t a);
 
 int byte_strstr(uint8_t *src, size_t srclen, uint8_t *pattern, size_t plen);
+
+struct smartbuf {
+    char *ptr;
+    size_t size;
+    size_t idx;
+} typedef smartbuf;
+void sb_append_char(smartbuf *sb, unsigned char c);
 #endif

@@ -1261,3 +1261,12 @@ int byte_strstr(uint8_t *src, size_t srclen, uint8_t *pattern, size_t plen) {
     }
     return -1;
 }
+
+void sb_append_char(smartbuf *sb, unsigned char c) {
+    if (sb->idx >= sb->size) {
+        sb->size *= 2;
+        sb->ptr = realloc(sb->ptr, sb->size);
+    }
+    sb->ptr[sb->idx] = c;
+    sb->idx++;
+}
