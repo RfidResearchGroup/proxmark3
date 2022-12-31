@@ -573,7 +573,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     //2 Not crc-command
 
     //--- Draw the data column
-    char line[18][140] = {{0}};
+    char line[18][160] = {{0}};
 
     if (data_len == 0) {
         if (protocol == ICLASS && duration == 2048) {
@@ -633,8 +633,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     }
 
+
     uint8_t crc_format_string_offset = 0;
-    if (markCRCBytes) {
+    if (markCRCBytes && data_len > 2) {
         //CRC-command
         if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAGS)) && (data_len > 1)) {
             // Note that UID REQUEST response has no CRC, but we don't know
@@ -647,6 +648,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         } else {
 
             if (crcStatus == 0 || crcStatus == 1) {
+
                 char *pos1 = line[(data_len - 2) / 18];
                 pos1 += (((data_len - 2) % 18) * 4) - 1;
 
