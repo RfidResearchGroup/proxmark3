@@ -322,6 +322,7 @@ static int reader_dump_mode(void) {
             .use_credit_key = false,
             .do_auth = true,
             .send_reply = false,
+            .shallow_mod = false,
         };
         memcpy(auth.key, legacy_aa1_key, sizeof(auth.key));
 
@@ -333,7 +334,7 @@ static int reader_dump_mode(void) {
 
         // select tag.
         uint32_t eof_time = 0;
-        bool res = select_iclass_tag(hdr, auth.use_credit_key, &eof_time);
+        bool res = select_iclass_tag(hdr, auth.use_credit_key, &eof_time, false);
         if (res == false) {
             switch_off();
             continue;
@@ -382,7 +383,7 @@ static int reader_dump_mode(void) {
 
         // main read loop
         for (uint16_t i = start_block; i <= app1_limit; i++) {
-            if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time)) {
+            if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time, false)) {
                 dumped++;
             }
         }
@@ -394,7 +395,7 @@ static int reader_dump_mode(void) {
             auth.use_credit_key = true;
             memcpy(auth.key, aa2_key, sizeof(auth.key));
 
-            res = select_iclass_tag(hdr, auth.use_credit_key, &eof_time);
+            res = select_iclass_tag(hdr, auth.use_credit_key, &eof_time, false);
             if (res) {
 
                 // sanity check of CSN.
@@ -408,7 +409,7 @@ static int reader_dump_mode(void) {
                     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
                     for (uint16_t i = app1_limit + 1; i <= app2_limit; i++) {
-                        if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time)) {
+                        if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time, false)) {
                             dumped++;
                         }
                     }
@@ -458,6 +459,7 @@ static int dump_sim_mode(void) {
             .use_credit_key = false,
             .do_auth = true,
             .send_reply = false,
+            .shallow_mod = false,
         };
         memcpy(auth.key, legacy_aa1_key, sizeof(auth.key));
 
@@ -469,7 +471,7 @@ static int dump_sim_mode(void) {
 
         // select tag.
         uint32_t eof_time = 0;
-        bool res = select_iclass_tag(hdr, auth.use_credit_key, &eof_time);
+        bool res = select_iclass_tag(hdr, auth.use_credit_key, &eof_time, false);
         if (res == false) {
             switch_off();
             continue;
@@ -518,7 +520,7 @@ static int dump_sim_mode(void) {
 
         // main read loop
         for (uint16_t i = start_block; i <= app1_limit; i++) {
-            if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time)) {
+            if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time, false)) {
                 dumped++;
             }
         }
@@ -530,7 +532,7 @@ static int dump_sim_mode(void) {
             auth.use_credit_key = true;
             memcpy(auth.key, aa2_key, sizeof(auth.key));
 
-            res = select_iclass_tag(hdr, auth.use_credit_key, &eof_time);
+            res = select_iclass_tag(hdr, auth.use_credit_key, &eof_time, false);
             if (res) {
 
                 // sanity check of CSN.
@@ -544,7 +546,7 @@ static int dump_sim_mode(void) {
                     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
                     for (uint16_t i = app1_limit + 1; i <= app2_limit; i++) {
-                        if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time)) {
+                        if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time, false)) {
                             dumped++;
                         }
                     }
