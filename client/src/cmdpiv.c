@@ -653,6 +653,45 @@ static int PivGetDataByTagAndPrint(Iso7816CommandChannel channel, const uint8_t 
     return PivGetDataByCidAndPrint(channel, &(PIV_CONTAINERS[idx]), decodeTLV, verbose);
 }
 
+static int PivAuthenticateSign(Iso7816CommandChannel channel, uint8_t alg_id, uint8_t key_id, uint8_t nonce[], size_t nonce_len, void **result, bool decodeTLV, bool verbose) {
+    const size_t MAX_NONCE_LEN = 0x7a;
+    if (nonce_len > MAX_NONCE_LEN) {
+        if (verbose == true) {
+            PrintAndLogEx(WARNING, "Nonce cannot exceed %zu bytes. Got %zu bytes.", MAX_NONCE_LEN, nonce_len);
+        }
+        return PM3_EINVARG;
+    }
+    uint8_t apdu_buf[APDU_RES_LEN] = {0x7c, nonce_len + 4, 0x82, 0x00, 0x81, nonce_len};
+    memcpy(&apdu_buf[6], nonce, nonce_len);
+    sAPDU_t apdu = {
+        0x00, 0x87, alg_id, key_id,
+        6 + nonce_len, apdu_buf
+    };
+
+    uint16_t sw = 0;
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    int res = Iso7816ExchangeEx(channel, false, true, apdu, false, 0, buf, APDU_RES_LEN, &len, &sw);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Sending APDU failed with code %d", res);
+        return res;
+    }
+    if (sw != APDU_RES_SUCCESS) {
+        if (verbose == true) {
+            PrintAndLogEx(INFO, "Unexpected APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        }
+        return PM3_EFAILED;
+    }
+    if (verbose == true) {
+        if (decodeTLV == true) {
+            PrintTLVFromBuffer(buf, len);
+        } else {
+            print_buffer(buf, len, 0);
+        }
+    }
+    return PM3_SUCCESS;
+}
+
 static int PivSelect(Iso7816CommandChannel channel, bool activateField, bool leaveFieldOn, bool decodeTLV, bool silent, uint8_t applet[], size_t appletLen) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
@@ -786,6 +825,81 @@ static int CmdPIVGetData(const char *Cmd) {
     return res;
 }
 
+static int CmdPIVAuthenticateSign(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "piv sign",
+                  "Send a nonce and ask the PIV card to sign it",
+                  "piv sign -sk   -> select card, select applet, sign a NULL nonce\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("sS",  "select",  "Activate field and select applet"),
+        arg_lit0("kK",  "keep",    "Keep field for next command"),
+        arg_lit0("aA",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("tT",  "tlv",     "TLV decode results"),
+        arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_str0(NULL,  "aid", "<hex>", "Applet ID to select. By default A0000003080000100 will be used"),
+        arg_str1(NULL,  "nonce", "<hex>", "Nonce to sign."),
+        arg_int0(NULL,  "slot", "<dec id>", "Slot number. Default will be 0x9E (card auth cert)."),
+        arg_int0(NULL,  "alg", "<dec>", "Algorithm to use to sign. Example values: 06=RSA-1024, 07=RSA-2048, 11=ECC-P256 (default), 14=ECC-P384"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool activateField = arg_get_lit(ctx, 1);
+    bool leaveSignalON = arg_get_lit(ctx, 2);
+    bool APDULogging = arg_get_lit(ctx, 3);
+    bool decodeTLV = arg_get_lit(ctx, 4);
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
+    if (arg_get_lit(ctx, 5))
+        channel = CC_CONTACT;
+    PrintChannel(channel);
+
+    uint8_t applet_id[APDU_AID_LEN] = {0};
+    int aid_len = 0;
+    CLIGetHexWithReturn(ctx, 6, applet_id, &aid_len);
+    if (aid_len == 0) {
+        memcpy(applet_id, PIV_APPLET, sizeof(PIV_APPLET));
+        aid_len = sizeof(PIV_APPLET);
+    }
+
+    uint8_t nonce[APDU_RES_LEN] = {0};
+    int nonce_len = 0;
+    CLIGetHexWithReturn(ctx, 7, nonce, &nonce_len);
+
+    int key_slot = arg_get_int_def(ctx, 8, 0x9e);
+    int alg_id = arg_get_int_def(ctx, 9, 0x11);
+
+    CLIParserFree(ctx);
+
+    if (key_slot > 0xff) {
+        PrintAndLogEx(FAILED, "Key slot must fit on 1 byte.");
+        return PM3_EINVARG;
+    }
+    if (alg_id > 0xff) {
+        PrintAndLogEx(FAILED, "Algorithm ID must fit on 1 byte");
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+
+    int res = 0;
+    if (activateField == true) {
+        res = PivSelect(channel, activateField, true, decodeTLV, true, applet_id, aid_len);
+        if (res != PM3_SUCCESS) {
+            if (leaveSignalON == false) {
+                DropFieldEx(channel);
+            }
+            return res;
+        }
+    }
+    res = PivAuthenticateSign(channel, (uint8_t)(alg_id & 0xff), (uint8_t)(key_slot & 0xff), nonce, nonce_len, NULL, decodeTLV, true);
+    if (leaveSignalON == false) {
+        DropFieldEx(channel);
+    }
+    return res;
+}
+
 static int CmdPIVScan(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "piv scan",
@@ -858,6 +972,7 @@ static command_t CommandTable[] =  {
     {"help",        CmdHelp,                        AlwaysAvailable, "This help"},
     {"select",      CmdPIVSelect,                   IfPm3Iso14443,   "Select the PIV applet"},
     {"getdata",     CmdPIVGetData,                  IfPm3Iso14443,   "Gets a container on a PIV card"},
+    {"authsign",    CmdPIVAuthenticateSign,         IfPm3Iso14443,   "Authenticate with the card"},
     {"scan",        CmdPIVScan,                     IfPm3Iso14443,   "Scan PIV card for known containers"},
 
     {"list",        CmdPIVList,                     AlwaysAvailable, "List ISO7816 history"},
