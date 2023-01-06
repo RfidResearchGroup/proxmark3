@@ -654,9 +654,10 @@ static int PivGetDataByTagAndPrint(Iso7816CommandChannel channel, const uint8_t 
 }
 
 static int PivAuthenticateSign(Iso7816CommandChannel channel, uint8_t alg_id, uint8_t key_id, uint8_t nonce[], size_t nonce_len, void **result, bool decodeTLV, bool verbose) {
-    if (nonce_len > 0x7A) {
+    const size_t MAX_NONCE_LEN = 0x7a;
+    if (nonce_len > MAX_NONCE_LEN) {
         if (verbose == true) {
-            PrintAndLogEx(WARNING, "Nonce cannot exceed %d bytes. Got %d bytes.", 0x7a, nonce_len);
+            PrintAndLogEx(WARNING, "Nonce cannot exceed %d bytes. Got %d bytes.", MAX_NONCE_LEN, nonce_len);
         }
         return PM3_EINVARG;
     }
