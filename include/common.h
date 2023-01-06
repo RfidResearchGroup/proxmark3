@@ -23,7 +23,14 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#ifdef _WIN32
+#define ABOVE "..\\"
+#define PATHSEP "\\"
+#else
+#define ABOVE "../"
 #define PATHSEP "/"
+#endif
+
 // PM3 share path relative to executable when installed
 #define PM3_SHARE_RELPATH    ".." PATHSEP "share" PATHSEP "proxmark3" PATHSEP
 

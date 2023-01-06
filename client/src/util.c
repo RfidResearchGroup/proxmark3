@@ -303,7 +303,8 @@ void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t brea
 
 static void print_buffer_ex(const uint8_t *data, const size_t len, int level, uint8_t breaks) {
 
-    if (len < 1)
+    // sanity checks
+    if ((data == NULL) || (len < 1))
         return;
 
     char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
@@ -1259,4 +1260,13 @@ int byte_strstr(uint8_t *src, size_t srclen, uint8_t *pattern, size_t plen) {
         }
     }
     return -1;
+}
+
+void sb_append_char(smartbuf *sb, unsigned char c) {
+    if (sb->idx >= sb->size) {
+        sb->size *= 2;
+        sb->ptr = realloc(sb->ptr, sb->size);
+    }
+    sb->ptr[sb->idx] = c;
+    sb->idx++;
 }

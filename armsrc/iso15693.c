@@ -262,9 +262,9 @@ void CodeIso15693AsTag(const uint8_t *cmd, size_t len) {
 }
 
 // Transmit the command (to the tag) that was placed in cmd[].
-void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time) {
+void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time, bool shallow_mod) {
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_FULL_MOD);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | (shallow_mod ? FPGA_HF_READER_MODE_SEND_SHALLOW_MOD : FPGA_HF_READER_MODE_SEND_FULL_MOD));
 
     if (*start_time < DELAY_ARM_TO_TAG) {
         *start_time = DELAY_ARM_TO_TAG;
@@ -1585,7 +1585,7 @@ void AcquireRawAdcSamplesIso15693(void) {
     tosend_t *ts = get_tosend();
 
     uint32_t start_time = 0;
-    TransmitTo15693Tag(ts->buf, ts->max, &start_time);
+    TransmitTo15693Tag(ts->buf, ts->max, &start_time, false);
 
     // wait for last transfer to complete
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY)) ;
@@ -1899,7 +1899,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
     }
 
     tosend_t *ts = get_tosend();
-    TransmitTo15693Tag(ts->buf, ts->max, &start_time);
+    TransmitTo15693Tag(ts->buf, ts->max, &start_time, false);
 
     if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
         *resp_len = 0;
@@ -1922,7 +1922,7 @@ int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, ui
 
     CodeIso15693AsReaderEOF();
     tosend_t *ts = get_tosend();
-    TransmitTo15693Tag(ts->buf, ts->max, &start_time);
+    TransmitTo15693Tag(ts->buf, ts->max, &start_time, false);
     uint32_t end_time = start_time + 32 * (8 * ts->max - 4); // subtract the 4 padding bits after EOF
     LogTrace_ISO15693(NULL, 0, (start_time * 4), (end_time * 4), NULL, true);
 

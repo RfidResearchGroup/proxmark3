@@ -93,7 +93,13 @@ We define generic Proxmark3 platforms as following devices.
  - ⚠  VX
    - **Note**: unknown device hw
 -  ⚠ Proxmark3 X 
-   - **Note**: unknown device hw.  
+   - **Note**: unknown device hw
+-  ⚠ Proxmark3 Ultimate
+   - **Note**: unknown device hw
+-  ⚠ Proxmark3 SE
+   - **Note**: unknown device hw
+
+When it comes to these new unknown models we are depending on the community to report in if this repo works and what they did to make it work.
 
 
 **256kb flash memory size of generic Proxmark3 platforms**
