@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add command `piv scan` which tries to read all known containers on PIV (@jmichelp)
  - Add support for PIV commands, over wired and contactless interfaces (@jmichelp)
  - Add `--shallow` option to `hf iclass` reader commands to do shallow (ASK) reader modulation instead of OOK (@nvx)
  - Improved NXP SLI/SLIX series tag identification (@nvx)
