@@ -35,7 +35,6 @@ static int CmdHelp(const char *Cmd);
 static const uint16_t APDU_RES_SUCCESS = 0x9000;
 static const uint16_t APDU_RES_NOT_FOUND = 0x6A82;
 static const uint16_t APDU_RES_SECURITY = 0x6982;
-static const uint16_t APDU_RES_PIN_BLOCKED = 0x6983;
 
 static uint8_t PIV_APPLET[9] = "\xA0\x00\x00\x03\x08\x00\x00\x10\x00";
 
