@@ -36,7 +36,7 @@ typedef enum emojiMode {EMO_ALIAS, EMO_EMOJI, EMO_ALTTEXT, EMO_NONE} emojiMode_t
 typedef enum clientdebugLevel {cdbOFF, cdbSIMPLE, cdbFULL} clientdebugLevel_t;
 // typedef enum devicedebugLevel {ddbOFF, ddbERROR, ddbINFO, ddbDEBUG, ddbEXTENDED} devicedebugLevel_t;
 
- // last item spItemCount used to auto map to number of files
+// last item spItemCount used to auto map to number of files
 typedef enum savePaths {spDefault, spDump, spTrace, spItemCount} savePaths_t;
 typedef struct {int x; int y; int h; int w;} qtWindow_t;
 

@@ -847,13 +847,13 @@ end
 -- returns true if b is the index of a sector trailer
 local function mfIsSectorTrailer(b)
     n=b+1
-    if (n < 32*4 ) then 
-        if  (n % 4 ==  0) then return true 
+    if (n < 32*4 ) then
+        if  (n % 4 ==  0) then return true
         else return false
         end
     end
 
-    if (n % 16 == 0) then return true 
+    if (n % 16 == 0) then return true
     end
 
     return false

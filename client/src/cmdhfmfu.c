@@ -4154,7 +4154,7 @@ static int CmdHF14AMfuEView(const char *Cmd) {
 
     if (override_end) {
         ++end ;
-    } else { 
+    } else {
         end = dump->pages ;
     }
 

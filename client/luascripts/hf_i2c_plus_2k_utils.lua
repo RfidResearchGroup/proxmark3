@@ -23,7 +23,7 @@ author = 'Shain Lakin'
 version = 'v1.0.0'
 desc =[[
 
-This script can be used to read blocks, write blocks, dump sectors, 
+This script can be used to read blocks, write blocks, dump sectors,
 or write a files hex bytes to sector 0 or 1 on the NTAG I2C PLUS 2K tag.
 
 ]]
@@ -32,7 +32,7 @@ example =[[
 
     Read block 04 from sector 1:
     script run hf_i2c_plus_2k_utils -m r -s 1 -b 04
-    
+
     Write FFFFFFFF to block A0 sector 1:
     script run hf_i2c_plus_2k_utils -m w -s 1 -b A0 -d FFFFFFFF
 
@@ -45,15 +45,15 @@ example =[[
 ]]
 usage = [[
 
-    Read mode: 
+    Read mode:
     script run hf_i2c_plus_2k_utils -m r -s <sector> -b <block (hex)>
-    
-    Write mode: 
+
+    Write mode:
     script run hf_i2c_plus_2k_utils -m w -s <sector> -b <block (hex)> -d <data (hex)>
-    
+
     Dump mode:
     script run hf_i2c_plus_2k_utils -m d -s <sector>
-    
+
     File mode:
     script run hf_i2c_plus_2k_utils -m f -s <sector> -f <file>
 
@@ -124,7 +124,7 @@ end
 ---
 
 
---- Function to connect 
+--- Function to connect
 local function connect()
     core.clearCommandBuffer()
 
@@ -189,7 +189,7 @@ local function filewriter(file,sector)
     end_char = 8
     block_counter = 4
     -- NTAG_I2C_PLUS_2K:SECTOR_0:225,SECTOR_1:255
-    end_block = 225 
+    end_block = 225
     connect()
     select_sector(sector)
     for count = 1, len do
@@ -296,7 +296,7 @@ local function main(args)
         elseif mode == 'd' then
             dump(sector,uid)
         end
-    
+
     else
         return print(usage)
     end

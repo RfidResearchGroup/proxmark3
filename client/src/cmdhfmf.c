@@ -238,7 +238,7 @@ static bool mfc_value(const uint8_t *d, int32_t *val) {
 }
 
 static void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose) {
-     if (blockno == 0) {
+    if (blockno == 0) {
         PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
     } else if (mfIsSectorTrailer(blockno)) {
         PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
@@ -373,6 +373,31 @@ static bool mf_write_block(const uint8_t *key, uint8_t keytype, uint8_t blockno,
     }
 
     return (resp.oldarg[0] & 0xff);
+}
+
+static void mf_analyse_acl(uint16_t n, uint8_t *d) {
+
+    for (uint16_t b = 3; b < n; b++) {
+        if (mfIsSectorTrailer(b) == false) {
+            continue;
+        }
+
+        uint8_t block[MFBLOCK_SIZE] = {0x00};
+        memcpy(block, d + (b * MFBLOCK_SIZE), MFBLOCK_SIZE);
+
+        // ensure access right isn't messed up.
+        if (mfValidateAccessConditions(&block[6]) == false) {
+            PrintAndLogEx(WARNING, "Invalid Access Conditions on sector " _YELLOW_("%u"), mfSectorNum(b));
+        }
+
+        // Warn if ACL is strict read-only
+        uint8_t bar = mfNumBlocksPerSector(mfSectorNum(b));
+        for (uint8_t foo = 0; foo < bar; foo++) {
+            if (mfReadOnlyAccessConditions(foo, &block[6])) {
+                PrintAndLogEx(WARNING, _YELLOW_("s%u / b%u") " - Strict ReadOnly Access Conditions detected", mfSectorNum(b), b - bar + 1 + foo);
+            }
+        }
+    }
 }
 
 static int CmdHF14AMfAcl(const char *Cmd) {
@@ -538,6 +563,32 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     }
 
     uint8_t blockno = (uint8_t)b;
+
+    // Warn if ACL is strict read-only
+    if (mfIsSectorTrailer(blockno)) {
+        PrintAndLogEx(INFO, "Sector trailer (ST) write detected");
+
+        // ensure access right isn't messed up.
+        if (mfValidateAccessConditions(&block[6]) == false) {
+            PrintAndLogEx(WARNING, "Invalid Access Conditions detected, replacing by default values");
+            memcpy(block + 6, "\xFF\x07\x80\x69", 4);
+        }
+
+        bool ro_detected = false;
+        uint8_t bar = mfNumBlocksPerSector(mfSectorNum(blockno));
+        for (uint8_t foo = 0; foo < bar; foo++) {
+            if (mfReadOnlyAccessConditions(foo, &block[6])) {
+                PrintAndLogEx(WARNING, "Strict ReadOnly Access Conditions on block " _YELLOW_("%u") " detected", blockno - bar + 1 + foo);
+                ro_detected = true;
+            }
+        }
+        if (ro_detected) {
+            PrintAndLogEx(INFO, "Exiting, please run `" _YELLOW_("hf mf acl -d %s") "` to understand", sprint_hex_inrow(&block[6], 3));
+            return PM3_EINVARG;
+        } else {
+            PrintAndLogEx(SUCCESS, "ST passed checks, continuing...");
+        }
+    }
 
     PrintAndLogEx(INFO, "Writing block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
     PrintAndLogEx(INFO, "data: %s", sprint_hex(block, sizeof(block)));
@@ -1172,7 +1223,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", datafilename);
 
-    // main loop for restoreing.
+    // main loop for restoring.
     // a bit more complicated than needed
     // this is because of two things.
     // 1. we are setting keys from a key file or using the existing ones in the dump
@@ -1182,7 +1233,6 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         for (uint8_t b = 0; b < mfNumBlocksPerSector(s); b++) {
 
             uint8_t bldata[MFBLOCK_SIZE] = {0x00};
-
             memcpy(bldata, dump, MFBLOCK_SIZE);
 
             // if sector trailer
@@ -1208,6 +1258,13 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 if (mfValidateAccessConditions(&bldata[6]) == false) {
                     PrintAndLogEx(WARNING, "Invalid Access Conditions on sector %i, replacing by default values", s);
                     memcpy(bldata + 6, "\xFF\x07\x80\x69", 4);
+                }
+
+                // Warn if ACL is strict read-only
+                for (uint8_t foo = 0; foo < mfNumBlocksPerSector(s); foo++) {
+                    if (mfReadOnlyAccessConditions(foo, &bldata[6])) {
+                        PrintAndLogEx(WARNING, "Strict ReadOnly Access Conditions on block " _YELLOW_("%u") " detected", foo);
+                    }
                 }
             }
 
@@ -6818,6 +6875,7 @@ static int CmdHF14AMfView(const char *Cmd) {
 
     if (verbose) {
         mf_print_keys(block_cnt, dump);
+        mf_analyse_acl(block_cnt, dump);
     }
 
     int sector = DetectHID(dump, 0x4910);
@@ -6836,7 +6894,7 @@ static int CmdHF14AMfView(const char *Cmd) {
         }
 
         // allocate memory
-        uint8_t* d = calloc(bytes_read, sizeof(uint8_t));
+        uint8_t *d = calloc(bytes_read, sizeof(uint8_t));
         if (d == NULL) {
             return PM3_EMALLOC;
         }
@@ -7324,8 +7382,8 @@ static int CmdHF14AGen4Save(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    
-    bool fill_emulator = arg_get_lit(ctx,7);
+
+    bool fill_emulator = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     // validations
@@ -7420,12 +7478,12 @@ static int CmdHF14AGen4Save(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    
+
     if (fill_emulator) {
         PrintAndLogEx(INFO, "uploading to emulator memory" NOLF);
         // fast push mode
         g_conn.block_after_ACK = true;
-        
+
         size_t offset = 0;
         int       cnt = 0;
         uint16_t bytes_left = bytes ;
@@ -7454,7 +7512,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
             offset += MFBLOCK_SIZE;
             bytes_left -= MFBLOCK_SIZE;
         }
-        
+
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", bytes);
     }

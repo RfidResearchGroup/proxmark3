@@ -900,16 +900,16 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
         if (use_us) {
             PrintAndLogEx(NORMAL, " %10.1f | %10.1f | %s |fdt (Frame Delay Time): " _YELLOW_("%.1f"),
-                (float)time1 / 13.56,
-                (float)time2 / 13.56,
-                "   ",
-                (float)(next_hdr->timestamp - end_of_transmission_timestamp) / 13.56);
+                          (float)time1 / 13.56,
+                          (float)time2 / 13.56,
+                          "   ",
+                          (float)(next_hdr->timestamp - end_of_transmission_timestamp) / 13.56);
         } else {
             PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): " _YELLOW_("%d"),
-                time1,
-                time2,
-                "   ",
-                (next_hdr->timestamp - end_of_transmission_timestamp));
+                          time1,
+                          time2,
+                          "   ",
+                          (next_hdr->timestamp - end_of_transmission_timestamp));
         }
     }
 

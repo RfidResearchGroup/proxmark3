@@ -71,6 +71,7 @@ int MFPGetSignature(bool activateField, bool leaveSignalON, uint8_t *dataout, in
 int MFPGetVersion(bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 
 bool mfValidateAccessConditions(const uint8_t *data);
+bool mfReadOnlyAccessConditions(uint8_t blockn, const uint8_t *data);
 const char *mfGetAccessConditionsDesc(uint8_t blockn, const uint8_t *data);
 
 uint8_t mfNumBlocksPerSector(uint8_t sectorNo);

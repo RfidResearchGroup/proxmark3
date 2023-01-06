@@ -3968,7 +3968,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        // iceman: only for formats w length smaller than 37. 
+        // iceman: only for formats w length smaller than 37.
         // Needs a check.
 
         // increase length to allow setting bit just above real data
