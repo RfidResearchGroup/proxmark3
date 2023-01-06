@@ -786,6 +786,70 @@ static int CmdPIVGetData(const char *Cmd) {
     return res;
 }
 
+static int CmdPIVScan(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "piv scan",
+                  "Scan a PIV card for known containers",
+                  "piv scan -s   -> select card, select applet and run scan\n"
+                  "piv scan -st --aid a00000030800001000   -> select card, select applet a00000030800001000, show result of the scan in TLV\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("sS",  "select",  "Activate field and select applet"),
+        arg_lit0("kK",  "keep",    "Keep field for next command"),
+        arg_lit0("aA",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("tT",  "tlv",     "TLV decode results"),
+        arg_lit0("wW",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_str0(NULL,  "aid", "<hex>", "Applet ID to select. By default A0000003080000100 will be used"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool activateField = arg_get_lit(ctx, 1);
+    bool leaveSignalON = arg_get_lit(ctx, 2);
+    bool APDULogging = arg_get_lit(ctx, 3);
+    bool decodeTLV = arg_get_lit(ctx, 4);
+    Iso7816CommandChannel channel = CC_CONTACTLESS;
+    if (arg_get_lit(ctx, 5))
+        channel = CC_CONTACT;
+    PrintChannel(channel);
+
+    uint8_t applet_id[APDU_AID_LEN] = {0};
+    int aid_len = 0;
+    CLIGetHexWithReturn(ctx, 6, applet_id, &aid_len);
+    if (aid_len == 0) {
+        memcpy(applet_id, PIV_APPLET, sizeof(PIV_APPLET));
+        aid_len = sizeof(PIV_APPLET);
+    }
+
+    CLIParserFree(ctx);
+
+    SetAPDULogging(APDULogging);
+    if (aid_len == 0) {
+        memcpy(applet_id, PIV_APPLET, sizeof(PIV_APPLET));
+        aid_len = sizeof(PIV_APPLET);
+    }
+    int res = 0;
+    if (activateField == true) {
+        res = PivSelect(channel, activateField, true, decodeTLV, true, applet_id, aid_len);
+        if (res != PM3_SUCCESS) {
+            if (leaveSignalON == false) {
+                DropFieldEx(channel);
+            }
+            return res;
+        }
+    }
+
+    for (int i = 0; PIV_CONTAINERS[i].len != 0; i++) {
+        PivGetDataByCidAndPrint(channel, &(PIV_CONTAINERS[i]), decodeTLV, false);
+        PrintAndLogEx(NORMAL, "");
+    }
+    if (leaveSignalON == false) {
+        DropFieldEx(channel);
+    }
+    return PM3_SUCCESS;
+}
+
 static int CmdPIVList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "piv", "7816");
 }
@@ -794,6 +858,7 @@ static command_t CommandTable[] =  {
     {"help",        CmdHelp,                        AlwaysAvailable, "This help"},
     {"select",      CmdPIVSelect,                   IfPm3Iso14443,   "Select the PIV applet"},
     {"getdata",     CmdPIVGetData,                  IfPm3Iso14443,   "Gets a container on a PIV card"},
+    {"scan",        CmdPIVScan,                     IfPm3Iso14443,   "Scan PIV card for known containers"},
 
     {"list",        CmdPIVList,                     AlwaysAvailable, "List ISO7816 history"},
     {NULL, NULL, NULL, NULL}
