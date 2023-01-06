@@ -626,6 +626,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdmain.c \
 		cmdnfc.c \
 		cmdparser.c \
+		cmdpiv.c \
 		cmdscript.c \
 		cmdsmartcard.c \
 		cmdtrace.c \
