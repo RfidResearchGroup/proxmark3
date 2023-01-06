@@ -56,6 +56,9 @@ define KNOWN_STANDALONE_DEFINITIONS
 | LF_PROXBRUTE    | HID ProxII bruteforce                  |
 |                 | - Brad Antoniewicz                     |
 +----------------------------------------------------------+
+| LF_PROX2BRUTE   | HID ProxII bruteforce v2               |
+|                 |                                        |
++----------------------------------------------------------+
 | LF_SAMYRUN      | HID26 read/clone/sim                   |
 | (default)       | - Samy Kamkar                          |
 +----------------------------------------------------------+
@@ -118,7 +121,7 @@ define KNOWN_STANDALONE_DEFINITIONS
 +----------------------------------------------------------+
 endef
 
-STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RSWW LF_EM4100RWC LF_HIDBRUTE LF_HIDFCBRUTE LF_ICEHID LF_PROXBRUTE LF_SAMYRUN LF_THAREXDE LF_NEXID
+STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RSWW LF_EM4100RWC LF_HIDBRUTE LF_HIDFCBRUTE LF_ICEHID LF_PROXBRUTE LF_PROX2BRUTE LF_SAMYRUN LF_THAREXDE LF_NEXID
 STANDALONE_MODES += HF_14ASNIFF HF_14BSNIFF HF_15SNIFF HF_AVEFUL HF_BOG HF_COLIN HF_CRAFTBYTE HF_ICECLASS HF_LEGIC HF_LEGICSIM HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_TCPRST HF_TMUDFORD HF_YOUNG HF_REBLAY DANKARMULTI
 STANDALONE_MODES_REQ_BT := HF_REBLAY
 STANDALONE_MODES_REQ_SMARTCARD :=
