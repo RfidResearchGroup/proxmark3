@@ -657,7 +657,7 @@ static int PivAuthenticateSign(Iso7816CommandChannel channel, uint8_t alg_id, ui
     const size_t MAX_NONCE_LEN = 0x7a;
     if (nonce_len > MAX_NONCE_LEN) {
         if (verbose == true) {
-            PrintAndLogEx(WARNING, "Nonce cannot exceed %d bytes. Got %d bytes.", MAX_NONCE_LEN, nonce_len);
+            PrintAndLogEx(WARNING, "Nonce cannot exceed %zu bytes. Got %zu bytes.", MAX_NONCE_LEN, nonce_len);
         }
         return PM3_EINVARG;
     }
