@@ -6,20 +6,20 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = "Iceman"
-version = 'v1.0.1'
+version = 'v1.0.2'
 desc = [[
 This script calculates mifare Ultralight-EV1 pwd based on uid diversification for an Italian ticketsystem
 Algo not found by me.
 ]]
 example =[[
      -- if called without, it reads tag uid
-     script run hf_mfu_uidkeycalc-italy
+     script run hf_mfu_uidkeycalc_italy
 
      --
-     script run hf_mfu_uidkeycalc-italy -u 11223344556677
+     script run hf_mfu_uidkeycalc_italy -u 11223344556677
 ]]
 usage = [[
-script run hf_mfu_uidkeycalc-italy -h -u <uid> "
+script run hf_mfu_uidkeycalc_italy -h -u <uid> "
 ]]
 arguments = [[
     -h             : this help
