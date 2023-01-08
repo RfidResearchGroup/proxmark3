@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mfu info` - now also does a simple OTP fingerprinting (@iceman1001)
  - Changed `hf mf wrbl` - now checks for strict readonly ACL's in the data to write (@iceman1001)
  - Changed `hf mf view` - verbose printing if strict readonly ACL's exists in dump file (@iceman1001)
  - Add command `piv authsign` to get a buffer signed by the selected key (@jmichelp)
