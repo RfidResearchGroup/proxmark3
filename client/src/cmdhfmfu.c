@@ -65,7 +65,7 @@ static uint8_t default_3des_keys[][16] = {
 
 static uint8_t default_pwd_pack[][4] = {
     {0xFF, 0xFF, 0xFF, 0xFF}, // PACK 0x00,0x00 -- factory default
-    {0x4E, 0x45, 0x78, 0x54},
+    {0x4E, 0x45, 0x78, 0x54}, // NExT
 };
 
 static uint32_t UL_TYPES_ARRAY[] = {
@@ -1146,6 +1146,46 @@ Lego Dimensions,
 
 typedef struct {
     const char *desc;
+    uint8_t mpos;
+    uint8_t mlen;
+    const char *match;
+    uint32_t (*otp)(const uint8_t *uid);
+    const char *hint;
+} mfu_otp_identify_t;
+
+static mfu_otp_identify_t mfu_otp_ident_table[] = {
+    { "SALTO", 12, 4, "534C544F", ul_c_otpgenA, NULL },
+//    { "SAFLOK", 12, 4, NULL, ul_c_otpgenB, NULL },
+//    { "VINGCARD", 12, 4, NULL, ul_c_otpgenC, NULL },
+//    { "DORMA KABA", 12, 4, NULL, ul_c_otpgenD, NULL },
+    { NULL, 0, 0, NULL, NULL, NULL }
+};
+
+static mfu_otp_identify_t *mfu_match_otp_fingerprint(uint8_t *data) {
+    uint8_t i = 0;
+    do {
+        int ml = 0;
+        uint8_t mtmp[40] = {0};
+
+        // static or dynamic created OTP to fingerprint.
+        if (mfu_otp_ident_table[i].match) {
+            param_gethex_to_eol(mfu_otp_ident_table[i].match, 0, mtmp, sizeof(mtmp), &ml);
+        } else {
+            uint32_t otp = mfu_otp_ident_table[i].otp(data);
+            num_to_bytes(otp, 4, mtmp);
+        }
+
+        bool m2 = (memcmp(mtmp, data + mfu_otp_ident_table[i].mpos, mfu_otp_ident_table[i].mlen) == 0);
+        if (m2) {
+            PrintAndLogEx(DEBUG, "(fingerprint) found %s", mfu_otp_ident_table[i].desc);
+            return &mfu_otp_ident_table[i];
+        }
+    } while (mfu_otp_ident_table[++i].desc);
+    return NULL;
+}
+
+typedef struct {
+    const char *desc;
     const char *version;
     uint8_t mpos;
     uint8_t mlen;
@@ -1184,7 +1224,7 @@ static mfu_identify_t mfu_ident_table[] = {
         "Snackworld", "0004040101000B03",
         9, 7, "483000E1100600",
         NULL, NULL,
-        "hf mfu dump -k %08x"
+        "hf mfu dump -k"
     },
     {
         "Amiibo", "0004040201001103",
@@ -1324,15 +1364,36 @@ static int mfu_fingerprint(TagTypeUL_t tagtype, bool hasAuthKey, uint8_t *authke
         if (item) {
             PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s"), item->desc);
 
-            if (item->Pwd) {
+            if (item->hint) {
+                if (item->Pwd) {
+                    char s[40] = {0};
+                    snprintf(s, sizeof(s), item->hint, item->Pwd(uid));
+                    PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", s);
+                } else {
+                    PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", item->hint);
+                }
+            }
+        }
+    }
+
+    // OTP checks    
+    mfu_otp_identify_t *item = mfu_match_otp_fingerprint(data);
+    if (item) {
+        PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s"), item->desc);
+
+        if (item->hint) {
+            if (item->otp) {
                 char s[40] = {0};
-                snprintf(s, sizeof(s), item->hint, item->Pwd(uid));
+                snprintf(s, sizeof(s), item->hint, item->otp(uid));
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", s);
             } else {
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", item->hint);
             }
         }
     }
+    // 
+    
+    
 
 out:
     free(data);
@@ -3248,7 +3309,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     PrintAndLogEx(INFO, "----------------------------------");
     PrintAndLogEx(INFO, " algo            | pwd      | pack");
     PrintAndLogEx(INFO, "-----------------+----------+-----");
-    PrintAndLogEx(INFO, " EV1             | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
+    PrintAndLogEx(INFO, " Transport EV1   | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
     PrintAndLogEx(INFO, " Amiibo          | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
     PrintAndLogEx(INFO, " Lego Dimension  | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
     PrintAndLogEx(INFO, " XYZ 3D printer  | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
@@ -3256,6 +3317,9 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     PrintAndLogEx(INFO, " NTAG tools      | %08X | %04X", ul_ev1_pwdgenF(uid), ul_ev1_packgen_def(uid));
     PrintAndLogEx(INFO, "-----------------+----------+-----");
     PrintAndLogEx(INFO, " Vingcard algo");
+    PrintAndLogEx(INFO, " Saflok algo");
+    PrintAndLogEx(INFO, " SALTO algo");
+    PrintAndLogEx(INFO, " Dorma Kaba algo");
     PrintAndLogEx(INFO, "----------------------------------");
     return PM3_SUCCESS;
 }
