@@ -85,6 +85,43 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
 #ifdef _WIN32
     struct _stat st;
     // Mingw _stat fails if path ends with /, so let's use a stripped path
+    if (str_endswith(path, PATHSEP))
+
+    memset(path + (strlen(path) - strlen(PATHSEP)), 0x00, strlen(PATHSEP));
+    result = _stat(path, &st);
+    strncat(path, PATHSEP, strlen(PATHSEP));
+} else {
+    result = _stat(path, &st);
+}
+#else
+    struct stat st;
+    result = stat(path, &st);
+#endif
+if ((result != 0) && create_home) {
+
+#ifdef _WIN32
+    if (_mkdir(path))
+#else
+    if (mkdir(path, 0700))
+#endif
+    {
+        fprintf(stderr, "Could not create user directory %s\n", path);
+        free(path);
+        return PM3_EFILE;
+    }
+}
+if (subdir != NULL) {
+    pathlen += strlen(subdir);
+    char *tmp = realloc(path, pathlen * sizeof(char));
+    if (tmp == NULL) {
+        //free(path);
+        return PM3_EMALLOC;
+    }
+    path = tmp;
+    strcat(path, subdir);
+
+#ifdef _WIN32
+    // Mingw _stat fails if path ends with /, so let's use a stripped path
     if (path[strlen(path) - 1] == '/') {
         path[strlen(path) - 1] = '\0';
         result = _stat(path, &st);
@@ -93,7 +130,6 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
         result = _stat(path, &st);
     }
 #else
-    struct stat st;
     result = stat(path, &st);
 #endif
     if ((result != 0) && create_home) {
@@ -109,57 +145,22 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
             return PM3_EFILE;
         }
     }
-    if (subdir != NULL) {
-        pathlen += strlen(subdir);
-        char *tmp = realloc(path, pathlen * sizeof(char));
-        if (tmp == NULL) {
-            //free(path);
-            return PM3_EMALLOC;
-        }
-        path = tmp;
-        strcat(path, subdir);
+}
 
-#ifdef _WIN32
-        // Mingw _stat fails if path ends with /, so let's use a stripped path
-        if (path[strlen(path) - 1] == '/') {
-            path[strlen(path) - 1] = '\0';
-            result = _stat(path, &st);
-            path[strlen(path)] = '/';
-        } else {
-            result = _stat(path, &st);
-        }
-#else
-        result = stat(path, &st);
-#endif
-        if ((result != 0) && create_home) {
-
-#ifdef _WIN32
-            if (_mkdir(path))
-#else
-            if (mkdir(path, 0700))
-#endif
-            {
-                fprintf(stderr, "Could not create user directory %s\n", path);
-                free(path);
-                return PM3_EFILE;
-            }
-        }
-    }
-
-    if (filename == NULL) {
-        *foundpath = path;
-        return PM3_SUCCESS;
-    }
-    pathlen += strlen(filename);
-    char *tmp = realloc(path, pathlen * sizeof(char));
-    if (tmp == NULL) {
-        //free(path);
-        return PM3_EMALLOC;
-    }
-    path = tmp;
-    strcat(path, filename);
+if (filename == NULL) {
     *foundpath = path;
     return PM3_SUCCESS;
+}
+pathlen += strlen(filename);
+char *tmp = realloc(path, pathlen *sizeof(char));
+if (tmp == NULL) {
+    //free(path);
+    return PM3_EMALLOC;
+}
+path = tmp;
+strcat(path, filename);
+*foundpath = path;
+return PM3_SUCCESS;
 }
 
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space) {
