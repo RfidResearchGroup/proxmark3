@@ -88,7 +88,6 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
 
     strcpy(path, user_path);
     strcat(path, PM3_USER_DIRECTORY);
-
     int result;
 
 #ifdef _WIN32
@@ -97,7 +96,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     if (str_endswith(path, PATHSEP)) {
         memset(path + (strlen(path) - strlen(PATHSEP)), 0x00, strlen(PATHSEP));
         result = _stat(path, &st);
-        strncat(path, PATHSEP, strlen(PATHSEP));
+        strcat(path, PATHSEP);
     } else {
         result = _stat(path, &st);
     }
@@ -131,7 +130,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
         if (str_endswith(path, PATHSEP)) {
             memset(path + (strlen(path) - strlen(PATHSEP)), 0x00, strlen(PATHSEP));
             result = _stat(path, &st);
-            strncat(path, PATHSEP, strlen(PATHSEP));
+            strcat(path, PATHSEP);
         } else {
             result = _stat(path, &st);
         }
