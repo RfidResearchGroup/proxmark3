@@ -105,7 +105,7 @@ local function main(args)
 
     -- chomp emu header
     if #hex == 1192 then
-        hex = hex:sub(112)
+        hex = hex:sub(113)
     end
 
     local amiibo_offset = 0
