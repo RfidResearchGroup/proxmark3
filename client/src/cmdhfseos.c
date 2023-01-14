@@ -30,6 +30,7 @@
 #include "iso7816/apduinfo.h"   // GetAPDUCodeDescription
 #include "crypto/asn1utils.h"   // ASN1 decode / print
 #include "commonutil.h"         // get_sw
+#include "protocols.h"          // ISO7816 APDU return codes
 
 static int CmdHelp(const char *Cmd);
 
@@ -55,7 +56,7 @@ static int seos_select(void) {
     }
 
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting SEOS applet aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -75,7 +76,7 @@ static int seos_select(void) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting ADF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
