@@ -1162,12 +1162,19 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
-    uint8_t *udata = (uint8_t *)data;
+    typedef union UDATA
+    {
+        void* v;
+        uint8_t* bytes;
+        mfu_dump_t* mfu;
+        topaz_tag_t* topaz;
+    } UDATA;
+    UDATA udata = (UDATA)data;
     char ctype[100] = {0};
     JsonLoadStr(root, "$.FileType", ctype);
 
     if (!strcmp(ctype, "raw")) {
-        JsonLoadBufAsHex(root, "$.raw", udata, maxdatalen, datalen);
+        JsonLoadBufAsHex(root, "$.raw", udata.bytes, maxdatalen, datalen);
     }
 
     if (!strcmp(ctype, "mfcard")) {
@@ -1187,7 +1194,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            memcpy(&udata[sptr], block, 16);
+            memcpy(&udata.bytes[sptr], block, 16);
             sptr += len;
         }
 
@@ -1206,7 +1213,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &udata[sptr], 4, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (!len)
                 break;
 
@@ -1218,18 +1225,16 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     if (!strcmp(ctype, "mfu")) {
 
-        mfu_dump_t *mem = (mfu_dump_t *)udata;
-
-        JsonLoadBufAsHex(root, "$.Card.Version", mem->version, sizeof(mem->version), datalen);
-        JsonLoadBufAsHex(root, "$.Card.TBO_0", mem->tbo, sizeof(mem->tbo), datalen);
-        JsonLoadBufAsHex(root, "$.Card.TBO_1", mem->tbo1, sizeof(mem->tbo1), datalen);
-        JsonLoadBufAsHex(root, "$.Card.Signature", mem->signature, sizeof(mem->signature), datalen);
-        JsonLoadBufAsHex(root, "$.Card.Counter0", &mem->counter_tearing[0][0], 3, datalen);
-        JsonLoadBufAsHex(root, "$.Card.Tearing0", &mem->counter_tearing[0][3], 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.Counter1", &mem->counter_tearing[1][0], 3, datalen);
-        JsonLoadBufAsHex(root, "$.Card.Tearing1", &mem->counter_tearing[1][3], 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.Counter2", &mem->counter_tearing[2][0], 3, datalen);
-        JsonLoadBufAsHex(root, "$.Card.Tearing2", &mem->counter_tearing[2][3], 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Version", udata.mfu->version, sizeof(udata.mfu->version), datalen);
+        JsonLoadBufAsHex(root, "$.Card.TBO_0", udata.mfu->tbo, sizeof(udata.mfu->tbo), datalen);
+        JsonLoadBufAsHex(root, "$.Card.TBO_1", udata.mfu->tbo1, sizeof(udata.mfu->tbo1), datalen);
+        JsonLoadBufAsHex(root, "$.Card.Signature", udata.mfu->signature, sizeof(udata.mfu->signature), datalen);
+        JsonLoadBufAsHex(root, "$.Card.Counter0", &udata.mfu->counter_tearing[0][0], 3, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Tearing0", &udata.mfu->counter_tearing[0][3], 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Counter1", &udata.mfu->counter_tearing[1][0], 3, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Tearing1", &udata.mfu->counter_tearing[1][3], 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Counter2", &udata.mfu->counter_tearing[2][0], 3, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Tearing2", &udata.mfu->counter_tearing[2][3], 1, datalen);
         *datalen = MFU_DUMP_PREFIX_LENGTH;
 
         size_t sptr = 0;
@@ -1243,15 +1248,15 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &mem->data[sptr], MFU_BLOCK_SIZE, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.mfu->data[sptr], MFU_BLOCK_SIZE, &len);
             if (!len)
                 break;
 
             sptr += len;
-            mem->pages++;
+            udata.mfu->pages++;
         }
         // remove one, since pages indicates a index rather than number of available pages
-        --mem->pages;
+        --udata.mfu->pages;
 
         *datalen += sptr;
     }
@@ -1268,7 +1273,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &udata[sptr], 4, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (!len)
                 break;
 
@@ -1290,7 +1295,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &udata[sptr], 8, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 8, &len);
             if (!len)
                 break;
 
@@ -1311,7 +1316,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &udata[sptr], 4, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (!len)
                 break;
 
@@ -1332,7 +1337,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &udata[sptr], 4, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (!len)
                 break;
 
@@ -1342,19 +1347,18 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     }
 
     if (!strcmp(ctype, "15693")) {
-        JsonLoadBufAsHex(root, "$.raw", udata, maxdatalen, datalen);
+        JsonLoadBufAsHex(root, "$.raw", udata.bytes, maxdatalen, datalen);
     }
 
     if (!strcmp(ctype, "legic")) {
-        JsonLoadBufAsHex(root, "$.raw", udata, maxdatalen, datalen);
+        JsonLoadBufAsHex(root, "$.raw", udata.bytes, maxdatalen, datalen);
     }
 
     if (!strcmp(ctype, "topaz")) {
 
-        topaz_tag_t *mem = (topaz_tag_t *)udata;
-        JsonLoadBufAsHex(root, "$.Card.UID", mem->uid, sizeof(mem->uid), datalen);
-        JsonLoadBufAsHex(root, "$.Card.HR01", mem->HR01, sizeof(mem->HR01), datalen);
-        JsonLoadBufAsHex(root, "$.Card.Size", (uint8_t *) & (mem->size), 2, datalen);
+        JsonLoadBufAsHex(root, "$.Card.UID", udata.topaz->uid, sizeof(udata.topaz->uid), datalen);
+        JsonLoadBufAsHex(root, "$.Card.HR01", udata.topaz->HR01, sizeof(udata.topaz->HR01), datalen);
+        JsonLoadBufAsHex(root, "$.Card.Size", (uint8_t *) & (udata.topaz->size), 2, datalen);
 
         size_t sptr = 0;
         for (int i = 0; i < (TOPAZ_STATIC_MEMORY / 8); i++) {
@@ -1368,7 +1372,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &mem->data_blocks[sptr][0], TOPAZ_BLOCK_SIZE, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.topaz->data_blocks[sptr][0], TOPAZ_BLOCK_SIZE, &len);
             if (!len)
                 break;
 
