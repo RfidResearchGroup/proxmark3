@@ -29,12 +29,9 @@
 #include "cmdhf14a.h"
 #include "fileutils.h"
 #include "crypto/asn1utils.h"
+#include "protocols.h"
 
 static int CmdHelp(const char *Cmd);
-
-static const uint16_t APDU_RES_SUCCESS = 0x9000;
-static const uint16_t APDU_RES_NOT_FOUND = 0x6A82;
-static const uint16_t APDU_RES_SECURITY = 0x6982;
 
 static uint8_t PIV_APPLET[9] = "\xA0\x00\x00\x03\x08\x00\x00\x10\x00";
 
@@ -585,14 +582,14 @@ static int PivGetData(Iso7816CommandChannel channel, const uint8_t tag[], size_t
                 root = new_root;
             }
         }
-        if ((*sw) == APDU_RES_SUCCESS) {
+        if ((*sw) == ISO7816_OK) {
             more_data = 0;
         }
     } while (more_data > 0);
 
     // Now we can try parse the TLV and return it
     *result = root;
-    if (*sw == APDU_RES_SUCCESS && tlvdb_parse_root(root) == true) {
+    if (*sw == ISO7816_OK && tlvdb_parse_root(root) == true) {
         return PM3_SUCCESS;
     }
     if (verbose == true) {
@@ -614,17 +611,17 @@ static int PivGetDataByCidAndPrint(Iso7816CommandChannel channel, const struct p
 
     if (PivGetData(channel, cid->tlv_tag, cid->len, verbose, &root, &sw) == PM3_SUCCESS) {
         switch (sw) {
-            case APDU_RES_SUCCESS:
+            case ISO7816_OK:
                 if (decodeTLV == true) {
                     PrintTLV(&(root->db));
                 } else {
                     print_buffer(root->buf, root->len, 0);
                 }
                 break;
-            case APDU_RES_NOT_FOUND:
+            case ISO7816_FILE_NOT_FOUND:
                 PrintAndLogEx(FAILED, "Container not found.");
                 break;
-            case APDU_RES_SECURITY:
+            case ISO7816_SECURITY_STATUS_NOT_SATISFIED:
                 PrintAndLogEx(WARNING, "Security conditions not met.");
                 break;
             default:
@@ -676,7 +673,7 @@ static int PivAuthenticateSign(Iso7816CommandChannel channel, uint8_t alg_id, ui
         PrintAndLogEx(FAILED, "Sending APDU failed with code %d", res);
         return res;
     }
-    if (sw != APDU_RES_SUCCESS) {
+    if (sw != ISO7816_OK) {
         if (verbose == true) {
             PrintAndLogEx(INFO, "Unexpected APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         }
@@ -701,7 +698,7 @@ static int PivSelect(Iso7816CommandChannel channel, bool activateField, bool lea
     if ((sw != 0) && (silent == false)) {
         PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
     }
-    if (res != PM3_SUCCESS || sw != APDU_RES_SUCCESS) {
+    if (res != PM3_SUCCESS || sw != ISO7816_OK) {
         PrintAndLogEx(FAILED, "Applet selection failed. Card is not a PIV card.");
         return res;
     }
