@@ -17,13 +17,11 @@
 //-----------------------------------------------------------------------------
 
 #include "emvcore.h"
-
 #include <string.h>
-
-#include "commonutil.h"  // ARRAYLEN
-#include "comms.h"       // DropField
+#include "commonutil.h"     // ARRAYLEN
+#include "comms.h"          // DropField
 #include "cmdparser.h"
-#include "cmdsmartcard.h" // ExchangeAPDUSC
+#include "cmdsmartcard.h"   // ExchangeAPDUSC
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "cmdhf14b.h"
@@ -31,6 +29,7 @@
 #include "emv_tags.h"
 #include "emvjson.h"
 #include "util_posix.h"
+#include "protocols.h"      // ISO7816 APDU return codes
 
 // Got from here. Thanks!
 // https://eftlab.co.uk/index.php/site-map/knowledge-base/211-emv-aid-rid-pix
@@ -392,7 +391,7 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
     res = EMVSelectPSE(channel, ActivateField, true, PSENum, data, sizeof(data), &datalen, &sw);
 
     if (!res) {
-        if (sw != 0x9000) {
+        if (sw != ISO7816_OK) {
             PrintAndLogEx(FAILED, "Select PSE error. APDU error: %04x.", sw);
             return 1;
         }
@@ -419,7 +418,7 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
                     }
 
                     // error catch!
-                    if (sw != 0x9000) {
+                    if (sw != ISO7816_OK) {
                         sfidatalen[ui] = 0;
                         PrintAndLogEx(FAILED, "PPSE get Error. APDU error: %04x.", sw);
                         break;
