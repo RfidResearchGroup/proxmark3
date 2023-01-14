@@ -126,8 +126,8 @@ static void hf14b_aid_search(bool verbose) {
             }
         }
 
-        if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
-            if (sw == 0x9000) {
+        if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
+            if (sw == ISO7816_OK) {
                 if (verbose) PrintAndLogEx(SUCCESS, "Application ( " _GREEN_("ok") " )");
             } else {
                 if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
@@ -2035,7 +2035,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
         goto out;
@@ -2055,7 +2055,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
         goto out;
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
         goto out;
@@ -2071,7 +2071,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
         goto out;
@@ -2090,7 +2090,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
         goto out;
