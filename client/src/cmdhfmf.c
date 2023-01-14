@@ -6915,9 +6915,15 @@ static int CmdHF14AMfView(const char *Cmd) {
             return res;
         }
 
+        typedef union UDATA
+        {
+            uint8_t *bytes;
+            mfc_vigik_t *vigik;
+        } UDATA;
         // allocate memory
-        uint8_t *d = calloc(bytes_read, sizeof(uint8_t));
-        if (d == NULL) {
+        UDATA d;
+        d.bytes = calloc(bytes_read, sizeof(uint8_t));
+        if (d.bytes == NULL) {
             return PM3_EMALLOC;
         }
         uint16_t dlen = 0;
@@ -6925,14 +6931,14 @@ static int CmdHF14AMfView(const char *Cmd) {
         // vigik struture sector 0
         uint8_t *pdump = dump;
 
-        memcpy(d + dlen, pdump, MFBLOCK_SIZE * 3);
+        memcpy(d.bytes + dlen, pdump, MFBLOCK_SIZE * 3);
         dlen += MFBLOCK_SIZE * 3;
         pdump += (MFBLOCK_SIZE * 4);  // skip sectortrailer
 
         // extract memory from MAD sectors
         for (int i = 0; i <= madlen; i++) {
             if (0x4910 == mad[i] || 0x4916 == mad[i]) {
-                memcpy(d + dlen, pdump, MFBLOCK_SIZE * 3);
+                memcpy(d.bytes + dlen, pdump, MFBLOCK_SIZE * 3);
                 dlen += MFBLOCK_SIZE * 3;
             }
 
@@ -6940,8 +6946,8 @@ static int CmdHF14AMfView(const char *Cmd) {
         }
 
 //          convert_mfc_2_arr(pdump, bytes_read, d, &dlen);
-        vigik_annotate(d);
-        free(d);
+        vigik_annotate(d.vigik);
+        free(d.bytes);
     }
 
     free(dump);

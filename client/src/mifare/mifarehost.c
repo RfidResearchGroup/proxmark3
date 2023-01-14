@@ -1499,7 +1499,7 @@ static void reverse_array(const uint8_t *src, int src_len, uint8_t *dest) {
     }
 };
 
-int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
+int vigik_verify(mfc_vigik_t *d) {
 
     // iso9796
     // Exponent V = 2
@@ -1507,16 +1507,16 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
 
     if (g_debugMode == DEBUG) {
         PrintAndLogEx(INFO, "Raw");
-        print_hex_noascii_break(uid, uidlen, MFBLOCK_SIZE * 2);
+        print_hex_noascii_break((uint8_t *)d, sizeof(*d) - sizeof(d->rsa_signature), MFBLOCK_SIZE * 2);
 
         PrintAndLogEx(INFO, "Raw signature");
-        print_hex_noascii_break(signature, signature_len, MFBLOCK_SIZE * 2);
+        print_hex_noascii_break(d->rsa_signature, sizeof(d->rsa_signature), MFBLOCK_SIZE * 2);
     }
     uint8_t rev_sig[128];
-    reverse_array(signature, signature_len, rev_sig);
+    reverse_array(d->rsa_signature, sizeof(d->rsa_signature), rev_sig);
 
     PrintAndLogEx(INFO, "Raw signature reverse");
-    print_hex_noascii_break(rev_sig, signature_len, MFBLOCK_SIZE * 2);
+    print_hex_noascii_break(rev_sig, sizeof(d->rsa_signature), MFBLOCK_SIZE * 2);
 
     // t = 0xBC  = Implicitly known
     // t = 0xCC  = look at byte before to determine hash function
@@ -1566,7 +1566,7 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
         mbedtls_mpi_read_binary(&N, (const unsigned char *)n, PUBLIC_VIGIK_KEYLEN);
 
         //mbedtls_mpi_read_binary(&s, (const unsigned char*)signature, signature_len);
-        mbedtls_mpi_read_binary(&s, (const unsigned char *)rev_sig, signature_len);
+        mbedtls_mpi_read_binary(&s, (const unsigned char *)rev_sig, sizeof(d->rsa_signature));
 
         // check is sign < (N/2)
 
@@ -1725,7 +1725,7 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
 
     if (is_valid == false || i == ARRAYLEN(vigik_rsa_pk)) {
         PrintAndLogEx(INFO, "Signature:");
-        print_hex_noascii_break(signature, signature_len,  MFBLOCK_SIZE * 2);
+        print_hex_noascii_break(d->rsa_signature, sizeof(d->rsa_signature),  MFBLOCK_SIZE * 2);
         PrintAndLogEx(SUCCESS, "Signature verification: " _RED_("failed"));
         return PM3_ESOFT;
     }
@@ -1738,37 +1738,35 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
     PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 192);
 
     PrintAndLogEx(INFO, "Signature:");
-    print_hex_noascii_break(signature, signature_len,  MFBLOCK_SIZE * 2);
+    print_hex_noascii_break(d->rsa_signature, sizeof(d->rsa_signature),  MFBLOCK_SIZE * 2);
 
     PrintAndLogEx(SUCCESS, "Signature verification: " _GREEN_("successful"));
 
     return PM3_SUCCESS;
 }
 
-int vigik_annotate(uint8_t *d) {
+int vigik_annotate(mfc_vigik_t *d) {
     if (d == NULL)
         return PM3_EINVARG;
 
-    mfc_vigik_t *foo = (mfc_vigik_t *)d;
-
-    PrintAndLogEx(INFO, "Manufacture......... %s", sprint_hex(foo->b0, sizeof(foo->b0)));
-    PrintAndLogEx(INFO, "MAD................. %s", sprint_hex(foo->mad, sizeof(foo->mad)));
-    PrintAndLogEx(INFO, "Counters............ %u", foo->counters);
-    PrintAndLogEx(INFO, "rtf................. %s", sprint_hex(foo->rtf, sizeof(foo->rtf)));
-    PrintAndLogEx(INFO, "Service code........ 0x%08x / %u  - " _YELLOW_("%s"), foo->service_code, foo->service_code, vigik_get_service(foo->service_code));
-    PrintAndLogEx(INFO, "Info flag........... %u -", foo->info_flag); // ,  sprint_bin(foo->info_flag, 1));
-    PrintAndLogEx(INFO, "Key version......... %u", foo->key_version);
-    PrintAndLogEx(INFO, "PTR Counter......... %u", foo->ptr_counter);
-    PrintAndLogEx(INFO, "Counter num......... %u", foo->counter_num);
-    PrintAndLogEx(INFO, "Slot access date.... %s", sprint_hex(foo->slot_access_date, sizeof(foo->slot_access_date)));
-    PrintAndLogEx(INFO, "Slot dst duration... %u", foo->slot_dst_duration);
-    PrintAndLogEx(INFO, "Other Slots......... %s", sprint_hex(foo->other_slots, sizeof(foo->other_slots)));
-    PrintAndLogEx(INFO, "Services counter.... %u", foo->services_counter);
-    PrintAndLogEx(INFO, "Loading date........ %s", sprint_hex(foo->loading_date, sizeof(foo->loading_date)));
-    PrintAndLogEx(INFO, "Reserved null....... %u", foo->reserved_null);
+    PrintAndLogEx(INFO, "Manufacture......... %s", sprint_hex(d->b0, sizeof(d->b0)));
+    PrintAndLogEx(INFO, "MAD................. %s", sprint_hex(d->mad, sizeof(d->mad)));
+    PrintAndLogEx(INFO, "Counters............ %u", d->counters);
+    PrintAndLogEx(INFO, "rtf................. %s", sprint_hex(d->rtf, sizeof(d->rtf)));
+    PrintAndLogEx(INFO, "Service code........ 0x%08x / %u  - " _YELLOW_("%s"), d->service_code, d->service_code, vigik_get_service(d->service_code));
+    PrintAndLogEx(INFO, "Info flag........... %u -", d->info_flag); // ,  sprint_bin(d->info_flag, 1));
+    PrintAndLogEx(INFO, "Key version......... %u", d->key_version);
+    PrintAndLogEx(INFO, "PTR Counter......... %u", d->ptr_counter);
+    PrintAndLogEx(INFO, "Counter num......... %u", d->counter_num);
+    PrintAndLogEx(INFO, "Slot access date.... %s", sprint_hex(d->slot_access_date, sizeof(d->slot_access_date)));
+    PrintAndLogEx(INFO, "Slot dst duration... %u", d->slot_dst_duration);
+    PrintAndLogEx(INFO, "Other Slots......... %s", sprint_hex(d->other_slots, sizeof(d->other_slots)));
+    PrintAndLogEx(INFO, "Services counter.... %u", d->services_counter);
+    PrintAndLogEx(INFO, "Loading date........ %s", sprint_hex(d->loading_date, sizeof(d->loading_date)));
+    PrintAndLogEx(INFO, "Reserved null....... %u", d->reserved_null);
     PrintAndLogEx(INFO, "----------------------------------------------------------------");
     PrintAndLogEx(INFO, "");
-    vigik_verify(d, 96, foo->rsa_signature, sizeof(foo->rsa_signature));
+    vigik_verify(d);
     PrintAndLogEx(INFO, "----------------------------------------------------------------");
     PrintAndLogEx(INFO, "");
     return PM3_SUCCESS;
