@@ -583,9 +583,7 @@ static void topaz_print_lifecycle_state(uint8_t *data) {
     // to be done
 }
 
-static void printTopazDumpContents(uint8_t *dump, size_t size) {
-
-    topaz_tag_t *t = (topaz_tag_t *)dump;
+static void printTopazDumpContents(topaz_tag_t *dump) {
 
     // uses a global var for all
     PrintAndLogEx(NORMAL, "");
@@ -608,14 +606,14 @@ static void printTopazDumpContents(uint8_t *dump, size_t size) {
         PrintAndLogEx(SUCCESS, " %3u / 0x%02x | %s| %s | %s",
                       i,
                       i,
-                      sprint_hex(&t->data_blocks[i][0], 8),
+                      sprint_hex(&dump->data_blocks[i][0], 8),
                       lockstr,
                       block_info
                      );
     }
 
-    PrintAndLogEx(SUCCESS, " %3u / 0x%02x | %s|   | %s", 0x0D, 0x0D, sprint_hex(&t->data_blocks[0x0D][0], 8), topaz_ks[2]);
-    PrintAndLogEx(SUCCESS, " %3u / 0x%02x | %s|   | %s", 0x0E, 0x0E, sprint_hex(&t->data_blocks[0x0E][0], 8), topaz_ks[3]);
+    PrintAndLogEx(SUCCESS, " %3u / 0x%02x | %s|   | %s", 0x0D, 0x0D, sprint_hex(&dump->data_blocks[0x0D][0], 8), topaz_ks[2]);
+    PrintAndLogEx(SUCCESS, " %3u / 0x%02x | %s|   | %s", 0x0E, 0x0E, sprint_hex(&dump->data_blocks[0x0E][0], 8), topaz_ks[3]);
     PrintAndLogEx(SUCCESS, "------------+-------------------------+---+------------");
     PrintAndLogEx(NORMAL, "");
 }
@@ -797,7 +795,7 @@ static int CmdHFTopazDump(const char *Cmd) {
     if (status != PM3_SUCCESS) {
         return status;
     }
-    printTopazDumpContents((uint8_t *)&topaz_tag, sizeof(topaz_tag_t));
+    printTopazDumpContents(&topaz_tag);
 
     bool set_dynamic = false;
     if (topaz_set_cc_dynamic(&topaz_tag.data_blocks[1][0]) == PM3_SUCCESS) {
@@ -853,14 +851,17 @@ static int CmdHFTopazView(const char *Cmd) {
     CLIParserFree(ctx);
 
     // read dump file
-    uint8_t *dump = NULL;
+    topaz_tag_t *dump = NULL;
     size_t bytes_read = TOPAZ_MAX_SIZE;
     int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, sizeof(topaz_tag_t) + TOPAZ_MAX_SIZE);
     if (res != PM3_SUCCESS) {
         return res;
     }
-
-    printTopazDumpContents(dump, bytes_read);
+    if (bytes_read < sizeof(topaz_tag_t)) {
+        free(dump);
+        return PM3_EFAILED;
+    }
+    printTopazDumpContents(dump);
 
     if (topaz_set_cc_dynamic(&topaz_tag.data_blocks[1][0]) == PM3_SUCCESS) {
 
