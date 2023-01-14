@@ -465,7 +465,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO7816_FILE_EOF                        0x6282 // The end of the file has been reached before the end of reading
 #define ISO7816_INVALID_DF                      0x6283 // Invalid DF
 #define ISO7816_INVALID_FILE                    0x6284 // Selected file is not valid
-#define ISO7816_                                0x6285
+#define ISO7816_FILE_TERMINATED                 0x6285 // File is terminated
 
 // 63 xx
 #define ISO7816_AUTH_FAILED                     0x6300 // Authentification failed
@@ -503,7 +503,10 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO7816_FILE_NOT_FOUND                  0x6A82 // File not found
 #define ISO7816_RECORD_NOT_FOUND                0x6A83 // Record not found
 #define ISO7816_FILE_FULL                       0x6A84 // Not enough memory space in the file
-#define ISO7816_INCORRECT_P1P2                  0x6A86  // Incorrect parameters (P1,P2)
+#define ISO7816_LC_TLV_CONFLICT                 0x6A85 // LC / TLV conlict
+#define ISO7816_INCORRECT_P1P2                  0x6A86 // Incorrect parameters (P1,P2)
+#define ISO7816_FILE_EXISTS                     0x6A89 // File exists
+#define ISO7816_NOT_IMPLEMENTED                 0x6AFF // 
 
 // 6x 00
 #define ISO7816_WRONG_P1P2                      0x6B00 // Incorrect parameters (P1,P2)
