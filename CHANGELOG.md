@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `lf paradox clone` - it now accepts FC/CN (@mwalker33)
+ - Added standalone mode for simulatin Nedap ID (@anon)
  - Changed `hf mfu info` - now also does a simple OTP fingerprinting (@iceman1001)
  - Changed `hf mf wrbl` - now checks for strict readonly ACL's in the data to write (@iceman1001)
  - Changed `hf mf view` - verbose printing if strict readonly ACL's exists in dump file (@iceman1001)
@@ -36,7 +38,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `trace list -c` - annotation of CRC bytes now is colored or squared if no ansi colors is supported (@iceman1001)
  - Fixed `trace list -t mf` - now also finds UID if anticollision is partial captured, to be used for mfkey (@iceman1001)
  - Fixed `make accessrights` on Fedora (@mooey5775)
- - Added standalone mode for simulatin Nedap ID
 
 ## [Radium.4.15864][2022-10-29]
  - Changed `lf indala sim` - now accepts fc / cn (@iceman1001)
