@@ -473,7 +473,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // 65 xx
 #define ISO7816_MEMORY_FULL                     0x6501 // Memory failure
-#define ISO7816_WRITE_MEMORY_ERR            	0x6581 // Write problem / Memory failure / Unknown mode
+#define ISO7816_WRITE_MEMORY_ERR                0x6581 // Write problem / Memory failure / Unknown mode
 
 // 67 xx
 #define ISO7816_WRONG_LENGTH                    0x6700 // Wrong length

@@ -63,8 +63,8 @@ local function card_format(key_a,key_b,ab,user,s70)
         core.console(cmd)
         print(cmd)
         core.clearCommandBuffer()
-	if s70 == false and k > 15 then
-		return
+    if s70 == false and k > 15 then
+        return
         end
     end
 end

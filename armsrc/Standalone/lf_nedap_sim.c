@@ -27,7 +27,7 @@
 #include "BigBuf.h"
 #include "crc16.h"
 
-#define MODULE_LONG_NAME	"LF Nedap simple simulator"
+#define MODULE_LONG_NAME    "LF Nedap simple simulator"
 
 typedef struct _NEDAP_TAG {
     uint8_t subType;
