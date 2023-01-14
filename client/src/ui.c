@@ -62,9 +62,9 @@ pthread_mutex_t g_print_lock = PTHREAD_MUTEX_INITIALIZER;
 static void fPrintAndLog(FILE *stream, const char *fmt, ...);
 
 #ifdef _WIN32
- #define MKDIR_CHK _mkdir(path)
+#define MKDIR_CHK _mkdir(path)
 #else
- #define MKDIR_CHK mkdir(path, 0700)
+#define MKDIR_CHK mkdir(path, 0700)
 #endif
 
 
@@ -107,8 +107,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
 
     if ((result != 0) && create_home) {
 
-        if (MKDIR_CHK)
-        {
+        if (MKDIR_CHK) {
             fprintf(stderr, "Could not create user directory %s\n", path);
             free(path);
             return PM3_EFILE;
@@ -140,8 +139,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
 
         if ((result != 0) && create_home) {
 
-            if (MKDIR_CHK)
-            {
+            if (MKDIR_CHK) {
                 fprintf(stderr, "Could not create user directory %s\n", path);
                 free(path);
                 return PM3_EFILE;
@@ -155,7 +153,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     }
 
     pathlen += strlen(filename);
-    char *tmp = realloc(path, pathlen *sizeof(char));
+    char *tmp = realloc(path, pathlen * sizeof(char));
     if (tmp == NULL) {
         //free(path);
         return PM3_EMALLOC;

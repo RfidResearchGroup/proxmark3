@@ -506,7 +506,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO7816_LC_TLV_CONFLICT                 0x6A85 // LC / TLV conlict
 #define ISO7816_INCORRECT_P1P2                  0x6A86 // Incorrect parameters (P1,P2)
 #define ISO7816_FILE_EXISTS                     0x6A89 // File exists
-#define ISO7816_NOT_IMPLEMENTED                 0x6AFF // 
+#define ISO7816_NOT_IMPLEMENTED                 0x6AFF //
 
 // 6x 00
 #define ISO7816_WRONG_P1P2                      0x6B00 // Incorrect parameters (P1,P2)

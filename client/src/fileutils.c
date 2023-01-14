@@ -258,13 +258,13 @@ static size_t path_size(savePaths_t a) {
     if (a == spItemCount) {
         return 0;
     }
-    return strlen( g_session.defaultPaths[a] );
+    return strlen(g_session.defaultPaths[a]);
 }
 
 char *newfilenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL || suffix == NULL) {
         return NULL;
-    } 
+    }
 
     uint16_t p_namelen = strlen(preferredName);
     if (str_endswith(preferredName, suffix))
@@ -328,7 +328,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
     }
 
     char *fileName = newfilenamemcopy(preferredName, ".eml");
-    if (fileName == NULL) { 
+    if (fileName == NULL) {
         return PM3_EMALLOC;
     }
 

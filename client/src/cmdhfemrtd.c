@@ -1964,11 +1964,11 @@ int infoHF_EMRTD_offline(const char *path) {
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_COM].filename);
 
-    if ((loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) && 
-        (loadFile_safeEx(filepath, ".bin", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS)) {
-            PrintAndLogEx(ERR, "Failed to read EF_COM");
-            free(filepath);
-            return PM3_ESOFT;
+    if ((loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) &&
+            (loadFile_safeEx(filepath, ".bin", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS)) {
+        PrintAndLogEx(ERR, "Failed to read EF_COM");
+        free(filepath);
+        return PM3_ESOFT;
     }
 
     int res = emrtd_print_ef_com_info(data, datalen);
@@ -1999,9 +1999,9 @@ int infoHF_EMRTD_offline(const char *path) {
     strcat(filepath, dg_table[EF_CardAccess].filename);
 
     if ((loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS) ||
-        (loadFile_safeEx(filepath, ".bin", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS)) {
-            emrtd_print_ef_cardaccess_info(data, datalen);
-            free(data);
+            (loadFile_safeEx(filepath, ".bin", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS)) {
+        emrtd_print_ef_cardaccess_info(data, datalen);
+        free(data);
     } else {
         PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE");
     }
@@ -2010,11 +2010,11 @@ int infoHF_EMRTD_offline(const char *path) {
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_SOD].filename);
 
-    if ((loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) && 
-        (loadFile_safeEx(filepath, ".bin", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS)) {
-            PrintAndLogEx(ERR, "Failed to read EF_SOD");
-            free(filepath);
-            return PM3_ESOFT;
+    if ((loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) &&
+            (loadFile_safeEx(filepath, ".bin", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS)) {
+        PrintAndLogEx(ERR, "Failed to read EF_SOD");
+        free(filepath);
+        return PM3_ESOFT;
     }
 
     // coverity scan CID 395630,
@@ -2040,7 +2040,7 @@ int infoHF_EMRTD_offline(const char *path) {
             strncat(filepath, PATHSEP, 2);
             strcat(filepath, dg->filename);
             if ((loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS) ||
-                (loadFile_safeEx(filepath, ".bin", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS)) {
+                    (loadFile_safeEx(filepath, ".bin", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS)) {
                 // we won't halt on parsing errors
                 if (dg->parser != NULL) {
                     dg->parser(data, datalen);
@@ -2111,7 +2111,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
-        strn_upper((char*)docnum, slen);
+        strn_upper((char *)docnum, slen);
         if (slen != 9) {
             // Pad to 9 with <
             memset(docnum + slen, '<', 9 - slen);
@@ -2144,7 +2144,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
             error = true;
         } else {
             BAC = true;
-            strn_upper((char*)mrz, slen);
+            strn_upper((char *)mrz, slen);
             memcpy(docnum, &mrz[0], 9);
             memcpy(dob,    &mrz[13], 6);
             memcpy(expiry, &mrz[21], 6);
@@ -2213,7 +2213,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
-        strn_upper((char*)docnum, slen);
+        strn_upper((char *)docnum, slen);
         if (slen != 9) {
             memset(docnum + slen, '<', 9 - slen);
         }
@@ -2245,7 +2245,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
             error = true;
         } else {
             BAC = true;
-            strn_upper((char*)mrz, slen);
+            strn_upper((char *)mrz, slen);
             memcpy(docnum, &mrz[0], 9);
             memcpy(dob,    &mrz[13], 6);
             memcpy(expiry, &mrz[21], 6);

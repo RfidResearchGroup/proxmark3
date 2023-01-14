@@ -1466,7 +1466,7 @@ int convert_mfc_2_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen) 
         ilen -= MFBLOCK_SIZE;
         *olen += MFBLOCK_SIZE;
     }
-    return PM3_SUCCESS;    
+    return PM3_SUCCESS;
 }
 
 static const vigik_pk_t vigik_rsa_pk[] = {
@@ -1502,7 +1502,7 @@ static void reverse_array(const uint8_t *src, int src_len, uint8_t *dest) {
 int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
 
     // iso9796
-    // Exponent V = 2  
+    // Exponent V = 2
     // n = The public modulus n is the product of the secret prime factors p and q. Its length is 1024 bits.
 
     if (g_debugMode == DEBUG) {
@@ -1527,7 +1527,7 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
 
     // signature = h( C || M1 || h(M2) )
     // 1024 - 786 - 160 - 16 -1
-    // salt C 
+    // salt C
     // message M = 96 bytes,  768 bits
     // sha1 hash H = 20 bytes, 160 bits
     // padding = 20 bytes, 96 bits
@@ -1563,18 +1563,18 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
         mbedtls_mpi_init(&sqr);
         mbedtls_mpi_init(&res);
 
-        mbedtls_mpi_read_binary(&N, (const unsigned char*)n, PUBLIC_VIGIK_KEYLEN);
+        mbedtls_mpi_read_binary(&N, (const unsigned char *)n, PUBLIC_VIGIK_KEYLEN);
 
         //mbedtls_mpi_read_binary(&s, (const unsigned char*)signature, signature_len);
-        mbedtls_mpi_read_binary(&s, (const unsigned char*)rev_sig, signature_len);
+        mbedtls_mpi_read_binary(&s, (const unsigned char *)rev_sig, signature_len);
 
         // check is sign < (N/2)
-        
+
         mbedtls_mpi n_2;
         mbedtls_mpi_init(&n_2);
         mbedtls_mpi_copy(&n_2, &N);
         mbedtls_mpi_shift_r(&n_2, 1);
-        bool is_less =  (mbedtls_mpi_cmp_mpi(&s, &n_2) > 0) ? false : true;
+        bool is_less = (mbedtls_mpi_cmp_mpi(&s, &n_2) > 0) ? false : true;
         PrintAndLogEx(DEBUG, "z < (N/2) ..... %s", (is_less) ? _GREEN_("YES") : _RED_("NO"));
         mbedtls_mpi_free(&n_2);
 
@@ -1644,10 +1644,10 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
 
         PrintAndLogEx(DEBUG, "LSB............ " _GREEN_("%u"), lsb);
         if (g_debugMode == DEBUG) {
-            mbedtls_mpi_write_file( "[=] N.............. ", &N, 16, NULL );
-            mbedtls_mpi_write_file( "[=] signature...... ", &s, 16, NULL );        
-            mbedtls_mpi_write_file( "[=] square mod n... ", &sqr, 16, NULL );
-            mbedtls_mpi_write_file( "[=] n-fs........... ", &res, 16, NULL );
+            mbedtls_mpi_write_file("[=] N.............. ", &N, 16, NULL);
+            mbedtls_mpi_write_file("[=] signature...... ", &s, 16, NULL);
+            mbedtls_mpi_write_file("[=] square mod n... ", &sqr, 16, NULL);
+            mbedtls_mpi_write_file("[=] n-fs........... ", &res, 16, NULL);
         }
 
 
@@ -1656,9 +1656,9 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
 
         // xor 0xDC01
         int count_zero = 0;
-        for (int x = 0; x < sizeof(nfs); x +=2) {
+        for (int x = 0; x < sizeof(nfs); x += 2) {
             nfs[x] ^= 0xDC;
-            nfs[x+1] ^= 0x01;
+            nfs[x + 1] ^= 0x01;
 
             if (nfs[x] == 0x00)
                 count_zero++;
@@ -1689,10 +1689,10 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
                 PrintAndLogEx(INFO, "Hash byte... 0x%02X", ts.hash);
                 switch(ts.rsa[126]) {
                     case 0x11:
-                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - SHA1");                    
+                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - SHA1");
                         break;
                     case 0x22:
-                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - RIPEMD");       
+                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - RIPEMD");
                         break;
                     case 0x33:
                         PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - SHA1");
@@ -1711,7 +1711,7 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
             print_hex_noascii_break(ts.rsa, sizeof(ts.rsa) - 20, 32);
         }
         */
-    
+
         mbedtls_mpi_free(&N);
         mbedtls_mpi_free(&s);
         mbedtls_mpi_free(&res);
@@ -1722,7 +1722,7 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     PrintAndLogEx(INFO, "RSA: 1024bit");
-    
+
     if (is_valid == false || i == ARRAYLEN(vigik_rsa_pk)) {
         PrintAndLogEx(INFO, "Signature:");
         print_hex_noascii_break(signature, signature_len,  MFBLOCK_SIZE * 2);
@@ -1736,7 +1736,7 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
     PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 64);
     PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 128);
     PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 192);
-    
+
     PrintAndLogEx(INFO, "Signature:");
     print_hex_noascii_break(signature, signature_len,  MFBLOCK_SIZE * 2);
 
@@ -1749,7 +1749,7 @@ int vigik_annotate(uint8_t *d) {
     if (d == NULL)
         return PM3_EINVARG;
 
-    mfc_vigik_t *foo = (mfc_vigik_t*)d;
+    mfc_vigik_t *foo = (mfc_vigik_t *)d;
 
     PrintAndLogEx(INFO, "Manufacture......... %s", sprint_hex(foo->b0, sizeof(foo->b0)));
     PrintAndLogEx(INFO, "MAD................. %s", sprint_hex(foo->mad, sizeof(foo->mad)));

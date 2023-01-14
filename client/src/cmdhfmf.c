@@ -569,7 +569,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
 
     uint8_t blockno = (uint8_t)b;
 
-    // Sector trailer sanity checks. 
+    // Sector trailer sanity checks.
     // Warn if ACL is strict read-only,  or invalid ACL.
     if (mfIsSectorTrailer(blockno)) {
         PrintAndLogEx(INFO, "Sector trailer (ST) write detected");

@@ -66,7 +66,7 @@ static const struct piv_container PIV_CONTAINERS[] = {
     {0x0100, PIV_TAG_ID("\x5F\xC1\x0A"), 3, PIV_CONDITIONAL, "X.509 Certificate for Digital Signature (key ref 9C)"},
     {0x0102, PIV_TAG_ID("\x5F\xC1\x0B"), 3, PIV_CONDITIONAL, "X.509 Certificate for Key Management (key ref 9D)"},
     {0x3001, PIV_TAG_ID("\x5F\xC1\x09"), 3, PIV_OPTIONAL,    "Printed Information"},
-    {0x6050, PIV_TAG_ID(        "\x7E"), 1, PIV_OPTIONAL,    "Discovery Object"},
+    {0x6050, PIV_TAG_ID("\x7E"), 1, PIV_OPTIONAL,    "Discovery Object"},
     {0x6060, PIV_TAG_ID("\x5F\xC1\x0C"), 3, PIV_OPTIONAL,    "Key History Object"},
     {0x1001, PIV_TAG_ID("\x5F\xC1\x0D"), 3, PIV_OPTIONAL,    "Retired X.509 Certificate for Key Management 1 (key ref 82)"},
     {0x1002, PIV_TAG_ID("\x5F\xC1\x0E"), 3, PIV_OPTIONAL,    "Retired X.509 Certificate for Key Management 2 (key ref 83)"},
@@ -89,7 +89,7 @@ static const struct piv_container PIV_CONTAINERS[] = {
     {0x1013, PIV_TAG_ID("\x5F\xC1\x1F"), 3, PIV_OPTIONAL,    "Retired X.509 Certificate for Key Management 19 (key ref 94)"},
     {0x1014, PIV_TAG_ID("\x5F\xC1\x20"), 3, PIV_OPTIONAL,    "Retired X.509 Certificate for Key Management 20 (key ref 95)"},
     {0x1015, PIV_TAG_ID("\x5F\xC1\x21"), 3, PIV_OPTIONAL,    "Cardholder Iris Images"},
-    {0x1016, PIV_TAG_ID(    "\x7F\x61"), 2, PIV_OPTIONAL,    "Biometric Information Templates Group Template"},
+    {0x1016, PIV_TAG_ID("\x7F\x61"), 2, PIV_OPTIONAL,    "Biometric Information Templates Group Template"},
     {0x1017, PIV_TAG_ID("\x5F\xC1\x22"), 3, PIV_OPTIONAL,    "Secure Messaging Certificate Signer"},
     {0x1018, PIV_TAG_ID("\x5F\xC1\x23"), 3, PIV_OPTIONAL,    "Pairing Code Reference Data Container"},
     PIV_CONTAINER_FINISH,
@@ -493,13 +493,13 @@ static void piv_print_cb(void *data, const struct tlv *tlv, int level, bool is_l
     }
 }
 
-static void PrintTLV(const struct tlvdb* tlvdb) {
+static void PrintTLV(const struct tlvdb *tlvdb) {
     if (tlvdb) {
         tlvdb_visit(tlvdb, piv_print_cb, NULL, 0);
     }
 }
 
-static void PrintTLVFromBuffer(const uint8_t* buf, size_t len) {
+static void PrintTLVFromBuffer(const uint8_t *buf, size_t len) {
     if (buf == NULL || len == 0) {
         return;
     }
@@ -598,7 +598,7 @@ static int PivGetData(Iso7816CommandChannel channel, const uint8_t tag[], size_t
     return PM3_SUCCESS;
 }
 
-static int PivGetDataByCidAndPrint(Iso7816CommandChannel channel, const struct piv_container* cid, bool decodeTLV, bool verbose) {
+static int PivGetDataByCidAndPrint(Iso7816CommandChannel channel, const struct piv_container *cid, bool decodeTLV, bool verbose) {
     struct tlvdb_root *root = NULL;
 
     if (cid == NULL) {

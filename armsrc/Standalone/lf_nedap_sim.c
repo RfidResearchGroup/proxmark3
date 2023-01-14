@@ -30,11 +30,11 @@
 #define MODULE_LONG_NAME	"LF Nedap simple simulator"
 
 typedef struct _NEDAP_TAG {
-	uint8_t subType;
-	uint16_t customerCode;
-	uint32_t id;
-	
-	uint8_t bIsLong;
+    uint8_t subType;
+    uint16_t customerCode;
+    uint32_t id;
+
+    uint8_t bIsLong;
 } NEDAP_TAG, *PNEDAP_TAG;
 
 const NEDAP_TAG Tag = {.subType = 0x5, .customerCode = 0x123, .id = 42424, .bIsLong = 1};
@@ -46,78 +46,67 @@ static uint8_t isEven_64_63(const uint8_t *data);
 static inline uint32_t bitcount32(uint32_t a);
 static void bytes_to_bytebits(const void *src, const size_t srclen, void *dest);
 
-void ModInfo(void)
-{
+void ModInfo(void) {
     DbpString("  " MODULE_LONG_NAME);
 }
 
-void RunMod(void)
-{
-	int n;
+void RunMod(void) {
+    int n;
 
-	StandAloneMode();
+    StandAloneMode();
 
     Dbprintf("[=] " MODULE_LONG_NAME " -- started");
-	FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-	Dbprintf("[=] NEDAP (%s) - ID: " _GREEN_("%05u") " subtype: " _GREEN_("%1u") " customer code: " _GREEN_("%u / 0x%03X"), Tag.bIsLong ? "128b" : "64b", Tag.id, Tag.subType, Tag.customerCode, Tag.customerCode);
-	
-	n = NedapPrepareBigBuffer(&Tag);
-    do
-	{
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    Dbprintf("[=] NEDAP (%s) - ID: " _GREEN_("%05u") " subtype: " _GREEN_("%1u") " customer code: " _GREEN_("%u / 0x%03X"), Tag.bIsLong ? "128b" : "64b", Tag.id, Tag.subType, Tag.customerCode, Tag.customerCode);
+
+    n = NedapPrepareBigBuffer(&Tag);
+    do {
         WDT_HIT();
 
         if (data_available())
-			break;
+            break;
 
-		SimulateTagLowFrequency(n, 0, true);
-		
+        SimulateTagLowFrequency(n, 0, true);
+
     } while (BUTTON_HELD(1000) == BUTTON_NO_CLICK);
 
     Dbprintf("[=] " MODULE_LONG_NAME " -- exiting");
-	
+
     LEDsoff();
 }
 
-static int NedapPrepareBigBuffer(const NEDAP_TAG *pTag)
-{
-	int ret = 0;
-	uint8_t data[16], bitStream[sizeof(data) * 8], phase = 0;
-	uint16_t i, size = pTag->bIsLong ? sizeof(data) : (sizeof(data) / 2);
-	
-	NedapGen(pTag->subType, pTag->customerCode, pTag->id, pTag->bIsLong, data);
-	bytes_to_bytebits(data, size, bitStream);
-	size <<= 3;
-	
-	for (i = 0; i < size; i++)
-	{
-		biphaseSimBitInverted(!bitStream[i], &ret, &phase);
-	}
-	if (phase == 1) //run a second set inverted to keep phase in check
-	{
-		for (i = 0; i < size; i++)
-		{
-			biphaseSimBitInverted(!bitStream[i], &ret, &phase);
-		}
-	}
-	
-	return ret;
+static int NedapPrepareBigBuffer(const NEDAP_TAG *pTag) {
+    int ret = 0;
+    uint8_t data[16], bitStream[sizeof(data) * 8], phase = 0;
+    uint16_t i, size = pTag->bIsLong ? sizeof(data) : (sizeof(data) / 2);
+
+    NedapGen(pTag->subType, pTag->customerCode, pTag->id, pTag->bIsLong, data);
+    bytes_to_bytebits(data, size, bitStream);
+    size <<= 3;
+
+    for (i = 0; i < size; i++) {
+        biphaseSimBitInverted(!bitStream[i], &ret, &phase);
+    }
+    if (phase == 1) { //run a second set inverted to keep phase in check
+        for (i = 0; i < size; i++) {
+            biphaseSimBitInverted(!bitStream[i], &ret, &phase);
+        }
+    }
+
+    return ret;
 }
 
-static void biphaseSimBitInverted(uint8_t c, int *n, uint8_t *phase)
-{
-	uint8_t *dest = BigBuf_get_addr();
+static void biphaseSimBitInverted(uint8_t c, int *n, uint8_t *phase) {
+    uint8_t *dest = BigBuf_get_addr();
 
-	if (c)
-	{
-		memset(dest + (*n), c ^ 1 ^ *phase, 32);
-		memset(dest + (*n) + 32, c ^ *phase, 32);
-	}
-	else
-	{
-		memset(dest + (*n), c ^ *phase, 64);
-		*phase ^= 1;
-	}
-	*n += 64;
+    if (c) {
+        memset(dest + (*n), c ^ 1 ^ *phase, 32);
+        memset(dest + (*n) + 32, c ^ *phase, 32);
+    } else {
+        memset(dest + (*n), c ^ *phase, 64);
+        *phase ^= 1;
+    }
+    *n += 64;
 }
 
 #define FIXED_71    0x71
@@ -190,13 +179,11 @@ static uint8_t isEven_64_63(const uint8_t *data) { // 8
     return (bitcount32(tmp[0]) + (bitcount32(tmp[1] & 0xfeffffff))) & 1;
 }
 
-static void bytes_to_bytebits(const void *src, const size_t srclen, void *dest)
-{
+static void bytes_to_bytebits(const void *src, const size_t srclen, void *dest) {
     uint8_t *s = (uint8_t *)src, *d = (uint8_t *)dest;
     size_t i = srclen * 8, j = srclen;
 
-    while (j--)
-	{
+    while (j--) {
         uint8_t b = s[j];
         d[--i] = (b >> 0) & 1;
         d[--i] = (b >> 1) & 1;
@@ -209,8 +196,7 @@ static void bytes_to_bytebits(const void *src, const size_t srclen, void *dest)
     }
 }
 
-static inline uint32_t bitcount32(uint32_t a)
-{
+static inline uint32_t bitcount32(uint32_t a) {
 #if defined __GNUC__
     return __builtin_popcountl(a);
 #else
