@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf emrtd info` - looking for lower case .bin extensions (@iceman1001)
+ - Changed `hf emrtd dump` - looking for lower case .bin extensions (@iceman1001)
  - Changed `lf paradox clone` - it now accepts FC/CN (@mwalker33)
  - Added standalone mode for simulatin Nedap ID (@anon)
  - Changed `hf mfu info` - now also does a simple OTP fingerprinting (@iceman1001)
