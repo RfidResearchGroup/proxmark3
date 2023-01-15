@@ -174,6 +174,8 @@ static char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const si
 static bool checkValidCmdByte(uint8_t *cmd, uint16_t n) {
 
     bool ok = false;
+    if (cmd == NULL)
+        return false;
     for (int i = 0; i < 8; ++i) {
         if (cmd[0] == cmds[i][0]) {
 

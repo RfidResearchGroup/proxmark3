@@ -331,6 +331,8 @@ static bool checkValidCmd(uint32_t decrypted) {
 static bool checkValidCmdByte(uint8_t *cmd, uint16_t n) {
 
     bool ok = false;
+    if (cmd == NULL)
+        return false;
     for (int i = 0; i < 8; ++i) {
         if (cmd[0] == cmds[i][0]) {
 
