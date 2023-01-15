@@ -1044,11 +1044,9 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     PrintAndLogEx(SUCCESS, "successfully read block %2d of sector %2d.", blockNo, sectorNo);
                 } else {
                     PrintAndLogEx(FAILED, "could not read block %2d of sector %2d", blockNo, sectorNo);
-                    break;
                 }
             } else {
                 PrintAndLogEx(WARNING, "command execute timeout when trying to read block %2d of sector %2d.", blockNo, sectorNo);
-                break;
             }
         }
     }
