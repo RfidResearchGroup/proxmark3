@@ -4,5 +4,5 @@
 # This script is to be run from proxmark root folder inside the docker env
 # docker/fedora-36/run_tests.sh;
 
-sudo apt update && sudo apt upgrade -y
+sudo yum -y update
 tools/release_tests.sh
