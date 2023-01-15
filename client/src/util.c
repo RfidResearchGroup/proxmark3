@@ -1247,7 +1247,7 @@ inline uint64_t leadingzeros64(uint64_t a) {
 }
 
 
-int byte_strstr(uint8_t *src, size_t srclen, uint8_t *pattern, size_t plen) {
+int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen) {
 
     size_t max = srclen - plen + 1;
 

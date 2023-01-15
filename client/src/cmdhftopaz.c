@@ -292,7 +292,7 @@ static bool topaz_byte_is_locked(uint16_t byteno) {
     }
 }
 
-static int topaz_set_cc_dynamic(uint8_t *data) {
+static int topaz_set_cc_dynamic(const uint8_t *data) {
 
     if (data[0] != 0xE1) {
         topaz_tag.size = TOPAZ_STATIC_MEMORY;

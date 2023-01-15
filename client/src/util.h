@@ -148,7 +148,7 @@ uint64_t bitcount64(uint64_t a);
 uint32_t leadingzeros32(uint32_t a);
 uint64_t leadingzeros64(uint64_t a);
 
-int byte_strstr(uint8_t *src, size_t srclen, uint8_t *pattern, size_t plen);
+int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen);
 
 struct smartbuf {
     char *ptr;
