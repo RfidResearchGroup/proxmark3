@@ -531,12 +531,11 @@ void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode
         uint8_t emojified_token_length = 0;
         char *current_token = NULL;
         uint8_t current_token_length = 0;
-        char current_char;
         char *rdest = (char *)dest;
         char *rsrc = (char *)src;
         uint16_t si = 0;
         for (size_t i = 0; i < n; i++) {
-            current_char = rsrc[i];
+            char current_char = rsrc[i];
 
             if (current_token_length == 0) {
                 // starting a new token.

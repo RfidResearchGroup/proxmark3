@@ -2025,10 +2025,8 @@ int CmdEM4x05Sniff(const char *Cmd) {
     size_t idx = 0;
     // loop though sample buffer
     while (idx < g_GraphTraceLen) {
-        bool eop = false;
         bool haveData = false;
         bool pwd = false;
-        uint32_t tmpValue;
 
         idx = em4x05_Sniff_GetNextBitStart(idx, g_GraphTraceLen, g_GraphBuffer, &pulseSamples);
         size_t pktOffset = idx;
@@ -2044,6 +2042,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                 memset(bits.ptr, 0, bits.size);
                 bits.idx = 0;
 
+                bool eop = false;
                 while ((idx < g_GraphTraceLen) && !eop) {
                     CycleWidth = idx;
                     idx = em4x05_Sniff_GetNextBitStart(idx, g_GraphTraceLen, g_GraphBuffer, &pulseSamples);
@@ -2081,7 +2080,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                             pwd = true;
                             cmdText = "Logon";
                             strncpy(blkAddr, "   ",  sizeof(blkAddr));
-                            tmpValue = em4x05_Sniff_GetBlock(&bits.ptr[4], fwd);
+                            uint32_t tmpValue = em4x05_Sniff_GetBlock(&bits.ptr[4], fwd);
                             snprintf(dataText, sizeof(dataText), "%08X", tmpValue);
                         }
 
@@ -2089,7 +2088,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                         if ((strncmp(bits.ptr, "0101", 4) == 0) && (bits.idx == 56)) {
                             haveData = true;
                             cmdText = "Write";
-                            tmpValue = (bits.ptr[4] - '0') + ((bits.ptr[5] - '0') << 1) + ((bits.ptr[6] - '0') << 2)  + ((bits.ptr[7] - '0') << 3);
+                            uint32_t tmpValue = (bits.ptr[4] - '0') + ((bits.ptr[5] - '0') << 1) + ((bits.ptr[6] - '0') << 2)  + ((bits.ptr[7] - '0') << 3);
                             snprintf(blkAddr, sizeof(blkAddr), "%u", tmpValue);
                             if (tmpValue == 2) {
                                 pwd = true;
@@ -2103,7 +2102,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                             haveData = true;
                             pwd = false;
                             cmdText = "Read";
-                            tmpValue = (bits.ptr[4] - '0') + ((bits.ptr[5] - '0') << 1) + ((bits.ptr[6] - '0') << 2)  + ((bits.ptr[7] - '0') << 3);
+                            uint32_t tmpValue = (bits.ptr[4] - '0') + ((bits.ptr[5] - '0') << 1) + ((bits.ptr[6] - '0') << 2)  + ((bits.ptr[7] - '0') << 3);
                             snprintf(blkAddr, sizeof(blkAddr), "%u", tmpValue);
                             strncpy(dataText, " ", sizeof(dataText));
                         }
@@ -2114,7 +2113,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                             pwd = false;
                             cmdText = "Protect";
                             strncpy(blkAddr, " ",  sizeof(blkAddr));
-                            tmpValue = em4x05_Sniff_GetBlock(&bits.ptr[11], fwd);
+                            uint32_t tmpValue = em4x05_Sniff_GetBlock(&bits.ptr[11], fwd);
                             snprintf(dataText, sizeof(dataText), "%08X", tmpValue);
                         }
 
@@ -2124,7 +2123,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                             pwd = false;
                             cmdText = "Disable";
                             strncpy(blkAddr, " ",  sizeof(blkAddr));
-                            tmpValue = em4x05_Sniff_GetBlock(&bits.ptr[11], fwd);
+                            uint32_t tmpValue = em4x05_Sniff_GetBlock(&bits.ptr[11], fwd);
                             snprintf(dataText, sizeof(dataText), "%08X", tmpValue);
                         }
 

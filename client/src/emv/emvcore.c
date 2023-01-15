@@ -381,8 +381,6 @@ static int EMVCheckAID(Iso7816CommandChannel channel, bool decodeTLV, struct tlv
 int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv) {
     uint8_t data[APDU_RES_LEN] = {0};
     size_t datalen = 0;
-    uint8_t sfidata[0x11][APDU_RES_LEN];
-    size_t sfidatalen[0x11] = {0};
     uint16_t sw = 0;
     int res;
     const char *PSE_or_PPSE = PSENum == 1 ? "PSE" : "PPSE";
@@ -402,6 +400,8 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
             // PSE/PPSE with SFI
             struct tlvdb *tsfi = tlvdb_find_path(t, (tlv_tag_t[]) {0x6f, 0xa5, 0x88, 0x00});
             if (tsfi) {
+                uint8_t sfidata[0x11][APDU_RES_LEN];
+                size_t sfidatalen[0x11] = {0};
                 uint8_t sfin = 0;
                 tlv_get_uint8(tlvdb_get_tlv(tsfi), &sfin);
                 PrintAndLogEx(INFO, "* PPSE get SFI: 0x%02x.", sfin);
@@ -669,10 +669,6 @@ static const unsigned char default_ddol_value[] = {0x9f, 0x37, 0x04};
 static struct tlv default_ddol_tlv = {.tag = 0x9f49, .len = 3, .value = default_ddol_value };
 
 int trDDA(Iso7816CommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
-    uint8_t buf[APDU_RES_LEN] = {0};
-    size_t len = 0;
-    uint16_t sw = 0;
-
     struct emv_pk *pk = get_ca_pk(tlv);
     if (!pk) {
         PrintAndLogEx(ERR, "Error: Key not found, exiting");
@@ -767,6 +763,9 @@ int trDDA(Iso7816CommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
         tlvdb_free(atc_db);
 
     } else {
+        uint8_t buf[APDU_RES_LEN] = {0};
+        size_t len = 0;
+        uint16_t sw = 0;
         struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
         if (dac_db) {
             const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);

@@ -2301,9 +2301,9 @@ static const char *GetDesfireKeyType(uint8_t keytype) {
 }
 
 const char *GetDesfireAccessRightStr(uint8_t right) {
-    static char int_access_str[200];
 
     if (right <= 0x0d) {
+        static char int_access_str[200];
         snprintf(int_access_str, sizeof(int_access_str), "key 0x%02x", right);
         return int_access_str;
     }

@@ -940,9 +940,8 @@ static int CmdPIVScan(const char *Cmd) {
         memcpy(applet_id, PIV_APPLET, sizeof(PIV_APPLET));
         aid_len = sizeof(PIV_APPLET);
     }
-    int res = 0;
     if (activateField == true) {
-        res = PivSelect(channel, activateField, true, decodeTLV, true, applet_id, aid_len);
+        int res = PivSelect(channel, activateField, true, decodeTLV, true, applet_id, aid_len);
         if (res != PM3_SUCCESS) {
             if (leaveSignalON == false) {
                 DropFieldEx(channel);

@@ -4011,7 +4011,6 @@ static int CmdT55xxSniff(const char *Cmd) {
     size_t idx = 0;
     uint32_t usedPassword, blockData;
     int pulseSamples = 0, pulseIdx = 0;
-    const char *modeText;
     char pwdText[100];
     char dataText[100];
     int pulseBuffer[80] = { 0 }; // max should be 73 +/- - Holds Pulse widths
@@ -4037,7 +4036,7 @@ static int CmdT55xxSniff(const char *Cmd) {
         int maxWidth = 0;
         data[0] = 0;
         bool have_data = false;
-        modeText = "Default";
+        const char *modeText = "Default";
         strncpy(pwdText, " ", sizeof(pwdText));
         strncpy(dataText, " ", sizeof(dataText));
 

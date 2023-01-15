@@ -199,18 +199,15 @@ static lookup_entry lookup_right[0x8000];
 static uint8_t left_addition[0x100000];
 
 static inline void init_lookup_left() {
-    uint8_t b3, b6, temp;
-    int i, index;
-
-    for (i = 0; i < 0x400; i++) {
-        b6 = i & 0x1f;
-        b3 = (i >> 5) & 0x1f;
-        index = (b3 << 15) | b6;
+    for (int i = 0; i < 0x400; i++) {
+        uint8_t b6 = i & 0x1f;
+        uint8_t b3 = (i >> 5) & 0x1f;
+        int index = (b3 << 15) | b6;
 
 //      b6 = bit_rotate_l(b6, 5);
         b6 = BIT_ROL(b6);
 
-        temp = mod(b3 + b6, 0x1f);
+        uint8_t temp = mod(b3 + b6, 0x1f);
         left_addition[index] = temp;
         lookup_left[index].addition = temp;
         lookup_left[index].out = ((temp ^ b3) & 0x0f);
@@ -218,15 +215,12 @@ static inline void init_lookup_left() {
 }
 
 static inline void init_lookup_right() {
-    uint8_t b16, b18, temp;
-    int i, index;
+    for (int i = 0; i < 0x400; i++) {
+        uint8_t b18 = i & 0x1f;
+        uint8_t b16 = (i >> 5) & 0x1f;
+        int index = (b16 << 10) | b18;
 
-    for (i = 0; i < 0x400; i++) {
-        b18 = i & 0x1f;
-        b16 = (i >> 5) & 0x1f;
-        index = (b16 << 10) | b18;
-
-        temp = mod(b18 + b16, 0x1f);
+        uint8_t temp = mod(b18 + b16, 0x1f);
         lookup_right[index].addition = temp;
         lookup_right[index].out = ((temp ^ b16) & 0x0f);
     }
@@ -589,23 +583,21 @@ static void ice_sm_left(const uint8_t *ks, uint8_t *mask, vector<cs_t> *pcstates
 
 static inline uint32_t sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_t> *pcrstates) {
     uint8_t tmp_mask[16];
-    size_t pos, bits, bit, topbits;
+    size_t topbits = 0;
     map<uint64_t, uint64_t> bincstates;
     map<uint64_t, uint64_t>::iterator it;
-    uint8_t bt;
-    topbits = 0;
 
 
     for (uint64_t counter = 0; counter < 0x2000000; counter++) {
         // Reset the current bitcount of correct bits
-        bits = 0;
+        size_t bits = 0;
 
         // Copy the state we are going to test
         uint64_t rstate = counter;
 
-        for (pos = 0; pos < 16; pos++) {
+        for (size_t pos = 0; pos < 16; pos++) {
             next_right_fast(0, &rstate);
-            bt = next_right_fast(0, &rstate) << 4;
+            uint8_t bt = next_right_fast(0, &rstate) << 4;
             next_right_fast(0, &rstate);
             bt |= next_right_fast(0, &rstate);
 
@@ -615,7 +607,7 @@ static inline uint32_t sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_
             // Save the mask for the left produced bits
             tmp_mask[pos] = bt;
 
-            for (bit = 0; bit < 8; bit++) {
+            for (size_t bit = 0; bit < 8; bit++) {
                 // When the bit is xored away (=zero), it was the same, so correct ;)
                 if ((bt & 0x01) == 0) bits++;
                 bt >>= 1;
@@ -744,7 +736,7 @@ static inline void search_gc_candidates_right(const uint64_t rstate_before_gc, c
 static inline void sm_left(const uint8_t *ks, const uint8_t *mask, vector<cs_t> *pcstates) {
     map<uint64_t, cs_t> bincstates;
     map<uint64_t, cs_t>::iterator it;
-    uint64_t counter, lstate;
+    uint64_t counter;
     size_t pos, bits;
     uint8_t correct_bits[16];
     uint8_t bt;
@@ -756,7 +748,7 @@ static inline void sm_left(const uint8_t *ks, const uint8_t *mask, vector<cs_t> 
     state.invalid = false;
 
     for (counter = 0; counter < 0x800000000ull; counter++) {
-        lstate = counter;
+        uint64_t lstate = counter;
 
         for (pos = 0; pos < 16; pos++) {
 

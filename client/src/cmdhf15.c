@@ -1384,11 +1384,11 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     // arg0 (datalen,  cmd len?  .arg0 == crc?)
     // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
     // arg2 (recv == 1 == expect a response)
-    uint8_t read_respone = 1;
+    uint8_t read_response = 1;
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_respone, req, reqlen);
+    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_response, req, reqlen);
 
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
         PrintAndLogEx(ERR, "iso15693 timeout");

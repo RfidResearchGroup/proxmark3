@@ -235,9 +235,10 @@ static int json_get_utf8_char_len(unsigned char ch) {
 
 /* string = '"' { quoted_printable_chars } '"' */
 static int json_parse_string(struct frozen *f) {
-    int n, ch = 0, len = 0;
+    int ch = 0;
     TRY(json_test_and_skip(f, '"'));
     {
+        int len = 0;
         SET_STATE(f, f->cur, "", 0);
         for (; f->cur < f->end; f->cur += len) {
             ch = *(unsigned char *) f->cur;
@@ -245,6 +246,7 @@ static int json_parse_string(struct frozen *f) {
             EXPECT(ch >= 32 && len > 0, JSON_STRING_INVALID); /* No control chars */
             EXPECT(len <= json_left(f), JSON_STRING_INCOMPLETE);
             if (ch == '\\') {
+                int n;
                 EXPECT((n = json_get_escape_len(f->cur + 1, json_left(f))) > 0, n);
                 len += n;
             } else if (ch == '"') {
@@ -295,17 +297,17 @@ static int json_parse_number(struct frozen *f) {
 #if JSON_ENABLE_ARRAY
 /* array = '[' [ value { ',' value } ] ']' */
 static int json_parse_array(struct frozen *f) {
-    int i = 0, current_path_len;
-    char buf[20];
     CALL_BACK(f, JSON_TYPE_ARRAY_START, NULL, 0);
     TRY(json_test_and_skip(f, '['));
     {
         {
+            int i = 0;
             SET_STATE(f, f->cur - 1, "", 0);
             while (json_cur(f) != ']') {
+                char buf[20];
                 snprintf(buf, sizeof(buf), "[%d]", i);
                 i++;
-                current_path_len = json_append_to_path(f, buf, strlen(buf));
+                int current_path_len = json_append_to_path(f, buf, strlen(buf));
                 f->cur_name =
                     f->path + strlen(f->path) - strlen(buf) + 1 /*opening brace*/;
                 f->cur_name_len = strlen(buf) - 2 /*braces*/;

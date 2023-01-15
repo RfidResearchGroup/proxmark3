@@ -202,7 +202,7 @@ void RC2_set_key(RC2_KEY *key, int len, const unsigned char *data, int bits) {
 void RC2_encrypt(unsigned long *d, RC2_KEY *key) {
     int i, n;
     register RC2_INT *p0, *p1;
-    register RC2_INT x0, x1, x2, x3, t;
+    register RC2_INT x0, x1, x2, x3;
     unsigned long l;
 
     l = d[0];
@@ -217,7 +217,7 @@ void RC2_encrypt(unsigned long *d, RC2_KEY *key) {
 
     p0 = p1 = &(key->data[0]);
     for (;;) {
-        t = (x0 + (x1 & ~x3) + (x2 & x3) + * (p0++)) & 0xffff;
+        register RC2_INT t = (x0 + (x1 & ~x3) + (x2 & x3) + * (p0++)) & 0xffff;
         x0 = (t << 1) | (t >> 15);
         t = (x1 + (x2 & ~x0) + (x3 & x0) + * (p0++)) & 0xffff;
         x1 = (t << 2) | (t >> 14);
@@ -244,7 +244,7 @@ void RC2_encrypt(unsigned long *d, RC2_KEY *key) {
 void RC2_decrypt(unsigned long *d, RC2_KEY *key) {
     int i, n;
     register RC2_INT *p0, *p1;
-    register RC2_INT x0, x1, x2, x3, t;
+    register RC2_INT x0, x1, x2, x3;
     unsigned long l;
 
     l = d[0];
@@ -260,7 +260,7 @@ void RC2_decrypt(unsigned long *d, RC2_KEY *key) {
     p0 = &(key->data[63]);
     p1 = &(key->data[0]);
     for (;;) {
-        t = ((x3 << 11) | (x3 >> 5)) & 0xffff;
+        register RC2_INT t = ((x3 << 11) | (x3 >> 5)) & 0xffff;
         x3 = (t - (x0 & ~x2) - (x1 & x2) - * (p0--)) & 0xffff;
         t = ((x2 << 13) | (x2 >> 3)) & 0xffff;
         x2 = (t - (x3 & ~x1) - (x0 & x1) - * (p0--)) & 0xffff;
