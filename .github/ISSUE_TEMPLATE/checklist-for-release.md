@@ -34,7 +34,7 @@ Run `tools/release_tests.sh` on:
 - [ ] Debian Testing
 - [ ] Ubuntu 22
 - [ ] ParrotOS
-- [ ] Fedora
+- [ ] Fedora 37
 - [ ] OpenSuse Leap
 - [ ] OpenSuse Tumbleweed
 - [ ] OSX (MacPorts)
