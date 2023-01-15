@@ -263,7 +263,7 @@ static int CmdParadoxClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint32_t blocks[4];
+    uint32_t blocks[4] = {0};
 
     if (raw_len != 0) {
         if (raw_len != 12) {
