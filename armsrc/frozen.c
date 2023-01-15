@@ -1429,9 +1429,12 @@ static void json_next_cb(void *userdata, const char *name, size_t name_len,
 
 static void *json_next(const char *s, int len, void *handle, const char *path,
                        struct json_token *key, struct json_token *val, int *i) {
-    struct json_token tmpval, *v = val == NULL ? &tmpval : val;
-    struct json_token tmpkey, *k = key == NULL ? &tmpkey : key;
-    int tmpidx, *pidx = i == NULL ? &tmpidx : i;
+    struct json_token tmpval;
+    struct json_token *v = val == NULL ? &tmpval : val;
+    struct json_token tmpkey;
+    struct json_token *k = key == NULL ? &tmpkey : key;
+    int tmpidx;
+    int *pidx = i == NULL ? &tmpidx : i;
     struct next_data data = {handle, path, (int) strlen(path), 0, k, v, pidx};
     json_walk(s, len, json_next_cb, &data);
     return data.found ? data.handle : NULL;
