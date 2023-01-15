@@ -32,7 +32,7 @@ Run `tools/release_tests.sh` on:
 - [ ] Kali
 - [ ] Debian Stable
 - [ ] Debian Testing
-- [ ] Ubuntu21
+- [ ] Ubuntu 22
 - [ ] ParrotOS
 - [ ] Fedora
 - [ ] OpenSuse Leap
