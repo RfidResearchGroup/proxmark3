@@ -293,9 +293,9 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfseos.c
         ${PM3_ROOT}/client/src/cmdhfst.c
         ${PM3_ROOT}/client/src/cmdhfst25ta.c
+        ${PM3_ROOT}/client/src/cmdhftexkom.c
         ${PM3_ROOT}/client/src/cmdhfthinfilm.c
         ${PM3_ROOT}/client/src/cmdhftopaz.c
-        ${PM3_ROOT}/client/src/cmdhftexkom.c
         ${PM3_ROOT}/client/src/cmdhfwaveshare.c
         ${PM3_ROOT}/client/src/cmdhfxerox.c
         ${PM3_ROOT}/client/src/cmdhw.c

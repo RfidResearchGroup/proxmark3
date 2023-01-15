@@ -306,7 +306,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
 }
 
 // ref:  https://www.nxp.com/docs/en/application-note/AN12343.pdf  p7
-static nxp_producttype_t getProductType(uint8_t *versionhw) {
+static nxp_producttype_t getProductType(const uint8_t *versionhw) {
 
     uint8_t product = versionhw[2];
 
@@ -323,7 +323,7 @@ static nxp_producttype_t getProductType(uint8_t *versionhw) {
     return DESFIRE_UNKNOWN_PROD;
 }
 
-static const char *getProductTypeStr(uint8_t *versionhw) {
+static const char *getProductTypeStr(const uint8_t *versionhw) {
 
     uint8_t product = versionhw[2];
 

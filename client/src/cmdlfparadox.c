@@ -263,8 +263,8 @@ static int CmdParadoxClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint32_t blocks[4];
-    
+    uint32_t blocks[4] = {0};
+
     if (raw_len != 0) {
         if (raw_len != 12) {
             PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
@@ -280,39 +280,39 @@ static int CmdParadoxClone(const char *Cmd) {
 
         manchester[0] = 0x0F; // preamble
         manchester[1] = 0x05; // Leading zeros  - Note: from this byte on, is part of the CRC calculation
-        manchester[2] = 0x55; // Leading zeros          its 4 bits out for the CRC, so we need too move 
+        manchester[2] = 0x55; // Leading zeros          its 4 bits out for the CRC, so we need too move
         manchester[3] = 0x55; // Leading zeros          back 4 bits once we have the crc (done below)
 
         // add FC
-        t1 = manchesterEncode2Bytes (fc);
+        t1 = manchesterEncode2Bytes(fc);
         manchester[4] = (t1 >> 8) & 0xFF;
         manchester[5] = t1 & 0xFF;
-        
+
         // add cn
-        t1 = manchesterEncode2Bytes (cn);
+        t1 = manchesterEncode2Bytes(cn);
         manchester[6] = (t1 >> 24) & 0xFF;
         manchester[7] = (t1 >> 16) & 0xFF;
         manchester[8] = (t1 >> 8) & 0xFF;
         manchester[9] = t1 & 0xFF;
 
-        uint8_t crc = (CRC8Maxim(manchester+1, 9) ^ 0x6) & 0xFF;
+        uint8_t crc = (CRC8Maxim(manchester + 1, 9) ^ 0x6) & 0xFF;
 
         // add crc
-        t1 = manchesterEncode2Bytes (crc);
+        t1 = manchesterEncode2Bytes(crc);
         manchester[10] = (t1 >> 8) & 0xFF;
         manchester[11] = t1 & 0xFF;
 
         // move left 4 bits left 4 bits - Now that we have the CRC we need to re-align the data.
         for (int i = 1; i < 12; i++)
-            manchester[i] = (manchester[i] << 4) + (manchester[i+1] >> 4);
-        
+            manchester[i] = (manchester[i] << 4) + (manchester[i + 1] >> 4);
+
         // Add trailing 1010 (11)
         manchester[11] |= (1 << 3);
         manchester[11] |= (1 << 1);
-        
+
         // move into tag blocks
         for (int i = 0; i < 12; i++)
-            blocks[1 + (i/4)] += (manchester[i] << (8 * (3 - i % 4)));
+            blocks[1 + (i / 4)] += (manchester[i] << (8 * (3 - i % 4)));
     }
 
     // Paradox - FSK2a, data rate 50, 3 data blocks

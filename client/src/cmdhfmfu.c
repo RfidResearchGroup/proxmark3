@@ -1376,7 +1376,7 @@ static int mfu_fingerprint(TagTypeUL_t tagtype, bool hasAuthKey, uint8_t *authke
         }
     }
 
-    // OTP checks    
+    // OTP checks
     mfu_otp_identify_t *item = mfu_match_otp_fingerprint(data);
     if (item) {
         PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s"), item->desc);
@@ -1391,9 +1391,9 @@ static int mfu_fingerprint(TagTypeUL_t tagtype, bool hasAuthKey, uint8_t *authke
             }
         }
     }
-    // 
-    
-    
+    //
+
+
 
 out:
     free(data);

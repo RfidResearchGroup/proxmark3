@@ -740,6 +740,7 @@ const static vocabulory_t vocabulory[] = {
     { 1, "piv help" }, 
     { 0, "piv select" }, 
     { 0, "piv getdata" }, 
+    { 0, "piv authsign" }, 
     { 0, "piv scan" }, 
     { 1, "piv list" }, 
     { 1, "smart help" }, 

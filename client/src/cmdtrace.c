@@ -485,8 +485,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     uint32_t end_of_transmission_timestamp = 0;
     uint8_t topaz_reader_command[9];
     char explanation[40] = {0};
-    uint8_t mfData[32] = {0};
-    size_t mfDataLen = 0;
     tracelog_hdr_t *first_hdr = (tracelog_hdr_t *)(trace);
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
 
@@ -871,6 +869,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     if (protocol == PROTO_MIFARE) {
+        uint8_t mfData[32] = {0};
+        size_t mfDataLen = 0;
         if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen, mfDicKeys, mfDicKeysCount)) {
             memset(explanation, 0x00, sizeof(explanation));
             annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen, hdr->isResponse);

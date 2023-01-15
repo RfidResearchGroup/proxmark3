@@ -20,11 +20,10 @@ void ComputeCrc14443(int CrcType,
                      const unsigned char *Data, int Length,
                      unsigned char *TransmitFirst,
                      unsigned char *TransmitSecond) {
-    unsigned char chBlock;
     unsigned short wCrc = CrcType;
 
     do {
-        chBlock = *Data++;
+        unsigned char chBlock = *Data++;
         UpdateCrc14443(chBlock, &wCrc);
     } while (--Length);
 

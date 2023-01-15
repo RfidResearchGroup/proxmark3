@@ -672,11 +672,6 @@ static int CmdEM410xClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    char cardtype[16] = {"T55x7"};
-    if (q5) {
-        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
-    }
-
     PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with EM Tag ID " _GREEN_("%010" PRIX64) " (RF/%d)", q5 ? "Q5/T5555" : (em ? "EM4305/4469" : "T55x7"), id, clk);
 
     struct {

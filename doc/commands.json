@@ -2189,7 +2189,9 @@
             "command": "hf emrtd dump",
             "description": "Dump all files on an eMRTD",
             "notes": [
-                "hf emrtd dump"
+                "hf emrtd dump",
+                "hf emrtd dump --dir ../dump",
+                "hf emrtd dump -n 123456789 -d 19890101 -e 20250401"
             ],
             "offline": false,
             "options": [
@@ -2198,9 +2200,9 @@
                 "-d, --dateofbirth <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars",
-                "--path <dirpath> save dump to the given dirpath"
+                "--dir <str> save dump to the given dirpath"
             ],
-            "usage": "hf emrtd dump [-h] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--path <dirpath>]"
+            "usage": "hf emrtd dump [-h] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--dir <str>]"
         },
         "hf emrtd help": {
             "command": "hf emrtd help",
@@ -2214,7 +2216,10 @@
             "command": "hf emrtd info",
             "description": "Display info about an eMRTD",
             "notes": [
-                "hf emrtd info"
+                "hf emrtd info",
+                "hf emrtd info --dir ../dumps",
+                "hf emrtd info -n 123456789 -d 19890101 -e 20250401",
+                "hf emrtd info -n 123456789 -d 19890101 -e 20250401 -i"
             ],
             "offline": true,
             "options": [
@@ -2223,10 +2228,10 @@
                 "-d, --dateofbirth <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars (passports only)",
-                "--path <dirpath> display info from offline dump stored in dirpath",
+                "--dir <str> display info from offline dump stored in dirpath",
                 "-i, --images show images"
             ],
-            "usage": "hf emrtd info [-hi] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--path <dirpath>]"
+            "usage": "hf emrtd info [-hi] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--dir <str>]"
         },
         "hf emrtd list": {
             "command": "hf emrtd list",
@@ -4799,7 +4804,7 @@
         },
         "hf mf wrbl": {
             "command": "hf mf wrbl",
-            "description": "Write MIFARE Classic block with 16 hex bytes of data Sector 0 / Block 0 - Manufacturer block When writing to block 0 you must use a VALID block 0 data (UID, BCC, SAK, ATQA) Writing an invalid block 0 means rendering your Magic GEN2 card undetectable. Look in the magic_cards_notes.md file for help to resolve it.",
+            "description": "Write MIFARE Classic block with 16 hex bytes of data Sector 0 / Block 0 - Manufacturer block When writing to block 0 you must use a VALID block 0 data (UID, BCC, SAK, ATQA) Writing an invalid block 0 means rendering your Magic GEN2 card undetectable. Look in the magic_cards_notes.md file for help to resolve it. `--force` param is used to override warnings like bad ACL and BLOCK 0 writes. if not specified, it will exit if detected",
             "notes": [
                 "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 000102030405060708090a0b0c0d0e0f"
             ],
@@ -4809,7 +4814,7 @@
                 "--blk <dec> block number",
                 "-a input key type is key A (def)",
                 "-b input key type is key B",
-                "--force enforce block0 writes",
+                "--force override warnings",
                 "-k, --key <hex> key, 6 hex bytes",
                 "-d, --data <hex> bytes to write, 16 hex bytes"
             ],
@@ -9378,6 +9383,7 @@
             "command": "lf paradox clone",
             "description": "clone a paradox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
+                "lf paradox clone --fc 96 --cn 40426 -> encode for T55x7 tag with fc and cn",
                 "lf paradox clone --raw 0f55555695596a6a9999a59a -> encode for T55x7 tag",
                 "lf paradox clone --raw 0f55555695596a6a9999a59a --q5 -> encode for Q5/T5555 tag",
                 "lf paradox clone --raw 0f55555695596a6a9999a59a --em -> encode for EM4305/4469"
@@ -9386,10 +9392,12 @@
             "options": [
                 "-h, --help This help",
                 "-r, --raw <hex> raw hex data. 12 bytes max",
+                "--fc <dec> facility code",
+                "--cn <dec> card number",
                 "--q5 optional - specify writing to Q5/T5555 tag",
                 "--em optional - specify writing to EM4305/4469 tag"
             ],
-            "usage": "lf paradox clone [-h] [-r <hex>] [--q5] [--em]"
+            "usage": "lf paradox clone [-h] [-r <hex>] [--fc <dec>] [--cn <dec>] [--q5] [--em]"
         },
         "lf paradox demod": {
             "command": "lf paradox demod",
@@ -10952,6 +10960,27 @@
             ],
             "usage": "hf 14b ndefread [-hv] [-f <fn>]"
         },
+        "piv authsign": {
+            "command": "piv authsign",
+            "description": "Send a nonce and ask the PIV card to sign it",
+            "notes": [
+                "piv sign -sk -> select card, select applet, sign a NULL nonce"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-s, -S, --select Activate field and select applet",
+                "-k, -K, --keep Keep field for next command",
+                "-a, -A, --apdu Show APDU requests and responses",
+                "-t, -T, --tlv TLV decode results",
+                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--aid <hex> Applet ID to select. By default A0000003080000100 will be used",
+                "--nonce <hex> Nonce to sign.",
+                "--slot <dec id> Slot number. Default will be 0x9E (card auth cert).",
+                "--alg <dec> Algorithm to use to sign. Example values: 06=RSA-1024, 07=RSA-2048, 11=ECC-P256 (default), 14=ECC-P384"
+            ],
+            "usage": "piv sign [-hskatw] [--aid <hex>] --nonce <hex> [--slot <dec id>] [--alg <dec>]"
+        },
         "piv getdata": {
             "command": "piv getdata",
             "description": "Get a data container of a given tag",
@@ -11731,8 +11760,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 738,
+        "commands_extracted": 739,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-01-06T21:37:50"
+        "extracted_on": "2023-01-15T01:24:39"
     }
 }

@@ -369,7 +369,7 @@ static bool mf_write_block(const uint8_t *key, uint8_t keytype, uint8_t blockno,
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
         PrintAndLogEx(FAILED, "Command execute timeout");
-        return PM3_ETIMEOUT;
+        return false;
     }
 
     return (resp.oldarg[0] & 0xff);
@@ -569,7 +569,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
 
     uint8_t blockno = (uint8_t)b;
 
-    // Sector trailer sanity checks. 
+    // Sector trailer sanity checks.
     // Warn if ACL is strict read-only,  or invalid ACL.
     if (mfIsSectorTrailer(blockno)) {
         PrintAndLogEx(INFO, "Sector trailer (ST) write detected");
@@ -3688,8 +3688,6 @@ static int CmdHF14AMfSim(const char *Cmd) {
     }
     CLIParserFree(ctx);
 
-    nonces_t data[1];
-
     sector_t *k_sector = NULL;
 
     //Validations
@@ -3780,7 +3778,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
             if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
             if (!(flags & FLAG_NR_AR_ATTACK)) break;
             if ((resp.oldarg[0] & 0xffff) != CMD_HF_MIFARE_SIMULATE) break;
-
+            nonces_t data[1];
             memcpy(data, resp.data.asBytes, sizeof(data));
             readerAttack(k_sector, k_sectorsCount, data[0], setEmulatorMem, verbose);
         }
@@ -6915,9 +6913,14 @@ static int CmdHF14AMfView(const char *Cmd) {
             return res;
         }
 
+        typedef union UDATA {
+            uint8_t *bytes;
+            mfc_vigik_t *vigik;
+        } UDATA;
         // allocate memory
-        uint8_t *d = calloc(bytes_read, sizeof(uint8_t));
-        if (d == NULL) {
+        UDATA d;
+        d.bytes = calloc(bytes_read, sizeof(uint8_t));
+        if (d.bytes == NULL) {
             return PM3_EMALLOC;
         }
         uint16_t dlen = 0;
@@ -6925,14 +6928,14 @@ static int CmdHF14AMfView(const char *Cmd) {
         // vigik struture sector 0
         uint8_t *pdump = dump;
 
-        memcpy(d + dlen, pdump, MFBLOCK_SIZE * 3);
+        memcpy(d.bytes + dlen, pdump, MFBLOCK_SIZE * 3);
         dlen += MFBLOCK_SIZE * 3;
         pdump += (MFBLOCK_SIZE * 4);  // skip sectortrailer
 
         // extract memory from MAD sectors
         for (int i = 0; i <= madlen; i++) {
             if (0x4910 == mad[i] || 0x4916 == mad[i]) {
-                memcpy(d + dlen, pdump, MFBLOCK_SIZE * 3);
+                memcpy(d.bytes + dlen, pdump, MFBLOCK_SIZE * 3);
                 dlen += MFBLOCK_SIZE * 3;
             }
 
@@ -6940,8 +6943,8 @@ static int CmdHF14AMfView(const char *Cmd) {
         }
 
 //          convert_mfc_2_arr(pdump, bytes_read, d, &dlen);
-        vigik_annotate(d);
-        free(d);
+        vigik_annotate(d.vigik);
+        free(d.bytes);
     }
 
     free(dump);
@@ -7613,7 +7616,6 @@ static int CmdHF14AMfValue(const char *Cmd) {
     int64_t decval = (int64_t)arg_get_u64_def(ctx, 5, -1); // Inc by -1 is invalid, so not set.
     int64_t setval = (int64_t)arg_get_u64_def(ctx, 6, 0x7FFFFFFFFFFFFFFF);  // out of bounds (for int32) so not set
     bool getval = arg_get_lit(ctx, 7);
-    uint8_t block[MFBLOCK_SIZE] = {0x00};
     int dlen = 0;
     uint8_t data[16] = {0};
     CLIGetHexWithReturn(ctx, 9, data, &dlen);
@@ -7621,7 +7623,6 @@ static int CmdHF14AMfValue(const char *Cmd) {
 
     uint8_t action = 3; // 0 Increment, 1 - Decrement, 2 - Set, 3 - Get, 4 - Decode from data
     uint32_t value = 0;
-    uint8_t isok = true;
 
     // Need to check we only have 1 of inc/dec/set and get the value from the selected option
     int optionsprovided = 0;
@@ -7677,11 +7678,12 @@ static int CmdHF14AMfValue(const char *Cmd) {
     }
 
     if (action < 3) {
-
+        uint8_t isok = true;
         if (g_session.pm3_present == false)
             return PM3_ENOTTY;
 
         if (action <= 1) { // increment/decrement value
+            uint8_t block[MFBLOCK_SIZE] = {0x00};
             memcpy(block, (uint8_t *)&value, 4);
             uint8_t cmddata[26];
             memcpy(cmddata, key, sizeof(key));  // Key == 6 data went to 10, so lets offset 9 for inc/dec

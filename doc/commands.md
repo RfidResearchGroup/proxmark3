@@ -1343,6 +1343,7 @@ Check column "offline" for their availability.
 |`piv help               `|Y       |`This help`
 |`piv select             `|N       |`Select the PIV applet`
 |`piv getdata            `|N       |`Gets a container on a PIV card`
+|`piv authsign           `|N       |`Authenticate with the card`
 |`piv scan               `|N       |`Scan PIV card for known containers`
 |`piv list               `|Y       |`List ISO7816 history`
 
