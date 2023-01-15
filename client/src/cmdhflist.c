@@ -318,6 +318,18 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 snprintf(exp, size, "AUTH-B(%d)", cmd[1]);
                 break;
             }
+            case MIFARE_MAGIC_GDM_AUTH_KEYA:{
+                if (cmdsize > 3) {
+                    snprintf(exp, size, "MAGIC AUTH-A(%d)", cmd[1]);
+                    MifareAuthState = masNt;
+                }
+                break;
+            }
+            case MIFARE_MAGIC_GDM_AUTH_KEYB: {
+                MifareAuthState = masNt;
+                snprintf(exp, size, "MAGIC AUTH-B(%d)", cmd[1]);
+                break;
+            }
             case MIFARE_MAGICWUPC1:
                 snprintf(exp, size, "MAGIC WUPC1");
                 break;
