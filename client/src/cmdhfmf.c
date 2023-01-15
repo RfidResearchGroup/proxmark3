@@ -369,7 +369,7 @@ static bool mf_write_block(const uint8_t *key, uint8_t keytype, uint8_t blockno,
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
         PrintAndLogEx(FAILED, "Command execute timeout");
-        return PM3_ETIMEOUT;
+        return false;
     }
 
     return (resp.oldarg[0] & 0xff);
