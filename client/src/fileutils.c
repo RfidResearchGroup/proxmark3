@@ -1162,12 +1162,11 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
-    typedef union UDATA
-    {
-        void* v;
-        uint8_t* bytes;
-        mfu_dump_t* mfu;
-        topaz_tag_t* topaz;
+    typedef union UDATA {
+        void *v;
+        uint8_t *bytes;
+        mfu_dump_t *mfu;
+        topaz_tag_t *topaz;
     } UDATA;
     UDATA udata = (UDATA)data;
     char ctype[100] = {0};

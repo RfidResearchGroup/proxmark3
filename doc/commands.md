@@ -367,11 +367,11 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf ksx6924 help        `|Y       |`This help`
-|`hf ksx6924 balance     `|N       |`Get current purse balance`
-|`hf ksx6924 info        `|N       |`Get info about a KS X 6924 (T-Money, Snapper+) transit card`
-|`hf ksx6924 initialize  `|N       |`Perform transaction initialization (Mpda)`
-|`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
 |`hf ksx6924 select      `|N       |`Select application, and leave field up`
+|`hf ksx6924 info        `|N       |`Get info about a KS X 6924 (T-Money, Snapper+) transit card`
+|`hf ksx6924 balance     `|N       |`Get current purse balance`
+|`hf ksx6924 init        `|N       |`Perform transaction initialization with Mpda`
+|`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
 
 
 ### hf jooki
@@ -510,6 +510,10 @@ Check column "offline" for their availability.
 |`hf mf gen3uid          `|N       |`Set UID without changing manufacturer block`
 |`hf mf gen3blk          `|N       |`Overwrite manufacturer block`
 |`hf mf gen3freeze       `|N       |`Perma lock UID changes. irreversible`
+|`hf mf ggetblk          `|N       |`Read block from card`
+|`hf mf gload            `|N       |`Load dump to card`
+|`hf mf gsave            `|N       |`Save dump from card into file or emulator`
+|`hf mf gsetblk          `|N       |`Write block to card`
 |`hf mf gview            `|N       |`View card`
 |`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
 |`hf mf ndefread         `|N       |`Read and print NDEF records from card`
@@ -554,7 +558,8 @@ Check column "offline" for their availability.
 |`hf mfu restore         `|N       |`Restore a dump onto a MFU MAGIC tag`
 |`hf mfu view            `|Y       |`Display content from tag dump file`
 |`hf mfu wrbl            `|N       |`Write block`
-|`hf mfu eload           `|N       |`Load Ultralight .eml dump file into emulator memory`
+|`hf mfu eload           `|N       |`Load Ultralight dump file into emulator memory`
+|`hf mfu esave           `|N       |`Save Ultralight dump file from emulator memory`
 |`hf mfu eview           `|N       |`View emulator memory`
 |`hf mfu sim             `|N       |`Simulate MIFARE Ultralight from emulator memory`
 |`hf mfu setpwd          `|N       |`Set 3DES key - Ultralight-C`
@@ -971,6 +976,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf indala help         `|Y       |`This help`
+|`lf indala brute        `|N       |`Demodulate an Indala tag (PSK1) from the GraphBuffer`
 |`lf indala demod        `|Y       |`Demodulate an Indala tag (PSK1) from the GraphBuffer`
 |`lf indala altdemod     `|Y       |`Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
 |`lf indala reader       `|N       |`Read an Indala tag from the antenna`
@@ -1326,6 +1332,20 @@ Check column "offline" for their availability.
 |`nfc barcode read       `|N       |`read NFC Barcode`
 |`nfc barcode sim        `|N       |`simulate NFC Barcode`
 |`nfc barcode help       `|Y       |`This help`
+
+
+### piv
+
+ { PIV commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`piv help               `|Y       |`This help`
+|`piv select             `|N       |`Select the PIV applet`
+|`piv getdata            `|N       |`Gets a container on a PIV card`
+|`piv authsign           `|N       |`Authenticate with the card`
+|`piv scan               `|N       |`Scan PIV card for known containers`
+|`piv list               `|Y       |`List ISO7816 history`
 
 
 ### reveng

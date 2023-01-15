@@ -6913,8 +6913,7 @@ static int CmdHF14AMfView(const char *Cmd) {
             return res;
         }
 
-        typedef union UDATA
-        {
+        typedef union UDATA {
             uint8_t *bytes;
             mfc_vigik_t *vigik;
         } UDATA;
