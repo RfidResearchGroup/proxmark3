@@ -165,6 +165,9 @@ void print_cs(const char *text, pcs s) {
 }
 
 static inline uint8_t mod(uint8_t a, uint8_t m) {
+    if (m==0) {
+        return 0; // Actually, divide by zero error
+    }
     // Just return the input when this is less or equal than the modular value
     if (a < m) return a;
 
