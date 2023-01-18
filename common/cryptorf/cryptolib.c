@@ -280,7 +280,6 @@ void cm_auth(const uint8_t *Gc, const uint8_t *Ci, const uint8_t *Q, uint8_t *Ch
 
 static void cm_crypt(const CryptoAction ca, const uint8_t offset, const uint8_t len, const uint8_t *in, uint8_t *out, crypto_state s) {
     size_t pos;
-    uint8_t bt;
 
     next_n(true, 5, 0, s);
     next(true, offset, s);
@@ -288,7 +287,7 @@ static void cm_crypt(const CryptoAction ca, const uint8_t offset, const uint8_t 
     next(true, len, s);
     for (pos = 0; pos < len; pos++) {
         // Perform the crypto operation
-        bt = in[pos] ^ cm_byte(s);
+        uint8_t bt = in[pos] ^ cm_byte(s);
 
         // Generate output
         if (out) out[pos] = bt;

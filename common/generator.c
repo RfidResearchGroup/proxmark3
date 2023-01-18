@@ -240,6 +240,12 @@ uint16_t ul_ev1_packgen_def(const uint8_t *uid) {
     return 0x0000;
 }
 
+// MIFARE ULTRALIGHT OTP generators
+uint32_t ul_c_otpgenA(const uint8_t *uid) {
+    return 0x534C544F;
+}
+
+
 //------------------------------------
 // MFC key generation stuff
 // Each algo implementation should offer two key generation functions.

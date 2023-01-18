@@ -1088,6 +1088,14 @@ void str_lower(char *s) {
         s[i] = tolower(s[i]);
 }
 
+void str_upper(char *s) {
+    strn_upper(s, strlen(s));
+}
+
+void strn_upper(char *s, size_t n) {
+    for (size_t i = 0; i < n; i++)
+        s[i] = toupper(s[i]);
+}
 // check for prefix in string
 bool str_startswith(const char *s,  const char *pre) {
     return strncmp(pre, s, strlen(pre)) == 0;
@@ -1239,7 +1247,7 @@ inline uint64_t leadingzeros64(uint64_t a) {
 }
 
 
-int byte_strstr(uint8_t *src, size_t srclen, uint8_t *pattern, size_t plen) {
+int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen) {
 
     size_t max = srclen - plen + 1;
 

@@ -1,7 +1,7 @@
 ---
 -- This Lua script is designed to run with Iceman/RRG Proxmark3 fork
 -- Just copy hf_mf_dump-luxeo.lua to client/luascripts/
--- and run "script run hf_mf_dump-luxeo"
+-- and run "script run hf_mf_dump_luxeo"
 
 -- requirements
 local cmds = require('commands')
@@ -12,16 +12,16 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = '0xdrrb'
-version = 'v0.1.2'
+version = 'v0.1.3'
 desc = [[
 This is a script that tries to dump and decrypt the data of a specific type of Mifare laundromat token.
 OBS! Tag must be on the antenna.
 ]]
 example = [[
-    script run hf_mf_dump-luxeo
+    script run hf_mf_dump_luxeo
 ]]
 usage = [[
-script run hf_mf_dump-luxeo
+script run hf_mf_dump_luxeo
 ]]
 arguments = [[
     -h              This help

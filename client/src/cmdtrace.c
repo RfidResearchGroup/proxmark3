@@ -485,8 +485,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     uint32_t end_of_transmission_timestamp = 0;
     uint8_t topaz_reader_command[9];
     char explanation[40] = {0};
-    uint8_t mfData[32] = {0};
-    size_t mfDataLen = 0;
     tracelog_hdr_t *first_hdr = (tracelog_hdr_t *)(trace);
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
 
@@ -871,6 +869,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     if (protocol == PROTO_MIFARE) {
+        uint8_t mfData[32] = {0};
+        size_t mfDataLen = 0;
         if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen, mfDicKeys, mfDicKeysCount)) {
             memset(explanation, 0x00, sizeof(explanation));
             annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen, hdr->isResponse);
@@ -900,16 +900,16 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
         if (use_us) {
             PrintAndLogEx(NORMAL, " %10.1f | %10.1f | %s |fdt (Frame Delay Time): " _YELLOW_("%.1f"),
-                (float)time1 / 13.56,
-                (float)time2 / 13.56,
-                "   ",
-                (float)(next_hdr->timestamp - end_of_transmission_timestamp) / 13.56);
+                          (float)time1 / 13.56,
+                          (float)time2 / 13.56,
+                          "   ",
+                          (float)(next_hdr->timestamp - end_of_transmission_timestamp) / 13.56);
         } else {
             PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): " _YELLOW_("%d"),
-                time1,
-                time2,
-                "   ",
-                (next_hdr->timestamp - end_of_transmission_timestamp));
+                          time1,
+                          time2,
+                          "   ",
+                          (next_hdr->timestamp - end_of_transmission_timestamp));
         }
     }
 

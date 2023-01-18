@@ -228,7 +228,7 @@ static int CmdHFEPAPACESimulate(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
 //    bool use_pc = arg_get_lit(ctx, 1);
-//	uint8_t pwd_type = 0;
+//  uint8_t pwd_type = 0;
 
     int plen = 0;
     uint8_t pwd[6] = {0};
@@ -273,7 +273,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,                   AlwaysAvailable, "This help"},
     {"cnonces", CmdHFEPACollectPACENonces, IfPm3Iso14443,   "Acquire encrypted PACE nonces of specific size"},
     {"replay",  CmdHFEPAPACEReplay,        IfPm3Iso14443,   "Perform PACE protocol by replaying given APDUs"},
-    {"sim",     CmdHFEPAPACESimulate,	   IfPm3Iso14443,   "Simulate PACE protocol"},
+    {"sim",     CmdHFEPAPACESimulate,      IfPm3Iso14443,   "Simulate PACE protocol"},
     {NULL, NULL, NULL, NULL}
 };
 

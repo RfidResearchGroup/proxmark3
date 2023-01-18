@@ -1030,7 +1030,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help Use `<command> help` for details of a command prefs { Edit client/device preferences... } -------- ----------------------- Technology ----------------------- analyse { Analyse utils... } data { Plot window / data buffer manipulation... } emv { EMV ISO-14443 / ISO-7816... } hf { High frequency commands... } hw { Hardware commands... } lf { Low frequency commands... } nfc { NFC commands... } reveng { CRC calculations from RevEng software... } smart { Smart card ISO-7816 commands... } script { Scripting commands... } trace { Trace manipulation... } wiegand { Wiegand format manipulation... } -------- ----------------------- General ----------------------- clear Clear screen hints Turn hints on / off msleep Add a pause in milliseconds rem Add a text line in log file quit exit Exit program",
+            "description": "help Use `<command> help` for details of a command prefs { Edit client/device preferences... } -------- ----------------------- Technology ----------------------- analyse { Analyse utils... } data { Plot window / data buffer manipulation... } emv { EMV ISO-14443 / ISO-7816... } hf { High frequency commands... } hw { Hardware commands... } lf { Low frequency commands... } nfc { NFC commands... } piv { PIV commands... } reveng { CRC calculations from RevEng software... } smart { Smart card ISO-7816 commands... } script { Scripting commands... } trace { Trace manipulation... } wiegand { Wiegand format manipulation... } -------- ----------------------- General ----------------------- clear Clear screen hints Turn hints on / off msleep Add a pause in milliseconds rem Add a text line in log file quit exit Exit program",
             "notes": [],
             "offline": true,
             "options": [],
@@ -2189,7 +2189,9 @@
             "command": "hf emrtd dump",
             "description": "Dump all files on an eMRTD",
             "notes": [
-                "hf emrtd dump"
+                "hf emrtd dump",
+                "hf emrtd dump --dir ../dump",
+                "hf emrtd dump -n 123456789 -d 19890101 -e 20250401"
             ],
             "offline": false,
             "options": [
@@ -2198,9 +2200,9 @@
                 "-d, --dateofbirth <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars",
-                "--path <dirpath> save dump to the given dirpath"
+                "--dir <str> save dump to the given dirpath"
             ],
-            "usage": "hf emrtd dump [-h] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--path <dirpath>]"
+            "usage": "hf emrtd dump [-h] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--dir <str>]"
         },
         "hf emrtd help": {
             "command": "hf emrtd help",
@@ -2214,7 +2216,10 @@
             "command": "hf emrtd info",
             "description": "Display info about an eMRTD",
             "notes": [
-                "hf emrtd info"
+                "hf emrtd info",
+                "hf emrtd info --dir ../dumps",
+                "hf emrtd info -n 123456789 -d 19890101 -e 20250401",
+                "hf emrtd info -n 123456789 -d 19890101 -e 20250401 -i"
             ],
             "offline": true,
             "options": [
@@ -2223,10 +2228,10 @@
                 "-d, --dateofbirth <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars (passports only)",
-                "--path <dirpath> display info from offline dump stored in dirpath",
+                "--dir <str> display info from offline dump stored in dirpath",
                 "-i, --images show images"
             ],
-            "usage": "hf emrtd info [-hi] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--path <dirpath>]"
+            "usage": "hf emrtd info [-hi] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--dir <str>]"
         },
         "hf emrtd list": {
             "command": "hf emrtd list",
@@ -2916,9 +2921,10 @@
                 "-f, --file <fn> Dictionary file with default iclass keys",
                 "--credit key is assumed to be the credit key",
                 "--elite elite computations applied to key",
-                "--raw no computations applied to key (raw)"
+                "--raw no computations applied to key (raw)",
+                "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass chk [-h] -f <fn> [--credit] [--elite] [--raw]"
+            "usage": "hf iclass chk [-h] -f <fn> [--credit] [--elite] [--raw] [--shallow]"
         },
         "hf iclass configcard": {
             "command": "hf iclass configcard",
@@ -2970,9 +2976,10 @@
                 "--raw raw, the key is interpreted as raw block 3/4",
                 "--nr replay of NR/MAC",
                 "-z, --dense dense dump output style",
-                "--force force unsecure card read"
+                "--force force unsecure card read",
+                "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass dump [-hz] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr] [--force]"
+            "usage": "hf iclass dump [-hz] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr] [--force] [--shallow]"
         },
         "hf iclass eload": {
             "command": "hf iclass eload",
@@ -3008,9 +3015,10 @@
                 "--enckey <hex> 3DES transport key, 16 hex bytes",
                 "--fc <dec> facility code",
                 "--cn <dec> card number",
-                "-w, --wiegand <format> see `wiegand list` for available formats"
+                "-w, --wiegand <format> see `wiegand list` for available formats",
+                "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass encode [-h] [--bin <bin>] --ki <dec> [--credit] [--elite] [--raw] [--enckey <hex>] [--fc <dec>] [--cn <dec>] [-w <format>]"
+            "usage": "hf iclass encode [-h] [--bin <bin>] --ki <dec> [--credit] [--elite] [--raw] [--enckey <hex>] [--fc <dec>] [--cn <dec>] [-w <format>] [--shallow]"
         },
         "hf iclass encrypt": {
             "command": "hf iclass encrypt",
@@ -3077,9 +3085,10 @@
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass info [-h]"
+            "usage": "hf iclass info [-h] [--shallow]"
         },
         "hf iclass list": {
             "command": "hf iclass list",
@@ -3191,9 +3200,10 @@
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key",
                 "--nr replay of NR/MAC",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass rdbl [-hv] [-k <hex>] [--ki <dec>] -b <dec> [--credit] [--elite] [--raw] [--nr]"
+            "usage": "hf iclass rdbl [-hv] [-k <hex>] [--ki <dec>] -b <dec> [--credit] [--elite] [--raw] [--nr] [--shallow]"
         },
         "hf iclass reader": {
             "command": "hf iclass reader",
@@ -3204,9 +3214,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-@ optional - continuous reader mode"
+                "-@ optional - continuous reader mode",
+                "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass reader [-h@]"
+            "usage": "hf iclass reader [-h@] [--shallow]"
         },
         "hf iclass restore": {
             "command": "hf iclass restore",
@@ -3227,9 +3238,10 @@
                 "--credit key is assumed to be the credit key",
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass restore [-hv] -f <fn> [-k <hex>] [--ki <dec>] --first <dec> --last <dec> [--credit] [--elite] [--raw]"
+            "usage": "hf iclass restore [-hv] -f <fn> [-k <hex>] [--ki <dec>] --first <dec> --last <dec> [--credit] [--elite] [--raw] [--shallow]"
         },
         "hf iclass sim": {
             "command": "hf iclass sim",
@@ -3301,9 +3313,10 @@
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key",
                 "--nr replay of NR/MAC",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass wrbl [-hv] [-k <hex>] [--ki <dec>] -b <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr]"
+            "usage": "hf iclass wrbl [-hv] [-k <hex>] [--ki <dec>] -b <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow]"
         },
         "hf jooki clone": {
             "command": "hf jooki clone",
@@ -3391,6 +3404,20 @@
             ],
             "usage": "hf jooki sim [-h] [-b <base64>]"
         },
+        "hf ksx6924 balance": {
+            "command": "hf ksx6924 balance",
+            "description": "Gets the current purse balance",
+            "notes": [
+                "hf ksx6924 balance"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --keep keep field ON for next command",
+                "-a, --apdu Show APDU requests and responses"
+            ],
+            "usage": "hf ksx6924 balance [-hka]"
+        },
         "hf ksx6924 help": {
             "command": "hf ksx6924 help",
             "description": "help This help",
@@ -3398,19 +3425,6 @@
             "offline": true,
             "options": [],
             "usage": ""
-        },
-        "hf ksx6924 select": {
-            "command": "hf ksx6924 select",
-            "description": "Selects KS X 6924 application, and leaves field up",
-            "notes": [
-                "hf ksx6924 select"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-a, --apdu Show APDU requests and responses"
-            ],
-            "usage": "hf ksx6924 select [-ha]"
         },
         "hf ksx6924 info": {
             "command": "hf ksx6924 info",
@@ -3426,23 +3440,9 @@
             ],
             "usage": "hf ksx6924 info [-hka]"
         },
-        "hf ksx6924 balance": {
-            "command": "hf ksx6924 balance",
-            "description": "Gets the current purse balance",
-            "notes": [
-                "hf ksx6924 balance"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-k, --keep keep field ON for next command",
-                "-a, --apdu Show APDU requests and responses"
-            ],
-            "usage": "hf ksx6924 balance [-hka]"
-        },
         "hf ksx6924 init": {
             "command": "hf ksx6924 init",
-            "description": "Perform transaction initialization (mpda)",
+            "description": "Perform transaction initialization with Mpda (Money of Purchase Transaction)",
             "notes": [
                 "hf ksx6924 init 000003e8 -> Mpda"
             ],
@@ -3468,7 +3468,19 @@
             ],
             "usage": "hf ksx6924 prec [-hka] <record 1byte HEX>"
         },
-        
+        "hf ksx6924 select": {
+            "command": "hf ksx6924 select",
+            "description": "Selects KS X 6924 application, and leaves field up",
+            "notes": [
+                "hf ksx6924 select"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses"
+            ],
+            "usage": "hf ksx6924 select [-ha]"
+        },
         "hf legic crc": {
             "command": "hf legic crc",
             "description": "Calculates the legic crc8/crc16 on the given data",
@@ -3971,7 +3983,7 @@
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
-                "--emu from emulator memory"
+                "--emu to emulator memory"
             ],
             "usage": "hf mf csave [-h] [-f <fn>] [--mini] [--1k] [--2k] [--4k] [--emu]"
         },
@@ -4347,6 +4359,27 @@
                 "--end <dec> index of block to end writing (default last block)"
             ],
             "usage": "hf mf gload [-hv] [--mini] [--1k] [--2k] [--4k] [-p <hex>] [-f <fn>] [--emu] [--start <dec>] [--end <dec>]"
+        },
+        "hf mf gsave": {
+            "command": "hf mf gsave",
+            "description": "Save `magic gen4 gtu` card memory into three files (BIN/EML/JSON)or into emulator memory",
+            "notes": [
+                "hf mf gsave",
+                "hf mf gsave --4k",
+                "hf mf gsave -p DEADBEEF -f hf-mf-01020304.json"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--mini MIFARE Classic Mini / S20",
+                "--1k MIFARE Classic 1k / S50 (def)",
+                "--2k MIFARE Classic/Plus 2k",
+                "--4k MIFARE Classic 4k / S70",
+                "-p, --pwd <hex> password 4bytes",
+                "-f, --file <fn> filename of dump",
+                "--emu to emulator memory"
+            ],
+            "usage": "hf mf gsave [-h] [--mini] [--1k] [--2k] [--4k] [-p <hex>] [-f <fn>] [--emu]"
         },
         "hf mf gsetblk": {
             "command": "hf mf gsetblk",
@@ -4771,7 +4804,7 @@
         },
         "hf mf wrbl": {
             "command": "hf mf wrbl",
-            "description": "Write MIFARE Classic block with 16 hex bytes of data Sector 0 / Block 0 - Manufacturer block When writing to block 0 you must use a VALID block 0 data (UID, BCC, SAK, ATQA) Writing an invalid block 0 means rendering your Magic GEN2 card undetectable. Look in the magic_cards_notes.md file for help to resolve it.",
+            "description": "Write MIFARE Classic block with 16 hex bytes of data Sector 0 / Block 0 - Manufacturer block When writing to block 0 you must use a VALID block 0 data (UID, BCC, SAK, ATQA) Writing an invalid block 0 means rendering your Magic GEN2 card undetectable. Look in the magic_cards_notes.md file for help to resolve it. `--force` param is used to override warnings like bad ACL and BLOCK 0 writes. if not specified, it will exit if detected",
             "notes": [
                 "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 000102030405060708090a0b0c0d0e0f"
             ],
@@ -4781,7 +4814,7 @@
                 "--blk <dec> block number",
                 "-a input key type is key A (def)",
                 "-b input key type is key B",
-                "--force enforce block0 writes",
+                "--force override warnings",
                 "-k, --key <hex> key, 6 hex bytes",
                 "-d, --data <hex> bytes to write, 16 hex bytes"
             ],
@@ -6176,7 +6209,7 @@
         },
         "hf mfu esave": {
             "command": "hf mfu esave",
-            "description": "Saves emulator memory to a MIFARE Ultralight/NTAG dump file (bin/eml/json) By default number of pages saved depends on defined tag type. You can overrife this with option --end.",
+            "description": "Saves emulator memory to a MIFARE Ultralight/NTAG dump file (bin/eml/json) By default number of pages saved depends on defined tag type. You can override this with option --end.",
             "notes": [
                 "hf mfu esave",
                 "hf mfu esave --end 255 -> saves whole memory",
@@ -6192,7 +6225,7 @@
         },
         "hf mfu eview": {
             "command": "hf mfu eview",
-            "description": "Displays emulator memory By default number of pages shown depends on defined tag type. You can overrife this with option --end.",
+            "description": "Displays emulator memory By default number of pages shown depends on defined tag type. You can override this with option --end.",
             "notes": [
                 "hf mfu eview",
                 "hf mfu eview --end 255 -> dumps whole memory"
@@ -9350,6 +9383,7 @@
             "command": "lf paradox clone",
             "description": "clone a paradox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
+                "lf paradox clone --fc 96 --cn 40426 -> encode for T55x7 tag with fc and cn",
                 "lf paradox clone --raw 0f55555695596a6a9999a59a -> encode for T55x7 tag",
                 "lf paradox clone --raw 0f55555695596a6a9999a59a --q5 -> encode for Q5/T5555 tag",
                 "lf paradox clone --raw 0f55555695596a6a9999a59a --em -> encode for EM4305/4469"
@@ -9358,10 +9392,12 @@
             "options": [
                 "-h, --help This help",
                 "-r, --raw <hex> raw hex data. 12 bytes max",
+                "--fc <dec> facility code",
+                "--cn <dec> card number",
                 "--q5 optional - specify writing to Q5/T5555 tag",
                 "--em optional - specify writing to EM4305/4469 tag"
             ],
-            "usage": "lf paradox clone [-h] [-r <hex>] [--q5] [--em]"
+            "usage": "lf paradox clone [-h] [-r <hex>] [--fc <dec>] [--cn <dec>] [--q5] [--em]"
         },
         "lf paradox demod": {
             "command": "lf paradox demod",
@@ -10924,6 +10960,114 @@
             ],
             "usage": "hf 14b ndefread [-hv] [-f <fn>]"
         },
+        "piv authsign": {
+            "command": "piv authsign",
+            "description": "Send a nonce and ask the PIV card to sign it",
+            "notes": [
+                "piv sign -sk -> select card, select applet, sign a NULL nonce"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-s, -S, --select Activate field and select applet",
+                "-k, -K, --keep Keep field for next command",
+                "-a, -A, --apdu Show APDU requests and responses",
+                "-t, -T, --tlv TLV decode results",
+                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--aid <hex> Applet ID to select. By default A0000003080000100 will be used",
+                "--nonce <hex> Nonce to sign.",
+                "--slot <dec id> Slot number. Default will be 0x9E (card auth cert).",
+                "--alg <dec> Algorithm to use to sign. Example values: 06=RSA-1024, 07=RSA-2048, 11=ECC-P256 (default), 14=ECC-P384"
+            ],
+            "usage": "piv sign [-hskatw] [--aid <hex>] --nonce <hex> [--slot <dec id>] [--alg <dec>]"
+        },
+        "piv getdata": {
+            "command": "piv getdata",
+            "description": "Get a data container of a given tag",
+            "notes": [
+                "piv getdata -s 5fc102 -> select card, select applet, get card holder unique identifer",
+                "piv getdata -st 5fc102 -> select card, select applet, get card holder unique identifer, show result in TLV"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-s, -S, --select Activate field and select applet",
+                "-k, -K, --keep Keep field for next command",
+                "-a, -A, --apdu Show APDU requests and responses",
+                "-t, -T, --tlv TLV decode results",
+                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--aid <hex> Applet ID to select. By default A0000003080000100 will be used",
+                "<hex> Tag ID to read, between 1 and 3 bytes."
+            ],
+            "usage": "piv getdata [-hskatw] [--aid <hex>] <hex>"
+        },
+        "piv help": {
+            "command": "piv help",
+            "description": "help This help list List ISO7816 history",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "piv list": {
+            "command": "piv list",
+            "description": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "notes": [
+                "piv list --frame -> show frame delay times",
+                "piv list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-1, --buffer use data from trace buffer",
+                "--frame show frame delay times",
+                "-c mark CRC bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into Wireshark using encapsulation type \"ISO 14443\"",
+                "-f, --file <fn> filename of dictionary"
+            ],
+            "usage": "piv list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "piv scan": {
+            "command": "piv scan",
+            "description": "Scan a PIV card for known containers",
+            "notes": [
+                "piv scan -s -> select card, select applet and run scan",
+                "piv scan -st --aid a00000030800001000 -> select card, select applet a00000030800001000, show result of the scan in TLV"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-s, -S, --select Activate field and select applet",
+                "-k, -K, --keep Keep field for next command",
+                "-a, -A, --apdu Show APDU requests and responses",
+                "-t, -T, --tlv TLV decode results",
+                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--aid <hex> Applet ID to select. By default A0000003080000100 will be used"
+            ],
+            "usage": "piv scan [-hskatw] [--aid <hex>]"
+        },
+        "piv select": {
+            "command": "piv select",
+            "description": "Executes select applet command",
+            "notes": [
+                "piv select -s -> select card, select applet",
+                "piv select -st --aid a00000030800001000 -> select card, select applet a00000030800001000, show result in TLV"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-s, -S, --select Activate field and select applet",
+                "-k, -K, --keep Keep field for next command",
+                "-a, -A, --apdu Show APDU requests and responses",
+                "-t, -T, --tlv TLV decode results",
+                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "--aid <hex> Applet ID to select. By default A0000003080000100 will be used"
+            ],
+            "usage": "piv select [-hskatw] [--aid <hex>]"
+        },
         "prefs get barmode": {
             "command": "prefs get barmode",
             "description": "Get preference of HF/LF tune command styled output in the client",
@@ -11616,8 +11760,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 732,
+        "commands_extracted": 739,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-11-20T20:19:15"
+        "extracted_on": "2023-01-15T01:24:39"
     }
 }

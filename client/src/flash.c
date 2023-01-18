@@ -489,7 +489,7 @@ static void flash_suggest_update_bootloader(void) {
     PrintAndLogEx(ERR, "------------- " _CYAN_("Follow these steps") " -------------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(ERR, " 1)   ./pm3-flash-bootrom");
-    PrintAndLogEx(ERR, " 2)   ./pm3-flash-all");
+    PrintAndLogEx(ERR, " 2)   ./pm3-flash-fullimage");
     PrintAndLogEx(ERR, " 3)   ./pm3");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------------------------------------------------");

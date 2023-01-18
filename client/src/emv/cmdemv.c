@@ -17,11 +17,9 @@
 //-----------------------------------------------------------------------------
 
 #include "cmdemv.h"
-
 #include <string.h>
-
-#include "comms.h" // DropField
-#include "cmdsmartcard.h" // smart_select
+#include "comms.h"          // DropField
+#include "cmdsmartcard.h"   // smart_select
 #include "cmdtrace.h"
 #include "emvjson.h"
 #include "test/cryptotest.h"
@@ -35,6 +33,7 @@
 #include "ui.h"
 #include "emv_tags.h"
 #include "fileutils.h"
+#include "protocols.h"      // ISO7816 APDU return codes
 
 static int CmdHelp(const char *Cmd);
 
@@ -1564,7 +1563,7 @@ static int CmdEMVScan(const char *Cmd) {
     PrintAndLogEx(INFO, "PPSE");
     res = EMVSelectPSE(channel, true, true, 2, buf, sizeof(buf), &len, &sw);
 
-    if (!res && sw == 0x9000) {
+    if (!res && sw == ISO7816_OK) {
         if (decodeTLV)
             TLVPrintFromBuffer(buf, len);
 

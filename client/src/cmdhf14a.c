@@ -2242,8 +2242,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         }
                     }
 
-                    if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
-                        if (sw == 0x9000) {
+                    if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
+                        if (sw == ISO7816_OK) {
                             if (verbose) PrintAndLogEx(SUCCESS, "Application ( " _GREEN_("ok") " )");
                         } else {
                             if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
@@ -2380,14 +2380,14 @@ int infoHF14A4Applications(bool verbose) {
         if (res)
             break;
 
-        if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
+        if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
             if (!found) {
                 if (verbose)
                     PrintAndLogEx(INFO, "----------------- " _CYAN_("Short AID search") " -----------------");
             }
             found++;
 
-            if (sw == 0x9000) {
+            if (sw == ISO7816_OK) {
                 if (verbose)
                     PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " ( " _GREEN_("ok") " )", hintAIDList[i].desc);
                 cardFound[i] = true;
@@ -2574,7 +2574,7 @@ retry_ins:
                     // Show response.
                     if (sw_occurrences < error_limit) {
                         logLevel_t log_level = INFO;
-                        if (sw == 0x9000) {
+                        if (sw == ISO7816_OK) {
                             log_level = SUCCESS;
                         }
 
@@ -2674,7 +2674,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         // Try NDEF Type 4 Tag v1.0
         param_gethex_to_eol("00a4040007d2760000850100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
         res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
@@ -2688,7 +2688,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         }
 
         sw = get_sw(response, resplen);
-        if (sw != 0x9000) {
+        if (sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
             DropField();
             return PM3_ESOFT;
@@ -2714,7 +2714,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -2729,7 +2729,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         return res;
     }
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -2763,7 +2763,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -2780,7 +2780,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -2819,7 +2819,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         }
 
         sw = get_sw(response, resplen);
-        if (sw != 0x9000) {
+        if (sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
             DropField();
             free(ndef_file);
@@ -2887,7 +2887,7 @@ int CmdHF14ANdefFormat(const char *Cmd) {
 
     bool have_application = true;
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         have_application = false;
         PrintAndLogEx(INFO, "no NDEF application found");
     } else {

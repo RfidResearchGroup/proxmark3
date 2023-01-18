@@ -1258,7 +1258,6 @@ static bool iclass_send_cmd_with_retries(uint8_t *cmd, size_t cmdsize, uint8_t *
                                          uint16_t timeout, uint32_t *eof_time, bool shallow_mod) {
 
     uint16_t resp_len = 0;
-    int res;
     while (tries-- > 0) {
 
         iclass_send_as_reader(cmd, cmdsize, start_time, eof_time, shallow_mod);
@@ -1267,7 +1266,7 @@ static bool iclass_send_cmd_with_retries(uint8_t *cmd, size_t cmdsize, uint8_t *
             return true;
         }
 
-        res = GetIso15693AnswerFromTag(resp, max_resp_size, timeout, eof_time, false, true, &resp_len);
+        int res = GetIso15693AnswerFromTag(resp, max_resp_size, timeout, eof_time, false, true, &resp_len);
         if (res == PM3_SUCCESS && expected_size == resp_len) {
             return true;
         }

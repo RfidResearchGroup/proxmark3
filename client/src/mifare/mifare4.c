@@ -74,22 +74,37 @@ AccessConditions_t MFAccessConditionsTrailer[] = {
 };
 
 bool mfValidateAccessConditions(const uint8_t *data) {
-    uint8_t ndata1 = (data[0]) & 0x0f;
-    uint8_t ndata2 = (data[0] >> 4) & 0x0f;
-    uint8_t ndata3 = (data[1]) & 0x0f;
-    uint8_t data1  = (data[1] >> 4) & 0x0f;
-    uint8_t data2  = (data[2]) & 0x0f;
-    uint8_t data3  = (data[2] >> 4) & 0x0f;
+    uint8_t nd1 = NIBBLE_LOW(data[0]);
+    uint8_t nd2 = NIBBLE_HIGH(data[0]);
+    uint8_t nd3 = NIBBLE_LOW(data[1]);
+    uint8_t d1  = NIBBLE_HIGH(data[1]);
+    uint8_t d2  = NIBBLE_LOW(data[2]);
+    uint8_t d3  = NIBBLE_HIGH(data[2]);
 
-    return ((ndata1 == (data1 ^ 0xF)) && (ndata2 == (data2 ^ 0xF)) && (ndata3 == (data3 ^ 0xF)));
+    return ((nd1 == (d1 ^ 0xF)) && (nd2 == (d2 ^ 0xF)) && (nd3 == (d3 ^ 0xF)));
+}
+bool mfReadOnlyAccessConditions(uint8_t blockn, const uint8_t *data) {
+
+    uint8_t d1  = NIBBLE_HIGH(data[1]) >> blockn;
+    uint8_t d2  = NIBBLE_LOW(data[2]) >> blockn;
+    uint8_t d3  = NIBBLE_HIGH(data[2]) >> blockn;
+    uint8_t cond = (d1 & 0x01) << 2 | (d2 & 0x01) << 1 | (d3 & 0x01);
+
+    if (blockn == 3) {
+        if ((cond == 0x02) || (cond == 0x06) || (cond == 0x07)) return true;
+    } else {
+        if ((cond == 0x02) || (cond == 0x05)) return true;
+    }
+    return false;
 }
 
-const char *mfGetAccessConditionsDesc(uint8_t blockn, const uint8_t *data) {
-    uint8_t data1 = ((data[1] >> 4) & 0x0f) >> blockn;
-    uint8_t data2 = ((data[2]) & 0x0f) >> blockn;
-    uint8_t data3 = ((data[2] >> 4) & 0x0f) >> blockn;
 
-    uint8_t cond = (data1 & 0x01) << 2 | (data2 & 0x01) << 1 | (data3 & 0x01);
+const char *mfGetAccessConditionsDesc(uint8_t blockn, const uint8_t *data) {
+    uint8_t d1 = NIBBLE_HIGH(data[1]) >> blockn;
+    uint8_t d2 = NIBBLE_LOW(data[2]) >> blockn;
+    uint8_t d3 = NIBBLE_HIGH(data[2]) >> blockn;
+
+    uint8_t cond = (d1 & 0x01) << 2 | (d2 & 0x01) << 1 | (d3 & 0x01);
 
     if (blockn == 3) {
         for (int i = 0; i < ARRAYLEN(MFAccessConditionsTrailer); i++)

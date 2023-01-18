@@ -23,7 +23,6 @@
 #endif
 #include "ui.h"
 #include "commonutil.h"  // ARRAYLEN
-
 #include <stdio.h> // for Mingw readline
 #include <stdarg.h>
 #include <stdlib.h>
@@ -62,10 +61,18 @@ pthread_mutex_t g_print_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void fPrintAndLog(FILE *stream, const char *fmt, ...);
 
+#ifdef _WIN32
+#define MKDIR_CHK _mkdir(path)
+#else
+#define MKDIR_CHK mkdir(path, 0700)
+#endif
+
+
 // needed by flasher, so let's put it here instead of fileutils.c
 int searchHomeFilePath(char **foundpath, const char *subdir, const char *filename, bool create_home) {
-    if (foundpath == NULL)
+    if (foundpath == NULL) {
         return PM3_EINVARG;
+    }
 
     const char *user_path = get_my_user_directory();
     if (user_path == NULL) {
@@ -75,20 +82,21 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
 
     size_t pathlen = strlen(user_path) + strlen(PM3_USER_DIRECTORY) + 1;
     char *path = calloc(pathlen, sizeof(char));
-    if (path == NULL)
+    if (path == NULL) {
         return PM3_EMALLOC;
+    }
 
     strcpy(path, user_path);
     strcat(path, PM3_USER_DIRECTORY);
-
     int result;
+
 #ifdef _WIN32
     struct _stat st;
     // Mingw _stat fails if path ends with /, so let's use a stripped path
-    if (path[strlen(path) - 1] == '/') {
-        path[strlen(path) - 1] = '\0';
+    if (str_endswith(path, PATHSEP)) {
+        memset(path + (strlen(path) - strlen(PATHSEP)), 0x00, strlen(PATHSEP));
         result = _stat(path, &st);
-        path[strlen(path)] = '/';
+        strcat(path, PATHSEP);
     } else {
         result = _stat(path, &st);
     }
@@ -96,19 +104,16 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     struct stat st;
     result = stat(path, &st);
 #endif
+
     if ((result != 0) && create_home) {
 
-#ifdef _WIN32
-        if (_mkdir(path))
-#else
-        if (mkdir(path, 0700))
-#endif
-        {
+        if (MKDIR_CHK) {
             fprintf(stderr, "Could not create user directory %s\n", path);
             free(path);
             return PM3_EFILE;
         }
     }
+
     if (subdir != NULL) {
         pathlen += strlen(subdir);
         char *tmp = realloc(path, pathlen * sizeof(char));
@@ -121,24 +126,20 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
 
 #ifdef _WIN32
         // Mingw _stat fails if path ends with /, so let's use a stripped path
-        if (path[strlen(path) - 1] == '/') {
-            path[strlen(path) - 1] = '\0';
+        if (str_endswith(path, PATHSEP)) {
+            memset(path + (strlen(path) - strlen(PATHSEP)), 0x00, strlen(PATHSEP));
             result = _stat(path, &st);
-            path[strlen(path)] = '/';
+            strcat(path, PATHSEP);
         } else {
             result = _stat(path, &st);
         }
 #else
         result = stat(path, &st);
 #endif
+
         if ((result != 0) && create_home) {
 
-#ifdef _WIN32
-            if (_mkdir(path))
-#else
-            if (mkdir(path, 0700))
-#endif
-            {
+            if (MKDIR_CHK) {
                 fprintf(stderr, "Could not create user directory %s\n", path);
                 free(path);
                 return PM3_EFILE;
@@ -150,15 +151,18 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
         *foundpath = path;
         return PM3_SUCCESS;
     }
+
     pathlen += strlen(filename);
     char *tmp = realloc(path, pathlen * sizeof(char));
     if (tmp == NULL) {
         //free(path);
         return PM3_EMALLOC;
     }
+
     path = tmp;
     strcat(path, filename);
     *foundpath = path;
+
     return PM3_SUCCESS;
 }
 
@@ -527,12 +531,11 @@ void memcpy_filter_emoji(void *dest, const void *src, size_t n, emojiMode_t mode
         uint8_t emojified_token_length = 0;
         char *current_token = NULL;
         uint8_t current_token_length = 0;
-        char current_char;
         char *rdest = (char *)dest;
         char *rsrc = (char *)src;
         uint16_t si = 0;
         for (size_t i = 0; i < n; i++) {
-            current_char = rsrc[i];
+            char current_char = rsrc[i];
 
             if (current_token_length == 0) {
                 // starting a new token.

@@ -404,7 +404,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
     uint8_t data[MAX_GRAPH_TRACE_LEN] = {0};
     size_t datasize = getFromGraphBuf(data);
 
-    uint8_t rawbits[4096];
+    uint8_t rawbits[4096] = {0};
     int rawbit = 0;
     int worst = 0, worstPos = 0;
 

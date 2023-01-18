@@ -404,7 +404,7 @@ static int CmdScriptRun(const char *Cmd) {
         PyImport_AppendInittab("_pm3", PyInit__pm3);
 #endif
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
-	Py_Initialize();
+        Py_Initialize();
 #else
         PyConfig py_conf;
         PyConfig_InitIsolatedConfig(&py_conf);

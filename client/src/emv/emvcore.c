@@ -17,13 +17,11 @@
 //-----------------------------------------------------------------------------
 
 #include "emvcore.h"
-
 #include <string.h>
-
-#include "commonutil.h"  // ARRAYLEN
-#include "comms.h"       // DropField
+#include "commonutil.h"     // ARRAYLEN
+#include "comms.h"          // DropField
 #include "cmdparser.h"
-#include "cmdsmartcard.h" // ExchangeAPDUSC
+#include "cmdsmartcard.h"   // ExchangeAPDUSC
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "cmdhf14b.h"
@@ -31,6 +29,7 @@
 #include "emv_tags.h"
 #include "emvjson.h"
 #include "util_posix.h"
+#include "protocols.h"      // ISO7816 APDU return codes
 
 // Got from here. Thanks!
 // https://eftlab.co.uk/index.php/site-map/knowledge-base/211-emv-aid-rid-pix
@@ -382,8 +381,6 @@ static int EMVCheckAID(Iso7816CommandChannel channel, bool decodeTLV, struct tlv
 int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv) {
     uint8_t data[APDU_RES_LEN] = {0};
     size_t datalen = 0;
-    uint8_t sfidata[0x11][APDU_RES_LEN];
-    size_t sfidatalen[0x11] = {0};
     uint16_t sw = 0;
     int res;
     const char *PSE_or_PPSE = PSENum == 1 ? "PSE" : "PPSE";
@@ -392,7 +389,7 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
     res = EMVSelectPSE(channel, ActivateField, true, PSENum, data, sizeof(data), &datalen, &sw);
 
     if (!res) {
-        if (sw != 0x9000) {
+        if (sw != ISO7816_OK) {
             PrintAndLogEx(FAILED, "Select PSE error. APDU error: %04x.", sw);
             return 1;
         }
@@ -403,6 +400,8 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
             // PSE/PPSE with SFI
             struct tlvdb *tsfi = tlvdb_find_path(t, (tlv_tag_t[]) {0x6f, 0xa5, 0x88, 0x00});
             if (tsfi) {
+                uint8_t sfidata[0x11][APDU_RES_LEN];
+                size_t sfidatalen[0x11] = {0};
                 uint8_t sfin = 0;
                 tlv_get_uint8(tlvdb_get_tlv(tsfi), &sfin);
                 PrintAndLogEx(INFO, "* PPSE get SFI: 0x%02x.", sfin);
@@ -419,7 +418,7 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
                     }
 
                     // error catch!
-                    if (sw != 0x9000) {
+                    if (sw != ISO7816_OK) {
                         sfidatalen[ui] = 0;
                         PrintAndLogEx(FAILED, "PPSE get Error. APDU error: %04x.", sw);
                         break;
@@ -670,10 +669,6 @@ static const unsigned char default_ddol_value[] = {0x9f, 0x37, 0x04};
 static struct tlv default_ddol_tlv = {.tag = 0x9f49, .len = 3, .value = default_ddol_value };
 
 int trDDA(Iso7816CommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
-    uint8_t buf[APDU_RES_LEN] = {0};
-    size_t len = 0;
-    uint16_t sw = 0;
-
     struct emv_pk *pk = get_ca_pk(tlv);
     if (!pk) {
         PrintAndLogEx(ERR, "Error: Key not found, exiting");
@@ -768,6 +763,9 @@ int trDDA(Iso7816CommandChannel channel, bool decodeTLV, struct tlvdb *tlv) {
         tlvdb_free(atc_db);
 
     } else {
+        uint8_t buf[APDU_RES_LEN] = {0};
+        size_t len = 0;
+        uint16_t sw = 0;
         struct tlvdb *dac_db = emv_pki_recover_dac(issuer_pk, tlv, sda_tlv);
         if (dac_db) {
             const struct tlv *dac_tlv = tlvdb_get(dac_db, 0x9f45, NULL);

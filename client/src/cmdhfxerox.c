@@ -15,77 +15,77 @@
 #define TIMEOUT 2000
 
 
-#define c2l(c,l)	(l = ((unsigned long)(*((c)++))), \
-			 l |= ((unsigned long)(*((c)++))) << 8L, \
-			 l |= ((unsigned long)(*((c)++))) << 16L, \
-			 l |= ((unsigned long)(*((c)++))) << 24L)
+#define c2l(c,l)    (l = ((unsigned long)(*((c)++))), \
+             l |= ((unsigned long)(*((c)++))) << 8L, \
+             l |= ((unsigned long)(*((c)++))) << 16L, \
+             l |= ((unsigned long)(*((c)++))) << 24L)
 
 /* NOTE - c is not incremented as per c2l */
-#define c2ln(c,l1,l2,n)	{ \
-			c += n; \
-			l1 = l2 = 0; \
-			switch (n) { \
-			case 8: l2 = ((unsigned long)(*(--(c)))) << 24L; \
-			case 7: l2 |= ((unsigned long)(*(--(c)))) << 16L; \
-			case 6: l2 |= ((unsigned long)(*(--(c)))) << 8L; \
-			case 5: l2 |= ((unsigned long)(*(--(c)))); \
-			case 4: l1 = ((unsigned long)(*(--(c)))) << 24L; \
-			case 3: l1 |= ((unsigned long)(*(--(c)))) << 16L; \
-			case 2: l1 |= ((unsigned long)(*(--(c)))) << 8L; \
-			case 1: l1 |= ((unsigned long)(*(--(c)))); \
-				} \
-			}
+#define c2ln(c,l1,l2,n) { \
+            c += n; \
+            l1 = l2 = 0; \
+            switch (n) { \
+            case 8: l2 = ((unsigned long)(*(--(c)))) << 24L; \
+            case 7: l2 |= ((unsigned long)(*(--(c)))) << 16L; \
+            case 6: l2 |= ((unsigned long)(*(--(c)))) << 8L; \
+            case 5: l2 |= ((unsigned long)(*(--(c)))); \
+            case 4: l1 = ((unsigned long)(*(--(c)))) << 24L; \
+            case 3: l1 |= ((unsigned long)(*(--(c)))) << 16L; \
+            case 2: l1 |= ((unsigned long)(*(--(c)))) << 8L; \
+            case 1: l1 |= ((unsigned long)(*(--(c)))); \
+                } \
+            }
 
-#define l2c(l,c)	(*((c)++) = (uint8_t)(((l)) & 0xff), \
-			 *((c)++) = (uint8_t)(((l) >> 8L) & 0xff), \
-			 *((c)++) = (uint8_t)(((l) >> 16L) & 0xff), \
-			 *((c)++) = (uint8_t)(((l) >> 24L) & 0xff))
+#define l2c(l,c)    (*((c)++) = (uint8_t)(((l)) & 0xff), \
+             *((c)++) = (uint8_t)(((l) >> 8L) & 0xff), \
+             *((c)++) = (uint8_t)(((l) >> 16L) & 0xff), \
+             *((c)++) = (uint8_t)(((l) >> 24L) & 0xff))
 
 /* NOTE - c is not incremented as per l2c */
-#define l2cn(l1,l2,c,n)	{ \
-			c += n; \
-			switch (n) { \
-			case 8: *(--(c)) = (uint8_t)(((l2) >> 24L) & 0xff); \
-			case 7: *(--(c)) = (uint8_t)(((l2) >> 16L) & 0xff); \
-			case 6: *(--(c)) = (uint8_t)(((l2) >> 8L) & 0xff); \
-			case 5: *(--(c)) = (uint8_t)(((l2)) & 0xff); \
-			case 4: *(--(c)) = (uint8_t)(((l1) >> 24L) & 0xff); \
-			case 3: *(--(c)) = (uint8_t)(((l1) >> 16L) & 0xff); \
-			case 2: *(--(c)) = (uint8_t)(((l1) >> 8L) & 0xff); \
-			case 1: *(--(c)) = (uint8_t)(((l1)) & 0xff); \
-				} \
-			}
+#define l2cn(l1,l2,c,n) { \
+            c += n; \
+            switch (n) { \
+            case 8: *(--(c)) = (uint8_t)(((l2) >> 24L) & 0xff); \
+            case 7: *(--(c)) = (uint8_t)(((l2) >> 16L) & 0xff); \
+            case 6: *(--(c)) = (uint8_t)(((l2) >> 8L) & 0xff); \
+            case 5: *(--(c)) = (uint8_t)(((l2)) & 0xff); \
+            case 4: *(--(c)) = (uint8_t)(((l1) >> 24L) & 0xff); \
+            case 3: *(--(c)) = (uint8_t)(((l1) >> 16L) & 0xff); \
+            case 2: *(--(c)) = (uint8_t)(((l1) >> 8L) & 0xff); \
+            case 1: *(--(c)) = (uint8_t)(((l1)) & 0xff); \
+                } \
+            }
 
 /* NOTE - c is not incremented as per n2l */
-#define n2ln(c,l1,l2,n)	{ \
-			c += n; \
-			l1 = l2 = 0; \
-			switch (n) { \
-			case 8: l2 = ((unsigned long)(*(--(c)))); \
-			case 7: l2 |= ((unsigned long)(*(--(c)))) << 8; \
-			case 6: l2 |= ((unsigned long)(*(--(c)))) << 16; \
-			case 5: l2 |= ((unsigned long)(*(--(c)))) << 24; \
-			case 4: l1 = ((unsigned long)(*(--(c)))); \
-			case 3: l1 |= ((unsigned long)(*(--(c)))) << 8; \
-			case 2: l1 |= ((unsigned long)(*(--(c)))) << 16; \
-			case 1: l1 |= ((unsigned long)(*(--(c)))) << 24; \
-				} \
-			}
+#define n2ln(c,l1,l2,n) { \
+            c += n; \
+            l1 = l2 = 0; \
+            switch (n) { \
+            case 8: l2 = ((unsigned long)(*(--(c)))); \
+            case 7: l2 |= ((unsigned long)(*(--(c)))) << 8; \
+            case 6: l2 |= ((unsigned long)(*(--(c)))) << 16; \
+            case 5: l2 |= ((unsigned long)(*(--(c)))) << 24; \
+            case 4: l1 = ((unsigned long)(*(--(c)))); \
+            case 3: l1 |= ((unsigned long)(*(--(c)))) << 8; \
+            case 2: l1 |= ((unsigned long)(*(--(c)))) << 16; \
+            case 1: l1 |= ((unsigned long)(*(--(c)))) << 24; \
+                } \
+            }
 
 /* NOTE - c is not incremented as per l2n */
-#define l2nn(l1,l2,c,n)	{ \
-			c+=n; \
-			switch (n) { \
-			case 8: *(--(c)) = (uint8_t)(((l2)) & 0xff); \
-			case 7: *(--(c)) = (uint8_t)(((l2) >> 8) & 0xff); \
-			case 6: *(--(c)) = (uint8_t)(((l2) >> 16) & 0xff); \
-			case 5: *(--(c)) = (uint8_t)(((l2) >> 24) & 0xff); \
-			case 4: *(--(c)) = (uint8_t)(((l1)) & 0xff); \
-			case 3: *(--(c)) = (uint8_t)(((l1) >> 8) & 0xff); \
-			case 2: *(--(c)) = (uint8_t)(((l1) >> 16) & 0xff); \
-			case 1: *(--(c)) = (uint8_t)(((l1) >> 24) & 0xff); \
-				} \
-			}
+#define l2nn(l1,l2,c,n) { \
+            c+=n; \
+            switch (n) { \
+            case 8: *(--(c)) = (uint8_t)(((l2)) & 0xff); \
+            case 7: *(--(c)) = (uint8_t)(((l2) >> 8) & 0xff); \
+            case 6: *(--(c)) = (uint8_t)(((l2) >> 16) & 0xff); \
+            case 5: *(--(c)) = (uint8_t)(((l2) >> 24) & 0xff); \
+            case 4: *(--(c)) = (uint8_t)(((l1)) & 0xff); \
+            case 3: *(--(c)) = (uint8_t)(((l1) >> 8) & 0xff); \
+            case 2: *(--(c)) = (uint8_t)(((l1) >> 16) & 0xff); \
+            case 1: *(--(c)) = (uint8_t)(((l1) >> 24) & 0xff); \
+                } \
+            }
 
 #define n2l(c,l)        (l = ((unsigned long)(*((c)++))) << 24L, \
                          l |= ((unsigned long)(*((c)++))) << 16L, \
@@ -98,17 +98,17 @@
                          *((c)++) = (uint8_t)(((l)) & 0xff))
 
 #define C_RC2(n) \
-	t = (x0 + (x1 & ~x3) + (x2 & x3) + *(p0++)) & 0xffff; \
-	x0 = (t << 1) | (t >> 15); \
-	t = (x1 + (x2 & ~x0) + (x3 & x0) + *(p0++)) & 0xffff; \
-	x1 = (t << 2) | (t >> 14); \
-	t = (x2 + (x3 & ~x1) + (x0 & x1) + *(p0++)) & 0xffff; \
-	x2 = (t << 3) | (t >> 13); \
-	t = (x3 + (x0 & ~x2) + (x1 & x2) + *(p0++)) & 0xffff; \
-	x3 = (t << 5) | (t >> 11);
+    t = (x0 + (x1 & ~x3) + (x2 & x3) + *(p0++)) & 0xffff; \
+    x0 = (t << 1) | (t >> 15); \
+    t = (x1 + (x2 & ~x0) + (x3 & x0) + *(p0++)) & 0xffff; \
+    x1 = (t << 2) | (t >> 14); \
+    t = (x2 + (x3 & ~x1) + (x0 & x1) + *(p0++)) & 0xffff; \
+    x2 = (t << 3) | (t >> 13); \
+    t = (x3 + (x0 & ~x2) + (x1 & x2) + *(p0++)) & 0xffff; \
+    x3 = (t << 5) | (t >> 11);
 
-#define RC2_ENCRYPT	1
-#define RC2_DECRYPT	0
+#define RC2_ENCRYPT 1
+#define RC2_DECRYPT 0
 
 typedef unsigned int RC2_INT;
 
@@ -202,7 +202,7 @@ void RC2_set_key(RC2_KEY *key, int len, const unsigned char *data, int bits) {
 void RC2_encrypt(unsigned long *d, RC2_KEY *key) {
     int i, n;
     register RC2_INT *p0, *p1;
-    register RC2_INT x0, x1, x2, x3, t;
+    register RC2_INT x0, x1, x2, x3;
     unsigned long l;
 
     l = d[0];
@@ -217,7 +217,7 @@ void RC2_encrypt(unsigned long *d, RC2_KEY *key) {
 
     p0 = p1 = &(key->data[0]);
     for (;;) {
-        t = (x0 + (x1 & ~x3) + (x2 & x3) + * (p0++)) & 0xffff;
+        register RC2_INT t = (x0 + (x1 & ~x3) + (x2 & x3) + * (p0++)) & 0xffff;
         x0 = (t << 1) | (t >> 15);
         t = (x1 + (x2 & ~x0) + (x3 & x0) + * (p0++)) & 0xffff;
         x1 = (t << 2) | (t >> 14);
@@ -244,7 +244,7 @@ void RC2_encrypt(unsigned long *d, RC2_KEY *key) {
 void RC2_decrypt(unsigned long *d, RC2_KEY *key) {
     int i, n;
     register RC2_INT *p0, *p1;
-    register RC2_INT x0, x1, x2, x3, t;
+    register RC2_INT x0, x1, x2, x3;
     unsigned long l;
 
     l = d[0];
@@ -260,7 +260,7 @@ void RC2_decrypt(unsigned long *d, RC2_KEY *key) {
     p0 = &(key->data[63]);
     p1 = &(key->data[0]);
     for (;;) {
-        t = ((x3 << 11) | (x3 >> 5)) & 0xffff;
+        register RC2_INT t = ((x3 << 11) | (x3 >> 5)) & 0xffff;
         x3 = (t - (x0 & ~x2) - (x1 & x2) - * (p0--)) & 0xffff;
         t = ((x2 << 13) | (x2 >> 3)) & 0xffff;
         x2 = (t - (x3 & ~x1) - (x0 & x1) - * (p0--)) & 0xffff;
@@ -533,8 +533,8 @@ static int CmdHFXeroxInfo(const char *Cmd) {
     packet->flags = (ISO14B_APPEND_CRC | ISO14B_RAW);
     packet->rawlen = 11;
     packet->raw[0] = 0x02;
-    packet->raw[1] = 0x20;			// set command: read mem
-    memcpy(packet->raw + 2, card.uid, 8);		// store uid
+    packet->raw[1] = 0x20;          // set command: read mem
+    memcpy(packet->raw + 2, card.uid, 8);       // store uid
 
     for (int retry = 0; (retry < 5 && blocknum < sizeof(info_blocks)); retry++) {
 
@@ -623,7 +623,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
     }
 
     iso14b_card_select_t card;
-    int status = findXerox(&card, false);	// remain RF on
+    int status = findXerox(&card, false);   // remain RF on
     if (status != PM3_SUCCESS) {
         free(packet);
         switch_off_field();
@@ -632,20 +632,20 @@ static int CmdHFXeroxDump(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Reading memory from tag UID " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
 
-    int blocknum = 1;			// block 0 all zeros
+    int blocknum = 1;           // block 0 all zeros
     uint8_t data[256 * 4] = {0};
 
     // set up the read command
     packet->flags = (ISO14B_APPEND_CRC | ISO14B_RAW);
     packet->rawlen = 11;
     packet->raw[0] = 0x02;
-    memcpy(packet->raw + 2, card.uid, 8);		// store uid
+    memcpy(packet->raw + 2, card.uid, 8);       // store uid
 
     PrintAndLogEx(INFO, "." NOLF);
 
     for (int retry = 0; (retry < 5 && blocknum < 0x100); retry++) {
 
-        packet->raw[1]  = (blocknum < 12) ? 0x30 : 0x20;	// set command: read ext mem or read mem
+        packet->raw[1]  = (blocknum < 12) ? 0x30 : 0x20;    // set command: read ext mem or read mem
         packet->raw[10] = blocknum & 0xFF;
 
         PacketResponseNG resp;
@@ -657,7 +657,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
             resp.cmd, resp.length, resp.magic, resp.status, resp.crc, resp.oldarg[0], resp.oldarg[1], resp.oldarg[2],
             resp.data.asBytes[0], resp.data.asBytes[1], resp.data.asBytes[2], resp.ng ? 't' : 'f');
             */
-            if (/*resp.status != 0 ||*/ resp.length < 7) {	// 14b raw command send data_len instead of status
+            if (/*resp.status != 0 ||*/ resp.length < 7) {  // 14b raw command send data_len instead of status
                 PrintAndLogEx(FAILED, "retrying one more time");
                 continue;
             }
@@ -722,8 +722,8 @@ static int CmdHFXeroxDump(const char *Cmd) {
         memcpy(k1, k2, sizeof(k1));
 
         k1[2] = k2[3] ^ data[0x22 * 4 + 0];
-        k1[3] = k2[4] ^ data[0x22 * 4 + 1];	// first_key[7];
-        k1[5] = k2[1] ^ 0x01;		// 01 = crypto method? rfid[23][2]
+        k1[3] = k2[4] ^ data[0x22 * 4 + 1]; // first_key[7];
+        k1[5] = k2[1] ^ 0x01;       // 01 = crypto method? rfid[23][2]
 
         RC2_set_key(&exp_key, 8, k1, 64);
 
@@ -747,7 +747,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
             uint16_t cs, csd;
 
             // calc checksum
-            for (b = 0, cs = 0; b < sizeof(decr) - 2; b += 2)	cs += decr[b] | (decr[b + 1] << 8);
+            for (b = 0, cs = 0; b < sizeof(decr) - 2; b += 2)   cs += decr[b] | (decr[b + 1] << 8);
             cs = ~cs;
             csd = (decr[7] << 8) | decr[6];
 
@@ -772,7 +772,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
     PrintAndLogEx(INFO, "---------+--------------+----------");
     PrintAndLogEx(NORMAL, "");
 
-    if (0 == filename[0]) {	// generate filename from uid
+    if (0 == filename[0]) { // generate filename from uid
         /*
                 PrintAndLogEx(INFO, "Using UID as filename");
 

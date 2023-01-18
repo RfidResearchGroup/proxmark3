@@ -137,6 +137,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_MFCSIM,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_mfcsim.c
 endif
+# WITH_STANDALONE_LF_NEDAP_SIM
+ifneq (,$(findstring WITH_STANDALONE_LF_NEDAP_SIM,$(APP_CFLAGS)))
+    SRC_STANDALONE = lf_nedap_sim.c
+endif
 
 ifneq (,$(findstring WITH_STANDALONE_DANKARMULTI,$(APP_CFLAGS)))
     SRC_STANDALONE = dankarmulti.c

@@ -318,6 +318,18 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 snprintf(exp, size, "AUTH-B(%d)", cmd[1]);
                 break;
             }
+            case MIFARE_MAGIC_GDM_AUTH_KEYA:{
+                if (cmdsize > 3) {
+                    snprintf(exp, size, "MAGIC AUTH-A(%d)", cmd[1]);
+                    MifareAuthState = masNt;
+                }
+                break;
+            }
+            case MIFARE_MAGIC_GDM_AUTH_KEYB: {
+                MifareAuthState = masNt;
+                snprintf(exp, size, "MAGIC AUTH-B(%d)", cmd[1]);
+                break;
+            }
             case MIFARE_MAGICWUPC1:
                 snprintf(exp, size, "MAGIC WUPC1");
                 break;
@@ -942,14 +954,14 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         break;
                     case MFDES_READ_DATA:
                         if (data_size >= 7) {
-                            snprintf(exp, size, "READ DATA (fileId %02x, offset %d, len %d)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                            snprintf(exp, size, "READ DATA (fileId %02x, offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
                         } else {
                             snprintf(exp, size, "READ DATA");
                         }
                         break;
                     case MFDES_WRITE_DATA:
                         if (data_size >= 7) {
-                            snprintf(exp, size, "WRITE DATA (fileId %02x, offset %d, len %d)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                            snprintf(exp, size, "WRITE DATA (fileId %02x, offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
                         } else {
                             snprintf(exp, size, "WRITE DATA");
                         }
@@ -984,14 +996,14 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         break;
                     case MFDES_WRITE_RECORD:
                         if (data_size >= 7) {
-                            snprintf(exp, size, "WRITE RECORD (fileId %02x, offset %d, len %d)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                            snprintf(exp, size, "WRITE RECORD (fileId %02x, offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
                         } else {
                             snprintf(exp, size, "WRITE RECORD");
                         }
                         break;
                     case MFDES_READ_RECORDS:
                         if (data_size >= 7) {
-                            snprintf(exp, size, "READ RECORDS (fileId %02x, offset %d, len %d)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                            snprintf(exp, size, "READ RECORDS (fileId %02x, offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
                         } else {
                             snprintf(exp, size, "READ RECORDS");
                         }
@@ -1086,21 +1098,21 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         break;
                     case MFDES_AUTHENTICATE:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "AUTH NATIVE (keyNo %d)", data[0]);
+                            snprintf(exp, size, "AUTH NATIVE (keyNo %u)", data[0]);
                         } else {
                             snprintf(exp, size, "AUTH NATIVE");
                         }
                         break;  // AUTHENTICATE_NATIVE
                     case MFDES_AUTHENTICATE_ISO:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "AUTH ISO (keyNo %d)", data[0]);
+                            snprintf(exp, size, "AUTH ISO (keyNo %u)", data[0]);
                         } else {
                             snprintf(exp, size, "AUTH ISO");
                         }
                         break;  // AUTHENTICATE_STANDARD
                     case MFDES_AUTHENTICATE_AES:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "AUTH AES (keyNo %d)", data[0]);
+                            snprintf(exp, size, "AUTH AES (keyNo %u)", data[0]);
                         } else {
                             snprintf(exp, size, "AUTH AES");
                         }
@@ -1119,14 +1131,14 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         break;
                     case MFDES_CHANGE_KEY:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "CHANGE KEY (keyNo %d)", data[0]);
+                            snprintf(exp, size, "CHANGE KEY (keyNo %u)", data[0]);
                         } else {
                             snprintf(exp, size, "CHANGE KEY");
                         }
                         break;
                     case MFDES_GET_KEY_VERSION:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "GET KEY VERSION (keyNo %d)", data[0]);
+                            snprintf(exp, size, "GET KEY VERSION (keyNo %u)", data[0]);
                         } else {
                             snprintf(exp, size, "GET KEY VERSION");
                         }

@@ -1,4 +1,4 @@
-FROM fedora:34
+FROM fedora:37
 
 ENV LANG C
 # qt5-qtbase-devel skipped
@@ -7,6 +7,8 @@ RUN dnf install -y passwd sudo git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-non
 RUN yum -y update
 RUN yum -y install cmake python-pip
 RUN python3 -m pip install ansicolors sslcrypto
+
+RUN yum -y install mesa-libOpenCL ocl-icd-devel
 
 # Create rrg user
 RUN useradd -ms /bin/bash rrg
