@@ -1916,21 +1916,29 @@ D144BD193063
 # "the more, the marriott" mifare project
 #
 # mifare classic 1k - graduate hotel
-0D258FE90296
-17193709ADF4
 C49DAE1C6049
 209A2B910545
-752FBB5B7B45
 #
 # mifare classic 1k - westin
-B578F38A5C61
 8C29F8320617
 5697519A8F02
+7D0A1C277C05
+2058580A941F
+C40964215509
+D44CFC178460
 #
 # mifare classic 1k EV1 - marriott
-D01AFEEB890A
 7B4DFC6D6525
 23C9FDD9A366
 3119A70628EB
 30AAD6A711EF
 1330824CD356
+#
+# mifare classic 1k - AC hotels marriott
+8EA8EC3F2320
+#
+# mifare classic 1k - the ritz-carlton
+30FB20D0EFEF
+#
+# mifare classic 1k - unknown
+722538817225
