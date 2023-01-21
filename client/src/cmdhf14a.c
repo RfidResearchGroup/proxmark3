@@ -42,7 +42,13 @@
 #include "desfire.h"             // desfire enums
 #include "mifare/desfirecore.h"  // desfire context
 
-static bool APDUInFramingEnable = true;
+static bool g_apdu_in_framing_enable = true;
+bool Get_apdu_in_framing(void) {
+    return g_apdu_in_framing_enable;
+}
+void Set_apdu_in_framing(bool v) {
+    g_apdu_in_framing_enable = v;
+}
 
 static int CmdHelp(const char *Cmd);
 static int waitCmd(bool i_select, uint32_t timeout, bool verbose);
@@ -1050,7 +1056,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
     int res;
 
     // 3 byte here - 1b framing header, 2b crc16
-    if (APDUInFramingEnable &&
+    if (g_apdu_in_framing_enable &&
             ((gs_frame_len && (datainlen > gs_frame_len - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
 
         int clen = 0;
@@ -1454,29 +1460,34 @@ static int CmdHF14AChaining(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a chaining",
                   "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
-                  "hf 14a chaining disable -> disable chaining\n"
+                  "hf 14a chaining --off   -> disable chaining\n"
                   "hf 14a chaining         -> show chaining enable/disable state\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, NULL,      "<enable/disable or 0/1>", NULL),
+        arg_lit0("1", "on", "enabled chaining"),
+        arg_lit0("0", "off", "disable chaining"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    struct arg_str *str = arg_get_str(ctx, 1);
-    int len = arg_get_str_len(ctx, 1);
+    bool on = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
 
-    if (len && (!strcmp(str->sval[0], "enable") || !strcmp(str->sval[0], "1")))
-        APDUInFramingEnable = true;
+    if ((on + off) > 1) {
+        PrintAndLogEx(INFO, "Select only one option");
+        return PM3_EINVARG;
+    }
 
-    if (len && (!strcmp(str->sval[0], "disable") || !strcmp(str->sval[0], "0")))
-        APDUInFramingEnable = false;
+    if (on)
+        Set_apdu_in_framing(true);
+
+    if (off)
+        Set_apdu_in_framing(false);
 
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", APDUInFramingEnable ? "enabled" : "disabled");
-
+    PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", g_apdu_in_framing_enable ? "enabled" : "disabled");
     return PM3_SUCCESS;
 }
 
