@@ -164,6 +164,30 @@ static int info_hf_tesla(void) {
         }
     }
     Set_apdu_in_framing(false);
+
+    uint8_t aAUTH[90];
+    int aAUTH_n = 0;
+    // vehicle public key ,  16 byte CHALLENGE
+    // 00112233445566778899AABBCCDDEEFF
+    // 0x51 = 81 dec
+//    param_gethex_to_eol("8011000051 046F08AE62526ABB5690643458152AC963CF5D7C113949F3C2453D1DDC6E4385B430523524045A22F5747BF236F1B5F60F0EA32DC2B8276D75ACDE9813EF77C330  00112233445566778899AABBCCDDEEFF", 0, aAUTH, sizeof(aAUTH), &aAUTH_n);
+    param_gethex_to_eol("8011000051046F08AE62526ABB5690643458152AC963CF5D7C113949F3C2453D1DDC6E4385B430523524045A22F5747BF236F1B5F60F0EA32DC2B8276D75ACDE9813EF77C33000112233445566778899AABBCCDDEEFF", 0, aAUTH, sizeof(aAUTH), &aAUTH_n);
+    res = ExchangeAPDU14a(aAUTH, aAUTH_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    uint8_t auth[resplen - 2];
+
+    sw = get_sw(response, resplen);
+    if (sw == ISO7816_OK) {
+        // store CHALLENGE for later
+        memcpy(auth, response, sizeof(auth));
+    }
+
+    PrintAndLogEx(INFO, "CHALL... %s", sprint_hex_inrow(auth, sizeof(auth)));
+
     keep_field_on = false;
     DropField();
 
