@@ -971,6 +971,11 @@ static int CmdHF14AMfDump(const char *Cmd) {
         for (blockNo = 0; blockNo < mfNumBlocksPerSector(sectorNo); blockNo++) {
             bool received = false;
             current_key = MF_KEY_A;
+            uint8_t data_area = (sectorNo < 32) ? blockNo : blockNo / 5;
+            if (rights[sectorNo][data_area] == 0x07) {                                     // no key would work
+                PrintAndLogEx(WARNING, "access rights do not allow reading of sector %2d block %3d, skipping", sectorNo, blockNo);
+                continue;
+            }
             for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
                 if (blockNo == mfNumBlocksPerSector(sectorNo) - 1) { // sector trailer. At least the Access Conditions can always be read with key A.
 
@@ -982,7 +987,6 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
                     received = WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500);
                 } else {                                           // data block. Check if it can be read with key A or key B
-                    uint8_t data_area = (sectorNo < 32) ? blockNo : blockNo / 5;
                     if ((rights[sectorNo][data_area] == 0x03) || (rights[sectorNo][data_area] == 0x05)) { // only key B would work
 
                         payload.blockno = mfFirstBlockOfSector(sectorNo) + blockNo;
@@ -992,10 +996,6 @@ static int CmdHF14AMfDump(const char *Cmd) {
                         clearCommandBuffer();
                         SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
                         received = WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500);
-                    } else if (rights[sectorNo][data_area] == 0x07) {                                     // no key would work
-                        PrintAndLogEx(WARNING, "access rights do not allow reading of sector %2d block %3d", sectorNo, blockNo);
-                        // where do you want to go??  Next sector or block?
-                        break;
                     } else {                                                                              // key A would work
 
                         payload.blockno = mfFirstBlockOfSector(sectorNo) + blockNo;
@@ -1044,11 +1044,9 @@ static int CmdHF14AMfDump(const char *Cmd) {
                     PrintAndLogEx(SUCCESS, "successfully read block %2d of sector %2d.", blockNo, sectorNo);
                 } else {
                     PrintAndLogEx(FAILED, "could not read block %2d of sector %2d", blockNo, sectorNo);
-                    break;
                 }
             } else {
                 PrintAndLogEx(WARNING, "command execute timeout when trying to read block %2d of sector %2d.", blockNo, sectorNo);
-                break;
             }
         }
     }
