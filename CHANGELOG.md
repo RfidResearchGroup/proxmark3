@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf tesla info` - intital information command to read TESLA cards (@iceman1001)
  - Changed `hf emrtd info` - looking for lower case .bin extensions (@iceman1001)
  - Changed `hf emrtd dump` - looking for lower case .bin extensions (@iceman1001)
  - Changed `lf paradox clone` - it now accepts FC/CN (@mwalker33)
