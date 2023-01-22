@@ -296,7 +296,9 @@ void LFSetupFPGAForADC(int divisor, bool reader_field) {
 uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, int16_t trigger_threshold,
                        bool verbose, uint32_t sample_size, uint32_t cancel_after, int32_t samples_to_skip, bool ledcontrol) {
 
-    initSampleBuffer(&sample_size);
+    initSampleBuffer(&sample_size); // sample size in bytes
+    sample_size <<= 3; // sample size in bits
+    sample_size /= bits_per_sample; // sample count
 
     if (g_dbglevel >= DBG_DEBUG) {
         printSamples();
