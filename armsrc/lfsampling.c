@@ -370,8 +370,12 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
     }
 
     // Ensure that DC offset removal and noise check is performed for any device-side processing
-    removeSignalOffset(data.buffer, samples.total_saved);
-    computeSignalProperties(data.buffer, samples.total_saved);
+    if (bits_per_sample == 8)
+    {
+        // these functions only consider bps==8
+        removeSignalOffset(data.buffer, samples.total_saved);
+        computeSignalProperties(data.buffer, samples.total_saved);
+    }
     return data.numbits;
 }
 /**
