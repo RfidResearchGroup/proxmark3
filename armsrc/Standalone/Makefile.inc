@@ -29,6 +29,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_LF_PROXBRUTE,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_proxbrute.c
 endif
+# WITH_STANDALONE_LF_PROX2BRUTE
+ifneq (,$(findstring WITH_STANDALONE_LF_PROX2BRUTE,$(APP_CFLAGS)))
+    SRC_STANDALONE = lf_prox2brute.c
+endif
 # WITH_STANDALONE_LF_HIDBRUTE
 ifneq (,$(findstring WITH_STANDALONE_LF_HIDBRUTE,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_hidbrute.c
