@@ -191,8 +191,6 @@ static int info_hf_tesla(void) {
         memcpy(auth, response, sizeof(auth));
     }
 
-    PrintAndLogEx(INFO, "CHALL... %s", sprint_hex_inrow(auth, sizeof(auth)));
-
     keep_field_on = false;
     DropField();
 
@@ -203,12 +201,23 @@ static int info_hf_tesla(void) {
     for (int i=0; i < 3; i++) {
         PrintAndLogEx(INFO, "%d - %s", i, sprint_hex_inrow(pk[i], 65));
     }
-    PrintAndLogEx(INFO, "Form factor... %s", sprint_hex_inrow(form_factor, sizeof(form_factor)));
-    PrintAndLogEx(INFO, "Version....... %s", sprint_hex_inrow(version, sizeof(version)));
-
-    if ((memcmp(pk[0], pk[1], 65) == 0)) {
-        PrintAndLogEx(INFO, "GaussKey detected");
+    if (form_factor[1] == 1) {
+        PrintAndLogEx(INFO, "Form factor... %s (card)", sprint_hex_inrow(form_factor, sizeof(form_factor)));
+    } else if (form_factor[1] == 2){
+        PrintAndLogEx(INFO, "Form factor... %s (phone app)", sprint_hex_inrow(form_factor, sizeof(form_factor)));
     }
+
+    if (sizeof(version) > 0) {
+        PrintAndLogEx(INFO, "Version....... %s", sprint_hex_inrow(version, sizeof(version)));
+    }
+
+    PrintAndLogEx(INFO, "CHALL......... %s", sprint_hex_inrow(auth, sizeof(auth)));
+
+    PrintAndLogEx(INFO, "Fingerprint");
+    if ((memcmp(pk[0], pk[1], 65) == 0)) {
+        PrintAndLogEx(INFO, "  GaussKey detected");
+    }
+    // 
     return PM3_SUCCESS;
 }
 
