@@ -5,7 +5,7 @@ PLATFORM=PM3RDV4
 #PLATFORM=PM3GENERIC
 # If you want more than one PLATFORM_EXTRAS option, separate them by spaces:
 #PLATFORM_EXTRAS=BTADDON
-#STANDALONE=LF_SAMYRUN
+STANDALONE=HF_BOG
 
 # To accelerate repetitive compilations:
 # Install package "ccache" -> Debian/Ubuntu: /usr/lib/ccache, Fedora/CentOS/RHEL: /usr/lib64/ccache
