@@ -1363,6 +1363,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Mifare simulation, `hf mf sim` (was broken a long time) (@pwpiwi)
  - Major improvements in LF area and data operations. (@marshmellow42, @iceman1001)
  - Issues regarding LF simulation (@pwpiwi)
+ - Issue interpreting NXP "get sys info" command return value for icode tags. (@mjacksn)
 
 ### Added
  - iClass functionality: full simulation of iclass tags, so tags can be simulated with data (not only CSN). Not yet support for write/update, but readers do not seem to enforce update. (@holiman).
