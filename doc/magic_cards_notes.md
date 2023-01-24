@@ -1086,6 +1086,7 @@ CF <passwd> 35 <2b ATQA><1b SAK>                 // Configure ATQA/SAK (swap ATQ
 CF <passwd> 68 <00-02>                           // Configure UID length
 CF <passwd> 69 <00-01>                           // (De)Activate Ultralight mode
 CF <passwd> 6A <00-03>                           // Select Ultralight mode
+CF <passwd> 6B <1b>                              // Set Ultralight and M1 maximum read/write sectors
 CF <passwd> C6                                   // Dump configuration
 CF <passwd> CC                                   // Factory test, returns 6666
 CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
@@ -1304,6 +1305,19 @@ script run hf_mf_ultimatecard -m 02
 ```
 
 Now the card supports the 3DES UL-C authentication.
+### Set Ultralight and M1 maximum read/write sectors
+^[Top](#top) ^^[Gen4](#g4top)
+
+```
+hf 14a raw -s -c -t 1000 CF<passwd>6B<1b blocks>
+```
+Hexadecimal, maximum sector data, default 0xFF, range 0x00-0xFF
+
+Example: set maximum 63 blocks read/write for Mifare Classic 1K
+
+```
+hf 14a raw -s -c -t 1000 CF000000006B3F
+```
 ### Set shadow mode (GTU)
 ^[Top](#top) ^^[Gen4](#g4top)
 
