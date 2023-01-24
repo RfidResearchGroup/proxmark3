@@ -65,25 +65,35 @@ static int info_hf_tesla(void) {
     int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res != PM3_SUCCESS) {
         DropField();
-        return res;
-    }
-
-    if (resplen < 2) {
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    uint16_t sw = get_sw(response, resplen);
-    if (sw != ISO7816_OK) {
-        PrintAndLogEx(ERR, "Selecting TESLA aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        DropField();
         return PM3_ESOFT;
     }
 
     activate_field = false;
+    uint16_t sw = get_sw(response, resplen);
+
+    if ((resplen < 2) || (sw != ISO7816_OK)) {
+
+        param_gethex_to_eol("00a404000af465736c614c6f676963", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
+        res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }
+
+    if ((resplen < 2) || (sw != ISO7816_OK)) {
+        PrintAndLogEx(ERR, "Selecting TESLA aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        // DropField();
+        // return PM3_ESOFT;
+    }
+
+
     keep_field_on = true;
 
+
     // ---------------  ECDH public key file reading ----------------
+    uint8_t pk[3][65] = {{0}};
+
     for (uint8_t i = 0; i < 3; i++) {
 
         uint8_t aSELECT_PK[5] = {0x80, 0x04, i, 0x00, 0x00};
@@ -94,12 +104,7 @@ static int info_hf_tesla(void) {
 
         sw = get_sw(response, resplen);
         if (sw == ISO7816_OK) {
-            // save PK for later    
-            uint8_t pk[65] = {0};
-            memcpy(pk, response, resplen - 2);
-        
-            PrintAndLogEx(INFO, "PUBLIC KEY # %i", i);
-            PrintAndLogEx(INFO, "%s", sprint_hex_inrow(pk, sizeof(pk)));
+            memcpy(pk[i], response, resplen - 2);
         }
     }
 
@@ -186,21 +191,33 @@ static int info_hf_tesla(void) {
         memcpy(auth, response, sizeof(auth));
     }
 
-    PrintAndLogEx(INFO, "CHALL... %s", sprint_hex_inrow(auth, sizeof(auth)));
-
     keep_field_on = false;
     DropField();
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(NORMAL, "");
-//    PrintAndLogEx(INFO, "PUBLIC KEY");
-//    PrintAndLogEx(INFO, "%zu - %s", sizeof(pk), sprint_hex_inrow(pk, sizeof(pk)));
-    PrintAndLogEx(INFO, "Form factor");
-    PrintAndLogEx(INFO, "%zu - %s", sizeof(form_factor), sprint_hex_inrow(form_factor, sizeof(form_factor)));
-    PrintAndLogEx(INFO, "VERSION");
-    PrintAndLogEx(INFO, "%zu - %s", sizeof(version), sprint_hex_inrow(version, sizeof(version)));
+    PrintAndLogEx(INFO, "PUBLIC KEY");
+    for (int i=0; i < 3; i++) {
+        PrintAndLogEx(INFO, "%d - %s", i, sprint_hex_inrow(pk[i], 65));
+    }
+    if (form_factor[1] == 1) {
+        PrintAndLogEx(INFO, "Form factor... %s (card)", sprint_hex_inrow(form_factor, sizeof(form_factor)));
+    } else if (form_factor[1] == 2){
+        PrintAndLogEx(INFO, "Form factor... %s (phone app)", sprint_hex_inrow(form_factor, sizeof(form_factor)));
+    }
 
+    if (sizeof(version) > 0) {
+        PrintAndLogEx(INFO, "Version....... %s", sprint_hex_inrow(version, sizeof(version)));
+    }
+
+    PrintAndLogEx(INFO, "CHALL......... %s", sprint_hex_inrow(auth, sizeof(auth)));
+
+    PrintAndLogEx(INFO, "Fingerprint");
+    if ((memcmp(pk[0], pk[1], 65) == 0)) {
+        PrintAndLogEx(INFO, "  GaussKey detected");
+    }
+    // 
     return PM3_SUCCESS;
 }
 
