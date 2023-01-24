@@ -453,6 +453,12 @@ static void SendCapabilities(void) {
         capabilities.baudrate = g_usart_baudrate;
 #endif
 
+#ifdef RDV4
+    capabilities.is_rdv4 = true;
+#else 
+    capabilities.is_rdv4 = false;
+#endif
+
 #ifdef WITH_FLASH
     capabilities.compiled_with_flash = true;
     capabilities.hw_available_flash = FlashInit();
