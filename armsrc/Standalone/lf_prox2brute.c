@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright (C) Brad Antoniewicz 2011
+// Copyright (C) Yann Gascuel 2023
 // Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
 // This program is free software: you can redistribute it and/or modify
