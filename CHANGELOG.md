@@ -1367,3 +1367,5 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ### Added
  - iClass functionality: full simulation of iclass tags, so tags can be simulated with data (not only CSN). Not yet support for write/update, but readers do not seem to enforce update. (@holiman).
  - iClass decryption. Proxmark can now decrypt data on an iclass tag, but requires you to have the HID decryption key locally on your computer, as this is not bundled with the sourcecode.
+ - `hf 15 info` can detect NTAG 5 tags
+ - `hf 15 info` include an EAS status check on more of the icode tags which support EAS (SLI, SLIX, SLIX-L, and SLIX-S)
