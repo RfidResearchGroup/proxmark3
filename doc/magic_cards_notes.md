@@ -1091,6 +1091,7 @@ CF <passwd> C6                                   // Dump configuration
 CF <passwd> CC                                   // Factory test, returns 6666
 CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
 CF <passwd> CE <1b block number>                 // Backdoor read 16b block
+CF <passwd> CF <1b param>                        // Unknown
 CF <passwd> F0 <30b configuration data>          // Configure all params in one cmd
 CF <passwd> F1 <30b configuration data>          // Configure all params in one cmd and fuse the configuration permanently
 CF <passwd> FE <4b new_password>                 // change password
@@ -1379,6 +1380,20 @@ Example: write block0 with factory data, default pwd
 hf 14a raw -s -c -t 1000 CF00000000CD00112233441C000011778185BA18000000
 ```
 
+### Unknown command
+^[Top](#top) ^^[Gen4](#g4top)
+
+This command modifies one byte in configuration dump, but purpose one is unknown.
+
+```
+hf 14a raw -s -c -t 1000 CF<passwd>CF<1b param>
+```
+ * `<param>`
+   * `??`: ???
+
+Example:
+hf 14a raw -s -c -t 1000 CF00000000CF02
+
 ### Change backdoor password
 ^[Top](#top) ^^[Gen4](#g4top)
 
@@ -1405,8 +1420,10 @@ hf 14a raw -s -c -t 1000 CF<passwd>C6
 ```
 Default configuration:
 ```
-00000000000002000978009102DABC191010111213141516040008004F6B
-                                                        ^^^^ ??
+00000000000002000978009102DABC191010111213141516040008006B024F6B
+                                                            ^^^^ ??
+                                                          ^^ cf cmd cf: ?? this byte set by cmd cf<pwd>cf<param>, factory value 0x02
+                                                        ^^ cf cmd 6b: maximum read/write sectors, factory value 0x6b
                                                       ^^ cf cmd 6a: UL mode
                                                 ^^^^^^ cf cmd 35: ATQA/SAK
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cf cmd 34: ATS length & content
