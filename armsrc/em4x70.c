@@ -21,6 +21,7 @@
 #include "dbprint.h"
 #include "lfadc.h"
 #include "commonutil.h"
+#include "optimized_cipherutils.h"
 #include "em4x70.h"
 #include "appmain.h" // tear
 
@@ -85,7 +86,7 @@ static int em4x70_receive(uint8_t *bits, size_t length);
 static bool find_listen_window(bool command);
 
 static void init_tag(void) {
-    memset(tag.data, 0x00, ARRAYLEN(tag.data));
+    memset(tag.data, 0x00, sizeof(tag.data));
 }
 
 static void em4x70_setup_read(void) {
@@ -298,14 +299,14 @@ static bool check_ack(void) {
     // returns true if signal structue corresponds to ACK, anything else is
     // counted as NAK (-> false)
     // ACK  64 + 64
-    // NACK 64 + 48
+    // NAK 64 + 48
     if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD) &&
             check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
         // ACK
         return true;
     }
 
-    // Othewise it was a NACK or Listen Window
+    // Otherwise it was a NAK or Listen Window
     return false;
 }
 
@@ -339,11 +340,85 @@ static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *respon
         uint8_t grnd[EM4X70_MAX_RECEIVE_LENGTH] = {0};
         int num = em4x70_receive(grnd, 20);
         if (num < 20) {
-            Dbprintf("Auth failed");
+            if (g_dbglevel >= DBG_EXTENDED) Dbprintf("Auth failed");
             return PM3_ESOFT;
         }
         bits2bytes(grnd, 24, response);
         return PM3_SUCCESS;
+    }
+
+    return PM3_ESOFT;
+}
+
+static int set_byte(uint8_t *target, int value) {
+    int c = value > 0xFF;
+    *target = reflect8(value);
+    return c;
+}
+
+static int bruteforce(const uint8_t address, const uint8_t *rnd, const uint8_t *frnd, uint16_t start_key, uint8_t *response) {
+
+    uint8_t auth_resp[3] = {0};
+    uint8_t rev_rnd[7];
+    uint8_t temp_rnd[7];
+
+    reverse_arraycopy((uint8_t *)rnd, rev_rnd, sizeof(rnd));
+    memcpy(temp_rnd, rnd, sizeof(temp_rnd));
+
+    for (int k = start_key; k <= 0xFFFF; ++k) {
+        int c = 0;
+        
+        WDT_HIT();
+
+        uint16_t rev_k = reflect16(k);
+        switch (address) {
+            case 9:
+                c = set_byte(&temp_rnd[0], rev_rnd[0] + (rev_k & 0xFF));
+                c = set_byte(&temp_rnd[1], rev_rnd[1] + c + ((rev_k >> 8) & 0xFF));
+                c = set_byte(&temp_rnd[2], rev_rnd[2] + c);
+                c = set_byte(&temp_rnd[3], rev_rnd[3] + c);
+                c = set_byte(&temp_rnd[4], rev_rnd[4] + c);
+                c = set_byte(&temp_rnd[5], rev_rnd[5] + c);
+                set_byte(&temp_rnd[6], rev_rnd[6] + c);
+                break;
+
+            case 8:
+                c = set_byte(&temp_rnd[2], rev_rnd[2] + (rev_k & 0xFF));
+                c = set_byte(&temp_rnd[3], rev_rnd[3] + c + ((rev_k >> 8) & 0xFF));
+                c = set_byte(&temp_rnd[4], rev_rnd[4] + c);
+                c = set_byte(&temp_rnd[5], rev_rnd[5] + c);
+                set_byte(&temp_rnd[6], rev_rnd[6] + c);
+                break;
+
+            case 7:
+                c = set_byte(&temp_rnd[4], rev_rnd[4] + (rev_k & 0xFF));
+                c = set_byte(&temp_rnd[5], rev_rnd[5] + c + ((rev_k >> 8) & 0xFF));
+                set_byte(&temp_rnd[6], rev_rnd[6] + c);
+                break;
+
+            default:
+                Dbprintf("Bad block number given: %d", address);
+                return PM3_ESOFT;
+        }
+
+        // Report progress every 256 attempts
+        if ((k % 0x100) == 0) {
+            Dbprintf("Trying: %04X", k);
+        }
+        
+        // Due to performance reason, we only try it once. Therefore you need a very stable RFID communcation.
+        if (authenticate(temp_rnd, frnd, auth_resp) == PM3_SUCCESS) {
+            if (g_dbglevel >= DBG_INFO)
+                Dbprintf("Authentication success with rnd: %02X%02X%02X%02X%02X%02X%02X", temp_rnd[0], temp_rnd[1], temp_rnd[2], temp_rnd[3], temp_rnd[4], temp_rnd[5], temp_rnd[6]);
+            response[0] = (k >> 8) & 0xFF;
+            response[1] = k & 0xFF;
+            return PM3_SUCCESS;
+        }
+
+        if (BUTTON_PRESS() || data_available()) {
+            Dbprintf("EM4x70 Bruteforce Interrupted");
+            return PM3_EOPABORTED;
+        }
     }
 
     return PM3_ESOFT;
@@ -576,7 +651,7 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
     }
 
     if (!foundheader) {
-        Dbprintf("Failed to find read header");
+        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("Failed to find read header");
         return 0;
     }
 
@@ -736,6 +811,27 @@ void em4x70_auth(em4x70_data_t *etd, bool ledcontrol) {
     StopTicks();
     lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_AUTH, status, response, sizeof(response));
+}
+
+void em4x70_brute(em4x70_data_t *etd, bool ledcontrol) {
+    uint8_t status = 0;
+    uint8_t response[2] = {0};
+
+    command_parity = etd->parity;
+
+    init_tag();
+    em4x70_setup_read();
+
+    // Find the Tag
+    if (get_signalproperties() && find_em4x70_tag()) {
+
+        // Bruteforce partial key
+        status = bruteforce(etd->address, etd->rnd, etd->frnd, etd->start_key, response) == PM3_SUCCESS;
+    }
+
+    StopTicks();
+    lf_finalize(ledcontrol);
+    reply_ng(CMD_LF_EM4X70_BRUTE, status, response, sizeof(response));
 }
 
 void em4x70_write_pin(em4x70_data_t *etd, bool ledcontrol) {
