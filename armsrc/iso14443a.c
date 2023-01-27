@@ -1229,6 +1229,17 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
 
     AddCrc14A(rPPS, sizeof(rPPS) - 2);
 
+    if (tagType == 7) {
+        uint8_t pwd[4];
+        uint8_t gen_pwd[4];
+        uint16_t start = (*pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH;
+        emlGetMemBt(pwd, start, sizeof(pwd));
+        Uint4byteToMemBe(gen_pwd, ul_ev1_pwdgenB(data));
+        if (memcmp(pwd, gen_pwd, sizeof(pwd)) == 0) {
+            rPACK[0] = 0x80;
+            rPACK[1] = 0x80;
+        }
+    }
     AddCrc14A(rPACK, sizeof(rPACK) - 2);
 
     static tag_response_info_t responses_init[] = {

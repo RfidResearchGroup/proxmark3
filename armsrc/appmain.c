@@ -345,7 +345,7 @@ static void print_debug_level(void) {
     char dbglvlstr[20] = {0};
     switch (g_dbglevel) {
         case DBG_NONE:
-            sprintf(dbglvlstr, "none");
+            sprintf(dbglvlstr, "off");
             break;
         case DBG_ERROR:
             sprintf(dbglvlstr, "error");

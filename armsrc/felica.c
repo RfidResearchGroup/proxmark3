@@ -298,7 +298,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
 // 8-byte IDm, number of blocks, blocks numbers
 // number of blocks limited to 4 for FelicaLite(S)
 static void BuildFliteRdblk(const uint8_t *idm, uint8_t blocknum, const uint16_t *blocks) {
-    if (blocknum > 4 || blocknum <= 0)
+    if (blocknum > 4 || blocknum == 0)
         Dbprintf("Invalid number of blocks, %d != 4", blocknum);
 
     uint8_t c = 0, i = 0;

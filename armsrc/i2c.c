@@ -749,7 +749,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
         }
     }
 
-    card_ptr->atr_len = (uint8_t) (len & 0xff);
+    card_ptr->atr_len = (uint8_t)(len & 0xff);
     if (verbose) {
         LogTrace(card_ptr->atr, card_ptr->atr_len, 0, 0, NULL, false);
     }

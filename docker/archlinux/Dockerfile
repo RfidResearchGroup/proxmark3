@@ -10,6 +10,9 @@ RUN pacman -S --noconfirm sudo git base-devel cmake libusb readline bzip2 arm-no
 RUN pacman -S --noconfirm python-pip
 RUN python3 -m pip install ansicolors sslcrypto
 
+# OpenCL for hitag2crack
+RUN pacman -S --noconfirm ocl-icd
+
 # Create rrg user
 RUN useradd -ms /bin/bash rrg
 RUN passwd -d rrg

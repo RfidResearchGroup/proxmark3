@@ -48,7 +48,7 @@ INSTALLFW = $(OBJDIR)/bootrom.elf
 OBJS = $(OBJDIR)/bootrom.s19
 
 # version_pm3.c should be remade on every compilation
-version_pm3.c: default_version_pm3.c
+version_pm3.c: default_version_pm3.c .FORCE
 	$(info [=] GEN $@)
 	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $< $@
 
@@ -82,7 +82,7 @@ uninstall:
 	$(info [@] Uninstalling bootrom from $(DESTDIR)$(PREFIX)...)
 	$(Q)$(INSTALLSUDO) $(RM) $(foreach fw,$(INSTALLFW),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(notdir $(fw)))
 
-.PHONY: all clean help install showinfo
+.PHONY: all clean help install showinfo .FORCE
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:

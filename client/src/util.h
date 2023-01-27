@@ -129,6 +129,9 @@ uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
 int num_CPUs(void); // number of logical CPUs
 
 void str_lower(char *s); // converts string to lower case
+void str_upper(char *s); // converts string to UPPER case
+void strn_upper(char *s, size_t n);
+
 bool str_startswith(const char *s,  const char *pre);  // check for prefix in string
 bool str_endswith(const char *s,  const char *suffix);    // check for suffix in string
 void clean_ascii(unsigned char *buf, size_t len);
@@ -145,5 +148,12 @@ uint64_t bitcount64(uint64_t a);
 uint32_t leadingzeros32(uint32_t a);
 uint64_t leadingzeros64(uint64_t a);
 
-int byte_strstr(uint8_t *src, size_t srclen, uint8_t *pattern, size_t plen);
+int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen);
+
+struct smartbuf {
+    char *ptr;
+    size_t size;
+    size_t idx;
+} typedef smartbuf;
+void sb_append_char(smartbuf *sb, unsigned char c);
 #endif

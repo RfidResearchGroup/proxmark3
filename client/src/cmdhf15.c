@@ -67,7 +67,7 @@ typedef struct {
 // structure and database for uid -> tagtype lookups
 typedef struct {
     uint64_t uid;
-    int mask; // how many MSB bits used
+    uint64_t mask; // how many MSB bits used, or mask itself if larger than 64
     const char *desc;
 } productName_t;
 
@@ -90,17 +90,23 @@ static const productName_t uidmapping[] = {
     // E0 04 xx
     //   04 = Manufacturer code (Philips/NXP)
     //   XX = IC id (Chip ID Family)
-    //I-Code SLI SL2 ICS20 [IC id = 01]
-    //I-Code SLI-S         [IC id = 02]
-    //I-Code SLI-L         [IC id = 03]
-    //I-Code SLIX          [IC id = 01 + bit36 set to 1 (starting from bit0 - different from normal SLI)]
+    //I-Code SLI SL2 ICS20 [IC id = 01 + bit35 set to 0 + bit36 set to 0]
+    //I-Code SLIX          [IC id = 01 + bit35 set to 0 + bit36 set to 1]
     //I-Code SLIX2         [IC id = 01 + bit35 set to 1 + bit36 set to 0]
+    //I-Code SLI-S         [IC id = 02 + bit36 set to 0]
     //I-Code SLIX-S        [IC id = 02 + bit36 set to 1]
+    //I-Code SLI-L         [IC id = 03 + bit36 set to 0]
     //I-Code SLIX-L        [IC id = 03 + bit36 set to 1]
     { 0xE004000000000000LL, 16, "NXP Semiconductors Germany (Philips)" },
     { 0xE004010000000000LL, 24, "NXP(Philips); IC SL2 ICS20/ICS21(SLI) ICS2002/ICS2102(SLIX) ICS2602(SLIX2)" },
-    { 0xE004020000000000LL, 24, "NXP(Philips); IC SL2 ICS53/ICS54(SLI-S) ICS5302/ICS5402(SLIX-S)" },
-    { 0xE004030000000000LL, 24, "NXP(Philips); IC SL2 ICS50/ICS51(SLI-L) ICS5002/ICS5102(SLIX-L)" },
+    { 0xE004011800000000LL, 0xFFFFFF1800000000LL, "NXP(Philips); IC NTP53x2/NTP5210/NTA5332(NTAG 5)" },
+    { 0xE004010000000000LL, 0xFFFFFF1800000000LL, "NXP(Philips); IC SL2 ICS20/ICS21(SLI)" },
+    { 0xE004011000000000LL, 0xFFFFFF1800000000LL, "NXP(Philips); IC SL2 ICS2002/ICS2102(SLIX)" },
+    { 0xE004010800000000LL, 0xFFFFFF1800000000LL, "NXP(Philips); IC SL2 ICS2602(SLIX2)" },
+    { 0xE004020000000000LL, 0xFFFFFF1000000000LL, "NXP(Philips); IC SL2 ICS53/ICS54(SLI-S)" },
+    { 0xE004021000000000LL, 0xFFFFFF1000000000LL, "NXP(Philips); ICS5302/ICS5402(SLIX-S)" },
+    { 0xE004030000000000LL, 0xFFFFFF1000000000LL, "NXP(Philips); IC SL2 ICS50/ICS51(SLI-L)" },
+    { 0xE004031000000000LL, 0xFFFFFF1000000000LL, "NXP(Philips); ICS5002/ICS5102(SLIX-L)" },
 
     // E0 05 XX .. .. ..
     //   05 = Manufacturer code (Infineon)
@@ -364,7 +370,11 @@ static const char *getTagInfo_15(uint8_t *uid) {
     int i = 0, best = -1;
     memcpy(&myuid, uid, sizeof(uint64_t));
     while (uidmapping[i].mask > 0) {
-        mask = (~0ULL) << (64 - uidmapping[i].mask);
+        if (uidmapping[i].mask > 64) {
+            mask = uidmapping[i].mask;
+        } else {
+            mask = (~0ULL) << (64 - uidmapping[i].mask);
+        }
         if ((myuid & mask) == uidmapping[i].uid) {
             if (best == -1) {
                 best = i;
@@ -642,6 +652,94 @@ static int CmdHF15Samples(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int NxpTestEAS(uint8_t *uid) {
+    uint8_t fast = 1;
+    uint8_t reply = 1;
+    PacketResponseNG resp;
+    uint16_t reqlen = 0;
+    uint8_t req[PM3_CMD_DATA_SIZE] = {0};
+
+    req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
+    req[reqlen++] = ISO15693_EAS_ALARM;
+    req[reqlen++] = 0x04; // IC manufacturer code
+    memcpy(req + 3, uid, 8); // add UID
+    reqlen += 8;
+
+    AddCrc15(req,  reqlen);
+    reqlen += 2;
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
+
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "iso15693 timeout");
+    } else {
+        PrintAndLogEx(NORMAL, "");
+
+
+        if (resp.length < 2) {
+            PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is not active");
+        } else {
+            uint8_t *recv = resp.data.asBytes;
+
+            if (!(recv[0] & ISO15_RES_ERROR)) {
+                PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is active.");
+                PrintAndLogEx(INFO, "  EAS sequence: %s", sprint_hex(recv + 1, 32));
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int NxpCheckSig(uint8_t *uid) {
+    uint8_t fast = 1;
+    uint8_t reply = 1;
+    PacketResponseNG resp;
+    uint16_t reqlen = 0;
+    uint8_t req[PM3_CMD_DATA_SIZE] = {0};
+
+    // Check if we can also read the signature
+    req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
+    req[reqlen++] = ISO15693_READ_SIGNATURE;
+    req[reqlen++] = 0x04; // IC manufacturer code
+    memcpy(req + 3, uid, 8); // add UID
+    reqlen += 8;
+
+    AddCrc15(req,  reqlen);
+    reqlen += 2;
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
+
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "iso15693 timeout");
+        DropField();
+        return PM3_ETIMEOUT;
+    }
+
+    DropField();
+
+    if (resp.length < 2) {
+        PrintAndLogEx(WARNING, "iso15693 card doesn't answer to READ SIGNATURE command");
+        return PM3_EWRONGANSWER;
+    }
+
+    uint8_t *recv = resp.data.asBytes;
+
+    if ((recv[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
+        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
+        return PM3_EWRONGANSWER;
+    }
+
+    uint8_t signature[32] = {0x00};
+    memcpy(signature, recv + 1, 32);
+
+    nxp_15693_print_signature(uid, signature);
+
+    return PM3_SUCCESS;
+}
+
 // Get NXP system information from SLIX2 tag/VICC
 static int NxpSysInfo(uint8_t *uid) {
 
@@ -723,77 +821,11 @@ static int NxpSysInfo(uint8_t *uid) {
     PrintAndLogEx(INFO, "      * Additional 32 bits feature flags are%s transmitted", ((recv[5] & 0x80) ? "" : " not"));
 
     if (support_easmode) {
-        reqlen = 0;
-        req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-        req[reqlen++] = ISO15693_EAS_ALARM;
-        req[reqlen++] = 0x04; // IC manufacturer code
-        memcpy(req + 3, uid, 8); // add UID
-        reqlen += 8;
-
-        AddCrc15(req,  reqlen);
-        reqlen += 2;
-
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
-
-        if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-            PrintAndLogEx(WARNING, "iso15693 timeout");
-        } else {
-            PrintAndLogEx(NORMAL, "");
-
-
-            if (resp.length < 2) {
-                PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is not active");
-            } else {
-                recv = resp.data.asBytes;
-
-                if (!(recv[0] & ISO15_RES_ERROR)) {
-                    PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is active.");
-                    PrintAndLogEx(INFO, "  EAS sequence: %s", sprint_hex(recv + 1, 32));
-                }
-            }
-        }
+        NxpTestEAS(uid);
     }
 
     if (support_signature) {
-        // Check if we can also read the signature
-        reqlen = 0;
-        req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-        req[reqlen++] = ISO15693_READ_SIGNATURE;
-        req[reqlen++] = 0x04; // IC manufacturer code
-        memcpy(req + 3, uid, 8); // add UID
-        reqlen += 8;
-
-        AddCrc15(req,  reqlen);
-        reqlen += 2;
-
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
-
-        if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-            PrintAndLogEx(WARNING, "iso15693 timeout");
-            DropField();
-            return PM3_ETIMEOUT;
-        }
-
-        DropField();
-
-        if (resp.length < 2) {
-            PrintAndLogEx(WARNING, "iso15693 card doesn't answer to READ SIGNATURE command");
-            return PM3_EWRONGANSWER;
-        }
-
-        recv = resp.data.asBytes;
-
-        if ((recv[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
-            PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-            return PM3_EWRONGANSWER;
-        }
-
-        uint8_t signature[32] = {0x00};
-        memcpy(signature, recv + 1, 32);
-
-        nxp_15693_print_signature(uid, signature);
+        NxpCheckSig(uid);
     }
 
     return PM3_SUCCESS;
@@ -935,6 +967,12 @@ static int CmdHF15Info(const char *Cmd) {
     if (data[8] == 0x04 && data[7] == 0x01 && nxp_version == 0x08) {
         PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
         return NxpSysInfo(uid);
+    } else if (data[8] == 0x04 && data[7] == 0x01 && nxp_version == 0x18) { //If it is an NTAG 5
+        PrintAndLogEx(DEBUG, "NTAG 5 Detected, getting NXP System Info");
+        return NxpSysInfo(uid);
+    } else if (data[8] == 0x04 && (data[7] == 0x01 || data[7] == 0x02 || data[7] == 0x03)) { //If SLI, SLIX, SLIX-l, or SLIX-S check EAS status
+        PrintAndLogEx(DEBUG, "SLI, SLIX, SLIX-L, or SLIX-S Detected checking EAS status");
+        return NxpTestEAS(uid);
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -1375,11 +1413,11 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     // arg0 (datalen,  cmd len?  .arg0 == crc?)
     // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
     // arg2 (recv == 1 == expect a response)
-    uint8_t read_respone = 1;
+    uint8_t read_response = 1;
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_respone, req, reqlen);
+    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_response, req, reqlen);
 
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
         PrintAndLogEx(ERR, "iso15693 timeout");

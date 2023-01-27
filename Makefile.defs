@@ -29,8 +29,8 @@ GZIP = gzip
 MKDIR = mkdir -p
 RM = rm -f
 RMDIR = rm -rf
-# rmdir only if dir is empty, tolerate failure
-RMDIR_SOFT = -rmdir
+# rmdir only if dir is empty, you must add "-" when using it to tolerate failure
+RMDIR_SOFT = rmdir
 MV = mv
 TOUCH = touch
 FALSE = false

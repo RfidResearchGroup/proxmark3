@@ -53,4 +53,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool silentMode);
 
 int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card);
+
+bool Get_apdu_in_framing(void);
+void Set_apdu_in_framing(bool v);
 #endif

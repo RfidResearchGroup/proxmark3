@@ -857,12 +857,12 @@ static int CmdLFHitag2Dump(const char *Cmd) {
         memcpy(htd.pwd.password, key, sizeof(htd.pwd.password));
         PrintAndLogEx(INFO, "Authenticating in password mode");
     }
-    
+
     uint16_t cmd = CMD_LF_HITAG_READER;
     clearCommandBuffer();
     SendCommandMIX(cmd, htf, 0, 0, &htd, sizeof(htd));
     PacketResponseNG resp;
-  
+
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;

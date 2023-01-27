@@ -141,6 +141,8 @@ int fnf(uint64_t s) {
 
 // builds the lfsr for the prng (quick calcs for hitag2_nstep())
 void buildlfsr(Hitag_State *hstate) {
+    if (hstate == NULL)
+        return;
     uint64_t state = hstate->shiftreg;
     uint64_t temp = state ^ (state >> 1);
     hstate->lfsr = state ^ (state >>  6) ^ (state >> 16)

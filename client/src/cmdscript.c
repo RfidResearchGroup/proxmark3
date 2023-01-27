@@ -147,7 +147,7 @@ static int split(char *str, char **arr) {
     return word_cnt;
 }
 
-static void set_python_path(char *path) {
+static void set_python_path(const char *path) {
     PyObject *syspath = PySys_GetObject("path");
     if (syspath == 0) {
         PrintAndLogEx(WARNING, "Python failed to getobject");
@@ -172,7 +172,7 @@ static void set_python_paths(void) {
         char scripts_path[strlen(exec_path) + strlen(PYTHON_SCRIPTS_SUBDIR) + strlen(PYTHON_LIBRARIES_WILDCARD) + 1];
         strcpy(scripts_path, exec_path);
         strcat(scripts_path, PYTHON_SCRIPTS_SUBDIR);
-//        strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
+        // strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
         set_python_path(scripts_path);
     }
 
@@ -183,7 +183,7 @@ static void set_python_paths(void) {
         strcpy(scripts_path, user_path);
         strcat(scripts_path, PM3_USER_DIRECTORY);
         strcat(scripts_path, PYTHON_SCRIPTS_SUBDIR);
-//        strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
+        // strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
         set_python_path(scripts_path);
 
     }
@@ -194,7 +194,7 @@ static void set_python_paths(void) {
         strcpy(scripts_path, exec_path);
         strcat(scripts_path, PM3_SHARE_RELPATH);
         strcat(scripts_path, PYTHON_SCRIPTS_SUBDIR);
-//        strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
+        // strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
         set_python_path(scripts_path);
     }
 }
@@ -404,15 +404,19 @@ static int CmdScriptRun(const char *Cmd) {
         PyImport_AppendInittab("_pm3", PyInit__pm3);
 #endif
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
-	Py_Initialize();
+        Py_Initialize();
 #else
         PyConfig py_conf;
-        PyConfig_InitIsolatedConfig(&py_conf);
-        // Despite being isolated we probably want to allow users to use
-        // the Python packages they installed on their user directory as well
-        // as system ones. But it seems isolated mode still enforces them off.
-        py_conf.use_environment = 1;
+        // We need to use Python mode instead of isolated to avoid breaking stuff.
+        PyConfig_InitPythonConfig(&py_conf);
+        // Let's still make things bit safer by being as close as possible to isolated mode.
+        py_conf.configure_c_stdio = -1;
+        py_conf.faulthandler = 0;
+        py_conf.use_hash_seed = 0;
+        py_conf.install_signal_handlers = 0;
+        py_conf.parse_argv = 0;
         py_conf.user_site_directory = 1;
+        py_conf.use_environment = 0;
 #endif
 
         //int argc, char ** argv
@@ -429,8 +433,13 @@ static int CmdScriptRun(const char *Cmd) {
 #else
         // The following line will implicitly pre-initialize Python
         PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
+
+        // We disallowed in py_conf environment variables interfering with python interpreter's behavior.
+        // Let's manually enable the ones we truly need.
         // This is required by Proxspace to work with an isolated Python configuration
         PyConfig_SetBytesString(&py_conf, &py_conf.home, getenv("PYTHONHOME"));
+        // This is required for allowing `import pm3` in python scripts
+        PyConfig_SetBytesString(&py_conf, &py_conf.pythonpath_env, getenv("PYTHONPATH"));
 
         Py_InitializeFromConfig(&py_conf);
 

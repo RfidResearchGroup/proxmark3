@@ -1,9 +1,8 @@
 # Notes on run_tests.sh script
-This script does both setup the mirrors and pip install and then run a 
-bunch of different builds with make and cmake together with the different combos 
-of RDV4, GENERIC, BTADDON combos. 
+This script runs a bunch of different builds with make and cmake together
+with the different combos of RDV4, GENERIC, BTADDON combos.
 
-If all tests OK,  the script will finish.
+If all tests OK,  the script will finish with PASS.
 
 
 # Notes to run tests

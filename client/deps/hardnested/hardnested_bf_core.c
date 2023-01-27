@@ -530,7 +530,6 @@ stop_tests:
             bucket_states_tested += bucket_size[block_idx];
             // prepare to set new states
             state_p = &states[KEYSTREAM_SIZE];
-            continue;
         }
     }
 out:

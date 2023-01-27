@@ -185,7 +185,7 @@ showinfo:
 .DELETE_ON_ERROR:
 
 # version_pm3.c should be remade on every time fullimage.stage1.elf should be remade
-version_pm3.c: default_version_pm3.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
+version_pm3.c: default_version_pm3.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ) .FORCE
 	$(info [-] GEN $@)
 	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(CP) $< $@
 
@@ -257,7 +257,7 @@ uninstall:
 	$(info [@] Uninstalling fullimage from $(DESTDIR)$(PREFIX)...)
 	$(Q)$(INSTALLSUDO) $(RM) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
 
-.PHONY: all clean help install uninstall
+.PHONY: all clean help install uninstall .FORCE
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:

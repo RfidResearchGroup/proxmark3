@@ -42,7 +42,13 @@
 #include "desfire.h"             // desfire enums
 #include "mifare/desfirecore.h"  // desfire context
 
-static bool APDUInFramingEnable = true;
+static bool g_apdu_in_framing_enable = true;
+bool Get_apdu_in_framing(void) {
+    return g_apdu_in_framing_enable;
+}
+void Set_apdu_in_framing(bool v) {
+    g_apdu_in_framing_enable = v;
+}
 
 static int CmdHelp(const char *Cmd);
 static int waitCmd(bool i_select, uint32_t timeout, bool verbose);
@@ -1050,7 +1056,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
     int res;
 
     // 3 byte here - 1b framing header, 2b crc16
-    if (APDUInFramingEnable &&
+    if (g_apdu_in_framing_enable &&
             ((gs_frame_len && (datainlen > gs_frame_len - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
 
         int clen = 0;
@@ -1454,29 +1460,34 @@ static int CmdHF14AChaining(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a chaining",
                   "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
-                  "hf 14a chaining disable -> disable chaining\n"
+                  "hf 14a chaining --off   -> disable chaining\n"
                   "hf 14a chaining         -> show chaining enable/disable state\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, NULL,      "<enable/disable or 0/1>", NULL),
+        arg_lit0("1", "on", "enabled chaining"),
+        arg_lit0("0", "off", "disable chaining"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    struct arg_str *str = arg_get_str(ctx, 1);
-    int len = arg_get_str_len(ctx, 1);
+    bool on = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
 
-    if (len && (!strcmp(str->sval[0], "enable") || !strcmp(str->sval[0], "1")))
-        APDUInFramingEnable = true;
+    if ((on + off) > 1) {
+        PrintAndLogEx(INFO, "Select only one option");
+        return PM3_EINVARG;
+    }
 
-    if (len && (!strcmp(str->sval[0], "disable") || !strcmp(str->sval[0], "0")))
-        APDUInFramingEnable = false;
+    if (on)
+        Set_apdu_in_framing(true);
+
+    if (off)
+        Set_apdu_in_framing(false);
 
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", APDUInFramingEnable ? "enabled" : "disabled");
-
+    PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", g_apdu_in_framing_enable ? "enabled" : "disabled");
     return PM3_SUCCESS;
 }
 
@@ -2242,8 +2253,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         }
                     }
 
-                    if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
-                        if (sw == 0x9000) {
+                    if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
+                        if (sw == ISO7816_OK) {
                             if (verbose) PrintAndLogEx(SUCCESS, "Application ( " _GREEN_("ok") " )");
                         } else {
                             if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
@@ -2380,14 +2391,14 @@ int infoHF14A4Applications(bool verbose) {
         if (res)
             break;
 
-        if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
+        if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
             if (!found) {
                 if (verbose)
                     PrintAndLogEx(INFO, "----------------- " _CYAN_("Short AID search") " -----------------");
             }
             found++;
 
-            if (sw == 0x9000) {
+            if (sw == ISO7816_OK) {
                 if (verbose)
                     PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " ( " _GREEN_("ok") " )", hintAIDList[i].desc);
                 cardFound[i] = true;
@@ -2574,7 +2585,7 @@ retry_ins:
                     // Show response.
                     if (sw_occurrences < error_limit) {
                         logLevel_t log_level = INFO;
-                        if (sw == 0x9000) {
+                        if (sw == ISO7816_OK) {
                             log_level = SUCCESS;
                         }
 
@@ -2674,7 +2685,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         // Try NDEF Type 4 Tag v1.0
         param_gethex_to_eol("00a4040007d2760000850100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
         res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
@@ -2688,7 +2699,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         }
 
         sw = get_sw(response, resplen);
-        if (sw != 0x9000) {
+        if (sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
             DropField();
             return PM3_ESOFT;
@@ -2714,7 +2725,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -2729,7 +2740,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         return res;
     }
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -2763,7 +2774,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -2780,7 +2791,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -2819,7 +2830,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         }
 
         sw = get_sw(response, resplen);
-        if (sw != 0x9000) {
+        if (sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
             DropField();
             free(ndef_file);
@@ -2887,7 +2898,7 @@ int CmdHF14ANdefFormat(const char *Cmd) {
 
     bool have_application = true;
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         have_application = false;
         PrintAndLogEx(INFO, "no NDEF application found");
     } else {

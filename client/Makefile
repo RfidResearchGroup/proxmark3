@@ -583,6 +583,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdhfseos.c \
 		cmdhfst.c \
 		cmdhfst25ta.c \
+		cmdhftesla.c \
 		cmdhfthinfilm.c \
 		cmdhftopaz.c \
 		cmdhftexkom.c \
@@ -626,6 +627,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdmain.c \
 		cmdnfc.c \
 		cmdparser.c \
+		cmdpiv.c \
 		cmdscript.c \
 		cmdsmartcard.c \
 		cmdtrace.c \

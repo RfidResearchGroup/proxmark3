@@ -38,6 +38,7 @@
 #include "util.h"
 #include "comms.h"         // clearCommandBuffer
 #include "commonutil.h"    // ntohl (pm3 version)
+#include "protocols.h"     // ISO7816 APDU return codes
 
 // Date type. This is the actual on-card format.
 typedef struct {
@@ -98,7 +99,7 @@ typedef struct {
          KEY_TYPE key, const char* defaultValue) { \
       struct _ksx6924_enum_ ## KEY_TYPE *r = bsearch( \
          &key, KSX6924_ENUM_ ## NAME, \
-         sizeof(KSX6924_ENUM_ ## NAME) / sizeof(KSX6924_ENUM_ ## NAME [0]), \
+         ARRAYLEN(KSX6924_ENUM_ ## NAME), \
          sizeof(KSX6924_ENUM_ ## NAME [0]), \
          _ksx6924_ ## KEY_TYPE ## _enum_compare); \
       if (r == NULL) { \
@@ -402,7 +403,7 @@ bool KSX6924TrySelect(void) {
         return false;
     }
 
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         if (sw) {
             PrintAndLogEx(FAILED,
                           "Not a KS X 6924 card! APDU response: %04x - %s",
@@ -444,7 +445,7 @@ bool KSX6924GetBalance(uint32_t *result) {
         return false;
     }
 
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         return false;
     }
 
@@ -476,7 +477,7 @@ bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t 
         return false;
     }
 
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         return false;
     }
 
@@ -574,7 +575,7 @@ bool KSX6924ProprietaryGetRecord(uint8_t id, uint8_t *result, size_t result_len)
         return false;
     }
 
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         return false;
     }
 

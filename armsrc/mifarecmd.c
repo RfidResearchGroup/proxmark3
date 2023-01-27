@@ -2356,7 +2356,7 @@ void MifareCIdent(bool is_mfc) {
     uint8_t rats[4] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 };
     uint8_t rdblf0[4] = { ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
     uint8_t rdbl00[4] = { ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
-    uint8_t gen4GetConf[8] = { GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0}; 
+    uint8_t gen4GetConf[8] = { GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_malloc(10);

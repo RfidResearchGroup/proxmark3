@@ -11,7 +11,11 @@ RUN apt-get update && \
 
 RUN apt-get install -y python3-minimal && \
     apt-get install -y python3-pip && \
+    apt-get clean && \
     python3 -m pip install ansicolors sslcrypto
+
+RUN apt-get install -y opencl-dev && \
+    apt-get clean
 
 # Create rrg user
 RUN useradd -ms /bin/bash rrg
