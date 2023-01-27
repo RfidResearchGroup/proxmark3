@@ -433,7 +433,7 @@ static int CmdScriptRun(const char *Cmd) {
 #else
         // The following line will implicitly pre-initialize Python
         PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
-        
+
         // We disallowed in py_conf environment variables interfering with python interpreter's behavior.
         // Let's manually enable the ones we truly need.
         // This is required by Proxspace to work with an isolated Python configuration

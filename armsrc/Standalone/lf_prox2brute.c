@@ -57,19 +57,19 @@ void RunMod(void) {
         WDT_HIT();
         // exit from SamyRun,   send a usbcommand.
         if (data_available()) { // early exit
-             DbpString("[=] You can take the shell back :) ...");
+            DbpString("[=] You can take the shell back :) ...");
             LEDsoff();
             return;
         }
     }
-    
+
     LED_C_ON();
     WAIT_BUTTON_RELEASED(); // We are now ready to start brutforcing card numbers
     LEDsoff();
 
     Dbprintf("[=] Starting HID ProxII Bruteforce from card %08x to %08x",
              CARDNUM_START, MIN(CARDNUM_END, 0xFFFF));
-        
+
     for (cardnum = CARDNUM_START ; cardnum <= MIN(CARDNUM_END, 0xFFFF) ; cardnum++) {
         WDT_HIT();
 
@@ -92,14 +92,14 @@ void RunMod(void) {
 
         // switch leds to be able to know (aproximatly) which card number worked (64 tries loop)
         LED_A_INV(); // switch led A every try
-        if ((cardnum-CARDNUM_START) % 8 == 7) // switch led B every 8 tries
+        if ((cardnum - CARDNUM_START) % 8 == 7) // switch led B every 8 tries
             LED_B_INV();
-        if ((cardnum-CARDNUM_START) % 16 == 15) // switch led C every 16 tries
+        if ((cardnum - CARDNUM_START) % 16 == 15) // switch led C every 16 tries
             LED_C_INV();
-        if ((cardnum-CARDNUM_START) % 32 == 31) // switch led D every 32 tries
+        if ((cardnum - CARDNUM_START) % 32 == 31) // switch led D every 32 tries
             LED_D_INV();
     }
-    
+
     SpinErr((LED_A | LED_B | LED_C | LED_D), 250, 5); // Xmax tree
     Dbprintf("[=] Ending HID ProxII Bruteforce from card %08x to %08x",
              CARDNUM_START, cardnum - 1);
