@@ -1101,14 +1101,16 @@
             "command": "hf 14a chaining",
             "description": "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
             "notes": [
-                "hf 14a chaining disable -> disable chaining",
+                "hf 14a chaining --off -> disable chaining",
                 "hf 14a chaining -> show chaining enable/disable state"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-1, --on enabled chaining",
+                "-0, --off disable chaining"
             ],
-            "usage": "hf 14a chaining [-h] [<enable/disable or 0/1>]"
+            "usage": "hf 14a chaining [-h10]"
         },
         "hf 14a config": {
             "command": "hf 14a config",
@@ -2881,7 +2883,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } jooki { Jooki RFIDs... } iclass { ICLASS RFIDs... } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } texkom { Texkom RFIDs... } xerox { Fuji/Xerox cartridge RFIDs... } waveshare { Waveshare NFC ePaper... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } jooki { Jooki RFIDs... } iclass { ICLASS RFIDs... } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } xerox { Fuji/Xerox cartridge RFIDs... } waveshare { Waveshare NFC ePaper... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags",
             "notes": [],
             "offline": true,
             "options": [],
@@ -6683,6 +6685,47 @@
                 "-u, --uid <hex> 7 byte UID"
             ],
             "usage": "hf st25ta sim [-h] -u <hex>"
+        },
+        "hf tesla help": {
+            "command": "hf tesla help",
+            "description": "help This help list List ISO 14443A/7816 history",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf tesla info": {
+            "command": "hf tesla info",
+            "description": "Get info about TESLA Key tag",
+            "notes": [
+                "hf tesla info"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf telsa info [-h]"
+        },
+        "hf tesla list": {
+            "command": "hf tesla list",
+            "description": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "notes": [
+                "hf tesla list --frame -> show frame delay times",
+                "hf tesla list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-1, --buffer use data from trace buffer",
+                "--frame show frame delay times",
+                "-c mark CRC bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into Wireshark using encapsulation type \"ISO 14443\"",
+                "-f, --file <fn> filename of dictionary"
+            ],
+            "usage": "hf tesla list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf texkom help": {
             "command": "hf texkom help",
@@ -11760,8 +11803,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 739,
+        "commands_extracted": 742,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-01-15T01:24:39"
+        "extracted_on": "2023-01-27T01:57:37"
     }
 }
