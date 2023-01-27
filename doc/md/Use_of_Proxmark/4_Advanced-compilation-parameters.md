@@ -111,6 +111,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | LF_NEDAP_SIM    | LF Nedap ID simulator
 | LF_NEXID        | Nexwatch credentials detection mode - jrjgjk & Zolorah
 | LF_PROXBRUTE    | HID ProxII bruteforce - Brad Antoniewicz
+| LF_PROX2BRUTE   | HID ProxII bruteforce v2 - Yann Gascuel
 | LF_SAMYRUN (def)| HID26 read/clone/sim - Samy Kamkar
 | LF_SKELETON     | standalone mode skeleton - Iceman1001
 | LF_THAREXDE     | LF EM4x50 simulator/read standalone mode - tharexde
@@ -119,8 +120,8 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_15SNIFF      | 15693 sniff storing to flashmem - Glaser
 | HF_AVEFUL       | MIFARE Ultralight read/simulation - Ave Ozkal
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth storing in flashmem - Bogito
-| HF_CRAFTBYTE    | UID stealer - Emulates scanned 14a UID - Anze Jensterle
 | HF_COLIN        | Mifare ultra fast sniff/sim/clone - Colin Brigato
+| HF_CRAFTBYTE    | UID stealer - Emulates scanned 14a UID - Anze Jensterle
 | HF_ICECLASS     | iCLASS 4-1 mode  sim/read & dump/loclass/glitch & config to flashmem - Iceman1001
 | HF_LEGIC        | HF Legic Prime Read/Store/Sim standalone - uhei
 | HF_LEGICSIM     | HF Legic Prime Simulate standalone - uhei
