@@ -139,14 +139,10 @@ local function main(args)
     -- force lock bytes, otherwise the Amiibo won't be recognized
     blocks[16] = blocks[16]:sub(1, 4)..'0FE0'
 
-    -- add PWD and PACK if necessary
+    -- add PWD and PACK
     local uid = blocks[14]:sub(1, 6)..blocks[15]:sub(1, 8)
-    if blocks[147] == nil or blocks[147] == '00000000' then
-        blocks[147] = ("%08x"):format(bxor(bxor(tonumber(sub(uid, 2, 10), 16), tonumber(sub(uid, 6, 14), 16)), 0xaa55aa55))
-    end
-    if blocks[148] == nil or blocks[148] == '00000000' then
-        blocks[148] = "80800000"
-    end
+    blocks[147] = ("%08x"):format(bxor(bxor(tonumber(sub(uid, 2, 10), 16), tonumber(sub(uid, 6, 14), 16)), 0xaa55aa55))
+    blocks[148] = "80800000"
 
     err = LoadEmulator(uid, blocks)
     if err then return oops(err) end
