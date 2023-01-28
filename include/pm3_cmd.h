@@ -519,7 +519,7 @@ typedef struct {
 #define CMD_HF_ISO15693_COMMAND                                           0x0313
 #define CMD_HF_ISO15693_FINDAFI                                           0x0315
 #define CMD_HF_ISO15693_CSETUID                                           0x0316
-#define CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY                               0xA317
+#define CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY                               0x0867
 #define CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY                              0x0317
 #define CMD_HF_ISO15693_SLIX_DISABLE_EAS                                  0x0318
 #define CMD_HF_ISO15693_SLIX_ENABLE_EAS                                   0x0862
