@@ -152,7 +152,7 @@ int preferences_save(void) {
     }
 
     uint8_t dummyData = 0x00;
-    size_t dummyDL = 0x00;
+    size_t dummyDL = 0x01;
 
     if (saveFileJSON(fn, jsfCustom, &dummyData, dummyDL, &preferences_save_callback) != PM3_SUCCESS)
         PrintAndLogEx(ERR, "Error saving preferences to \"%s\"", fn);

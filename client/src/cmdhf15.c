@@ -698,7 +698,7 @@ static int NxpCheckSig(uint8_t *uid) {
     PacketResponseNG resp;
     uint16_t reqlen = 0;
     uint8_t req[PM3_CMD_DATA_SIZE] = {0};
-    
+
     // Check if we can also read the signature
     req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
     req[reqlen++] = ISO15693_READ_SIGNATURE;
@@ -736,7 +736,7 @@ static int NxpCheckSig(uint8_t *uid) {
     memcpy(signature, recv + 1, 32);
 
     nxp_15693_print_signature(uid, signature);
-    
+
     return PM3_SUCCESS;
 }
 
@@ -1363,7 +1363,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     argtable[4] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     struct {
         uint8_t pwd[4];
         bool use_pwd;
@@ -1376,21 +1376,20 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
 
     payload.afi = arg_get_int_def(ctx, 2, 0);
-    
+
     int pwdlen;
-    
     CLIGetHexWithReturn(ctx, 3, payload.pwd, &pwdlen);
-    
+
     CLIParserFree(ctx);
-    
-    if(pwdlen == 4)
-    {
+
+    payload.use_pwd = false;
+    if (pwdlen == 4) {
         payload.use_pwd = true;
     }
-    
-    if(uidlen == 8)
-    {
-      payload.use_uid = true; 
+
+    payload.use_uid = false;
+    if (uidlen == 8) {
+        payload.use_uid = true;
     }
 
     // sanity checks
@@ -1398,11 +1397,10 @@ static int CmdHF15WriteAfi(const char *Cmd) {
         PrintAndLogEx(WARNING, "uid must be 8 hex bytes if provided");
         return PM3_EINVARG;
     }
-    
-    if(pwdlen > 0 && pwdlen != 4)
-    {             
+
+    if (pwdlen > 0 && pwdlen != 4) {
         PrintAndLogEx(WARNING, "password must be 4 hex bytes if provided");
-        return PM3_ESOFT; 
+        return PM3_ESOFT;
     }
 
     PacketResponseNG resp;
@@ -1420,11 +1418,11 @@ static int CmdHF15WriteAfi(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "error writing AFI");          
+            PrintAndLogEx(WARNING, "error writing AFI");
             break;
         }
         case PM3_SUCCESS: {
-             PrintAndLogEx(SUCCESS, "Wrote AFI 0x%02X", payload.afi);
+            PrintAndLogEx(SUCCESS, "Wrote AFI 0x%02X", payload.afi);
             break;
         }
     }
@@ -2385,29 +2383,24 @@ static int CmdHF15SlixEASEnable(const char *Cmd) {
         bool usepwd;
     } PACKED payload;
     int pwdlen = 0;
-    
+
     int ret_pwdparse = CLIParamHexToBuf(arg_get_str(ctx, 1), payload.pwd, 4, &pwdlen);
-    if((pwdlen > 0 && pwdlen != 4) || ret_pwdparse != 0)
-    {             
+    if ((pwdlen > 0 && pwdlen != 4) || ret_pwdparse != 0) {
         PrintAndLogEx(WARNING, "password must be 4 hex bytes if provided");
-        return PM3_ESOFT; 
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
     }
-   
-    //CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
+
     CLIParserFree(ctx);
-     
-     
-    if(pwdlen > 0 )
-    {
-      PrintAndLogEx(INFO, "Trying to enable EAS mode using password " _GREEN_("%s")
-                  , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
-                 );
-      payload.usepwd = true;
-    }
-    else 
-    {
-      PrintAndLogEx(INFO, "Trying to enable EAS mode without using a password");
-      payload.usepwd = false;
+
+    if (pwdlen > 0) {
+        PrintAndLogEx(INFO, "Trying to enable EAS mode using password " _GREEN_("%s")
+                      , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
+                     );
+        payload.usepwd = true;
+    } else {
+        PrintAndLogEx(INFO, "Trying to enable EAS mode without using a password");
+        payload.usepwd = false;
     }
 
 
@@ -2426,13 +2419,10 @@ static int CmdHF15SlixEASEnable(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            if(pwdlen > 0 )
-            {
-              PrintAndLogEx(WARNING, "the password provided was not accepted");
-            }
-            else
-            {
-              PrintAndLogEx(WARNING, "either a password is required or EAS mode is locked");
+            if (pwdlen > 0) {
+                PrintAndLogEx(WARNING, "the password provided was not accepted");
+            } else {
+                PrintAndLogEx(WARNING, "either a password is required or EAS mode is locked");
             }
             break;
         }
@@ -2451,41 +2441,36 @@ static int CmdHF15SlixEASDisable(const char *Cmd) {
                   "Disable EAS mode on SLIX ISO-15693 tag",
                   "hf 15 slixeasdisable -p 0F0F0F0F");
 
-        void *argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "optional password, 8 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
     struct {
         uint8_t pwd[4];
         bool usepwd;
-        
+
     } PACKED payload;
     int pwdlen = 0;
-    
+
     int ret_pwdparse = CLIParamHexToBuf(arg_get_str(ctx, 1), payload.pwd, 4, &pwdlen);
-    if((pwdlen > 0 && pwdlen != 4) || ret_pwdparse != 0)
-    {             
-        PrintAndLogEx(WARNING, "password must be 4 hex bytes if provided");
-        return PM3_ESOFT; 
-    }
-   
-    //CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
     CLIParserFree(ctx);
-     
-     
-    if(pwdlen > 0 )
-    {
-      PrintAndLogEx(INFO, "Trying to disable EAS mode using password " _GREEN_("%s")
-                  , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
-                 );
-      payload.usepwd = true;
+
+    if ((pwdlen > 0 && pwdlen != 4) || ret_pwdparse != 0) {
+        PrintAndLogEx(WARNING, "password must be 4 hex bytes if provided");
+        return PM3_ESOFT;
     }
-    else 
-    {
-      PrintAndLogEx(INFO, "Trying to enable EAS mode without using a password");
-      payload.usepwd = false;
+
+    if (pwdlen > 0) {
+        PrintAndLogEx(INFO, "Trying to disable EAS mode using password " _GREEN_("%s")
+                      , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
+                     );
+        payload.usepwd = true;
+    } else {
+        PrintAndLogEx(INFO, "Trying to enable EAS mode without using a password");
+        payload.usepwd = false;
     }
 
     PacketResponseNG resp;
@@ -2503,13 +2488,10 @@ static int CmdHF15SlixEASDisable(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            if(pwdlen > 0 )
-            {
-              PrintAndLogEx(WARNING, "the password provided was not accepted");
-            }
-            else
-            {
-              PrintAndLogEx(WARNING, "either a password is required or EAS mode is locked");
+            if (pwdlen > 0) {
+                PrintAndLogEx(WARNING, "the password provided was not accepted");
+            } else {
+                PrintAndLogEx(WARNING, "either a password is required or EAS mode is locked");
             }
             break;
         }
@@ -2571,14 +2553,14 @@ static int CmdHF15SlixDisable(const char *Cmd) {
     return resp.status;
 }
 
-static int CmdHF15SlixEnable(const char* Cmd) {
+static int CmdHF15SlixEnable(const char *Cmd) {
 
-    CLIParserContext* ctx;
+    CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 slixprivacyenable",
-        "Enable privacy mode on SLIX ISO-15693 tag",
-        "hf 15 slixenable -p 0F0F0F0F");
+                  "Enable privacy mode on SLIX ISO-15693 tag",
+                  "hf 15 slixenable -p 0F0F0F0F");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_str1("p", "pwd", "<hex>", "password, 8 hex bytes"),
         arg_param_end
@@ -2592,12 +2574,12 @@ static int CmdHF15SlixEnable(const char* Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "Trying to enable privacy mode using password " _GREEN_("%s")
-        , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
-    );
+                  , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
+                 );
 
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY, (uint8_t *)&payload, sizeof(payload));
     if (WaitForResponseTimeout(CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         DropField();
@@ -2605,18 +2587,18 @@ static int CmdHF15SlixEnable(const char* Cmd) {
     }
 
     switch (resp.status) {
-    case PM3_ETIMEOUT: {
-        PrintAndLogEx(WARNING, "no tag found");
-        break;
-    }
-    case PM3_EWRONGANSWER: {
-        PrintAndLogEx(WARNING, "password was not accepted");
-        break;
-    }
-    case PM3_SUCCESS: {
-        PrintAndLogEx(SUCCESS, "privacy mode is now enabled ( " _GREEN_("ok") " ) ");
-        break;
-    }
+        case PM3_ETIMEOUT: {
+            PrintAndLogEx(WARNING, "no tag found");
+            break;
+        }
+        case PM3_EWRONGANSWER: {
+            PrintAndLogEx(WARNING, "password was not accepted");
+            break;
+        }
+        case PM3_SUCCESS: {
+            PrintAndLogEx(SUCCESS, "privacy mode is now enabled ( " _GREEN_("ok") " ) ");
+            break;
+        }
     }
     return resp.status;
 }
@@ -2624,83 +2606,69 @@ static int CmdHF15SlixEnable(const char* Cmd) {
 static int CmdHF15SlixWritePassword(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 slixwritepwd",
-                  "Write a password on a SLIX family ISO-15693 tag",
+                  "Write a password on a SLIX family ISO-15693 tag.n"
+                  "Some tags do not support all different password types.",
                   "hf 15 slixwritepwd -t READ -o 00000000 -n 12131415");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("t", "type", "<read|write|privacy|destroy|easafi>", "which password field to write to (some tags do not support all password types)"),
+        arg_str1("t", "type", "<read|write|privacy|destroy|easafi>", "which password field to write to"),
         arg_str0("o", "old", "<hex>", "old password (if present), 8 hex bytes"),
         arg_str1("n", "new", "<hex>", "new password, 8 hex bytes"),
         arg_param_end
     };
-    
+
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    
+
     struct {
         uint8_t old_pwd[4];
         uint8_t new_pwd[4];
         uint8_t pwd_id;
     } PACKED payload;
     int pwdlen = 0;
-    
-   
-    
+
     CLIGetHexWithReturn(ctx, 2, payload.old_pwd, &pwdlen);
-    
-    if(pwdlen > 0 && pwdlen != 4)
-    {             
+
+    if (pwdlen > 0 && pwdlen != 4) {
         PrintAndLogEx(WARNING, "old password must be 4 hex bytes if provided");
-        return PM3_ESOFT; 
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
     }
-    
+
     CLIGetHexWithReturn(ctx, 3, payload.new_pwd, &pwdlen);
-    
-    if(pwdlen != 4)
-    {             
+
+    if (pwdlen != 4) {
         PrintAndLogEx(WARNING, "new password must be 4 hex bytes");
-        return PM3_ESOFT; 
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
     }
-    
+
     int vlen = 0;
     char value[10];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)value, sizeof(value), &vlen);
-    
+    CLIParserFree(ctx);
+
     if (vlen > 0) {
-        if (strcmp(value, "read") == 0) 
-        {
+        if (strcmp(value, "read") == 0) {
             PrintAndLogEx(SUCCESS, "Selected read pass");
             payload.pwd_id = 0x01;
-        }
-        else if (strcmp(value, "write") == 0)
-        {
+        } else if (strcmp(value, "write") == 0) {
             PrintAndLogEx(SUCCESS, "Selected write pass");
             payload.pwd_id = 0x02;
-        }
-        else if (strcmp(value, "privacy") == 0) 
-        {
+        } else if (strcmp(value, "privacy") == 0) {
             PrintAndLogEx(SUCCESS, "Selected privacy pass");
             payload.pwd_id = 0x04;
-        }
-        else if (strcmp(value, "destroy") == 0) 
-        {
+        } else if (strcmp(value, "destroy") == 0) {
             PrintAndLogEx(SUCCESS, "Selected destroy pass");
             payload.pwd_id = 0x08;
-        } 
-        else if (strcmp(value, "easafi") == 0) 
-        {
+        } else if (strcmp(value, "easafi") == 0) {
             PrintAndLogEx(SUCCESS, "Selected easafi pass");
             payload.pwd_id = 0x10;
-        } 
-        else
-        {
+        } else {
             PrintAndLogEx(ERR, "t argument must be 'read', 'write', 'privacy', 'destroy', or 'easafi'");
             return PM3_EINVARG;
         }
     }
-    
-    CLIParserFree(ctx);
-   
 
     PrintAndLogEx(INFO, "Trying to write " _YELLOW_("%s") " as " _YELLOW_("%s") " password"
                   , sprint_hex_inrow(payload.new_pwd, sizeof(payload.new_pwd)), value);
@@ -2732,135 +2700,134 @@ static int CmdHF15SlixWritePassword(const char *Cmd) {
 }
 
 static int CmdHF15AFIPassProtect(const char *Cmd) {
-  
-  CLIParserContext *ctx;
-  CLIParserInit(&ctx, "hf 15 passprotectafi",
-                "Password protect AFI. Cannot be undone.",
-                "hf 15 passprotectafi -p 00000000 -c");
 
-  void *argtable[] = {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 passprotectafi",
+                  "This command enables the password protect of AFI.\n"
+                  "*** OBS!  This action can not be undone! ***",
+                  "hf 15 passprotectafi -p 00000000 --force");
+
+    void *argtable[] = {
         arg_param_begin,
-        arg_str1("p", "password", "<hex>", "EAS/AFI password, 8 hex bytes"),
-        arg_lit0("c", "confirm", "confirm the execution of this irreversible command"),
+        arg_str1("p", "pwd", "<hex>", "EAS/AFI password, 8 hex bytes"),
+        arg_lit0(NULL, "force", "Force execution of command (irreversible) "),
         arg_param_end
     };
-    
-  CLIExecWithReturn(ctx, Cmd, argtable, true);
-  
-  struct {
-      uint8_t pwd[4];
-  } PACKED payload;
-  int pwdlen = 0;
-    
-  CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
-  
-  bool confirmation = arg_get_lit(ctx, 2);
-  
-  if(pwdlen != 4)
-  {             
-      PrintAndLogEx(WARNING, "password must be 4 hex bytes");
-      return PM3_ESOFT; 
-  }
-  
-  if(confirmation == 0)
-  {
-    PrintAndLogEx(WARNING, "This irreversible command must be confirmed with the -c flag");
-    return PM3_ESOFT;
-  }
-  
-  
-  PrintAndLogEx(INFO, "Trying to enable AFI password protection");
-  
-  PacketResponseNG resp;
-  clearCommandBuffer();
-  SendCommandNG(CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI, (uint8_t*)&payload, sizeof(payload));
-  if (WaitForResponseTimeout(CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI, &resp, 2000) == false) {
-      PrintAndLogEx(WARNING, "timeout while waiting for reply");
-      DropField();
-      return PM3_ESOFT;
-  }
 
-  switch (resp.status) {
-      case PM3_ETIMEOUT: {
-          PrintAndLogEx(WARNING, "no tag found");
-          break;
-      }
-      case PM3_EWRONGANSWER: {
-          PrintAndLogEx(WARNING, "error enabling AFI password protection");
-          break;
-      }
-      case PM3_SUCCESS: {
-          PrintAndLogEx(SUCCESS, "AFI password protected ( " _GREEN_("ok") " ) ");
-          break;
-      }
-  }
-  return resp.status;
-  
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    struct {
+        uint8_t pwd[4];
+    } PACKED payload;
+    int pwdlen = 0;
+
+    CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
+
+    bool force = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (pwdlen != 4) {
+        PrintAndLogEx(WARNING, "password must be 4 hex bytes");
+        return PM3_ESOFT;
+    }
+
+    if (force == false) {
+        PrintAndLogEx(WARNING, "Use `--force` flag to override. OBS! Irreversable command");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "Trying to enable AFI password protection...");
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI, (uint8_t *)&payload, sizeof(payload));
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    switch (resp.status) {
+        case PM3_ETIMEOUT: {
+            PrintAndLogEx(WARNING, "no tag found");
+            break;
+        }
+        case PM3_EWRONGANSWER: {
+            PrintAndLogEx(WARNING, "error enabling AFI password protection");
+            break;
+        }
+        case PM3_SUCCESS: {
+            PrintAndLogEx(SUCCESS, "AFI password protected ( " _GREEN_("ok") " ) ");
+            break;
+        }
+    }
+    return resp.status;
+
 }
 
 static int CmdHF15EASPassProtect(const char *Cmd) {
-  
-  CLIParserContext *ctx;
-  CLIParserInit(&ctx, "hf 15 passprotecteas",
-                "Password protect EAS. Cannot be undone.",
-                "hf 15 passprotecteas -p 00000000 -c");
-                
-  void *argtable[] = {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 passprotecteas",
+                  "This command enables the password protect of EAS.\n"
+                  "*** OBS!  This action can not be undone! ***",
+                  "hf 15 passprotecteas -p 00000000 --force");
+
+    void *argtable[] = {
         arg_param_begin,
-        arg_str1("p", "password", "<hex>", "EAS/AFI password, 8 hex bytes"),
-        arg_lit0("c", "confirm", "confirm the execution of this irreversible command"),
+        arg_str1("p", "pwd", "<hex>", "EAS/AFI password, 8 hex bytes"),
+        arg_lit0(NULL, "force", "Force execution of command (irreversible) "),
         arg_param_end
     };
 
-  CLIExecWithReturn(ctx, Cmd, argtable, true);
-  
-  struct {
-      uint8_t pwd[4];
-  } PACKED payload;
-  int pwdlen = 0;
-    
-  CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
-  
-  bool confirmation = arg_get_lit(ctx, 2);
-  
-  if(pwdlen != 4)
-  {             
-      PrintAndLogEx(WARNING, "password must be 4 hex bytes");
-      return PM3_ESOFT; 
-  }
-  
-  if(confirmation == 0)
-  {
-    PrintAndLogEx(WARNING, "This irreversible command must be confirmed with the -c flag");
-    return PM3_ESOFT;
-  }
-  
-  PrintAndLogEx(INFO, "Trying to enable EAS password protection");
-  
-  PacketResponseNG resp;
-  clearCommandBuffer();
-  SendCommandNG(CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS, (uint8_t*)&payload, sizeof(payload));
-  if (WaitForResponseTimeout(CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS, &resp, 2000) == false) {
-      PrintAndLogEx(WARNING, "timeout while waiting for reply");
-      DropField();
-      return PM3_ESOFT;
-  }
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-  switch (resp.status) {
-      case PM3_ETIMEOUT: {
-          PrintAndLogEx(WARNING, "no tag found");
-          break;
-      }
-      case PM3_EWRONGANSWER: {
-          PrintAndLogEx(WARNING, "error enabling EAS password protection");
-          break;
-      }
-      case PM3_SUCCESS: {
-          PrintAndLogEx(SUCCESS, "EAS password protected ( " _GREEN_("ok") " ) ");
-          break;
-      }
-  }
-  return resp.status;
+    struct {
+        uint8_t pwd[4];
+    } PACKED payload;
+    int pwdlen = 0;
+
+    CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
+
+    bool force = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (pwdlen != 4) {
+        PrintAndLogEx(WARNING, "password must be 4 hex bytes");
+        return PM3_ESOFT;
+    }
+
+    if (force == false) {
+        PrintAndLogEx(WARNING, "Use `--force` flag to override. OBS! Irreversable command");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "Trying to enable EAS password protection...");
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS, (uint8_t *)&payload, sizeof(payload));
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    switch (resp.status) {
+        case PM3_ETIMEOUT: {
+            PrintAndLogEx(WARNING, "no tag found");
+            break;
+        }
+        case PM3_EWRONGANSWER: {
+            PrintAndLogEx(WARNING, "error enabling EAS password protection");
+            break;
+        }
+        case PM3_SUCCESS: {
+            PrintAndLogEx(SUCCESS, "EAS password protected ( " _GREEN_("ok") " ) ");
+            break;
+        }
+    }
+    return resp.status;
 }
 
 static command_t CommandTable[] = {

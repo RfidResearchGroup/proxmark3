@@ -1301,7 +1301,7 @@ void pm3_version(bool verbose, bool oneliner) {
                 if (IfPm3Flash()) {
                     PrintAndLogEx(NORMAL, "  external flash............ %s", _GREEN_("present"));
                 }
-                
+
                 if (IfPm3FpcUsartHost()) {
                     PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
                 }

@@ -641,6 +641,10 @@ static int CmdFlashMemInfo(const char *Cmd) {
     // Verify (public key)
     bool is_verified = (mbedtls_rsa_pkcs1_verify(rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA1, 20, sha_hash, from_device) == 0);
 
+    if (got_private == false) {
+        mbedtls_rsa_free(rsa);
+    }
+
     mbedtls_pk_free(&pkctx);
 
     PrintAndLogEx(NORMAL, "");
