@@ -1230,7 +1230,7 @@ int FSKrawDemod(uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, bo
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, _YELLOW_("%s") " decoded bitstream", GetFSKType(fchigh, fclow, invert));
             PrintAndLogEx(INFO, "-----------------------");
-            printDemodBuff(0, false, invert, false);
+            printDemodBuff(0, false, false, false);
         }
         goto out;
     } else {

@@ -453,6 +453,12 @@ static void SendCapabilities(void) {
         capabilities.baudrate = g_usart_baudrate;
 #endif
 
+#ifdef RDV4
+    capabilities.is_rdv4 = true;
+#else 
+    capabilities.is_rdv4 = false;
+#endif
+
 #ifdef WITH_FLASH
     capabilities.compiled_with_flash = true;
     capabilities.hw_available_flash = FlashInit();
@@ -1287,23 +1293,79 @@ static void PacketReceived(PacketCommandNG *packet) {
             SetTag15693Uid(payload->uid);
             break;
         }
-        case CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY: {
+        case CMD_HF_ISO15693_SLIX_DISABLE_EAS: {
+            struct p {
+                uint8_t pwd[4];
+                bool usepwd; 
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            DisableEAS_AFISlixIso15693(payload->pwd, payload->usepwd);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_ENABLE_EAS: {
+            struct p {
+                uint8_t pwd[4];
+                bool usepwd; 
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            EnableEAS_AFISlixIso15693(payload->pwd, payload->usepwd);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_WRITE_PWD: {
+            struct p {
+                uint8_t old_pwd[4];
+                uint8_t new_pwd[4];
+                uint8_t pwd_id;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            WritePasswordSlixIso15693(payload->old_pwd, payload->new_pwd, payload->pwd_id);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY: {
             struct p {
                 uint8_t pwd[4];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            DisablePrivacySlixLIso15693(payload->pwd);
+            DisablePrivacySlixIso15693(payload->pwd);
             break;
         }
-        case CMD_HF_ISO15693_SLIX_L_DISABLE_AESAFI: {
+        case CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY: {
             struct p {
                 uint8_t pwd[4];
             } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;
-            DisableEAS_AFISlixLIso15693(payload->pwd);
+            struct p* payload = (struct p*)packet->data.asBytes;
+            EnablePrivacySlixIso15693(payload->pwd);
             break;
         }
-
+        case CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p* payload = (struct p*)packet->data.asBytes;
+            PassProtectAFISlixIso15693(payload->pwd);
+            break;
+        }
+        case CMD_HF_ISO15693_WRITE_AFI: {
+            struct p {
+                uint8_t pwd[4];
+                bool use_pwd;
+                uint8_t uid[8];
+                bool use_uid;
+                uint8_t afi;
+            } PACKED;
+            struct p* payload = (struct p*)packet->data.asBytes;
+            WriteAFIIso15693(payload->pwd, payload->use_pwd, payload->uid, payload->use_uid, payload->afi);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p* payload = (struct p*)packet->data.asBytes;
+            PassProtextEASSlixIso15693(payload->pwd);
+            break;
+        }
+        
 #endif
 
 #ifdef WITH_LEGICRF

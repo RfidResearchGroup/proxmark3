@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added new magic gen4 cards command in docs (@McEloff)
  - Added `hf tesla info` - intital information command to read TESLA cards (@iceman1001)
  - Changed `hf emrtd info` - looking for lower case .bin extensions (@iceman1001)
  - Changed `hf emrtd dump` - looking for lower case .bin extensions (@iceman1001)
@@ -42,6 +43,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `trace list -t mf` - now also finds UID if anticollision is partial captured, to be used for mfkey (@iceman1001)
  - Fixed `make accessrights` on Fedora (@mooey5775)
  - Fixed the lf sampling when bits_per_sample is less than 8 (@wh201906)
+ - Fixed `hf mfu info` - can now identify the 50 pF version of NTAG 210u(micro) (@mjacksn)
+ - Added `hf 15` sub-commands for controlling EAS, AFI, privacy mode, and the setting of passwords on SLIX tags (@mjacksn)
 
 ## [Radium.4.15864][2022-10-29]
  - Changed `lf indala sim` - now accepts fc / cn (@iceman1001)
@@ -1364,6 +1367,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Mifare simulation, `hf mf sim` (was broken a long time) (@pwpiwi)
  - Major improvements in LF area and data operations. (@marshmellow42, @iceman1001)
  - Issues regarding LF simulation (@pwpiwi)
+ - Issue interpreting NXP "get sys info" command return value for icode tags. (@mjacksn)
 
 ### Added
  - iClass functionality: full simulation of iclass tags, so tags can be simulated with data (not only CSN). Not yet support for write/update, but readers do not seem to enforce update. (@holiman).

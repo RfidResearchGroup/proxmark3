@@ -38,7 +38,7 @@ bool IfPm3Present(void) {
 bool IfPm3Rdv4Fw(void) {
     if (!IfPm3Present())
         return false;
-    return (g_pm3_capabilities.compiled_with_flash) || (g_pm3_capabilities.compiled_with_smartcard);
+    return (g_pm3_capabilities.is_rdv4);
 }
 
 bool IfPm3Flash(void) {

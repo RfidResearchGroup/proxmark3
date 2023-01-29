@@ -1086,10 +1086,12 @@ CF <passwd> 35 <2b ATQA><1b SAK>                 // Configure ATQA/SAK (swap ATQ
 CF <passwd> 68 <00-02>                           // Configure UID length
 CF <passwd> 69 <00-01>                           // (De)Activate Ultralight mode
 CF <passwd> 6A <00-03>                           // Select Ultralight mode
+CF <passwd> 6B <1b>                              // Set Ultralight and M1 maximum read/write sectors
 CF <passwd> C6                                   // Dump configuration
 CF <passwd> CC                                   // Factory test, returns 6666
 CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
 CF <passwd> CE <1b block number>                 // Backdoor read 16b block
+CF <passwd> CF <1b param>                        // Unknown
 CF <passwd> F0 <30b configuration data>          // Configure all params in one cmd
 CF <passwd> F1 <30b configuration data>          // Configure all params in one cmd and fuse the configuration permanently
 CF <passwd> FE <4b new_password>                 // change password
@@ -1304,6 +1306,19 @@ script run hf_mf_ultimatecard -m 02
 ```
 
 Now the card supports the 3DES UL-C authentication.
+### Set Ultralight and M1 maximum read/write sectors
+^[Top](#top) ^^[Gen4](#g4top)
+
+```
+hf 14a raw -s -c -t 1000 CF<passwd>6B<1b blocks>
+```
+Hexadecimal, maximum sector data, default 0xFF, range 0x00-0xFF
+
+Example: set maximum 63 blocks read/write for Mifare Classic 1K
+
+```
+hf 14a raw -s -c -t 1000 CF000000006B3F
+```
 ### Set shadow mode (GTU)
 ^[Top](#top) ^^[Gen4](#g4top)
 
@@ -1365,6 +1380,20 @@ Example: write block0 with factory data, default pwd
 hf 14a raw -s -c -t 1000 CF00000000CD00112233441C000011778185BA18000000
 ```
 
+### Unknown command
+^[Top](#top) ^^[Gen4](#g4top)
+
+This command modifies one byte in configuration dump, but purpose one is unknown.
+
+```
+hf 14a raw -s -c -t 1000 CF<passwd>CF<1b param>
+```
+ * `<param>`
+   * `??`: ???
+
+Example:
+hf 14a raw -s -c -t 1000 CF00000000CF02
+
 ### Change backdoor password
 ^[Top](#top) ^^[Gen4](#g4top)
 
@@ -1391,8 +1420,10 @@ hf 14a raw -s -c -t 1000 CF<passwd>C6
 ```
 Default configuration:
 ```
-00000000000002000978009102DABC191010111213141516040008004F6B
-                                                        ^^^^ ??
+00000000000002000978009102DABC191010111213141516040008006B024F6B
+                                                            ^^^^ ??
+                                                          ^^ cf cmd cf: ?? this byte set by cmd cf<pwd>cf<param>, factory value 0x02
+                                                        ^^ cf cmd 6b: maximum read/write sectors, factory value 0x6b
                                                       ^^ cf cmd 6a: UL mode
                                                 ^^^^^^ cf cmd 35: ATQA/SAK
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cf cmd 34: ATS length & content
