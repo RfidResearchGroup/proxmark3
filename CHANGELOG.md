@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
-## [Nitride][2023-01-29]
+## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)
  - Fixed some coverity fixes (@iceman1001)
  - Fixed `make accessrights` on Fedora (@mooey5775)
