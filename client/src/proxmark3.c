@@ -42,7 +42,7 @@ static int mainret = PM3_ESOFT;
 #ifndef LIBPM3
 #define BANNERMSG1 ""
 #define BANNERMSG2 "   [ :coffee: ]"
-#define BANNERMSG3 ""
+#define BANNERMSG3 "Release v4.16191 - Nitride"
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
 
