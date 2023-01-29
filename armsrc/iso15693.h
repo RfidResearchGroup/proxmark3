@@ -64,7 +64,7 @@ void SetTag15693Uid(const uint8_t *uid);
 
 void WritePasswordSlixIso15693(uint8_t *old_password, uint8_t *new_password, uint8_t pwd_id);
 void DisablePrivacySlixIso15693(uint8_t *password);
-void EnablePrivacySlixIso15693(uint8_t* password);
+void EnablePrivacySlixIso15693(uint8_t *password);
 void DisableEAS_AFISlixIso15693(uint8_t *password, bool usepwd);
 void EnableEAS_AFISlixIso15693(uint8_t *password, bool usepwd);
 void PassProtextEASSlixIso15693(uint8_t *password);

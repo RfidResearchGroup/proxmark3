@@ -455,7 +455,7 @@ static void SendCapabilities(void) {
 
 #ifdef RDV4
     capabilities.is_rdv4 = true;
-#else 
+#else
     capabilities.is_rdv4 = false;
 #endif
 
@@ -1296,7 +1296,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_ISO15693_SLIX_DISABLE_EAS: {
             struct p {
                 uint8_t pwd[4];
-                bool usepwd; 
+                bool usepwd;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             DisableEAS_AFISlixIso15693(payload->pwd, payload->usepwd);
@@ -1305,7 +1305,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_ISO15693_SLIX_ENABLE_EAS: {
             struct p {
                 uint8_t pwd[4];
-                bool usepwd; 
+                bool usepwd;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             EnableEAS_AFISlixIso15693(payload->pwd, payload->usepwd);
@@ -1333,7 +1333,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p {
                 uint8_t pwd[4];
             } PACKED;
-            struct p* payload = (struct p*)packet->data.asBytes;
+            struct p *payload = (struct p *)packet->data.asBytes;
             EnablePrivacySlixIso15693(payload->pwd);
             break;
         }
@@ -1341,7 +1341,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p {
                 uint8_t pwd[4];
             } PACKED;
-            struct p* payload = (struct p*)packet->data.asBytes;
+            struct p *payload = (struct p *)packet->data.asBytes;
             PassProtectAFISlixIso15693(payload->pwd);
             break;
         }
@@ -1353,7 +1353,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 bool use_uid;
                 uint8_t afi;
             } PACKED;
-            struct p* payload = (struct p*)packet->data.asBytes;
+            struct p *payload = (struct p *)packet->data.asBytes;
             WriteAFIIso15693(payload->pwd, payload->use_pwd, payload->uid, payload->use_uid, payload->afi);
             break;
         }
@@ -1361,11 +1361,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p {
                 uint8_t pwd[4];
             } PACKED;
-            struct p* payload = (struct p*)packet->data.asBytes;
+            struct p *payload = (struct p *)packet->data.asBytes;
             PassProtextEASSlixIso15693(payload->pwd);
             break;
         }
-        
+
 #endif
 
 #ifdef WITH_LEGICRF
