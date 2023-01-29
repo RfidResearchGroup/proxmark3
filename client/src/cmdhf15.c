@@ -2606,12 +2606,13 @@ static int CmdHF15SlixEnable(const char *Cmd) {
 static int CmdHF15SlixWritePassword(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 slixwritepwd",
-                  "Write a password on a SLIX family ISO-15693 tag",
+                  "Write a password on a SLIX family ISO-15693 tag.n"
+                  "Some tags do not support all different password types.",
                   "hf 15 slixwritepwd -t READ -o 00000000 -n 12131415");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("t", "type", "<read|write|privacy|destroy|easafi>", "which password field to write to (some tags do not support all password types)"),
+        arg_str1("t", "type", "<read|write|privacy|destroy|easafi>", "which password field to write to"),
         arg_str0("o", "old", "<hex>", "old password (if present), 8 hex bytes"),
         arg_str1("n", "new", "<hex>", "new password, 8 hex bytes"),
         arg_param_end
@@ -2645,6 +2646,7 @@ static int CmdHF15SlixWritePassword(const char *Cmd) {
     int vlen = 0;
     char value[10];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)value, sizeof(value), &vlen);
+    CLIParserFree(ctx);
 
     if (vlen > 0) {
         if (strcmp(value, "read") == 0) {
@@ -2667,8 +2669,6 @@ static int CmdHF15SlixWritePassword(const char *Cmd) {
             return PM3_EINVARG;
         }
     }
-
-    CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "Trying to write " _YELLOW_("%s") " as " _YELLOW_("%s") " password"
                   , sprint_hex_inrow(payload.new_pwd, sizeof(payload.new_pwd)), value);
