@@ -1101,8 +1101,8 @@
             "command": "hf 14a chaining",
             "description": "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
             "notes": [
-                "hf 14a chaining --off -> disable chaining",
-                "hf 14a chaining -> show chaining enable/disable state"
+                "hf 14a chaining -> show chaining enable/disable state",
+                "hf 14a chaining --off -> disable chaining"
             ],
             "offline": false,
             "options": [
@@ -1658,31 +1658,31 @@
         },
         "hf 15 passprotectafi": {
             "command": "hf 15 passprotectafi",
-            "description": "Password protect AFI. Cannot be undone.",
+            "description": "This command enables the password protect of AFI. *** OBS! This action can not be undone! ***",
             "notes": [
-                "hf 15 passprotectafi -p 00000000 -c"
+                "hf 15 passprotectafi -p 00000000 --force"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-p, --password <hex> EAS/AFI password, 8 hex bytes",
-                "-c, --confirm confirm the execution of this irreversible command"
+                "-p, --pwd <hex> EAS/AFI password, 8 hex bytes",
+                "--force Force execution of command (irreversible)"
             ],
-            "usage": "hf 15 passprotectafi [-hc] -p <hex>"
+            "usage": "hf 15 passprotectafi [-h] -p <hex> [--force]"
         },
         "hf 15 passprotecteas": {
             "command": "hf 15 passprotecteas",
-            "description": "Password protect EAS. Cannot be undone.",
+            "description": "This command enables the password protect of EAS. *** OBS! This action can not be undone! ***",
             "notes": [
-                "hf 15 passprotecteas -p 00000000 -c"
+                "hf 15 passprotecteas -p 00000000 --force"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-p, --password <hex> EAS/AFI password, 8 hex bytes",
-                "-c, --confirm confirm the execution of this irreversible command"
+                "-p, --pwd <hex> EAS/AFI password, 8 hex bytes",
+                "--force Force execution of command (irreversible)"
             ],
-            "usage": "hf 15 passprotecteas [-hc] -p <hex>"
+            "usage": "hf 15 passprotecteas [-h] -p <hex> [--force]"
         },
         "hf 15 raw": {
             "command": "hf 15 raw",
@@ -11884,6 +11884,6 @@
     "metadata": {
         "commands_extracted": 748,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-01-29T03:58:53"
+        "extracted_on": "2023-01-29T17:29:14"
     }
 }

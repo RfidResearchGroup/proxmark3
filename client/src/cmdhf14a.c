@@ -1462,7 +1462,7 @@ static int CmdHF14AChaining(const char *Cmd) {
                   "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
                   "hf 14a chaining         -> show chaining enable/disable state\n"
                   "hf 14a chaining --off   -> disable chaining\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,

@@ -2769,9 +2769,9 @@ static int CmdHF15EASPassProtect(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 passprotecteas",
-                 "This command enables the password protect of EAS.\n"
-                 "*** OBS!  This action can not be undone! ***",
-                 "hf 15 passprotecteas -p 00000000 --force");
+                  "This command enables the password protect of EAS.\n"
+                  "*** OBS!  This action can not be undone! ***",
+                  "hf 15 passprotecteas -p 00000000 --force");
 
     void *argtable[] = {
         arg_param_begin,
