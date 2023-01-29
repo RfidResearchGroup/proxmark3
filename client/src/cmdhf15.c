@@ -2447,6 +2447,7 @@ static int CmdHF15SlixEASDisable(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
     struct {
         uint8_t pwd[4];
         bool usepwd;
@@ -2455,14 +2456,12 @@ static int CmdHF15SlixEASDisable(const char *Cmd) {
     int pwdlen = 0;
 
     int ret_pwdparse = CLIParamHexToBuf(arg_get_str(ctx, 1), payload.pwd, 4, &pwdlen);
+    CLIParserFree(ctx);
+
     if ((pwdlen > 0 && pwdlen != 4) || ret_pwdparse != 0) {
         PrintAndLogEx(WARNING, "password must be 4 hex bytes if provided");
         return PM3_ESOFT;
     }
-
-    //CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
-    CLIParserFree(ctx);
-
 
     if (pwdlen > 0) {
         PrintAndLogEx(INFO, "Trying to disable EAS mode using password " _GREEN_("%s")
@@ -2776,7 +2775,7 @@ static int CmdHF15EASPassProtect(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("p", "password", "<hex>", "EAS/AFI password, 8 hex bytes"),
+        arg_str1("p", "pwd", "<hex>", "EAS/AFI password, 8 hex bytes"),
         arg_lit0(NULL, "force", "Force execution of command (irreversible) "),
         arg_param_end
     };
