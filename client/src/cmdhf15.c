@@ -1378,15 +1378,16 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     payload.afi = arg_get_int_def(ctx, 2, 0);
 
     int pwdlen;
-
     CLIGetHexWithReturn(ctx, 3, payload.pwd, &pwdlen);
 
     CLIParserFree(ctx);
 
+    payload.use_pwd = false;
     if (pwdlen == 4) {
         payload.use_pwd = true;
     }
 
+    payload.use_uid = false;
     if (uidlen == 8) {
         payload.use_uid = true;
     }
@@ -2386,12 +2387,11 @@ static int CmdHF15SlixEASEnable(const char *Cmd) {
     int ret_pwdparse = CLIParamHexToBuf(arg_get_str(ctx, 1), payload.pwd, 4, &pwdlen);
     if ((pwdlen > 0 && pwdlen != 4) || ret_pwdparse != 0) {
         PrintAndLogEx(WARNING, "password must be 4 hex bytes if provided");
+        CLIParserFree(ctx);
         return PM3_ESOFT;
     }
 
-    //CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
     CLIParserFree(ctx);
-
 
     if (pwdlen > 0) {
         PrintAndLogEx(INFO, "Trying to enable EAS mode using password " _GREEN_("%s")
@@ -2627,12 +2627,11 @@ static int CmdHF15SlixWritePassword(const char *Cmd) {
     } PACKED payload;
     int pwdlen = 0;
 
-
-
     CLIGetHexWithReturn(ctx, 2, payload.old_pwd, &pwdlen);
 
     if (pwdlen > 0 && pwdlen != 4) {
         PrintAndLogEx(WARNING, "old password must be 4 hex bytes if provided");
+        CLIParserFree(ctx);
         return PM3_ESOFT;
     }
 
@@ -2640,6 +2639,7 @@ static int CmdHF15SlixWritePassword(const char *Cmd) {
 
     if (pwdlen != 4) {
         PrintAndLogEx(WARNING, "new password must be 4 hex bytes");
+        CLIParserFree(ctx);
         return PM3_ESOFT;
     }
 
@@ -2670,7 +2670,6 @@ static int CmdHF15SlixWritePassword(const char *Cmd) {
     }
 
     CLIParserFree(ctx);
-
 
     PrintAndLogEx(INFO, "Trying to write " _YELLOW_("%s") " as " _YELLOW_("%s") " password"
                   , sprint_hex_inrow(payload.new_pwd, sizeof(payload.new_pwd)), value);
@@ -2705,13 +2704,14 @@ static int CmdHF15AFIPassProtect(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 passprotectafi",
-                  "Password protect AFI. Cannot be undone.",
-                  "hf 15 passprotectafi -p 00000000 -c");
+                  "This command enables the password protect of AFI.\n"
+                  "*** OBS!  This action can not be undone! ***",
+                  "hf 15 passprotectafi -p 00000000 --force");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("p", "password", "<hex>", "EAS/AFI password, 8 hex bytes"),
-        arg_lit0("c", "confirm", "confirm the execution of this irreversible command"),
+        arg_str1("p", "pwd", "<hex>", "EAS/AFI password, 8 hex bytes"),
+        arg_lit0(NULL, "force", "Force execution of command (irreversible) "),
         arg_param_end
     };
 
@@ -2724,20 +2724,20 @@ static int CmdHF15AFIPassProtect(const char *Cmd) {
 
     CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
 
-    bool confirmation = arg_get_lit(ctx, 2);
+    bool force = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
     if (pwdlen != 4) {
         PrintAndLogEx(WARNING, "password must be 4 hex bytes");
         return PM3_ESOFT;
     }
 
-    if (confirmation == 0) {
-        PrintAndLogEx(WARNING, "This irreversible command must be confirmed with the -c flag");
+    if (force == false) {
+        PrintAndLogEx(WARNING, "Use `--force` flag to override. OBS! Irreversable command");
         return PM3_ESOFT;
     }
 
-
-    PrintAndLogEx(INFO, "Trying to enable AFI password protection");
+    PrintAndLogEx(INFO, "Trying to enable AFI password protection...");
 
     PacketResponseNG resp;
     clearCommandBuffer();
@@ -2770,13 +2770,14 @@ static int CmdHF15EASPassProtect(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 passprotecteas",
-                  "Password protect EAS. Cannot be undone.",
-                  "hf 15 passprotecteas -p 00000000 -c");
+                 "This command enables the password protect of EAS.\n"
+                 "*** OBS!  This action can not be undone! ***",
+                 "hf 15 passprotecteas -p 00000000 --force");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("p", "password", "<hex>", "EAS/AFI password, 8 hex bytes"),
-        arg_lit0("c", "confirm", "confirm the execution of this irreversible command"),
+        arg_lit0(NULL, "force", "Force execution of command (irreversible) "),
         arg_param_end
     };
 
@@ -2789,19 +2790,20 @@ static int CmdHF15EASPassProtect(const char *Cmd) {
 
     CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
 
-    bool confirmation = arg_get_lit(ctx, 2);
+    bool force = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
     if (pwdlen != 4) {
         PrintAndLogEx(WARNING, "password must be 4 hex bytes");
         return PM3_ESOFT;
     }
 
-    if (confirmation == 0) {
-        PrintAndLogEx(WARNING, "This irreversible command must be confirmed with the -c flag");
+    if (force == false) {
+        PrintAndLogEx(WARNING, "Use `--force` flag to override. OBS! Irreversable command");
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "Trying to enable EAS password protection");
+    PrintAndLogEx(INFO, "Trying to enable EAS password protection...");
 
     PacketResponseNG resp;
     clearCommandBuffer();
