@@ -205,6 +205,7 @@ typedef struct {
     // rdv4
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
+    bool is_rdv4                       : 1;
 } PACKED capabilities_t;
 #define CAPABILITIES_VERSION 6
 extern capabilities_t g_pm3_capabilities;
