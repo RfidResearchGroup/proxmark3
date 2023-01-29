@@ -789,14 +789,14 @@ static int NxpSysInfo(uint8_t *uid) {
     }
 
     bool support_signature = (recv[5] & 0x01);
-    bool support_easmode = (recv[4] & 0x03);
+    bool support_easmode = (recv[4] & 0x04);
 
     PrintAndLogEx(INFO, "--------- " _CYAN_("NXP Sysinfo") " ---------");
     PrintAndLogEx(INFO, "  raw : %s", sprint_hex(recv, 8));
     PrintAndLogEx(INFO, "    Password protection configuration:");
     PrintAndLogEx(INFO, "      * Page L read%s password protected", ((recv[2] & 0x01) ? "" : " not"));
     PrintAndLogEx(INFO, "      * Page L write%s password protected", ((recv[2] & 0x02) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * Page H read%s password protected", ((recv[2] & 0x08) ? "" : " not"));
+    PrintAndLogEx(INFO, "      * Page H read%s password protected", ((recv[2] & 0x10) ? "" : " not"));
     PrintAndLogEx(INFO, "      * Page H write%s password protected", ((recv[2] & 0x20) ? "" : " not"));
 
     PrintAndLogEx(INFO, "    Lock bits:");
@@ -809,16 +809,16 @@ static int NxpSysInfo(uint8_t *uid) {
     PrintAndLogEx(INFO, "      * User memory password protection%s supported", ((recv[4] & 0x01) ? "" : " not"));
     PrintAndLogEx(INFO, "      * Counter feature%s supported", ((recv[4] & 0x02) ? "" : " not"));
     PrintAndLogEx(INFO, "      * EAS ID%s supported by EAS ALARM command", support_easmode ? "" : " not");
-    PrintAndLogEx(INFO, "      * EAS password protection%s supported", ((recv[4] & 0x04) ? "" : " not"));
+    PrintAndLogEx(INFO, "      * EAS password protection%s supported", ((recv[4] & 0x08) ? "" : " not"));
     PrintAndLogEx(INFO, "      * AFI password protection%s supported", ((recv[4] & 0x10) ? "" : " not"));
     PrintAndLogEx(INFO, "      * Extended mode%s supported by INVENTORY READ command", ((recv[4] & 0x20) ? "" : " not"));
     PrintAndLogEx(INFO, "      * EAS selection%s supported by extended mode in INVENTORY READ command", ((recv[4] & 0x40) ? "" : " not"));
     PrintAndLogEx(INFO, "      * READ SIGNATURE command%s supported", support_signature ? "" : " not");
     PrintAndLogEx(INFO, "      * Password protection for READ SIGNATURE command%s supported", ((recv[5] & 0x02) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * STAY QUIET PERSISTENT command%s supported", ((recv[5] & 0x03) ? "" : " not"));
+    PrintAndLogEx(INFO, "      * STAY QUIET PERSISTENT command%s supported", ((recv[5] & 0x04) ? "" : " not"));
     PrintAndLogEx(INFO, "      * ENABLE PRIVACY command%s supported", ((recv[5] & 0x10) ? "" : " not"));
     PrintAndLogEx(INFO, "      * DESTROY command%s supported", ((recv[5] & 0x20) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * Additional 32 bits feature flags are%s transmitted", ((recv[5] & 0x80) ? "" : " not"));
+    PrintAndLogEx(INFO, "      * Additional 32 bits feature flags are%s transmitted", ((recv[7] & 0x80) ? "" : " not"));
 
     if (support_easmode) {
         NxpTestEAS(uid);
