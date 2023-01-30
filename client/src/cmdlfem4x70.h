@@ -26,6 +26,7 @@
 int CmdLFEM4X70(const char *Cmd);
 int CmdEM4x70Info(const char *Cmd);
 int CmdEM4x70Write(const char *Cmd);
+int CmdEM4x70Brute(const char *Cmd);
 int CmdEM4x70Unlock(const char *Cmd);
 int CmdEM4x70Auth(const char *Cmd);
 int CmdEM4x70WritePIN(const char *Cmd);
