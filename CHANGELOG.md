@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Fixed the lf sampling when bits_per_sample is less than 8 (@wh201906)
+ - Added `lf em 4x70 brute` command (@adite)
 
 
 ## [Nitride.4.16191][2023-01-29]
