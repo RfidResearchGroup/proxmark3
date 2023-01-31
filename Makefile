@@ -259,7 +259,7 @@ udev:
 ifneq ($(wildcard /etc/arch-release),)
 # If user is running ArchLinux, use group 'uucp'
 	$(SUDO) cp -rf driver/77-pm3-usb-device-blacklist-uucp.rules    $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
-else ifneq ($(wildcard /etc/fedora-release),)
+else
 # Else, use group 'dialout'
 	$(SUDO) cp -rf driver/77-pm3-usb-device-blacklist-dialout.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
 endif
