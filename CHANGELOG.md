@@ -5,7 +5,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
  - Fixed the lf sampling when bits_per_sample is less than 8 (@wh201906)
  - Added `lf em 4x70 brute` command (@adite)
-
+ - Added documentation for usage of Proxmark3 under WSL2 (@henrygab)
+ - Fixed device permissions via updated `udev` rules (@henrygab)
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)
@@ -51,7 +52,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `pm3` shell script now automatically detects WSL2 with USBIPD serial ports (@iceman1001)
  - Fixed `trace list -c` - annotation of CRC bytes now is colored or squared if no ansi colors is supported (@iceman1001)
  - Fixed `trace list -t mf` - now also finds UID if anticollision is partial captured, to be used for mfkey (@iceman1001)
-
 
 ## [Radium.4.15864][2022-10-29]
  - Changed `lf indala sim` - now accepts fc / cn (@iceman1001)
