@@ -147,7 +147,7 @@ static int info_hf_tesla(void) {
 
     // ---------------  CERT reading ----------------
     Set_apdu_in_framing(true);
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < 5; i++) {
 
         uint8_t aSELECT_CERT[PM3_CMD_DATA_SIZE] = {0x80, 0x06, i, 0x00, 0x00, 0x00, 0xFF};
         int aSELECT_CERT_n = 7;
@@ -160,7 +160,7 @@ static int info_hf_tesla(void) {
         sw = get_sw(response, resplen);
 
         if (sw == ISO7816_OK) {
-            // save CETT for later
+            // save CERT for later
             uint8_t cert[515] = {0};
             memcpy(cert, response, resplen - 2);
 
@@ -201,10 +201,21 @@ static int info_hf_tesla(void) {
     for (int i = 0; i < 3; i++) {
         PrintAndLogEx(INFO, "%d - %s", i, sprint_hex_inrow(pk[i], 65));
     }
-    if (form_factor[1] == 1) {
-        PrintAndLogEx(INFO, "Form factor... %s (card)", sprint_hex_inrow(form_factor, sizeof(form_factor)));
-    } else if (form_factor[1] == 2) {
-        PrintAndLogEx(INFO, "Form factor... %s (phone app)", sprint_hex_inrow(form_factor, sizeof(form_factor)));
+    PrintAndLogEx(INFO, "Form factor... %s " NOLF, sprint_hex_inrow(form_factor, sizeof(form_factor)));
+    uint16_t form_factor_value = form_factor[0] << 8 | form_factor[1];
+    switch (form_factor_value) {
+        case 0x0001:
+            PrintAndLogEx(NORMAL, "(card)");
+            break;
+        case 0x0022:
+            PrintAndLogEx(NORMAL, "(fob)");
+            break;
+        case 0x0031:
+            PrintAndLogEx(NORMAL, "(phone app)");
+            break;
+        default:
+            PrintAndLogEx(NORMAL, "(unknown)");
+            break;
     }
 
     if (sizeof(version) > 0) {

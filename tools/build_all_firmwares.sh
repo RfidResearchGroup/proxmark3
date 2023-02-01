@@ -22,7 +22,8 @@ echo "Destination:    ${DEST:=firmware}"
 echo "Produce stats?: ${STATS:=false}"
 
 # Which parts to skip for the 256kb version?
-SKIPS256="SKIP_HITAG=1 SKIP_LEGICRF=1 SKIP_FELICA=1 SKIP_EM4x50=1 SKIP_ISO14443b=1"
+SKIPS256="SKIP_HITAG=1 SKIP_LEGICRF=1 SKIP_FELICA=1 SKIP_EM4x50=1 SKIP_ISO14443b=1 SKIP_NFCBARCODE=1 SKIP_ZX8211=1"
+
 
 make $MKFLAGS bootrom || exit 1
 chmod 644 bootrom/obj/bootrom.elf

@@ -1298,6 +1298,10 @@ void pm3_version(bool verbose, bool oneliner) {
                 PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
             } else {
                 PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3 GENERIC"));
+                if (IfPm3Flash()) {
+                    PrintAndLogEx(NORMAL, "  external flash............ %s", _GREEN_("present"));
+                }
+
                 if (IfPm3FpcUsartHost()) {
                     PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
                 }

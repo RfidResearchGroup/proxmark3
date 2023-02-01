@@ -62,6 +62,12 @@ int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, ui
 
 void SetTag15693Uid(const uint8_t *uid);
 
-void DisablePrivacySlixLIso15693(uint8_t *password);
-void DisableEAS_AFISlixLIso15693(uint8_t *password);
+void WritePasswordSlixIso15693(uint8_t *old_password, uint8_t *new_password, uint8_t pwd_id);
+void DisablePrivacySlixIso15693(uint8_t *password);
+void EnablePrivacySlixIso15693(uint8_t *password);
+void DisableEAS_AFISlixIso15693(uint8_t *password, bool usepwd);
+void EnableEAS_AFISlixIso15693(uint8_t *password, bool usepwd);
+void PassProtextEASSlixIso15693(uint8_t *password);
+void PassProtectAFISlixIso15693(uint8_t *password);
+void WriteAFIIso15693(uint8_t *password, bool usepwd, uint8_t *uid, bool use_uid, uint8_t afi);
 #endif
