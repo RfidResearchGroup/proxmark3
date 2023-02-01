@@ -306,8 +306,8 @@ int CmdEM4x70Brute(const char *Cmd) {
             break;
         }
 
-        // should be done in about 30 minutes
-        if (timeout > ((30 * 60000) / TIMEOUT)) {
+        // should be done in about 60 minutes.
+        if (timeout > ((60 * 60000) / TIMEOUT)) {
             PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
             break;
         }
