@@ -441,6 +441,171 @@ int CmdEM4x70Auth(const char *Cmd) {
     return PM3_ESOFT;
 }
 
+static bool Parse_CmdEM4x70_NEW_COMMAND_XYZZY(const char *Cmd, em4x70_data_t* etd) {
+    bool failedArgsParsing = false;
+    memset(etd, 0, sizeof(em4x70_data_t));
+
+    CLIParserContext *ctx;
+
+    // N.B. - Calling CLIParserInit may result in various allocations, and therefore
+    //        REQUIRES that all code paths call `CLIParserFree(ctx)` before exiting.
+    CLIParserInit(&ctx, "lf em 4x70 NEW_COMMAND_XYZZY",
+                "Multiple lines of help text describing\n"
+                "what the command does, how it's used,\n"
+                "and preferably at least one example commmand line\n"
+                "showing the command in use.\n",
+                "Example command to foo the bar:\n"
+                "lf em 4x70 xyzzy -k F32AA98CF5BE4ADFA6D3480B --rnd 45F54ADA252AAC --frn 4866BB70 -d 8\n"
+                );
+
+    // This lists the arguments expected.
+    // (the index of each argument is significant, and used later...)
+    void *argtable[] = {
+        arg_param_begin,
+        
+        // INDEX == 1: no short param, "--par" supported.
+        // arg_lit0 means no parameters (e.g., a boolean value or count of instances)
+        arg_lit0(NULL, "par", "Add parity bit when sending commands"),
+
+        // INDEX == 2: no short param, "--rnd" is a hex string
+        // arg_str1 means one additional parameter, and the third parameter indicates type
+        arg_str1(NULL, "rnd", "<hex>", "Random 56-bit"),
+
+        // INDEX == 3: no short param, "--frn" is a hex string
+        // arg_str1 means one additional parameter, and the third parameter indicates type
+        arg_str1(NULL, "frn", "<hex>", "F(RN) 28-bit as 8 hex characters (last character is padding of zero)"),
+
+        // INDEX == 4: Either "-k" or "--key" is a hex string
+        // arg_str1 means one additional parameter, and the third parameter indicates type
+        arg_str1("k",  "key", "<hex>", "Crypt Key as 24 hex characters"),
+
+        // INDEX == 5: Either "-d" or "--divergence" is an integer given as a decimal value
+        // arg_int1 means one additional parameter, and the third parameter indicates type
+        arg_int1("d",  "divergence", "<dec>", "number of significant bits to diverge from key (default = 12)"),
+
+        arg_param_end
+    };
+
+    // Many use the `CLIExecWithReturn()` macro, but I do not like macros which
+    // hide function exit points.  Expanded here as this is for learning what
+    // the code actually does....
+    if (CLIParserParseString(ctx, Cmd, argtable, arg_getsize(argtable), true)) {
+        CLIParserFree(ctx);
+        return false;
+    }
+
+    // Get the count of times the "--par" argument was given, but store
+    // as a boolean ... any number of "--par" can be provided
+    etd->parity = arg_get_lit(ctx, 1);
+
+    // Next see if the parameter listed in the table at INDEX == 2 was found.
+    // arg_get_str(ctx,2) returns the string that followed this argument.
+    // CLIParamHexToBuf() converts the string into data bytes, and if successful,
+    // returns the number of bytes that user provided (which may differ from
+    // the maximum count of bytes in the provided buffer).
+    int rnd_len = 7;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 2), etd->rnd, 7, &rnd_len)) {
+        // mandatory parameter, so mark as failure
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "rnd parameter is a mandatory hex string");
+    } else if (rnd_len != 7) {
+        // also fail if the hex string was not 14 characters (7 data bytes)
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "Random number length must be 7 bytes instead of %d", rnd_len);
+    }
+
+    // As above, but for parameter INDEX == 3, which requires 4 bytes
+    int frnd_len = 4;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 3), etd->frnd, 4, &frnd_len)) {
+        // mandatory parameter, so mark as failure
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "frnd parameter is a mandatory hex string");
+    } else if (frnd_len != 4) {
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "F(RN) length must be 4 bytes instead of %d", frnd_len);
+    }
+
+    // As above, but for parameter INDEX == 4, which requires 12 bytes
+    int key_len = 12;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 4), etd->crypt_key, 12, &key_len)) {
+        // mandatory parameter, so mark as failure
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "key_len parameter is a mandatory hex string");
+    } else if (key_len != 12) {
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "Crypt key length must be 12 bytes instead of %d", key_len);
+    }
+
+    // Next see if the parameter listed in the table at INDEX == 5 was found.
+    // arg_get_int_def(ctx,idx,12) is used because this is an OPTIONAL parameter.
+    // The `12` is the default value, if not in the command options.
+    int divergence = arg_get_int_def(ctx, 5, 12);
+    // Nevertheless, it can still fail if the user provided a value that
+    // is out-of-bounds.  Here, the valid values are [1..27].
+    if (divergence < 1 || divergence > 27) {
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "divergence has to be within range [1, 27], got: %d", divergence);
+    }
+    // Here, the value is stored in `address` in the etd structure
+    etd->address = (uint8_t)divergence;
+
+    // As noted above, every call to `CLIParserInit()` requires
+    // a corresponding call to `CLIParserFree()`...
+    CLIParserFree(ctx);
+
+    // return a boolean indicating if the parameters parsed successfully or not
+    return failedArgsParsing ? false : true;
+}
+int CmdEM4x70_NEW_COMMAND_XYZZY(const char *Cmd) {
+
+    // Kudos to paper "Dismantling Megamos Crypto", Roel Verdult, Flavio D. Garcia and Barıs¸ Ege.
+    // Given a working { private key, rnd, frnd }, this function branches out
+    em4x70_data_t etd = {0};
+
+    if (!Parse_CmdEM4x70_NEW_COMMAND_XYZZY(Cmd, &etd)) {
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "click " _GREEN_("pm3 button") " or press " _GREEN_("Enter") " to exit");
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    SendCommandNG(CMD_LF_EM4X70_NEW_COMMAND_XYZZY, (uint8_t *)&etd, sizeof(etd));
+
+    uint32_t timeout = 0;
+    for (;;) {
+
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            break;
+        }
+
+        if (WaitForResponseTimeout(CMD_LF_EM4X70_NEW_COMMAND_XYZZY, &resp, TIMEOUT)) {
+            // if not a long-running command, this should exit on failures
+            // (e.g., check for PM3_SUCCESS, handle specific errors such as PM3_ETIMEOUT, etc.
+            if (resp.status) {
+                // Response data must match arm source
+                // In this example, the ARM source returned four uint8_t bytes.
+                const uint8_t* data = &(resp.data.asBytes[0]);
+                PrintAndLogEx(INFO, "Success: " _BRIGHT_GREEN_("%02x %02x %02x %02x"), data[0], data[1], data[2], data[3]);
+                return PM3_SUCCESS;
+            }
+            break;
+        }
+
+        // should be done in about 60 minutes.
+        if (timeout > ((60 * 60000) / TIMEOUT)) {
+            PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+            break;
+        }
+        timeout++;
+    }
+
+    PrintAndLogEx(FAILED, "Command NEW_COMMAND_XYZZY " _BRIGHT_RED_("failed"));
+    return PM3_ESOFT;
+}
+
+
 int CmdEM4x70WritePIN(const char *Cmd) {
 
     em4x70_data_t etd = {0};
@@ -549,14 +714,15 @@ int CmdEM4x70WriteKey(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",     CmdHelp,           AlwaysAvailable, "This help"},
-    {"brute",    CmdEM4x70Brute,    IfPm3EM4x70,     "Bruteforce EM4X70 to find partial Crypt Key"},
-    {"info",     CmdEM4x70Info,     IfPm3EM4x70,     "Tag information EM4x70"},
-    {"write",    CmdEM4x70Write,    IfPm3EM4x70,     "Write EM4x70"},
-    {"unlock",   CmdEM4x70Unlock,   IfPm3EM4x70,     "Unlock EM4x70 for writing"},
-    {"auth",     CmdEM4x70Auth,     IfPm3EM4x70,     "Authenticate EM4x70"},
-    {"writepin", CmdEM4x70WritePIN, IfPm3EM4x70,     "Write PIN"},
-    {"writekey", CmdEM4x70WriteKey, IfPm3EM4x70,     "Write Crypt Key"},
+    {"help",        CmdHelp,             AlwaysAvailable, "This help"},
+    {"brute",       CmdEM4x70Brute,      IfPm3EM4x70,     "Bruteforce EM4X70 to find partial Crypt Key"},
+    {"info",        CmdEM4x70Info,       IfPm3EM4x70,     "Tag information EM4x70"},
+    {"write",       CmdEM4x70Write,      IfPm3EM4x70,     "Write EM4x70"},
+    {"unlock",      CmdEM4x70Unlock,     IfPm3EM4x70,     "Unlock EM4x70 for writing"},
+    {"auth",        CmdEM4x70Auth,       IfPm3EM4x70,     "Authenticate EM4x70"},
+    {"xyzzy",       CmdEM4x70_NEW_COMMAND_XYZZY, IfPm3EM4x70,     "one-line summary of command"},
+    {"writepin",    CmdEM4x70WritePIN,   IfPm3EM4x70,     "Write PIN"},
+    {"writekey",    CmdEM4x70WriteKey,   IfPm3EM4x70,     "Write Crypt Key"},
     {NULL, NULL, NULL, NULL}
 };
 

@@ -486,6 +486,8 @@ typedef struct {
 #define CMD_LF_EM4X70_WRITEPIN                                            0x0264
 #define CMD_LF_EM4X70_WRITEKEY                                            0x0265
 #define CMD_LF_EM4X70_BRUTE                                               0x0266
+#define CMD_LF_EM4X70_NEW_COMMAND_XYZZY                                   0x026F // This must be a unique number...
+
 // Sampling configuration for LF reader/sniffer
 #define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E

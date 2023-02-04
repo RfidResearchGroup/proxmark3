@@ -1231,6 +1231,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x70_brute((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }
+        case CMD_LF_EM4X70_NEW_COMMAND_XYZZY: {
+            Dbprintf("received CMD_LF_EM4x70_NEW_COMMAND_XYZZY command with %d bytes payload", packet->length);
+            em4x70_NEW_COMMAND_XYZZY((em4x70_data_t *)packet->data.asBytes, true);
+        }
 #endif
 
 #ifdef WITH_ZX8211

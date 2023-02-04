@@ -834,6 +834,53 @@ void em4x70_brute(em4x70_data_t *etd, bool ledcontrol) {
     reply_ng(CMD_LF_EM4X70_BRUTE, status, response, sizeof(response));
 }
 
+// TODO: Check known output filter bits to reduce attempts needed.
+// PROBLEM: Requires two (modifiable) 128k bit tables to store two
+//          bits for each of the 2^20 possibilities.  Won't fit in
+//          current ProxMark3 hardware.
+//          (PM3 Easy and PM3 RDV4 are each 512k flash / 64k ram)
+//
+void em4x70_NEW_COMMAND_XYZZY(em4x70_data_t *etd, bool ledcontrol) {
+
+    // NOTE: the  etd  parameter stores all the options to be used for this command.
+    //       validation of the options validity should occur herein,
+    //       even if most implemented commands today do not do this.
+
+    bool status = true;
+
+    command_parity = etd->parity;
+
+    // Minimally, need to setup FPGA for LF reading, and call init_tag() (resets the 'tag' global variable)
+    init_tag();
+    em4x70_setup_read();
+
+    // Find the Tag
+    if (status) {
+        status = get_signalproperties();
+        if (!status) {
+            Dbprintf(_RED_("Failed to get signal properties."));
+        }
+    }
+    if (status) {
+        status = find_em4x70_tag();
+        if (!status) {
+            Dbprintf(_RED_("Failed to find tag."));
+        }
+    }
+    Dbprintf(_BRIGHT_RED_("WHY DOES THIS LEAVE THE PM3 IN A NON-RESPONSIVE STATE?"));
+    status = false;
+
+    // Normally, this would be data retrieved from the transponder in some way...s
+    uint8_t results[4] = { 0x48, 0x47, 0x21, 0x00 };
+
+
+    StopTicks();
+    lf_finalize(ledcontrol);
+    reply_ng(CMD_LF_EM4X70_NEW_COMMAND_XYZZY, status, results, 4);
+    Dbprintf("*** " __FILE__ " @ %4d    Function exit.", __LINE__);
+}
+
+
 void em4x70_write_pin(em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
