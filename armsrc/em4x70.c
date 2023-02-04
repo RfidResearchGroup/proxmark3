@@ -876,8 +876,8 @@ void em4x70_NEW_COMMAND_XYZZY(em4x70_data_t *etd, bool ledcontrol) {
 
     StopTicks();
     lf_finalize(ledcontrol);
-    Dbprintf("*** " __FILE__ " @ %4d    final call to reply_ng.", __LINE__);
-    reply_ng(CMD_LF_EM4X70_NEW_COMMAND_XYZZY, PM3_SUCCESS, results, 4);
+    Dbprintf("*** " __FILE__ " @ %4d    final call to reply_ng.  (compiled at %s)", __LINE__, __TIME__);
+    reply_ng(CMD_LF_EM4X70_NEW_COMMAND_XYZZY, 1, results, 4);
 }
 
 
