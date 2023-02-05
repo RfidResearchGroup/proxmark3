@@ -300,15 +300,23 @@ static int CmdClear(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "clear",
                   "Clear the Proxmark3 client terminal screen",
-                  "clear"
+                  "clear      -> clear the terminal screen\n"
+                  "clear -b   -> clear the terminal screen and the scrollback buffer"
                  );
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("b", "back", "also clear the scrollback buffer"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool scrollback = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
-    PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
+
+    if (!scrollback)
+        PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
+    else
+        PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ _CLEAR_SCROLLBACK_ "");
+
     return PM3_SUCCESS;
 }
 

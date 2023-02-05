@@ -58,6 +58,7 @@
 #define _BACK_BRIGHT_WHITE_(s)   "\x1b[47;1m" s AEND
 
 #define _CLEAR_ "\x1b[2J"
+#define _CLEAR_SCROLLBACK_ "\x1b[3J"
 #define _TOP_   "\x1b[1;1f"
 
 #if defined(HAVE_READLINE)
