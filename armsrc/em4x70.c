@@ -848,14 +848,21 @@ void em4x70_NEW_COMMAND_XYZZY(em4x70_data_t *etd, bool ledcontrol) {
 
     bool status = true;
 
+
+
     command_parity = etd->parity;
 
-    // Minimally, need to setup FPGA for LF reading, and call init_tag() (resets the 'tag' global variable)
-    init_tag();
-    em4x70_setup_read();
+    if (status) {
+        Dbprintf(_BRIGHT_RED_("WHY DOES THIS LEAVE THE PM3 IN A NON-RESPONSIVE STATE?"));
+        status = false;
+    }
 
-    Dbprintf(_BRIGHT_RED_("WHY DOES THIS LEAVE THE PM3 IN A NON-RESPONSIVE STATE?"));
-    status = false;
+
+    // Minimally, need to setup FPGA for LF reading, and call init_tag() (resets the 'tag' global variable)
+    if (status) {
+        init_tag();
+        em4x70_setup_read();
+    }
 
     // Find the Tag
     if (status) {
