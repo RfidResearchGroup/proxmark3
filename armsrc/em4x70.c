@@ -846,16 +846,8 @@ void em4x70_NEW_COMMAND_XYZZY(em4x70_data_t *etd, bool ledcontrol) {
     //       validation of the options validity should occur herein,
     //       even if most implemented commands today do not do this.
 
-    bool status = false;
-
-
-
+    bool status = true;
     command_parity = etd->parity;
-
-    if (status) {
-        Dbprintf(_BRIGHT_RED_("WHY DOES THIS LEAVE THE PM3 IN A NON-RESPONSIVE STATE?"));
-        status = false;
-    }
 
 
     // Minimally, need to setup FPGA for LF reading, and call init_tag() (resets the 'tag' global variable)
@@ -877,15 +869,15 @@ void em4x70_NEW_COMMAND_XYZZY(em4x70_data_t *etd, bool ledcontrol) {
             Dbprintf(_RED_("Failed to find tag."));
         }
     }
- 
 
-
-    //StopTicks();
-    //lf_finalize(ledcontrol);
-    //Dbprintf("*** " __FILE__ " @ %4d    final call to reply_ng.  (compiled at %s)", __LINE__, __TIME__);
-
-    // Normally, this would be data retrieved from the transponder in some way...s
+    // do the real stuff here...
+    Dbprintf("*** This command is just a placeholder");
+    // Normally, this would be data retrieved from the transponder in some way...
     uint8_t results[4] = { 0x48, 0x47, 0x21, 0x00 };
+
+    StopTicks();
+    lf_finalize(ledcontrol);
+
     reply_ng(CMD_LF_EM4X70_NEW_COMMAND_XYZZY, 1, results, 4);
 }
 
