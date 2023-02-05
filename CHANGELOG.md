@@ -6,6 +6,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed broken `lf em 4x70 brute` command (@adite)
  - Fixed the lf sampling when bits_per_sample is less than 8 (@wh201906)
  - Added `lf em 4x70 brute` command (@adite)
+ - Added `--back` option to `clear` command to clear the scrollback buffer (@wh201906)
 
 
 ## [Nitride.4.16191][2023-01-29]
