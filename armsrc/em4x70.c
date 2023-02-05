@@ -854,6 +854,9 @@ void em4x70_NEW_COMMAND_XYZZY(em4x70_data_t *etd, bool ledcontrol) {
     init_tag();
     em4x70_setup_read();
 
+    Dbprintf(_BRIGHT_RED_("WHY DOES THIS LEAVE THE PM3 IN A NON-RESPONSIVE STATE?"));
+    status = false;
+
     // Find the Tag
     if (status) {
         status = get_signalproperties();
@@ -867,9 +870,7 @@ void em4x70_NEW_COMMAND_XYZZY(em4x70_data_t *etd, bool ledcontrol) {
             Dbprintf(_RED_("Failed to find tag."));
         }
     }
-    Dbprintf(_BRIGHT_RED_("WHY DOES THIS LEAVE THE PM3 IN A NON-RESPONSIVE STATE?"));
-    status = false;
-
+ 
     // Normally, this would be data retrieved from the transponder in some way...s
     uint8_t results[4] = { 0x48, 0x47, 0x21, 0x00 };
 
