@@ -65,7 +65,7 @@ ifneq (,$(INSTALLSIMFW))
 endif
 ifeq ($(platform),Linux)
 	$(Q)$(INSTALLSUDO) $(MKDIR) $(DESTDIR)$(UDEV_PREFIX)
-	$(Q)$(INSTALLSUDO) $(CP) driver/77-pm3-usb-device-blacklist.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+	$(Q)$(INSTALLSUDO) $(CP) driver/77-pm3-usb-device-blacklist-dialout.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
 endif
 
 uninstall: common/uninstall
