@@ -195,10 +195,30 @@ function installDeps {
     esac
 }
 
+function askUseDir {
+    echo
+    info "Found proxmark3 repository:"
+    info "  ${DEPENDENCIES[*]}"
+    if [[ "${MACOS_PKGMGR}" == "brew" ]]; then
+        info "The following tap needs to be added to brew:"
+        info "  ${BREW_TAP}"
+    fi
+}
+
+function checkRepo {
+    for i in "$(dirname $0)" "$(pwd)"; do
+        ORIGIN=$(git remote get-url origin | tr '[:upper:]' '[:lower:]')
+        # Lazy checking
+        if [[ "${ORIGIN}" =~ git@github.com:rfidresearchgroup/proxmark3 ]] || [[ "${ORIGIN}" =~ https://github.com/rfidresearchgroup/proxmark3 ]]; then
+            POTENTIAL_WORKDIR=$(git rev-parse --show-toplevel)
+        fi
+    done;
+}
+
 echo
 info "PM3 build script"
 os
 
 installDeps
 
-cloneRepo
+checkRepo
