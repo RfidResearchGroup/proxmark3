@@ -317,6 +317,7 @@ static int smart_wait(uint8_t *out, int maxoutlen, bool verbose) {
 static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
 
     int datalen = smart_wait(out, maxoutlen, verbose);
+    int totallen = datalen;
     bool needGetData = false;
 
     if (datalen < 2) {
@@ -327,8 +328,26 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
         needGetData = true;
     }
 
-    if (needGetData) {
+    if (needGetData == true) {
+        // Don't discard data we already received except the SW code.
+        // If we only received 1 byte, this is the echo of INS, we discard it.
+        totallen -= 2;
+        if (totallen == 1) {
+            totallen = 0;
+        }
+        int ofs = totallen;
+        maxoutlen -= totallen;
+        PrintAndLogEx(DEBUG, "Keeping data (%d bytes): %s", ofs, sprint_hex(out, ofs));
+
         int len = out[datalen - 1];
+        if (len == 0 || len > MAX_APDU_SIZE) {
+            // Cap the data length or the smartcard may send us a buffer we can't handle
+            len = MAX_APDU_SIZE;
+        }
+        if (maxoutlen < len) {
+            // We don't have enough buffer to hold the next part
+            goto out;
+        }
 
         if (verbose) PrintAndLogEx(INFO, "Requesting " _YELLOW_("0x%02X") " bytes response", len);
 
@@ -342,7 +361,7 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
         SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
         free(payload);
 
-        datalen = smart_wait(out, maxoutlen, verbose);
+        datalen = smart_wait(&out[ofs], maxoutlen, verbose);
 
         if (datalen < 2) {
             goto out;
@@ -352,7 +371,7 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
         if (datalen != len + 2) {
             // data with ACK
             if (datalen == len + 2 + 1) { // 2 - response, 1 - ACK
-                if (out[0] != ISO7816_GET_RESPONSE) {
+                if (out[ofs] != ISO7816_GET_RESPONSE) {
                     if (verbose) {
                         PrintAndLogEx(ERR, "GetResponse ACK error. len 0x%x | data[0] %02X", len, out[0]);
                     }
@@ -361,7 +380,8 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
                 }
 
                 datalen--;
-                memmove(out, &out[1], datalen);
+                memmove(&out[ofs], &out[ofs + 1], datalen);
+                totallen += datalen;
             } else {
                 // wrong length
                 if (verbose) {
@@ -372,7 +392,7 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
     }
 
 out:
-    return datalen;
+    return totallen;
 }
 
 static int smart_response(uint8_t *out, int maxoutlen) {
@@ -501,8 +521,8 @@ static int CmdSmartUpgrade(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart upgrade",
-                  "Upgrade RDV4.0 sim module firmware",
-                  "smart upgrade -f sim011.bin"
+                  "Upgrade RDV4 sim module firmware",
+                  "smart upgrade -f sim013.bin"
                  );
 
     void *argtable[] = {
@@ -699,7 +719,7 @@ static int CmdSmartInfo(const char *Cmd) {
 
     // print header
     PrintAndLogEx(INFO, "--- " _CYAN_("Smartcard Information") " ---------");
-    PrintAndLogEx(INFO, "ISO7618-3 ATR... %s", sprint_hex(card.atr, card.atr_len));
+    PrintAndLogEx(INFO, "ISO7816-3 ATR... %s", sprint_hex(card.atr, card.atr_len));
     // convert bytes to str.
     char *hexstr = calloc((card.atr_len << 1) + 1, sizeof(uint8_t));
     if (hexstr == NULL) {

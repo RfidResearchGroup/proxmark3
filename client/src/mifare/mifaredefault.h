@@ -21,6 +21,7 @@
 
 #include "common.h"
 
+#define MFKEY_SIZE 6
 #define MFBLOCK_SIZE 16
 
 static const uint64_t g_mifare_default_keys[] = {
@@ -28,6 +29,7 @@ static const uint64_t g_mifare_default_keys[] = {
     0x000000000000, // Blank key
     0xa0a1a2a3a4a5, // NFCForum MAD key
     0xd3f7d3f7d3f7, // NDEF public key
+    0x4b791bea7bcc, // MFC EV1 Signature B
     0xb0b1b2b3b4b5,
     0xaabbccddeeff,
     0x1a2b3c4d5e6f,
@@ -45,7 +47,7 @@ static const uint64_t g_mifare_default_keys[] = {
     0x0000014b5c31,
     0xb578f38a5c61,
     0x96a301bce267,
-    0xfc00018778f7,
+    0xfc00018778f7, // Public Transport
     0x6471a5ef2d1a, // SimonsVoss
     0x4E3552426B32, // ID06
     0x6A1987C40A21, // Salto
@@ -66,9 +68,18 @@ static const uint64_t g_mifare_default_keys[] = {
     0x857464D3AAD1, // HTC Eindhoven key
     0x08B386463229, // troika
     0xe00000000000, // icopy
+    0x199404281970, // NSP A
+    0x199404281998, // NSP B
 };
 
+static const uint8_t g_mifare_default_key[] =  {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static const uint8_t g_mifare_mad_key[] =  {0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5};
+static const uint8_t g_mifare_mad_key_b[] = {0x89, 0xEC, 0xA9, 0x7F, 0x8C, 0x2A};
+
+// 16 key B  D01AFEEB890A
+static const uint8_t g_mifare_signature_key_a[] = {0x5C, 0x8F, 0xF9, 0x99, 0x0D, 0xA2};
+static const uint8_t g_mifare_signature_key_b[] = {0x4b, 0x79, 0x1b, 0xea, 0x7b, 0xcc};
+
 static const uint8_t g_mifare_ndef_key[] = {0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7};
 static const uint8_t g_mifarep_mad_key[] =  {0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7};
 static const uint8_t g_mifarep_ndef_key[] = {0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7};

@@ -44,19 +44,6 @@
 //  const typeof( ((type *)0)->member ) *__mptr = (ptr);
 //        (type *)( (char *)__mptr - offsetof(type,member) );})
 
-struct tlvdb {
-    struct tlv tag;
-    struct tlvdb *next;
-    struct tlvdb *parent;
-    struct tlvdb *children;
-};
-
-struct tlvdb_root {
-    struct tlvdb db;
-    size_t len;
-    unsigned char buf[0];
-};
-
 static tlv_tag_t tlv_parse_tag(const unsigned char **buf, size_t *len) {
     tlv_tag_t tag;
 
@@ -212,6 +199,7 @@ struct tlvdb *tlvdb_parse(const unsigned char *buf, size_t len) {
 err:
     tlvdb_free(&root->db);
 
+    free(root);
     return NULL;
 }
 
@@ -248,7 +236,51 @@ struct tlvdb *tlvdb_parse_multi(const unsigned char *buf, size_t len) {
 err:
     tlvdb_free(&root->db);
 
+    free(root);
     return NULL;
+}
+
+bool tlvdb_parse_root(struct tlvdb_root *root) {
+    if (root == NULL || root->len == 0) {
+        return false;
+    }
+
+    const uint8_t *tmp;
+    size_t left;
+
+    tmp = root->buf;
+    left = root->len;
+    if (tlvdb_parse_one(&root->db, NULL, &tmp, &left) == true) {
+        if (left == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool tlvdb_parse_root_multi(struct tlvdb_root *root) {
+    if (root == NULL || root->len == 0) {
+        return false;
+    }
+
+    const uint8_t *tmp;
+    size_t left;
+
+    tmp = root->buf;
+    left = root->len;
+    if (tlvdb_parse_one(&root->db, NULL, &tmp, &left) == true) {
+        while (left > 0) {
+            struct tlvdb *db = calloc(1, sizeof(*db));
+            if (tlvdb_parse_one(db, NULL, &tmp, &left) == true) {
+                tlvdb_add(&root->db, db);
+            } else {
+                free(db);
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
 }
 
 struct tlvdb *tlvdb_fixed(tlv_tag_t tag, size_t len, const unsigned char *value) {
@@ -289,6 +321,21 @@ void tlvdb_free(struct tlvdb *tlvdb) {
         tlvdb_free(tlvdb->children);
         free(tlvdb);
     }
+}
+
+void tlvdb_root_free(struct tlvdb_root *root) {
+    if (root == NULL) {
+        return;
+    }
+    if (root->db.children) {
+        tlvdb_free(root->db.children);
+        root->db.children = NULL;
+    }
+    if (root->db.next) {
+        tlvdb_free(root->db.next);
+        root->db.next = NULL;
+    }
+    free(root);
 }
 
 struct tlvdb *tlvdb_find_next(struct tlvdb *tlvdb, tlv_tag_t tag) {

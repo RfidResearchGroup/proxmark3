@@ -29,15 +29,15 @@ GZIP = gzip
 MKDIR = mkdir -p
 RM = rm -f
 RMDIR = rm -rf
-# rmdir only if dir is empty, tolerate failure
-RMDIR_SOFT = -rmdir
+# rmdir only if dir is empty, you must add "-" when using it to tolerate failure
+RMDIR_SOFT = rmdir
 MV = mv
 TOUCH = touch
 FALSE = false
 TAR = tar
 TARFLAGS ?= -v --ignore-failed-read -r
 TARFLAGS += -C .. -f
-CROSS  ?= arm-none-eabi-
+CROSS ?= arm-none-eabi-
 CC ?= gcc
 CXX ?= g++
 SH = sh
@@ -46,6 +46,14 @@ PERL = perl
 SWIG = swig
 CC_VERSION = $(shell $(CC) -dumpversion 2>/dev/null|sed 's/\..*//')
 CC_VERSION := $(or $(strip $(CC_VERSION)),0)
+
+ECHO = echo
+SUDO = sudo
+USERMOD = usermod -aG
+ADDUSER = adduser
+GETENT_BL = getent group bluetooth
+
+
 
 PATHSEP=/
 PREFIX ?=              /usr/local

@@ -713,18 +713,18 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     }
 
     if (blockn > 255) {
-        PrintAndLogEx(ERR, "<block number> must be in range [0..255] instead of: %d", blockn);
+        PrintAndLogEx(ERR, "<block number> must be in range [0..255] got: %d", blockn);
         return PM3_EINVARG;
     }
 
     if (keylen != 16) {
-        PrintAndLogEx(ERR, "<key> must be 16 bytes long instead of: %d", keylen);
+        PrintAndLogEx(ERR, "<key> must be 16 bytes long. got: %d", keylen);
         return PM3_EINVARG;
     }
 
     // 3 blocks - wo iso14443-4 chaining
     if (blocksCount > 3) {
-        PrintAndLogEx(ERR, "blocks count must be less than 3 instead of: %d", blocksCount);
+        PrintAndLogEx(ERR, "blocks count must be less than 3. got: %d", blocksCount);
         return PM3_EINVARG;
     }
 
@@ -823,12 +823,12 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     }
 
     if (sectorNum > 39) {
-        PrintAndLogEx(ERR, "<sector number> must be in range [0..39] instead of: %d", sectorNum);
+        PrintAndLogEx(ERR, "<sector number> must be in range [0..39] got: %d", sectorNum);
         return PM3_EINVARG;
     }
 
     if (keylen != 16) {
-        PrintAndLogEx(ERR, "<key> must be 16 bytes long instead of: %d", keylen);
+        PrintAndLogEx(ERR, "<key> must be 16 bytes long. got: %d", keylen);
         return PM3_EINVARG;
     }
 
@@ -925,17 +925,17 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     }
 
     if (blockNum > 255) {
-        PrintAndLogEx(ERR, "<block number> must be in range [0..255] instead of: %d", blockNum);
+        PrintAndLogEx(ERR, "<block number> must be in range [0..255] got: %d", blockNum);
         return PM3_EINVARG;
     }
 
     if (keylen != 16) {
-        PrintAndLogEx(ERR, "<key> must be 16 bytes long instead of: %d", keylen);
+        PrintAndLogEx(ERR, "<key> must be 16 bytes long. got: %d", keylen);
         return PM3_EINVARG;
     }
 
     if (datainlen != 16) {
-        PrintAndLogEx(ERR, "<data> must be 16 bytes long instead of: %d", datainlen);
+        PrintAndLogEx(ERR, "<data> must be 16 bytes long. got: %d", datainlen);
         return PM3_EINVARG;
     }
 

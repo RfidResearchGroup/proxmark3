@@ -83,7 +83,7 @@ We define generic Proxmark3 platforms as following devices.
    - **Note**: unknown pin assignments.
  - ⚠  Ryscorp Proxmark3 Pro 
    - **Note**: device has different fpga and unknown pin assignments.
-   - **Note**: Company have dissappared, leaving their customers in the dark.
+   - **Note**: Company have disappeared, leaving their customers in the dark.
  - ⚠  iCopy-X
    - **Note**: experimental support, currently incompatible with iCopy-X GUI as Proxmark client commands are now using cliparser.
    - **Note**: see also [icopyx-community repos](https://github.com/iCopy-X-Community/) for upstream sources, reversed hw etc.
@@ -93,7 +93,13 @@ We define generic Proxmark3 platforms as following devices.
  - ⚠  VX
    - **Note**: unknown device hw
 -  ⚠ Proxmark3 X 
-   - **Note**: unknown device hw.  
+   - **Note**: unknown device hw
+-  ⚠ Proxmark3 Ultimate
+   - **Note**: unknown device hw
+-  ⚠ Proxmark3 SE
+   - **Note**: unknown device hw
+
+When it comes to these new unknown models we are depending on the community to report in if this repo works and what they did to make it work.
 
 
 **256kb flash memory size of generic Proxmark3 platforms**
@@ -200,7 +206,7 @@ The official PM3-GUI from Gaucho will not work. Not to mention is quite old and 
 
 ## Official channels
 Where do you find the community?
-   - [RFID Hacking community discord server](https://discord.gg/iceman)
+   - [RFID Hacking community discord server](https://t.ly/d4_C)
    - [Proxmark3 IRC channel](https://web.libera.chat/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
    - [Proxmark3 forum](http://www.proxmark.org/forum/index.php)

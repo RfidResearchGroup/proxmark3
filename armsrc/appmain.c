@@ -345,7 +345,7 @@ static void print_debug_level(void) {
     char dbglvlstr[20] = {0};
     switch (g_dbglevel) {
         case DBG_NONE:
-            sprintf(dbglvlstr, "none");
+            sprintf(dbglvlstr, "off");
             break;
         case DBG_ERROR:
             sprintf(dbglvlstr, "error");
@@ -451,6 +451,12 @@ static void SendCapabilities(void) {
 #ifdef WITH_FPC_USART
     if (g_reply_via_fpc)
         capabilities.baudrate = g_usart_baudrate;
+#endif
+
+#ifdef RDV4
+    capabilities.is_rdv4 = true;
+#else
+    capabilities.is_rdv4 = false;
 #endif
 
 #ifdef WITH_FLASH
@@ -1221,6 +1227,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x70_write_key((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }
+        case CMD_LF_EM4X70_BRUTE: {
+            em4x70_brute((em4x70_data_t *)packet->data.asBytes, true);
+            break;
+        }
 #endif
 
 #ifdef WITH_ZX8211
@@ -1256,12 +1266,27 @@ static void PacketReceived(PacketCommandNG *packet) {
             ReaderIso15693(NULL);
             break;
         }
+        case CMD_HF_ISO15693_EML_CLEAR: {
+            EmlClearIso15693();
+            break;
+        }
+        case CMD_HF_ISO15693_EML_SETMEM: {
+            struct p {
+                uint32_t offset;
+                uint8_t count;
+                uint8_t data[];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            EmlSetMemIso15693(payload->count, payload->data, payload->offset);
+            break;
+        }
         case CMD_HF_ISO15693_SIMULATE: {
             struct p {
                 uint8_t uid[8];
+                uint8_t block_size;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            SimTagIso15693(payload->uid);
+            SimTagIso15693(payload->uid, payload->block_size);
             break;
         }
         case CMD_HF_ISO15693_CSETUID: {
@@ -1272,20 +1297,76 @@ static void PacketReceived(PacketCommandNG *packet) {
             SetTag15693Uid(payload->uid);
             break;
         }
-        case CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY: {
+        case CMD_HF_ISO15693_SLIX_DISABLE_EAS: {
             struct p {
                 uint8_t pwd[4];
+                bool usepwd;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            DisablePrivacySlixLIso15693(payload->pwd);
+            DisableEAS_AFISlixIso15693(payload->pwd, payload->usepwd);
             break;
         }
-        case CMD_HF_ISO15693_SLIX_L_DISABLE_AESAFI: {
+        case CMD_HF_ISO15693_SLIX_ENABLE_EAS: {
+            struct p {
+                uint8_t pwd[4];
+                bool usepwd;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            EnableEAS_AFISlixIso15693(payload->pwd, payload->usepwd);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_WRITE_PWD: {
+            struct p {
+                uint8_t old_pwd[4];
+                uint8_t new_pwd[4];
+                uint8_t pwd_id;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            WritePasswordSlixIso15693(payload->old_pwd, payload->new_pwd, payload->pwd_id);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY: {
             struct p {
                 uint8_t pwd[4];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            DisableEAS_AFISlixLIso15693(payload->pwd);
+            DisablePrivacySlixIso15693(payload->pwd);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            EnablePrivacySlixIso15693(payload->pwd);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            PassProtectAFISlixIso15693(payload->pwd);
+            break;
+        }
+        case CMD_HF_ISO15693_WRITE_AFI: {
+            struct p {
+                uint8_t pwd[4];
+                bool use_pwd;
+                uint8_t uid[8];
+                bool use_uid;
+                uint8_t afi;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            WriteAFIIso15693(payload->pwd, payload->use_pwd, payload->uid, payload->use_uid, payload->afi);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            PassProtextEASSlixIso15693(payload->pwd);
             break;
         }
 
@@ -1449,6 +1530,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             iso14443a_antifuzz(payload->flag);
             break;
         }
+        // EPA related
         case CMD_HF_EPA_COLLECT_NONCE: {
             EPA_PACE_Collect_Nonce(packet);
             break;
@@ -1457,6 +1539,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             EPA_PACE_Replay(packet);
             break;
         }
+        case CMD_HF_EPA_PACE_SIMULATE: {
+            EPA_PACE_Simulate(packet);
+            break;
+        }
+
         case CMD_HF_MIFARE_READER: {
             struct p {
                 uint8_t first_run;
@@ -1630,9 +1717,22 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p {
                 uint8_t blockno;
                 uint8_t pwd[4];
+                uint8_t workFlags;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareG4ReadBlk(payload->blockno, payload->pwd);
+            MifareG4ReadBlk(payload->blockno, payload->pwd, payload->workFlags);
+            break;
+        }
+        // Gen 4 GTU magic cards
+        case CMD_HF_MIFARE_G4_WRBL: {
+            struct p {
+                uint8_t blockno;
+                uint8_t pwd[4];
+                uint8_t data[16]; // data to be written
+                uint8_t workFlags;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareG4WriteBlk(payload->blockno, payload->pwd, payload->data, payload->workFlags);
             break;
         }
         case CMD_HF_MIFARE_PERSONALIZE_UID: {
@@ -2167,7 +2267,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint8_t *buff = BigBuf_malloc(size);
             if (buff == NULL) {
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf ("Could not allocate buffer");
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Could not allocate buffer");
                 // Trigger a finish downloading signal with an PM3_EMALLOC
                 reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_EMALLOC, NULL, 0);
             } else {
@@ -2184,7 +2284,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 }
                 // Trigger a finish downloading signal with an ACK frame
                 reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_SUCCESS, NULL, 0);
-                BigBuf_free ();
+                BigBuf_free();
             }
             LED_B_OFF();
             break;
@@ -2289,6 +2389,30 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_ON();
             rdv40_spiffs_safe_wipe();
             reply_ng(CMD_SPIFFS_WIPE, PM3_SUCCESS, NULL, 0);
+            LED_B_OFF();
+            break;
+        }
+        case CMD_SPIFFS_ELOAD: {
+            LED_B_ON();
+
+            uint8_t *em = BigBuf_get_EM_addr();
+            if (em == NULL) {
+                reply_ng(CMD_SPIFFS_ELOAD, PM3_EMALLOC, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
+
+            char *fn = (char *)packet->data.asBytes;
+
+            uint32_t size = size_in_spiffs(fn);
+            if (size == 0) {
+                reply_ng(CMD_SPIFFS_ELOAD, PM3_SUCCESS, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
+
+            rdv40_spiffs_read_as_filetype(fn, em, size, RDV40_SPIFFS_SAFETY_SAFE);
+            reply_ng(CMD_SPIFFS_ELOAD, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }
@@ -2550,7 +2674,7 @@ void  __attribute__((noreturn)) AppMain(void) {
 #endif
 
 #ifdef WITH_SMARTCARD
-    I2C_init();
+    I2C_init(false);
 #endif
 
 #ifdef WITH_FPC_USART

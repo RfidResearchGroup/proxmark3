@@ -1248,6 +1248,14 @@
         "Type": ""
     },
     {
+        "AID": "A000000308000010000100",
+        "Vendor": "National Institute of Standards and Technology",
+        "Country": "United States",
+        "Name": "Personal Identity Verification (PIV) / ID-ONE PIV BIO",
+        "Description": "PIV End Point Applet. Last 2 bytes designate version",
+        "Type": ""
+    },
+    {
         "AID": "A00000031510100528",
         "Vendor": "Currence Holding/PIN BV",
         "Country": "The Netherlands",

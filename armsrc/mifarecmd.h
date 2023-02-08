@@ -57,7 +57,8 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block); // Gen 3 magic card overw
 void MifareGen3Freez(void); // Gen 3 magic card lock further UID changes
 
 // MFC GEN4 GTU
-void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd);
+void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd, uint8_t workFlags);
+void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t workFlags);
 
 void MifareSetMod(uint8_t *datain);
 void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key);

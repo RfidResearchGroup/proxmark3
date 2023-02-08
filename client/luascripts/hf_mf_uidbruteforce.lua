@@ -109,8 +109,8 @@ local function main(args)
         command = 'hf 14a sim -t 1 -u ' .. uid_format
         msg('Bruteforcing Mifare Classic card numbers')
     elseif mftype == 'mfc4' then
-	    command = 'hf 14a sim -t 8 -u ' .. uid_format
-	    msg('Bruteforcing Mifare Classic 4K card numbers')
+        command = 'hf 14a sim -t 8 -u ' .. uid_format
+        msg('Bruteforcing Mifare Classic 4K card numbers')
     elseif mftype == 'mfu' then
         command = 'hf 14a sim -t 2 -u ' .. uid_format
         msg('Bruteforcing Mifare Ultralight card numbers')

@@ -23,7 +23,14 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#ifdef _WIN32
+#define ABOVE "../"
 #define PATHSEP "/"
+#else
+#define ABOVE "../"
+#define PATHSEP "/"
+#endif
+
 // PM3 share path relative to executable when installed
 #define PM3_SHARE_RELPATH    ".." PATHSEP "share" PATHSEP "proxmark3" PATHSEP
 
@@ -53,7 +60,7 @@ struct version_information_t {
     char clean; /* 1: Tree was clean, no local changes. 0: Tree was unclean. 2: Couldn't be determined */
     char gitversion[50]; /* String with the git revision */
     char buildtime[30]; /* string with the build time */
-    char armsrc[10]; /* sha256sum of sha256sum of armsrc files */
+    char armsrc[10]; /* sha256sum of sha256sum of armsrc && common_arm files */
 } PACKED;
 
 // debug

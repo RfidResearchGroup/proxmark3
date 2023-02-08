@@ -111,7 +111,7 @@ void RunMod(void) {
         //Indicate which card will be simulated
         LED(i, 0);
 
-        //Try to load dump form flash
+        //Try to load dump from flash
         sprintf(cur_dump_file, HF_LEGICSIM_DUMPFILE_SIM, i);
         Dbprintf(_YELLOW_("[Slot: %d] Try to load dump file: %s"), i, cur_dump_file);
         if (!fill_eml_from_file(cur_dump_file)) {

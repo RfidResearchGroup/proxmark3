@@ -6,7 +6,7 @@ local ac = require('ansicolors')
 
 copyright = ''
 author = "Christian Herrmann"
-version = 'v1.0.0'
+version = 'v1.0.1'
 desc = [[
 This script loads a json format file,  with the field "data" and a hexbyte array of data. Ie t55x7 dump,
 it tries to identify which system based on block1,  and detect block0 settings.
@@ -16,7 +16,7 @@ example = [[
     script run lf_ident_json -i lf_t55xx.json
 ]]
 usage = [[
-script run lf_en4100_bulk.lua [-h] [-c] [-p password] [-s <start cn>] [-v]
+script run lf_ident_json.lua [-h] [-c] [-p password] [-s <start cn>] [-v]
 ]]
 arguments = [[
     -h      : this help

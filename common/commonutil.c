@@ -262,10 +262,10 @@ uint32_t rotr(uint32_t a, uint8_t n) {
     return (a >> n) | (a << (32 - n));
 }
 
-uint16_t get_sw(const uint8_t *d, uint8_t n) {
+uint16_t get_sw(const uint8_t *d, uint16_t n) {
     if (n < 2)
         return 0;
 
     n -= 2;
-    return d[n] * 0x0100 + d[n + 1];
+    return (d[n] << 8 | d[n + 1]);
 }

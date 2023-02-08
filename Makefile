@@ -34,7 +34,7 @@ all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfk
 #all clean install uninstall check: %: hitag2crack/%
 
 INSTALLTOOLS=pm3_eml2lower.sh pm3_eml2upper.sh pm3_mfdread.py pm3_mfd2eml.py pm3_eml2mfd.py pm3_amii_bin2eml.pl pm3_reblay-emulating.py pm3_reblay-reading.py
-INSTALLSIMFW=sim011.bin sim011.sha512.txt
+INSTALLSIMFW=sim011.bin sim011.sha512.txt sim013.bin sim013.sha512.txt
 INSTALLSCRIPTS=pm3 pm3-flash pm3-flash-all pm3-flash-bootrom pm3-flash-fullimage
 INSTALLSHARES=tools/jtag_openocd traces
 INSTALLDOCS=doc/*.md doc/md
@@ -80,20 +80,20 @@ ifneq (,$(INSTALLSHARES))
 endif
 ifneq (,$(INSTALLDOCS))
 	$(Q)$(INSTALLSUDO) $(RMDIR) $(foreach doc,$(INSTALLDOCS),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLDOCSRELPATH)$(PATHSEP)$(notdir $(doc)))
-	$(Q)$(INSTALLSUDO) $(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLDOCSRELPATH)
+	$(Q)-$(INSTALLSUDO) $(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLDOCSRELPATH)
 endif
 ifneq (,$(INSTALLTOOLS))
 	$(Q)$(INSTALLSUDO) $(RM) $(foreach tool,$(INSTALLTOOLS),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)$(PATHSEP)$(notdir $(tool)))
 endif
-	$(Q)$(INSTALLSUDO) $(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)
+	$(Q)-$(INSTALLSUDO) $(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)
 ifneq (,$(INSTALLSIMFW))
 	$(Q)$(INSTALLSUDO) $(RM) $(foreach fw,$(INSTALLSIMFW),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(notdir $(fw)))
 endif
-	$(Q)$(INSTALLSUDO) $(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+	$(Q)-$(INSTALLSUDO) $(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
 ifeq ($(platform),Linux)
 	$(Q)$(INSTALLSUDO) $(RM) $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
 endif
-	$(Q)$(INSTALLSUDO) $(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)
+	$(Q)-$(INSTALLSUDO) $(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)
 
 # tests
 mfkey/check: FORCE
@@ -248,28 +248,39 @@ ifeq ($(PLATFORM_CHANGED),true)
 	$(Q)$(MAKE) --no-print-directory -C recovery clean
 	$(Q)$(MAKE) --no-print-directory -C client clean
 	$(Q)$(MAKE) --no-print-directory -C tools/fpga_compress clean
-	$(Q)echo CACHED_PLATFORM=$(PLATFORM) > .Makefile.options.cache
-	$(Q)echo CACHED_PLATFORM_EXTRAS=$(PLATFORM_EXTRAS) >> .Makefile.options.cache
-	$(Q)echo CACHED_PLATFORM_DEFS=$(PLATFORM_DEFS) >> .Makefile.options.cache
+	$(Q)$(ECHO) CACHED_PLATFORM=$(PLATFORM) > .Makefile.options.cache
+	$(Q)$(ECHO) CACHED_PLATFORM_EXTRAS=$(PLATFORM_EXTRAS) >> .Makefile.options.cache
+	$(Q)$(ECHO) CACHED_PLATFORM_DEFS=$(PLATFORM_DEFS) >> .Makefile.options.cache
 endif
 
 # configure system to ignore PM3 device as a modem (ModemManager blacklist, effective *only* if ModemManager is not using _strict_ policy)
 # Read doc/md/ModemManager-Must-Be-Discarded.md for more info
 udev:
-	sudo cp -rf driver/77-pm3-usb-device-blacklist.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
-	sudo udevadm control --reload-rules
+ifneq ($(wildcard /etc/arch-release),)
+# If user is running ArchLinux, use group 'uucp'
+	$(SUDO) cp -rf driver/77-pm3-usb-device-blacklist-uucp.rules    $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+else
+# Else, use group 'dialout'
+	$(SUDO) cp -rf driver/77-pm3-usb-device-blacklist-dialout.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+endif
+	$(SUDO) udevadm control --reload-rules
+	$(SUDO) udevadm trigger --action=change
 
-# configure system to add user to the dialout group
+# configure system to add user to the dialout group and if bluetooth group exists,  add user to it
 # you need to logout, relogin to get this access right correct.
 # Finally,  you might need to run the proxmark3 client under SUDO on some systems
 accessrights:
 ifneq ($(wildcard /etc/arch-release),)
 #If user is running ArchLinux, use specific command and group
-	$(Q)sudo usermod -aG uucp $(USER)
-	$(Q)getent group bluetooth >/dev/null && sudo usermod -aG bluetooth $(USER) || true
+	$(Q)$(SUDO) $(USERMOD) uucp $(USER)
+	$(Q)$(GETENT_BL) >/dev/null && $(SUDO) $(USERMOD) bluetooth $(USER) || true
+else ifneq ($(wildcard /etc/fedora-release),)
+# If the user is running Fedora, use `usermod` with the dialout group
+	$(Q)$(SUDO) $(USERMOD) dialout $(USER)
+	$(Q)$(GETENT_BL) >/dev/null && $(SUDO) $(USERMOD) bluetooth $(USER) || true
 else
-	$(Q)sudo adduser $(USER) dialout
-	$(Q)getent group bluetooth >/dev/null && sudo adduser $(USER) bluetooth || true
+	$(Q)$(SUDO) $(ADDUSER) $(USER) dialout
+	$(Q)$(GETENT_BL) >/dev/null && $(SUDO) $(ADDUSER) $(USER) bluetooth || true
 endif
 
 # easy printing of MAKE VARIABLES

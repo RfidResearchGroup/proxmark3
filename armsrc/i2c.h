@@ -31,7 +31,7 @@
 #define I2C_DEVICE_CMD_SEND_T0      0x07
 
 void I2C_recovery(void);
-void I2C_init(void);
+void I2C_init(bool has_ticks);
 void I2C_Reset(void);
 void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA);
 
@@ -41,14 +41,14 @@ void I2C_Reset_EnterBootloader(void);
 bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address);
 
 bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address);
-bool I2C_BufferWrite(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address);
-int16_t I2C_BufferRead(uint8_t *data, uint8_t len, uint8_t device_cmd, uint8_t device_address);
+bool I2C_BufferWrite(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address);
+int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address);
 
 // for firmware
 int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
 bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
 
-bool sc_rx_bytes(uint8_t *dest, uint8_t *destlen);
+bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen);
 //
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose);
 

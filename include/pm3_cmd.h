@@ -205,6 +205,7 @@ typedef struct {
     // rdv4
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
+    bool is_rdv4                       : 1;
 } PACKED capabilities_t;
 #define CAPABILITIES_VERSION 6
 extern capabilities_t g_pm3_capabilities;
@@ -416,16 +417,15 @@ typedef struct {
 #define CMD_SPIFFS_WIPE                                                   0x013A
 
 // This take a +0x2000 as they are high level helper and special functions
-// As the others, they may have safety level argument if it makkes sense
+// As the others, they may have safety level argument if it makes sense
 #define CMD_SPIFFS_PRINT_TREE                                             0x2130
 #define CMD_SPIFFS_GET_TREE                                               0x2131
 #define CMD_SPIFFS_TEST                                                   0x2132
 #define CMD_SPIFFS_PRINT_FSINFO                                           0x2133
 #define CMD_SPIFFS_DOWNLOAD                                               0x2134
 #define CMD_SPIFFS_DOWNLOADED                                             0x2135
+#define CMD_SPIFFS_ELOAD                                                  0x2136
 #define CMD_SPIFFS_CHECK                                                  0x3000
-// more ?
-
 
 // RDV40,  Smart card operations
 #define CMD_SMART_RAW                                                     0x0140
@@ -485,6 +485,7 @@ typedef struct {
 #define CMD_LF_EM4X70_AUTH                                                0x0263
 #define CMD_LF_EM4X70_WRITEPIN                                            0x0264
 #define CMD_LF_EM4X70_WRITEKEY                                            0x0265
+#define CMD_LF_EM4X70_BRUTE                                               0x0266
 // Sampling configuration for LF reader/sniffer
 #define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E
@@ -520,9 +521,17 @@ typedef struct {
 #define CMD_HF_ISO15693_COMMAND                                           0x0313
 #define CMD_HF_ISO15693_FINDAFI                                           0x0315
 #define CMD_HF_ISO15693_CSETUID                                           0x0316
-#define CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY                            0x0317
-#define CMD_HF_ISO15693_SLIX_L_DISABLE_AESAFI                             0x0318
+#define CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY                               0x0867
+#define CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY                              0x0317
+#define CMD_HF_ISO15693_SLIX_DISABLE_EAS                                  0x0318
+#define CMD_HF_ISO15693_SLIX_ENABLE_EAS                                   0x0862
+#define CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI                             0x0863
+#define CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS                             0x0864
+#define CMD_HF_ISO15693_SLIX_WRITE_PWD                                    0x0865
+#define CMD_HF_ISO15693_WRITE_AFI                                         0x0866
 #define CMD_HF_TEXKOM_SIMULATE                                            0x0320
+#define CMD_HF_ISO15693_EML_CLEAR                                         0x0330
+#define CMD_HF_ISO15693_EML_SETMEM                                        0x0331
 
 #define CMD_LF_SNIFF_RAW_ADC                                              0x0360
 
@@ -554,6 +563,7 @@ typedef struct {
 
 #define CMD_HF_EPA_COLLECT_NONCE                                          0x038A
 #define CMD_HF_EPA_REPLAY                                                 0x038B
+#define CMD_HF_EPA_PACE_SIMULATE                                          0x039C
 
 #define CMD_HF_LEGIC_INFO                                                 0x03BC
 #define CMD_HF_LEGIC_ESET                                                 0x03BD
@@ -674,6 +684,7 @@ typedef struct {
 
 // Gen 4 GTU magic cards
 #define CMD_HF_MIFARE_G4_RDBL                                             0x0860
+#define CMD_HF_MIFARE_G4_WRBL                                             0x0861
 
 #define CMD_UNKNOWN                                                       0xFFFF
 
@@ -770,10 +781,14 @@ typedef struct {
 // Got bad CRC                          client/pm3: error in transfer of data,  crc mismatch.
 #define PM3_ECRC              -24
 
+// STATIC Nonce detect                  pm3:  when collecting nonces for hardnested
+#define PM3_ESTATIC_NONCE     -25
+
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program
 #define PM3_EFATAL            -99
+
 
 // LF
 #define LF_FREQ2DIV(f) ((int)(((12000.0 + (f)/2.0)/(f))-1))

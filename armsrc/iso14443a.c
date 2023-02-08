@@ -1039,6 +1039,8 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
     // PPS response
     static uint8_t rPPS[3] = { 0xD0 };
 
+    static uint8_t rPACK[4] = { 0x00, 0x00, 0x00, 0x00 };
+
     switch (tagType) {
         case 1: { // MIFARE Classic 1k
             rATQA[0] = 0x04;
@@ -1227,6 +1229,19 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
 
     AddCrc14A(rPPS, sizeof(rPPS) - 2);
 
+    if (tagType == 7) {
+        uint8_t pwd[4];
+        uint8_t gen_pwd[4];
+        uint16_t start = (*pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH;
+        emlGetMemBt(pwd, start, sizeof(pwd));
+        Uint4byteToMemBe(gen_pwd, ul_ev1_pwdgenB(data));
+        if (memcmp(pwd, gen_pwd, sizeof(pwd)) == 0) {
+            rPACK[0] = 0x80;
+            rPACK[1] = 0x80;
+        }
+    }
+    AddCrc14A(rPACK, sizeof(rPACK) - 2);
+
     static tag_response_info_t responses_init[] = {
         { .response = rATQA,      .response_n = sizeof(rATQA)     },  // Answer to request - respond with card type
         { .response = rUIDc1,     .response_n = sizeof(rUIDc1)    },  // Anticollision cascade1 - respond with uid
@@ -1238,14 +1253,16 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
         { .response = rRATS,      .response_n = sizeof(rRATS)     },  // dummy ATS (pseudo-ATR), answer to RATS
         { .response = rVERSION,   .response_n = sizeof(rVERSION)  },  // EV1/NTAG GET_VERSION response
         { .response = rSIGN,      .response_n = sizeof(rSIGN)     },  // EV1/NTAG READ_SIG response
-        { .response = rPPS,       .response_n = sizeof(rPPS)      }   // PPS response
+        { .response = rPPS,       .response_n = sizeof(rPPS)      },  // PPS response
+        { .response = rPACK,      .response_n = sizeof(rPACK)     }   // PACK response
     };
 
-    // "precompile" responses. There are 11 predefined responses with a total of 80 bytes data to transmit.
+    // "precompile" responses. There are 12 predefined responses with a total of 84 bytes data to transmit.
+
     // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
-    // 81 * 8 data bits, 81 * 1 parity bits, 11 start bits, 11 stop bits, 11 correction bits
-    // 81 * 8 + 81 + 11 + 11 + 11 == 762
-#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 762
+    // 85 * 8 data bits, 85 * 1 parity bits, 12 start bits, 12 stop bits, 12 correction bits
+    // 85 * 8 + 85 + 12 + 12 + 12 == 801
+#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 801
 
     uint8_t *free_buffer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
     // modulation buffer pointer and current buffer free space size
@@ -1641,6 +1658,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
             LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
             p_response = NULL;
         } else if (receivedCmd[0] == MIFARE_ULEV1_AUTH && len == 7 && tagType == 7) { // NTAG / EV-1 authentication
+
+            /*
             // PWD stored in dump now
             uint8_t pwd[4];
             emlGetMemBt(pwd, (pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
@@ -1654,7 +1673,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
                 uint8_t pack[4];
                 emlGetMemBt(pack, pages * 4 + MFU_DUMP_PREFIX_LENGTH, 2);
                 if (memcmp(pack, "\x00\x00\x00\x00", 4) == 0) {
-                    memcpy(pack, "\x80\x80\x00\x00", 4);
+                    pack[0] = 0x80;
+                    pack[1] = 0x80;
                 }
                 AddCrc14A(pack, sizeof(pack) - 2);
                 EmSendCmd(pack, sizeof(pack));
@@ -1663,6 +1683,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Auth attempt: %08x", bytes_to_num(receivedCmd + 1, 4));
             }
             p_response = NULL;
+            */
+            p_response = &responses[RESP_INDEX_PACK];
         } else if (receivedCmd[0] == MIFARE_ULEV1_VCSL && len == 23 && tagType == 7) {
             uint8_t cmd[3];
             emlGetMemBt(cmd, (pages - 2) * 4 + 1 + MFU_DUMP_PREFIX_LENGTH, 1);

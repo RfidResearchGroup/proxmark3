@@ -1230,7 +1230,7 @@ int FSKrawDemod(uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, bo
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, _YELLOW_("%s") " decoded bitstream", GetFSKType(fchigh, fclow, invert));
             PrintAndLogEx(INFO, "-----------------------");
-            printDemodBuff(0, false, invert, false);
+            printDemodBuff(0, false, false, false);
         }
         goto out;
     } else {
@@ -1779,7 +1779,7 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
 
         BitstreamOut_t bout = { got, bits_per_sample * n,  0};
         uint32_t j = 0;
-        for (j = 0; j * bits_per_sample < n * 8 && j < n; j++) {
+        for (j = 0; j * bits_per_sample < n * 8 && j * bits_per_sample < MAX_GRAPH_TRACE_LEN * 8; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
             g_GraphBuffer[j] = ((int) sample) - 127;
         }
@@ -2767,13 +2767,19 @@ static int print_modulation(lf_modulation_t b) {
 
 static int try_detect_modulation(void) {
 
-    lf_modulation_t tests[6];
+#define LF_NUM_OF_TESTS     6
+
+    lf_modulation_t tests[LF_NUM_OF_TESTS];
+    for (int i = 0; i < ARRAYLEN(tests); i++) {
+        memset(&tests[i], 0, sizeof(lf_modulation_t));
+    }
+
     int clk = 0, firstClockEdge = 0;
-    uint8_t hits = 0, ans = 0;
-    uint8_t fc1 = 0, fc2 = 0;
+    uint8_t hits = 0, fc1 = 0, fc2 = 0;
     bool st = false;
 
-    ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
+
+    uint8_t ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
 
     if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
 
@@ -3057,8 +3063,8 @@ static int CmdDiff(const char *Cmd) {
     }
     */
 
-    size_t n = (datalenA > datalenB) ? datalenB : datalenA;
-    PrintAndLogEx(DEBUG, "data len:  %zu   A %zu  B %zu", n, datalenA, datalenB);
+    size_t biggest = (datalenA > datalenB) ? datalenA : datalenB;
+    PrintAndLogEx(DEBUG, "data len:  %zu   A %zu  B %zu", biggest, datalenA, datalenB);
 
     if (inA == NULL)
         PrintAndLogEx(INFO, "inA null");
@@ -3085,102 +3091,68 @@ static int CmdDiff(const char *Cmd) {
     char line[880] = {0};
 
     // print data diff loop
-    int i;
-    for (i = 0; i < n;  i += width) {
+    for (int i = 0 ; i < biggest ; i += width) {
+        char dlnA[240] = {0};
+        char dlnB[240] = {0};
+        char dlnAii[180] = {0};
+        char dlnBii[180] = {0};
 
-        memset(line, 0, sizeof(line));
+        memset(dlnA, 0, sizeof(dlnA));
+        memset(dlnB, 0, sizeof(dlnB));
+        memset(dlnAii, 0, sizeof(dlnAii));
+        memset(dlnBii, 0, sizeof(dlnBii));
 
-        int diff = memcmp(inA + i, inB + i, width);
+        for (int j = i; j < i + width; j++) {
+            int dlnALen = strlen(dlnA);
+            int dlnBLen = strlen(dlnB);
+            int dlnAiiLen = strlen(dlnAii);
+            int dlnBiiLen = strlen(dlnBii);
 
-        // if ok,  just print
-        if (diff == 0) {
-            hex_to_buffer((uint8_t *)line, inA + i, width, sizeof(line), 0, 1, true);
-            ascii_to_buffer((uint8_t *)(line + strlen(line)), inA + i, width, width, 0);
-            strncat(line + strlen(line), " | ", sizeof(line) - strlen(line));
-            hex_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, sizeof(line), 0, 1, true);
-            ascii_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, width, 0);
-        } else {
-
-            char dlnA[240] = {0};
-            char dlnB[240] = {0};
-            char dlnAii[180] = {0};
-            char dlnBii[180] = {0};
-
-            memset(dlnA, 0, sizeof(dlnA));
-            memset(dlnB, 0, sizeof(dlnB));
-            memset(dlnAii, 0, sizeof(dlnAii));
-            memset(dlnBii, 0, sizeof(dlnBii));
-
-            // if diff,  time to find it
-            for (int j = i; j < (i + width); j++) {
-
-                char ca = inA[j];
-                char cb = inB[j];
-
-                int dlnALen = strlen(dlnA);
-                int dlnBLen = strlen(dlnB);
-                int dlnAiiLen = strlen(dlnAii);
-                int dlnBiiLen = strlen(dlnBii);
-
-                if (inA[j] != inB[j]) {
-
-                    // diff / add colors
-                    snprintf(dlnA + dlnALen, sizeof(dlnA) - dlnALen, _GREEN_("%02X "), inA[j]);
-                    snprintf(dlnB + dlnBLen, sizeof(dlnB) - dlnBLen, _RED_("%02X "), inB[j]);
-                    snprintf(dlnAii + dlnAiiLen, sizeof(dlnAii) - dlnAiiLen, _GREEN_("%c"), ((ca < 32) || (ca == 127)) ? '.' : ca);
-                    snprintf(dlnBii + dlnBiiLen, sizeof(dlnBii) - dlnBiiLen, _RED_("%c"), ((cb < 32) || (cb == 127)) ? '.' : cb);
-
-                } else {
-                    // normal
-                    snprintf(dlnA + dlnALen, sizeof(dlnA) - dlnALen, "%02X ", inA[j]);
-                    snprintf(dlnB + dlnBLen, sizeof(dlnB) - dlnBLen, "%02X ", inB[j]);
-                    snprintf(dlnAii + dlnAiiLen, sizeof(dlnAii) - dlnAiiLen, "%c", ((ca < 32) || (ca == 127)) ? '.' : ca);
-                    snprintf(dlnBii + dlnBiiLen, sizeof(dlnBii) - dlnBiiLen, "%c", ((cb < 32) || (cb == 127)) ? '.' : cb);
-                }
+            //both files ended
+            if (j >= datalenA && j >= datalenB) {
+                snprintf(dlnA + dlnALen, sizeof(dlnA) - dlnALen, "-- ");
+                snprintf(dlnAii + dlnAiiLen, sizeof(dlnAii) - dlnAiiLen, ".") ;
+                snprintf(dlnB + dlnBLen, sizeof(dlnB) - dlnBLen, "-- ");
+                snprintf(dlnBii + dlnBiiLen, sizeof(dlnBii) - dlnBiiLen, ".") ;
+                continue ;
             }
-            snprintf(line, sizeof(line), "%s%s | %s%s", dlnA, dlnAii, dlnB, dlnBii);
+
+            char ca, cb;
+
+            if (j >= datalenA) {
+                // file A ended. print B without colors
+                cb = inB[j];
+                snprintf(dlnA + dlnALen, sizeof(dlnA) - dlnALen, "-- ");
+                snprintf(dlnAii + dlnAiiLen, sizeof(dlnAii) - dlnAiiLen, ".") ;
+                snprintf(dlnB + dlnBLen, sizeof(dlnB) - dlnBLen, "%02X ", inB[j]);
+                snprintf(dlnBii + dlnBiiLen, sizeof(dlnBii) - dlnBiiLen, "%c", ((cb < 32) || (cb == 127)) ? '.' : cb);
+                continue ;
+            }
+            ca = inA[j];
+            if (j >= datalenB) {
+                // file B ended. print A without colors
+                snprintf(dlnA + dlnALen, sizeof(dlnA) - dlnALen, "%02X ", inA[j]);
+                snprintf(dlnAii + dlnAiiLen, sizeof(dlnAii) - dlnAiiLen, "%c", ((ca < 32) || (ca == 127)) ? '.' : ca);
+                snprintf(dlnB + dlnBLen, sizeof(dlnB) - dlnBLen, "-- ");
+                snprintf(dlnBii + dlnBiiLen, sizeof(dlnBii) - dlnBiiLen, ".") ;
+                continue ;
+            }
+            cb = inB[j];
+            if (inA[j] != inB[j]) {
+                // diff / add colors
+                snprintf(dlnA + dlnALen, sizeof(dlnA) - dlnALen, _GREEN_("%02X "), inA[j]);
+                snprintf(dlnB + dlnBLen, sizeof(dlnB) - dlnBLen, _RED_("%02X "), inB[j]);
+                snprintf(dlnAii + dlnAiiLen, sizeof(dlnAii) - dlnAiiLen, _GREEN_("%c"), ((ca < 32) || (ca == 127)) ? '.' : ca);
+                snprintf(dlnBii + dlnBiiLen, sizeof(dlnBii) - dlnBiiLen, _RED_("%c"), ((cb < 32) || (cb == 127)) ? '.' : cb);
+            } else {
+                // normal
+                snprintf(dlnA + dlnALen, sizeof(dlnA) - dlnALen, "%02X ", inA[j]);
+                snprintf(dlnB + dlnBLen, sizeof(dlnB) - dlnBLen, "%02X ", inB[j]);
+                snprintf(dlnAii + dlnAiiLen, sizeof(dlnAii) - dlnAiiLen, "%c", ((ca < 32) || (ca == 127)) ? '.' : ca);
+                snprintf(dlnBii + dlnBiiLen, sizeof(dlnBii) - dlnBiiLen, "%c", ((cb < 32) || (cb == 127)) ? '.' : cb);
+            }
         }
-        PrintAndLogEx(INFO, "%03X | %s", i, line);
-    }
-
-    // mod
-
-
-    // print different length
-    bool tallestA = (datalenA > datalenB);
-    if (tallestA) {
-        n = datalenA;
-    } else {
-        n = datalenB;
-    }
-
-    // print data diff loop
-    for (; i < n;  i += width) {
-
-        memset(line, 0, sizeof(line));
-
-        if (tallestA) {
-            hex_to_buffer((uint8_t *)line, inA + i, width, sizeof(line), 0, 1, true);
-            ascii_to_buffer((uint8_t *)(line + strlen(line)), inA + i, width, sizeof(line), 0);
-            strcat(line + strlen(line), " | ");
-            for (int j = 0; j < width; j++) {
-                strncat(line + strlen(line), "-- ", sizeof(line) - strlen(line));
-            }
-            for (int j = 0; j < width; j++) {
-                strncat(line + strlen(line), ".", sizeof(line) - strlen(line));
-            }
-        } else {
-
-            for (int j = 0; j < width; j++) {
-                strncat(line + strlen(line), "-- ", sizeof(line) - strlen(line));
-            }
-            for (int j = 0; j < width; j++) {
-                strncat(line + strlen(line), ".", sizeof(line) - strlen(line));
-            }
-            strncat(line + strlen(line), " | ", sizeof(line) - strlen(line));
-            hex_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, sizeof(line), 0, 1, true);
-            ascii_to_buffer((uint8_t *)(line + strlen(line)), inB + i, width, sizeof(line), 0);
-        }
+        snprintf(line, sizeof(line), "%s%s | %s%s", dlnA, dlnAii, dlnB, dlnBii);
 
         PrintAndLogEx(INFO, "%03X | %s", i, line);
     }

@@ -59,18 +59,20 @@ function get_pm3_list_Linux {
     fi
     for DEV in $(find /dev/ttyACM* 2>/dev/null); do
         if command -v udevadm >/dev/null; then
+            # WSL1 detection
             if udevadm info -q property -n "$DEV" | grep -q "ID_VENDOR=proxmark.org"; then
                 PM3LIST+=("$DEV")
                 if [ ${#PM3LIST[*]} -ge "$N" ]; then
                     return
                 fi
             fi
-        else
-            if grep -q "proxmark.org" "/sys/class/tty/${DEV#/dev/}/../../../manufacturer" 2>/dev/null; then
-                PM3LIST+=("$DEV")
-                if [ ${#PM3LIST[*]} -ge "$N" ]; then
-                    return
-                fi
+        fi
+        # WSL2 with usbipd detection - doesn't report same things as WSL1
+
+        if grep -q "proxmark.org" "/sys/class/tty/${DEV#/dev/}/../../../manufacturer" 2>/dev/null; then
+            PM3LIST+=("$DEV")
+            if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                return
             fi
         fi
     done
@@ -439,6 +441,7 @@ done
 
 # if a port is already provided, let's just run the command as such
 for ARG; do
+    shift
     if [ "$ARG" == "-p" ]; then
         CMD "$@"
         exit $?

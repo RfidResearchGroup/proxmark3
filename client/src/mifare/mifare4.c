@@ -74,22 +74,37 @@ AccessConditions_t MFAccessConditionsTrailer[] = {
 };
 
 bool mfValidateAccessConditions(const uint8_t *data) {
-    uint8_t ndata1 = (data[0]) & 0x0f;
-    uint8_t ndata2 = (data[0] >> 4) & 0x0f;
-    uint8_t ndata3 = (data[1]) & 0x0f;
-    uint8_t data1  = (data[1] >> 4) & 0x0f;
-    uint8_t data2  = (data[2]) & 0x0f;
-    uint8_t data3  = (data[2] >> 4) & 0x0f;
+    uint8_t nd1 = NIBBLE_LOW(data[0]);
+    uint8_t nd2 = NIBBLE_HIGH(data[0]);
+    uint8_t nd3 = NIBBLE_LOW(data[1]);
+    uint8_t d1  = NIBBLE_HIGH(data[1]);
+    uint8_t d2  = NIBBLE_LOW(data[2]);
+    uint8_t d3  = NIBBLE_HIGH(data[2]);
 
-    return ((ndata1 == (data1 ^ 0xF)) && (ndata2 == (data2 ^ 0xF)) && (ndata3 == (data3 ^ 0xF)));
+    return ((nd1 == (d1 ^ 0xF)) && (nd2 == (d2 ^ 0xF)) && (nd3 == (d3 ^ 0xF)));
+}
+bool mfReadOnlyAccessConditions(uint8_t blockn, const uint8_t *data) {
+
+    uint8_t d1  = NIBBLE_HIGH(data[1]) >> blockn;
+    uint8_t d2  = NIBBLE_LOW(data[2]) >> blockn;
+    uint8_t d3  = NIBBLE_HIGH(data[2]) >> blockn;
+    uint8_t cond = (d1 & 0x01) << 2 | (d2 & 0x01) << 1 | (d3 & 0x01);
+
+    if (blockn == 3) {
+        if ((cond == 0x02) || (cond == 0x06) || (cond == 0x07)) return true;
+    } else {
+        if ((cond == 0x02) || (cond == 0x05)) return true;
+    }
+    return false;
 }
 
-const char *mfGetAccessConditionsDesc(uint8_t blockn, const uint8_t *data) {
-    uint8_t data1 = ((data[1] >> 4) & 0x0f) >> blockn;
-    uint8_t data2 = ((data[2]) & 0x0f) >> blockn;
-    uint8_t data3 = ((data[2] >> 4) & 0x0f) >> blockn;
 
-    uint8_t cond = (data1 & 0x01) << 2 | (data2 & 0x01) << 1 | (data3 & 0x01);
+const char *mfGetAccessConditionsDesc(uint8_t blockn, const uint8_t *data) {
+    uint8_t d1 = NIBBLE_HIGH(data[1]) >> blockn;
+    uint8_t d2 = NIBBLE_LOW(data[2]) >> blockn;
+    uint8_t d3 = NIBBLE_HIGH(data[2]) >> blockn;
+
+    uint8_t cond = (d1 & 0x01) << 2 | (d2 & 0x01) << 1 | (d3 & 0x01);
 
     if (blockn == 3) {
         for (int i = 0; i < ARRAYLEN(MFAccessConditionsTrailer); i++)
@@ -198,7 +213,7 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     if (res) {
         if (!silentMode) PrintAndLogEx(ERR, "Exchange raw error: %d", res);
         if (dropFieldIfError) DropField();
-        return 2;
+        return PM3_ERFTRANS;
     }
 
     if (verbose)
@@ -207,19 +222,19 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     if (datalen < 1) {
         if (!silentMode) PrintAndLogEx(ERR, "Card response wrong length: %d", datalen);
         if (dropFieldIfError) DropField();
-        return 3;
+        return PM3_EWRONGANSWER;
     }
 
     if (data[0] != 0x90) {
         if (!silentMode) PrintAndLogEx(ERR, "Card response error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
         if (dropFieldIfError) DropField();
-        return 3;
+        return PM3_EWRONGANSWER;
     }
 
     if (datalen != 19) { // code 1b + 16b + crc 2b
         if (!silentMode) PrintAndLogEx(ERR, "Card response must be 19 bytes long instead of: %d", datalen);
         if (dropFieldIfError) DropField();
-        return 3;
+        return PM3_EWRONGANSWER;
     }
 
     aes_decode(NULL, key, &data[1], RndB, 16);
@@ -242,7 +257,7 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     if (res) {
         if (!silentMode) PrintAndLogEx(ERR, "Exchange raw error: %d", res);
         if (dropFieldIfError) DropField();
-        return 4;
+        return PM3_ERFTRANS;
     }
 
     if (verbose)
@@ -262,7 +277,7 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
             PrintAndLogEx(ERR, "RndA   card: %s", sprint_hex(&raw[4], 16));
         }
         if (dropFieldIfError) DropField();
-        return 5;
+        return PM3_EWRONGANSWER;
     }
 
     if (verbose) {
@@ -319,7 +334,7 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     if (verbose)
         PrintAndLogEx(INFO, "Authentication OK");
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int intExchangeRAW14aPlus(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {

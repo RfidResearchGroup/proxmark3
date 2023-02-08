@@ -1814,17 +1814,17 @@ int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
     static const uint8_t x_wup2[] = { 0x5D, 0x37, 0x21, 0x71, 0x71 };
     uint8_t slot_mark[1];
 
-    uint8_t x_atqb[24] = {0x0};		// ATQB len = 18
+    uint8_t x_atqb[24] = {0x0};     // ATQB len = 18
 
     uint32_t start_time = 0;
     uint32_t eof_time = 0;
 
-    iso14b_set_timeout(24);	// wait for carrier
+    iso14b_set_timeout(24); // wait for carrier
 
     // wup1
     CodeAndTransmit14443bAsReader(x_wup1, sizeof(x_wup1), &start_time, &eof_time, true);
 
-    start_time = eof_time + US_TO_SSP(9000);	// 9ms before next cmd
+    start_time = eof_time + US_TO_SSP(9000);    // 9ms before next cmd
 
     // wup2
     CodeAndTransmit14443bAsReader(x_wup2, sizeof(x_wup2), &start_time, &eof_time, true);
@@ -1836,7 +1836,7 @@ int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
         int slot;
 
         for (slot = 0; slot < 4; slot++) {
-            start_time = eof_time + ETU_TO_SSP(30);	//(24);	// next slot after 24 ETU
+            start_time = eof_time + ETU_TO_SSP(30); //(24); // next slot after 24 ETU
 
             retlen = Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), iso14b_timeout, &eof_time);
 
@@ -1850,14 +1850,14 @@ int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
 
             // tx unframed slot-marker
 
-            if (Demod.posCount) {	// no rx, but subcarrier burst detected
+            if (Demod.posCount) {   // no rx, but subcarrier burst detected
                 uid |= (uint64_t)slot << uid_pos;
 
-                slot_mark[0] = 0xB1 + (slot << 1);	// ack slot
+                slot_mark[0] = 0xB1 + (slot << 1);  // ack slot
                 CodeAndTransmit14443bAsReader(slot_mark, sizeof(slot_mark), &start_time, &eof_time, false);
                 break;
-            } else {		// no subcarrier burst
-                slot_mark[0] = 0xA1 + (slot << 1);	// nak slot
+            } else {        // no subcarrier burst
+                slot_mark[0] = 0xA1 + (slot << 1);  // nak slot
                 CodeAndTransmit14443bAsReader(slot_mark, sizeof(slot_mark), &start_time, &eof_time, false);
             }
         }
@@ -1884,7 +1884,7 @@ int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
     }
 
     // VALIDATE CRC
-    if (check_crc(CRC_14443_B, x_atqb, 18) == false) {		// use fixed len because unstable EOF catch
+    if (check_crc(CRC_14443_B, x_atqb, 18) == false) {      // use fixed len because unstable EOF catch
         return 3;
     }
 

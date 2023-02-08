@@ -40,6 +40,7 @@
 #include "util.h"
 #include "fileutils.h"   // laodFileJSONroot
 #include "crypto/libpcrypto.h"
+#include "protocols.h"   // ISO7816 APDU return codes
 
 const uint8_t PxSE_AID[] = {0xA0, 0x00, 0x00, 0x05, 0x07, 0x01, 0x00};
 #define PxSE_AID_LENGTH 7
@@ -104,11 +105,11 @@ static int SelectAndPrintInfoFile(void) {
     uint16_t sw = 0;
 
     int res = CIPURSESelectFile(0x2ff7, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000)
+    if (res != 0 || sw != ISO7816_OK)
         return PM3_EAPDU_FAIL;
 
     res = CIPURSEReadBinary(0, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000)
+    if (res != 0 || sw != ISO7816_OK)
         return PM3_EAPDU_FAIL;
 
     if (len > 0) {
@@ -151,7 +152,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     bool mfExist = false;
     bool infoPrinted = false;
     int res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
-    if (res == PM3_SUCCESS && sw == 0x9000) {
+    if (res == PM3_SUCCESS && sw == ISO7816_OK) {
         mfExist = true;
         PrintAndLogEx(INFO, _YELLOW_("MasterFile") " exist and can be selected.");
 
@@ -161,7 +162,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
 
     for (int i = 0; i < ARRAYLEN(PxSE_AID_LIST); i++) {
         res = CIPURSESelectAID(false, true, (uint8_t *)PxSE_AID_LIST[i].aid, PxSE_AID_LENGTH, buf, sizeof(buf), &len, &sw);
-        if (res == PM3_SUCCESS && sw == 0x9000) {
+        if (res == PM3_SUCCESS && sw == ISO7816_OK) {
             mfExist = true;
             PrintAndLogEx(INFO, _CYAN_("PxSE") " exist: %s", PxSE_AID_LIST[i].name);
             if (len > 0) {
@@ -179,7 +180,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "Application `" _YELLOW_("AF F1") "` selected " _GREEN_("successfully"));
 
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         if (sw == 0x0000) {
             PrintAndLogEx(ERR, "APDU exchange error. Card returns 0x0000");
         } else {
@@ -362,7 +363,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
     if (useAID && aidLen > 0) {
 
         res = CIPURSESelectAID(true, true, aid, aidLen, buf, bufSize, len, sw);
-        if (res != 0 || *sw != 0x9000) {
+        if (res != 0 || *sw != ISO7816_OK) {
             if (verbose) {
                 PrintAndLogEx(ERR, "Cipurse select application " _GREEN_("%s ") _RED_("error") ". Card returns 0x%04x", sprint_hex_inrow(aid, aidLen), *sw);
             }
@@ -375,7 +376,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
     } else if (useFID) {
 
         res = CIPURSESelectFileEx(true, true, fileId, buf, bufSize, len, sw);
-        if (res != 0 || *sw != 0x9000) {
+        if (res != 0 || *sw != ISO7816_OK) {
             if (verbose) {
                 PrintAndLogEx(ERR, "Cipurse select file 0x%04x  ( %s )", fileId, _RED_("fail"));
                 PrintAndLogEx(ERR, "Card returns 0x%04x", *sw);
@@ -389,7 +390,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
     } else if (selectDefaultFile) {
 
         res = CIPURSESelectMFDefaultFileEx(true, true, buf, bufSize, len, sw);
-        if (res != 0 || *sw != 0x9000) {
+        if (res != 0 || *sw != ISO7816_OK) {
             if (verbose) {
                 PrintAndLogEx(ERR, "Cipurse select default file " _RED_("error") ". Card returns 0x%04x", *sw);
             }
@@ -402,7 +403,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
     } else {
 
         res = CIPURSESelect(true, true, buf, bufSize, len, sw);
-        if (res != 0 || *sw != 0x9000) {
+        if (res != 0 || *sw != ISO7816_OK) {
             if (verbose) {
                 PrintAndLogEx(ERR, "Cipurse select default application " _RED_("error") ". Card returns 0x%04x", *sw);
             }
@@ -419,7 +420,7 @@ static int SelectCommandEx(bool selectDefaultFile, bool useAID, uint8_t *aid, si
         }
 
         res = CIPURSESelectFileEx(false, true, childFileId, buf, bufSize, len, sw);
-        if (res != 0 || *sw != 0x9000) {
+        if (res != 0 || *sw != ISO7816_OK) {
             if (verbose) {
                 PrintAndLogEx(ERR, "Select child file 0x%04x " _RED_("error") ". Card returns 0x%04x", childFileId, *sw);
             }
@@ -487,7 +488,7 @@ static int CmdHFCipurseSelect(const char *Cmd) {
     size_t len = 0;
     uint16_t sw = 0;
     res = SelectCommandEx(selmfd, useAID, aid, aidLen, useFID, fileId, useChildFID, childFileId, true, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         DropField();
         return PM3_ESOFT;
     }
@@ -553,7 +554,7 @@ static int CmdHFCipurseAuth(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
 
     res = SelectCommand(selmfd, useAID, aid, aidLen, useFID, fileId, true, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         DropField();
         return PM3_ESOFT;
     }
@@ -635,7 +636,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
 
     res = CIPURSESelectAID(true, true, aid, aidLen, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Cipurse select application " _CYAN_("%s") " ( " _RED_("error") " ). Card returns 0x%04x", sprint_hex_inrow(aid, aidLen), sw);
         DropField();
         return PM3_ESOFT;
@@ -660,7 +661,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
     }
 
     res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         if (verbose == false)
             PrintAndLogEx(ERR, "File select ( " _RED_("error") " ). Card returns 0x%04x", sw);
         DropField();
@@ -671,7 +672,7 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
 
     res = CIPURSEReadBinary(offset, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         if (verbose == false)
             PrintAndLogEx(ERR, "File read " _RED_("ERROR") ". Card returns 0x%04x", sw);
         DropField();
@@ -758,7 +759,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
 
     res = CIPURSESelectAID(true, true, aid, aidLen, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Cipurse select application " _CYAN_("%s") " ( " _RED_("error") " ). Card returns 0x%04x", sprint_hex_inrow(aid, aidLen), sw);
         DropField();
         return PM3_ESOFT;
@@ -789,7 +790,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
     }
 
     res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         if (verbose == false)
             PrintAndLogEx(ERR, "File select " _RED_("ERROR") ". Card returns 0x%04x", sw);
         DropField();
@@ -800,7 +801,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
 
     res = CIPURSEUpdateBinary(offset, hdata, hdatalen, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         if (verbose == false)
             PrintAndLogEx(ERR, "File write " _RED_("ERROR") ". Card returns 0x%04x", sw);
         DropField();
@@ -812,7 +813,7 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
     if (needCommit) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
-        if (res != 0 || sw != 0x9000)
+        if (res != 0 || sw != ISO7816_OK)
             PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
@@ -883,7 +884,7 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
     uint16_t sw = 0;
 
     res = SelectCommandEx(selmfd, useAID, aid, aidLen, useFID, fileId, useChildFID, childFileId, verbose, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Select command ( " _RED_("error") " )");
         DropField();
         return PM3_ESOFT;
@@ -921,7 +922,7 @@ static int CmdHFCipurseReadFileAttr(const char *Cmd) {
     }
 
     res = CIPURSEReadFileAttributes(buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         if (verbose == false)
             PrintAndLogEx(ERR, "File read " _RED_("ERROR") ". Card returns 0x%04x", sw);
         DropField();
@@ -1020,7 +1021,7 @@ static int CmdHFCipurseWriteFileAttr(const char *Cmd) {
     uint16_t sw = 0;
 
     res = SelectCommandEx(selmfd, useAID, aid, aidLen, useFID, fileId, useChildFID, childFileId, verbose, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Select command ( " _RED_("error") " )");
         DropField();
         return PM3_ESOFT;
@@ -1058,7 +1059,7 @@ static int CmdHFCipurseWriteFileAttr(const char *Cmd) {
     }
 
     res = CIPURSEUpdateFileAttributes(hdata, hdatalen, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         if (verbose == false)
             PrintAndLogEx(ERR, "File attributes update " _RED_("ERROR") ". Card returns 0x%04x", sw);
         DropField();
@@ -1070,7 +1071,7 @@ static int CmdHFCipurseWriteFileAttr(const char *Cmd) {
     if (needCommit) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
-        if (res != 0 || sw != 0x9000)
+        if (res != 0 || sw != ISO7816_OK)
             PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
@@ -1125,7 +1126,7 @@ static int CmdHFCipurseFormatAll(const char *Cmd) {
     uint16_t sw = 0;
 
     res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
         DropField();
         return PM3_ESOFT;
@@ -1154,7 +1155,7 @@ static int CmdHFCipurseFormatAll(const char *Cmd) {
     }
 
     res = CIPURSEFormatAll(&sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Format " _RED_("ERROR") ". Card returns 0x%04x", sw);
         DropField();
         return PM3_ESOFT;
@@ -1239,14 +1240,14 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
 
     if (useAID || useFID || selmfd) {
         res = SelectCommand(selmfd, useAID, aid, aidLen, useFID, fileId, verbose, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
+        if (res != 0 || sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Select command ( " _RED_("error") " )");
             DropField();
             return PM3_ESOFT;
         }
     } else {
         res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
+        if (res != 0 || sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
             DropField();
             return PM3_ESOFT;
@@ -1277,7 +1278,7 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     }
 
     res = CIPURSECreateFile(hdata, hdatalen, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Create file command " _RED_("ERROR"));
         PrintAndLogEx(ERR, "0x%04x - %s", sw,
                       GetSpecificAPDUCodeDesc(SelectAPDUCodeDescriptions, ARRAYLEN(SelectAPDUCodeDescriptions), sw));
@@ -1289,7 +1290,7 @@ static int CmdHFCipurseCreateDGI(const char *Cmd) {
     if (needCommit) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
-        if (res != 0 || sw != 0x9000)
+        if (res != 0 || sw != ISO7816_OK)
             PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
@@ -1376,14 +1377,14 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
 
     if (useChildFID) {
         res = SelectCommand(false, useAID, aid, aidLen, useFID, fileId, verbose, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
+        if (res != 0 || sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Top level select " _RED_("error") ". Card returns 0x%04x", sw);
             DropField();
             return PM3_ESOFT;
         }
     } else {
         res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
+        if (res != 0 || sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
             DropField();
             return PM3_ESOFT;
@@ -1405,7 +1406,7 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
 
     if (useChildFID) {
         res = CIPURSEDeleteFile(childFileId, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
+        if (res != 0 || sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Delete child file " _CYAN_("%04x ") " %s", childFileId, _RED_("ERROR"));
             PrintAndLogEx(ERR, "0x%04x - %s",
                           sw,
@@ -1417,7 +1418,7 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
         PrintAndLogEx(INFO, "Child file id " _CYAN_("%04x") " deleted " _GREEN_("succesfully"), childFileId);
     } else if (useFID) {
         res = CIPURSEDeleteFile(fileId, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
+        if (res != 0 || sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Delete file " _CYAN_("%04x ") " %s", fileId, _RED_("ERROR"));
             PrintAndLogEx(ERR, "0x%04x - %s",
                           sw,
@@ -1429,7 +1430,7 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
         PrintAndLogEx(INFO, "File id " _CYAN_("%04x") " deleted " _GREEN_("succesfully"), fileId);
     } else {
         res = CIPURSEDeleteFileAID(aid, aidLen, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
+        if (res != 0 || sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Delete application " _CYAN_("%s ") " %s", sprint_hex_inrow(aid, aidLen), _RED_("ERROR"));
             PrintAndLogEx(ERR, "0x%04x - %s",
                           sw,
@@ -1444,7 +1445,7 @@ static int CmdHFCipurseDeleteFile(const char *Cmd) {
     if (needCommit) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
-        if (res != 0 || sw != 0x9000)
+        if (res != 0 || sw != ISO7816_OK)
             PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
@@ -1588,14 +1589,14 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
 
     if (useAID || useFID || selmfd) {
         res = SelectCommand(selmfd, useAID, aid, aidLen, useFID, fileId, verbose, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
+        if (res != 0 || sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Select command ( " _RED_("error") " )");
             DropField();
             return PM3_ESOFT;
         }
     } else {
         res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
+        if (res != 0 || sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
             DropField();
             return PM3_ESOFT;
@@ -1626,7 +1627,7 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
     }
 
     res = CIPURSEUpdateKey(encKeyId, newKeyId, keydata, sizeof(keydata), buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Update key command " _RED_("ERROR"));
         PrintAndLogEx(ERR, "0x%04x - %s", sw,
                       GetSpecificAPDUCodeDesc(UAPDpdateKeyCodeDescriptions, ARRAYLEN(UAPDpdateKeyCodeDescriptions), sw));
@@ -1638,7 +1639,7 @@ static int CmdHFCipurseUpdateKey(const char *Cmd) {
     if (needCommit) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
-        if (res != 0 || sw != 0x9000)
+        if (res != 0 || sw != ISO7816_OK)
             PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
@@ -1736,14 +1737,14 @@ static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
 
     if (useAID || useFID || selmfd) {
         res = SelectCommand(selmfd, useAID, aid, aidLen, useFID, fileId, verbose, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
+        if (res != 0 || sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Select command ( " _RED_("error") " )");
             DropField();
             return PM3_ESOFT;
         }
     } else {
         res = CIPURSESelectMFEx(true, true, buf, sizeof(buf), &len, &sw);
-        if (res != 0 || sw != 0x9000) {
+        if (res != 0 || sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Cipurse masterfile select " _RED_("error") ". Card returns 0x%04x", sw);
             DropField();
             return PM3_ESOFT;
@@ -1774,7 +1775,7 @@ static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
     }
 
     res = CIPURSEUpdateKeyAttrib(trgKeyId, hdata[0], buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000) {
+    if (res != 0 || sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Update key attributes command " _RED_("ERROR"));
         PrintAndLogEx(ERR, "0x%04x - %s", sw,
                       GetSpecificAPDUCodeDesc(UAPDpdateKeyAttrCodeDescriptions, ARRAYLEN(UAPDpdateKeyAttrCodeDescriptions), sw));
@@ -1786,7 +1787,7 @@ static int CmdHFCipurseUpdateKeyAttr(const char *Cmd) {
     if (needCommit) {
         sw = 0;
         res = CIPURSECommitTransaction(&sw);
-        if (res != 0 || sw != 0x9000)
+        if (res != 0 || sw != ISO7816_OK)
             PrintAndLogEx(WARNING, "Commit ( " _YELLOW_("fail") " ) Card returns 0x%04x", sw);
 
         if (verbose)
@@ -1803,7 +1804,7 @@ bool CheckCardCipurse(void) {
     uint16_t sw = 0;
     int res = CIPURSESelect(true, false, buf, sizeof(buf), &len, &sw);
 
-    return (res == 0 && sw == 0x9000);
+    return (res == 0 && sw == ISO7816_OK);
 }
 
 static int CmdHFCipurseTest(const char *Cmd) {

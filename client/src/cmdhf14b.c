@@ -126,8 +126,8 @@ static void hf14b_aid_search(bool verbose) {
             }
         }
 
-        if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
-            if (sw == 0x9000) {
+        if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
+            if (sw == ISO7816_OK) {
                 if (verbose) PrintAndLogEx(SUCCESS, "Application ( " _GREEN_("ok") " )");
             } else {
                 if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
@@ -787,25 +787,26 @@ static void print_ct_blocks(uint8_t *data, size_t len) {
 }
 */
 
-static void print_sr_blocks(uint8_t *data, size_t len) {
+static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid) {
 
-    size_t blocks = len / ST25TB_SR_BLOCK_SIZE;
-    uint8_t chipid = get_st_chipid(data);
+    size_t blocks = (len / ST25TB_SR_BLOCK_SIZE) - 1 ;
+    uint8_t *systemblock = data + blocks * ST25TB_SR_BLOCK_SIZE ;
+    uint8_t chipid = get_st_chipid(uid);
     PrintAndLogEx(SUCCESS, _GREEN_("%s") " tag", get_st_chip_model(chipid));
 
-    PrintAndLogEx(DEBUG, "systemblock : %s", sprint_hex(data + (blocks * 4), 4));
-    PrintAndLogEx(DEBUG, "   otp lock : %02x %02x", data[(blocks * 4)], data[(blocks * 4) + 1]);
+    PrintAndLogEx(DEBUG, "systemblock : %s", sprint_hex(systemblock, ST25TB_SR_BLOCK_SIZE));
+    PrintAndLogEx(DEBUG, "   otp lock : %02x %02x", *systemblock, *(systemblock + 1));
 
     print_hdr();
 
-    for (int i = 0; i <= blocks; i++) {
+    for (int i = 0; i < blocks; i++) {
         PrintAndLogEx(INFO,
                       "%3d/0x%02X | %s | %s | %s",
                       i,
                       i,
-                      sprint_hex(data + (i * 4), 4),
-                      get_st_lock_info(chipid, data + (blocks * 4), i),
-                      sprint_ascii(data + (i * 4), 4)
+                      sprint_hex(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE),
+                      get_st_lock_info(chipid, systemblock, i),
+                      sprint_ascii(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE)
                      );
     }
 
@@ -813,9 +814,9 @@ static void print_sr_blocks(uint8_t *data, size_t len) {
                   "%3d/0x%02X | %s | %s | %s",
                   0xFF,
                   0xFF,
-                  sprint_hex(data + (0xFF * 4), 4),
-                  get_st_lock_info(chipid, data + (blocks * 4), 0xFF),
-                  sprint_ascii(data + (0xFF * 4), 4)
+                  sprint_hex(systemblock, ST25TB_SR_BLOCK_SIZE),
+                  get_st_lock_info(chipid, systemblock, 0xFF),
+                  sprint_ascii(systemblock, ST25TB_SR_BLOCK_SIZE)
                  );
 
     print_footer();
@@ -1405,18 +1406,18 @@ static int CmdHF14BDump(const char *Cmd) {
         // 1 = 4096
         // 2 = 512
         uint8_t cardtype = get_st_cardsize(card.uid);
-        uint8_t blocks = 0;
+        uint8_t lastblock = 0;
         uint16_t cardsize = 0;
 
         switch (cardtype) {
             case 2:
-                cardsize = (512 / 8) + 4;
-                blocks = 0x0F;
+                cardsize = (512 / 8) + ST25TB_SR_BLOCK_SIZE;
+                lastblock = 0x0F;
                 break;
             case 1:
             default:
-                cardsize = (4096 / 8) + 4;
-                blocks = 0x7F;
+                cardsize = (4096 / 8) + ST25TB_SR_BLOCK_SIZE;
+                lastblock = 0x7F;
                 break;
         }
 
@@ -1425,7 +1426,6 @@ static int CmdHF14BDump(const char *Cmd) {
 
         // detect blocksize from card :)
         PrintAndLogEx(INFO, "reading tag memory from UID " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(card.uid, card.uidlen, 8), card.uidlen));
-
         iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 2);
         if (packet == NULL) {
             PrintAndLogEx(FAILED, "failed to allocate memory");
@@ -1486,15 +1486,15 @@ static int CmdHF14BDump(const char *Cmd) {
                 // last read
                 if (blocknum == 0xFF) {
                     // we reserved space for this block after 0x0F and 0x7F,  ie 0x10, 0x80
-                    memcpy(data + (blocks * 4), recv, 4);
+                    memcpy(data + ((lastblock + 1) * ST25TB_SR_BLOCK_SIZE), recv, ST25TB_SR_BLOCK_SIZE);
                     break;
                 }
-                memcpy(data + (blocknum * 4), recv, 4);
+                memcpy(data + (blocknum * ST25TB_SR_BLOCK_SIZE), recv, ST25TB_SR_BLOCK_SIZE);
 
 
                 retry = 0;
                 blocknum++;
-                if (blocknum > blocks) {
+                if (blocknum > lastblock) {
                     // read config block
                     blocknum = 0xFF;
                 }
@@ -1512,7 +1512,7 @@ static int CmdHF14BDump(const char *Cmd) {
             return switch_off_field_14b();
         }
 
-        print_sr_blocks(data, cardsize);
+        print_sr_blocks(data, cardsize, card.uid);
 
         // save to file
         if (fnlen < 1) {
@@ -1521,8 +1521,8 @@ static int CmdHF14BDump(const char *Cmd) {
             FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
         }
 
-        size_t datalen = (blocks + 1) * 4;
-        pm3_save_dump(filename, data, datalen, jsf14b, 4);
+        size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
+        pm3_save_dump(filename, data, datalen, jsf14b, ST25TB_SR_BLOCK_SIZE);
     }
 
     return switch_off_field_14b();
@@ -2004,12 +2004,15 @@ int CmdHF14BNdefRead(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     bool activate_field = true;
@@ -2032,7 +2035,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
         goto out;
@@ -2052,7 +2055,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
         goto out;
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
         goto out;
@@ -2068,7 +2071,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
         goto out;
@@ -2087,7 +2090,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
         goto out;
@@ -2096,13 +2099,36 @@ int CmdHF14BNdefRead(const char *Cmd) {
     if (fnlen != 0) {
         saveFile(filename, ".bin", response + 2, resplen - 4);
     }
-    res = NDEFRecordsDecodeAndPrint(response + 2, resplen - 4);
+    res = NDEFRecordsDecodeAndPrint(response + 2, resplen - 4, verbose);
 
 out:
     switch_off_field_14b();
     return res;
 }
 
+/* extract uid from filename
+ * filename must match '^hf-14b-[0-9A-F]{16}'
+ */
+uint8_t *get_uid_from_filename(const char *filename) {
+    static uint8_t uid[8]  ;
+    memset(uid, 0, 8) ;
+    char uidinhex[17] ;
+    if (strlen(filename) < 23 || strncmp(filename, "hf-14b-", 7)) {
+        PrintAndLogEx(ERR, "can't get uid from filename '%s'. Expected format is hf-14b-<uid>...", filename);
+        return uid ;
+    }
+    // extract uid part from filename
+    strncpy(uidinhex, filename + 7, 16) ;
+    uidinhex[16] = '\0' ;
+    int len = hex_to_bytes(uidinhex, uid, 8);
+    if (len == 8)
+        return SwapEndian64(uid, 8, 8);
+    else {
+        PrintAndLogEx(ERR, "get_uid_from_filename failed: hex_to_bytes returned %d", len);
+        memset(uid, 0, 8);
+    }
+    return uid ;
+}
 
 static int CmdHF14BView(const char *Cmd) {
 
@@ -2141,8 +2167,7 @@ static int CmdHF14BView(const char *Cmd) {
 
     // figure out a way to identify the different dump files.
     // STD/SR/CT is difference
-
-    print_sr_blocks(dump, bytes_read);
+    print_sr_blocks(dump, bytes_read, get_uid_from_filename(filename));
     //print_std_blocks(dump, bytes_read);
     //print_ct_blocks(dump, bytes_read);
 

@@ -11,7 +11,7 @@
 //              then from shell:
 //                  hexdump lf.bin -e '5/1 "%02X" /0 "\n"'
 //
-//				To recall only LAST stored ID from flash use lf-last instead of lf file.
+//              To recall only LAST stored ID from flash use lf-last instead of lf file.
 //
 //-----------------------------------------------------------------------------
 // Modes of operation:

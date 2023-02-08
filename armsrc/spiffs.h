@@ -25,8 +25,8 @@ extern "C" {
 #include "spiffs_config.h"
 
 typedef enum spiffs_safety_level {
-    RDV40_SPIFFS_SAFETY_NORMAL, 
-    RDV40_SPIFFS_SAFETY_LAZY, 
+    RDV40_SPIFFS_SAFETY_NORMAL,
+    RDV40_SPIFFS_SAFETY_LAZY,
     RDV40_SPIFFS_SAFETY_SAFE
 } RDV40SpiFFSSafetyLevel;
 

@@ -775,7 +775,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
 
         if (!have_uid) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
-            if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+            if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireNonces: Can't select card (ALL)");
                 continue;
             }
@@ -794,7 +794,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
             }
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
-            if (!iso14443a_fast_select_card(uid, cascade_levels)) {
+            if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireNonces: Can't select card (UID)");
                 continue;
             }
@@ -852,7 +852,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
     uint64_t ui64Key = bytes_to_num(datain, 6);
     uint32_t cuid = 0;
-    int16_t isOK = 0;
+    int16_t isOK = PM3_SUCCESS;
     uint16_t num_nonces = 0;
     uint8_t nt_par_enc = 0;
     uint8_t cascade_levels = 0;
@@ -878,18 +878,21 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
     LED_C_ON();
 
+    uint8_t prev_enc_nt[] = {0, 0, 0, 0};
+    uint8_t prev_counter = 0;
+
     for (uint16_t i = 0; i <= PM3_CMD_DATA_SIZE - 9;) {
 
         // Test if the action was cancelled
         if (BUTTON_PRESS()) {
-            isOK = 2;
+            isOK = PM3_EOPABORTED;
             field_off = true;
             break;
         }
 
-        if (!have_uid) { // need a full select cycle to get the uid first
+        if (have_uid == false) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
-            if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+            if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Can't select card (ALL)");
                 continue;
             }
@@ -908,7 +911,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
             }
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
-            if (!iso14443a_fast_select_card(uid, cascade_levels)) {
+            if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Can't select card (UID)");
                 continue;
             }
@@ -917,7 +920,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
         if (slow)
             SpinDelayUs(HARDNESTED_PRE_AUTHENTICATION_LEADTIME);
 
-        uint32_t nt1;
+        uint32_t nt1 = 0;
         if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, NULL)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Auth1 error");
             continue;
@@ -939,11 +942,27 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
             memcpy(buf + i, receivedAnswer, 4);
             nt_par_enc = par_enc[0] & 0xf0;
         } else {
-            nt_par_enc |= par_enc[0]  >> 4;
+            nt_par_enc |= par_enc[0] >> 4;
             memcpy(buf + i + 4, receivedAnswer, 4);
             memcpy(buf + i + 8, &nt_par_enc, 1);
             i += 9;
         }
+
+
+        if (prev_enc_nt[0] == receivedAnswer[0] &&
+                prev_enc_nt[1] == receivedAnswer[1] &&
+                prev_enc_nt[2] == receivedAnswer[2] &&
+                prev_enc_nt[3] == receivedAnswer[3]
+           ) {
+            prev_counter++;
+        }
+        memcpy(prev_enc_nt, receivedAnswer, 4);
+        if (prev_counter == 5) {
+            if (g_dbglevel >= DBG_EXTENDED) DbpString("Static encrypted nonce detected, exiting...");
+            isOK = PM3_ESTATIC_NONCE;
+            break;
+        }
+
     }
 
     LED_C_OFF();
@@ -952,7 +971,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
     reply_old(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
     LED_B_OFF();
 
-    if (g_dbglevel >= 3) DbpString("AcquireEncryptedNonces finished");
+    if (g_dbglevel >= DBG_ERROR) DbpString("AcquireEncryptedNonces finished");
 
     if (field_off) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1030,7 +1049,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
                 continue;
             }
 
-            if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+            if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == 0) {
                 if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Can't select card");
                 rtr--;
                 continue;
@@ -2337,6 +2356,7 @@ void MifareCIdent(bool is_mfc) {
     uint8_t rats[4] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 };
     uint8_t rdblf0[4] = { ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
     uint8_t rdbl00[4] = { ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
+    uint8_t gen4GetConf[8] = { GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_malloc(10);
@@ -2369,6 +2389,26 @@ void MifareCIdent(bool is_mfc) {
 
     int res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
     if (res == 2) {
+
+        // Check for Magic Gen4 GTU with default password :
+        // Get config should return 30 or 32 bytes
+        AddCrc14A(gen4GetConf, sizeof(gen4GetConf) - 2);
+        ReaderTransmit(gen4GetConf, sizeof(gen4GetConf), NULL);
+        res = ReaderReceive(buf, par);
+        if (res == 32 || res == 34) {
+            isGen = MAGIC_GEN_4GTU;
+            goto OUT;
+        }
+    }
+
+    // reset card
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    SpinDelay(40);
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
+    res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+    if (res == 2) {
+
         if (cuid == 0xAA55C396) {
             isGen = MAGIC_GEN_UNFUSED;
             goto OUT;
@@ -2464,6 +2504,8 @@ OUT:
 }
 
 void MifareHasStaticNonce(void) {
+
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     // variables
     int retval = PM3_SUCCESS;
@@ -2682,42 +2724,152 @@ OUT:
     BigBuf_free();
 }
 
-void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd) {
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-    clear_trace();
-    set_tracing(true);
+void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd, uint8_t workFlags) {
+    bool setup = ((workFlags & MAGIC_INIT) == MAGIC_INIT) ;
+    bool  done = ((workFlags & MAGIC_OFF)  == MAGIC_OFF) ;
 
+    int res = 0;
     int retval = PM3_SUCCESS;
-    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
-    uint8_t *uid = BigBuf_malloc(10);
-    if (iso14443a_select_card(uid, NULL, NULL, true, 0, true) == false) {
-        retval = PM3_ESOFT;
+    if (buf == NULL) {
+        retval = PM3_EMALLOC;
         goto OUT;
     }
 
-    LED_B_ON();
-    uint32_t save_iso14a_timeout = iso14a_get_timeout();
-    iso14a_set_timeout(13560000 / 1000 / (8 * 16) * 1000); // 2 seconds timeout
+    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+    if (par == NULL) {
+        retval = PM3_EMALLOC;
+        goto OUT;
+    }
 
-    uint8_t cmd[] = { 0xCF, 0x00, 0x00, 0x00, 0x00, 0xCE, blockno, 0x00, 0x00};
+    if (setup) {
+        uint8_t *uid = BigBuf_malloc(10);
+        if (uid == NULL) {
+            retval = PM3_EMALLOC;
+            goto OUT;
+        }
+        iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+        clear_trace();
+        set_tracing(true);
+
+        if (iso14443a_select_card(uid, NULL, NULL, true, 0, true) == false) {
+            retval = PM3_ESOFT;
+            goto OUT;
+        }
+    }
+
+    LED_B_ON();
+
+    static uint32_t save_iso14a_timeout;
+    if (setup) {
+        save_iso14a_timeout = iso14a_get_timeout();
+        iso14a_set_timeout(13560000 / 1000 / (8 * 16) * 1000); // 2 seconds timeout
+    }
+
+    uint8_t cmd[] = { GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_READ, blockno,
+                      0x00, 0x00
+                    };
 
     memcpy(cmd + 1, pwd, 4);
 
     AddCrc14A(cmd, sizeof(cmd) - 2);
 
     ReaderTransmit(cmd, sizeof(cmd), NULL);
-    int res = ReaderReceive(buf, par);
+    res = ReaderReceive(buf, par);
+
     if (res != 18) {
         retval = PM3_ESOFT;
     }
-    iso14a_set_timeout(save_iso14a_timeout);
+
+    if (done || retval != 0) iso14a_set_timeout(save_iso14a_timeout);
     LED_B_OFF();
 
 OUT:
-    reply_ng(CMD_HF_MIFARE_G4_RDBL, retval, buf, 18);
+    reply_ng(CMD_HF_MIFARE_G4_RDBL, retval, buf, res);
     // turns off
-    OnSuccessMagic();
+    if (done || retval != 0) FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+    if (done || retval != 0) set_tracing(false);
+    BigBuf_free();
+}
+
+void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t workFlags) {
+    bool setup = ((workFlags & MAGIC_INIT) == MAGIC_INIT) ;
+    bool  done = ((workFlags & MAGIC_OFF)  == MAGIC_OFF) ;
+
+    int res = 0;
+    int retval = PM3_SUCCESS;
+
+    uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
+    if (buf == NULL) {
+        retval = PM3_EMALLOC;
+        goto OUT;
+    }
+
+    // check args
+    if (data == NULL) {
+        retval = PM3_EINVARG;
+        goto OUT;
+    }
+
+    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+    if (par == NULL) {
+        retval = PM3_EMALLOC;
+        goto OUT;
+    }
+
+    if (setup) {
+        uint8_t *uid = BigBuf_malloc(10);
+        if (uid == NULL) {
+            retval = PM3_EMALLOC;
+            goto OUT;
+        }
+        iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+        clear_trace();
+        set_tracing(true);
+
+        if (iso14443a_select_card(uid, NULL, NULL, true, 0, true) == false) {
+            retval = PM3_ESOFT;
+            goto OUT;
+        }
+    }
+
+    LED_B_ON();
+
+    static uint32_t save_iso14a_timeout;
+    if (setup) {
+        save_iso14a_timeout = iso14a_get_timeout();
+        iso14a_set_timeout(13560000 / 1000 / (8 * 16) * 1000); // 2 seconds timeout
+    }
+
+    uint8_t cmd[] = { GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_WRITE, blockno,
+                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00
+                    };
+
+    memcpy(cmd + 1, pwd, 4);
+    memcpy(cmd + 7, data, 16);
+
+    AddCrc14A(cmd, sizeof(cmd) - 2);
+
+    ReaderTransmit(cmd, sizeof(cmd), NULL);
+    res = ReaderReceive(buf, par);
+
+    if ((res != 4) || (memcmp(buf, "\x90\x00\xfd\x07", 4) != 0)) {
+        retval = PM3_ESOFT;
+    }
+
+    if (done || retval != 0) iso14a_set_timeout(save_iso14a_timeout);
+    LED_B_OFF();
+
+OUT:
+    reply_ng(CMD_HF_MIFARE_G4_WRBL, retval, buf, res);
+    // turns off
+    if (done || retval != 0) FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+    if (done || retval != 0) set_tracing(false);
     BigBuf_free();
 }
 

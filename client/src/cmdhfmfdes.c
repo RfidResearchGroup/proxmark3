@@ -18,12 +18,10 @@
 // Code heavily modified by B.Kerler :)
 
 #include "cmdhfmfdes.h"
-
 #include <stdio.h>
 #include <string.h>
-
-#include "commonutil.h"  // ARRAYLEN
-#include "cmdparser.h"    // command_t
+#include "commonutil.h"             // ARRAYLEN
+#include "cmdparser.h"              // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmdhf14a.h"
@@ -32,16 +30,16 @@
 #include "protocols.h"
 #include "cmdtrace.h"
 #include "cliparser.h"
-#include "iso7816/apduinfo.h"   // APDU manipulation / errorcodes
+#include "iso7816/apduinfo.h"       // APDU manipulation / errorcodes
 #include "iso7816/iso7816core.h"    // APDU logging
-#include "util_posix.h"     // msleep
+#include "util_posix.h"             // msleep
 #include "mifare/desfirecore.h"
 #include "mifare/desfiretest.h"
 #include "mifare/desfiresecurechan.h"
-#include "mifare/mifaredefault.h"  // default keys
+#include "mifare/mifaredefault.h"   // default keys
 #include "crapto1/crapto1.h"
 #include "fileutils.h"
-#include "nfc/ndef.h"           // NDEF
+//#include "nfc/ndef.h"               // NDEF
 #include "mifare/mad.h"
 #include "mifare/mifaredefault.h"
 #include "generator.h"
@@ -308,7 +306,7 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
 }
 
 // ref:  https://www.nxp.com/docs/en/application-note/AN12343.pdf  p7
-static nxp_producttype_t getProductType(uint8_t *versionhw) {
+static nxp_producttype_t getProductType(const uint8_t *versionhw) {
 
     uint8_t product = versionhw[2];
 
@@ -325,7 +323,7 @@ static nxp_producttype_t getProductType(uint8_t *versionhw) {
     return DESFIRE_UNKNOWN_PROD;
 }
 
-static const char *getProductTypeStr(uint8_t *versionhw) {
+static const char *getProductTypeStr(const uint8_t *versionhw) {
 
     uint8_t product = versionhw[2];
 

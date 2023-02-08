@@ -95,6 +95,7 @@ ifeq ($(PLATFORM),PM3RDV4)
     PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH -DRDV4
     PLTNAME = Proxmark3 RDV4
     PLATFORM_FPGA = xc2s30
+    RDV4 = yes
 else ifeq ($(PLATFORM),PM3OTHER)
     $(warning PLATFORM=PM3OTHER is deprecated, please use PLATFORM=PM3GENERIC)
     PLTNAME = Proxmark3 generic target

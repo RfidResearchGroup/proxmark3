@@ -188,7 +188,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
     if (sector0 == NULL)
         return PM3_EINVARG;
 
-    uint8_t GPB = sector0[3 * 16 + 9];
+    uint8_t GPB = sector0[(3 * 16) + 9];
     if (verbose)
         PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x"), "GPB", GPB);
 
@@ -214,7 +214,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
     int res = madCRCCheck(sector0, true, 1);
 
     if (verbose && res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x") " (%s)", "CRC8", sector0[16], _GREEN_("ok"));
+        PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x") " ( %s )", "CRC8", sector0[16], _GREEN_("ok"));
 
     if (mad_ver == 2 && sector10) {
         int res2 = madCRCCheck(sector10, true, 2);
@@ -222,7 +222,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
             res = res2;
 
         if (verbose && !res2)
-            PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x") " (%s)", "CRC8", sector10[0], _GREEN_("ok"));
+            PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x") " ( %s )", "CRC8", sector10[0], _GREEN_("ok"));
     }
 
     // MA (multi-application card)
@@ -317,7 +317,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
 
     int ibs = MADInfoByteDecode(sector, swapmad, 1, verbose);
 
-    if (ibs) {
+    if (ibs > 0) {
         PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02x"), ibs);
     } else {
         PrintAndLogEx(WARNING, "Card publisher " _RED_("not") " present " _YELLOW_("0x%02x"), ibs);
@@ -354,13 +354,13 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
     int res = madCRCCheck(sector, true, 2);
     if (verbose) {
         if (res == PM3_SUCCESS)
-            PrintAndLogEx(SUCCESS, "CRC8 (%s)", _GREEN_("ok"));
+            PrintAndLogEx(SUCCESS, "CRC8 ( %s )", _GREEN_("ok"));
         else
-            PrintAndLogEx(WARNING, "CRC8 (%s)", _RED_("fail"));
+            PrintAndLogEx(WARNING, "CRC8 ( %s )", _RED_("fail"));
     }
 
     int ibs = MADInfoByteDecode(sector, swapmad, 2, verbose);
-    if (ibs) {
+    if (ibs > 0) {
         PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02x"), ibs);
     } else {
         PrintAndLogEx(WARNING, "Card publisher " _RED_("not") " present " _YELLOW_("0x%02x"), ibs);

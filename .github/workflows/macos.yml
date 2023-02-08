@@ -19,7 +19,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set Git http.postBuffer to something high
         run: git config --global http.postBuffer 524288000
@@ -36,6 +36,7 @@ jobs:
 
       - name: Install dependencies
         run: brew install readline coreutils qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl
+        continue-on-error: true
 
       - name: Install Python dependencies
         run: |
@@ -60,7 +61,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set Git http.postBuffer to something high
         run: git config --global http.postBuffer 524288000
@@ -77,6 +78,7 @@ jobs:
 
       - name: Install dependencies
         run: brew install readline coreutils qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl
+        continue-on-error: true
 
       - name: Install Python dependencies
         run: |
@@ -102,7 +104,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set Git http.postBuffer to something high
         run: git config --global http.postBuffer 524288000
@@ -119,6 +121,7 @@ jobs:
 
       - name: Install dependencies
         run: brew install readline coreutils qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl
+        continue-on-error: true
 
       - name: Install Python dependencies
         run: |

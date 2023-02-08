@@ -65,7 +65,7 @@ static uint8_t default_3des_keys[][16] = {
 
 static uint8_t default_pwd_pack[][4] = {
     {0xFF, 0xFF, 0xFF, 0xFF}, // PACK 0x00,0x00 -- factory default
-    {0x4E, 0x45, 0x78, 0x54},
+    {0x4E, 0x45, 0x78, 0x54}, // NExT
 };
 
 static uint32_t UL_TYPES_ARRAY[] = {
@@ -1146,6 +1146,46 @@ Lego Dimensions,
 
 typedef struct {
     const char *desc;
+    uint8_t mpos;
+    uint8_t mlen;
+    const char *match;
+    uint32_t (*otp)(const uint8_t *uid);
+    const char *hint;
+} mfu_otp_identify_t;
+
+static mfu_otp_identify_t mfu_otp_ident_table[] = {
+    { "SALTO", 12, 4, "534C544F", ul_c_otpgenA, NULL },
+//    { "SAFLOK", 12, 4, NULL, ul_c_otpgenB, NULL },
+//    { "VINGCARD", 12, 4, NULL, ul_c_otpgenC, NULL },
+//    { "DORMA KABA", 12, 4, NULL, ul_c_otpgenD, NULL },
+    { NULL, 0, 0, NULL, NULL, NULL }
+};
+
+static mfu_otp_identify_t *mfu_match_otp_fingerprint(uint8_t *data) {
+    uint8_t i = 0;
+    do {
+        int ml = 0;
+        uint8_t mtmp[40] = {0};
+
+        // static or dynamic created OTP to fingerprint.
+        if (mfu_otp_ident_table[i].match) {
+            param_gethex_to_eol(mfu_otp_ident_table[i].match, 0, mtmp, sizeof(mtmp), &ml);
+        } else {
+            uint32_t otp = mfu_otp_ident_table[i].otp(data);
+            num_to_bytes(otp, 4, mtmp);
+        }
+
+        bool m2 = (memcmp(mtmp, data + mfu_otp_ident_table[i].mpos, mfu_otp_ident_table[i].mlen) == 0);
+        if (m2) {
+            PrintAndLogEx(DEBUG, "(fingerprint) found %s", mfu_otp_ident_table[i].desc);
+            return &mfu_otp_ident_table[i];
+        }
+    } while (mfu_otp_ident_table[++i].desc);
+    return NULL;
+}
+
+typedef struct {
+    const char *desc;
     const char *version;
     uint8_t mpos;
     uint8_t mlen;
@@ -1184,7 +1224,7 @@ static mfu_identify_t mfu_ident_table[] = {
         "Snackworld", "0004040101000B03",
         9, 7, "483000E1100600",
         NULL, NULL,
-        "hf mfu dump -k %08x"
+        "hf mfu dump -k"
     },
     {
         "Amiibo", "0004040201001103",
@@ -1324,15 +1364,36 @@ static int mfu_fingerprint(TagTypeUL_t tagtype, bool hasAuthKey, uint8_t *authke
         if (item) {
             PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s"), item->desc);
 
-            if (item->Pwd) {
+            if (item->hint) {
+                if (item->Pwd) {
+                    char s[40] = {0};
+                    snprintf(s, sizeof(s), item->hint, item->Pwd(uid));
+                    PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", s);
+                } else {
+                    PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", item->hint);
+                }
+            }
+        }
+    }
+
+    // OTP checks
+    mfu_otp_identify_t *item = mfu_match_otp_fingerprint(data);
+    if (item) {
+        PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s"), item->desc);
+
+        if (item->hint) {
+            if (item->otp) {
                 char s[40] = {0};
-                snprintf(s, sizeof(s), item->hint, item->Pwd(uid));
+                snprintf(s, sizeof(s), item->hint, item->otp(uid));
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", s);
             } else {
                 PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", item->hint);
             }
         }
     }
+    //
+
+
 
 out:
     free(data);
@@ -1411,6 +1472,7 @@ uint32_t GetHF14AMfU_Type(void) {
                 else if (memcmp(version, "\x00\x34\x21\x01\x01\x00\x0E", 7) == 0) { tagtype = UL_EV1_128; break; } // Mikron JSC Russia EV1 41 pages tag
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0B", 7) == 0) { tagtype = NTAG_210; break; }
                 else if (memcmp(version, "\x00\x04\x04\x01\x02\x00\x0B", 7) == 0) { tagtype = NTAG_210u; break; }
+                else if (memcmp(version, "\x00\x04\x04\x02\x02\x00\x0B", 7) == 0) { tagtype = NTAG_210u; break; }
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0E", 7) == 0) { tagtype = NTAG_212; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x00\x0F", 7) == 0) { tagtype = NTAG_213; break; }
                 else if (memcmp(version, "\x00\x53\x04\x02\x01\x00\x0F", 7) == 0) { tagtype = NTAG_213; break; } //Shanghai Feiju Microelectronics Co. Ltd. China (Xiaomi Air Purifier filter)
@@ -2718,6 +2780,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
     PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfu sim -t 7`") " to simulate an Amiibo.");
     return res;
 }
+
 //
 //  Simulate tag
 //
@@ -2730,8 +2793,8 @@ static int CmdHF14AMfUSim(const char *Cmd) {
                   "The UID from emulator memory will be used if not specified.\n"
                   "See `hf 14a sim -h` to see available types. You want 2 or 7 usually.",
                   "hf mfu sim -t 2 --uid 11223344556677        -> MIFARE Ultralight\n"
-                  "hf mfu sim -t 7 --uid 11223344556677 -n 5   -> Amiibo (NTAG 215),  pack 0x8080\n"
-                  "hf mfu sim -t 7                             -> Amiibo (NTAG 215),  pack 0x8080"
+                  "hf mfu sim -t 7 --uid 11223344556677 -n 5   -> MFU EV1 / NTAG 215 Amiibo\n"
+                  "hf mfu sim -t 7                             -> MFU EV1 / NTAG 215 Amiibo"
                  );
 
     void *argtable[] = {
@@ -3247,7 +3310,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     PrintAndLogEx(INFO, "----------------------------------");
     PrintAndLogEx(INFO, " algo            | pwd      | pack");
     PrintAndLogEx(INFO, "-----------------+----------+-----");
-    PrintAndLogEx(INFO, " EV1             | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
+    PrintAndLogEx(INFO, " Transport EV1   | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
     PrintAndLogEx(INFO, " Amiibo          | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
     PrintAndLogEx(INFO, " Lego Dimension  | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
     PrintAndLogEx(INFO, " XYZ 3D printer  | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
@@ -3255,6 +3318,9 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     PrintAndLogEx(INFO, " NTAG tools      | %08X | %04X", ul_ev1_pwdgenF(uid), ul_ev1_packgen_def(uid));
     PrintAndLogEx(INFO, "-----------------+----------+-----");
     PrintAndLogEx(INFO, " Vingcard algo");
+    PrintAndLogEx(INFO, " Saflok algo");
+    PrintAndLogEx(INFO, " SALTO algo");
+    PrintAndLogEx(INFO, " Dorma Kaba algo");
     PrintAndLogEx(INFO, "----------------------------------");
     return PM3_SUCCESS;
 }
@@ -3958,6 +4024,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
         arg_str0("k", "key", "Replace default key for NDEF", NULL),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
         arg_str0("f", "file", "<fn>", "Save raw NDEF to file"),
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3966,6 +4033,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     switch (keylen) {
@@ -4027,6 +4095,9 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
         }
     }
 
+    // The following read will read in blocks of 16 bytes.
+    // ensure maxsize is rounded up to a multiple of 16
+    maxsize = maxsize + (16 - (maxsize % 16));
     // allocate mem
     uint8_t *records = calloc(maxsize, sizeof(uint8_t));
     if (records == NULL) {
@@ -4049,9 +4120,9 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     if (fnlen != 0) {
         saveFile(filename, ".bin", records, (size_t)maxsize);
     }
-    status = NDEFRecordsDecodeAndPrint(records, (size_t)maxsize);
+    status = NDEFRecordsDecodeAndPrint(records, (size_t)maxsize, verbose);
     if (status != PM3_SUCCESS) {
-        status = NDEFDecodeAndPrint(records, (size_t)maxsize, true);
+        status = NDEFDecodeAndPrint(records, (size_t)maxsize, verbose);
     }
 
     char *jooki = strstr((char *)records, "s.jooki.rocks/s/?s=");
@@ -4093,39 +4164,133 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     return status;
 }
 
-static int CmdHF14AMfuEView(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfu eview",
-                  "It displays emulator memory",
-                  "hf mfu eview"
-                 );
+// utility function. Retrieves emulator memory
+static int GetMfuDumpFromEMul(mfu_dump_t **buf) {
 
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    uint16_t blocks = MFU_MAX_BLOCKS;
-    uint16_t bytes = MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH;
-
-    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    mfu_dump_t *dump = calloc(1, sizeof(mfu_dump_t));
     if (dump == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
 
     PrintAndLogEx(INFO, "downloading from emulator memory");
-    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+    if (!GetFromDevice(BIG_BUF_EML, (uint8_t *)dump, MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH, 0, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
         return PM3_ETIMEOUT;
     }
 
-    printMFUdumpEx((mfu_dump_t *)dump, blocks, 0);
+    *buf = dump ;
+    return PM3_SUCCESS ;
+}
+
+static int CmdHF14AMfuEView(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu eview",
+                  "Displays emulator memory\n"
+                  "By default number of pages shown depends on defined tag type.\n"
+                  "You can override this with option --end.",
+                  "hf mfu eview\n"
+                  "hf mfu eview --end 255 -> dumps whole memory"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("e", "end", "<dec>", "index of last block"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int end = arg_get_int_def(ctx, 1, -1);
+    CLIParserFree(ctx);
+
+    bool override_end = (end != -1) ;
+
+    if (override_end && (end < 0 || end > MFU_MAX_BLOCKS)) {
+        PrintAndLogEx(WARNING, "Invalid value for end:%d. Must be be positive integer < %d.", end, MFU_MAX_BLOCKS);
+        return PM3_EINVARG ;
+    }
+
+    mfu_dump_t *dump ;
+    int res = GetMfuDumpFromEMul(&dump) ;
+    if (res != PM3_SUCCESS) {
+        return res ;
+    }
+
+    if (override_end) {
+        ++end ;
+    } else {
+        end = dump->pages ;
+    }
+
+    printMFUdumpEx(dump, end, 0);
     free(dump);
     return PM3_SUCCESS;
+}
+
+static int CmdHF14AMfuESave(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu esave",
+                  "Saves emulator memory to a MIFARE Ultralight/NTAG dump file (bin/eml/json)\n"
+                  "By default number of pages saved depends on defined tag type.\n"
+                  "You can override this with option --end.",
+                  "hf mfu esave\n"
+                  "hf mfu esave --end 255 -> saves whole memory\n"
+                  "hf mfu esave -f hf-mfu-04010203040506-dump.json"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("e", "end", "<dec>", "index of last block"),
+        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int end = arg_get_int_def(ctx, 1, -1);
+
+    char filename[FILE_PATH_SIZE];
+    int fnlen = 0 ;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    CLIParserFree(ctx);
+
+    bool override_end = (end != -1) ;
+
+    if (override_end && (end < 0 || end > MFU_MAX_BLOCKS)) {
+        PrintAndLogEx(WARNING, "Invalid value for end:%d. Must be be positive integer <= %d.", end, MFU_MAX_BLOCKS);
+        return PM3_EINVARG ;
+    }
+
+    // get dump from memory
+    mfu_dump_t *dump ;
+    int res = GetMfuDumpFromEMul(&dump) ;
+    if (res != PM3_SUCCESS) {
+        return res ;
+    }
+
+    // initialize filename
+    if (fnlen < 1) {
+        PrintAndLogEx(INFO, "Using UID as filename");
+        uint8_t uid[7] = {0};
+        memcpy(uid, (uint8_t *) & (dump->data), 3);
+        memcpy(uid + 3, (uint8_t *) & (dump->data) + 4, 4);
+        strcat(filename, "hf-mfu-");
+        FillFileNameByUID(filename, uid, "-dump", sizeof(uid));
+    }
+
+    if (override_end) {
+        end ++ ;
+    } else {
+        end = dump->pages ;
+    }
+
+    // save dump. Last block contains PACK + RFU
+    uint16_t datalen = (end + 1) * MFU_BLOCK_SIZE + MFU_DUMP_PREFIX_LENGTH;
+    res = pm3_save_dump(filename, (uint8_t *)dump, datalen, jsfMfuMemory, MFU_BLOCK_SIZE);
+
+    free(dump);
+    return res;
 }
 
 static int CmdHF14AMfuView(const char *Cmd) {
@@ -4242,7 +4407,8 @@ static command_t CommandTable[] = {
     {"view",     CmdHF14AMfuView,           AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",     CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
     {"---------", CmdHelp,                  IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
-    {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "Load Ultralight .eml dump file into emulator memory"},
+    {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "Load Ultralight dump file into emulator memory"},
+    {"esave",    CmdHF14AMfuESave,          IfPm3Iso14443a,  "Save Ultralight dump file from emulator memory"},
     {"eview",    CmdHF14AMfuEView,          IfPm3Iso14443a,  "View emulator memory"},
     {"sim",      CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate MIFARE Ultralight from emulator memory"},
     {"---------", CmdHelp,                  IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},

@@ -190,6 +190,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MIFARE_CMD_RESTORE          0xC2
 #define MIFARE_CMD_TRANSFER         0xB0
 
+#define MIFARE_MAGIC_GDM_AUTH_KEYA  0x80
+#define MIFARE_MAGIC_GDM_AUTH_KEYB  0x81
+
 #define MIFARE_EV1_PERSONAL_UID     0x40
 #define MIFARE_EV1_SETMODE          0x43
 #define MIFARE_EV1_UIDF0            0x00
@@ -252,6 +255,25 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_SUPER         6
 #define MAGIC_NTAG21X       7
 #define MAGIC_GEN_3         8
+#define MAGIC_GEN_4GTU      9
+
+// Commands for configuration of Gen4 GTU cards.
+// see https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/magic_cards_notes.md
+#define GEN_4GTU_CMD    0xCF // Prefix for all commands, followed by pasword (4b)
+#define GEN_4GTU_SHADOW 0x32 // Configure GTU shadow mode
+#define GEN_4GTU_ATS    0x34 // Configure ATS
+#define GEN_4GTU_ATQA   0x35 // Configure ATQA/SAK (swap ATQA bytes)
+#define GEN_4GTU_UIDLEN 0x68 // Configure UID length
+#define GEN_4GTU_ULEN   0x69 // (De)Activate Ultralight mode
+#define GEN_4GTU_ULMODE 0x6A // Select Ultralight mode
+#define GEN_4GTU_GETCNF 0xC6 // Dump configuration
+#define GEN_4GTU_TEST   0xCC // Factory test, returns 6666
+#define GEN_4GTU_WRITE  0xCD // Backdoor write 16b block
+#define GEN_4GTU_READ   0xCE // Backdoor read 16b block
+#define GEN_4GTU_SETCNF 0xF0 // Configure all params in one cmd
+#define GEN_4GTU_FUSCNF 0xF1 // Configure all params in one cmd and fuse the configuration permanently
+#define GEN_4GTU_CHPWD  0xFE // change password
+
 /**
 06 00 = INITIATE
 0E xx = SELECT ID (xx = Chip-ID)
@@ -431,9 +453,71 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO7816_MANAGE_CHANNEL          0x70
 
 #define ISO7816_GET_RESPONSE            0xC0
+
 // ISO7816-4 For response APDU's
-#define ISO7816_OK                      0x9000
-// 6x xx = ERROR
+#define ISO7816_OK                              0x9000
+
+// 6x xx = APDU ERROR CODES
+
+// 61 xx
+#define ISO7816_BYTES_REMAINING_00              0x6100 // Response bytes remaining
+
+// 62 xx
+#define ISO7816_WARNING_STATE_UNCHANGED         0x6200 // Warning, card state unchanged
+#define ISO7816_DATA_CORRUPT                    0x6281 // Returned data may be corrupted
+#define ISO7816_FILE_EOF                        0x6282 // The end of the file has been reached before the end of reading
+#define ISO7816_INVALID_DF                      0x6283 // Invalid DF
+#define ISO7816_INVALID_FILE                    0x6284 // Selected file is not valid
+#define ISO7816_FILE_TERMINATED                 0x6285 // File is terminated
+
+// 63 xx
+#define ISO7816_AUTH_FAILED                     0x6300 // Authentification failed
+#define ISO7816_FILE_FILLED                     0x6381 // File filled up by the last write
+
+// 65 xx
+#define ISO7816_MEMORY_FULL                     0x6501 // Memory failure
+#define ISO7816_WRITE_MEMORY_ERR                0x6581 // Write problem / Memory failure / Unknown mode
+
+// 67 xx
+#define ISO7816_WRONG_LENGTH                    0x6700 // Wrong length
+
+// 68 xx
+#define ISO7816_LOGICAL_CHANNEL_NOT_SUPPORTED   0x6881 // Card does not support the operation on the specified logical channel
+#define ISO7816_SECURE_MESSAGING_NOT_SUPPORTED  0x6882 // Card does not support secure messaging
+#define ISO7816_LAST_COMMAND_EXPECTED           0x6883 // Last command in chain expected
+#define ISO7816_COMMAND_CHAINING_NOT_SUPPORTED  0x6884 // Command chaining not supported
+
+// 69 xx
+#define ISO7816_TRANSACTION_FAIL                0x6900 // No successful transaction executed during session
+#define ISO7816_SELECT_FILE_ERR                 0x6981 // Cannot select indicated file, command not compatible with file organization
+#define ISO7816_SECURITY_STATUS_NOT_SATISFIED   0x6982 // Security condition not satisfied
+#define ISO7816_FILE_INVALID                    0x6983 // File invalid
+#define ISO7816_DATA_INVALID                    0x6984 // Data invalid
+#define ISO7816_CONDITIONS_NOT_SATISFIED        0x6985 // Conditions of use not satisfied
+#define ISO7816_COMMAND_NOT_ALLOWED             0x6986 // Command not allowed (no current EF)
+#define ISO7816_SM_DATA_MISSING                 0x6987 // Expected SM data objects missing
+#define ISO7816_SM_DATA_INCORRECT               0x6988 // SM data objects incorrect
+#define ISO7816_APPLET_SELECT_FAILED            0x6999 // Applet selection failed
+
+// 6A xx
+#define ISO7816_INVALID_P1P2                    0x6A00 // Bytes P1 and/or P2 are invalid
+#define ISO7816_WRONG_DATA                      0x6A80 // Wrong data
+#define ISO7816_FUNC_NOT_SUPPORTED              0x6A81 // Function not supported
+#define ISO7816_FILE_NOT_FOUND                  0x6A82 // File not found
+#define ISO7816_RECORD_NOT_FOUND                0x6A83 // Record not found
+#define ISO7816_FILE_FULL                       0x6A84 // Not enough memory space in the file
+#define ISO7816_LC_TLV_CONFLICT                 0x6A85 // LC / TLV conlict
+#define ISO7816_INCORRECT_P1P2                  0x6A86 // Incorrect parameters (P1,P2)
+#define ISO7816_FILE_EXISTS                     0x6A89 // File exists
+#define ISO7816_NOT_IMPLEMENTED                 0x6AFF //
+
+// 6x 00
+#define ISO7816_WRONG_P1P2                      0x6B00 // Incorrect parameters (P1,P2)
+#define ISO7816_CORRECT_LENGTH_00               0x6C00 // Correct Expected Length (Le)
+#define ISO7816_INS_NOT_SUPPORTED               0x6D00 // INS value not supported
+#define ISO7816_CLA_NOT_SUPPORTED               0x6E00 // CLA value not supported
+#define ISO7816_UNKNOWN                         0x6F00 // No precise diagnosis
+
 
 // MIFARE DESFire command set:
 #define MFDES_AUTHENTICATE              0x0A  // AUTHENTICATE_NATIVE

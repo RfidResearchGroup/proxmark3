@@ -452,7 +452,7 @@ bool Flash_WipeMemoryPage(uint8_t page) {
     FlashStop();
 
     // let spiffs check and update its info post flash erase
-    rdv40_spiffs_check ();
+    rdv40_spiffs_check();
     return true;
 }
 // Wipes flash memory completely, fills with 0xFF
@@ -594,7 +594,7 @@ void Flashmem_print_info(void) {
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  Mifare.................. "_YELLOW_("%d")" keys", num);
+            Dbprintf("  Mifare.................. "_YELLOW_("%d")" / "_GREEN_("%d")" keys", num, DEFAULT_MF_KEYS_MAX);
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
@@ -602,7 +602,7 @@ void Flashmem_print_info(void) {
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  T55x7................... "_YELLOW_("%d")" keys", num);
+            Dbprintf("  T55x7................... "_YELLOW_("%d")" / "_GREEN_("%d")" keys", num, DEFAULT_T55XX_KEYS_MAX);
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
@@ -610,7 +610,7 @@ void Flashmem_print_info(void) {
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  iClass.................. "_YELLOW_("%d")" keys", num);
+            Dbprintf("  iClass.................. "_YELLOW_("%d")" / "_GREEN_("%d")" keys", num, DEFAULT_ICLASS_KEYS_MAX);
     }
 
     FlashStop();

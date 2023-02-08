@@ -285,7 +285,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
 
     // get header from card
     PrintAndLogEx(INFO, "trying to read a card..");
-    int res = read_iclass_csn(false, false);
+    int res = read_iclass_csn(false, false, false);
     if (res == PM3_SUCCESS) {
         cc = &iclass_last_known_card;
         // calc diversified key for selected card
@@ -664,14 +664,15 @@ static int CmdHFiClassSniff(const char *Cmd) {
         PrintAndLogEx(INFO, "Sniff with jam of iCLASS e-purse updates...");
     }
 
-    const uint8_t update_epurse_sequence[2] = {0x87, 0x02};
-
     struct {
         uint8_t jam_search_len;
         uint8_t jam_search_string[2];
     } PACKED payload;
 
+    memset(&payload, 0, sizeof(payload));
+
     if (jam_epurse_update) {
+        const uint8_t update_epurse_sequence[2] = {0x87, 0x02};
         payload.jam_search_len = sizeof(update_epurse_sequence);
         memcpy(payload.jam_search_string, update_epurse_sequence, sizeof(payload.jam_search_string));
     }
@@ -705,7 +706,7 @@ static int CmdHFiClassSim(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int sim_type = arg_get_int(ctx, 1);
+    int sim_type = arg_get_int_def(ctx, 1, 3);
 
     int csn_len = 0;
     uint8_t csn[8] = {0};
@@ -904,18 +905,24 @@ static int CmdHFiClassInfo(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool shallow_mod = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
-    return info_iclass();
+    return info_iclass(shallow_mod);
 }
 
-int read_iclass_csn(bool loop, bool verbose) {
+int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
 
     iclass_card_select_t payload = {
         .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
     };
+
+    if (shallow_mod) {
+        payload.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
+    }
 
     int res = PM3_SUCCESS;
 
@@ -972,30 +979,33 @@ static int CmdHFiClassReader(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool cm = arg_get_lit(ctx, 1);
+    bool shallow_mod = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     if (cm) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
-    return read_iclass_csn(cm, true);
+    return read_iclass_csn(cm, true, shallow_mod);
 }
 
 static int CmdHFiClassELoad(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass eload",
                   "Load emulator memory with data from (bin/eml/json) iCLASS dump file",
-                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
                   "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.eml\n"
+                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin -m\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "filename of dump (bin/eml/json)"),
+        arg_lit0("m", "mem",  "use RDV4 spiffs"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1010,7 +1020,38 @@ static int CmdHFiClassELoad(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    bool use_spiffs = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
+
+    // use RDV4 spiffs
+    if (use_spiffs && IfPm3Flash() == false) {
+        PrintAndLogEx(WARNING, "Device not compiled to support spiffs");
+        return PM3_EINVARG;
+    }
+
+    if (use_spiffs) {
+
+        if (fnlen > 32) {
+            PrintAndLogEx(WARNING, "filename too long for spiffs, expected 32, got %u", fnlen);
+            return PM3_EINVARG;
+        }
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_SPIFFS_ELOAD, (uint8_t *)filename, fnlen);
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_SPIFFS_ELOAD, &resp, 2000) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Loading file from spiffs to emulatore memory failed");
+            return PM3_EFLASH;
+        }
+
+        PrintAndLogEx(SUCCESS, "File transfered from spiffs to device emulator memory");
+        return PM3_SUCCESS;
+    }
 
     // read dump file
     uint8_t *dump = NULL;
@@ -1514,11 +1555,15 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose) {
+static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose, bool shallow_mod) {
 
     iclass_card_select_t payload = {
         .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
     };
+
+    if (shallow_mod) {
+        payload.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
+    }
 
     clearCommandBuffer();
     PacketResponseNG resp;
@@ -1574,6 +1619,8 @@ static int CmdHFiClassDump(const char *Cmd) {
         arg_lit0(NULL, "raw", "raw, the key is interpreted as raw block 3/4"),
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0(NULL, "force", "force unsecure card read"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1658,6 +1705,8 @@ static int CmdHFiClassDump(const char *Cmd) {
     bool rawkey = arg_get_lit(ctx, 7);
     bool use_replay = arg_get_lit(ctx, 8);
     bool dense_output = g_session.dense_output || arg_get_lit(ctx, 9);
+    bool force = arg_get_lit(ctx, 10);
+    bool shallow_mod = arg_get_lit(ctx, 11);
 
     CLIParserFree(ctx);
 
@@ -1676,6 +1725,11 @@ static int CmdHFiClassDump(const char *Cmd) {
     iclass_card_select_t payload_rdr = {
         .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
     };
+
+    if (shallow_mod) {
+        payload_rdr.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
+    }
+
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload_rdr, sizeof(iclass_card_select_t));
@@ -1724,6 +1778,12 @@ static int CmdHFiClassDump(const char *Cmd) {
         }
     }
 
+    //
+    if (force) {
+        pagemap = PICOPASS_NON_SECURE_PAGEMODE;
+        PrintAndLogEx(INFO, "Forcing NON SECURE PAGE dumping");
+    }
+
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
         PrintAndLogEx(INFO, "Dumping all available memory, block 3 - %u (0x%02x)", app_limit1, app_limit1);
         if (auth) {
@@ -1749,6 +1809,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         .req.use_replay = use_replay,
         .req.send_reply = true,
         .req.do_auth = auth,
+        .req.shallow_mod = shallow_mod,
         .end_block = app_limit1,
     };
     memcpy(payload.req.key, key, 8);
@@ -1909,7 +1970,7 @@ write_dump:
     return PM3_SUCCESS;
 }
 
-static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *macdata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose, bool use_secure_pagemode) {
+static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *macdata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose, bool use_secure_pagemode, bool shallow_mod) {
 
     iclass_writeblock_req_t payload = {
         .req.use_raw = rawkey,
@@ -1919,6 +1980,7 @@ static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *macdata
         .req.blockno = blockno,
         .req.send_reply = true,
         .req.do_auth = use_secure_pagemode,
+        .req.shallow_mod = shallow_mod,
     };
     memcpy(payload.req.key, KEY, 8);
     memcpy(payload.data, bldata, sizeof(payload.data));
@@ -1963,6 +2025,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
         arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2031,6 +2094,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     bool rawkey = arg_get_lit(ctx, 8);
     bool use_replay = arg_get_lit(ctx, 9);
     bool verbose = arg_get_lit(ctx, 10);
+    bool shallow_mod = arg_get_lit(ctx, 11);
 
     CLIParserFree(ctx);
 
@@ -2039,7 +2103,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    int isok = iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth);
+    int isok = iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
     switch (isok) {
         case PM3_SUCCESS:
             PrintAndLogEx(SUCCESS, "Wrote block %3d/0x%02X successful", blockno, blockno);
@@ -2075,6 +2139,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2124,6 +2189,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     bool elite = arg_get_lit(ctx, 7);
     bool rawkey = arg_get_lit(ctx, 8);
     bool verbose = arg_get_lit(ctx, 9);
+    bool shallow_mod = arg_get_lit(ctx, 10);
 
     CLIParserFree(ctx);
 
@@ -2174,6 +2240,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     payload->req.blockno = startblock;
     payload->req.send_reply = true;
     payload->req.do_auth = true;
+    payload->req.shallow_mod = shallow_mod;
     memcpy(payload->req.key, key, 8);
 
     payload->item_cnt = (endblock - startblock + 1);
@@ -2227,7 +2294,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     return resp.status;
 }
 
-static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool replay, bool verbose, bool auth, uint8_t *out) {
+static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool replay, bool verbose, bool auth, bool shallow_mod, uint8_t *out) {
 
     iclass_auth_req_t payload = {
         .use_raw = rawkey,
@@ -2237,6 +2304,7 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
         .blockno = blockno,
         .send_reply = true,
         .do_auth = auth,
+        .shallow_mod = shallow_mod,
     };
     memcpy(payload.key, KEY, 8);
 
@@ -2290,6 +2358,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
         arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2340,6 +2409,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     bool rawkey = arg_get_lit(ctx, 6);
     bool use_replay = arg_get_lit(ctx, 7);
     bool verbose = arg_get_lit(ctx, 8);
+    bool shallow_mod = arg_get_lit(ctx, 9);
 
     CLIParserFree(ctx);
 
@@ -2359,7 +2429,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     }
 
     uint8_t data[8] = {0};
-    int res = iclass_read_block(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, data);
+    int res = iclass_read_block(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, data);
     if (res != PM3_SUCCESS)
         return res;
 
@@ -2934,7 +3004,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
 
     if (givenCSN == false) {
         uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (select_only(csn, CCNR, true) == false) {
+        if (select_only(csn, CCNR, true, false) == false) {
             DropField();
             return PM3_ESOFT;
         }
@@ -3132,6 +3202,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3143,6 +3214,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     bool use_credit_key = arg_get_lit(ctx, 2);
     bool use_elite = arg_get_lit(ctx, 3);
     bool use_raw = arg_get_lit(ctx, 4);
+    bool shallow_mod = arg_get_lit(ctx, 5);
 
     CLIParserFree(ctx);
 
@@ -3172,7 +3244,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 
     bool got_csn = false;
     for (uint8_t i = 0; i < ICLASS_AUTH_RETRY; i++) {
-        got_csn = select_only(CSN, CCNR, false);
+        got_csn = select_only(CSN, CCNR, false, shallow_mod);
         if (got_csn == false)
             PrintAndLogEx(WARNING, "one more try");
         else
@@ -3254,6 +3326,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         }
         packet->use_credit_key = use_credit_key;
         packet->count = curr_chunk_cnt;
+        packet->shallow_mod = shallow_mod;
         // copy chunk of pre calculated macs to packet
         memcpy(packet->items, (pre + chunk_offset), (4 * curr_chunk_cnt));
 
@@ -3740,7 +3813,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass encode",
-                  "Encode binary wiegand to block 7\n"
+                  "Encode binary wiegand to block 7,8,9\n"
                   "Use either --bin or --wiegand/--fc/--cn",
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337\n"
                   "hf iclass encode --fc 31 --cn 337 --ki 0                            -> FC 31 CN 337\n"
@@ -3758,6 +3831,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
         arg_u64_0(NULL, "fc", "<dec>", "facility code"),
         arg_u64_0(NULL, "cn", "<dec>", "card number"),
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3801,6 +3875,8 @@ static int CmdHFiClassEncode(const char *Cmd) {
     char format[16] = {0};
     int format_len = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)format, sizeof(format), &format_len);
+
+    bool shallow_mod = arg_get_lit(ctx, 10);
 
     CLIParserFree(ctx);
 
@@ -3892,8 +3968,12 @@ static int CmdHFiClassEncode(const char *Cmd) {
             return PM3_ESOFT;
         }
 
+        // iceman: only for formats w length smaller than 37.
+        // Needs a check.
+
+        // increase length to allow setting bit just above real data
+        packed.Length++;
         // Set sentinel bit
-        packed.Length++;// increase length to allow setting bit just above real data
         set_bit_by_position(&packed, true, 0);
 
 #ifdef HOST_LITTLE_ENDIAN
@@ -3919,13 +3999,13 @@ static int CmdHFiClassEncode(const char *Cmd) {
     int isok = PM3_SUCCESS;
     // write
     for (uint8_t i = 0; i < 4; i++) {
-        isok = iclass_write_block(6 + i, credential + (i * 8), NULL, key, use_credit_key, elite, rawkey, false, false, auth);
+        isok = iclass_write_block(6 + i, credential + (i * 8), NULL, key, use_credit_key, elite, rawkey, false, false, auth, shallow_mod);
         switch (isok) {
             case PM3_SUCCESS:
                 PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _GREEN_("ok") " )  --> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
                 break;
             default:
-                PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
+                PrintAndLogEx(INFO, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
                 break;
         }
     }
@@ -4090,11 +4170,16 @@ int CmdHFiClass(const char *Cmd) {
 // DESFIRE|                       |                                   |
 //}
 
-int info_iclass(void) {
+int info_iclass(bool shallow_mod) {
 
     iclass_card_select_t payload = {
         .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
     };
+
+    if (shallow_mod) {
+        payload.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
+    }
+
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload, sizeof(iclass_card_select_t));
