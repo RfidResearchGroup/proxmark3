@@ -65,7 +65,13 @@ ifneq (,$(INSTALLSIMFW))
 endif
 ifeq ($(platform),Linux)
 	$(Q)$(INSTALLSUDO) $(MKDIR) $(DESTDIR)$(UDEV_PREFIX)
-	$(Q)$(INSTALLSUDO) $(CP) driver/77-pm3-usb-device-blacklist.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+# If user is running ArchLinux, use group 'uucp'
+# Else, use group 'dialout'
+	ifneq ($(wildcard /etc/arch-release),)
+		$(Q)$(INSTALLSUDO) $(CP) driver/77-pm3-usb-device-blacklist-uucp.rules    $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+	else
+		$(Q)$(INSTALLSUDO) $(CP) driver/77-pm3-usb-device-blacklist-dialout.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+	endif
 endif
 
 uninstall: common/uninstall
