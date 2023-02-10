@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added verbose flag to `hf iclass encode` (@natesales)
  - Fixed `Makefile` regression that broke `make install` (@henrygab)
  - Fixed `lf em 4x70 brute` - now works as expected (@adite)
  - Fixed the lf sampling when bits_per_sample is less than 8 (@wh201906)
