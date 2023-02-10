@@ -205,6 +205,7 @@ typedef struct {
     // rdv4
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
+    bool is_rdv4                       : 1;
 } PACKED capabilities_t;
 #define CAPABILITIES_VERSION 6
 extern capabilities_t g_pm3_capabilities;
@@ -484,6 +485,7 @@ typedef struct {
 #define CMD_LF_EM4X70_AUTH                                                0x0263
 #define CMD_LF_EM4X70_WRITEPIN                                            0x0264
 #define CMD_LF_EM4X70_WRITEKEY                                            0x0265
+#define CMD_LF_EM4X70_BRUTE                                               0x0266
 // Sampling configuration for LF reader/sniffer
 #define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E
@@ -519,8 +521,14 @@ typedef struct {
 #define CMD_HF_ISO15693_COMMAND                                           0x0313
 #define CMD_HF_ISO15693_FINDAFI                                           0x0315
 #define CMD_HF_ISO15693_CSETUID                                           0x0316
-#define CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY                            0x0317
-#define CMD_HF_ISO15693_SLIX_L_DISABLE_AESAFI                             0x0318
+#define CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY                               0x0867
+#define CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY                              0x0317
+#define CMD_HF_ISO15693_SLIX_DISABLE_EAS                                  0x0318
+#define CMD_HF_ISO15693_SLIX_ENABLE_EAS                                   0x0862
+#define CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI                             0x0863
+#define CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS                             0x0864
+#define CMD_HF_ISO15693_SLIX_WRITE_PWD                                    0x0865
+#define CMD_HF_ISO15693_WRITE_AFI                                         0x0866
 #define CMD_HF_TEXKOM_SIMULATE                                            0x0320
 #define CMD_HF_ISO15693_EML_CLEAR                                         0x0330
 #define CMD_HF_ISO15693_EML_SETMEM                                        0x0331

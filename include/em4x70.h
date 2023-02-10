@@ -42,6 +42,9 @@ typedef struct {
     // Used to write new key
     uint8_t crypt_key[12];
 
+    // used for bruteforce the partial key
+    uint16_t start_key;
+
 } em4x70_data_t;
 
 #endif /* EM4X70_H__ */

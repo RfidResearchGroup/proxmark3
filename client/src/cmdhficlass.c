@@ -3832,6 +3832,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
         arg_u64_0(NULL, "cn", "<dec>", "card number"),
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
+        arg_lit0("v", NULL, "verbose (print encoded blocks)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3877,6 +3878,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)format, sizeof(format), &format_len);
 
     bool shallow_mod = arg_get_lit(ctx, 10);
+    bool verbose = arg_get_lit(ctx, 11);
 
     CLIParserFree(ctx);
 
@@ -3994,6 +3996,17 @@ static int CmdHFiClassEncode(const char *Cmd) {
         iclass_encrypt_block_data(credential + 8, enc_key);
         iclass_encrypt_block_data(credential + 16, enc_key);
         iclass_encrypt_block_data(credential + 24, enc_key);
+    }
+
+    if (verbose) {
+        for (uint8_t i = 0; i < 4; i++) {
+            PrintAndLogEx(INFO, "Block %d/0x0%x -> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
+        }
+    }
+
+    if (!g_session.pm3_present) {
+        PrintAndLogEx(ERR, "Device offline\n");
+        return PM3_EFAILED;
     }
 
     int isok = PM3_SUCCESS;

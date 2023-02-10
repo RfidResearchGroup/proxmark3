@@ -1230,7 +1230,7 @@ int FSKrawDemod(uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, bo
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, _YELLOW_("%s") " decoded bitstream", GetFSKType(fchigh, fclow, invert));
             PrintAndLogEx(INFO, "-----------------------");
-            printDemodBuff(0, false, invert, false);
+            printDemodBuff(0, false, false, false);
         }
         goto out;
     } else {
@@ -1779,7 +1779,7 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
 
         BitstreamOut_t bout = { got, bits_per_sample * n,  0};
         uint32_t j = 0;
-        for (j = 0; j * bits_per_sample < n * 8 && j < n; j++) {
+        for (j = 0; j * bits_per_sample < n * 8 && j * bits_per_sample < MAX_GRAPH_TRACE_LEN * 8; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
             g_GraphBuffer[j] = ((int) sample) - 127;
         }

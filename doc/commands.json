@@ -1101,14 +1101,16 @@
             "command": "hf 14a chaining",
             "description": "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
             "notes": [
-                "hf 14a chaining disable -> disable chaining",
-                "hf 14a chaining -> show chaining enable/disable state"
+                "hf 14a chaining -> show chaining enable/disable state",
+                "hf 14a chaining --off -> disable chaining"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-1, --on enabled chaining",
+                "-0, --off disable chaining"
             ],
-            "usage": "hf 14a chaining [-h] [<enable/disable or 0/1>]"
+            "usage": "hf 14a chaining [-h10]"
         },
         "hf 14a config": {
             "command": "hf 14a config",
@@ -1654,6 +1656,34 @@
             ],
             "usage": "hf 15 list [-h1crux] [--frame] [-f <fn>]"
         },
+        "hf 15 passprotectafi": {
+            "command": "hf 15 passprotectafi",
+            "description": "This command enables the password protect of AFI. *** OBS! This action can not be undone! ***",
+            "notes": [
+                "hf 15 passprotectafi -p 00000000 --force"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-p, --pwd <hex> EAS/AFI password, 8 hex bytes",
+                "--force Force execution of command (irreversible)"
+            ],
+            "usage": "hf 15 passprotectafi [-h] -p <hex> [--force]"
+        },
+        "hf 15 passprotecteas": {
+            "command": "hf 15 passprotecteas",
+            "description": "This command enables the password protect of EAS. *** OBS! This action can not be undone! ***",
+            "notes": [
+                "hf 15 passprotecteas -p 00000000 --force"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-p, --pwd <hex> EAS/AFI password, 8 hex bytes",
+                "--force Force execution of command (irreversible)"
+            ],
+            "usage": "hf 15 passprotecteas [-h] -p <hex> [--force]"
+        },
         "hf 15 raw": {
             "command": "hf 15 raw",
             "description": "Sends raw bytes over ISO-15693 to card",
@@ -1774,8 +1804,34 @@
             ],
             "usage": "hf 15 sim [-h] -u <8b hex> [-b <dec>]"
         },
-        "hf 15 slixdisable": {
-            "command": "hf 15 slixdisable",
+        "hf 15 slixeasdisable": {
+            "command": "hf 15 slixeasdisable",
+            "description": "Disable EAS mode on SLIX ISO-15693 tag",
+            "notes": [
+                "hf 15 slixeasdisable -p 0F0F0F0F"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-p, --pwd <hex> optional password, 8 hex bytes"
+            ],
+            "usage": "hf 15 slixeasdisable [-h] [-p <hex>]"
+        },
+        "hf 15 slixeasenable": {
+            "command": "hf 15 slixeasenable",
+            "description": "Enable EAS mode on SLIX ISO-15693 tag",
+            "notes": [
+                "hf 15 slixeasenable -p 0F0F0F0F"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-p, --pwd <hex> optional password, 8 hex bytes"
+            ],
+            "usage": "hf 15 slixeasenable [-h] [-p <hex>]"
+        },
+        "hf 15 slixprivacydisable": {
+            "command": "hf 15 slixprivacydisable",
             "description": "Disable privacy mode on SLIX ISO-15693 tag",
             "notes": [
                 "hf 15 slixdisable -p 0F0F0F0F"
@@ -1785,7 +1841,35 @@
                 "-h, --help This help",
                 "-p, --pwd <hex> password, 8 hex bytes"
             ],
-            "usage": "hf 15 slixdisable [-h] -p <hex>"
+            "usage": "hf 15 slixprivacydisable [-h] -p <hex>"
+        },
+        "hf 15 slixprivacyenable": {
+            "command": "hf 15 slixprivacyenable",
+            "description": "Enable privacy mode on SLIX ISO-15693 tag",
+            "notes": [
+                "hf 15 slixenable -p 0F0F0F0F"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-p, --pwd <hex> password, 8 hex bytes"
+            ],
+            "usage": "hf 15 slixprivacyenable [-h] -p <hex>"
+        },
+        "hf 15 slixwritepwd": {
+            "command": "hf 15 slixwritepwd",
+            "description": "Write a password on a SLIX family ISO-15693 tag",
+            "notes": [
+                "hf 15 slixwritepwd -t READ -o 00000000 -n 12131415"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-t, --type <read|write|privacy|destroy|easafi> which password field to write to (some tags do not support all password types)",
+                "-o, --old <hex> old password (if present), 8 hex bytes",
+                "-n, --new <hex> new password, 8 hex bytes"
+            ],
+            "usage": "hf 15 slixwritepwd [-h] -t <read|write|privacy|destroy|easafi> [-o <hex>] -n <hex>"
         },
         "hf 15 sniff": {
             "command": "hf 15 sniff",
@@ -1825,19 +1909,16 @@
             "description": "Write AFI on card",
             "notes": [
                 "hf 15 writeafi -* --afi 12",
-                "hf 15 writeafi -u E011223344556677 --afi 12"
+                "hf 15 writeafi -u E011223344556677 --afi 12 -p 0F0F0F0F"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-u, --uid <hex> full UID, 8 bytes",
-                "--ua unaddressed mode",
-                "-* scan for tag",
-                "-2 use slower '1 out of 256' mode",
-                "-o, --opt set OPTION Flag (needed for TI)",
-                "--afi <dec> AFI number (0-255)"
+                "--afi <dec> AFI number (0-255)",
+                "-p, --pwd <hex> optional AFI/EAS password"
             ],
-            "usage": "hf 15 writeafi [-h*2o] [-u <hex>] [--ua] --afi <dec>"
+            "usage": "hf 15 writeafi [-h] [-u <hex>] --afi <dec> [-p <hex>]"
         },
         "hf 15 writedsfid": {
             "command": "hf 15 writedsfid",
@@ -2881,7 +2962,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } jooki { Jooki RFIDs... } iclass { ICLASS RFIDs... } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } texkom { Texkom RFIDs... } xerox { Fuji/Xerox cartridge RFIDs... } waveshare { Waveshare NFC ePaper... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } jooki { Jooki RFIDs... } iclass { ICLASS RFIDs... } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } xerox { Fuji/Xerox cartridge RFIDs... } waveshare { Waveshare NFC ePaper... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags",
             "notes": [],
             "offline": true,
             "options": [],
@@ -6683,6 +6764,47 @@
                 "-u, --uid <hex> 7 byte UID"
             ],
             "usage": "hf st25ta sim [-h] -u <hex>"
+        },
+        "hf tesla help": {
+            "command": "hf tesla help",
+            "description": "help This help list List ISO 14443A/7816 history",
+            "notes": [],
+            "offline": true,
+            "options": [],
+            "usage": ""
+        },
+        "hf tesla info": {
+            "command": "hf tesla info",
+            "description": "Get info about TESLA Key tag",
+            "notes": [
+                "hf tesla info"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf telsa info [-h]"
+        },
+        "hf tesla list": {
+            "command": "hf tesla list",
+            "description": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "notes": [
+                "hf tesla list --frame -> show frame delay times",
+                "hf tesla list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-1, --buffer use data from trace buffer",
+                "--frame show frame delay times",
+                "-c mark CRC bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into Wireshark using encapsulation type \"ISO 14443\"",
+                "-f, --file <fn> filename of dictionary"
+            ],
+            "usage": "hf tesla list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf texkom help": {
             "command": "hf texkom help",
@@ -11365,7 +11487,7 @@
         },
         "script help": {
             "command": "script help",
-            "description": "This is a feature to run Lua/Cmd/Python scripts. You can place scripts within the luascripts/cmdscripts/pyscripts folders. --------------------------------------------------------------------------------------- script list available offline: yes",
+            "description": "This is a feature to run Lua/Cmd scripts. You can place scripts within the luascripts/cmdscripts folders. --------------------------------------------------------------------------------------- script list available offline: yes",
             "notes": [],
             "offline": true,
             "options": [],
@@ -11760,8 +11882,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 739,
+        "commands_extracted": 748,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-01-15T01:24:39"
+        "extracted_on": "2023-01-29T17:39:28"
     }
 }

@@ -1460,8 +1460,9 @@ static int CmdHF14AChaining(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a chaining",
                   "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
+                  "hf 14a chaining         -> show chaining enable/disable state\n"
                   "hf 14a chaining --off   -> disable chaining\n"
-                  "hf 14a chaining         -> show chaining enable/disable state\n");
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1473,6 +1474,7 @@ static int CmdHF14AChaining(const char *Cmd) {
 
     bool on = arg_get_lit(ctx, 1);
     bool off = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
     if ((on + off) > 1) {
         PrintAndLogEx(INFO, "Select only one option");
@@ -1484,8 +1486,6 @@ static int CmdHF14AChaining(const char *Cmd) {
 
     if (off)
         Set_apdu_in_framing(false);
-
-    CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", g_apdu_in_framing_enable ? "enabled" : "disabled");
     return PM3_SUCCESS;

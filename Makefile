@@ -65,7 +65,13 @@ ifneq (,$(INSTALLSIMFW))
 endif
 ifeq ($(platform),Linux)
 	$(Q)$(INSTALLSUDO) $(MKDIR) $(DESTDIR)$(UDEV_PREFIX)
-	$(Q)$(INSTALLSUDO) $(CP) driver/77-pm3-usb-device-blacklist.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+# If user is running ArchLinux, use group 'uucp'
+# Else, use group 'dialout'
+	ifneq ($(wildcard /etc/arch-release),)
+		$(Q)$(INSTALLSUDO) $(CP) driver/77-pm3-usb-device-blacklist-uucp.rules    $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+	else
+		$(Q)$(INSTALLSUDO) $(CP) driver/77-pm3-usb-device-blacklist-dialout.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+	endif
 endif
 
 uninstall: common/uninstall
@@ -256,8 +262,15 @@ endif
 # configure system to ignore PM3 device as a modem (ModemManager blacklist, effective *only* if ModemManager is not using _strict_ policy)
 # Read doc/md/ModemManager-Must-Be-Discarded.md for more info
 udev:
-	$(SUDO) cp -rf driver/77-pm3-usb-device-blacklist.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+ifneq ($(wildcard /etc/arch-release),)
+# If user is running ArchLinux, use group 'uucp'
+	$(SUDO) cp -rf driver/77-pm3-usb-device-blacklist-uucp.rules    $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+else
+# Else, use group 'dialout'
+	$(SUDO) cp -rf driver/77-pm3-usb-device-blacklist-dialout.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+endif
 	$(SUDO) udevadm control --reload-rules
+	$(SUDO) udevadm trigger --action=change
 
 # configure system to add user to the dialout group and if bluetooth group exists,  add user to it
 # you need to logout, relogin to get this access right correct.

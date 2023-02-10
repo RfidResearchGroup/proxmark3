@@ -393,8 +393,8 @@ required, please do not proceed.
     
     | Hex Data | Binary Data                            |
     |:--------:|:---------------------------------------|
-    | 00088040 | 000000000000100010000000111***0***0000 |
-    | 00088050 | 000000000000100010000000111***1***0000 |
+    | 000880E0 | 000000000000100010000000111***0***0000 |
+    | 000880F0 | 000000000000100010000000111***1***0000 |
     
     See how in the above we changed the bit in location 28 from a 0 to 1  
     0 = No Password, 1 = Use Password
@@ -533,7 +533,7 @@ required, please do not proceed.
     [=]  Downlink mode..... default/fixed bit length 
     [=]  Password set...... No                       
     ```
-    Yes we can!  We can see Block 0 is the correct config 00088040
+    Yes we can!  We can see Block 0 is the correct config 000880E0
 
 # Part 2 – Configuration Blocks
 ^[Top](#top)

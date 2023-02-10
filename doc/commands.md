@@ -236,7 +236,13 @@ Check column "offline" for their availability.
 |`hf 15 esave            `|N       |`Save emulator memory into image file`
 |`hf 15 eview            `|N       |`View emulator memory`
 |`hf 15 sim              `|N       |`Fake an ISO-15693 tag`
-|`hf 15 slixdisable      `|N       |`Disable privacy mode on SLIX ISO-15693 tag`
+|`hf 15 slixwritepwd     `|N       |`Writes a password on a SLIX ISO-15693 tag`
+|`hf 15 slixeasdisable   `|N       |`Disable EAS mode on SLIX ISO-15693 tag`
+|`hf 15 slixeasenable    `|N       |`Enable EAS mode on SLIX ISO-15693 tag`
+|`hf 15 slixprivacydisable`|N       |`Disable privacy mode on SLIX ISO-15693 tag`
+|`hf 15 slixprivacyenable`|N       |`Enable privacy mode on SLIX ISO-15693 tag`
+|`hf 15 passprotectafi   `|N       |`Password protect AFI - Cannot be undone`
+|`hf 15 passprotecteas   `|N       |`Password protect EAS - Cannot be undone`
 |`hf 15 wrbl             `|N       |`Write a block`
 |`hf 15 findafi          `|N       |`Brute force AFI of an ISO-15693 tag`
 |`hf 15 writeafi         `|N       |`Writes the AFI on an ISO-15693 tag`
@@ -651,6 +657,28 @@ Check column "offline" for their availability.
 |`hf st25ta sim          `|N       |`Fake ISO 14443A/ST tag`
 
 
+### hf tesla
+
+ { TESLA Cards...                      }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf tesla help          `|Y       |`This help`
+|`hf tesla info          `|N       |`Tag information`
+|`hf tesla list          `|Y       |`List ISO 14443A/7816 history`
+
+
+### hf texkom
+
+ { Texkom RFIDs...                     }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf texkom help         `|Y       |`This help`
+|`hf texkom reader       `|N       |`Act like a Texkom reader`
+|`hf texkom sim          `|N       |`Simulate a Texkom tag`
+
+
 ### hf thinfilm
 
  { Thinfilm RFIDs...                   }
@@ -680,17 +708,6 @@ Check column "offline" for their availability.
 |`hf topaz rdbl          `|N       |`Read block`
 |`hf topaz view          `|Y       |`Display content from tag dump file`
 |`hf topaz wrbl          `|N       |`Write block`
-
-
-### hf texkom
-
- { Texkom RFIDs...                     }
-
-|command                  |offline |description
-|-------                  |------- |-----------
-|`hf texkom help         `|Y       |`This help`
-|`hf texkom reader       `|N       |`Act like a Texkom reader`
-|`hf texkom sim          `|N       |`Simulate a Texkom tag`
 
 
 ### hf xerox
