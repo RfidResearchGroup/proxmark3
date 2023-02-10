@@ -35,11 +35,14 @@ void SpinDelayUsPrecision(int us) {
     AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;                           // Channel Duty Cycle Register
     AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xFFFF;                      // Channel Period Register
 
-    uint16_t start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+    uint16_t end = AT91C_BASE_PWMC_CH0->PWMC_CCNTR + ticks;
+    if (end == 0) // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
+        end++;    // so we have to end++ to avoid inivity loop
 
     for (;;) {
         uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
-        if (now == (uint16_t)(start + ticks))
+
+        if (now == end)
             return;
 
         WDT_HIT();
@@ -59,13 +62,15 @@ void SpinDelayUs(int us) {
     AT91C_BASE_PWMC_CH0->PWMC_CDTYR = 0;                            // Channel Duty Cycle Register
     AT91C_BASE_PWMC_CH0->PWMC_CPRDR = 0xffff;                       // Channel Period Register
 
-    uint16_t start = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
+    uint16_t end = AT91C_BASE_PWMC_CH0->PWMC_CCNTR + ticks;
+    if (end == 0) // AT91C_BASE_PWMC_CH0->PWMC_CCNTR is never == 0
+        end++;    // so we have to end++ to avoid inivity loop
 
     for (;;) {
         uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
-        if (now == (uint16_t)(start + ticks))
-            return;
 
+        if (now == end)
+            return;
         WDT_HIT();
     }
 }
