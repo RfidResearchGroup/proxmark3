@@ -367,7 +367,7 @@ static int bruteforce(const uint8_t address, const uint8_t *rnd, const uint8_t *
 
     for (int k = start_key; k <= 0xFFFF; ++k) {
         int c = 0;
-        
+
         WDT_HIT();
 
         uint16_t rev_k = reflect16(k);
@@ -405,7 +405,7 @@ static int bruteforce(const uint8_t address, const uint8_t *rnd, const uint8_t *
         if ((k % 0x100) == 0) {
             Dbprintf("Trying: %04X", k);
         }
-        
+
         // Due to performance reason, we only try it once. Therefore you need a very stable RFID communcation.
         if (authenticate(temp_rnd, frnd, auth_resp) == PM3_SUCCESS) {
             if (g_dbglevel >= DBG_INFO)
