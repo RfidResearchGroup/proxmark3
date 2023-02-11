@@ -67,11 +67,11 @@ ifeq ($(platform),Linux)
 	$(Q)$(INSTALLSUDO) $(MKDIR) $(DESTDIR)$(UDEV_PREFIX)
 # If user is running ArchLinux, use group 'uucp'
 # Else, use group 'dialout'
-	ifneq ($(wildcard /etc/arch-release),)
-		$(Q)$(INSTALLSUDO) $(CP) driver/77-pm3-usb-device-blacklist-uucp.rules    $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
-	else
-		$(Q)$(INSTALLSUDO) $(CP) driver/77-pm3-usb-device-blacklist-dialout.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
-	endif
+ifneq ($(wildcard /etc/arch-release),)
+	$(Q)$(INSTALLSUDO) $(CP) driver/77-pm3-usb-device-blacklist-uucp.rules    $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+else
+	$(Q)$(INSTALLSUDO) $(CP) driver/77-pm3-usb-device-blacklist-dialout.rules $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
+endif
 endif
 
 uninstall: common/uninstall
@@ -81,21 +81,28 @@ common/uninstall:
 ifneq (,$(INSTALLSCRIPTS))
 	$(Q)$(INSTALLSUDO) $(RM) $(foreach script,$(INSTALLSCRIPTS),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLBINRELPATH)$(PATHSEP)$(notdir $(script)))
 endif
+
 ifneq (,$(INSTALLSHARES))
 	$(Q)$(INSTALLSUDO) $(RMDIR) $(foreach share,$(INSTALLSHARES),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)$(PATHSEP)$(notdir $(share)))
 endif
+
 ifneq (,$(INSTALLDOCS))
 	$(Q)$(INSTALLSUDO) $(RMDIR) $(foreach doc,$(INSTALLDOCS),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLDOCSRELPATH)$(PATHSEP)$(notdir $(doc)))
 	$(Q)-$(INSTALLSUDO) $(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLDOCSRELPATH)
 endif
+
 ifneq (,$(INSTALLTOOLS))
 	$(Q)$(INSTALLSUDO) $(RM) $(foreach tool,$(INSTALLTOOLS),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)$(PATHSEP)$(notdir $(tool)))
 endif
+
 	$(Q)-$(INSTALLSUDO) $(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLTOOLSRELPATH)
+
 ifneq (,$(INSTALLSIMFW))
 	$(Q)$(INSTALLSUDO) $(RM) $(foreach fw,$(INSTALLSIMFW),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(notdir $(fw)))
 endif
+
 	$(Q)-$(INSTALLSUDO) $(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)
+
 ifeq ($(platform),Linux)
 	$(Q)$(INSTALLSUDO) $(RM) $(DESTDIR)$(UDEV_PREFIX)/77-pm3-usb-device-blacklist.rules
 endif
