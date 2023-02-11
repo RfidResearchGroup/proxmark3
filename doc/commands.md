@@ -893,6 +893,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf em 4x70 help        `|Y       |`This help`
+|`lf em 4x70 brute       `|N       |`Bruteforce EM4X70 to find partial Crypt Key`
 |`lf em 4x70 info        `|N       |`Tag information EM4x70`
 |`lf em 4x70 write       `|N       |`Write EM4x70`
 |`lf em 4x70 unlock      `|N       |`Unlock EM4x70 for writing`

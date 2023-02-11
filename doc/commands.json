@@ -175,13 +175,15 @@
             "command": "clear",
             "description": "Clear the Proxmark3 client terminal screen",
             "notes": [
-                "clear"
+                "clear -> clear the terminal screen",
+                "clear -b -> clear the terminal screen and the scrollback buffer"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-b, --back also clear the scrollback buffer"
             ],
-            "usage": "clear [-h]"
+            "usage": "clear [-hb]"
         },
         "data askedgedetect": {
             "command": "data askedgedetect",
@@ -1858,14 +1860,14 @@
         },
         "hf 15 slixwritepwd": {
             "command": "hf 15 slixwritepwd",
-            "description": "Write a password on a SLIX family ISO-15693 tag",
+            "description": "Write a password on a SLIX family ISO-15693 tag.nSome tags do not support all different password types.",
             "notes": [
                 "hf 15 slixwritepwd -t READ -o 00000000 -n 12131415"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, --type <read|write|privacy|destroy|easafi> which password field to write to (some tags do not support all password types)",
+                "-t, --type <read|write|privacy|destroy|easafi> which password field to write to",
                 "-o, --old <hex> old password (if present), 8 hex bytes",
                 "-n, --new <hex> new password, 8 hex bytes"
             ],
@@ -3097,9 +3099,10 @@
                 "--fc <dec> facility code",
                 "--cn <dec> card number",
                 "-w, --wiegand <format> see `wiegand list` for available formats",
-                "--shallow use shallow (ASK) reader modulation instead of OOK"
+                "--shallow use shallow (ASK) reader modulation instead of OOK",
+                "-v verbose (print encoded blocks)"
             ],
-            "usage": "hf iclass encode [-h] [--bin <bin>] --ki <dec> [--credit] [--elite] [--raw] [--enckey <hex>] [--fc <dec>] [--cn <dec>] [-w <format>] [--shallow]"
+            "usage": "hf iclass encode [-hv] [--bin <bin>] --ki <dec> [--credit] [--elite] [--raw] [--enckey <hex>] [--fc <dec>] [--cn <dec>] [-w <format>] [--shallow]"
         },
         "hf iclass encrypt": {
             "command": "hf iclass encrypt",
@@ -8190,6 +8193,23 @@
             ],
             "usage": "lf em 4x70 auth [-h] [--par] --rnd <hex> --frn <hex>"
         },
+        "lf em 4x70 brute": {
+            "command": "lf em 4x70 brute",
+            "description": "Optimized partial key-update attack of 16-bit key block 7, 8 or 9 of an EM4x70 This attack does NOT write anything to the tag. Before starting this attack, 0000 must be written to the 16-bit key block: 'lf em 4x70 write -b 9 -d 0000'. After success, the 16-bit key block have to be restored with the key found: 'lf em 4x70 write -b 9 -d c0de'",
+            "notes": [
+                "lf em 4x70 brute -b 9 --rnd 45F54ADA252AAC --frn 4866BB70 -> bruteforcing key bits k95...k80"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--par Add parity bit when sending commands",
+                "-b, --block <dec> block/word address, dec",
+                "--rnd <hex> Random 56-bit",
+                "--frn <hex> F(RN) 28-bit as 4 hex bytes",
+                "-s, --start <hex> Start bruteforce enumeration from this key value"
+            ],
+            "usage": "lf em 4x70 brute [-h] [--par] -b <dec> --rnd <hex> --frn <hex> [-s <hex>]"
+        },
         "lf em 4x70 help": {
             "command": "lf em 4x70 help",
             "description": "help This help",
@@ -11882,8 +11902,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 748,
+        "commands_extracted": 749,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-01-29T17:39:28"
+        "extracted_on": "2023-02-11T10:42:29"
     }
 }
