@@ -723,6 +723,7 @@ void RunMod(void) {
                 break;
             }
             case ICE_STATE_READ_SIM: {
+                DbpString("-=[ enter " _CYAN_("`read & sim`") " mode, read cards, then sim after button press ]=-");
                 DbpString("Entering reader dump mode");
                 reader_dump_mode();
                 SpinDelay(1200); // debounce button press
