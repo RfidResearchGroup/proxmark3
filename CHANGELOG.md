@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Add ICECLASS standalone read/sim mode (@natesales)
+ - Added verbose flag to `hf iclass encode` (@natesales)
  - Fixed `Makefile` regression that broke `make install` (@henrygab)
  - Fixed `lf em 4x70 brute` - now works as expected (@adite)
  - Fixed the lf sampling when bits_per_sample is less than 8 (@wh201906)
