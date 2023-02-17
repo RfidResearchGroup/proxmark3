@@ -1202,6 +1202,35 @@ static int CmdHFiClassEView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static void iclass_decode_credentials(uint8_t *data) {
+    BLOCK79ENCRYPTION encryption = (data[(6 * 8) + 7] & 0x03);
+    bool has_values = (memcmp(data + (8 * 7), empty, 8) != 0) && (memcmp(data + (8 * 7), zeros, 8) != 0);
+    if (has_values && encryption == None) {
+
+        //todo:  remove preamble/sentinel
+        uint32_t top = 0, mid = 0, bot = 0;
+
+        PrintAndLogEx(INFO, "Block 7 decoder");
+
+        char hexstr[16 + 1] = {0};
+        hex_to_buffer((uint8_t *)hexstr, data + (8 * 7), 8, sizeof(hexstr) - 1, 0, 0, true);
+        hexstring_to_u96(&top, &mid, &bot, hexstr);
+
+        char binstr[64 + 1];
+        hextobinstring(binstr, hexstr);
+        char *pbin = binstr;
+        while (strlen(pbin) && *(++pbin) == '0');
+
+        PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), pbin);
+
+        PrintAndLogEx(INFO, "Wiegand decode");
+        wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
+        HIDTryUnpack(&packed);
+    } else {
+        PrintAndLogEx(INFO, "No credential found");
+    }
+}
+
 static int CmdHFiClassDecrypt(const char *Cmd) {
     CLIParserContext *clictx;
     CLIParserInit(&clictx, "hf iclass decrypt",
@@ -1356,21 +1385,36 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         //uint8_t numblocks4userid = GetNumberBlocksForUserId(decrypted + (6 * 8));
 
+        bool decrypted_block789 = false;
         for (uint8_t blocknum = 0; blocknum < limit; ++blocknum) {
 
             uint16_t idx = blocknum * 8;
             memcpy(enc_data, decrypted + idx, 8);
 
-            if (aa1_encryption == RFU || aa1_encryption == None)
-                continue;
+            switch (aa1_encryption) {
+                // Right now, only 3DES is supported
+                case TRIPLEDES:
+                    // Decrypt block 7,8,9 if configured.
+                    if (blocknum > 6 && blocknum <= 9 && memcmp(enc_data, empty, 8) != 0) {
+                        if (use_sc) {
+                            Decrypt(enc_data, decrypted + idx);
+                        } else {
+                            mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
+                        }
+                        decrypted_block789 = true;
+                    }
+                    break;
+                case DES:
+                case RFU:
+                case None:
+                    // Nothing to do for None anyway...
+                default:
+                    continue;
+            }
 
-            // Decrypted block 7,8,9 if configured.
-            if (blocknum > 6 && blocknum <= 9 && memcmp(enc_data, empty, 8) != 0) {
-                if (use_sc) {
-                    Decrypt(enc_data, decrypted + idx);
-                } else {
-                    mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
-                }
+            if (decrypted_block789) {
+                // Set the 2 last bits of block6 to 0 to mark the data as decrypted
+                decrypted[(6 * 8) + 7] = decrypted[(6 * 8) + 7] & 0xfc;
             }
         }
 
@@ -1404,31 +1448,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         }
 
         // decode block 7-8-9
-        has_values = (memcmp(decrypted + (8 * 7), empty, 8) != 0) && (memcmp(decrypted + (8 * 7), zeros, 8) != 0);
-        if (has_values) {
-
-            //todo:  remove preamble/sentinel
-            uint32_t top = 0, mid = 0, bot = 0;
-
-            PrintAndLogEx(INFO, "Block 7 decoder");
-
-            char hexstr[16 + 1] = {0};
-            hex_to_buffer((uint8_t *)hexstr, decrypted + (8 * 7), 8, sizeof(hexstr) - 1, 0, 0, true);
-            hexstring_to_u96(&top, &mid, &bot, hexstr);
-
-            char binstr[64 + 1];
-            hextobinstring(binstr, hexstr);
-            char *pbin = binstr;
-            while (strlen(pbin) && *(++pbin) == '0');
-
-            PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), pbin);
-
-            PrintAndLogEx(INFO, "Wiegand decode");
-            wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
-            HIDTryUnpack(&packed);
-        } else {
-            PrintAndLogEx(INFO, "No credential found");
-        }
+        iclass_decode_credentials(decrypted);
 
         // decode block 9
         has_values = (memcmp(decrypted + (8 * 9), empty, 8) != 0) && (memcmp(decrypted + (8 * 9), zeros, 8) != 0);
@@ -2840,6 +2860,7 @@ static int CmdHFiClassView(const char *Cmd) {
     print_picopass_header((picopass_hdr_t *) dump);
     print_picopass_info((picopass_hdr_t *) dump);
     printIclassDumpContents(dump, startblock, endblock, bytes_read, dense_output);
+    iclass_decode_credentials(dump);
 
     if (verbose) {
         printIclassSIO(dump);
