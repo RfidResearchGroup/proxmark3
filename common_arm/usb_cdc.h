@@ -31,6 +31,7 @@ bool usb_poll_validate_length(void);
 uint32_t usb_read(uint8_t *data, size_t len);
 int usb_write(const uint8_t *data, const size_t len);
 uint32_t usb_read_ng(uint8_t *data, size_t len);
+void usb_update_serial(uint64_t newSerialNumber);
 
 void SetUSBreconnect(int value);
 int GetUSBreconnect(void);

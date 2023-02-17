@@ -22,7 +22,7 @@
 #include "ticks.h"
 #include "dbprint.h"
 #include "string.h"
-#include "spiffs.h"
+#include "usb_cdc.h"
 
 /* here: use NCPS2 @ PA10: */
 #define SPI_CSR_NUM      2
@@ -436,7 +436,9 @@ out:
     return len;
 }
 
-
+// WARNING -- if callers are using a file system (such as SPIFFS),
+//            they should inform the file system of this change
+//            e.g., rdv40_spiffs_check()
 bool Flash_WipeMemoryPage(uint8_t page) {
     if (!FlashInit()) {
         if (g_dbglevel > 3) Dbprintf("Flash_WriteData init fail");
@@ -451,8 +453,6 @@ bool Flash_WipeMemoryPage(uint8_t page) {
 
     FlashStop();
 
-    // let spiffs check and update its info post flash erase
-    rdv40_spiffs_check();
     return true;
 }
 // Wipes flash memory completely, fills with 0xFF

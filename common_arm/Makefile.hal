@@ -114,6 +114,10 @@ endif
 
 # parsing additional PLATFORM_EXTRAS tokens
 PLATFORM_EXTRAS_TMP:=$(PLATFORM_EXTRAS)
+ifneq (,$(findstring FLASH,$(PLATFORM_EXTRAS_TMP)))
+    PLATFORM_DEFS += -DWITH_FLASH
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out FLASH,$(PLATFORM_EXTRAS_TMP)))
+endif
 ifneq (,$(findstring BTADDON,$(PLATFORM_EXTRAS_TMP)))
     PLATFORM_DEFS += -DWITH_FPC_USART_HOST
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out BTADDON,$(PLATFORM_EXTRAS_TMP)))

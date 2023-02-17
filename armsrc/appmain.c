@@ -2471,8 +2471,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                 LED_B_OFF();
                 break;
             }
-            if (page < 3)
+            if (page < 3) {
                 isok = Flash_WipeMemoryPage(page);
+                // let spiffs check and update its info post flash erase
+                rdv40_spiffs_check();
+            }
 
             reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
             LED_B_OFF();
@@ -2675,6 +2678,17 @@ void  __attribute__((noreturn)) AppMain(void) {
 
 #ifdef WITH_SMARTCARD
     I2C_init(false);
+#endif
+
+#ifdef WITH_FLASH
+    if (FlashInit()) {
+        uint64_t flash_uniqueID = 0;
+        if (!Flash_CheckBusy(BUSY_TIMEOUT)) { // OK because firmware was built for devices with flash
+            Flash_UniqueID((uint8_t*)&(flash_uniqueID));
+        }
+        FlashStop();
+        usb_update_serial(flash_uniqueID);
+    }
 #endif
 
 #ifdef WITH_FPC_USART
