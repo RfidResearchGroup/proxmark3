@@ -1414,7 +1414,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
             if (decrypted_block789) {
                 // Set the 2 last bits of block6 to 0 to mark the data as decrypted
-                decrypted[(6 * 8) + 7] = decrypted[(6 * 8) + 7] & 0xfc;
+                decrypted[(6 * 8) + 7] &= 0xFC;
             }
         }
 
