@@ -446,6 +446,7 @@ for ARG; do
         CMD "$@"
         exit $?
     fi
+    set -- "$@" "$ARG"
 done
 
 if [ "$1" == "--list" ]; then
