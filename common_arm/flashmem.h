@@ -123,7 +123,12 @@ bool Flash_Erase4k(uint8_t block, uint8_t sector);
 //bool Flash_Erase32k(uint32_t address);
 bool Flash_Erase64k(uint8_t block);
 
-uint8_t Flash_ReadID(void);
+typedef struct {
+    uint8_t manufacturer_id;
+    uint8_t device_id;
+} flash_device_type_90_t; // to differentiate from JDEC ID via cmd 9F
+bool Flash_ReadID_90(flash_device_type_90_t* result);
+
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
 uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len);
 uint16_t Flash_Write(uint32_t address, uint8_t *in, uint16_t len);

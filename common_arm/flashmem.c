@@ -49,9 +49,9 @@ void FlashmemSetSpiBaudrate(uint32_t baudrate) {
 }
 
 // read ID out
-uint8_t Flash_ReadID(void) {
+bool Flash_ReadID_90(flash_device_type_90_t* result) {
 
-    if (Flash_CheckBusy(BUSY_TIMEOUT)) return 0;
+    if (Flash_CheckBusy(BUSY_TIMEOUT)) return false;
 
     // Manufacture ID / device ID
     FlashSendByte(ID);
@@ -59,15 +59,10 @@ uint8_t Flash_ReadID(void) {
     FlashSendByte(0x00);
     FlashSendByte(0x00);
 
-    uint8_t man_id = FlashSendByte(0xFF);
-    uint8_t dev_id = FlashSendLastByte(0xFF);
+    result->manufacturer_id = FlashSendByte(0xFF);
+    result->device_id       = FlashSendLastByte(0xFF);
 
-    if (g_dbglevel > 3) Dbprintf("Flash ReadID  |  Man ID %02x | Device ID %02x", man_id, dev_id);
-
-    if ((man_id == WINBOND_MANID) && (dev_id == WINBOND_DEVID))
-        return dev_id;
-
-    return 0;
+    return true;
 }
 
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len) {
@@ -349,29 +344,32 @@ void Flashmem_print_status(void) {
     }
     DbpString("  Init.................... " _GREEN_("OK"));
 
-    uint8_t dev_id = Flash_ReadID();
-    switch (dev_id) {
-        case 0x11 :
-            DbpString("  Memory size............. " _YELLOW_("2 mbits / 256 kb"));
-            break;
-        case 0x10 :
-            DbpString("  Memory size..... ....... " _YELLOW_("1 mbits / 128 kb"));
-            break;
-        case 0x05 :
-            DbpString("  Memory size............. " _YELLOW_("512 kbits / 64 kb"));
-            break;
-        default :
-            DbpString("  Device ID............... " _YELLOW_(" -->  Unknown  <--"));
-            break;
+    // NOTE: It would likely be more useful to use JDEC ID command 9F,
+    //       as it provides a third byte indicative of capacity.
+    flash_device_type_90_t device_type = {0};
+    if (!Flash_ReadID_90(&device_type)) {
+        DbpString("  Device ID............... " _RED_(" -->  Not Found  <--"));
+    } else {
+        if ((device_type.manufacturer_id == WINBOND_MANID) && (device_type.device_id == WINBOND_DEVID)) {
+            DbpString("  Memory size............. " _GREEN_("2 mbits / 256 kb"));
+        } else {
+            Dbprintf("  Device ID............... " _YELLOW_("%02X / %02X (unknown)"),
+                device_type.manufacturer_id, device_type.device_id );
+        }
     }
 
     uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Flash_UniqueID(uid);
-    Dbprintf("  Unique ID............... " _YELLOW_("0x%02X%02X%02X%02X%02X%02X%02X%02X"),
-             uid[7], uid[6], uid[5], uid[4],
-             uid[3], uid[2], uid[1], uid[0]
+    Dbprintf("  Unique ID (be).......... " _YELLOW_("0x%02X%02X%02X%02X%02X%02X%02X%02X" ),
+            uid[0], uid[1], uid[2], uid[3],
+            uid[4], uid[5], uid[6], uid[7]
             );
-
+    if (g_dbglevel > 3) {
+        Dbprintf("  Unique ID (le).......... " _YELLOW_("0x%02X%02X%02X%02X%02X%02X%02X%02X" ),
+                uid[7], uid[6], uid[5], uid[4],
+                uid[3], uid[2], uid[1], uid[0]
+                );
+    }
     FlashStop();
 }
 
