@@ -2684,7 +2684,7 @@ void  __attribute__((noreturn)) AppMain(void) {
     if (FlashInit()) {
         uint64_t flash_uniqueID = 0;
         if (!Flash_CheckBusy(BUSY_TIMEOUT)) { // OK because firmware was built for devices with flash
-            Flash_UniqueID((uint8_t*)&(flash_uniqueID));
+            Flash_UniqueID((uint8_t*)(&flash_uniqueID));
         }
         FlashStop();
         usb_update_serial(flash_uniqueID);

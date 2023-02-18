@@ -382,7 +382,6 @@ static const char StrSerialNumber[] = {
 // offset 18, length 32: 16x unicode chars (8-byte serial as hex characters)
 // ============================
 // total: 50 bytes
-
 #define USB_STRING_DESCRIPTOR_SERIAL_NUMBER_LENGTH  50
 char StrSerialNumber[] = {
     14,         // Length is initially identical to non-unique version ... The length updated at boot, if unique serial is available
@@ -399,6 +398,7 @@ void usb_update_serial(uint64_t newSerialNumber) {
     }
     // run this only once per boot... even if it fails to find serial number
     configured = true;
+    // reject serial number if all-zero or all-ones
     if ((newSerialNumber == 0x0000000000000000) || (newSerialNumber == 0xFFFFFFFFFFFFFFFF)) {
         return;
     }
@@ -407,10 +407,14 @@ void usb_update_serial(uint64_t newSerialNumber) {
     // Convert uniqueID's eight bytes to 16 unicode characters in the
     // descriptor and, finally, update the descriptor's length, which 
     // causes the serial number to become visible.
-    for (uint8_t i = 0; i < 16; i++) {
-        uint8_t nibble = (uint8_t)((newSerialNumber >> (60 - (4*i))) & 0xFu);
-        char c = nibble < 10 ? '0' + nibble : 'A' + (nibble-10);
-        StrSerialNumber[18+(2*i)] = c; // [ 18, 20, 22, .., 46, 48 ]
+    for (uint8_t i = 0; i < 8; i++) {
+        // order of nibbles chosen to match display order from `hw status`
+        uint8_t nibble1 = (newSerialNumber >> ((8*i) + 4)) & 0xFu; // bitmasks [0xF0, 0xF000, 0xF00000, ... 0xF000000000000000]
+        uint8_t nibble2 = (newSerialNumber >> ((8*i) + 0)) & 0xFu; // bitmasks [0x0F, 0x0F00, 0x0F0000, ... 0x0F00000000000000]
+        char c1 = nibble1 < 10 ? '0' + nibble1 : 'A' + (nibble1-10);
+        char c2 = nibble2 < 10 ? '0' + nibble2 : 'A' + (nibble2-10);
+        StrSerialNumber[46-(4*i)] = c1; // [ 46, 42, .., 22, 18 ]
+        StrSerialNumber[48-(4*i)] = c2; // [ 48, 44, .., 24, 20 ]
     }
     StrSerialNumber[0] = USB_STRING_DESCRIPTOR_SERIAL_NUMBER_LENGTH;
 }

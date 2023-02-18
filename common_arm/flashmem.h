@@ -100,17 +100,67 @@
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-void FlashmemSetSpiBaudrate(uint32_t baudrate);
 bool FlashInit(void);
-void FlashSetup(uint32_t baudrate);
+void Flash_UniqueID(uint8_t *uid);
 void FlashStop(void);
-bool Flash_WaitIdle(void);
+
+void FlashSetup(uint32_t baudrate);
+bool Flash_CheckBusy(uint32_t timeout);
 uint8_t Flash_ReadStat1(void);
-uint8_t Flash_ReadStat2(void);
 uint16_t FlashSendByte(uint32_t data);
+uint16_t FlashSendLastByte(uint32_t data);
+
+
+#ifndef AS_BOOTROM
+    // Bootrom does not require these functions.
+    // Wrap in #ifndef to avoid accidental bloat of bootrom
+    // Bootrom needs only enough to get uniqueID from flash.
+    // It calls three functions.  Full call trees listed:
+    //
+    // FlashInit()
+    // |
+    // \____ FlashSetup()
+    // |      \____ leaf
+    // |
+    // \____ StartTicks()
+    // |      \____ leaf
+    // |
+    // \____ Flash_CheckBusy() [*]
+    // |     \____ WaitUS()
+    // |     |     \____ WaitTicks()
+    // |     |           \____ leaf
+    // |     |
+    // |     \____ StartCountUS()
+    // |     |     \____ leaf
+    // |     |
+    // |     \____ GetCountUS()
+    // |     |     \____ leaf
+    // |     |
+    // |     \____ Flash_ReadStat1()
+    // |           \____ FlashSendByte()
+    // |           |     \____ leaf
+    // |           |
+    // |           \____ FlashSendLastByte()
+    // |                 \____ FlashSendByte()
+    // |                       \____ leaf
+    // |
+    // \____ StopTicks()
+    //       \____ leaf
+    //
+    // Flash_UniqueID()
+    // \____ FlashCheckBusy()          (see FlashInit)
+    // \____ FlashSendByteByte()       (see FlashInit)
+    // \____ FlashSendByteLastByte()   (see FlashInit)
+    // 
+    //
+    // FlashStop() [*]
+
+
+
+void FlashmemSetSpiBaudrate(uint32_t baudrate);
+bool Flash_WaitIdle(void);
 void Flash_TransferAdresse(uint32_t address);
 
-bool Flash_CheckBusy(uint32_t timeout);
 
 void Flash_WriteEnable(void);
 bool Flash_WipeMemoryPage(uint8_t page);
@@ -119,7 +169,6 @@ bool Flash_Erase4k(uint8_t block, uint8_t sector);
 //bool Flash_Erase32k(uint32_t address);
 bool Flash_Erase64k(uint8_t block);
 
-void Flash_UniqueID(uint8_t *uid);
 uint8_t Flash_ReadID(void);
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
 uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len);
@@ -128,6 +177,8 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len);
 uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len);
 void Flashmem_print_status(void);
 void Flashmem_print_info(void);
-uint16_t FlashSendLastByte(uint32_t data);
+
+#endif // #ifndef AS_BOOTROM
+
 
 #endif

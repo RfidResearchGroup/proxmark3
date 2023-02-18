@@ -20,7 +20,11 @@
 
 #include "proxmark3_arm.h"
 #include "ticks.h"
+
+#ifndef AS_BOOTROM
 #include "dbprint.h"
+#endif // AS_BOOTROM
+
 #include "string.h"
 #include "usb_cdc.h"
 
@@ -37,195 +41,11 @@
 static uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
 #define FASTFLASH (FLASHMEM_SPIBAUDRATE > FLASH_MINFAST)
 
+#ifndef AS_BOOTROM
+
 void FlashmemSetSpiBaudrate(uint32_t baudrate) {
     FLASHMEM_SPIBAUDRATE = baudrate;
     Dbprintf("Spi Baudrate : %dMHz", FLASHMEM_SPIBAUDRATE / 1000000);
-}
-
-// initialize
-bool FlashInit(void) {
-    FlashSetup(FLASHMEM_SPIBAUDRATE);
-
-    StartTicks();
-
-    if (Flash_CheckBusy(BUSY_TIMEOUT)) {
-        StopTicks();
-        return false;
-    }
-
-    return true;
-}
-
-void FlashSetup(uint32_t baudrate) {
-    //WDT_DISABLE
-    AT91C_BASE_WDTC->WDTC_WDMR = AT91C_WDTC_WDDIS;
-
-    // PA10 -> SPI_NCS2 chip select (FLASHMEM)
-    // PA11 -> SPI_NCS0 chip select (FPGA)
-    // PA12 -> SPI_MISO Master-In Slave-Out
-    // PA13 -> SPI_MOSI Master-Out Slave-In
-    // PA14 -> SPI_SPCK Serial Clock
-
-    // Disable PIO control of the following pins, allows use by the SPI peripheral
-    AT91C_BASE_PIOA->PIO_PDR |= (GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK | GPIO_NCS2);
-
-    // Pull-up Enable
-    AT91C_BASE_PIOA->PIO_PPUER |= (GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK | GPIO_NCS2);
-
-    // Peripheral A
-    AT91C_BASE_PIOA->PIO_ASR |= (GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK);
-
-    // Peripheral B
-    AT91C_BASE_PIOA->PIO_BSR |= GPIO_NCS2;
-
-    //enable the SPI Peripheral clock
-    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SPI);
-
-
-    //reset spi needs double SWRST, see atmel's errata on this case
-    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SWRST;
-    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SWRST;
-
-    // Enable SPI
-    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIEN;
-
-    // NPCS2 Mode 0
-    AT91C_BASE_SPI->SPI_MR =
-        (0 << 24)            | // Delay between chip selects = DYLBCS/MCK BUT:
-        // If DLYBCS is less than or equal to six, six MCK periods
-        // will be inserted by default.
-        SPI_PCS(SPI_CSR_NUM) | // Peripheral Chip Select (selects SPI_NCS2 or PA10)
-        (0 << 7)            |  // Disable LLB (1=MOSI2MISO test mode)
-        (1 << 4)            |  // Disable ModeFault Protection
-        (0 << 3)            |  // makes spi operate at MCK (1 is MCK/2)
-        (0 << 2)            |  // Chip selects connected directly to peripheral
-        AT91C_SPI_PS_FIXED   | // Fixed Peripheral Select
-        AT91C_SPI_MSTR;        // Master Mode
-
-    uint8_t csaat = 1;
-    uint32_t dlybct = 0;
-    uint8_t ncpha = 1;
-    uint8_t cpol = 0;
-    if (baudrate > FLASH_MINFAST) {
-        baudrate = FLASH_FASTBAUD;
-        //csaat = 0;
-        dlybct = 1500;
-        ncpha = 0;
-        cpol = 0;
-    }
-
-    AT91C_BASE_SPI->SPI_CSR[2] =
-        SPI_DLYBCT(dlybct, MCK) | // Delay between Consecutive Transfers (32 MCK periods)
-        SPI_DLYBS(0, MCK)      | // Delay Beforce SPCK CLock
-        SPI_SCBR(baudrate, MCK) | // SPI Baudrate Selection
-        AT91C_SPI_BITS_8      | // Bits per Transfer (8 bits)
-        //AT91C_SPI_CSAAT       | // Chip Select inactive after transfer
-        // 40.4.6.2 SPI: Bad tx_ready Behavior when CSAAT = 1 and SCBR = 1
-        // If the SPI is programmed with CSAAT = 1, SCBR(baudrate) = 1 and two transfers are performed consecutively on
-        // the same slave with an IDLE state between them, the tx_ready signal does not rise after the second data has been
-        // transferred in the shifter. This can imply for example, that the second data is sent twice.
-        // COLIN :: For now we STILL use CSAAT=1 to avoid having to (de)assert  NPCS manually via PIO lines and we deal with delay
-        (csaat << 3)         |
-        /* Spi modes:
-            Mode CPOL CPHA NCPHA
-            0    0    0    1       clock normally low    read on rising edge
-            1    0    1    0       clock normally low    read on falling edge
-            2    1    0    1       clock normally high   read on falling edge
-            3    1    1    0       clock normally high   read on rising edge
-            However, page 512 of the AT91SAM7Sx datasheet say "Note that in SPI
-            master mode the ATSAM7S512/256/128/64/321/32 does not sample the data
-            (MISO) on the opposite edge where data clocks out (MOSI) but the same
-            edge is used as shown in Figure 36-3 and Figure 36-4."  Figure 36-3
-            shows that CPOL=NCPHA=0 or CPOL=NCPHA=1 samples on the rising edge and
-            that the data changes sometime after the rising edge (about 2 ns).  To
-            be consistent with normal SPI operation, it is probably safe to say
-            that the data changes on the falling edge and should be sampled on the
-            rising edge.  Therefore, it appears that NCPHA should be treated the
-            same as CPHA.  Thus:
-            Mode CPOL CPHA NCPHA
-            0    0    0    0       clock normally low    read on rising edge
-            1    0    1    1       clock normally low    read on falling edge
-            2    1    0    0       clock normally high   read on falling edge
-            3    1    1    1       clock normally high   read on rising edge
-            Update: for 24MHz, writing is more stable with ncpha=1, else bitflips occur.
-        */
-        (ncpha << 1)             |  // Clock Phase data captured on leading edge, changes on following edge
-        (cpol << 0);               // Clock Polarity inactive state is logic 0
-
-    // read first, empty buffer
-    if (AT91C_BASE_SPI->SPI_RDR == 0) {};
-}
-
-void FlashStop(void) {
-    //Bof
-    //* Reset all the Chip Select register
-    AT91C_BASE_SPI->SPI_CSR[0] = 0;
-    AT91C_BASE_SPI->SPI_CSR[1] = 0;
-    AT91C_BASE_SPI->SPI_CSR[2] = 0;
-    AT91C_BASE_SPI->SPI_CSR[3] = 0;
-
-    // Reset the SPI mode
-    AT91C_BASE_SPI->SPI_MR = 0;
-
-    // Disable all interrupts
-    AT91C_BASE_SPI->SPI_IDR = 0xFFFFFFFF;
-
-    // SPI disable
-    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIDIS;
-
-    if (g_dbglevel > 3) Dbprintf("FlashStop");
-
-    StopTicks();
-}
-
-// send one byte over SPI
-uint16_t FlashSendByte(uint32_t data) {
-
-    // wait until SPI is ready for transfer
-    //if you are checking for incoming data returned then the TXEMPTY flag is redundant
-    //while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0) {};
-
-    // send the data
-    AT91C_BASE_SPI->SPI_TDR = data;
-
-    //while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TDRE) == 0){};
-
-    // wait receive transfer is complete
-    while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF) == 0) {};
-
-    // reading incoming data
-    return ((AT91C_BASE_SPI->SPI_RDR) & 0xFFFF);
-}
-
-// send last byte over SPI
-uint16_t FlashSendLastByte(uint32_t data) {
-    return FlashSendByte(data | AT91C_SPI_LASTXFER);
-}
-
-// read state register 1
-uint8_t Flash_ReadStat1(void) {
-    FlashSendByte(READSTAT1);
-    return FlashSendLastByte(0xFF);
-}
-
-bool Flash_CheckBusy(uint32_t timeout) {
-    WaitUS(WINBOND_WRITE_DELAY);
-    StartCountUS();
-    uint32_t _time = GetCountUS();
-
-    if (g_dbglevel > 3) Dbprintf("Checkbusy in...");
-
-    do {
-        if (!(Flash_ReadStat1() & BUSY)) {
-            return false;
-        }
-    } while ((GetCountUS() - _time) < timeout);
-
-    if (timeout <= (GetCountUS() - _time)) {
-        return true;
-    }
-
-    return false;
 }
 
 // read ID out
@@ -248,28 +68,6 @@ uint8_t Flash_ReadID(void) {
         return dev_id;
 
     return 0;
-}
-
-// read unique id for chip.
-void Flash_UniqueID(uint8_t *uid) {
-
-    if (Flash_CheckBusy(BUSY_TIMEOUT)) return;
-
-    // reading unique serial number
-    FlashSendByte(UNIQUE_ID);
-    FlashSendByte(0xFF);
-    FlashSendByte(0xFF);
-    FlashSendByte(0xFF);
-    FlashSendByte(0xFF);
-
-    uid[7] = FlashSendByte(0xFF);
-    uid[6] = FlashSendByte(0xFF);
-    uid[5] = FlashSendByte(0xFF);
-    uid[4] = FlashSendByte(0xFF);
-    uid[3] = FlashSendByte(0xFF);
-    uid[2] = FlashSendByte(0xFF);
-    uid[1] = FlashSendByte(0xFF);
-    uid[0] = FlashSendLastByte(0xFF);
 }
 
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len) {
@@ -326,7 +124,6 @@ uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
     return len;
 }
 
-
 ////////////////////////////////////////
 // Write data can only program one page. A page has 256 bytes.
 // if len > 256, it might wrap around and overwrite pos 0.
@@ -371,7 +168,6 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
     FlashStop();
     return len;
 }
-
 
 // length should never be zero
 // Max 256 bytes write
@@ -571,7 +367,7 @@ void Flashmem_print_status(void) {
 
     uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Flash_UniqueID(uid);
-    Dbprintf("  Unique ID............... 0x%02X%02X%02X%02X%02X%02X%02X%02X",
+    Dbprintf(         "  Unique ID............... " _YELLOW_("0x%02X%02X%02X%02X%02X%02X%02X%02X"),
              uid[7], uid[6], uid[5], uid[4],
              uid[3], uid[2], uid[1], uid[0]
             );
@@ -616,4 +412,217 @@ void Flashmem_print_info(void) {
     FlashStop();
 }
 
+#endif // #ifndef AS_BOOTROM
 
+
+// initialize
+bool FlashInit(void) {
+    FlashSetup(FLASHMEM_SPIBAUDRATE);
+
+    StartTicks();
+
+    if (Flash_CheckBusy(BUSY_TIMEOUT)) {
+        StopTicks();
+        return false;
+    }
+
+    return true;
+}
+
+// read unique id for chip.
+void Flash_UniqueID(uint8_t *uid) {
+
+    if (Flash_CheckBusy(BUSY_TIMEOUT)) return;
+
+    // reading unique serial number
+    FlashSendByte(UNIQUE_ID);
+    FlashSendByte(0xFF);
+    FlashSendByte(0xFF);
+    FlashSendByte(0xFF);
+    FlashSendByte(0xFF);
+
+    uid[7] = FlashSendByte(0xFF);
+    uid[6] = FlashSendByte(0xFF);
+    uid[5] = FlashSendByte(0xFF);
+    uid[4] = FlashSendByte(0xFF);
+    uid[3] = FlashSendByte(0xFF);
+    uid[2] = FlashSendByte(0xFF);
+    uid[1] = FlashSendByte(0xFF);
+    uid[0] = FlashSendLastByte(0xFF);
+}
+
+void FlashStop(void) {
+    //Bof
+    //* Reset all the Chip Select register
+    AT91C_BASE_SPI->SPI_CSR[0] = 0;
+    AT91C_BASE_SPI->SPI_CSR[1] = 0;
+    AT91C_BASE_SPI->SPI_CSR[2] = 0;
+    AT91C_BASE_SPI->SPI_CSR[3] = 0;
+
+    // Reset the SPI mode
+    AT91C_BASE_SPI->SPI_MR = 0;
+
+    // Disable all interrupts
+    AT91C_BASE_SPI->SPI_IDR = 0xFFFFFFFF;
+
+    // SPI disable
+    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIDIS;
+
+#ifndef AS_BOOTROM
+    if (g_dbglevel > 3) Dbprintf("FlashStop");
+#endif // AS_BOOTROM
+
+    StopTicks();
+}
+
+void FlashSetup(uint32_t baudrate) {
+    //WDT_DISABLE
+    AT91C_BASE_WDTC->WDTC_WDMR = AT91C_WDTC_WDDIS;
+
+    // PA10 -> SPI_NCS2 chip select (FLASHMEM)
+    // PA11 -> SPI_NCS0 chip select (FPGA)
+    // PA12 -> SPI_MISO Master-In Slave-Out
+    // PA13 -> SPI_MOSI Master-Out Slave-In
+    // PA14 -> SPI_SPCK Serial Clock
+
+    // Disable PIO control of the following pins, allows use by the SPI peripheral
+    AT91C_BASE_PIOA->PIO_PDR |= (GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK | GPIO_NCS2);
+
+    // Pull-up Enable
+    AT91C_BASE_PIOA->PIO_PPUER |= (GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK | GPIO_NCS2);
+
+    // Peripheral A
+    AT91C_BASE_PIOA->PIO_ASR |= (GPIO_NCS0 | GPIO_MISO | GPIO_MOSI | GPIO_SPCK);
+
+    // Peripheral B
+    AT91C_BASE_PIOA->PIO_BSR |= GPIO_NCS2;
+
+    //enable the SPI Peripheral clock
+    AT91C_BASE_PMC->PMC_PCER = (1 << AT91C_ID_SPI);
+
+
+    //reset spi needs double SWRST, see atmel's errata on this case
+    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SWRST;
+    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SWRST;
+
+    // Enable SPI
+    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIEN;
+
+    // NPCS2 Mode 0
+    AT91C_BASE_SPI->SPI_MR =
+        (0 << 24)            | // Delay between chip selects = DYLBCS/MCK BUT:
+        // If DLYBCS is less than or equal to six, six MCK periods
+        // will be inserted by default.
+        SPI_PCS(SPI_CSR_NUM) | // Peripheral Chip Select (selects SPI_NCS2 or PA10)
+        (0 << 7)            |  // Disable LLB (1=MOSI2MISO test mode)
+        (1 << 4)            |  // Disable ModeFault Protection
+        (0 << 3)            |  // makes spi operate at MCK (1 is MCK/2)
+        (0 << 2)            |  // Chip selects connected directly to peripheral
+        AT91C_SPI_PS_FIXED   | // Fixed Peripheral Select
+        AT91C_SPI_MSTR;        // Master Mode
+
+    uint8_t csaat = 1;
+    uint32_t dlybct = 0;
+    uint8_t ncpha = 1;
+    uint8_t cpol = 0;
+    if (baudrate > FLASH_MINFAST) {
+        baudrate = FLASH_FASTBAUD;
+        //csaat = 0;
+        dlybct = 1500;
+        ncpha = 0;
+        cpol = 0;
+    }
+
+    AT91C_BASE_SPI->SPI_CSR[2] =
+        SPI_DLYBCT(dlybct, MCK) | // Delay between Consecutive Transfers (32 MCK periods)
+        SPI_DLYBS(0, MCK)      | // Delay Beforce SPCK CLock
+        SPI_SCBR(baudrate, MCK) | // SPI Baudrate Selection
+        AT91C_SPI_BITS_8      | // Bits per Transfer (8 bits)
+        //AT91C_SPI_CSAAT       | // Chip Select inactive after transfer
+        // 40.4.6.2 SPI: Bad tx_ready Behavior when CSAAT = 1 and SCBR = 1
+        // If the SPI is programmed with CSAAT = 1, SCBR(baudrate) = 1 and two transfers are performed consecutively on
+        // the same slave with an IDLE state between them, the tx_ready signal does not rise after the second data has been
+        // transferred in the shifter. This can imply for example, that the second data is sent twice.
+        // COLIN :: For now we STILL use CSAAT=1 to avoid having to (de)assert  NPCS manually via PIO lines and we deal with delay
+        (csaat << 3)         |
+        /* Spi modes:
+            Mode CPOL CPHA NCPHA
+            0    0    0    1       clock normally low    read on rising edge
+            1    0    1    0       clock normally low    read on falling edge
+            2    1    0    1       clock normally high   read on falling edge
+            3    1    1    0       clock normally high   read on rising edge
+            However, page 512 of the AT91SAM7Sx datasheet say "Note that in SPI
+            master mode the ATSAM7S512/256/128/64/321/32 does not sample the data
+            (MISO) on the opposite edge where data clocks out (MOSI) but the same
+            edge is used as shown in Figure 36-3 and Figure 36-4."  Figure 36-3
+            shows that CPOL=NCPHA=0 or CPOL=NCPHA=1 samples on the rising edge and
+            that the data changes sometime after the rising edge (about 2 ns).  To
+            be consistent with normal SPI operation, it is probably safe to say
+            that the data changes on the falling edge and should be sampled on the
+            rising edge.  Therefore, it appears that NCPHA should be treated the
+            same as CPHA.  Thus:
+            Mode CPOL CPHA NCPHA
+            0    0    0    0       clock normally low    read on rising edge
+            1    0    1    1       clock normally low    read on falling edge
+            2    1    0    0       clock normally high   read on falling edge
+            3    1    1    1       clock normally high   read on rising edge
+            Update: for 24MHz, writing is more stable with ncpha=1, else bitflips occur.
+        */
+        (ncpha << 1)             |  // Clock Phase data captured on leading edge, changes on following edge
+        (cpol << 0);               // Clock Polarity inactive state is logic 0
+
+    // read first, empty buffer
+    if (AT91C_BASE_SPI->SPI_RDR == 0) {};
+}
+
+bool Flash_CheckBusy(uint32_t timeout) {
+    WaitUS(WINBOND_WRITE_DELAY);
+    StartCountUS();
+    uint32_t _time = GetCountUS();
+
+#ifndef AS_BOOTROM
+    if (g_dbglevel > 3) Dbprintf("Checkbusy in...");
+#endif // AS_BOOTROM
+
+    do {
+        if (!(Flash_ReadStat1() & BUSY)) {
+            return false;
+        }
+    } while ((GetCountUS() - _time) < timeout);
+
+    if (timeout <= (GetCountUS() - _time)) {
+        return true;
+    }
+
+    return false;
+}
+
+// read state register 1
+uint8_t Flash_ReadStat1(void) {
+    FlashSendByte(READSTAT1);
+    return FlashSendLastByte(0xFF);
+}
+
+// send one byte over SPI
+uint16_t FlashSendByte(uint32_t data) {
+
+    // wait until SPI is ready for transfer
+    //if you are checking for incoming data returned then the TXEMPTY flag is redundant
+    //while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY) == 0) {};
+
+    // send the data
+    AT91C_BASE_SPI->SPI_TDR = data;
+
+    //while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TDRE) == 0){};
+
+    // wait receive transfer is complete
+    while ((AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF) == 0) {};
+
+    // reading incoming data
+    return ((AT91C_BASE_SPI->SPI_RDR) & 0xFFFF);
+}
+
+// send last byte over SPI
+uint16_t FlashSendLastByte(uint32_t data) {
+    return FlashSendByte(data | AT91C_SPI_LASTXFER);
+}
