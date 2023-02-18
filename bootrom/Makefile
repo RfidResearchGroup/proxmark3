@@ -34,10 +34,16 @@ VERSIONSRC = version_pm3.c
 # THUMBSRC :=
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant
-APP_CFLAGS = -I. -ffunction-sections -fdata-sections
+APP_CFLAGS = -I. -ffunction-sections -fdata-sections -DAS_BOOTROM
 
 # stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc,  no-common makes sure uninitialized vars don't end up in COMMON area
 APP_CFLAGS += -fno-stack-protector -fno-pie -fno-common
+
+ifneq (,$(findstring WITH_FLASH,$(PLATFORM_DEFS)))
+	APP_CFLAGS += -DWITH_FLASH
+	APP_CFLAGS += -I../common_arm
+    THUMBSRC += flashmem.c ticks.c
+endif
 
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC

@@ -1407,7 +1407,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 case DES:
                 case RFU:
                 case None:
-                    // Nothing to do for None anyway...
+                // Nothing to do for None anyway...
                 default:
                     continue;
             }

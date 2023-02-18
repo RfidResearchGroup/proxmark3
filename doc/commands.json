@@ -11507,7 +11507,7 @@
         },
         "script help": {
             "command": "script help",
-            "description": "This is a feature to run Lua/Cmd scripts. You can place scripts within the luascripts/cmdscripts folders. --------------------------------------------------------------------------------------- script list available offline: yes",
+            "description": "This is a feature to run Lua/Cmd/Python scripts. You can place scripts within the luascripts/cmdscripts/pyscripts folders. --------------------------------------------------------------------------------------- script list available offline: yes",
             "notes": [],
             "offline": true,
             "options": [],
@@ -11904,6 +11904,6 @@
     "metadata": {
         "commands_extracted": 749,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-02-11T10:42:29"
+        "extracted_on": "2023-02-18T20:20:19"
     }
 }

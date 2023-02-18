@@ -5,6 +5,8 @@ PLATFORM=PM3RDV4
 #PLATFORM=PM3GENERIC
 # If you want more than one PLATFORM_EXTRAS option, separate them by spaces:
 #PLATFORM_EXTRAS=BTADDON
+#PLATFORM_EXTRAS=FLASH
+#PLATFORM_EXTRAS=BTADDON FLASH
 #STANDALONE=LF_SAMYRUN
 
 # Uncomment the lines below in order to make a 256KB image
