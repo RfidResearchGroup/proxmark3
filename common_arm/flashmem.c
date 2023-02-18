@@ -367,7 +367,7 @@ void Flashmem_print_status(void) {
 
     uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Flash_UniqueID(uid);
-    Dbprintf(         "  Unique ID............... " _YELLOW_("0x%02X%02X%02X%02X%02X%02X%02X%02X"),
+    Dbprintf("  Unique ID............... " _YELLOW_("0x%02X%02X%02X%02X%02X%02X%02X%02X"),
              uid[7], uid[6], uid[5], uid[4],
              uid[3], uid[2], uid[1], uid[0]
             );

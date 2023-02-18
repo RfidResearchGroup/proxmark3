@@ -20,7 +20,7 @@
 
 #include "proxmark3_arm.h"
 #ifndef AS_BOOTROM
-    #include "dbprint.h"
+#include "dbprint.h"
 #endif
 
 

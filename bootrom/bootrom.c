@@ -225,7 +225,7 @@ static void flash_mode(void) {
 #ifdef WITH_FLASH
     if (FlashInit()) { // checks for existence of flash also ... OK because bootrom was built for devices with flash
         uint64_t flash_uniqueID = 0;
-        Flash_UniqueID((uint8_t*)&flash_uniqueID);
+        Flash_UniqueID((uint8_t *)&flash_uniqueID);
         FlashStop();
         usb_update_serial(flash_uniqueID);
     }

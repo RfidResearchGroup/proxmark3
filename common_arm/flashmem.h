@@ -112,55 +112,9 @@ uint16_t FlashSendLastByte(uint32_t data);
 
 
 #ifndef AS_BOOTROM
-    // Bootrom does not require these functions.
-    // Wrap in #ifndef to avoid accidental bloat of bootrom
-    // Bootrom needs only enough to get uniqueID from flash.
-    // It calls three functions.  Full call trees listed:
-    //
-    // FlashInit()
-    // |
-    // \____ FlashSetup()
-    // |      \____ leaf
-    // |
-    // \____ StartTicks()
-    // |      \____ leaf
-    // |
-    // \____ Flash_CheckBusy() [*]
-    // |     \____ WaitUS()
-    // |     |     \____ WaitTicks()
-    // |     |           \____ leaf
-    // |     |
-    // |     \____ StartCountUS()
-    // |     |     \____ leaf
-    // |     |
-    // |     \____ GetCountUS()
-    // |     |     \____ leaf
-    // |     |
-    // |     \____ Flash_ReadStat1()
-    // |           \____ FlashSendByte()
-    // |           |     \____ leaf
-    // |           |
-    // |           \____ FlashSendLastByte()
-    // |                 \____ FlashSendByte()
-    // |                       \____ leaf
-    // |
-    // \____ StopTicks()
-    //       \____ leaf
-    //
-    // Flash_UniqueID()
-    // \____ FlashCheckBusy()          (see FlashInit)
-    // \____ FlashSendByteByte()       (see FlashInit)
-    // \____ FlashSendByteLastByte()   (see FlashInit)
-    // 
-    //
-    // FlashStop() [*]
-
-
-
 void FlashmemSetSpiBaudrate(uint32_t baudrate);
 bool Flash_WaitIdle(void);
 void Flash_TransferAdresse(uint32_t address);
-
 
 void Flash_WriteEnable(void);
 bool Flash_WipeMemoryPage(uint8_t page);
