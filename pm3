@@ -255,7 +255,7 @@ Quick helper script for proxmark3 client when working with a Proxmark3 device
 Description:
     The usage is the same as for the proxmark3 client, with the following differences:
      * the correct port name will be automatically guessed;
-     * the script will wait for a Proxmark to be connected (same as option -w of the client).
+     * the script will wait for a Proxmark3 to be connected (same as option -w of the client).
     You can also specify a first option -n N to access the Nth Proxmark3 connected.
     To see a list of available ports, use --list.
 
@@ -302,7 +302,7 @@ elif [ "$SCRIPT" = "pm3-flash" ]; then
   }
   HELP() {
       cat << EOF
-Quick helper script for flashing a Proxmark device via USB
+Quick helper script for flashing a Proxmark3 device via USB
 
 Description:
     The usage is similar to the old proxmark3-flasher binary, except that the correct port name will be automatically guessed.
@@ -340,7 +340,7 @@ elif [ "$SCRIPT" = "pm3-flash-all" ]; then
   }
   HELP() {
       cat << EOF
-Quick helper script for flashing a Proxmark device via USB
+Quick helper script for flashing a Proxmark3 device via USB
 
 Description:
     The correct port name will be automatically guessed and the stock bootloader and firmware image will be flashed.
@@ -370,7 +370,7 @@ elif [ "$SCRIPT" = "pm3-flash-fullimage" ]; then
   }
   HELP() {
       cat << EOF
-Quick helper script for flashing a Proxmark device via USB
+Quick helper script for flashing a Proxmark3 device via USB
 
 Description:
     The correct port name will be automatically guessed and the stock firmware image will be flashed.
@@ -400,7 +400,7 @@ elif [ "$SCRIPT" = "pm3-flash-bootrom" ]; then
   }
   HELP() {
       cat << EOF
-Quick helper script for flashing a Proxmark device via USB
+Quick helper script for flashing a Proxmark3 device via USB
 
 Description:
     The correct port name will be automatically guessed and the stock bootloader will be flashed.
@@ -459,7 +459,7 @@ if [ "$1" == "--list" ]; then
     SHOWLIST=true
 fi
 
-# Number of the proxmark3 we're interested in
+# Number of the Proxmark3 we're interested in
 N=1
 if [ "$1" == "-n" ]; then
     shift
@@ -518,7 +518,7 @@ if $SHOWLIST; then
     exit 0
 fi
 
-# Wait till we get at least N proxmark3 devices
+# Wait till we get at least N Proxmark3 devices
 $GETPM3LIST "$N"
 if [ ${#PM3LIST} -lt "$N" ]; then
     echo >&2 "[=] Waiting for Proxmark3 to appear..."
