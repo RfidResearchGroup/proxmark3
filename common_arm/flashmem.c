@@ -350,11 +350,25 @@ void Flashmem_print_status(void) {
     if (!Flash_ReadID_90(&device_type)) {
         DbpString("  Device ID............... " _RED_(" -->  Not Found  <--"));
     } else {
-        if ((device_type.manufacturer_id == WINBOND_MANID) && (device_type.device_id == WINBOND_DEVID)) {
-            DbpString("  Memory size............. " _GREEN_("2 mbits / 256 kb"));
+        if (device_type.manufacturer_id == WINBOND_MANID) {
+            switch (device_type.device_id) {
+                case WINBOND_2MB_DEVID:
+                    DbpString("  Memory size............. " _YELLOW_("2 mbits / 256 kb"));
+                    break;
+                case WINBOND_1MB_DEVID:
+                    DbpString("  Memory size..... ....... " _YELLOW_("1 mbits / 128 kb"));
+                    break;
+                case WINBOND_512KB_DEVID:
+                    DbpString("  Memory size............. " _YELLOW_("512 kbits / 64 kb"));
+                    break;
+                default:
+                    break;
+            }
         } else {
             Dbprintf("  Device ID............... " _YELLOW_("%02X / %02X (unknown)"),
-                     device_type.manufacturer_id, device_type.device_id);
+                        device_type.manufacturer_id,
+                        device_type.device_id
+                    );
         }
     }
 
@@ -577,10 +591,6 @@ bool Flash_CheckBusy(uint32_t timeout) {
     WaitUS(WINBOND_WRITE_DELAY);
     StartCountUS();
     uint32_t _time = GetCountUS();
-
-#ifndef AS_BOOTROM
-    if (g_dbglevel > 3) Dbprintf("Checkbusy in...");
-#endif // AS_BOOTROM
 
     do {
         if (!(Flash_ReadStat1() & BUSY)) {

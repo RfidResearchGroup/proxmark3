@@ -54,8 +54,11 @@
 // Flash busy timeout: 20ms is the strict minimum when writing 256kb
 #define BUSY_TIMEOUT    200000L
 
-#define WINBOND_MANID   0xEF
-#define WINBOND_DEVID   0x11
+#define WINBOND_MANID       0xEF
+#define WINBOND_2MB_DEVID   0x11
+#define WINBOND_1MB_DEVID   0x10
+#define WINBOND_512KB_DEVID 0x05
+
 #define PAGESIZE        0x100
 #define WINBOND_WRITE_DELAY 0x02
 
