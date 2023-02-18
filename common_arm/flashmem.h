@@ -127,7 +127,7 @@ typedef struct {
     uint8_t manufacturer_id;
     uint8_t device_id;
 } flash_device_type_90_t; // to differentiate from JDEC ID via cmd 9F
-bool Flash_ReadID_90(flash_device_type_90_t* result);
+bool Flash_ReadID_90(flash_device_type_90_t *result);
 
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
 uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len);

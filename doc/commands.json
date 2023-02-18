@@ -3099,9 +3099,10 @@
                 "--fc <dec> facility code",
                 "--cn <dec> card number",
                 "-w, --wiegand <format> see `wiegand list` for available formats",
-                "--shallow use shallow (ASK) reader modulation instead of OOK"
+                "--shallow use shallow (ASK) reader modulation instead of OOK",
+                "-v verbose (print encoded blocks)"
             ],
-            "usage": "hf iclass encode [-h] [--bin <bin>] --ki <dec> [--credit] [--elite] [--raw] [--enckey <hex>] [--fc <dec>] [--cn <dec>] [-w <format>] [--shallow]"
+            "usage": "hf iclass encode [-hv] [--bin <bin>] --ki <dec> [--credit] [--elite] [--raw] [--enckey <hex>] [--fc <dec>] [--cn <dec>] [-w <format>] [--shallow]"
         },
         "hf iclass encrypt": {
             "command": "hf iclass encrypt",
@@ -11903,6 +11904,6 @@
     "metadata": {
         "commands_extracted": 749,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-02-18T01:26:44"
+        "extracted_on": "2023-02-18T20:20:19"
     }
 }

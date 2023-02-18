@@ -413,8 +413,8 @@ void usb_update_serial(uint64_t newSerialNumber) {
         uint8_t nibble2 = (newSerialNumber >> ((8 * i) + 0)) & 0xFu; // bitmasks [0x0F, 0x0F00, 0x0F0000, ... 0x0F00000000000000]
         char c1 = nibble1 < 10 ? '0' + nibble1 : 'A' + (nibble1 - 10);
         char c2 = nibble2 < 10 ? '0' + nibble2 : 'A' + (nibble2 - 10);
-        StrSerialNumber[18 + (4*i) + 0] = c1; // [ 18, 22, .., 42, 46 ]
-        StrSerialNumber[18 + (4*i) + 2] = c2; // [ 20, 24, .., 44, 48 ]
+        StrSerialNumber[18 + (4 * i) + 0] = c1; // [ 18, 22, .., 42, 46 ]
+        StrSerialNumber[18 + (4 * i) + 2] = c2; // [ 20, 24, .., 44, 48 ]
     }
     StrSerialNumber[0] = USB_STRING_DESCRIPTOR_SERIAL_NUMBER_LENGTH;
 }

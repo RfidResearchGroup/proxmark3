@@ -49,7 +49,7 @@ void FlashmemSetSpiBaudrate(uint32_t baudrate) {
 }
 
 // read ID out
-bool Flash_ReadID_90(flash_device_type_90_t* result) {
+bool Flash_ReadID_90(flash_device_type_90_t *result) {
 
     if (Flash_CheckBusy(BUSY_TIMEOUT)) return false;
 
@@ -354,20 +354,20 @@ void Flashmem_print_status(void) {
             DbpString("  Memory size............. " _GREEN_("2 mbits / 256 kb"));
         } else {
             Dbprintf("  Device ID............... " _YELLOW_("%02X / %02X (unknown)"),
-                device_type.manufacturer_id, device_type.device_id );
+                     device_type.manufacturer_id, device_type.device_id);
         }
     }
 
     uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Flash_UniqueID(uid);
-    Dbprintf("  Unique ID (be).......... " _YELLOW_("0x%02X%02X%02X%02X%02X%02X%02X%02X" ),
-            uid[0], uid[1], uid[2], uid[3],
-            uid[4], uid[5], uid[6], uid[7]
+    Dbprintf("  Unique ID (be).......... " _YELLOW_("0x%02X%02X%02X%02X%02X%02X%02X%02X"),
+             uid[0], uid[1], uid[2], uid[3],
+             uid[4], uid[5], uid[6], uid[7]
             );
     if (g_dbglevel > 3) {
-        Dbprintf("  Unique ID (le).......... " _YELLOW_("0x%02X%02X%02X%02X%02X%02X%02X%02X" ),
-                uid[7], uid[6], uid[5], uid[4],
-                uid[3], uid[2], uid[1], uid[0]
+        Dbprintf("  Unique ID (le).......... " _YELLOW_("0x%02X%02X%02X%02X%02X%02X%02X%02X"),
+                 uid[7], uid[6], uid[5], uid[4],
+                 uid[3], uid[2], uid[1], uid[0]
                 );
     }
     FlashStop();
