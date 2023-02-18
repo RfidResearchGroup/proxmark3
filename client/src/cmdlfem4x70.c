@@ -252,6 +252,7 @@ int CmdEM4x70Brute(const char *Cmd) {
     int addr = arg_get_int_def(ctx, 2, 0);
     if (addr < 7 || addr > 9) {
         PrintAndLogEx(FAILED, "block has to be within range [7, 9] got: %d", addr);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     etd.address = (uint8_t) addr;
@@ -265,8 +266,8 @@ int CmdEM4x70Brute(const char *Cmd) {
     uint32_t start_key = 0;
     int res = arg_get_u32_hexstr_def_nlen(ctx, 5, 0, &start_key, 2, true);
     if (res == 2) {
-        CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "start key parameter must be in range [0, FFFF]");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
     etd.start_key = start_key;
