@@ -29,21 +29,39 @@ int g_GraphBuffer[MAX_GRAPH_TRACE_LEN];
 size_t g_GraphTraceLen;
 
 /* write a manchester bit to the graph
-TODO,  verfy that this doesn't overflow buffer  (iceman)
 */
 void AppendGraph(bool redraw, uint16_t clock, int bit) {
-    uint8_t half = clock / 2;
+    uint16_t half = clock / 2;
+    uint16_t end = clock;
     uint16_t i;
+
+    // overflow/underflow safe checks ... Assumptions:
+    //     _Assert(g_GraphTraceLen >= 0);
+    //     _Assert(g_GraphTraceLen <= MAX_GRAPH_TRACE_LEN);
+    // If this occurs, allow partial rendering, up to the last sample...
+    if ((MAX_GRAPH_TRACE_LEN - g_GraphTraceLen) < half) {
+        PrintAndLogEx(DEBUG, "WARNING: AppendGraph() - Request exceeds max graph length");
+        end = MAX_GRAPH_TRACE_LEN - g_GraphTraceLen;
+        half = end;
+    }
+    if ((MAX_GRAPH_TRACE_LEN - g_GraphTraceLen) < end) {
+        PrintAndLogEx(DEBUG, "WARNING: AppendGraph() - Request exceeds max graph length");
+        end = MAX_GRAPH_TRACE_LEN - g_GraphTraceLen;
+    }
+
     //set first half the clock bit (all 1's or 0's for a 0 or 1 bit)
-    for (i = 0; i < half; ++i)
+    for (i = 0; i < half; ++i) {
         g_GraphBuffer[g_GraphTraceLen++] = bit;
+    }
 
     //set second half of the clock bit (all 0's or 1's for a 0 or 1 bit)
-    for (; i < clock; ++i)
+    for (; i < end; ++i) {
         g_GraphBuffer[g_GraphTraceLen++] = bit ^ 1;
+    }
 
-    if (redraw)
+    if (redraw) {
         RepaintGraphWindow();
+    }
 }
 
 // clear out our graph window
