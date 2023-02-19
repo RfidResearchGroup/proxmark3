@@ -384,6 +384,7 @@ const static vocabulory_t vocabulory[] = {
     { 0, "hf mfu rdbl" }, 
     { 0, "hf mfu restore" }, 
     { 1, "hf mfu view" }, 
+    { 0, "hf mfu tamper" },
     { 0, "hf mfu wrbl" }, 
     { 0, "hf mfu eload" }, 
     { 0, "hf mfu esave" }, 
