@@ -68,11 +68,12 @@ function get_pm3_list_Linux {
             fi
         fi
         # WSL2 with usbipd detection - doesn't report same things as WSL1
-
         if grep -q "proxmark.org" "/sys/class/tty/${DEV#/dev/}/../../../manufacturer" 2>/dev/null; then
-            PM3LIST+=("$DEV")
-            if [ ${#PM3LIST[*]} -ge "$N" ]; then
-                return
+            if echo "${PM3LIST[*]}" | grep -qv "${DEV}"; then
+                PM3LIST+=("$DEV")
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                    return
+                fi
             fi
         fi
     done
@@ -474,7 +475,8 @@ fi
 
 HOSTOS=$(uname | awk '{print toupper($0)}')
 if [ "$HOSTOS" = "LINUX" ]; then
-    if uname -a|grep -qi Microsoft; then
+    # Detect when running under WSL1 (but exclude WSL2)
+    if uname -a | grep -qi Microsoft && uname -a | grep -qvi WSL2; then
         # First try finding it using the PATH environment variable
         PSHEXE=$(command -v powershell.exe 2>/dev/null)
 
