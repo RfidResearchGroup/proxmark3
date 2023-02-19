@@ -398,8 +398,6 @@ typedef struct {
 #define CMD_SPIFFS_UNMOUNT                                                0x0131
 #define CMD_SPIFFS_WRITE                                                  0x0132
 
-// We take +0x1000 when having a variant of similar function (todo : make it an argument!)
-#define CMD_SPIFFS_APPEND                                                 0x1132
 
 #define CMD_SPIFFS_READ                                                   0x0133
 //We use no open/close instruction, as they are handled internally.
@@ -413,21 +411,9 @@ typedef struct {
 #define CMD_SPIFFS_FSTAT                                                  0x0138
 #define CMD_SPIFFS_INFO                                                   0x0139
 #define CMD_SPIFFS_FORMAT                                                 CMD_FLASHMEM_WIPE
-
 #define CMD_SPIFFS_WIPE                                                   0x013A
 
 #define CMD_SET_FPGAMODE                                                  0x013F
-
-// This take a +0x2000 as they are high level helper and special functions
-// As the others, they may have safety level argument if it makes sense
-#define CMD_SPIFFS_PRINT_TREE                                             0x2130
-#define CMD_SPIFFS_GET_TREE                                               0x2131
-#define CMD_SPIFFS_TEST                                                   0x2132
-#define CMD_SPIFFS_PRINT_FSINFO                                           0x2133
-#define CMD_SPIFFS_DOWNLOAD                                               0x2134
-#define CMD_SPIFFS_DOWNLOADED                                             0x2135
-#define CMD_SPIFFS_ELOAD                                                  0x2136
-#define CMD_SPIFFS_CHECK                                                  0x3000
 
 // RDV40,  Smart card operations
 #define CMD_SMART_RAW                                                     0x0140
@@ -463,14 +449,31 @@ typedef struct {
 #define CMD_LF_T55XX_WRITEBL                                              0x0215
 #define CMD_LF_T55XX_RESET_READ                                           0x0216
 #define CMD_LF_PCF7931_READ                                               0x0217
-#define CMD_LF_PCF7931_WRITE                                              0x0223
-#define CMD_LF_EM4X_LOGIN                                                 0x0229
 #define CMD_LF_EM4X_READWORD                                              0x0218
 #define CMD_LF_EM4X_WRITEWORD                                             0x0219
-#define CMD_LF_EM4X_PROTECTWORD                                           0x021B
-#define CMD_LF_EM4X_BF                                                    0x022A
 #define CMD_LF_IO_WATCH                                                   0x021A
+#define CMD_LF_EM4X_PROTECTWORD                                           0x021B
 #define CMD_LF_EM410X_WATCH                                               0x021C
+// Sampling configuration for LF reader/sniffer
+#define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
+#define CMD_LF_FSK_SIMULATE                                               0x021E
+#define CMD_LF_ASK_SIMULATE                                               0x021F
+#define CMD_LF_PSK_SIMULATE                                               0x0220
+#define CMD_LF_AWID_WATCH                                                 0x0221
+#define CMD_LF_VIKING_CLONE                                               0x0222
+#define CMD_LF_PCF7931_WRITE                                              0x0223
+#define CMD_LF_T55XX_WAKEUP                                               0x0224
+#define CMD_LF_COTAG_READ                                                 0x0225
+#define CMD_LF_T55XX_SET_CONFIG                                           0x0226
+#define CMD_LF_SAMPLING_PRINT_CONFIG                                      0x0227
+#define CMD_LF_SAMPLING_GET_CONFIG                                        0x0228
+#define CMD_LF_EM4X_LOGIN                                                 0x0229
+#define CMD_LF_EM4X_BF                                                    0x022A
+
+#define CMD_LF_T55XX_CHK_PWDS                                             0x0230
+#define CMD_LF_T55XX_DANGERRAW                                            0x0231
+#define CMD_LF_NRZ_SIMULATE                                               0x0232
+
 #define CMD_LF_EM4X50_INFO                                                0x0240
 #define CMD_LF_EM4X50_WRITE                                               0x0241
 #define CMD_LF_EM4X50_WRITEPWD                                            0x0242
@@ -488,23 +491,7 @@ typedef struct {
 #define CMD_LF_EM4X70_WRITEPIN                                            0x0264
 #define CMD_LF_EM4X70_WRITEKEY                                            0x0265
 #define CMD_LF_EM4X70_BRUTE                                               0x0266
-// Sampling configuration for LF reader/sniffer
-#define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
-#define CMD_LF_FSK_SIMULATE                                               0x021E
-#define CMD_LF_ASK_SIMULATE                                               0x021F
-#define CMD_LF_PSK_SIMULATE                                               0x0220
-#define CMD_LF_NRZ_SIMULATE                                               0x0232
-#define CMD_LF_AWID_WATCH                                                 0x0221
-#define CMD_LF_VIKING_CLONE                                               0x0222
-#define CMD_LF_T55XX_WAKEUP                                               0x0224
-#define CMD_LF_COTAG_READ                                                 0x0225
-#define CMD_LF_T55XX_SET_CONFIG                                           0x0226
-#define CMD_LF_SAMPLING_PRINT_CONFIG                                      0x0227
-#define CMD_LF_SAMPLING_GET_CONFIG                                        0x0228
-
-#define CMD_LF_T55XX_CHK_PWDS                                             0x0230
-#define CMD_LF_T55XX_DANGERRAW                                            0x0231
-
+#define CMD_LF_EM4X70_AUTHBRANCH                                          0x0267
 
 // ZX8211
 #define CMD_LF_ZX_READ                                                    0x0270
@@ -523,19 +510,15 @@ typedef struct {
 #define CMD_HF_ISO15693_COMMAND                                           0x0313
 #define CMD_HF_ISO15693_FINDAFI                                           0x0315
 #define CMD_HF_ISO15693_CSETUID                                           0x0316
-#define CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY                               0x0867
 #define CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY                              0x0317
 #define CMD_HF_ISO15693_SLIX_DISABLE_EAS                                  0x0318
-#define CMD_HF_ISO15693_SLIX_ENABLE_EAS                                   0x0862
-#define CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI                             0x0863
-#define CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS                             0x0864
-#define CMD_HF_ISO15693_SLIX_WRITE_PWD                                    0x0865
-#define CMD_HF_ISO15693_WRITE_AFI                                         0x0866
 #define CMD_HF_TEXKOM_SIMULATE                                            0x0320
 #define CMD_HF_ISO15693_EML_CLEAR                                         0x0330
 #define CMD_HF_ISO15693_EML_SETMEM                                        0x0331
 
 #define CMD_LF_SNIFF_RAW_ADC                                              0x0360
+#define CMD_LF_HITAGS_TEST_TRACES                                         0x0367
+#define CMD_LF_HITAGS_SIMULATE                                            0x0368
 
 // For Hitag2 transponders
 #define CMD_LF_HITAG_SNIFF                                                0x0370
@@ -543,26 +526,19 @@ typedef struct {
 #define CMD_LF_HITAG_READER                                               0x0372
 
 // For HitagS
-#define CMD_LF_HITAGS_TEST_TRACES                                         0x0367
-#define CMD_LF_HITAGS_SIMULATE                                            0x0368
 #define CMD_LF_HITAGS_READ                                                0x0373
 #define CMD_LF_HITAGS_WRITE                                               0x0375
-
 #define CMD_LF_HITAG_ELOAD                                                0x0376
 
 #define CMD_HF_ISO14443A_ANTIFUZZ                                         0x0380
 #define CMD_HF_ISO14443B_SIMULATE                                         0x0381
 #define CMD_HF_ISO14443B_SNIFF                                            0x0382
-
 #define CMD_HF_ISO14443A_SNIFF                                            0x0383
 #define CMD_HF_ISO14443A_SIMULATE                                         0x0384
-
 #define CMD_HF_ISO14443A_READER                                           0x0385
-
 #define CMD_HF_LEGIC_SIMULATE                                             0x0387
 #define CMD_HF_LEGIC_READER                                               0x0388
 #define CMD_HF_LEGIC_WRITER                                               0x0389
-
 #define CMD_HF_EPA_COLLECT_NONCE                                          0x038A
 #define CMD_HF_EPA_REPLAY                                                 0x038B
 #define CMD_HF_EPA_PACE_SIMULATE                                          0x039C
@@ -571,7 +547,6 @@ typedef struct {
 #define CMD_HF_LEGIC_ESET                                                 0x03BD
 
 // iCLASS / Picopass
-#define CMD_HF_ICLASS_READCHECK                                           0x038F
 #define CMD_HF_ICLASS_DUMP                                                0x0391
 #define CMD_HF_ICLASS_SNIFF                                               0x0392
 #define CMD_HF_ICLASS_SIMULATE                                            0x0393
@@ -581,6 +556,8 @@ typedef struct {
 #define CMD_HF_ICLASS_EML_MEMSET                                          0x0398
 #define CMD_HF_ICLASS_CHKKEYS                                             0x039A
 #define CMD_HF_ICLASS_RESTORE                                             0x039B
+
+#define CMD_HF_EPA_PACE_SIMULATE                                          0x039C
 
 // For ISO1092 / FeliCa
 #define CMD_HF_FELICA_SIMULATE                                            0x03A0
@@ -594,6 +571,9 @@ typedef struct {
 #define CMD_HF_ISO14443A_PRINT_CONFIG                                     0x03B0
 #define CMD_HF_ISO14443A_GET_CONFIG                                       0x03B1
 #define CMD_HF_ISO14443A_SET_CONFIG                                       0x03B2
+
+#define CMD_HF_LEGIC_INFO                                                 0x03BC
+#define CMD_HF_LEGIC_ESET                                                 0x03BD
 
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING                                        0x0400
@@ -626,23 +606,22 @@ typedef struct {
 #define CMD_HF_MIFARE_STATIC_ENC                                          0x0616
 
 #define CMD_HF_MIFARE_READBL                                              0x0620
-#define CMD_HF_MIFAREU_READBL                                             0x0720
 #define CMD_HF_MIFARE_READSC                                              0x0621
-#define CMD_HF_MIFAREU_READCARD                                           0x0721
 #define CMD_HF_MIFARE_WRITEBL                                             0x0622
-#define CMD_HF_MIFARE_VALUE                                               0x0627
-#define CMD_HF_MIFAREU_WRITEBL                                            0x0722
-#define CMD_HF_MIFAREU_WRITEBL_COMPAT                                     0x0723
-
 #define CMD_HF_MIFARE_CHKKEYS                                             0x0623
 #define CMD_HF_MIFARE_SETMOD                                              0x0624
 #define CMD_HF_MIFARE_CHKKEYS_FAST                                        0x0625
 #define CMD_HF_MIFARE_CHKKEYS_FILE                                        0x0626
+#define CMD_HF_MIFARE_VALUE                                               0x0627
 
 #define CMD_HF_MIFARE_SNIFF                                               0x0630
 #define CMD_HF_MIFARE_MFKEY                                               0x0631
 #define CMD_HF_MIFARE_PERSONALIZE_UID                                     0x0632
 
+#define CMD_HF_MIFAREU_READBL                                             0x0720
+#define CMD_HF_MIFAREU_READCARD                                           0x0721
+#define CMD_HF_MIFAREU_WRITEBL                                            0x0722
+#define CMD_HF_MIFAREU_WRITEBL_COMPAT                                     0x0723
 //ultralightC
 #define CMD_HF_MIFAREUC_AUTH                                              0x0724
 //0x0725 and 0x0726 no longer used
@@ -689,11 +668,38 @@ typedef struct {
 #define CMD_HF_MIFARE_G4_RDBL                                             0x0860
 #define CMD_HF_MIFARE_G4_WRBL                                             0x0861
 
+
+#define CMD_HF_ISO15693_SLIX_ENABLE_EAS                                   0x0862
+#define CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI                             0x0863
+#define CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS                             0x0864
+#define CMD_HF_ISO15693_SLIX_WRITE_PWD                                    0x0865
+#define CMD_HF_ISO15693_WRITE_AFI                                         0x0866
+#define CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY                               0x0867
+
+
 // Gen 4 GDM magic cards
 #define CMD_HF_MIFARE_G4_GDM_RDBL                                         0x0870
 #define CMD_HF_MIFARE_G4_GDM_WRBL                                         0x0871
 #define CMD_HF_MIFARE_G4_GDM_CONFIG                                       0x0872
 #define CMD_HF_MIFARE_G4_GDM_WRCFG                                        0x0873
+
+// NOTE: SPIFFS commands started to use bits 12-13 as flags:
+// 0x1000 == variant of command without this bit set
+// 0x2000 == high-level helper variant of command without this bit set, typically with "safety" argument level
+// 0x3000 == Special-case: CMD_SPIFFS_CHECK
+
+// We take +0x1000 when having a variant of similar function (todo : make it an argument!)
+#define CMD_SPIFFS_APPEND                                                 0x1132
+// This take a +0x2000 as they are high level helper and special functions
+// As the others, they may have safety level argument if it makes sense
+#define CMD_SPIFFS_PRINT_TREE                                             0x2130
+#define CMD_SPIFFS_GET_TREE                                               0x2131
+#define CMD_SPIFFS_TEST                                                   0x2132
+#define CMD_SPIFFS_PRINT_FSINFO                                           0x2133
+#define CMD_SPIFFS_DOWNLOAD                                               0x2134
+#define CMD_SPIFFS_DOWNLOADED                                             0x2135
+#define CMD_SPIFFS_ELOAD                                                  0x2136
+#define CMD_SPIFFS_CHECK                                                  0x3000
 
 #define CMD_UNKNOWN                                                       0xFFFF
 
