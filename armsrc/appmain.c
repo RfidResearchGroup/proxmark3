@@ -1242,6 +1242,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x70_brute((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }
+        case CMD_LF_EM4X70_AUTHBRANCH: {
+            em4x70_authbranch((em4x70_data_t *)packet->data.asBytes, true);
+            break;
+        }
 #endif
 
 #ifdef WITH_ZX8211

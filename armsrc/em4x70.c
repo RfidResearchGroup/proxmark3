@@ -19,6 +19,7 @@
 #include "fpgaloader.h"
 #include "ticks.h"
 #include "dbprint.h"
+#include "printf.h"
 #include "lfadc.h"
 #include "commonutil.h"
 #include "optimized_cipherutils.h"
@@ -271,16 +272,18 @@ static void em4x70_send_byte(uint8_t byte) {
         em4x70_send_bit((byte >> (7 - i)) & 1);
 }
 
+// NOTE: Takes native byte order for word to be sent.
 static void em4x70_send_word(const uint16_t word) {
 
     // Split into nibbles
     uint8_t nibbles[4];
-    uint8_t j = 0;
-    for (int i = 0; i < 2; i++) {
-        uint8_t byte = (word >> (8 * i)) & 0xff;
-        nibbles[j++] = (byte >> 4) & 0xf;
-        nibbles[j++] = byte & 0xf;
-    }
+    // prior loop unrolled for clarity
+    // input  is native uint16_t
+    // output starts with most significant bits of the least significant byte (!!!)
+    nibbles[0] = (word >>  4) & 0xf;
+    nibbles[1] = (word >>  0) & 0xf;
+    nibbles[2] = (word >> 12) & 0xf;
+    nibbles[3] = (word >>  8) & 0xf;
 
     // send 16 bit word with parity bits according to EM4x70 datasheet
     // sent as 4 x nibbles (4 bits + parity)
@@ -911,3 +914,17 @@ void em4x70_write_key(em4x70_data_t *etd, bool ledcontrol) {
     lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_WRITEKEY, status, tag.data, sizeof(tag.data));
 }
+
+// TODO: Check known output filter bits to reduce attempts needed.
+// PROBLEM: Requires two (modifiable) 128k bit tables to store two
+//          bits for each of the 2^20 possibilities.  Won't fit in
+//          current ProxMark3 hardware.
+//          (PM3 Easy and PM3 RDV4 are each 512k flash / 64k ram)
+//
+void em4x70_authbranch(em4x70_data_t *etd, bool ledcontrol) {
+
+    int status_code = PM3_ENOTIMPL;
+    reply_ng(CMD_LF_EM4X70_AUTHBRANCH, status_code, NULL, 0);
+}
+
+

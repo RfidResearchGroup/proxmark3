@@ -31,6 +31,56 @@
 
 static int CmdHelp(const char *Cmd);
 
+static command_t CommandTable[] = {
+    {"help",       CmdHelp,             AlwaysAvailable, "This help"},
+    {"brute",      CmdEM4x70Brute,      IfPm3EM4x70,     "Bruteforce EM4X70 to find partial Crypt Key"},
+    {"info",       CmdEM4x70Info,       IfPm3EM4x70,     "Tag information EM4x70"},
+    {"write",      CmdEM4x70Write,      IfPm3EM4x70,     "Write EM4x70"},
+    {"unlock",     CmdEM4x70Unlock,     IfPm3EM4x70,     "Unlock EM4x70 for writing"},
+    {"auth",       CmdEM4x70Auth,       IfPm3EM4x70,     "Authenticate EM4x70"},
+    {"authbranch", CmdEM4x70AuthBranch, IfPm3EM4x70,     "Branch from known-good {k, rnd, frn} set"},
+    {"writepin",   CmdEM4x70WritePIN,   IfPm3EM4x70,     "Write PIN"},
+    {"writekey",   CmdEM4x70WriteKey,   IfPm3EM4x70,     "Write Crypt Key"},
+    {NULL, NULL, NULL, NULL}
+};
+
+static int CmdHelp(const char *Cmd) {
+    (void)Cmd; // Cmd is not used so far
+    CmdsHelp(CommandTable);
+    return PM3_SUCCESS;
+}
+
+int CmdLFEM4X70(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(CommandTable, Cmd);
+}
+
+/*
+static uint8_t CountOfTrailingZeroBits32(uint32_t v) {
+    static const uint8_t MultiplyDeBruijnBitPosition32[32] = {
+         0,  1, 28,  2,   29, 14, 24,  3,   30, 22, 20, 15,   25, 17,  4,  8, 
+        31, 27, 13, 23,   21, 19, 16,  7,   26, 12, 18,  6,   11,  5, 10,  9,
+    };
+    if (v == 0) {
+        return 32;
+    }
+    // (v & -v)    --> extracts the least significant bit
+    v &= -v;
+    // 0x077CB531  --> a de Bruijn sequence; unique top 5 bits for each one-bit multiplier
+    // >> 27       --> take only those top 5 bits from the result
+    // array index --> convert to count of trailing zeros
+    return MultiplyDeBruijnBitPosition32[((uint32_t)(v * 0x077CB531u)) >> 27];
+}
+static uint8_t CountOfTrailingOneBits32(uint32_t v) {
+    uint8_t result = 0;
+    while (v & 0x1) {
+        result++;
+        v >>= 1;
+    }
+    return result;
+}
+*/
+
 static void print_info_result(const uint8_t *data) {
 
     PrintAndLogEx(NORMAL, "");
@@ -547,25 +597,7 @@ int CmdEM4x70WriteKey(const char *Cmd) {
     return PM3_ESOFT;
 }
 
-static command_t CommandTable[] = {
-    {"help",     CmdHelp,           AlwaysAvailable, "This help"},
-    {"brute",    CmdEM4x70Brute,    IfPm3EM4x70,     "Bruteforce EM4X70 to find partial Crypt Key"},
-    {"info",     CmdEM4x70Info,     IfPm3EM4x70,     "Tag information EM4x70"},
-    {"write",    CmdEM4x70Write,    IfPm3EM4x70,     "Write EM4x70"},
-    {"unlock",   CmdEM4x70Unlock,   IfPm3EM4x70,     "Unlock EM4x70 for writing"},
-    {"auth",     CmdEM4x70Auth,     IfPm3EM4x70,     "Authenticate EM4x70"},
-    {"writepin", CmdEM4x70WritePIN, IfPm3EM4x70,     "Write PIN"},
-    {"writekey", CmdEM4x70WriteKey, IfPm3EM4x70,     "Write Crypt Key"},
-    {NULL, NULL, NULL, NULL}
-};
-
-static int CmdHelp(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
-    CmdsHelp(CommandTable);
-    return PM3_SUCCESS;
-}
-
-int CmdLFEM4X70(const char *Cmd) {
-    clearCommandBuffer();
-    return CmdsParse(CommandTable, Cmd);
+int CmdEM4x70AuthBranch(const char *Cmd) {
+    PrintAndLogEx(FAILED, "Not yet implemented: 'CmdEM4x70AuthBranch'");
+    return PM3_ENOTIMPL;
 }

@@ -29,6 +29,7 @@ int CmdEM4x70Write(const char *Cmd);
 int CmdEM4x70Brute(const char *Cmd);
 int CmdEM4x70Unlock(const char *Cmd);
 int CmdEM4x70Auth(const char *Cmd);
+int CmdEM4x70AuthBranch(const char *Cmd);
 int CmdEM4x70WritePIN(const char *Cmd);
 int CmdEM4x70WriteKey(const char *Cmd);
 
