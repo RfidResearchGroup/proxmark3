@@ -223,7 +223,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define NTAG_I2C_SELECT_SECTOR      0xC2
 #define NTAG_I2C_FASTWRITE          0xA6
 
-//NTAG 213TT (tamper) command 
+//NTAG 213TT (tamper) command
 #define NTAGTT_CMD_READ_TT          0xA4
 
 // mifare 4bit card answers
