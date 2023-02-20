@@ -579,6 +579,7 @@ const static vocabulory_t vocabulory[] = {
     { 0, "lf em 4x70 write" }, 
     { 0, "lf em 4x70 unlock" }, 
     { 0, "lf em 4x70 auth" }, 
+    { 0, "lf em 4x70 authbranch" }, 
     { 0, "lf em 4x70 writepin" }, 
     { 0, "lf em 4x70 writekey" }, 
     { 1, "lf fdxb help" }, 

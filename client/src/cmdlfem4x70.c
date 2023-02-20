@@ -29,6 +29,9 @@
 
 #define INDEX_TO_BLOCK(x) (((32-x)/2)-1)
 
+
+
+
 static int CmdHelp(const char *Cmd);
 
 static command_t CommandTable[] = {
@@ -55,10 +58,15 @@ int CmdLFEM4X70(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
+// file-local function prototypes
+static void SetInvalidPhase1Data(em4x70_authbranch_t *data);
+static void SetInvalidPhase2Data(em4x70_authbranch_t *data);
+static void SetInvalidPhase3Data(em4x70_authbranch_t *data);
+static void InitializeAuthBranchData(em4x70_authbranch_t *data, em4x70_authbranch_phase_t phase);
 /*
 static uint8_t CountOfTrailingZeroBits32(uint32_t v) {
     static const uint8_t MultiplyDeBruijnBitPosition32[32] = {
-         0,  1, 28,  2,   29, 14, 24,  3,   30, 22, 20, 15,   25, 17,  4,  8, 
+         0,  1, 28,  2,   29, 14, 24,  3,   30, 22, 20, 15,   25, 17,  4,  8,
         31, 27, 13, 23,   21, 19, 16,  7,   26, 12, 18,  6,   11,  5, 10,  9,
     };
     if (v == 0) {
@@ -597,7 +605,326 @@ int CmdEM4x70WriteKey(const char *Cmd) {
     return PM3_ESOFT;
 }
 
+
+
+
+static void SetInvalidPhase1Data(em4x70_authbranch_t *data) {
+    // set invalid values, to help find code paths where the values are
+    // used without proper initialization ... makes easier to debug.
+    Uint4byteToMemBe(&(data->phase1_input.be_rnd[0]), UINT32_C(0x1abe1edF)); // labeledF...
+    Uint3byteToMemBe(&(data->phase1_input.be_rnd[4]), UINT32_C(0x001066ed)); //      ...logged
+    Uint4byteToMemBe(&(data->phase1_input.be_key[0]), UINT32_C(0xDeadF00d)); // deadfood
+    Uint4byteToMemBe(&(data->phase1_input.be_key[4]), UINT32_C(0xCafeBabe)); // cafebabe
+    Uint4byteToMemBe(&(data->phase1_input.be_key[8]), UINT32_C(0xBaadF00d)); // baadfood
+    Uint4byteToMemBe(&(data->phase1_input.be_frn[0]), UINT32_C(0xF1055a6e)); // flossage
+    // Uint4byteToMemBe(&(data->phase1_input.be_start_frn[0]), UINT32_C(0x00000000)); // safe default
+    Uint4byteToMemBe(&(data->phase1_input.be_xormask[0]), UINT32_C(0)); // zero is the invalid value
+}
+static void SetInvalidPhase2Data(em4x70_authbranch_t *data) {
+    // set invalid values, to help find code paths where the values are
+    // used without proper initialization ... makes easier to debug.
+    Uint4byteToMemBe(&(data->phase2_input.be_xormask[0]),          UINT32_C(0x00000000)); // the only invalid value
+    Uint4byteToMemBe(&(data->phase2_output.be_key[0]),             UINT32_C(0xF1a7f007)); // flatfoot
+    Uint4byteToMemBe(&(data->phase2_output.be_key[4]),             UINT32_C(0xCafeBabe)); // cafebabe
+    Uint4byteToMemBe(&(data->phase2_output.be_key[8]),             UINT32_C(0x1eaf1e75)); // leaflets
+    Uint4byteToMemBe(&(data->phase2_output.be_start_frn[0]),       UINT32_C(0xBa5eba11)); // baseball
+    Uint4byteToMemBe(&(data->phase2_output.be_max_iterations[0]),  UINT32_C(0xdecea5ed)); // deceased
+}
+static void SetInvalidPhase3Data(em4x70_authbranch_t *data) {
+    // set invalid values, to help find code paths where the values are
+    // used without proper initialization ... makes easier to debug.
+    Uint4byteToMemBe(&(data->phase3_input.be_max_iterations[0]),   UINT32_C(0xFEEDBEEF)); // feedbeef
+    Uint4byteToMemBe(&(data->phase3_input.be_starting_frn[0]),     UINT32_C(0xFee1Baad)); // feelbaad
+    Uint4byteToMemBe(&(data->phase3_output.be_next_start_frn[0]),  UINT32_C(0xF100Fee5)); // FlooFees
+    Uint4byteToMemBe(&(data->phase3_output.be_successful_frn[0]),  UINT32_C(0xc011a7ed)); // collated
+    Uint3byteToMemBe(&(data->phase3_output.be_successful_ac[0]),   UINT32_C(0x00000000)); // all-zero is unlikely to be valid
+}
+
+// At phase 1, invalidates all fields except phase
+// At phase 2, invalidates phase2_input onwards
+// At phase 3, invalidates phase3_input onwards
+// Finally, automatically sets ->phase to reflect the new phase for this structure
+static void InitializeAuthBranchData(em4x70_authbranch_t *data, em4x70_authbranch_phase_t phase) {
+
+    // ensure these are constants by using in enum
+    enum {
+        OFFSET_PHASE1 = offsetof(em4x70_authbranch_t, phase1_input),
+        OFFSET_PHASE2 = offsetof(em4x70_authbranch_t, phase2_input),
+        OFFSET_PHASE3 = offsetof(em4x70_authbranch_t, phase3_input),
+    };
+    enum {
+        REMAINING_BYTE_COUNT_PHASE1 = sizeof(em4x70_authbranch_t) - OFFSET_PHASE1,
+        REMAINING_BYTE_COUNT_PHASE2 = sizeof(em4x70_authbranch_t) - OFFSET_PHASE2,
+        REMAINING_BYTE_COUNT_PHASE3 = sizeof(em4x70_authbranch_t) - OFFSET_PHASE3,
+    };
+    em4x70_authbranch_phase_t priorPhase = MemBeToUint4byte(&(data->be_phase[0]));
+
+    if (phase == EM4X70_AUTHBRANCH_PHASE1_VERIFY_STARTING_VALUES) {
+        memset(&(data->phase1_input), 0, REMAINING_BYTE_COUNT_PHASE1);
+        SetInvalidPhase1Data(data);
+        SetInvalidPhase2Data(data);
+        SetInvalidPhase3Data(data);
+        data->phase1_input.useParity = 0x00;
+    } else if (phase == EM4X70_AUTHBRANCH_PHASE2_WRITE_BRANCHED_KEY) {
+        // prior phase must be either Phase1 or Phase3
+        if ((priorPhase != EM4X70_AUTHBRANCH_PHASE1_VERIFY_STARTING_VALUES) &&
+                (priorPhase != EM4X70_AUTHBRANCH_PHASE3_BRUTE_FORCE)) {
+            PrintAndLogEx(FAILED, "InitializeAuthBranchData() called for phase 2, but prior phase was %08" PRIX32, priorPhase);
+        }
+        // reset phase 2 and phase 3 -- zero then set invalid data
+        memset(&(data->phase2_input), 0, REMAINING_BYTE_COUNT_PHASE2);
+        SetInvalidPhase2Data(data);
+        SetInvalidPhase3Data(data);
+    } else if (phase == EM4X70_AUTHBRANCH_PHASE3_BRUTE_FORCE) {
+        // reset phase 3 -- zero then set invalid data
+        memset(&(data->phase3_input), 0, REMAINING_BYTE_COUNT_PHASE3);
+        SetInvalidPhase3Data(data);
+    }
+    // ensure the phase is updated
+    Uint4byteToMemBe(&(data->be_phase[0]), phase);
+}
+
+static bool Parse_CmdEM4x70AuthBranch(const char *Cmd, em4x70_authbranch_t *data) {
+    bool failedArgsParsing = false;
+    InitializeAuthBranchData(data, EM4X70_AUTHBRANCH_PHASE1_VERIFY_STARTING_VALUES);
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x70 auth_branch",
+                  "Given a valid key, rnd, and frn, this function finds\n"
+                  "other valid { key, rnd, frn } values.\n"
+                  "This function OVERWRITES any existing key on the tag.\n"
+                  "Before starting, the tag MUST be unlocked.\n"
+                  "After running, the private key is left in an INDETERMINATE state.\n"
+                  "It is the responsiblity of the user to restore any desired private key.\n",
+                  "Example to diverge the key by 13 bits from sample key/fnd/frnd\n"
+                  "lf em 4x70 auth_branch -k F32AA98CF5BE4ADFA6D3480B --rnd 45F54ADA252AAC --frn 4866BB70 -d 13\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_litn(NULL, "par",                 0, 1, "Add parity bit when sending commands"),                                 // 1
+        arg_str1(NULL, "rnd",        "<hex>",       "Random 56-bit"),                                                        // 2
+        arg_str1("k",  "key",        "<hex>",       "Crypt Key as 24 hex characters"),                                       // 3
+        arg_str1(NULL, "frn",        "<hex>",       "F(RN) 28-bit as 8 hex characters (last character is padding of zero)"), // 4
+        arg_intn("d",  "divergence", "<dec>", 0, 1, "Set key divergence to specified count of bits (5..31)"),                // 5
+        arg_strn("x",  "xormask",    "<hex>", 0, 1, "Set 32-bit hex mask to apply as divergence XOR value"),                 // 6
+        arg_strn("s",  "start",      "<hex>", 0, 1, "Start bruteforce from this hex frn value (with padding zero)"),         // 7
+        arg_param_end
+    };
+
+    if (CLIParserParseString(ctx, Cmd, argtable, arg_getsize(argtable), true)) {
+        failedArgsParsing = true;
+        // exit early to avoid more error messages
+        CLIParserFree(ctx);
+        return false;
+    }
+
+    data->phase1_input.useParity = arg_get_lit(ctx, 1);
+
+    int rnd_len = 7;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 2), &(data->phase1_input.be_rnd[0]), 7, &rnd_len)) {
+        // mandatory parameter, so mark as failure
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "rnd parameter is a mandatory hex string");
+    } else if (rnd_len != 7) {
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "rnd parameter must be 7 bytes (got %d)", rnd_len);
+    }
+
+    int key_len = 12;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 3), &(data->phase1_input.be_key[0]), 12, &key_len)) {
+        // mandatory parameter, so mark as failure
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "key parameter is a mandatory hex string");
+    } else if (key_len != 12) {
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "key parameter must be 12 bytes (got %d)", key_len);
+    }
+
+    int frn_len = 4;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 4), &(data->phase1_input.be_frn[0]), 4, &frn_len)) {
+        // mandatory parameter, so mark as failure
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "frn parameter is a mandatory hex string");
+    } else if (frn_len != 4) {
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "frn parameter must be 4 bytes (got %d)", frn_len);
+    }
+
+    uint32_t native_xormask = 0x00010000;
+    // divergence is option with default value (16)
+    int divergence = arg_get_int_def(ctx, 5, 16);
+    if ((divergence > EM4X70_MAXIMUM_KEY_DIVERGENCE_BITS) || (divergence < EM4X70_MINIMUM_KEY_DIVERGENCE_BITS)) {
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED,
+                      "divergence parameter must be in range [%" PRId32 " .. %" PRId32 "], got %d",
+                      EM4X70_MINIMUM_KEY_DIVERGENCE_BITS, EM4X70_MAXIMUM_KEY_DIVERGENCE_BITS, divergence);
+    } else {
+        native_xormask = UINT32_C(1) << divergence;
+    }
+
+    // xor mask, if provided, overrides divergence
+    int xormask_len = 4;
+    // xormask is optional ... use divergence (which has default value) if this isn't provided
+    // since it's a string argument type, length == 0 means caller did not provide the value
+    if (CLIParamHexToBuf(arg_get_str(ctx, 6), &(data->phase1_input.be_xormask[0]), 4, &xormask_len)) {
+        // optional parameter was not provided, so overwrite with divergence-based xormask
+        Uint4byteToMemBe(&(data->phase1_input.be_xormask[0]), native_xormask);
+    } else if (xormask_len == 0) {
+        // optional parameter was not provided, so overwrite with divergence-based xormask
+        Uint4byteToMemBe(&(data->phase1_input.be_start_frn[0]), UINT32_C(0));
+    } else if (xormask_len != 4) {
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "xormask must be 4 bytes (got %d)", xormask_len);
+    }
+
+    int start_frnd_len = 4;
+    // start_frn is an entirely optional parameter
+    // since it's a string argument type, length == 0 means caller did not provide the value
+    if (CLIParamHexToBuf(arg_get_str(ctx, 7), &(data->phase1_input.be_start_frn[0]), 4, &start_frnd_len)) {
+        // optional parameter, so use default of no special offset by setting to invalid value
+        // (and on off chance it's actually a valid starting value, it acts identically to no starting value)
+        Uint4byteToMemBe(&(data->phase1_input.be_start_frn[0]), UINT32_C(0));
+    } else if (start_frnd_len == 0) {
+        // optional parameter, so use default of no special offset by setting to invalid value
+        Uint4byteToMemBe(&(data->phase1_input.be_start_frn[0]), UINT32_C(0));
+    } else if (start_frnd_len != 4) {
+        failedArgsParsing = true;
+        PrintAndLogEx(FAILED, "start_frnd_len must be 4 bytes (got %d)", start_frnd_len);
+    }
+
+    // always need to free the ctx
+    CLIParserFree(ctx);
+
+    return failedArgsParsing ? false : true;
+}
+
 int CmdEM4x70AuthBranch(const char *Cmd) {
-    PrintAndLogEx(FAILED, "Not yet implemented: 'CmdEM4x70AuthBranch'");
+
+    enum {
+        MAX_TIMEOUT_CYCLES_PHASE1 =   8,    //   16  seconds: phase 1 writes the original key, and does an initial authentication
+        MAX_TIMEOUT_CYCLES_PHASE2 =   6,    //   12  seconds: phase 2 writes the branched key
+        MAX_TIMEOUT_CYCLES_PHASE3 = 120,    //  240  seconds: depends on next value ... how many frnd to attempt at one go?
+        FRN_ITERATIONS_PER_UPDATE = 0x400,  // 1024 attempts: affects selection of timeout for phase3
+    };
+
+    // Kudos to paper "Dismantling Megamos Crypto", Roel Verdult, Flavio D. Garcia and Barıs¸ Ege.
+    // Given a working { private key, rnd, frnd }, this function branches out
+    em4x70_authbranch_t abd = {0};
+    InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE1_VERIFY_STARTING_VALUES);
+
+    // if arguments parse successfully, we have everything needed, and phase1 is ready to launch
+    if (!Parse_CmdEM4x70AuthBranch(Cmd, &abd)) {
+        return PM3_EINVARG;
+    }
+    
+    PrintAndLogEx(FAILED, "Arguments successfully parsed, but not yet implemented: 'CmdEM4x70AuthBranch'");
+    //dump_authbranch_data();
     return PM3_ENOTIMPL;
+
+    clearCommandBuffer();
+
+    int status = PM3_SUCCESS;
+    bool sendAdditionalCommand = true;
+    int32_t remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE1;
+
+    for (uint32_t i = 0; true; ++i) { // only exit is via failure
+
+        // each loop, must send a command to the device...
+        if (sendAdditionalCommand) {
+            SendCommandNG(CMD_LF_EM4X70_AUTHBRANCH, (uint8_t *)&abd, sizeof(em4x70_authbranch_t));
+            sendAdditionalCommand = false;
+        }
+
+        // use might abort at any time...
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(WARNING, _BRIGHT_RED_("User aborted"));
+            break;
+        }
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeoutW(CMD_LF_EM4X70_AUTHBRANCH, &resp, TIMEOUT, false)) {
+            // Proxmark device sent a response ... parse the packet to learn phase, success vs. failure, etc.
+            // PrintAndLogEx(INFO, "WaitForResponseTimeout succeeded with cmd %" PRId16 ", status %" PRId16, resp.cmd, resp.status);
+            const em4x70_authbranch_t *results = (const em4x70_authbranch_t *)(&(resp.data.asBytes[0]));
+            em4x70_authbranch_phase_t phase = MemBeToUint4byte(&(abd.be_phase[0]));
+            if (phase == EM4X70_AUTHBRANCH_PHASE1_VERIFY_STARTING_VALUES) {
+                if (resp.status == PM3_SUCCESS) {
+                    // successfully completed phase1 ... move to phase2
+                    InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE2_WRITE_BRANCHED_KEY);
+                    uint32_t xormask = MemBeToUint4byte(&(abd.phase1_input.be_xormask[0]));
+                    Uint4byteToMemBe(&(abd.phase2_input.be_xormask[0]), xormask);
+                    remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE2;
+                    sendAdditionalCommand = true;
+                    // continue loop
+                } else {
+                    status = resp.status;
+                    break; // out of infinite loop
+                }
+            } else if (phase == EM4X70_AUTHBRANCH_PHASE2_WRITE_BRANCHED_KEY) {
+                if (resp.status == PM3_SUCCESS) {
+                    // successfully completed phase2 ... move to phase3
+                    InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE3_BRUTE_FORCE);
+                    Uint4byteToMemBe(&(abd.phase3_input.be_max_iterations[0]), FRN_ITERATIONS_PER_UPDATE); // how many frnd to try before return success/failure?
+                    uint32_t start_frn = MemBeToUint4byte(&(abd.phase1_input.be_start_frn[0]));
+                    Uint4byteToMemBe(&(abd.phase3_input.be_starting_frn[0]), start_frn);
+                    remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE3;
+                    sendAdditionalCommand = true;
+                    // continue loop
+                } else {
+                    status = resp.status;
+                    break; // out of infinite loop
+                }
+            } else if (phase == EM4X70_AUTHBRANCH_PHASE3_BRUTE_FORCE) {
+                if (resp.status != PM3_SUCCESS) {
+                    // this is expected nearly all the time.
+                    // simply move to the next group of frn values,
+                    // as indicated by the return value provided.
+                    // found a working frn value!
+                    InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE3_BRUTE_FORCE);
+                    Uint4byteToMemBe(&(abd.phase3_input.be_max_iterations[0]), FRN_ITERATIONS_PER_UPDATE); // how many frnd to try before return success/failure?
+                    uint32_t next_frn = MemBeToUint4byte(results->phase3_output.be_next_start_frn);
+                    Uint4byteToMemBe(&(abd.phase3_input.be_starting_frn[0]), next_frn);
+                    remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE3;
+                    sendAdditionalCommand = true;
+                } else {
+                    PrintAndLogEx(SUCCESS,
+                                  "{ "
+                                  "\"N\": \"%02X%02X%02X%02X%02X%02X%02X\", "
+                                  "\"K\": \"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X\", "
+                                  "\"Ac\": \"%02X%02X%02X%02X\", "
+                                  "\"At\": \"%02X%02X%02X\" },",
+                                  abd.phase1_input.be_rnd[0], abd.phase1_input.be_rnd[1], abd.phase1_input.be_rnd[2],
+                                  abd.phase1_input.be_rnd[3], abd.phase1_input.be_rnd[4], abd.phase1_input.be_rnd[5], abd.phase1_input.be_rnd[6],
+                                  abd.phase2_output.be_key[ 0], abd.phase2_output.be_key[ 1], abd.phase2_output.be_key[ 2],
+                                  abd.phase2_output.be_key[ 3], abd.phase2_output.be_key[ 4], abd.phase2_output.be_key[ 5],
+                                  abd.phase2_output.be_key[ 6], abd.phase2_output.be_key[ 7], abd.phase2_output.be_key[ 8],
+                                  abd.phase2_output.be_key[ 9], abd.phase2_output.be_key[10], abd.phase2_output.be_key[11],
+                                  abd.phase3_output.be_successful_frn[0], abd.phase3_output.be_successful_frn[1],
+                                  abd.phase3_output.be_successful_frn[2], abd.phase3_output.be_successful_frn[3],
+                                  abd.phase3_output.be_successful_ac[0], abd.phase3_output.be_successful_ac[1], abd.phase3_output.be_successful_ac[2]
+                                 );
+                    // TODO: also get the 32x variations
+                    // return TrivialVariations_CmdEM4x70AuthBranch(etx);
+                    return PM3_SUCCESS;
+                }
+            } else {
+                status = resp.status;
+                PrintAndLogEx(ERR, "Unknown phase: %" PRId32 " (%08" PRIX32 ") for status %d at file %s, line %d", phase, phase, status, __FILE__, __LINE__);
+                break; // out of infinite loop
+            }
+        } else {
+            --remainingTimeoutsThisPhase;
+            if (remainingTimeoutsThisPhase <= 0) {
+                status = PM3_EOPABORTED;
+                PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+                break; // out of infinite loop
+            }
+        }
+    }
+
+    PrintAndLogEx(FAILED, "Branching from existing { K, rnd, frnd } " _BRIGHT_RED_("failed"));
+    //dump_etd(NORMAL, &etd);
+    return PM3_ESOFT;
 }

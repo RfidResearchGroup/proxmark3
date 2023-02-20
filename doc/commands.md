@@ -926,6 +926,7 @@ Check column "offline" for their availability.
 |`lf em 4x70 write       `|N       |`Write EM4x70`
 |`lf em 4x70 unlock      `|N       |`Unlock EM4x70 for writing`
 |`lf em 4x70 auth        `|N       |`Authenticate EM4x70`
+|`lf em 4x70 authbranch  `|N       |`Branch from known-good {k, rnd, frn} set`
 |`lf em 4x70 writepin    `|N       |`Write PIN`
 |`lf em 4x70 writekey    `|N       |`Write Crypt Key`
 

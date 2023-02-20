@@ -1243,7 +1243,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_EM4X70_AUTHBRANCH: {
-            em4x70_authbranch((em4x70_data_t *)packet->data.asBytes, true);
+            em4x70_authbranch((em4x70_authbranch_t *)packet->data.asBytes, true);
             break;
         }
 #endif

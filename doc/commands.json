@@ -8309,6 +8309,26 @@
             ],
             "usage": "lf em 4x70 auth [-h] [--par] --rnd <hex> --frn <hex>"
         },
+        "lf em 4x70 authbranch": {
+            "command": "lf em 4x70 authbranch",
+            "description": "Given a valid key, rnd, and frn, this function finds other valid { key, rnd, frn } values. This function OVERWRITES any existing key on the tag. Before starting, the tag MUST be unlocked. After running, the private key is left in an INDETERMINATE state. It is the responsiblity of the user to restore any desired private key.",
+            "notes": [
+                "Example to diverge the key by 13 bits from sample key/fnd/frnd",
+                "lf em 4x70 auth_branch -k F32AA98CF5BE4ADFA6D3480B --rnd 45F54ADA252AAC --frn 4866BB70 -d 13"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--par Add parity bit when sending commands",
+                "--rnd <hex> Random 56-bit",
+                "-k, --key <hex> Crypt Key as 24 hex characters",
+                "--frn <hex> F(RN) 28-bit as 8 hex characters (last character is padding of zero)",
+                "-d, --divergence <dec> Set key divergence to specified count of bits (5..31)",
+                "-x, --xormask <hex> Set 32-bit hex mask to apply as divergence XOR value",
+                "-s, --start <hex> Start bruteforce from this hex frn value (with padding zero)"
+            ],
+            "usage": "lf em 4x70 auth_branch [-h] [--par] --rnd <hex> -k <hex> --frn <hex> [-d <dec>] [-x <hex>] [-s <hex>]"
+        },
         "lf em 4x70 brute": {
             "command": "lf em 4x70 brute",
             "description": "Optimized partial key-update attack of 16-bit key block 7, 8 or 9 of an EM4x70 This attack does NOT write anything to the tag. Before starting this attack, 0000 must be written to the 16-bit key block: 'lf em 4x70 write -b 9 -d 0000'. After success, the 16-bit key block have to be restored with the key found: 'lf em 4x70 write -b 9 -d c0de'",
