@@ -922,8 +922,7 @@ void em4x70_write_key(em4x70_data_t *etd, bool ledcontrol) {
 //          Flash has hard-coded (assumed) size of 512k.
 //          However, actual chips may be larger.
 //
-void em4x70_authbranch(em4x70_authbranch_t *etd, bool ledcontrol) {
-
+void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
     int status_code = PM3_ENOTIMPL;
     reply_ng(CMD_LF_EM4X70_AUTHBRANCH, status_code, NULL, 0);
 }

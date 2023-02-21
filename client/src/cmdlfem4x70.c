@@ -606,7 +606,7 @@ int CmdEM4x70WriteKey(const char *Cmd) {
 
 // Longest returned string: "1 (req)  Verify Starting Values" == 31 chars
 //                           ....-....1....-....2....-....3....-
-static const char* sprint_authbranch_phase(em4x70_authbranch_phase_t phase) {
+static const char *sprint_authbranch_phase(em4x70_authbranch_phase_t phase) {
     switch (phase) {
         case EM4X70_AUTHBRANCH_PHASE0_UNINITIALIZED:
             return "0 (uninitialized)";
@@ -626,142 +626,142 @@ static const char* sprint_authbranch_phase(em4x70_authbranch_phase_t phase) {
     // default
     static char buf[20]; // "Invalid: " is 9 chars, + 8 for hex digits + null + 1 extra
     memset(buf, 0, sizeof(buf));
-    snprintf(buf, sizeof(buf)-1, "Invalid: %08" PRIX32, phase);
+    snprintf(buf, sizeof(buf) - 1, "Invalid: %08" PRIX32, phase);
     return (const char *)buf;
 }
 
 // wishing for C++ templates....
-static char* sprint_abd_phase1_input_useParity(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase1_input_useParity(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT     = sizeof(data->phase1_input.useParity) };
     const uint8_t *p = (const uint8_t *)(&data->phase1_input.useParity);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase1_input_be_rnd(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase1_input_be_rnd(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase1_input.be_rnd) };
     const uint8_t *p = (const   uint8_t *)(&data->phase1_input.be_rnd);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase1_input_be_key(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase1_input_be_key(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase1_input.be_key) };
     const uint8_t *p = (const   uint8_t *)(&data->phase1_input.be_key);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase1_input_be_frn(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase1_input_be_frn(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase1_input.be_frn) };
     const uint8_t *p = (const   uint8_t *)(&data->phase1_input.be_frn);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase1_input_be_start_frn(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase1_input_be_start_frn(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase1_input.be_start_frn) };
     const uint8_t *p = (const   uint8_t *)(&data->phase1_input.be_start_frn);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase1_input_be_xormask(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase1_input_be_xormask(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase1_input.be_xormask) };
     const uint8_t *p = (const   uint8_t *)(&data->phase1_input.be_xormask);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase2_input_be_xormask(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase2_input_be_xormask(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase2_input.be_xormask) };
     const uint8_t *p = (const   uint8_t *)(&data->phase2_input.be_xormask);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase2_output_be_key(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase2_output_be_key(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase2_output.be_key) };
     const uint8_t *p = (const   uint8_t *)(&data->phase2_output.be_key);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase2_output_be_start_frn(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase2_output_be_start_frn(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase2_output.be_start_frn) };
     const uint8_t *p = (const   uint8_t *)(&data->phase2_output.be_start_frn);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase2_output_be_max_iterations(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase2_output_be_max_iterations(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase2_output.be_max_iterations) };
     const uint8_t *p = (const   uint8_t *)(&data->phase2_output.be_max_iterations);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase3_input_be_starting_frn(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase3_input_be_starting_frn(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase3_input.be_starting_frn) };
     const uint8_t *p = (const   uint8_t *)(&data->phase3_input.be_starting_frn);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase3_input_be_max_iterations(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase3_input_be_max_iterations(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase3_input.be_max_iterations) };
     const uint8_t *p = (const   uint8_t *)(&data->phase3_input.be_max_iterations);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase3_output_be_next_start_frn(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase3_output_be_next_start_frn(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase3_output.be_next_start_frn) };
     const uint8_t *p = (const   uint8_t *)(&data->phase3_output.be_next_start_frn);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase3_output_be_successful_frn(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase3_output_be_successful_frn(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase3_output.be_successful_frn) };
     const uint8_t *p = (const   uint8_t *)(&data->phase3_output.be_successful_frn);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
-static char* sprint_abd_phase3_output_be_successful_ac(const em4x70_authbranch_t *data) {
+static char *sprint_abd_phase3_output_be_successful_ac(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase3_output.be_successful_ac) };
     const uint8_t *p = (const   uint8_t *)(&data->phase3_output.be_successful_ac);
-    
-    static uint8_t buf[(2*LOCAL_BYTE_COUNT)+1] = {0};
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
     memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
@@ -804,6 +804,7 @@ static void DumpAuthBranchPhase3Inputs(logLevel_t level, const em4x70_authbranch
 static void DumpAuthBranchPhase3Outputs(logLevel_t level, const em4x70_authbranch_t *data) {
     PrintAndLogEx(level, "| Phase 3 Outputs  |                            |");
     PrintAndLogEx(level, "+------------------+----------------------------+");
+    PrintAndLogEx(level, "| %15s  |  %24s  |", "found Ac",       data->phase3_output.found_working_value ? "true" : "false");
     PrintAndLogEx(level, "| %15s  |  %24s  |", "next_start_frn", sprint_abd_phase3_output_be_next_start_frn(data));
     PrintAndLogEx(level, "| %15s  |  %24s  |", "successful_frn", sprint_abd_phase3_output_be_successful_frn(data));
     PrintAndLogEx(level, "| %15s  |  %24s  |", "successful_ac",  sprint_abd_phase3_output_be_successful_ac(data));
@@ -815,40 +816,45 @@ static void dump_authbranch_data(logLevel_t level, const em4x70_authbranch_t *da
     em4x70_authbranch_phase_t phase = MemBeToUint4byte(&(data->be_phase[0]));
     PrintAndLogEx(level, "| Phase: %-37s  |", sprint_authbranch_phase(phase));
     PrintAndLogEx(level, "+==================+============================+");
-    if ((phase == EM4X70_AUTHBRANCH_PHASE1_REQUESTED_VERIFY_STARTING_VALUES) ||
+    if (
+        (phase == EM4X70_AUTHBRANCH_PHASE1_REQUESTED_VERIFY_STARTING_VALUES) ||
         (phase == EM4X70_AUTHBRANCH_PHASE1_COMPLETED_VERIFY_STARTING_VALUES) ||
-        (phase == EM4X70_AUTHBRANCH_PHASE2_REQUESTED_WRITE_BRANCHED_KEY    ) ||
-        (phase == EM4X70_AUTHBRANCH_PHASE2_COMPLETED_WRITE_BRANCHED_KEY    ) ||
-        (phase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE           ) ||
-        (phase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE           ) ||
+        (phase == EM4X70_AUTHBRANCH_PHASE2_REQUESTED_WRITE_BRANCHED_KEY) ||
+        (phase == EM4X70_AUTHBRANCH_PHASE2_COMPLETED_WRITE_BRANCHED_KEY) ||
+        (phase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE) ||
+        (phase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE) ||
         dumpAll
-        ) {
+    ) {
         DumpAuthBranchPhase1Inputs(level, data);
     }
-    if ((phase == EM4X70_AUTHBRANCH_PHASE2_REQUESTED_WRITE_BRANCHED_KEY    ) ||
-        (phase == EM4X70_AUTHBRANCH_PHASE2_COMPLETED_WRITE_BRANCHED_KEY    ) ||
-        (phase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE           ) ||
-        (phase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE           ) ||
+    if (
+        (phase == EM4X70_AUTHBRANCH_PHASE2_REQUESTED_WRITE_BRANCHED_KEY) ||
+        (phase == EM4X70_AUTHBRANCH_PHASE2_COMPLETED_WRITE_BRANCHED_KEY) ||
+        (phase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE) ||
+        (phase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE) ||
         dumpAll
-        ) {
+    ) {
         DumpAuthBranchPhase2Inputs(level, data);
     }
-    if ((phase == EM4X70_AUTHBRANCH_PHASE2_COMPLETED_WRITE_BRANCHED_KEY    ) ||
-        (phase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE           ) ||
-        (phase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE           ) ||
+    if (
+        (phase == EM4X70_AUTHBRANCH_PHASE2_COMPLETED_WRITE_BRANCHED_KEY) ||
+        (phase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE) ||
+        (phase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE) ||
         dumpAll
-        ) {
+    ) {
         DumpAuthBranchPhase2Outputs(level, data);
     }
-    if ((phase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE           ) ||
-        (phase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE           ) ||
+    if (
+        (phase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE) ||
+        (phase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE) ||
         dumpAll
-        ) {
+    ) {
         DumpAuthBranchPhase3Inputs(level, data);
     }
-    if ((phase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE           ) ||
+    if (
+        (phase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE) ||
         dumpAll
-        ) {
+    ) {
         DumpAuthBranchPhase3Outputs(level, data);
     }
 }
@@ -912,7 +918,8 @@ static void InitializeAuthBranchData(em4x70_authbranch_t *data, em4x70_authbranc
     } else if (phase == EM4X70_AUTHBRANCH_PHASE2_REQUESTED_WRITE_BRANCHED_KEY) {
         // prior phase must be either Phase1 or Phase3
         em4x70_authbranch_phase_t priorPhase = MemBeToUint4byte(&(data->be_phase[0]));
-        if ((priorPhase != EM4X70_AUTHBRANCH_PHASE1_REQUESTED_VERIFY_STARTING_VALUES) &&
+        if (
+            (priorPhase != EM4X70_AUTHBRANCH_PHASE1_REQUESTED_VERIFY_STARTING_VALUES) &&
             (priorPhase != EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE)) {
             PrintAndLogEx(FAILED, "InitializeAuthBranchData() called for phase 2, but prior phase was %08" PRIX32, priorPhase);
         }
@@ -1101,20 +1108,18 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
         return PM3_EINVARG;
     }
     dump_authbranch_data(NORMAL, &abd, false);
-    PrintAndLogEx(FAILED, "Arguments successfully parsed, but not yet implemented: 'CmdEM4x70AuthBranch'");
-    return PM3_ENOTIMPL;
-
-    clearCommandBuffer();
 
     int status = PM3_SUCCESS;
     bool sendAdditionalCommand = true;
     int32_t remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE1;
 
     for (uint32_t i = 0; true; ++i) { // only exit is via failure
+
         em4x70_authbranch_phase_t requestPhase = MemBeToUint4byte(&(abd.be_phase[0]));
 
         // each loop, must send a command to the device...
         if (sendAdditionalCommand) {
+            clearCommandBuffer();
             SendCommandNG(CMD_LF_EM4X70_AUTHBRANCH, (uint8_t *)&abd, sizeof(em4x70_authbranch_t));
             sendAdditionalCommand = false;
         }
@@ -1136,62 +1141,56 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
             // PrintAndLogEx(INFO, "WaitForResponseTimeout succeeded with cmd %" PRId16 ", status %" PRId16, resp.cmd, resp.status);
 
             const em4x70_authbranch_t *results = (const em4x70_authbranch_t *)(&(resp.data.asBytes[0]));
-            em4x70_authbranch_phase_t responsePhase = MemBeToUint4byte(&(abd.be_phase[0]));
-            if (responsePhase == EM4X70_AUTHBRANCH_PHASE1_COMPLETED_VERIFY_STARTING_VALUES) {
-                if (requestPhase != EM4X70_AUTHBRANCH_PHASE1_REQUESTED_VERIFY_STARTING_VALUES) {
-                    PrintAndLogEx(ERR, "Phase mismatch: Requested %08" PRIX32 ", Response %08" PRIX32, requestPhase, responsePhase);
-                    status = PM3_ESOFT;
-                } else if (resp.status == PM3_SUCCESS) {
-                    // successfully completed phase1 ... move to phase2
-                    InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE2_REQUESTED_WRITE_BRANCHED_KEY);
-                    uint32_t xormask = MemBeToUint4byte(&(abd.phase1_input.be_xormask[0]));
-                    Uint4byteToMemBe(&(abd.phase2_input.be_xormask[0]), xormask);
-                    remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE2;
-                    sendAdditionalCommand = true;
-                    // continue loop
-                } else {
+            em4x70_authbranch_phase_t responsePhase = MemBeToUint4byte(&(results->be_phase[0]));
+            if (requestPhase == EM4X70_AUTHBRANCH_PHASE1_REQUESTED_VERIFY_STARTING_VALUES) {
+                if (resp.status != PM3_SUCCESS) {
+                    PrintAndLogEx(ERR, "Non-successful response status %04" PRId16 " for request phase %08" PRId32, resp.status, requestPhase);
                     status = resp.status;
                     break; // out of infinite loop
-                }
-            } else if (responsePhase == EM4X70_AUTHBRANCH_PHASE2_COMPLETED_WRITE_BRANCHED_KEY) {
-                if (requestPhase != EM4X70_AUTHBRANCH_PHASE2_REQUESTED_WRITE_BRANCHED_KEY) {
+                } else if (responsePhase != EM4X70_AUTHBRANCH_PHASE1_COMPLETED_VERIFY_STARTING_VALUES) {
                     PrintAndLogEx(ERR, "Phase mismatch: Requested %08" PRIX32 ", Response %08" PRIX32, requestPhase, responsePhase);
                     status = PM3_ESOFT;
-                } else if (resp.status == PM3_SUCCESS) {
-                    // successfully completed phase2 ... move to phase3
-                    InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE);
-                    Uint4byteToMemBe(&(abd.phase3_input.be_max_iterations[0]), FRN_ITERATIONS_PER_UPDATE); // how many frnd to try before return success/failure?
-                    uint32_t start_frn = MemBeToUint4byte(&(abd.phase1_input.be_start_frn[0]));
-                    Uint4byteToMemBe(&(abd.phase3_input.be_starting_frn[0]), start_frn);
-                    remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE3;
-                    sendAdditionalCommand = true;
-                    // continue loop
-                } else {
-                    status = resp.status;
                     break; // out of infinite loop
                 }
-            } else if (responsePhase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE) {
-                if (requestPhase != EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE) {
+                // prepare to send phase 2 request
+                InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE2_REQUESTED_WRITE_BRANCHED_KEY);
+                uint32_t xormask = MemBeToUint4byte(&(abd.phase1_input.be_xormask[0]));
+                Uint4byteToMemBe(&(abd.phase2_input.be_xormask[0]), xormask);
+                remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE2;
+                sendAdditionalCommand = true;
+                // continue loop
+            } else if (requestPhase == EM4X70_AUTHBRANCH_PHASE2_REQUESTED_WRITE_BRANCHED_KEY) {
+                if (resp.status != PM3_SUCCESS) {
+                    PrintAndLogEx(ERR, "Non-successful response status %04" PRId16 " for request phase %08" PRId32, resp.status, requestPhase);
+                    status = resp.status;
+                    break; // out of infinite loop
+                } else if (responsePhase != EM4X70_AUTHBRANCH_PHASE2_COMPLETED_WRITE_BRANCHED_KEY) {
                     PrintAndLogEx(ERR, "Phase mismatch: Requested %08" PRIX32 ", Response %08" PRIX32, requestPhase, responsePhase);
                     status = PM3_ESOFT;
-                } else if (resp.status != PM3_SUCCESS) {
-                    // trust the response that the device provided regarding what the next frn to start at should be
-                    uint32_t next_frn = MemBeToUint4byte(results->phase3_output.be_next_start_frn);
-                    // but verify it's the expected value
-                    uint32_t prior_start_frn = MemBeToUint4byte(&(abd.phase3_input.be_starting_frn[0]));
-                    uint32_t expected_frn   = prior_start_frn + FRN_ITERATIONS_PER_UPDATE;
-                    if (expected_frn != next_frn) {
-                        PrintAndLogEx(ERR, "Unexpected next FRN from device, expected %08" PRIX32 ", got %08" PRIX32, expected_frn, next_frn);
-                    }
-                    InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE);
-                    Uint4byteToMemBe(&(abd.phase3_input.be_max_iterations[0]), FRN_ITERATIONS_PER_UPDATE); // how many frnd to try before return success/failure?
+                    break; // out of infinite loop
+                }
+                // prepare to send first phase 3 request
+                InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE);
+                uint32_t max_iterations = MemBeToUint4byte(results->phase2_output.be_max_iterations);
+                uint32_t next_iterations = (max_iterations < FRN_ITERATIONS_PER_UPDATE) ? max_iterations : FRN_ITERATIONS_PER_UPDATE;
+                Uint4byteToMemBe(&(abd.phase3_input.be_max_iterations[0]), next_iterations);
+                uint32_t start_frn = MemBeToUint4byte(&(abd.phase1_input.be_start_frn[0]));
+                Uint4byteToMemBe(&(abd.phase3_input.be_starting_frn[0]), start_frn);
+                remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE3;
+                sendAdditionalCommand = true;
+                // continue loop
+            } else if (requestPhase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE) {
+                if ((resp.status != PM3_SUCCESS) && (resp.status != PM3_EPARTIAL)) {
+                    PrintAndLogEx(ERR, "Non-successful response status %04" PRId16 " for request phase %08" PRId32, resp.status, requestPhase);
+                    status = resp.status;
+                    break; // out of infinite loop
+                } else if (responsePhase != EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE) {
+                    PrintAndLogEx(ERR, "Phase mismatch: Requested %08" PRIX32 ", Response %08" PRIX32, requestPhase, responsePhase);
+                    status = PM3_ESOFT;
+                    break; // out of infinite loop
+                }
 
-                    if (next_frn )
-
-                    Uint4byteToMemBe(&(abd.phase3_input.be_starting_frn[0]), next_frn);
-                    remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE3;
-                    sendAdditionalCommand = true;
-                } else {
+                if (results->phase3_output.found_working_value) {
                     PrintAndLogEx(SUCCESS,
                                   "{ "
                                   "\"N\": \"%02X%02X%02X%02X%02X%02X%02X\", "
@@ -1212,6 +1211,69 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                     // return TrivialVariations_CmdEM4x70AuthBranch(etx);
                     return PM3_SUCCESS;
                 }
+
+                if (resp.status != PM3_EPARTIAL) {
+                    PrintAndLogEx(WARNING, "If no working value was found, expected status PM3_EPARTIAL, but got PM3_SUCCESS");
+                }
+
+                uint32_t next_frn = MemBeToUint4byte(results->phase3_output.be_next_start_frn);
+                // validate next_frn is within bounds of search space
+                uint32_t p2o_max_iterations = MemBeToUint4byte(&(abd.phase2_output.be_max_iterations[0]));
+                uint32_t p2o_start_frn = MemBeToUint4byte(&(abd.phase2_output.be_start_frn[0]));
+                uint32_t p2o_end_frn   = p2o_start_frn + (p2o_max_iterations << 4); // low 4 bits are unused, so each iteration is +0x10...
+                if ((next_frn < p2o_start_frn) || (next_frn > p2o_end_frn)) {
+                    PrintAndLogEx(ERR, "Device responded with a next_frn of %08" PRIX32 ", which is outside range [%08" PRIX32 " .. %08" PRIX32 "] -- aborting",
+                                  next_frn, p2o_start_frn, p2o_end_frn);
+                    status = PM3_ESOFT;
+                    break; // out of infinite loop
+                }
+                uint32_t prior_start_frn = MemBeToUint4byte(&(abd.phase3_input.be_starting_frn[0]));
+                if (next_frn < prior_start_frn) {
+                    PrintAndLogEx(ERR, "Device responded with a next_frn of %08" PRIX32 ", which is less than prior start frn %08" PRIX32 " -- aborting",
+                                  next_frn, prior_start_frn);
+                    status = PM3_ESOFT;
+                    break; // out of infinite loop
+                }
+                uint32_t prior_iterations = MemBeToUint4byte(&(abd.phase3_input.be_max_iterations[0]));
+                uint32_t expected_next_frn = prior_start_frn + (prior_iterations << 4); // low 4 bits are unused, so each iteration is +0x10
+                if (next_frn != expected_next_frn) {
+                    PrintAndLogEx(WARNING, "Device responded with a next_frn of %08" PRIX32 ", expected %08" PRIX32 " based on prior inputs:",
+                                  next_frn, expected_next_frn);
+                    DumpAuthBranchPhase3Inputs(WARNING, &abd);
+                    status = PM3_ESOFT;
+                    break; // out of infinite loop
+                }
+
+                uint32_t remaining_iterations = (p2o_end_frn - next_frn) >> 4; // low 4 bits are unused, so each iteration is +0x10
+                if (remaining_iterations == 0) {
+                    PrintAndLogEx(ERR, "Reached end of search space.  Inputs:");
+                    DumpAuthBranchSeparator(ERR);
+                    DumpAuthBranchPhase1Inputs(ERR, &abd);
+                    DumpAuthBranchPhase2Inputs(ERR, &abd);
+                    DumpAuthBranchPhase3Inputs(ERR, &abd);
+                    PrintAndLogEx(ERR, "");
+                    PrintAndLogEx(ERR, "Outputs:");
+                    dump_authbranch_data(ERR, results, true);
+                    status = PM3_EFAILED;
+                    break; // out of infinite loop
+                }
+
+
+                // Log if this is ever NOT the expected value.
+                uint32_t prior_max_iterations = MemBeToUint4byte(&(abd.phase3_input.be_max_iterations[0]));
+                uint32_t expected_frn   = prior_start_frn + (prior_max_iterations << 4); // low 4 bits are unused, so each iteration is +0x10...
+                if (expected_frn != next_frn) {
+                    PrintAndLogEx(WARNING, "Unexpected next FRN from device, expected %08" PRIX32 ", got %08" PRIX32, expected_frn, next_frn);
+                }
+
+
+                // prepare to send the next possible request
+                InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE);
+                uint32_t next_iterations = (remaining_iterations < FRN_ITERATIONS_PER_UPDATE) ? remaining_iterations : FRN_ITERATIONS_PER_UPDATE;
+                Uint4byteToMemBe(&(abd.phase3_input.be_max_iterations[0]), next_iterations);
+                Uint4byteToMemBe(&(abd.phase3_input.be_starting_frn[0]), next_frn);
+                remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE3;
+                sendAdditionalCommand = true;
             } else {
                 status = resp.status;
                 PrintAndLogEx(ERR, "Unknown response phase: %" PRId32 " for request phase %" PRId32 " with status %d at file %s, line %d", responsePhase, requestPhase, status, __FILE__, __LINE__);
