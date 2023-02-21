@@ -1100,6 +1100,9 @@ static bool Parse_CmdEM4x70AuthBranch(const char *Cmd, em4x70_authbranch_t *data
     return failedArgsParsing ? false : true;
 }
 
+
+bool g_Extensive_EM4x70_AuthBranch_Debug = false;
+
 int CmdEM4x70AuthBranch(const char *Cmd) {
 
     if (false) { // unused functions ... to quiet the compiler warnings
@@ -1120,13 +1123,16 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
     // Given a working { private key, rnd, frnd }, this function branches out
     em4x70_authbranch_t abd = {0};
     InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE0_UNINITIALIZED);
-    dump_authbranch_data(NORMAL, &abd, false);
-
+    if (g_Extensive_EM4x70_AuthBranch_Debug) {
+        dump_authbranch_data(NORMAL, &abd, false);
+    }
     // if arguments parse successfully, we have everything needed, and phase1 is ready to launch
     if (!Parse_CmdEM4x70AuthBranch(Cmd, &abd)) {
         return PM3_EINVARG;
     }
-    dump_authbranch_data(NORMAL, &abd, false);
+    if (g_Extensive_EM4x70_AuthBranch_Debug) {
+        dump_authbranch_data(NORMAL, &abd, false);
+    }
 
     int status = PM3_SUCCESS;
     bool sendAdditionalCommand = true;
@@ -1142,8 +1148,10 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
         if (sendAdditionalCommand) {
             clearCommandBuffer();
 
-            PrintAndLogEx(WARNING, "Sending phase %s", sprint_authbranch_phase(requestPhase));
-            dump_authbranch_data(WARNING, &abd, true);
+            if (g_Extensive_EM4x70_AuthBranch_Debug) {
+                PrintAndLogEx(WARNING, "Sending phase %s", sprint_authbranch_phase(requestPhase));
+                dump_authbranch_data(WARNING, &abd, true);
+            }
 
             SendCommandNG(CMD_LF_EM4X70_AUTHBRANCH, (uint8_t *)&abd, sizeof(em4x70_authbranch_t));
             sendAdditionalCommand = false;
@@ -1162,14 +1170,14 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
 
         PacketResponseNG resp;
         if (WaitForResponseTimeoutW(CMD_LF_EM4X70_AUTHBRANCH, &resp, TIMEOUT, false)) {
-            // Proxmark device sent a response ... parse the packet to learn phase, success vs. failure, etc.
-            // PrintAndLogEx(INFO, "WaitForResponseTimeout succeeded with cmd %" PRId16 ", status %" PRId16, resp.cmd, resp.status);
-
             const em4x70_authbranch_t *results = (const em4x70_authbranch_t *)(&(resp.data.asBytes[0]));
             em4x70_authbranch_phase_t responsePhase = MemBeToUint4byte(&(results->be_phase[0]));
 
-            PrintAndLogEx(WARNING, "Received phase %s", sprint_authbranch_phase(responsePhase));
-            dump_authbranch_data(WARNING, results, true);
+            if (g_Extensive_EM4x70_AuthBranch_Debug) {
+                PrintAndLogEx(INFO, "WaitForResponseTimeout succeeded with cmd %" PRId16 ", status %" PRId16, resp.cmd, resp.status);
+                PrintAndLogEx(WARNING, "Received phase %s", sprint_authbranch_phase(responsePhase));
+                dump_authbranch_data(WARNING, results, true);
+            }
 
 
             if (requestPhase == EM4X70_AUTHBRANCH_PHASE1_REQUESTED_VERIFY_STARTING_VALUES) {
@@ -1251,13 +1259,9 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                                   results->phase3_output.be_successful_ac[0], results->phase3_output.be_successful_ac[1],
                                   results->phase3_output.be_successful_ac[2]
                                  );
-                    // TODO: also get the 32x variations
+                    PrintAndLogEx(WARNING, _BRIGHT_RED_("TODO: also get the 32x trivial variations"));
                     // return TrivialVariations_CmdEM4x70AuthBranch(etx);
                     return PM3_SUCCESS;
-                }
-
-                if (resp.status != PM3_EPARTIAL) {
-                    PrintAndLogEx(WARNING, "If no working value was found, expected status PM3_EPARTIAL, but got PM3_SUCCESS");
                 }
 
                 uint32_t p3o_next_frn = MemBeToUint4byte(results->phase3_output.be_next_start_frn);
@@ -1292,14 +1296,19 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
 
                 uint32_t remaining_iterations = (p2o_max_frn - p3o_next_frn) >> 4; // low 4 bits are unused, so each iteration is +0x10
                 if (remaining_iterations == 0) {
-                    PrintAndLogEx(ERR, "Reached end of search space.  Inputs:");
-                    DumpAuthBranchSeparator(ERR);
-                    DumpAuthBranchPhase1Inputs(ERR, &abd);
-                    DumpAuthBranchPhase2Inputs(ERR, &abd);
-                    DumpAuthBranchPhase3Inputs(ERR, &abd);
-                    PrintAndLogEx(ERR, "");
-                    PrintAndLogEx(ERR, "Outputs:");
-                    dump_authbranch_data(ERR, results, true);
+                    if (g_Extensive_EM4x70_AuthBranch_Debug) {
+                        PrintAndLogEx(ERR, "Reached end of search space.  Inputs:");
+                        DumpAuthBranchSeparator(ERR);
+                        DumpAuthBranchPhase1Inputs(ERR, &abd);
+                        DumpAuthBranchPhase2Inputs(ERR, &abd);
+                        DumpAuthBranchPhase3Inputs(ERR, &abd);
+                        PrintAndLogEx(ERR, "");
+                        PrintAndLogEx(ERR, "Outputs:");
+                        DumpAuthBranchSeparator(ERR);
+                        DumpAuthBranchPhase2Outputs(ERR, &abd);
+                        DumpAuthBranchPhase3Outputs(ERR, &abd);
+                        DumpAuthBranchPhase3Outputs(ERR, results);
+                    }
                     status = PM3_EFAILED;
                     break; // out of infinite loop
                 }

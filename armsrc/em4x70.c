@@ -951,6 +951,8 @@ void em4x70_write_key(em4x70_data_t *etd, bool ledcontrol) {
 //
 
 
+bool g_Extensive_EM4x70_AuthBranch_Debug = false;
+
 void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
     int status_code = PM3_SUCCESS;
 
@@ -972,7 +974,9 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
         // 1. find the tag
         if (status_code == PM3_SUCCESS) {
             WDT_HIT();
-            Dbprintf("1. Finding tag...");
+            if (g_Extensive_EM4x70_AuthBranch_Debug) {
+                Dbprintf("1. Finding tag...");
+            }
             if (!get_signalproperties()) {
                 Dbprintf(_RED_("Failed to get signal properties."));
                 status_code = PM3_EFAILED;
@@ -988,7 +992,9 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
         // 2. write original key to transponder
         if (status_code == PM3_SUCCESS) {
             WDT_HIT();
-            Dbprintf("2. Writing original key to transponder...");
+            if (g_Extensive_EM4x70_AuthBranch_Debug) {
+                Dbprintf("2. Writing original key to transponder...");
+            }
             for (int i = 0; (status_code == PM3_SUCCESS) && (i < 6); i++) {
                 // Yes, this treats the key array as though it were an array of LE 16-bit values ...
                 // That's because the write() function ends up swapping each pair of bytes back. <sigh>
@@ -1004,12 +1010,14 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
         if (status_code == PM3_SUCCESS) {
             WDT_HIT();
             uint8_t auth_response[4] = {0u};
-            Dbprintf("3. Verifying auth with provided rnd/frnd");
+            if (g_Extensive_EM4x70_AuthBranch_Debug) {
+                Dbprintf("3. Verifying auth with provided rnd/frnd");
+            }
             status_code = authenticate(&(abd->phase1_input.be_rnd[0]), &(abd->phase1_input.be_frn[0]), &(auth_response[0]));
             if (status_code != PM3_SUCCESS) {
                 Dbprintf(_RED_("Failed to verify original key/rnd/frnd, status %d"), status_code);
-            } else {
-                // Dbprintf("Tag Auth Response: %02X%02X%02X", auth_response[0], auth_response[1], auth_response[2]);
+            } else if (g_Extensive_EM4x70_AuthBranch_Debug) {
+                Dbprintf("Original Tag Auth Response: %02X%02X%02X", auth_response[0], auth_response[1], auth_response[2]);
             }
         }
 
@@ -1068,16 +1076,18 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
             uint32_t frn_max_in_uint32 = frn_min_in_uint32 + ((max_iterations-1) << 4);
             uint32_t calculated_max_iterations = ((frn_max_in_uint32 - frn_min_in_uint32)/0x10)+1;
             if (calculated_max_iterations != max_iterations) {
-                Dbprintf(_BRIGHT_RED_("My maths appear to be incorrect...."));
-                //                              ....-....1....-....2....-            
-                Dbprintf("  %25s: %02" PRId8 , "frn_in_uint32_bit_index",    frn_in_uint32_bit_index   );
-                Dbprintf("  %25s: %02" PRId8 , "frn_28bit_bit_index",        frn_28bit_bit_index       );
-                Dbprintf("  %25s: %08" PRIX32, "original_frn_in_uint32",     original_frn_in_uint32    );
-                Dbprintf("  %25s: %08" PRIX32, "frn_in_uint32_clear_mask",   frn_in_uint32_clear_mask  );
-                Dbprintf("  %25s: %08" PRIX32, "max_iterations",             max_iterations            );
-                Dbprintf("  %25s: %08" PRIX32, "frn_min_in_uint32",          frn_min_in_uint32         );
-                Dbprintf("  %25s: %08" PRIX32, "frn_max_in_uint32",          frn_max_in_uint32         );
-                Dbprintf("  %25s: %08" PRIX32, "calculated_max_iterations",  calculated_max_iterations );
+                if (g_Extensive_EM4x70_AuthBranch_Debug) {
+                    Dbprintf(_BRIGHT_RED_("My maths appear to be incorrect...."));
+                    //                              ....-....1....-....2....-            
+                    Dbprintf("  %25s: %02" PRId8 , "frn_in_uint32_bit_index",    frn_in_uint32_bit_index   );
+                    Dbprintf("  %25s: %02" PRId8 , "frn_28bit_bit_index",        frn_28bit_bit_index       );
+                    Dbprintf("  %25s: %08" PRIX32, "original_frn_in_uint32",     original_frn_in_uint32    );
+                    Dbprintf("  %25s: %08" PRIX32, "frn_in_uint32_clear_mask",   frn_in_uint32_clear_mask  );
+                    Dbprintf("  %25s: %08" PRIX32, "max_iterations",             max_iterations            );
+                    Dbprintf("  %25s: %08" PRIX32, "frn_min_in_uint32",          frn_min_in_uint32         );
+                    Dbprintf("  %25s: %08" PRIX32, "frn_max_in_uint32",          frn_max_in_uint32         );
+                    Dbprintf("  %25s: %08" PRIX32, "calculated_max_iterations",  calculated_max_iterations );
+                }
                 status_code = PM3_ESOFT;
             }
 
@@ -1089,7 +1099,9 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
         // 4. write the new branched key
         // TODO - only write the 1-2 words that have changed from phase1? (meaningless optimization)
         if (status_code == PM3_SUCCESS) {
-            Dbprintf("4. Writing branched key to transponder...");
+            if (g_Extensive_EM4x70_AuthBranch_Debug) {
+                Dbprintf("4. Writing branched key to transponder...");
+            }
             for (int i = 0; (status_code == PM3_SUCCESS) && (i < 6); i++) {
                 WDT_HIT();
                 // Yes, this treats the key array as though it were an array of LE 16-bit values ...
@@ -1127,7 +1139,9 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
         uint32_t start_frn      = MemBeToUint4byte(&(abd->phase3_input.be_starting_frn[0]));
         uint32_t max_iterations = MemBeToUint4byte(&(abd->phase3_input.be_max_iterations[0]));
         uint32_t current_frn    = start_frn;
-        Dbprintf(_BRIGHT_RED_("Start == %08" PRIX32 ", max_iterations == %08" PRIX32), start_frn, max_iterations);
+        if (g_Extensive_EM4x70_AuthBranch_Debug) {
+            Dbprintf(_BRIGHT_RED_("Start == %08" PRIX32 ", max_iterations == %08" PRIX32), start_frn, max_iterations);
+        }
 
         if (max_iterations == UINT32_C(0xFFFFFFFF)) {
             // would cause infinite loop
@@ -1137,7 +1151,9 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
 
         for (uint32_t i = 0; (status_code == PM3_SUCCESS) && (i < max_iterations); ++i, current_frn += 0x10) {
             WDT_HIT();
-            Dbprintf("Attempting FRN %08" PRIX32, current_frn);
+            if (g_Extensive_EM4x70_AuthBranch_Debug) {
+                Dbprintf("Attempting FRN %08" PRIX32, current_frn);
+            }
 
             // rnd can be used directly
             // keep output's next_start_frn updated (in case of early exit)
