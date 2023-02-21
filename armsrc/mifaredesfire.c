@@ -139,6 +139,7 @@ void MifareDesfireGetInformation(void) {
         uint8_t details[14];
     } PACKED payload;
 
+    memset(&payload, 0x00, sizeof(payload));
     /*
         1 = PCB                 1
         2 = cid                 2
