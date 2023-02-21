@@ -1101,6 +1101,13 @@ static bool Parse_CmdEM4x70AuthBranch(const char *Cmd, em4x70_authbranch_t *data
 }
 
 
+static void OutputProgress(logLevel_t level, uint32_t min, uint32_t max, uint32_t current) {
+    double n = current - min;
+    double d = max - min;
+    double p = (n*100)/d;
+    PrintAndLogEx(level, "Progress [%08" PRIX32 "..%08" PRIX32 "], Current: %08" PRIX32 " (~%0.2f%%)", min, max, current, p);
+}
+
 bool g_Extensive_EM4x70_AuthBranch_Debug = false;
 
 int CmdEM4x70AuthBranch(const char *Cmd) {
@@ -1115,8 +1122,8 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
     enum {
         MAX_TIMEOUT_CYCLES_PHASE1 =     8,  //   16  seconds: phase 1 writes the original key, and does an initial authentication
         MAX_TIMEOUT_CYCLES_PHASE2 =     6,  //   12  seconds: phase 2 writes the branched key
-        MAX_TIMEOUT_CYCLES_PHASE3 =     5,  //   10  seconds: depends on next value ... how many frnd to attempt at one go?
-        FRN_ITERATIONS_PER_UPDATE = 0x100,  //  256 attempts: affects selection of timeout for phase3
+        MAX_TIMEOUT_CYCLES_PHASE3 =  0x10,  //   16  seconds: depends on next value ... how many frnd to attempt at one go?
+        FRN_ITERATIONS_PER_UPDATE =  0x40,  //   64 attempts: affects selection of timeout for phase3
     };
 
     // Kudos to paper "Dismantling Megamos Crypto", Roel Verdult, Flavio D. Garcia and Barıs¸ Ege.
@@ -1138,6 +1145,7 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
     bool sendAdditionalCommand = true;
     int32_t remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE1;
 
+    PrintAndLogEx(WARNING, "Need to test resuming from ~20 away from last possible frn");
     PrintAndLogEx(WARNING, "Need to test resuming from ~20 away from last possible frn");
 
     for (uint32_t i = 0; true; ++i) { // only exit is via failure
@@ -1213,6 +1221,7 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                 InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE);
                 uint32_t max_iterations = MemBeToUint4byte(results->phase2_output.be_max_iterations);
                 uint32_t min_frn   = MemBeToUint4byte(&(abd.phase2_output.be_min_frn[0]));
+                uint32_t max_frn   = MemBeToUint4byte(&(abd.phase2_output.be_max_frn[0]));
 
                 // if user provided a start frn, use it ... else use the minimum frn to start from the beginning
                 uint32_t start_frn = MemBeToUint4byte(&(abd.phase1_input.be_start_frn[0]));
@@ -1226,6 +1235,9 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                 uint32_t next_iterations = (remaining_iterations < FRN_ITERATIONS_PER_UPDATE) ? remaining_iterations : FRN_ITERATIONS_PER_UPDATE;
                 Uint4byteToMemBe(&(abd.phase3_input.be_max_iterations[0]), next_iterations);
                 Uint4byteToMemBe(&(abd.phase3_input.be_starting_frn[0]),   start_frn      );
+
+                OutputProgress(INPLACE, min_frn, max_frn, start_frn);
+
                 remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE3;
                 sendAdditionalCommand = true;
                 // continue loop
@@ -1240,7 +1252,18 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                     break; // out of infinite loop
                 }
 
+                uint32_t p3o_next_frn = MemBeToUint4byte(results->phase3_output.be_next_start_frn);
+                uint32_t p2o_min_frn = MemBeToUint4byte(&(abd.phase2_output.be_min_frn[0]));
+                uint32_t p2o_max_frn = MemBeToUint4byte(&(abd.phase2_output.be_max_frn[0]));
+
+                uint32_t prior_start_frn  = MemBeToUint4byte(&(abd.phase3_input.be_starting_frn[0]));
+                uint32_t prior_iterations = MemBeToUint4byte(&(abd.phase3_input.be_max_iterations[0]));
+
+                uint32_t expected_next_frn = prior_start_frn + (prior_iterations << 4); // low 4 bits are unused, so each iteration is +0x10
+
                 if (results->phase3_output.found_working_value) {
+                    uint32_t actual_frn = MemBeToUint4byte(&(results->phase3_output.be_successful_frn[0]));
+                    OutputProgress(NORMAL, p2o_min_frn, p2o_max_frn, actual_frn);
                     PrintAndLogEx(SUCCESS,
                                   "{ "
                                   "\"N\": \"%02X%02X%02X%02X%02X%02X%02X\", "
@@ -1264,15 +1287,6 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                     return PM3_SUCCESS;
                 }
 
-                uint32_t p3o_next_frn = MemBeToUint4byte(results->phase3_output.be_next_start_frn);
-                // validate next_frn is within bounds of search space
-                uint32_t p2o_min_frn = MemBeToUint4byte(&(abd.phase2_output.be_min_frn[0]));
-                uint32_t p2o_max_frn = MemBeToUint4byte(&(abd.phase2_output.be_max_frn[0]));
-
-                uint32_t prior_start_frn  = MemBeToUint4byte(&(abd.phase3_input.be_starting_frn[0]));
-                uint32_t prior_iterations = MemBeToUint4byte(&(abd.phase3_input.be_max_iterations[0]));
-
-                uint32_t expected_next_frn = prior_start_frn + (prior_iterations << 4); // low 4 bits are unused, so each iteration is +0x10
 
                 // validate expectations ... if something is amiss, output information to help understand
                 if ((p3o_next_frn < p2o_min_frn) || (p3o_next_frn > p2o_max_frn)) {
@@ -1296,6 +1310,7 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
 
                 uint32_t remaining_iterations = (p2o_max_frn - p3o_next_frn) >> 4; // low 4 bits are unused, so each iteration is +0x10
                 if (remaining_iterations == 0) {
+                    OutputProgress(NORMAL, p2o_min_frn, p2o_max_frn, p3o_next_frn);
                     if (g_Extensive_EM4x70_AuthBranch_Debug) {
                         PrintAndLogEx(ERR, "Reached end of search space.  Inputs:");
                         DumpAuthBranchSeparator(ERR);
@@ -1321,6 +1336,8 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                     PrintAndLogEx(WARNING, "Unexpected next FRN from device, expected %08" PRIX32 ", got %08" PRIX32, expected_frn, p3o_next_frn);
                 }
 
+                OutputProgress(INPLACE, p2o_min_frn, p2o_max_frn, p3o_next_frn);
+
                 // prepare to send the next possible request
                 InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE);
                 uint32_t next_iterations = (remaining_iterations < FRN_ITERATIONS_PER_UPDATE) ? remaining_iterations : FRN_ITERATIONS_PER_UPDATE;
@@ -1345,11 +1362,15 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
 
     if (status == PM3_SUCCESS) {
         PrintAndLogEx(ERR, "INTERNAL ERROR: Unexpectedly reached end of function with PM3_SUCCESS status code!?");
-        dump_authbranch_data(NORMAL, &abd, true);
+        if (g_Extensive_EM4x70_AuthBranch_Debug) {
+            dump_authbranch_data(NORMAL, &abd, true);
+        }
     } else if (status == PM3_ENOTIMPL) {
         PrintAndLogEx(WARNING, "Reach end of implemented features (PM3_ENOTIMPL), which is a type of success.");
     } else {
-        dump_authbranch_data(NORMAL, &abd, true);
+        if (g_Extensive_EM4x70_AuthBranch_Debug) {
+            dump_authbranch_data(NORMAL, &abd, true);
+        }
     }
     return PM3_ESOFT;
 }
