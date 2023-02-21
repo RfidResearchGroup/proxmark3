@@ -172,7 +172,7 @@ static void print_time(uint64_t at) {
     char res[32];
     strftime(res, sizeof(res), "%Y-%m-%d %H:%M:%S", &lt);
 
-    printf("%u  ( '%s' )\n", (unsigned)t, res);
+    printf("%"PRIu64" ( '%s' )\n", t, res);
 }
 
 static void *brute_thread(void *arguments) {
@@ -378,7 +378,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    uint64_t start_time = atoi(argv[3]);
+    uint64_t start_time = 0;
+    sscanf(argv[3], "%lu", &start_time);
 
     printf("Crypto algo............ " _GREEN_("%s") "\n", algostr);
     printf("LCR Random generator... " _GREEN_("%s") "\n", generators[g_idx].Name);

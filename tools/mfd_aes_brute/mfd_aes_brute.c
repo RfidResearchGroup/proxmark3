@@ -233,7 +233,8 @@ int main(int argc, char *argv[]) {
 
     if (argc != 4) return usage(argv[0]);
 
-    uint64_t start_time = atoi(argv[1]);
+    uint64_t start_time = 0;
+    sscanf(argv[1], "%lu", &start_time);
 
     uint8_t tag_challenge[16] = {0x00};
     if (hexstr_to_byte_array(argv[2], tag_challenge, sizeof(tag_challenge)))
