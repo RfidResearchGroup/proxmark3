@@ -923,8 +923,83 @@ void em4x70_write_key(em4x70_data_t *etd, bool ledcontrol) {
 //          However, actual chips may be larger.
 //
 void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
-    int status_code = PM3_ENOTIMPL;
-    reply_ng(CMD_LF_EM4X70_AUTHBRANCH, status_code, NULL, 0);
+    int status_code = PM3_SUCCESS;
+
+    init_tag();
+    em4x70_setup_read();
+
+
+    // expect incoming phase to be ..._REQUESTED_...
+    em4x70_authbranch_phase_t phase = MemBeToUint4byte(&(abd->be_phase[0]));
+    em4x70_authbranch_t results; memcpy(&results, abd, sizeof(em4x70_authbranch_t));
+
+    command_parity = abd->phase1_input.useParity ? true : false;
+
+    if (phase == EM4X70_AUTHBRANCH_PHASE1_REQUESTED_VERIFY_STARTING_VALUES) {
+        Uint4byteToMemBe(&(results.be_phase[0]), EM4X70_AUTHBRANCH_PHASE1_COMPLETED_VERIFY_STARTING_VALUES);
+        // Note: there are no outputs to this phase, so simply modifying the phase is sufficient
+
+        // 1. find the tag
+        if (status_code == PM3_SUCCESS) {
+            Dbprintf("1. Finding tag...");
+            if (!get_signalproperties()) {
+                Dbprintf(_RED_("Failed to get signal properties."));
+                status_code = PM3_EFAILED;
+            }
+        }
+        if (status_code == PM3_SUCCESS) {
+            if (!find_em4x70_tag()) {
+                Dbprintf(_RED_("Failed to find tag."));
+                status_code = PM3_EFAILED;
+            }
+        }
+        // 2. write original key to transponder
+        if (status_code == PM3_SUCCESS) {
+            Dbprintf("2. Writing original key to transponder...");
+            for (int i = 0; (status_code == PM3_SUCCESS) && (i < 6); i++) {
+                // Yes, this treats the key array as though it were an array of LE 16-bit values ...
+                // That's because the write() function ends up swapping each pair of bytes back. <sigh>
+                uint16_t key_word = (abd->phase1_input.be_key[(i * 2) + 1] << 8) + abd->phase1_input.be_key[i * 2];
+                // Write each word, abort if any failure occurs
+                status_code = write(key_word, 9 - i);
+                if (status_code != PM3_SUCCESS) {
+                    Dbprintf(_RED_("Failed to write orig key to block %d, status %d"), 9-i, status_code);
+                }
+            }
+        }
+        // 3. verify authentication with provided rnd/frnd works
+        if (status_code == PM3_SUCCESS) {
+            uint8_t auth_response[4] = {0u};
+            Dbprintf("3. Verifying auth with provided rnd/frnd");
+            status_code = authenticate(&(abd->phase1_input.be_rnd[0]), &(abd->phase1_input.be_frn[0]), &(auth_response[0]));
+            if (status_code != PM3_SUCCESS) {
+                Dbprintf(_RED_("Failed to verify original key/rnd/frnd, status %d"), status_code);
+            } else {
+                Dbprintf("Tag Auth Response: %02X %02X %02X", auth_response[0], auth_response[1], auth_response[2]);
+            }
+        }
+
+    } else if (phase == EM4X70_AUTHBRANCH_PHASE2_REQUESTED_WRITE_BRANCHED_KEY) {
+        Uint4byteToMemBe(&(results.be_phase[0]), EM4X70_AUTHBRANCH_PHASE2_COMPLETED_WRITE_BRANCHED_KEY);
+
+        // 
+        status_code = PM3_ENOTIMPL;
+
+    } else if (phase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE) {
+        Uint4byteToMemBe(&(results.be_phase[0]), EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE);
+
+        status_code = PM3_ENOTIMPL;
+
+    } else {
+        // unsupported phase ... exit!
+        status_code = PM3_ESOFT;
+    }
+
+    StopTicks();
+    lf_finalize(ledcontrol);
+
+    reply_ng(CMD_LF_EM4X70_AUTHBRANCH, status_code, (uint8_t *)&results, sizeof(em4x70_authbranch_t));
+    return;
 }
 
 

@@ -157,8 +157,8 @@ typedef struct {
     // phase 1 output: SUCCESS if could write key and authenticate with the transponder (else error code)
     em4x70_authbranch_phase1_input_t  phase1_input;
 
-    // phase 2  input: which bit of the key to branch
-    // phase 2 output: branched:  key, start frn, end frn
+    // phase 2  input: xor mask to be applied to the phase1 key for branching
+    // phase 2 output: SUCCESS if could write branched key (also indicates { key, start frn, end frn })
     em4x70_authbranch_phase2_input_t  phase2_input;
     em4x70_authbranch_phase2_output_t phase2_output;
 
