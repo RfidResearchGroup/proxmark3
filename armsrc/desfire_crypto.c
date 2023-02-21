@@ -755,7 +755,7 @@ void mifare_cypher_single_block(desfirekey_t key, uint8_t *data, uint8_t *ivect,
         memcpy(ovect, data, block_size);
     }
 
-    uint8_t edata[DESFIRE_MAX_CRYPTO_BLOCK_SIZE];
+    uint8_t edata[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
 
     switch (key->type) {
         case T_DES:
