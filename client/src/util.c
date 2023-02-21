@@ -90,6 +90,8 @@ int kbd_enter_pressed(void) {
 }
 #endif
 
+
+// convert low nibble of `v` to corresponding hex character
 static char b2s(uint8_t v, bool uppercase) {
     // clear higher bits
     v &= 0xF;

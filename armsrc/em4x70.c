@@ -16,6 +16,7 @@
 // Low frequency EM4x70 commands
 //-----------------------------------------------------------------------------
 
+#include "inttypes.h"
 #include "fpgaloader.h"
 #include "ticks.h"
 #include "dbprint.h"
@@ -85,6 +86,32 @@ static uint8_t bits2byte(const uint8_t *bits, int length);
 static void bits2bytes(const uint8_t *bits, int length, uint8_t *out);
 static int em4x70_receive(uint8_t *bits, size_t length);
 static bool find_listen_window(bool command);
+
+// For any 32-bit value, returns the index of the highest bit set to one.
+// for input of zero, this returns -1.  range of returned results: [-1 .. 31 ]
+static int8_t highest_set_bit_index(uint32_t v);
+static void propagate_set_bits(uint32_t *v);
+static void propagate_set_bits(uint32_t *v) {
+    *v |= *v >> 1;
+    *v |= *v >> 2;
+    *v |= *v >> 4;
+    *v |= *v >> 8;
+    *v |= *v >> 16;
+}
+static int8_t highest_set_bit_index(uint32_t v)
+{
+    // DeBruijn's Sequence
+    static const uint32_t deBruijnValue = (uint32_t) 0x07C4ACDD;
+    static const int reverse_lookup[32] = {
+        0,  9,  1, 10, 13, 21,  2, 29,   11, 14, 16, 18, 22, 25,  3, 30,
+        8, 12, 20, 28, 15, 17, 24,  7,   19, 27, 23,  6, 26,  5,  4, 31,
+    };
+    if (!v) { return -1; }
+    propagate_set_bits(&v);
+    return reverse_lookup[(v * deBruijnValue) >> 27];
+}
+
+
 
 static void init_tag(void) {
     memset(tag.data, 0x00, sizeof(tag.data));
@@ -922,6 +949,8 @@ void em4x70_write_key(em4x70_data_t *etd, bool ledcontrol) {
 //          Flash has hard-coded (assumed) size of 512k.
 //          However, actual chips may be larger.
 //
+
+
 void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
     int status_code = PM3_SUCCESS;
 
@@ -975,19 +1004,101 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
             if (status_code != PM3_SUCCESS) {
                 Dbprintf(_RED_("Failed to verify original key/rnd/frnd, status %d"), status_code);
             } else {
-                Dbprintf("Tag Auth Response: %02X %02X %02X", auth_response[0], auth_response[1], auth_response[2]);
+                // Dbprintf("Tag Auth Response: %02X%02X%02X", auth_response[0], auth_response[1], auth_response[2]);
             }
         }
 
     } else if (phase == EM4X70_AUTHBRANCH_PHASE2_REQUESTED_WRITE_BRANCHED_KEY) {
         Uint4byteToMemBe(&(results.be_phase[0]), EM4X70_AUTHBRANCH_PHASE2_COMPLETED_WRITE_BRANCHED_KEY);
 
-        // 
-        status_code = PM3_ENOTIMPL;
+        // Generate the new key
+        memcpy(results.phase2_output.be_key, abd->phase1_input.be_key, sizeof(results.phase2_output.be_key));
+        uint32_t xormask = MemBeToUint4byte(&(abd->phase1_input.be_xormask[0]));
+        uint32_t key_lsb = MemBeToUint4byte(&(abd->phase1_input.be_key[8]));
+        uint32_t new_key_lsb = key_lsb ^ xormask;
+        Uint4byteToMemBe(&(results.phase2_output.be_key[8]), new_key_lsb);
 
+        // The highest set bit of xormask defines the maximum number of iterations required.
+        int8_t highest_key_xormask_bit_index = highest_set_bit_index(xormask); // range [-1..31]
+        if (highest_key_xormask_bit_index < 5) {
+            // values less than 0x20 don't change the frn
+            Uint4byteToMemBe(&(results.phase2_output.be_max_iterations[0]), UINT32_C(1));
+            memcpy(&(results.phase2_output.be_min_frn[0]), &(results.phase1_input.be_frn[0]), sizeof(results.phase1_input.be_frn));
+            memcpy(&(results.phase2_output.be_max_frn[0]), &(results.phase1_input.be_frn[0]), sizeof(results.phase1_input.be_frn));
+            // that's all for these trivial cases!
+        } else {
+            // highest_key_xormask_bit_index range now [5..31]
+            enum {
+                // 28-bit FRN bit index is the middle-ground, converts to either key index or uint32_t frn
+                // when going from the 28-bit FRN, must add 5 to the index, because least significant 5 bits of key have no influence on FRN
+                // when going from the 28-bit FRN to the one stored in uint32_t, have to add 4 to the index,
+                FRN_28BIT_BIT_INDEX_TO_KEY_INDEX    =  5,
+                FRN_28BIT_BIT_INDEX_TO_FRN_UINT32_INDEX =  4,
+                // Now list the inverse operations of the two operations above
+                KEY_BIT_INDEX_TO_FRN_28BIT_INDEX        = -FRN_28BIT_BIT_INDEX_TO_KEY_INDEX,        // aka -5
+                FRN_UINT32_BIT_INDEX_TO_FRN_28BIT_INDEX = -FRN_28BIT_BIT_INDEX_TO_FRN_UINT32_INDEX, // aka -4
+
+                // For convenience, also add for converting from key bit directly to uint32_t frn and vice versa
+                FRM_UINT32_BIT_INDEX_TO_KEY_INDEX = FRN_UINT32_BIT_INDEX_TO_FRN_28BIT_INDEX + FRN_28BIT_BIT_INDEX_TO_KEY_INDEX, // aka -4 + 5 = +1
+                KEY_BIT_INDEX_TO_FRN_UINT32_INDEX = -FRM_UINT32_BIT_INDEX_TO_KEY_INDEX, // aka -1
+            };
+
+            // have to manuall deal with the wierdness of having a 28-bit value
+            // with four zero bits shifted as least significant bits.
+            // This includes special-casing otherwise simple bitmasks / bitshifts.
+            // CHOSEN METHOD:
+            // bit index :== index of the bit, as stored in the uint32_t (e.g., +4 to the index)
+            //               of course, relative to the keybit index, the frn index would be -5.
+
+            // Most of these are constexpr...
+            int8_t frn_in_uint32_bit_index  = highest_key_xormask_bit_index + KEY_BIT_INDEX_TO_FRN_UINT32_INDEX; // range: 4..30,   if ==4          if ==30
+            int8_t frn_28bit_bit_index      = highest_key_xormask_bit_index + KEY_BIT_INDEX_TO_FRN_28BIT_INDEX;  // range: 0..26,      ==0             ==26
+            uint32_t original_frn_in_uint32 = MemBeToUint4byte(&(abd->phase1_input.be_frn[0]));
+            uint32_t frn_in_uint32_clear_mask = ~((UINT32_C(1) << (frn_in_uint32_bit_index+1)) - 1); // before negation, all the lowest bits were set
+            // uint32_t frn_in_uint32_set_mask = (~frn_in_uint32_clear_mask) & UINT32_C(0xFFFFFFF0);    // negate the clear mask, but exclude low nibble
+
+            uint32_t max_iterations    = UINT32_C(1) << (frn_28bit_bit_index+1);
+            uint32_t frn_min_in_uint32 = original_frn_in_uint32 & frn_in_uint32_clear_mask;
+            uint32_t frn_max_in_uint32 = frn_min_in_uint32 + ((max_iterations-1) << 4);
+            uint32_t calculated_max_iterations = ((frn_max_in_uint32 - frn_min_in_uint32)/0x10)+1;
+            if (calculated_max_iterations != max_iterations) {
+                Dbprintf(_BRIGHT_RED_("My maths appear to be incorrect...."));
+                //                              ....-....1....-....2....-            
+                Dbprintf("  %25s: %02" PRId8 , "frn_in_uint32_bit_index",    frn_in_uint32_bit_index   );
+                Dbprintf("  %25s: %02" PRId8 , "frn_28bit_bit_index",        frn_28bit_bit_index       );
+                Dbprintf("  %25s: %08" PRIX32, "original_frn_in_uint32",     original_frn_in_uint32    );
+                Dbprintf("  %25s: %08" PRIX32, "frn_in_uint32_clear_mask",   frn_in_uint32_clear_mask  );
+                Dbprintf("  %25s: %08" PRIX32, "max_iterations",             max_iterations            );
+                Dbprintf("  %25s: %08" PRIX32, "frn_min_in_uint32",          frn_min_in_uint32         );
+                Dbprintf("  %25s: %08" PRIX32, "frn_max_in_uint32",          frn_max_in_uint32         );
+                Dbprintf("  %25s: %08" PRIX32, "calculated_max_iterations",  calculated_max_iterations );
+                status_code = PM3_ESOFT;
+            }
+
+            // store the results in the output fields...
+            Uint4byteToMemBe(&(results.phase2_output.be_min_frn[0]), frn_min_in_uint32);
+            Uint4byteToMemBe(&(results.phase2_output.be_max_frn[0]), frn_max_in_uint32);
+            Uint4byteToMemBe(&(results.phase2_output.be_max_iterations[0]), max_iterations);
+        }
+        // 4. write the new branched key
+        // TODO - only write the 1-2 words that have changed from phase1? (meaningless optimization)
+        if (status_code == PM3_SUCCESS) {
+            Dbprintf("4. Writing branched key to transponder...");
+            for (int i = 0; (status_code == PM3_SUCCESS) && (i < 6); i++) {
+                // Yes, this treats the key array as though it were an array of LE 16-bit values ...
+                // That's because the write() function ends up swapping each pair of bytes back. <sigh>
+                uint16_t key_word = (results.phase2_output.be_key[(i * 2) + 1] << 8) + results.phase2_output.be_key[i * 2];
+                // Write each word, abort if any failure occurs
+                status_code = write(key_word, 9 - i);
+                if (status_code != PM3_SUCCESS) {
+                    Dbprintf(_RED_("Failed to write orig key to block %d, status %d"), 9-i, status_code);
+                }
+            }
+        }
     } else if (phase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE) {
         Uint4byteToMemBe(&(results.be_phase[0]), EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE);
 
+        // 
         status_code = PM3_ENOTIMPL;
 
     } else {

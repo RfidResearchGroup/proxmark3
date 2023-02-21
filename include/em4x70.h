@@ -136,7 +136,8 @@ typedef struct EM4X70_AUTHBRANCH_PHASE2_INPUT {
 } em4x70_authbranch_phase2_input_t;
 typedef struct EM4X70_AUTHBRANCH_PHASE2_OUTPUT {
     uint8_t be_key[12];           // big-endian -- written to transponder!
-    uint8_t be_start_frn[4];      // big-endian
+    uint8_t be_min_frn[4];      // big-endian -- first frn for a full-space search
+    uint8_t be_max_frn[4];        // big-endian -- last frn for a full-space search
     uint8_t be_max_iterations[4]; // big-endian -- max loop iterations w/`frn` incremented by 0x10 each time
 } em4x70_authbranch_phase2_output_t;
 typedef struct EM4X70_AUTHBRANCH_PHASE3_INPUT {
@@ -166,6 +167,7 @@ typedef struct {
     em4x70_authbranch_phase3_input_t  phase3_input;
     em4x70_authbranch_phase3_output_t phase3_output;
 } em4x70_authbranch_t;
+
 // Examples of branched key, branched frn start, and branched iterations derivation:
 //
 // When N is in range 5..31:
