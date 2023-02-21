@@ -643,6 +643,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
 
     if (got_private == false) {
         mbedtls_rsa_free(rsa);
+        free(rsa);
     }
 
     mbedtls_pk_free(&pkctx);
