@@ -965,11 +965,13 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
     command_parity = abd->phase1_input.useParity ? true : false;
 
     if (phase == EM4X70_AUTHBRANCH_PHASE1_REQUESTED_VERIFY_STARTING_VALUES) {
+        WDT_HIT();
         Uint4byteToMemBe(&(results.be_phase[0]), EM4X70_AUTHBRANCH_PHASE1_COMPLETED_VERIFY_STARTING_VALUES);
         // Note: there are no outputs to this phase, so simply modifying the phase is sufficient
 
         // 1. find the tag
         if (status_code == PM3_SUCCESS) {
+            WDT_HIT();
             Dbprintf("1. Finding tag...");
             if (!get_signalproperties()) {
                 Dbprintf(_RED_("Failed to get signal properties."));
@@ -977,6 +979,7 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
             }
         }
         if (status_code == PM3_SUCCESS) {
+            WDT_HIT();
             if (!find_em4x70_tag()) {
                 Dbprintf(_RED_("Failed to find tag."));
                 status_code = PM3_EFAILED;
@@ -984,6 +987,7 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
         }
         // 2. write original key to transponder
         if (status_code == PM3_SUCCESS) {
+            WDT_HIT();
             Dbprintf("2. Writing original key to transponder...");
             for (int i = 0; (status_code == PM3_SUCCESS) && (i < 6); i++) {
                 // Yes, this treats the key array as though it were an array of LE 16-bit values ...
@@ -998,6 +1002,7 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
         }
         // 3. verify authentication with provided rnd/frnd works
         if (status_code == PM3_SUCCESS) {
+            WDT_HIT();
             uint8_t auth_response[4] = {0u};
             Dbprintf("3. Verifying auth with provided rnd/frnd");
             status_code = authenticate(&(abd->phase1_input.be_rnd[0]), &(abd->phase1_input.be_frn[0]), &(auth_response[0]));
@@ -1009,6 +1014,7 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
         }
 
     } else if (phase == EM4X70_AUTHBRANCH_PHASE2_REQUESTED_WRITE_BRANCHED_KEY) {
+        WDT_HIT();
         Uint4byteToMemBe(&(results.be_phase[0]), EM4X70_AUTHBRANCH_PHASE2_COMPLETED_WRITE_BRANCHED_KEY);
 
         // Generate the new key
@@ -1076,15 +1082,16 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
             }
 
             // store the results in the output fields...
-            Uint4byteToMemBe(&(results.phase2_output.be_min_frn[0]), frn_min_in_uint32);
-            Uint4byteToMemBe(&(results.phase2_output.be_max_frn[0]), frn_max_in_uint32);
-            Uint4byteToMemBe(&(results.phase2_output.be_max_iterations[0]), max_iterations);
+            Uint4byteToMemBe(&(results.phase2_output.be_min_frn[0]),        frn_min_in_uint32);
+            Uint4byteToMemBe(&(results.phase2_output.be_max_frn[0]),        frn_max_in_uint32);
+            Uint4byteToMemBe(&(results.phase2_output.be_max_iterations[0]), max_iterations   );
         }
         // 4. write the new branched key
         // TODO - only write the 1-2 words that have changed from phase1? (meaningless optimization)
         if (status_code == PM3_SUCCESS) {
             Dbprintf("4. Writing branched key to transponder...");
             for (int i = 0; (status_code == PM3_SUCCESS) && (i < 6); i++) {
+                WDT_HIT();
                 // Yes, this treats the key array as though it were an array of LE 16-bit values ...
                 // That's because the write() function ends up swapping each pair of bytes back. <sigh>
                 uint16_t key_word = (results.phase2_output.be_key[(i * 2) + 1] << 8) + results.phase2_output.be_key[i * 2];
@@ -1096,10 +1103,72 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
             }
         }
     } else if (phase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE) {
+        WDT_HIT();
         Uint4byteToMemBe(&(results.be_phase[0]), EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE);
+        results.phase3_output.found_working_value = 0;
 
-        // 
-        status_code = PM3_ENOTIMPL;
+        // In phase 3, going to be repeatedly attempting authorization with the transponder.
+        // INPUTS:
+        //     phase1_input.be_rnd[7]
+        //     phase3_input.be_starting_frn[4]
+        //     phase3_input.be_max_iterations[4]
+        //
+        // If none of the frn in this set worked, return PM3_EPARTIAL.
+        // This helps to differentiate vs. other types of error conditions in the client.
+        //
+        // OUTPUTS:
+        //     be_next_start_frn[4]
+        //     found_working_value
+        //     be_successful_ac[3]
+        //     be_successful_frn[4]
+        //
+
+        // TODO: validate inputs?
+        uint32_t start_frn      = MemBeToUint4byte(&(abd->phase3_input.be_starting_frn[0]));
+        uint32_t max_iterations = MemBeToUint4byte(&(abd->phase3_input.be_max_iterations[0]));
+        uint32_t current_frn    = start_frn;
+        Dbprintf(_BRIGHT_RED_("Start == %08" PRIX32 ", max_iterations == %08" PRIX32), start_frn, max_iterations);
+
+        if (max_iterations == UINT32_C(0xFFFFFFFF)) {
+            // would cause infinite loop
+            Dbprintf(_BRIGHT_RED_("max_iterations cannot be -1"));
+            status_code = PM3_EINVARG;
+        }
+
+        for (uint32_t i = 0; (status_code == PM3_SUCCESS) && (i < max_iterations); ++i, current_frn += 0x10) {
+            WDT_HIT();
+            Dbprintf("Attempting FRN %08" PRIX32, current_frn);
+
+            // rnd can be used directly
+            // keep output's next_start_frn updated (in case of early exit)
+            Uint4byteToMemBe(&(results.phase3_output.be_next_start_frn[0]), current_frn);
+
+            uint8_t response_data[3] = {0};
+            int16_t tmp_status = authenticate(
+                &(abd->phase1_input.be_rnd[0]),
+                &(results.phase3_output.be_next_start_frn[0]),
+                &(response_data[0])
+                );
+
+            if (tmp_status == PM3_SUCCESS) {
+                results.phase3_output.found_working_value = 0x5A;
+                Uint4byteToMemBe(&(results.phase3_output.be_successful_frn[0]), current_frn);
+                memcpy(&(results.phase3_output.be_successful_ac[0]), &(response_data[0]), 3);
+                break; // out of for-loop
+            }
+            // only tried once ... keep perfect positioning (e.g., use blue tack to hold transponder)
+
+            if (BUTTON_PRESS() || data_available()) {
+                Dbprintf(_BRIGHT_YELLOW_("EM4x70 Auth_Branch Interrupted;  Last FRN tested == %08" PRIX32), current_frn);
+                status_code = PM3_EOPABORTED;
+                break; // out of for-loop
+            }
+        }
+        // whether broke out early or not, save the next start frn
+        Uint4byteToMemBe(&(results.phase3_output.be_next_start_frn[0]), current_frn);
+        // if ((!results.phase3_output.found_working_value) && (status_code == PM3_SUCCESS)) {
+        //     status
+        // }
 
     } else {
         // unsupported phase ... exit!

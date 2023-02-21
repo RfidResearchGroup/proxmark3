@@ -1123,6 +1123,8 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
     bool sendAdditionalCommand = true;
     int32_t remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE1;
 
+    PrintAndLogEx(WARNING, "Need to test resuming from ~20 away from last possible frn");
+
     for (uint32_t i = 0; true; ++i) { // only exit is via failure
 
         em4x70_authbranch_phase_t requestPhase = MemBeToUint4byte(&(abd.be_phase[0]));
@@ -1130,6 +1132,10 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
         // each loop, must send a command to the device...
         if (sendAdditionalCommand) {
             clearCommandBuffer();
+
+            PrintAndLogEx(WARNING, "Sending phase %s", sprint_authbranch_phase(requestPhase));
+            dump_authbranch_data(WARNING, &abd, true);
+
             SendCommandNG(CMD_LF_EM4X70_AUTHBRANCH, (uint8_t *)&abd, sizeof(em4x70_authbranch_t));
             sendAdditionalCommand = false;
         }
@@ -1152,6 +1158,11 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
 
             const em4x70_authbranch_t *results = (const em4x70_authbranch_t *)(&(resp.data.asBytes[0]));
             em4x70_authbranch_phase_t responsePhase = MemBeToUint4byte(&(results->be_phase[0]));
+
+            PrintAndLogEx(WARNING, "Received phase %s", sprint_authbranch_phase(responsePhase));
+            dump_authbranch_data(WARNING, results, true);
+
+
             if (requestPhase == EM4X70_AUTHBRANCH_PHASE1_REQUESTED_VERIFY_STARTING_VALUES) {
                 if (resp.status != PM3_SUCCESS) {
                     PrintAndLogEx(ERR, "Non-successful response status %04" PRId16 " for request phase %08" PRId32, resp.status, requestPhase);
@@ -1179,13 +1190,25 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                     status = PM3_ESOFT;
                     break; // out of infinite loop
                 }
+
                 // prepare to send first phase 3 request
+                memcpy(&(abd.phase2_output), &(results->phase2_output), sizeof(results->phase2_output));
                 InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE);
                 uint32_t max_iterations = MemBeToUint4byte(results->phase2_output.be_max_iterations);
-                uint32_t next_iterations = (max_iterations < FRN_ITERATIONS_PER_UPDATE) ? max_iterations : FRN_ITERATIONS_PER_UPDATE;
-                Uint4byteToMemBe(&(abd.phase3_input.be_max_iterations[0]), next_iterations);
+                uint32_t min_frn   = MemBeToUint4byte(&(abd.phase2_output.be_min_frn[0]));
+
+                // if user provided a start frn, use it ... else use the minimum frn to start from the beginning
                 uint32_t start_frn = MemBeToUint4byte(&(abd.phase1_input.be_start_frn[0]));
-                Uint4byteToMemBe(&(abd.phase3_input.be_starting_frn[0]), start_frn);
+                if (start_frn == 0) {
+                    start_frn = min_frn;
+                }
+
+                // do we need to limit the number of iterations?
+                uint32_t frn_offset = start_frn - min_frn;
+                uint32_t remaining_iterations = max_iterations - frn_offset;
+                uint32_t next_iterations = (remaining_iterations < FRN_ITERATIONS_PER_UPDATE) ? remaining_iterations : FRN_ITERATIONS_PER_UPDATE;
+                Uint4byteToMemBe(&(abd.phase3_input.be_max_iterations[0]), next_iterations);
+                Uint4byteToMemBe(&(abd.phase3_input.be_starting_frn[0]),   start_frn      );
                 remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE3;
                 sendAdditionalCommand = true;
                 // continue loop
@@ -1300,7 +1323,13 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(FAILED, "Branching from existing { K, rnd, frnd } " _BRIGHT_RED_("failed"));
-    dump_authbranch_data(NORMAL, &abd, true);
+    if (status == PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "INTERNAL ERROR: Unexpectedly reached end of function with PM3_SUCCESS status code!?");
+        dump_authbranch_data(NORMAL, &abd, true);
+    } else if (status == PM3_ENOTIMPL) {
+        PrintAndLogEx(WARNING, "Reach end of implemented features (PM3_ENOTIMPL), which is a type of success.");
+    } else {
+        dump_authbranch_data(NORMAL, &abd, true);
+    }
     return PM3_ESOFT;
 }
