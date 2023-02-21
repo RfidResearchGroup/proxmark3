@@ -898,7 +898,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 snprintf(exp, size, "R-block NACK(%d)", (cmd[0] & 0x01));
         }
         // I-block 000xCN1x
-        else if ((cmd[0] & 0xC0) == 0x00) {
+        else if (((cmd[0] & 0xC0) == 0x00) && (cmdsize > 2)) {
 
             // PCB [CID] [NAD] [INF] CRC CRC
             int pos = 1;
