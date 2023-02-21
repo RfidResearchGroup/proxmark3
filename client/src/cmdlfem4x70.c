@@ -748,6 +748,15 @@ static char *sprint_abd_phase3_input_be_max_iterations(const em4x70_authbranch_t
     hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
     return (char *)buf;
 }
+static char *sprint_abd_phase3_output_found_working_value(const em4x70_authbranch_t *data) {
+    enum { LOCAL_BYTE_COUNT =        sizeof(data->phase3_output.found_working_value) };
+    const uint8_t *p = (const   uint8_t *)(&data->phase3_output.found_working_value);
+
+    static uint8_t buf[(2 * LOCAL_BYTE_COUNT) + 1] = {0};
+    memset(buf, 0x00, sizeof(buf));
+    hex_to_buffer((uint8_t *)buf, p, LOCAL_BYTE_COUNT, sizeof(buf) - 1, 0, 0, true);
+    return (char *)buf;
+}
 static char *sprint_abd_phase3_output_be_next_start_frn(const em4x70_authbranch_t *data) {
     enum { LOCAL_BYTE_COUNT =       sizeof(data->phase3_output.be_next_start_frn) };
     const uint8_t *p = (const   uint8_t *)(&data->phase3_output.be_next_start_frn);
@@ -814,7 +823,7 @@ static void DumpAuthBranchPhase3Inputs(logLevel_t level, const em4x70_authbranch
 static void DumpAuthBranchPhase3Outputs(logLevel_t level, const em4x70_authbranch_t *data) {
     PrintAndLogEx(level, "| Phase 3 Outputs  |                            |");
     PrintAndLogEx(level, "+------------------+----------------------------+");
-    PrintAndLogEx(level, "| %15s  |  %24s  |", "found Ac",       data->phase3_output.found_working_value ? "true" : "false");
+    PrintAndLogEx(level, "| %15s  |  %24s  |", "found Ac",       sprint_abd_phase3_output_found_working_value(data));
     PrintAndLogEx(level, "| %15s  |  %24s  |", "next_start_frn", sprint_abd_phase3_output_be_next_start_frn(data));
     PrintAndLogEx(level, "| %15s  |  %24s  |", "successful_frn", sprint_abd_phase3_output_be_successful_frn(data));
     PrintAndLogEx(level, "| %15s  |  %24s  |", "successful_ac",  sprint_abd_phase3_output_be_successful_ac(data));
@@ -1230,15 +1239,17 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                                   "\"K\": \"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X\", "
                                   "\"Ac\": \"%02X%02X%02X%02X\", "
                                   "\"At\": \"%02X%02X%02X\" },",
-                                  abd.phase1_input.be_rnd[0], abd.phase1_input.be_rnd[1], abd.phase1_input.be_rnd[2],
-                                  abd.phase1_input.be_rnd[3], abd.phase1_input.be_rnd[4], abd.phase1_input.be_rnd[5], abd.phase1_input.be_rnd[6],
-                                  abd.phase2_output.be_key[ 0], abd.phase2_output.be_key[ 1], abd.phase2_output.be_key[ 2],
-                                  abd.phase2_output.be_key[ 3], abd.phase2_output.be_key[ 4], abd.phase2_output.be_key[ 5],
-                                  abd.phase2_output.be_key[ 6], abd.phase2_output.be_key[ 7], abd.phase2_output.be_key[ 8],
-                                  abd.phase2_output.be_key[ 9], abd.phase2_output.be_key[10], abd.phase2_output.be_key[11],
-                                  abd.phase3_output.be_successful_frn[0], abd.phase3_output.be_successful_frn[1],
-                                  abd.phase3_output.be_successful_frn[2], abd.phase3_output.be_successful_frn[3],
-                                  abd.phase3_output.be_successful_ac[0], abd.phase3_output.be_successful_ac[1], abd.phase3_output.be_successful_ac[2]
+                                  results->phase1_input.be_rnd[0], results->phase1_input.be_rnd[1], results->phase1_input.be_rnd[2],
+                                  results->phase1_input.be_rnd[3], results->phase1_input.be_rnd[4], results->phase1_input.be_rnd[5],
+                                  results->phase1_input.be_rnd[6],
+                                  results->phase2_output.be_key[ 0], results->phase2_output.be_key[ 1], results->phase2_output.be_key[ 2],
+                                  results->phase2_output.be_key[ 3], results->phase2_output.be_key[ 4], results->phase2_output.be_key[ 5],
+                                  results->phase2_output.be_key[ 6], results->phase2_output.be_key[ 7], results->phase2_output.be_key[ 8],
+                                  results->phase2_output.be_key[ 9], results->phase2_output.be_key[10], results->phase2_output.be_key[11],
+                                  results->phase3_output.be_successful_frn[0], results->phase3_output.be_successful_frn[1],
+                                  results->phase3_output.be_successful_frn[2], results->phase3_output.be_successful_frn[3],
+                                  results->phase3_output.be_successful_ac[0], results->phase3_output.be_successful_ac[1],
+                                  results->phase3_output.be_successful_ac[2]
                                  );
                     // TODO: also get the 32x variations
                     // return TrivialVariations_CmdEM4x70AuthBranch(etx);

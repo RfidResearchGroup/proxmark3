@@ -1151,6 +1151,7 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
                 );
 
             if (tmp_status == PM3_SUCCESS) {
+                Dbprintf(_BRIGHT_GREEN_("Found @ FRN == %08" PRIX32), current_frn);
                 results.phase3_output.found_working_value = 0x5A;
                 Uint4byteToMemBe(&(results.phase3_output.be_successful_frn[0]), current_frn);
                 memcpy(&(results.phase3_output.be_successful_ac[0]), &(response_data[0]), 3);
