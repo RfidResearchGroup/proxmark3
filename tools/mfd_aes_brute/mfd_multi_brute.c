@@ -379,7 +379,7 @@ int main(int argc, char *argv[]) {
     }
 
     uint64_t start_time = 0;
-    sscanf(argv[3], "%lu", &start_time);
+    sscanf(argv[3], "%"PRIu64, &start_time);
 
     printf("Crypto algo............ " _GREEN_("%s") "\n", algostr);
     printf("LCR Random generator... " _GREEN_("%s") "\n", generators[g_idx].Name);

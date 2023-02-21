@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
     uint8_t lock_challenge[32] = {0x00};
 
     uint64_t timestamp = 0;
-    sscanf(argv[1], "%lu", &timestamp);
+    sscanf(argv[1], "%"PRIu64, &timestamp);
 
     if (argc != 4) {
         printf("\nusage: %s <unix timestamp> <16 byte tag challenge> <32 byte lock challenge>\n\n", argv[0]);
