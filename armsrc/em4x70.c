@@ -1125,7 +1125,7 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
         //     phase3_input.be_starting_frn[4]
         //     phase3_input.be_max_iterations[4]
         //
-        // If none of the frn in this set worked, return PM3_EPARTIAL.
+        // If none of the frn in this set worked, still return PM3_SUCCESS.
         // This helps to differentiate vs. other types of error conditions in the client.
         //
         // OUTPUTS:
@@ -1167,7 +1167,9 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
                 );
 
             if (tmp_status == PM3_SUCCESS) {
-                Dbprintf(_BRIGHT_GREEN_("Found @ FRN == %08" PRIX32), current_frn);
+                if (g_Extensive_EM4x70_AuthBranch_Debug) {
+                    Dbprintf(_BRIGHT_GREEN_("Found @ FRN == %08" PRIX32), current_frn);
+                }
                 results.phase3_output.found_working_value = 0x5A;
                 Uint4byteToMemBe(&(results.phase3_output.be_successful_frn[0]), current_frn);
                 memcpy(&(results.phase3_output.be_successful_ac[0]), &(response_data[0]), 3);
@@ -1176,7 +1178,9 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
             // only tried once ... keep perfect positioning (e.g., use blue tack to hold transponder)
 
             if (BUTTON_PRESS() || data_available()) {
-                Dbprintf(_BRIGHT_YELLOW_("EM4x70 Auth_Branch Interrupted;  Last FRN tested == %08" PRIX32), current_frn);
+                if (g_Extensive_EM4x70_AuthBranch_Debug) {
+                    Dbprintf(_BRIGHT_YELLOW_("EM4x70 Auth_Branch Interrupted;  Last FRN tested == %08" PRIX32), current_frn);
+                }
                 status_code = PM3_EOPABORTED;
                 break; // out of for-loop
             }

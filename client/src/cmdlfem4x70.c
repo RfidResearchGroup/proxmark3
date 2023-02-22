@@ -1015,85 +1015,84 @@ static bool Parse_CmdEM4x70AuthBranch(const char *Cmd, em4x70_authbranch_t *data
 
     if (CLIParserParseString(ctx, Cmd, argtable, arg_getsize(argtable), true)) {
         failedArgsParsing = true;
-        // exit early to avoid more error messages
-        CLIParserFree(ctx);
-        return false;
-    }
-
-    data->phase1_input.useParity = arg_get_lit(ctx, 1);
-
-    int rnd_len = 7;
-    if (CLIParamHexToBuf(arg_get_str(ctx, 2), &(data->phase1_input.be_rnd[0]), 7, &rnd_len)) {
-        // mandatory parameter, so mark as failure
-        failedArgsParsing = true;
-        PrintAndLogEx(FAILED, "rnd parameter is a mandatory hex string");
-    } else if (rnd_len != 7) {
-        failedArgsParsing = true;
-        PrintAndLogEx(FAILED, "rnd parameter must be 7 bytes (got %d)", rnd_len);
-    }
-
-    int key_len = 12;
-    if (CLIParamHexToBuf(arg_get_str(ctx, 3), &(data->phase1_input.be_key[0]), 12, &key_len)) {
-        // mandatory parameter, so mark as failure
-        failedArgsParsing = true;
-        PrintAndLogEx(FAILED, "key parameter is a mandatory hex string");
-    } else if (key_len != 12) {
-        failedArgsParsing = true;
-        PrintAndLogEx(FAILED, "key parameter must be 12 bytes (got %d)", key_len);
-    }
-
-    int frn_len = 4;
-    if (CLIParamHexToBuf(arg_get_str(ctx, 4), &(data->phase1_input.be_frn[0]), 4, &frn_len)) {
-        // mandatory parameter, so mark as failure
-        failedArgsParsing = true;
-        PrintAndLogEx(FAILED, "frn parameter is a mandatory hex string");
-    } else if (frn_len != 4) {
-        failedArgsParsing = true;
-        PrintAndLogEx(FAILED, "frn parameter must be 4 bytes (got %d)", frn_len);
-    }
-
-    uint32_t native_xormask = 0x00010000;
-    // divergence is option with default value (16)
-    int divergence = arg_get_int_def(ctx, 5, 16);
-    if ((divergence > EM4X70_MAXIMUM_KEY_DIVERGENCE_BITS) || (divergence < EM4X70_MINIMUM_KEY_DIVERGENCE_BITS)) {
-        failedArgsParsing = true;
-        PrintAndLogEx(FAILED,
-                      "divergence parameter must be in range [%" PRId32 " .. %" PRId32 "], got %d",
-                      EM4X70_MINIMUM_KEY_DIVERGENCE_BITS, EM4X70_MAXIMUM_KEY_DIVERGENCE_BITS, divergence);
     } else {
-        native_xormask = UINT32_C(1) << divergence;
-    }
 
-    // xor mask, if provided, overrides divergence
-    int xormask_len = 4;
-    // xormask is optional ... use divergence (which has default value) if this isn't provided
-    // since it's a string argument type, length == 0 means caller did not provide the value
-    if (CLIParamHexToBuf(arg_get_str(ctx, 6), &(data->phase1_input.be_xormask[0]), 4, &xormask_len)) {
-        // optional parameter was not provided, so overwrite with divergence-based xormask
-        Uint4byteToMemBe(&(data->phase1_input.be_xormask[0]), native_xormask);
-    } else if (xormask_len == 0) {
-        // optional parameter was not provided, so overwrite with divergence-based xormask
-        Uint4byteToMemBe(&(data->phase1_input.be_start_frn[0]), UINT32_C(0));
-    } else if (xormask_len != 4) {
-        failedArgsParsing = true;
-        PrintAndLogEx(FAILED, "xormask must be 4 bytes (got %d)", xormask_len);
-    }
+        data->phase1_input.useParity = arg_get_lit(ctx, 1);
 
-    int start_frnd_len = 4;
-    // start_frn is an entirely optional parameter
-    // since it's a string argument type, length == 0 means caller did not provide the value
-    if (CLIParamHexToBuf(arg_get_str(ctx, 7), &(data->phase1_input.be_start_frn[0]), 4, &start_frnd_len)) {
-        // optional parameter, so use default of no special offset by setting to invalid value
-        // (and on off chance it's actually a valid starting value, it acts identically to no starting value)
-        Uint4byteToMemBe(&(data->phase1_input.be_start_frn[0]), UINT32_C(0));
-    } else if (start_frnd_len == 0) {
-        // optional parameter, so use default of no special offset by setting to invalid value
-        Uint4byteToMemBe(&(data->phase1_input.be_start_frn[0]), UINT32_C(0));
-    } else if (start_frnd_len != 4) {
-        failedArgsParsing = true;
-        PrintAndLogEx(FAILED, "start_frnd_len must be 4 bytes (got %d)", start_frnd_len);
-    }
+        int rnd_len = 7;
+        if (CLIParamHexToBuf(arg_get_str(ctx, 2), &(data->phase1_input.be_rnd[0]), 7, &rnd_len)) {
+            // parse failed (different than non-existent parameter)
+            // mandatory parameter, so mark as failure
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "rnd parameter is a mandatory hex string");
+        } else if (rnd_len != 7) {
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "rnd parameter must be 7 bytes (got %d)", rnd_len);
+        }
 
+        int key_len = 12;
+        if (CLIParamHexToBuf(arg_get_str(ctx, 3), &(data->phase1_input.be_key[0]), 12, &key_len)) {
+            // parse failed (different than non-existent parameter)
+            // mandatory parameter, so mark as failure
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "key parameter is a mandatory hex string");
+        } else if (key_len != 12) {
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "key parameter must be 12 bytes (got %d)", key_len);
+        }
+
+        int frn_len = 4;
+        if (CLIParamHexToBuf(arg_get_str(ctx, 4), &(data->phase1_input.be_frn[0]), 4, &frn_len)) {
+            // parse failed (different than non-existent parameter)
+            // mandatory parameter, so mark as failure
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "frn parameter is a mandatory hex string");
+        } else if (frn_len != 4) {
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "frn parameter must be 4 bytes (got %d)", frn_len);
+        }
+
+        uint32_t native_xormask = 0x00010000;
+        // divergence is option with default value (16)
+        int divergence = arg_get_int_def(ctx, 5, 16);
+        if ((divergence > EM4X70_MAXIMUM_KEY_DIVERGENCE_BITS) || (divergence < EM4X70_MINIMUM_KEY_DIVERGENCE_BITS)) {
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED,
+                        "divergence parameter must be in range [%" PRId32 " .. %" PRId32 "], got %d",
+                        EM4X70_MINIMUM_KEY_DIVERGENCE_BITS, EM4X70_MAXIMUM_KEY_DIVERGENCE_BITS, divergence);
+        } else {
+            native_xormask = UINT32_C(1) << divergence;
+        }
+
+        // xor mask, if provided, overrides divergence
+        int xormask_len = 4;
+        // xormask is optional ... use divergence (which has default value) if this isn't provided
+        // since it's a string argument type, length == 0 means caller did not provide the value
+        if (CLIParamHexToBuf(arg_get_str(ctx, 6), &(data->phase1_input.be_xormask[0]), 4, &xormask_len)) {
+            // parse failed (different than non-existent parameter)
+            failedArgsParsing = true;
+        } else if (xormask_len == 0) {
+            // optional parameter was not provided, so overwrite with divergence-based xormask
+            Uint4byteToMemBe(&(data->phase1_input.be_xormask[0]), native_xormask);
+        } else if (xormask_len != 4) {
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "xormask must be 4 bytes (got %d)", xormask_len);
+        }
+
+        int start_frnd_len = 4;
+        // start_frn is an entirely optional parameter
+        // since it's a string argument type, length == 0 means caller did not provide the value
+        if (CLIParamHexToBuf(arg_get_str(ctx, 7), &(data->phase1_input.be_start_frn[0]), 4, &start_frnd_len)) {
+            // parse failed (different than non-existent parameter)
+            failedArgsParsing = true;
+        } else if (start_frnd_len == 0) {
+            // optional parameter, so use default of no special offset by setting to invalid value
+            Uint4byteToMemBe(&(data->phase1_input.be_start_frn[0]), UINT32_C(0));
+        } else if (start_frnd_len != 4) {
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "start_frnd_len must be 4 bytes (got %d)", start_frnd_len);
+        }
+    }
     // always need to free the ctx
     CLIParserFree(ctx);
 
@@ -1145,9 +1144,6 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
     bool sendAdditionalCommand = true;
     int32_t remainingTimeoutsThisPhase = MAX_TIMEOUT_CYCLES_PHASE1;
 
-    PrintAndLogEx(WARNING, "Need to test resuming from ~20 away from last possible frn");
-    PrintAndLogEx(WARNING, "Need to test resuming from ~20 away from last possible frn");
-
     for (uint32_t i = 0; true; ++i) { // only exit is via failure
 
         em4x70_authbranch_phase_t requestPhase = MemBeToUint4byte(&(abd.be_phase[0]));
@@ -1171,8 +1167,24 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
             PrintAndLogEx(WARNING, _BRIGHT_RED_("User aborted"));
             if (requestPhase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE) {
                 uint32_t lastRequestedFrn = MemBeToUint4byte(&(abd.phase3_input.be_starting_frn[0]));
-                PrintAndLogEx(WARNING, "Last FRN requested: " _BRIGHT_RED_("%08") PRIX32, lastRequestedFrn);
+                uint32_t min_frn = MemBeToUint4byte(&(abd.phase2_output.be_min_frn[0]));
+                uint32_t max_frn = MemBeToUint4byte(&(abd.phase2_output.be_max_frn[0]));
+                OutputProgress(NORMAL, min_frn, max_frn, lastRequestedFrn);
+                PrintAndLogEx(NORMAL, "To resume:");
+                PrintAndLogEx(NORMAL,
+                    "lf em 4x70 authbranch --rnd %014" PRIx64 
+                    " -k %016" PRIx64 "%08" PRIx32 
+                    " --frn %08" PRIx32
+                    " --xormask %08" PRIx32
+                    " --start %08" PRIx32,
+                    MemBeToUint7byte(&(abd.phase1_input.be_rnd[0])),
+                    MemBeToUint8byte(&(abd.phase1_input.be_key[0])), MemBeToUint4byte(&(abd.phase1_input.be_key[8])),
+                    MemBeToUint4byte(&(abd.phase1_input.be_frn[0])),
+                    MemBeToUint4byte(&(abd.phase1_input.be_xormask[0])),
+                    lastRequestedFrn
+                    );
             }
+            status = PM3_EOPABORTED;
             break;
         }
 
@@ -1242,7 +1254,7 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                 sendAdditionalCommand = true;
                 // continue loop
             } else if (requestPhase == EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE) {
-                if ((resp.status != PM3_SUCCESS) && (resp.status != PM3_EPARTIAL)) {
+                if ((resp.status != PM3_SUCCESS) && (resp.status != PM3_EOPABORTED)) {
                     PrintAndLogEx(ERR, "Non-successful response status %04" PRId16 " for request phase %08" PRId32, resp.status, requestPhase);
                     status = resp.status;
                     break; // out of infinite loop
@@ -1260,6 +1272,25 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                 uint32_t prior_iterations = MemBeToUint4byte(&(abd.phase3_input.be_max_iterations[0]));
 
                 uint32_t expected_next_frn = prior_start_frn + (prior_iterations << 4); // low 4 bits are unused, so each iteration is +0x10
+
+                // Handle two exit conditions: abort and found value
+                if (resp.status == PM3_EOPABORTED) {
+                    OutputProgress(NORMAL, p2o_min_frn, p2o_max_frn, p3o_next_frn);
+                    PrintAndLogEx(NORMAL, "To resume:");
+                    PrintAndLogEx(NORMAL,
+                        "lf em 4x70 authbranch --rnd %014" PRIx64 
+                        " -k %016" PRIx64 "%08" PRIx32 
+                        " --frn %08" PRIx32
+                        " --xormask %08" PRIx32
+                        " --start %08" PRIx32,
+                        MemBeToUint7byte(&(abd.phase1_input.be_rnd[0])),
+                        MemBeToUint8byte(&(abd.phase1_input.be_key[0])), MemBeToUint4byte(&(abd.phase1_input.be_key[8])),
+                        MemBeToUint4byte(&(abd.phase1_input.be_frn[0])),
+                        MemBeToUint4byte(&(abd.phase1_input.be_xormask[0])),
+                        p3o_next_frn
+                        );
+                    return PM3_EOPABORTED;
+                }
 
                 if (results->phase3_output.found_working_value) {
                     uint32_t actual_frn = MemBeToUint4byte(&(results->phase3_output.be_successful_frn[0]));
