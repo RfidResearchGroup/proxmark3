@@ -758,7 +758,6 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
     if (tagtype & NTAG_213_TT) {
         uint8_t mirror_conf = ((data[0] & 0xE0) >> 5);
         uint8_t mirror_byte = ((data[0] & 0x18) >> 3);
-        uint8_t tt_msg_lock = (data[1] & 0x04);
         uint8_t mirror_page = data[2];
 
         switch (mirror_conf) {
@@ -820,10 +819,6 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
                     break;
             }
             PrintAndLogEx(INFO, "                mirror start page %02X | byte pos %02X - %s", mirror_page, mirror_byte, (mirror_page >= 0x4 && ((mirror_user_mem_start_byte + bytes_required_for_mirror_data) <= 144)) ? _GREEN_("OK") : _YELLOW_("Invalid value"));
-        }
-
-        if (tt_msg_lock) {
-            PrintAndLogEx(INFO, "                    - tamper message is permanently locked and cannot be written or read from memory");
         }
 
     } else if (tagtype & (NTAG_213_F | NTAG_216_F)) {
@@ -902,7 +897,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 
     uint8_t tt_enabled = 0;
     uint8_t tt_message[4] = {0x00};
-    uint8_t tt_msg_resp_len;
+    uint8_t tt_msg_resp_len = 0;
     uint8_t tt_status_resp[5] = {0x00};
 
     if (tagtype & NTAG_213_TT) {
@@ -948,10 +943,10 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
     if (tagtype & NTAG_213_TT) {
         if (data[1] & 0x06) {
             PrintAndLogEx(INFO, "TT_MSG [45/0x2D]: %s- (cannot be read)", sprint_hex(tt_message, tt_msg_resp_len));
-            PrintAndLogEx(INFO, "                    - tamper message is masked in memory, but can be revealed in the READ_TT_STATUS command response if tampering was detected");
+            PrintAndLogEx(INFO, "                    - tamper message is masked in memory");
         } else {
             PrintAndLogEx(INFO, "TT_MSG [45/0x2D]: %s", sprint_hex(tt_message, tt_msg_resp_len));
-            PrintAndLogEx(INFO, "                    - tamper message (read from memory) is %s", sprint_hex(tt_message, tt_msg_resp_len));
+            PrintAndLogEx(INFO, "                    - tamper message is %s and is readable/writablbe in memory", sprint_hex(tt_message, tt_msg_resp_len));
         }
     }
 
@@ -961,7 +956,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
         uint8_t tt_status_len = ntagtt_getTamperStatus(tt_status_resp, 5);
 
         if (tt_status_len != 5) {
-            PrintAndLogEx(WARNING, "Error sending the read TT status command to tag\n");
+            PrintAndLogEx(WARNING, "Error sending the READ_TT_STATUS command to tag\n");
             return PM3_ESOFT;
         }
 
@@ -978,7 +973,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
                 PrintAndLogEx(INFO, "            - Tamper loop was detected as open during this power-up");
                 break;
             case 0x49:
-                PrintAndLogEx(INFO, "            - Tamper loop measurement from this power-up was not enabled or not valid");
+                PrintAndLogEx(INFO, "            - Tamper loop measurement was not enabled or not valid during this power-up");
                 break;
             default:
                 break;
@@ -2725,6 +2720,7 @@ int CmdHF14MfUTamper(const char *Cmd) {
     bool lock_msg = arg_get_lit(ctx, 4);
     bool enable = arg_get_lit(ctx, 1);
     bool disable = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
     TagTypeUL_t tagtype = GetHF14AMfU_Type();
     if (tagtype == UL_ERROR) {
