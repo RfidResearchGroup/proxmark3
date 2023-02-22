@@ -80,12 +80,14 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
                      );
     }
 
-    lf_hidsim_t payload;
-    payload.Q5 = false;
-    payload.hi2 = packed.Top;
-    payload.hi = packed.Mid;
-    payload.lo = packed.Bot;
-    payload.longFMT = (packed.Mid > 0xFFF);
+    lf_hidsim_t payload = {
+        .EM = false,
+        .Q5 = false,
+        .hi2 = packed.Top,
+        .hi = packed.Mid,
+        .lo = packed.Bot,
+        .longFMT = (packed.Mid > 0xFFF)
+    };
 
     clearCommandBuffer();
 
