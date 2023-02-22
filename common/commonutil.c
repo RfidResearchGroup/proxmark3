@@ -132,15 +132,15 @@ uint32_t reflect32(uint32_t b) {
     // https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
     uint32_t v = b; // 32-bit word to reverse bit order
     // swap odd and even bits
-    v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);
+    v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) <<  1);
     // swap consecutive pairs
-    v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) << 2);
+    v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) <<  2);
     // swap nibbles ...
-    v = ((v >> 4) & 0x0F0F0F0F) | ((v & 0x0F0F0F0F) << 4);
+    v = ((v >> 4) & 0x0F0F0F0F) | ((v & 0x0F0F0F0F) <<  4);
     // swap bytes
-    v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) << 8);
+    v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) <<  8);
     // swap 2-byte long pairs
-    v = (v >> 16) | (v               << 16);
+    v = (v >> 16              ) | ( v               << 16);
     return v;
 }
 
@@ -178,6 +178,32 @@ inline uint32_t MemLeToUint4byte(const uint8_t *data) {
            );
 }
 
+uint64_t MemLeToUint5byte(const uint8_t *data) {
+    return
+        (((uint64_t)data[4]) << 32) +
+        (data[3] << 24) + (data[2] << 16) + (data[1] <<  8) +  data[0];
+}
+
+uint64_t MemLeToUint6byte(const uint8_t *data) {
+    return
+        (((uint64_t)data[5]) << 40) + (((uint64_t)data[4]) << 32) +
+        (data[3] << 24) + (data[2] << 16) + (data[1] <<  8) +  data[0];
+}
+
+uint64_t MemLeToUint7byte(const uint8_t *data) {
+    return
+        (((uint64_t)data[6]) << 48) +
+        (((uint64_t)data[5]) << 40) + (((uint64_t)data[4]) << 32) +
+        (data[3] << 24) + (data[2] << 16) + (data[1] <<  8) +  data[0];
+}
+
+uint64_t MemLeToUint8byte(const uint8_t *data) {
+    return
+        (((uint64_t)data[7]) << 56) + (((uint64_t)data[6]) << 48) +
+        (((uint64_t)data[5]) << 40) + (((uint64_t)data[4]) << 32) +
+        (data[3] << 24) + (data[2] << 16) + (data[1] <<  8) +  data[0];
+}
+
 inline uint16_t MemBeToUint2byte(const uint8_t *data) {
     return (uint16_t)(
                (data[0] << 8) + data[1]
@@ -194,6 +220,36 @@ inline uint32_t MemBeToUint4byte(const uint8_t *data) {
     return (uint32_t)(
                (data[0] << 24) + (data[1] << 16) + (data[2] << 8) + data[3]
            );
+}
+
+uint64_t MemBeToUint5byte(const uint8_t *data) {
+    return 
+        (((uint64_t)data[0]) << 32) +
+        (((uint64_t)data[1]) << 24) + (((uint64_t)data[2]) << 16) +
+        (((uint64_t)data[3]) <<  8) +  data[4];
+}
+
+uint64_t MemBeToUint6byte(const uint8_t *data) {
+    return
+        (((uint64_t)data[0]) << 40) + (((uint64_t)data[1]) << 32) +
+        (((uint64_t)data[2]) << 24) + (((uint64_t)data[3]) << 16) +
+        (((uint64_t)data[4]) <<  8) +  data[5];
+}
+
+uint64_t MemBeToUint7byte(const uint8_t *data) {
+    return 
+        (((uint64_t)data[0]) << 48) +
+        (((uint64_t)data[1]) << 40) + (((uint64_t)data[2]) << 32) +
+        (((uint64_t)data[3]) << 24) + (((uint64_t)data[4]) << 16) +
+        (((uint64_t)data[5]) <<  8) +  data[6];
+}
+
+uint64_t MemBeToUint8byte(const uint8_t *data) {
+    return 
+        (((uint64_t)data[0]) << 56) + (((uint64_t)data[1]) << 48) +
+        (((uint64_t)data[2]) << 40) + (((uint64_t)data[3]) << 32) +
+        (((uint64_t)data[4]) << 24) + (((uint64_t)data[5]) << 16) +
+        (((uint64_t)data[6]) <<  8) +  data[7];
 }
 
 void Uint2byteToMemLe(uint8_t *data, uint16_t value) {
@@ -214,6 +270,44 @@ void Uint4byteToMemLe(uint8_t *data, uint32_t value) {
     data[0] = value & 0xff;
 }
 
+void Uint5byteToMemLe(uint8_t *data, uint64_t value) {
+    data[4] = (value >> 32) & 0xff;
+    data[3] = (value >> 24) & 0xff;
+    data[2] = (value >> 16) & 0xff;
+    data[1] = (value >>  8) & 0xff;
+    data[0] = value & 0xff;
+}
+
+void Uint6byteToMemLe(uint8_t *data, uint64_t value) {
+    data[5] = (value >> 40) & 0xff;
+    data[4] = (value >> 32) & 0xff;
+    data[3] = (value >> 24) & 0xff;
+    data[2] = (value >> 16) & 0xff;
+    data[1] = (value >>  8) & 0xff;
+    data[0] = value & 0xff;
+}
+
+void Uint7byteToMemLe(uint8_t *data, uint64_t value) {
+    data[6] = (value >> 48) & 0xff;
+    data[5] = (value >> 40) & 0xff;
+    data[4] = (value >> 32) & 0xff;
+    data[3] = (value >> 24) & 0xff;
+    data[2] = (value >> 16) & 0xff;
+    data[1] = (value >>  8) & 0xff;
+    data[0] = value & 0xff;
+}
+
+void Uint8byteToMemLe(uint8_t *data, uint64_t value) {
+    data[7] = (value >> 56) & 0xff;
+    data[6] = (value >> 48) & 0xff;
+    data[5] = (value >> 40) & 0xff;
+    data[4] = (value >> 32) & 0xff;
+    data[3] = (value >> 24) & 0xff;
+    data[2] = (value >> 16) & 0xff;
+    data[1] = (value >>  8) & 0xff;
+    data[0] = value & 0xff;
+}
+
 void Uint2byteToMemBe(uint8_t *data, uint16_t value) {
     data[0] = (value >> 8) & 0xff;
     data[1] = value & 0xff;
@@ -230,6 +324,44 @@ void Uint4byteToMemBe(uint8_t *data, uint32_t value) {
     data[1] = (value >> 16) & 0xff;
     data[2] = (value >> 8) & 0xff;
     data[3] = value & 0xff;
+}
+
+void Uint5byteToMemBe(uint8_t *data, uint64_t value) {
+    data[0] = (value >> 32) & 0xff;
+    data[1] = (value >> 24) & 0xff;
+    data[2] = (value >> 16) & 0xff;
+    data[3] = (value >>  8) & 0xff;
+    data[4] =  value        & 0xff;
+}
+
+void Uint6byteToMemBe(uint8_t *data, uint64_t value) {
+    data[0] = (value >> 40) & 0xff;
+    data[1] = (value >> 32) & 0xff;
+    data[2] = (value >> 24) & 0xff;
+    data[3] = (value >> 16) & 0xff;
+    data[4] = (value >>  8) & 0xff;
+    data[5] =  value        & 0xff;
+}
+
+void Uint7byteToMemBe(uint8_t *data, uint64_t value) {
+    data[0] = (value >> 48) & 0xff;
+    data[1] = (value >> 40) & 0xff;
+    data[2] = (value >> 32) & 0xff;
+    data[3] = (value >> 24) & 0xff;
+    data[4] = (value >> 16) & 0xff;
+    data[5] = (value >>  8) & 0xff;
+    data[6] =  value        & 0xff;
+}
+
+void Uint8byteToMemBe(uint8_t *data, uint64_t value) {
+    data[0] = (value >> 56) & 0xff;
+    data[1] = (value >> 48) & 0xff;
+    data[2] = (value >> 40) & 0xff;
+    data[3] = (value >> 32) & 0xff;
+    data[4] = (value >> 24) & 0xff;
+    data[5] = (value >> 16) & 0xff;
+    data[6] = (value >>  8) & 0xff;
+    data[7] =  value        & 0xff;
 }
 
 // RotateLeft - Ultralight, Desfire
