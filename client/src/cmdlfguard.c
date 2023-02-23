@@ -375,7 +375,7 @@ static int CmdGuardSim(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating Guardall Prox - xorKey: " _YELLOW_("%u%") " Facility Code: " _YELLOW_("%u") " CardNumber: " _YELLOW_("%u")
+    PrintAndLogEx(SUCCESS, "Simulating Guardall Prox - xorKey: " _YELLOW_("%u") " Facility Code: " _YELLOW_("%u") " CardNumber: " _YELLOW_("%u")
     			  , xorval
                   , facilitycode
                   , cardnumber
