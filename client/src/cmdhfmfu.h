@@ -50,6 +50,7 @@ int trace_mfuc_try_default_3des_keys(uint8_t **correct_key, int state, uint8_t (
 
 int CmdHFMFUltra(const char *Cmd);
 int CmdHF14MfuNDEFRead(const char *Cmd);
+int CmdHF14MfUTamper(const char *Cmd);
 
 uint16_t ul_ev1_packgen_VCNEW(uint8_t *uid, uint32_t pwd);
 uint32_t ul_ev1_otpgenA(uint8_t *uid);
