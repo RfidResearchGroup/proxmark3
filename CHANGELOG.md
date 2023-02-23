@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `lf em 4x70 authvars` command (@henrygab)
+ - Added `lf em 4x70 authbranch` command (@henrygab)
+ - Added 64-bit `UintNbyteToMemZZ()` and `MemZZToUintNbyte()` functions (@henrygab)
  - Changed `mem load -m` - now correctly erase all allocated flash memory (@iceman1001)
  - Fixed emulator quick dump to handle MFC Ev1 extra sectors (@iceman100)
  - Removed some empty dump files (@iceman1001)
