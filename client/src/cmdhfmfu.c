@@ -2714,6 +2714,7 @@ int CmdHF14MfUTamper(const char *Cmd) {
     if (use_msg && msg_len != 4) {
         PrintAndLogEx(WARNING, "The tamper message must be 4 hex bytes if provided");
         DropField();
+        CLIParserFree(ctx);
         return PM3_ESOFT;
     }
 
