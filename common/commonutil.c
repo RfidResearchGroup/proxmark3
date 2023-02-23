@@ -140,7 +140,7 @@ uint32_t reflect32(uint32_t b) {
     // swap bytes
     v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) <<  8);
     // swap 2-byte long pairs
-    v = (v >> 16              ) | ( v               << 16);
+    v = (v >> 16) | (v               << 16);
     return v;
 }
 
@@ -223,7 +223,7 @@ inline uint32_t MemBeToUint4byte(const uint8_t *data) {
 }
 
 uint64_t MemBeToUint5byte(const uint8_t *data) {
-    return 
+    return
         (((uint64_t)data[0]) << 32) +
         (((uint64_t)data[1]) << 24) + (((uint64_t)data[2]) << 16) +
         (((uint64_t)data[3]) <<  8) +  data[4];
@@ -237,7 +237,7 @@ uint64_t MemBeToUint6byte(const uint8_t *data) {
 }
 
 uint64_t MemBeToUint7byte(const uint8_t *data) {
-    return 
+    return
         (((uint64_t)data[0]) << 48) +
         (((uint64_t)data[1]) << 40) + (((uint64_t)data[2]) << 32) +
         (((uint64_t)data[3]) << 24) + (((uint64_t)data[4]) << 16) +
@@ -245,7 +245,7 @@ uint64_t MemBeToUint7byte(const uint8_t *data) {
 }
 
 uint64_t MemBeToUint8byte(const uint8_t *data) {
-    return 
+    return
         (((uint64_t)data[0]) << 56) + (((uint64_t)data[1]) << 48) +
         (((uint64_t)data[2]) << 40) + (((uint64_t)data[3]) << 32) +
         (((uint64_t)data[4]) << 24) + (((uint64_t)data[5]) << 16) +

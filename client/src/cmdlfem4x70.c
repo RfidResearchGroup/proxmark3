@@ -94,7 +94,7 @@ static uint8_t CountOfTrailingOneBits32(uint32_t v) {
 static void OutputProgress(logLevel_t level, uint32_t min, uint32_t max, uint32_t current) {
     double n = current - min;
     double d = max - min;
-    double p = (n*100)/d;
+    double p = (n * 100) / d;
     PrintAndLogEx(level, "Progress [%08" PRIX32 "..%08" PRIX32 "], Current: %08" PRIX32 " (~%0.2f%%)", min, max, current, p);
 }
 
@@ -1066,28 +1066,28 @@ static int16_t get_variations_and_dump_output(const em4x70_authbranch_t *data) {
         return status;
     }
     PrintAndLogEx(SUCCESS,
-        "{ \"N\": \"%014" PRIX64 "\","
-        " \"K\": \"%016"  PRIX64 "%08" PRIX32 "\","
-        " \"Ac\": \"%08"  PRIX32 "\","
-        " \"Ats\": ["
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\"] },",
-        rnd, k_high64, k_low32, frn,
-        x.native_ac[ 0], x.native_ac[ 1], x.native_ac[ 2], x.native_ac[ 3],
-        x.native_ac[ 4], x.native_ac[ 5], x.native_ac[ 6], x.native_ac[ 7],
-        x.native_ac[ 8], x.native_ac[ 9], x.native_ac[10], x.native_ac[11],
-        x.native_ac[12], x.native_ac[13], x.native_ac[14], x.native_ac[15],
-        x.native_ac[16], x.native_ac[17], x.native_ac[18], x.native_ac[19],
-        x.native_ac[20], x.native_ac[21], x.native_ac[22], x.native_ac[23],
-        x.native_ac[24], x.native_ac[25], x.native_ac[26], x.native_ac[27],
-        x.native_ac[28], x.native_ac[29], x.native_ac[30], x.native_ac[31]
-        );
+                  "{ \"N\": \"%014" PRIX64 "\","
+                  " \"K\": \"%016"  PRIX64 "%08" PRIX32 "\","
+                  " \"Ac\": \"%08"  PRIX32 "\","
+                  " \"Ats\": ["
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\"] },",
+                  rnd, k_high64, k_low32, frn,
+                  x.native_ac[ 0], x.native_ac[ 1], x.native_ac[ 2], x.native_ac[ 3],
+                  x.native_ac[ 4], x.native_ac[ 5], x.native_ac[ 6], x.native_ac[ 7],
+                  x.native_ac[ 8], x.native_ac[ 9], x.native_ac[10], x.native_ac[11],
+                  x.native_ac[12], x.native_ac[13], x.native_ac[14], x.native_ac[15],
+                  x.native_ac[16], x.native_ac[17], x.native_ac[18], x.native_ac[19],
+                  x.native_ac[20], x.native_ac[21], x.native_ac[22], x.native_ac[23],
+                  x.native_ac[24], x.native_ac[25], x.native_ac[26], x.native_ac[27],
+                  x.native_ac[28], x.native_ac[29], x.native_ac[30], x.native_ac[31]
+                 );
     return PM3_SUCCESS;
 }
 
@@ -1164,8 +1164,8 @@ static bool Parse_CmdEM4x70AuthBranch(const char *Cmd, em4x70_authbranch_t *data
         if ((divergence > EM4X70_MAXIMUM_KEY_DIVERGENCE_BITS) || (divergence < EM4X70_MINIMUM_KEY_DIVERGENCE_BITS)) {
             failedArgsParsing = true;
             PrintAndLogEx(FAILED,
-                        "divergence parameter must be in range [%" PRId32 " .. %" PRId32 "], got %d",
-                        EM4X70_MINIMUM_KEY_DIVERGENCE_BITS, EM4X70_MAXIMUM_KEY_DIVERGENCE_BITS, divergence);
+                          "divergence parameter must be in range [%" PRId32 " .. %" PRId32 "], got %d",
+                          EM4X70_MINIMUM_KEY_DIVERGENCE_BITS, EM4X70_MAXIMUM_KEY_DIVERGENCE_BITS, divergence);
         } else {
             native_xormask = UINT32_C(1) << divergence;
         }
@@ -1268,17 +1268,17 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                 OutputProgress(NORMAL, min_frn, max_frn, lastRequestedFrn);
                 PrintAndLogEx(NORMAL, "To resume:");
                 PrintAndLogEx(NORMAL,
-                    "lf em 4x70 authbranch --rnd %014" PRIX64 
-                    " -k %016" PRIX64 "%08" PRIX32 
-                    " --frn %08" PRIX32
-                    " --xormask %08" PRIX32
-                    " --start %08" PRIX32,
-                    MemBeToUint7byte(&(abd.phase1_input.be_rnd[0])),
-                    MemBeToUint8byte(&(abd.phase1_input.be_key[0])), MemBeToUint4byte(&(abd.phase1_input.be_key[8])),
-                    MemBeToUint4byte(&(abd.phase1_input.be_frn[0])),
-                    MemBeToUint4byte(&(abd.phase1_input.be_xormask[0])),
-                    lastRequestedFrn
-                    );
+                              "lf em 4x70 authbranch --rnd %014" PRIX64
+                              " -k %016" PRIX64 "%08" PRIX32
+                              " --frn %08" PRIX32
+                              " --xormask %08" PRIX32
+                              " --start %08" PRIX32,
+                              MemBeToUint7byte(&(abd.phase1_input.be_rnd[0])),
+                              MemBeToUint8byte(&(abd.phase1_input.be_key[0])), MemBeToUint4byte(&(abd.phase1_input.be_key[8])),
+                              MemBeToUint4byte(&(abd.phase1_input.be_frn[0])),
+                              MemBeToUint4byte(&(abd.phase1_input.be_xormask[0])),
+                              lastRequestedFrn
+                             );
             }
             status = PM3_EOPABORTED;
             break;
@@ -1342,7 +1342,7 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                 uint32_t remaining_iterations = max_iterations - frn_offset;
                 uint32_t next_iterations = (remaining_iterations < FRN_ITERATIONS_PER_UPDATE) ? remaining_iterations : FRN_ITERATIONS_PER_UPDATE;
                 Uint4byteToMemBe(&(abd.phase3_input.be_max_iterations[0]), next_iterations);
-                Uint4byteToMemBe(&(abd.phase3_input.be_starting_frn[0]),   start_frn      );
+                Uint4byteToMemBe(&(abd.phase3_input.be_starting_frn[0]),   start_frn);
 
                 OutputProgress(INPLACE, min_frn, max_frn, start_frn);
 
@@ -1375,22 +1375,22 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                     PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(NORMAL, "To resume:");
                     PrintAndLogEx(NORMAL,
-                        "lf em 4x70 authbranch --rnd %014" PRIX64 
-                        " -k %016" PRIX64 "%08" PRIX32 
-                        " --frn %08" PRIX32
-                        " --xormask %08" PRIX32
-                        " --start %08" PRIX32,
-                        MemBeToUint7byte(&(abd.phase1_input.be_rnd[0])),
-                        MemBeToUint8byte(&(abd.phase1_input.be_key[0])), MemBeToUint4byte(&(abd.phase1_input.be_key[8])),
-                        MemBeToUint4byte(&(abd.phase1_input.be_frn[0])),
-                        MemBeToUint4byte(&(abd.phase1_input.be_xormask[0])),
-                        p3o_next_frn
-                        );
+                                  "lf em 4x70 authbranch --rnd %014" PRIX64
+                                  " -k %016" PRIX64 "%08" PRIX32
+                                  " --frn %08" PRIX32
+                                  " --xormask %08" PRIX32
+                                  " --start %08" PRIX32,
+                                  MemBeToUint7byte(&(abd.phase1_input.be_rnd[0])),
+                                  MemBeToUint8byte(&(abd.phase1_input.be_key[0])), MemBeToUint4byte(&(abd.phase1_input.be_key[8])),
+                                  MemBeToUint4byte(&(abd.phase1_input.be_frn[0])),
+                                  MemBeToUint4byte(&(abd.phase1_input.be_xormask[0])),
+                                  p3o_next_frn
+                                 );
                     return PM3_EOPABORTED;
                 }
 
                 if (results->phase3_output.found_working_value) {
-                    PrintAndLogEx(NORMAL,""); // saves last line's output
+                    PrintAndLogEx(NORMAL, ""); // saves last line's output
                     return get_variations_and_dump_output(results);
                 }
 
@@ -1561,10 +1561,10 @@ int CmdEM4x70AuthVars(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint64_t rnd      = MemBeToUint7byte(&(etd.rnd[0])      );
+    uint64_t rnd      = MemBeToUint7byte(&(etd.rnd[0]));
     uint64_t k_high64 = MemBeToUint8byte(&(etd.crypt_key[0]));
     uint32_t k_low32  = MemBeToUint4byte(&(etd.crypt_key[8]));
-    uint32_t frn      = MemBeToUint4byte(&(etd.frnd[0])     );
+    uint32_t frn      = MemBeToUint4byte(&(etd.frnd[0]));
 
     trivial_variations_output_t x = {0};
     int16_t status = get_trivial_auth_variations(&etd, &x);
@@ -1574,28 +1574,28 @@ int CmdEM4x70AuthVars(const char *Cmd) {
         return status;
     }
     PrintAndLogEx(SUCCESS,
-        "{ \"N\": \"%014" PRIX64 "\","
-        " \"K\": \"%016"  PRIX64 "%08" PRIX32 "\","
-        " \"Ac\": \"%08"  PRIX32 "\","
-        " \"Ats\": ["
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\" ] },",
-        rnd, k_high64, k_low32, frn,
-        x.native_ac[ 0], x.native_ac[ 1], x.native_ac[ 2], x.native_ac[ 3],
-        x.native_ac[ 4], x.native_ac[ 5], x.native_ac[ 6], x.native_ac[ 7],
-        x.native_ac[ 8], x.native_ac[ 9], x.native_ac[10], x.native_ac[11],
-        x.native_ac[12], x.native_ac[13], x.native_ac[14], x.native_ac[15],
-        x.native_ac[16], x.native_ac[17], x.native_ac[18], x.native_ac[19],
-        x.native_ac[20], x.native_ac[21], x.native_ac[22], x.native_ac[23],
-        x.native_ac[24], x.native_ac[25], x.native_ac[26], x.native_ac[27],
-        x.native_ac[28], x.native_ac[29], x.native_ac[30], x.native_ac[31]
-        );
+                  "{ \"N\": \"%014" PRIX64 "\","
+                  " \"K\": \"%016"  PRIX64 "%08" PRIX32 "\","
+                  " \"Ac\": \"%08"  PRIX32 "\","
+                  " \"Ats\": ["
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\" ] },",
+                  rnd, k_high64, k_low32, frn,
+                  x.native_ac[ 0], x.native_ac[ 1], x.native_ac[ 2], x.native_ac[ 3],
+                  x.native_ac[ 4], x.native_ac[ 5], x.native_ac[ 6], x.native_ac[ 7],
+                  x.native_ac[ 8], x.native_ac[ 9], x.native_ac[10], x.native_ac[11],
+                  x.native_ac[12], x.native_ac[13], x.native_ac[14], x.native_ac[15],
+                  x.native_ac[16], x.native_ac[17], x.native_ac[18], x.native_ac[19],
+                  x.native_ac[20], x.native_ac[21], x.native_ac[22], x.native_ac[23],
+                  x.native_ac[24], x.native_ac[25], x.native_ac[26], x.native_ac[27],
+                  x.native_ac[28], x.native_ac[29], x.native_ac[30], x.native_ac[31]
+                 );
 
 //         { "N": "3FFE1FB6CC513F", "K": "A090A0A02080000000000000", "Ac": "F355F1A0", "Ats": [ "609D60", "645270", "609990", "6451C0",  "69DA70", "6F90D0", "69DD20", "6F92D0",  "65A9D0", "60A360", "65ADD0", "60A540",  "6C29F0", "6BE610", "6C2CF0", "6BE0A0",  "6101F0", "65FAD0", "610310", "65FA60",  "68CBF0", "6E0FB0", "68CBA0", "6E0AB0",  "6DDA00", "69B130", "6DDA00", "69B030",  "649C10", "629790", "649DD0", "629790"] },
     return PM3_SUCCESS;

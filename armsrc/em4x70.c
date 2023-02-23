@@ -98,8 +98,7 @@ static void propagate_set_bits(uint32_t *v) {
     *v |= *v >> 8;
     *v |= *v >> 16;
 }
-static int8_t highest_set_bit_index(uint32_t v)
-{
+static int8_t highest_set_bit_index(uint32_t v) {
     // DeBruijn's Sequence
     static const uint32_t deBruijnValue = (uint32_t) 0x07C4ACDD;
     static const int reverse_lookup[32] = {
@@ -962,7 +961,8 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
 
     // expect incoming phase to be ..._REQUESTED_...
     em4x70_authbranch_phase_t phase = MemBeToUint4byte(&(abd->be_phase[0]));
-    em4x70_authbranch_t results; memcpy(&results, abd, sizeof(em4x70_authbranch_t));
+    em4x70_authbranch_t results;
+    memcpy(&results, abd, sizeof(em4x70_authbranch_t));
 
     command_parity = abd->phase1_input.useParity ? true : false;
 
@@ -1002,7 +1002,7 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
                 // Write each word, abort if any failure occurs
                 status_code = write(key_word, 9 - i);
                 if (status_code != PM3_SUCCESS) {
-                    Dbprintf(_RED_("Failed to write orig key to block %d, status %d"), 9-i, status_code);
+                    Dbprintf(_RED_("Failed to write orig key to block %d, status %d"), 9 - i, status_code);
                 }
             }
         }
@@ -1068,25 +1068,25 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
             int8_t frn_in_uint32_bit_index  = highest_key_xormask_bit_index + KEY_BIT_INDEX_TO_FRN_UINT32_INDEX; // range: 4..30,   if ==4          if ==30
             int8_t frn_28bit_bit_index      = highest_key_xormask_bit_index + KEY_BIT_INDEX_TO_FRN_28BIT_INDEX;  // range: 0..26,      ==0             ==26
             uint32_t original_frn_in_uint32 = MemBeToUint4byte(&(abd->phase1_input.be_frn[0]));
-            uint32_t frn_in_uint32_clear_mask = ~((UINT32_C(1) << (frn_in_uint32_bit_index+1)) - 1); // before negation, all the lowest bits were set
+            uint32_t frn_in_uint32_clear_mask = ~((UINT32_C(1) << (frn_in_uint32_bit_index + 1)) - 1); // before negation, all the lowest bits were set
             // uint32_t frn_in_uint32_set_mask = (~frn_in_uint32_clear_mask) & UINT32_C(0xFFFFFFF0);    // negate the clear mask, but exclude low nibble
 
-            uint32_t max_iterations    = UINT32_C(1) << (frn_28bit_bit_index+1);
+            uint32_t max_iterations    = UINT32_C(1) << (frn_28bit_bit_index + 1);
             uint32_t frn_min_in_uint32 = original_frn_in_uint32 & frn_in_uint32_clear_mask;
-            uint32_t frn_max_in_uint32 = frn_min_in_uint32 + ((max_iterations-1) << 4);
-            uint32_t calculated_max_iterations = ((frn_max_in_uint32 - frn_min_in_uint32)/0x10)+1;
+            uint32_t frn_max_in_uint32 = frn_min_in_uint32 + ((max_iterations - 1) << 4);
+            uint32_t calculated_max_iterations = ((frn_max_in_uint32 - frn_min_in_uint32) / 0x10) + 1;
             if (calculated_max_iterations != max_iterations) {
                 if (g_Extensive_EM4x70_AuthBranch_Debug) {
                     Dbprintf(_BRIGHT_RED_("My maths appear to be incorrect...."));
-                    //                              ....-....1....-....2....-            
-                    Dbprintf("  %25s: %02" PRId8 , "frn_in_uint32_bit_index",    frn_in_uint32_bit_index   );
-                    Dbprintf("  %25s: %02" PRId8 , "frn_28bit_bit_index",        frn_28bit_bit_index       );
-                    Dbprintf("  %25s: %08" PRIX32, "original_frn_in_uint32",     original_frn_in_uint32    );
-                    Dbprintf("  %25s: %08" PRIX32, "frn_in_uint32_clear_mask",   frn_in_uint32_clear_mask  );
-                    Dbprintf("  %25s: %08" PRIX32, "max_iterations",             max_iterations            );
-                    Dbprintf("  %25s: %08" PRIX32, "frn_min_in_uint32",          frn_min_in_uint32         );
-                    Dbprintf("  %25s: %08" PRIX32, "frn_max_in_uint32",          frn_max_in_uint32         );
-                    Dbprintf("  %25s: %08" PRIX32, "calculated_max_iterations",  calculated_max_iterations );
+                    //                              ....-....1....-....2....-
+                    Dbprintf("  %25s: %02" PRId8, "frn_in_uint32_bit_index",    frn_in_uint32_bit_index);
+                    Dbprintf("  %25s: %02" PRId8, "frn_28bit_bit_index",        frn_28bit_bit_index);
+                    Dbprintf("  %25s: %08" PRIX32, "original_frn_in_uint32",     original_frn_in_uint32);
+                    Dbprintf("  %25s: %08" PRIX32, "frn_in_uint32_clear_mask",   frn_in_uint32_clear_mask);
+                    Dbprintf("  %25s: %08" PRIX32, "max_iterations",             max_iterations);
+                    Dbprintf("  %25s: %08" PRIX32, "frn_min_in_uint32",          frn_min_in_uint32);
+                    Dbprintf("  %25s: %08" PRIX32, "frn_max_in_uint32",          frn_max_in_uint32);
+                    Dbprintf("  %25s: %08" PRIX32, "calculated_max_iterations",  calculated_max_iterations);
                 }
                 status_code = PM3_ESOFT;
             }
@@ -1094,7 +1094,7 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
             // store the results in the output fields...
             Uint4byteToMemBe(&(results.phase2_output.be_min_frn[0]),        frn_min_in_uint32);
             Uint4byteToMemBe(&(results.phase2_output.be_max_frn[0]),        frn_max_in_uint32);
-            Uint4byteToMemBe(&(results.phase2_output.be_max_iterations[0]), max_iterations   );
+            Uint4byteToMemBe(&(results.phase2_output.be_max_iterations[0]), max_iterations);
         }
         // 4. write the new branched key
         // TODO - only write the 1-2 words that have changed from phase1? (meaningless optimization)
@@ -1110,7 +1110,7 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
                 // Write each word, abort if any failure occurs
                 status_code = write(key_word, 9 - i);
                 if (status_code != PM3_SUCCESS) {
-                    Dbprintf(_RED_("Failed to write orig key to block %d, status %d"), 9-i, status_code);
+                    Dbprintf(_RED_("Failed to write orig key to block %d, status %d"), 9 - i, status_code);
                 }
             }
         }
@@ -1161,10 +1161,10 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
 
             uint8_t response_data[3] = {0};
             int16_t tmp_status = authenticate(
-                &(abd->phase1_input.be_rnd[0]),
-                &(results.phase3_output.be_next_start_frn[0]),
-                &(response_data[0])
-                );
+                                     &(abd->phase1_input.be_rnd[0]),
+                                     &(results.phase3_output.be_next_start_frn[0]),
+                                     &(response_data[0])
+                                 );
 
             if (tmp_status == PM3_SUCCESS) {
                 if (g_Extensive_EM4x70_AuthBranch_Debug) {
