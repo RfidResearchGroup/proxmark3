@@ -483,17 +483,29 @@ local function write_signature(data)
     end
     local info = connect()
     if not info then return false, "Can't select card" end
-    if ulprotocol == '00' then return nil, 'Magic Card is not using the Ultralight Protocol' end
-    print('Writing new signature',data)
-    local b,c
-    local cmd = 'A2F%d%s'
-    local j = 2
-    for i = 1, #data, 8 do
-        b = data:sub(i,i+7)
-        c = cmd:format(j,b)
-        local resp = send(c)
-        if resp ~= '0A' then lib14a.disconnect(); return nil, oops('Failed to write signature') end
-        j = j + 1
+    if ulprotocol == '00' then
+        print('Writing new MFC signature',data)
+        send('CF'.._key..'6B48')
+        lib14a.disconnect()
+        connect() -- not 100% sure why it's needed, but without this blocks aren't actually written
+        local sig1 = data:sub(1, 32)
+        local sig2 = data:sub(33, 64)
+
+        send('CF'.._key..'CD45'..sig1)
+        send('CF'.._key..'CD46'..sig2)
+        send('CF'.._key..'CD475C8FF9990DA270F0F8694B791BEA7BCC')
+    else
+        print('Writing new MFUL signature',data)
+        local b,c
+        local cmd = 'A2F%d%s'
+        local j = 2
+        for i = 1, #data, 8 do
+            b = data:sub(i,i+7)
+            c = cmd:format(j,b)
+            local resp = send(c)
+            if resp ~= '0A' then lib14a.disconnect(); return nil, oops('Failed to write signature') end
+            j = j + 1
+        end
     end
     lib14a.disconnect()
     return true, 'Ok'
