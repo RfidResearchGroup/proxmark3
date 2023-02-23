@@ -29,6 +29,9 @@
 
 #define INDEX_TO_BLOCK(x) (((32-x)/2)-1)
 
+bool g_Extensive_EM4x70_AuthBranch_Debug = false;
+
+
 
 
 
@@ -42,6 +45,7 @@ static command_t CommandTable[] = {
     {"unlock",     CmdEM4x70Unlock,     IfPm3EM4x70,     "Unlock EM4x70 for writing"},
     {"auth",       CmdEM4x70Auth,       IfPm3EM4x70,     "Authenticate EM4x70"},
     {"authbranch", CmdEM4x70AuthBranch, IfPm3EM4x70,     "Branch from known-good {k, rnd, frn} set"},
+    {"authvars",   CmdEM4x70AuthVars,   IfPm3EM4x70,     "Show trivial variations from known-good {k, rnd, frn} set"},
     {"writepin",   CmdEM4x70WritePIN,   IfPm3EM4x70,     "Write PIN"},
     {"writekey",   CmdEM4x70WriteKey,   IfPm3EM4x70,     "Write Crypt Key"},
     {NULL, NULL, NULL, NULL}
@@ -86,6 +90,13 @@ static uint8_t CountOfTrailingOneBits32(uint32_t v) {
     return result;
 }
 */
+
+static void OutputProgress(logLevel_t level, uint32_t min, uint32_t max, uint32_t current) {
+    double n = current - min;
+    double d = max - min;
+    double p = (n*100)/d;
+    PrintAndLogEx(level, "Progress [%08" PRIX32 "..%08" PRIX32 "], Current: %08" PRIX32 " (~%0.2f%%)", min, max, current, p);
+}
 
 static void print_info_result(const uint8_t *data) {
 
@@ -604,6 +615,53 @@ int CmdEM4x70WriteKey(const char *Cmd) {
 }
 
 
+
+typedef struct TRIVIAL_VARIATIONS_OUTPUT {
+    uint32_t native_ac[32];
+} trivial_variations_output_t;
+static int16_t get_trivial_auth_variations(const em4x70_data_t *etd_orig, trivial_variations_output_t *results) {
+    memset(results, 0, sizeof(trivial_variations_output_t));
+
+    PacketResponseNG resp;
+    for (uint8_t i = 0; i < 32; ++i) {
+
+        em4x70_data_t etd;
+        memcpy(&etd, etd_orig, sizeof(em4x70_data_t));
+
+        // 1. write new key
+        etd.crypt_key[11] = (etd.crypt_key[11] & 0xE0) | i; // clear lowest 5 bits and set to loop index
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_EM4X70_WRITEKEY, (uint8_t *)&etd, sizeof(em4x70_data_t));
+
+        memset(&resp, 0, sizeof(PacketResponseNG));
+        if (!WaitForResponseTimeout(CMD_LF_EM4X70_WRITEKEY, &resp, TIMEOUT)) {
+            PrintAndLogEx(WARNING, "Timeout while writing equivalent key idx %" PRId8, i);
+            return PM3_ETIMEOUT;
+        }
+        if (!(resp.status)) {
+            PrintAndLogEx(FAILED, "Writing new equivalent crypt key %" PRId8 ": " _RED_("FAILED"), i);
+            return PM3_ESOFT;
+        }
+
+        // 2. perform authentication
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_EM4X70_AUTH, (uint8_t *)&etd, sizeof(etd));
+        memset(&resp, 0, sizeof(PacketResponseNG));
+        if (!WaitForResponseTimeout(CMD_LF_EM4X70_AUTH, &resp, TIMEOUT)) {
+            PrintAndLogEx(WARNING, "Timeout while waiting for auth reply equivalent key idx %" PRId8 ".", i);
+            return PM3_ETIMEOUT;
+        }
+        if (!(resp.status)) {
+            PrintAndLogEx(FAILED, "TAG Authentication equivalent key %" PRId8 ": " _RED_("Failed"), i);
+            return PM3_ESOFT;
+        }
+
+        // 3. store auth results in parameter's array
+        results->native_ac[i] = MemLeToUint3byte(&(resp.data.asBytes[0]));
+    }
+    return PM3_SUCCESS;
+}
+
 // Longest returned string: "1 (req)  Verify Starting Values" == 31 chars
 //                           ....-....1....-....2....-....3....-
 static const char *sprint_authbranch_phase(em4x70_authbranch_phase_t phase) {
@@ -985,6 +1043,54 @@ static void InitializeAuthBranchData(em4x70_authbranch_t *data, em4x70_authbranc
 //     memcpy(dest, src, BYTECOUNT);
 // }
 
+static int16_t get_variations_and_dump_output(const em4x70_authbranch_t *data) {
+
+    em4x70_data_t etd;
+    memset(&etd, 0, sizeof(em4x70_data_t));
+
+    uint64_t rnd      = MemBeToUint7byte(&(data->phase1_input.be_rnd[0]));
+    uint64_t k_high64 = MemBeToUint8byte(&(data->phase2_output.be_key[0]));
+    uint64_t k_low32  = MemBeToUint4byte(&(data->phase2_output.be_key[8]));
+    uint32_t frn      = MemBeToUint4byte(&(data->phase3_output.be_successful_frn[0]));
+
+    Uint7byteToMemBe(&(etd.rnd[0]), rnd);
+    Uint8byteToMemBe(&(etd.crypt_key[0]), k_high64);
+    Uint4byteToMemBe(&(etd.crypt_key[8]), k_low32);
+    Uint4byteToMemBe(&(etd.frnd[0]), frn);
+
+    trivial_variations_output_t x = {0};
+    int16_t status = get_trivial_auth_variations(&etd, &x);
+
+    if (status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Getting trivial auth variations failed: " _BRIGHT_RED_("%" PRId16), status);
+        return status;
+    }
+    PrintAndLogEx(SUCCESS,
+        "{ \"N\": \"%014" PRIX64 "\","
+        " \"K\": \"%016"  PRIX64 "%08" PRIX32 "\","
+        " \"Ac\": \"%08"  PRIX32 "\","
+        " \"Ats\": ["
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\"] },",
+        rnd, k_high64, k_low32, frn,
+        x.native_ac[ 0], x.native_ac[ 1], x.native_ac[ 2], x.native_ac[ 3],
+        x.native_ac[ 4], x.native_ac[ 5], x.native_ac[ 6], x.native_ac[ 7],
+        x.native_ac[ 8], x.native_ac[ 9], x.native_ac[10], x.native_ac[11],
+        x.native_ac[12], x.native_ac[13], x.native_ac[14], x.native_ac[15],
+        x.native_ac[16], x.native_ac[17], x.native_ac[18], x.native_ac[19],
+        x.native_ac[20], x.native_ac[21], x.native_ac[22], x.native_ac[23],
+        x.native_ac[24], x.native_ac[25], x.native_ac[26], x.native_ac[27],
+        x.native_ac[28], x.native_ac[29], x.native_ac[30], x.native_ac[31]
+        );
+    return PM3_SUCCESS;
+}
+
 static bool Parse_CmdEM4x70AuthBranch(const char *Cmd, em4x70_authbranch_t *data) {
     bool failedArgsParsing = false;
     InitializeAuthBranchData(data, EM4X70_AUTHBRANCH_PHASE1_REQUESTED_VERIFY_STARTING_VALUES);
@@ -1098,17 +1204,6 @@ static bool Parse_CmdEM4x70AuthBranch(const char *Cmd, em4x70_authbranch_t *data
 
     return failedArgsParsing ? false : true;
 }
-
-
-static void OutputProgress(logLevel_t level, uint32_t min, uint32_t max, uint32_t current) {
-    double n = current - min;
-    double d = max - min;
-    double p = (n*100)/d;
-    PrintAndLogEx(level, "Progress [%08" PRIX32 "..%08" PRIX32 "], Current: %08" PRIX32 " (~%0.2f%%)", min, max, current, p);
-}
-
-bool g_Extensive_EM4x70_AuthBranch_Debug = false;
-
 int CmdEM4x70AuthBranch(const char *Cmd) {
 
     if (false) { // unused functions ... to quiet the compiler warnings
@@ -1164,6 +1259,7 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
         // use might abort at any time...
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, _BRIGHT_RED_("User aborted"));
             if (requestPhase == EM4X70_AUTHBRANCH_PHASE3_COMPLETED_BRUTE_FORCE) {
                 uint32_t lastRequestedFrn = MemBeToUint4byte(&(abd.phase3_input.be_starting_frn[0]));
@@ -1172,11 +1268,11 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                 OutputProgress(NORMAL, min_frn, max_frn, lastRequestedFrn);
                 PrintAndLogEx(NORMAL, "To resume:");
                 PrintAndLogEx(NORMAL,
-                    "lf em 4x70 authbranch --rnd %014" PRIx64 
-                    " -k %016" PRIx64 "%08" PRIx32 
-                    " --frn %08" PRIx32
-                    " --xormask %08" PRIx32
-                    " --start %08" PRIx32,
+                    "lf em 4x70 authbranch --rnd %014" PRIX64 
+                    " -k %016" PRIX64 "%08" PRIX32 
+                    " --frn %08" PRIX32
+                    " --xormask %08" PRIX32
+                    " --start %08" PRIX32,
                     MemBeToUint7byte(&(abd.phase1_input.be_rnd[0])),
                     MemBeToUint8byte(&(abd.phase1_input.be_key[0])), MemBeToUint4byte(&(abd.phase1_input.be_key[8])),
                     MemBeToUint4byte(&(abd.phase1_input.be_frn[0])),
@@ -1272,17 +1368,18 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                 uint32_t prior_iterations = MemBeToUint4byte(&(abd.phase3_input.be_max_iterations[0]));
 
                 uint32_t expected_next_frn = prior_start_frn + (prior_iterations << 4); // low 4 bits are unused, so each iteration is +0x10
+                OutputProgress(INPLACE, p2o_min_frn, p2o_max_frn, p3o_next_frn);
 
                 // Handle two exit conditions: abort and found value
                 if (resp.status == PM3_EOPABORTED) {
-                    OutputProgress(NORMAL, p2o_min_frn, p2o_max_frn, p3o_next_frn);
+                    PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(NORMAL, "To resume:");
                     PrintAndLogEx(NORMAL,
-                        "lf em 4x70 authbranch --rnd %014" PRIx64 
-                        " -k %016" PRIx64 "%08" PRIx32 
-                        " --frn %08" PRIx32
-                        " --xormask %08" PRIx32
-                        " --start %08" PRIx32,
+                        "lf em 4x70 authbranch --rnd %014" PRIX64 
+                        " -k %016" PRIX64 "%08" PRIX32 
+                        " --frn %08" PRIX32
+                        " --xormask %08" PRIX32
+                        " --start %08" PRIX32,
                         MemBeToUint7byte(&(abd.phase1_input.be_rnd[0])),
                         MemBeToUint8byte(&(abd.phase1_input.be_key[0])), MemBeToUint4byte(&(abd.phase1_input.be_key[8])),
                         MemBeToUint4byte(&(abd.phase1_input.be_frn[0])),
@@ -1293,31 +1390,9 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                 }
 
                 if (results->phase3_output.found_working_value) {
-                    uint32_t actual_frn = MemBeToUint4byte(&(results->phase3_output.be_successful_frn[0]));
-                    OutputProgress(NORMAL, p2o_min_frn, p2o_max_frn, actual_frn);
-                    PrintAndLogEx(SUCCESS,
-                                  "{ "
-                                  "\"N\": \"%02X%02X%02X%02X%02X%02X%02X\", "
-                                  "\"K\": \"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X\", "
-                                  "\"Ac\": \"%02X%02X%02X%02X\", "
-                                  "\"At\": \"%02X%02X%02X\" },",
-                                  results->phase1_input.be_rnd[0], results->phase1_input.be_rnd[1], results->phase1_input.be_rnd[2],
-                                  results->phase1_input.be_rnd[3], results->phase1_input.be_rnd[4], results->phase1_input.be_rnd[5],
-                                  results->phase1_input.be_rnd[6],
-                                  results->phase2_output.be_key[ 0], results->phase2_output.be_key[ 1], results->phase2_output.be_key[ 2],
-                                  results->phase2_output.be_key[ 3], results->phase2_output.be_key[ 4], results->phase2_output.be_key[ 5],
-                                  results->phase2_output.be_key[ 6], results->phase2_output.be_key[ 7], results->phase2_output.be_key[ 8],
-                                  results->phase2_output.be_key[ 9], results->phase2_output.be_key[10], results->phase2_output.be_key[11],
-                                  results->phase3_output.be_successful_frn[0], results->phase3_output.be_successful_frn[1],
-                                  results->phase3_output.be_successful_frn[2], results->phase3_output.be_successful_frn[3],
-                                  results->phase3_output.be_successful_ac[0], results->phase3_output.be_successful_ac[1],
-                                  results->phase3_output.be_successful_ac[2]
-                                 );
-                    PrintAndLogEx(WARNING, _BRIGHT_RED_("TODO: also get the 32x trivial variations"));
-                    // return TrivialVariations_CmdEM4x70AuthBranch(etx);
-                    return PM3_SUCCESS;
+                    PrintAndLogEx(NORMAL,""); // saves last line's output
+                    return get_variations_and_dump_output(results);
                 }
-
 
                 // validate expectations ... if something is amiss, output information to help understand
                 if ((p3o_next_frn < p2o_min_frn) || (p3o_next_frn > p2o_max_frn)) {
@@ -1341,7 +1416,8 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
 
                 uint32_t remaining_iterations = (p2o_max_frn - p3o_next_frn) >> 4; // low 4 bits are unused, so each iteration is +0x10
                 if (remaining_iterations == 0) {
-                    OutputProgress(NORMAL, p2o_min_frn, p2o_max_frn, p3o_next_frn);
+                    OutputProgress(INPLACE, p2o_min_frn, p2o_max_frn, p3o_next_frn);
+                    PrintAndLogEx(NORMAL, "");
                     if (g_Extensive_EM4x70_AuthBranch_Debug) {
                         PrintAndLogEx(ERR, "Reached end of search space.  Inputs:");
                         DumpAuthBranchSeparator(ERR);
@@ -1366,8 +1442,6 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
                 if (expected_frn != p3o_next_frn) {
                     PrintAndLogEx(WARNING, "Unexpected next FRN from device, expected %08" PRIX32 ", got %08" PRIX32, expected_frn, p3o_next_frn);
                 }
-
-                OutputProgress(INPLACE, p2o_min_frn, p2o_max_frn, p3o_next_frn);
 
                 // prepare to send the next possible request
                 InitializeAuthBranchData(&abd, EM4X70_AUTHBRANCH_PHASE3_REQUESTED_BRUTE_FORCE);
@@ -1405,3 +1479,160 @@ int CmdEM4x70AuthBranch(const char *Cmd) {
     }
     return PM3_ESOFT;
 }
+
+static bool Parse_CmdEM4x70AuthVars(const char *Cmd, em4x70_data_t *etd) {
+    bool failedArgsParsing = false;
+    memset(etd, 0, sizeof(em4x70_data_t));
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x70 auth_branch",
+                  "Given a valid rnd, key, and frn, this function will\n"
+                  "show the 32 trivial variations of { rnd, key, frn } values.\n"
+                  "The rnd and frn values remains the same.\n"
+                  "The low five bits of the key are set to to 0x00 .. 0x1F.\n"
+                  "NOTE 1: This function OVERWRITES any existing key on the tag.\n"
+                  "NOTE 2: Before starting, the tag MUST be unlocked.\n"
+                  "NOTE 3: After running, the private key is left in an INDETERMINATE state.\n"
+                  "It is the responsiblity of the user to restore any desired private key.\n",
+                  "lf em 4x70 authvar -k F32AA98CF5BE4ADFA6D3480B --rnd 45F54ADA252AAC --frn 4866BB70\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_litn(NULL, "par",                 0, 1, "Add parity bit when sending commands"),                                 // 1
+        arg_str1(NULL, "rnd",        "<hex>",       "Random 56-bit"),                                                        // 2
+        arg_str1("k",  "key",        "<hex>",       "Crypt Key as 24 hex characters"),                                       // 3
+        arg_str1(NULL, "frn",        "<hex>",       "F(RN) 28-bit as 8 hex characters (last character is padding of zero)"), // 4
+        arg_param_end
+    };
+
+    if (CLIParserParseString(ctx, Cmd, argtable, arg_getsize(argtable), true)) {
+        failedArgsParsing = true;
+    } else {
+
+        etd->parity = arg_get_lit(ctx, 1);
+
+        int rnd_len = 7;
+        if (CLIParamHexToBuf(arg_get_str(ctx, 2), &(etd->rnd[0]), 7, &rnd_len)) {
+            // parse failed (different than non-existent parameter)
+            // mandatory parameter, so mark as failure
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "rnd parameter is a mandatory hex string");
+        } else if (rnd_len != 7) {
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "rnd parameter must be 7 bytes (got %d)", rnd_len);
+        }
+
+        int key_len = 12;
+        if (CLIParamHexToBuf(arg_get_str(ctx, 3), &(etd->crypt_key[0]), 12, &key_len)) {
+            // parse failed (different than non-existent parameter)
+            // mandatory parameter, so mark as failure
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "key parameter is a mandatory hex string");
+        } else if (key_len != 12) {
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "key parameter must be 12 bytes (got %d)", key_len);
+        }
+
+        int frn_len = 4;
+        if (CLIParamHexToBuf(arg_get_str(ctx, 4), &(etd->frnd[0]), 4, &frn_len)) {
+            // parse failed (different than non-existent parameter)
+            // mandatory parameter, so mark as failure
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "frn parameter is a mandatory hex string");
+        } else if (frn_len != 4) {
+            failedArgsParsing = true;
+            PrintAndLogEx(FAILED, "frn parameter must be 4 bytes (got %d)", frn_len);
+        }
+    }
+    // always need to free the ctx
+    CLIParserFree(ctx);
+    return failedArgsParsing ? false : true;
+}
+
+int CmdEM4x70AuthVars(const char *Cmd) {
+
+    // Authenticate transponder
+    // Send 56-bit random number + pre-computed f(rnd, k) to transponder.
+    // Transponder will respond with a response
+    em4x70_data_t etd = {0};
+
+    if (!Parse_CmdEM4x70AuthVars(Cmd, &etd)) {
+        return PM3_EINVARG;
+    }
+
+    uint64_t rnd      = MemBeToUint7byte(&(etd.rnd[0])      );
+    uint64_t k_high64 = MemBeToUint8byte(&(etd.crypt_key[0]));
+    uint32_t k_low32  = MemBeToUint4byte(&(etd.crypt_key[8]));
+    uint32_t frn      = MemBeToUint4byte(&(etd.frnd[0])     );
+
+    trivial_variations_output_t x = {0};
+    int16_t status = get_trivial_auth_variations(&etd, &x);
+
+    if (status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Getting trivial auth variations failed: " _BRIGHT_RED_("%" PRId16), status);
+        return status;
+    }
+    PrintAndLogEx(SUCCESS,
+        "{ \"N\": \"%014" PRIX64 "\","
+        " \"K\": \"%016"  PRIX64 "%08" PRIX32 "\","
+        " \"Ac\": \"%08"  PRIX32 "\","
+        " \"Ats\": ["
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
+        " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\" ] },",
+        rnd, k_high64, k_low32, frn,
+        x.native_ac[ 0], x.native_ac[ 1], x.native_ac[ 2], x.native_ac[ 3],
+        x.native_ac[ 4], x.native_ac[ 5], x.native_ac[ 6], x.native_ac[ 7],
+        x.native_ac[ 8], x.native_ac[ 9], x.native_ac[10], x.native_ac[11],
+        x.native_ac[12], x.native_ac[13], x.native_ac[14], x.native_ac[15],
+        x.native_ac[16], x.native_ac[17], x.native_ac[18], x.native_ac[19],
+        x.native_ac[20], x.native_ac[21], x.native_ac[22], x.native_ac[23],
+        x.native_ac[24], x.native_ac[25], x.native_ac[26], x.native_ac[27],
+        x.native_ac[28], x.native_ac[29], x.native_ac[30], x.native_ac[31]
+        );
+
+//         { "N": "3FFE1FB6CC513F", "K": "A090A0A02080000000000000", "Ac": "F355F1A0", "Ats": [ "609D60", "645270", "609990", "6451C0",  "69DA70", "6F90D0", "69DD20", "6F92D0",  "65A9D0", "60A360", "65ADD0", "60A540",  "6C29F0", "6BE610", "6C2CF0", "6BE0A0",  "6101F0", "65FAD0", "610310", "65FA60",  "68CBF0", "6E0FB0", "68CBA0", "6E0AB0",  "6DDA00", "69B130", "6DDA00", "69B030",  "649C10", "629790", "649DD0", "629790"] },
+    return PM3_SUCCESS;
+}
+
+// trivial_variations_t tv = {0};
+// memcpy(&(tv.be_key[0]), &(abd.phase2_output.be_key[0]), 12);
+// tv.useParity = abd.phase1_input.useParity;
+// memcpy(&(tv.be_rnd[0]), &(abd.phase1_input.be_rnd[0]), 7);
+// memcpy(&(tv.be_frn[0]), &(results->phase3_output.be_successful_frn[0]), 4);
+
+// status = TrivialVariations_CmdEM4x70AuthBranch(&tv);
+// if (status == PM3_SUCCESS) {
+//     PrintAndLogEx(SUCCESS,
+//         " = ["
+//         "%08" PRIX32 ", %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32
+//         ",  %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32
+//         ",  %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32
+//         ",  %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32
+//         ",  %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32
+//         ",  %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32
+//         ",  %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32
+//         ",  %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32 ", %08" PRIX32
+//         " ] },",
+//         tv.ac[ 0], tv.ac[ 1], tv.ac[ 2], tv.ac[ 3],
+//         tv.ac[ 4], tv.ac[ 5], tv.ac[ 6], tv.ac[ 7],
+//         tv.ac[ 8], tv.ac[ 9], tv.ac[10], tv.ac[11],
+//         tv.ac[12], tv.ac[13], tv.ac[14], tv.ac[15],
+//         tv.ac[16], tv.ac[17], tv.ac[18], tv.ac[19],
+//         tv.ac[20], tv.ac[21], tv.ac[22], tv.ac[23],
+//         tv.ac[24], tv.ac[25], tv.ac[26], tv.ac[27],
+//         tv.ac[28], tv.ac[29], tv.ac[30], tv.ac[31]
+//     );
+//     return PM3_SUCCESS;
+// } else {
+//     PrintAndLogEx(ERR, "Trivial 32x authentications failed %" PRId16, status);
+//     return status;
+// }
+
+
