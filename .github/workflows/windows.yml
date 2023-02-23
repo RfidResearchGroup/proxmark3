@@ -100,7 +100,7 @@ jobs:
       - name: WSL setup
         uses: Vampire/setup-wsl@v2
         with:
-          distribution: Ubuntu-20.04
+          distribution: Ubuntu-22.04
           update: "true"
           additional-packages: git
             ca-certificates
