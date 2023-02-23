@@ -169,10 +169,10 @@ static void print_time(uint64_t at) {
     (void)localtime_r(&t, &lt);
 #endif
 
-    char res[32];
-    strftime(res, sizeof(res), "%Y-%m-%d %H:%M:%S", &lt);
+    char res[70];
+    strftime(res, sizeof(res), "%s ('%Y-%m-%d %H:%M:%S')", &lt);
 
-    printf("%"PRIu64" ( '%s' )\n", t, res);
+    printf("%s\n", res);
 }
 
 static void *brute_thread(void *arguments) {
