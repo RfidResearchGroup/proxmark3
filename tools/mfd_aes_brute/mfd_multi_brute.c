@@ -170,7 +170,11 @@ static void print_time(uint64_t at) {
 #endif
 
     char res[70];
+#if defined(__MINGW32__) || defined(__MINGW64__)
+    strftime(res, sizeof(res), "('%Y-%m-%d %H:%M:%S')", &lt);
+#else
     strftime(res, sizeof(res), "%s ('%Y-%m-%d %H:%M:%S')", &lt);
+#endif 
     printf("%s\n", res);
 }
 
