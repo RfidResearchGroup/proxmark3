@@ -4583,53 +4583,280 @@ static int CmdHF14AMfuView(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu view",
-                  "Print a MIFARE Ultralight/NTAG dump file (bin/eml/json)",
-                  "hf mfu view -f hf-mfu-01020304-dump.bin"
+                  "View Ultralight/NTAG card memory or dump.\n",
+                  "\n"
+                  "`--file` param is used for dump filename.\n"
+                  "`--key` param is used for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes).\n"
+                  "\n"
+                  "hf mf view --file hf-mf-11223344-dump.bin\n"
+                  "hf mf view --key 00112233445566778899AABBCCDDEEFF\n"
                  );
+
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Filename of dump"),
+        arg_str0("f", "file", "<fn>", "Filename of dump"),
+        arg_str0("k", "key", "<hex>", "Key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_lit0("l", NULL, "Swap entered key's endianness"),
+        arg_int0("p", "page", "<dec>", "Manually set start page number to start from"),
+        arg_int0("q", "qty", "<dec>", "Manually set number of pages to dump"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    bool verbose = arg_get_lit(ctx, 2);
+    
+    int ak_len = 0;
+    uint8_t authenticationkey[16] = {0x00};
+    uint8_t *authKeyPtr = authenticationkey;
+    CLIGetHexWithReturn(ctx, 2, authenticationkey, &ak_len);
+
+    bool swap_endian = arg_get_lit(ctx, 3);
+    int start_page = arg_get_int_def(ctx, 4, 0);
+    int pages = arg_get_int_def(ctx, 5, 16);
+    bool verbose = arg_get_lit(ctx, 6);
+
     CLIParserFree(ctx);
 
-    // read dump file
-    uint8_t *dump = NULL;
-    size_t bytes_read = 0;
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH));
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
+    if (fnlen != 0) {
+        // read dump file
+        uint8_t *dump = NULL;
+        size_t bytes_read = 0;
+        int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (MFU_MAX_BYTES + MFU_DUMP_PREFIX_LENGTH));
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
 
-    if (bytes_read < MFU_DUMP_PREFIX_LENGTH) {
-        PrintAndLogEx(ERR, "Error, dump file is too small");
+        if (bytes_read < MFU_DUMP_PREFIX_LENGTH) {
+            PrintAndLogEx(ERR, "Error, dump file is too small");
+            free(dump);
+            return PM3_ESOFT;
+        }
+
+        res = convert_mfu_dump_format(&dump, &bytes_read, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
+            free(dump);
+            return res;
+        }
+
+        uint16_t block_cnt = ((bytes_read - MFU_DUMP_PREFIX_LENGTH) / MFU_BLOCK_SIZE);
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
+            PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
+        }
+
+        printMFUdumpEx((mfu_dump_t *)dump, block_cnt, 0);
         free(dump);
-        return PM3_ESOFT;
+
+        return PM3_SUCCESS;
+    } else {
+        if (g_session.pm3_present == false) {
+            PrintAndLogEx(WARNING, "Device offline\n");
+            return PM3_ENODATA;
+        }
+
+        bool has_auth_key = false;
+        bool has_pwd = false;
+        if (ak_len == 16) {
+            has_auth_key = true;
+        } else if (ak_len == 4) {
+            has_pwd = true;
+        } else if (ak_len != 0) {
+            PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+            return PM3_EINVARG;
+        }
+
+        bool manual_pages = false;
+        if (start_page > 0)
+            manual_pages = true;
+
+        if (pages != 16)
+            manual_pages = true;
+
+        uint8_t card_mem_size = 0;
+
+        // Swap endianness
+        if (swap_endian) {
+            if (has_auth_key)
+                authKeyPtr = SwapEndian64(authenticationkey, ak_len, 8);
+
+            if (has_pwd)
+                authKeyPtr = SwapEndian64(authenticationkey, ak_len, 4);
+        }
+
+        TagTypeUL_t tagtype = GetHF14AMfU_Type();
+        if (tagtype == UL_ERROR)
+            return PM3_ESOFT;
+
+        //get number of pages to read
+        if (manual_pages == false) {
+            for (uint8_t idx = 0; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
+                if (tagtype & UL_TYPES_ARRAY[idx]) {
+                    //add one as maxblks starts at 0
+                    card_mem_size = pages = UL_MEMORY_ARRAY[idx] + 1;
+                    break;
+                }
+            }
+        }
+
+        ul_print_type(tagtype, 0);
+        PrintAndLogEx(SUCCESS, "Reading tag memory...");
+        uint8_t keytype = 0;
+        if (has_auth_key || has_pwd) {
+            if (tagtype & UL_C)
+                keytype = 1; //UL_C auth
+            else
+                keytype = 2; //UL_EV1/NTAG auth
+        }
+
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_MIFAREU_READCARD, start_page, pages, keytype, authKeyPtr, ak_len);
+
+        PacketResponseNG resp;
+        if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+            PrintAndLogEx(WARNING, "Command execute time-out");
+            return PM3_ETIMEOUT;
+        }
+
+        if (resp.oldarg[0] != 1) {
+            PrintAndLogEx(WARNING, "Failed dumping card");
+            return PM3_ESOFT;
+        }
+
+        // read all memory
+        uint8_t data[1024] = {0x00};
+        memset(data, 0x00, sizeof(data));
+
+        uint32_t startindex = resp.oldarg[2];
+        uint32_t buffer_size = resp.oldarg[1];
+        if (buffer_size > sizeof(data)) {
+            PrintAndLogEx(FAILED, "Data exceeded Buffer size!");
+            buffer_size = sizeof(data);
+        }
+
+        if (!GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false)) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+
+        bool is_partial = (pages != buffer_size / 4);
+
+        pages = buffer_size / 4;
+
+        iso14a_card_select_t card;
+        mfu_dump_t dump_file_data;
+        memset(&dump_file_data, 0, sizeof(dump_file_data));
+        uint8_t get_version[] = {0, 0, 0, 0, 0, 0, 0, 0};
+        uint8_t get_counter_tearing[][4] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
+        uint8_t get_signature[32];
+        memset(get_signature, 0, sizeof(get_signature));
+
+        // not ul_c and not std ul then attempt to collect info like
+        //  VERSION, SIGNATURE, COUNTERS, TEARING, PACK,
+        if (!(tagtype & UL_C || tagtype & UL || tagtype & MY_D_MOVE || tagtype & MY_D_MOVE_LEAN)) {
+            //attempt to read pack
+            uint8_t get_pack[] = {0, 0};
+            if (ul_auth_select(&card, tagtype, true, authKeyPtr, get_pack, sizeof(get_pack)) != PM3_SUCCESS) {
+                //reset pack
+                get_pack[0] = 0;
+                get_pack[1] = 0;
+            }
+            DropField();
+
+            // only add pack if not partial read,  and complete pages read.
+            if (!is_partial && pages == card_mem_size) {
+
+                // add pack to block read
+                memcpy(data + (pages * 4) - 4, get_pack, sizeof(get_pack));
+            }
+
+            if (has_auth_key) {
+                uint8_t dummy_pack[] = {0, 0};
+                ul_auth_select(&card, tagtype, has_auth_key, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+            } else {
+                ul_select(&card);
+            }
+
+            ulev1_getVersion(get_version, sizeof(get_version));
+
+            // ULEV-1 has 3 counters
+            uint8_t n = 0;
+
+            // NTAG has 1 counter, at 0x02
+            if ((tagtype & (NTAG_213 | NTAG_213_F | NTAG_213_C | NTAG_213_TT | NTAG_215 | NTAG_216))) {
+                n = 2;
+            }
+
+            // NTAG can have nfc counter pwd protection enabled
+            for (; n < 3; n++) {
+
+                if (has_auth_key) {
+                    uint8_t dummy_pack[] = {0, 0};
+                    ul_auth_select(&card, tagtype, has_auth_key, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+                } else {
+                    ul_select(&card);
+                }
+                ulev1_readCounter(n, &get_counter_tearing[n][0], 3);
+
+                if (has_auth_key) {
+                    uint8_t dummy_pack[] = {0, 0};
+                    ul_auth_select(&card, tagtype, has_auth_key, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+                } else {
+                    ul_select(&card);
+                }
+                ulev1_readTearing(n, &get_counter_tearing[n][3], 1);
+            }
+
+            DropField();
+
+            if (has_auth_key) {
+                uint8_t dummy_pack[] = {0, 0};
+                ul_auth_select(&card, tagtype, has_auth_key, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+            } else
+                ul_select(&card);
+
+            ulev1_readSignature(get_signature, sizeof(get_signature));
+            DropField();
+        }
+
+        // format and add keys to block dump output
+        // only add keys if not partial read, and complete pages read
+        if (!is_partial && pages == card_mem_size && (has_auth_key || has_pwd)) {
+            // if we didn't swapendian before - do it now for the sprint_hex call
+            // NOTE: default entry is bigendian (unless swapped), sprint_hex outputs little endian
+            //       need to swap to keep it the same
+            if (swap_endian == false) {
+                authKeyPtr = SwapEndian64(authenticationkey, ak_len, (ak_len == 16) ? 8 : 4);
+            } else {
+                authKeyPtr = authenticationkey;
+            }
+
+            if (tagtype & UL_C) { //add 4 pages
+                memcpy(data + pages * 4, authKeyPtr, ak_len);
+                pages += ak_len / 4;
+            } else { // 2nd page from end
+                memcpy(data + (pages * 4) - 8, authenticationkey, ak_len);
+            }
+        }
+
+        //add *special* blocks to dump
+        // pack and pwd saved into last pages of dump, if was not partial read
+        dump_file_data.pages = pages - 1;
+        memcpy(dump_file_data.version, get_version, sizeof(dump_file_data.version));
+        memcpy(dump_file_data.signature, get_signature, sizeof(dump_file_data.signature));
+        memcpy(dump_file_data.counter_tearing, get_counter_tearing, sizeof(dump_file_data.counter_tearing));
+        memcpy(dump_file_data.data, data, pages * 4);
+
+        printMFUdumpEx(&dump_file_data, pages, start_page);
+
+        return PM3_SUCCESS;
     }
-
-    res = convert_mfu_dump_format(&dump, &bytes_read, verbose);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
-        free(dump);
-        return res;
-    }
-
-    uint16_t block_cnt = ((bytes_read - MFU_DUMP_PREFIX_LENGTH) / MFU_BLOCK_SIZE);
-
-    if (verbose) {
-        PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
-        PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
-    }
-
-    printMFUdumpEx((mfu_dump_t *)dump, block_cnt, 0);
-    free(dump);
-    return PM3_SUCCESS;
+    
+    return PM3_ENODATA;
 }
 
 
