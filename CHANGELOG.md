@@ -33,7 +33,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Add Mifare Classic EV1 signature write support to gen4 magic tag lua script (@augustozanellato)
  - Added XOR key extraction and flag to Guardall G-Prox II (@GuruSteve)
  - Changed verbiage on `hf iclass info` KeyAccess area to be congruent with AA1 and AA2 areas (@GuruSteve)
- - 
+ - Improved `hf mf view` now you can view Mifare Classic memory without dumping the card (@Alejandro12120)
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)
