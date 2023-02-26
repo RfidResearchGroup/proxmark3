@@ -6852,101 +6852,373 @@ static int CmdHF14AMfView(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf view",
-                  "Print a MIFARE Classic dump file (bin/eml/json)",
-                  "hf mf view -f hf-mf-01020304-dump.bin"
+                  "View Mifare classic card memory or dump.\n",
+                  "\n"
+                  "`--file` param is used for dump filename.\n"
+                  "`--kfn` param is used for key filename.\n"
+                  "\n"
+                  "hf mf view --file hf-mf-11223344-dump.bin\n"
+                  "hf mf view --kfn hf-mf-11223344-key.bin\n"
+                  "hf mf view --2k --kfn hf-mf-11223344-key.bin"
                  );
+
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "specify dump filename (bin/eml/json)"),
+        arg_str0("k", "kfn",  "<fn>", "key filename"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0("v", "verbose", "verbose output"),
+        
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE];
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    bool verbose = arg_get_lit(ctx, 2);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int dumplen = 0;
+    char dumpname[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)dumpname, FILE_PATH_SIZE, &dumplen);
+
+    int keylen = 0;
+    char keyname[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)keyname, FILE_PATH_SIZE, &keylen);
+
+    bool verbose = arg_get_lit(ctx, 7);
+
+    bool m0 = arg_get_lit(ctx, 3);
+    bool m1 = arg_get_lit(ctx, 4);
+    bool m2 = arg_get_lit(ctx, 5);
+    bool m4 = arg_get_lit(ctx, 6);
+
     CLIParserFree(ctx);
 
-    // read dump file
-    uint8_t *dump = NULL;
-    size_t bytes_read = 0;
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK));
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-
-    uint16_t block_cnt = MIN(MIFARE_1K_MAXBLOCK, (bytes_read / MFBLOCK_SIZE));
-    if (bytes_read == 320)
-        block_cnt = MIFARE_MINI_MAXBLOCK;
-    else if (bytes_read == 2048)
-        block_cnt = MIFARE_2K_MAXBLOCK;
-    else if (bytes_read == 4096)
-        block_cnt = MIFARE_4K_MAXBLOCK;
-
-    if (verbose) {
-        PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
-        PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
-    }
-
-    mf_print_blocks(block_cnt, dump, verbose);
-
-    if (verbose) {
-        mf_print_keys(block_cnt, dump);
-        mf_analyse_acl(block_cnt, dump);
-    }
-
-    int sector = DetectHID(dump, 0x4910);
-    if (sector > -1) {
-        // decode it
-        PrintAndLogEx(INFO, "");
-        PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
-
-        // decode MAD
-        uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
-        size_t madlen = 0;
-        res = MADDecode(dump, NULL, mad, &madlen, false);
+    if(dumplen != 0) {
+        // read dump file
+        uint8_t *dump = NULL;
+        size_t bytes_read = 0;
+        int res = pm3_load_dump(dumpname, (void **)&dump, &bytes_read, (MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK));
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "can't decode MAD");
             return res;
         }
+    
+        uint16_t block_cnt = MIN(MIFARE_1K_MAXBLOCK, (bytes_read / MFBLOCK_SIZE));
+        if (bytes_read == 320)
+            block_cnt = MIFARE_MINI_MAXBLOCK;
+        else if (bytes_read == 2048)
+            block_cnt = MIFARE_2K_MAXBLOCK;
+        else if (bytes_read == 4096)
+            block_cnt = MIFARE_4K_MAXBLOCK;
 
-        typedef union UDATA {
-            uint8_t *bytes;
-            mfc_vigik_t *vigik;
-        } UDATA;
-        // allocate memory
-        UDATA d;
-        d.bytes = calloc(bytes_read, sizeof(uint8_t));
-        if (d.bytes == NULL) {
-            return PM3_EMALLOC;
+        if (verbose) {
+            PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), dumpname);
+            PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
         }
-        uint16_t dlen = 0;
 
-        // vigik struture sector 0
-        uint8_t *pdump = dump;
+        mf_print_blocks(block_cnt, dump, verbose);
 
-        memcpy(d.bytes + dlen, pdump, MFBLOCK_SIZE * 3);
-        dlen += MFBLOCK_SIZE * 3;
-        pdump += (MFBLOCK_SIZE * 4);  // skip sectortrailer
+        if (verbose) {
+            mf_print_keys(block_cnt, dump);
+            mf_analyse_acl(block_cnt, dump);
+        }
 
-        // extract memory from MAD sectors
-        for (int i = 0; i <= madlen; i++) {
-            if (0x4910 == mad[i] || 0x4916 == mad[i]) {
-                memcpy(d.bytes + dlen, pdump, MFBLOCK_SIZE * 3);
-                dlen += MFBLOCK_SIZE * 3;
+        int sector = DetectHID(dump, 0x4910);
+        if (sector > -1) {
+            // decode it
+            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
+
+            // decode MAD
+            uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+            size_t madlen = 0;
+            res = MADDecode(dump, NULL, mad, &madlen, false);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "can't decode MAD");
+                return res;
             }
 
+            typedef union UDATA {
+                uint8_t *bytes;
+                mfc_vigik_t *vigik;
+            } UDATA;
+            // allocate memory
+            UDATA d;
+            d.bytes = calloc(bytes_read, sizeof(uint8_t));
+            if (d.bytes == NULL) {
+                return PM3_EMALLOC;
+            }
+            uint16_t dlen = 0;
+
+            // vigik struture sector 0
+            uint8_t *pdump = dump;
+
+            memcpy(d.bytes + dlen, pdump, MFBLOCK_SIZE * 3);
+            dlen += MFBLOCK_SIZE * 3;
             pdump += (MFBLOCK_SIZE * 4);  // skip sectortrailer
-        }
+
+            // extract memory from MAD sectors
+            for (int i = 0; i <= madlen; i++) {
+                if (0x4910 == mad[i] || 0x4916 == mad[i]) {
+                    memcpy(d.bytes + dlen, pdump, MFBLOCK_SIZE * 3);
+                    dlen += MFBLOCK_SIZE * 3;
+                }
+
+                pdump += (MFBLOCK_SIZE * 4);  // skip sectortrailer
+            }
 
 //          convert_mfc_2_arr(pdump, bytes_read, d, &dlen);
-        vigik_annotate(d.vigik);
-        free(d.bytes);
-    }
+            vigik_annotate(d.vigik);
+            free(d.bytes);
+        }
+        free(dump);
 
-    free(dump);
-    return PM3_SUCCESS;
+        return PM3_SUCCESS;
+    } else {
+        if (g_session.pm3_present == false) {
+            PrintAndLogEx(WARNING, "Device offline\n");
+            return PM3_ENODATA;
+        }
+
+        // validations
+        if ((m0 + m1 + m2 + m4) > 1) {
+            PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+            return PM3_EINVARG;
+        } else if ((m0 + m1 + m2 + m4) == 0) {
+            m1 = true;
+        }
+
+        uint8_t numSectors = MIFARE_1K_MAXSECTOR;
+
+        if (m0) {
+            numSectors = MIFARE_MINI_MAXSECTOR;
+        } else if (m1) {
+            numSectors = MIFARE_1K_MAXSECTOR;
+        } else if (m2) {
+            numSectors = MIFARE_2K_MAXSECTOR;
+        } else if (m4) {
+            numSectors = MIFARE_4K_MAXSECTOR;
+        } else {
+            PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+            return PM3_EINVARG;
+        }
+
+        uint8_t sectorNo, blockNo;
+        uint8_t keyA[40][6];
+        uint8_t keyB[40][6];
+        uint8_t rights[40][4];
+        uint8_t carddata[256][16];
+
+        FILE *f;
+        PacketResponseNG resp;
+
+        char *fptr;
+
+        // Select card to get UID/UIDLEN/ATQA/SAK information
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+            PrintAndLogEx(WARNING, "iso14443a card select timeout");
+            return PM3_ETIMEOUT;
+        }
+
+        uint64_t select_status = resp.oldarg[0];
+        if (select_status == 0) {
+            PrintAndLogEx(WARNING, "iso14443a card select failed");
+            return PM3_SUCCESS;
+        }
+
+        // store card info
+        iso14a_card_select_t card;
+        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+        if (keylen == 0) {
+            fptr = GenerateFilename("hf-mf-", "-key.bin");
+            if (fptr == NULL)
+                return PM3_ESOFT;
+
+            strcpy(keyname, fptr);
+            free(fptr);
+        }
+
+        if ((f = fopen(keyname, "rb")) == NULL) {
+            PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), keyname);
+            return PM3_EFILE;
+        }
+
+        PrintAndLogEx(INFO, "Using `" _YELLOW_("%s") "`", keyname);
+
+        // Read keys A from file
+        size_t bytes_read;
+        for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
+            bytes_read = fread(keyA[sectorNo], 1, MFKEY_SIZE, f);
+            if (bytes_read != MFKEY_SIZE) {
+                PrintAndLogEx(ERR, "File reading error.");
+                fclose(f);
+                return PM3_EFILE;
+            }
+        }
+
+        // Read keys B from file
+        for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
+            bytes_read = fread(keyB[sectorNo], 1, MFKEY_SIZE, f);
+            if (bytes_read != MFKEY_SIZE) {
+                PrintAndLogEx(ERR, "File reading error.");
+                fclose(f);
+                return PM3_EFILE;
+            }
+        }
+
+        fclose(f);
+
+        PrintAndLogEx(INFO, "Reading sector access bits...");
+        PrintAndLogEx(INFO, "." NOLF);
+
+        uint8_t tries;
+        mf_readblock_t payload;
+        uint8_t current_key;
+        for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
+            current_key = MF_KEY_A;
+            for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
+                PrintAndLogEx(NORMAL, "." NOLF);
+                fflush(stdout);
+
+                payload.blockno = mfFirstBlockOfSector(sectorNo) + mfNumBlocksPerSector(sectorNo) - 1;
+                payload.keytype = current_key;
+
+                memcpy(payload.key, current_key == MF_KEY_A ? keyA[sectorNo] : keyB[sectorNo], sizeof(payload.key));
+
+                clearCommandBuffer();
+                SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
+
+                if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) {
+
+                    uint8_t *data = resp.data.asBytes;
+                    if (resp.status == PM3_SUCCESS) {
+                        rights[sectorNo][0] = ((data[7] & 0x10) >> 2) | ((data[8] & 0x1) << 1) | ((data[8] & 0x10) >> 4); // C1C2C3 for data area 0
+                        rights[sectorNo][1] = ((data[7] & 0x20) >> 3) | ((data[8] & 0x2) << 0) | ((data[8] & 0x20) >> 5); // C1C2C3 for data area 1
+                        rights[sectorNo][2] = ((data[7] & 0x40) >> 4) | ((data[8] & 0x4) >> 1) | ((data[8] & 0x40) >> 6); // C1C2C3 for data area 2
+                        rights[sectorNo][3] = ((data[7] & 0x80) >> 5) | ((data[8] & 0x8) >> 2) | ((data[8] & 0x80) >> 7); // C1C2C3 for sector trailer
+                        break;
+                    } else if (tries == (MIFARE_SECTOR_RETRY / 2)) { // after half unsuccessful tries, give key B a go
+                        PrintAndLogEx(WARNING, "\ntrying with key B instead...");
+                        current_key = MF_KEY_B;
+                        PrintAndLogEx(INFO, "." NOLF);
+                    } else if (tries == (MIFARE_SECTOR_RETRY - 1)) { // on last try set defaults
+                        PrintAndLogEx(FAILED, "\ncould not get access rights for sector %2d. Trying with defaults...", sectorNo);
+                        rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
+                        rights[sectorNo][3] = 0x01;
+                    }
+                } else {
+                    PrintAndLogEx(FAILED, "\ncommand execute timeout when trying to read access rights for sector %2d. Trying with defaults...", sectorNo);
+                    rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
+                    rights[sectorNo][3] = 0x01;
+                }
+            }
+        }
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "Finished reading sector access bits");
+        PrintAndLogEx(INFO, "Reading blocks from card...");
+        PrintAndLogEx(INFO, "." NOLF);
+
+        for (sectorNo = 0; sectorNo < numSectors; sectorNo++) {
+            PrintAndLogEx(NORMAL, "." NOLF);
+            for (blockNo = 0; blockNo < mfNumBlocksPerSector(sectorNo); blockNo++) {
+                bool received = false;
+                current_key = MF_KEY_A;
+                uint8_t data_area = (sectorNo < 32) ? blockNo : blockNo / 5;
+                if (rights[sectorNo][data_area] == 0x07) {                                     // no key would work
+                    PrintAndLogEx(WARNING, "access rights do not allow reading of sector %2d block %3d, skipping", sectorNo, blockNo);
+                    continue;
+                }
+                for (tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
+                    if (blockNo == mfNumBlocksPerSector(sectorNo) - 1) { // sector trailer. At least the Access Conditions can always be read with key A.
+
+                        payload.blockno = mfFirstBlockOfSector(sectorNo) + blockNo;
+                        payload.keytype = current_key;
+                        memcpy(payload.key, current_key == MF_KEY_A ? keyA[sectorNo] : keyB[sectorNo], sizeof(payload.key));
+
+                        clearCommandBuffer();
+                        SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
+                        received = WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500);
+                    } else {                                           // data block. Check if it can be read with key A or key B
+                        if ((rights[sectorNo][data_area] == 0x03) || (rights[sectorNo][data_area] == 0x05)) { // only key B would work
+
+                            payload.blockno = mfFirstBlockOfSector(sectorNo) + blockNo;
+                            payload.keytype = MF_KEY_B;
+                            memcpy(payload.key, keyB[sectorNo], sizeof(payload.key));
+
+                            clearCommandBuffer();
+                            SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
+                            received = WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500);
+                        } else {                                                                              // key A would work
+
+                            payload.blockno = mfFirstBlockOfSector(sectorNo) + blockNo;
+                            payload.keytype = current_key;
+                            memcpy(payload.key, current_key == MF_KEY_A ? keyA[sectorNo] : keyB[sectorNo], sizeof(payload.key));
+
+                            clearCommandBuffer();
+                            SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
+                            received = WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500);
+                        }
+                    }
+                    if (received) {
+                        if (resp.status == PM3_SUCCESS) {
+                            // break the re-try loop
+                            break;
+                        }
+                        if ((current_key == MF_KEY_A) && (tries == (MIFARE_SECTOR_RETRY / 2))) {
+                            // Half the tries failed with key A. Swap for key B
+                            current_key = MF_KEY_B;
+
+                            // clear out keyA since it failed.
+                            memset(keyA[sectorNo], 0x00, sizeof(keyA[sectorNo]));
+                        }
+                    }
+                }
+
+                if (received) {
+                    uint8_t *data  = resp.data.asBytes;
+                    if (blockNo == mfNumBlocksPerSector(sectorNo) - 1) { // sector trailer. Fill in the keys.
+                        data[0]  = (keyA[sectorNo][0]);
+                        data[1]  = (keyA[sectorNo][1]);
+                        data[2]  = (keyA[sectorNo][2]);
+                        data[3]  = (keyA[sectorNo][3]);
+                        data[4]  = (keyA[sectorNo][4]);
+                        data[5]  = (keyA[sectorNo][5]);
+
+                        data[10] = (keyB[sectorNo][0]);
+                        data[11] = (keyB[sectorNo][1]);
+                        data[12] = (keyB[sectorNo][2]);
+                        data[13] = (keyB[sectorNo][3]);
+                        data[14] = (keyB[sectorNo][4]);
+                        data[15] = (keyB[sectorNo][5]);
+                    }
+                    if (resp.status == PM3_SUCCESS) {
+                        memcpy(carddata[mfFirstBlockOfSector(sectorNo) + blockNo], data, 16);
+                        PrintAndLogEx(NORMAL, "." NOLF);
+                    } else {
+                        PrintAndLogEx(FAILED, "could not read block %2d of sector %2d", blockNo, sectorNo);
+                    }
+                } else {
+                    PrintAndLogEx(WARNING, "command execute timeout when trying to read block %2d of sector %2d.", blockNo, sectorNo);
+                }
+            }
+        }        
+
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "Finished reading card. Displaying data...");
+
+        mf_print_blocks(numSectors * 4, (uint8_t *)carddata, verbose);
+
+        if (verbose) {
+            mf_print_keys(numSectors * 4, (uint8_t *)carddata);
+            mf_analyse_acl(numSectors * 4, (uint8_t *)carddata);
+        }
+
+        return PM3_SUCCESS;
+    } 
+
+    return PM3_ENODATA;
 }
 
 // Read block from Gen4 GTU card
@@ -7791,7 +8063,7 @@ static command_t CommandTable[] = {
     {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE Classic binary file to tag"},
     {"setmod",      CmdHf14AMfSetMod,       IfPm3Iso14443a,  "Set MIFARE Classic EV1 load modulation strength"},
     {"value",       CmdHF14AMfValue,        AlwaysAvailable, "Value blocks"},
-    {"view",        CmdHF14AMfView,         AlwaysAvailable, "Display content from tag dump file"},
+    {"view",        CmdHF14AMfView,         AlwaysAvailable, "Display content from tag"},
     {"wipe",        CmdHF14AMfWipe,         IfPm3Iso14443a,  "Wipe card to zeros and default keys/acc"},
     {"wrbl",        CmdHF14AMfWrBl,         IfPm3Iso14443a,  "Write MIFARE Classic block"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
