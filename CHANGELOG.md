@@ -22,6 +22,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf iclass decrypt` - mark credentials as decrypted in the dump (@natesales)
  - Changed `hf iclass view` - show credentials on a decrypted dump (@natesales)
  - Show NTAG213TT tamper info in `hf mfu info` and add commands for configuring it's tamper feature (@mjaksn)
+ - Add Mifare Classic EV1 signature write support to gen4 magic tag lua script (@augustozanellato)
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)
