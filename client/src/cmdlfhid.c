@@ -476,7 +476,7 @@ static int CmdHIDBrute(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid brute",
                   "Enables bruteforce of HID readers while maintaining specific parameter values.\n"
-				  "If the field being bruteforced is provided, it starts with it and goes up / down one step while maintaining other supplied values.\n"
+                  "If the field being bruteforced is provided, it starts with it and goes up / down one step while maintaining other supplied values.\n"
                   "If the field being bruteforced is not provided, it will iterate through the full range while maintaining other supplied values.",
                   "lf hid brute -w H10301 -f fc --fc 224 --cn 6278\n"
                   "lf hid brute -w H10301 -f cn --fc 21 -d 2000\n"
@@ -488,12 +488,12 @@ static int CmdHIDBrute(const char *Cmd) {
         arg_param_begin,
         arg_lit0("v", "verbose",             "verbose output"),
         arg_str1("w", "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
-		arg_str1("f", "field", "<fc, cn>", "field to bruteforce"),
-        arg_u64_0(NULL, "fc",     "<dec>",    "facility code"),
-        arg_u64_0(NULL, "cn",     "<dec>",    "card number"),
-        arg_u64_0("i",  "issue",  "<dec>",    "issue level"),
-        arg_u64_0("o", "oem",     "<dec>",    "OEM code"),
-        arg_u64_0("d", "delay",   "<dec>",    "delay betweens attempts in ms. (default is 1000)"),
+	arg_str1("f", "field", "<fc, cn>", "field to bruteforce"),
+        arg_u64_0(NULL, "fc",     "<dec>",   "facility code"),
+        arg_u64_0(NULL, "cn",     "<dec>",   "card number"),
+        arg_u64_0("i",  "issue",  "<dec>",   "issue level"),
+        arg_u64_0("o", "oem",     "<dec>",   "OEM code"),
+        arg_u64_0("d", "delay",   "<dec>",   "delay betweens attempts in ms. (default is 1000)"),
         arg_lit0(NULL, "up",                 "direction to increment field value. (default is both directions)"),
         arg_lit0(NULL, "down",               "direction to decrement field value. (default is both directions)"),
         arg_param_end
