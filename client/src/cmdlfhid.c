@@ -488,7 +488,7 @@ static int CmdHIDBrute(const char *Cmd) {
         arg_param_begin,
         arg_lit0("v", "verbose",             "verbose output"),
         arg_str1("w", "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
-	arg_str1("f", "field", "<fc, cn>", "field to bruteforce"),
+	arg_str1("f", "field", "<fc, cn>",   "field to bruteforce"),
         arg_u64_0(NULL, "fc",     "<dec>",   "facility code"),
         arg_u64_0(NULL, "cn",     "<dec>",   "card number"),
         arg_u64_0("i",  "issue",  "<dec>",   "issue level"),
