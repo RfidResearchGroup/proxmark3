@@ -488,7 +488,7 @@ static int CmdHIDBrute(const char *Cmd) {
         arg_param_begin,
         arg_lit0("v", "verbose",             "verbose output"),
         arg_str1("w", "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
-	arg_str1("f", "field", "<fc, cn>",   "field to bruteforce"),
+	arg_str1(NULL, "field",   "<str>",   "field to bruteforce. can be _YELLOW("`fc`") for facility code, or _YELLOW("`cn`") for card number"),
         arg_u64_0(NULL, "fc",     "<dec>",   "facility code"),
         arg_u64_0(NULL, "cn",     "<dec>",   "card number"),
         arg_u64_0("i",  "issue",  "<dec>",   "issue level"),
@@ -656,8 +656,8 @@ static command_t CommandTable[] = {
     {"reader",  CmdHIDReader,   IfPm3Lf,         "attempt to read and extract tag data"},
     {"clone",   CmdHIDClone,    IfPm3Lf,         "clone HID tag to T55x7"},
     {"sim",     CmdHIDSim,      IfPm3Lf,         "simulate HID tag"},
-    {"brute",   CmdHIDBrute,    IfPm3Lf,         "bruteforce HID tag while maintaining specific parameter values"},
-    {"watch",   CmdHIDWatch,    IfPm3Lf,         "continuously watch for cards"},
+    {"brute",   CmdHIDBrute,    IfPm3Lf,         "bruteforce facility code or card number against reader"},
+    {"watch",   CmdHIDWatch,    IfPm3Lf,         "continuously watch for cards.  Reader mode"},
     {NULL, NULL, NULL, NULL}
 };
 
