@@ -475,13 +475,13 @@ static int CmdHIDClone(const char *Cmd) {
 static int CmdHIDBrute(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid brute",
-                  "Enables bruteforce of HID readers while maintaining specific parameter values.\n"
+                  "Enables bruteforce of HID readers with specified facility code or card number. This is an attack against the reader.\n"
                   "If the field being bruteforced is provided, it starts with it and goes up / down one step while maintaining other supplied values.\n"
                   "If the field being bruteforced is not provided, it will iterate through the full range while maintaining other supplied values.",
-                  "lf hid brute -w H10301 -f fc --fc 224 --cn 6278\n"
-                  "lf hid brute -w H10301 -f cn --fc 21 -d 2000\n"
-                  "lf hid brute -v -w H10301 -f cn --fc 21 --cn 200 -d 2000\n"
-                  "lf hid brute -v -w H10301 -f fc --fc 21 --cn 200 -d 2000 --up\n"
+                  "lf hid brute -w H10301 --field fc --fc 224 --cn 6278\n"
+                  "lf hid brute -w H10301 --field cn --fc 21 -d 2000\n"
+                  "lf hid brute -v -w H10301 --field cn --fc 21 --cn 200 -d 2000\n"
+                  "lf hid brute -v -w H10301 --field fc --fc 21 --cn 200 -d 2000 --up\n"
                  );
 
     void *argtable[] = {
