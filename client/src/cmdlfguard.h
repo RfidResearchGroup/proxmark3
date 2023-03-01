@@ -23,5 +23,5 @@
 int CmdLFGuard(const char *Cmd);
 int detectGProxII(uint8_t *bits, size_t *size);
 int demodGuard(bool verbose);
-int getGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits);
+int getGuardBits(uint8_t xorKey, uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits);
 #endif
