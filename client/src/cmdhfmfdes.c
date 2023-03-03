@@ -4307,7 +4307,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (fnum > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0x00 - 0x1f), got 0x%02x", fnum);
         return PM3_EINVARG;
     }
 
@@ -4557,7 +4557,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (fnum > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0x00 - 0x1f), got 0x%02x", fnum);
         return PM3_EINVARG;
     }
 
@@ -4989,7 +4989,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (fnum > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0x00 - 0x1f), got 0x%02x", fnum);
         return PM3_EINVARG;
     }
 
@@ -5188,7 +5188,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (fnum > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0x00 - 0x1f), got 0x%02x", fnum);
         return PM3_EINVARG;
     }
 
