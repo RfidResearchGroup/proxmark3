@@ -884,7 +884,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
         if (fptr == NULL)
             return PM3_ESOFT;
 
-        strcpy(keyFilename, fptr);
+        strncpy(keyFilename, fptr, sizeof(keyFilename) - 1);
         free(fptr);
     }
 
@@ -1179,7 +1179,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         if (fptr == NULL)
             return PM3_ESOFT;
 
-        strcpy(keyfilename, fptr);
+        strncpy(keyfilename, fptr, sizeof(keyfilename) - 1);
         free(fptr);
     }
 
@@ -6009,7 +6009,7 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
     if (keyfnlen == 0) {
         char *fptr = GenerateFilename("hf-mf-", "-key.bin");
         if (fptr) {
-            strcpy(keyFilename, fptr);
+            strncpy(keyFilename, fptr, sizeof(keyFilename) - 1);
         }
         free(fptr);
         DropField();
@@ -6733,7 +6733,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
         if (fptr == NULL)
             return PM3_ESOFT;
 
-        strcpy(keyFilename, fptr);
+        strncpy(keyFilename, fptr, sizeof(keyFilename) - 1);
         free(fptr);
     }
 
