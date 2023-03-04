@@ -488,14 +488,14 @@ static int CmdHIDBrute(const char *Cmd) {
         arg_param_begin,
         arg_lit0("v", "verbose",             "verbose output"),
         arg_str1("w", "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
-	arg_str1(NULL, "field",   "<str>",   "field to bruteforce. can be " _YELLOW("`fc`") " for facility code, or " _YELLOW("`cn`") " for card number"),
+	    arg_str1(NULL, "field",   "<fc|cn>", "field to bruteforce"),
         arg_u64_0(NULL, "fc",     "<dec>",   "facility code"),
         arg_u64_0(NULL, "cn",     "<dec>",   "card number"),
         arg_u64_0("i",  "issue",  "<dec>",   "issue level"),
         arg_u64_0("o", "oem",     "<dec>",   "OEM code"),
-        arg_u64_0("d", "delay",   "<dec>",   "delay betweens attempts in ms. (default is 1000)"),
-        arg_lit0(NULL, "up",                 "direction to increment field value. (default is both directions)"),
-        arg_lit0(NULL, "down",               "direction to decrement field value. (default is both directions)"),
+        arg_u64_0("d", "delay",   "<dec>",   "delay betweens attempts in ms. (def is 1000)"),
+        arg_lit0(NULL, "up",                 "direction to increment field value. (def is both directions)"),
+        arg_lit0(NULL, "down",               "direction to decrement field value. (def is both directions)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
