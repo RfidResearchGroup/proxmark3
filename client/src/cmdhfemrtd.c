@@ -2018,7 +2018,7 @@ int infoHF_EMRTD_offline(const char *path) {
     }
 
     // coverity scan CID 395630,
-    if (data != NULL) {
+    if (data == NULL) {
         return PM3_ESOFT;
     }
 
