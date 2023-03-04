@@ -1069,16 +1069,16 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF Memory Control") " ---");
                 if (len != 3) {
-                    PrintAndLogEx(WARNING, "NDEF Memory Control block size must be 3 instead of %d", len);
+                    PrintAndLogEx(WARNING, "NDEF Memory Control block size must be 3 instead of %u", len);
                 } else {
                     uint8_t pages_addr = (ndef[indx] >> 4) & 0x0f;
                     uint8_t byte_offset = ndef[indx] & 0x0f;
                     uint8_t Size = ndef[indx + 1];
                     uint8_t bytes_per_page = ndef[indx + 2] & 0x0f;
-                    PrintAndLogEx(SUCCESS, "Pages addr (number of pages).... %d", pages_addr);
-                    PrintAndLogEx(SUCCESS, "Byte offset (number of bytes)... %d", byte_offset);
-                    PrintAndLogEx(SUCCESS, "Reserved area size in bits...... %d ( %d bytes )", Size, Size / 8);
-                    PrintAndLogEx(SUCCESS, "       Number of bytes / page... %d", bytes_per_page);
+                    PrintAndLogEx(SUCCESS, "Pages addr (number of pages).... %u", pages_addr);
+                    PrintAndLogEx(SUCCESS, "Byte offset (number of bytes)... %u", byte_offset);
+                    PrintAndLogEx(SUCCESS, "Reserved area size in bits...... %u ( %u bytes )", Size, Size / 8);
+                    PrintAndLogEx(SUCCESS, "       Number of bytes / page... %u", bytes_per_page);
                 }
                 indx += len;
                 break;
@@ -1091,7 +1091,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 if (len == 0) {
                     PrintAndLogEx(SUCCESS, "Found NDEF message w zero length");
                 } else {
-                    PrintAndLogEx(SUCCESS, "Found NDEF message ( " _YELLOW_("%d") " bytes )", len);
+                    PrintAndLogEx(SUCCESS, "Found NDEF message ( " _YELLOW_("%u") " bytes )", len);
 
                     int res = NDEFRecordsDecodeAndPrint(&ndef[indx], len, verbose);
                     if (res != PM3_SUCCESS)
