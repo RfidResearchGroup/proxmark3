@@ -86,9 +86,9 @@ static int demod_guard_raw(uint8_t *raw, uint8_t rlen) {
     }
 
     if (unknown)
-        PrintAndLogEx(SUCCESS, "G-Prox-II - xorKey: " _GREEN_("%u")" Unknown len: " _GREEN_("%u") ", Raw: %s", xorKey, fmtlen, sprint_hex_inrow(raw, rlen));
+        PrintAndLogEx(SUCCESS, "G-Prox-II - Unknown len: " _GREEN_("%u") "xor: " _GREEN_("%u")", Raw: %s", fmtlen, xorKey, sprint_hex_inrow(raw, rlen));
     else
-        PrintAndLogEx(SUCCESS, "G-Prox-II - xorKey: " _GREEN_("%u")" Len: " _GREEN_("%u")" FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %s", xorKey, fmtlen, FC, Card,  sprint_hex_inrow(raw, rlen));
+        PrintAndLogEx(SUCCESS, "G-Prox-II - Len: " _GREEN_("%u")" FC: " _GREEN_("%u") " Card: " _GREEN_("%u") "xor: " _GREEN_("%u")", Raw: %s", fmtlen, FC, Card, xorKey, sprint_hex_inrow(raw, rlen));
 
     return PM3_SUCCESS;
 }
@@ -180,10 +180,10 @@ int demodGuard(bool verbose) {
             unknown = true;
             break;
     }
-    if (!unknown)
-        PrintAndLogEx(SUCCESS, "G-Prox-II - xorKey: " _GREEN_("%u") " Len: " _GREEN_("%u")" FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %08x%08x%08x", xorKey, fmtLen, FC, Card, raw1, raw2, raw3);
+    if (unknown)
+        PrintAndLogEx(SUCCESS, "G-Prox-II - Unknown len: " _GREEN_("%u") " xor: " _GREEN_("%u")", Raw: %08x%08x%08x ", fmtLen, xorKey, raw1, raw2, raw3);
     else
-        PrintAndLogEx(SUCCESS, "G-Prox-II - xorKey: " _GREEN_("%u") " Unknown len: " _GREEN_("%u") ", Raw: %08x%08x%08x", xorKey, fmtLen, raw1, raw2, raw3);
+        PrintAndLogEx(SUCCESS, "G-Prox-II - Len: " _GREEN_("%u")" FC: " _GREEN_("%u") " Card: " _GREEN_("%u") " xor: " _GREEN_("%u") ", Raw: %08x%08x%08x", fmtLen, FC, Card, xorKey, raw1, raw2, raw3);
 
     return PM3_SUCCESS;
 }
