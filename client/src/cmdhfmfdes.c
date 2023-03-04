@@ -4843,14 +4843,17 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx,
             }
         }
 
-        if (resplen > 0) {
+        if (resplen > 0 && reclen > 0) {
             size_t reccount = resplen / reclen;
             PrintAndLogEx(SUCCESS, "Read %zu bytes from file 0x%02x from record %d record count %zu record length %zu", resplen, fnum, offset, reccount, reclen);
-            if (reccount > 1)
+            if (reccount > 1) {
                 PrintAndLogEx(SUCCESS, "Lastest record at the bottom.");
+            }
+
             for (int i = 0; i < reccount; i++) {
-                if (i != 0)
+                if (i != 0) {
                     PrintAndLogEx(SUCCESS, "Record %zu", reccount - (i + offset + 1));
+                }
                 print_buffer_with_offset(&resp[i * reclen], reclen, offset, (i == 0));
             }
         } else {
