@@ -2973,7 +2973,8 @@ all_found:
         free(fptr);
         return PM3_ESOFT;
     }
-    strcpy(filename, fptr);
+
+    strncpy(filename, fptr, sizeof(filename) - 1);
     free(fptr);
 
     saveFile(filename, ".bin", dump, bytes);
@@ -5411,7 +5412,7 @@ static int CmdHF14AMfice(const char *Cmd) {
         fptr = GenerateFilename("hf-mf-", "-nonces.bin");
         if (fptr == NULL)
             return PM3_EFILE;
-        strcpy(filename, fptr);
+        strncpy(filename, fptr, sizeof(filename) - 1);
         free(fptr);
     }
 

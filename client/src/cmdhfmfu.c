@@ -2870,7 +2870,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     if (fnlen == 0) {
         char *fptr = GenerateFilename("hf-mfu-", "-dump.bin");
         if (fptr != NULL) {
-            strcpy(filename, fptr);
+            strncpy(filename, fptr, sizeof(filename) - 1);
         } else {
             snprintf(filename, sizeof(filename), "dumpdata.bin");
         }
