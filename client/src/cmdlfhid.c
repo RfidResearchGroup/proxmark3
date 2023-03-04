@@ -488,7 +488,7 @@ static int CmdHIDBrute(const char *Cmd) {
         arg_param_begin,
         arg_lit0("v", "verbose",             "verbose output"),
         arg_str1("w", "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
-	    arg_str1(NULL, "field",   "<fc|cn>", "field to bruteforce"),
+        arg_str1(NULL, "field",   "<fc|cn>", "field to bruteforce"),
         arg_u64_0(NULL, "fc",     "<dec>",   "facility code"),
         arg_u64_0(NULL, "cn",     "<dec>",   "card number"),
         arg_u64_0("i",  "issue",  "<dec>",   "issue level"),
@@ -515,7 +515,7 @@ static int CmdHIDBrute(const char *Cmd) {
 
     wiegand_card_t card_hi, card_low;
     memset(&card_hi, 0, sizeof(wiegand_card_t));
-	
+
     char field[3] = {0};
     int field_len = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)field, sizeof(field), &field_len);
@@ -587,7 +587,7 @@ static int CmdHIDBrute(const char *Cmd) {
             return sendPing();
         }
 
-        // do one up		
+        // do one up
         if (direction != 2 && fin_hi != true) {
             if (sendTry(format_idx, &card_hi, delay, verbose) != PM3_SUCCESS) {
                 return PM3_ESOFT;

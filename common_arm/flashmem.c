@@ -366,8 +366,8 @@ void Flashmem_print_status(void) {
             }
         } else {
             Dbprintf("  Device ID............... " _YELLOW_("%02X / %02X (unknown)"),
-                        device_type.manufacturer_id,
-                        device_type.device_id
+                     device_type.manufacturer_id,
+                     device_type.device_id
                     );
         }
     }

@@ -163,12 +163,12 @@ int demodGuard(bool verbose) {
     bool unknown = false;
     switch (fmtLen) {
         case 36:
-        	PrintAndLogEx(DEBUG, "DEBUG: FC 1: %x", (plain[3] & 0x7F) << 7);
-        	PrintAndLogEx(DEBUG, "DEBUG: FC 2: %x", plain[4] >> 1);
-        	PrintAndLogEx(DEBUG, "DEBUG: Card 1: %x", (plain[4] & 1) << 19);
-        	PrintAndLogEx(DEBUG, "DEBUG: Card 2: %x", plain[5] << 11);
-        	PrintAndLogEx(DEBUG, "DEBUG: Card 3: %x", plain[6] << 3);
-        	PrintAndLogEx(DEBUG, "DEBUG: Card 4: %x", (plain[7] & 0xE0) >> 5);
+            PrintAndLogEx(DEBUG, "DEBUG: FC 1: %x", (plain[3] & 0x7F) << 7);
+            PrintAndLogEx(DEBUG, "DEBUG: FC 2: %x", plain[4] >> 1);
+            PrintAndLogEx(DEBUG, "DEBUG: Card 1: %x", (plain[4] & 1) << 19);
+            PrintAndLogEx(DEBUG, "DEBUG: Card 2: %x", plain[5] << 11);
+            PrintAndLogEx(DEBUG, "DEBUG: Card 3: %x", plain[6] << 3);
+            PrintAndLogEx(DEBUG, "DEBUG: Card 4: %x", (plain[7] & 0xE0) >> 5);
             FC = ((plain[3] & 0x7F) << 7) | (plain[4] >> 1);
             Card = ((plain[4] & 1) << 19) | (plain[5] << 11) | (plain[6] << 3) | ((plain[7] & 0xE0) >> 5);
             break;
@@ -271,7 +271,7 @@ static int CmdGuardClone(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-	uint32_t xorval = arg_get_u32_def(ctx, 1, 0);
+    uint32_t xorval = arg_get_u32_def(ctx, 1, 0);
     uint32_t fmtlen = arg_get_u32_def(ctx, 2, 0);
     uint32_t fc = arg_get_u32_def(ctx, 3, 0);
     uint32_t cn = arg_get_u32_def(ctx, 4, 0);
@@ -357,7 +357,7 @@ static int CmdGuardSim(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-	uint32_t xorval = arg_get_u32_def(ctx, 1, 0);
+    uint32_t xorval = arg_get_u32_def(ctx, 1, 0);
     uint32_t fmtlen = arg_get_u32_def(ctx, 2, 0);
     uint32_t fc = arg_get_u32_def(ctx, 3, 0);
     uint32_t cn = arg_get_u32_def(ctx, 4, 0);
@@ -376,7 +376,7 @@ static int CmdGuardSim(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Simulating Guardall Prox - xorKey: " _YELLOW_("%u") " Facility Code: " _YELLOW_("%u") " CardNumber: " _YELLOW_("%u")
-    			  , xorval
+                  , xorval
                   , facilitycode
                   , cardnumber
                  );

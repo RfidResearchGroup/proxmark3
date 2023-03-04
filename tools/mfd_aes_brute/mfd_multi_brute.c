@@ -174,7 +174,7 @@ static void print_time(uint64_t at) {
     strftime(res, sizeof(res), "('%Y-%m-%d %H:%M:%S')", &lt);
 #else
     strftime(res, sizeof(res), "%s ('%Y-%m-%d %H:%M:%S')", &lt);
-#endif 
+#endif
     printf("%s\n", res);
 }
 
