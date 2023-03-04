@@ -3572,7 +3572,6 @@ static int DesfireCreateFileParameters(
     bool userawfrights = false;
     if (frightsid) {
         if (CLIGetUint32Hex(ctx, frightsid, 0xeeee, &frights, &userawfrights, 2, "File rights must have 2 bytes length")) {
-            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
