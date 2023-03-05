@@ -223,16 +223,6 @@ static const productName_t uidmapping[] = {
     { 0, 0, "no tag-info available" } // must be the last entry
 };
 
-static inline void reverse(uint8_t *buff, uint8_t length) {
-    uint8_t upper_bound = (length % 2 == 0) ? length / 2 : (length / 2) + 1;
-    uint8_t tmp = 0;
-    for (int start = 0, end = length - 1; end >= upper_bound; ++start, --end) {
-        tmp = buff[end];
-        buff[end] = buff[start];
-        buff[start] = tmp;
-    }
-}
-
 static int CmdHF15Help(const char *Cmd);
 
 static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
@@ -287,16 +277,14 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
             }
         };
     */
-    uint8_t i;
-    uint8_t revuid[8];
-    for (i = 0; i < sizeof(revuid); i++) {
-        revuid[i] = uid[7 - i];
-    }
-    uint8_t revsign[32];
-    for (i = 0; i < sizeof(revsign); i++) {
-        revsign[i] = signature[31 - i];
-    }
 
+    uint8_t revuid[8] = {0};
+    reverse_array_copy(uid, sizeof(revuid), revuid);
+
+    uint8_t revsign[32] = {0};
+    reverse_array_copy(signature, sizeof(revsign), revsign);
+
+    uint8_t i;
     int reason = 0;
     bool is_valid = false;
     for (i = 0; i < ARRAYLEN(nxp_15693_public_keys); i++) {
@@ -1823,7 +1811,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
                 return PM3_EINVARG;
             }
         } else {
-            reverse(uid, HF15_UID_LENGTH);
+            reverse_array(uid, HF15_UID_LENGTH);
         }
         // add UID (scan, uid)
         memcpy(req + reqlen, uid, HF15_UID_LENGTH);
@@ -1953,7 +1941,7 @@ static int CmdHF15Readblock(const char *Cmd) {
                 return PM3_EINVARG;
             }
         } else {
-            reverse(uid, HF15_UID_LENGTH);
+            reverse_array(uid, HF15_UID_LENGTH);
         }
         // add UID (scan, uid)
         memcpy(req + reqlen, uid, HF15_UID_LENGTH);
@@ -2129,7 +2117,7 @@ static int CmdHF15Write(const char *Cmd) {
                 return PM3_EINVARG;
             }
         } else {
-            reverse(uid, HF15_UID_LENGTH);
+            reverse_array(uid, HF15_UID_LENGTH);
         }
         // add UID (scan, uid)
         memcpy(req + reqlen, uid, HF15_UID_LENGTH);
@@ -2356,11 +2344,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
 
     // reverse cardUID to compare
     uint8_t revuid[8] = {0};
-    uint8_t i = 0;
-    while (i < sizeof(revuid)) {
-        revuid[i] = carduid[7 - i];
-        i++;
-    }
+    reverse_array_copy(carduid, sizeof(carduid), revuid);
 
     if (memcmp(revuid, payload.uid, 8) != 0) {
         PrintAndLogEx(FAILED, "setting new UID ( " _RED_("fail") " )");

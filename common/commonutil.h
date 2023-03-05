@@ -86,4 +86,8 @@ uint32_t rotl(uint32_t a, uint8_t n);
 uint32_t rotr(uint32_t a, uint8_t n);
 
 uint16_t get_sw(const uint8_t *d, uint16_t n);
+
+void reverse_array(uint8_t *d, size_t n);
+void reverse_array_copy(const uint8_t *src, int src_len, uint8_t *dest);
+
 #endif
