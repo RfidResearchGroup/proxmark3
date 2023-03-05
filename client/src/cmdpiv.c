@@ -698,10 +698,12 @@ static int PivSelect(Iso7816CommandChannel channel, bool activateField, bool lea
     if ((sw != 0) && (silent == false)) {
         PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
     }
+
     if (res != PM3_SUCCESS || sw != ISO7816_OK) {
         PrintAndLogEx(FAILED, "Applet selection failed. Card is not a PIV card.");
         return res;
     }
+
     if (silent == false) {
         if (decodeTLV == true) {
             PrintTLVFromBuffer(buf, len);
@@ -736,8 +738,10 @@ static int CmdPIVSelect(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 3);
     bool decodeTLV = arg_get_lit(ctx, 4);
     Iso7816CommandChannel channel = CC_CONTACTLESS;
-    if (arg_get_lit(ctx, 5))
+    if (arg_get_lit(ctx, 5)) {
         channel = CC_CONTACT;
+    }
+
     PrintChannel(channel);
 
     uint8_t applet_id[APDU_AID_LEN] = {0};
@@ -970,7 +974,6 @@ static command_t CommandTable[] =  {
     {"getdata",     CmdPIVGetData,                  IfPm3Iso14443,   "Gets a container on a PIV card"},
     {"authsign",    CmdPIVAuthenticateSign,         IfPm3Iso14443,   "Authenticate with the card"},
     {"scan",        CmdPIVScan,                     IfPm3Iso14443,   "Scan PIV card for known containers"},
-
     {"list",        CmdPIVList,                     AlwaysAvailable, "List ISO7816 history"},
     {NULL, NULL, NULL, NULL}
 };
