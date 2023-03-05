@@ -35,6 +35,9 @@
 #include "cmdlft55xx.h"          // print...
 #include "crypto/asn1utils.h"    // ASN1 decode / print
 #include "cmdflashmemspiffs.h"   // SPIFFS flash memory download
+#include "mbedtls/bignum.h"      // big num
+#include "mbedtls/entropy.h"     // 
+#include "mbedtls/ctr_drbg.h"    // random generator
 
 uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t g_DemodBufferLen = 0;
@@ -2425,6 +2428,19 @@ static int CmdZerocrossings(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static bool data_verify_hex(uint8_t *d, size_t n) {
+    if (d == NULL) 
+        return false;
+
+    for (size_t i = 0; i < n; i++) {
+        if (isxdigit(d[i]) == false) {
+            PrintAndLogEx(ERR, "Non hex digit found");
+            return false;
+        }
+    }
+    return true;
+}
+
 /**
  * @brief Utility for conversion via cmdline.
  * @param Cmd
@@ -2501,12 +2517,8 @@ static int Cmdhex2bin(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    for (int i = 0; i < dlen; i++) {
-        char x = data[i];
-        if (isxdigit(x) == false) {
-            PrintAndLogEx(ERR, "Non hex digit found");
-            return PM3_EINVARG;
-        }
+    if (data_verify_hex((uint8_t*)data, dlen) == false) {
+        return PM3_EINVARG;
     }
 
     PrintAndLogEx(SUCCESS, "" NOLF);
@@ -3166,6 +3178,129 @@ static int CmdDiff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdNumCon(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data num",
+                  "Function takes a decimal or hexdecimal number and print it in decimal/hex/binary\n"
+                  "Will print message if number is a prime number\n",
+                  "data num --dec 2023\n"
+                  "data num --hex 0x1000\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL,  "dec", "<dec>", "decimal value"),
+        arg_str0(NULL,  "hex", "<hex>", "hexadecimal value"),
+        arg_str0(NULL,  "bin", "<bin>", "binary value"),
+        arg_lit0("i",  NULL,  "print inverted value"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int dlen = 256;
+    char dec[256];
+    memset(dec, 0, sizeof(dec));
+    int res = CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)dec, sizeof(dec), &dlen);
+
+
+    int hlen = 256;
+    char hex[256];
+    memset(hex, 0, sizeof(hex));
+    res = CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)hex, sizeof(hex), &hlen);
+
+    int blen = 256;
+    char bin[256];
+    memset(bin, 0, sizeof(bin));
+    res = CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)bin, sizeof(bin), &blen);
+
+    bool shall_invert = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    // sanity checks
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+
+    // results for MPI actions
+    bool ret = false;
+
+    // container of big number
+    mbedtls_mpi N;
+    mbedtls_mpi_init(&N);
+
+
+    // hex
+    if (hlen > 0) {
+        if (data_verify_hex((uint8_t*)hex, hlen) == false) {
+            return PM3_EINVARG;
+        }
+        MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&N, 16, hex));
+    }
+
+    // decimal
+    if (dlen > 0) {
+        // should have decimal string check here too
+        MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&N, 10, dec));
+    }
+
+    // binary
+    if (blen > 0) {
+        // should have bianry string check here too
+        MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&N, 2, bin));
+    }
+
+    mbedtls_mpi base;
+    mbedtls_mpi_init(&base);
+    mbedtls_mpi_add_int(&base, &base, 10);
+
+    if (shall_invert) {
+        PrintAndLogEx(INFO, "should invert");
+        MBEDTLS_MPI_CHK(mbedtls_mpi_inv_mod(&N, &N, &base));
+    }
+
+     // printing
+    typedef struct {
+        const char* desc;
+        uint8_t radix;
+    } radix_t;
+
+    radix_t radix[] = {
+            {"dec..... ", 10},
+            {"hex..... 0x", 16}, 
+            {"bin..... 0b", 2}
+    };
+
+    char s[600] = {0};
+    size_t slen = 0;
+
+    for (uint8_t i=0; i < ARRAYLEN(radix); i++) {
+        MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, radix[i].radix, s, sizeof(s), &slen));
+        if (slen > 0) {
+            PrintAndLogEx(INFO, "%s%s", radix[i].desc, s);
+        }
+    }
+
+    // check if number is a prime
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_ctr_drbg_init(&ctr_drbg);
+    mbedtls_entropy_init(&entropy);
+
+    MBEDTLS_MPI_CHK(mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0 ));
+
+    res = mbedtls_mpi_is_prime_ext( &N, 50, mbedtls_ctr_drbg_random, &ctr_drbg );
+    if (res == 0) {
+        PrintAndLogEx(INFO, "prime... " _YELLOW_("yes"));
+    }
+
+cleanup:
+    mbedtls_mpi_free(&N);
+    mbedtls_mpi_free(&base);
+    mbedtls_entropy_free(&entropy);
+    mbedtls_ctr_drbg_free(&ctr_drbg);
+    return PM3_SUCCESS;
+}
 
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable,  "This help"},
@@ -3209,6 +3344,7 @@ static command_t CommandTable[] = {
     {"hexsamples",      CmdHexsamples,           IfPm3Present,     "Dump big buffer as hex bytes"},
     {"hex2bin",         Cmdhex2bin,              AlwaysAvailable,  "Converts hexadecimal to binary"},
     {"load",            CmdLoad,                 AlwaysAvailable,  "Load contents of file into graph window"},
+    {"num",             CmdNumCon,               AlwaysAvailable,  "Converts dec/hex/bin"},
     {"print",           CmdPrintDemodBuff,       AlwaysAvailable,  "Print the data in the DemodBuffer"},
     {"samples",         CmdSamples,              IfPm3Present,     "Get raw samples for graph window (GraphBuffer)"},
     {"save",            CmdSave,                 AlwaysAvailable,  "Save signal trace data  (from graph window)"},

@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Fixed `hf mfdes info`- now handles incorrect tag answers better (@didiera)
+ - Added `data num` - easy convert between dec/hex/bin (@iceman1001)
+ - Fixed `hf mfdes info` - now handles incorrect tag answers better (@didiera)
  - Fixed `hf mfdes` generic help text is now correct (@didiera)
  - Fixed `pm3` script to correctly identify WSL enabled distros (@henrygab)
  - Changed device enumeration with "unique USB serial numbers when built with `FLASH` -- **_UPDATES BOOTROM ALSO_**" (@henrygab)
