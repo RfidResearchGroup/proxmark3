@@ -48,6 +48,7 @@
 #define Logic1                  Iso15693Logic1
 #define FrameEOF                Iso15693FrameEOF
 #define CARD_MEMORY_SIZE        4096
+#define HF15_UID_LENGTH		8
 
 #ifndef Crc15
 # define Crc15(data, len)       Crc16ex(CRC_15693, (data), (len))
@@ -221,6 +222,16 @@ static const productName_t uidmapping[] = {
     { 0xE044000000000000LL, 16, "Gentag Inc (USA) USA" },
     { 0, 0, "no tag-info available" } // must be the last entry
 };
+
+static inline void reverse(uint8_t *buff, uint8_t length) {
+    uint8_t upper_bound = (length % 2 == 0) ? length / 2 : (length / 2) + 1;
+    uint8_t tmp = 0;
+    for (int start = 0, end = length - 1; end >= upper_bound; ++start, --end) {
+        tmp = buff[end];
+        buff[end] = buff[start];
+        buff[start] = tmp;
+    }
+}
 
 static int CmdHF15Help(const char *Cmd);
 
@@ -1774,11 +1785,13 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t uid[8];
+    uint8_t uid[HF15_UID_LENGTH];
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    bool uid_set = (uidlen == HF15_UID_LENGTH) ? true : false;
+
     bool unaddressed = arg_get_lit(ctx, 2);
-    bool scan = arg_get_lit(ctx, 3);
+    bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; //Default fallback to scan for tag. Overriding unaddressed parameter.
     int fast = (arg_get_lit(ctx, 4) == false);
     bool add_option = arg_get_lit(ctx, 5);
 
@@ -1793,7 +1806,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if ((scan + unaddressed + uidlen) > 1) {
+    if ((scan + unaddressed + uid_set) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
         return PM3_EINVARG;
     }
@@ -1809,14 +1822,13 @@ static int CmdHF15Readmulti(const char *Cmd) {
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }
-            uidlen = 8;
+        } else {
+            reverse(uid, HF15_UID_LENGTH);
         }
+        // add UID (scan, uid)
+        memcpy(req + reqlen, uid, HF15_UID_LENGTH);
+        reqlen += HF15_UID_LENGTH;
 
-        if (uidlen == 8) {
-            // add UID (scan, uid)
-            memcpy(req + reqlen, uid, sizeof(uid));
-            reqlen += sizeof(uid);
-        }
         PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
     }
     // add OPTION flag, in order to get lock-info
@@ -1908,11 +1920,13 @@ static int CmdHF15Readblock(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t uid[8];
+    uint8_t uid[HF15_UID_LENGTH];
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    bool uid_set = (uidlen == HF15_UID_LENGTH) ? true : false;
+
     bool unaddressed = arg_get_lit(ctx, 2);
-    bool scan = arg_get_lit(ctx, 3);
+    bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; //Default fallback to scan for tag. Overriding unaddressed parameter.
     int fast = (arg_get_lit(ctx, 4) == false);
     bool add_option = arg_get_lit(ctx, 5);
 
@@ -1920,15 +1934,9 @@ static int CmdHF15Readblock(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
-    if ((scan + unaddressed + uidlen) > 1) {
+    if ((scan + unaddressed + uid_set) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
         return PM3_EINVARG;
-    }
-
-    // default fallback to scan for tag.
-    // overriding unaddress parameter :)
-    if (uidlen != 8) {
-        scan = true;
     }
 
     // request to be sent to device/card
@@ -1937,19 +1945,20 @@ static int CmdHF15Readblock(const char *Cmd) {
     uint16_t reqlen = 2;
 
     if (unaddressed == false) {
+        // default fallback to scan for tag.
+        // overriding unaddress parameter :)
         if (scan) {
             if (getUID(false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }
-            uidlen = 8;
+        } else {
+            reverse(uid, HF15_UID_LENGTH);
         }
+        // add UID (scan, uid)
+        memcpy(req + reqlen, uid, HF15_UID_LENGTH);
+        reqlen += HF15_UID_LENGTH;
 
-        if (uidlen == 8) {
-            // add UID (scan, uid)
-            memcpy(req + reqlen, uid, sizeof(uid));
-            reqlen += sizeof(uid);
-        }
         PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
     }
     // add OPTION flag, in order to get lock-info
@@ -2073,11 +2082,13 @@ static int CmdHF15Write(const char *Cmd) {
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t uid[8];
+    uint8_t uid[HF15_UID_LENGTH];
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    bool uid_set = (uidlen == HF15_UID_LENGTH) ? true : false;
+
     bool unaddressed = arg_get_lit(ctx, 2);
-    bool scan = arg_get_lit(ctx, 3);
+    bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; //Default fallback to scan for tag. Overriding unaddressed parameter.
     int fast = (arg_get_lit(ctx, 4) == false);
     bool add_option = arg_get_lit(ctx, 5);
 
@@ -2090,7 +2101,7 @@ static int CmdHF15Write(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
-    if ((scan + unaddressed + uidlen) > 1) {
+    if ((scan + unaddressed + uid_set) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
         return PM3_EINVARG;
     }
@@ -2102,9 +2113,6 @@ static int CmdHF15Write(const char *Cmd) {
 
     // default fallback to scan for tag.
     // overriding unaddress parameter :)
-    if (uidlen != 8) {
-        scan = true;
-    }
 
     // request to be sent to device/card
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
@@ -2120,17 +2128,15 @@ static int CmdHF15Write(const char *Cmd) {
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }
-            uidlen = 8;
+        } else {
+            reverse(uid, HF15_UID_LENGTH);
         }
+        // add UID (scan, uid)
+        memcpy(req + reqlen, uid, HF15_UID_LENGTH);
+        reqlen += HF15_UID_LENGTH;
 
-        if (uidlen == 8) {
-            // add UID (scan, uid)
-            memcpy(req + reqlen, uid, sizeof(uid));
-            reqlen += sizeof(uid);
-        }
         PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
     }
-
 
     req[reqlen++] = (uint8_t)block;
     memcpy(req + reqlen, d, sizeof(d));
