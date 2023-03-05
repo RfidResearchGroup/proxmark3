@@ -202,19 +202,21 @@ static int info_hf_tesla(void) {
         PrintAndLogEx(INFO, "%d - %s", i, sprint_hex_inrow(pk[i], 65));
     }
     PrintAndLogEx(INFO, "Form factor... %s " NOLF, sprint_hex_inrow(form_factor, sizeof(form_factor)));
-    uint16_t form_factor_value = form_factor[0] << 8 | form_factor[1];
+
+    uint16_t form_factor_value = MemBeToUint2byte(form_factor);
+
     switch (form_factor_value) {
         case 0x0001:
-            PrintAndLogEx(NORMAL, "(card)");
+            PrintAndLogEx(NORMAL, "( card )");
             break;
         case 0x0022:
-            PrintAndLogEx(NORMAL, "(fob)");
+            PrintAndLogEx(NORMAL, "( fob )");
             break;
         case 0x0031:
-            PrintAndLogEx(NORMAL, "(phone app)");
+            PrintAndLogEx(NORMAL, "( phone app )");
             break;
         default:
-            PrintAndLogEx(NORMAL, "(unknown)");
+            PrintAndLogEx(NORMAL, "( unknown )");
             break;
     }
 
@@ -248,7 +250,6 @@ static int CmdHFTeslaInfo(const char *Cmd) {
     CLIParserFree(ctx);
     return info_hf_tesla();
 }
-
 
 static int CmdHFTeslaList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf tesla", "7816");
