@@ -224,7 +224,7 @@ Try running it with
 ## libQt5Core.so.5 not found
 ^[Top](#top)
 
-On WSL1 / updated to Ubuntu 20.04,  there is a slight chance you experience problems when compiling the repo with QT5.
+On WSL1 / updated to Ubuntu 20.04 and 22.04,  there is a slight chance you experience problems when compiling the repo with QT5.
 The following steps is needed to make the development environment happy again.   
 ```
 sudo apt reinstall qtbase5-dev
