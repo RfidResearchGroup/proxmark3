@@ -93,7 +93,6 @@ LUALIBLD =
 LUAPLATFORM = generic
 ifneq (,$(findstring MINGW,$(platform)))
     LUAPLATFORM = mingw
-	LDLIBS += -lws2_32
 else
     ifeq ($(platform),Darwin)
         LUAPLATFORM = macosx
@@ -101,6 +100,11 @@ else
         LUALIBLD +=  -ldl
         LUAPLATFORM = linux
     endif
+endif
+
+## Winsock2
+ifneq (,$(findstring MINGW,$(platform)))
+	LDLIBS += -lws2_32
 endif
 
 ## Reveng

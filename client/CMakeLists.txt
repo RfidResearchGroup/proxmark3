@@ -584,6 +584,9 @@ if (MINGW)
 
     set(CMAKE_C_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_CXX_FLAGS}")
+
+    # link Winsock2
+    set(ADDITIONAL_LNK ws2_32 ${ADDITIONAL_LNK})
 endif (MINGW)
 
 target_include_directories(proxmark3 PRIVATE
