@@ -594,17 +594,17 @@ static void mem_app_config(const picopass_hdr_t *hdr) {
     PrintAndLogEx(INFO, " * Kd, Debit key, AA1    Kc, Credit key, AA2 *");
     uint8_t keyAccess = isset(mem, 0x01);
     if (keyAccess) {
-        PrintAndLogEx(INFO, "    Read A....... debit");
-        PrintAndLogEx(INFO, "    Read B....... credit");
-        PrintAndLogEx(INFO, "    Write A...... debit");
-        PrintAndLogEx(INFO, "    Write B...... credit");
+        PrintAndLogEx(INFO, "    Read AA1....... debit");
+        PrintAndLogEx(INFO, "    Write AA1...... debit");
+        PrintAndLogEx(INFO, "    Read AA2....... credit");
+        PrintAndLogEx(INFO, "    Write AA2...... credit");
         PrintAndLogEx(INFO, "    Debit........ debit or credit");
         PrintAndLogEx(INFO, "    Credit....... credit");
     } else {
-        PrintAndLogEx(INFO, "    Read A....... debit or credit");
-        PrintAndLogEx(INFO, "    Read B....... debit or credit");
-        PrintAndLogEx(INFO, "    Write A...... credit");
-        PrintAndLogEx(INFO, "    Write B...... credit");
+        PrintAndLogEx(INFO, "    Read AA1....... debit or credit");
+        PrintAndLogEx(INFO, "    Write AA1...... credit");
+        PrintAndLogEx(INFO, "    Read AA2....... debit or credit");
+        PrintAndLogEx(INFO, "    Write AA2...... credit");
         PrintAndLogEx(INFO, "    Debit........ debit or credit");
         PrintAndLogEx(INFO, "    Credit....... credit");
     }
