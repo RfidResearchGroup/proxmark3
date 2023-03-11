@@ -163,11 +163,12 @@ endif (NOT SKIPJANSSONSYSTEM EQUAL 1)
 
 if(EMBED_BZIP2)
     set(BZIP2_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
+    # Specify SOURCE_DIR will cause some errors
     ExternalProject_Add(bzip2
         GIT_REPOSITORY        https://android.googlesource.com/platform/external/bzip2
         GIT_TAG               platform-tools-30.0.2
         PREFIX                deps/bzip2
-        SOURCE_DIR            ${CMAKE_CURRENT_SOURCE_DIR}/deps/bzip2
+        # SOURCE_DIR            ${CMAKE_CURRENT_SOURCE_DIR}/deps/bzip2
         CONFIGURE_COMMAND     mkdir -p ${BZIP2_BUILD_DIR} && git archive --format tar HEAD | tar -C ${BZIP2_BUILD_DIR} -x
         BUILD_IN_SOURCE       ON
         BUILD_COMMAND         make -C ${BZIP2_BUILD_DIR} -j4 CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} libbz2.a
