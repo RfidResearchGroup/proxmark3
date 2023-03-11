@@ -29,6 +29,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf iclass view` - show credentials on a decrypted dump (@natesales)
  - Show NTAG213TT tamper info in `hf mfu info` and add commands for configuring it's tamper feature (@mjaksn)
  - Add Mifare Classic EV1 signature write support to gen4 magic tag lua script (@augustozanellato)
+ - Added XOR key extraction and flag to Guardall G-Prox II (@GuruSteve)
+ - Changed verbiage on `hf iclass info` KeyAccess area to be congruent with AA1 and AA2 areas (@GuruSteve)
  - 
 
 ## [Nitride.4.16191][2023-01-29]
@@ -179,7 +181,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added new standalone mode `lf_em4100rsww` (@zabszk)
  - Fixed `hf 15 slixdisable` wrong pass id (@r1ddl3rz)
  - Added `script run hf_mf_hid_sim.lua` (@micsen)
- - Changed verbiage on `hf iclass info` KeyAccess area to be congruent with AA1 and AA2 areas (@GuruSteve)
 
 ## [Frostbit.4.14831][2022-01-11]
  - Changed Wiegand format lookup - now case-insensitive (@iceman1001)
