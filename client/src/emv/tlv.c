@@ -199,7 +199,6 @@ struct tlvdb *tlvdb_parse(const unsigned char *buf, size_t len) {
 err:
     tlvdb_free(&root->db);
 
-    free(root);
     return NULL;
 }
 
@@ -236,7 +235,6 @@ struct tlvdb *tlvdb_parse_multi(const unsigned char *buf, size_t len) {
 err:
     tlvdb_free(&root->db);
 
-    free(root);
     return NULL;
 }
 
