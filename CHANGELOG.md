@@ -28,6 +28,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf iclass view` - show credentials on a decrypted dump (@natesales)
  - Show NTAG213TT tamper info in `hf mfu info` and add commands for configuring it's tamper feature (@mjaksn)
  - Add Mifare Classic EV1 signature write support to gen4 magic tag lua script (@augustozanellato)
+ - Added XOR key extraction and flag to Guardall G-Prox II (@GuruSteve)
  - Changed verbiage on `hf iclass info` KeyAccess area to be congruent with AA1 and AA2 areas (@GuruSteve)
  - 
 
