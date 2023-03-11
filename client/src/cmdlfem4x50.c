@@ -555,7 +555,7 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out) {
         return PM3_ESOFT;
 
     uint8_t *data = resp.data.asBytes;
-    em4x50_word_t words[EM4X50_NO_WORDS];
+    em4x50_word_t words[EM4X50_NO_WORDS] = {0};
     prepare_result(data, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF, words);
 
     if (out != NULL)

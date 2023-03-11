@@ -29,7 +29,7 @@
 #include "commonutil.h"        // get_sw
 #include "protocols.h"         // ISO7816 APDU return co-des
 #include "ui.h"
-#include "cmdhf14a.h"          // apdu chaining 
+#include "cmdhf14a.h"          // apdu chaining
 
 #define TIMEOUT 2000
 
@@ -147,7 +147,7 @@ static int info_hf_tesla(void) {
 
     // ---------------  CERT reading ----------------
     Set_apdu_in_framing(true);
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < 5; i++) {
 
         uint8_t aSELECT_CERT[PM3_CMD_DATA_SIZE] = {0x80, 0x06, i, 0x00, 0x00, 0x00, 0xFF};
         int aSELECT_CERT_n = 7;
@@ -160,10 +160,10 @@ static int info_hf_tesla(void) {
         sw = get_sw(response, resplen);
 
         if (sw == ISO7816_OK) {
-            // save CETT for later    
+            // save CERT for later
             uint8_t cert[515] = {0};
             memcpy(cert, response, resplen - 2);
-        
+
             PrintAndLogEx(INFO, "CERT # %i", i);
             PrintAndLogEx(INFO, "%s", sprint_hex_inrow(cert, resplen - 2));
         }
@@ -198,13 +198,26 @@ static int info_hf_tesla(void) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "PUBLIC KEY");
-    for (int i=0; i < 3; i++) {
+    for (int i = 0; i < 3; i++) {
         PrintAndLogEx(INFO, "%d - %s", i, sprint_hex_inrow(pk[i], 65));
     }
-    if (form_factor[1] == 1) {
-        PrintAndLogEx(INFO, "Form factor... %s (card)", sprint_hex_inrow(form_factor, sizeof(form_factor)));
-    } else if (form_factor[1] == 2){
-        PrintAndLogEx(INFO, "Form factor... %s (phone app)", sprint_hex_inrow(form_factor, sizeof(form_factor)));
+    PrintAndLogEx(INFO, "Form factor... %s " NOLF, sprint_hex_inrow(form_factor, sizeof(form_factor)));
+
+    uint16_t form_factor_value = MemBeToUint2byte(form_factor);
+
+    switch (form_factor_value) {
+        case 0x0001:
+            PrintAndLogEx(NORMAL, "( card )");
+            break;
+        case 0x0022:
+            PrintAndLogEx(NORMAL, "( fob )");
+            break;
+        case 0x0031:
+            PrintAndLogEx(NORMAL, "( phone app )");
+            break;
+        default:
+            PrintAndLogEx(NORMAL, "( unknown )");
+            break;
     }
 
     if (sizeof(version) > 0) {
@@ -217,7 +230,7 @@ static int info_hf_tesla(void) {
     if ((memcmp(pk[0], pk[1], 65) == 0)) {
         PrintAndLogEx(INFO, "  GaussKey detected");
     }
-    // 
+    //
     return PM3_SUCCESS;
 }
 
@@ -237,7 +250,6 @@ static int CmdHFTeslaInfo(const char *Cmd) {
     CLIParserFree(ctx);
     return info_hf_tesla();
 }
-
 
 static int CmdHFTeslaList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf tesla", "7816");

@@ -1265,7 +1265,8 @@ int CmdEM4x05Info(const char *Cmd) {
 
     // read word 1 (serial #) doesn't need pwd
     // continue if failed, .. non blocking fail.
-    em4x05_read_word_ext(EM_SERIAL_BLOCK, 0, false, &serial);
+    int res = em4x05_read_word_ext(EM_SERIAL_BLOCK, 0, false, &serial);
+    (void)res;
 
     printEM4x05info(block0, serial);
 

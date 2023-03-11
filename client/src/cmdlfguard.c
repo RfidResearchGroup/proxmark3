@@ -86,9 +86,9 @@ static int demod_guard_raw(uint8_t *raw, uint8_t rlen) {
     }
 
     if (unknown)
-        PrintAndLogEx(SUCCESS, "G-Prox-II - Unknown len: " _GREEN_("%u") ", Raw: %s", fmtlen, sprint_hex_inrow(raw, rlen));
+        PrintAndLogEx(SUCCESS, "G-Prox-II - Unknown len: " _GREEN_("%u") "xor: " _GREEN_("%u")", Raw: %s", fmtlen, xorKey, sprint_hex_inrow(raw, rlen));
     else
-        PrintAndLogEx(SUCCESS, "G-Prox-II - len: " _GREEN_("%u")" FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %s", fmtlen, FC, Card,  sprint_hex_inrow(raw, rlen));
+        PrintAndLogEx(SUCCESS, "G-Prox-II - Len: " _GREEN_("%u")" FC: " _GREEN_("%u") " Card: " _GREEN_("%u") "xor: " _GREEN_("%u")", Raw: %s", fmtlen, FC, Card, xorKey, sprint_hex_inrow(raw, rlen));
 
     return PM3_SUCCESS;
 }
@@ -142,9 +142,11 @@ int demodGuard(bool verbose) {
 
     // get key and then get all 8 bytes of payload decoded
     xorKey = (uint8_t)bytebits_to_byteLSBF(bits_no_spacer, 8);
+    PrintAndLogEx(DEBUG, "DEBUG: gProxII xorKey: %u", xorKey);
+
     for (size_t idx = 0; idx < 8; idx++) {
         plain[idx] = ((uint8_t)bytebits_to_byteLSBF(bits_no_spacer + 8 + (idx * 8), 8)) ^ xorKey;
-        PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %zu after xor: %02x", idx, plain[idx]);
+        PrintAndLogEx(DEBUG, "DEBUG: gProxII byte %zu after xor: %02x (%02x before xor)", idx, plain[idx], bytebits_to_byteLSBF(bits_no_spacer + 8 + (idx * 8), 8));
     }
 
     setDemodBuff(g_DemodBuffer, 96, preambleIndex);
@@ -161,6 +163,12 @@ int demodGuard(bool verbose) {
     bool unknown = false;
     switch (fmtLen) {
         case 36:
+            PrintAndLogEx(DEBUG, "DEBUG: FC 1: %x", (plain[3] & 0x7F) << 7);
+            PrintAndLogEx(DEBUG, "DEBUG: FC 2: %x", plain[4] >> 1);
+            PrintAndLogEx(DEBUG, "DEBUG: Card 1: %x", (plain[4] & 1) << 19);
+            PrintAndLogEx(DEBUG, "DEBUG: Card 2: %x", plain[5] << 11);
+            PrintAndLogEx(DEBUG, "DEBUG: Card 3: %x", plain[6] << 3);
+            PrintAndLogEx(DEBUG, "DEBUG: Card 4: %x", (plain[7] & 0xE0) >> 5);
             FC = ((plain[3] & 0x7F) << 7) | (plain[4] >> 1);
             Card = ((plain[4] & 1) << 19) | (plain[5] << 11) | (plain[6] << 3) | ((plain[7] & 0xE0) >> 5);
             break;
@@ -172,10 +180,10 @@ int demodGuard(bool verbose) {
             unknown = true;
             break;
     }
-    if (!unknown)
-        PrintAndLogEx(SUCCESS, "G-Prox-II - len: " _GREEN_("%u")" FC: " _GREEN_("%u") " Card: " _GREEN_("%u") ", Raw: %08x%08x%08x", fmtLen, FC, Card, raw1, raw2, raw3);
+    if (unknown)
+        PrintAndLogEx(SUCCESS, "G-Prox-II - Unknown len: " _GREEN_("%u") " xor: " _GREEN_("%u")", Raw: %08x%08x%08x ", fmtLen, xorKey, raw1, raw2, raw3);
     else
-        PrintAndLogEx(SUCCESS, "G-Prox-II - Unknown len: " _GREEN_("%u") ", Raw: %08x%08x%08x", fmtLen, raw1, raw2, raw3);
+        PrintAndLogEx(SUCCESS, "G-Prox-II - Len: " _GREEN_("%u")" FC: " _GREEN_("%u") " Card: " _GREEN_("%u") " xor: " _GREEN_("%u") ", Raw: %08x%08x%08x", fmtLen, FC, Card, xorKey, raw1, raw2, raw3);
 
     return PM3_SUCCESS;
 }
@@ -243,16 +251,17 @@ static int CmdGuardReader(const char *Cmd) {
 static int CmdGuardClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf gproxii clone",
-                  "clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
+                  "Clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
                   "The facility-code is 8-bit and the card number is 20-bit.  Larger values are truncated.\n"
                   "Currently work only on 26 | 36 bit format",
-                  "lf gproxii clone --fmt 26 --fc 123 --cn 1337       -> encode for T55x7 tag\n"
-                  "lf gproxii clone --fmt 26 --fc 123 --cn 1337 --q5  -> encode for Q5/T5555 tag\n"
-                  "lf gproxii clone --fmt 26 --fc 123 --cn 1337 --em  -> encode for EM4305/4469"
+                  "lf gproxii clone --xor 141 --fmt 26 --fc 123 --cn 1337       -> encode for T55x7 tag\n"
+                  "lf gproxii clone --xor 141 --fmt 26 --fc 123 --cn 1337 --q5  -> encode for Q5/T5555 tag\n"
+                  "lf gproxii clone --xor 141 --fmt 26 --fc 123 --cn 1337 --em  -> encode for EM4305/4469"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_u64_1(NULL, "xor", "<dec>", "8-bit xor value (installation dependant)"),
         arg_u64_1(NULL, "fmt", "<dec>", "format length 26|32|36|40"),
         arg_u64_1(NULL, "fc", "<dec>", "8-bit value facility code"),
         arg_u64_1(NULL, "cn", "<dec>", "16-bit value card number"),
@@ -262,11 +271,13 @@ static int CmdGuardClone(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint32_t fmtlen = arg_get_u32_def(ctx, 1, 0);
-    uint32_t fc = arg_get_u32_def(ctx, 2, 0);
-    uint32_t cn = arg_get_u32_def(ctx, 3, 0);
-    bool q5 = arg_get_lit(ctx, 4);
-    bool em = arg_get_lit(ctx, 5);
+    uint32_t xorval = arg_get_u32_def(ctx, 1, 0);
+    uint32_t fmtlen = arg_get_u32_def(ctx, 2, 0);
+    uint32_t fc = arg_get_u32_def(ctx, 3, 0);
+    uint32_t cn = arg_get_u32_def(ctx, 4, 0);
+
+    bool q5 = arg_get_lit(ctx, 5);
+    bool em = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     if (q5 && em) {
@@ -280,7 +291,7 @@ static int CmdGuardClone(const char *Cmd) {
 
     //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
     uint8_t *bs = calloc(96, sizeof(uint8_t));
-    if (getGuardBits(fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
+    if (getGuardBits(xorval, fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bs);
         return PM3_ESOFT;
@@ -306,10 +317,11 @@ static int CmdGuardClone(const char *Cmd) {
 
     free(bs);
 
-    PrintAndLogEx(INFO, "Preparing to clone Guardall to " _YELLOW_("%s") " with Facility Code: " _GREEN_("%u") " Card Number: " _GREEN_("%u")
+    PrintAndLogEx(INFO, "Preparing to clone Guardall to " _YELLOW_("%s") " with Facility Code: " _GREEN_("%u") " Card Number: " _GREEN_("%u") " xorKey: " _GREEN_("%u")
                   , cardtype
                   , facilitycode
                   , cardnumber
+                  , xorval
                  );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
@@ -332,11 +344,12 @@ static int CmdGuardSim(const char *Cmd) {
                   "Simulation runs until the button is pressed or another USB command is issued.\n"
                   "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\n"
                   "Currently work only on 26 | 36 bit format",
-                  "lf gproxii sim --fmt 26 --fc 123 --cn 1337\n"
+                  "lf gproxii sim --xor 141 --fmt 26 --fc 123 --cn 1337\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_u64_1(NULL, "xor", "<dec>", "8-bit xor value (installation dependant)"),
         arg_u64_1(NULL, "fmt", "<dec>", "format length 26|32|36|40"),
         arg_u64_1(NULL, "fc", "<dec>", "8-bit value facility code"),
         arg_u64_1(NULL, "cn", "<dec>", "16-bit value card number"),
@@ -344,9 +357,10 @@ static int CmdGuardSim(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint32_t fmtlen = arg_get_u32_def(ctx, 1, 0);
-    uint32_t fc = arg_get_u32_def(ctx, 2, 0);
-    uint32_t cn = arg_get_u32_def(ctx, 3, 0);
+    uint32_t xorval = arg_get_u32_def(ctx, 1, 0);
+    uint32_t fmtlen = arg_get_u32_def(ctx, 2, 0);
+    uint32_t fc = arg_get_u32_def(ctx, 3, 0);
+    uint32_t cn = arg_get_u32_def(ctx, 4, 0);
     CLIParserFree(ctx);
 
     fmtlen &= 0x7F;
@@ -356,12 +370,13 @@ static int CmdGuardSim(const char *Cmd) {
     uint8_t bs[96];
     memset(bs, 0x00, sizeof(bs));
 
-    if (getGuardBits(fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
+    if (getGuardBits(xorval, fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating Guardall Prox - Facility Code: " _YELLOW_("%u") " CardNumber: " _YELLOW_("%u")
+    PrintAndLogEx(SUCCESS, "Simulating Guardall Prox - xorKey: " _YELLOW_("%u") " Facility Code: " _YELLOW_("%u") " CardNumber: " _YELLOW_("%u")
+                  , xorval
                   , facilitycode
                   , cardnumber
                  );
@@ -435,9 +450,8 @@ int detectGProxII(uint8_t *bits, size_t *size) {
 }
 
 // Works for 26bits.
-int getGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
+int getGuardBits(uint8_t xorKey, uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
 
-    uint8_t xorKey = 0x66;
     uint8_t i;
     uint8_t pre[96];
     uint8_t rawbytes[12];
@@ -448,7 +462,6 @@ int getGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
     switch (fmtlen) {
         case 32: {
             rawbytes[1] = (32 << 2);
-
             break;
         }
         case 36: {
@@ -456,6 +469,7 @@ int getGuardBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *guardBits) {
             // Get wiegand from FacilityCode 14bits, CardNumber 20bits
             uint8_t wiegand[36];
             memset(wiegand, 0x00, sizeof(wiegand));
+
             num_to_bytebits(fc, 14, wiegand);
             num_to_bytebits(cn, 20, wiegand + 14);
 

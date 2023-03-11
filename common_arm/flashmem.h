@@ -54,8 +54,11 @@
 // Flash busy timeout: 20ms is the strict minimum when writing 256kb
 #define BUSY_TIMEOUT    200000L
 
-#define WINBOND_MANID   0xEF
-#define WINBOND_DEVID   0x11
+#define WINBOND_MANID       0xEF
+#define WINBOND_2MB_DEVID   0x11
+#define WINBOND_1MB_DEVID   0x10
+#define WINBOND_512KB_DEVID 0x05
+
 #define PAGESIZE        0x100
 #define WINBOND_WRITE_DELAY 0x02
 
@@ -100,17 +103,21 @@
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-void FlashmemSetSpiBaudrate(uint32_t baudrate);
 bool FlashInit(void);
-void FlashSetup(uint32_t baudrate);
+void Flash_UniqueID(uint8_t *uid);
 void FlashStop(void);
-bool Flash_WaitIdle(void);
-uint8_t Flash_ReadStat1(void);
-uint8_t Flash_ReadStat2(void);
-uint16_t FlashSendByte(uint32_t data);
-void Flash_TransferAdresse(uint32_t address);
 
+void FlashSetup(uint32_t baudrate);
 bool Flash_CheckBusy(uint32_t timeout);
+uint8_t Flash_ReadStat1(void);
+uint16_t FlashSendByte(uint32_t data);
+uint16_t FlashSendLastByte(uint32_t data);
+
+
+#ifndef AS_BOOTROM
+void FlashmemSetSpiBaudrate(uint32_t baudrate);
+bool Flash_WaitIdle(void);
+void Flash_TransferAdresse(uint32_t address);
 
 void Flash_WriteEnable(void);
 bool Flash_WipeMemoryPage(uint8_t page);
@@ -119,8 +126,12 @@ bool Flash_Erase4k(uint8_t block, uint8_t sector);
 //bool Flash_Erase32k(uint32_t address);
 bool Flash_Erase64k(uint8_t block);
 
-void Flash_UniqueID(uint8_t *uid);
-uint8_t Flash_ReadID(void);
+typedef struct {
+    uint8_t manufacturer_id;
+    uint8_t device_id;
+} flash_device_type_90_t; // to differentiate from JDEC ID via cmd 9F
+bool Flash_ReadID_90(flash_device_type_90_t *result);
+
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
 uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len);
 uint16_t Flash_Write(uint32_t address, uint8_t *in, uint16_t len);
@@ -128,6 +139,8 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len);
 uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len);
 void Flashmem_print_status(void);
 void Flashmem_print_info(void);
-uint16_t FlashSendLastByte(uint32_t data);
+
+#endif // #ifndef AS_BOOTROM
+
 
 #endif

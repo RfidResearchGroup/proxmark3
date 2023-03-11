@@ -20,6 +20,10 @@
 #include "clocks.h"
 #include "usb_cdc.h"
 
+#ifdef WITH_FLASH
+#include "flashmem.h"
+#endif
+
 #include "proxmark3_arm.h"
 #define DEBUG 0
 
@@ -214,8 +218,18 @@ static void flash_mode(void) {
     bootrom_unlocked = false;
     uint8_t rx[sizeof(PacketCommandOLD)];
     g_common_area.command = COMMON_AREA_COMMAND_NONE;
-    if (!g_common_area.flags.button_pressed && BUTTON_PRESS())
+    if (!g_common_area.flags.button_pressed && BUTTON_PRESS()) {
         g_common_area.flags.button_pressed = 1;
+    }
+
+#ifdef WITH_FLASH
+    if (FlashInit()) { // checks for existence of flash also ... OK because bootrom was built for devices with flash
+        uint64_t flash_uniqueID = 0;
+        Flash_UniqueID((uint8_t *)&flash_uniqueID);
+        FlashStop();
+        usb_update_serial(flash_uniqueID);
+    }
+#endif
 
     usb_enable();
 

@@ -164,11 +164,18 @@ static void set_python_path(const char *path) {
 }
 
 static void set_python_paths(void) {
-    //--add to the LUA_PATH (package.path in lua)
-    // so we can load scripts from various places:
+    // Prepending to sys.path so we can load scripts from various places.
+    // This means the following directories are in reverse order of
+    // priority for search python modules.
+
+    // Allow current working directory because it seems that's what users want.
+    // But put it with lower search priority than the typical pm3 scripts directories
+    // but still with a higher priority than the pip installed libraries to mimic
+    // Python interpreter behavior. That should be confusing the users the least.
+    set_python_path(".");
     const char *exec_path = get_my_executable_directory();
     if (exec_path != NULL) {
-        // from the ./luascripts/ directory
+        // from the ./pyscripts/ directory
         char scripts_path[strlen(exec_path) + strlen(PYTHON_SCRIPTS_SUBDIR) + strlen(PYTHON_LIBRARIES_WILDCARD) + 1];
         strcpy(scripts_path, exec_path);
         strcat(scripts_path, PYTHON_SCRIPTS_SUBDIR);
@@ -178,7 +185,7 @@ static void set_python_paths(void) {
 
     const char *user_path = get_my_user_directory();
     if (user_path != NULL) {
-        // from the $HOME/.proxmark3/luascripts/ directory
+        // from the $HOME/.proxmark3/pyscripts/ directory
         char scripts_path[strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(PYTHON_SCRIPTS_SUBDIR) + strlen(PYTHON_LIBRARIES_WILDCARD) + 1];
         strcpy(scripts_path, user_path);
         strcat(scripts_path, PM3_USER_DIRECTORY);
@@ -189,7 +196,7 @@ static void set_python_paths(void) {
     }
 
     if (exec_path != NULL) {
-        // from the $PREFIX/share/proxmark3/luascripts/ directory
+        // from the $PREFIX/share/proxmark3/pyscripts/ directory
         char scripts_path[strlen(exec_path) + strlen(PM3_SHARE_RELPATH) + strlen(PYTHON_SCRIPTS_SUBDIR) + strlen(PYTHON_LIBRARIES_WILDCARD) + 1];
         strcpy(scripts_path, exec_path);
         strcat(scripts_path, PM3_SHARE_RELPATH);
@@ -433,7 +440,7 @@ static int CmdScriptRun(const char *Cmd) {
 #else
         // The following line will implicitly pre-initialize Python
         PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
-        
+
         // We disallowed in py_conf environment variables interfering with python interpreter's behavior.
         // Let's manually enable the ones we truly need.
         // This is required by Proxspace to work with an isolated Python configuration

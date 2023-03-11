@@ -3,6 +3,40 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed the client build on Android (@wh201906)
+ - Added TCP connection support on Windows (@wh201906)
+ - Added `data num` - easy convert between dec/hex/bin (@iceman1001)
+ - Fixed `hf mfdes info` - now handles incorrect tag answers better (@didiera)
+ - Fixed `hf mfdes` generic help text is now correct (@didiera)
+ - Fixed `pm3` script to correctly identify WSL enabled distros (@henrygab)
+ - Changed device enumeration with "unique USB serial numbers when built with `FLASH` -- **_UPDATES BOOTROM ALSO_**" (@henrygab)
+ - Changed the readline package to v8.2 in the CMAKE files for the client (@iceman1001)
+ - Fixed `pm3` script for passing arguments (@doegox)
+ - Fixed python paths to include current directory (@jmichelp)
+ - Fixed infinite loops in spindelayus (@lnv42)
+ - Add ICECLASS standalone read/sim mode (@natesales)
+ - Changed `hf iclass encode` - added verbose flag (@natesales)
+ - Changed `hf waveshare` - now identify 1.54 nfc epaper correct (@ah01)
+ - Fixed `Makefile` regression that broke `make install` (@henrygab)
+ - Fixed `lf em 4x70 brute` - now works as expected (@adite)
+ - Fixed the lf sampling when bits_per_sample is less than 8 (@wh201906)
+ - Added `lf em 4x70 brute` command (@adite)
+ - Added documentation for usage of Proxmark3 under WSL2 (@henrygab)
+ - Fixed device permissions via updated `udev` rules (@henrygab)
+ - Added `--back` option to `clear` command to clear the scrollback buffer (@wh201906)
+ - Changed `hf iclass decrypt` - mark credentials as decrypted in the dump (@natesales)
+ - Changed `hf iclass view` - show credentials on a decrypted dump (@natesales)
+ - Show NTAG213TT tamper info in `hf mfu info` and add commands for configuring it's tamper feature (@mjaksn)
+ - Add Mifare Classic EV1 signature write support to gen4 magic tag lua script (@augustozanellato)
+ - 
+
+## [Nitride.4.16191][2023-01-29]
+ - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)
+ - Fixed some coverity fixes (@iceman1001)
+ - Fixed `make accessrights` on Fedora (@mooey5775)
+ - Fixed `hf mfu info` - can now identify the 50 pF version of NTAG 210u(micro) (@mjacksn)
+ - Added `hf 15` sub-commands for controlling EAS, AFI, privacy mode, and the setting of passwords on SLIX tags (@mjacksn)
+ - Added new magic gen4 cards command in docs (@McEloff)
  - Added `hf tesla info` - intital information command to read TESLA cards (@iceman1001)
  - Changed `hf emrtd info` - looking for lower case .bin extensions (@iceman1001)
  - Changed `hf emrtd dump` - looking for lower case .bin extensions (@iceman1001)
@@ -40,7 +74,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `pm3` shell script now automatically detects WSL2 with USBIPD serial ports (@iceman1001)
  - Fixed `trace list -c` - annotation of CRC bytes now is colored or squared if no ansi colors is supported (@iceman1001)
  - Fixed `trace list -t mf` - now also finds UID if anticollision is partial captured, to be used for mfkey (@iceman1001)
- - Fixed `make accessrights` on Fedora (@mooey5775)
 
 ## [Radium.4.15864][2022-10-29]
  - Changed `lf indala sim` - now accepts fc / cn (@iceman1001)
@@ -145,7 +178,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added new standalone mode `lf_em4100rsww` (@zabszk)
  - Fixed `hf 15 slixdisable` wrong pass id (@r1ddl3rz)
  - Added `script run hf_mf_hid_sim.lua` (@micsen)
-
+ - Changed verbiage on `hf iclass info` KeyAccess area to be congruent with AA1 and AA2 areas (@GuruSteve)
 
 ## [Frostbit.4.14831][2022-01-11]
  - Changed Wiegand format lookup - now case-insensitive (@iceman1001)
@@ -1363,6 +1396,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Mifare simulation, `hf mf sim` (was broken a long time) (@pwpiwi)
  - Major improvements in LF area and data operations. (@marshmellow42, @iceman1001)
  - Issues regarding LF simulation (@pwpiwi)
+ - Issue interpreting NXP "get sys info" command return value for icode tags. (@mjacksn)
 
 ### Added
  - iClass functionality: full simulation of iclass tags, so tags can be simulated with data (not only CSN). Not yet support for write/update, but readers do not seem to enforce update. (@holiman).

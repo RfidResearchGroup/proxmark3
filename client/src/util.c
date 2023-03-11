@@ -266,7 +266,7 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
     uint8_t mod = len % breaks;
 
     if (mod) {
-        char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
+        char buf[UTIL_BUFFER_SIZE_SPRINT + 3] = {0};
         hex_to_buffer((uint8_t *)buf, data + i, mod, (sizeof(buf) - 1), 0, 1, true);
 
         // add the spaces...
@@ -291,7 +291,7 @@ void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t brea
     uint8_t mod = len % breaks;
 
     if (mod) {
-        char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
+        char buf[UTIL_BUFFER_SIZE_SPRINT + 3] = {0};
         hex_to_buffer((uint8_t *)buf, data + i, mod, (sizeof(buf) - 1), 0, 0, true);
 
         // add the spaces...
@@ -300,14 +300,13 @@ void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t brea
     }
 }
 
-
 static void print_buffer_ex(const uint8_t *data, const size_t len, int level, uint8_t breaks) {
 
     // sanity checks
     if ((data == NULL) || (len < 1))
         return;
 
-    char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
+    char buf[UTIL_BUFFER_SIZE_SPRINT + 3] = {0};
     int i;
     for (i = 0; i < len; i += breaks) {
 
@@ -614,7 +613,7 @@ void bytes_to_bytebits(const void *src, const size_t srclen, void *dest) {
 // hh,gg,ff,ee,dd,cc,bb,aa, pp,oo,nn,mm,ll,kk,jj,ii
 // up to 64 bytes or 512 bits
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize) {
-    static uint8_t buf[64];
+    static uint8_t buf[64] = {0};
     memset(buf, 0x00, 64);
     uint8_t *tmp = buf;
     for (uint8_t block = 0; block < (uint8_t)(len / blockSize); block++) {

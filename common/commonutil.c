@@ -269,3 +269,27 @@ uint16_t get_sw(const uint8_t *d, uint16_t n) {
     n -= 2;
     return (d[n] << 8 | d[n + 1]);
 }
+
+// reverse same array
+void reverse_array(uint8_t *d, size_t n) {
+    if (d == NULL || n < 2) {
+        return;
+    }
+
+    for (int i = 0, j = n - 1; i < j; ++i, --j) {
+        d[i] ^= d[j];
+        d[j] ^= d[i];
+        d[i] ^= d[j];
+    } 
+}
+
+// reverse src array into dest array
+void reverse_array_copy(const uint8_t *src, int src_len, uint8_t *dest) {
+    if (src == NULL || src_len == 0 || dest == NULL) {
+        return;
+    }
+
+    for (int i = 0; i < src_len; i++) {
+        dest[i] = src[(src_len - 1) - i];
+    }
+}

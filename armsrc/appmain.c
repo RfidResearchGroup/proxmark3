@@ -453,6 +453,12 @@ static void SendCapabilities(void) {
         capabilities.baudrate = g_usart_baudrate;
 #endif
 
+#ifdef RDV4
+    capabilities.is_rdv4 = true;
+#else
+    capabilities.is_rdv4 = false;
+#endif
+
 #ifdef WITH_FLASH
     capabilities.compiled_with_flash = true;
     capabilities.hw_available_flash = FlashInit();
@@ -1221,6 +1227,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x70_write_key((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }
+        case CMD_LF_EM4X70_BRUTE: {
+            em4x70_brute((em4x70_data_t *)packet->data.asBytes, true);
+            break;
+        }
 #endif
 
 #ifdef WITH_ZX8211
@@ -1287,20 +1297,76 @@ static void PacketReceived(PacketCommandNG *packet) {
             SetTag15693Uid(payload->uid);
             break;
         }
-        case CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY: {
+        case CMD_HF_ISO15693_SLIX_DISABLE_EAS: {
             struct p {
                 uint8_t pwd[4];
+                bool usepwd;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            DisablePrivacySlixLIso15693(payload->pwd);
+            DisableEAS_AFISlixIso15693(payload->pwd, payload->usepwd);
             break;
         }
-        case CMD_HF_ISO15693_SLIX_L_DISABLE_AESAFI: {
+        case CMD_HF_ISO15693_SLIX_ENABLE_EAS: {
+            struct p {
+                uint8_t pwd[4];
+                bool usepwd;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            EnableEAS_AFISlixIso15693(payload->pwd, payload->usepwd);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_WRITE_PWD: {
+            struct p {
+                uint8_t old_pwd[4];
+                uint8_t new_pwd[4];
+                uint8_t pwd_id;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            WritePasswordSlixIso15693(payload->old_pwd, payload->new_pwd, payload->pwd_id);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY: {
             struct p {
                 uint8_t pwd[4];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            DisableEAS_AFISlixLIso15693(payload->pwd);
+            DisablePrivacySlixIso15693(payload->pwd);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            EnablePrivacySlixIso15693(payload->pwd);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            PassProtectAFISlixIso15693(payload->pwd);
+            break;
+        }
+        case CMD_HF_ISO15693_WRITE_AFI: {
+            struct p {
+                uint8_t pwd[4];
+                bool use_pwd;
+                uint8_t uid[8];
+                bool use_uid;
+                uint8_t afi;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            WriteAFIIso15693(payload->pwd, payload->use_pwd, payload->uid, payload->use_uid, payload->afi);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            PassProtextEASSlixIso15693(payload->pwd);
             break;
         }
 
@@ -2405,8 +2471,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                 LED_B_OFF();
                 break;
             }
-            if (page < 3)
+            if (page < 3) {
                 isok = Flash_WipeMemoryPage(page);
+                // let spiffs check and update its info post flash erase
+                rdv40_spiffs_check();
+            }
 
             reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
             LED_B_OFF();
@@ -2609,6 +2678,17 @@ void  __attribute__((noreturn)) AppMain(void) {
 
 #ifdef WITH_SMARTCARD
     I2C_init(false);
+#endif
+
+#ifdef WITH_FLASH
+    if (FlashInit()) {
+        uint64_t flash_uniqueID = 0;
+        if (!Flash_CheckBusy(BUSY_TIMEOUT)) { // OK because firmware was built for devices with flash
+            Flash_UniqueID((uint8_t *)(&flash_uniqueID));
+        }
+        FlashStop();
+        usb_update_serial(flash_uniqueID);
+    }
 #endif
 
 #ifdef WITH_FPC_USART

@@ -392,6 +392,12 @@ static int ul_auth_select(iso14a_card_select_t *card, TagTypeUL_t tagtype, bool 
     return PM3_SUCCESS;
 }
 
+static int ntagtt_getTamperStatus(uint8_t *response, uint16_t responseLength) {
+    uint8_t cmd[] = {NTAGTT_CMD_READ_TT, 0x00};
+    int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
+    return len;
+}
+
 static int ulev1_getVersion(uint8_t *response, uint16_t responseLength) {
     uint8_t cmd[] = {MIFARE_ULEV1_VERSION};
     int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
@@ -748,8 +754,75 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
 
     PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: %s", startPage, startPage, sprint_hex(data, 4));
 
-    if ((tagtype & (NTAG_213_F | NTAG_213_TT | NTAG_216_F))) {
-        uint8_t mirror_conf = (data[0] & 0xC0);
+    //NTAG213TT has different ASCII mirroring options and config bytes interpretation from other ulev1 class tags
+    if (tagtype & NTAG_213_TT) {
+        uint8_t mirror_conf = ((data[0] & 0xE0) >> 5);
+        uint8_t mirror_byte = ((data[0] & 0x18) >> 3);
+        uint8_t mirror_page = data[2];
+
+        switch (mirror_conf) {
+            case 0:
+                PrintAndLogEx(INFO, "                    - no ASCII mirror");
+                break;
+            case 1:
+                PrintAndLogEx(INFO, "                    - UID ASCII mirror");
+                break;
+            case 2:
+                PrintAndLogEx(INFO, "                    - NFC counter ASCII mirror");
+                break;
+            case 3:
+                PrintAndLogEx(INFO, "                    - UID and NFC counter ASCII mirror");
+                break;
+            case 4:
+                PrintAndLogEx(INFO, "                    - tag tamper ASCII mirror");
+                break;
+            case 5:
+                PrintAndLogEx(INFO, "                    - UID and tag tamper ASCII mirror");
+                break;
+            case 6:
+                PrintAndLogEx(INFO, "                    - NFC counter and tag tamper ASCII mirror");
+                break;
+            case 7:
+                PrintAndLogEx(INFO, "                    - UID, NFC counter, and tag tamper ASCII mirror");
+                break;
+            default:
+                break;
+        }
+
+        if (mirror_conf) {
+            uint8_t mirror_user_mem_start_byte = (4 * (mirror_page - 4)) + mirror_byte;
+            uint8_t bytes_required_for_mirror_data = 0;
+
+            switch (mirror_conf) {
+                case 1:
+                    bytes_required_for_mirror_data = 14;
+                    break;
+                case 2:
+                    bytes_required_for_mirror_data = 6;
+                    break;
+                case 3:
+                    bytes_required_for_mirror_data = 8;
+                    break;
+                case 4:
+                    bytes_required_for_mirror_data = 21;
+                    break;
+                case 5:
+                    bytes_required_for_mirror_data = 23;
+                    break;
+                case 6:
+                    bytes_required_for_mirror_data = 15;
+                    break;
+                case 7:
+                    bytes_required_for_mirror_data = 30;
+                    break;
+                default:
+                    break;
+            }
+            PrintAndLogEx(INFO, "                mirror start page %02X | byte pos %02X - %s", mirror_page, mirror_byte, (mirror_page >= 0x4 && ((mirror_user_mem_start_byte + bytes_required_for_mirror_data) <= 144)) ? _GREEN_("OK") : _YELLOW_("Invalid value"));
+        }
+
+    } else if (tagtype & (NTAG_213_F | NTAG_216_F)) {
+        uint8_t mirror_conf = ((data[0] & 0xC0) >> 6);
         uint8_t mirror_byte = (data[0] & 0x30);
         bool sleep_en = (data[0] & 0x08);
         strg_mod_en = (data[0] & 0x04);
@@ -791,7 +864,7 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
                 break;
         }
         // valid mirror start page and byte position within start page.
-        if ((tagtype & NTAG_213_F) || (tagtype & NTAG_213_TT)) {
+        if (tagtype & NTAG_213_F) {
             switch (mirror_conf) {
                 case 1:
                 { PrintAndLogEx(INFO, "         mirror start block %02X | byte pos %02X - %s", data[2], mirror_byte, (data[2] >= 0x4 && data[2] <= 0x24) ? "OK" : "Invalid value"); break;}
@@ -822,6 +895,35 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
     else
         PrintAndLogEx(INFO, "                    - pages don't need authentication");
 
+    uint8_t tt_enabled = 0;
+    uint8_t tt_message[4] = {0x00};
+    uint8_t tt_msg_resp_len = 0;
+    uint8_t tt_status_resp[5] = {0x00};
+
+    if (tagtype & NTAG_213_TT) {
+        tt_enabled = (data[1] & 0x02);
+        tt_msg_resp_len = ul_read(45, tt_message, 4);
+
+        PrintAndLogEx(INFO, "                    - tamper detection feature is %s"
+                      , (tt_enabled) ? _GREEN_("ENABLED") : "disabled"
+                     );
+
+        switch (data[1] & 0x06) {
+            case 0x00:
+                PrintAndLogEx(INFO, "                    - tamper message is unlocked and read/write enabled");
+                break;
+            case 0x02:
+                PrintAndLogEx(INFO, "                    - tamper message is reversibly read/write locked in memory while the tamper feature is enabled");
+                break;
+            case 0x04:
+            case 0x06:
+                PrintAndLogEx(INFO, "                    - tamper message is permanently read/write locked in memory");
+                break;
+            default:
+                break;
+        }
+    }
+
     PrintAndLogEx(INFO, "  cfg1 [%u/0x%02X]: %s", startPage + 1, startPage + 1,  sprint_hex(data + 4, 4));
     if (authlim == 0)
         PrintAndLogEx(INFO, "                    - " _GREEN_("Unlimited password attempts"));
@@ -837,6 +939,55 @@ static int ulev1_print_configuration(uint32_t tagtype, uint8_t *data, uint8_t st
     PrintAndLogEx(INFO, "  PWD  [%u/0x%02X]: %s- (cannot be read)", startPage + 2, startPage + 2,  sprint_hex(data + 8, 4));
     PrintAndLogEx(INFO, "  PACK [%u/0x%02X]: %s      - (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data + 12, 2));
     PrintAndLogEx(INFO, "  RFU  [%u/0x%02X]:       %s- (cannot be read)", startPage + 3, startPage + 3,  sprint_hex(data + 14, 2));
+
+    if (tagtype & NTAG_213_TT) {
+        if (data[1] & 0x06) {
+            PrintAndLogEx(INFO, "TT_MSG [45/0x2D]: %s- (cannot be read)", sprint_hex(tt_message, tt_msg_resp_len));
+            PrintAndLogEx(INFO, "                    - tamper message is masked in memory");
+        } else {
+            PrintAndLogEx(INFO, "TT_MSG [45/0x2D]: %s", sprint_hex(tt_message, tt_msg_resp_len));
+            PrintAndLogEx(INFO, "                    - tamper message is %s and is readable/writablbe in memory", sprint_hex(tt_message, tt_msg_resp_len));
+        }
+    }
+
+    //The NTAG213TT only returns meaningful information for the fields below if the tamper feature is enabled
+    if ((tagtype & NTAG_213_TT) && tt_enabled) {
+
+        uint8_t tt_status_len = ntagtt_getTamperStatus(tt_status_resp, 5);
+
+        if (tt_status_len != 5) {
+            PrintAndLogEx(WARNING, "Error sending the READ_TT_STATUS command to tag\n");
+            return PM3_ESOFT;
+        }
+
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Tamper Status"));
+        PrintAndLogEx(INFO, "  READ_TT_STATUS: %s", sprint_hex(tt_status_resp, 5));
+
+        PrintAndLogEx(INFO, "     Tamper status result from this power-up:");
+        switch (tt_status_resp[4]) {
+            case 0x43:
+                PrintAndLogEx(INFO, "            - Tamper loop was detcted as closed during this power-up");
+                break;
+            case 0x4F:
+                PrintAndLogEx(INFO, "            - Tamper loop was detected as open during this power-up");
+                break;
+            case 0x49:
+                PrintAndLogEx(INFO, "            - Tamper loop measurement was not enabled or not valid during this power-up");
+                break;
+            default:
+                break;
+        }
+
+        PrintAndLogEx(INFO, "     Tamper detection permanent memory:");
+        if ((tt_status_resp[0] | tt_status_resp [1] | tt_status_resp[2] | tt_status_resp[3]) == 0x00)
+
+            PrintAndLogEx(INFO, "            - Tamper loop has never been detected as open during power-up");
+        else {
+            PrintAndLogEx(INFO, "            - Tamper loop was detected as open during power-up at least once");
+            PrintAndLogEx(INFO, "            - Tamper message returned by READ_TT_STATUS command: %s", sprint_hex(tt_status_resp, 4));
+        }
+    }
     return PM3_SUCCESS;
 }
 
@@ -1472,6 +1623,7 @@ uint32_t GetHF14AMfU_Type(void) {
                 else if (memcmp(version, "\x00\x34\x21\x01\x01\x00\x0E", 7) == 0) { tagtype = UL_EV1_128; break; } // Mikron JSC Russia EV1 41 pages tag
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0B", 7) == 0) { tagtype = NTAG_210; break; }
                 else if (memcmp(version, "\x00\x04\x04\x01\x02\x00\x0B", 7) == 0) { tagtype = NTAG_210u; break; }
+                else if (memcmp(version, "\x00\x04\x04\x02\x02\x00\x0B", 7) == 0) { tagtype = NTAG_210u; break; }
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0E", 7) == 0) { tagtype = NTAG_212; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x00\x0F", 7) == 0) { tagtype = NTAG_213; break; }
                 else if (memcmp(version, "\x00\x53\x04\x02\x01\x00\x0F", 7) == 0) { tagtype = NTAG_213; break; } //Shanghai Feiju Microelectronics Co. Ltd. China (Xiaomi Air Purifier filter)
@@ -1756,7 +1908,6 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         uint8_t startconfigblock = 0;
         uint8_t ulev1_conf[16] = {0x00};
 
-        // config blocks always are last 4 pages
         for (uint8_t i = 0; i < ARRAYLEN(UL_TYPES_ARRAY); i++) {
             if (tagtype & UL_TYPES_ARRAY[i]) {
                 startconfigblock = UL_MEMORY_ARRAY[i] - 3;
@@ -2529,6 +2680,142 @@ static void wait4response(uint8_t b) {
 }
 
 //
+//Configure tamper feature of NTAG 213TT
+//
+int CmdHF14MfUTamper(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu tamper",
+                  "Set the congiguration of the NTAG 213TT tamper feature\n"
+                  "Supports:\n"
+                  "NTAG 213TT\n",
+                  "hf mfu tamper -e               -> enable tamper feature\n"
+                  "hf mfu tamper -d               -> disable tamper feature\n"
+                  "hf mfu tamper -m 0A0A0A0A      -> set the tamper message to 0A0A0A0A\n"
+                  "hf mfu tamper --lockmessage    -> permanently lock the tamper message and mask it from memory\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("e", "enable", "Enable the tamper feature"),
+        arg_lit0("d", "disable", "Disable the tamper feature"),
+        arg_str0("m", "message", "<hex>", "Set the tamper message (4 bytes)"),
+        arg_lit0(NULL, "lockmessage", "Permanently lock the tamper message and mask it from memory (does not lock tamper feature itself)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int tt_cfg_page = 41;
+    int tt_msg_page = 45;
+    int msg_len = 0;
+    uint8_t msg_data[4] = {0x00};
+    CLIGetHexWithReturn(ctx, 3, msg_data, &msg_len);
+    bool use_msg = (msg_len > 0);
+
+    if (use_msg && msg_len != 4) {
+        PrintAndLogEx(WARNING, "The tamper message must be 4 hex bytes if provided");
+        DropField();
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
+
+    bool lock_msg = arg_get_lit(ctx, 4);
+    bool enable = arg_get_lit(ctx, 1);
+    bool disable = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    TagTypeUL_t tagtype = GetHF14AMfU_Type();
+    if (tagtype == UL_ERROR) {
+        PrintAndLogEx(WARNING, "Tag type not detected");
+        DropField();
+        return PM3_ESOFT;
+    }
+    if (tagtype != NTAG_213_TT) {
+        PrintAndLogEx(WARNING, "Tag type not NTAG 213TT");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    DropField();
+    iso14a_card_select_t card;
+
+    if (enable && disable) {
+        PrintAndLogEx(WARNING, "You can only select one of the options enable/disable tamper feature");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (use_msg) {
+        if (ul_select(&card) == false) {
+            DropField();
+            return UL_ERROR;
+        }
+        PrintAndLogEx(INFO, "Trying to write tamper message\n");
+        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, tt_msg_page, 0, 0, msg_data, 4);
+
+        PacketResponseNG resp;
+
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+            uint8_t isOK  = resp.oldarg[0] & 0xff;
+            if (!isOK)
+                PrintAndLogEx(WARNING, "Failed to write tamper message");
+            else
+                PrintAndLogEx(SUCCESS, "Tamper message written successfully");
+        } else {
+            PrintAndLogEx(WARNING, "Command execute timeout");
+        }
+    }
+
+    if (enable | disable | lock_msg) {
+
+        if (ul_select(&card) == false) {
+            PrintAndLogEx(ERR, "Unable to select tag");
+            DropField();
+            return UL_ERROR;
+        }
+
+        uint8_t cfg_page[4] = {0x00};
+        uint8_t cmd[] = {ISO14443A_CMD_READBLOCK, tt_cfg_page};
+        int status = ul_send_cmd_raw(cmd, sizeof(cmd), cfg_page, 4);
+        DropField();
+
+        if (status <= 0) {
+            PrintAndLogEx(WARNING, "Problem reading current config from tag");
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (enable) {
+            cfg_page[1] = cfg_page[1] | 0x02;
+            PrintAndLogEx(INFO, "Enabling tamper feature");
+        }
+        if (disable) {
+            cfg_page[1] = cfg_page[1] & 0xFD;
+            PrintAndLogEx(INFO, "Disabling tamper feature");
+        }
+        if (lock_msg) {
+            cfg_page[1] = cfg_page[1] | 0x04;
+            PrintAndLogEx(INFO, "Locking tamper message");
+        }
+
+        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, tt_cfg_page, 0, 0, cfg_page, 4);
+        PacketResponseNG resp;
+
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+            uint8_t isOK  = resp.oldarg[0] & 0xff;
+            if (!isOK)
+                PrintAndLogEx(WARNING, "Failed to write tamper configuration");
+            else
+                PrintAndLogEx(SUCCESS, "Tamper configuration written successfully");
+        } else {
+            PrintAndLogEx(WARNING, "Command execute timeout");
+        }
+    }
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
+//
 //  Restore dump file onto tag
 //
 static int CmdHF14AMfURestore(const char *Cmd) {
@@ -2583,7 +2870,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     if (fnlen == 0) {
         char *fptr = GenerateFilename("hf-mfu-", "-dump.bin");
         if (fptr != NULL) {
-            strcpy(filename, fptr);
+            strncpy(filename, fptr, sizeof(filename) - 1);
         } else {
             snprintf(filename, sizeof(filename), "dumpdata.bin");
         }
@@ -4405,6 +4692,7 @@ static command_t CommandTable[] = {
     {"restore",  CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump onto a MFU MAGIC tag"},
     {"view",     CmdHF14AMfuView,           AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",     CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
+    {"tamper",   CmdHF14MfUTamper,         IfPm3Iso14443a, "Cofigure the tamper feature on an NTAG 213TT"},
     {"---------", CmdHelp,                  IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
     {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "Load Ultralight dump file into emulator memory"},
     {"esave",    CmdHF14AMfuESave,          IfPm3Iso14443a,  "Save Ultralight dump file from emulator memory"},

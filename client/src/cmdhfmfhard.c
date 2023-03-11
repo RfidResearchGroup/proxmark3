@@ -1481,6 +1481,9 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
 
                     if (got_match == false) {
                         PrintAndLogEx(FAILED, "No match for the First_Byte_Sum (%u), is the card a genuine MFC Ev1? ", first_byte_Sum);
+                        if (nonce_file_write) {
+                            fclose(fnonces);
+                        }
                         return PM3_EWRONGANSWER;
                     }
 

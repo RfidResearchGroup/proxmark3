@@ -1493,13 +1493,9 @@ const char *vigik_get_service(uint16_t service_code) {
     return vigik_rsa_pk[ARRAYLEN(vigik_rsa_pk) - 1].desc;
 }
 
-static void reverse_array(const uint8_t *src, int src_len, uint8_t *dest) {
-    for (int i = 0; i < src_len; i++) {
-        dest[i] = src[(src_len - 1) - i];
-    }
-};
 
 int vigik_verify(mfc_vigik_t *d) {
+#define PUBLIC_VIGIK_KEYLEN 128
 
     // iso9796
     // Exponent V = 2
@@ -1512,8 +1508,18 @@ int vigik_verify(mfc_vigik_t *d) {
         PrintAndLogEx(INFO, "Raw signature");
         print_hex_noascii_break(d->rsa_signature, sizeof(d->rsa_signature), MFBLOCK_SIZE * 2);
     }
+	
+/*
+    int dl = 0;
+    
+        param_gethex_to_eol("1C07D46DA3849326D24B3468BD76673F4F3C41827DC413E81E4F3C7804FAC727213059B21D047510D6432448643A92EBFC67FBEDDAB468D13D948B172F5EBC79A0E3FEFDFAF4E81FC7108E070F1E3CD0", 0, signature, PUBLIC_VIGIK_KEYLEN, &dl);
+
+    param_gethex_to_eol("1AB86FE0C17FFFFE4379D5E15A4B2FAFFEFCFA0F1F3F7FA03E7DDDF1E3C78FFFB1F0E23F7FFF51584771C5C18307FEA36CA74E60AA6B0409ACA66A9EC155F4E9112345708A2B8457E722608EE1157408", 0, signature, PUBLIC_VIGIK_KEYLEN, &dl);
+    signature_len = dl;
+    */
+	
     uint8_t rev_sig[128];
-    reverse_array(d->rsa_signature, sizeof(d->rsa_signature), rev_sig);
+    reverse_array_copy(d->rsa_signature, sizeof(d->rsa_signature), rev_sig);
 
     PrintAndLogEx(INFO, "Raw signature reverse");
     print_hex_noascii_break(rev_sig, sizeof(d->rsa_signature), MFBLOCK_SIZE * 2);
@@ -1531,10 +1537,6 @@ int vigik_verify(mfc_vigik_t *d) {
     // message M = 96 bytes,  768 bits
     // sha1 hash H = 20 bytes, 160 bits
     // padding = 20 bytes, 96 bits
-
-
-// ref:  MIFARE Classic EV1 Originality Signature Validation
-#define PUBLIC_VIGIK_KEYLEN 128
 
     uint8_t i;
     bool is_valid = false;

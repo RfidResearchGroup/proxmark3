@@ -17,7 +17,7 @@ target_compile_definitions(pm3rrg_rdv4_hardnested_nosimd PRIVATE NOSIMD_BUILD)
 ## Mingw platforms: AMD64
 set(X86_CPUS x86 x86_64 i686 AMD64)
 set(ARM64_CPUS arm64 aarch64)
-set(ARM32_CPUS armel armhf)
+set(ARM32_CPUS armel armhf armv7-a)
 
 message(STATUS "CMAKE_SYSTEM_PROCESSOR := ${CMAKE_SYSTEM_PROCESSOR}")
 
