@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf 14a apdu` double-free when parsing tlv fails
  - Fixed the client build on Android (@wh201906)
  - Added TCP connection support on Windows (@wh201906)
  - Added `data num` - easy convert between dec/hex/bin (@iceman1001)
