@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `data asn1` - now handles bad input better (@iceman1001)
  - Added new public key for signature MIFARE Plus Troika (@iceman100)
  - Fixed the client build on Android (@wh201906)
  - Added TCP connection support on Windows (@wh201906)

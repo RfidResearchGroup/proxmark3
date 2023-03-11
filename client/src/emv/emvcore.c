@@ -177,7 +177,7 @@ bool TLVPrintFromBuffer(uint8_t *data, int datalen) {
 }
 
 void TLVPrintFromTLVLev(struct tlvdb *tlv, int level) {
-    if (!tlv)
+    if (tlv == NULL)
         return;
 
     tlvdb_visit(tlv, emv_print_cb, NULL, level);
@@ -193,15 +193,16 @@ void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv) {
     PrintAndLogEx(INFO, "|------------------+--------+-------------------------|");
 
     struct tlvdb *ttmp = tlvdb_find(tlv, 0x6f);
-    if (!ttmp)
+    if (ttmp == NULL)
         PrintAndLogEx(INFO, "|                         none                        |");
 
     while (ttmp) {
         const struct tlv *tgAID = tlvdb_get_inchild(ttmp, 0x84, NULL);
         const struct tlv *tgName = tlvdb_get_inchild(ttmp, 0x50, NULL);
         const struct tlv *tgPrio = tlvdb_get_inchild(ttmp, 0x87, NULL);
-        if (!tgAID)
+        if (!tgAID) {
             break;
+        }
         PrintAndLogEx(INFO, "| %s|   %s  | %s|",
                       sprint_hex_inrow_ex(tgAID->value, tgAID->len, 17),
                       (tgPrio) ? sprint_hex(tgPrio->value, 1) : "   ",

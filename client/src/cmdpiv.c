@@ -576,7 +576,8 @@ static int PivGetData(Iso7816CommandChannel channel, const uint8_t tag[], size_t
                 struct tlvdb_root *new_root = realloc(root, sizeof(*root) + capacity);
                 if (new_root == NULL) {
                     PrintAndLogEx(FAILED, "Running out of memory while re-allocating buffer");
-                    free(root);
+                    //free(root);
+                    tlvdb_root_free(root);
                     return PM3_EMALLOC;
                 }
                 root = new_root;
