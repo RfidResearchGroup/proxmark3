@@ -96,7 +96,6 @@ static const struct asn1_tag asn1_tags[] = {
     { 0xa5, "[5]",               ASN1_TAG_GENERIC      },
 };
 
-
 static int asn1_sort_tag(tlv_tag_t tag) {
     return (int)(tag >= 0x100 ? tag : tag << 8);
 }
@@ -109,9 +108,7 @@ static int asn1_tlv_compare(const void *a, const void *b) {
 }
 
 static const struct asn1_tag *asn1_get_tag(const struct tlv *tlv) {
-    struct asn1_tag *tag = bsearch(tlv, asn1_tags, ARRAYLEN(asn1_tags),
-                                   sizeof(asn1_tags[0]), asn1_tlv_compare);
-
+    struct asn1_tag *tag = bsearch(tlv, asn1_tags, ARRAYLEN(asn1_tags), sizeof(asn1_tags[0]), asn1_tlv_compare);
     return tag ? tag : &asn1_tags[0];
 }
 
@@ -189,8 +186,8 @@ static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_
     }
 }
 
-static unsigned long asn1_value_integer(const struct tlv *tlv, unsigned start, unsigned end) {
-    unsigned long ret = 0;
+static uint64_t asn1_value_integer(const struct tlv *tlv, unsigned start, unsigned end) {
+    uint64_t ret = 0;
     unsigned i;
 
     if (end > tlv->len * 2)
@@ -238,8 +235,8 @@ static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *
         PrintAndLogEx(NORMAL, "    value: %d (0x%08X)", val, val);
         return;
     }
-    uint32_t val = asn1_value_integer(tlv, 0, tlv->len * 2);
-    PrintAndLogEx(NORMAL, "    value: %" PRIu32 " (0x%X)", val, val);
+    uint64_t val = asn1_value_integer(tlv, 0, tlv->len * 2);
+    PrintAndLogEx(NORMAL, "    value: %" PRIu64 " (0x%X)", val, val);
 }
 
 static char *asn1_oid_description(const char *oid, bool with_group_desc) {
@@ -293,7 +290,7 @@ static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag
     char pstr[300];
     mbedtls_oid_get_numeric_string(pstr, sizeof(pstr), &asn1_buf);
 
-    PrintAndLogEx(INFO, "%*s %s" NOLF, (level * 4), " ", pstr);
+    PrintAndLogEx(NORMAL, "%*s %s" NOLF, (level * 4), " ", pstr);
 
     char *jsondesc = asn1_oid_description(pstr, true);
     if (jsondesc) {
