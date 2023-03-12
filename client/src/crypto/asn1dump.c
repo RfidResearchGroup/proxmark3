@@ -116,7 +116,7 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
     int len = tlv->len;
     *needdump = false;
 
-    int startindx = longyear ? 4 : 2;
+    int startidx = longyear ? 4 : 2;
 
     if (len > 4) {
         PrintAndLogEx(NORMAL, "    value: '" NOLF);
@@ -125,34 +125,38 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
             if (longyear == false)
                 PrintAndLogEx(NORMAL, "20" NOLF);
 
-            PrintAndLogEx(NORMAL, "%s-" NOLF, sprint_hex(tlv->value, startindx));
+            PrintAndLogEx(NORMAL, "%.*s-" NOLF, startidx, tlv->value);
 
-            if (len < startindx + 2)
+            if (len < startidx + 2)
                 break;
 
             // month
-            PrintAndLogEx(NORMAL, "%02x%02x-" NOLF, tlv->value[startindx], tlv->value[startindx + 1]);
-            if (len < startindx + 4)
+            PrintAndLogEx(NORMAL, "%.*s-" NOLF, 2, tlv->value + startidx );
+            if (len < startidx + 4)
                 break;
 
             // day
-            PrintAndLogEx(NORMAL, "%02x%02x " NOLF, tlv->value[startindx + 2], tlv->value[startindx + 3]);
-            if (len < startindx + 6)
+            PrintAndLogEx(NORMAL, "%.*s " NOLF, 2, tlv->value + startidx + 2);
+            if (len < startidx + 6)
                 break;
+
             // hour
-            PrintAndLogEx(NORMAL, "%02x%02x:" NOLF, tlv->value[startindx + 4], tlv->value[startindx + 5]);
-            if (len < startindx + 8)
+            PrintAndLogEx(NORMAL, "%.*s:" NOLF, 2, tlv->value + startidx + 4);
+            if (len < startidx + 8)
                 break;
+
             // min
-            PrintAndLogEx(NORMAL, "%02x%02x:" NOLF, tlv->value[startindx + 6], tlv->value[startindx + 7]);
-            if (len < startindx + 10)
+            PrintAndLogEx(NORMAL, "%.*s:" NOLF, 2, tlv->value + startidx + 6);
+            if (len < startidx + 10)
                 break;
+
             // sec
-            PrintAndLogEx(NORMAL, "%02x%02x" NOLF, tlv->value[startindx + 8], tlv->value[startindx + 9]);
-            if (len < startindx + 11)
+            PrintAndLogEx(NORMAL, "%.*s" NOLF, 2, tlv->value + startidx + 8);
+            if (len < startidx + 11)
                 break;
+
             // time zone
-            PrintAndLogEx(NORMAL, " zone: %.*s" NOLF, len - 10 - (longyear ? 4 : 2), &tlv->value[startindx + 10]);
+            PrintAndLogEx(NORMAL, " zone: %.*s" NOLF, len - 10 - (longyear ? 4 : 2), tlv->value + startidx + 10);
             break;
         }
         PrintAndLogEx(NORMAL, "'");
@@ -163,7 +167,7 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
 }
 
 static void asn1_tag_dump_string(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
-    PrintAndLogEx(NORMAL, "    value: '%.*s'  hex: '%s'", tlv->len, tlv->value, sprint_hex(tlv->value, tlv->len));
+    PrintAndLogEx(NORMAL, "    value: '" _GREEN_("%.*s") "' hex: '%s'", tlv->len, tlv->value, sprint_hex(tlv->value, tlv->len));
 }
 
 static void asn1_tag_dump_hex(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
