@@ -2915,8 +2915,8 @@ static int CmdAsn1Decoder(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int dlen = 256;
-    uint8_t data[256];
+    int dlen = 2048;
+    uint8_t data[2048];
     CLIGetHexWithReturn(ctx, 1, data, &dlen);
     CLIParserFree(ctx);
 
@@ -2926,8 +2926,6 @@ static int CmdAsn1Decoder(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-
-
 
 static int CmdDiff(const char *Cmd) {
 
