@@ -166,7 +166,7 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
 }
 
 static void asn1_tag_dump_string(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
-    PrintAndLogEx(NORMAL, "    value: '%s'", sprint_hex(tlv->value, tlv->len));
+    PrintAndLogEx(NORMAL, "    value: '%.*s'  hex: '%s'", tlv->len, tlv->value, sprint_hex(tlv->value, tlv->len));
 }
 
 static void asn1_tag_dump_hex(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
