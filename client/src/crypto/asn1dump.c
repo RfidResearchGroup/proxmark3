@@ -26,6 +26,7 @@
 #include <string.h>
 #include <jansson.h>
 #include <mbedtls/asn1.h>
+#include "mbedtls/bignum.h"      // big num
 #include <mbedtls/oid.h>
 #include "emv/emv_tags.h"
 #include "emv/emvjson.h"
@@ -239,36 +240,6 @@ static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_
     }
 }
 
-static uint64_t asn1_value_integer(const struct tlv *tlv, unsigned start, unsigned end) {
-    uint64_t ret = 0;
-    unsigned i;
-
-    if (end > tlv->len * 2)
-        return ret;
-    if (start >= end)
-        return ret;
-
-    if (start & 1) {
-        ret += tlv->value[start / 2] & 0xf;
-        i = start + 1;
-    } else
-        i = start;
-
-    for (; i < end - 1; i += 2) {
-        ret = ret << 4; // was: ret*=10
-        ret += tlv->value[i / 2] >> 4;
-        ret = ret << 4; // was: ret*=10
-        ret += tlv->value[i / 2] & 0xf;
-    }
-
-    if (end & 1) {
-        ret = ret << 4; // was: ret*=10
-        ret += tlv->value[end / 2] >> 4;
-    }
-
-    return ret;
-}
-
 static void asn1_tag_dump_boolean(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
     PrintAndLogEx(NORMAL, "%*s" NOLF, (level * 4), " ");
     if (tlv->len > 0) {
@@ -279,17 +250,34 @@ static void asn1_tag_dump_boolean(const struct tlv *tlv, const struct asn1_tag *
 }
 
 static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
-    PrintAndLogEx(NORMAL, "%*s" NOLF, (level * 4), " ");
-    if (tlv->len == 4) {
-        int32_t val = 0;
-        for (size_t i = 0; i < tlv->len; i++) {
-            val = (val << 8) + tlv->value[i];
-        }
-        PrintAndLogEx(NORMAL, "    value: %d (0x%08X)", val, val);
+
+    size_t n = (tlv->len * 2);
+    char *hex = calloc(n + 1, sizeof(uint8_t));
+    if (hex == NULL) {
         return;
     }
-    uint64_t val = asn1_value_integer(tlv, 0, tlv->len * 2);
-    PrintAndLogEx(NORMAL, "    value: %" PRIu64 " (0x%X)", val, val);
+
+    hex_to_buffer((uint8_t*)hex, tlv->value, tlv->len, tlv->len, 0, 0, false);
+
+    // results for MPI actions
+    bool ret = false;
+
+    // container of big number
+    mbedtls_mpi N;
+    mbedtls_mpi_init(&N);
+
+    MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&N, 16, hex));
+
+    char s[600] = {0};
+    size_t slen = 0;
+    MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, 10, s, sizeof(s), &slen));
+    if (slen > 0) {
+       PrintAndLogEx(NORMAL, "%*s value: %s", (level ), "", s);
+    }
+
+cleanup:
+    mbedtls_mpi_free(&N);
+    free(hex);
 }
 
 static char *asn1_oid_description(const char *oid, bool with_group_desc) {
@@ -343,7 +331,7 @@ static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag
     char pstr[300];
     mbedtls_oid_get_numeric_string(pstr, sizeof(pstr), &asn1_buf);
 
-    PrintAndLogEx(NORMAL, "%*s %s" NOLF, (level * 4), " ", pstr);
+    PrintAndLogEx(NORMAL, "%*s %s" NOLF, (level), " ", pstr);
 
     char *jsondesc = asn1_oid_description(pstr, true);
     if (jsondesc) {
