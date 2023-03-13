@@ -44,6 +44,7 @@ enum asn1_tag_t {
     ASN1_TAG_STR_TIME,
     ASN1_TAG_OBJECT_ID,
     ASN1_TAG_HEX,
+    ASN1_TAG_BIT_STRING,
 };
 
 struct asn1_tag {
@@ -62,7 +63,7 @@ static const struct asn1_tag asn1_tags[] = {
     // ASN.1
     { 0x01, "BOOLEAN",           ASN1_TAG_BOOLEAN      },
     { 0x02, "INTEGER",           ASN1_TAG_INTEGER      },
-    { 0x03, "BIT STRING",        ASN1_TAG_GENERIC      },
+    { 0x03, "BIT STRING",        ASN1_TAG_BIT_STRING   },
     { 0x04, "OCTET STRING",      ASN1_TAG_OCTET_STRING },
     { 0x05, "NULL",              ASN1_TAG_GENERIC      },
     { 0x06, "OBJECT IDENTIFIER", ASN1_TAG_OBJECT_ID    },
@@ -168,6 +169,54 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
 
 static void asn1_tag_dump_string(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
     PrintAndLogEx(NORMAL, "    value: '" _GREEN_("%.*s") "' hex: '%s'", tlv->len, tlv->value, sprint_hex(tlv->value, tlv->len));
+}
+
+static void asn1_tag_dump_bitstring(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
+
+    size_t len = tlv->len;
+    size_t n = (len * 8);
+    bool skip = false;
+
+    if (tlv->value[0] == 0) {
+        n -= 8;
+        len--;
+        skip = true;
+    }
+
+    uint8_t *d = calloc(n, sizeof(uint8_t));
+    if (d == NULL) {
+        return;
+    }
+
+    if (skip)
+        bytes_to_bytebits(tlv->value + 1, len, d);
+    else
+        bytes_to_bytebits(tlv->value, len, d);
+
+    level++;
+    PrintAndLogEx(NORMAL, "  (%zu bit)", n);
+    PrintAndLogEx(INFO, "%*s" NOLF, 1 + (level * 4), "");
+
+    for (int i = 0; i < n; i++) {
+
+        char c = d[i];
+        if (c < 2) {
+            c += '0';
+        } else {
+            goto out;
+        }
+
+        PrintAndLogEx(NORMAL, "%c" NOLF, c);
+
+        if (((i + 1) % 64) == 0) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "%*s" NOLF, 1 + (level * 4), "");
+        }
+    }
+
+out:
+    free(d);
+    PrintAndLogEx(NORMAL, "");
 }
 
 static void asn1_tag_dump_hex(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
@@ -376,6 +425,10 @@ bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
             break;
         case ASN1_TAG_HEX:
             asn1_tag_dump_hex(tlv, tag, level);
+            *candump = false;
+            break;
+        case ASN1_TAG_BIT_STRING:
+            asn1_tag_dump_bitstring(tlv, tag, level);
             *candump = false;
             break;
     };
