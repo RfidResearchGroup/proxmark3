@@ -57,54 +57,28 @@ static bool legic_xor(uint8_t *data, uint16_t cardsize) {
     return true;
 }
 
-/*
- *  Output BigBuf and deobfuscate LEGIC RF tag data.
- *  This is based on information given in the talk held
- *  by Henryk Ploetz and Karsten Nohl at 26c3
- */
-static int CmdLegicInfo(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf legic info",
-                  "Gets information from a LEGIC Prime tag like systemarea, user areas, etc",
-                  "hf legic info");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
+static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buffer) {
     int i = 0, k = 0, segmentNum = 0, segment_len = 0, segment_flag = 0;
     int crc = 0, wrp = 0, wrc = 0;
     uint8_t stamp_len = 0;
-    uint16_t datalen = 0;
     char token_type[6] = {0, 0, 0, 0, 0, 0};
     int dcf = 0;
     int bIsSegmented = 0;
+    int return_value = PM3_SUCCESS;
 
-    // tagtype
-    legic_card_select_t card;
-    if (legic_get_type(&card) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Failed to identify tagtype");
-        return PM3_ESOFT;
+    if (!(card_size == LEGIC_PRIME_MIM22 || card_size == LEGIC_PRIME_MIM256 || card_size == LEGIC_PRIME_MIM1024)) {
+        PrintAndLogEx(FAILED, "Bytebuffer is not any known legic card size! (MIM22, MIM256, MIM1024)");
+        return_value = PM3_EFAILED;
+        return PM3_EFAILED;
     }
 
-    PrintAndLogEx(SUCCESS, "Reading full tag memory of " _YELLOW_("%d") " bytes...", card.cardsize);
-
-    // allocate receiver buffer
-    uint8_t *data = calloc(card.cardsize, sizeof(uint8_t));
+    // copy input buffer into newly allocated buffer, because the existing code mutates the data inside.
+    uint8_t *data = calloc(card_size, sizeof(uint8_t));
     if (!data) {
         PrintAndLogEx(WARNING, "Cannot allocate memory");
         return PM3_EMALLOC;
     }
-
-    int status = legic_read_mem(0, card.cardsize, 0x55, data, &datalen);
-    if (status != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Failed reading memory");
-        free(data);
-        return status;
-    }
+    memcpy(data, input_buffer, card_size);
 
     // Output CDF System area (9 bytes) plus remaining header area (12 bytes)
     crc = data[4];
@@ -217,9 +191,10 @@ static int CmdLegicInfo(const char *Cmd) {
     uint32_t segCalcCRC = 0;
     uint32_t segCRC = 0;
 
-    // Not Data card?
-    if (dcf > 60000)
+    // Not a data card by dcf or too small to contain data (MIM22)?
+    if (dcf > 60000 || card_size == LEGIC_PRIME_MIM22) {
         goto out;
+    }
 
     PrintAndLogEx(SUCCESS, _CYAN_("ADF: User Area"));
     PrintAndLogEx(NORMAL, "------------------------------------------------------");
@@ -231,6 +206,13 @@ static int CmdLegicInfo(const char *Cmd) {
 
         // decode segments
         for (segmentNum = 1; segmentNum < 128; segmentNum++) {
+            // for decoding the segment header we need at least 4 bytes left in buffer
+            if ((i + 4) > card_size) {
+                PrintAndLogEx(FAILED, "Cannot read segment header, because the input buffer is too small. "
+                              "Please check that the data is correct and properly aligned. ");
+                return_value = PM3_EOUTOFBOUND;
+                goto out;
+            }
             segment_len = ((data[i + 1] ^ crc) & 0x0f) * 256 + (data[i] ^ crc);
             segment_flag = ((data[i + 1] ^ crc) & 0xf0) >> 4;
             wrp = (data[i + 2] ^ crc);
@@ -276,6 +258,14 @@ static int CmdLegicInfo(const char *Cmd) {
                          );
 
             i += 5;
+
+            // for printing the complete segment we need at least wrc + wrp_len + remain_seg_payload_len bytes
+            if ((i + wrc + wrp_len + remain_seg_payload_len) > card_size) {
+                PrintAndLogEx(FAILED, "Cannot read segment body, because the input buffer is too small. "
+                              "Please check that the data is correct and properly aligned. ");
+                return_value = PM3_EOUTOFBOUND;
+                goto out;
+            }
 
             if (hasWRC) {
                 PrintAndLogEx(SUCCESS, "\nWRC protected area:   (I %d | K %d| WRC %d)", i, k, wrc);
@@ -330,7 +320,6 @@ static int CmdLegicInfo(const char *Cmd) {
         } // end for loop
 
     } else {
-
         // Data start point on unsegmented cards
         i = 8;
 
@@ -340,13 +329,21 @@ static int CmdLegicInfo(const char *Cmd) {
         bool hasWRC = (wrc > 0);
         bool hasWRP = (wrp > wrc);
         int wrp_len = (wrp - wrc);
-        int remain_seg_payload_len = (card.cardsize - 22 - wrp);
+        int remain_seg_payload_len = (card_size - 22 - wrp);
 
         PrintAndLogEx(SUCCESS, "Unsegmented card - WRP: %02u, WRC: %02u, RD: %01u",
                       wrp,
                       wrc,
                       (data[7] & 0x80) >> 7
                      );
+
+        // for printing the complete segment we need at least wrc + wrp_len + remain_seg_payload_len bytes
+        if ((i + wrc + wrp_len + remain_seg_payload_len) > card_size) {
+            PrintAndLogEx(FAILED, "Cannot read segment body, because the input buffer is too small. "
+                          "Please check that the data is correct and properly aligned. ");
+            return_value = PM3_EOUTOFBOUND;
+            goto out;
+        }
 
         if (hasWRC) {
             PrintAndLogEx(SUCCESS, "WRC protected area:   (I %d | WRC %d)", i, wrc);
@@ -386,6 +383,55 @@ static int CmdLegicInfo(const char *Cmd) {
     }
 
 out:
+    free(data);
+    return (return_value);
+}
+
+/*
+ *  Output BigBuf and deobfuscate LEGIC RF tag data.
+ *  This is based on information given in the talk held
+ *  by Henryk Ploetz and Karsten Nohl at 26c3
+ */
+static int CmdLegicInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic info",
+                  "Gets information from a LEGIC Prime tag like systemarea, user areas, etc",
+                  "hf legic info");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    uint16_t datalen = 0;
+
+    // tagtype
+    legic_card_select_t card;
+    if (legic_get_type(&card) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Failed to identify tagtype");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(SUCCESS, "Reading full tag memory of " _YELLOW_("%d") " bytes...", card.cardsize);
+
+    // allocate receiver buffer
+    uint8_t *data = calloc(card.cardsize, sizeof(uint8_t));
+    if (!data) {
+        PrintAndLogEx(WARNING, "Cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    int status = legic_read_mem(0, card.cardsize, 0x55, data, &datalen);
+    if (status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Failed reading memory");
+        free(data);
+        return status;
+    }
+
+    decode_and_print_memory(card.cardsize, data);
+
     free(data);
     return PM3_SUCCESS;
 }
@@ -1174,6 +1220,41 @@ static int CmdLegicEView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdLegicEInfo(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic einfo",
+                  "It decodes and displays emulator memory",
+                  "hf legic einfo\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    size_t card_size = LEGIC_PRIME_MIM256;
+
+    uint8_t *dump = calloc(card_size, sizeof(uint8_t));
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    PrintAndLogEx(INFO, "downloading emulator memory");
+    if (GetFromDevice(BIG_BUF_EML, dump, card_size, 0, NULL, 0, NULL, 2500, false) == false) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+        free(dump);
+        return PM3_ETIMEOUT;
+    }
+
+    decode_and_print_memory(card_size, dump);
+
+    free(dump);
+    return PM3_SUCCESS;
+}
+
 static int CmdLegicWipe(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic wipe",
@@ -1290,6 +1371,37 @@ static int CmdLegicView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdLegicDInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic view",
+                  "Print a LEGIC Prime dump file (bin/eml/json)",
+                  "hf legic view -f hf-legic-01020304-dump.bin"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "Filename of dump"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
+
+    // read dump file
+    uint8_t *dump = NULL;
+    size_t bytes_read = 0;
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, LEGIC_PRIME_MIM1024);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    decode_and_print_memory(bytes_read, dump);
+
+    free(dump);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] =  {
     {"-----------", CmdHelp,      AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
     {"help",    CmdHelp,          AlwaysAvailable, "This help"},
@@ -1306,9 +1418,11 @@ static command_t CommandTable[] =  {
     {"eload",   CmdLegicELoad,    IfPm3Legicrf,    "Load binary dump to emulator memory"},
     {"esave",   CmdLegicESave,    IfPm3Legicrf,    "Save emulator memory to binary file"},
     {"eview",   CmdLegicEView,    IfPm3Legicrf,    "View emulator memory"},
+    {"einfo",   CmdLegicEInfo,    IfPm3Legicrf,    "Display deobfuscated and decoded emulator memory"},
     {"-----------", CmdHelp,      AlwaysAvailable, "--------------------- " _CYAN_("utils") " ---------------------"},
     {"crc",     CmdLegicCalcCrc,  AlwaysAvailable, "Calculate Legic CRC over given bytes"},
     {"view",    CmdLegicView,     AlwaysAvailable, "Display content from tag dump file"},
+    {"dinfo",   CmdLegicDInfo,     AlwaysAvailable, "Display deobfuscated and decoded content from tag dump file"},
     {NULL, NULL, NULL, NULL}
 };
 
