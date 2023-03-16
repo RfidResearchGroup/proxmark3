@@ -1367,35 +1367,8 @@ static int CmdLegicView(const char *Cmd) {
     PrintAndLogEx(INFO, "## |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | ascii");
     PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
     print_hex_break(dump, bytes_read, 16);
-    free(dump);
-    return PM3_SUCCESS;
-}
 
-static int CmdLegicDInfo(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf legic view",
-                  "Print a LEGIC Prime dump file (bin/eml/json)",
-                  "hf legic view -f hf-legic-01020304-dump.bin"
-                 );
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Filename of dump"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE];
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    CLIParserFree(ctx);
-
-    // read dump file
-    uint8_t *dump = NULL;
-    size_t bytes_read = 0;
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, LEGIC_PRIME_MIM1024);
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-
+    PrintAndLogEx(NORMAL, "");
     decode_and_print_memory(bytes_read, dump);
 
     free(dump);
@@ -1421,8 +1394,7 @@ static command_t CommandTable[] =  {
     {"einfo",   CmdLegicEInfo,    IfPm3Legicrf,    "Display deobfuscated and decoded emulator memory"},
     {"-----------", CmdHelp,      AlwaysAvailable, "--------------------- " _CYAN_("utils") " ---------------------"},
     {"crc",     CmdLegicCalcCrc,  AlwaysAvailable, "Calculate Legic CRC over given bytes"},
-    {"view",    CmdLegicView,     AlwaysAvailable, "Display content from tag dump file"},
-    {"dinfo",   CmdLegicDInfo,     AlwaysAvailable, "Display deobfuscated and decoded content from tag dump file"},
+    {"view",    CmdLegicView,     AlwaysAvailable, "Display deobfuscated and decoded content from tag dump file"},
     {NULL, NULL, NULL, NULL}
 };
 
