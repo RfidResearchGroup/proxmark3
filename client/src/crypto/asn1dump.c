@@ -26,6 +26,7 @@
 #include <string.h>
 #include <jansson.h>
 #include <mbedtls/asn1.h>
+#include "mbedtls/bignum.h"      // big num
 #include <mbedtls/oid.h>
 #include "emv/emv_tags.h"
 #include "emv/emvjson.h"
@@ -44,6 +45,7 @@ enum asn1_tag_t {
     ASN1_TAG_STR_TIME,
     ASN1_TAG_OBJECT_ID,
     ASN1_TAG_HEX,
+    ASN1_TAG_BIT_STRING,
 };
 
 struct asn1_tag {
@@ -62,7 +64,7 @@ static const struct asn1_tag asn1_tags[] = {
     // ASN.1
     { 0x01, "BOOLEAN",           ASN1_TAG_BOOLEAN      },
     { 0x02, "INTEGER",           ASN1_TAG_INTEGER      },
-    { 0x03, "BIT STRING",        ASN1_TAG_GENERIC      },
+    { 0x03, "BIT STRING",        ASN1_TAG_BIT_STRING   },
     { 0x04, "OCTET STRING",      ASN1_TAG_OCTET_STRING },
     { 0x05, "NULL",              ASN1_TAG_GENERIC      },
     { 0x06, "OBJECT IDENTIFIER", ASN1_TAG_OBJECT_ID    },
@@ -121,12 +123,20 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
     if (len > 4) {
         PrintAndLogEx(NORMAL, "    value: '" NOLF);
         while (true) {
+
             // year
-            if (longyear == false)
-                PrintAndLogEx(NORMAL, "20" NOLF);
+            if (longyear == false) {
+                int short_year = (tlv->value[0] - '0') * 10 + (tlv->value[1] - '0');
+                if (short_year >= 0 && short_year <= 99) {
+                    if (short_year > 50) {
+                        PrintAndLogEx(NORMAL, "19" NOLF);
+                    } else {
+                        PrintAndLogEx(NORMAL, "20" NOLF);
+                    }
+                }
+            }
 
             PrintAndLogEx(NORMAL, "%.*s-" NOLF, startidx, tlv->value);
-
             if (len < startidx + 2)
                 break;
 
@@ -152,11 +162,11 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
 
             // sec
             PrintAndLogEx(NORMAL, "%.*s" NOLF, 2, tlv->value + startidx + 8);
-            if (len < startidx + 11)
+            if (len < startidx + 12)
                 break;
 
             // time zone
-            PrintAndLogEx(NORMAL, " zone: %.*s" NOLF, len - 10 - (longyear ? 4 : 2), tlv->value + startidx + 10);
+            PrintAndLogEx(NORMAL, " zone: %.*s" NOLF, len - startidx - 10, tlv->value + startidx + 10);
             break;
         }
         PrintAndLogEx(NORMAL, "'");
@@ -168,6 +178,54 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
 
 static void asn1_tag_dump_string(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
     PrintAndLogEx(NORMAL, "    value: '" _GREEN_("%.*s") "' hex: '%s'", tlv->len, tlv->value, sprint_hex(tlv->value, tlv->len));
+}
+
+static void asn1_tag_dump_bitstring(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
+
+    size_t len = tlv->len;
+    size_t n = (len * 8);
+    bool skip = false;
+
+    if (tlv->value[0] == 0) {
+        n -= 8;
+        len--;
+        skip = true;
+    }
+
+    uint8_t *d = calloc(n, sizeof(uint8_t));
+    if (d == NULL) {
+        return;
+    }
+
+    if (skip)
+        bytes_to_bytebits(tlv->value + 1, len, d);
+    else
+        bytes_to_bytebits(tlv->value, len, d);
+
+    level++;
+    PrintAndLogEx(NORMAL, "  (%zu bit)", n);
+    PrintAndLogEx(INFO, "%*s" NOLF, 1 + (level * 4), "");
+
+    for (int i = 0; i < n; i++) {
+
+        char c = d[i];
+        if (c < 2) {
+            c += '0';
+        } else {
+            goto out;
+        }
+
+        PrintAndLogEx(NORMAL, "%c" NOLF, c);
+
+        if (((i + 1) % 64) == 0) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "%*s" NOLF, 1 + (level * 4), "");
+        }
+    }
+
+out:
+    free(d);
+    PrintAndLogEx(NORMAL, "");
 }
 
 static void asn1_tag_dump_hex(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
@@ -190,36 +248,6 @@ static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_
     }
 }
 
-static uint64_t asn1_value_integer(const struct tlv *tlv, unsigned start, unsigned end) {
-    uint64_t ret = 0;
-    unsigned i;
-
-    if (end > tlv->len * 2)
-        return ret;
-    if (start >= end)
-        return ret;
-
-    if (start & 1) {
-        ret += tlv->value[start / 2] & 0xf;
-        i = start + 1;
-    } else
-        i = start;
-
-    for (; i < end - 1; i += 2) {
-        ret = ret << 4; // was: ret*=10
-        ret += tlv->value[i / 2] >> 4;
-        ret = ret << 4; // was: ret*=10
-        ret += tlv->value[i / 2] & 0xf;
-    }
-
-    if (end & 1) {
-        ret = ret << 4; // was: ret*=10
-        ret += tlv->value[end / 2] >> 4;
-    }
-
-    return ret;
-}
-
 static void asn1_tag_dump_boolean(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
     PrintAndLogEx(NORMAL, "%*s" NOLF, (level * 4), " ");
     if (tlv->len > 0) {
@@ -230,17 +258,34 @@ static void asn1_tag_dump_boolean(const struct tlv *tlv, const struct asn1_tag *
 }
 
 static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
-    PrintAndLogEx(NORMAL, "%*s" NOLF, (level * 4), " ");
-    if (tlv->len == 4) {
-        int32_t val = 0;
-        for (size_t i = 0; i < tlv->len; i++) {
-            val = (val << 8) + tlv->value[i];
-        }
-        PrintAndLogEx(NORMAL, "    value: %d (0x%08X)", val, val);
+
+    size_t n = (tlv->len * 2);
+    char *hex = calloc(n + 1, sizeof(uint8_t));
+    if (hex == NULL) {
         return;
     }
-    uint64_t val = asn1_value_integer(tlv, 0, tlv->len * 2);
-    PrintAndLogEx(NORMAL, "    value: %" PRIu64 " (0x%X)", val, val);
+
+    hex_to_buffer((uint8_t*)hex, tlv->value, tlv->len, tlv->len, 0, 0, false);
+
+    // results for MPI actions
+    bool ret = false;
+
+    // container of big number
+    mbedtls_mpi N;
+    mbedtls_mpi_init(&N);
+
+    MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&N, 16, hex));
+
+    char s[600] = {0};
+    size_t slen = 0;
+    MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, 10, s, sizeof(s), &slen));
+    if (slen > 0) {
+       PrintAndLogEx(NORMAL, "%*s value: %s", (level ), "", s);
+    }
+
+cleanup:
+    mbedtls_mpi_free(&N);
+    free(hex);
 }
 
 static char *asn1_oid_description(const char *oid, bool with_group_desc) {
@@ -294,7 +339,7 @@ static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag
     char pstr[300];
     mbedtls_oid_get_numeric_string(pstr, sizeof(pstr), &asn1_buf);
 
-    PrintAndLogEx(NORMAL, "%*s %s" NOLF, (level * 4), " ", pstr);
+    PrintAndLogEx(NORMAL, "%*s %s" NOLF, (level), " ", pstr);
 
     char *jsondesc = asn1_oid_description(pstr, true);
     if (jsondesc) {
@@ -376,6 +421,10 @@ bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
             break;
         case ASN1_TAG_HEX:
             asn1_tag_dump_hex(tlv, tag, level);
+            *candump = false;
+            break;
+        case ASN1_TAG_BIT_STRING:
+            asn1_tag_dump_bitstring(tlv, tag, level);
             *candump = false;
             break;
     };

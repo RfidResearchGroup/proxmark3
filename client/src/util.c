@@ -45,7 +45,7 @@ bool g_pendingPrompt = false;
 #include <windows.h>
 #endif
 
-#define MAX_BIN_BREAK_LENGTH   (3072+384+1)
+#define MAX_BIN_BREAK_LENGTH   (3072 + 384 + 1)
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -911,27 +911,32 @@ https://github.com/ApertureLabsLtd/RFIDler/blob/master/firmware/Pic32/RFIDler.X/
 // convert hex to sequence of 0/1 bit values
 // returns number of bits converted
 int hextobinarray(char *target, char *source) {
-    int length, i, count = 0;
+    return hextobinarray_n(target, source, strlen(source));
+}
+
+int hextobinarray_n(char *target, char *source, int sourcelen) {
+    int i, count = 0;
     char *start = source;
-    length = strlen(source);
     // process 4 bits (1 hex digit) at a time
-    while (length--) {
+    while (sourcelen--) {
         char x = *(source++);
         // capitalize
-        if (x >= 'a' && x <= 'f')
+        if (x >= 'a' && x <= 'f') {
             x -= 32;
+        }
         // convert to numeric value
-        if (x >= '0' && x <= '9')
+        if (x >= '0' && x <= '9') {
             x -= '0';
-        else if (x >= 'A' && x <= 'F')
+        } else if (x >= 'A' && x <= 'F') {
             x -= 'A' - 10;
-        else {
+        } else {
             PrintAndLogEx(INFO, "(hextobinarray) discovered unknown character %c %d at idx %d of %s", x, x, (int16_t)(source - start), start);
             return 0;
         }
         // output
-        for (i = 0 ; i < 4 ; ++i, ++count)
+        for (i = 0 ; i < 4 ; ++i, ++count) {
             *(target++) = (x >> (3 - i)) & 1;
+        }
     }
 
     return count;
@@ -939,9 +944,14 @@ int hextobinarray(char *target, char *source) {
 
 // convert hex to human readable binary string
 int hextobinstring(char *target, char *source) {
-    int length = hextobinarray(target, source);
-    if (length == 0)
+    return hextobinstring_n(target, source, strlen(source));
+}
+
+int hextobinstring_n(char *target, char *source, int sourcelen) {
+    int length = hextobinarray_n(target, source, sourcelen);
+    if (length == 0) {
         return 0;
+    }
     binarraytobinstring(target, target, length);
     return length;
 }
@@ -1229,7 +1239,7 @@ inline uint64_t bitcount64(uint64_t a) {
 
 inline uint32_t leadingzeros32(uint32_t a) {
 #if defined __GNUC__
-    return __builtin_clzl(a);
+    return __builtin_clz(a);
 #else
     PrintAndLogEx(FAILED, "Was not compiled with fct bitcount64");
     return 0;
