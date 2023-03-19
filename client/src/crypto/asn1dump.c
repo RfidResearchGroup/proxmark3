@@ -123,12 +123,20 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
     if (len > 4) {
         PrintAndLogEx(NORMAL, "    value: '" NOLF);
         while (true) {
+
             // year
-            if (longyear == false)
-                PrintAndLogEx(NORMAL, "20" NOLF);
+            if (longyear == false) {
+                int short_year = (tlv->value[0] - '0') * 10 + (tlv->value[1] - '0');
+                if (short_year >= 0 && short_year <= 99) {
+                    if (short_year > 50) {
+                        PrintAndLogEx(NORMAL, "19" NOLF);
+                    } else {
+                        PrintAndLogEx(NORMAL, "20" NOLF);
+                    }
+                }
+            }
 
             PrintAndLogEx(NORMAL, "%.*s-" NOLF, startidx, tlv->value);
-
             if (len < startidx + 2)
                 break;
 
@@ -154,11 +162,11 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
 
             // sec
             PrintAndLogEx(NORMAL, "%.*s" NOLF, 2, tlv->value + startidx + 8);
-            if (len < startidx + 11)
+            if (len < startidx + 12)
                 break;
 
             // time zone
-            PrintAndLogEx(NORMAL, " zone: %.*s" NOLF, len - 10 - (longyear ? 4 : 2), tlv->value + startidx + 10);
+            PrintAndLogEx(NORMAL, " zone: %.*s" NOLF, len - startidx - 10, tlv->value + startidx + 10);
             break;
         }
         PrintAndLogEx(NORMAL, "'");
