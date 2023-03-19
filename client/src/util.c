@@ -45,7 +45,7 @@ bool g_pendingPrompt = false;
 #include <windows.h>
 #endif
 
-#define MAX_BIN_BREAK_LENGTH   (3072+384+1)
+#define MAX_BIN_BREAK_LENGTH   (3072 + 384 + 1)
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -1229,7 +1229,7 @@ inline uint64_t bitcount64(uint64_t a) {
 
 inline uint32_t leadingzeros32(uint32_t a) {
 #if defined __GNUC__
-    return __builtin_clzl(a);
+    return __builtin_clz(a);
 #else
     PrintAndLogEx(FAILED, "Was not compiled with fct bitcount64");
     return 0;
