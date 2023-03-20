@@ -2356,6 +2356,7 @@ void MifareCIdent(bool is_mfc) {
     uint8_t rats[4] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 };
     uint8_t rdblf0[4] = { ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
     uint8_t rdbl00[4] = { ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
+    uint8_t gen3gmd[4] = { MIFARE_MAGIC_GDM_AUTH_KEYA, 0x00, 0x6C, 0x92};
     uint8_t gen4GetConf[8] = { GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
@@ -2479,7 +2480,7 @@ void MifareCIdent(bool is_mfc) {
                 }
             }
         } else {
-            // magic MFC Gen3 test
+            // magic MFC Gen3 test 1
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
             SpinDelay(40);
             iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -2489,6 +2490,21 @@ void MifareCIdent(bool is_mfc) {
                 res = ReaderReceive(buf, par);
                 if (res == 18) {
                     isGen = MAGIC_GEN_3;
+                }
+            }
+
+            // magic MFC Gen3 test 2
+            if (isGen != MAGIC_GEN_3) {
+                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                SpinDelay(40);
+                iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+                res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+                if (res == 2) {
+                    ReaderTransmit(gen3gmd, sizeof(gen3gmd), NULL);
+                    res = ReaderReceive(buf, par);
+                    if (res == 4) {
+                        isGen = MAGIC_GEN_3;
+                    }
                 }
             }
         }
