@@ -686,6 +686,10 @@ typedef struct {
 #define CMD_HF_MIFARE_G4_RDBL                                             0x0860
 #define CMD_HF_MIFARE_G4_WRBL                                             0x0861
 
+// Gen 4 GDM magic cards
+#define CMD_HF_MIFARE_G4_GDM_RDBL                                         0x0870
+#define CMD_HF_MIFARE_G4_GDM_WRBL                                         0x0871
+
 #define CMD_UNKNOWN                                                       0xFFFF
 
 //Mifare simulation flags

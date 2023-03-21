@@ -137,8 +137,10 @@ uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t
 int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested) {
     return mifare_classic_authex(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL, NULL);
 }
-
 int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing) {
+    return mifare_classic_authex_2(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL, NULL, false);
+}
+int mifare_classic_authex_2(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing, bool is_gdm) {
     int len;
     uint32_t pos, nt, ntpp; // Supplied tag nonce
     uint8_t par[1] = {0x00};
@@ -150,8 +152,9 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
     // "random" reader nonce:
     num_to_bytes(prng_successor(GetTickCount(), 32), 4, nr);
 
-    // Transmit MIFARE_CLASSIC_AUTH
-    len = mifare_sendcmd_short(pcs, isNested, 0x60 + (keyType & 0x01), blockNo, receivedAnswer, receivedAnswerPar, timing);
+    // Transmit MIFARE_CLASSIC_AUTH 0x60, 0x61 or GDM 0x80
+    uint8_t cmdbyte = (is_gdm) ? MIFARE_MAGIC_GDM_AUTH_KEYA : MIFARE_AUTH_KEYA + (keyType & 0x01);
+    len = mifare_sendcmd_short(pcs, isNested, cmdbyte, blockNo, receivedAnswer, receivedAnswerPar, timing);
     if (len != 4) return 1;
 
     // Save the tag nonce (nt)
@@ -411,6 +414,10 @@ int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData) {
 }
 
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData) {
+    return mifare_classic_writeblock_ex(pcs, uid, blockNo, blockData, false);
+}
+
+int mifare_classic_writeblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData, bool is_gdm) {
     // variables
     uint16_t len = 0;
     uint32_t pos = 0;
@@ -421,8 +428,12 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
-    // command MIFARE_CLASSIC_WRITEBLOCK
-    len = mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
+    // command MIFARE_MAGIC_GDM_WRITEBLOCK
+    if (is_gdm) {
+        len = mifare_sendcmd_short(pcs, 1, MIFARE_MAGIC_GDM_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
+    } else {
+        len = mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
+    }
 
     if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
@@ -455,6 +466,7 @@ int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     }
     return 0;
 }
+
 
 int mifare_classic_value(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData, uint8_t action) {
     // variables

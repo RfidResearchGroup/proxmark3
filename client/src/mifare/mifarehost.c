@@ -1214,6 +1214,7 @@ int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags
     return PM3_SUCCESS;
 }
 
+
 // variables
 uint32_t cuid = 0;    // uid part used for crypto1.
 
@@ -1413,6 +1414,9 @@ int detect_mf_magic(bool is_mfc) {
             break;
         case MAGIC_GEN_4GTU:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GTU"));
+            break;
+        case MAGIC_GEN_4GDM:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GDM"));
             break;
         case MAGIC_GEN_UNFUSED:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));

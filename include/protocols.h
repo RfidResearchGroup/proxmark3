@@ -192,6 +192,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 #define MIFARE_MAGIC_GDM_AUTH_KEYA  0x80
 #define MIFARE_MAGIC_GDM_AUTH_KEYB  0x81
+#define MIFARE_MAGIC_GDM_WRITEBLOCK 0xA8
 
 #define MIFARE_EV1_PERSONAL_UID     0x40
 #define MIFARE_EV1_SETMODE          0x43
@@ -259,6 +260,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_NTAG21X       7
 #define MAGIC_GEN_3         8
 #define MAGIC_GEN_4GTU      9
+#define MAGIC_GEN_4GDM      10
 
 // Commands for configuration of Gen4 GTU cards.
 // see https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/magic_cards_notes.md

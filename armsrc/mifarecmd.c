@@ -446,6 +446,73 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     set_tracing(false);
 }
 
+void MifareWriteBlockGDM(uint8_t blockno, uint8_t keytype, uint8_t *key, uint8_t *datain) {
+
+    int retval = PM3_SUCCESS;
+
+    // check args
+    if (datain == NULL) {
+        retval = PM3_EINVARG;
+        goto OUT;
+    }
+
+    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+    if (par == NULL) {
+        retval = PM3_EMALLOC;
+        goto OUT;
+    }
+
+    uint8_t *uid = BigBuf_malloc(10);
+    if (uid == NULL) {
+        retval = PM3_EMALLOC;
+        goto OUT;
+    }
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    clear_trace();
+    set_tracing(true);
+
+    // variables
+    uint32_t cuid = 0;
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs;
+    pcs = &mpcs;
+
+    uint64_t ui64key = bytes_to_num(key, 6);
+
+    if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == false) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    }
+
+    if (mifare_classic_authex_2(pcs, cuid, blockno, keytype, ui64key, AUTH_FIRST, NULL, NULL, true)) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    };
+
+    if (mifare_classic_writeblock_ex(pcs, cuid, blockno, datain, true)) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    };
+
+    if (mifare_classic_halt(pcs, cuid)) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    };
+
+    if (g_dbglevel >= 2) DbpString("WRITE BLOCK FINISHED");
+
+OUT:
+    crypto1_deinit(pcs);
+
+    reply_ng(CMD_HF_MIFARE_G4_GDM_WRBL, retval, NULL, 0);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+    set_tracing(false);
+    BigBuf_free();
+}
+
+
 void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     // params
     uint8_t blockNo = arg0;
@@ -2356,7 +2423,7 @@ void MifareCIdent(bool is_mfc) {
     uint8_t rats[4] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 };
     uint8_t rdblf0[4] = { ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
     uint8_t rdbl00[4] = { ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
-    uint8_t gen3gmd[4] = { MIFARE_MAGIC_GDM_AUTH_KEYA, 0x00, 0x6C, 0x92};
+    uint8_t gen4gmd[4] = { MIFARE_MAGIC_GDM_AUTH_KEYA, 0x00, 0x6C, 0x92};
     uint8_t gen4GetConf[8] = { GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
@@ -2493,17 +2560,17 @@ void MifareCIdent(bool is_mfc) {
                 }
             }
 
-            // magic MFC Gen3 test 2
+            // magic MFC Gen4 GDM test
             if (isGen != MAGIC_GEN_3) {
                 FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
                 SpinDelay(40);
                 iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
                 res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
                 if (res == 2) {
-                    ReaderTransmit(gen3gmd, sizeof(gen3gmd), NULL);
+                    ReaderTransmit(gen4gmd, sizeof(gen4gmd), NULL);
                     res = ReaderReceive(buf, par);
                     if (res == 4) {
-                        isGen = MAGIC_GEN_3;
+                        isGen = MAGIC_GEN_4GDM;
                     }
                 }
             }

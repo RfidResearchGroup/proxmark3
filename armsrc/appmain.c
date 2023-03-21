@@ -1686,7 +1686,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareECardLoadExt(payload->sectorcnt, payload->keytype);
             break;
         }
-        // Work with "magic Chinese" card
+        // Gen1a / 1b - "magic Chinese" card
         case CMD_HF_MIFARE_CSETBL: {
             MifareCSetBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
@@ -1713,6 +1713,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareGen3Freez();
             break;
         }
+        // Gen 4 GTU magic cards
         case CMD_HF_MIFARE_G4_RDBL: {
             struct p {
                 uint8_t blockno;
@@ -1723,7 +1724,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareG4ReadBlk(payload->blockno, payload->pwd, payload->workFlags);
             break;
         }
-        // Gen 4 GTU magic cards
         case CMD_HF_MIFARE_G4_WRBL: {
             struct p {
                 uint8_t blockno;
@@ -1733,6 +1733,18 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             MifareG4WriteBlk(payload->blockno, payload->pwd, payload->data, payload->workFlags);
+            break;
+        }
+
+        case CMD_HF_MIFARE_G4_GDM_WRBL: {
+            struct p {
+                uint8_t blockno;
+                uint8_t keytype;
+                uint8_t key[6];
+                uint8_t data[16]; // data to be written
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareWriteBlockGDM(payload->blockno, payload->keytype, payload->key, payload->data);
             break;
         }
         case CMD_HF_MIFARE_PERSONALIZE_UID: {
