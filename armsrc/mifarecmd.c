@@ -1905,6 +1905,8 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
         bool found;
     } PACKED keyresult;
     keyresult.found = false;
+    memset(keyresult.key, 0x00, sizeof(keyresult.key));
+
     bool have_uid = false;
 
     uint8_t keyType = datain[0];
