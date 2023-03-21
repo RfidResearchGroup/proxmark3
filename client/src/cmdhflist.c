@@ -330,6 +330,10 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 snprintf(exp, size, "MAGIC AUTH-B(%d)", cmd[1]);
                 break;
             }
+            case MIFARE_MAGIC_GDM_WRITEBLOCK: {
+                snprintf(exp, size, "MAGIC WRITEBLOCK(%d)", cmd[1]);
+                break;
+            }
             case MIFARE_MAGICWUPC1:
                 snprintf(exp, size, "MAGIC WUPC1");
                 break;
