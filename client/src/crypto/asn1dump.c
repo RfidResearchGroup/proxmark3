@@ -166,7 +166,7 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
                 break;
 
             // time zone
-            PrintAndLogEx(NORMAL, " zone: %.*s" NOLF, len - startidx - 10, tlv->value + startidx + 10);
+            PrintAndLogEx(NORMAL, " zone: UTC %.*s" NOLF, len - startidx - 10, tlv->value + startidx + 10);
             break;
         }
         PrintAndLogEx(NORMAL, "'");
@@ -177,7 +177,7 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
 }
 
 static void asn1_tag_dump_string(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
-    PrintAndLogEx(NORMAL, "    value: '" _GREEN_("%.*s") "' hex: '%s'", tlv->len, tlv->value, sprint_hex(tlv->value, tlv->len));
+    PrintAndLogEx(NORMAL, "    value: '" _GREEN_("%.*s") "' hex: '%s'", (int)tlv->len, tlv->value, sprint_hex(tlv->value, tlv->len));
 }
 
 static void asn1_tag_dump_bitstring(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
@@ -232,20 +232,17 @@ static void asn1_tag_dump_hex(const struct tlv *tlv, const struct asn1_tag *tag,
     PrintAndLogEx(NORMAL, "    value: '%s'", sprint_hex_inrow(tlv->value, tlv->len));
 }
 
-static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_tag *tag, int level, bool *needdump) {
-    *needdump = false;
-    for (size_t i = 0; i < tlv->len; i++)
+static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
+/*
+    for (size_t i = 0; i < tlv->len; i++) {
         if (!isspace(tlv->value[i]) && !isprint(tlv->value[i])) {
             *needdump = true;
             break;
         }
-
-    if (*needdump) {
-        PrintAndLogEx(NORMAL, "");
-    } else {
+    }
+    */
         PrintAndLogEx(NORMAL, "        " NOLF);
         asn1_tag_dump_string(tlv, tag, level);
-    }
 }
 
 static void asn1_tag_dump_boolean(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
@@ -399,7 +396,8 @@ bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
             *candump = false;
             break;
         case ASN1_TAG_OCTET_STRING:
-            asn1_tag_dump_octet_string(tlv, tag, level, candump);
+            asn1_tag_dump_octet_string(tlv, tag, level);
+            *candump = false;
             break;
         case ASN1_TAG_BOOLEAN:
             asn1_tag_dump_boolean(tlv, tag, level);
