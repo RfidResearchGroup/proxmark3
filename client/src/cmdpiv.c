@@ -150,7 +150,8 @@ static const char *PIV_EXTLEN_INFO[] = {
     "Max command len w/o secure messaging",
     "Max response len w/o secure messaging",
     "Max command len w/ secure messaging",
-    "Max response len w/ secure messaging"
+    "Max response len w/ secure messaging",
+    NULL
 };
 
 static const struct piv_tag piv_tags[] = {
@@ -367,6 +368,11 @@ static void piv_tag_dump_int_array(const struct tlv *tlv, const struct piv_tag *
     const char **labels = (const char **) tag->data;
     const unsigned char *buf =  tlv->value;
     size_t left = tlv->len;
+    int max_labels = 0;
+
+    while (labels[max_labels]) {
+        max_labels++;
+    }
 
     while (left) {
         struct tlv sub_tlv;
@@ -376,7 +382,7 @@ static void piv_tag_dump_int_array(const struct tlv *tlv, const struct piv_tag *
             continue;
         }
         sub_tlv.value = buf;
-        if (index < ARRAYLEN(labels)) {
+        if (index < max_labels) {
             PrintAndLogEx(INFO, "%*s--%2x[%02zx] '%s':" NOLF, (level * 4), " ", sub_tlv.tag, sub_tlv.len, labels[index]);
         } else {
             PrintAndLogEx(INFO, "%*s--%2x[%02zx] 'Unknown item index %d':" NOLF, (level * 4), " ", sub_tlv.tag, sub_tlv.len, index);
