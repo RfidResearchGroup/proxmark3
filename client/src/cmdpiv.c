@@ -107,6 +107,7 @@ enum piv_tag_t {
     PIV_TAG_GUID,
     PIV_TAG_CERT,
     PIV_TAG_FASCN,
+    PIV_TAG_INTARRAY,
 };
 
 struct piv_tag {
@@ -145,6 +146,13 @@ static const struct piv_tag_enum PIV_CERT_INFO[] = {
     PIV_ENUM_FINISH,
 };
 
+static const char *PIV_EXTLEN_INFO[] = {
+    "Max command len w/o secure messaging",
+    "Max response len w/o secure messaging",
+    "Max command len w/ secure messaging",
+    "Max response len w/ secure messaging"
+};
+
 static const struct piv_tag piv_tags[] = {
     { 0x00,     "Unknown ???",                                                 PIV_TAG_HEXDUMP,  NULL },
     { 0x01,     "Name",                                                        PIV_TAG_PRINTSTR, NULL },
@@ -179,6 +187,7 @@ static const struct piv_tag piv_tags[] = {
     { 0x79,     "Coexistent tag allocation authority",                         PIV_TAG_HEXDUMP,  NULL },
     { 0x7f21,   "Intermediate CVC",                                            PIV_TAG_HEXDUMP,  NULL },
     { 0x7f60,   "Biometric Information Template",                              PIV_TAG_GENERIC,  NULL },
+    { 0x7f66,   "Extended length buffer information",                          PIV_TAG_INTARRAY, PIV_EXTLEN_INFO },
 
     { 0x80,     "Cryptographic algorithm identifier",                          PIV_TAG_ENUM,     PIV_CRYPTO_ALG },
 
@@ -352,6 +361,42 @@ static void piv_tag_dump_tlv(const struct tlv *tlv, const struct piv_tag *tag, i
 
 }
 
+static void piv_tag_dump_int_array(const struct tlv *tlv, const struct piv_tag *tag, int level) {
+    int index = 0;
+
+    const char **labels = (const char **) tag->data;
+    const unsigned char *buf =  tlv->value;
+    size_t left = tlv->len;
+
+    while (left) {
+        struct tlv sub_tlv;
+        unsigned long v = 0;
+        if (!tlv_parse_tl(&buf, &left, &sub_tlv)) {
+            PrintAndLogEx(INFO, "%*sInvalid Tag-Len", (level * 4), " ");
+            continue;
+        }
+        sub_tlv.value = buf;
+        if (index < ARRAYLEN(labels)) {
+            PrintAndLogEx(INFO, "%*s--%2x[%02zx] '%s':" NOLF, (level * 4), " ", sub_tlv.tag, sub_tlv.len, labels[index]);
+        } else {
+            PrintAndLogEx(INFO, "%*s--%2x[%02zx] 'Unknown item index %d':" NOLF, (level * 4), " ", sub_tlv.tag, sub_tlv.len, index);
+        }
+        if (sub_tlv.len <= sizeof(v)) {
+            // We have enough space to convert to integer
+            for (int i = 0; i < sub_tlv.len; i++) {
+                v = (v << 8) + sub_tlv.value[i];
+            }
+            PrintAndLogEx(NORMAL, _YELLOW_("%u") " bytes (" _YELLOW_("%zx") ")", v, v);
+        } else {
+            // Number is to big. Just print hex value
+            PrintAndLogEx(NORMAL, _YELLOW_("0x%s"), sprint_hex_inrow(sub_tlv.value, sub_tlv.len));
+        }
+        buf += sub_tlv.len;
+        left -= sub_tlv.len;
+        index++;
+    }
+}
+
 static void piv_print_cert(const uint8_t *buf, const size_t len, int level) {
     char prefix[256] = {0};
     PrintAndLogEx(NORMAL, "");
@@ -454,7 +499,7 @@ static bool piv_tag_dump(const struct tlv *tlv, int level) {
             break;
         case PIV_TAG_PRINTSTR:
             PrintAndLogEx(NORMAL, " '" NOLF);
-            for (size_t i = 0; i < tlv->len; i++) {
+            for (size_t i = 0; i < tlv->len && tlv->value[i]; i++) {
                 PrintAndLogEx(NORMAL, _YELLOW_("%c") NOLF, tlv->value[i]);
             }
             PrintAndLogEx(NORMAL, "'");
@@ -480,6 +525,9 @@ static bool piv_tag_dump(const struct tlv *tlv, int level) {
             if (tlv->len == 25) {
                 piv_print_fascn(tlv->value, tlv->len, level + 2);
             }
+            break;
+        case PIV_TAG_INTARRAY:
+            piv_tag_dump_int_array(tlv, tag, level + 2);
             break;
     };
 
