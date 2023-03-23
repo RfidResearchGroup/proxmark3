@@ -176,7 +176,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
 
     if (is_response == false) {
         if ((gs_ntag_i2c_state == 1) && (cmdsize == 6) && (memcmp(cmd + 1, "\x00\x00\x00", 3) == 0)) {
-            snprintf(exp, size, "SECTOR(%d)", cmd[0]);
+            snprintf(exp, size, "SECTOR(" _MAGENTA_("%d") ")", cmd[0]);
             gs_ntag_i2c_state = 0;
             return PM3_SUCCESS;
         }
@@ -260,10 +260,10 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 snprintf(exp, size, "REQA");
                 break;
             case ISO14443A_CMD_READBLOCK:
-                snprintf(exp, size, "READBLOCK(%d)", cmd[1]);
+                snprintf(exp, size, "READBLOCK(" _MAGENTA_("%d") ")", cmd[1]);
                 break;
             case ISO14443A_CMD_WRITEBLOCK:
-                snprintf(exp, size, "WRITEBLOCK(%d)", cmd[1]);
+                snprintf(exp, size, "WRITEBLOCK(" _MAGENTA_("%d") ")", cmd[1]);
                 break;
             case ISO14443A_CMD_HALT:
                 snprintf(exp, size, "HALT");
@@ -279,10 +279,10 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 snprintf(exp, size, "OPTIONAL TIMESLOT");
                 break;
             case MIFARE_CMD_INC:
-                snprintf(exp, size, "INC(%d)", cmd[1]);
+                snprintf(exp, size, "INC(" _MAGENTA_("%d") ")", cmd[1]);
                 break;
             case MIFARE_CMD_DEC:
-                snprintf(exp, size, "DEC(%d)", cmd[1]);
+                snprintf(exp, size, "DEC(" _MAGENTA_("%d") ")", cmd[1]);
                 break;
             case MIFARE_CMD_RESTORE:
 
@@ -293,7 +293,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                         snprintf(exp, size, "SELECT SECTOR");
                         gs_ntag_i2c_state = 1;
                     } else {
-                        snprintf(exp, size, "RESTORE(%d)", cmd[1]);
+                        snprintf(exp, size, "RESTORE(" _MAGENTA_("%d") ")", cmd[1]);
                     }
                 } else {
                     return PM3_ESOFT;
@@ -301,11 +301,11 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
 
                 break;
             case MIFARE_CMD_TRANSFER:
-                snprintf(exp, size, "TRANSFER(%d)", cmd[1]);
+                snprintf(exp, size, "TRANSFER(" _MAGENTA_("%d") ")", cmd[1]);
                 break;
             case MIFARE_AUTH_KEYA: {
                 if (cmdsize > 3) {
-                    snprintf(exp, size, "AUTH-A(%d)", cmd[1]);
+                    snprintf(exp, size, "AUTH-A(" _MAGENTA_("%d") ")", cmd[1]);
                     MifareAuthState = masNt;
                 } else {
                     // case MIFARE_ULEV1_VERSION :  both 0x60.
@@ -315,23 +315,23 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             }
             case MIFARE_AUTH_KEYB: {
                 MifareAuthState = masNt;
-                snprintf(exp, size, "AUTH-B(%d)", cmd[1]);
+                snprintf(exp, size, "AUTH-B(" _MAGENTA_("%d") ")", cmd[1]);
                 break;
             }
             case MIFARE_MAGIC_GDM_AUTH_KEYA: {
                 if (cmdsize > 3) {
-                    snprintf(exp, size, "MAGIC AUTH-A(%d)", cmd[1]);
+                    snprintf(exp, size, "MAGIC AUTH-A(" _MAGENTA_("%d") ")", cmd[1]);
                     MifareAuthState = masNt;
                 }
                 break;
             }
             case MIFARE_MAGIC_GDM_AUTH_KEYB: {
                 MifareAuthState = masNt;
-                snprintf(exp, size, "MAGIC AUTH-B(%d)", cmd[1]);
+                snprintf(exp, size, "MAGIC AUTH-B(" _MAGENTA_("%d") ")", cmd[1]);
                 break;
             }
             case MIFARE_MAGIC_GDM_WRITEBLOCK: {
-                snprintf(exp, size, "MAGIC WRITEBLOCK(%d)", cmd[1]);
+                snprintf(exp, size, "MAGIC WRITEBLOCK(" _MAGENTA_("%d") ")", cmd[1]);
                 break;
             }
             case MIFARE_MAGICWUPC1:
@@ -371,30 +371,30 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 break;
             case MIFARE_ULEV1_FASTREAD : {
                 if (cmdsize >= 3 && cmd[2] <= 0xE6)
-                    snprintf(exp, size, "READ RANGE (%d-%d)", cmd[1], cmd[2]);
+                    snprintf(exp, size, "READ RANGE (" _MAGENTA_("%d-%d") ")", cmd[1], cmd[2]);
                 else
                     // outside limits, useful for some tags...
-                    snprintf(exp, size, "READ RANGE (%d-%d) (?)", cmd[1], cmd[2]);
+                    snprintf(exp, size, "READ RANGE (" _MAGENTA_("%d-%d") ") (?)", cmd[1], cmd[2]);
                 break;
             }
             case MIFARE_ULC_WRITE : {
                 if (cmd[1] < 0x21)
-                    snprintf(exp, size, "WRITEBLOCK(%d)", cmd[1]);
+                    snprintf(exp, size, "WRITEBLOCK(" _MAGENTA_("%d") ")", cmd[1]);
                 else
                     // outside limits, useful for some tags...
-                    snprintf(exp, size, "WRITEBLOCK(%d) (?)", cmd[1]);
+                    snprintf(exp, size, "WRITEBLOCK(" _MAGENTA_("%d") ") (?)", cmd[1]);
                 break;
             }
             case MIFARE_ULEV1_READ_CNT : {
                 if (cmd[1] < 5)
-                    snprintf(exp, size, "READ CNT(%d)", cmd[1]);
+                    snprintf(exp, size, "READ CNT(" _MAGENTA_("%d") ")", cmd[1]);
                 else
                     snprintf(exp, size, "?");
                 break;
             }
             case MIFARE_ULEV1_INCR_CNT : {
                 if (cmd[1] < 5)
-                    snprintf(exp, size, "INCR(%d)", cmd[1]);
+                    snprintf(exp, size, "INCR(" _MAGENTA_("%d") ")", cmd[1]);
                 else
                     snprintf(exp, size, "?");
                 break;
@@ -403,7 +403,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 snprintf(exp, size, "READ SIG");
                 break;
             case MIFARE_ULEV1_CHECKTEAR:
-                snprintf(exp, size, "CHK TEARING(%d)", cmd[1]);
+                snprintf(exp, size, "CHK TEARING(" _MAGENTA_("%d") ")", cmd[1]);
                 break;
             case MIFARE_ULEV1_VCSL:
                 snprintf(exp, size, "VCSL");
@@ -422,7 +422,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             }
             case NTAG_I2C_FASTWRITE:
                 if (cmdsize == 69)
-                    snprintf(exp, size, "FAST WRITE (%d - %d)", cmd[1], cmd[2]);
+                    snprintf(exp, size, "FAST WRITE (" _MAGENTA_("%d-%d") ")", cmd[1], cmd[2]);
                 else
                     snprintf(exp, size, "?");
 
