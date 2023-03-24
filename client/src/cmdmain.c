@@ -250,7 +250,7 @@ static int CmdMsleep(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "msleep",
                   "Sleep for given amount of milliseconds",
-                  "msleep 100"
+                  "msleep -t 100"
                  );
 
     void *argtable[] = {
