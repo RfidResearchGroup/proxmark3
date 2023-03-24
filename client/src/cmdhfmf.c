@@ -6572,29 +6572,62 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf supercard",
                   "Extract info from a `super card`",
-                  "hf mf supercard");
+                  "hf mf supercard              -> recover key\n"
+                  "hf mf supercard -r           -> reset card\n"
+                  "hf mf supercard -u 11223344  -> change UID\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("r",  "reset",  "reset card"),
+        arg_lit0("r", "reset", "reset card"),
+        arg_str0("u", "uid", "<hex>", "New UID (4 hex bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool reset_card = arg_get_lit(ctx, 1);
+    uint8_t uid[4];
+    int uidlen = 0;
+    CLIParamHexToBuf(arg_get_str(ctx, 2), uid, sizeof(uid), &uidlen);
     CLIParserFree(ctx);
+
+    if (uidlen && uidlen != 4) {
+        PrintAndLogEx(ERR, "UID must include 8 HEX symbols");
+        return PM3_EINVARG;
+    }
 
     bool activate_field = true;
     bool keep_field_on = true;
     int res = 0;
 
-    if (reset_card)  {
+    // Commands:
+    // a0 - set UID
+    // b0 - read traces
+    // c0 - clear card
+    if (uidlen) {
+        keep_field_on = false;
+        uint8_t response[6];
+        int resplen = 0;
 
+        // --------------- CHANGE UID ----------------
+        uint8_t aCHANGE[] = {0x00, 0xa6, 0xa0, 0x00, 0x05, 0xff, 0xff, 0xff, 0xff, 0x00};
+        memcpy(aCHANGE + 5, uid, uidlen);
+        res = ExchangeAPDU14a(aCHANGE, sizeof(aCHANGE), activate_field, keep_field_on, response, sizeof(response), &resplen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Super card UID change [ " _RED_("fail") " ]");
+            DropField();
+            return res;
+        }
+
+        PrintAndLogEx(SUCCESS, "Super card UID change ( " _GREEN_("ok") " )");
+        return PM3_SUCCESS;
+    }
+
+    if (reset_card)  {
         keep_field_on = false;
         uint8_t response[6];
         int resplen = 0;
 
         // --------------- RESET CARD ----------------
-        uint8_t aRESET[] = { 0x00, 0xa6, 0xc0,  0x00 };
+        uint8_t aRESET[] = { 0x00, 0xa6, 0xc0, 0x00 };
         res = ExchangeAPDU14a(aRESET, sizeof(aRESET), activate_field, keep_field_on, response, sizeof(response), &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Super card reset [ " _RED_("fail") " ]");
@@ -6629,9 +6662,6 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         DropField();
         return res;
     }
-
-// uint8_t inA[] = { 0x72, 0xD7, 0xF4, 0x3E, 0xFD, 0xAB, 0xF2, 0x35, 0xFD, 0x49, 0xEE, 0xDC, 0x44, 0x95, 0x43, 0xC4};
-// uint8_t inB[] = { 0xF0, 0xA2, 0x67, 0x6A, 0x04, 0x6A, 0x72, 0x12, 0x76, 0xA4, 0x1D, 0x02, 0x1F, 0xEA, 0x20, 0x85};
 
     uint8_t outA[16] = {0};
     uint8_t outB[16] = {0};
@@ -6670,7 +6700,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
     // second
     NT0 = (outB[6] << 8) | outB[7];
-    data.nonce2 =  prng_successor(NT0, 31);;
+    data.nonce2 =  prng_successor(NT0, 31);
     data.nr2 = bytes_to_num(outB + 8, 4);
     data.ar2 = bytes_to_num(outB + 12, 4);
     data.sector = mfSectorNum(outA[5]);

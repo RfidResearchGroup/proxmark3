@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mf supercard` - Support editing UID (@AloneLiberty)
  - Added `hf mf gdmsetblk` - Support Gen4 GDM write block (@iceman1001)
  - Changed `hf 14a info` - detect Gen GDM magic tags (@iceman1001) 
  - Changed CLI max string argument length limit from 512 to 4096 (@iceman1001)

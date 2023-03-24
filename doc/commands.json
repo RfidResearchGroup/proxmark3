@@ -4827,9 +4827,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-r, --reset reset card"
+                "-r, --reset Reset card",
+                "-u, --uid <hex> Change UID"
             ],
-            "usage": "hf mf supercard [-hr]"
+            "usage": "hf mf supercard [-hru]"
         },
         "hf mf value": {
             "command": "hf mf value",
