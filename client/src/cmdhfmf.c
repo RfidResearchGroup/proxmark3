@@ -6568,7 +6568,6 @@ static int CmdHf14AGen3Freeze(const char *Cmd) {
 }
 
 static int CmdHf14AMfSuperCard(const char *Cmd) {
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf supercard",
                   "Extract info from a `super card`",
@@ -6594,139 +6593,224 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    bool activate_field = true;
-    bool keep_field_on = true;
-    int res = 0;
+    uint32_t trace = 0;
+    uint8_t traces[7][16];
+    for (trace = 0; trace < 7; trace++) {
+        uint8_t data[] = {0x30, 0x00 + trace};
+        uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
 
-    // Commands:
-    // a0 - set UID
-    // b0 - read traces
-    // c0 - clear card
-    if (uidlen) {
-        keep_field_on = false;
-        uint8_t response[6];
-        int resplen = 0;
+        clearCommandBuffer();
+        SendCommandOLD(CMD_HF_ISO14443A_READER, flags, sizeof(data), 0, data, sizeof(data));
 
-        // --------------- CHANGE UID ----------------
-        uint8_t aCHANGE[] = {0x00, 0xa6, 0xa0, 0x00, 0x05, 0xff, 0xff, 0xff, 0xff, 0x00};
-        memcpy(aCHANGE + 5, uid, uidlen);
-        res = ExchangeAPDU14a(aCHANGE, sizeof(aCHANGE), activate_field, keep_field_on, response, sizeof(response), &resplen);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Super card UID change [ " _RED_("fail") " ]");
-            DropField();
-            return res;
+        if (!WaitForResponseTimeout(CMD_ACK, NULL, 1500)) {
+            break; // Select card
         }
 
-        PrintAndLogEx(SUCCESS, "Super card UID change ( " _GREEN_("ok") " )");
-        return PM3_SUCCESS;
-    }
-
-    if (reset_card)  {
-        keep_field_on = false;
-        uint8_t response[6];
-        int resplen = 0;
-
-        // --------------- RESET CARD ----------------
-        uint8_t aRESET[] = { 0x00, 0xa6, 0xc0, 0x00 };
-        res = ExchangeAPDU14a(aRESET, sizeof(aRESET), activate_field, keep_field_on, response, sizeof(response), &resplen);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Super card reset [ " _RED_("fail") " ]");
-            DropField();
-            return res;
+        PacketResponseNG resp;
+        if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+            break; // Data not received
         }
-        PrintAndLogEx(SUCCESS, "Super card reset ( " _GREEN_("ok") " )");
-        return PM3_SUCCESS;
+
+        uint16_t len = resp.oldarg[0] & 0xFFFF;
+        if (len != 18) {
+            break; // Not trace data
+        }
+
+        memcpy(&traces[trace], resp.data.asBytes, len - 2);
     }
 
+    if (trace == 7) {
+        if (uidlen || reset_card) {
+            PrintAndLogEx(FAILED, "Not supported on this card");
+            return PM3_SUCCESS;
+        }
 
-    uint8_t responseA[22];
-    uint8_t responseB[22];
-    int respAlen = 0;
-    int respBlen = 0;
+        for (trace = 0; trace < 7; trace++) {
+            uint8_t *trace_data = traces[trace];
+            nonces_t data;
 
-    // --------------- First ----------------
-    uint8_t aFIRST[] = { 0x00, 0xa6, 0xb0,  0x00,  0x10 };
-    res = ExchangeAPDU14a(aFIRST, sizeof(aFIRST), activate_field, keep_field_on, responseA, sizeof(responseA), &respAlen);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
-    }
+            // first
+            uint16_t NT0 = (trace_data[6] << 8) | trace_data[7];
+            data.cuid = bytes_to_num(trace_data, 4);
+            data.nonce = prng_successor(NT0, 31);
+            data.nr = bytes_to_num(trace_data + 8, 4);
+            data.ar = bytes_to_num(trace_data + 12, 4);
+            data.at = 0;
 
-    // --------------- Second ----------------
-    activate_field = false;
-    keep_field_on = false;
+            // second
+            for (uint8_t s_strace = trace + 1; s_strace < 7; s_strace++) {
+                uint8_t *s_trace_data = traces[s_strace];
+                if (mfSectorNum(s_trace_data[5]) == mfSectorNum(trace_data[5])) {
+                    NT0 = (s_trace_data[6] << 8) | s_trace_data[7];
+                    data.nonce2 = prng_successor(NT0, 31);
+                    data.nr2 = bytes_to_num(s_trace_data + 8, 4);
+                    data.ar2 = bytes_to_num(s_trace_data + 12, 4);
+                    data.sector = mfSectorNum(trace_data[5]);
+                    data.keytype = trace_data[4];
+                    data.state = FIRST;
 
-    uint8_t aSECOND[] = { 0x00, 0xa6, 0xb0,  0x01,  0x10 };
-    res = ExchangeAPDU14a(aSECOND, sizeof(aSECOND), activate_field, keep_field_on, responseB, sizeof(responseB), &respBlen);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
-    }
+                    uint64_t key64 = -1;
+                    int res = mfkey32_moebius(&data, &key64);
 
-    uint8_t outA[16] = {0};
-    uint8_t outB[16] = {0};
-
-    uint8_t key[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
-    for (uint8_t i = 0; i < 16; i += 8) {
-        des_decrypt(outA + i, responseA + i, key);
-        des_decrypt(outB + i, responseB + i, key);
-    }
-
-    PrintAndLogEx(DEBUG, " in : %s", sprint_hex_inrow(responseA, respAlen));
-    PrintAndLogEx(DEBUG, "out : %s", sprint_hex_inrow(outA, sizeof(outA)));
-    PrintAndLogEx(DEBUG, " in : %s", sprint_hex_inrow(responseB, respAlen));
-    PrintAndLogEx(DEBUG, "out : %s", sprint_hex_inrow(outB, sizeof(outB)));
-
-    if (memcmp(outA, "\x01\x01\x01\x01\x01\x01\x01\x01", 8) == 0) {
-        PrintAndLogEx(INFO, "No trace recorded");
-        return PM3_SUCCESS;
-    }
-
-    // second trace?
-    if (memcmp(outB, "\x01\x01\x01\x01\x01\x01\x01\x01", 8) == 0) {
-        PrintAndLogEx(INFO, "Only one trace recorded");
-        return PM3_SUCCESS;
-    }
-
-    nonces_t data;
-
-    // first
-    uint16_t NT0 = (outA[6] << 8) | outA[7];
-    data.cuid = bytes_to_num(outA, 4);
-    data.nonce = prng_successor(NT0, 31);
-    data.nr = bytes_to_num(outA + 8, 4);
-    data.ar = bytes_to_num(outA + 12, 4);
-    data.at = 0;
-
-    // second
-    NT0 = (outB[6] << 8) | outB[7];
-    data.nonce2 =  prng_successor(NT0, 31);
-    data.nr2 = bytes_to_num(outB + 8, 4);
-    data.ar2 = bytes_to_num(outB + 12, 4);
-    data.sector = mfSectorNum(outA[5]);
-    data.keytype = outA[4];
-    data.state = FIRST;
-
-    PrintAndLogEx(DEBUG, "A Sector %02x", data.sector);
-    PrintAndLogEx(DEBUG, "A NT  %08x", data.nonce);
-    PrintAndLogEx(DEBUG, "A NR  %08x", data.nr);
-    PrintAndLogEx(DEBUG, "A AR  %08x", data.ar);
-    PrintAndLogEx(DEBUG, "");
-    PrintAndLogEx(DEBUG, "B NT  %08x", data.nonce2);
-    PrintAndLogEx(DEBUG, "B NR  %08x", data.nr2);
-    PrintAndLogEx(DEBUG, "B AR  %08x", data.ar2);
-
-    uint64_t key64 = -1;
-    res = mfkey32_moebius(&data, &key64);
-
-    if (res) {
-        PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ " _GREEN_("%12" PRIX64) " ]"
-                      , sprint_hex_inrow(outA, 4)
-                      , data.sector
-                      , (data.keytype == 0x60) ? 'A' : 'B'
-                      , key64);
+                    if (res) {
+                        PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ "
+                        _GREEN_("%012"
+                        PRIX64) " ]", sprint_hex_inrow(trace_data, 4), data.sector, (data.keytype == 0x60) ? 'A'
+                                                                                                           : 'B', key64);
+                        break;
+                    }
+                }
+            }
+        }
     } else {
-        PrintAndLogEx(FAILED, "failed to recover any key");
+        // Commands:
+        // a0 - set UID
+        // b0 - read traces
+        // c0 - clear card
+
+        bool activate_field = true;
+        bool keep_field_on = true;
+        int res = 0;
+        if (uidlen) {
+            keep_field_on = false;
+            uint8_t response[6];
+            int resplen = 0;
+
+            // --------------- CHANGE UID ----------------
+            uint8_t aCHANGE[] = {0x00, 0xa6, 0xa0, 0x00, 0x05, 0xff, 0xff, 0xff, 0xff, 0x00};
+            memcpy(aCHANGE + 5, uid, uidlen);
+            res = ExchangeAPDU14a(aCHANGE, sizeof(aCHANGE), activate_field, keep_field_on, response, sizeof(response),
+                                  &resplen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(FAILED, "Super card UID change [ "
+                _RED_("fail")
+                " ]");
+                DropField();
+                return res;
+            }
+
+            PrintAndLogEx(SUCCESS, "Super card UID change ( "
+            _GREEN_("ok")
+            " )");
+            return PM3_SUCCESS;
+        }
+
+        if (reset_card) {
+            keep_field_on = false;
+            uint8_t response[6];
+            int resplen = 0;
+
+            // --------------- RESET CARD ----------------
+            uint8_t aRESET[] = {0x00, 0xa6, 0xc0, 0x00};
+            res = ExchangeAPDU14a(aRESET, sizeof(aRESET), activate_field, keep_field_on, response, sizeof(response),
+                                  &resplen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(FAILED, "Super card reset [ "
+                _RED_("fail")
+                " ]");
+                DropField();
+                return res;
+            }
+            PrintAndLogEx(SUCCESS, "Super card reset ( "
+            _GREEN_("ok")
+            " )");
+            return PM3_SUCCESS;
+        }
+
+
+        uint8_t responseA[22];
+        uint8_t responseB[22];
+        int respAlen = 0;
+        int respBlen = 0;
+
+        // --------------- First ----------------
+        uint8_t aFIRST[] = {0x00, 0xa6, 0xb0, 0x00, 0x10};
+        res = ExchangeAPDU14a(aFIRST, sizeof(aFIRST), activate_field, keep_field_on, responseA, sizeof(responseA),
+                              &respAlen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+
+        // --------------- Second ----------------
+        activate_field = false;
+        keep_field_on = false;
+
+        uint8_t aSECOND[] = {0x00, 0xa6, 0xb0, 0x01, 0x10};
+        res = ExchangeAPDU14a(aSECOND, sizeof(aSECOND), activate_field, keep_field_on, responseB, sizeof(responseB),
+                              &respBlen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+
+        uint8_t outA[16] = {0};
+        uint8_t outB[16] = {0};
+
+        uint8_t key[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+        for (uint8_t i = 0; i < 16; i += 8) {
+            des_decrypt(outA + i, responseA + i, key);
+            des_decrypt(outB + i, responseB + i, key);
+        }
+
+        PrintAndLogEx(DEBUG, " in : %s", sprint_hex_inrow(responseA, respAlen));
+        PrintAndLogEx(DEBUG, "out : %s", sprint_hex_inrow(outA, sizeof(outA)));
+        PrintAndLogEx(DEBUG, " in : %s", sprint_hex_inrow(responseB, respAlen));
+        PrintAndLogEx(DEBUG, "out : %s", sprint_hex_inrow(outB, sizeof(outB)));
+
+        if (memcmp(outA, "\x01\x01\x01\x01\x01\x01\x01\x01", 8) == 0) {
+            PrintAndLogEx(INFO, "No trace recorded");
+            return PM3_SUCCESS;
+        }
+
+        // second trace?
+        if (memcmp(outB, "\x01\x01\x01\x01\x01\x01\x01\x01", 8) == 0) {
+            PrintAndLogEx(INFO, "Only one trace recorded");
+            return PM3_SUCCESS;
+        }
+
+        nonces_t data;
+
+        // first
+        uint16_t NT0 = (outA[6] << 8) | outA[7];
+        data.cuid = bytes_to_num(outA, 4);
+        data.nonce = prng_successor(NT0, 31);
+        data.nr = bytes_to_num(outA + 8, 4);
+        data.ar = bytes_to_num(outA + 12, 4);
+        data.at = 0;
+
+        // second
+        NT0 = (outB[6] << 8) | outB[7];
+        data.nonce2 = prng_successor(NT0, 31);
+        data.nr2 = bytes_to_num(outB + 8, 4);
+        data.ar2 = bytes_to_num(outB + 12, 4);
+        data.sector = mfSectorNum(outA[5]);
+        data.keytype = outA[4];
+        data.state = FIRST;
+
+        PrintAndLogEx(DEBUG, "A Sector %02x", data.sector);
+        PrintAndLogEx(DEBUG, "A NT  %08x", data.nonce);
+        PrintAndLogEx(DEBUG, "A NR  %08x", data.nr);
+        PrintAndLogEx(DEBUG, "A AR  %08x", data.ar);
+        PrintAndLogEx(DEBUG, "");
+        PrintAndLogEx(DEBUG, "B NT  %08x", data.nonce2);
+        PrintAndLogEx(DEBUG, "B NR  %08x", data.nr2);
+        PrintAndLogEx(DEBUG, "B AR  %08x", data.ar2);
+
+        uint64_t key64 = -1;
+        res = mfkey32_moebius(&data, &key64);
+
+        if (res) {
+            PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ "
+            _GREEN_("%12"
+            PRIX64) " ]"
+                    , sprint_hex_inrow(outA, 4)
+                    , data.sector
+                    , (data.keytype == 0x60) ? 'A' : 'B'
+                    , key64);
+        } else {
+            PrintAndLogEx(FAILED, "failed to recover any key");
+        }
     }
     return PM3_SUCCESS;
 }
