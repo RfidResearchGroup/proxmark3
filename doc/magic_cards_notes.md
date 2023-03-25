@@ -1164,7 +1164,7 @@ CF <passwd> C6                                   // Dump configuration
 CF <passwd> CC                                   // Factory test, returns 6666
 CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
 CF <passwd> CE <1b block number>                 // Backdoor read 16b block
-CF <passwd> CF <1b param>                        // Unknown
+CF <passwd> CF <1b param>                        // (De)Activate direct write to block 0
 CF <passwd> F0 <30b configuration data>          // Configure all params in one cmd
 CF <passwd> F1 <30b configuration data>          // Configure all params in one cmd and fuse the configuration permanently
 CF <passwd> FE <4b new_password>                 // change password
@@ -1457,19 +1457,27 @@ Example: write block0 with factory data, default pwd
 hf 14a raw -s -c -t 1000 CF00000000CD00112233441C000011778185BA18000000
 ```
 
-### Unknown command
+### (De)Activate direct write to block 0
 ^[Top](#top) ^^[Gen4](#g4top)
 
-This command modifies one byte in configuration dump, but purpose one is unknown.
+This command enables/disables direct writes to block 0.
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>CF<1b param>
 ```
  * `<param>`
-   * `??`: ???
+   * `00`: Activate direct write to block 0 (Same behaviour of Gen2 cards. Some readers may identify the card as magic)
+   * `01`: Deactivate direct write to block 0 (Same behaviour of vanilla cards)
+   * `02`: Default value. (Same behaviour as `00` (?))
 
-Example:
-hf 14a raw -s -c -t 1000 CF00000000CF02
+Example: enable direct writes to block 0, default pwd
+```
+hf 14a raw -s -c -t 1000 CF00000000CF00
+```
+Example: disable direct writes to block 0, default pwd
+```
+hf 14a raw -s -c -t 1000 CF00000000CF01
+```
 
 ### Change backdoor password
 ^[Top](#top) ^^[Gen4](#g4top)
@@ -1620,4 +1628,3 @@ hf mfu wrbl -b 250 -d 00040402 --force
 hf mfu wrbl -b 251 -d 01001303 --force
 hf mfu info
 ```
-
