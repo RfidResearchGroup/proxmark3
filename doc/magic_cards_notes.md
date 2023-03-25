@@ -370,7 +370,7 @@ Android compatible
 ^[Top](#top)
 
 ```
-hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344440804006263646566676869
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344440804006263646566676869 --force
 
 hf mf wipe --gen2
 ```
@@ -385,8 +385,13 @@ e.g. for 4b UID:
 
 ```
 hf 14a config --atqa force --bcc ignore --cl2 skip --rats skip
-hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344440804006263646566676869 # for 1k
-hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344441802006263646566676869 # for 4k
+
+# for 1k
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344440804006263646566676869 --force
+
+# for 4k
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344441802006263646566676869 --force
+
 hf 14a config --std
 hf 14a reader
 ```
@@ -395,8 +400,13 @@ e.g. for 7b UID:
 
 ```
 hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip --rats skip
-hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 04112233445566084400626364656667 # for 1k
-hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 04112233445566184200626364656667 # for 4k
+
+# for 1k
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 04112233445566084400626364656667 --force
+
+# for 4k
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 04112233445566184200626364656667 --force
+
 hf 14a config --std
 hf 14a reader
 ```
