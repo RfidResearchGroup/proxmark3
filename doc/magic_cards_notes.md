@@ -68,6 +68,7 @@ To restore anticollision config of the Proxmark3:
 ```
 hf 14a config --std
 ```
+
 # MIFARE Classic
 ^[Top](#top)
 
@@ -89,7 +90,7 @@ UID 4b: (actually NUID as there are no more "unique" IDs on 4b)
 ```
 
  
-Computing BCC on UID 11223344: `hf analyse lcr -d 11223344` = `44`
+Computing BCC on UID 11223344: `analyse lcr -d 11223344` = `44`
 
 UID 7b:
 
@@ -262,6 +263,8 @@ hf 14a info
 * Read: `40(7)`, `30xx`
 * Write: `40(7)`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
+
+
 ## MIFARE Classic DirectWrite aka Gen2 aka CUID
 ^[Top](#top)
 
@@ -396,6 +399,7 @@ hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 04112233445566184200626364656667 # for 4k
 hf 14a config --std
 hf 14a reader
 ```
+
 ## MIFARE Classic DirectWrite, FUID version aka 1-write
 ^[Top](#top)
 
@@ -435,14 +439,6 @@ hf 14a raw    -k -c   e000
 hf 14a raw    -k -c   e100
 hf 14a raw       -c   85000000000000000000000000000008
 ```
-
-## MIFARE Classic, other versions
-^[Top](#top)
-
-**TODO**
-
-* ZXUID, EUID, ICUID ?
-* Some cards exhibit a specific SAK=28 ??
 
 ## MIFARE Classic Gen3 aka APDU
 ^[Top](#top)
@@ -516,6 +512,71 @@ hf 14a raw -s -c  -t 2000  90F0CCCC10 041219c3219316984200e32000000000
 # lock (uid/block0?) forever:
 hf 14a raw -s -c 90FD111100
 ```
+
+## MIFARE Classic Gen4 aka GDM
+^[Top](#top)
+Tag has shadow mode enabled from start.
+Meaning every write or changes to normal MFC memory is restored back to a copy from persistent memory after about 3 seconds 
+off rfid field.
+Tag also seems to support Gen2 style, direct write,  to block 0 to the normal MFC memory.
+
+The persistent memory is also writable. For that tag uses its own backdoor commands.
+for example to write,  you must use a customer authentication byte, 0x80, to authenticate with an all zeros key, 0x0000000000.
+Then send the data to be written.
+
+** OBS **
+When writing to persistent memory it is possible to write _bad_ ACL and perm-brick the tag. 
+
+
+### Identify
+^[Top](#top)
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 4 GDM
+```
+### Magic commands
+^[Top](#top)
+
+* Auth: `80xx`+crc
+* Write: `A8xx`+crc,  `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
+* Read : `E000`+crc   (unidentified)
+
+### Characteristics
+^[Top](#top)
+Have no access to card,  no knowledge in ATQA/SAK/BCC quirks or if there is a wipe, softbrick recover
+* Its magic part seem to be three identified custom command. 
+* Auth command 0x80, with the key 0x0000000000,  Write 0xA8 allows writing to persistent memory,  Read 0xE0  which seems to return a configuration.   This is unknown today what these bytes are.
+
+It is also unknown what kind of block 0 changes the tag supports today
+* UID: 4b
+* ATQA/SAK: unknown
+* BCC: unknown
+* ATS: none
+
+### Proxmark3 commands
+^[Top](#top)
+```
+# Write to persistent memory
+hf mf gdmsetblk
+
+# Read 0xE0 configuration:
+hf mf gdmgetblk
+
+```
+
+### libnfc commands
+^[Top](#top)
+No implemented commands today
+
+## MIFARE Classic, other versions
+^[Top](#top)
+
+**TODO**
+
+* ZXUID, EUID, ICUID ?
+* Some cards exhibit a specific SAK=28 ??
 
 ## MIFARE Classic Super
 ^[Top](#top)
@@ -972,7 +1033,6 @@ script run hf_15_magic -u E004013344556677
 
 A.k.a ultimate magic card,  most promenent feature is shadow mode (GTU) and optional password protected backdoor commands.
 
-
 Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 
 - [Identify](#identify)
@@ -1010,6 +1070,7 @@ The card will be identified only if the password is the default one. One can ide
 hf 14a raw -s -c -t 1000 CF00000000C6
 ```
 If the card is an Ultimate Magic Card, it returns 30 or 32 bytes.
+
 ### Magic commands
 ^[Top](#top) ^^[Gen4](#g4top)
 
@@ -1156,6 +1217,7 @@ OR (Note the script will correct the ATQA correctly)
 ```
 script run hf_mf_ultimatecard -q 004428
 ```
+
 ### Change ATS
 ^[Top](#top) ^^[Gen4](#g4top)
 
@@ -1193,6 +1255,7 @@ Example: set UID length to 7 bytes, default pwd
 ```
 hf 14a raw -s -c -t 1000 CF000000006801
 ```
+
 ### Set 14443A UID
 ^[Top](#top) ^^[Gen4](#g4top)
 
@@ -1306,6 +1369,7 @@ script run hf_mf_ultimatecard -m 02
 ```
 
 Now the card supports the 3DES UL-C authentication.
+
 ### Set Ultralight and M1 maximum read/write sectors
 ^[Top](#top) ^^[Gen4](#g4top)
 
@@ -1319,6 +1383,7 @@ Example: set maximum 63 blocks read/write for Mifare Classic 1K
 ```
 hf 14a raw -s -c -t 1000 CF000000006B3F
 ```
+
 ### Set shadow mode (GTU)
 ^[Top](#top) ^^[Gen4](#g4top)
 
@@ -1432,6 +1497,7 @@ Default configuration:
   ^^ cf cmd 68: UID length
 ^^ cf cmd 69: Ultralight protocol
 ```
+
 ### Fast configuration
 ^[Top](#top) ^^[Gen4](#g4top)
 
