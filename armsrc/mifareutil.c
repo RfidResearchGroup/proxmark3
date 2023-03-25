@@ -230,13 +230,20 @@ int mifare_classic_authex_2(struct Crypto1State *pcs, uint32_t uid, uint8_t bloc
 }
 
 int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData) {
+    return mifare_classic_readblock_ex(pcs, uid, blockNo, blockData, false);
+}
+int mifare_classic_readblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData, bool is_gdm) {
 
-    int len;
-    uint8_t bt[2] = {0x00, 0x00};
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
-    len = mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
+    uint16_t len;
+    if (is_gdm) {
+        len = mifare_sendcmd_short(pcs, 1, MIFARE_MAGIC_GDM_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
+    } else {
+        len = mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
+    }
+
     if (len == 1) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error %02x", receivedAnswer[0]);
         return 1;
@@ -246,6 +253,7 @@ int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blo
         return 2;
     }
 
+    uint8_t bt[2] = {0x00, 0x00};
     memcpy(bt, receivedAnswer + 16, 2);
     AddCrc14A(receivedAnswer, 16);
     if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
@@ -416,19 +424,14 @@ int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData) {
 int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData) {
     return mifare_classic_writeblock_ex(pcs, uid, blockNo, blockData, false);
 }
-
 int mifare_classic_writeblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData, bool is_gdm) {
-    // variables
-    uint16_t len = 0;
-    uint32_t pos = 0;
-    uint8_t par[3] = {0x00, 0x00, 0x00}; // enough for 18 Bytes to send
-    uint8_t res = 0;
 
-    uint8_t d_block[18], d_block_enc[18];
+    // variables
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
     // command MIFARE_MAGIC_GDM_WRITEBLOCK
+    uint16_t len;
     if (is_gdm) {
         len = mifare_sendcmd_short(pcs, 1, MIFARE_MAGIC_GDM_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
     } else {
@@ -440,11 +443,14 @@ int mifare_classic_writeblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t
         return 1;
     }
 
+    uint8_t d_block[18], d_block_enc[18];
     memcpy(d_block, blockData, 16);
     AddCrc14A(d_block, 16);
 
+    // enough for 18 Bytes to send
+    uint8_t par[3] = {0x00, 0x00, 0x00};
     // crypto
-    for (pos = 0; pos < 18; pos++) {
+    for (uint32_t pos = 0; pos < 18; pos++) {
         d_block_enc[pos] = crypto1_byte(pcs, 0x00, 0) ^ d_block[pos];
         par[pos >> 3] |= (((filter(pcs->odd) ^ oddparity8(d_block[pos])) & 0x01) << (7 - (pos & 0x0007)));
     }
@@ -452,9 +458,10 @@ int mifare_classic_writeblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t
     ReaderTransmitPar(d_block_enc, sizeof(d_block_enc), par, NULL);
 
     // Receive the response
+
     len = ReaderReceive(receivedAnswer, receivedAnswerPar);
 
-    res = 0;
+    uint8_t res = 0;
     res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 0)) << 0;
     res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 1)) << 1;
     res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 2)) << 2;

@@ -214,6 +214,65 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     LEDsoff();
 }
 
+void MifareReadBlockGDM(uint8_t blockno, uint8_t keytype, uint8_t *key) {
+
+    int retval = PM3_SUCCESS;
+
+    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+    if (par == NULL) {
+        retval = PM3_EMALLOC;
+        goto OUT;
+    }
+
+    uint8_t *uid = BigBuf_malloc(10);
+    if (uid == NULL) {
+        retval = PM3_EMALLOC;
+        goto OUT;
+    }
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    clear_trace();
+    set_tracing(true);
+
+    // variables
+    uint32_t cuid = 0;
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs;
+    pcs = &mpcs;
+
+    uint64_t ui64key = bytes_to_num(key, 6);
+    uint8_t outbuf[16] = {0x00};
+
+    if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == false) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    }
+
+    if (mifare_classic_authex_2(pcs, cuid, blockno, keytype, ui64key, AUTH_FIRST, NULL, NULL, true)) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    };
+
+    if (mifare_classic_readblock_ex(pcs, cuid, blockno, outbuf, true)) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    };
+
+    if (mifare_classic_halt(pcs, cuid)) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    };
+
+OUT:
+    crypto1_deinit(pcs);
+
+    reply_ng(CMD_HF_MIFARE_G4_GDM_RDBL, retval, outbuf, sizeof(outbuf));
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+    set_tracing(false);
+    BigBuf_free();
+}
+
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Read a MIFARE tag.
 // read sector (data = 4 x 16 bytes = 64 bytes, or 16 x 16 bytes = 256 bytes)
