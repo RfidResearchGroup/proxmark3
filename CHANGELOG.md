@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mf gdmgetblk` - Support Gen4 GDM read configuration block (@iceman1001)
  - Changed magic note to include a section about GDM tags (@iceman1001)
  - Added `hf mf gdmsetblk` - Support Gen4 GDM write block (@iceman1001)
  - Changed `hf 14a info` - detect Gen GDM magic tags (@iceman1001) 
