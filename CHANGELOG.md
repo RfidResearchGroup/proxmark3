@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed magic note to include a section about GDM tags (@iceman1001)
  - Added `hf mf gdmsetblk` - Support Gen4 GDM write block (@iceman1001)
  - Changed `hf 14a info` - detect Gen GDM magic tags (@iceman1001) 
  - Changed CLI max string argument length limit from 512 to 4096 (@iceman1001)
@@ -19,7 +20,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `pm3` script for passing arguments (@doegox)
  - Fixed python paths to include current directory (@jmichelp)
  - Fixed infinite loops in spindelayus (@lnv42)
- - Add ICECLASS standalone read/sim mode (@natesales)
+ - Changed ICECLASS standalone to support a read/sim mode (@natesales)
  - Changed `hf iclass encode` - added verbose flag (@natesales)
  - Changed `hf waveshare` - now identify 1.54 nfc epaper correct (@ah01)
  - Fixed `Makefile` regression that broke `make install` (@henrygab)
@@ -31,12 +32,13 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `--back` option to `clear` command to clear the scrollback buffer (@wh201906)
  - Changed `hf iclass decrypt` - mark credentials as decrypted in the dump (@natesales)
  - Changed `hf iclass view` - show credentials on a decrypted dump (@natesales)
- - Show NTAG213TT tamper info in `hf mfu info` and add commands for configuring it's tamper feature (@mjaksn)
- - Add Mifare Classic EV1 signature write support to gen4 magic tag lua script (@augustozanellato)
+ - Changed `hf mfu info` - NTAG213TT tamper info (mjaksn)
+ - Added commands for configuring NTAG213TT tamper featue (@mjaksn)
+ - Added Mifare Classic EV1 signature write support to gen4 magic tag lua script (@augustozanellato)
  - Added XOR key extraction and flag to Guardall G-Prox II (@GuruSteve)
  - Changed verbiage on `hf iclass info` KeyAccess area to be congruent with AA1 and AA2 areas (@GuruSteve)
  - Added `hf legic info` command for other sources: `hf legic einfo`, `hf legic view` (@0xdeb)
- - 
+ 
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)
