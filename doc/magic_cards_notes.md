@@ -546,11 +546,12 @@ hf 14a info
 
 ### Characteristics
 ^[Top](#top)
-Have no access to card,  no knowledge in ATQA/SAK/BCC quirks or if there is a wipe, softbrick recover
-* Its magic part seem to be three identified custom command. 
-* Auth command 0x80, with the key 0x0000000000,  Write 0xA8 allows writing to persistent memory,  Read 0xE0  which seems to return a configuration.   This is unknown today what these bytes are.
 
-It is also unknown what kind of block 0 changes the tag supports today
+* Have no knowledge in ATQA/SAK/BCC quirks or if there is a wipe, softbrick recover
+* Its magic part seem to be three identified custom command. 
+* Auth command 0x80, with the key 0x0000000000,  Write 0xA8 allows writing to persistent memory,  Read 0xE0  which seems to return a configuration. This is unknown today what these bytes are.
+
+It is unknown what kind of block 0 changes the tag supports
 * UID: 4b
 * ATQA/SAK: unknown
 * BCC: unknown
