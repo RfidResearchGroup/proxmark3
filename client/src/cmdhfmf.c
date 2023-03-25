@@ -7674,6 +7674,78 @@ static int CmdHF14AGen4Save(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AGen4_GDM_GetBlk(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf gdmgetblk",
+                  "Get block data from magic gen4 GDM card.",
+                  "hf mf gdmgetblk --blk 0      --> get block 0 (manufacturer)\n"
+                  "hf mf gdmgetblk --blk 3 -v   --> get block 3, decode sector trailer\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b",  "blk", "<dec>", "block number"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_str0("k", "key", "<hex>", "key 6 bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int b = arg_get_int_def(ctx, 1, 0);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
+    CLIParserFree(ctx);
+
+    // validate args
+    if (b < 0 ||  b >= MIFARE_4K_MAXBLOCK) {
+        PrintAndLogEx(FAILED, "target block number out-of-range, got %i", b);
+        return PM3_EINVARG;
+    }
+
+    if (keylen != 6 && keylen != 0) {
+        PrintAndLogEx(FAILED, "Must specify 6 bytes, got " _YELLOW_("%u"), keylen);
+        return PM3_EINVARG;
+    }
+
+    uint8_t blockno = (uint8_t)b;
+    PrintAndLogEx(NORMAL, "Block: %x", blockno) ;
+
+    struct p {
+        uint8_t blockno;
+        uint8_t keytype;
+        uint8_t key[6];
+    } PACKED payload;
+
+    payload.blockno = blockno;
+    payload.keytype = 0;
+    memcpy(payload.key, key, sizeof(payload.key));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_G4_GDM_RDBL, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_GDM_RDBL, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_SUCCESS) {
+        uint8_t sector = mfSectorNum(blockno);
+        mf_print_sector_hdr(sector);
+
+        uint8_t *d = resp.data.asBytes;
+        mf_print_block_one(blockno, d, verbose);
+
+        if (verbose) {
+            decode_print_st(blockno, d);
+        } else {
+            PrintAndLogEx(NORMAL, "");
+        }
+    }
+
+    return resp.status;
+}
+
 static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -7713,12 +7785,17 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (blen != MFBLOCK_SIZE) {
-        PrintAndLogEx(WARNING, "expected 16 HEX bytes. got %i", blen);
+        PrintAndLogEx(WARNING, "expected %u HEX bytes. got %i", MFBLOCK_SIZE, blen);
         return PM3_EINVARG;
     }
 
     if (b < 0 ||  b >= MIFARE_4K_MAXBLOCK) {
         PrintAndLogEx(FAILED, "target block number out-of-range, got %i", b);
+        return PM3_EINVARG;
+    }
+
+    if (keylen != 6 && keylen != 0) {
+        PrintAndLogEx(FAILED, "Must specify 6 bytes, got " _YELLOW_("%u"), keylen);
         return PM3_EINVARG;
     }
 
@@ -8022,6 +8099,7 @@ static command_t CommandTable[] = {
     {"gsetblk",     CmdHF14AGen4SetBlk,     IfPm3Iso14443a,  "Write block to card"},
     {"gview",       CmdHF14AGen4View,       IfPm3Iso14443a,  "View card"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GDM") " --------------------------"},    
+    {"gdmgetblk",   CmdHF14AGen4_GDM_GetBlk, IfPm3Iso14443a,  "Read block from card"},
     {"gdmsetblk",   CmdHF14AGen4_GDM_SetBlk, IfPm3Iso14443a,  "Write block to card"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("ndef") " -----------------------"},
 //    {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
