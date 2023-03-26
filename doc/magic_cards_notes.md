@@ -598,9 +598,11 @@ It is unknown what kind of block 0 changes the tag supports
 # Write to persistent memory
 hf mf gdmsetblk
 
-# Read 0xE0 configuration:
-hf mf gdmconfig
+# Read configuration (0xE0):
+hf mf gdmcfg
 
+# Write configuration (0xE1):
+hf mf gdmsetcfg
 ```
 
 ### libnfc commands
