@@ -280,7 +280,7 @@ void reverse_array(uint8_t *d, size_t n) {
         d[i] ^= d[j];
         d[j] ^= d[i];
         d[i] ^= d[j];
-    } 
+    }
 }
 
 // reverse src array into dest array

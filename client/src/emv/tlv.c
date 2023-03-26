@@ -227,7 +227,7 @@ struct tlvdb *tlvdb_parse_multi(const unsigned char *buf, size_t len) {
 
     while (left != 0) {
         struct tlvdb *db = calloc(1, sizeof(*db));
-        if (db == NULL ) {
+        if (db == NULL) {
             goto err;
         }
 

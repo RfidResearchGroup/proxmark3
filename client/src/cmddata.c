@@ -36,7 +36,7 @@
 #include "crypto/asn1utils.h"    // ASN1 decode / print
 #include "cmdflashmemspiffs.h"   // SPIFFS flash memory download
 #include "mbedtls/bignum.h"      // big num
-#include "mbedtls/entropy.h"     // 
+#include "mbedtls/entropy.h"     //
 #include "mbedtls/ctr_drbg.h"    // random generator
 
 uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN];
@@ -2429,7 +2429,7 @@ static int CmdZerocrossings(const char *Cmd) {
 }
 
 static bool data_verify_hex(uint8_t *d, size_t n) {
-    if (d == NULL) 
+    if (d == NULL)
         return false;
 
     for (size_t i = 0; i < n; i++) {
@@ -2517,7 +2517,7 @@ static int Cmdhex2bin(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (data_verify_hex((uint8_t*)data, dlen) == false) {
+    if (data_verify_hex((uint8_t *)data, dlen) == false) {
         return PM3_EINVARG;
     }
 
@@ -3230,7 +3230,7 @@ static int CmdNumCon(const char *Cmd) {
 
     // hex
     if (hlen > 0) {
-        if (data_verify_hex((uint8_t*)hex, hlen) == false) {
+        if (data_verify_hex((uint8_t *)hex, hlen) == false) {
             return PM3_EINVARG;
         }
         MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&N, 16, hex));
@@ -3257,22 +3257,22 @@ static int CmdNumCon(const char *Cmd) {
         MBEDTLS_MPI_CHK(mbedtls_mpi_inv_mod(&N, &N, &base));
     }
 
-     // printing
+    // printing
     typedef struct {
-        const char* desc;
+        const char *desc;
         uint8_t radix;
     } radix_t;
 
     radix_t radix[] = {
-            {"dec..... ", 10},
-            {"hex..... 0x", 16}, 
-            {"bin..... 0b", 2}
+        {"dec..... ", 10},
+        {"hex..... 0x", 16},
+        {"bin..... 0b", 2}
     };
 
     char s[600] = {0};
     size_t slen = 0;
 
-    for (uint8_t i=0; i < ARRAYLEN(radix); i++) {
+    for (uint8_t i = 0; i < ARRAYLEN(radix); i++) {
         MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, radix[i].radix, s, sizeof(s), &slen));
         if (slen > 0) {
             PrintAndLogEx(INFO, "%s%s", radix[i].desc, s);
@@ -3285,9 +3285,9 @@ static int CmdNumCon(const char *Cmd) {
     mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_entropy_init(&entropy);
 
-    MBEDTLS_MPI_CHK(mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0 ));
+    MBEDTLS_MPI_CHK(mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0));
 
-    res = mbedtls_mpi_is_prime_ext( &N, 50, mbedtls_ctr_drbg_random, &ctr_drbg );
+    res = mbedtls_mpi_is_prime_ext(&N, 50, mbedtls_ctr_drbg_random, &ctr_drbg);
     if (res == 0) {
         PrintAndLogEx(INFO, "prime... " _YELLOW_("yes"));
     }

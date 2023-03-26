@@ -404,7 +404,7 @@ static void mf_analyse_acl(uint16_t n, uint8_t *d) {
  Sector trailer sanity checks.
  Warn if ACL is strict read-only,  or invalid ACL.
 */
-static int mf_analyse_st_block(uint8_t blockno, uint8_t *block, bool force){
+static int mf_analyse_st_block(uint8_t blockno, uint8_t *block, bool force) {
 
     if (mfIsSectorTrailer(blockno) == false) {
         return PM3_SUCCESS;
@@ -6665,10 +6665,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
                     int res = mfkey32_moebius(&data, &key64);
 
                     if (res) {
-                        PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ "
-                        _GREEN_("%012"
-                        PRIX64) " ]", sprint_hex_inrow(trace_data, 4), data.sector, (data.keytype == 0x60) ? 'A'
-                                                                                                           : 'B', key64);
+                        PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ "_GREEN_("%012" PRIX64) " ]", sprint_hex_inrow(trace_data, 4), data.sector, (data.keytype == 0x60) ? 'A' : 'B', key64);
                         break;
                     }
                 }
@@ -6694,16 +6691,12 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
             res = ExchangeAPDU14a(aCHANGE, sizeof(aCHANGE), activate_field, keep_field_on, response, sizeof(response),
                                   &resplen);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(FAILED, "Super card UID change [ "
-                _RED_("fail")
-                " ]");
+                PrintAndLogEx(FAILED, "Super card UID change [ " _RED_("fail") " ]");
                 DropField();
                 return res;
             }
 
-            PrintAndLogEx(SUCCESS, "Super card UID change ( "
-            _GREEN_("ok")
-            " )");
+            PrintAndLogEx(SUCCESS, "Super card UID change ( " _GREEN_("ok") " )");
             return PM3_SUCCESS;
         }
 
@@ -6717,15 +6710,11 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
             res = ExchangeAPDU14a(aRESET, sizeof(aRESET), activate_field, keep_field_on, response, sizeof(response),
                                   &resplen);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(FAILED, "Super card reset [ "
-                _RED_("fail")
-                " ]");
+                PrintAndLogEx(FAILED, "Super card reset [ " _RED_("fail") " ]");
                 DropField();
                 return res;
             }
-            PrintAndLogEx(SUCCESS, "Super card reset ( "
-            _GREEN_("ok")
-            " )");
+            PrintAndLogEx(SUCCESS, "Super card reset ( " _GREEN_("ok") " )");
             return PM3_SUCCESS;
         }
 
@@ -6813,13 +6802,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         res = mfkey32_moebius(&data, &key64);
 
         if (res) {
-            PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ "
-            _GREEN_("%12"
-            PRIX64) " ]"
-                    , sprint_hex_inrow(outA, 4)
-                    , data.sector
-                    , (data.keytype == 0x60) ? 'A' : 'B'
-                    , key64);
+            PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ " _GREEN_("%12" PRIX64) " ]", sprint_hex_inrow(outA, 4), data.sector, (data.keytype == 0x60) ? 'A' : 'B', key64);
         } else {
             PrintAndLogEx(FAILED, "failed to recover any key");
         }
@@ -8093,7 +8076,7 @@ static command_t CommandTable[] = {
     {"gsave",       CmdHF14AGen4Save,       IfPm3Iso14443a,  "Save dump from card into file or emulator"},
     {"gsetblk",     CmdHF14AGen4SetBlk,     IfPm3Iso14443a,  "Write block to card"},
     {"gview",       CmdHF14AGen4View,       IfPm3Iso14443a,  "View card"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GDM") " --------------------------"},    
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GDM") " --------------------------"},
     {"gdmconfig",   CmdHF14AGen4_GDM_ConfigBlk, IfPm3Iso14443a,  "Read config block from card"},
     {"gdmsetblk",   CmdHF14AGen4_GDM_SetBlk, IfPm3Iso14443a,  "Write block to card"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("ndef") " -----------------------"},
