@@ -4,7 +4,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Changed `hf mf supercard` - Support editing UID and recovery of keys from second generation card (@AloneLiberty)
- - Added `hf mf gdmgetblk` - Support Gen4 GDM read configuration block (@iceman1001)
+ - Added `hf mf gdmsetcfg` - Supprt Gen4 GDM write configuration block (@iceman1001)
+ - Added `hf mf gdmcfg` - Support Gen4 GDM read configuration block (@iceman1001)
  - Changed magic note to include a section about GDM tags (@iceman1001)
  - Added `hf mf gdmsetblk` - Support Gen4 GDM write block (@iceman1001)
  - Changed `hf 14a info` - detect Gen GDM magic tags (@iceman1001) 

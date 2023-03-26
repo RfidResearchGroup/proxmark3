@@ -628,10 +628,12 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isok  = resp.oldarg[0] & 0xff;
-    if (isok) {
+    int status  = resp.oldarg[0];
+    if (status) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
         PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf rdbl") "` to verify");
+    } else if (status == PM3_ETEAROFF) {
+        return status;       
     } else {
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
         // suggest the opposite keytype than what was used.
@@ -7669,11 +7671,11 @@ static int CmdHF14AGen4Save(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14AGen4_GDM_ConfigBlk(const char *Cmd) {
+static int CmdHF14AGen4_GDM_Cfg(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mf gdmconfig",
+    CLIParserInit(&ctx, "hf mf gdmcfg",
                   "Get configuration data from magic gen4 GDM card.",
-                  "hf mf gdmconfig\n"
+                  "hf mf gdmcfg\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -7713,6 +7715,52 @@ static int CmdHF14AGen4_GDM_ConfigBlk(const char *Cmd) {
     }
 
     return resp.status;
+}
+
+static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf gdmsetcfg",
+                  "Set configuration data on a magic gen4 GDM card",
+                  "hf mf gdmsetcfg -d 850000000000000000005A5A00000008"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t block[MFBLOCK_SIZE] = {0x00};
+    int blen = 0;
+    CLIGetHexWithReturn(ctx, 1, block, &blen);
+    CLIParserFree(ctx);
+
+    if (blen != MFBLOCK_SIZE) {
+        PrintAndLogEx(WARNING, "expected %u HEX bytes. got %i", MFBLOCK_SIZE, blen);
+        return PM3_EINVARG;
+    }
+
+    struct p {
+        uint8_t data[MFBLOCK_SIZE];
+    } PACKED payload;
+
+    memcpy(payload.data, block, sizeof(payload.data));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_G4_GDM_WRCFG, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_GDM_WRCFG, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
+        PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf gdmcfg") "` to verify");
+    } else {
+        PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
+    }
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
@@ -7805,7 +7853,9 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
     if (resp.status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
         PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf rdbl") "` to verify");
-    } else {
+    } else if (resp.status == PM3_ETEAROFF) {
+        return resp.status;
+    } else {        
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
         PrintAndLogEx(HINT, "Maybe access rights? Try specify keytype `" _YELLOW_("hf mf gdmsetblk -%c ...") "` instead", (keytype == MF_KEY_A) ? 'b' : 'a');
     }
@@ -7928,7 +7978,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
     }
 
     if (action < 3) {
-        uint8_t isok = true;
+
         if (g_session.pm3_present == false)
             return PM3_ENOTTY;
 
@@ -7955,7 +8005,15 @@ static int CmdHF14AMfValue(const char *Cmd) {
                 PrintAndLogEx(FAILED, "Command execute timeout");
                 return PM3_ETIMEOUT;
             }
-            isok  = resp.oldarg[0] & 0xff;
+
+            if (resp.oldarg[0] & 0xFF) {
+                 // all ok so set flag to read current value
+                getval = true;
+                PrintAndLogEx(SUCCESS, "Update ( " _GREEN_("success") " )");
+            } else {
+                PrintAndLogEx(FAILED, "Update ( " _RED_("failed") " )");
+            }
+
         } else { // set value
             // To set a value block (or setup) we can use the normal mifare classic write block
             // So build the command options can call CMD_HF_MIFARE_WRITEBL
@@ -7980,14 +8038,17 @@ static int CmdHF14AMfValue(const char *Cmd) {
                 PrintAndLogEx(FAILED, "Command execute timeout");
                 return PM3_ETIMEOUT;
             }
-            isok  = resp.oldarg[0] & 0xff;
-        }
-
-        if (isok) {
-            PrintAndLogEx(SUCCESS, "Update ... : " _GREEN_("success"));
-            getval = true; // all ok so set flag to read current value
-        } else {
-            PrintAndLogEx(FAILED, "Update ... : " _RED_("failed"));
+            int status  = resp.oldarg[0];
+            if (status) {
+                 // all ok so set flag to read current value
+                getval = true;
+                PrintAndLogEx(SUCCESS, "Update ( " _GREEN_("success") " )");
+            } else if (status == PM3_ETEAROFF) {
+                // all ok so set flag to read current value
+                getval = true;
+            } else {
+                PrintAndLogEx(FAILED, "Update ( " _RED_("failed") " )");
+            }
         }
     }
 
@@ -8076,9 +8137,10 @@ static command_t CommandTable[] = {
     {"gsave",       CmdHF14AGen4Save,       IfPm3Iso14443a,  "Save dump from card into file or emulator"},
     {"gsetblk",     CmdHF14AGen4SetBlk,     IfPm3Iso14443a,  "Write block to card"},
     {"gview",       CmdHF14AGen4View,       IfPm3Iso14443a,  "View card"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GDM") " --------------------------"},
-    {"gdmconfig",   CmdHF14AGen4_GDM_ConfigBlk, IfPm3Iso14443a,  "Read config block from card"},
-    {"gdmsetblk",   CmdHF14AGen4_GDM_SetBlk, IfPm3Iso14443a,  "Write block to card"},
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GDM") " --------------------------"},    
+    {"gdmcfg",      CmdHF14AGen4_GDM_Cfg,   IfPm3Iso14443a,  "Read config block from card"},
+    {"gdmsetcfg",   CmdHF14AGen4_GDM_SetCfg, IfPm3Iso14443a, "Write config block to card"},
+    {"gdmsetblk",   CmdHF14AGen4_GDM_SetBlk, IfPm3Iso14443a, "Write block to card"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("ndef") " -----------------------"},
 //    {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
     {"ndefformat",  CmdHFMFNDEFFormat,      IfPm3Iso14443a,  "Format MIFARE Classic Tag as NFC Tag"},

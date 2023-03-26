@@ -690,6 +690,7 @@ typedef struct {
 #define CMD_HF_MIFARE_G4_GDM_RDBL                                         0x0870
 #define CMD_HF_MIFARE_G4_GDM_WRBL                                         0x0871
 #define CMD_HF_MIFARE_G4_GDM_CONFIG                                       0x0872
+#define CMD_HF_MIFARE_G4_GDM_WRCFG                                        0x0873
 
 #define CMD_UNKNOWN                                                       0xFFFF
 

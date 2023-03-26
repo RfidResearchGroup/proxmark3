@@ -537,7 +537,7 @@ for example to write,  you must use a customer authentication byte, 0x80, to aut
 Then send the data to be written.
 
 This tag has simular commands to the [UFUID](#mifare-classic-directwrite-ufuid-version)
-It seems to be developed by the same person.
+This indicates that both tagtypes are developed by the same person.
 
 **OBS**
 
@@ -560,8 +560,8 @@ hf 14a info
 
 * Auth: `80xx`+crc
 * Write: `A8xx`+crc,  `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
-* Read config: `E000`+crc  (unidentified)
-* Write config: `E100`+crc
+* Read config: `E000`+crc
+* Write config: `E100`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
 ### Characteristics
 ^[Top](#top)
@@ -598,9 +598,11 @@ It is unknown what kind of block 0 changes the tag supports
 # Write to persistent memory
 hf mf gdmsetblk
 
-# Read 0xE0 configuration:
-hf mf gdmconfig
+# Read configuration (0xE0):
+hf mf gdmcfg
 
+# Write configuration (0xE1):
+hf mf gdmsetcfg
 ```
 
 ### libnfc commands
@@ -612,7 +614,7 @@ No implemented commands today
 
 **TODO**
 
-* ZXUID, EUID, ICUID ?
+* ZXUID, EUID, ICUID, KUID, HUID, RFUID ?
 * Some cards exhibit a specific SAK=28 ??
 
 ## MIFARE Classic Super
