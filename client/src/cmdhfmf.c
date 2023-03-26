@@ -400,6 +400,47 @@ static void mf_analyse_acl(uint16_t n, uint8_t *d) {
     }
 }
 
+/*
+ Sector trailer sanity checks.
+ Warn if ACL is strict read-only,  or invalid ACL.
+*/
+static int mf_analyse_st_block(uint8_t blockno, uint8_t *block, bool force){
+
+    if (mfIsSectorTrailer(blockno) == false) {
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(INFO, "Sector trailer (ST) write detected");
+
+    // ensure access right isn't messed up.
+    if (mfValidateAccessConditions(&block[6]) == false) {
+        PrintAndLogEx(WARNING, "Invalid Access Conditions detected, replacing with default values");
+        memcpy(block + 6, "\xFF\x07\x80\x69", 4);
+    }
+
+    bool ro_detected = false;
+    uint8_t bar = mfNumBlocksPerSector(mfSectorNum(blockno));
+    for (uint8_t foo = 0; foo < bar; foo++) {
+        if (mfReadOnlyAccessConditions(foo, &block[6])) {
+            PrintAndLogEx(WARNING, "Strict ReadOnly Access Conditions on block " _YELLOW_("%u") " detected", blockno - bar + 1 + foo);
+            ro_detected = true;
+        }
+    }
+    if (ro_detected) {
+        if (force) {
+            PrintAndLogEx(WARNING, " --force override, continuing...");
+        } else {
+            PrintAndLogEx(INFO, "Exiting, please run `" _YELLOW_("hf mf acl -d %s") "` to understand", sprint_hex_inrow(&block[6], 3));
+            PrintAndLogEx(INFO, "Use `" _YELLOW_("--force") "` to override and write this data");
+            return PM3_EINVARG;
+        }
+    } else {
+        PrintAndLogEx(SUCCESS, "ST passed checks, continuing...");
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14AMfAcl(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf acl",
@@ -521,7 +562,6 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
         arg_lit0(NULL, "force", "override warnings"),
         arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
         arg_str0("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
-
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -569,36 +609,8 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
 
     uint8_t blockno = (uint8_t)b;
 
-    // Sector trailer sanity checks.
-    // Warn if ACL is strict read-only,  or invalid ACL.
-    if (mfIsSectorTrailer(blockno)) {
-        PrintAndLogEx(INFO, "Sector trailer (ST) write detected");
-
-        // ensure access right isn't messed up.
-        if (mfValidateAccessConditions(&block[6]) == false) {
-            PrintAndLogEx(WARNING, "Invalid Access Conditions detected, replacing with default values");
-            memcpy(block + 6, "\xFF\x07\x80\x69", 4);
-        }
-
-        bool ro_detected = false;
-        uint8_t bar = mfNumBlocksPerSector(mfSectorNum(blockno));
-        for (uint8_t foo = 0; foo < bar; foo++) {
-            if (mfReadOnlyAccessConditions(foo, &block[6])) {
-                PrintAndLogEx(WARNING, "Strict ReadOnly Access Conditions on block " _YELLOW_("%u") " detected", blockno - bar + 1 + foo);
-                ro_detected = true;
-            }
-        }
-        if (ro_detected) {
-            if (force) {
-                PrintAndLogEx(WARNING, " --force override, continuing...");
-            } else {
-                PrintAndLogEx(INFO, "Exiting, please run `" _YELLOW_("hf mf acl -d %s") "` to understand", sprint_hex_inrow(&block[6], 3));
-                PrintAndLogEx(INFO, "Use `" _YELLOW_("--force") "` to override and write this data");
-                return PM3_EINVARG;
-            }
-        } else {
-            PrintAndLogEx(SUCCESS, "ST passed checks, continuing...");
-        }
+    if (mf_analyse_st_block(blockno, block, force) != PM3_SUCCESS) {
+        return PM3_EINVARG;
     }
 
     PrintAndLogEx(INFO, "Writing block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
@@ -7674,73 +7686,47 @@ static int CmdHF14AGen4Save(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14AGen4_GDM_GetBlk(const char *Cmd) {
+static int CmdHF14AGen4_GDM_ConfigBlk(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mf gdmgetblk",
-                  "Get block data from magic gen4 GDM card.",
-                  "hf mf gdmgetblk --blk 0      --> get block 0 (manufacturer)\n"
-                  "hf mf gdmgetblk --blk 3 -v   --> get block 3, decode sector trailer\n"
+    CLIParserInit(&ctx, "hf mf gdmconfig",
+                  "Get configuration data from magic gen4 GDM card.",
+                  "hf mf gdmconfig\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("b",  "blk", "<dec>", "block number"),
-        arg_lit0("v", "verbose", "verbose output"),
         arg_str0("k", "key", "<hex>", "key 6 bytes"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int b = arg_get_int_def(ctx, 1, 0);
-    bool verbose = arg_get_lit(ctx, 2);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int keylen = 0;
     uint8_t key[6] = {0};
-    CLIGetHexWithReturn(ctx, 3, key, &keylen);
+    CLIGetHexWithReturn(ctx, 1, key, &keylen);
     CLIParserFree(ctx);
 
     // validate args
-    if (b < 0 ||  b >= MIFARE_4K_MAXBLOCK) {
-        PrintAndLogEx(FAILED, "target block number out-of-range, got %i", b);
-        return PM3_EINVARG;
-    }
-
     if (keylen != 6 && keylen != 0) {
         PrintAndLogEx(FAILED, "Must specify 6 bytes, got " _YELLOW_("%u"), keylen);
         return PM3_EINVARG;
     }
 
-    uint8_t blockno = (uint8_t)b;
-    PrintAndLogEx(NORMAL, "Block: %x", blockno) ;
-
     struct p {
-        uint8_t blockno;
-        uint8_t keytype;
         uint8_t key[6];
     } PACKED payload;
-
-    payload.blockno = blockno;
-    payload.keytype = 0;
     memcpy(payload.key, key, sizeof(payload.key));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_G4_GDM_RDBL, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFARE_G4_GDM_CONFIG, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_GDM_RDBL, &resp, 1500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_GDM_CONFIG, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
     }
 
     if (resp.status == PM3_SUCCESS) {
-        uint8_t sector = mfSectorNum(blockno);
-        mf_print_sector_hdr(sector);
-
         uint8_t *d = resp.data.asBytes;
-        mf_print_block_one(blockno, d, verbose);
-
-        if (verbose) {
-            decode_print_st(blockno, d);
-        } else {
-            PrintAndLogEx(NORMAL, "");
-        }
+        PrintAndLogEx(SUCCESS, "config... %s", sprint_hex(d, resp.length));
+        PrintAndLogEx(NORMAL, "");
     }
 
     return resp.status;
@@ -7750,7 +7736,9 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gdmsetblk",
-                  "Set block data on a magic gen4 GDM card",
+                  "Set block data on a magic gen4 GDM card\n"
+                  "`--force` param is used to override warnings like bad ACL writes.\n"
+                  "          if not specified, it will exit if detected",
                   "hf mf gdmsetblk --blk 1 -d 000102030405060708090a0b0c0d0e0f"
                  );
     void *argtable[] = {
@@ -7758,8 +7746,9 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
         arg_int1(NULL, "blk", "<dec>", "block number"),
         arg_lit0("a", NULL, "input key type is key A (def)"),
         arg_lit0("b", NULL, "input key type is key B"),
-        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
         arg_str0("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_lit0(NULL, "force", "override warnings"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -7775,13 +7764,15 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
         keytype = MF_KEY_B;;
     }
 
-    int keylen = 0;
-    uint8_t key[6] = {0};
-    CLIGetHexWithReturn(ctx, 4, key, &keylen);
-
     uint8_t block[MFBLOCK_SIZE] = {0x00};
     int blen = 0;
-    CLIGetHexWithReturn(ctx, 5, block, &blen);
+    CLIGetHexWithReturn(ctx, 4, block, &blen);
+
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+
+    bool force = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     if (blen != MFBLOCK_SIZE) {
@@ -7800,6 +7791,10 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
     }
 
     uint8_t blockno = (uint8_t)b;
+
+    if (mf_analyse_st_block(blockno, block, force) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
 
     PrintAndLogEx(INFO, "Writing block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
     PrintAndLogEx(INFO, "data: %s", sprint_hex(block, sizeof(block)));
@@ -8099,7 +8094,7 @@ static command_t CommandTable[] = {
     {"gsetblk",     CmdHF14AGen4SetBlk,     IfPm3Iso14443a,  "Write block to card"},
     {"gview",       CmdHF14AGen4View,       IfPm3Iso14443a,  "View card"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GDM") " --------------------------"},    
-    {"gdmgetblk",   CmdHF14AGen4_GDM_GetBlk, IfPm3Iso14443a,  "Read block from card"},
+    {"gdmconfig",   CmdHF14AGen4_GDM_ConfigBlk, IfPm3Iso14443a,  "Read config block from card"},
     {"gdmsetblk",   CmdHF14AGen4_GDM_SetBlk, IfPm3Iso14443a,  "Write block to card"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("ndef") " -----------------------"},
 //    {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},

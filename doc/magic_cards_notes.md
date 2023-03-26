@@ -370,7 +370,7 @@ Android compatible
 ^[Top](#top)
 
 ```
-hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344440804006263646566676869
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344440804006263646566676869 --force
 
 hf mf wipe --gen2
 ```
@@ -385,8 +385,13 @@ e.g. for 4b UID:
 
 ```
 hf 14a config --atqa force --bcc ignore --cl2 skip --rats skip
-hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344440804006263646566676869 # for 1k
-hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344441802006263646566676869 # for 4k
+
+# for 1k
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344440804006263646566676869 --force
+
+# for 4k
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 11223344441802006263646566676869 --force
+
 hf 14a config --std
 hf 14a reader
 ```
@@ -395,8 +400,13 @@ e.g. for 7b UID:
 
 ```
 hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip --rats skip
-hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 04112233445566084400626364656667 # for 1k
-hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 04112233445566184200626364656667 # for 4k
+
+# for 1k
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 04112233445566084400626364656667 --force
+
+# for 4k
+hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 04112233445566184200626364656667 --force
+
 hf 14a config --std
 hf 14a reader
 ```
@@ -516,6 +526,7 @@ hf 14a raw -s -c 90FD111100
 
 ## MIFARE Classic Gen4 aka GDM
 ^[Top](#top)
+
 Tag has shadow mode enabled from start.
 Meaning every write or changes to normal MFC memory is restored back to a copy from persistent memory after about 3 seconds 
 off rfid field.
@@ -525,9 +536,16 @@ The persistent memory is also writable. For that tag uses its own backdoor comma
 for example to write,  you must use a customer authentication byte, 0x80, to authenticate with an all zeros key, 0x0000000000.
 Then send the data to be written.
 
-** OBS **
+This tag has simular commands to the [UFUID](#mifare-classic-directwrite-ufuid-version)
+It seems to be developed by the same person.
+
+**OBS**
+
 When writing to persistent memory it is possible to write _bad_ ACL and perm-brick the tag. 
 
+**OBS**
+
+It is possible to write a configuration that perma locks the tag,  ie no more magic
 
 ### Identify
 ^[Top](#top)
@@ -542,7 +560,8 @@ hf 14a info
 
 * Auth: `80xx`+crc
 * Write: `A8xx`+crc,  `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
-* Read : `E000`+crc   (unidentified)
+* Read config: `E000`+crc  (unidentified)
+* Write config: `E100`+crc
 
 ### Characteristics
 ^[Top](#top)
@@ -550,6 +569,22 @@ hf 14a info
 * Have no knowledge in ATQA/SAK/BCC quirks or if there is a wipe, softbrick recover
 * Its magic part seem to be three identified custom command. 
 * Auth command 0x80, with the key 0x0000000000,  Write 0xA8 allows writing to persistent memory,  Read 0xE0  which seems to return a configuration. This is unknown today what these bytes are.
+
+Read config:
+1. sending custom auth with all zeros key
+2. send 0xE000,  will return the configuration bytes.
+`results: 850000000000000000005A5A00000008`
+
+Write config:
+1. sending custom auth with all zeros key
+2. send 0xE100
+3. send 16 bytes
+
+**Warning**
+
+Example of configuration to Perma lock tag:
+`85000000000000000000000000000008`
+
 
 It is unknown what kind of block 0 changes the tag supports
 * UID: 4b
@@ -564,7 +599,7 @@ It is unknown what kind of block 0 changes the tag supports
 hf mf gdmsetblk
 
 # Read 0xE0 configuration:
-hf mf gdmgetblk
+hf mf gdmconfig
 
 ```
 
@@ -1097,6 +1132,7 @@ Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 - [Select Ultralight mode](#select-ultralight-mode)
 - [Set shadow mode (GTU)](#set-shadow-mode-gtu)
 - [Direct block read and write](#direct-block-read-and-write)
+- [(De)Activate direct write to block 0](#deactivate-direct-write-to-block-0)
 - [Change backdoor password](#change-backdoor-password)
 - [Dump configuration](#dump-configuration)
 - [Fast configuration](#fast-configuration)
@@ -1201,7 +1237,7 @@ CF <passwd> C6                                   // Dump configuration
 CF <passwd> CC                                   // Factory test, returns 6666
 CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
 CF <passwd> CE <1b block number>                 // Backdoor read 16b block
-CF <passwd> CF <1b param>                        // Unknown
+CF <passwd> CF <1b param>                        // (De)Activate direct write to block 0
 CF <passwd> F0 <30b configuration data>          // Configure all params in one cmd
 CF <passwd> F1 <30b configuration data>          // Configure all params in one cmd and fuse the configuration permanently
 CF <passwd> FE <4b new_password>                 // change password
@@ -1494,19 +1530,27 @@ Example: write block0 with factory data, default pwd
 hf 14a raw -s -c -t 1000 CF00000000CD00112233441C000011778185BA18000000
 ```
 
-### Unknown command
+### (De)Activate direct write to block 0
 ^[Top](#top) ^^[Gen4](#g4top)
 
-This command modifies one byte in configuration dump, but purpose one is unknown.
+This command enables/disables direct writes to block 0.
 
 ```
 hf 14a raw -s -c -t 1000 CF<passwd>CF<1b param>
 ```
  * `<param>`
-   * `??`: ???
+   * `00`: Activate direct write to block 0 (Same behaviour of Gen2 cards. Some readers may identify the card as magic)
+   * `01`: Deactivate direct write to block 0 (Same behaviour of vanilla cards)
+   * `02`: Default value. (Same behaviour as `00` (?))
 
-Example:
-hf 14a raw -s -c -t 1000 CF00000000CF02
+Example: enable direct writes to block 0, default pwd
+```
+hf 14a raw -s -c -t 1000 CF00000000CF00
+```
+Example: disable direct writes to block 0, default pwd
+```
+hf 14a raw -s -c -t 1000 CF00000000CF01
+```
 
 ### Change backdoor password
 ^[Top](#top) ^^[Gen4](#g4top)
@@ -1536,7 +1580,7 @@ Default configuration:
 ```
 00000000000002000978009102DABC191010111213141516040008006B024F6B
                                                             ^^^^ ??
-                                                          ^^ cf cmd cf: ?? this byte set by cmd cf<pwd>cf<param>, factory value 0x02
+                                                          ^^ cf cmd cf: block0 direct write setting, factory value 0x02
                                                         ^^ cf cmd 6b: maximum read/write sectors, factory value 0x6b
                                                       ^^ cf cmd 6a: UL mode
                                                 ^^^^^^ cf cmd 35: ATQA/SAK
@@ -1657,4 +1701,3 @@ hf mfu wrbl -b 250 -d 00040402 --force
 hf mfu wrbl -b 251 -d 01001303 --force
 hf mfu info
 ```
-
