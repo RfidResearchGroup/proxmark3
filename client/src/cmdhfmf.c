@@ -6589,7 +6589,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("r", "reset", "reset card"),
+        arg_lit0("r", "reset", "Reset card"),
         arg_str0("u", "uid", "<hex>", "New UID (4 hex bytes)"),
         arg_param_end
     };
