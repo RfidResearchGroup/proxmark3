@@ -453,7 +453,6 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     memcpy(blockdata, datain + 10, 16);
 
     // variables
-    uint8_t isOK = 0;
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
@@ -469,37 +468,39 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     LED_B_OFF();
     LED_C_OFF();
 
-    while (true) {
-        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
-            break;
-        };
+    uint8_t retval = 0;
 
-        if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
-            break;
-        };
+    if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
+        goto OUT;
+    };
 
-        if (mifare_classic_writeblock(pcs, cuid, blockNo, blockdata)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
-            break;
-        };
+    if (mifare_classic_auth(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST)) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
+        goto OUT;
+    };
 
-        if (mifare_classic_halt(pcs, cuid)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Halt error");
-            break;
-        };
-
-        isOK = 1;
-        break;
+    int res = mifare_classic_writeblock(pcs, cuid, blockNo, blockdata);
+    if (res == PM3_ETEAROFF) {
+        retval = PM3_ETEAROFF;
+        goto OUT;
+    } else if (res) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+        retval = PM3_ESOFT;
+        goto OUT;
     }
 
+    if (mifare_classic_halt(pcs, cuid)) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Halt error");
+        goto OUT;
+    };
+
+    retval = 1;
+
+OUT: 
     crypto1_deinit(pcs);
 
-    if (g_dbglevel >= 2) DbpString("WRITE BLOCK FINISHED");
-
-    reply_mix(CMD_ACK, isOK, 0, 0, 0, 0);
-
+    reply_mix(CMD_ACK, retval, 0, 0, 0, 0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
@@ -549,17 +550,19 @@ void MifareWriteBlockGDM(uint8_t blockno, uint8_t keytype, uint8_t *key, uint8_t
         goto OUT;
     };
 
-    if (mifare_classic_writeblock_ex(pcs, cuid, blockno, datain, true)) {
+    int res = mifare_classic_writeblock_ex(pcs, cuid, blockno, datain, true);
+    if (res == PM3_ETEAROFF) {
+        retval = PM3_ETEAROFF;
+        goto OUT;
+    } else if (res) {
         retval = PM3_ESOFT;
         goto OUT;
-    };
+    }
 
     if (mifare_classic_halt(pcs, cuid)) {
         retval = PM3_ESOFT;
         goto OUT;
     };
-
-    if (g_dbglevel >= 2) DbpString("WRITE BLOCK FINISHED");
 
 OUT:
     crypto1_deinit(pcs);

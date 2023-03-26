@@ -628,10 +628,12 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isok  = resp.oldarg[0] & 0xff;
-    if (isok) {
+    int status  = resp.oldarg[0];
+    if (status) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
         PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf rdbl") "` to verify");
+    } else if (status == PM3_ETEAROFF) {
+        return status;       
     } else {
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
         // suggest the opposite keytype than what was used.
@@ -7708,7 +7710,9 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
     if (resp.status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
         PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf rdbl") "` to verify");
-    } else {
+    } else if (resp.status == PM3_ETEAROFF) {
+        return resp.status;
+    } else {        
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
         PrintAndLogEx(HINT, "Maybe access rights? Try specify keytype `" _YELLOW_("hf mf gdmsetblk -%c ...") "` instead", (keytype == MF_KEY_A) ? 'b' : 'a');
     }
@@ -7831,7 +7835,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
     }
 
     if (action < 3) {
-        uint8_t isok = true;
+
         if (g_session.pm3_present == false)
             return PM3_ENOTTY;
 
@@ -7858,7 +7862,15 @@ static int CmdHF14AMfValue(const char *Cmd) {
                 PrintAndLogEx(FAILED, "Command execute timeout");
                 return PM3_ETIMEOUT;
             }
-            isok  = resp.oldarg[0] & 0xff;
+
+            if (resp.oldarg[0] & 0xFF) {
+                 // all ok so set flag to read current value
+                getval = true;
+                PrintAndLogEx(SUCCESS, "Update ( " _GREEN_("success") " )");
+            } else {
+                PrintAndLogEx(FAILED, "Update ( " _RED_("failed") " )");
+            }
+
         } else { // set value
             // To set a value block (or setup) we can use the normal mifare classic write block
             // So build the command options can call CMD_HF_MIFARE_WRITEBL
@@ -7883,14 +7895,17 @@ static int CmdHF14AMfValue(const char *Cmd) {
                 PrintAndLogEx(FAILED, "Command execute timeout");
                 return PM3_ETIMEOUT;
             }
-            isok  = resp.oldarg[0] & 0xff;
-        }
-
-        if (isok) {
-            PrintAndLogEx(SUCCESS, "Update ... : " _GREEN_("success"));
-            getval = true; // all ok so set flag to read current value
-        } else {
-            PrintAndLogEx(FAILED, "Update ... : " _RED_("failed"));
+            int status  = resp.oldarg[0];
+            if (status) {
+                 // all ok so set flag to read current value
+                getval = true;
+                PrintAndLogEx(SUCCESS, "Update ( " _GREEN_("success") " )");
+            } else if (status == PM3_ETEAROFF) {
+                // all ok so set flag to read current value
+                getval = true;
+            } else {
+                PrintAndLogEx(FAILED, "Update ( " _RED_("failed") " )");
+            }
         }
     }
 

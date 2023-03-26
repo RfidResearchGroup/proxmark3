@@ -18,6 +18,7 @@
 //-----------------------------------------------------------------------------
 #include "mifareutil.h"
 
+#include "appmain.h"  // tearoff hook
 #include "string.h"
 #include "BigBuf.h"
 #include "iso14443a.h"
@@ -451,18 +452,23 @@ int mifare_classic_writeblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t
 
     ReaderTransmitPar(d_block_enc, sizeof(d_block_enc), par, NULL);
 
-    // Receive the response
-    len = ReaderReceive(receivedAnswer, receivedAnswerPar);
+    // tearoff occurred
+    if (tearoff_hook() == PM3_ETEAROFF) {
+        return PM3_ETEAROFF;
+    } else {
+        // Receive the response
+        len = ReaderReceive(receivedAnswer, receivedAnswerPar);
 
-    uint8_t res = 0;
-    res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 0)) << 0;
-    res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 1)) << 1;
-    res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 2)) << 2;
-    res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 3)) << 3;
+        uint8_t res = 0;
+        res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 0)) << 0;
+        res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 1)) << 1;
+        res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 2)) << 2;
+        res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 3)) << 3;
 
-    if ((len != 1) || (res != 0x0A)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd send data2 Error: %02x", res);
-        return 2;
+        if ((len != 1) || (res != 0x0A)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd send data2 Error: %02x", res);
+            return 2;
+        }
     }
     return 0;
 }
