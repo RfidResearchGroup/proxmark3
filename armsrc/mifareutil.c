@@ -153,7 +153,7 @@ int mifare_classic_authex_2(struct Crypto1State *pcs, uint32_t uid, uint8_t bloc
     num_to_bytes(prng_successor(GetTickCount(), 32), 4, nr);
 
     // Transmit MIFARE_CLASSIC_AUTH 0x60, 0x61 or GDM 0x80
-    uint8_t cmdbyte = (is_gdm) ? MIFARE_MAGIC_GDM_AUTH_KEYA : MIFARE_AUTH_KEYA + (keyType & 0x01);
+    uint8_t cmdbyte = (is_gdm) ? MIFARE_MAGIC_GDM_AUTH_KEYA + (keyType & 0x01) : MIFARE_AUTH_KEYA + (keyType & 0x01);
     len = mifare_sendcmd_short(pcs, isNested, cmdbyte, blockNo, receivedAnswer, receivedAnswerPar, timing);
     if (len != 4) return 1;
 
@@ -230,20 +230,14 @@ int mifare_classic_authex_2(struct Crypto1State *pcs, uint32_t uid, uint8_t bloc
 }
 
 int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData) {
-    return mifare_classic_readblock_ex(pcs, uid, blockNo, blockData, false);
+    return mifare_classic_readblock_ex(pcs, uid, blockNo, blockData, ISO14443A_CMD_READBLOCK);
 }
-int mifare_classic_readblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData, bool is_gdm) {
+int mifare_classic_readblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData, uint8_t iso_byte) {
 
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
-    uint16_t len;
-    if (is_gdm) {
-        len = mifare_sendcmd_short(pcs, 1, MIFARE_MAGIC_GDM_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
-    } else {
-        len = mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
-    }
-
+    uint16_t len = mifare_sendcmd_short(pcs, 1, iso_byte, blockNo, receivedAnswer, receivedAnswerPar, NULL);
     if (len == 1) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error %02x", receivedAnswer[0]);
         return 1;
@@ -458,7 +452,6 @@ int mifare_classic_writeblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t
     ReaderTransmitPar(d_block_enc, sizeof(d_block_enc), par, NULL);
 
     // Receive the response
-
     len = ReaderReceive(receivedAnswer, receivedAnswerPar);
 
     uint8_t res = 0;

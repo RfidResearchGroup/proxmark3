@@ -1735,14 +1735,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareG4WriteBlk(payload->blockno, payload->pwd, payload->data, payload->workFlags);
             break;
         }
-        case CMD_HF_MIFARE_G4_GDM_RDBL: {
+        case CMD_HF_MIFARE_G4_GDM_CONFIG: {
             struct p {
-                uint8_t blockno;
-                uint8_t keytype;
                 uint8_t key[6];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareReadBlockGDM(payload->blockno, payload->keytype, payload->key);
+            MifareReadConfigBlockGDM(payload->key);
             break;
         }
         case CMD_HF_MIFARE_G4_GDM_WRBL: {

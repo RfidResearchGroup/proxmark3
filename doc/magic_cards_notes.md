@@ -540,9 +540,11 @@ This tag has simular commands to the [UFUID](#mifare-classic-directwrite-ufuid-v
 It seems to be developed by the same person.
 
 **OBS**
+
 When writing to persistent memory it is possible to write _bad_ ACL and perm-brick the tag. 
 
 **OBS**
+
 It is possible to write a configuration that perma locks the tag,  ie no more magic
 
 ### Identify
@@ -579,6 +581,7 @@ Write config:
 3. send 16 bytes
 
 **Warning**
+
 Example of configuration to Perma lock tag:
 `85000000000000000000000000000008`
 
@@ -596,7 +599,7 @@ It is unknown what kind of block 0 changes the tag supports
 hf mf gdmsetblk
 
 # Read 0xE0 configuration:
-hf mf gdmgetblk
+hf mf gdmconfig
 
 ```
 

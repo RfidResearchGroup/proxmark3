@@ -689,6 +689,7 @@ typedef struct {
 // Gen 4 GDM magic cards
 #define CMD_HF_MIFARE_G4_GDM_RDBL                                         0x0870
 #define CMD_HF_MIFARE_G4_GDM_WRBL                                         0x0871
+#define CMD_HF_MIFARE_G4_GDM_CONFIG                                       0x0872
 
 #define CMD_UNKNOWN                                                       0xFFFF
 

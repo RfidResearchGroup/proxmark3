@@ -214,7 +214,7 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     LEDsoff();
 }
 
-void MifareReadBlockGDM(uint8_t blockno, uint8_t keytype, uint8_t *key) {
+void MifareReadConfigBlockGDM(uint8_t *key) {
 
     int retval = PM3_SUCCESS;
 
@@ -248,12 +248,12 @@ void MifareReadBlockGDM(uint8_t blockno, uint8_t keytype, uint8_t *key) {
         goto OUT;
     }
 
-    if (mifare_classic_authex_2(pcs, cuid, blockno, keytype, ui64key, AUTH_FIRST, NULL, NULL, true)) {
+    if (mifare_classic_authex_2(pcs, cuid, 0, 0, ui64key, AUTH_FIRST, NULL, NULL, true)) {
         retval = PM3_ESOFT;
         goto OUT;
     };
 
-    if (mifare_classic_readblock_ex(pcs, cuid, blockno, outbuf, true)) {
+    if (mifare_classic_readblock_ex(pcs, cuid, 0, outbuf, MIFARE_MAGIC_GDM_READBLOCK)) {
         retval = PM3_ESOFT;
         goto OUT;
     };
@@ -266,7 +266,7 @@ void MifareReadBlockGDM(uint8_t blockno, uint8_t keytype, uint8_t *key) {
 OUT:
     crypto1_deinit(pcs);
 
-    reply_ng(CMD_HF_MIFARE_G4_GDM_RDBL, retval, outbuf, sizeof(outbuf));
+    reply_ng(CMD_HF_MIFARE_G4_GDM_CONFIG, retval, outbuf, sizeof(outbuf));
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
