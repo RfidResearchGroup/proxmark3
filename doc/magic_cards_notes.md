@@ -1060,6 +1060,7 @@ Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 - [Select Ultralight mode](#select-ultralight-mode)
 - [Set shadow mode (GTU)](#set-shadow-mode-gtu)
 - [Direct block read and write](#direct-block-read-and-write)
+- [(De)Activate direct write to block 0](#deactivate-direct-write-to-block-0)
 - [Change backdoor password](#change-backdoor-password)
 - [Dump configuration](#dump-configuration)
 - [Fast configuration](#fast-configuration)
@@ -1507,7 +1508,7 @@ Default configuration:
 ```
 00000000000002000978009102DABC191010111213141516040008006B024F6B
                                                             ^^^^ ??
-                                                          ^^ cf cmd cf: ?? this byte set by cmd cf<pwd>cf<param>, factory value 0x02
+                                                          ^^ cf cmd cf: block0 direct write setting, factory value 0x02
                                                         ^^ cf cmd 6b: maximum read/write sectors, factory value 0x6b
                                                       ^^ cf cmd 6a: UL mode
                                                 ^^^^^^ cf cmd 35: ATQA/SAK
