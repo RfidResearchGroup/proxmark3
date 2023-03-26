@@ -539,10 +539,10 @@ Then send the data to be written.
 This tag has simular commands to the [UFUID](#mifare-classic-directwrite-ufuid-version)
 It seems to be developed by the same person.
 
-** OBS **
+*** OBS ***
 When writing to persistent memory it is possible to write _bad_ ACL and perm-brick the tag. 
 
-** OBS **
+*** OBS ***
 It is possible to write a configuration that perma locks the tag,  ie no more magic
 
 ### Identify
