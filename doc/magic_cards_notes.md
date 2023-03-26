@@ -526,6 +526,7 @@ hf 14a raw -s -c 90FD111100
 
 ## MIFARE Classic Gen4 aka GDM
 ^[Top](#top)
+
 Tag has shadow mode enabled from start.
 Meaning every write or changes to normal MFC memory is restored back to a copy from persistent memory after about 3 seconds 
 off rfid field.
