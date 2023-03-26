@@ -633,7 +633,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
         PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf rdbl") "` to verify");
     } else if (status == PM3_ETEAROFF) {
-        return status;       
+        return status;
     } else {
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
         // suggest the opposite keytype than what was used.
@@ -7855,7 +7855,7 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
         PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf rdbl") "` to verify");
     } else if (resp.status == PM3_ETEAROFF) {
         return resp.status;
-    } else {        
+    } else {
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
         PrintAndLogEx(HINT, "Maybe access rights? Try specify keytype `" _YELLOW_("hf mf gdmsetblk -%c ...") "` instead", (keytype == MF_KEY_A) ? 'b' : 'a');
     }
@@ -8007,7 +8007,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
             }
 
             if (resp.oldarg[0] & 0xFF) {
-                 // all ok so set flag to read current value
+                // all ok so set flag to read current value
                 getval = true;
                 PrintAndLogEx(SUCCESS, "Update ( " _GREEN_("success") " )");
             } else {
@@ -8040,7 +8040,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
             }
             int status  = resp.oldarg[0];
             if (status) {
-                 // all ok so set flag to read current value
+                // all ok so set flag to read current value
                 getval = true;
                 PrintAndLogEx(SUCCESS, "Update ( " _GREEN_("success") " )");
             } else if (status == PM3_ETEAROFF) {
@@ -8137,7 +8137,7 @@ static command_t CommandTable[] = {
     {"gsave",       CmdHF14AGen4Save,       IfPm3Iso14443a,  "Save dump from card into file or emulator"},
     {"gsetblk",     CmdHF14AGen4SetBlk,     IfPm3Iso14443a,  "Write block to card"},
     {"gview",       CmdHF14AGen4View,       IfPm3Iso14443a,  "View card"},
-    {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GDM") " --------------------------"},    
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GDM") " --------------------------"},
     {"gdmcfg",      CmdHF14AGen4_GDM_Cfg,   IfPm3Iso14443a,  "Read config block from card"},
     {"gdmsetcfg",   CmdHF14AGen4_GDM_SetCfg, IfPm3Iso14443a, "Write config block to card"},
     {"gdmsetblk",   CmdHF14AGen4_GDM_SetBlk, IfPm3Iso14443a, "Write block to card"},

@@ -497,7 +497,7 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
 
     retval = 1;
 
-OUT: 
+OUT:
     crypto1_deinit(pcs);
 
     reply_mix(CMD_ACK, retval, 0, 0, 0, 0);
