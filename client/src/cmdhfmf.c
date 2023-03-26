@@ -6804,7 +6804,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         res = mfkey32_moebius(&data, &key64);
 
         if (res) {
-            PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ " _GREEN_("%12" PRIX64) " ]", sprint_hex_inrow(outA, 4), data.sector, (data.keytype == 0x60) ? 'A' : 'B', key64);
+            PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ " _GREEN_("%012" PRIX64) " ]", sprint_hex_inrow(outA, 4), data.sector, (data.keytype == 0x60) ? 'A' : 'B', key64);
         } else {
             PrintAndLogEx(FAILED, "failed to recover any key");
         }
