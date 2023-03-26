@@ -142,24 +142,21 @@ int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockN
     return mifare_classic_authex_2(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL, NULL, false);
 }
 int mifare_classic_authex_2(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing, bool is_gdm) {
-    int len;
-    uint32_t pos, nt, ntpp; // Supplied tag nonce
-    uint8_t par[1] = {0x00};
+
+    // "random" reader nonce:
     uint8_t nr[4];
-    uint8_t mf_nr_ar[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    num_to_bytes(prng_successor(GetTickCount(), 32), 4, nr);
+
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
-    // "random" reader nonce:
-    num_to_bytes(prng_successor(GetTickCount(), 32), 4, nr);
-
     // Transmit MIFARE_CLASSIC_AUTH 0x60, 0x61 or GDM 0x80
-    uint8_t cmdbyte = (is_gdm) ? MIFARE_MAGIC_GDM_AUTH_KEYA + (keyType & 0x01) : MIFARE_AUTH_KEYA + (keyType & 0x01);
-    len = mifare_sendcmd_short(pcs, isNested, cmdbyte, blockNo, receivedAnswer, receivedAnswerPar, timing);
+    uint8_t cmdbyte = (is_gdm) ? MIFARE_MAGIC_GDM_AUTH_KEY : MIFARE_AUTH_KEYA + (keyType & 0x01);
+    int len = mifare_sendcmd_short(pcs, isNested, cmdbyte, blockNo, receivedAnswer, receivedAnswerPar, timing);
     if (len != 4) return 1;
 
     // Save the tag nonce (nt)
-    nt = bytes_to_num(receivedAnswer, 4);
+    uint32_t nt = bytes_to_num(receivedAnswer, 4);
 
     //  ----------------------------- crypto1 create
     if (isNested)
@@ -185,7 +182,9 @@ int mifare_classic_authex_2(struct Crypto1State *pcs, uint32_t uid, uint8_t bloc
         *ntptr = nt;
 
     // Generate (encrypted) nr+parity by loading it into the cipher (Nr)
-    par[0] = 0;
+    uint32_t pos;
+    uint8_t par[1] = {0x00};    
+    uint8_t mf_nr_ar[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     for (pos = 0; pos < 4; pos++) {
         mf_nr_ar[pos] = crypto1_byte(pcs, nr[pos], 0) ^ nr[pos];
         par[0] |= (((filter(pcs->odd) ^ oddparity8(nr[pos])) & 0x01) << (7 - pos));
@@ -221,8 +220,8 @@ int mifare_classic_authex_2(struct Crypto1State *pcs, uint32_t uid, uint8_t bloc
         return 2;
     }
 
-    ntpp = prng_successor(nt, 32) ^ crypto1_word(pcs, 0, 0);
-
+    // Supplied tag nonce
+    uint32_t ntpp = prng_successor(nt, 32) ^ crypto1_word(pcs, 0, 0);
     if (ntpp != bytes_to_num(receivedAnswer, 4)) {
         if (g_dbglevel >= DBG_EXTENDED) Dbprintf("Authentication failed. Error card response");
         return 3;
@@ -472,6 +471,52 @@ int mifare_classic_writeblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t
     }
     return 0;
 }
+
+int mifare_classic_write_cfg_block_gdm(struct Crypto1State *pcs, uint32_t uid, uint8_t *blockData) {
+
+    // variables
+    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+    uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
+
+    uint16_t len = mifare_sendcmd_short(pcs, 1, MIFARE_MAGIC_GDM_WRITE_CFG, 0, receivedAnswer, receivedAnswerPar, NULL);
+    if ((len != 1) || (receivedAnswer[0] != 0x0A)) {
+        return 1;
+    }
+
+    uint8_t d_block[18], d_block_enc[18];
+    memcpy(d_block, blockData, 16);
+    AddCrc14A(d_block, 16);
+
+    // enough for 18 Bytes to send
+    uint8_t par[3] = {0x00, 0x00, 0x00};
+    // crypto
+    for (uint32_t pos = 0; pos < 18; pos++) {
+        d_block_enc[pos] = crypto1_byte(pcs, 0x00, 0) ^ d_block[pos];
+        par[pos >> 3] |= (((filter(pcs->odd) ^ oddparity8(d_block[pos])) & 0x01) << (7 - (pos & 0x0007)));
+    }
+
+    ReaderTransmitPar(d_block_enc, sizeof(d_block_enc), par, NULL);
+
+    // tearoff occurred
+    if (tearoff_hook() == PM3_ETEAROFF) {
+        return PM3_ETEAROFF;
+    } else {
+        // Receive the response
+        len = ReaderReceive(receivedAnswer, receivedAnswerPar);
+
+        uint8_t res = 0;
+        res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 0)) << 0;
+        res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 1)) << 1;
+        res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 2)) << 2;
+        res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 3)) << 3;
+
+        if ((len != 1) || (res != 0x0A)) {
+            return 2;
+        }
+    }
+    return 0;
+}
+
 
 
 int mifare_classic_value(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData, uint8_t action) {

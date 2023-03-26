@@ -253,7 +253,7 @@ void MifareReadConfigBlockGDM(uint8_t *key) {
         goto OUT;
     };
 
-    if (mifare_classic_readblock_ex(pcs, cuid, 0, outbuf, MIFARE_MAGIC_GDM_READBLOCK)) {
+    if (mifare_classic_readblock_ex(pcs, cuid, 0, outbuf, MIFARE_MAGIC_GDM_READ_CFG)) {
         retval = PM3_ESOFT;
         goto OUT;
     };
@@ -568,6 +568,73 @@ OUT:
     crypto1_deinit(pcs);
 
     reply_ng(CMD_HF_MIFARE_G4_GDM_WRBL, retval, NULL, 0);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+    set_tracing(false);
+    BigBuf_free();
+}
+
+void MifareWriteConfigBlockGDM(uint8_t *datain) {
+
+    int retval = PM3_SUCCESS;
+
+    // check args
+    if (datain == NULL) {
+        retval = PM3_EINVARG;
+        goto OUT;
+    }
+
+    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+    if (par == NULL) {
+        retval = PM3_EMALLOC;
+        goto OUT;
+    }
+
+    uint8_t *uid = BigBuf_malloc(10);
+    if (uid == NULL) {
+        retval = PM3_EMALLOC;
+        goto OUT;
+    }
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    clear_trace();
+    set_tracing(true);
+
+    // variables
+    uint32_t cuid = 0;
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs;
+    pcs = &mpcs;
+
+    if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == false) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    }
+
+    uint64_t key = 0;
+    if (mifare_classic_authex_2(pcs, cuid, 0, 0, key, AUTH_FIRST, NULL, NULL, true)) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    };
+
+    int res = mifare_classic_write_cfg_block_gdm(pcs, cuid, datain);
+    if (res == PM3_ETEAROFF) {
+        retval = PM3_ETEAROFF;
+        goto OUT;
+    } else if (res) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    }
+
+    if (mifare_classic_halt(pcs, cuid)) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    };
+
+OUT:
+    crypto1_deinit(pcs);
+
+    reply_ng(CMD_HF_MIFARE_G4_GDM_WRCFG, retval, NULL, 0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
@@ -2487,7 +2554,7 @@ void MifareCIdent(bool is_mfc) {
     uint8_t rats[4] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 };
     uint8_t rdblf0[4] = { ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
     uint8_t rdbl00[4] = { ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
-    uint8_t gen4gmd[4] = { MIFARE_MAGIC_GDM_AUTH_KEYA, 0x00, 0x6C, 0x92};
+    uint8_t gen4gmd[4] = { MIFARE_MAGIC_GDM_AUTH_KEY, 0x00, 0x6C, 0x92};
     uint8_t gen4GetConf[8] = { GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
