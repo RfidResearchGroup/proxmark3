@@ -535,9 +535,14 @@ The persistent memory is also writable. For that tag uses its own backdoor comma
 for example to write,  you must use a customer authentication byte, 0x80, to authenticate with an all zeros key, 0x0000000000.
 Then send the data to be written.
 
+This tag has simular commands to the [UFUID](#mifare-classic-directwrite-ufuid-version)
+It seems to be developed by the same person.
+
 ** OBS **
 When writing to persistent memory it is possible to write _bad_ ACL and perm-brick the tag. 
 
+** OBS **
+It is possible to write a configuration that perma locks the tag,  ie no more magic
 
 ### Identify
 ^[Top](#top)
@@ -552,7 +557,8 @@ hf 14a info
 
 * Auth: `80xx`+crc
 * Write: `A8xx`+crc,  `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
-* Read : `E000`+crc   (unidentified)
+* Read config: `E000`+crc  (unidentified)
+* Write config: `E100`+crc
 
 ### Characteristics
 ^[Top](#top)
@@ -560,6 +566,21 @@ hf 14a info
 * Have no knowledge in ATQA/SAK/BCC quirks or if there is a wipe, softbrick recover
 * Its magic part seem to be three identified custom command. 
 * Auth command 0x80, with the key 0x0000000000,  Write 0xA8 allows writing to persistent memory,  Read 0xE0  which seems to return a configuration. This is unknown today what these bytes are.
+
+Read config:
+1. sending custom auth with all zeros key
+2. send 0xE000,  will return the configuration bytes.
+`results: 850000000000000000005A5A00000008`
+
+Write config:
+1. sending custom auth with all zeros key
+2. send 0xE100
+3. send 16 bytes
+
+** Warning **
+Example of configuration to Perma lock tag:
+`85000000000000000000000000000008`
+
 
 It is unknown what kind of block 0 changes the tag supports
 * UID: 4b
