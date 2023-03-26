@@ -2487,7 +2487,6 @@ void MifareCIdent(bool is_mfc) {
     uint8_t gen4gmd[4] = {MIFARE_MAGIC_GDM_AUTH_KEYA, 0x00, 0x6C, 0x92};
     uint8_t gen4GetConf[8] = {GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
     uint8_t superGen1[9] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10, 0x14, 0x1D};
-    uint8_t superGen2[4] = {0x30, 0x00, 0x02, 0xA8};
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_malloc(10);
@@ -2559,7 +2558,7 @@ void MifareCIdent(bool is_mfc) {
                 iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
                 iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-                ReaderTransmit(superGen2, sizeof(superGen2), NULL);
+                ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
                 res = ReaderReceive(buf, par);
                 if (res == 18) {
                     isGen = MAGIC_SUPER_GEN2;
