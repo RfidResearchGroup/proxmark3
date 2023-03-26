@@ -1421,8 +1421,11 @@ int detect_mf_magic(bool is_mfc) {
         case MAGIC_GEN_UNFUSED:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));
             break;
-        case MAGIC_SUPER:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("super card"));
+        case MAGIC_SUPER_GEN1:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Super card (") _CYAN_("Gen 1") _GREEN_(")"));
+            break;
+        case MAGIC_SUPER_GEN2:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Super card (") _CYAN_("Gen 2") _GREEN_(")"));
             break;
         case MAGIC_NTAG21X:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("NTAG21x"));

@@ -677,12 +677,12 @@ CF <passwd> FE <4b new_password>                 // Change password
 ### Identify
 ^[Top](#top)
 
-Only Gen1 at the moment:
+Only Gen1/Gen2 at this moment (Gen1B is unsupported):
 
 ```
 hf 14a info
 ...
-[+] Magic capabilities : super card
+[+] Magic capabilities : Super card (Gen ?)
 ```
 
 # MIFARE Ultralight

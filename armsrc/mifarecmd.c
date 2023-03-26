@@ -2481,11 +2481,13 @@ void MifareCIdent(bool is_mfc) {
     uint8_t isGen = 0;
     uint8_t rec[1] = {0x00};
     uint8_t recpar[1] = {0x00};
-    uint8_t rats[4] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 };
-    uint8_t rdblf0[4] = { ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
-    uint8_t rdbl00[4] = { ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
-    uint8_t gen4gmd[4] = { MIFARE_MAGIC_GDM_AUTH_KEYA, 0x00, 0x6C, 0x92};
-    uint8_t gen4GetConf[8] = { GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
+    uint8_t rats[4] = {ISO14443A_CMD_RATS, 0x80, 0x31, 0x73};
+    uint8_t rdblf0[4] = {ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
+    uint8_t rdbl00[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
+    uint8_t gen4gmd[4] = {MIFARE_MAGIC_GDM_AUTH_KEYA, 0x00, 0x6C, 0x92};
+    uint8_t gen4GetConf[8] = {GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
+    uint8_t superGen1[9] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10, 0x14, 0x1D};
+    uint8_t superGen2[4] = {0x30, 0x00, 0x02, 0xA8};
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_malloc(10);
@@ -2518,8 +2520,7 @@ void MifareCIdent(bool is_mfc) {
 
     int res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
     if (res == 2) {
-
-        // Check for Magic Gen4 GTU with default password :
+        // Check for Magic Gen4 GTU with default password:
         // Get config should return 30 or 32 bytes
         AddCrc14A(gen4GetConf, sizeof(gen4GetConf) - 2);
         ReaderTransmit(gen4GetConf, sizeof(gen4GetConf), NULL);
@@ -2537,7 +2538,6 @@ void MifareCIdent(bool is_mfc) {
 
     res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
     if (res == 2) {
-
         if (cuid == 0xAA55C396) {
             isGen = MAGIC_GEN_UNFUSED;
             goto OUT;
@@ -2546,19 +2546,29 @@ void MifareCIdent(bool is_mfc) {
         ReaderTransmit(rats, sizeof(rats), NULL);
         res = ReaderReceive(buf, par);
         if (res) {
+            // test for super card
+            ReaderTransmit(superGen1, sizeof(superGen1), NULL);
+            res = ReaderReceive(buf, par);
+            if (res == 22) {
+                isGen = MAGIC_SUPER_GEN1;
 
-            // test for some MFC gen2
-            if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10\xF0\x05", 11) == 0) {
+                // check for super card gen2
+                // not available after RATS, reset card before executing
+                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                SpinDelay(40);
+                iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
-                // super card ident
-                uint8_t super[] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10, 0x14, 0x1D};
-                ReaderTransmit(super, sizeof(super), NULL);
+                iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+                ReaderTransmit(superGen2, sizeof(superGen2), NULL);
                 res = ReaderReceive(buf, par);
-                if (res == 22) {
-                    isGen = MAGIC_SUPER;
-                    goto OUT;
+                if (res == 18) {
+                    isGen = MAGIC_SUPER_GEN2;
                 }
 
+                goto OUT;
+            }
+            // test for some MFC gen2
+            if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10\xF0\x05", 11) == 0) {
                 isGen = MAGIC_GEN_2;
                 goto OUT;
             }
