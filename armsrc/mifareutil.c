@@ -139,7 +139,7 @@ int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo,
     return mifare_classic_authex(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL, NULL);
 }
 int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing) {
-    return mifare_classic_authex_2(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL, NULL, false);
+    return mifare_classic_authex_2(pcs, uid, blockNo, keyType, ui64Key, isNested, ntptr, timing, false);
 }
 int mifare_classic_authex_2(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing, bool is_gdm) {
 
