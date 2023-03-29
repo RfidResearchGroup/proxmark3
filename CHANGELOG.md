@@ -40,6 +40,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added XOR key extraction and flag to Guardall G-Prox II (@GuruSteve)
  - Changed verbiage on `hf iclass info` KeyAccess area to be congruent with AA1 and AA2 areas (@GuruSteve)
  - Added `hf legic info` command for other sources: `hf legic einfo`, `hf legic view` (@0xdeb)
+ - Added iClass credit key to default iClass key table and reorganized key order (@GuruSteve)
  
 
 ## [Nitride.4.16191][2023-01-29]
