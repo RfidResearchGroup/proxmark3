@@ -304,12 +304,12 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
         return PM3_EMALLOC;
     }
 
-    /* We should have a valid filename now, e.g. dumpdata-3.bin */
+    // We should have a valid filename now, e.g. dumpdata-3.bin
 
-    /*Opening file for writing in binary mode*/
+    // Opening file for writing in binary mode
     FILE *f = fopen(fileName, "wb");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
         free(fileName);
         return PM3_EFILE;
     }
@@ -336,12 +336,12 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
     int blocks = datalen / blocksize;
     uint16_t currblock = 1;
 
-    /* We should have a valid filename now, e.g. dumpdata-3.bin */
+    // We should have a valid filename now, e.g. dumpdata-3.bin
 
-    /*Opening file for writing in text mode*/
+    // Opening file for writing in text mode
     FILE *f = fopen(fileName, "w+");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
         retval = PM3_EFILE;
         goto out;
     }
@@ -770,7 +770,7 @@ int saveFileWAVE(const char *preferredName, const int *data, size_t datalen) {
 
     FILE *wave_file = fopen(fileName, "wb");
     if (!wave_file) {
-        PrintAndLogEx(WARNING, "file not found or locked. "_YELLOW_("'%s'"), fileName);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
         retval = PM3_EFILE;
         goto out;
     }
@@ -806,7 +806,7 @@ int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
 
     FILE *f = fopen(fileName, "w");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. "_YELLOW_("'%s'"), fileName);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
         retval = PM3_EFILE;
         goto out;
     }
@@ -939,7 +939,7 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
 
     FILE *f = fopen(path, "rb");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
     }
@@ -1050,7 +1050,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
 
     FILE *f = fopen(path, "r");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
     }
@@ -1427,6 +1427,7 @@ int loadFileJSONroot(const char *preferredName, void **proot, bool verbose) {
     return retval;
 }
 
+// iceman:  todo - move all unsafe functions like this from client source.
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint32_t *keycnt) {
     // t5577 == 4 bytes
     // mifare == 6 bytes
@@ -1463,7 +1464,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
 
     FILE *f = fopen(path, "r");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         retval = PM3_EFILE;
         goto out;
     }
@@ -1566,7 +1567,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
     FILE *f = fopen(path, "r");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         retval = PM3_EFILE;
         goto out;
     }
@@ -1617,6 +1618,57 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 out:
     free(path);
     return retval;
+}
+
+int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen) {
+
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, suffix, false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+    free(path);
+
+    // get filesize in order to malloc memory
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (fsize <= 0) {
+        PrintAndLogEx(FAILED, "error, when getting filesize");
+        fclose(f);
+        return PM3_EFILE;
+    }
+
+    // Half is KEY A,  half is KEY B
+    fsize /= 2;
+
+    *keya = calloc(fsize, sizeof(uint8_t));
+    if (*keya == NULL) {
+        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        fclose(f);
+        return PM3_EMALLOC;
+    }
+
+    *alen = fread(*keya, 1, fsize, f);
+
+    *keyb = calloc(fsize, sizeof(uint8_t));
+    if (*keyb == NULL) {
+        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        fclose(f);
+        return PM3_EMALLOC;
+    }
+
+    *blen = fread(*keyb, 1, fsize, f);
+    fclose(f);
+    return PM3_SUCCESS;
 }
 
 mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
@@ -2058,7 +2110,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
     }
 
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", fn);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fn);
         return PM3_EFILE;
     }
 
@@ -2068,7 +2120,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, size_t blocksize) {
 
     if (d == NULL || n == 0) {
-        PrintAndLogEx(INFO, "No data to save. Skipping...");
+        PrintAndLogEx(INFO, "No data to save, skipping...");
         return PM3_EINVARG;
     }
 
