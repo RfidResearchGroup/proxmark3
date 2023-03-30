@@ -39,8 +39,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added Mifare Classic EV1 signature write support to gen4 magic tag lua script (@augustozanellato)
  - Added XOR key extraction and flag to Guardall G-Prox II (@GuruSteve)
  - Changed verbiage on `hf iclass info` KeyAccess area to be congruent with AA1 and AA2 areas (@GuruSteve)
- - Added `hf legic info` command for other sources: `hf legic einfo`, `hf legic view` (@0xdeb)
- 
+ - Added `hf legic info` command for other sources (@0xdeb)
+ - Added `hf legic einfo` - views emulator menory (@0xdeb)
+ - Changed `hf legic view` - now also print the decoded info of the dump file (@0xdeb)
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)
