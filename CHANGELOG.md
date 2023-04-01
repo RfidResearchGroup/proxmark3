@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added iClass credit key to default iClass key table and reorganized key order (@GuruSteve)
  - Changed `hf mf value` - ability to use transfer on different block (@AloneLiberty)
  - Change `hf mf dump --ns` - dump command now supports `no save` of MFC card memory (@iceman1001)
  - Added `hf mf gdmsetcfg` - Supprt Gen4 GDM write configuration block (@iceman1001)
