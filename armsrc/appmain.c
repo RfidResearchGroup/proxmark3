@@ -1584,7 +1584,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_VALUE: {
-            MifareValue(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            MifareValue(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFAREU_WRITEBL: {
