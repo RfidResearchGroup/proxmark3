@@ -1528,13 +1528,16 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                 PrintAndLogEx(ERR, "Command execute timeout\n");
                 break;
             case PM3_EOPABORTED:
-                PrintAndLogEx(WARNING, "Button pressed. Aborted.\n");
+                PrintAndLogEx(WARNING, "Button pressed. Aborted\n");
                 break;
             case PM3_EFAILED:
                 PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n");
                 break;
             case PM3_ESOFT:
                 PrintAndLogEx(FAILED, "No valid key found");
+                break;
+            case PM3_ESTATIC_NONCE:
+                PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
                 break;
             case PM3_SUCCESS:
                 key64 = bytes_to_num(keyBlock, 6);
@@ -1560,7 +1563,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                 }
                 return PM3_SUCCESS;
             default :
-                PrintAndLogEx(ERR, "Unknown error.\n");
+                PrintAndLogEx(ERR, "Unknown error\n");
         }
         return PM3_SUCCESS;
 
@@ -1608,15 +1611,18 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                             PrintAndLogEx(ERR, "Command execute timeout\n");
                             break;
                         case PM3_EOPABORTED:
-                            PrintAndLogEx(WARNING, "button pressed. Aborted.\n");
+                            PrintAndLogEx(WARNING, "button pressed. Aborted\n");
                             break;
                         case PM3_EFAILED :
-                            PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n");
+                            PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable)\n");
                             break;
                         case PM3_ESOFT:
                             //key not found
                             calibrate = false;
                             continue;
+                        case PM3_ESTATIC_NONCE:
+                            PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
+                            break;
                         case PM3_SUCCESS:
                             calibrate = false;
                             e_sector[sectorNo].foundKey[trgKeyType] = 1;
@@ -1625,7 +1631,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                             mfCheckKeys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false);
                             continue;
                         default :
-                            PrintAndLogEx(ERR, "Unknown error.\n");
+                            PrintAndLogEx(ERR, "Unknown error\n");
                     }
                     free(e_sector);
                     return PM3_ESOFT;
@@ -2179,13 +2185,13 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     if (isOK) {
         switch (isOK) {
             case PM3_ETIMEOUT :
-                PrintAndLogEx(ERR, "Error: No response from Proxmark3.\n");
+                PrintAndLogEx(ERR, "Error: No response from Proxmark3\n");
                 break;
             case PM3_EOPABORTED:
-                PrintAndLogEx(WARNING, "Button pressed. Aborted.\n");
+                PrintAndLogEx(WARNING, "Button pressed. Aborted\n");
                 break;
             case PM3_ESTATIC_NONCE:
-                PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted.\n");
+                PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
                 break;
             default :
                 break;
@@ -2841,6 +2847,11 @@ tryNested:
                                 }
                                 break;
                             }
+                            case PM3_ESTATIC_NONCE:
+                                PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
+                                free(e_sector);
+                                free(fptr);
+                                return isOK;
                             case PM3_SUCCESS: {
                                 calibrate = false;
                                 e_sector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmp_key, 6);
@@ -2878,7 +2889,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                     break;
                                 }
                                 case PM3_ESTATIC_NONCE: {
-                                    PrintAndLogEx(ERR, "\nError: Static encrypted nonce detected. Aborted.\n");
+                                    PrintAndLogEx(ERR, "\nError: Static encrypted nonce detected. Aborted\n");
                                     break;
                                 }
                                 default: {
