@@ -54,6 +54,8 @@ Then you are missing Rosetta 2 and need to install it: `/usr/sbin/softwareupdate
 Homebrew has changed their prefix to differentiate between native Apple Silicon and Intel compiled binaries.  The Makefile attempts to account for this but please note that 
 whichever terminal or application you're using must be running under Architecture "Apple" as seen by Activity Monitor as all child processes inherit the Rosetta 2 environment of their parent.  You can check which architecture you're currently running under with a `uname -m` in your terminal.
 
+The fastest option is to run the brew command with the `arch -arm64` prefix i.e. `arch -arm64 brew install --HEAD --with-blueshark proxmark3`. This doesn't require running the whole terminal in Rosetta 2.
+
 Visual Studio Code still runs under Rosetta 2 and if you're developing for proxmark3 on an Apple Silicon Mac you might want to consider running the Insiders build which has support for running natively on Apple Silicon.
 
 ## Install Proxmark3 tools

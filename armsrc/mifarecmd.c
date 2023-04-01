@@ -1154,7 +1154,12 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
         }
         memcpy(prev_enc_nt, receivedAnswer, 4);
         if (prev_counter == 5) {
-            if (g_dbglevel >= DBG_EXTENDED) DbpString("Static encrypted nonce detected, exiting...");
+            if (g_dbglevel >= DBG_EXTENDED) {
+                DbpString("Static encrypted nonce detected, exiting...");
+                uint32_t a = bytes_to_num(prev_enc_nt, 4);
+                uint32_t b = bytes_to_num(receivedAnswer, 4);
+                Dbprintf("( %08x vs %08x )", a, b);
+            }
             isOK = PM3_ESTATIC_NONCE;
             break;
         }
@@ -1224,6 +1229,9 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
         LED_B_ON();
         WDT_HIT();
 
+        uint32_t prev_enc_nt = 0;
+        uint8_t prev_counter = 0;
+
         uint16_t unsuccessful_tries = 0;
         uint16_t davg = 0;
         dmax = 0;
@@ -1266,11 +1274,13 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
             };
 
             // cards with fixed nonce
+            /*
             if (nt1 == nt2) {
                 Dbprintf("Nested: %08x vs %08x", nt1, nt2);
                 break;
             }
-
+            */
+         
             uint32_t nttmp = prng_successor(nt1, 100); //NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
             for (i = 101; i < 1200; i++) {
                 nttmp = prng_successor(nttmp, 1);
@@ -1291,6 +1301,21 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
                 if (unsuccessful_tries > NESTED_MAX_TRIES) { // card isn't vulnerable to nested attack (random numbers are not predictable)
                     isOK = PM3_EFAILED;
                 }
+            }
+
+
+            if (nt1 == nt2) {
+                prev_counter++;
+            }
+            prev_enc_nt = nt2;
+
+            if (prev_counter == 5) {
+                if (g_dbglevel >= DBG_EXTENDED) {
+                    DbpString("Static encrypted nonce detected, exiting...");
+                    Dbprintf("( %08x vs %08x )", prev_enc_nt, nt2);
+                }
+                isOK = PM3_ESTATIC_NONCE;
+                break;
             }
         }
 

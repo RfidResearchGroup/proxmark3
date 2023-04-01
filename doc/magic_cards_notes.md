@@ -575,6 +575,13 @@ Read config:
 2. send 0xE000,  will return the configuration bytes.
 `results: 850000000000000000005A5A00000008`
 
+
+Mapping of configuration bytes so far:
+```
+850000000000000000005A5A00000008
+                              ^^  --> SAK
+```
+
 Write config:
 1. sending custom auth with all zeros key
 2. send 0xE100
