@@ -642,21 +642,28 @@ OUT:
 }
 
 
-void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
+void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
     // params
     uint8_t blockNo = arg0;
     uint8_t keyType = arg1;
+    uint8_t transferKeyType = arg2;
     uint64_t ui64Key = 0;
+    uint64_t transferUi64Key = 0;
     uint8_t blockdata[16] = {0x00};
 
     ui64Key = bytes_to_num(datain, 6);
-    memcpy(blockdata, datain + 10, 16);
+    memcpy(blockdata, datain + 11, 16);
+    transferUi64Key = bytes_to_num(datain + 27, 6);
 
     // variables
     uint8_t action = datain[9];
+    uint8_t transferBlk = datain[10];
+    bool needAuth = datain[33];
     uint8_t isOK = 0;
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
+    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+    uint8_t len = 0;
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
@@ -685,6 +692,21 @@ void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
             break;
         };
+
+        if (needAuth) {
+            // transfer to other sector
+            if (mifare_classic_auth(pcs, cuid, transferBlk, transferKeyType, transferUi64Key, AUTH_NESTED)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("Nested auth error");
+                break;
+            }
+        }
+
+        // send transfer (commit the change)
+        len = mifare_sendcmd_short(pcs, 1, MIFARE_CMD_TRANSFER, (transferBlk != 0) ? transferBlk : blockNo, receivedAnswer, NULL, NULL);
+        if (len != 1 && receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error in transfer: %02x", receivedAnswer[0]);
+            break;
+        }
 
         if (mifare_classic_halt(pcs, cuid)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Halt error");
