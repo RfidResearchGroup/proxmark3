@@ -642,21 +642,28 @@ OUT:
 }
 
 
-void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
+void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
     // params
     uint8_t blockNo = arg0;
     uint8_t keyType = arg1;
+    uint8_t transferKeyType = arg2;
     uint64_t ui64Key = 0;
+    uint64_t transferUi64Key = 0;
     uint8_t blockdata[16] = {0x00};
 
     ui64Key = bytes_to_num(datain, 6);
-    memcpy(blockdata, datain + 10, 16);
+    memcpy(blockdata, datain + 11, 16);
+    transferUi64Key = bytes_to_num(datain + 27, 6);
 
     // variables
     uint8_t action = datain[9];
+    uint8_t transferBlk = datain[10];
+    bool needAuth = datain[33];
     uint8_t isOK = 0;
     uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
+    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+    uint8_t len = 0;
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
@@ -685,6 +692,21 @@ void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
             break;
         };
+
+        if (needAuth) {
+            // transfer to other sector
+            if (mifare_classic_auth(pcs, cuid, transferBlk, transferKeyType, transferUi64Key, AUTH_NESTED)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("Nested auth error");
+                break;
+            }
+        }
+
+        // send transfer (commit the change)
+        len = mifare_sendcmd_short(pcs, 1, MIFARE_CMD_TRANSFER, (transferBlk != 0) ? transferBlk : blockNo, receivedAnswer, NULL, NULL);
+        if (len != 1 && receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error in transfer: %02x", receivedAnswer[0]);
+            break;
+        }
 
         if (mifare_classic_halt(pcs, cuid)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Halt error");
@@ -1154,7 +1176,12 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
         }
         memcpy(prev_enc_nt, receivedAnswer, 4);
         if (prev_counter == 5) {
-            if (g_dbglevel >= DBG_EXTENDED) DbpString("Static encrypted nonce detected, exiting...");
+            if (g_dbglevel >= DBG_EXTENDED) {
+                DbpString("Static encrypted nonce detected, exiting...");
+                uint32_t a = bytes_to_num(prev_enc_nt, 4);
+                uint32_t b = bytes_to_num(receivedAnswer, 4);
+                Dbprintf("( %08x vs %08x )", a, b);
+            }
             isOK = PM3_ESTATIC_NONCE;
             break;
         }
@@ -1224,6 +1251,9 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
         LED_B_ON();
         WDT_HIT();
 
+        uint32_t prev_enc_nt = 0;
+        uint8_t prev_counter = 0;
+
         uint16_t unsuccessful_tries = 0;
         uint16_t davg = 0;
         dmax = 0;
@@ -1266,11 +1296,13 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
             };
 
             // cards with fixed nonce
+            /*
             if (nt1 == nt2) {
                 Dbprintf("Nested: %08x vs %08x", nt1, nt2);
                 break;
             }
-
+            */
+         
             uint32_t nttmp = prng_successor(nt1, 100); //NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
             for (i = 101; i < 1200; i++) {
                 nttmp = prng_successor(nttmp, 1);
@@ -1291,6 +1323,21 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
                 if (unsuccessful_tries > NESTED_MAX_TRIES) { // card isn't vulnerable to nested attack (random numbers are not predictable)
                     isOK = PM3_EFAILED;
                 }
+            }
+
+
+            if (nt1 == nt2) {
+                prev_counter++;
+            }
+            prev_enc_nt = nt2;
+
+            if (prev_counter == 5) {
+                if (g_dbglevel >= DBG_EXTENDED) {
+                    DbpString("Static encrypted nonce detected, exiting...");
+                    Dbprintf("( %08x vs %08x )", prev_enc_nt, nt2);
+                }
+                isOK = PM3_ESTATIC_NONCE;
+                break;
             }
         }
 

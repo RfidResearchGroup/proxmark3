@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added iClass credit key to default iClass key table and reorganized key order (@GuruSteve)
+ - Changed `hf mf value` - ability to use transfer on different block (@AloneLiberty)
+ - Change `hf mf dump --ns` - dump command now supports `no save` of MFC card memory (@iceman1001)
  - Added `hf mf gdmsetcfg` - Supprt Gen4 GDM write configuration block (@iceman1001)
  - Added `hf mf gdmcfg` - Support Gen4 GDM read configuration block (@iceman1001)
  - Changed magic note to include a section about GDM tags (@iceman1001)
@@ -39,9 +42,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added Mifare Classic EV1 signature write support to gen4 magic tag lua script (@augustozanellato)
  - Added XOR key extraction and flag to Guardall G-Prox II (@GuruSteve)
  - Changed verbiage on `hf iclass info` KeyAccess area to be congruent with AA1 and AA2 areas (@GuruSteve)
- - Added `hf legic info` command for other sources: `hf legic einfo`, `hf legic view` (@0xdeb)
- - Added iClass credit key to default iClass key table and reorganized key order (@GuruSteve)
- 
+ - Added `hf legic info` command for other sources (@0xdeb)
+ - Added `hf legic einfo` - views emulator menory (@0xdeb)
+ - Changed `hf legic view` - now also print the decoded info of the dump file (@0xdeb)
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)
