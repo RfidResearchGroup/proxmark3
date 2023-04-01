@@ -1229,7 +1229,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
         LED_B_ON();
         WDT_HIT();
 
-        uint8_t prev_enc_nt[] = {0, 0, 0, 0};
+        uint32_t prev_enc_nt = 0;
         uint8_t prev_counter = 0;
 
         uint16_t unsuccessful_tries = 0;
@@ -1303,20 +1303,16 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
                 }
             }
 
-            if (prev_enc_nt[0] == receivedAnswer[0] &&
-                    prev_enc_nt[1] == receivedAnswer[1] &&
-                    prev_enc_nt[2] == receivedAnswer[2] &&
-                    prev_enc_nt[3] == receivedAnswer[3]
-                ) {
+
+            if (nt1 == nt2) {
                 prev_counter++;
             }
-            memcpy(prev_enc_nt, receivedAnswer, 4);
+            prev_enc_nt = nt2;
+
             if (prev_counter == 5) {
                 if (g_dbglevel >= DBG_EXTENDED) {
                     DbpString("Static encrypted nonce detected, exiting...");
-                    uint32_t a = bytes_to_num(prev_enc_nt, 4);
-                    uint32_t b = bytes_to_num(receivedAnswer, 4);
-                    Dbprintf("( %08x vs %08x )", a, b);
+                    Dbprintf("( %08x vs %08x )", prev_enc_nt, nt2);
                 }
                 isOK = PM3_ESTATIC_NONCE;
                 break;
