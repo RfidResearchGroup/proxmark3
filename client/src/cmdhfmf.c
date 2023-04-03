@@ -7899,24 +7899,30 @@ static int CmdHF14AMfValue(const char *Cmd) {
                   "hf mf value --blk 16 -k FFFFFFFFFFFF --inc 10\n"
                   "hf mf value --blk 16 -k FFFFFFFFFFFF -b --dec 10\n"
                   "hf mf value --blk 16 -k FFFFFFFFFFFF -b --get\n"
+                  "hf mf value --blk 16 -k FFFFFFFFFFFF --res --transfer 30 --tk FFFFFFFFFFFF --> transfer block 16 value to block 30 (even if block can't be incremented by ACL)\n"
                   "hf mf value --get -d 87D612007829EDFF87D6120011EE11EE\n"
-                 );
+    );
     void *argtable[] = {
-        arg_param_begin,
-        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
-        arg_lit0("a", NULL, "input key type is key A (def)"),
-        arg_lit0("b", NULL, "input key type is key B"),
-        arg_u64_0(NULL, "inc", "<dec>", "Incremenet value by X (0 - 2147483647)"),
-        arg_u64_0(NULL, "dec", "<dec>", "Dcrement value by X (0 - 2147483647)"),
-        arg_u64_0(NULL, "set", "<dec>", "Set value to X (-2147483647 - 2147483647)"),
-        arg_lit0(NULL, "get", "Get value from block"),
-        arg_int0(NULL, "blk", "<dec>", "block number"),
-        arg_str0("d", "data", "<hex>", "block data to extract values from (16 hex bytes)"),
-        arg_param_end
+            arg_param_begin,
+            arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+            arg_lit0("a", NULL, "input key type is key A (def)"),
+            arg_lit0("b", NULL, "input key type is key B"),
+            arg_u64_0(NULL, "inc", "<dec>", "Increment value by X (0 - 2147483647)"),
+            arg_u64_0(NULL, "dec", "<dec>", "Decrement value by X (0 - 2147483647)"),
+            arg_u64_0(NULL, "set", "<dec>", "Set value to X (-2147483647 - 2147483647)"),
+            arg_u64_0(NULL, "transfer", "<dec>", "Transfer value to other block (after inc/dec/restore)"),
+            arg_str0(NULL, "tkey", "<hex>", "transfer key, 6 hex bytes (if transfer is preformed to other sector)"),
+            arg_lit0(NULL, "ta", "transfer key type is key A (def)"),
+            arg_lit0(NULL, "tb", "transfer key type is key B"),
+            arg_lit0(NULL, "get", "Get value from block"),
+            arg_lit0(NULL, "res", "Restore (copy value to card buffer, should be used with --transfer)"),
+            arg_int0(NULL, "blk", "<dec>", "block number"),
+            arg_str0("d", "data", "<hex>", "block data to extract values from (16 hex bytes)"),
+            arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t blockno = (uint8_t)arg_get_int_def(ctx, 8, 1);
+    uint8_t blockno = (uint8_t)arg_get_int_def(ctx, 13, 1);
 
     uint8_t keytype = MF_KEY_A;
     if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
@@ -7927,29 +7933,44 @@ static int CmdHF14AMfValue(const char *Cmd) {
         keytype = MF_KEY_B;;
     }
 
+    uint8_t transferkeytype = MF_KEY_A;
+    if (arg_get_lit(ctx, 9) && arg_get_lit(ctx, 10)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 10)) {
+        keytype = MF_KEY_B;;
+    }
+
     int keylen = 0;
     uint8_t key[6] = {0};
     CLIGetHexWithReturn(ctx, 1, key, &keylen);
 
+    int transferkeylen = 0;
+    uint8_t transferkey[6] = {0};
+    CLIGetHexWithReturn(ctx, 8, transferkey, &transferkeylen);
+
     /*
         Value    /Value   Value    BLK /BLK BLK /BLK
         00000000 FFFFFFFF 00000000 10  EF   10  EF
-        BLK is used to referece where the backup come from, I suspect its just the current block for the actual value ?
+        BLK is used to reference where the backup come from, I suspect it's just the current block for the actual value ?
         increment and decrement are an unsigned value
         set value is a signed value
 
-        We are getting signed and/or bigger values to allow a defult to be set meaning users did not supply that option.
+        We are getting signed and/or bigger values to allow a default to be set meaning users did not supply that option.
     */
     int64_t incval = (int64_t)arg_get_u64_def(ctx, 4, -1); // Inc by -1 is invalid, so not set.
-    int64_t decval = (int64_t)arg_get_u64_def(ctx, 5, -1); // Inc by -1 is invalid, so not set.
+    int64_t decval = (int64_t)arg_get_u64_def(ctx, 5, -1); // Dec by -1 is invalid, so not set.
     int64_t setval = (int64_t)arg_get_u64_def(ctx, 6, 0x7FFFFFFFFFFFFFFF);  // out of bounds (for int32) so not set
-    bool getval = arg_get_lit(ctx, 7);
+    int64_t trnval = (int64_t)arg_get_u64_def(ctx, 7, -1);  // block to transfer to
+    bool getval = arg_get_lit(ctx, 11);
+    bool resval = arg_get_lit(ctx, 12);
     int dlen = 0;
     uint8_t data[16] = {0};
-    CLIGetHexWithReturn(ctx, 9, data, &dlen);
+    CLIGetHexWithReturn(ctx, 14, data, &dlen);
     CLIParserFree(ctx);
 
-    uint8_t action = 3; // 0 Increment, 1 - Decrement, 2 - Set, 3 - Get, 4 - Decode from data
+    uint8_t action = 4; // 0 Increment, 1 - Decrement, 2 - Restore, 3 - Set, 4 - Get, 5 - Decode from data
     uint32_t value = 0;
 
     // Need to check we only have 1 of inc/dec/set and get the value from the selected option
@@ -7977,7 +7998,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
 
     if (setval != 0x7FFFFFFFFFFFFFFF) {
         optionsprovided++;
-        action = 2;
+        action = 3;
         if ((setval < -2147483647) || (setval > 2147483647)) {
             PrintAndLogEx(WARNING, "set value must be between -2147483647 and 2147483647. Got %lli", setval);
             return PM3_EINVARG;
@@ -7985,9 +8006,19 @@ static int CmdHF14AMfValue(const char *Cmd) {
             value = (uint32_t)setval;
     }
 
+    if (resval) {
+        if (trnval == -1) {
+            PrintAndLogEx(WARNING, "You can't use restore without using transfer");
+            return PM3_EINVARG;
+        }
+
+        optionsprovided++;
+        action = 2;
+    }
+
     if (dlen != 0)  {
         optionsprovided++;
-        action = 4;
+        action = 5;
         if (dlen != 16) {
             PrintAndLogEx(WARNING, "date length must be 16 hex bytes long, got %d", dlen);
             return PM3_EINVARG;
@@ -7999,34 +8030,52 @@ static int CmdHF14AMfValue(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    // dont want to write value data and break something
-    if ((blockno == 0) || (mfIsSectorTrailer(blockno))) {
-        PrintAndLogEx(WARNING, "invlaid block number, should be a data block ");
+    if (trnval != -1 && action > 2) {
+        PrintAndLogEx(WARNING, "You can't use transfer without using --inc, --dec or --res");
         return PM3_EINVARG;
     }
 
-    if (action < 3) {
+    if (trnval != -1 && transferkeylen == 0 && mfSectorNum(trnval) != mfSectorNum(blockno)) {
+        PrintAndLogEx(WARNING, "Transfer is preformed to other sector, but no key for new sector provided");
+        return PM3_EINVARG;
+    }
 
+    // don't want to write value data and break something
+    if ((blockno == 0) || (mfIsSectorTrailer(blockno)) || (trnval == 0) || (trnval != -1 && mfIsSectorTrailer(trnval))) {
+        PrintAndLogEx(WARNING, "invalid block number, should be a data block");
+        return PM3_EINVARG;
+    }
+
+    if (action < 4) {
+        uint8_t isok = true;
         if (g_session.pm3_present == false)
             return PM3_ENOTTY;
-
-        if (action <= 1) { // increment/decrement value
+        // 0 Increment, 1 - Decrement, 2 - Restore, 3 - Set, 4 - Get, 5 - Decode from data
+        if (action <= 2) { // increment/decrement/restore value
             uint8_t block[MFBLOCK_SIZE] = {0x00};
             memcpy(block, (uint8_t *)&value, 4);
-            uint8_t cmddata[26];
+            uint8_t cmddata[34];
             memcpy(cmddata, key, sizeof(key));  // Key == 6 data went to 10, so lets offset 9 for inc/dec
             if (action == 0)
-                PrintAndLogEx(INFO, "value increment by : %d", value);
-            else
-                PrintAndLogEx(INFO, "value decrement by : %d", value);
+                PrintAndLogEx(INFO, "Value incremented by : %d", value);
+            if (action == 1)
+                PrintAndLogEx(INFO, "Value decremented by : %d", value);
 
-            PrintAndLogEx(INFO, "Writing block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
-
-            cmddata[9] = action; // 00 if increment, 01 if decrement.
-            memcpy(cmddata + 10, block, sizeof(block));
+            cmddata[9] = action; // 00 if increment, 01 if decrement, 02 if restore
+            if (trnval != -1) {
+                cmddata[10] = trnval; // transfer to block
+                memcpy(cmddata + 27, transferkey, sizeof(transferkey));
+                if (mfSectorNum(trnval) != mfSectorNum(blockno))
+                    cmddata[33] = 1; // should send nested auth
+                PrintAndLogEx(INFO, "Transfer block no %d to block %d", blockno, trnval);
+            } else {
+                cmddata[10] = 0;
+                PrintAndLogEx(INFO, "Writing block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
+            }
+            memcpy(cmddata + 11, block, sizeof(block));
 
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFARE_VALUE, blockno, keytype, 0, cmddata, sizeof(cmddata));
+            SendCommandMIX(CMD_HF_MIFARE_VALUE, blockno, keytype, transferkeytype, cmddata, sizeof(cmddata));
 
             PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
@@ -8034,14 +8083,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
                 return PM3_ETIMEOUT;
             }
 
-            if (resp.oldarg[0] & 0xFF) {
-                // all ok so set flag to read current value
-                getval = true;
-                PrintAndLogEx(SUCCESS, "Update ( " _GREEN_("success") " )");
-            } else {
-                PrintAndLogEx(FAILED, "Update ( " _RED_("failed") " )");
-            }
-
+            isok = resp.oldarg[0] & 0xff;
         } else { // set value
             // To set a value block (or setup) we can use the normal mifare classic write block
             // So build the command options can call CMD_HF_MIFARE_WRITEBL
@@ -8066,17 +8108,15 @@ static int CmdHF14AMfValue(const char *Cmd) {
                 PrintAndLogEx(FAILED, "Command execute timeout");
                 return PM3_ETIMEOUT;
             }
-            int status  = resp.oldarg[0];
-            if (status) {
-                // all ok so set flag to read current value
-                getval = true;
-                PrintAndLogEx(SUCCESS, "Update ( " _GREEN_("success") " )");
-            } else if (status == PM3_ETEAROFF) {
-                // all ok so set flag to read current value
-                getval = true;
-            } else {
-                PrintAndLogEx(FAILED, "Update ( " _RED_("failed") " )");
-            }
+
+            isok = resp.oldarg[0] & 0xff;
+        }
+
+        if (isok) {
+            PrintAndLogEx(SUCCESS, "Update ... : " _GREEN_("success"));
+            getval = true; // all ok so set flag to read current value
+        } else {
+            PrintAndLogEx(FAILED, "Update ... : " _RED_("failed"));
         }
     }
 
@@ -8085,10 +8125,17 @@ static int CmdHF14AMfValue(const char *Cmd) {
         int32_t readvalue;
         int res = -1;
 
-        if (action == 4) {
-            res = PM3_SUCCESS; // alread have data from command line
+        if (action == 5) {
+            res = PM3_SUCCESS; // already have data from command line
         } else {
-            res = mfReadBlock(blockno, keytype, key, data);
+            if (trnval == -1) {
+                res = mfReadBlock(blockno, keytype, key, data);
+            } else {
+                if (mfSectorNum(trnval) != mfSectorNum(blockno))
+                    res = mfReadBlock(trnval, transferkeytype, transferkey, data);
+                else
+                    res = mfReadBlock(trnval, keytype, key, data);
+            }
         }
 
         if (res == PM3_SUCCESS) {

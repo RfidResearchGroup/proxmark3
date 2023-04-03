@@ -4,6 +4,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Changed `hf mf supercard` - Support editing UID and recovery of keys from second generation card (@AloneLiberty)
+ - Added iClass credit key to default iClass key table and reorganized key order (@GuruSteve)
+ - Changed `hf mf value` - ability to use transfer on different block (@AloneLiberty)
  - Change `hf mf dump --ns` - dump command now supports `no save` of MFC card memory (@iceman1001)
  - Added `hf mf gdmsetcfg` - Supprt Gen4 GDM write configuration block (@iceman1001)
  - Added `hf mf gdmcfg` - Support Gen4 GDM read configuration block (@iceman1001)

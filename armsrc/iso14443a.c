@@ -1053,6 +1053,30 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
             // some first pages of UL/NTAG dump is special data
             mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
             *pages = MAX(mfu_header->pages, 15);
+
+            // counters and tearing flags
+            // for old dumps with all zero headers, we need to set default values.
+            for (uint8_t i = 0; i < 3; i++) {
+
+                counters[i] = le24toh(mfu_header->counter_tearing[i]);
+
+                if (mfu_header->counter_tearing[i][3] != 0x00) {
+                    tearings[i] = mfu_header->counter_tearing[i][3];
+                }
+            }
+
+            // GET_VERSION
+            if (memcmp(mfu_header->version, "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0) {
+                memcpy(rVERSION, "\x00\x04\x04\x02\x01\x00\x11\x03", 8);
+            } else {
+                memcpy(rVERSION, mfu_header->version, 8);
+            }
+            AddCrc14A(rVERSION, sizeof(rVERSION) - 2);
+
+            // READ_SIG
+            memcpy(rSIGN, mfu_header->signature, 32);
+            AddCrc14A(rSIGN, sizeof(rSIGN) - 2);
+
         }
         break;
         case 3: { // MIFARE DESFire
@@ -2577,7 +2601,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             uint8_t fudan_read[] = { 0x30, 0x01, 0x8B, 0xB9};
             ReaderTransmit(fudan_read, sizeof(fudan_read), NULL);
             if (!ReaderReceive(resp, resp_par)) {
-                Dbprintf("Card didn't answer to select all");
+                if (g_dbglevel >= DBG_INFO) Dbprintf("Card didn't answer to select all");
                 return 0;
             }
 
@@ -2626,7 +2650,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             // SELECT_ALL
             ReaderTransmit(sel_all, sizeof(sel_all), NULL);
             if (!ReaderReceive(resp, resp_par)) {
-                Dbprintf("Card didn't answer to CL%i select all", cascade_level + 1);
+                if (g_dbglevel >= DBG_INFO) Dbprintf("Card didn't answer to CL%i select all", cascade_level + 1);
                 return 0;
             }
 
@@ -2704,7 +2728,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
 
         // Receive the SAK
         if (!ReaderReceive(resp, resp_par)) {
-            Dbprintf("Card didn't answer to select");
+            if (g_dbglevel >= DBG_INFO) Dbprintf("Card didn't answer to select");
             return 0;
         }
         sak = resp[0];
