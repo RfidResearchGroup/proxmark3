@@ -6627,30 +6627,33 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     bool reset_card = arg_get_lit(ctx, 1);
     uint8_t uid[4];
     int uidlen = 0;
-    CLIParamHexToBuf(arg_get_str(ctx, 2), uid, sizeof(uid), &uidlen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), uid, sizeof(uid), &uidlen);
     CLIParserFree(ctx);
 
-    if (uidlen && uidlen != 4) {
+    if (res || (!res && uidlen && uidlen != sizeof(uid))) {
         PrintAndLogEx(ERR, "UID must include 8 HEX symbols");
         return PM3_EINVARG;
     }
 
-    uint32_t trace = 0;
-    uint8_t traces[7][16];
-    for (trace = 0; trace < 7; trace++) {
+    #define SUPER_MAX_TRACES    7
+
+    uint8_t trace = 0;
+    uint8_t traces[SUPER_MAX_TRACES][16];
+
+    // read 7 traces from super card
+    for (trace = 0; trace < SUPER_MAX_TRACES; trace++) {
+
         uint8_t data[] = {0x30, 0x00 + trace};
         uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
-
         clearCommandBuffer();
-        SendCommandOLD(CMD_HF_ISO14443A_READER, flags, sizeof(data), 0, data, sizeof(data));
-
-        if (!WaitForResponseTimeout(CMD_ACK, NULL, 1500)) {
-            break; // Select card
+        SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(data), 0, data, sizeof(data));
+        if (WaitForResponseTimeout(CMD_ACK, NULL, 1500) == false) {
+            break;
         }
 
         PacketResponseNG resp;
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            break; // Data not received
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+            break;
         }
 
         uint16_t len = resp.oldarg[0] & 0xFFFF;
@@ -6661,13 +6664,17 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         memcpy(&traces[trace], resp.data.asBytes, len - 2);
     }
 
-    if (trace == 7) {
+    // Super card generation 2
+    if (trace == SUPER_MAX_TRACES) {
+
+        // no reset on super card generation 2.
         if (uidlen || reset_card) {
             PrintAndLogEx(FAILED, "Not supported on this card");
             return PM3_SUCCESS;
         }
 
-        for (trace = 0; trace < 7; trace++) {
+        // recover key from collected traces
+        for (trace = 0; trace < SUPER_MAX_TRACES; trace++) {
             uint8_t *trace_data = traces[trace];
             nonces_t data;
 
@@ -6692,24 +6699,26 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
                     data.state = FIRST;
 
                     uint64_t key64 = -1;
-                    int res = mfkey32_moebius(&data, &key64);
-
-                    if (res) {
+                    if (mfkey32_moebius(&data, &key64)) {
                         PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ "_GREEN_("%012" PRIX64) " ]", sprint_hex_inrow(trace_data, 4), data.sector, (data.keytype == 0x60) ? 'A' : 'B', key64);
                         break;
                     }
                 }
             }
         }
+
     } else {
+
+        // Super card generation 1
+
         // Commands:
         // a0 - set UID
         // b0 - read traces
         // c0 - clear card
-
         bool activate_field = true;
         bool keep_field_on = true;
-        int res = 0;
+
+        // change UID on a super card generation 1
         if (uidlen) {
             keep_field_on = false;
             uint8_t response[6];
@@ -6730,6 +6739,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
             return PM3_SUCCESS;
         }
 
+        // reset a super card generation 1
         if (reset_card) {
             keep_field_on = false;
             uint8_t response[6];
@@ -6756,8 +6766,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
         // --------------- First ----------------
         uint8_t aFIRST[] = {0x00, 0xa6, 0xb0, 0x00, 0x10};
-        res = ExchangeAPDU14a(aFIRST, sizeof(aFIRST), activate_field, keep_field_on, responseA, sizeof(responseA),
-                              &respAlen);
+        res = ExchangeAPDU14a(aFIRST, sizeof(aFIRST), activate_field, keep_field_on, responseA, sizeof(responseA), &respAlen);
         if (res != PM3_SUCCESS) {
             DropField();
             return res;
@@ -6768,8 +6777,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         keep_field_on = false;
 
         uint8_t aSECOND[] = {0x00, 0xa6, 0xb0, 0x01, 0x10};
-        res = ExchangeAPDU14a(aSECOND, sizeof(aSECOND), activate_field, keep_field_on, responseB, sizeof(responseB),
-                              &respBlen);
+        res = ExchangeAPDU14a(aSECOND, sizeof(aSECOND), activate_field, keep_field_on, responseB, sizeof(responseB), &respBlen);
         if (res != PM3_SUCCESS) {
             DropField();
             return res;
@@ -6829,9 +6837,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         PrintAndLogEx(DEBUG, "B AR  %08x", data.ar2);
 
         uint64_t key64 = -1;
-        res = mfkey32_moebius(&data, &key64);
-
-        if (res) {
+        if (mfkey32_moebius(&data, &key64)) {
             PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ " _GREEN_("%012" PRIX64) " ]", sprint_hex_inrow(outA, 4), data.sector, (data.keytype == 0x60) ? 'A' : 'B', key64);
         } else {
             PrintAndLogEx(FAILED, "failed to recover any key");
