@@ -126,6 +126,7 @@ Check column "offline" for their availability.
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`
 |`data hex2bin           `|Y       |`Converts hexadecimal to binary`
 |`data load              `|Y       |`Load contents of file into graph window`
+|`data num               `|Y       |`Converts dec/hex/bin`
 |`data print             `|Y       |`Print the data in the DemodBuffer`
 |`data samples           `|N       |`Get raw samples for graph window (GraphBuffer)`
 |`data save              `|Y       |`Save signal trace data  (from graph window)`
@@ -444,8 +445,9 @@ Check column "offline" for their availability.
 |`hf legic eload         `|N       |`Load binary dump to emulator memory`
 |`hf legic esave         `|N       |`Save emulator memory to binary file`
 |`hf legic eview         `|N       |`View emulator memory`
+|`hf legic einfo         `|N       |`Display deobfuscated and decoded emulator memory`
 |`hf legic crc           `|Y       |`Calculate Legic CRC over given bytes`
-|`hf legic view          `|Y       |`Display content from tag dump file`
+|`hf legic view          `|Y       |`Display deobfuscated and decoded content from tag dump file`
 
 
 ### hf lto
@@ -521,6 +523,8 @@ Check column "offline" for their availability.
 |`hf mf gsave            `|N       |`Save dump from card into file or emulator`
 |`hf mf gsetblk          `|N       |`Write block to card`
 |`hf mf gview            `|N       |`View card`
+|`hf mf gdmconfig        `|N       |`Read config block from card`
+|`hf mf gdmsetblk        `|N       |`Write block to card`
 |`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
 |`hf mf ndefread         `|N       |`Read and print NDEF records from card`
 |`hf mf ndefwrite        `|N       |`Write NDEF records to card`
@@ -564,6 +568,7 @@ Check column "offline" for their availability.
 |`hf mfu restore         `|N       |`Restore a dump onto a MFU MAGIC tag`
 |`hf mfu view            `|Y       |`Display content from tag dump file`
 |`hf mfu wrbl            `|N       |`Write block`
+|`hf mfu tamper          `|N       |`Cofigure the tamper feature on an NTAG 213TT`
 |`hf mfu eload           `|N       |`Load Ultralight dump file into emulator memory`
 |`hf mfu esave           `|N       |`Save Ultralight dump file from emulator memory`
 |`hf mfu eview           `|N       |`View emulator memory`
@@ -952,7 +957,7 @@ Check column "offline" for their availability.
 |`lf hid reader          `|N       |`attempt to read and extract tag data`
 |`lf hid clone           `|N       |`clone HID tag to T55x7`
 |`lf hid sim             `|N       |`simulate HID tag`
-|`lf hid brute           `|N       |`bruteforce card number against reader`
+|`lf hid brute           `|N       |`bruteforce facility code or card number against reader`
 |`lf hid watch           `|N       |`continuously watch for cards.  Reader mode`
 
 

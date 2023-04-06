@@ -141,7 +141,7 @@ static void asn1_tag_dump_str_time(const struct tlv *tlv, const struct asn1_tag 
                 break;
 
             // month
-            PrintAndLogEx(NORMAL, "%.*s-" NOLF, 2, tlv->value + startidx );
+            PrintAndLogEx(NORMAL, "%.*s-" NOLF, 2, tlv->value + startidx);
             if (len < startidx + 4)
                 break;
 
@@ -233,16 +233,16 @@ static void asn1_tag_dump_hex(const struct tlv *tlv, const struct asn1_tag *tag,
 }
 
 static void asn1_tag_dump_octet_string(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
-/*
-    for (size_t i = 0; i < tlv->len; i++) {
-        if (!isspace(tlv->value[i]) && !isprint(tlv->value[i])) {
-            *needdump = true;
-            break;
+    /*
+        for (size_t i = 0; i < tlv->len; i++) {
+            if (!isspace(tlv->value[i]) && !isprint(tlv->value[i])) {
+                *needdump = true;
+                break;
+            }
         }
-    }
-    */
-        PrintAndLogEx(NORMAL, "        " NOLF);
-        asn1_tag_dump_string(tlv, tag, level);
+        */
+    PrintAndLogEx(NORMAL, "        " NOLF);
+    asn1_tag_dump_string(tlv, tag, level);
 }
 
 static void asn1_tag_dump_boolean(const struct tlv *tlv, const struct asn1_tag *tag, int level) {
@@ -262,7 +262,7 @@ static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *
         return;
     }
 
-    hex_to_buffer((uint8_t*)hex, tlv->value, tlv->len, tlv->len, 0, 0, false);
+    hex_to_buffer((uint8_t *)hex, tlv->value, tlv->len, tlv->len, 0, 0, false);
 
     // results for MPI actions
     bool ret = false;
@@ -277,7 +277,7 @@ static void asn1_tag_dump_integer(const struct tlv *tlv, const struct asn1_tag *
     size_t slen = 0;
     MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, 10, s, sizeof(s), &slen));
     if (slen > 0) {
-       PrintAndLogEx(NORMAL, "%*s value: %s", (level ), "", s);
+        PrintAndLogEx(NORMAL, "%*s value: %s", (level), "", s);
     }
 
 cleanup:

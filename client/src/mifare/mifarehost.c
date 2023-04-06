@@ -1421,8 +1421,11 @@ int detect_mf_magic(bool is_mfc) {
         case MAGIC_GEN_UNFUSED:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));
             break;
-        case MAGIC_SUPER:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("super card"));
+        case MAGIC_SUPER_GEN1:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Super card (") _CYAN_("Gen 1") _GREEN_(")"));
+            break;
+        case MAGIC_SUPER_GEN2:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Super card (") _CYAN_("Gen 2") _GREEN_(")"));
             break;
         case MAGIC_NTAG21X:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("NTAG21x"));
@@ -1512,16 +1515,16 @@ int vigik_verify(mfc_vigik_t *d) {
         PrintAndLogEx(INFO, "Raw signature");
         print_hex_noascii_break(d->rsa_signature, sizeof(d->rsa_signature), MFBLOCK_SIZE * 2);
     }
-	
-/*
-    int dl = 0;
-    
-        param_gethex_to_eol("1C07D46DA3849326D24B3468BD76673F4F3C41827DC413E81E4F3C7804FAC727213059B21D047510D6432448643A92EBFC67FBEDDAB468D13D948B172F5EBC79A0E3FEFDFAF4E81FC7108E070F1E3CD0", 0, signature, PUBLIC_VIGIK_KEYLEN, &dl);
 
-    param_gethex_to_eol("1AB86FE0C17FFFFE4379D5E15A4B2FAFFEFCFA0F1F3F7FA03E7DDDF1E3C78FFFB1F0E23F7FFF51584771C5C18307FEA36CA74E60AA6B0409ACA66A9EC155F4E9112345708A2B8457E722608EE1157408", 0, signature, PUBLIC_VIGIK_KEYLEN, &dl);
-    signature_len = dl;
-    */
-	
+    /*
+        int dl = 0;
+
+            param_gethex_to_eol("1C07D46DA3849326D24B3468BD76673F4F3C41827DC413E81E4F3C7804FAC727213059B21D047510D6432448643A92EBFC67FBEDDAB468D13D948B172F5EBC79A0E3FEFDFAF4E81FC7108E070F1E3CD0", 0, signature, PUBLIC_VIGIK_KEYLEN, &dl);
+
+        param_gethex_to_eol("1AB86FE0C17FFFFE4379D5E15A4B2FAFFEFCFA0F1F3F7FA03E7DDDF1E3C78FFFB1F0E23F7FFF51584771C5C18307FEA36CA74E60AA6B0409ACA66A9EC155F4E9112345708A2B8457E722608EE1157408", 0, signature, PUBLIC_VIGIK_KEYLEN, &dl);
+        signature_len = dl;
+        */
+
     uint8_t rev_sig[128];
     reverse_array_copy(d->rsa_signature, sizeof(d->rsa_signature), rev_sig);
 

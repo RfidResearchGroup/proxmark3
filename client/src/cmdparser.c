@@ -386,7 +386,7 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown, bool full_help)
 
         char currentparent[MAX_PM3_INPUT_ARGS_LENGTH] = {0};
         snprintf(currentparent, sizeof currentparent, "%s%s ", parent, cmds[i].Name);
-        
+
         char *old_parent = parent;
         parent = currentparent;
         // This is what causes the recursion, since commands Parse-implementation

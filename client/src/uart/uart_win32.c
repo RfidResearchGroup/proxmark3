@@ -126,7 +126,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         struct addrinfo info;
         int iResult;
 
-        iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+        iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
         if (iResult != 0) {
             PrintAndLogEx(ERR, "error: WSAStartup failed with error: %d", iResult);
             free(sp);
@@ -231,7 +231,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
 void uart_close(const serial_port sp) {
     serial_port_windows_t *spw = (serial_port_windows_t *)sp;
-    if (spw->hSocket != INVALID_SOCKET){
+    if (spw->hSocket != INVALID_SOCKET) {
         shutdown(spw->hSocket, SD_BOTH);
         closesocket(spw->hSocket);
         WSACleanup();
@@ -294,8 +294,7 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         }
 
         return PM3_ENOTTY;
-    }
-    else { // TCP
+    } else { // TCP
         uint32_t byteCount;  // FIONREAD returns size on 32b
         fd_set rfds;
         struct timeval tv;
@@ -332,12 +331,12 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
 
             // Retrieve the count of the incoming bytes
             res = ioctlsocket(spw->hSocket, FIONREAD, (u_long *)&byteCount);
-    //        PrintAndLogEx(ERR, "UART:: RX ioctl res %d byteCount %u", res, byteCount);
+            //        PrintAndLogEx(ERR, "UART:: RX ioctl res %d byteCount %u", res, byteCount);
             if (res == SOCKET_ERROR) return PM3_ENOTTY;
 
             // Cap the number of bytes, so we don't overrun the buffer
             if (pszMaxRxLen - (*pszRxLen) < byteCount) {
-    //            PrintAndLogEx(ERR, "UART:: RX prevent overrun (have %u, need %u)", pszMaxRxLen - (*pszRxLen), byteCount);
+                //            PrintAndLogEx(ERR, "UART:: RX prevent overrun (have %u, need %u)", pszMaxRxLen - (*pszRxLen), byteCount);
                 byteCount = pszMaxRxLen - (*pszRxLen);
             }
 
@@ -374,8 +373,7 @@ int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
             return PM3_EIO;
         }
         return PM3_ENOTTY;
-        }
-    else { // TCP
+    } else { // TCP
         uint32_t pos = 0;
         fd_set wfds;
         struct timeval tv;

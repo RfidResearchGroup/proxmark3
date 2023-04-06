@@ -183,7 +183,7 @@ int mifare_classic_authex_2(struct Crypto1State *pcs, uint32_t uid, uint8_t bloc
 
     // Generate (encrypted) nr+parity by loading it into the cipher (Nr)
     uint32_t pos;
-    uint8_t par[1] = {0x00};    
+    uint8_t par[1] = {0x00};
     uint8_t mf_nr_ar[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     for (pos = 0; pos < 4; pos++) {
         mf_nr_ar[pos] = crypto1_byte(pcs, nr[pos], 0) ^ nr[pos];

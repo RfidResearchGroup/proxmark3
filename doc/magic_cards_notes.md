@@ -627,24 +627,71 @@ No implemented commands today
 ## MIFARE Classic Super
 ^[Top](#top)
 
-It behaves like DirectWrite but records reader auth attempts.
+It behaves like regular Mifare Classic but records reader auth attempts.
 
-To change UID: same commands as for MFC DirectWrite
+#### MIFARE Classic Super Gen1
+^[Top](#top)
 
-To do reader-only attack: at least two versions exist.
+Old type of cards, hard to obtain. They are DirectWrite, UID can be changed via 0 block or backdoor commands.
 
-* type 1: https://github.com/nfc-tools/nfc-supercard for card with ATS: 0978009102DABC1910F005
-* type 2: https://github.com/netscylla/super-card/blob/master/libnfc-1.7.1/utils/nfc-super.c for ??
+* UID: 4b version
+* ATQA/SAK: fixed
+* BCC: auto
+* ATS: fixed, 0978009102DABC1910F005
+
+ATQA/SAK matches 1k card, but works as 4k card.
+
+Backdoor commands provided over APDU. Format:
+
+```
+00 A6 A0 00 05 FF FF FF FF 00
+^^ ^^                         Backdoor command header
+      ^^                      Backdoor command (A0 - set UID/B0 - get trace/C0 - reset card)
+         ^^                   Type of answer (used in key recovery to select trace number)
+            ^^                Length of user provided data
+               ^^ ^^ ^^ ^^ ^^ User data
+```
+
+👉 You can't change UID with backdoor command if incorrect data is written to the 0 sector trailer!
+
+#### MIFARE Classic Super Gen1B
+
+DirectWrite card, ATS unknown. Probably same as Gen1, except backdoor commands. 
+Implementation: https://github.com/netscylla/super-card/blob/master/libnfc-1.7.1/utils/nfc-super.c
+
+#### MIFARE Classic Super Gen2
+^[Top](#top)
+
+New generation of cards, based on limited Gen4 chip. Emulates Gen1 backdoor protocol, but can store up to 7 different traces.
+
+Card always answer `ff  ff  ff  ff` to auth, so writing/reading it via Mifare protocol is impossible. 
+
+UID is changeable via Gen4 backdoor write to 0 block.
+
+* UID: 4b and 7b versions
+* ATQA/SAK: fixed
+* BCC: auto
+* ATS: changeable, default as Gen1
+
+Gen4 commands available:
+
+```
+CF <passwd> 34 <1b length><0-16b ATS>            // Configure ATS
+CF <passwd> CC                                   // Factory test, returns 00 00 00 02 AA
+CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
+CF <passwd> CE <1b block number>                 // Backdoor read 16b block
+CF <passwd> FE <4b new_password>                 // Change password
+```
 
 ### Identify
 ^[Top](#top)
 
-Only type 1 at the moment:
+Only Gen1/Gen2 at this moment (Gen1B is unsupported):
 
 ```
 hf 14a info
 ...
-[+] Magic capabilities : super card
+[+] Magic capabilities : Super card (Gen ?)
 ```
 
 # MIFARE Ultralight
