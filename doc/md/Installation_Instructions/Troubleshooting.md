@@ -6,24 +6,26 @@ Always use the latest repository commits from *master* branch. There are always 
 
 ## Table of Contents
 
-  * [pm3 or pm3-flash* doesn't see my Proxmark](#pm3-or-pm3-flash-doesnt-see-my-proxmark)
-  * [pm3-flash* stops and warns about up-to-date firmware images](#pm3-flash-stops-and-warns-about-up-to-date-firmware-images)
-  * [My Proxmark3 seems bricked](#my-proxmark3-seems-bricked)
-     * [Maybe just a false alarm?](#maybe-just-a-false-alarm)
-     * [Find out why it would be bricked](#find-out-why-it-would-be-bricked)
-     * [Determine if the bootloader was damaged or only the main OS image](#determine-if-the-bootloader-was-damaged-or-only-the-main-os-image)
-     * [Ok, my bootloader is definitively dead, now what?](#ok-my-bootloader-is-definitively-dead-now-what)
-  * [Slow to boot or difficulties to enumerate the device over USB](#slow-to-boot-or-difficulties-to-enumerate-the-device-over-usb)
-  * [Troubles with SIM card reader](#troubles-with-sim-card-reader)
-  * [Troubles with t5577 commands or MFC/iClass/T55x7 dictionaries](#troubles-with-t5577-commands-or-mfciclasst55x7-dictionaries)
-  * [File not found](#file-not-found)
-  * [Pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
-  * [Usb cable](#usb-cable)
-  * [WSL explorer.exe . doesn't work](#WSL)
-  * [Troubles with running the Proxmark3 client](#troubles-with-running-the-proxmark3-client)
-  * [libQt5Core.so.5 not found](#libQt5Coreso5-not-found)
-  * [Target attribute is not supported on this machine](#target-attribute-is-not-supported-on-this-machine)
-  * [Qt: Session management error:](#qt-session-management-error)
+- [Troubleshooting guide](#troubleshooting-guide)
+  - [Table of Contents](#table-of-contents)
+  - [`pm3` or `pm3-flash*` doesn't see my Proxmark](#pm3-or-pm3-flash-doesnt-see-my-proxmark)
+  - [`pm3-flash*` stops and warns about up-to-date firmware images](#pm3-flash-stops-and-warns-about-up-to-date-firmware-images)
+  - [My Proxmark3 seems bricked](#my-proxmark3-seems-bricked)
+    - [Maybe just a false alarm?](#maybe-just-a-false-alarm)
+    - [Find out why it would be bricked](#find-out-why-it-would-be-bricked)
+    - [Determine if the bootloader was damaged or only the main OS image](#determine-if-the-bootloader-was-damaged-or-only-the-main-os-image)
+    - [Ok, my bootloader is definitively dead, now what?](#ok-my-bootloader-is-definitively-dead-now-what)
+  - [Slow to boot or difficulties to enumerate the device over USB](#slow-to-boot-or-difficulties-to-enumerate-the-device-over-usb)
+  - [Troubles with SIM card reader](#troubles-with-sim-card-reader)
+  - [Troubles with t5577 commands or MFC/iClass/T55x7 dictionaries](#troubles-with-t5577-commands-or-mfciclasst55x7-dictionaries)
+  - [File not found](#file-not-found)
+  - [Pixmap / pixbuf warnings](#pixmap--pixbuf-warnings)
+  - [Usb cable](#usb-cable)
+  - [WSL](#wsl)
+  - [Troubles with running the Proxmark3 client](#troubles-with-running-the-proxmark3-client)
+  - [libQt5Core.so.5 not found](#libqt5coreso5-not-found)
+  - [target attribute is not supported on this machine](#target-attribute-is-not-supported-on-this-machine)
+  - [Qt Session management error](#qt-session-management-error)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -133,6 +135,8 @@ See [details here](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
 
 (RDV4 only) Make sure you've the latest SIM firmware according to the [configuration documentation](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md#verify-sim-module-firmware-version).
 
+Check that the SIM daughterboard is properly seated onto the mainboard.  Pressure on the edges of the daughterboard could cause the connector to partially disconnect (especially good to check if problems began after installation of the bluetooth module, for example).
+
 ## Troubles with t5577 commands or MFC/iClass/T55x7 dictionaries
 ^[Top](#top)
 
@@ -159,12 +163,12 @@ proxmark3 <YOUR_PORT_HERE> --flash --image /usr/local/share/proxmark3/firmware/f
 proxmark3 <YOUR_PORT_HERE> --flash --image /usr/share/proxmark3/firmware/fullimage.elf
 
 using the script:
-pm3 --> smart upgrade -f /usr/local/share/proxmark3/firmware/sim011.bin
+pm3 --> smart upgrade -f /usr/local/share/proxmark3/firmware/sim013.bin
 <>
-pm3 --> smart upgrade -f /usr/share/proxmark3/firmware/sim011.bin
+pm3 --> smart upgrade -f /usr/share/proxmark3/firmware/sim013.bin
 ```
 
-If you didn't install the PRoxmark but you're working from the sources directory and depending how you launch the client, your working directory might be the root of the repository:
+If you didn't install the Proxmark but you're working from the sources directory and depending how you launch the client, your working directory might be the root of the repository:
 
 ```
 ./pm3 ...
@@ -184,7 +188,7 @@ client/proxmark3 <YOUR_PORT_HERE> --flash --image armsrc/obj/fullimage.elf
 <>
 ./proxmark3 <YOUR_PORT_HERE> --flash --image ../armsrc/obj/fullimage.elf
 
-pm3 --> smart upgrade -f sim011.bin
+pm3 --> smart upgrade -f sim013.bin
 ```
 
 etc.
@@ -220,7 +224,7 @@ Try running it with
 ## libQt5Core.so.5 not found
 ^[Top](#top)
 
-On WSL1 / updated to Ubuntu 20.04,  there is a slight chance you experience problems when compiling the repo with QT5.
+On WSL1 / updated to Ubuntu 20.04 and 22.04,  there is a slight chance you experience problems when compiling the repo with QT5.
 The following steps is needed to make the development environment happy again.   
 ```
 sudo apt reinstall qtbase5-dev

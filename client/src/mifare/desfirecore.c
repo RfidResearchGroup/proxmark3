@@ -32,9 +32,9 @@
 #include "aes.h"
 #include "ui.h"
 #include "crc.h"
-#include "crc16.h"        // crc16 ccitt
+#include "crc16.h"                 // crc16 ccitt
 #include "crc32.h"
-#include "protocols.h"
+#include "protocols.h"             // ISO7816 APDU return codes
 #include "cmdhf14a.h"
 #include "iso7816/apduinfo.h"      // APDU manipulation / errorcodes
 #include "iso7816/iso7816core.h"   // APDU logging
@@ -470,7 +470,7 @@ static int DESFIRESendApduEx(bool activate_field, sAPDU_t apdu, uint16_t le, uin
     if (sw)
         *sw = isw;
 
-    if (isw != 0x9000 &&
+    if (isw != ISO7816_OK &&
             isw != DESFIRE_GET_ISO_STATUS(MFDES_S_OPERATION_OK) &&
             isw != DESFIRE_GET_ISO_STATUS(MFDES_S_SIGNATURE) &&
             isw != DESFIRE_GET_ISO_STATUS(MFDES_S_ADDITIONAL_FRAME) &&
@@ -942,7 +942,7 @@ void DesfirePrintMADAID(uint32_t appid, bool verbose) {
         if (appid == 0xffffff)
             PrintAndLogEx(SUCCESS, "  Card issuer information application");
         else
-            MADDFDecodeAndPrint(short_aid);
+            MADDFDecodeAndPrint(short_aid, verbose);
     }
 }
 
@@ -953,7 +953,7 @@ void DesfirePrintAIDFunctions(uint32_t appid) {
         uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
         PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
         PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, nxp_cluster_to_text(short_aid >> 8));
-        MADDFDecodeAndPrint(short_aid);
+        MADDFDecodeAndPrint(short_aid, false);
     } else {
         AIDDFDecodeAndPrint(aid);
     }
@@ -997,7 +997,7 @@ int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel 
     if (isosw)
         dctx->cmdSet = DCCISO;
 
-    if (!noauth) {
+    if (noauth == false) {
         res = DesfireAuthenticate(dctx, secureChannel, verbose);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
@@ -1655,7 +1655,7 @@ static bool DesfireCheckISOAuthCmd(DesfireISOSelectWay way, uint32_t appID, char
     uint8_t p2 = ((app_level) ? 0x80 : 0x00) | keyNum;
     res = DesfireExchangeISO(false, &dctx, (sAPDU_t) {0x00, ISO7816_EXTERNAL_AUTHENTICATION, p1, p2, rndlen * 2, piccrnd}, 0, resp, &resplen, &sw);
     DropField();
-    return (sw == 0x9000 || sw == 0x6982);
+    return (sw == ISO7816_OK || sw == ISO7816_SECURITY_STATUS_NOT_SATISFIED);
 }
 
 void DesfireCheckAuthCommands(DesfireISOSelectWay way, uint32_t appID, char *dfname, uint8_t keyNum, AuthCommandsChk_t *authCmdCheck) {
@@ -1746,7 +1746,12 @@ int DesfireFillAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS ap
             int indx = AppListSearchAID(DesfireAIDByteToUint(&buf[i * 24 + 1]), appList, PICCInfo->appCount);
             if (indx >= 0) {
                 appList[indx].appISONum = MemLeToUint2byte(&buf[i * 24 + 1 + 3]);
-                memcpy(appList[indx].appDFName, &buf[i * 24 + 1 + 5], strnlen((char *)&buf[i * 24 + 1 + 5], 16));
+                memcpy(
+                    appList[indx].appDFName,
+                    &buf[i * 24 + 1 + 5],
+                    // strnlen((char *)&buf[i * 24 + 1 + 5], 16)
+                    16
+                );
             }
         }
     }
@@ -1822,12 +1827,14 @@ void DesfirePrintAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS 
     PrintAndLogEx(SUCCESS, "--------------------------------- " _CYAN_("Applications list") " ---------------------------------");
 
     for (int i = 0; i < PICCInfo->appCount; i++) {
-        PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02x") " iso id: " _GREEN_("0x%04x") " name: " _GREEN_("%s"), appList[i].appNum, appList[i].appISONum, appList[i].appDFName);
+        PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02X"), appList[i].appNum);
+        PrintAndLogEx(SUCCESS, "  ISO id.... " _GREEN_("0x%04X"), appList[i].appISONum);
+        PrintAndLogEx(SUCCESS, "  DF name... " _GREEN_("%s") " ( %s)", appList[i].appDFName, sprint_hex((uint8_t *)appList[i].appDFName, sizeof(appList[i].appDFName)));
 
         DesfirePrintAIDFunctions(appList[i].appNum);
 
         if (PICCInfo->authCmdCheck.checked) {
-            PrintAndLogEx(SUCCESS, "Auth commands: " NOLF);
+            PrintAndLogEx(SUCCESS, "Auth commands: ");
             DesfireCheckAuthCommandsPrint(&appList[i].authCmdCheck);
             PrintAndLogEx(SUCCESS, "");
         }
@@ -2294,9 +2301,9 @@ static const char *GetDesfireKeyType(uint8_t keytype) {
 }
 
 const char *GetDesfireAccessRightStr(uint8_t right) {
-    static char int_access_str[200];
 
     if (right <= 0x0d) {
+        static char int_access_str[200];
         snprintf(int_access_str, sizeof(int_access_str), "key 0x%02x", right);
         return int_access_str;
     }
@@ -2360,10 +2367,10 @@ void DesfireDecodeFileAcessMode(const uint8_t *mode, uint8_t *r, uint8_t *w, uin
 void DesfirePrintAccessRight(uint8_t *data) {
     uint8_t r = 0, w = 0, rw = 0, ch = 0;
     DesfireDecodeFileAcessMode(data, &r, &w, &rw, &ch);
-    PrintAndLogEx(SUCCESS, "read     : %s", GetDesfireAccessRightStr(r));
-    PrintAndLogEx(SUCCESS, "write    : %s", GetDesfireAccessRightStr(w));
-    PrintAndLogEx(SUCCESS, "readwrite: %s", GetDesfireAccessRightStr(rw));
-    PrintAndLogEx(SUCCESS, "change   : %s", GetDesfireAccessRightStr(ch));
+    PrintAndLogEx(SUCCESS, "  read......... %s", GetDesfireAccessRightStr(r));
+    PrintAndLogEx(SUCCESS, "  write........ %s", GetDesfireAccessRightStr(w));
+    PrintAndLogEx(SUCCESS, "  read/write... %s", GetDesfireAccessRightStr(rw));
+    PrintAndLogEx(SUCCESS, "  change....... %s", GetDesfireAccessRightStr(ch));
 }
 
 void DesfireFillFileSettings(uint8_t *data, size_t datalen, FileSettings_t *fsettings) {
@@ -2430,22 +2437,31 @@ static void DesfirePrintShortFileTypeSettings(FileSettings_t *fsettings) {
     switch (fsettings->fileType) {
         case 0x00:
         case 0x01: {
-            PrintAndLogEx(NORMAL, "size: %d [0x%x] " NOLF, fsettings->fileSize, fsettings->fileSize);
+            PrintAndLogEx(NORMAL, "Size " _YELLOW_("%d") " / " _YELLOW_("0x%X") NOLF, fsettings->fileSize, fsettings->fileSize);
             break;
         }
         case 0x02: {
-            PrintAndLogEx(NORMAL, "value [%d .. %d] lim cred: 0x%02x (%d [0x%x]) " NOLF,
-                          fsettings->lowerLimit, fsettings->upperLimit, fsettings->limitedCredit, fsettings->value, fsettings->value);
+            PrintAndLogEx(NORMAL, "Value [%d .. %d] lim cred: 0x%02x (%d [0x%x]) " NOLF,
+                          fsettings->lowerLimit,
+                          fsettings->upperLimit,
+                          fsettings->limitedCredit,
+                          fsettings->value,
+                          fsettings->value
+                         );
             break;
         }
         case 0x03:
         case 0x04: {
-            PrintAndLogEx(NORMAL, "record count %d/%d size: %d [0x%x]b " NOLF,
-                          fsettings->curRecordCount, fsettings->maxRecordCount, fsettings->recordSize, fsettings->recordSize);
+            PrintAndLogEx(NORMAL, "Rec cnt %d/%d size: %d [0x%x]b " NOLF,
+                          fsettings->curRecordCount,
+                          fsettings->maxRecordCount,
+                          fsettings->recordSize,
+                          fsettings->recordSize
+                         );
             break;
         }
         case 0x05: {
-            PrintAndLogEx(NORMAL, "key type: 0x%02x version: 0x%02x " NOLF, fsettings->keyType, fsettings->keyVersion);
+            PrintAndLogEx(NORMAL, "Key type: 0x%02x ver: 0x%02x " NOLF, fsettings->keyType, fsettings->keyVersion);
             break;
         }
         default: {
@@ -2469,8 +2485,8 @@ void DesfirePrintFileSettingsOneLine(FileSettings_t *fsettings) {
 
 void DesfirePrintFileSettingsTable(bool printheader, uint8_t id, bool isoidavail, uint16_t isoid, FileSettings_t *fsettings) {
     if (printheader) {
-        PrintAndLogEx(SUCCESS, " ID |ISO ID|     File type       | Mode  | Rights: raw, r w rw ch   | File settings   ");
-        PrintAndLogEx(SUCCESS, "------------------------------------------------------------------------------------------------------------");
+        PrintAndLogEx(SUCCESS, " ID |ISO ID| File type            | Mode  | Rights: raw, r w rw ch    | File settings");
+        PrintAndLogEx(SUCCESS, "----------------------------------------------------------------------------------------------------------");
     }
     PrintAndLogEx(SUCCESS, " " _GREEN_("%02x") " |" NOLF, id);
     if (isoidavail) {
@@ -2482,10 +2498,10 @@ void DesfirePrintFileSettingsTable(bool printheader, uint8_t id, bool isoidavail
         PrintAndLogEx(NORMAL, "      |" NOLF);
     }
 
-    PrintAndLogEx(NORMAL, "0x%02x " _CYAN_("%-15s") " |" NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
+    PrintAndLogEx(NORMAL, " 0x%02x " _CYAN_("%-15s") " |" NOLF, fsettings->fileType, GetDesfireFileType(fsettings->fileType));
     PrintAndLogEx(NORMAL, " %-5s |" NOLF, GetDesfireCommunicationMode(fsettings->fileCommMode));
 
-    PrintAndLogEx(NORMAL, "%04x, %-4s %-4s %-4s %-4s |" NOLF,
+    PrintAndLogEx(NORMAL, " %04x, %-4s %-4s %-4s %-4s |" NOLF,
                   fsettings->rawAccessRights,
                   GetDesfireAccessRightShortStr(fsettings->rAccess),
                   GetDesfireAccessRightShortStr(fsettings->wAccess),
@@ -2539,15 +2555,12 @@ void DesfirePrintFileSettingsExtended(FileSettings_t *fsettings) {
     PrintAndLogEx(NORMAL, "change: %s)", GetDesfireAccessRightStr(fsettings->chAccess));
 }
 
-
 static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t datalen, uint8_t *dynlen, bool create) {
     switch (filetype) {
         case 0x00:
         case 0x01: {
             int filesize = MemLeToUint3byte(&data[0]);
-
-            PrintAndLogEx(INFO, "File size        : %d (0x%X) bytes", filesize, filesize);
-
+            PrintAndLogEx(INFO, "File size (bytes)... " _YELLOW_("%d") " / " _YELLOW_("0x%X"), filesize, filesize);
             *dynlen = 3;
             break;
         }
@@ -2557,15 +2570,23 @@ static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t 
             int value = MemLeToUint4byte(&data[8]);
             uint8_t limited_credit_enabled = data[12];
 
-            PrintAndLogEx(INFO, "Lower limit      : %d (0x%08X)", lowerlimit, lowerlimit);
-            PrintAndLogEx(INFO, "Upper limit      : %d (0x%08X)", upperlimit, upperlimit);
+            PrintAndLogEx(INFO, "Lower limit... %d / 0x%08X", lowerlimit, lowerlimit);
+            PrintAndLogEx(INFO, "Upper limit... %d / 0x%08X", upperlimit, upperlimit);
             if (create) {
-                PrintAndLogEx(INFO, "Value            : %d (0x%08X)", value, value);
-                PrintAndLogEx(INFO, "Limited credit   : [%d - %s]", limited_credit_enabled, ((limited_credit_enabled & 1) != 0) ? "enabled" : "disabled");
+                PrintAndLogEx(INFO, "Value............ %d / 0x%08X", value, value);
+                PrintAndLogEx(INFO, "Limited credit... %d - %s"
+                              , limited_credit_enabled
+                              , ((limited_credit_enabled & 1) != 0) ? "enabled" : "disabled"
+                             );
             } else {
-                PrintAndLogEx(INFO, "Limited credit   : [%d - %s] %d (0x%08X)", limited_credit_enabled, ((limited_credit_enabled & 1) != 0) ? "enabled" : "disabled", value, value);
+                PrintAndLogEx(INFO, "Limited credit... %d - %s %d (0x%08X)"
+                              , limited_credit_enabled
+                              , ((limited_credit_enabled & 1) != 0) ? "enabled" : "disabled"
+                              , value
+                              , value
+                             );
             }
-            PrintAndLogEx(INFO, "GetValue access  : %s", ((limited_credit_enabled & 0x02) != 0) ? "Free" : "Not Free");
+            PrintAndLogEx(INFO, "GetValue access... %s", ((limited_credit_enabled & 0x02) != 0) ? "Free" : "Not Free");
 
             *dynlen = 13;
             break;
@@ -2575,28 +2596,28 @@ static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t 
             uint32_t recordsize = MemLeToUint3byte(&data[0]);
             uint32_t maxrecords = MemLeToUint3byte(&data[3]);
             uint32_t currentrecord = 0;
-            if (!create)
+            if (create == false)
                 currentrecord = MemLeToUint3byte(&data[6]);
 
-            PrintAndLogEx(INFO, "Record size      : %d (0x%X) bytes", recordsize, recordsize);
-            PrintAndLogEx(INFO, "Max num records  : %d (0x%X)", maxrecords, maxrecords);
-            PrintAndLogEx(INFO, "Total size       : %d (0x%X) bytes", recordsize * maxrecords, recordsize * maxrecords);
-            if (!create)
-                PrintAndLogEx(INFO, "Curr num records : %d (0x%X)", currentrecord, currentrecord);
+            PrintAndLogEx(INFO, "Record size....... %d / 0x%X bytes", recordsize, recordsize);
+            PrintAndLogEx(INFO, "Max num records... %d / 0x%X", maxrecords, maxrecords);
+            PrintAndLogEx(INFO, "Total size........ %d / 0x%X bytes", recordsize * maxrecords, recordsize * maxrecords);
+            if (create == false)
+                PrintAndLogEx(INFO, "Curr num records... %d / 0x%X", currentrecord, currentrecord);
 
             *dynlen = (create) ? 6 : 9;
             break;
         }
         case 0x05: {
-            PrintAndLogEx(INFO, "Key type [0x%02x]  : %s", data[0], GetDesfireKeyType(data[0]));
+            PrintAndLogEx(INFO, "Key type [0x%02x] ... %s", data[0], GetDesfireKeyType(data[0]));
             *dynlen = 1;
 
             if (create) {
-                PrintAndLogEx(INFO, "Key              : %s", sprint_hex(&data[1], 16));
+                PrintAndLogEx(INFO, "Key... %s", sprint_hex(&data[1], 16));
                 *dynlen += 16;
             }
 
-            PrintAndLogEx(INFO, "Key version      : %d (0x%X)", data[*dynlen], data[*dynlen]);
+            PrintAndLogEx(INFO, "Key version... %d / 0x%X", data[*dynlen], data[*dynlen]);
             (*dynlen)++;
             break;
         }
@@ -2608,28 +2629,29 @@ static void DesfirePrintFileSettDynPart(uint8_t filetype, uint8_t *data, size_t 
 
 void DesfirePrintFileSettings(uint8_t *data, size_t len) {
     if (len < 6) {
-        PrintAndLogEx(ERR, "Wrong file settings length: %zu", len);
+        PrintAndLogEx(ERR, "Wrong file settings length, expected 6> got %zu ", len);
         return;
     }
 
     uint8_t filetype = data[0];
     PrintAndLogEx(INFO, "---- " _CYAN_("File settings") " ----");
-    PrintAndLogEx(SUCCESS, "File type [0x%02x] : %s file", filetype, GetDesfireFileType(filetype));
-    PrintAndLogEx(SUCCESS, "File comm mode   : %s", GetDesfireCommunicationMode(data[1] & 0x03));
+    PrintAndLogEx(SUCCESS, "File type " _YELLOW_("0x%02x") " ..... %s file", filetype, GetDesfireFileType(filetype));
+    PrintAndLogEx(SUCCESS, "File comm mode...... %s", GetDesfireCommunicationMode(data[1] & 0x03));
     bool addaccess = false;
     if (filetype != 0x05) {
         addaccess = ((data[1] & 0x80) != 0);
-        PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
+        PrintAndLogEx(SUCCESS, "Additional access... %s", (addaccess) ? "Yes" : "No");
     }
-    PrintAndLogEx(SUCCESS, "Access rights    : %04x", MemLeToUint2byte(&data[2]));
-    DesfirePrintAccessRight(&data[2]); //2 bytes
+
+    PrintAndLogEx(SUCCESS, "Access rights....... %04x", MemLeToUint2byte(&data[2]));
+    DesfirePrintAccessRight(&data[2]); // 2 bytes
 
     uint8_t reclen = 0;
     DesfirePrintFileSettDynPart(filetype, &data[4], len - 4, &reclen, false);
     reclen += 4; // static part
 
     if (addaccess && filetype != 0x05 && reclen > 0 && len > reclen && len == reclen + data[reclen] * 2) {
-        PrintAndLogEx(SUCCESS, "Add access records: %d", data[reclen]);
+        PrintAndLogEx(SUCCESS, "Add access records... %d", data[reclen]);
         for (int i = 0; i < data[reclen] * 2; i += 2) {
             PrintAndLogEx(SUCCESS, "Add access rights : [%d] %04x", i / 2, MemLeToUint2byte(&data[reclen + 1 + i]));
             DesfirePrintAccessRight(&data[reclen + 1 + i]);
@@ -2667,11 +2689,11 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
 
     PrintAndLogEx(INFO, "---- " _CYAN_("Create file settings") " ----");
     PrintAndLogEx(SUCCESS, "File type        : %s", ftyperec->text);
-    PrintAndLogEx(SUCCESS, "File number      : 0x%02x (%d)", data[0], data[0]);
+    PrintAndLogEx(SUCCESS, "File number      : 0x%02X (%d)", data[0], data[0]);
     size_t xlen = 1;
     if (ftyperec->mayHaveISOfid) {
         if (isoidpresent) {
-            PrintAndLogEx(SUCCESS, "File ISO number  : 0x%04x", MemLeToUint2byte(&data[xlen]));
+            PrintAndLogEx(SUCCESS, "File ISO number  : 0x%04X", MemLeToUint2byte(&data[xlen]));
             xlen += 2;
         } else {
             PrintAndLogEx(SUCCESS, "File ISO number  : n/a");
@@ -2683,7 +2705,7 @@ void DesfirePrintCreateFileSettings(uint8_t filetype, uint8_t *data, size_t len)
     PrintAndLogEx(SUCCESS, "Additional access: %s", (addaccess) ? "Yes" : "No");
     xlen++;
 
-    PrintAndLogEx(SUCCESS, "Access rights    : %04x", MemLeToUint2byte(&data[xlen]));
+    PrintAndLogEx(SUCCESS, "Access rights    : %04X", MemLeToUint2byte(&data[xlen]));
     DesfirePrintAccessRight(&data[xlen]);
     xlen += 2;
 
@@ -2837,7 +2859,7 @@ int DesfireISOSelectEx(DesfireContext_t *dctx, bool fieldon, DesfireISOSelectCon
     size_t xresplen = 0;
     uint16_t sw = 0;
     int res = DesfireExchangeISO(fieldon, dctx, (sAPDU_t) {0x00, ISO7816_SELECT_FILE, cntr, ((resp == NULL) ? 0x0C : 0x00), datalen, data}, APDU_INCLUDE_LE_00, xresp, &xresplen, &sw);
-    if (res == PM3_SUCCESS && sw != 0x9000)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK)
         return PM3_ESOFT;
 
     if (resp != NULL && resplen != NULL) {
@@ -2863,7 +2885,7 @@ int DesfireISOSelectDF(DesfireContext_t *dctx, char *dfname, uint8_t *resp, size
 int DesfireISOGetChallenge(DesfireContext_t *dctx, DesfireCryptoAlgorithm keytype, uint8_t *resp, size_t *resplen) {
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_GET_CHALLENGE, 0x00, 0x00, 0x00, NULL}, DesfireGetRndLenForKey(keytype), resp, resplen, &sw);
-    if (res == PM3_SUCCESS && sw != 0x9000)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK)
         return PM3_ESOFT;
 
     return res;
@@ -2878,7 +2900,7 @@ int DesfireISOExternalAuth(DesfireContext_t *dctx, bool app_level, uint8_t keynu
 
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_EXTERNAL_AUTHENTICATION, p1, p2, DesfireGetRndLenForKey(keytype) * 2, data}, 0, resp, &resplen, &sw);
-    if (res == PM3_SUCCESS && sw != 0x9000)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK)
         return PM3_ESOFT;
 
     return res;
@@ -2891,7 +2913,7 @@ int DesfireISOInternalAuth(DesfireContext_t *dctx, bool app_level, uint8_t keynu
 
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_INTERNAL_AUTHENTICATION, p1, p2, keylen, data}, keylen * 2, resp, resplen, &sw);
-    if (res == PM3_SUCCESS && sw != 0x9000)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK)
         return PM3_ESOFT;
 
     return res;
@@ -2907,7 +2929,7 @@ int DesfireISOReadBinary(DesfireContext_t *dctx, bool use_file_id, uint8_t filei
 
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_READ_BINARY, p1, p2, 0, NULL}, (length == 0) ? APDU_INCLUDE_LE_00 : length, resp, resplen, &sw);
-    if (res == PM3_SUCCESS && sw != 0x9000)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK)
         return PM3_ESOFT;
 
     return res;
@@ -2926,7 +2948,7 @@ int DesfireISOUpdateBinary(DesfireContext_t *dctx, bool use_file_id, uint8_t fil
 
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_UPDATE_BINARY, p1, p2, datalen, data}, 0, resp, &resplen, &sw);
-    if (res == PM3_SUCCESS && sw != 0x9000)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK)
         return PM3_ESOFT;
 
     return res;
@@ -2937,7 +2959,7 @@ int DesfireISOReadRecords(DesfireContext_t *dctx, uint8_t recordnum, bool read_a
 
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_READ_RECORDS, recordnum, p2, 0, NULL}, (length == 0) ? APDU_INCLUDE_LE_00 : length, resp, resplen, &sw);
-    if (res == PM3_SUCCESS && sw != 0x9000)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK)
         return PM3_ESOFT;
 
     return res;
@@ -2951,7 +2973,7 @@ int DesfireISOAppendRecord(DesfireContext_t *dctx, uint8_t fileid, uint8_t *data
 
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_APPEND_RECORD, 0x00, p2, datalen, data}, 0, resp, &resplen, &sw);
-    if (res == PM3_SUCCESS && sw != 0x9000)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK)
         return PM3_ESOFT;
 
     return res;

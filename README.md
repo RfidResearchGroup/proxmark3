@@ -83,7 +83,7 @@ We define generic Proxmark3 platforms as following devices.
    - **Note**: unknown pin assignments.
  - ⚠  Ryscorp Proxmark3 Pro 
    - **Note**: device has different fpga and unknown pin assignments.
-   - **Note**: Company have dissappared, leaving their customers in the dark.
+   - **Note**: Company have disappeared, leaving their customers in the dark.
  - ⚠  iCopy-X
    - **Note**: experimental support, currently incompatible with iCopy-X GUI as Proxmark client commands are now using cliparser.
    - **Note**: see also [icopyx-community repos](https://github.com/iCopy-X-Community/) for upstream sources, reversed hw etc.
@@ -93,24 +93,30 @@ We define generic Proxmark3 platforms as following devices.
  - ⚠  VX
    - **Note**: unknown device hw
 -  ⚠ Proxmark3 X 
-   - **Note**: unknown device hw.  
+   - **Note**: unknown device hw
+-  ⚠ Proxmark3 Ultimate
+   - **Note**: unknown device hw
+-  ⚠ Proxmark3 SE
+   - **Note**: unknown device hw
+
+When it comes to these new unknown models we are depending on the community to report in if this repo works and what they did to make it work.
 
 
-**256kb flash memory size of generic Proxmark3 platforms**
+**256KB flash memory size of generic Proxmark3 platforms**
 
 > ⚠ **Note**: 
 > You need to keep a eye on how large your ARM chip built-in flash memory is. 
-> With 512kb you are fine but if its 256kb you need to compile this repo with even less functionality.
+> With 512KB you are fine but if its 256KB you need to compile this repo with even less functionality.
 > When running the `./pm3-flash-all` you can see which size your device have if you have the bootloader from this repo installed. 
 > Otherwise you will find the size reported in the start message when running the Proxmark3 client `./pm3`.
 >
-> [OBS! Read the 256kb flash memory advisory](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#256kb-versions)
+> [OBS! Read the 256KB flash memory advisory](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#256KB-versions)
 
 
 # What has changed?
 
 Proxmark3 RDV4 hardware modifications:
-  * added flash memory 256kb
+  * added flash memory 256KB
   * added smart card module
   * added FPC connector for peripherals such as Bluetooth+battery addon
   * improved antennas
@@ -200,7 +206,7 @@ The official PM3-GUI from Gaucho will not work. Not to mention is quite old and 
 
 ## Official channels
 Where do you find the community?
-   - [RFID Hacking community discord server](https://discord.gg/iceman)
+   - [RFID Hacking community discord server](https://t.ly/d4_C)
    - [Proxmark3 IRC channel](https://web.libera.chat/?channels=#proxmark3)
    - [Proxmark3 sub reddit](https://www.reddit.com/r/proxmark3/)
    - [Proxmark3 forum](http://www.proxmark.org/forum/index.php)

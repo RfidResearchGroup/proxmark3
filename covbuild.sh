@@ -27,6 +27,7 @@ cov-build --dir "$COVDIR" --no-generate-build-id --force make recovery
 cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mfkey
 cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD nonce2key
 cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mf_nonce_brute
+cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mfd_aes_brute
 cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD client
 
 #########################################

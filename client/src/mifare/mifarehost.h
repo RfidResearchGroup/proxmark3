@@ -23,6 +23,7 @@
 #include "common.h"
 
 #include "util.h"       // FILE_PATH_SIZE
+#include "protocol_vigik.h"
 
 #define MIFARE_SECTOR_RETRY     10
 
@@ -79,8 +80,8 @@ int mfCheckKeys_file(uint8_t *destfn, uint64_t *key);
 
 int mfKeyBrute(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint64_t *resultkey);
 
-int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data);
-int mfReadBlock(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t *data);
+int mfReadSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *data);
+int mfReadBlock(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *data);
 
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount);
 int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount);
@@ -95,7 +96,8 @@ int mfGen3UID(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid);
 int mfGen3Block(uint8_t *block, int blockLen, uint8_t *newBlock);
 int mfGen3Freeze(void);
 
-int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data);
+int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags);
+int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags);
 
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len);
 
@@ -103,7 +105,15 @@ int detect_classic_prng(void);
 int detect_classic_nackbug(bool verbose);
 int detect_mf_magic(bool is_mfc);
 int detect_classic_static_nonce(void);
-int detect_mfc_ev1_signature(uint8_t *signature);
+bool detect_mfc_ev1_signature(void);
+int read_mfc_ev1_signature(uint8_t *signature);
+
 
 void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted);
+
+// remove all sector trailers in a MFC dump
+int convert_mfc_2_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen);
+const char *vigik_get_service(uint16_t service_code);
+int vigik_verify(mfc_vigik_t *d);
+int vigik_annotate(mfc_vigik_t *d);
 #endif

@@ -2235,7 +2235,7 @@ static int CmdT55xxDump(const char *Cmd) {
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, sizeof(filename), &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     uint8_t override = arg_get_lit(ctx, 2) ? 1 : 0;
 
@@ -2341,7 +2341,7 @@ static int CmdT55xxRestore(const char *Cmd) {
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, sizeof(filename), &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     bool usepwd = false;
     uint32_t password = 0;
@@ -2362,7 +2362,7 @@ static int CmdT55xxRestore(const char *Cmd) {
     }
 
     // read dump file
-    uint8_t *dump = NULL;
+    uint32_t *dump = NULL;
     size_t bytes_read = 0;
     res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (T55x7_BLOCK_COUNT * 4));
     if (res != PM3_SUCCESS) {
@@ -2387,11 +2387,10 @@ static int CmdT55xxRestore(const char *Cmd) {
         snprintf(pwdopt, sizeof(pwdopt), "-p %08X", password);
     }
 
-    uint32_t *data = (uint32_t *) dump;
     uint8_t idx;
     // Restore endien for writing to card
     for (idx = 0; idx < 12; idx++) {
-        data[idx] = BSWAP_32(data[idx]);
+        dump[idx] = BSWAP_32(dump[idx]);
     }
 
     // Have data ready, lets write
@@ -2400,12 +2399,12 @@ static int CmdT55xxRestore(const char *Cmd) {
     //    write blocks 1..3 page 1
     //    update downlink mode (if needed) and write b 0
     downlink_mode = 0;
-    if ((((data[11] >> 28) & 0xF) == 6) || (((data[11] >> 28) & 0xF) == 9))
-        downlink_mode = (data[11] >> 10) & 3;
+    if ((((dump[11] >> 28) & 0xF) == 6) || (((dump[11] >> 28) & 0xF) == 9))
+        downlink_mode = (dump[11] >> 10) & 3;
 
     // write out blocks 1-7 page 0
     for (idx = 1; idx <= 7; idx++) {
-        snprintf(wcmd, sizeof(wcmd), "-b %d -d %08X %s", idx, data[idx], pwdopt);
+        snprintf(wcmd, sizeof(wcmd), "-b %d -d %08X %s", idx, dump[idx], pwdopt);
 
         if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
@@ -2414,12 +2413,12 @@ static int CmdT55xxRestore(const char *Cmd) {
 
     // if password was set on the "blank" update as we may have just changed it
     if (usepwd) {
-        snprintf(pwdopt, sizeof(pwdopt), "-p %08X", data[7]);
+        snprintf(pwdopt, sizeof(pwdopt), "-p %08X", dump[7]);
     }
 
     // write out blocks 1-3 page 1
     for (idx = 9; idx <= 11; idx++) {
-        snprintf(wcmd, sizeof(wcmd), "-b %d --pg1 -d %08X %s", idx - 8, data[idx], pwdopt);
+        snprintf(wcmd, sizeof(wcmd), "-b %d --pg1 -d %08X %s", idx - 8, dump[idx], pwdopt);
 
         if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Warning: error writing blk %d", idx);
@@ -2430,7 +2429,7 @@ static int CmdT55xxRestore(const char *Cmd) {
     config.downlink_mode = downlink_mode;
 
     // Write the page 0 config
-    snprintf(wcmd, sizeof(wcmd), "-b 0 -d %08X %s", data[0], pwdopt);
+    snprintf(wcmd, sizeof(wcmd), "-b 0 -d %08X %s", dump[0], pwdopt);
     if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Warning: error writing blk 0");
     }
@@ -3035,7 +3034,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, sizeof(filename), &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     // White cloner password based on EM4100 ID
     bool use_calc_password = false;
@@ -4012,7 +4011,6 @@ static int CmdT55xxSniff(const char *Cmd) {
     size_t idx = 0;
     uint32_t usedPassword, blockData;
     int pulseSamples = 0, pulseIdx = 0;
-    const char *modeText;
     char pwdText[100];
     char dataText[100];
     int pulseBuffer[80] = { 0 }; // max should be 73 +/- - Holds Pulse widths
@@ -4027,8 +4025,8 @@ static int CmdT55xxSniff(const char *Cmd) {
     // Headings
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _CYAN_("T55xx command detection"));
-    PrintAndLogEx(SUCCESS, "Downlink mode         | password |   Data   | blk | page |  0  |  1  | raw");
-    PrintAndLogEx(SUCCESS, "----------------------+----------+----------+-----+------+-----+-----+-------------------------------------------------------------------------------");
+    PrintAndLogEx(SUCCESS, "Downlink mode           |  password  |   Data   | blk | page |  0  |  1  | raw");
+    PrintAndLogEx(SUCCESS, "------------------------+------------+----------+-----+------+-----+-----+-------------------------------------------------------------------------------");
 
     idx = 0;
     // loop though sample buffer
@@ -4038,7 +4036,7 @@ static int CmdT55xxSniff(const char *Cmd) {
         int maxWidth = 0;
         data[0] = 0;
         bool have_data = false;
-        modeText = "Default";
+        const char *modeText = "Default";
         strncpy(pwdText, " ", sizeof(pwdText));
         strncpy(dataText, " ", sizeof(dataText));
 
@@ -4164,11 +4162,15 @@ static int CmdT55xxSniff(const char *Cmd) {
                         }
                         have_data = true;
                         modeText = "Default pwd write";
-                        snprintf(pwdText, sizeof(pwdText), "%08X", usedPassword);
+                        snprintf(pwdText, sizeof(pwdText), " %08X", usedPassword);
                         snprintf(dataText, sizeof(dataText), "%08X", blockData);
                     }
 
-                    // Default Write (or password read ??)
+                    // Default Write or password read ???
+                    // the most confusing command.
+                    // if the token is with a password - all is OK,
+                    // if not - read command with a password will lead to write the shifted password to the memory and:
+                    //    IF the most bit of the data is `1` ----> IT LEADS TO LOCK this block of the memory
                     if (dataLen == 38) {
                         t55sniff_trim_samples(pulseBuffer, &pulseIdx, 38);
 
@@ -4180,6 +4182,12 @@ static int CmdT55xxSniff(const char *Cmd) {
                             if (data[i] == '1')
                                 blockData |= 1;
                         }
+                        for (uint8_t i = 2; i <= 33; i++) {
+                            usedPassword <<= 1;
+                            if (data[i] == '1') {
+                                usedPassword |= 1;
+                            }
+                        }
                         blockAddr = 0;
                         for (uint8_t i = 35; i <= 37; i++) {
                             blockAddr <<= 1;
@@ -4187,7 +4195,8 @@ static int CmdT55xxSniff(const char *Cmd) {
                                 blockAddr |= 1;
                         }
                         have_data = true;
-                        modeText = "Default write";
+                        modeText = "Default write/pwd read";
+                        snprintf(pwdText, sizeof(pwdText), "[%08X]", usedPassword);
                         snprintf(dataText, sizeof(dataText), "%08X", blockData);
                     }
                 }
@@ -4224,7 +4233,7 @@ static int CmdT55xxSniff(const char *Cmd) {
                         }
                         have_data = true;
                         modeText = "Leading 0 pwd write";
-                        snprintf(pwdText, sizeof(pwdText), "%08X", usedPassword);
+                        snprintf(pwdText, sizeof(pwdText), " %08X", usedPassword);
                         snprintf(dataText, sizeof(dataText), "%08X", blockData);
                     }
                 }
@@ -4234,9 +4243,9 @@ static int CmdT55xxSniff(const char *Cmd) {
         // Print results
         if (have_data) {
             if (blockAddr == 7)
-                PrintAndLogEx(SUCCESS, "%-20s  | "_GREEN_("%8s")" | "_YELLOW_("%8s")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
+                PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_YELLOW_("%8s")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
             else
-                PrintAndLogEx(SUCCESS, "%-20s  | "_GREEN_("%8s")" | "_GREEN_("%8s")" |  "_GREEN_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
+                PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_GREEN_("%8s")" |  "_GREEN_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
         }
     }
 

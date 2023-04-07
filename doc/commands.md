@@ -43,6 +43,7 @@ Check column "offline" for their availability.
 |`prefs get savepaths    `|Y       |`Get file folder  `
 |`prefs get emoji        `|Y       |`Get emoji display preference`
 |`prefs get hints        `|Y       |`Get hint display preference`
+|`prefs get output       `|Y       |`Get dump output style preference`
 |`prefs get plotsliders  `|Y       |`Get plot slider display preference`
 
 
@@ -60,6 +61,7 @@ Check column "offline" for their availability.
 |`prefs set emoji        `|Y       |`Set emoji display`
 |`prefs set hints        `|Y       |`Set hint display`
 |`prefs set savepaths    `|Y       |`... to be adjusted next ... `
+|`prefs set output       `|Y       |`Set dump output style`
 |`prefs set plotsliders  `|Y       |`Set plot slider display`
 
 
@@ -124,6 +126,7 @@ Check column "offline" for their availability.
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`
 |`data hex2bin           `|Y       |`Converts hexadecimal to binary`
 |`data load              `|Y       |`Load contents of file into graph window`
+|`data num               `|Y       |`Converts dec/hex/bin`
 |`data print             `|Y       |`Print the data in the DemodBuffer`
 |`data samples           `|N       |`Get raw samples for graph window (GraphBuffer)`
 |`data save              `|Y       |`Save signal trace data  (from graph window)`
@@ -175,18 +178,20 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf 14a help            `|Y       |`This help`
 |`hf 14a list            `|Y       |`List ISO 14443-a history`
-|`hf 14a info            `|N       |`Tag information`
-|`hf 14a reader          `|N       |`Act like an ISO14443-a reader`
-|`hf 14a ndefread        `|N       |`Read an NDEF file from ISO 14443-A Type 4 tag`
-|`hf 14a cuids           `|N       |`Collect n>0 ISO14443-a UIDs in one go`
-|`hf 14a sim             `|N       |`Simulate ISO 14443-a tag`
-|`hf 14a sniff           `|N       |`sniff ISO 14443-a traffic`
-|`hf 14a apdu            `|N       |`Send ISO 14443-4 APDU to tag`
-|`hf 14a chaining        `|N       |`Control ISO 14443-4 input chaining`
-|`hf 14a raw             `|N       |`Send raw hex data to tag`
 |`hf 14a antifuzz        `|N       |`Fuzzing the anticollision phase.  Warning! Readers may react strange`
 |`hf 14a config          `|N       |`Configure 14a settings (use with caution)`
+|`hf 14a cuids           `|N       |`Collect n>0 ISO14443-a UIDs in one go`
+|`hf 14a info            `|N       |`Tag information`
+|`hf 14a sim             `|N       |`Simulate ISO 14443-a tag`
+|`hf 14a sniff           `|N       |`sniff ISO 14443-a traffic`
+|`hf 14a raw             `|N       |`Send raw hex data to tag`
+|`hf 14a reader          `|N       |`Act like an ISO14443-a reader`
+|`hf 14a apdu            `|N       |`Send ISO 14443-4 APDU to tag`
 |`hf 14a apdufind        `|N       |`Enumerate APDUs - CLA/INS/P1P2`
+|`hf 14a chaining        `|N       |`Control ISO 14443-4 input chaining`
+|`hf 14a ndefformat      `|N       |`Format ISO 14443-A as NFC Type 4 tag`
+|`hf 14a ndefread        `|N       |`Read an NDEF file from ISO 14443-A Type 4 tag`
+|`hf 14a ndefwrite       `|N       |`Write NDEF records to ISO 14443-A tag`
 
 
 ### hf 14b
@@ -207,6 +212,7 @@ Check column "offline" for their availability.
 |`hf 14b sniff           `|N       |`Eavesdrop ISO-14443-B`
 |`hf 14b rdbl            `|N       |`Read SRI512/SRIX4x block`
 |`hf 14b sriwrite        `|N       |`Write data to a SRI512 or SRIX4K tag`
+|`hf 14b view            `|Y       |`Display content from tag dump file`
 
 
 ### hf 15
@@ -227,8 +233,17 @@ Check column "offline" for their availability.
 |`hf 15 reader           `|N       |`Act like an ISO-15693 reader`
 |`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO-15693 tag`
 |`hf 15 samples          `|N       |`Acquire samples as reader (enables carrier, sends inquiry)`
+|`hf 15 eload            `|N       |`Load image file into emulator to be used by 'sim' command`
+|`hf 15 esave            `|N       |`Save emulator memory into image file`
+|`hf 15 eview            `|N       |`View emulator memory`
 |`hf 15 sim              `|N       |`Fake an ISO-15693 tag`
-|`hf 15 slixdisable      `|N       |`Disable privacy mode on SLIX ISO-15693 tag`
+|`hf 15 slixwritepwd     `|N       |`Writes a password on a SLIX ISO-15693 tag`
+|`hf 15 slixeasdisable   `|N       |`Disable EAS mode on SLIX ISO-15693 tag`
+|`hf 15 slixeasenable    `|N       |`Enable EAS mode on SLIX ISO-15693 tag`
+|`hf 15 slixprivacydisable`|N       |`Disable privacy mode on SLIX ISO-15693 tag`
+|`hf 15 slixprivacyenable`|N       |`Enable privacy mode on SLIX ISO-15693 tag`
+|`hf 15 passprotectafi   `|N       |`Password protect AFI - Cannot be undone`
+|`hf 15 passprotecteas   `|N       |`Password protect EAS - Cannot be undone`
 |`hf 15 wrbl             `|N       |`Write a block`
 |`hf 15 findafi          `|N       |`Brute force AFI of an ISO-15693 tag`
 |`hf 15 writeafi         `|N       |`Writes the AFI on an ISO-15693 tag`
@@ -267,7 +282,8 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf epa help            `|Y       |`This help`
 |`hf epa cnonces         `|N       |`Acquire encrypted PACE nonces of specific size`
-|`hf epa preplay         `|N       |`Perform PACE protocol by replaying given APDUs`
+|`hf epa replay          `|N       |`Perform PACE protocol by replaying given APDUs`
+|`hf epa sim             `|N       |`Simulate PACE protocol`
 
 
 ### hf emrtd
@@ -323,6 +339,20 @@ Check column "offline" for their availability.
 |`hf fido assert         `|N       |`FIDO2 GetAssertion command.`
 
 
+### hf fudan
+
+ { Fudan RFIDs...                      }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf fudan help          `|Y       |`This help`
+|`hf fudan reader        `|N       |`Act like a fudan reader`
+|`hf fudan dump          `|N       |`Dump FUDAN tag to binary file`
+|`hf fudan rdbl          `|N       |`Read a fudan tag`
+|`hf fudan view          `|Y       |`Display content from tag dump file`
+|`hf fudan wrbl          `|N       |`Write a fudan tag`
+
+
 ### hf gallagher
 
  { Gallagher DESFire RFIDs...          }
@@ -334,6 +364,7 @@ Check column "offline" for their availability.
 |`hf gallagher clone     `|N       |`Add Gallagher credentials to a DESFire card`
 |`hf gallagher delete    `|N       |`Delete Gallagher credentials from a DESFire card`
 |`hf gallagher diversifykey`|Y       |`Diversify Gallagher key`
+|`hf gallagher decode    `|Y       |`Decode Gallagher credential block`
 
 
 ### hf ksx6924
@@ -343,11 +374,11 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf ksx6924 help        `|Y       |`This help`
-|`hf ksx6924 balance     `|N       |`Get current purse balance`
-|`hf ksx6924 info        `|N       |`Get info about a KS X 6924 (T-Money, Snapper+) transit card`
-|`hf ksx6924 initialize  `|N       |`Perform transaction initialization (Mpda)`
-|`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
 |`hf ksx6924 select      `|N       |`Select application, and leave field up`
+|`hf ksx6924 info        `|N       |`Get info about a KS X 6924 (T-Money, Snapper+) transit card`
+|`hf ksx6924 balance     `|N       |`Get current purse balance`
+|`hf ksx6924 init        `|N       |`Perform transaction initialization with Mpda`
+|`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
 
 
 ### hf jooki
@@ -414,8 +445,9 @@ Check column "offline" for their availability.
 |`hf legic eload         `|N       |`Load binary dump to emulator memory`
 |`hf legic esave         `|N       |`Save emulator memory to binary file`
 |`hf legic eview         `|N       |`View emulator memory`
+|`hf legic einfo         `|N       |`Display deobfuscated and decoded emulator memory`
 |`hf legic crc           `|Y       |`Calculate Legic CRC over given bytes`
-|`hf legic view          `|Y       |`Display content from tag dump file`
+|`hf legic view          `|Y       |`Display deobfuscated and decoded content from tag dump file`
 
 
 ### hf lto
@@ -426,11 +458,12 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf lto help            `|Y       |`This help`
 |`hf lto dump            `|N       |`Dump LTO-CM tag to file`
-|`hf lto restore         `|N       |`Restore dump file to LTO-CM tag`
 |`hf lto info            `|N       |`Tag information`
-|`hf lto rdbl            `|N       |`Read block`
-|`hf lto wrbl            `|N       |`Write block`
 |`hf lto list            `|Y       |`List LTO-CM history`
+|`hf lto rdbl            `|N       |`Read block`
+|`hf lto reader          `|N       |`Act like a LTO-CM reader`
+|`hf lto restore         `|N       |`Restore dump file to LTO-CM tag`
+|`hf lto wrbl            `|N       |`Write block`
 
 
 ### hf mf
@@ -454,12 +487,11 @@ Check column "offline" for their availability.
 |`hf mf auth4            `|N       |`ISO14443-4 AES authentication`
 |`hf mf acl              `|Y       |`Decode and print MIFARE Classic access rights bytes`
 |`hf mf dump             `|N       |`Dump MIFARE Classic tag to binary file`
-|`hf mf mad              `|N       |`Checks and prints MAD`
-|`hf mf ndefread         `|N       |`Prints NDEF records from card`
+|`hf mf mad              `|Y       |`Checks and prints MAD`
 |`hf mf personalize      `|N       |`Personalize UID (MIFARE Classic EV1 only)`
 |`hf mf rdbl             `|N       |`Read MIFARE Classic block`
 |`hf mf rdsc             `|N       |`Read MIFARE Classic sector`
-|`hf mf restore          `|N       |`Restore MIFARE Classic binary file to BLANK tag`
+|`hf mf restore          `|N       |`Restore MIFARE Classic binary file to tag`
 |`hf mf setmod           `|N       |`Set MIFARE Classic EV1 load modulation strength`
 |`hf mf value            `|Y       |`Value blocks`
 |`hf mf view             `|Y       |`Display content from tag dump file`
@@ -486,7 +518,16 @@ Check column "offline" for their availability.
 |`hf mf gen3uid          `|N       |`Set UID without changing manufacturer block`
 |`hf mf gen3blk          `|N       |`Overwrite manufacturer block`
 |`hf mf gen3freeze       `|N       |`Perma lock UID changes. irreversible`
+|`hf mf ggetblk          `|N       |`Read block from card`
+|`hf mf gload            `|N       |`Load dump to card`
+|`hf mf gsave            `|N       |`Save dump from card into file or emulator`
+|`hf mf gsetblk          `|N       |`Write block to card`
 |`hf mf gview            `|N       |`View card`
+|`hf mf gdmconfig        `|N       |`Read config block from card`
+|`hf mf gdmsetblk        `|N       |`Write block to card`
+|`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
+|`hf mf ndefread         `|N       |`Read and print NDEF records from card`
+|`hf mf ndefwrite        `|N       |`Write NDEF records to card`
 
 
 ### hf mfp
@@ -527,7 +568,9 @@ Check column "offline" for their availability.
 |`hf mfu restore         `|N       |`Restore a dump onto a MFU MAGIC tag`
 |`hf mfu view            `|Y       |`Display content from tag dump file`
 |`hf mfu wrbl            `|N       |`Write block`
-|`hf mfu eload           `|N       |`Load Ultralight .eml dump file into emulator memory`
+|`hf mfu tamper          `|N       |`Cofigure the tamper feature on an NTAG 213TT`
+|`hf mfu eload           `|N       |`Load Ultralight dump file into emulator memory`
+|`hf mfu esave           `|N       |`Save Ultralight dump file from emulator memory`
 |`hf mfu eview           `|N       |`View emulator memory`
 |`hf mfu sim             `|N       |`Simulate MIFARE Ultralight from emulator memory`
 |`hf mfu setpwd          `|N       |`Set 3DES key - Ultralight-C`
@@ -619,6 +662,28 @@ Check column "offline" for their availability.
 |`hf st25ta sim          `|N       |`Fake ISO 14443A/ST tag`
 
 
+### hf tesla
+
+ { TESLA Cards...                      }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf tesla help          `|Y       |`This help`
+|`hf tesla info          `|N       |`Tag information`
+|`hf tesla list          `|Y       |`List ISO 14443A/7816 history`
+
+
+### hf texkom
+
+ { Texkom RFIDs...                     }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf texkom help         `|Y       |`This help`
+|`hf texkom reader       `|N       |`Act like a Texkom reader`
+|`hf texkom sim          `|N       |`Simulate a Texkom tag`
+
+
 ### hf thinfilm
 
  { Thinfilm RFIDs...                   }
@@ -638,12 +703,28 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf topaz help          `|Y       |`This help`
+|`hf topaz dump          `|N       |`Dump TOPAZ family tag to file`
 |`hf topaz list          `|Y       |`List Topaz history`
 |`hf topaz info          `|N       |`Tag information`
 |`hf topaz reader        `|N       |`Act like a Topaz reader`
-|`hf topaz sim           `|N       |`<UID> -- Simulate Topaz tag`
+|`hf topaz sim           `|N       |`Simulate Topaz tag`
 |`hf topaz sniff         `|N       |`Sniff Topaz reader-tag communication`
 |`hf topaz raw           `|N       |`Send raw hex data to tag`
+|`hf topaz rdbl          `|N       |`Read block`
+|`hf topaz view          `|Y       |`Display content from tag dump file`
+|`hf topaz wrbl          `|N       |`Write block`
+
+
+### hf xerox
+
+ { Fuji/Xerox cartridge RFIDs...       }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf xerox help          `|Y       |`This help`
+|`hf xerox info          `|N       |`Short info on Fuji/Xerox tag`
+|`hf xerox reader        `|N       |`Act like a Fuji/Xerox reader`
+|`hf xerox dump          `|N       |`Read all memory pages of an Fuji/Xerox tag, save to file`
 
 
 ### hf waveshare
@@ -817,6 +898,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf em 4x70 help        `|Y       |`This help`
+|`lf em 4x70 brute       `|N       |`Bruteforce EM4X70 to find partial Crypt Key`
 |`lf em 4x70 info        `|N       |`Tag information EM4x70`
 |`lf em 4x70 write       `|N       |`Write EM4x70`
 |`lf em 4x70 unlock      `|N       |`Unlock EM4x70 for writing`
@@ -875,7 +957,7 @@ Check column "offline" for their availability.
 |`lf hid reader          `|N       |`attempt to read and extract tag data`
 |`lf hid clone           `|N       |`clone HID tag to T55x7`
 |`lf hid sim             `|N       |`simulate HID tag`
-|`lf hid brute           `|N       |`bruteforce card number against reader`
+|`lf hid brute           `|N       |`bruteforce facility code or card number against reader`
 |`lf hid watch           `|N       |`continuously watch for cards.  Reader mode`
 
 
@@ -917,6 +999,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf indala help         `|Y       |`This help`
+|`lf indala brute        `|N       |`Demodulate an Indala tag (PSK1) from the GraphBuffer`
 |`lf indala demod        `|Y       |`Demodulate an Indala tag (PSK1) from the GraphBuffer`
 |`lf indala altdemod     `|Y       |`Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
 |`lf indala reader       `|N       |`Read an Indala tag from the antenna`
@@ -1233,7 +1316,9 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
+|`nfc type4a format      `|N       |`format ISO-14443-a tag as NFC Tag`
 |`nfc type4a read        `|N       |`read NFC Forum Tag Type 4 A`
+|`nfc type4a write       `|N       |`write NFC Forum Tag Type 4 A`
 |`nfc type4a st25taread  `|N       |`read ST25TA as NFC Forum Tag Type 4`
 |`nfc type4a help        `|Y       |`This help`
 
@@ -1254,7 +1339,9 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
+|`nfc mf cformat         `|N       |`format MIFARE Classic Tag as NFC Tag`
 |`nfc mf cread           `|N       |`read NFC Type MIFARE Classic Tag`
+|`nfc mf cwrite          `|N       |`write NFC Type MIFARE Classic Tag`
 |`nfc mf pread           `|N       |`read NFC Type MIFARE Plus Tag`
 |`nfc mf help            `|Y       |`This help`
 
@@ -1268,6 +1355,20 @@ Check column "offline" for their availability.
 |`nfc barcode read       `|N       |`read NFC Barcode`
 |`nfc barcode sim        `|N       |`simulate NFC Barcode`
 |`nfc barcode help       `|Y       |`This help`
+
+
+### piv
+
+ { PIV commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`piv help               `|Y       |`This help`
+|`piv select             `|N       |`Select the PIV applet`
+|`piv getdata            `|N       |`Gets a container on a PIV card`
+|`piv authsign           `|N       |`Authenticate with the card`
+|`piv scan               `|N       |`Scan PIV card for known containers`
+|`piv list               `|Y       |`List ISO7816 history`
 
 
 ### reveng

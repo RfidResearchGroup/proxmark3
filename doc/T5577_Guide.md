@@ -22,6 +22,8 @@
 | [The configuration Block – Block 0 Page 0](#the-configuration-block-block-0-page-0) |
 | [Exercise 2](#exercise-2)                                                           |
 | [The configuration Block – Block 3 Page 1](#the-configuration-block-block-3-page-1) |
+| [Sniffing commands](#sniffing-commands) |
+| [T5577 and Keysy](#t5577-and-keysy) |
 
 # Part 1
 ^[Top](#top)
@@ -391,8 +393,8 @@ required, please do not proceed.
     
     | Hex Data | Binary Data                            |
     |:--------:|:---------------------------------------|
-    | 00088040 | 000000000000100010000000111***0***0000 |
-    | 00088050 | 000000000000100010000000111***1***0000 |
+    | 000880E0 | 000000000000100010000000111***0***0000 |
+    | 000880F0 | 000000000000100010000000111***1***0000 |
     
     See how in the above we changed the bit in location 28 from a 0 to 1  
     0 = No Password, 1 = Use Password
@@ -462,7 +464,9 @@ required, please do not proceed.
     
     ***Reading a T5577 block with a password when a password is not
     enabled can result in locking the card. Please only use read with a
-    password when it is known that a password is in use.***
+    password when it is known that a password is in use.
+    
+    At least don't use block 0 for this and password with `1` in the most significant bit***
     
     The proxmark3 has a safety check\!
     ```
@@ -529,7 +533,7 @@ required, please do not proceed.
     [=]  Downlink mode..... default/fixed bit length 
     [=]  Password set...... No                       
     ```
-    Yes we can!  We can see Block 0 is the correct config 00088040
+    Yes we can!  We can see Block 0 is the correct config 000880E0
 
 # Part 2 – Configuration Blocks
 ^[Top](#top)
@@ -718,8 +722,28 @@ it, we can follow the password section and update the config from
 _to be written_
 
 
+## Sniffing commands
+^[Top](#top)
+
+Some readers work with cards via T55xx commands (read/write/etc) and think that they are safe)
+The password in this case is sent in clear text.
+So) There is a sniff command to get this command from the buffer or the field:
+
+    [usb] pm3 --> lf t55xx sniff
+
+    result:
+                               
+    [=] T55xx command detection
+    [+] Downlink mode           |  password  |   Data   | blk | page |  0  |  1  | raw
+    [+] ------------------------+------------+----------+-----+------+-----+-+---------------------------------------------
+    [+] Default write/pwd read  | [FFxxxxxx] | FFxxxxxx |  6  |   0  |  16 |  45 | 1011111111101xxxxxxxxxxxxxxxx100000110
+    [+] Default write/pwd read  | [FFxxxxxx] | FFxxxxxx |  6  |   0  |  17 |  46 | 1011111111101xxxxxxxxxxxxxxxx100000110
+    [+] -------------------------------------------------------------------------------------------------------------------
+
+
 
 ## T5577 and Keysy
+^[Top](#top)
 
 The Keysy tag cloning tool (https://tinylabs.io/keysy/) uses T5577 tags that have a special "password" value (NOT the password described above) written in Block 6 that is tied to the traceability data.  The Keysy checks and computes the proper value for Block 6 and will not write to a tag that does not contain the proper value.   This DRM technology relies on the face that genuine T5577 chips cannot have their traceability data (Blocks 1 and 2 of Page 1) re-written and that the method to computer the proper value for Block 6 is proprietary, therefore compelling you to buy their branded tags.
 

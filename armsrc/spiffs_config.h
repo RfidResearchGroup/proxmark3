@@ -136,7 +136,7 @@ typedef uint8_t u8_t;
 
 // Define maximum number of gc runs to perform to reach desired free pages.
 #ifndef SPIFFS_GC_MAX_RUNS
-#define SPIFFS_GC_MAX_RUNS              5
+#define SPIFFS_GC_MAX_RUNS              10
 #endif
 
 // Enable/disable statistics on gc. Debug/test purpose only.
@@ -236,7 +236,7 @@ typedef uint8_t u8_t;
 // Instead of giving parameters in config struct, singleton build must
 // give parameters in defines below.
 #ifndef SPIFFS_CFG_PHYS_SZ
-#define SPIFFS_CFG_PHYS_SZ(ignore)        (1024*128)
+#define SPIFFS_CFG_PHYS_SZ(ignore)        (1024*192)
 #endif
 #ifndef SPIFFS_CFG_PHYS_ERASE_SZ
 #define SPIFFS_CFG_PHYS_ERASE_SZ(ignore)  (4*1024)

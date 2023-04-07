@@ -27,10 +27,20 @@
 #include "common.h"       //BSWAP_32/64
 #include "util.h"
 #include "pm3_cmd.h"
-#include "ui.h"
+#include "crc16.h"        // crc16 ccitt
 #include "mbedtls/sha1.h"
 #include "mbedtls/md5.h"
-#include "crc16.h"        // crc16 ccitt
+#include "mbedtls/cmac.h"
+#include "mbedtls/cipher.h"
+#include "mbedtls/md.h"
+
+#ifndef ON_DEVICE
+#include "ui.h"
+# define prnt(args...) PrintAndLogEx(DEBUG, ## args );
+#else
+# include "dbprint.h"
+# define prnt Dbprintf
+#endif
 
 // Implementation tips:
 // For each implementation of the algos, I recommend adding a self test for easy "simple unit" tests when Travis CI / Appveyor runs.
@@ -229,6 +239,12 @@ uint32_t ul_ev1_pwdgen_def(const uint8_t *uid) {
 uint16_t ul_ev1_packgen_def(const uint8_t *uid) {
     return 0x0000;
 }
+
+// MIFARE ULTRALIGHT OTP generators
+uint32_t ul_c_otpgenA(const uint8_t *uid) {
+    return 0x534C544F;
+}
+
 
 //------------------------------------
 // MFC key generation stuff
@@ -475,15 +491,14 @@ uint32_t lf_t55xx_white_pwdgen(uint32_t id) {
 // Gallagher Desfire Key Diversification Input for Cardax Card Data Application
 int mfdes_kdf_input_gallagher(uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint32_t aid, uint8_t *kdfInputOut, uint8_t *kdfInputLen) {
     if (uid == NULL || (uidLen != 4 && uidLen != 7) || keyNo > 2 || kdfInputOut == NULL || kdfInputLen == NULL) {
-        if (g_debugMode) {
-            PrintAndLogEx(WARNING, "Invalid arguments");
-        }
+        prnt("Invalid arguments");
         return PM3_EINVARG;
     }
 
     int len = 0;
-    // If the keyNo == 1, then omit the UID.
-    if (keyNo != 1) {
+    // If the keyNo == 1 or the aid is 000000, then omit the UID.
+    // On the other hand, if the aid is 1f81f4 (config card) always include the UID.
+    if ((keyNo != 1 && aid != 0x000000) || (aid == 0x1f81f4)) {
         if (*kdfInputLen < (4 + uidLen)) {
             return PM3_EINVARG;
         }
@@ -538,8 +553,9 @@ int mfc_algo_touch_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *
 //------------------------------------
 // Self tests
 //------------------------------------
-int generator_selftest(void) {
 
+int generator_selftest(void) {
+#ifndef ON_DEVICE
 #define NUM_OF_TEST     8
 
     PrintAndLogEx(INFO, "PWD / KEY generator selftest");
@@ -611,6 +627,8 @@ int generator_selftest(void) {
     PrintAndLogEx(success ? SUCCESS : WARNING, "ID  | 0x00000080            | %08"PRIx32 " - %s", lf_id, success ? "OK" : "->00018383<--");
 
     PrintAndLogEx(SUCCESS, "------------------- Selftest %s", (testresult == NUM_OF_TEST) ? "OK" : "fail");
+
+#endif
     return PM3_SUCCESS;
 }
 

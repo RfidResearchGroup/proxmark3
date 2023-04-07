@@ -12,6 +12,7 @@
 #define __CLIPARSER_H
 #include "argtable3.h"
 #include <stdlib.h>
+#include <stdbool.h>
 #include "util.h"
 
 #define arg_param_begin arg_lit0("h",  "help",    "This help")
@@ -53,13 +54,16 @@
 
 #define CLIGetOptionListWithReturn(ctx, paramnum, option_array, option_array_len, value) if (CLIGetOptionList(arg_get_str((ctx), (paramnum)), (option_array), (option_array_len), (value))) {CLIParserFree((ctx)); return PM3_ESOFT;}
 
+#define MAX_INPUT_ARG_LENGTH    4096
+
+
 typedef struct {
     void **argtable;
     size_t argtableLen;
     const char *programName;
     const char *programHint;
     const char *programHelp;
-    char buf[1024 + 60];
+    char buf[MAX_INPUT_ARG_LENGTH + 60];
 } CLIParserContext;
 
 #define CLI_MAX_OPTLIST_LEN    50

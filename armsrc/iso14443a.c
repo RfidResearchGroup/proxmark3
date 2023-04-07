@@ -34,6 +34,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "protocols.h"
+#include "generator.h"
 
 #define MAX_ISO14A_TIMEOUT 524288
 
@@ -927,9 +928,13 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
     (void)b;
 
     uint8_t flip = 0;
-    uint16_t checker = 0;
+    uint16_t checker = 4000;
     for (;;) {
+
         WDT_HIT();
+
+        // ever 3 * 4000,  check if we got any data from client
+        // takes long time,  usually messes with simualtion
         if (flip == 3) {
             if (data_available())
                 return false;
@@ -937,14 +942,14 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
             flip = 0;
         }
 
-        if (checker >= 3000) {
+        // button press, takes a bit time, might mess with simualtion
+        if (checker-- == 0) {
             if (BUTTON_PRESS())
                 return false;
 
             flip++;
-            checker = 0;
+            checker = 4000;
         }
-        ++checker;
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -1034,6 +1039,8 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
     // PPS response
     static uint8_t rPPS[3] = { 0xD0 };
 
+    static uint8_t rPACK[4] = { 0x00, 0x00, 0x00, 0x00 };
+
     switch (tagType) {
         case 1: { // MIFARE Classic 1k
             rATQA[0] = 0x04;
@@ -1046,6 +1053,30 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
             // some first pages of UL/NTAG dump is special data
             mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
             *pages = MAX(mfu_header->pages, 15);
+
+            // counters and tearing flags
+            // for old dumps with all zero headers, we need to set default values.
+            for (uint8_t i = 0; i < 3; i++) {
+
+                counters[i] = le24toh(mfu_header->counter_tearing[i]);
+
+                if (mfu_header->counter_tearing[i][3] != 0x00) {
+                    tearings[i] = mfu_header->counter_tearing[i][3];
+                }
+            }
+
+            // GET_VERSION
+            if (memcmp(mfu_header->version, "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0) {
+                memcpy(rVERSION, "\x00\x04\x04\x02\x01\x00\x11\x03", 8);
+            } else {
+                memcpy(rVERSION, mfu_header->version, 8);
+            }
+            AddCrc14A(rVERSION, sizeof(rVERSION) - 2);
+
+            // READ_SIG
+            memcpy(rSIGN, mfu_header->signature, 32);
+            AddCrc14A(rSIGN, sizeof(rSIGN) - 2);
+
         }
         break;
         case 3: { // MIFARE DESFire
@@ -1100,6 +1131,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
             // READ_SIG
             memcpy(rSIGN, mfu_header->signature, 32);
             AddCrc14A(rSIGN, sizeof(rSIGN) - 2);
+
         }
         break;
         case 8: { // MIFARE Classic 4k
@@ -1221,6 +1253,19 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
 
     AddCrc14A(rPPS, sizeof(rPPS) - 2);
 
+    if (tagType == 7) {
+        uint8_t pwd[4];
+        uint8_t gen_pwd[4];
+        uint16_t start = (*pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH;
+        emlGetMemBt(pwd, start, sizeof(pwd));
+        Uint4byteToMemBe(gen_pwd, ul_ev1_pwdgenB(data));
+        if (memcmp(pwd, gen_pwd, sizeof(pwd)) == 0) {
+            rPACK[0] = 0x80;
+            rPACK[1] = 0x80;
+        }
+    }
+    AddCrc14A(rPACK, sizeof(rPACK) - 2);
+
     static tag_response_info_t responses_init[] = {
         { .response = rATQA,      .response_n = sizeof(rATQA)     },  // Answer to request - respond with card type
         { .response = rUIDc1,     .response_n = sizeof(rUIDc1)    },  // Anticollision cascade1 - respond with uid
@@ -1232,14 +1277,16 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
         { .response = rRATS,      .response_n = sizeof(rRATS)     },  // dummy ATS (pseudo-ATR), answer to RATS
         { .response = rVERSION,   .response_n = sizeof(rVERSION)  },  // EV1/NTAG GET_VERSION response
         { .response = rSIGN,      .response_n = sizeof(rSIGN)     },  // EV1/NTAG READ_SIG response
-        { .response = rPPS,       .response_n = sizeof(rPPS)      }   // PPS response
+        { .response = rPPS,       .response_n = sizeof(rPPS)      },  // PPS response
+        { .response = rPACK,      .response_n = sizeof(rPACK)     }   // PACK response
     };
 
-    // "precompile" responses. There are 11 predefined responses with a total of 80 bytes data to transmit.
+    // "precompile" responses. There are 12 predefined responses with a total of 84 bytes data to transmit.
+
     // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
-    // 81 * 8 data bits, 81 * 1 parity bits, 11 start bits, 11 stop bits, 11 correction bits
-    // 81 * 8 + 81 + 11 + 11 + 11 == 762
-#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 762
+    // 85 * 8 data bits, 85 * 1 parity bits, 12 start bits, 12 stop bits, 12 correction bits
+    // 85 * 8 + 85 + 12 + 12 + 12 == 801
+#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 801
 
     uint8_t *free_buffer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
     // modulation buffer pointer and current buffer free space size
@@ -1635,14 +1682,23 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
             LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
             p_response = NULL;
         } else if (receivedCmd[0] == MIFARE_ULEV1_AUTH && len == 7 && tagType == 7) { // NTAG / EV-1 authentication
+
+            /*
             // PWD stored in dump now
             uint8_t pwd[4];
             emlGetMemBt(pwd, (pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
+            if (memcmp(pwd, "\x00\x00\x00\x00", 4) == 0) {
+                Uint4byteToMemLe(pwd, ul_ev1_pwdgenB(data));
+                Dbprintf("Calc pwd... %02X %02X %02X %02X", pwd[0], pwd[1], pwd[2], pwd[3]);
+            }
+
             if (memcmp(receivedCmd + 1, pwd, 4) == 0) {
+
                 uint8_t pack[4];
                 emlGetMemBt(pack, pages * 4 + MFU_DUMP_PREFIX_LENGTH, 2);
                 if (memcmp(pack, "\x00\x00\x00\x00", 4) == 0) {
-                    memcpy(pack, "\x80\x80\x00\x00", 4);
+                    pack[0] = 0x80;
+                    pack[1] = 0x80;
                 }
                 AddCrc14A(pack, sizeof(pack) - 2);
                 EmSendCmd(pack, sizeof(pack));
@@ -1651,6 +1707,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Auth attempt: %08x", bytes_to_num(receivedCmd + 1, 4));
             }
             p_response = NULL;
+            */
+            p_response = &responses[RESP_INDEX_PACK];
         } else if (receivedCmd[0] == MIFARE_ULEV1_VCSL && len == 23 && tagType == 7) {
             uint8_t cmd[3];
             emlGetMemBt(cmd, (pages - 2) * 4 + 1 + MFU_DUMP_PREFIX_LENGTH, 1);
@@ -2441,8 +2499,10 @@ static void iso14a_set_ATS_times(const uint8_t *ats) {
 
 static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_magsafe) {
 
-#define ECP_DELAY 15
+#define ECP_DELAY 10
+#define ECP_RETRY_TIMEOUT 100
 #define WUPA_RETRY_TIMEOUT 10    // 10ms
+
 
     // 0x26 - REQA
     // 0x52 - WAKE-UP
@@ -2454,15 +2514,25 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_mags
         wupa[0] = MAGSAFE_CMD_WUPA_4;
     }
 
+    if (use_ecp) {
+        // In case a device was already selected, we send a S-BLOCK deselect to bring it into an idle state so it can be selected again
+        uint8_t deselect_cmd[] = {0xc2, 0xe0, 0xb4};
+        ReaderTransmit(deselect_cmd, sizeof(deselect_cmd), NULL);
+        // Read response if present
+        (void) ReaderReceive(resp, resp_par);
+    }
+
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
 
+    bool first_try = true;
+    uint32_t retry_timeout = use_ecp ? ECP_RETRY_TIMEOUT : WUPA_RETRY_TIMEOUT;
     uint32_t start_time = GetTickCount();
     int len;
 
     // we may need several tries if we did send an unknown command or a wrong authentication before...
     do {
-        if (use_ecp) {
+        if (use_ecp && !first_try) {
             uint8_t ecp[] = { 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8};
             ReaderTransmit(ecp, sizeof(ecp), NULL);
             SpinDelay(ECP_DELAY);
@@ -2476,12 +2546,13 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_mags
             }
         }
 
-
         // Broadcast for a card, WUPA (0x52) will force response from all cards in the field
         ReaderTransmitBitsPar(wupa, 7, NULL, NULL);
         // Receive the ATQA
         len = ReaderReceive(resp, resp_par);
-    } while (len == 0 && GetTickCountDelta(start_time) <= WUPA_RETRY_TIMEOUT);
+
+        first_try = false;
+    } while (len == 0 && GetTickCountDelta(start_time) <= retry_timeout);
 
     iso14a_set_timeout(save_iso14a_timeout);
     return len;
@@ -2530,7 +2601,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             uint8_t fudan_read[] = { 0x30, 0x01, 0x8B, 0xB9};
             ReaderTransmit(fudan_read, sizeof(fudan_read), NULL);
             if (!ReaderReceive(resp, resp_par)) {
-                Dbprintf("Card didn't answer to select all");
+                if (g_dbglevel >= DBG_INFO) Dbprintf("Card didn't answer to select all");
                 return 0;
             }
 
@@ -2579,7 +2650,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             // SELECT_ALL
             ReaderTransmit(sel_all, sizeof(sel_all), NULL);
             if (!ReaderReceive(resp, resp_par)) {
-                Dbprintf("Card didn't answer to CL%i select all", cascade_level + 1);
+                if (g_dbglevel >= DBG_INFO) Dbprintf("Card didn't answer to CL%i select all", cascade_level + 1);
                 return 0;
             }
 
@@ -2657,7 +2728,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
 
         // Receive the SAK
         if (!ReaderReceive(resp, resp_par)) {
-            Dbprintf("Card didn't answer to select");
+            if (g_dbglevel >= DBG_INFO) Dbprintf("Card didn't answer to select");
             return 0;
         }
         sak = resp[0];

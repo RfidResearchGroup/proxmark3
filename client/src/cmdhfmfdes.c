@@ -18,12 +18,10 @@
 // Code heavily modified by B.Kerler :)
 
 #include "cmdhfmfdes.h"
-
 #include <stdio.h>
 #include <string.h>
-
-#include "commonutil.h"  // ARRAYLEN
-#include "cmdparser.h"    // command_t
+#include "commonutil.h"             // ARRAYLEN
+#include "cmdparser.h"              // command_t
 #include "comms.h"
 #include "ui.h"
 #include "cmdhf14a.h"
@@ -32,16 +30,16 @@
 #include "protocols.h"
 #include "cmdtrace.h"
 #include "cliparser.h"
-#include "iso7816/apduinfo.h"   // APDU manipulation / errorcodes
+#include "iso7816/apduinfo.h"       // APDU manipulation / errorcodes
 #include "iso7816/iso7816core.h"    // APDU logging
-#include "util_posix.h"     // msleep
+#include "util_posix.h"             // msleep
 #include "mifare/desfirecore.h"
 #include "mifare/desfiretest.h"
 #include "mifare/desfiresecurechan.h"
-#include "mifare/mifaredefault.h"  // default keys
+#include "mifare/mifaredefault.h"   // default keys
 #include "crapto1/crapto1.h"
 #include "fileutils.h"
-#include "nfc/ndef.h"           // NDEF
+//#include "nfc/ndef.h"               // NDEF
 #include "mifare/mad.h"
 #include "mifare/mifaredefault.h"
 #include "generator.h"
@@ -51,7 +49,7 @@
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
 
-#define status(x) ( ((uint16_t)(0x91<<8)) + (uint16_t)x )
+#define status(x) ( ((uint16_t)(0x91 << 8)) + (uint16_t)x )
 /*
 static uint8_t desdefaultkeys[3][8] = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, //Official
     {0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47},
@@ -148,6 +146,15 @@ typedef enum {
     PLUS_EV1,
     NTAG413DNA,
 } nxp_cardtype_t;
+
+typedef enum {
+    DESFIRE_UNKNOWN_PROD = 0,
+    DESFIRE_PHYSICAL,
+    DESFIRE_LIGHT_PHYSICAL,
+    DESFIRE_MICROCONTROLLER,
+    DESFIRE_JAVACARD,
+    DESFIRE_HCE,
+} nxp_producttype_t;
 
 typedef struct dfname {
     uint8_t aid[3];
@@ -298,6 +305,41 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
     return DESFIRE_UNKNOWN;
 }
 
+// ref:  https://www.nxp.com/docs/en/application-note/AN12343.pdf  p7
+static nxp_producttype_t getProductType(const uint8_t *versionhw) {
+
+    uint8_t product = versionhw[2];
+
+    if (product == 0x01)
+        return DESFIRE_PHYSICAL;
+    if (product == 0x08)
+        return DESFIRE_LIGHT_PHYSICAL;
+    if (product == 0x81 || product == 0x83)
+        return DESFIRE_MICROCONTROLLER;
+    if (product == 0x91)
+        return DESFIRE_JAVACARD;
+    if (product == 0xA1)
+        return DESFIRE_HCE;
+    return DESFIRE_UNKNOWN_PROD;
+}
+
+static const char *getProductTypeStr(const uint8_t *versionhw) {
+
+    uint8_t product = versionhw[2];
+
+    if (product == 0x01)
+        return "MIFARE DESFire native IC (physical card)";
+    if (product == 0x08)
+        return "MIFARE DESFire Light native IC (physical card)";
+    if (product == 0x81 || product == 0x83)
+        return "MIFARE DESFire implementation on microcontroller (physical card)";
+    if (product == 0x91)
+        return "MIFARE DESFire applet on Java card / secure element";
+    if (product == 0xA1)
+        return "MIFARE DESFire HCE (MIFARE 2GO)";
+    return "UNKNOWN PROD";
+}
+
 static int mfdes_get_info(mfdes_info_res_t *info) {
     SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
     PacketResponseNG resp;
@@ -354,6 +396,7 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
         {"MIFARE Plus Ev1", "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"},
         {"MIFARE Plus EvX", "04BB49AE4447E6B1B6D21C098C1538B594A11A4A1DBF3D5E673DEACDEB3CC512D1C08AFA1A2768CE20A200BACD2DC7804CD7523A0131ABF607"},
         {"DESFire Ev2 XL",  "04CD5D45E50B1502F0BA4656FF37669597E7E183251150F9574CC8DA56BF01C7ABE019E29FEA48F9CE22C3EA4029A765E1BC95A89543BAD1BC"},
+        {"MIFARE Plus Troika", "040F732E0EA7DF2B38F791BF89425BF7DCDF3EE4D976669E3831F324FF15751BD52AFF1782F72FF2731EEAD5F63ABE7D126E03C856FFB942AF"},
     };
 
 
@@ -627,6 +670,12 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(info.uid, info.uidlen));
     PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(info.details + 7, 5));
     PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), info.details[12], info.details[13]);
+
+    nxp_producttype_t prodtype = getProductType(info.versionHW);
+    if (prodtype != DESFIRE_UNKNOWN_PROD) {
+        PrintAndLogEx(SUCCESS, "     Product type: %s", getProductTypeStr(info.versionHW));
+    }
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
     PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info.versionHW, sizeof(info.versionHW)));
@@ -646,7 +695,6 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  info.versionSW[3], info.versionSW[4]);
     PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(info.versionSW[5]));
     PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(info.versionSW[6], false));
-
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("Card capabilities") " ---------------------------------");
     uint8_t major = info.versionSW[3];
@@ -1725,18 +1773,20 @@ static int CmdHF14aDesMAD(const char *Cmd) {
         }
     }
 
+    PrintAndLogEx(SUCCESS, _CYAN_("Issuer"));
+
     if (foundFFFFFF) {
         res = DesfireSelectAIDHexNoFieldOn(&dctx, 0xffffff);
         if (res == PM3_SUCCESS) {
             uint32_t madver = 0;
             res = DesfireValueFileOperations(&dctx, 0x00, MFDES_GET_VALUE, &madver);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "MAD version   : " _RED_("n/a"));
+                PrintAndLogEx(SUCCESS, "MAD version... " _RED_("n/a"));
             } else {
                 if (madver == 3)
-                    PrintAndLogEx(SUCCESS, "MAD version   : " _GREEN_("3"));
+                    PrintAndLogEx(SUCCESS, "MAD version... " _GREEN_("3"));
                 else
-                    PrintAndLogEx(WARNING, "MAD version   : " _YELLOW_("%d"), madver);
+                    PrintAndLogEx(WARNING, "MAD version... " _YELLOW_("%d"), madver);
             }
 
             uint8_t data[250] = {0};
@@ -1744,10 +1794,10 @@ static int CmdHF14aDesMAD(const char *Cmd) {
 
             res = DesfireReadFile(&dctx, 01, 0x000000, 0, data, &datalen);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "Card Holder   : " _RED_("n/a"));
+                PrintAndLogEx(SUCCESS, "Card Holder... " _RED_("n/a"));
             } else {
                 if (datalen > 0) {
-                    PrintAndLogEx(SUCCESS, "Card Holder   : ");
+                    PrintAndLogEx(SUCCESS, "Card Holder... ");
                     if (verbose) {
                         print_buffer_with_offset(data, datalen, 0, true);
                         PrintAndLogEx(NORMAL, "");
@@ -1755,7 +1805,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
                     MADCardHolderInfoDecode(data, datalen, verbose);
                     PrintAndLogEx(NORMAL, "");
                 } else {
-                    PrintAndLogEx(SUCCESS, "Card Holder   : " _YELLOW_("none"));
+                    PrintAndLogEx(SUCCESS, "Card Holder... " _YELLOW_("none"));
                 }
             }
 
@@ -1779,16 +1829,41 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     }
 
     size_t madappcount = 0;
-    PrintAndLogEx(SUCCESS, "Applications  : ");
+    PrintAndLogEx(SUCCESS, "");
+    PrintAndLogEx(SUCCESS, _CYAN_("Applications"));
     for (int i = 0; i < PICCInfo.appCount; i++) {
         if ((AppList[i].appNum & 0xf00000) == 0xf00000) {
             DesfirePrintMADAID(AppList[i].appNum, verbose);
+
+            // read file 0, 1, 2
+            res = DesfireSelectAIDHexNoFieldOn(&dctx, AppList[i].appNum);
+            if (res == PM3_SUCCESS) {
+                uint8_t buf[APDU_RES_LEN] = {0};
+                size_t buflen = 0;
+
+                res = DesfireGetFileIDList(&dctx, buf, &buflen);
+                if (res != PM3_SUCCESS) {
+                    PrintAndLogEx(ERR, "Desfire GetFileIDList command " _RED_("error") ". Result: %d", res);
+                    DropField();
+                    return PM3_ESOFT;
+                }
+
+                if (buflen > 0) {
+                    for (int j = 0; j < buflen; j++) {
+                        PrintAndLogEx(INFO, "  File ID... %02x", buf[j]);
+                    }
+                }
+            }
+
             madappcount++;
         }
     }
 
-    if (madappcount == 0)
+    if (madappcount == 0) {
         PrintAndLogEx(SUCCESS, "There is no MAD applications on the card");
+        DropField();
+        return PM3_SUCCESS;
+    }
 
     DropField();
     return PM3_SUCCESS;
@@ -2122,9 +2197,9 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
                   "\n"
                   "hf mfdes setconfig --param 03 --data 0428               -> set SAK\n"
                   "hf mfdes setconfig --param 02 --data 0875778102637264   -> set ATS (first byte - length)\n"
-                  "hf mfdes setconfig --isoid df01 -t aes -s ev2 --param 05 --data 00000000020000000000 -> set LRP mode enable for Desfire Light\n"
-                  "hf mfdes setconfig --isoid df01 -t aes -s ev2 --param 0a --data 00ffffffff           -> Disable failed auth counters for Desfire Light\n"
-                  "hf mfdes setconfig --isoid df01 -t aes -s lrp --param 0a --data 00ffffffff           -> Disable failed auth counters for Desfire Light via lrp");
+                  "hf mfdes setconfig --isoid df01 -t aes --schann ev2 --param 05 --data 00000000020000000000 -> set LRP mode enable for Desfire Light\n"
+                  "hf mfdes setconfig --isoid df01 -t aes --schann ev2 --param 0a --data 00ffffffff           -> Disable failed auth counters for Desfire Light\n"
+                  "hf mfdes setconfig --isoid df01 -t aes --schann lrp --param 0a --data 00ffffffff           -> Disable failed auth counters for Desfire Light via lrp");
 
     void *argtable[] = {
         arg_param_begin,
@@ -2231,7 +2306,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
                   "but for APP keys crypto algorithm is set by createapp command and can't be changed wo application delete\n"
                   "\n"
                   "hf mfdes changekey --aid 123456    -> execute with default factory setup. change des key 0 in the app 123456 from 00..00 to 00..00\n"
-                  "hf mfdes changekey --isoid df01 -t aes -s lrp --newkeyno 01    -> change key 01 via lrp channel"
+                  "hf mfdes changekey --isoid df01 -t aes --schann lrp --newkeyno 01    -> change key 01 via lrp channel"
                   "hf mfdes changekey -t des --newalgo aes --newkey 11223344556677889900112233445566 --newver a5      -> change card master key to AES one\n"
                   "hf mfdes changekey --aid 123456 -t aes --key 00000000000000000000000000000000 --newkey 11223344556677889900112233445566 -> change app master key\n"
                   "hf mfdes changekey --aid 123456 -t des -n 0 --newkeyno 1 --oldkey 5555555555555555 --newkey 1122334455667788  -> change key 1 with auth from key 0\n"
@@ -2632,7 +2707,7 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes getuid",
                   "Get UID from card. Get the real UID if the random UID bit is on and get the same UID as in anticollision if not. Any card's key needs to be provided. ",
                   "hf mfdes getuid                              -> execute with default factory setup\n"
-                  "hf mfdes getuid --isoid df01 -t aes -s lrp   -> for desfire lights default settings");
+                  "hf mfdes getuid --isoid df01 -t aes --schan lrp   -> for desfire lights default settings");
 
     void *argtable[] = {
         arg_param_begin,
@@ -3301,7 +3376,7 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
                   "hf mfdes getfileisoids --aid 123456    -> execute with defaults from `default` command\n"
                   "hf mfdes getfileisoids -n 0 -t des -k 0000000000000000 --kdf none --aid 123456    -> execute with default factory setup\n"
                   "hf mfdes getfileisoids --isoid df01     -> get iso file ids from Desfire Light with factory card settings\n"
-                  "hf mfdes getfileisoids --isoid df01 -s lrp -t aes     -> get iso file ids from Desfire Light via lrp channel with default key authentication");
+                  "hf mfdes getfileisoids --isoid df01 --schann lrp -t aes     -> get iso file ids from Desfire Light via lrp channel with default key authentication");
 
     void *argtable[] = {
         arg_param_begin,
@@ -3441,6 +3516,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
 
     DesfirePrintFileSettings(buf, buflen);
 
+    PrintAndLogEx(NORMAL, "");
     DropField();
     return PM3_SUCCESS;
 }
@@ -3497,7 +3573,6 @@ static int DesfireCreateFileParameters(
     bool userawfrights = false;
     if (frightsid) {
         if (CLIGetUint32Hex(ctx, frightsid, 0xeeee, &frights, &userawfrights, 2, "File rights must have 2 bytes length")) {
-            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
@@ -3543,7 +3618,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
                   "hf mfdes chfilesettings --aid 123456 --fid 01 --amode plain --rrights free --wrights free --rwrights free --chrights key0 -> change file settings app=123456, file=01 with defaults from `default` command\n"
                   "hf mfdes chfilesettings -n 0 -t des -k 0000000000000000 --kdf none --aid 123456 --fid 01 --rawdata 00EEEE -> execute with default factory setup\n"
                   "hf mfdes chfilesettings --aid 123456 --fid 01 --rawdata 810000021f112f22 -> change file settings with additional rights for keys 1 and 2\n"
-                  "hf mfdes chfilesettings --isoid df01 --fid 00 --amode plain --rawrights eee0 -s lrp -t aes -> change file settings via lrp channel");
+                  "hf mfdes chfilesettings --isoid df01 --fid 00 --amode plain --rawrights eee0 --schann lrp -t aes -> change file settings via lrp channel");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4068,8 +4143,8 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
                   "hf mfdes createmacfile --aid 123456 --fid 01 --rawrights 0FF0 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file with parameters. Rights from default. Authentication with defaults from `default` command\n"
                   "hf mfdes createmacfile --aid 123456 --fid 01 --amode plain --rrights free --wrights deny --rwrights free --chrights key0 --mackey 00112233445566778899aabbccddeeff -> create file app=123456, file=01, with key, and mentioned rights with defaults from `default` command\n"
                   "hf mfdes createmacfile -n 0 -t des -k 0000000000000000 --kdf none --aid 123456 --fid 01 -> execute with default factory setup. key and keyver == 0x00..00\n"
-                  "hf mfdes createmacfile --isoid df01 --fid 0f -s lrp -t aes --rawrights 0FF0 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file via lrp channel\n"
-                  "hf mfdes createmacfile --isoid df01 --fid 0f -s lrp -t aes --rawrights 0F10 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file via lrp channel with CommitReaderID command enable");
+                  "hf mfdes createmacfile --isoid df01 --fid 0f --schann lrp -t aes --rawrights 0FF0 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file via lrp channel\n"
+                  "hf mfdes createmacfile --isoid df01 --fid 0f --schann lrp -t aes --rawrights 0F10 --mackey 00112233445566778899aabbccddeeff --mackeyver 01 -> create transaction mac file via lrp channel with CommitReaderID command enable");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4186,7 +4261,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes deletefile",
                   "Delete file from application. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
                   "hf mfdes deletefile --aid 123456 --fid 01 -> delete file for: app=123456, file=01 with defaults from `default` command\n"
-                  "hf mfdes deletefile --isoid df01 --fid 0f -s lrp -t aes -> delete file for lrp channel");
+                  "hf mfdes deletefile --isoid df01 --fid 0f --schann lrp -t aes -> delete file for lrp channel");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4232,7 +4307,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (fnum > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0x00 - 0x1f), got 0x%02x", fnum);
         return PM3_EINVARG;
     }
 
@@ -4263,8 +4338,8 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
                   "hf mfdes value --aid 123456 --fid 01  -> get value app=123456, file=01 with defaults from `default` command\n"
                   "hf mfdes value --aid 123456 --fid 01 --op credit -d 00000001 -> credit value app=123456, file=01 with defaults from `default` command\n"
                   "hf mfdes value -n 0 -t des -k 0000000000000000 --kdf none --aid 123456 --fid 01 -> get value with default factory setup\n"
-                  "hf mfdes val --isoid df01 --fid 03 -s lrp -t aes -n 1 --op credit --d 00000001 -m encrypt -> credit value in the lrp encrypted mode\n"
-                  "hf mfdes val --isoid df01 --fid 03 -s lrp -t aes -n 1 --op get -m plain -> get value in plain (nevertheless of mode) works for desfire light (look SetConfiguration option 0x09)");
+                  "hf mfdes val --isoid df01 --fid 03 --schann lrp -t aes -n 1 --op credit --d 00000001 -m encrypt -> credit value in the lrp encrypted mode\n"
+                  "hf mfdes val --isoid df01 --fid 03 --schann lrp -t aes -n 1 --op get -m plain -> get value in plain (nevertheless of mode) works for desfire light (look SetConfiguration option 0x09)");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4436,7 +4511,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes clearrecfile",
                   "Clear record file. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
                   "hf mfdes clearrecfile --aid 123456 --fid 01 -> clear record file for: app=123456, file=01 with defaults from `default` command\n"
-                  "hf mfdes clearrecfile --isoid df01 --fid 01 -s lrp -t aes -n 3 -> clear record file for lrp channel with key number 3");
+                  "hf mfdes clearrecfile --isoid df01 --fid 01 --schann lrp -t aes -n 3 -> clear record file for lrp channel with key number 3");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4482,7 +4557,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (fnum > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0x00 - 0x1f), got 0x%02x", fnum);
         return PM3_EINVARG;
     }
 
@@ -4768,14 +4843,17 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx,
             }
         }
 
-        if (resplen > 0) {
+        if (resplen > 0 && reclen > 0) {
             size_t reccount = resplen / reclen;
             PrintAndLogEx(SUCCESS, "Read %zu bytes from file 0x%02x from record %d record count %zu record length %zu", resplen, fnum, offset, reccount, reclen);
-            if (reccount > 1)
+            if (reccount > 1) {
                 PrintAndLogEx(SUCCESS, "Lastest record at the bottom.");
+            }
+
             for (int i = 0; i < reccount; i++) {
-                if (i != 0)
+                if (i != 0) {
                     PrintAndLogEx(SUCCESS, "Record %zu", reccount - (i + offset + 1));
+                }
                 print_buffer_with_offset(&resp[i * reclen], reclen, offset, (i == 0));
             }
         } else {
@@ -4835,8 +4913,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
                   "hf mfdes read --isoid 0102 --fileisoid 1000 --type data -c iso -> read file via ISO channel: app iso id=0102, iso id=1000, offset=0. Select via ISO commands\n"
                   "hf mfdes read --isoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000001 -> get one record (number 5) from file 1100 via iso commands\n"
                   "hf mfdes read --isoid 0102 --fileisoid 1100 --type record -c iso --offset 000005 --length 000000 -> get all record (from 5 to 1) from file 1100 via iso commands\n"
-                  "hf mfdes read --isoid df01 --fid 00 -s lrp -t aes --length 000010 -> read via lrp channel\n"
-                  "hf mfdes read --isoid df01 --fid 00 -s ev2 -t aes --length 000010 --isochain -> read Desfire Light via ev2 channel");
+                  "hf mfdes read --isoid df01 --fid 00 --schann lrp -t aes --length 000010 -> read via lrp channel\n"
+                  "hf mfdes read --isoid df01 --fid 00 --schann ev2 -t aes --length 000010 --isochain -> read Desfire Light via ev2 channel");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4914,7 +4992,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (fnum > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0x00 - 0x1f), got 0x%02x", fnum);
         return PM3_EINVARG;
     }
 
@@ -4995,7 +5073,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
                   "Write data from file. Key needs to be provided or flag --no-auth set (depend on file settings).",
                   "In the mode with CommitReaderID to decode previous reader id command needs to read transaction counter via dump/read command and specify --trkey\n"
                   "\n"
-                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> write file: app=123456, file=01, offset=0, get file type from card. use default channel settings from `default` command\n"
+                  "hf mfdes write --aid 123456 --fid 01 -d 01020304 -> AID 123456, file=01, offset=0, get file type from card. use default channel settings from `default` command\n"
                   "hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --0ffset 000100 -> write data to std file with offset 0x100\n"
                   "hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --commit -> write data to backup file with commit\n"
                   "hf mfdes write --aid 123456 --fid 01 --type value -d 00000001 -> increment value file\n"
@@ -5007,7 +5085,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
                   "hf mfdes write --isoid 1234 --fileisoid 1000 --type data -c iso -d 01020304 -> write data to std/backup file via iso commandset\n"
                   "hf mfdes write --isoid 1234 --fileisoid 2000 --type record -c iso -d 01020304 -> send record to record file via iso commandset\n"
                   "hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203 -> write data to file with CommitReaderID command before write and CommitTransaction after write\n"
-                  "hf mfdes write --isoid df01 --fid 04 -d 01020304 --trkey 00112233445566778899aabbccddeeff --readerid 5532 -t aes -s lrp -> advanced CommitReaderID via lrp channel sample");
+                  "hf mfdes write --isoid df01 --fid 04 -d 01020304 --trkey 00112233445566778899aabbccddeeff --readerid 5532 -t aes --schann lrp -> advanced CommitReaderID via lrp channel sample");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5113,7 +5191,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (fnum > 0x1F) {
-        PrintAndLogEx(ERR, "File number range is invalid (exp 0 - 31), got %d", fnum);
+        PrintAndLogEx(ERR, "File number range is invalid (exp 0x00 - 0x1f), got 0x%02x", fnum);
         return PM3_EINVARG;
     }
 
@@ -5343,9 +5421,10 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 static int CmdHF14ADesLsFiles(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes lsfiles",
-                  "Show file list. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
-                  "hf mfdes lsfiles --aid 123456     -> show file list for: app=123456 with defaults from `default` command"
-                  "hf mfdes lsfiles --isoid df01 --no-auth    -> show files from desfire light");
+                  "This commands List files inside application AID / ISOID.\n"
+                  "Master key needs to be provided or flag --no-auth set (depend on cards settings).",
+                  "hf mfdes lsfiles --aid 123456            -> AID 123456, list files using `default` command creds\n"
+                  "hf mfdes lsfiles --isoid df01 --no-auth  -> list files for DESFire light");
 
     void *argtable[] = {
         arg_param_begin,
@@ -5484,7 +5563,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes dump",
                   "For each application show fil list and then file content. Key needs to be provided for authentication or flag --no-auth set (depend on cards settings).",
                   "hf mfdes dump --aid 123456     -> show file dump for: app=123456 with channel defaults from `default` command/n"
-                  "hf mfdes dump --isoid df01 -s lrp -t aes --length 000090    -> lrp default settings with length limit");
+                  "hf mfdes dump --isoid df01 --schann lrp -t aes --length 000090    -> lrp default settings with length limit");
 
     void *argtable[] = {
         arg_param_begin,

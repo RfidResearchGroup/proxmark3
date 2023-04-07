@@ -35,7 +35,9 @@ typedef enum logLevel {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG, INPLA
 typedef enum emojiMode {EMO_ALIAS, EMO_EMOJI, EMO_ALTTEXT, EMO_NONE} emojiMode_t;
 typedef enum clientdebugLevel {cdbOFF, cdbSIMPLE, cdbFULL} clientdebugLevel_t;
 // typedef enum devicedebugLevel {ddbOFF, ddbERROR, ddbINFO, ddbDEBUG, ddbEXTENDED} devicedebugLevel_t;
-typedef enum savePaths {spDefault, spDump, spTrace, spItemCount} savePaths_t; // last item spItemCount used to auto map to number of files
+
+// last item spItemCount used to auto map to number of files
+typedef enum savePaths {spDefault, spDump, spTrace, spItemCount} savePaths_t;
 typedef struct {int x; int y; int h; int w;} qtWindow_t;
 
 typedef struct {
@@ -47,6 +49,7 @@ typedef struct {
     bool pm3_present;
     bool help_dump_mode;
     bool show_hints;
+    bool dense_output;
     bool window_changed; // track if plot/overlay pos/size changed to save on exit
     qtWindow_t plot;
     qtWindow_t overlay;

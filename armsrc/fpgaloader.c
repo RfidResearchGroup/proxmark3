@@ -613,10 +613,12 @@ void switch_off(void) {
     if (g_dbglevel > 3) {
         Dbprintf("switch_off");
     }
+
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     if (downloaded_bitstream == FPGA_BITSTREAM_HF || downloaded_bitstream == FPGA_BITSTREAM_HF_15) {
         FpgaDisableSscDma();
     }
+
     set_tracing(false);
     LEDsoff();
 }

@@ -1,11 +1,20 @@
-# Notes to run tests
+# Notes on run_tests.sh script
+This script runs a bunch of different builds with make and cmake together
+with the different combos of RDV4, GENERIC, BTADDON combos.
 
-No ARM compiler available ?
+If all tests OK,  the script will finish with PASS.
+
+# Notes to run tests
+The script is to be run in proxmark root folder inside the docker env.
 
 ```
-sudo zypper --non-interactive install cmake
-sudo zypper --non-interactive install python3
-sudo zypper --non-interactive install python3-pip
-python3 -m pip install ansicolors sslcrypto
-tools/pm3_tests.sh --long mfkey nonce2key mf_nonce_brute fpga_compress common client
+docker/opensuse-leap/run_tests.sh;
+```
+
+Or if you want to run single test,
+
+```
+sudo zypper refresh && sudo zypper --non-interactive update
+make clean; make -j
+tools/pm3_tests.sh --long
 ```

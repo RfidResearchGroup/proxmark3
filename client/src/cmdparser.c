@@ -25,6 +25,9 @@
 #include "comms.h"
 #include "util_posix.h" // msleep
 
+
+#define MAX_PM3_INPUT_ARGS_LENGTH    4096
+
 bool AlwaysAvailable(void) {
     return true;
 }
@@ -36,54 +39,55 @@ bool IfPm3Present(void) {
 }
 
 bool IfPm3Rdv4Fw(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
-    return (g_pm3_capabilities.compiled_with_flash) || (g_pm3_capabilities.compiled_with_smartcard);
+    return (g_pm3_capabilities.is_rdv4);
 }
 
 bool IfPm3Flash(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
-    if (!g_pm3_capabilities.compiled_with_flash)
+    if (g_pm3_capabilities.compiled_with_flash == false)
         return false;
     return g_pm3_capabilities.hw_available_flash;
 }
 
 bool IfPm3Smartcard(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
-    if (!g_pm3_capabilities.compiled_with_smartcard)
+    if (g_pm3_capabilities.compiled_with_smartcard == false)
         return false;
     return g_pm3_capabilities.hw_available_smartcard;
 }
 
 bool IfPm3FpcUsart(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_fpc_usart;
 }
 
 bool IfPm3FpcUsartHost(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_fpc_usart_host;
 }
 
 bool IfPm3FpcUsartHostFromUsb(void) {
     // true if FPC USART Host support and if talking from USB-CDC interface
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
-    if (!g_pm3_capabilities.compiled_with_fpc_usart_host)
+    if (g_pm3_capabilities.compiled_with_fpc_usart_host == false)
         return false;
     return !g_conn.send_via_fpc_usart;
 }
 
 bool IfPm3FpcUsartDevFromUsb(void) {
     // true if FPC USART developer support and if talking from USB-CDC interface
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
-    if (!g_pm3_capabilities.compiled_with_fpc_usart_dev)
+    if (g_pm3_capabilities.compiled_with_fpc_usart_dev == false)
         return false;
+
     return !g_conn.send_via_fpc_usart;
 }
 
@@ -93,102 +97,100 @@ bool IfPm3FpcUsartFromUsb(void) {
 }
 
 bool IfPm3Lf(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_lf;
 }
 
 bool IfPm3Hitag(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_hitag;
 }
 
 bool IfPm3EM4x50(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_em4x50;
 }
 
 bool IfPm3EM4x70(void) {
-
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_em4x70;
 }
 
 bool IfPm3Hfsniff(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_hfsniff;
 }
 
 bool IfPm3Hfplot(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_hfplot;
 }
 
 bool IfPm3Iso14443a(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_iso14443a;
 }
 
 bool IfPm3Iso14443b(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_iso14443b;
 }
 
 bool IfPm3Iso14443(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_iso14443a || g_pm3_capabilities.compiled_with_iso14443b;
 }
 
 bool IfPm3Iso15693(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_iso15693;
 }
 
 bool IfPm3Felica(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_felica;
 }
 
 bool IfPm3Legicrf(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_legicrf;
 }
 
 bool IfPm3Iclass(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_iclass;
 }
 
 bool IfPm3NfcBarcode(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_nfcbarcode;
 }
 
 bool IfPm3Lcd(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_lcd;
 }
 
 bool IfPm3Zx8211(void) {
-    if (!IfPm3Present())
+    if (IfPm3Present() == false)
         return false;
     return g_pm3_capabilities.compiled_with_zx8211;
 }
-
 
 void CmdsHelp(const command_t Commands[]) {
     if (Commands[0].Name == NULL) return;
@@ -259,7 +261,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     }
 
 
-    char cmd_name[128];
+    char cmd_name[128] = {0};
     memset(cmd_name, 0, sizeof(cmd_name));
 
     int len = 0;
@@ -275,8 +277,10 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
 
     // find args, check for -h / --help
     int tmplen = len;
-    while (Cmd[tmplen] == ' ')
+    while (Cmd[tmplen] == ' ') {
         ++tmplen;
+    }
+
     bool request_help = (strcmp(Cmd + tmplen, "-h") == 0) || (strcmp(Cmd + tmplen, "--help") == 0);
 
     int i = 0;
@@ -305,12 +309,15 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
                 matches++;
             }
         }
-        if (matches == 1) i = last_match;
+        if (matches == 1) {
+            i = last_match;
+        }
     }
 
     if (Commands[i].Name) {
-        while (Cmd[len] == ' ')
+        while (Cmd[len] == ' ') {
             ++len;
+        }
         return Commands[i].Parse(Cmd + len);
     } else {
         // show help for selected hierarchy or if command not recognised
@@ -320,7 +327,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static char pparent[512] = {0};
+static char pparent[MAX_PM3_INPUT_ARGS_LENGTH] = {0};
 static char *parent = pparent;
 
 void dumpCommandsRecursive(const command_t cmds[], int markdown, bool full_help) {
@@ -346,11 +353,13 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown, bool full_help)
 
         const char *cmd_offline = "N";
 
-        if (cmds[i].IsAvailable())
+        if (cmds[i].IsAvailable()) {
             cmd_offline = "Y";
-        if (markdown)
+        }
+
+        if (markdown) {
             PrintAndLogEx(NORMAL, "|`%s%-*s`|%-*s|`%s`", parent, w_cmd - (int)strlen(parent) - 2, cmds[i].Name, w_off, cmd_offline, cmds[i].Help);
-        else if (full_help) {
+        } else if (full_help) {
             PrintAndLogEx(NORMAL, "---------------------------------------------------------------------------------------");
             PrintAndLogEx(NORMAL, _RED_("%s%-*s\n") "available offline: %s", parent, w_cmd - (int)strlen(parent), cmds[i].Name, cmds[i].IsAvailable() ? _GREEN_("yes") : _RED_("no"));
             cmds[i].Parse("--help");
@@ -374,15 +383,17 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown, bool full_help)
         } else {
             PrintAndLogEx(NORMAL, "### %s%s\n\n %s\n", parent, cmds[i].Name, cmds[i].Help);
         }
-        char currentparent[512] = {0};
+
+        char currentparent[MAX_PM3_INPUT_ARGS_LENGTH] = {0};
         snprintf(currentparent, sizeof currentparent, "%s%s ", parent, cmds[i].Name);
+
         char *old_parent = parent;
         parent = currentparent;
         // This is what causes the recursion, since commands Parse-implementation
         // in turn calls the CmdsParse above.
-        if (markdown)
+        if (markdown) {
             cmds[i].Parse("XX_internal_command_dump_markdown_XX");
-        else if (full_help) {
+        } else if (full_help) {
             cmds[i].Parse("XX_internal_command_dump_full_XX");
         } else {
             cmds[i].Parse("XX_internal_command_dump_XX");

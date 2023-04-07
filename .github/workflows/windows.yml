@@ -48,7 +48,7 @@ jobs:
         working-directory: C:\ProxSpace
         run: ./runme64.bat -c "exit"
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: make clean
         run: make clean
@@ -98,9 +98,9 @@ jobs:
 
     steps:
       - name: WSL setup
-        uses: Vampire/setup-wsl@v1
+        uses: Vampire/setup-wsl@v2
         with:
-          distribution: Ubuntu-20.04
+          distribution: Ubuntu-22.04
           update: "true"
           additional-packages: git
             ca-certificates
@@ -134,7 +134,7 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.eol lf
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: make clean
         run: make clean

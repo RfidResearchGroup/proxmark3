@@ -33,7 +33,7 @@
 
 #include "ui.h"     // PrintAndLog
 
-#define UTIL_BUFFER_SIZE_SPRINT 8193
+#define UTIL_BUFFER_SIZE_SPRINT 8196
 // global client debug variable
 uint8_t g_debugMode = 0;
 // global client disable logging variable
@@ -45,7 +45,7 @@ bool g_pendingPrompt = false;
 #include <windows.h>
 #endif
 
-#define MAX_BIN_BREAK_LENGTH   (3072+384+1)
+#define MAX_BIN_BREAK_LENGTH   (3072 + 384 + 1)
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -89,6 +89,28 @@ int kbd_enter_pressed(void) {
     return ret;
 }
 #endif
+
+static char b2s(uint8_t v, bool uppercase) {
+    // clear higher bits
+    v &= 0xF;
+
+    switch (v) {
+        case 0xA :
+            return (uppercase ? 'A' : 'a') ;
+        case 0xB :
+            return (uppercase ? 'B' : 'b') ;
+        case 0xC :
+            return (uppercase ? 'C' : 'c') ;
+        case 0xD :
+            return (uppercase ? 'D' : 'd') ;
+        case 0xE :
+            return (uppercase ? 'E' : 'e') ;
+        case 0xF :
+            return (uppercase ? 'F' : 'f') ;
+        default:
+            return (char)(v + 0x30);
+    }
+}
 
 // create filename on hex uid.
 // param *fn   -  pointer to filename char array
@@ -164,7 +186,7 @@ void ascii_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len
     size_t i = 0;
     for (i = 0; i < max_len; ++i, tmp++) {
         char c = hex_data[i];
-        snprintf(tmp, hex_max_len - (tmp - tmp_base), "%c", ((c < 32) || (c == 127)) ? '.' : c);
+        *tmp = ((c < 32) || (c == 127)) ? '.' : c;
     }
 
     size_t m = (min_str_len > i) ? min_str_len : 0;
@@ -172,7 +194,7 @@ void ascii_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len
         m = hex_max_len;
 
     for (; i < m; i++, tmp++)
-        snprintf(tmp, hex_max_len - (tmp - tmp_base), " ");
+        *tmp = ' ';
 
     // remove last space
     *tmp = '\0';
@@ -181,32 +203,41 @@ void ascii_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len
 void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, const size_t hex_max_len,
                    const size_t min_str_len, const size_t spaces_between, bool uppercase) {
 
-    if (buf == NULL) return;
+    // sanity check
+    if (buf == NULL || hex_len < 1)
+        return;
 
+    // 1. hex string length.
+    // 2. byte array to be converted to string
+    //
+
+    size_t max_byte_len = (hex_len > hex_max_len) ? hex_max_len : hex_len;
+    size_t max_str_len = (max_byte_len * (2 + spaces_between)) + 1;
     char *tmp_base = (char *)buf;
     char *tmp = tmp_base;
 
-    size_t max_len = (hex_len > hex_max_len) ? hex_max_len : hex_len;
-
     size_t i;
-    for (i = 0; i < max_len; ++i, tmp += 2 + spaces_between) {
-        snprintf(tmp, hex_max_len - (tmp - tmp_base), (uppercase) ? "%02X" : "%02x", (unsigned int) hex_data[i]);
+    for (i = 0; (i < max_byte_len) && (max_str_len > strlen(tmp_base)) ; ++i) {
+
+        *(tmp++) = b2s((hex_data[i] >> 4), uppercase);
+        *(tmp++) = b2s(hex_data[i], uppercase);
 
         for (size_t j = 0; j < spaces_between; j++)
-            snprintf(tmp + 2 + j, hex_max_len - ((tmp + 2 + j) - tmp_base), " ");
+            *(tmp++) = ' ';
     }
 
     i *= (2 + spaces_between);
 
-    size_t m = min_str_len > i ? min_str_len : 0;
+    size_t m = (min_str_len > i) ? min_str_len : 0;
     if (m > hex_max_len)
         m = hex_max_len;
 
-    for (; i < m; i++, tmp++)
-        snprintf(tmp, hex_max_len - (tmp - tmp_base), " ");
+    while (m--)
+        *(tmp++) = ' ';
 
     // remove last space
     *tmp = '\0';
+
 }
 
 // printing and converting functions
@@ -235,7 +266,7 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
     uint8_t mod = len % breaks;
 
     if (mod) {
-        char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
+        char buf[UTIL_BUFFER_SIZE_SPRINT + 3] = {0};
         hex_to_buffer((uint8_t *)buf, data + i, mod, (sizeof(buf) - 1), 0, 1, true);
 
         // add the spaces...
@@ -245,22 +276,53 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
     }
 }
 
-static void print_buffer_ex(const uint8_t *data, const size_t len, int level, uint8_t breaks) {
+void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t breaks) {
+    if (data == NULL || len == 0 || breaks == 0) return;
 
-    if (len < 1)
-        return;
-
-    char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
     int i;
     for (i = 0; i < len; i += breaks) {
         if (len - i < breaks) { // incomplete block, will be treated out of the loop
             break;
         }
+        PrintAndLogEx(INFO, "%s", sprint_hex_inrow_spaces(data + i, breaks, 0));
+    }
+
+    // the last odd bytes
+    uint8_t mod = len % breaks;
+
+    if (mod) {
+        char buf[UTIL_BUFFER_SIZE_SPRINT + 3] = {0};
+        hex_to_buffer((uint8_t *)buf, data + i, mod, (sizeof(buf) - 1), 0, 0, true);
+
+        // add the spaces...
+        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%*s", ((breaks - mod) * 3), " ");
+        PrintAndLogEx(INFO, "%s", buf);
+    }
+}
+
+static void print_buffer_ex(const uint8_t *data, const size_t len, int level, uint8_t breaks) {
+
+    // sanity checks
+    if ((data == NULL) || (len < 1))
+        return;
+
+    char buf[UTIL_BUFFER_SIZE_SPRINT + 3] = {0};
+    int i;
+    for (i = 0; i < len; i += breaks) {
+
+        memset(buf, 0x00, sizeof(buf));
+
+        if (len - i < breaks) { // incomplete block, will be treated out of the loop
+            break;
+        }
+
         // (16 * 3) + (16) +  + 1
         snprintf(buf, sizeof(buf), "%*s%02x: ", (level * 4), " ", i);
 
         hex_to_buffer((uint8_t *)(buf + strlen(buf)), data + i, breaks, (sizeof(buf) - strlen(buf) - 1), 0, 1, true);
+
         snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "| %s", sprint_ascii(data + i, breaks));
+
         PrintAndLogEx(INFO, "%s", buf);
     }
 
@@ -298,7 +360,6 @@ void print_buffer_with_offset(const uint8_t *data, const size_t len, int offset,
     }
 }
 
-
 void print_blocks(uint32_t *data, size_t len) {
     PrintAndLogEx(SUCCESS, "Blk | Data ");
     PrintAndLogEx(SUCCESS, "----+------------");
@@ -312,13 +373,15 @@ void print_blocks(uint32_t *data, size_t len) {
 }
 
 char *sprint_hex(const uint8_t *data, const size_t len) {
-    static char buf[UTIL_BUFFER_SIZE_SPRINT - 3] = {0};
+    static char buf[UTIL_BUFFER_SIZE_SPRINT] = {0};
+    memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, 0, 1, true);
     return buf;
 }
 
 char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t min_str_len) {
     static char buf[UTIL_BUFFER_SIZE_SPRINT] = {0};
+    memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, min_str_len, 0, true);
     return buf;
 }
@@ -326,8 +389,10 @@ char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t mi
 char *sprint_hex_inrow(const uint8_t *data, const size_t len) {
     return sprint_hex_inrow_ex(data, len, 0);
 }
+
 char *sprint_hex_inrow_spaces(const uint8_t *data, const size_t len, size_t spaces_between) {
     static char buf[UTIL_BUFFER_SIZE_SPRINT] = {0};
+    memset(buf, 0x00, sizeof(buf));
     hex_to_buffer((uint8_t *)buf, data, len, sizeof(buf) - 1, 0, spaces_between, true);
     return buf;
 }
@@ -338,8 +403,9 @@ char *sprint_bytebits_bin_break(const uint8_t *data, const size_t len, const uin
     size_t rowlen = (len > MAX_BIN_BREAK_LENGTH) ? MAX_BIN_BREAK_LENGTH : len;
 
     // 3072 + end of line characters if broken at 8 bits
-    static char buf[MAX_BIN_BREAK_LENGTH];
-    memset(buf, 0x00, sizeof(buf));
+    static char buf[MAX_BIN_BREAK_LENGTH] = {0};
+    memset(buf, 0, sizeof(buf));
+
     char *tmp = buf;
 
     // loop through the out_index to make sure we don't go too far
@@ -413,39 +479,43 @@ char *sprint_bytebits_bin(const uint8_t *data, const size_t len) {
 
 char *sprint_bin(const uint8_t *data, const size_t len) {
     size_t binlen = (len * 8 > MAX_BIN_BREAK_LENGTH) ? MAX_BIN_BREAK_LENGTH : len * 8;
-    static uint8_t buf[MAX_BIN_BREAK_LENGTH];
+    static uint8_t buf[MAX_BIN_BREAK_LENGTH] = {0};
     bytes_to_bytebits(data, binlen / 8, buf);
     return sprint_bytebits_bin_break(buf, binlen, 0);
 }
 
 char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
-    static char buf[UTIL_BUFFER_SIZE_SPRINT];
-    memset(buf, 0x00, UTIL_BUFFER_SIZE_SPRINT);
+    static char buf[UTIL_BUFFER_SIZE_SPRINT + 20] = {0};
+    memset(buf, 0x00, sizeof(buf));
+
+    char *tmp = buf;
     size_t max_len = (len > 1010) ? 1010 : len;
 
-    snprintf(buf, sizeof(buf), "%s| ", sprint_hex(data, max_len));
+    int ret = snprintf(buf, sizeof(buf) - 1, "%s| ", sprint_hex(data, max_len));
+    if (ret < 0) {
+        goto out;
+    }
 
     size_t i = 0;
     size_t pos = (max_len * 3) + 2;
 
     while (i < max_len) {
-
         char c = data[i];
-        if ((c < 32) || (c == 127))
-            c = '.';
-
-        snprintf(buf + pos + i, sizeof(buf) - (pos + 1), "%c",  c);
+        tmp[pos + i]  = ((c < 32) || (c == 127)) ? '.' : c;
         ++i;
     }
+out:
     return buf;
 }
 
 char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_str_len) {
-    static char buf[UTIL_BUFFER_SIZE_SPRINT];
+    static char buf[UTIL_BUFFER_SIZE_SPRINT] = {0};
+    memset(buf, 0x00, sizeof(buf));
+
     char *tmp = buf;
-    memset(buf, 0x00, UTIL_BUFFER_SIZE_SPRINT);
     size_t max_len = (len > 1010) ? 1010 : len;
     size_t i = 0;
+
     while (i < max_len) {
         char c = data[i];
         tmp[i] = ((c < 32) || (c == 127)) ? '.' : c;
@@ -543,7 +613,7 @@ void bytes_to_bytebits(const void *src, const size_t srclen, void *dest) {
 // hh,gg,ff,ee,dd,cc,bb,aa, pp,oo,nn,mm,ll,kk,jj,ii
 // up to 64 bytes or 512 bits
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize) {
-    static uint8_t buf[64];
+    static uint8_t buf[64] = {0};
     memset(buf, 0x00, 64);
     uint8_t *tmp = buf;
     for (uint8_t block = 0; block < (uint8_t)(len / blockSize); block++) {
@@ -727,13 +797,14 @@ int param_gethex_ex(const char *line, int paramnum, uint8_t *data, int *hexcnt) 
 }
 
 int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, int maxdatalen, int *datalen) {
-    int bg, en;
-    uint32_t temp;
-    char buf[5] = {0};
 
-    if (param_getptr(line, &bg, &en, paramnum)) return 1;
+    int bg, en;
+
+    if (param_getptr(line, &bg, &en, paramnum))
+        return 1;
 
     *datalen = 0;
+    char buf[5] = {0};
 
     int indx = bg;
     while (line[indx]) {
@@ -756,8 +827,9 @@ int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
         }
 
         if (strlen(buf) >= 2) {
+            uint32_t temp = 0;
             sscanf(buf, "%x", &temp);
-            data[*datalen] = (uint8_t)(temp & 0xff);
+            data[*datalen] = (uint8_t)(temp & 0xFF);
             *buf = 0;
             (*datalen)++;
         }
@@ -839,27 +911,32 @@ https://github.com/ApertureLabsLtd/RFIDler/blob/master/firmware/Pic32/RFIDler.X/
 // convert hex to sequence of 0/1 bit values
 // returns number of bits converted
 int hextobinarray(char *target, char *source) {
-    int length, i, count = 0;
+    return hextobinarray_n(target, source, strlen(source));
+}
+
+int hextobinarray_n(char *target, char *source, int sourcelen) {
+    int i, count = 0;
     char *start = source;
-    length = strlen(source);
     // process 4 bits (1 hex digit) at a time
-    while (length--) {
+    while (sourcelen--) {
         char x = *(source++);
         // capitalize
-        if (x >= 'a' && x <= 'f')
+        if (x >= 'a' && x <= 'f') {
             x -= 32;
+        }
         // convert to numeric value
-        if (x >= '0' && x <= '9')
+        if (x >= '0' && x <= '9') {
             x -= '0';
-        else if (x >= 'A' && x <= 'F')
+        } else if (x >= 'A' && x <= 'F') {
             x -= 'A' - 10;
-        else {
+        } else {
             PrintAndLogEx(INFO, "(hextobinarray) discovered unknown character %c %d at idx %d of %s", x, x, (int16_t)(source - start), start);
             return 0;
         }
         // output
-        for (i = 0 ; i < 4 ; ++i, ++count)
+        for (i = 0 ; i < 4 ; ++i, ++count) {
             *(target++) = (x >> (3 - i)) & 1;
+        }
     }
 
     return count;
@@ -867,9 +944,14 @@ int hextobinarray(char *target, char *source) {
 
 // convert hex to human readable binary string
 int hextobinstring(char *target, char *source) {
-    int length = hextobinarray(target, source);
-    if (length == 0)
+    return hextobinstring_n(target, source, strlen(source));
+}
+
+int hextobinstring_n(char *target, char *source, int sourcelen) {
+    int length = hextobinarray_n(target, source, sourcelen);
+    if (length == 0) {
         return 0;
+    }
     binarraytobinstring(target, target, length);
     return length;
 }
@@ -1015,6 +1097,14 @@ void str_lower(char *s) {
         s[i] = tolower(s[i]);
 }
 
+void str_upper(char *s) {
+    strn_upper(s, strlen(s));
+}
+
+void strn_upper(char *s, size_t n) {
+    for (size_t i = 0; i < n; i++)
+        s[i] = toupper(s[i]);
+}
 // check for prefix in string
 bool str_startswith(const char *s,  const char *pre) {
     return strncmp(pre, s, strlen(pre)) == 0;
@@ -1149,7 +1239,7 @@ inline uint64_t bitcount64(uint64_t a) {
 
 inline uint32_t leadingzeros32(uint32_t a) {
 #if defined __GNUC__
-    return __builtin_clzl(a);
+    return __builtin_clz(a);
 #else
     PrintAndLogEx(FAILED, "Was not compiled with fct bitcount64");
     return 0;
@@ -1163,4 +1253,37 @@ inline uint64_t leadingzeros64(uint64_t a) {
     PrintAndLogEx(FAILED, "Was not compiled with fct bitcount64");
     return 0;
 #endif
+}
+
+
+int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen) {
+
+    size_t max = srclen - plen + 1;
+
+    for (size_t i = 0; i < max; i++) {
+
+        // compare only first byte
+        if (src[i] != pattern[0])
+            continue;
+
+        // try to match rest of the pattern
+        for (int j = plen - 1; j >= 1; j--) {
+
+            if (src[i + j] != pattern[j])
+                break;
+
+            if (j == 1)
+                return i;
+        }
+    }
+    return -1;
+}
+
+void sb_append_char(smartbuf *sb, unsigned char c) {
+    if (sb->idx >= sb->size) {
+        sb->size *= 2;
+        sb->ptr = realloc(sb->ptr, sb->size);
+    }
+    sb->ptr[sb->idx] = c;
+    sb->idx++;
 }

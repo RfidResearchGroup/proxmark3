@@ -31,14 +31,31 @@ struct tlv {
     const unsigned char *value;
 };
 
-struct tlvdb;
+struct tlvdb {
+    struct tlv tag;
+    struct tlvdb *next;
+    struct tlvdb *parent;
+    struct tlvdb *children;
+};
+
+struct tlvdb_root {
+    struct tlvdb db;
+    size_t len;
+    unsigned char buf[0];
+};
+
 typedef void (*tlv_cb)(void *data, const struct tlv *tlv, int level, bool is_leaf);
 
 struct tlvdb *tlvdb_fixed(tlv_tag_t tag, size_t len, const unsigned char *value);
 struct tlvdb *tlvdb_external(tlv_tag_t tag, size_t len, const unsigned char *value);
 struct tlvdb *tlvdb_parse(const unsigned char *buf, size_t len);
 struct tlvdb *tlvdb_parse_multi(const unsigned char *buf, size_t len);
+
+bool tlvdb_parse_root(struct tlvdb_root *root);
+bool tlvdb_parse_root_multi(struct tlvdb_root *root);
+
 void tlvdb_free(struct tlvdb *tlvdb);
+void tlvdb_root_free(struct tlvdb_root *root);
 
 struct tlvdb *tlvdb_elm_get_next(struct tlvdb *tlvdb);
 struct tlvdb *tlvdb_elm_get_children(struct tlvdb *tlvdb);

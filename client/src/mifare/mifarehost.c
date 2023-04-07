@@ -35,6 +35,11 @@
 #include "util_posix.h"         // msclock
 #include "cmdparser.h"          // detection of flash capabilities
 #include "cmdflashmemspiffs.h"  // upload to flash mem
+#include "mifaredefault.h"      // default keys
+#include "protocol_vigik.h"     // VIGIK struct
+#include "crypto/libpcrypto.h"
+#include "util.h" // xor
+#include "mbedtls/sha1.h"       // SHA1
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;
@@ -80,7 +85,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_HF_MIFARE_READER, &resp, 2000)) {
                 if (resp.status == PM3_EOPABORTED) {
-                    return -1;
+                    return resp.status;
                 }
 
                 struct p {
@@ -435,7 +440,7 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_NESTED, (uint8_t *)&payload, sizeof(payload));
 
-    if (!WaitForResponseTimeout(CMD_HF_MIFARE_NESTED, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_NESTED, &resp, 2000) == false) {
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         return PM3_ETIMEOUT;
     }
@@ -635,104 +640,104 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
     memcpy(&statelists[1].nt_enc, package->nt_b, sizeof(package->nt_b));
     memcpy(&statelists[1].ks1, package->ks_b, sizeof(package->ks_b));
 
-        // calc keys
-        pthread_t thread_id[2];
-
-        // create and run worker threads
-        for (uint8_t i = 0; i < 2; i++)
-            pthread_create(thread_id + i, NULL, nested_worker_thread, &statelists[i]);
-
-        // wait for threads to terminate:
-        for (uint8_t i = 0; i < 2; i++)
-            pthread_join(thread_id[i], (void *)&statelists[i].head.slhead);
-
-        // the first 16 Bits of the cryptostate already contain part of our key.
-        // Create the intersection of the two lists based on these 16 Bits and
-        // roll back the cryptostate
-        p1 = p3 = statelists[0].head.slhead;
-        p2 = p4 = statelists[1].head.slhead;
-
-        while (p1 <= statelists[0].tail.sltail && p2 <= statelists[1].tail.sltail) {
-            if (Compare16Bits(p1, p2) == 0) {
-
-                struct Crypto1State savestate;
-                savestate = *p1;
-                while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
-                    *p3 = *p1;
-                    lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
-                    p3++;
-                    p1++;
-                }
-                savestate = *p2;
-                while (Compare16Bits(p2, &savestate) == 0 && p2 <= statelists[1].tail.sltail) {
-                    *p4 = *p2;
-                    lfsr_rollback_word(p4, statelists[1].nt_enc ^ statelists[1].uid, 0);
-                    p4++;
-                    p2++;
-                }
-            } else {
-                while (Compare16Bits(p1, p2) == -1) p1++;
-                while (Compare16Bits(p1, p2) == 1) p2++;
-            }
-        }
-
-        p3->odd = -1;
-        p3->even = -1;
-        p4->odd = -1;
-        p4->even = -1;
-        statelists[0].len = p3 - statelists[0].head.slhead;
-        statelists[1].len = p4 - statelists[1].head.slhead;
-        statelists[0].tail.sltail = --p3;
-        statelists[1].tail.sltail = --p4;
-
-        // the statelists now contain possible keys. The key we are searching for must be in the
-        // intersection of both lists
-        qsort(statelists[0].head.keyhead, statelists[0].len, sizeof(uint64_t), compare_uint64);
-        qsort(statelists[1].head.keyhead, statelists[1].len, sizeof(uint64_t), compare_uint64);
-        // Create the intersection
-        statelists[0].len = intersection(statelists[0].head.keyhead, statelists[1].head.keyhead);
-
-
-/*
-
-    memcpy(&uid, package->cuid, sizeof(package->cuid));
-
-    statelists[0].blockNo = package->block;
-    statelists[0].keyType = package->keytype;
-    statelists[0].uid = uid;
-
-    memcpy(&statelists[0].nt_enc, package->nt, sizeof(package->nt));
-    memcpy(&statelists[0].ks1, package->ks, sizeof(package->ks));
-
     // calc keys
-    pthread_t t;
+    pthread_t thread_id[2];
 
-    // create and run worker thread
-    pthread_create(&t, NULL, nested_worker_thread, &statelists[0]);
+    // create and run worker threads
+    for (uint8_t i = 0; i < 2; i++)
+        pthread_create(thread_id + i, NULL, nested_worker_thread, &statelists[i]);
 
-    // wait for thread to terminate:
-    pthread_join(t, (void *)&statelists[0].head.slhead);
+    // wait for threads to terminate:
+    for (uint8_t i = 0; i < 2; i++)
+        pthread_join(thread_id[i], (void *)&statelists[i].head.slhead);
 
     // the first 16 Bits of the cryptostate already contain part of our key.
+    // Create the intersection of the two lists based on these 16 Bits and
+    // roll back the cryptostate
     p1 = p3 = statelists[0].head.slhead;
+    p2 = p4 = statelists[1].head.slhead;
 
-    // create key candidates.
-    while (p1 <= statelists[0].tail.sltail) {
-        struct Crypto1State savestate;
-        savestate = *p1;
-        while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
-            *p3 = *p1;
-            lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
-            p3++;
-            p1++;
+    while (p1 <= statelists[0].tail.sltail && p2 <= statelists[1].tail.sltail) {
+        if (Compare16Bits(p1, p2) == 0) {
+
+            struct Crypto1State savestate;
+            savestate = *p1;
+            while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
+                *p3 = *p1;
+                lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
+                p3++;
+                p1++;
+            }
+            savestate = *p2;
+            while (Compare16Bits(p2, &savestate) == 0 && p2 <= statelists[1].tail.sltail) {
+                *p4 = *p2;
+                lfsr_rollback_word(p4, statelists[1].nt_enc ^ statelists[1].uid, 0);
+                p4++;
+                p2++;
+            }
+        } else {
+            while (Compare16Bits(p1, p2) == -1) p1++;
+            while (Compare16Bits(p1, p2) == 1) p2++;
         }
     }
 
     p3->odd = -1;
     p3->even = -1;
+    p4->odd = -1;
+    p4->even = -1;
     statelists[0].len = p3 - statelists[0].head.slhead;
+    statelists[1].len = p4 - statelists[1].head.slhead;
     statelists[0].tail.sltail = --p3;
-*/
+    statelists[1].tail.sltail = --p4;
+
+    // the statelists now contain possible keys. The key we are searching for must be in the
+    // intersection of both lists
+    qsort(statelists[0].head.keyhead, statelists[0].len, sizeof(uint64_t), compare_uint64);
+    qsort(statelists[1].head.keyhead, statelists[1].len, sizeof(uint64_t), compare_uint64);
+    // Create the intersection
+    statelists[0].len = intersection(statelists[0].head.keyhead, statelists[1].head.keyhead);
+
+
+    /*
+
+        memcpy(&uid, package->cuid, sizeof(package->cuid));
+
+        statelists[0].blockNo = package->block;
+        statelists[0].keyType = package->keytype;
+        statelists[0].uid = uid;
+
+        memcpy(&statelists[0].nt_enc, package->nt, sizeof(package->nt));
+        memcpy(&statelists[0].ks1, package->ks, sizeof(package->ks));
+
+        // calc keys
+        pthread_t t;
+
+        // create and run worker thread
+        pthread_create(&t, NULL, nested_worker_thread, &statelists[0]);
+
+        // wait for thread to terminate:
+        pthread_join(t, (void *)&statelists[0].head.slhead);
+
+        // the first 16 Bits of the cryptostate already contain part of our key.
+        p1 = p3 = statelists[0].head.slhead;
+
+        // create key candidates.
+        while (p1 <= statelists[0].tail.sltail) {
+            struct Crypto1State savestate;
+            savestate = *p1;
+            while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
+                *p3 = *p1;
+                lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
+                p3++;
+                p1++;
+            }
+        }
+
+        p3->odd = -1;
+        p3->even = -1;
+        statelists[0].len = p3 - statelists[0].head.slhead;
+        statelists[0].tail.sltail = --p3;
+    */
 
     uint32_t keycnt = statelists[0].len;
     if (keycnt == 0) goto out;
@@ -753,16 +758,16 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
 
         // used for mfCheckKeys_file, which needs a header
         mem = calloc((maxkeysinblock * 6) + 5, sizeof(uint8_t));
-    if (mem == NULL) {
-        free(statelists[0].head.slhead);
-        return PM3_EMALLOC;
-    }
+        if (mem == NULL) {
+            free(statelists[0].head.slhead);
+            return PM3_EMALLOC;
+        }
 
-    mem[0] = statelists[0].keyType;
-    mem[1] = statelists[0].blockNo;
-    mem[2] = 1;
-    mem[3] = ((max_keys_chunk >> 8) & 0xFF);
-    mem[4] = (max_keys_chunk & 0xFF);
+        mem[0] = statelists[0].keyType;
+        mem[1] = statelists[0].blockNo;
+        mem[2] = 1;
+        mem[3] = ((max_keys_chunk >> 8) & 0xFF);
+        mem[4] = (max_keys_chunk & 0xFF);
 
         p_keyblock = mem + 5;
     } else {
@@ -854,15 +859,15 @@ out:
                  );
 
     free(statelists[0].head.slhead);
-        free(statelists[1].head.slhead);
+    free(statelists[1].head.slhead);
     return PM3_ESOFT;
 }
 
 // MIFARE
-int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
+int mfReadSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *data) {
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, key, 6);
+    SendCommandMIX(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, (uint8_t *)key, 6);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
@@ -880,7 +885,7 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data)
     return PM3_SUCCESS;
 }
 
-int mfReadBlock(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t *data) {
+int mfReadBlock(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *data) {
     mf_readblock_t payload = {
         .blockno = blockNo,
         .keytype = keyType
@@ -1034,7 +1039,8 @@ int mfCSetUID(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const uint8_t *
 }
 
 int mfCWipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak) {
-    uint8_t block0[16] = {0x01, 0x02, 0x03, 0x04, 0x04, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBE, 0xAF};
+    uint8_t block0[16] = {0x00, 0x56, 0x78, 0xBB, 0x95, 0x08, 0x04, 0x00, 0x02, 0xB2, 0x1E, 0x24, 0x23, 0x27, 0x1E, 0x1D};
+    // uint8_t block0[16] = {0x04, 0x03, 0x02, 0x01, 0x04, 0x08, 0x04, 0x00, 0x64, 0xB9, 0x95, 0x11, 0x4D, 0x20, 0x42, 0x09};
     uint8_t blockD[16] = {0x00};
     uint8_t blockK[16] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x08, 0x77, 0x8F, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t params = MAGIC_SINGLE;
@@ -1157,13 +1163,15 @@ int mfGen3Freeze(void) {
     }
 }
 
-int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data) {
+int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags) {
     struct p {
         uint8_t blockno;
         uint8_t pwd[4];
+        uint8_t workFlags;
     } PACKED payload;
     payload.blockno = blockno;
     memcpy(payload.pwd, pwd, sizeof(payload.pwd));
+    payload.workFlags = workFlags;
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_G4_RDBL, (uint8_t *)&payload, sizeof(payload));
@@ -1173,6 +1181,32 @@ int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data) {
             return PM3_EUNDEF;
         }
         memcpy(data, resp.data.asBytes, 16);
+    } else {
+        PrintAndLogEx(WARNING, "command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+    return PM3_SUCCESS;
+}
+
+int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags) {
+    struct p {
+        uint8_t blockno;
+        uint8_t pwd[4];
+        uint8_t data[16];
+        uint8_t workFlags;
+    } PACKED payload;
+    payload.blockno = blockno;
+    memcpy(payload.pwd, pwd, sizeof(payload.pwd));
+    memcpy(payload.data, data, sizeof(payload.data));
+    payload.workFlags = workFlags;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_G4_WRBL, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_WRBL, &resp, 1500)) {
+        if (resp.status != PM3_SUCCESS) {
+            return PM3_EUNDEF;
+        }
     } else {
         PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
@@ -1269,6 +1303,8 @@ int detect_classic_nackbug(bool verbose) {
 
     if (verbose)
         PrintAndLogEx(SUCCESS, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.\n");
+
+    PrintAndLogEx(INFO, "." NOLF);
 
     while (true) {
 
@@ -1376,11 +1412,20 @@ int detect_mf_magic(bool is_mfc) {
         case MAGIC_GEN_3:
             PrintAndLogEx(SUCCESS, "Magic capabilities : possibly " _GREEN_("Gen 3 / APDU"));
             break;
+        case MAGIC_GEN_4GTU:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GTU"));
+            break;
+        case MAGIC_GEN_4GDM:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GDM"));
+            break;
         case MAGIC_GEN_UNFUSED:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));
             break;
-        case MAGIC_SUPER:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("super card"));
+        case MAGIC_SUPER_GEN1:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Super card (") _CYAN_("Gen 1") _GREEN_(")"));
+            break;
+        case MAGIC_SUPER_GEN2:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Super card (") _CYAN_("Gen 2") _GREEN_(")"));
             break;
         case MAGIC_NTAG21X:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("NTAG21x"));
@@ -1391,18 +1436,348 @@ int detect_mf_magic(bool is_mfc) {
     return isGeneration;
 }
 
-int detect_mfc_ev1_signature(uint8_t *signature) {
+bool detect_mfc_ev1_signature(void) {
+    uint64_t key = 0;
+    int res = mfCheckKeys(69, MF_KEY_B, false, 1, (uint8_t *)g_mifare_signature_key_b, &key);
+    return (res == PM3_SUCCESS);
+}
+
+int read_mfc_ev1_signature(uint8_t *signature) {
     if (signature == NULL) {
         return PM3_EINVARG;
     }
     uint8_t sign[32] = {0};
-    uint8_t key[] = {0x4b, 0x79, 0x1b, 0xea, 0x7b, 0xcc};
-    int res = mfReadBlock(69, 1, key, sign);
+    int res = mfReadBlock(69, MF_KEY_B, g_mifare_signature_key_b, sign);
     if (res == PM3_SUCCESS) {
-        res = mfReadBlock(70, 1, key, sign + 16);
+        res = mfReadBlock(70, MF_KEY_B, g_mifare_signature_key_b, sign + 16);
         if (res ==  PM3_SUCCESS) {
             memcpy(signature, sign, sizeof(sign));
         }
     }
     return res;
+}
+
+int convert_mfc_2_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen) {
+    if (in == NULL || out == NULL)
+        return PM3_EINVARG;
+
+    uint8_t blockno = 0;
+    while (ilen) {
+
+        if (mfIsSectorTrailer(blockno) == false) {
+            memcpy(out, in, MFBLOCK_SIZE);
+        }
+        blockno++;
+        out += MFBLOCK_SIZE;
+        in += MFBLOCK_SIZE;
+        ilen -= MFBLOCK_SIZE;
+        *olen += MFBLOCK_SIZE;
+    }
+    return PM3_SUCCESS;
+}
+
+static const vigik_pk_t vigik_rsa_pk[] = {
+    {"La Poste Service Universel", 0x07AA, "AB9953CBFCCD9375B6C028ADBAB7584BED15B9CA037FADED9765996F9EA1AB983F3041C90DA3A198804FF90D5D872A96A4988F91F2243B821E01C5021E3ED4E1BA83B7CFECAB0E766D8563164DE0B2412AE4E6EA63804DF5C19C7AA78DC14F608294D732D7C8C67A88C6F84C0F2E3FAFAE34084349E11AB5953AC68729D07715"},
+    {"La Poste Service Universel", 0x07AA, "1577D02987C63A95B51AE149430834AEAF3F2E0F4CF8C6887AC6C8D732D79482604FC18DA77A9CC1F54D8063EAE6E42A41B2E04D1663856D760EABECCFB783BAE1D43E1E02C5011E823B24F2918F98A4962A875D0DF94F8098A1A30DC941303F98ABA19E6F996597EDAD7F03CAB915ED4B58B7BAAD28C0B67593CDFCCB5399AB"},
+
+    {"La Poste Autres Services", 0x07AB, "A6D99B8D902893B04F3F8DE56CB6BF24338FEE897C1BCE6DFD4EBD05B7B1A07FD2EB564BB4F7D35DBFE0A42966C2C137AD156E3DAB62904592BCA20C0BC7B8B1E261EF82D53F52D203843566305A49A22062DECC38C2FE3864CAD08E79219487651E2F79F1C9392B48CAFE1BFFAFF4802AE451E7A283E55A4026AD1E82DF1A15"},
+    {"La Poste Autres Services", 0x07AB, "151adf821ead26405ae583a2e751e42a80f4afff1bfeca482b39c9f1792f1e65879421798ed0ca6438fec238ccde6220a2495a3066358403d2523fd582ef61e2b1b8c70b0ca2bc92459062ab3d6e15ad37c1c26629a4e0bf5dd3f7b44b56ebd27fa0b1b705bd4efd6dce1b7c89ee8f3324bfb66ce58d3f4fb09328908d9bd9a6"},
+
+    {"France Telecom", 0x07AC, "C44DBCD92F9DCF42F4902A87335DBB35D2FF530CDB09814CFA1F4B95A1BD018D099BC6AB69F667B4922AE1ED826E72951AA3E0EAAA7D49A695F04F8CDAAE2D18D10D25BD529CBB05ABF070DC7C041EC35C2BA7F58CC4C349983CC6E11A5CBE828FB8ECBC26F08E1094A6B44C8953C8E1BAFD214DF3E69F430A98CCC75C03669D"},
+    {"France Telecom", 0x07AC, "9d66035cc7cc980a439fe6f34d21fdbae1c853894cb4a694108ef026bcecb88f82be5c1ae1c63c9849c3c48cf5a72b5cc31e047cdc70f0ab05bb9c52bd250dd1182daeda8c4ff095a6497daaeae0a31a95726e82ede12a92b467f669abc69b098d01bda1954b1ffa4c8109db0c53ffd235bb5d33872a90f442cf9d2fd9bc4dc4"},
+
+    {"EDF-GDF", 0x07AD, "B35193DBD2F88A21CDCFFF4BF84F7FC036A991A363DCB3E802407A5E5879DC2127EECFC520779E79E911394882482C87D09A88B0711CBC2973B77FFDAE40EA0001F595072708C558B484AB89D02BCBCB971FF1B80371C0BE30CB13661078078BB68EBCCA524B9DD55EBF7D47D9355AFC95511350CC1103A5DEE847868848B235"},
+    {"EDF-GDF", 0x07AD, "35b248888647e8dea50311cc50135195fc5a35d9477dbf5ed59d4b52cabc8eb68b0778106613cb30bec07103b8f11f97cbcb2bd089ab84b458c508270795f50100ea40aefd7fb77329bc1c71b0889ad0872c4882483911e9799e7720c5cfee2721dc79585e7a4002e8b3dc63a391a936c07f4ff84bffcfcd218af8d2db9351b3"},
+    {NULL, 0, NULL}
+};
+
+const char *vigik_get_service(uint16_t service_code) {
+    for (int i = 0; i < ARRAYLEN(vigik_rsa_pk); ++i)
+        if (service_code == vigik_rsa_pk[i].code)
+            return vigik_rsa_pk[i].desc;
+
+    //No match, return default
+    return vigik_rsa_pk[ARRAYLEN(vigik_rsa_pk) - 1].desc;
+}
+
+
+int vigik_verify(mfc_vigik_t *d) {
+#define PUBLIC_VIGIK_KEYLEN 128
+
+    // iso9796
+    // Exponent V = 2
+    // n = The public modulus n is the product of the secret prime factors p and q. Its length is 1024 bits.
+
+    if (g_debugMode == DEBUG) {
+        PrintAndLogEx(INFO, "Raw");
+        print_hex_noascii_break((uint8_t *)d, sizeof(*d) - sizeof(d->rsa_signature), MFBLOCK_SIZE * 2);
+
+        PrintAndLogEx(INFO, "Raw signature");
+        print_hex_noascii_break(d->rsa_signature, sizeof(d->rsa_signature), MFBLOCK_SIZE * 2);
+    }
+
+    /*
+        int dl = 0;
+
+            param_gethex_to_eol("1C07D46DA3849326D24B3468BD76673F4F3C41827DC413E81E4F3C7804FAC727213059B21D047510D6432448643A92EBFC67FBEDDAB468D13D948B172F5EBC79A0E3FEFDFAF4E81FC7108E070F1E3CD0", 0, signature, PUBLIC_VIGIK_KEYLEN, &dl);
+
+        param_gethex_to_eol("1AB86FE0C17FFFFE4379D5E15A4B2FAFFEFCFA0F1F3F7FA03E7DDDF1E3C78FFFB1F0E23F7FFF51584771C5C18307FEA36CA74E60AA6B0409ACA66A9EC155F4E9112345708A2B8457E722608EE1157408", 0, signature, PUBLIC_VIGIK_KEYLEN, &dl);
+        signature_len = dl;
+        */
+
+    uint8_t rev_sig[128];
+    reverse_array_copy(d->rsa_signature, sizeof(d->rsa_signature), rev_sig);
+
+    PrintAndLogEx(INFO, "Raw signature reverse");
+    print_hex_noascii_break(rev_sig, sizeof(d->rsa_signature), MFBLOCK_SIZE * 2);
+
+    // t = 0xBC  = Implicitly known
+    // t = 0xCC  = look at byte before to determine hash function
+    // uint8_t T[] = {0x33, 0xCC};
+
+    // Success decrypt would mean  0x4b BB ... BB BA padding
+    // padding, message,  hash, 8 bits or 16 bits
+
+    // signature = h( C || M1 || h(M2) )
+    // 1024 - 786 - 160 - 16 -1
+    // salt C
+    // message M = 96 bytes,  768 bits
+    // sha1 hash H = 20 bytes, 160 bits
+    // padding = 20 bytes, 96 bits
+
+    uint8_t i;
+    bool is_valid = false;
+
+    for (i = 0; i < ARRAYLEN(vigik_rsa_pk); i++) {
+        if (vigik_rsa_pk[i].desc == NULL) {
+            break;
+        }
+
+        mbedtls_mpi RN, E;
+        mbedtls_mpi_init(&RN);
+
+        // exponent 2 = even
+        mbedtls_mpi_init(&E);
+        mbedtls_mpi_add_int(&E, &E, 2);
+
+        int dl = 0;
+        uint8_t n[PUBLIC_VIGIK_KEYLEN];
+        memset(n, 0, sizeof(n));
+        param_gethex_to_eol(vigik_rsa_pk[i].n, 0, n, PUBLIC_VIGIK_KEYLEN, &dl);
+
+        // convert
+        mbedtls_mpi N, s, sqr, res;
+        mbedtls_mpi_init(&N);
+        mbedtls_mpi_init(&s);
+        mbedtls_mpi_init(&sqr);
+        mbedtls_mpi_init(&res);
+
+        mbedtls_mpi_read_binary(&N, (const unsigned char *)n, PUBLIC_VIGIK_KEYLEN);
+
+        //mbedtls_mpi_read_binary(&s, (const unsigned char*)signature, signature_len);
+        mbedtls_mpi_read_binary(&s, (const unsigned char *)rev_sig, sizeof(d->rsa_signature));
+
+        // check is sign < (N/2)
+
+        mbedtls_mpi n_2;
+        mbedtls_mpi_init(&n_2);
+        mbedtls_mpi_copy(&n_2, &N);
+        mbedtls_mpi_shift_r(&n_2, 1);
+        bool is_less = (mbedtls_mpi_cmp_mpi(&s, &n_2) > 0) ? false : true;
+        PrintAndLogEx(DEBUG, "z < (N/2) ..... %s", (is_less) ? _GREEN_("YES") : _RED_("NO"));
+        mbedtls_mpi_free(&n_2);
+
+
+        if (is_less) {
+            mbedtls_mpi_exp_mod(&sqr, &s, &E, &N, &RN);
+        } else {
+            continue;
+        }
+
+        /*
+            if v is even and
+            ⎯ if J* mod 8 = 1, then f* = n–J*.
+            ⎯ if J* mod 8 = 4, then f* = J*,
+            ⎯ if J* mod 8 = 6, then f* = 2J*,
+            ⎯ if J* mod 8 = 7, then f* = 2(n–J*),
+        */
+        uint8_t b2 = mbedtls_mpi_get_bit(&sqr, 2);
+        uint8_t b1 = mbedtls_mpi_get_bit(&sqr, 1);
+        uint8_t b0 = mbedtls_mpi_get_bit(&sqr, 0);
+        uint8_t lsb = (b2 << 2) | (b1 << 1) | b0;
+
+        /*
+        //1
+        mbedtls_mpi_sub_mpi(&res, &N, &sqr);
+        mbedtls_mpi_write_file( "[=] 1... ", &res, 16, NULL );
+        // 4
+        mbedtls_mpi_copy(&res, &sqr);
+        mbedtls_mpi_write_file( "[=] 4... ", &res, 16, NULL );
+        // 6
+        mbedtls_mpi_mul_int(&res, &sqr, 2);
+        mbedtls_mpi_write_file( "[=] 6... ", &res, 16, NULL );
+        // 7
+        mbedtls_mpi foo;
+        mbedtls_mpi_init(&foo);
+        mbedtls_mpi_sub_mpi(&foo, &N, &sqr);
+        mbedtls_mpi_mul_int(&res, &foo, 2);
+        mbedtls_mpi_free(&foo);
+        mbedtls_mpi_write_file( "[=] 7... ", &res, 16, NULL );
+        */
+
+        switch (lsb) {
+            case 1: {
+                mbedtls_mpi_sub_mpi(&res, &N, &sqr);
+                break;
+            }
+            case 4: {
+                mbedtls_mpi_copy(&res, &sqr);
+                break;
+            }
+            case 6: {
+                mbedtls_mpi_mul_int(&res, &sqr, 2);
+                break;
+            }
+            case 7: {
+                mbedtls_mpi foo2;
+                mbedtls_mpi_init(&foo2);
+                mbedtls_mpi_sub_mpi(&foo2, &N, &sqr);
+                mbedtls_mpi_mul_int(&res, &foo2, 2);
+                mbedtls_mpi_free(&foo2);
+                break;
+            }
+            default: {
+                continue;
+            }
+        }
+
+        PrintAndLogEx(DEBUG, "LSB............ " _GREEN_("%u"), lsb);
+        if (g_debugMode == DEBUG) {
+            mbedtls_mpi_write_file("[=] N.............. ", &N, 16, NULL);
+            mbedtls_mpi_write_file("[=] signature...... ", &s, 16, NULL);
+            mbedtls_mpi_write_file("[=] square mod n... ", &sqr, 16, NULL);
+            mbedtls_mpi_write_file("[=] n-fs........... ", &res, 16, NULL);
+        }
+
+
+        uint8_t nfs[128] = {0};
+        mbedtls_mpi_write_binary(&res, nfs, sizeof(nfs));
+
+        // xor 0xDC01
+        int count_zero = 0;
+        for (int x = 0; x < sizeof(nfs); x += 2) {
+            nfs[x] ^= 0xDC;
+            nfs[x + 1] ^= 0x01;
+
+            if (nfs[x] == 0x00)
+                count_zero++;
+            if (nfs[x + 1] == 0x00)
+                count_zero++;
+        }
+
+        if (count_zero > 10)  {
+            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(INFO, "Message XORED");
+            print_hex_noascii_break(nfs, sizeof(nfs), 32);
+            PrintAndLogEx(INFO, "\n");
+            is_valid = true;
+            break;
+        }
+
+        /*
+        if (bar == 0) {
+            typedef struct vigik_rsa_s {
+                uint8_t rsa[127];
+                uint8_t hash;
+            } vigik_rsa_t;
+
+            vigik_rsa_t ts;
+            memcpy(&ts, nfs, sizeof(ts));
+
+            if ( ts.hash == 0xCC ) {
+                PrintAndLogEx(INFO, "Hash byte... 0x%02X", ts.hash);
+                switch(ts.rsa[126]) {
+                    case 0x11:
+                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - SHA1");
+                        break;
+                    case 0x22:
+                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - RIPEMD");
+                        break;
+                    case 0x33:
+                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - SHA1");
+                        break;
+                    default:
+                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - " _RED_("err"));
+                        break;
+                }
+            } else if ( ts.hash == 0xBC) {
+                PrintAndLogEx(INFO, "Hash byte... 0x%02X - " _GREEN_("implict"), ts.hash);
+            } else {
+                PrintAndLogEx(INFO, "Hash byte... 0x%02x - " _RED_("err"), ts.hash);
+            }
+
+            PrintAndLogEx(INFO, "Message w padding");
+            print_hex_noascii_break(ts.rsa, sizeof(ts.rsa) - 20, 32);
+        }
+        */
+
+        mbedtls_mpi_free(&N);
+        mbedtls_mpi_free(&s);
+        mbedtls_mpi_free(&res);
+        mbedtls_mpi_free(&RN);
+        mbedtls_mpi_free(&E);
+    }
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
+    PrintAndLogEx(INFO, "RSA: 1024bit");
+
+    if (is_valid == false || i == ARRAYLEN(vigik_rsa_pk)) {
+        PrintAndLogEx(INFO, "Signature:");
+        print_hex_noascii_break(d->rsa_signature, sizeof(d->rsa_signature),  MFBLOCK_SIZE * 2);
+        PrintAndLogEx(SUCCESS, "Signature verification: " _RED_("failed"));
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "Signature public key name: " _YELLOW_("%s"), vigik_rsa_pk[i].desc);
+    PrintAndLogEx(INFO, "Signature public key value:");
+    PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n);
+    PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 64);
+    PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 128);
+    PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 192);
+
+    PrintAndLogEx(INFO, "Signature:");
+    print_hex_noascii_break(d->rsa_signature, sizeof(d->rsa_signature),  MFBLOCK_SIZE * 2);
+
+    PrintAndLogEx(SUCCESS, "Signature verification: " _GREEN_("successful"));
+
+    return PM3_SUCCESS;
+}
+
+int vigik_annotate(mfc_vigik_t *d) {
+    if (d == NULL)
+        return PM3_EINVARG;
+
+    PrintAndLogEx(INFO, "Manufacture......... %s", sprint_hex(d->b0, sizeof(d->b0)));
+    PrintAndLogEx(INFO, "MAD................. %s", sprint_hex(d->mad, sizeof(d->mad)));
+    PrintAndLogEx(INFO, "Counters............ %u", d->counters);
+    PrintAndLogEx(INFO, "rtf................. %s", sprint_hex(d->rtf, sizeof(d->rtf)));
+    PrintAndLogEx(INFO, "Service code........ 0x%08x / %u  - " _YELLOW_("%s"), d->service_code, d->service_code, vigik_get_service(d->service_code));
+    PrintAndLogEx(INFO, "Info flag........... %u -", d->info_flag); // ,  sprint_bin(d->info_flag, 1));
+    PrintAndLogEx(INFO, "Key version......... %u", d->key_version);
+    PrintAndLogEx(INFO, "PTR Counter......... %u", d->ptr_counter);
+    PrintAndLogEx(INFO, "Counter num......... %u", d->counter_num);
+    PrintAndLogEx(INFO, "Slot access date.... %s", sprint_hex(d->slot_access_date, sizeof(d->slot_access_date)));
+    PrintAndLogEx(INFO, "Slot dst duration... %u", d->slot_dst_duration);
+    PrintAndLogEx(INFO, "Other Slots......... %s", sprint_hex(d->other_slots, sizeof(d->other_slots)));
+    PrintAndLogEx(INFO, "Services counter.... %u", d->services_counter);
+    PrintAndLogEx(INFO, "Loading date........ %s", sprint_hex(d->loading_date, sizeof(d->loading_date)));
+    PrintAndLogEx(INFO, "Reserved null....... %u", d->reserved_null);
+    PrintAndLogEx(INFO, "----------------------------------------------------------------");
+    PrintAndLogEx(INFO, "");
+    vigik_verify(d);
+    PrintAndLogEx(INFO, "----------------------------------------------------------------");
+    PrintAndLogEx(INFO, "");
+    return PM3_SUCCESS;
+
 }

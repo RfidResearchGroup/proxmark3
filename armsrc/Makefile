@@ -35,6 +35,7 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
              -ffunction-sections -fdata-sections
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
+SRC_HF = hfops.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
 #UNUSED: mifaresniff.c
@@ -132,6 +133,7 @@ THUMBSRC = start.c \
 	$(SRC_EM4x50) \
     $(SRC_EM4x70) \
     $(SRC_SPIFFS) \
+    $(SRC_HF) \
     $(SRC_ISO14443a) \
     $(SRC_ISO14443b) \
     $(SRC_CRAPTO1) \
@@ -150,7 +152,8 @@ THUMBSRC = start.c \
     BigBuf.c \
     ticks.c \
     clocks.c \
-    hfsnoop.c
+    hfsnoop.c \
+    generator.c
 
 
 # These are to be compiled in ARM mode
@@ -182,7 +185,7 @@ showinfo:
 .DELETE_ON_ERROR:
 
 # version_pm3.c should be remade on every time fullimage.stage1.elf should be remade
-version_pm3.c: default_version_pm3.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
+version_pm3.c: default_version_pm3.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ) .FORCE
 	$(info [-] GEN $@)
 	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(CP) $< $@
 
@@ -254,7 +257,7 @@ uninstall:
 	$(info [@] Uninstalling fullimage from $(DESTDIR)$(PREFIX)...)
 	$(Q)$(INSTALLSUDO) $(RM) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
 
-.PHONY: all clean help install uninstall
+.PHONY: all clean help install uninstall .FORCE
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:

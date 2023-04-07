@@ -57,34 +57,43 @@ You can also make yours with some 1.27mm headers (look for `1.27mm header` on Al
 J-Link [pinout](https://www.segger.com/interface-description.html):
 
 ```
-  ---------  ---------
- |1917151311 9 7 5 3 1|
- |201816141210 8 6 4 2|
-  --------------------
+Pin cut-out on a JLink 20 pin connector
+
+                ^^
+  --------------  ---------
+ |19 17 15 13 11  9 7 5 3 1|
+ |20 18 16 14 12 10 8 6 4 2|
+  -------------------------
 ```
+
+``` 
+Map of pins between PM3 / JLink 
 
 PM3 | JLink
 --- | -----
-TMS | 7
-TDI | 5
-TDO |13
-TCK | 9
-GND | 6
-3.3 | 2
+TMS |  7
+TDI |  5
+TDO | 13
+TCK |  9
+GND |  6
+3.3 |  2
+```
 
 ## Raspberry Pi pinout
 ^[Top](#top)
 
 RPi [pinout](https://pinout.xyz/):
 
+```
 PM3 | RPi
---- | -----
+--- | ---
 TMS | 22
 TDI | 19
 TDO | 21
 TCK | 23
-GND | 6
-3.3 | 1
+GND |  6
+3.3 |  1
+```
 
 # Where to find more information?
 ^[Top](#top)

@@ -7,6 +7,7 @@
 # Table of Contents
 - [Mac OS X - Homebrew automatic installation](#mac-os-x---homebrew-automatic-installation)
 - [Table of Contents](#table-of-contents)
+  - [macOS Ventura Beta users](#macos-ventura-beta-users)
   - [Apple Silicon (M1) Notes](#apple-silicon-m1-notes)
   - [Install Proxmark3 tools](#install-proxmark3-tools)
   - [Upgrade HomeBrew tap formula](#upgrade-homebrew-tap-formula)
@@ -20,6 +21,22 @@
   - [Run it](#run-it)
 
 
+
+## macOS Ventura Beta users
+^[Top](#top)
+
+Early users of macOS Ventura and Xcode 14.0 might run into an error saying that Xcode 14.0 is out-of-date (even though you have the latest Xcode Beta installed).
+
+If (and only if) you run into that error, here is the fix:
+- RE-download the *latest* Command Line Tools of Xcode Beta 14 and install them (again). (https://developer.apple.com/download/all/)
+- Run `sudo xcode-select -s /Applications/Xcode-beta.app` in Terminal.
+- Proceed with Brew installation
+That should normally fix the issue.
+
+Alternatively, and only if the issue still persists after following the steps above, you can use this *temporary and ugly* fix:
+- Try renaming `Xcode-beta.app` to `Xcode.app` (Note: If you still need Xcode 13.0 for signing and uploading apps to App Store rename `Xcode.app` to `Xcode-2.app`)
+- Proceed with Brew installation
+- IMPORTANT: Reverse renaming done in first step.
 
 ## Apple Silicon (M1) Notes
 ^[Top](#top)
@@ -36,6 +53,8 @@ Then you are missing Rosetta 2 and need to install it: `/usr/sbin/softwareupdate
 
 Homebrew has changed their prefix to differentiate between native Apple Silicon and Intel compiled binaries.  The Makefile attempts to account for this but please note that 
 whichever terminal or application you're using must be running under Architecture "Apple" as seen by Activity Monitor as all child processes inherit the Rosetta 2 environment of their parent.  You can check which architecture you're currently running under with a `uname -m` in your terminal.
+
+The fastest option is to run the brew command with the `arch -arm64` prefix i.e. `arch -arm64 brew install --HEAD --with-blueshark proxmark3`. This doesn't require running the whole terminal in Rosetta 2.
 
 Visual Studio Code still runs under Rosetta 2 and if you're developing for proxmark3 on an Apple Silicon Mac you might want to consider running the Insiders build which has support for running natively on Apple Silicon.
 

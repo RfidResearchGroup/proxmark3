@@ -274,7 +274,8 @@ int demodAWID(bool verbose) {
     }
     free(bits);
 
-    PrintAndLogEx(DEBUG, "DEBUG: AWID idx: %d, Len: %zu Printing DemodBuffer:", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: AWID idx: %d, Len: %zu", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: Printing DemodBuffer:");
     if (g_debugMode) {
         printDemodBuff(0, false, false, true);
         printDemodBuff(0, false, false, false);
@@ -487,7 +488,7 @@ static int CmdAWIDBrute(const char *Cmd) {
         arg_u64_1(NULL, "fc", "<dec>", "8|16bit value facility code"),
         arg_u64_0(NULL, "cn", "<dec>", "optional -  card number to start with, max 65535"),
         arg_u64_0(NULL, "delay", "<dec>", "optional - delay betweens attempts in ms. Default 1000ms"),
-        arg_lit0("v", "verbose", "verbose logging, show all tries"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

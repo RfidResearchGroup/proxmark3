@@ -485,8 +485,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     uint32_t end_of_transmission_timestamp = 0;
     uint8_t topaz_reader_command[9];
     char explanation[40] = {0};
-    uint8_t mfData[32] = {0};
-    size_t mfDataLen = 0;
     tracelog_hdr_t *first_hdr = (tracelog_hdr_t *)(trace);
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
 
@@ -573,7 +571,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     //2 Not crc-command
 
     //--- Draw the data column
-    char line[18][120] = {{0}};
+    char line[18][160] = {{0}};
 
     if (data_len == 0) {
         if (protocol == ICLASS && duration == 2048) {
@@ -633,7 +631,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     }
 
-    if (markCRCBytes) {
+
+    uint8_t crc_format_string_offset = 0;
+    if (markCRCBytes && data_len > 2) {
         //CRC-command
         if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAGS)) && (data_len > 1)) {
             // Note that UID REQUEST response has no CRC, but we don't know
@@ -644,18 +644,46 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             (*pos2) = ']';
             (*(pos2 + 1)) = '\0';
         } else {
+
             if (crcStatus == 0 || crcStatus == 1) {
-                char *pos1 = line[(data_len - 2) / 18] + (((data_len - 2) % 18) * 4) - 1;
-                (*pos1) = '[';
-                char *pos2 = line[(data_len) / 18] + (((data_len) % 18) * 4) - 1;
-                (*pos2) = ']';
-                (*(pos2 + 1)) = '\0';
+
+                char *pos1 = line[(data_len - 2) / 18];
+                pos1 += (((data_len - 2) % 18) * 4) - 1;
+
+                (*(pos1 + 6 + 1)) = '\0';
+
+                char *cb_str = str_dup(pos1 + 1);
+
+                if (hdr->isResponse) {
+                    if (g_session.supports_colors) {
+                        if (crcStatus == 0) {
+                            snprintf(pos1, 24, " " _RED_("%s") " ", cb_str);
+                        } else {
+                            snprintf(pos1, 24, " " _GREEN_("%s") " ", cb_str);
+                        }
+                        crc_format_string_offset = 9;
+                    } else {
+                        snprintf(pos1, 9, "[%s]", cb_str);
+                    }
+                } else {
+                    if (g_session.supports_colors) {
+                        if (crcStatus == 0) {
+                            snprintf(pos1, 24, AEND " " _RED_("%s") " ", cb_str);
+                        } else {
+                            snprintf(pos1, 24, AEND " " _GREEN_("%s") " ", cb_str);
+                        }
+                        crc_format_string_offset = 13;
+                    } else {
+                        snprintf(pos1, 9, "[%s]", cb_str);
+                    }
+                }
+                free(cb_str);
             }
         }
     }
 
     // Draw the CRC column
-    const char *crcstrings[] = { "!crc", " ok ", "    ", "A ok", "B ok" };
+    const char *crcstrings[] = { _RED_(" !! "), _GREEN_(" ok "), "    ", _GREEN_("A ok"), _GREEN_("B ok") };
     const char *crc = crcstrings[crcStatus];
 
     // mark short bytes (less than 8 Bit + Parity)
@@ -777,17 +805,19 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             if (hdr->isResponse) {
                 // tag row
                 if (use_us) {
-                    PrintAndLogEx(NORMAL, " %10.1f | %10.1f | Tag |%-72s | %s| %s",
+                    PrintAndLogEx(NORMAL, " %10.1f | %10.1f | Tag |%-*s | %s| %s",
                                   (float)time1 / 13.56,
                                   (float)time2 / 13.56,
+                                  72 + crc_format_string_offset,
                                   line[j],
                                   (j == num_lines - 1) ? crc : "    ",
                                   (j == num_lines - 1) ? explanation : ""
                                  );
                 } else {
-                    PrintAndLogEx(NORMAL, " %10u | %10u | Tag |%-72s | %s| %s",
-                                  (hdr->timestamp - first_hdr->timestamp),
-                                  (end_of_transmission_timestamp - first_hdr->timestamp),
+                    PrintAndLogEx(NORMAL, " %10u | %10u | Tag |%-*s | %s| %s",
+                                  time1,
+                                  time2,
+                                  72 + crc_format_string_offset,
                                   line[j],
                                   (j == num_lines - 1) ? crc : "    ",
                                   (j == num_lines - 1) ? explanation : ""
@@ -797,18 +827,20 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 // reader row
                 if (use_us) {
                     PrintAndLogEx(NORMAL,
-                                  _YELLOW_(" %10.1f") " | " _YELLOW_("%10.1f") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                                  _YELLOW_(" %10.1f") " | " _YELLOW_("%10.1f") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
                                   (float)time1 / 13.56,
                                   (float)time2 / 13.56,
+                                  72 + crc_format_string_offset,
                                   line[j],
                                   (j == num_lines - 1) ? crc : "    ",
                                   (j == num_lines - 1) ? explanation : ""
                                  );
                 } else {
                     PrintAndLogEx(NORMAL,
-                                  _YELLOW_(" %10u") " | " _YELLOW_("%10u") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
-                                  (hdr->timestamp - first_hdr->timestamp),
-                                  (end_of_transmission_timestamp - first_hdr->timestamp),
+                                  _YELLOW_(" %10u") " | " _YELLOW_("%10u") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                                  time1,
+                                  time2,
+                                  72 + crc_format_string_offset,
                                   line[j],
                                   (j == num_lines - 1) ? crc : "    ",
                                   (j == num_lines - 1) ? explanation : ""
@@ -819,13 +851,15 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
         } else {
             if (hdr->isResponse) {
-                PrintAndLogEx(NORMAL, "            |            |     |%-72s | %s| %s",
+                PrintAndLogEx(NORMAL, "            |            |     |%-*s | %s| %s",
+                              72 + crc_format_string_offset,
                               line[j],
                               (j == num_lines - 1) ? crc : "    ",
                               (j == num_lines - 1) ? explanation : ""
                              );
             } else {
-                PrintAndLogEx(NORMAL, "            |            |     |" _YELLOW_("%-72s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                PrintAndLogEx(NORMAL, "            |            |     |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                              72 + crc_format_string_offset,
                               line[j],
                               (j == num_lines - 1) ? crc : "    ",
                               (j == num_lines - 1) ? explanation : ""
@@ -835,13 +869,16 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     if (protocol == PROTO_MIFARE) {
+        uint8_t mfData[32] = {0};
+        size_t mfDataLen = 0;
         if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen, mfDicKeys, mfDicKeysCount)) {
             memset(explanation, 0x00, sizeof(explanation));
             annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen, hdr->isResponse);
             uint8_t crcc = iso14443A_CRC_check(hdr->isResponse, mfData, mfDataLen);
-            PrintAndLogEx(NORMAL, "            |            |  *  |%-72s | %-4s| %s",
+            PrintAndLogEx(NORMAL, "            |            |  *  |%-*s | %-4s| %s",
+                          72 + crc_format_string_offset,
                           sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
-                          (crcc == 0 ? "!crc" : (crcc == 1 ? " ok " : "    ")),
+                          (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
                           explanation);
         }
     }
@@ -854,11 +891,26 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
         tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
 
-        PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): " _YELLOW_("%d"),
-                      (end_of_transmission_timestamp - first_hdr->timestamp),
-                      (next_hdr->timestamp - first_hdr->timestamp),
-                      "   ",
-                      (next_hdr->timestamp - end_of_transmission_timestamp));
+        uint32_t time1 = end_of_transmission_timestamp - first_hdr->timestamp;
+        uint32_t time2 = next_hdr->timestamp - first_hdr->timestamp;
+        if (prev_eot) {
+            time1 = 0;
+            time2 = next_hdr->timestamp - end_of_transmission_timestamp;
+        }
+
+        if (use_us) {
+            PrintAndLogEx(NORMAL, " %10.1f | %10.1f | %s |fdt (Frame Delay Time): " _YELLOW_("%.1f"),
+                          (float)time1 / 13.56,
+                          (float)time2 / 13.56,
+                          "   ",
+                          (float)(next_hdr->timestamp - end_of_transmission_timestamp) / 13.56);
+        } else {
+            PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): " _YELLOW_("%d"),
+                          time1,
+                          time2,
+                          "   ",
+                          (next_hdr->timestamp - end_of_transmission_timestamp));
+        }
     }
 
     return tracepos;
@@ -1053,8 +1105,8 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
              protocol);
     char example[200] = {0};
     snprintf(example, sizeof(example) - 1,
-             "%s list -f              -> show frame delay times\n"
-             "%s list -1              -> use trace buffer ",
+             "%s list --frame      -> show frame delay times\n"
+             "%s list -1           -> use trace buffer ",
              alias, alias);
     char fullalias[100] = {0};
     snprintf(fullalias, sizeof(fullalias) - 1, "%s list", alias);
@@ -1063,20 +1115,20 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("1", "buffer", "use data from trace buffer"),
-        arg_lit0("f", NULL, "show frame delay times"),
+        arg_lit0(NULL, "frame", "show frame delay times"),
         arg_lit0("c", NULL, "mark CRC bytes"),
         arg_lit0("r", NULL, "show relative times (gap and duration)"),
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
                  "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
-        arg_str0(NULL, "dict", "<file>", "use dictionary keys file"),
+        arg_str0("f", "file", "<fn>", "filename of dictionary"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
     char args[128] = {0};
-    snprintf(args, sizeof(args), "-t %s ", protocol);
+    snprintf(args, sizeof(args), "-c -t %s ", protocol);
     strncat(args, Cmd, sizeof(args) - strlen(args) - 1);
     return CmdTraceList(args);
 }
@@ -1106,22 +1158,22 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t thinfilm -> interpret as " _YELLOW_("Thinfilm") "\n"
                   "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") "\n"
                   "\n"
-                  "trace list -t mf --dict <mfc_default_keys>    -> use dictionary keys file\n"
-                  "trace list -t 14a -f                          -> show frame delay times\n"
-                  "trace list -t 14a -1                          -> use trace buffer "
+                  "trace list -t mf -f mfc_default_keys.dic     -> use default dictionary file\n"
+                  "trace list -t 14a --frame                    -> show frame delay times\n"
+                  "trace list -t 14a -1                         -> use trace buffer "
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("1", "buffer", "use data from trace buffer"),
-        arg_lit0("f", NULL, "show frame delay times"),
+        arg_lit0(NULL, "frame", "show frame delay times"),
         arg_lit0("c", NULL, "mark CRC bytes"),
         arg_lit0("r", NULL, "show relative times (gap and duration)"),
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
                  "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
         arg_str0("t", "type", NULL, "protocol to annotate the trace"),
-        arg_str0(NULL, "dict", "<fn>", "use dictionary keys file"),
+        arg_str0("f", "file", "<fn>", "filename of dictionary"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

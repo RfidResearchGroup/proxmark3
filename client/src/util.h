@@ -67,6 +67,8 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len,
 
 void print_hex(const uint8_t *data, const size_t len);
 void print_hex_break(const uint8_t *data, const size_t len, const uint8_t breaks);
+void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t breaks);
+
 char *sprint_hex(const uint8_t *data, const size_t len);
 char *sprint_hex_inrow(const uint8_t *data, const size_t len);
 char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const size_t min_str_len);
@@ -110,7 +112,11 @@ int param_getbin_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
 int param_getstr(const char *line, int paramnum, char *str, size_t buffersize);
 
 int hextobinarray(char *target, char *source);
+int hextobinarray_n(char *target, char *source, int sourcelen);
+
 int hextobinstring(char *target, char *source);
+int hextobinstring_n(char *target, char *source, int sourcelen);
+
 int binarraytohex(char *target, const size_t targetlen, const char *source, size_t srclen);
 void binarraytobinstring(char *target,  char *source, int length);
 int binstring2binarray(uint8_t *target, char *source, int length);
@@ -127,6 +133,9 @@ uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
 int num_CPUs(void); // number of logical CPUs
 
 void str_lower(char *s); // converts string to lower case
+void str_upper(char *s); // converts string to UPPER case
+void strn_upper(char *s, size_t n);
+
 bool str_startswith(const char *s,  const char *pre);  // check for prefix in string
 bool str_endswith(const char *s,  const char *suffix);    // check for suffix in string
 void clean_ascii(unsigned char *buf, size_t len);
@@ -143,4 +152,12 @@ uint64_t bitcount64(uint64_t a);
 uint32_t leadingzeros32(uint32_t a);
 uint64_t leadingzeros64(uint64_t a);
 
+int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen);
+
+struct smartbuf {
+    char *ptr;
+    size_t size;
+    size_t idx;
+} typedef smartbuf;
+void sb_append_char(smartbuf *sb, unsigned char c);
 #endif

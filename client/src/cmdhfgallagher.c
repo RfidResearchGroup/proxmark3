@@ -840,9 +840,10 @@ static int hfgal_read_card(uint32_t aid, uint8_t *site_key, bool verbose, bool q
         uint32_t current_aid = cad_aid_byte_to_uint(&cad[i + 3]);
 
         if (verbose) {
-            if (region_code > 0 || facility_code > 0) {
-                PrintAndLogEx(INFO, "Reading AID: " _YELLOW_("%06X") ", region: " _YELLOW_("%u") ", facility: " _YELLOW_("%u"),
+            if (region_code > 0 || facility_code > 0 || current_aid > 0) {
+                PrintAndLogEx(INFO, "Reading AID: " _YELLOW_("%06X") ", region: " _YELLOW_("%c") " ( " _YELLOW_("%u") " ), facility: " _YELLOW_("%u"),
                               current_aid,
+                              'A' + region_code,
                               region_code,
                               facility_code
                              );
@@ -860,11 +861,12 @@ static int hfgal_read_card(uint32_t aid, uint8_t *site_key, bool verbose, bool q
         }
         PM3_RET_IF_ERR_MAYBE_MSG(res, !quiet, "Failed reading card application credentials");
 
-        PrintAndLogEx(SUCCESS, "Gallagher (AID %06X) - region: " _GREEN_("%u")
+        PrintAndLogEx(SUCCESS, "Gallagher (AID %06X) - region: " _GREEN_("%c") " ( " _GREEN_("%u") " )"
                       ", facility: " _GREEN_("%u")
                       ", card number: " _GREEN_("%u")
                       ", issue level: " _GREEN_("%u"),
                       current_aid,
+                      'A' + creds.region_code,
                       creds.region_code,
                       creds.facility_code,
                       creds.card_number,
@@ -1252,12 +1254,71 @@ static int CmdGallagherDiversify(const char *cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdGallagherDecode(const char *cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf gallagher decode",
+                  "Decode Gallagher credential block\n"
+                  "Credential block can be specified with or without the bitwise inverse.",
+                  "hf gallagher decode --data A3B4B0C151B0A31B"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "data", "<hex>", "Credential block (8 or 16 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, cmd, argtable, false);
+
+    int data_len = 0;
+    uint8_t data_buf[16] = {0};
+    CLIGetHexWithReturn(ctx, 1, data_buf, &data_len);
+    if (data_len != 8 && data_len != 16) {
+        PM3_RET_ERR_FREE(PM3_EINVARG, "--data must be 8 or 16 bytes");
+    }
+    CLIParserFree(ctx);
+
+    if (data_len == 16) {
+        // Check second half of file is the bitwise inverse of the first half
+        for (uint8_t i = 8; i < 16; i++) {
+            data_buf[i] ^= 0xFF;
+        }
+
+        if (memcmp(data_buf, &data_buf[8], 8) != 0) {
+            PM3_RET_ERR(PM3_EFAILED, "Invalid cardholder data, last 8 bytes should be bitwise inverse of first 16 bytes. Received %s",
+                        sprint_hex_inrow(data_buf, 16)
+                       );
+        }
+    } else {
+        for (uint8_t i = 0; i < 8; i++) {
+            data_buf[i + 8] = data_buf[i] ^ 0xFF;
+        }
+        PrintAndLogEx(INFO, "Full credential block with bitwise inverse: " _YELLOW_("%s"), sprint_hex_inrow(data_buf, 16));
+    }
+
+    GallagherCredentials_t creds = {0};
+    gallagher_decode_creds(data_buf, &creds);
+
+    PrintAndLogEx(SUCCESS, "Gallagher - region: " _GREEN_("%c") " ( " _GREEN_("%u") " )"
+                  ", facility: " _GREEN_("%u")
+                  ", card number: " _GREEN_("%u")
+                  ", issue level: " _GREEN_("%u"),
+                  'A' + creds.region_code,
+                  creds.region_code,
+                  creds.facility_code,
+                  creds.card_number,
+                  creds.issue_level
+                 );
+
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",         CmdHelp,               AlwaysAvailable, "This help"},
     {"reader",       CmdGallagherReader,    IfPm3Iso14443,   "Read & decode all Gallagher credentials on a DESFire card"},
     {"clone",        CmdGallagherClone,     IfPm3Iso14443,   "Add Gallagher credentials to a DESFire card"},
     {"delete",       CmdGallagherDelete,    IfPm3Iso14443,   "Delete Gallagher credentials from a DESFire card"},
     {"diversifykey", CmdGallagherDiversify, AlwaysAvailable, "Diversify Gallagher key"},
+    {"decode",       CmdGallagherDecode,    AlwaysAvailable, "Decode Gallagher credential block"},
     {NULL, NULL, NULL, NULL}
 };
 

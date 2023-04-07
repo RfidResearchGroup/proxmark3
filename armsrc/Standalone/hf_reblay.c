@@ -314,24 +314,24 @@ void RunMod() {
                     }
                 }
                 if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) {  // Received a REQUEST
-                    DbpString(_YELLOW_("+") "REQUEST Received");
+//                    DbpString(_YELLOW_("+") "REQUEST Received");
                     p_response = &responses[RESP_INDEX_ATQA];
                 } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {  // Received a HALT
-                    DbpString(_YELLOW_("+") "Received a HALT");
+//                    DbpString(_YELLOW_("+") "Received a HALT");
                     p_response = NULL;
                     resp = 0;
                 } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) {  // Received a WAKEUP
-                    DbpString(_YELLOW_("+") "WAKEUP Received");
+//                    DbpString(_YELLOW_("+") "WAKEUP Received");
                     p_response = &responses[RESP_INDEX_ATQA];
                     resp = 0;
                 } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {  // Received request for UID (cascade 1)
-                    DbpString(_YELLOW_("+") "Request for UID C1");
+//                    DbpString(_YELLOW_("+") "Request for UID C1");
                     p_response = &responses[RESP_INDEX_UIDC1];
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {  // Received a SELECT (cascade 1)
-                    DbpString(_YELLOW_("+") "Request for SELECT S1");
+//                    DbpString(_YELLOW_("+") "Request for SELECT S1");
                     p_response = &responses[RESP_INDEX_SAKC1];
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {  // Received a RATS request
-                    DbpString(_YELLOW_("+") "Request for RATS");
+//                    DbpString(_YELLOW_("+") "Request for RATS");
                     p_response = &responses[RESP_INDEX_RATS];
                     resp = 1;
                 } else if (receivedCmd[0] == 0xf2 && len == 4) {  // ACKed - Time extension

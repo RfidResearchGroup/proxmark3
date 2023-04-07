@@ -215,7 +215,7 @@ static void jooki_printEx(uint8_t *b64, uint8_t *iv, uint8_t tid, uint8_t fid, u
     PrintAndLogEx(INFO, "NDEF raw..... %s", sprint_hex_inrow(ndefmsg, sizeof(ndefmsg)));
 
     if (verbose) {
-        int res = NDEFRecordsDecodeAndPrint(ndefmsg, sizeof(ndefmsg));
+        int res = NDEFRecordsDecodeAndPrint(ndefmsg, sizeof(ndefmsg), verbose);
         if (res != PM3_SUCCESS) {
             NDEFDecodeAndPrint(ndefmsg, sizeof(ndefmsg), verbose);
         }
@@ -273,7 +273,7 @@ static int jooki_selftest(void) {
         jooki_create_ndef(b64, ndefmsg);
         PrintAndLogEx(INFO, "NDEF raw .... %s", sprint_hex(ndefmsg, sizeof(ndefmsg)));
 
-        int status = NDEFRecordsDecodeAndPrint(ndefmsg, sizeof(ndefmsg));
+        int status = NDEFRecordsDecodeAndPrint(ndefmsg, sizeof(ndefmsg), true);
         if (status != PM3_SUCCESS) {
             status = NDEFDecodeAndPrint(ndefmsg, sizeof(ndefmsg), true);
         }

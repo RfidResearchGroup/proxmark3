@@ -147,7 +147,7 @@ static int split(char *str, char **arr) {
     return word_cnt;
 }
 
-static void set_python_path(char *path) {
+static void set_python_path(const char *path) {
     PyObject *syspath = PySys_GetObject("path");
     if (syspath == 0) {
         PrintAndLogEx(WARNING, "Python failed to getobject");
@@ -164,37 +164,44 @@ static void set_python_path(char *path) {
 }
 
 static void set_python_paths(void) {
-    //--add to the LUA_PATH (package.path in lua)
-    // so we can load scripts from various places:
+    // Prepending to sys.path so we can load scripts from various places.
+    // This means the following directories are in reverse order of
+    // priority for search python modules.
+
+    // Allow current working directory because it seems that's what users want.
+    // But put it with lower search priority than the typical pm3 scripts directories
+    // but still with a higher priority than the pip installed libraries to mimic
+    // Python interpreter behavior. That should be confusing the users the least.
+    set_python_path(".");
     const char *exec_path = get_my_executable_directory();
     if (exec_path != NULL) {
-        // from the ./luascripts/ directory
+        // from the ./pyscripts/ directory
         char scripts_path[strlen(exec_path) + strlen(PYTHON_SCRIPTS_SUBDIR) + strlen(PYTHON_LIBRARIES_WILDCARD) + 1];
         strcpy(scripts_path, exec_path);
         strcat(scripts_path, PYTHON_SCRIPTS_SUBDIR);
-//        strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
+        // strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
         set_python_path(scripts_path);
     }
 
     const char *user_path = get_my_user_directory();
     if (user_path != NULL) {
-        // from the $HOME/.proxmark3/luascripts/ directory
+        // from the $HOME/.proxmark3/pyscripts/ directory
         char scripts_path[strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(PYTHON_SCRIPTS_SUBDIR) + strlen(PYTHON_LIBRARIES_WILDCARD) + 1];
         strcpy(scripts_path, user_path);
         strcat(scripts_path, PM3_USER_DIRECTORY);
         strcat(scripts_path, PYTHON_SCRIPTS_SUBDIR);
-//        strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
+        // strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
         set_python_path(scripts_path);
 
     }
 
     if (exec_path != NULL) {
-        // from the $PREFIX/share/proxmark3/luascripts/ directory
+        // from the $PREFIX/share/proxmark3/pyscripts/ directory
         char scripts_path[strlen(exec_path) + strlen(PM3_SHARE_RELPATH) + strlen(PYTHON_SCRIPTS_SUBDIR) + strlen(PYTHON_LIBRARIES_WILDCARD) + 1];
         strcpy(scripts_path, exec_path);
         strcat(scripts_path, PM3_SHARE_RELPATH);
         strcat(scripts_path, PYTHON_SCRIPTS_SUBDIR);
-//        strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
+        // strcat(scripts_path, PYTHON_LIBRARIES_WILDCARD);
         set_python_path(scripts_path);
     }
 }
@@ -399,35 +406,55 @@ static int CmdScriptRun(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "executing python " _YELLOW_("%s"), script_path);
         PrintAndLogEx(SUCCESS, "args " _YELLOW_("'%s'"), arguments);
 
-        wchar_t *program = Py_DecodeLocale(filename, NULL);
-        if (program == NULL) {
-            PrintAndLogEx(ERR, "could not decode " _YELLOW_("%s"), filename);
-            free(script_path);
-            return PM3_ESOFT;
-        }
-
-        // optional but recommended
-        Py_SetProgramName(program);
 #ifdef HAVE_PYTHON_SWIG
         // hook Proxmark3 API
         PyImport_AppendInittab("_pm3", PyInit__pm3);
 #endif
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
         Py_Initialize();
+#else
+        PyConfig py_conf;
+        // We need to use Python mode instead of isolated to avoid breaking stuff.
+        PyConfig_InitPythonConfig(&py_conf);
+        // Let's still make things bit safer by being as close as possible to isolated mode.
+        py_conf.configure_c_stdio = -1;
+        py_conf.faulthandler = 0;
+        py_conf.use_hash_seed = 0;
+        py_conf.install_signal_handlers = 0;
+        py_conf.parse_argv = 0;
+        py_conf.user_site_directory = 1;
+        py_conf.use_environment = 0;
+#endif
 
         //int argc, char ** argv
         char *argv[128];
-        int argc = split(arguments, argv);
+        argv[0] = filename;
+        int argc = split(arguments, &argv[1]);
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
         wchar_t *py_args[argc + 1];
-        py_args[0] = Py_DecodeLocale(filename, NULL);
-        for (int i = 0; i < argc; i++) {
-            py_args[i + 1] = Py_DecodeLocale(argv[i], NULL);
+        for (int i = 0; i <= argc; i++) {
+            py_args[i] = Py_DecodeLocale(argv[i], NULL);
         }
 
         PySys_SetArgv(argc + 1, py_args);
+#else
+        // The following line will implicitly pre-initialize Python
+        PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
+
+        // We disallowed in py_conf environment variables interfering with python interpreter's behavior.
+        // Let's manually enable the ones we truly need.
+        // This is required by Proxspace to work with an isolated Python configuration
+        PyConfig_SetBytesString(&py_conf, &py_conf.home, getenv("PYTHONHOME"));
+        // This is required for allowing `import pm3` in python scripts
+        PyConfig_SetBytesString(&py_conf, &py_conf.pythonpath_env, getenv("PYTHONPATH"));
+
+        Py_InitializeFromConfig(&py_conf);
 
         // clean up
+        PyConfig_Clear(&py_conf);
+#endif
         for (int i = 0; i < argc; ++i) {
-            free(argv[i]);
+            free(argv[i + 1]);
         }
 
         // setup search paths.
@@ -440,8 +467,13 @@ static int CmdScriptRun(const char *Cmd) {
             return PM3_ESOFT;
         }
         int ret = Pm3PyRun_SimpleFileNoExit(f, filename);
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
+        // Py_DecodeLocale() allocates memory that needs to be free'd
+        for (int i = 0; i < argc + 1; i++) {
+            PyMem_RawFree(py_args[i]);
+        }
+#endif
         Py_Finalize();
-        PyMem_RawFree(program);
         free(script_path);
         if (ret) {
             PrintAndLogEx(WARNING, "\nfinished " _YELLOW_("%s") " with exception", filename);

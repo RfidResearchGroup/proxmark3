@@ -131,7 +131,7 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, const uint8_t *data, 
     return PM3_SUCCESS;
 }
 
-int reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
+int reply_ng(uint16_t cmd, int16_t status, const uint8_t *data, size_t len) {
     return reply_ng_internal(cmd, status, data, len, true);
 }
 

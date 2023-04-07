@@ -116,7 +116,6 @@
 #define CMD_READ_RESP       13
 #define CMD_INV_RESP        12
 #define CMD_SYSINFO_RESP    17
-#define CMD_READBLOCK_RESP  7
 
 //#define Crc(data, len)        Crc(CRC_15693, (data), (len))
 #define CheckCrc15(data, len)   check_crc(CRC_15693, (data), (len))
@@ -175,6 +174,36 @@ static void CodeIso15693AsReaderEOF(void) {
     tosend_t *ts = get_tosend();
     ts->buf[++ts->max] = 0x20;
     ts->max++;
+}
+
+
+static int get_uid_slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid) {
+
+    uint8_t *answer = BigBuf_malloc(ISO15693_MAX_RESPONSE_LENGTH);
+    memset(answer, 0x00, ISO15693_MAX_RESPONSE_LENGTH);
+
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+
+    uint8_t cmd[5] = {0};
+    BuildIdentifyRequest(cmd);
+    uint16_t recvlen = 0;
+    SendDataTag(cmd, sizeof(cmd), false, true, answer, ISO15693_MAX_RESPONSE_LENGTH, start_time, ISO15693_READER_TIMEOUT, eof_time, &recvlen);
+
+    if (recvlen != 12) {
+        return PM3_ETIMEOUT;
+    }
+
+    uid[0] = answer[2];
+    uid[1] = answer[3];
+    uid[2] = answer[4];
+    uid[3] = answer[5];
+    uid[4] = answer[6];
+    uid[5] = answer[7];
+    uid[6] = answer[8];
+    uid[7] = answer[9];
+
+    BigBuf_free();
+    return PM3_SUCCESS;
 }
 
 
@@ -263,9 +292,9 @@ void CodeIso15693AsTag(const uint8_t *cmd, size_t len) {
 }
 
 // Transmit the command (to the tag) that was placed in cmd[].
-void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time) {
+void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time, bool shallow_mod) {
 
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_FULL_MOD);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | (shallow_mod ? FPGA_HF_READER_MODE_SEND_SHALLOW_MOD : FPGA_HF_READER_MODE_SEND_FULL_MOD));
 
     if (*start_time < DELAY_ARM_TO_TAG) {
         *start_time = DELAY_ARM_TO_TAG;
@@ -1586,7 +1615,7 @@ void AcquireRawAdcSamplesIso15693(void) {
     tosend_t *ts = get_tosend();
 
     uint32_t start_time = 0;
-    TransmitTo15693Tag(ts->buf, ts->max, &start_time);
+    TransmitTo15693Tag(ts->buf, ts->max, &start_time, false);
 
     // wait for last transfer to complete
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY)) ;
@@ -1673,7 +1702,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
             dma_start_time = GetCountSspClk() & 0xfffffff0;
         }
 
-        volatile uint16_t sniffdata;
+        volatile uint16_t sniffdata = 0;
         volatile uint16_t sniffdata_prev = sniffdata;
         sniffdata = *upTo++;
 
@@ -1900,7 +1929,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
     }
 
     tosend_t *ts = get_tosend();
-    TransmitTo15693Tag(ts->buf, ts->max, &start_time);
+    TransmitTo15693Tag(ts->buf, ts->max, &start_time, false);
 
     if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
         *resp_len = 0;
@@ -1923,7 +1952,7 @@ int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, ui
 
     CodeIso15693AsReaderEOF();
     tosend_t *ts = get_tosend();
-    TransmitTo15693Tag(ts->buf, ts->max, &start_time);
+    TransmitTo15693Tag(ts->buf, ts->max, &start_time, false);
     uint32_t end_time = start_time + 32 * (8 * ts->max - 4); // subtract the 4 padding bits after EOF
     LogTrace_ISO15693(NULL, 0, (start_time * 4), (end_time * 4), NULL, true);
 
@@ -2098,9 +2127,28 @@ void Iso15693InitTag(void) {
     StartCountSspClk();
 }
 
+
+void EmlClearIso15693(void) {
+    // Resetting the bitstream also frees the BigBuf memory, so we do this here to prevent
+    // an inconvenient reset in the future by Iso15693InitTag
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+    BigBuf_Clear_EM();
+    reply_ng(CMD_HF_ISO15693_EML_CLEAR, PM3_SUCCESS, NULL, 0);
+}
+
+void EmlSetMemIso15693(uint8_t count, uint8_t *data, uint32_t offset) {
+    uint8_t *emCARD = BigBuf_get_EM_addr();
+    memcpy(emCARD + offset, data, count);
+}
+
+void EmlGetMemIso15693(uint8_t count, uint8_t *output, uint32_t offset) {
+    uint8_t *emCARD = BigBuf_get_EM_addr();
+    memcpy(output, emCARD + offset, count);
+}
+
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
 // all demodulation performed in arm rather than host. - greg
-void SimTagIso15693(uint8_t *uid) {
+void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
@@ -2109,11 +2157,9 @@ void SimTagIso15693(uint8_t *uid) {
 
     LED_A_ON();
 
-    Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7]);
+    Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X block size %d", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7], block_size);
 
     LED_C_ON();
-
-
 
     enum { NO_FIELD, IDLE, ACTIVATED, SELECTED, HALTED } chip_state = NO_FIELD;
 
@@ -2188,7 +2234,7 @@ void SimTagIso15693(uint8_t *uid) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
-            // Build GET_SYSTEM_INFO command
+            // Build GET_SYSTEM_INFO response
             uint8_t resp_sysinfo[CMD_SYSINFO_RESP] = {0};
 
             resp_sysinfo[0] = 0;    // Response flags.
@@ -2207,8 +2253,8 @@ void SimTagIso15693(uint8_t *uid) {
             resp_sysinfo[10] = 0;    // DSFID
             resp_sysinfo[11] = 0;    // AFI
 
-            resp_sysinfo[12] = 0x1B; // Memory size.
-            resp_sysinfo[13] = 0x03; // Memory size.
+            resp_sysinfo[12] = 0x1F; // Block count
+            resp_sysinfo[13] = block_size - 1; // Block size.
             resp_sysinfo[14] = 0x01; // IC reference.
 
             // CRC
@@ -2221,28 +2267,97 @@ void SimTagIso15693(uint8_t *uid) {
             LogTrace_ISO15693(resp_sysinfo, CMD_SYSINFO_RESP, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
         }
 
-        // READ_BLOCK
-        if ((cmd[1] == ISO15693_READBLOCK)) {
+        // READ_BLOCK and READ_MULTI_BLOCK
+        if ((cmd[1] == ISO15693_READBLOCK) || (cmd[1] == ISO15693_READ_MULTI_BLOCK)) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
+            bool addressed = cmd[0] & ISO15_REQ_ADDRESS;
+            bool option = cmd[0] & ISO15_REQ_OPTION;
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
-            // Build GET_SYSTEM_INFO command
-            uint8_t resp_readblock[CMD_READBLOCK_RESP] = {0};
+            uint8_t address_offset = 0;
+            if (addressed) {
+                address_offset = 8;
+            }
 
-            resp_readblock[0] = 0;    // Response flags.
-            resp_readblock[1] = 0;    // Block data.
-            resp_readblock[2] = 0;    // Block data.
-            resp_readblock[3] = 0;    // Block data.
-            resp_readblock[4] = 0;    // Block data.
+            uint8_t block_idx = cmd[2 + address_offset];
+            uint8_t block_count = 1;
+            if (cmd[1] == ISO15693_READ_MULTI_BLOCK) {
+                block_count = cmd[3 + address_offset] + 1;
+            }
+
+            // Build READ_(MULTI_)BLOCK response
+            int response_length = 3 + block_size * block_count;
+            int security_offset = 0;
+            if (option) {
+                response_length += block_count;
+                security_offset = 1;
+            }
+            uint8_t resp_readblock[response_length];
+            memset(resp_readblock, 0, response_length);
+
+            resp_readblock[0] = 0;    // Response flags
+            for (int j = 0; j < block_count; j++) {
+                // where to put the data of the current block
+                int work_offset = 1 + j * (block_size + security_offset);
+                if (option) {
+                    resp_readblock[work_offset] = 0;    // Security status
+                }
+                // Block data
+                if (block_size * (block_idx + j + 1) <= CARD_MEMORY_SIZE) {
+                    EmlGetMemIso15693(block_size, resp_readblock + (work_offset + security_offset),
+                                      block_size * (block_idx + j));
+                } else {
+                    memset(resp_readblock + work_offset + security_offset, 0, block_size);
+                }
+            }
 
             // CRC
-            AddCrc15(resp_readblock, 5);
-            CodeIso15693AsTag(resp_readblock, CMD_READBLOCK_RESP);
+            AddCrc15(resp_readblock, response_length - 2);
+            CodeIso15693AsTag(resp_readblock, response_length);
 
             tosend_t *ts = get_tosend();
 
             TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
-            LogTrace_ISO15693(resp_readblock, CMD_READBLOCK_RESP, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
+            LogTrace_ISO15693(resp_readblock, response_length, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
+        }
+
+        // WRITE_BLOCK and WRITE_MULTI_BLOCK
+        if ((cmd[1] == ISO15693_WRITEBLOCK) || (cmd[1] == ISO15693_WRITE_MULTI_BLOCK)) {
+            bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
+            bool addressed = cmd[0] & ISO15_REQ_ADDRESS;
+            uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
+
+            uint8_t address_offset = 0;
+            if (addressed) {
+                address_offset = 8;
+            }
+
+            uint8_t block_idx = cmd[2 + address_offset];
+            uint8_t block_count = 1;
+            uint8_t multi_offset = 0;
+            if (cmd[1] == ISO15693_WRITE_MULTI_BLOCK) {
+                block_count = cmd[3 + address_offset] + 1;
+                multi_offset = 1;
+            }
+            uint8_t *data = cmd + 3 + address_offset + multi_offset;
+
+            // write data
+            EmlSetMemIso15693(block_count * block_size, data, block_idx * block_size);
+
+            // Build WRITE_(MULTI_)BLOCK response
+            int response_length = 3;
+            uint8_t resp_writeblock[response_length];
+            memset(resp_writeblock, 0, response_length);
+            resp_writeblock[0] = 0;    // Response flags
+
+            // CRC
+            AddCrc15(resp_writeblock, response_length - 2);
+            CodeIso15693AsTag(resp_writeblock, response_length);
+
+            tosend_t *ts = get_tosend();
+
+            TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
+            LogTrace_ISO15693(resp_writeblock, response_length, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
         }
     }
 
@@ -2346,6 +2461,8 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
         case ISO15693_WRITE_AFI:
         case ISO15693_LOCK_AFI:
         case ISO15693_WRITE_DSFID:
+        case ISO15693_WRITE_PASSWORD:
+        case ISO15693_PASSWORD_PROTECT_EAS:
         case ISO15693_LOCK_DSFID:
             timeout = ISO15693_READER_TIMEOUT_WRITE;
             request_answer = data[0] & ISO15_REQ_OPTION;
@@ -2555,7 +2672,7 @@ void SetTag15693Uid(const uint8_t *uid) {
     switch_off();
 }
 
-static void init_password_15693_slixl(uint8_t *buffer, uint8_t *pwd, const uint8_t *rnd) {
+static void init_password_15693_Slix(uint8_t *buffer, uint8_t *pwd, const uint8_t *rnd) {
     memcpy(buffer, pwd, 4);
     if (rnd) {
         buffer[0] ^= rnd[0];
@@ -2565,14 +2682,14 @@ static void init_password_15693_slixl(uint8_t *buffer, uint8_t *pwd, const uint8
     }
 }
 
-static bool get_rnd_15693_slixl(uint32_t start_time, uint32_t *eof_time, uint8_t *rnd) {
+static bool get_rnd_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *rnd) {
     // 0x04, == NXP from manufacture id list.
     uint8_t c[] = {ISO15_REQ_DATARATE_HIGH, ISO15693_GET_RANDOM_NUMBER, 0x04, 0x00, 0x00 };
     AddCrc15(c, 3);
 
     uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
     uint16_t recvlen = 0;
-    int res = SendDataTag(c, sizeof(c), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
+    int res = SendDataTag(c, sizeof(c), true, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
     if (res != PM3_SUCCESS && recvlen != 5) {
         return false;
     }
@@ -2583,15 +2700,16 @@ static bool get_rnd_15693_slixl(uint32_t start_time, uint32_t *eof_time, uint8_t
     return true;
 }
 
-static uint32_t set_pass_15693_slixl(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, uint8_t *password) {
+static uint32_t disable_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, uint8_t *password) {
+
     uint8_t rnd[2];
-    if (get_rnd_15693_slixl(start_time, eof_time, rnd) == false) {
+    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
         return PM3_ETIMEOUT;
     }
 
     // 0x04, == NXP from manufacture id list.
-    uint8_t c[] = {ISO15_REQ_DATARATE_HIGH, ISO15693_SET_PASSWORD, 0x04, pass_id, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    init_password_15693_slixl(&c[4], password, rnd);
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, ISO15693_SET_PASSWORD, 0x04, pass_id, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    init_password_15693_Slix(&c[4], password, rnd);
     AddCrc15(c, 8);
 
     start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
@@ -2604,16 +2722,226 @@ static uint32_t set_pass_15693_slixl(uint32_t start_time, uint32_t *eof_time, ui
     return PM3_SUCCESS;
 }
 
-/*
-static uint32_t enable_privacy_15693_slixl(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t pass_id, uint8_t *password) {
+static uint32_t set_pass_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, uint8_t *password, uint8_t *uid) {
+
+
     uint8_t rnd[2];
-    if (get_rnd_15693_slixl(start_time, eof_time, rnd) == false) {
+    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    // 0x04, == NXP from manufacture id list.
+    uint8_t c[] = { (ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS), ISO15693_SET_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, pass_id, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+    init_password_15693_Slix(&c[12], password, rnd);
+
+    memcpy(&c[3], uid, 8);
+    AddCrc15(c, 16);
+
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    uint16_t recvlen = 0;
+
+    int res = SendDataTag(c, sizeof(c), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
+    if (res != PM3_SUCCESS && recvlen != 3) {
+        return PM3_EWRONGANSWER;
+    }
+    return PM3_SUCCESS;
+}
+
+static uint32_t set_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *password) {
+    uint8_t rnd[2];
+    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    // 0x04, == NXP from manufacture id list.
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, 0xBA, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    init_password_15693_Slix(&c[3], password, rnd);
+    AddCrc15(c, 7);
+
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    uint16_t recvlen = 0;
+    int res = SendDataTag(c, sizeof(c), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
+    if (res != PM3_SUCCESS && recvlen != 3) {
+        return PM3_EWRONGANSWER;
+    }
+    return PM3_SUCCESS;
+}
+
+static uint32_t disable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *password, bool usepwd) {
+
+    uint8_t uid[8];
+    get_uid_slix(start_time, eof_time, uid);
+
+    uint8_t rnd[2];
+    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    if (usepwd) {
+
+        int res_setpass = set_pass_15693_Slix(start_time, eof_time, 0x10, password, uid);
+
+        if (res_setpass != PM3_SUCCESS) {
+            return PM3_EWRONGANSWER;
+        }
+    }
+
+    // 0x04, == NXP from manufacture id list.
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, 0xA3, 0x04, 0x00, 0x00};
+    AddCrc15(c, 3);
+
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    uint16_t recvlen = 0;
+    int res = SendDataTag(c, sizeof(c), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
+    if (res != PM3_SUCCESS && recvlen != 3) {
+        return PM3_EWRONGANSWER;
+    }
+    return PM3_SUCCESS;
+}
+
+
+static uint32_t enable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *password, bool usepwd) {
+
+    uint8_t uid[8];
+    get_uid_slix(start_time, eof_time, uid);
+
+    uint8_t rnd[2];
+    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    if (usepwd) {
+        int res_setpass = set_pass_15693_Slix(start_time, eof_time, 0x10, password, uid);
+
+        if (res_setpass != PM3_SUCCESS) {
+            return PM3_EWRONGANSWER;
+        }
+    }
+    // 0x04, == NXP from manufacture id list.
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, 0xA2, 0x04, 0x00, 0x00};
+    //init_password_15693_Slix(&c[3], password, rnd);
+    AddCrc15(c, 3);
+
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    uint16_t recvlen = 0;
+    int res = SendDataTag(c, sizeof(c), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
+    if (res != PM3_SUCCESS && recvlen != 3) {
+        return PM3_EWRONGANSWER;
+    }
+    return PM3_SUCCESS;
+}
+
+static uint32_t write_password_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pwd_id, uint8_t *password, uint8_t *uid) {
+
+    uint8_t new_pwd_cmd[] = { (ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS), ISO15693_WRITE_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, pwd_id, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    memcpy(&new_pwd_cmd[3], uid, 8);
+    memcpy(&new_pwd_cmd[12], password, 4);
+
+    AddCrc15(new_pwd_cmd, 16);
+
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    uint16_t recvlen = 0;
+
+    int res_wrp = SendDataTag(new_pwd_cmd, sizeof(new_pwd_cmd), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
+    if (res_wrp != PM3_SUCCESS && recvlen != 3) {
+        return PM3_EWRONGANSWER;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static uint32_t pass_protect_EASAFI_15693_Slix(uint32_t start_time, uint32_t *eof_time, bool set_option_flag, uint8_t *password) {
+
+    uint8_t flags;
+
+    if (set_option_flag)
+        flags = ISO15_REQ_DATARATE_HIGH | ISO15_REQ_OPTION;
+    else
+        flags = ISO15_REQ_DATARATE_HIGH;
+
+
+    uint8_t uid[8];
+    get_uid_slix(start_time, eof_time, uid);
+
+    uint8_t rnd[2];
+    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    int res_setpass = set_pass_15693_Slix(start_time, eof_time, 0x10, password, uid);
+
+    if (res_setpass != PM3_SUCCESS) {
+        return PM3_EWRONGANSWER;
+    }
+
+    uint8_t new_pass_protect_cmd[] = { flags, ISO15693_PASSWORD_PROTECT_EAS, 0x04, 0x00, 0x00};
+    AddCrc15(new_pass_protect_cmd, 3);
+
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    uint16_t recvlen = 0;
+
+    int res = SendDataTag(new_pass_protect_cmd, sizeof(new_pass_protect_cmd), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
+    if (res != PM3_SUCCESS && recvlen != 3) {
+        return PM3_EWRONGANSWER;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static uint32_t write_afi_15693(uint32_t start_time, uint32_t *eof_time, uint8_t *password, bool usepwd, uint8_t *uid, bool use_uid, uint8_t afi) {
+
+    if (!use_uid) {
+        int res_getuid = get_uid_slix(start_time, eof_time, uid);
+
+        if (res_getuid != PM3_SUCCESS) {
+            return res_getuid;
+        }
+    }
+
+    if (usepwd) {
+        int res_setpass = set_pass_15693_Slix(start_time, eof_time, 0x10, password, uid);
+
+        if (res_setpass != PM3_SUCCESS) {
+            return PM3_EWRONGANSWER;
+        }
+    }
+
+    uint8_t cmd[] = { ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS, ISO15693_WRITE_AFI, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    memcpy(&cmd[2], uid, 8);
+    cmd[10] = afi;
+    AddCrc15(cmd, 11);
+
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    uint16_t recvlen = 0;
+
+    int res = SendDataTag(cmd, sizeof(cmd), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
+    if (res != PM3_SUCCESS || recvlen != 3) {
+        return PM3_EWRONGANSWER;
+    }
+
+    return PM3_SUCCESS;
+}
+
+/*
+static uint32_t enable_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t pass_id, uint8_t *password) {
+    uint8_t rnd[2];
+    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
         return PM3_ETIMEOUT;
     }
 
     uint8_t c[] = {ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS, ISO15693_ENABLE_PRIVACY, pass_id, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     memcpy(&c[3], uid, 8);
-    init_password_15693_slixl(&c[11], password, rnd);
+    init_password_15693_Slix(&c[11], password, rnd);
     AddCrc15(c, 15);
 
     start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
@@ -2626,16 +2954,16 @@ static uint32_t enable_privacy_15693_slixl(uint32_t start_time, uint32_t *eof_ti
     return PM3_SUCCESS;
 }
 
-static uint32_t write_password_15693_slixl(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t pass_id, uint8_t *password) {
+static uint32_t write_password_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t pass_id, uint8_t *password) {
     uint8_t rnd[2];
-    if (get_rnd_15693_slixl(start_time, eof_time, rnd) == false) {
+    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
         return PM3_ETIMEOUT;
     }
 
     uint8_t c[] = {ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS, ISO15693_WRITE_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     memcpy(&c[3], uid, 8);
     c[11] = pass_id;
-    init_password_15693_slixl(&c[12], password, NULL);
+    init_password_15693_Slix(&c[12], password, NULL);
     AddCrc15(c, 16);
 
     start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
@@ -2649,16 +2977,16 @@ static uint32_t write_password_15693_slixl(uint32_t start_time, uint32_t *eof_ti
     return PM3_SUCCESS;
 }
 
-static uint32_t destroy_15693_slixl(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t *password) {
+static uint32_t destroy_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t *password) {
 
     uint8_t rnd[2];
-    if (get_rnd_15693_slixl(start_time, eof_time, rnd) == false) {
+    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
         return PM3_ETIMEOUT;
     }
 
     uint8_t c[] = {ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS, ISO15693_DESTROY, ISO15693_ENABLE_PRIVACY, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     memcpy(&c[3], uid, 8);
-    init_password_15693_slixl(&c[11], password, rnd);
+    init_password_15693_Slix(&c[11], password, rnd);
     AddCrc15(c, 15);
 
     start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
@@ -2673,8 +3001,32 @@ static uint32_t destroy_15693_slixl(uint32_t start_time, uint32_t *eof_time, uin
 
 */
 
-// Sets a PRIVACY password to all ZEROS
-void DisablePrivacySlixLIso15693(uint8_t *password) {
+void WritePasswordSlixIso15693(uint8_t *old_password, uint8_t *new_password, uint8_t pwd_id) {
+    LED_D_ON();
+    Iso15693InitReader();
+    StartCountSspClk();
+    uint32_t start_time = 0, eof_time = 0;
+    int res = PM3_EFAILED;
+
+    uint8_t uid[8];
+    get_uid_slix(start_time, &eof_time, uid);
+
+    res = set_pass_15693_Slix(start_time, &eof_time, pwd_id, old_password, uid);
+    if (res != PM3_SUCCESS) {
+        reply_ng(CMD_HF_ISO15693_SLIX_WRITE_PWD, res, NULL, 0);
+        switch_off();
+        return;
+    }
+
+    res = write_password_15693_Slix(start_time, &eof_time, pwd_id, new_password, uid);
+
+    reply_ng(CMD_HF_ISO15693_SLIX_WRITE_PWD, res, NULL, 0);
+
+    switch_off();
+
+}
+
+void DisablePrivacySlixIso15693(uint8_t *password) {
     LED_D_ON();
     Iso15693InitReader();
     StartCountSspClk();
@@ -2684,13 +3036,12 @@ void DisablePrivacySlixLIso15693(uint8_t *password) {
     // 0x04  Privacy
     // 0x08  Destroy SLIX-L
     // 0x10  EAS/AFI
-    int res = set_pass_15693_slixl(start_time, &eof_time, 0x04, password);
-    reply_ng(CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY, res, NULL, 0);
+    int res = disable_privacy_15693_Slix(start_time, &eof_time, 0x04, password);
+    reply_ng(CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY, res, NULL, 0);
     switch_off();
 }
 
-// Sets a EAS/AFI password to all ZEROS
-void DisableEAS_AFISlixLIso15693(uint8_t *password) {
+void EnablePrivacySlixIso15693(uint8_t *password) {
     LED_D_ON();
     Iso15693InitReader();
     StartCountSspClk();
@@ -2700,8 +3051,71 @@ void DisableEAS_AFISlixLIso15693(uint8_t *password) {
     // 0x04  Privacy
     // 0x08  Destroy SLIX-L
     // 0x10  EAS/AFI
-    int res = set_pass_15693_slixl(start_time, &eof_time, 0x10, password);
-    reply_ng(CMD_HF_ISO15693_SLIX_L_DISABLE_AESAFI, res, NULL, 0);
+    int res = set_privacy_15693_Slix(start_time, &eof_time, password);
+    reply_ng(CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY, res, NULL, 0);
     switch_off();
 }
 
+
+void DisableEAS_AFISlixIso15693(uint8_t *password, bool usepwd) {
+    LED_D_ON();
+    Iso15693InitReader();
+    StartCountSspClk();
+    uint32_t start_time = 0, eof_time = 0;
+
+    // Password identifier Password byte
+    // 0x04  Privacy
+    // 0x08  Destroy SLIX-L
+    // 0x10  EAS/AFI
+    int res = disable_eas_15693_Slix(start_time, &eof_time, password, usepwd);
+
+
+
+    reply_ng(CMD_HF_ISO15693_SLIX_DISABLE_EAS, res, NULL, 0);
+    switch_off();
+}
+
+void EnableEAS_AFISlixIso15693(uint8_t *password, bool usepwd) {
+    LED_D_ON();
+    Iso15693InitReader();
+    StartCountSspClk();
+    uint32_t start_time = 0, eof_time = 0;
+
+    // Password identifier Password byte
+    // 0x04  Privacy
+    // 0x08  Destroy SLIX-L
+    // 0x10  EAS/AFI
+    int res = enable_eas_15693_Slix(start_time, &eof_time, password, usepwd);
+    reply_ng(CMD_HF_ISO15693_SLIX_ENABLE_EAS, res, NULL, 0);
+    switch_off();
+}
+
+void PassProtextEASSlixIso15693(uint8_t *password) {
+    LED_D_ON();
+    Iso15693InitReader();
+    StartCountSspClk();
+    uint32_t start_time = 0, eof_time = 0;
+    int res = pass_protect_EASAFI_15693_Slix(start_time, &eof_time, false, password);
+    reply_ng(CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS, res, NULL, 0);
+    switch_off();
+}
+void PassProtectAFISlixIso15693(uint8_t *password) {
+    LED_D_ON();
+    Iso15693InitReader();
+    StartCountSspClk();
+    uint32_t start_time = 0, eof_time = 0;
+    int res = pass_protect_EASAFI_15693_Slix(start_time, &eof_time, true, password);
+    reply_ng(CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI, res, NULL, 0);
+    switch_off();
+}
+
+void WriteAFIIso15693(uint8_t *password, bool use_pwd, uint8_t *uid, bool use_uid, uint8_t afi) {
+    LED_D_ON();
+    Iso15693InitReader();
+    StartCountSspClk();
+    uint32_t start_time = 0, eof_time = 0;
+    int res = write_afi_15693(start_time, &eof_time, password, use_pwd, uid, use_uid, afi);
+    //int res = PM3_SUCCESS;
+    reply_ng(CMD_HF_ISO15693_WRITE_AFI, res, NULL, 0);
+    switch_off();
+}

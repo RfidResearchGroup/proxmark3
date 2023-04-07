@@ -24,7 +24,11 @@ extern "C" {
 
 #include "spiffs_config.h"
 
-typedef enum spiffs_safety_level { RDV40_SPIFFS_SAFETY_NORMAL, RDV40_SPIFFS_SAFETY_LAZY, RDV40_SPIFFS_SAFETY_SAFE } RDV40SpiFFSSafetyLevel;
+typedef enum spiffs_safety_level {
+    RDV40_SPIFFS_SAFETY_NORMAL,
+    RDV40_SPIFFS_SAFETY_LAZY,
+    RDV40_SPIFFS_SAFETY_SAFE
+} RDV40SpiFFSSafetyLevel;
 
 typedef enum spiffs_file_type {
     RDV40_SPIFFS_FILETYPE_REAL,
@@ -125,6 +129,8 @@ void rdv40_spiffs_safe_wipe(void);
 
 #define SPIFFS_ERR_TEST                 -10100
 
+// Amount of data to write/append to a file in one go.
+#define SPIFFS_WRITE_CHUNK_SIZE 8192
 
 // spiffs file descriptor index type. must be signed
 typedef s16_t spiffs_file;
@@ -198,16 +204,16 @@ typedef void (*spiffs_file_callback)(struct spiffs_t *fs, spiffs_fileop_type op,
 
 #ifndef SPIFFS_DBG
 #define SPIFFS_DBG(...) \
-    printf(__VA_ARGS__)
+    Dbprintf(__VA_ARGS__)
 #endif
 #ifndef SPIFFS_GC_DBG
-#define SPIFFS_GC_DBG(...) printf(__VA_ARGS__)
+#define SPIFFS_GC_DBG(...) Dbprintf(__VA_ARGS__)
 #endif
 #ifndef SPIFFS_CACHE_DBG
-#define SPIFFS_CACHE_DBG(...) printf(__VA_ARGS__)
+#define SPIFFS_CACHE_DBG(...) Dbprintf(__VA_ARGS__)
 #endif
 #ifndef SPIFFS_CHECK_DBG
-#define SPIFFS_CHECK_DBG(...) printf(__VA_ARGS__)
+#define SPIFFS_CHECK_DBG(...) Dbprintf(__VA_ARGS__)
 #endif
 
 /* Any write to the filehandle is appended to end of the file */

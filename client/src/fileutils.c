@@ -28,6 +28,7 @@
 #include "util.h"
 #include "cmdhficlass.h"  // pagemap
 #include "protocols.h"    // iclass defines
+#include "cmdhftopaz.h"   // TOPAZ defines
 
 #ifdef _WIN32
 #include "scandir.h"
@@ -213,18 +214,23 @@ bool create_path(const char *dirname) {
 }
 */
 
-bool setDefaultPath(savePaths_t pathIndex, const char *Path) {
+bool setDefaultPath(savePaths_t pathIndex, const char *path) {
 
     if (pathIndex < spItemCount) {
-        if ((Path == NULL) && (g_session.defaultPaths[pathIndex] != NULL)) {
+
+        if ((path == NULL) && (g_session.defaultPaths[pathIndex] != NULL)) {
             free(g_session.defaultPaths[pathIndex]);
             g_session.defaultPaths[pathIndex] = NULL;
         }
 
-        if (Path != NULL) {
-            g_session.defaultPaths[pathIndex] = (char *)realloc(g_session.defaultPaths[pathIndex], strlen(Path) + 1);
-            strcpy(g_session.defaultPaths[pathIndex], Path);
+        if (path == NULL) {
+            return false;
         }
+
+        size_t len = strlen(path);
+
+        g_session.defaultPaths[pathIndex] = (char *)realloc(g_session.defaultPaths[pathIndex], len + 1);
+        strcpy(g_session.defaultPaths[pathIndex], path);
         return true;
     }
     return false;
@@ -233,54 +239,77 @@ bool setDefaultPath(savePaths_t pathIndex, const char *Path) {
 static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
+
     char *fileName = (char *) calloc(strlen(preferredName) + strlen(suffix) + 1, sizeof(uint8_t));
-    if (fileName == NULL)
+    if (fileName == NULL) {
         return NULL;
+    }
+
     strcpy(fileName, preferredName);
-    if (str_endswith(fileName, suffix))
+    if (str_endswith(fileName, suffix)) {
         return fileName;
+    }
+
     strcat(fileName, suffix);
     return fileName;
 }
 
+static size_t path_size(savePaths_t a) {
+    if (a == spItemCount) {
+        return 0;
+    }
+    return strlen(g_session.defaultPaths[a]);
+}
+
 char *newfilenamemcopy(const char *preferredName, const char *suffix) {
-    if (preferredName == NULL) return NULL;
-    if (suffix == NULL) return NULL;
+    if (preferredName == NULL || suffix == NULL) {
+        return NULL;
+    }
 
     uint16_t p_namelen = strlen(preferredName);
     if (str_endswith(preferredName, suffix))
         p_namelen -= strlen(suffix);
 
-    const size_t fileNameLen = p_namelen + strlen(suffix) + 1 + 10;
-    const size_t fileNameSize = fileNameLen * sizeof(uint8_t);
+    // 10: room for filenum to ensure new filename
+    const size_t len = p_namelen + strlen(suffix) + 1 + 10;
 
-    char *fileName = (char *) calloc(fileNameLen, sizeof(uint8_t)); // 10: room for filenum to ensure new filename
+    int foobar = path_size(spDefault);
+    (void) foobar;
+
+    char *fileName = (char *) calloc(len, sizeof(uint8_t));
     if (fileName == NULL) {
         return NULL;
     }
 
-
     int num = 1;
-    snprintf(fileName, fileNameSize, "%.*s%s", p_namelen, preferredName, suffix);
+
+    snprintf(fileName, len, "%.*s%s", p_namelen, preferredName, suffix);
     while (fileExists(fileName)) {
-        snprintf(fileName, fileNameSize, "%.*s-%d%s", p_namelen, preferredName, num, suffix);
+        snprintf(fileName, len, "%.*s-%d%s", p_namelen, preferredName, num, suffix);
         num++;
     }
+
+    PrintAndLogEx(INFO, "FILE PATH:  %s", fileName);
     return fileName;
 }
 
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen) {
 
-    if (data == NULL) return PM3_EINVARG;
+    if (data == NULL || datalen == 0) {
+        return PM3_EINVARG;
+    }
+
     char *fileName = newfilenamemcopy(preferredName, suffix);
-    if (fileName == NULL) return PM3_EMALLOC;
+    if (fileName == NULL) {
+        return PM3_EMALLOC;
+    }
 
-    /* We should have a valid filename now, e.g. dumpdata-3.bin */
+    // We should have a valid filename now, e.g. dumpdata-3.bin
 
-    /*Opening file for writing in binary mode*/
+    // Opening file for writing in binary mode
     FILE *f = fopen(fileName, "wb");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
         free(fileName);
         return PM3_EFILE;
     }
@@ -294,20 +323,25 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
 
 int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t blocksize) {
 
-    if (data == NULL) return PM3_EINVARG;
+    if (data == NULL || datalen == 0) {
+        return PM3_EINVARG;
+    }
+
     char *fileName = newfilenamemcopy(preferredName, ".eml");
-    if (fileName == NULL) return PM3_EMALLOC;
+    if (fileName == NULL) {
+        return PM3_EMALLOC;
+    }
 
     int retval = PM3_SUCCESS;
     int blocks = datalen / blocksize;
     uint16_t currblock = 1;
 
-    /* We should have a valid filename now, e.g. dumpdata-3.bin */
+    // We should have a valid filename now, e.g. dumpdata-3.bin
 
-    /*Opening file for writing in text mode*/
+    // Opening file for writing in text mode
     FILE *f = fopen(fileName, "w+");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
         retval = PM3_EFILE;
         goto out;
     }
@@ -342,10 +376,14 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
 }
 int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *)) {
 
-    if (data == NULL) return PM3_EINVARG;
+    if (data == NULL || datalen == 0) {
+        return PM3_EINVARG;
+    }
 
     char *fileName = newfilenamemcopy(preferredName, ".json");
-    if (fileName == NULL) return PM3_EMALLOC;
+    if (fileName == NULL) {
+        return PM3_EMALLOC;
+    }
 
     int retval = PM3_SUCCESS;
 
@@ -393,6 +431,19 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditionsText.UserData", mfSectorNum(i));
                     JsonSaveBufAsHexCompact(root, path, &adata[3], 1);
                 }
+            }
+            break;
+        }
+        case jsfFudan: {
+            iso14a_mf_extdump_t *xdump = (iso14a_mf_extdump_t *)(void *) data;
+            JsonSaveStr(root, "FileType", "fudan");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", xdump->card_info.uid, xdump->card_info.uidlen);
+            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", xdump->card_info.atqa, 2);
+            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &(xdump->card_info.sak), 1);
+            for (size_t i = 0; i < (xdump->dumplen / 4); i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * 4], 4);
             }
             break;
         }
@@ -619,6 +670,24 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             (*callback)(root);
             break;
         }
+        case jsfTopaz: {
+            topaz_tag_t *tag = (topaz_tag_t *)(void *) data;
+            JsonSaveStr(root, "FileType", "topaz");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", tag->uid, sizeof(tag->uid));
+            JsonSaveBufAsHexCompact(root, "$.Card.H0R1", tag->HR01, sizeof(tag->HR01));
+            JsonSaveBufAsHexCompact(root, "$.Card.Size", (uint8_t *) & (tag->size), 2);
+            for (size_t i = 0; i < TOPAZ_STATIC_MEMORY / 8; i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, &tag->data_blocks[i][0], TOPAZ_BLOCK_SIZE);
+            }
+
+            // ICEMAN todo:  add dynamic memory.
+            // uint16_z Size
+            // uint8_t *dynamic_memory;
+
+            break;
+        }
         default:
             break;
     }
@@ -672,9 +741,15 @@ int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool
 
 int saveFileWAVE(const char *preferredName, const int *data, size_t datalen) {
 
-    if (data == NULL) return PM3_EINVARG;
+    if (data == NULL || datalen == 0) {
+        return PM3_EINVARG;
+    }
+
     char *fileName = newfilenamemcopy(preferredName, ".wav");
-    if (fileName == NULL) return PM3_EMALLOC;
+    if (fileName == NULL) {
+        return PM3_EMALLOC;
+    }
+
     int retval = PM3_SUCCESS;
 
     struct wave_info_t wave_info = {
@@ -695,15 +770,18 @@ int saveFileWAVE(const char *preferredName, const int *data, size_t datalen) {
 
     FILE *wave_file = fopen(fileName, "wb");
     if (!wave_file) {
-        PrintAndLogEx(WARNING, "file not found or locked. "_YELLOW_("'%s'"), fileName);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
         retval = PM3_EFILE;
         goto out;
     }
+
     fwrite(&wave_info, sizeof(wave_info), 1, wave_file);
+
     for (int i = 0; i < datalen; i++) {
         uint8_t sample = data[i] + 128;
         fwrite(&sample, 1, 1, wave_file);
     }
+
     fclose(wave_file);
 
     PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
@@ -715,21 +793,27 @@ out:
 
 int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
 
-    if (data == NULL) return PM3_EINVARG;
+    if (data == NULL || datalen == 0) {
+        return PM3_EINVARG;
+    }
+
     char *fileName = newfilenamemcopy(preferredName, ".pm3");
-    if (fileName == NULL) return PM3_EMALLOC;
+    if (fileName == NULL) {
+        return PM3_EMALLOC;
+    }
 
     int retval = PM3_SUCCESS;
 
     FILE *f = fopen(fileName, "w");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. "_YELLOW_("'%s'"), fileName);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
         retval = PM3_EFILE;
         goto out;
     }
 
-    for (uint32_t i = 0; i < datalen; i++)
+    for (uint32_t i = 0; i < datalen; i++) {
         fprintf(f, "%d\n", data[i]);
+    }
 
     fflush(f);
     fclose(f);
@@ -855,7 +939,7 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
 
     FILE *f = fopen(path, "rb");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
     }
@@ -966,7 +1050,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
 
     FILE *f = fopen(path, "r");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
     }
@@ -1078,18 +1162,48 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
-    uint8_t *udata = (uint8_t *)data;
+    typedef union UDATA {
+        void *v;
+        uint8_t *bytes;
+        mfu_dump_t *mfu;
+        topaz_tag_t *topaz;
+    } UDATA;
+    UDATA udata = (UDATA)data;
     char ctype[100] = {0};
     JsonLoadStr(root, "$.FileType", ctype);
 
     if (!strcmp(ctype, "raw")) {
-        JsonLoadBufAsHex(root, "$.raw", udata, maxdatalen, datalen);
+        JsonLoadBufAsHex(root, "$.raw", udata.bytes, maxdatalen, datalen);
     }
 
     if (!strcmp(ctype, "mfcard")) {
         size_t sptr = 0;
         for (int i = 0; i < 256; i++) {
+            char blocks[30] = {0};
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+
+            size_t len = 0;
+            uint8_t block[16];
+            JsonLoadBufAsHex(root, blocks, block, 16, &len);
+            if (!len)
+                break;
+
             if (sptr + 16 > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            memcpy(&udata.bytes[sptr], block, 16);
+            sptr += len;
+        }
+
+        *datalen = sptr;
+    }
+
+    if (!strcmp(ctype, "fudan")) {
+        size_t sptr = 0;
+        for (int i = 0; i < 256; i++) {
+            if (sptr + 4 > maxdatalen) {
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1098,7 +1212,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &udata[sptr], 16, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (!len)
                 break;
 
@@ -1110,18 +1224,16 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     if (!strcmp(ctype, "mfu")) {
 
-        mfu_dump_t *mem = (mfu_dump_t *)udata;
-
-        JsonLoadBufAsHex(root, "$.Card.Version", mem->version, sizeof(mem->version), datalen);
-        JsonLoadBufAsHex(root, "$.Card.TBO_0", mem->tbo, sizeof(mem->tbo), datalen);
-        JsonLoadBufAsHex(root, "$.Card.TBO_1", mem->tbo1, sizeof(mem->tbo1), datalen);
-        JsonLoadBufAsHex(root, "$.Card.Signature", mem->signature, sizeof(mem->signature), datalen);
-        JsonLoadBufAsHex(root, "$.Card.Counter0", &mem->counter_tearing[0][0], 3, datalen);
-        JsonLoadBufAsHex(root, "$.Card.Tearing0", &mem->counter_tearing[0][3], 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.Counter1", &mem->counter_tearing[1][0], 3, datalen);
-        JsonLoadBufAsHex(root, "$.Card.Tearing1", &mem->counter_tearing[1][3], 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.Counter2", &mem->counter_tearing[2][0], 3, datalen);
-        JsonLoadBufAsHex(root, "$.Card.Tearing2", &mem->counter_tearing[2][3], 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Version", udata.mfu->version, sizeof(udata.mfu->version), datalen);
+        JsonLoadBufAsHex(root, "$.Card.TBO_0", udata.mfu->tbo, sizeof(udata.mfu->tbo), datalen);
+        JsonLoadBufAsHex(root, "$.Card.TBO_1", udata.mfu->tbo1, sizeof(udata.mfu->tbo1), datalen);
+        JsonLoadBufAsHex(root, "$.Card.Signature", udata.mfu->signature, sizeof(udata.mfu->signature), datalen);
+        JsonLoadBufAsHex(root, "$.Card.Counter0", &udata.mfu->counter_tearing[0][0], 3, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Tearing0", &udata.mfu->counter_tearing[0][3], 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Counter1", &udata.mfu->counter_tearing[1][0], 3, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Tearing1", &udata.mfu->counter_tearing[1][3], 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Counter2", &udata.mfu->counter_tearing[2][0], 3, datalen);
+        JsonLoadBufAsHex(root, "$.Card.Tearing2", &udata.mfu->counter_tearing[2][3], 1, datalen);
         *datalen = MFU_DUMP_PREFIX_LENGTH;
 
         size_t sptr = 0;
@@ -1135,15 +1247,15 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &mem->data[sptr], MFU_BLOCK_SIZE, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.mfu->data[sptr], MFU_BLOCK_SIZE, &len);
             if (!len)
                 break;
 
             sptr += len;
-            mem->pages++;
+            udata.mfu->pages++;
         }
         // remove one, since pages indicates a index rather than number of available pages
-        --mem->pages;
+        --udata.mfu->pages;
 
         *datalen += sptr;
     }
@@ -1160,7 +1272,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &udata[sptr], 4, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (!len)
                 break;
 
@@ -1182,7 +1294,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &udata[sptr], 8, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 8, &len);
             if (!len)
                 break;
 
@@ -1203,7 +1315,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &udata[sptr], 4, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (!len)
                 break;
 
@@ -1224,7 +1336,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
 
             size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &udata[sptr], 4, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (!len)
                 break;
 
@@ -1234,13 +1346,44 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     }
 
     if (!strcmp(ctype, "15693")) {
-        JsonLoadBufAsHex(root, "$.raw", udata, maxdatalen, datalen);
+        JsonLoadBufAsHex(root, "$.raw", udata.bytes, maxdatalen, datalen);
     }
 
     if (!strcmp(ctype, "legic")) {
-        JsonLoadBufAsHex(root, "$.raw", udata, maxdatalen, datalen);
+        JsonLoadBufAsHex(root, "$.raw", udata.bytes, maxdatalen, datalen);
     }
 
+    if (!strcmp(ctype, "topaz")) {
+
+        JsonLoadBufAsHex(root, "$.Card.UID", udata.topaz->uid, sizeof(udata.topaz->uid), datalen);
+        JsonLoadBufAsHex(root, "$.Card.HR01", udata.topaz->HR01, sizeof(udata.topaz->HR01), datalen);
+        JsonLoadBufAsHex(root, "$.Card.Size", (uint8_t *) & (udata.topaz->size), 2, datalen);
+
+        size_t sptr = 0;
+        for (int i = 0; i < (TOPAZ_STATIC_MEMORY / 8); i++) {
+
+            if (sptr + TOPAZ_BLOCK_SIZE > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            char blocks[30] = {0};
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+
+            size_t len = 0;
+            JsonLoadBufAsHex(root, blocks, &udata.topaz->data_blocks[sptr][0], TOPAZ_BLOCK_SIZE, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+
+            // ICEMAN todo:  add dynamic memory.
+            // uint16_z Size
+            // uint8_t *dynamic_memory;
+        }
+
+        *datalen += sptr;
+    }
 out:
 
     if (callback != NULL) {
@@ -1284,6 +1427,7 @@ int loadFileJSONroot(const char *preferredName, void **proot, bool verbose) {
     return retval;
 }
 
+// iceman:  todo - move all unsafe functions like this from client source.
 int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, uint8_t keylen, uint32_t *keycnt) {
     // t5577 == 4 bytes
     // mifare == 6 bytes
@@ -1320,7 +1464,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
 
     FILE *f = fopen(path, "r");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         retval = PM3_EFILE;
         goto out;
     }
@@ -1423,7 +1567,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
     FILE *f = fopen(path, "r");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", path);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         retval = PM3_EFILE;
         goto out;
     }
@@ -1474,6 +1618,57 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 out:
     free(path);
     return retval;
+}
+
+int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen) {
+
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, suffix, false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+    free(path);
+
+    // get filesize in order to malloc memory
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (fsize <= 0) {
+        PrintAndLogEx(FAILED, "error, when getting filesize");
+        fclose(f);
+        return PM3_EFILE;
+    }
+
+    // Half is KEY A,  half is KEY B
+    fsize /= 2;
+
+    *keya = calloc(fsize, sizeof(uint8_t));
+    if (*keya == NULL) {
+        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        fclose(f);
+        return PM3_EMALLOC;
+    }
+
+    *alen = fread(*keya, 1, fsize, f);
+
+    *keyb = calloc(fsize, sizeof(uint8_t));
+    if (*keyb == NULL) {
+        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        fclose(f);
+        return PM3_EMALLOC;
+    }
+
+    *blen = fread(*keyb, 1, fsize, f);
+    fclose(f);
+    return PM3_SUCCESS;
 }
 
 mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
@@ -1774,14 +1969,18 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
              (strcmp(PYTHON_SCRIPTS_SUBDIR, pm3dir) == 0) ||
              (strcmp(RESOURCES_SUBDIR, pm3dir) == 0))) {
         char *path = calloc(strlen(exec_path) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
-        if (path == NULL)
+        if (path == NULL) {
             goto out;
+        }
+
         strcpy(path, exec_path);
         strcat(path, pm3dir);
         strcat(path, filename);
+
         if ((g_debugMode == 2) && (!silent)) {
             PrintAndLogEx(INFO, "Searching %s", path);
         }
+
         if (fileExists(path)) {
             free(filename);
             *foundpath = path;
@@ -1899,6 +2098,9 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
                 return PM3_EMALLOC;
             }
             res = loadFileJSON(fn, *pdump, maxdumplen, dumplen, NULL);
+            if (res != PM3_SUCCESS) {
+                free(*pdump);
+            }
             break;
         }
         case DICTIONARY: {
@@ -1908,8 +2110,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
     }
 
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", fn);
-        free(*pdump);
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fn);
         return PM3_EFILE;
     }
 
@@ -1917,6 +2118,12 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
 }
 
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, size_t blocksize) {
+
+    if (d == NULL || n == 0) {
+        PrintAndLogEx(INFO, "No data to save, skipping...");
+        return PM3_EINVARG;
+    }
+
     saveFile(fn, ".bin", d, n);
     saveFileEML(fn, d, n, blocksize);
     saveFileJSON(fn, jsft, d, n, NULL);

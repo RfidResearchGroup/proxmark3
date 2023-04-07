@@ -65,9 +65,9 @@ static char *getCardSizeStr(uint8_t fsize) {
 
     // is  LSB set?
     if (fsize & 1)
-        snprintf(retStr, sizeof(buf), "0x%02X (" _GREEN_("%d - %d bytes") ")", fsize, usize, lsize);
+        snprintf(retStr, sizeof(buf), "0x%02X ( " _GREEN_("%d - %d bytes") " )", fsize, usize, lsize);
     else
-        snprintf(retStr, sizeof(buf), "0x%02X (" _GREEN_("%d bytes") ")", fsize, lsize);
+        snprintf(retStr, sizeof(buf), "0x%02X ( " _GREEN_("%d bytes") " )", fsize, lsize);
     return buf;
 }
 
@@ -77,14 +77,14 @@ static char *getProtocolStr(uint8_t id, bool hw) {
     char *retStr = buf;
 
     if (id == 0x04) {
-        snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("ISO 14443-3 MIFARE, 14443-4") ")", id);
+        snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("ISO 14443-3 MIFARE, 14443-4") " )", id);
     } else if (id == 0x05) {
         if (hw)
-            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("ISO 14443-2, 14443-3") ")", id);
+            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("ISO 14443-2, 14443-3") " )", id);
         else
-            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("ISO 14443-3, 14443-4") ")", id);
+            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("ISO 14443-3, 14443-4") " )", id);
     } else {
-        snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("Unknown") ")", id);
+        snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Unknown") " )", id);
     }
     return buf;
 }
@@ -95,19 +95,19 @@ static char *getVersionStr(uint8_t major, uint8_t minor) {
     char *retStr = buf;
 
     if (major == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire MF3ICD40") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire MF3ICD40") " )", major, minor);
     else if (major == 0x01 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire EV1") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV1") " )", major, minor);
     else if (major == 0x12 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire EV2") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
     else if (major == 0x33 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire EV3") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV3") " )", major, minor);
     else if (major == 0x30 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("DESFire Light") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire Light") " )", major, minor);
     else if (major == 0x11 && minor == 0x00)
-        snprintf(retStr, sizeof(buf), "%x.%x (" _GREEN_("Plus EV1") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("Plus EV1") " )", major, minor);
     else
-        snprintf(retStr, sizeof(buf), "%x.%x (" _YELLOW_("Unknown") ")", major, minor);
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _YELLOW_("Unknown") " )", major, minor);
     return buf;
 }
 
@@ -118,16 +118,16 @@ static char *getTypeStr(uint8_t type) {
 
     switch (type) {
         case 1:
-            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("DESFire") ")", type);
+            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("DESFire") " )", type);
             break;
         case 2:
-            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("Plus") ")", type);
+            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Plus") " )", type);
             break;
         case 3:
-            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("Ultralight") ")", type);
+            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Ultralight") " )", type);
             break;
         case 4:
-            snprintf(retStr, sizeof(buf), "0x%02X (" _YELLOW_("NTAG") ")", type);
+            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("NTAG") " )", type);
             break;
         default:
             break;
@@ -171,7 +171,8 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
 #define PUBLIC_PLUS_ECDA_KEYLEN 57
     const ecdsa_publickey_t nxp_plus_public_keys[] = {
         {"MIFARE Plus EV1",  "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"},
-        {"MIFARE Plus Ev_x", "04BB49AE4447E6B1B6D21C098C1538B594A11A4A1DBF3D5E673DEACDEB3CC512D1C08AFA1A2768CE20A200BACD2DC7804CD7523A0131ABF607"}
+        {"MIFARE Plus Ev_x", "04BB49AE4447E6B1B6D21C098C1538B594A11A4A1DBF3D5E673DEACDEB3CC512D1C08AFA1A2768CE20A200BACD2DC7804CD7523A0131ABF607"},
+        {"MIFARE Plus Trojka", "040F732E0EA7DF2B38F791BF89425BF7DCDF3EE4D976669E3831F324FF15751BD52AFF1782F72FF2731EEAD5F63ABE7D126E03C856FFB942AF"}
     };
 
     uint8_t i;
@@ -461,7 +462,7 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v", "verbose", "Verbose mode"),
+        arg_lit0("v", "verbose", "Verbose output"),
         arg_str1(NULL, "ki",  "<hex>", " Key number, 2 hex bytes"),
         arg_str0(NULL, "key", "<hex>", " Key, 16 hex bytes"),
         arg_param_end
@@ -513,8 +514,8 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
         PrintAndLogEx(ERR, "Command error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
         return PM3_ESOFT;
     }
-    PrintAndLogEx(INFO, "Write (" _GREEN_("ok") " )");
 
+    PrintAndLogEx(INFO, "Write ( " _GREEN_("ok") " )");
     return PM3_SUCCESS;
 }
 
@@ -713,18 +714,18 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     }
 
     if (blockn > 255) {
-        PrintAndLogEx(ERR, "<block number> must be in range [0..255] instead of: %d", blockn);
+        PrintAndLogEx(ERR, "<block number> must be in range [0..255] got: %d", blockn);
         return PM3_EINVARG;
     }
 
     if (keylen != 16) {
-        PrintAndLogEx(ERR, "<key> must be 16 bytes long instead of: %d", keylen);
+        PrintAndLogEx(ERR, "<key> must be 16 bytes long. got: %d", keylen);
         return PM3_EINVARG;
     }
 
     // 3 blocks - wo iso14443-4 chaining
     if (blocksCount > 3) {
-        PrintAndLogEx(ERR, "blocks count must be less than 3 instead of: %d", blocksCount);
+        PrintAndLogEx(ERR, "blocks count must be less than 3. got: %d", blocksCount);
         return PM3_EINVARG;
     }
 
@@ -823,12 +824,12 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     }
 
     if (sectorNum > 39) {
-        PrintAndLogEx(ERR, "<sector number> must be in range [0..39] instead of: %d", sectorNum);
+        PrintAndLogEx(ERR, "<sector number> must be in range [0..39] got: %d", sectorNum);
         return PM3_EINVARG;
     }
 
     if (keylen != 16) {
-        PrintAndLogEx(ERR, "<key> must be 16 bytes long instead of: %d", keylen);
+        PrintAndLogEx(ERR, "<key> must be 16 bytes long. got: %d", keylen);
         return PM3_EINVARG;
     }
 
@@ -925,17 +926,17 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     }
 
     if (blockNum > 255) {
-        PrintAndLogEx(ERR, "<block number> must be in range [0..255] instead of: %d", blockNum);
+        PrintAndLogEx(ERR, "<block number> must be in range [0..255] got: %d", blockNum);
         return PM3_EINVARG;
     }
 
     if (keylen != 16) {
-        PrintAndLogEx(ERR, "<key> must be 16 bytes long instead of: %d", keylen);
+        PrintAndLogEx(ERR, "<key> must be 16 bytes long. got: %d", keylen);
         return PM3_EINVARG;
     }
 
     if (datainlen != 16) {
-        PrintAndLogEx(ERR, "<data> must be 16 bytes long instead of: %d", datainlen);
+        PrintAndLogEx(ERR, "<data> must be 16 bytes long. got: %d", datainlen);
         return PM3_EINVARG;
     }
 
@@ -1372,7 +1373,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
     if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
-        return 2;
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -1392,7 +1393,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
         if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD or doesn't have MAD on default keys");
-            return 2;
+            return PM3_ESOFT;
         }
 
         MAD2DecodeAndPrint(sector10, swapmad, verbose);
@@ -1403,7 +1404,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
         size_t madlen = 0;
         if (MADDecode(sector0, sector10, mad, &madlen, swapmad)) {
             PrintAndLogEx(ERR, "can't decode MAD");
-            return 10;
+            return PM3_EWRONGANSWER;
         }
 
         // copy default NDEF key

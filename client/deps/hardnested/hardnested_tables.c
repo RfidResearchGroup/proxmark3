@@ -85,7 +85,8 @@ static void *malloc_bitarray(size_t x) {
 }
 #define free_bitarray(x) free(x)
 #else
-#define malloc_bitarray(x) memalign(__BIGGEST_ALIGNMENT__, (x))
+//#define malloc_bitarray(x) memalign(__BIGGEST_ALIGNMENT__, (x))
+#define malloc_bitarray(x) __builtin_assume_aligned(memalign(__BIGGEST_ALIGNMENT__, (x)), __BIGGEST_ALIGNMENT__);
 #define free_bitarray(x) free(x)
 #endif
 

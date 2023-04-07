@@ -99,7 +99,7 @@ int demodParadox(bool verbose) {
     }
 
     uint32_t hi2 = 0, hi = 0, lo = 0;
-    uint8_t error = 0;
+    uint8_t errors = 0;
 
     // Remove manchester encoding from FSK bits, skip pre
     for (uint32_t i = idx + PARADOX_PREAMBLE_LEN; i < (idx + 96); i += 2) {
@@ -107,7 +107,7 @@ int demodParadox(bool verbose) {
         // not manchester data
         if (bits[i] == bits[i + 1]) {
             PrintAndLogEx(WARNING, "Error Manchester at %u", i);
-            error++;
+            errors++;
         }
 
         hi2 = (hi2 << 1) | (hi >> 31);
@@ -117,6 +117,10 @@ int demodParadox(bool verbose) {
         if (bits[i] && !bits[i + 1])  {
             lo |= 1;  // 10
         }
+    }
+
+    if (errors) {
+        PrintAndLogEx(WARNING, "Total Manchester Errors... %u", errors);
     }
 
     setDemodBuff(bits, size, idx);
@@ -226,6 +230,7 @@ static int CmdParadoxClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf paradox clone",
                   "clone a paradox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "lf paradox clone --fc 96 --cn 40426                     -> encode for T55x7 tag with fc and cn\n"
                   "lf paradox clone --raw 0f55555695596a6a9999a59a         -> encode for T55x7 tag\n"
                   "lf paradox clone --raw 0f55555695596a6a9999a59a --q5    -> encode for Q5/T5555 tag\n"
                   "lf paradox clone --raw 0f55555695596a6a9999a59a --em    -> encode for EM4305/4469"
@@ -234,6 +239,8 @@ static int CmdParadoxClone(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("r", "raw", "<hex>", "raw hex data. 12 bytes max"),
+        arg_u64_0(NULL, "fc", "<dec>", "facility code"),
+        arg_u64_0(NULL, "cn", "<dec>", "card number"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
@@ -245,8 +252,10 @@ static int CmdParadoxClone(const char *Cmd) {
     uint8_t raw[12] = {0};
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
 
-    bool q5 = arg_get_lit(ctx, 2);
-    bool em = arg_get_lit(ctx, 3);
+    uint32_t fc = arg_get_u32_def(ctx, 2, 0);
+    uint32_t cn = arg_get_u32_def(ctx, 3, 0);
+    bool q5 = arg_get_lit(ctx, 4);
+    bool em = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     if (q5 && em) {
@@ -254,14 +263,56 @@ static int CmdParadoxClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (raw_len != 12) {
-        PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
-        return PM3_EINVARG;
-    }
+    uint32_t blocks[4] = {0};
 
-    uint32_t blocks[4];
-    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
-        blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
+    if (raw_len != 0) {
+        if (raw_len != 12) {
+            PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
+            return PM3_EINVARG;
+        }
+
+        for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+            blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
+        }
+    } else {
+        uint8_t manchester[13] = { 0x00 }; // check size needed
+        uint32_t t1;
+
+        manchester[0] = 0x0F; // preamble
+        manchester[1] = 0x05; // Leading zeros  - Note: from this byte on, is part of the CRC calculation
+        manchester[2] = 0x55; // Leading zeros          its 4 bits out for the CRC, so we need too move
+        manchester[3] = 0x55; // Leading zeros          back 4 bits once we have the crc (done below)
+
+        // add FC
+        t1 = manchesterEncode2Bytes(fc);
+        manchester[4] = (t1 >> 8) & 0xFF;
+        manchester[5] = t1 & 0xFF;
+
+        // add cn
+        t1 = manchesterEncode2Bytes(cn);
+        manchester[6] = (t1 >> 24) & 0xFF;
+        manchester[7] = (t1 >> 16) & 0xFF;
+        manchester[8] = (t1 >> 8) & 0xFF;
+        manchester[9] = t1 & 0xFF;
+
+        uint8_t crc = (CRC8Maxim(manchester + 1, 9) ^ 0x6) & 0xFF;
+
+        // add crc
+        t1 = manchesterEncode2Bytes(crc);
+        manchester[10] = (t1 >> 8) & 0xFF;
+        manchester[11] = t1 & 0xFF;
+
+        // move left 4 bits left 4 bits - Now that we have the CRC we need to re-align the data.
+        for (int i = 1; i < 12; i++)
+            manchester[i] = (manchester[i] << 4) + (manchester[i + 1] >> 4);
+
+        // Add trailing 1010 (11)
+        manchester[11] |= (1 << 3);
+        manchester[11] |= (1 << 1);
+
+        // move into tag blocks
+        for (int i = 0; i < 12; i++)
+            blocks[1 + (i / 4)] += (manchester[i] << (8 * (3 - i % 4)));
     }
 
     // Paradox - FSK2a, data rate 50, 3 data blocks

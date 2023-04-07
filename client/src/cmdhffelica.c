@@ -591,7 +591,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
         arg_str0(NULL, "sn",  "<hex>", "number of service, 1 byte"),
         arg_str0(NULL, "scl", "<hex>", "service code list, 2 bytes"),
         arg_str0("k", "key",  "<hex>", "3des key, 16 bytes"),
-        arg_lit0("v", "verbose", "verbose helptext"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -702,7 +702,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     PrintAndLogEx(INFO, "Reader challenge (unencrypted): %s", sprint_hex(nonce, 8));
 
     // Create M1c Challenge with 3DES (3 Keys = 24, 2 Keys = 16)
-    uint8_t master_key[24];
+    uint8_t master_key[24] = {0};
     mbedtls_des3_context des3_ctx;
     mbedtls_des3_init(&des3_ctx);
 
@@ -804,7 +804,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
         arg_str0("i", NULL, "<hex>", "set custom IDm"),
         arg_str0("c", "cc", "<hex>", "M3c card challenge, 8 bytes"),
         arg_str0("k", "key",  "<hex>", "3des M3c decryption key, 16 bytes"),
-        arg_lit0("v", "verbose", "verbose helptext"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -970,7 +970,7 @@ static int CmdHFFelicaWritePlain(const char *Cmd) {
         arg_str0(NULL, "scl", "<hex>", "service code list"),
         arg_str0(NULL, "bn",  "<hex>", "number of block"),
         arg_str0(NULL, "ble", "<hex>", "block list element (def 2|3 bytes)"),
-        arg_lit0("v", "verbose", "verbose helptext"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1136,7 +1136,7 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
         arg_str0(NULL, "scl", "<hex>", "service code list"),
         arg_str0(NULL, "bn",  "<hex>", "number of block"),
         arg_str0(NULL, "ble", "<hex>", "block list element (def 2|3 bytes)"),
-        arg_lit0("v", "verbose", "verbose helptext"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1364,7 +1364,7 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
         arg_param_begin,
         arg_str0("i", NULL, "<hex>", "set custom IDm"),
         arg_str0("r", NULL, "<hex>", "set custom reserve"),
-        arg_lit0("v", "verbose", "verbose helptext"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1471,7 +1471,7 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
         arg_param_begin,
         arg_str0("i", NULL, "<hex>", "set custom IDm"),
         arg_str0("r", NULL, "<hex>", "set custom reserve"),
-        arg_lit0("v", "verbose", "verbose helptext"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

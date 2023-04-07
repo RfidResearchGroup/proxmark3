@@ -68,13 +68,12 @@ void make_key_turbopascal_n(uint32_t seed, uint8_t key[], const size_t keylen) {
 void make_key_posix_rand_r_n(uint32_t seed, uint8_t key[], const size_t keylen) {
 
     uint32_t lseed = seed;
-    int result;
 
     for (int i = 0; i < keylen; i++) {
 
         lseed *= 1103515245;
         lseed += 12345;
-        result = (uint16_t)(lseed / 0x10000) % 2048;
+        int result = (uint16_t)(lseed / 0x10000) % 2048;
 
         lseed *= 1103515245;
         lseed += 12345;

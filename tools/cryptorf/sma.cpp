@@ -331,11 +331,10 @@ static inline uint8_t next_right_fast(uint8_t in, uint64_t *right) {
 
 static inline void sm_left_mask(const uint8_t *ks, uint8_t *mask, uint64_t rstate) {
     size_t pos;
-    uint8_t bt;
 
     for (pos = 0; pos < 16; pos++) {
         next_right_fast(0, &rstate);
-        bt = next_right_fast(0, &rstate) << 4;
+        uint8_t bt = next_right_fast(0, &rstate) << 4;
         next_right_fast(0, &rstate);
         bt |= next_right_fast(0, &rstate);
 
@@ -349,7 +348,7 @@ static inline void sm_left_mask(const uint8_t *ks, uint8_t *mask, uint64_t rstat
 
 static inline uint32_t sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_t> *pcrstates) {
     uint8_t tmp_mask[16];
-    size_t pos, bits, bit, topbits;
+    size_t pos, bit, topbits;
     uint64_t rstate, counter;
     map<uint64_t, uint64_t> bincstates;
     map<uint64_t, uint64_t>::iterator it;
@@ -358,7 +357,7 @@ static inline uint32_t sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_
     topbits = 0;
     for (counter = 0; counter < 0x2000000; counter++) {
         // Reset the current bitcount of correct bits
-        bits = 0;
+        size_t bits = 0;
 
         // Copy the state we are going to test
         rstate = counter;
@@ -514,7 +513,7 @@ static inline void search_gc_candidates_right(const uint64_t rstate_before_gc, c
 static inline void sm_left(const uint8_t *ks, const uint8_t *mask, vector<cs_t> *pcstates) {
     map<uint64_t, cs_t> bincstates;
     map<uint64_t, cs_t>::iterator it;
-    uint64_t counter, lstate;
+    uint64_t counter;
     size_t pos, bits, bit;
     uint8_t correct_bits[16];
     uint8_t bt;
@@ -526,7 +525,7 @@ static inline void sm_left(const uint8_t *ks, const uint8_t *mask, vector<cs_t> 
     state.invalid = false;
 
     for (counter = 0; counter < 0x800000000ull; counter++) {
-        lstate = counter;
+        uint64_t lstate = counter;
 
         for (pos = 0; pos < 16; pos++) {
             lstate = (((lstate) >> 5) | ((uint64_t)left_addition[((lstate) & 0xf801f)] << 30));

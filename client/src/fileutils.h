@@ -47,6 +47,8 @@ typedef enum {
     jsfEM4x69,
     jsfEM4x50,
     jsfFido,
+    jsfFudan,
+    jsfTopaz,
 } JSONFileType;
 
 typedef enum {
@@ -58,7 +60,9 @@ typedef enum {
 
 int fileExists(const char *filename);
 //bool create_path(const char *dirname);
-bool setDefaultPath(savePaths_t pathIndex, const char *Path);  // set a path in the path list g_session.defaultPaths
+
+// set a path in the path list g_session.defaultPaths
+bool setDefaultPath(savePaths_t pathIndex, const char *path);
 
 char *newfilenamemcopy(const char *preferredName, const char *suffix);
 
@@ -232,6 +236,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
 */
 int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint32_t *keycnt);
 
+int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen);
 
 typedef enum {
     MFU_DF_UNKNOWN,
@@ -272,5 +277,20 @@ DumpFileType_t getfiletype(const char *filename);
  */
 int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen);
 
+
+/** STUB
+ * @brief Utility function to save data to three file files (BIN/EML/JSON).
+ * It also tries to save according to user preferences set dump folder paths.
+ * E.g. dumpdata.bin
+ * E.g. dumpdata.eml
+ * E.g. dumpdata.json
+
+ * @param fn
+ * @param d The binary data to write to the file
+ * @param n the length of the data
+ * @param jsft json format type for the different memory cards (MFC, MFUL, LEGIC, 14B, 15, ICLASS etc)
+ * @param blocksize
+ * @return PM3_SUCCESS if OK
+ */
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, size_t blocksize);
 #endif // FILEUTILS_H

@@ -36,7 +36,56 @@ static void RAMFUNC optimizedSniff(uint16_t *dest, uint16_t dsize) {
     }
 }
 
-int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
+static void RAMFUNC skipSniff(uint8_t *dest, uint16_t dsize, uint8_t skipMode, uint8_t skipRatio) {
+    uint32_t accum = (skipMode == HF_SNOOP_SKIP_MIN) ? 0xffffffff : 0;
+    uint8_t ratioindx = 0;
+    while (dsize > 0) {
+        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+            volatile uint16_t val = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
+            switch (skipMode) {
+                case HF_SNOOP_SKIP_MAX:
+                    if (accum < (val & 0xff))
+                        accum = val & 0xff;
+                    if (accum < (val >> 8))
+                        accum = val >> 8;
+                    break;
+                case HF_SNOOP_SKIP_MIN:
+                    if (accum > (val & 0xff))
+                        accum = val & 0xff;
+                    if (accum > (val >> 8))
+                        accum = val >> 8;
+                    break;
+                case HF_SNOOP_SKIP_AVG:
+                    accum += (val & 0xff) + (val & 0xff);
+                    break;
+                default: { // HF_SNOOP_SKIP_DROP and the rest
+                    if (ratioindx == 0)
+                        accum = val & 0xff;
+                }
+            }
+
+            ratioindx++;
+            if (ratioindx >= skipRatio) {
+                if (skipMode == HF_SNOOP_SKIP_AVG && skipRatio > 0) {
+                    accum = accum / (skipRatio * 2);
+                    if (accum <= 0xff)
+                        *dest = accum;
+                    else
+                        *dest = 0xff;
+                } else {
+                    *dest = accum;
+                }
+
+                dest++;
+                dsize --;
+                accum = (skipMode == HF_SNOOP_SKIP_MIN) ? 0xffffffff : 0;
+                ratioindx = 0;
+            }
+        }
+    }
+}
+
+int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint8_t skipMode, uint8_t skipRatio) {
     BigBuf_free();
     BigBuf_Clear_ext(false);
 
@@ -105,7 +154,10 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len) {
             }
         }
 
-        optimizedSniff((uint16_t *)mem, *len);
+        if (skipMode == 0)
+            optimizedSniff((uint16_t *)mem, *len);
+        else
+            skipSniff(mem, *len, skipMode, skipRatio);
 
         if (g_dbglevel >= DBG_INFO) {
             Dbprintf("Trigger kicked in (%d >= 180)", r);
@@ -157,6 +209,6 @@ void HfPlotDownload(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     // Trigger a finish downloading signal with an ACK frame
-    reply_mix(CMD_ACK, 1, 0, FPGA_TRACE_SIZE, 0, 0);
+    reply_ng(CMD_FPGAMEM_DOWNLOAD, PM3_SUCCESS, NULL, 0);
     LED_B_OFF();
 }

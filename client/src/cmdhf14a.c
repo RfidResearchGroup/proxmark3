@@ -18,9 +18,9 @@
 #include "cmdhf14a.h"
 #include <ctype.h>
 #include <string.h>
-#include "cmdparser.h"    // command_t
-#include "commonutil.h"   // ARRAYLEN
-#include "comms.h"        // clearCommandBuffer
+#include "cmdparser.h"          // command_t
+#include "commonutil.h"         // ARRAYLEN
+#include "comms.h"              // clearCommandBuffer
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "cmdhfmf.h"
@@ -29,18 +29,26 @@
 #include "emv/emvcore.h"
 #include "ui.h"
 #include "crc16.h"
-#include "util_posix.h"  // msclock
+#include "util_posix.h"          // msclock
 #include "aidsearch.h"
-#include "cmdhf.h"       // handle HF plot
+#include "cmdhf.h"               // handle HF plot
 #include "cliparser.h"
-#include "protocols.h"     // definitions of ISO14A/7816 protocol, MAGIC_GEN_1A
-#include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
-#include "nfc/ndef.h"      // NDEFRecordsDecodeAndPrint
-#include "cmdnfc.h"        // print_type4_cc_info
-#include "fileutils.h"     // saveFile
-#include "atrs.h"          // getATRinfo
+#include "protocols.h"           // definitions of ISO14A/7816 protocol, MAGIC_GEN_1A
+#include "iso7816/apduinfo.h"    // GetAPDUCodeDescription
+#include "nfc/ndef.h"            // NDEFRecordsDecodeAndPrint
+#include "cmdnfc.h"              // print_type4_cc_info
+#include "fileutils.h"           // saveFile
+#include "atrs.h"                // getATRinfo
+#include "desfire.h"             // desfire enums
+#include "mifare/desfirecore.h"  // desfire context
 
-static bool APDUInFramingEnable = true;
+static bool g_apdu_in_framing_enable = true;
+bool Get_apdu_in_framing(void) {
+    return g_apdu_in_framing_enable;
+}
+void Set_apdu_in_framing(bool v) {
+    g_apdu_in_framing_enable = v;
+}
 
 static int CmdHelp(const char *Cmd);
 static int waitCmd(bool i_select, uint32_t timeout, bool verbose);
@@ -400,7 +408,12 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
     if (select_status == 3) {
         PrintAndLogEx(INFO, "E->Card doesn't support standard iso14443-3 anticollision");
-        PrintAndLogEx(SUCCESS, "\tATQA : %02X %02X", card->atqa[1], card->atqa[0]);
+        // identify TOPAZ
+        if (card->atqa[1] == 0x0C && card->atqa[0] == 0x00) {
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
+        } else {
+            PrintAndLogEx(SUCCESS, "\tATQA : %02X %02X", card->atqa[1], card->atqa[0]);
+        }
         return 1;
     }
 
@@ -511,7 +524,14 @@ static int CmdHF14AReader(const char *Cmd) {
             if (select_status == 3) {
                 if (!(silent && continuous)) {
                     PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
-                    PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
+
+                    // identify TOPAZ
+                    if (card.atqa[1] == 0x0C && card.atqa[0] == 0x00) {
+                        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
+                    } else {
+                        PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
+                    }
+
                 }
                 DropField();
                 res = PM3_ESOFT;
@@ -648,22 +668,23 @@ static int CmdHF14ACUIDs(const char *Cmd) {
 int CmdHF14ASim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a sim",
-                  "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID",
-                  "hf 14a sim -t 1 --uid 11223344      -> MIFARE Classic 1k\n"
-                  "hf 14a sim -t 2                     -> MIFARE Ultralight\n"
-                  "hf 14a sim -t 3                     -> MIFARE Desfire\n"
-                  "hf 14a sim -t 4                     -> ISO/IEC 14443-4\n"
-                  "hf 14a sim -t 5                     -> MIFARE Tnp3xxx\n"
-                  "hf 14a sim -t 6                     -> MIFARE Mini\n"
-                  "hf 14a sim -t 7                     -> AMIIBO (NTAG 215),  pack 0x8080\n"
-                  "hf 14a sim -t 8                     -> MIFARE Classic 4k\n"
-                  "hf 14a sim -t 9                     -> FM11RF005SH Shanghai Metro\n"
-                  "hf 14a sim -t 10                    -> ST25TA IKEA Rothult\n");
+                  "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n"
+                  "Use type 7 for Mifare Ultralight EV1, Amiibo (NTAG215 pack 0x8080)",
+                  "hf 14a sim -t 1 --uid 11223344  -> MIFARE Classic 1k\n"
+                  "hf 14a sim -t 2                 -> MIFARE Ultralight\n"
+                  "hf 14a sim -t 3                 -> MIFARE Desfire\n"
+                  "hf 14a sim -t 4                 -> ISO/IEC 14443-4\n"
+                  "hf 14a sim -t 5                 -> MIFARE Tnp3xxx\n"
+                  "hf 14a sim -t 6                 -> MIFARE Mini\n"
+                  "hf 14a sim -t 7                 -> MFU EV1 / NTAG 215 Amiibo\n"
+                  "hf 14a sim -t 8                 -> MIFARE Classic 4k\n"
+                  "hf 14a sim -t 9                 -> FM11RF005SH Shanghai Metro\n"
+                  "hf 14a sim -t 10                -> ST25TA IKEA Rothult\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_int1("t", "type", "<1-10> ", "Simulation type to use"),
-        arg_str0("u", "uid", "<hex>", "4, 7 or 10 byte UID"),
+        arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
         arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks have been read by reader. 0 = infinite"),
         arg_lit0("x",  NULL, "Performs the 'reader attack', nr/ar attack against a reader"),
         arg_lit0(NULL, "sk", "Fill simulator keys from found keys"),
@@ -672,7 +693,7 @@ int CmdHF14ASim(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int tagtype = arg_get_int(ctx, 1);
+    int tagtype = arg_get_int_def(ctx, 1, 1);
 
     int uid_len = 0;
     uint8_t uid[10] = {0};
@@ -701,7 +722,7 @@ int CmdHF14ASim(const char *Cmd) {
         useUIDfromEML = false;
     }
 
-    uint8_t exitAfterNReads = arg_get_int(ctx, 3);
+    uint8_t exitAfterNReads = arg_get_int_def(ctx, 3, 0);
 
     if (arg_get_lit(ctx, 4)) {
         flags |= FLAG_NR_AR_ATTACK;
@@ -711,6 +732,11 @@ int CmdHF14ASim(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 6);
 
     CLIParserFree(ctx);
+
+    if (tagtype > 10) {
+        PrintAndLogEx(ERR, "Undefined tag %d", tagtype);
+        return PM3_EINVARG;
+    }
 
     sector_t *k_sector = NULL;
     uint8_t k_sectorsCount = 40;
@@ -737,7 +763,7 @@ int CmdHF14ASim(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
     bool keypress = kbd_enter_pressed();
-    while (!keypress) {
+    while (keypress == false) {
 
         if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0) continue;
         if (resp.status != PM3_SUCCESS) break;
@@ -1030,7 +1056,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
     int res;
 
     // 3 byte here - 1b framing header, 2b crc16
-    if (APDUInFramingEnable &&
+    if (g_apdu_in_framing_enable &&
             ((gs_frame_len && (datainlen > gs_frame_len - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
 
         int clen = 0;
@@ -1434,29 +1460,34 @@ static int CmdHF14AChaining(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a chaining",
                   "Enable/Disable ISO14443a input chaining. Maximum input length goes from ATS.",
-                  "hf 14a chaining disable -> disable chaining\n"
-                  "hf 14a chaining         -> show chaining enable/disable state\n");
+                  "hf 14a chaining         -> show chaining enable/disable state\n"
+                  "hf 14a chaining --off   -> disable chaining\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, NULL,      "<enable/disable or 0/1>", NULL),
+        arg_lit0("1", "on", "enabled chaining"),
+        arg_lit0("0", "off", "disable chaining"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    struct arg_str *str = arg_get_str(ctx, 1);
-    int len = arg_get_str_len(ctx, 1);
-
-    if (len && (!strcmp(str->sval[0], "enable") || !strcmp(str->sval[0], "1")))
-        APDUInFramingEnable = true;
-
-    if (len && (!strcmp(str->sval[0], "disable") || !strcmp(str->sval[0], "0")))
-        APDUInFramingEnable = false;
-
+    bool on = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", APDUInFramingEnable ? "enabled" : "disabled");
+    if ((on + off) > 1) {
+        PrintAndLogEx(INFO, "Select only one option");
+        return PM3_EINVARG;
+    }
 
+    if (on)
+        Set_apdu_in_framing(true);
+
+    if (off)
+        Set_apdu_in_framing(false);
+
+    PrintAndLogEx(INFO, "\nISO 14443-4 input chaining %s.\n", g_apdu_in_framing_enable ? "enabled" : "disabled");
     return PM3_SUCCESS;
 }
 
@@ -1475,6 +1506,7 @@ typedef enum {
     MTOTHER = 64,
     MTEMV = 128,
     MTFUDAN = 256,
+    MTISO18092 = 512,
 } nxp_mifare_type_t;
 
 // Based on NXP AN10833 Rev 3.6 and NXP AN10834 Rev 4.1
@@ -1487,6 +1519,13 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
         if ((sak & 0x19) == 0x19) {
             printTag("MIFARE Classic 2K");
             type |= MTCLASSIC;
+        } else if ((sak & 0x40) == 0x40) {
+            if ((atqa & 0x0110) == 0x0110)
+                printTag("P2P Support / Proprietary");
+            else
+                printTag("P2P Support / Android");
+
+            type |= MTISO18092;
         } else if ((sak & 0x38) == 0x38) {
             printTag("SmartMX with MIFARE Classic 4K");
             type |= MTCLASSIC;
@@ -1763,7 +1802,16 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (select_status == 3) {
         PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
-        PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
+
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
+        }
+
+        // identify TOPAZ
+        if (card.atqa[1] == 0x0C && card.atqa[0] == 0x00) {
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
+        }
+
         DropField();
         return select_status;
     }
@@ -1783,6 +1831,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isST = false;
     bool isEMV = false;
     bool isFUDAN = false;
+    bool isISO18092 = false;
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
@@ -1801,6 +1850,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
         if ((nxptype & MTEMV) == MTEMV)
             isEMV = true;
+
+        if ((nxptype & MTISO18092) == MTISO18092)
+            isISO18092 = true;
 
     } else {
 
@@ -2201,8 +2253,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         }
                     }
 
-                    if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
-                        if (sw == 0x9000) {
+                    if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
+                        if (sw == ISO7816_OK) {
                             if (verbose) PrintAndLogEx(SUCCESS, "Application ( " _GREEN_("ok") " )");
                         } else {
                             if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
@@ -2238,9 +2290,15 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             }
         }
     } else {
-        PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
-        if ((card.sak & 0x20) == 0x20) {
-            PrintAndLogEx(INFO, "--> SAK incorrectly claims that card supports RATS <--");
+
+        if (isISO18092) {
+            PrintAndLogEx(INFO, "proprietary iso18092 card found");
+        } else {
+
+            PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
+            if ((card.sak & 0x20) == 0x20) {
+                PrintAndLogEx(INFO, "--> SAK incorrectly claims that card supports RATS <--");
+            }
         }
         if (select_status == 1)
             select_status = 2;
@@ -2277,7 +2335,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
 
         uint8_t signature[32] = {0};
-        res = detect_mfc_ev1_signature(signature);
+        res = read_mfc_ev1_signature(signature);
         if (res == PM3_SUCCESS) {
             mfc_ev1_print_signature(card.uid, card.uidlen, signature, sizeof(signature));
         }
@@ -2301,7 +2359,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv search -s`"));
 
     if (isFUDAN) {
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf 14a raw`") " - since FUDAN is different");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf fudan dump`"));
+        /*
         PrintAndLogEx(HINT, "  hf 14a raw -a -b 7 -k 26");
         PrintAndLogEx(HINT, "  hf 14a raw -k -c 3000");
         PrintAndLogEx(HINT, "  hf 14a raw -k -c 3001");
@@ -2311,6 +2370,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "  hf 14a raw -k -c 3005");
         PrintAndLogEx(HINT, "  hf 14a raw -k -c 3006");
         PrintAndLogEx(HINT, "  hf 14a raw -c 3007");
+        */
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -2331,14 +2391,14 @@ int infoHF14A4Applications(bool verbose) {
         if (res)
             break;
 
-        if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
+        if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
             if (!found) {
                 if (verbose)
                     PrintAndLogEx(INFO, "----------------- " _CYAN_("Short AID search") " -----------------");
             }
             found++;
 
-            if (sw == 0x9000) {
+            if (sw == ISO7816_OK) {
                 if (verbose)
                     PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " ( " _GREEN_("ok") " )", hintAIDList[i].desc);
                 cardFound[i] = true;
@@ -2369,16 +2429,23 @@ int infoHF14A4Applications(bool verbose) {
     return found;
 }
 
-static uint64_t inc_sw_error_occurrence(uint16_t sw, uint64_t all_sw[256][256]) {
+static uint32_t inc_sw_error_occurrence(uint16_t sw, uint32_t *all_sw) {
     uint8_t sw1 = (uint8_t)(sw >> 8);
     uint8_t sw2 = (uint8_t)(0xff & sw);
+
+    // Don't count successes
     if (sw1 == 0x90 && sw2 == 0x00) {
-        return 0; // Don't count successes.
+        return 0;
     }
-    if (sw1 == 0x6d && sw2 == 0x00) {
-        return 0xffffffffffffffffULL; // Always max "Instruction not supported".
+
+    // Always max "Instruction not supported"
+    if (sw1 == 0x6D && sw2 == 0x00) {
+        return 0xFFFFFFFFUL;
     }
-    return ++all_sw[sw1][sw2];
+
+    all_sw[(sw1 * 256) + sw2]++;
+
+    return all_sw[(sw1 * 256) + sw2];
 }
 
 static int CmdHf14AFindapdu(const char *Cmd) {
@@ -2414,20 +2481,26 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     int cla_len = 0;
     uint8_t cla_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 1, cla_arg, &cla_len);
+
     int ins_len = 0;
     uint8_t ins_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 2, ins_arg, &ins_len);
+
     int p1_len = 0;
     uint8_t p1_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 3, p1_arg, &p1_len);
+
     int p2_len = 0;
     uint8_t p2_arg[1] = {0};
     CLIGetHexWithReturn(ctx, 4, p2_arg, &p2_len);
+
     uint64_t reset_time = arg_get_u64_def(ctx, 5, 5 * 60);
-    uint64_t error_limit = arg_get_u64_def(ctx, 6, 512);
+    uint32_t error_limit = arg_get_u64_def(ctx, 6, 512);
+
     int ignore_ins_len = 0;
     uint8_t ignore_ins_arg[250] = {0};
     CLIGetHexWithReturn(ctx, 7, ignore_ins_arg, &ignore_ins_len);
+
     bool with_le = arg_get_lit(ctx, 8);
     bool verbose = arg_get_lit(ctx, 9);
 
@@ -2439,7 +2512,8 @@ static int CmdHf14AFindapdu(const char *Cmd) {
     uint8_t ins = ins_arg[0];
     uint8_t p1 = p1_arg[0];
     uint8_t p2 = p2_arg[0];
-    uint8_t response[PM3_CMD_DATA_SIZE];
+
+    uint8_t response[PM3_CMD_DATA_SIZE] = {0};
     int response_n = 0;
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
@@ -2459,8 +2533,9 @@ static int CmdHf14AFindapdu(const char *Cmd) {
 
     bool inc_p1 = false;
     bool skip_ins = false;
-    uint64_t all_sw[256][256] = { { 0 } };
-    uint64_t sw_occurrences = 0;
+    uint32_t all_sw[256][256] = { { 0 } };
+    uint32_t sw_occurrences = 0;
+
     uint64_t t_start = msclock();
     uint64_t t_last_reset = msclock();
 
@@ -2482,6 +2557,7 @@ retry_ins:
                         break;
                     }
                 }
+
                 if (skip_ins) {
                     skip_ins = false;
                     continue;
@@ -2502,13 +2578,14 @@ retry_ins:
                         activate_field = true;
                         goto retry_ins;
                     }
+
                     uint16_t sw = get_sw(response, response_n);
-                    sw_occurrences = inc_sw_error_occurrence(sw, all_sw);
+                    sw_occurrences = inc_sw_error_occurrence(sw, all_sw[0]);
 
                     // Show response.
                     if (sw_occurrences < error_limit) {
                         logLevel_t log_level = INFO;
-                        if (sw == 0x9000) {
+                        if (sw == ISO7816_OK) {
                             log_level = SUCCESS;
                         }
 
@@ -2528,15 +2605,19 @@ retry_ins:
                         }
                     }
                 }
-                activate_field = false; // Do not reativate the filed until the next reset.
+                // Do not reativate the filed until the next reset.
+                activate_field = false;
             } while (++ins != ins_arg[0]);
+
             // Increment P1/P2 in an alternating fashion.
             if (inc_p1) {
                 p1++;
             } else {
                 p2++;
             }
+
             inc_p1 = !inc_p1;
+
             // Check if re-selecting the card is needed.
             uint64_t t_since_last_reset = ((msclock() - t_last_reset) / 1000);
             if (t_since_last_reset > reset_time) {
@@ -2546,9 +2627,12 @@ retry_ins:
                 PrintAndLogEx(INFO, "Last reset was %" PRIu64 " seconds ago. Resetting the tag to prevent timeout issues", t_since_last_reset);
             }
             PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
+
         } while (p1 != p1_arg[0] || p2 != p2_arg[0]);
+
         cla++;
         PrintAndLogEx(INFO, "Status: [ CLA " _GREEN_("%02X") " INS " _GREEN_("%02X") " P1 " _GREEN_("%02X") " P2 " _GREEN_("%02X") " ]", cla, ins, p1, p2);
+
     } while (cla != cla_arg[0]);
 
 out:
@@ -2568,12 +2652,15 @@ int CmdHF14ANdefRead(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     bool activate_field = true;
@@ -2598,7 +2685,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         // Try NDEF Type 4 Tag v1.0
         param_gethex_to_eol("00a4040007d2760000850100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
         res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
@@ -2612,7 +2699,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         }
 
         sw = get_sw(response, resplen);
-        if (sw != 0x9000) {
+        if (sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
             DropField();
             return PM3_ESOFT;
@@ -2624,7 +2711,6 @@ int CmdHF14ANdefRead(const char *Cmd) {
     keep_field_on = true;
 
     // ---------------  CC file reading ----------------
-
     uint8_t aSELECT_FILE_CC[30];
     int aSELECT_FILE_CC_n = 0;
     if (backward_compatibility_v1) {
@@ -2639,7 +2725,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -2654,7 +2740,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         return res;
     }
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -2665,7 +2751,10 @@ int CmdHF14ANdefRead(const char *Cmd) {
     memcpy(cc_data, response, sizeof(cc_data));
     uint8_t file_id[2] = {cc_data[9], cc_data[10]};
 
-    print_type4_cc_info(cc_data, sizeof(cc_data));
+    if (verbose) {
+        print_type4_cc_info(cc_data, sizeof(cc_data));
+    }
+
     uint16_t max_rapdu_size = (cc_data[3] << 8 | cc_data[4]) - 2;
     max_rapdu_size = max_rapdu_size < sizeof(response) - 2 ? max_rapdu_size : sizeof(response) - 2;
 
@@ -2685,14 +2774,13 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
     }
 
     // read first 2 bytes to get NDEF length
-
     uint8_t aREAD_NDEF[30];
     int aREAD_NDEF_n = 0;
     param_gethex_to_eol("00b0000002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
@@ -2703,7 +2791,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -2742,7 +2830,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         }
 
         sw = get_sw(response, resplen);
-        if (sw != 0x9000) {
+        if (sw != ISO7816_OK) {
             PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
             DropField();
             free(ndef_file);
@@ -2763,26 +2851,446 @@ int CmdHF14ANdefRead(const char *Cmd) {
         saveFile(filename, ".bin", ndef_file, ndef_size);
     }
 
-    NDEFRecordsDecodeAndPrint(ndef_file, ndef_size);
+    NDEFRecordsDecodeAndPrint(ndef_file, ndef_size, verbose);
     free(ndef_file);
     return PM3_SUCCESS;
 }
 
+int CmdHF14ANdefFormat(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a ndefformat",
+                  "Format ISO14443-a Tag as a NFC tag with Data Exchange Format (NDEF)",
+                  "hf 14a ndefformat\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (g_session.pm3_present == false)
+        return PM3_ENOTTY;
+
+    bool activate_field = true;
+    bool keep_field_on = false;
+    uint8_t response[PM3_CMD_DATA_SIZE];
+    int resplen = 0;
+
+    SetAPDULogging(false);
+
+    // step 1 - Select NDEF Tag application
+    uint8_t aSELECT_AID[80];
+    int aSELECT_AID_n = 0;
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
+    int res = ExchangeAPDU14a(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (resplen < 2) {
+        return PM3_ESOFT;
+    }
+
+    bool have_application = true;
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != ISO7816_OK) {
+        have_application = false;
+        PrintAndLogEx(INFO, "no NDEF application found");
+    } else {
+        PrintAndLogEx(INFO, "found ndef application");
+    }
+
+
+    // setup desfire authentication context
+    uint8_t empty_key[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    DesfireContext_t dctx;
+    dctx.secureChannel = DACNone;
+    DesfireSetKey(&dctx, 0, T_DES, empty_key);
+    DesfireSetKdf(&dctx, MFDES_KDF_ALGO_NONE, NULL, 0);
+    DesfireSetCommandSet(&dctx, DCCNativeISO);
+    DesfireSetCommMode(&dctx, DCMPlain);
+
+    // step 1 - create application
+    if (have_application == false) {
+        // "hf mfdes createapp --aid 000001 --fid E110 --ks1 0B --ks2 A1 --dfhex D2760000850101 -t des -n 0 -k 0000000000000000"
+        PrintAndLogEx(INFO, "creating NDEF application...");
+
+        // authenticae first to AID 00 00 00
+        res = DesfireSelectAndAuthenticateEx(&dctx, DACEV1, 0x000000, false, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(INFO, "failed empty auth..");
+            return res;
+        }
+
+        // create application
+        uint8_t dfname[] = {0xD2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01};
+        uint8_t ks1 = 0x0B;
+        uint8_t ks2 = 0xA1;           // bit FileID in ks2
+        uint32_t appid = 0x0000001;
+        uint16_t fileid = 0xE110;
+        uint8_t data[250] = {0};
+        size_t datalen = 0;
+
+        DesfireAIDUintToByte(appid, &data[0]);
+        data[3] = ks1;
+        data[4] = ks2;
+        Uint2byteToMemLe(&data[5], fileid);
+        memcpy(&data[7], dfname, sizeof(dfname));
+        datalen = 14;
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "---------------------------");
+            PrintAndLogEx(INFO, _CYAN_("Creating Application using:"));
+            PrintAndLogEx(INFO, "AID........... 0x%02X%02X%02X", data[2], data[1], data[0]);
+            PrintAndLogEx(INFO, "Key Set 1..... 0x%02X", data[3]);
+            PrintAndLogEx(INFO, "Key Set 2..... 0x%02X", data[4]);
+            PrintAndLogEx(INFO, "ISO file ID... %s", (data[4] & 0x20) ? "enabled" : "disabled");
+            if ((data[4] & 0x20)) {
+                PrintAndLogEx(INFO, "ISO file ID... 0x%04X", MemLeToUint2byte(&data[5]));
+                PrintAndLogEx(INFO, "DF Name[%02d]  %s | %s\n", 7, sprint_ascii(dfname, sizeof(dfname)), sprint_hex(dfname, sizeof(dfname)));
+            }
+            PrintKeySettings(data[3], data[4], true, true);
+            PrintAndLogEx(INFO, "---------------------------");
+        }
+
+        res = DesfireCreateApplication(&dctx, data, datalen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire CreateApplication command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        PrintAndLogEx(SUCCESS, "Desfire application %06x successfully " _GREEN_("created"), appid);
+
+
+        // step 2 - create capability container (CC File)
+
+        // authenticae to the new AID 00 00 01
+        uint8_t aes_key[] = {
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+        };
+        dctx.secureChannel = DACNone;
+        DesfireSetKey(&dctx, 0, T_AES, aes_key);
+        DesfireSetKdf(&dctx, MFDES_KDF_ALGO_NONE, NULL, 0);
+        DesfireSetCommandSet(&dctx, DCCNativeISO);
+        DesfireSetCommMode(&dctx, DCMPlain);
+        res = DesfireSelectAndAuthenticateEx(&dctx, DACEV1, 0x000001, false, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(INFO, "failed aid auth..");
+            return res;
+        }
+
+        // hf mfdes createfile --aid 000001 --fid 01 --isofid E103 --amode plain --size 00000F
+        // --rrights free --wrights key0 --rwrights key0 --chrights key0
+        //  -n 0 -t aes -k 00000000000000000000000000000000 -m plain
+        uint8_t fid = 0x01;
+        uint16_t isofid = 0xE103;
+        uint32_t fsize = 0x0F;
+        uint8_t filetype = 0x00;  // standard file
+
+        // file access mode:  plain 0x00
+        // read access:       free  0x0E
+        // write access:      key0  0x00
+        // r/w access:        key0  0x00
+        // change access:     key0  0x00
+        memset(data, 0x00, sizeof(data));
+        datalen = 0;
+
+        data[0] = fid;
+        data[1] = isofid & 0xff;
+        data[2] = (isofid >> 8) & 0xff;
+        datalen = 3;
+
+        uint8_t *settings = &data[datalen];
+        settings[0] = 0x00;
+        datalen++;
+
+        DesfireEncodeFileAcessMode(&settings[1], 0x0E, 0x00, 0x00, 0x00) ;
+        datalen += 2;
+
+        Uint3byteToMemLe(&data[datalen], fsize);
+        datalen += 3;
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%zu]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
+        }
+
+        DesfirePrintCreateFileSettings(filetype, data, datalen);
+
+        res = DesfireCreateFile(&dctx, filetype, data, datalen, true);  // check length only if we dont use raw mode
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire CreateFile command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        PrintAndLogEx(SUCCESS, "%s file %02x in the app %06x created " _GREEN_("successfully"), GetDesfireFileType(filetype), data[0], appid);
+
+
+
+        // hf mfdes write --aid 000001 --fid 01 -d 000F20003B00340406E10400FF00FF
+        // -n 0 -t aes -k 00000000000000000000000000000000 -m plain
+        res = DesfireSelectAndAuthenticateEx(&dctx, DACEV1, 0x000001, false, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(INFO, "failed aid auth..");
+            return res;
+        }
+
+        uint8_t fnum = 0x01;
+        uint32_t offset = 0;
+        uint8_t cc_data[] = {0x00, 0x0F, 0x20, 0x00, 0x3B, 0x00, 0x34, 0x04, 0x06, 0xE1, 0x04, 0x00, 0xFF, 0x00, 0x00};
+
+        res = DesfireWriteFile(&dctx, fnum, offset, sizeof(cc_data), cc_data);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire WriteFile command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "Write data file %02x " _GREEN_("success"), fnum);
+        }
+
+
+
+        // step 3 - create NDEF record file
+        // hf mfdes write --aid 000001 --fid 02 -d 000CD1010855016E78702E636F6DFE
+        // -n 0 -t aes -k 00000000000000000000000000000000 -m plain
+
+        fid = 0x02;
+        isofid = 0xE104;
+        fsize = 0xFF;
+        filetype = 0x00;  // standard file
+
+        // file access mode:  plain 0x00
+        // read access:       free  0x0E
+        // write access:      key0  0x00
+        // r/w access:        key0  0x00
+        // change access:     key0  0x00
+        memset(data, 0x00, sizeof(data));
+        datalen = 0;
+
+        data[0] = fid;
+        data[1] = isofid & 0xff;
+        data[2] = (isofid >> 8) & 0xff;
+        datalen = 3;
+
+        settings = &data[datalen];
+        settings[0] = 0x00;
+        datalen++;
+
+        DesfireEncodeFileAcessMode(&settings[1], 0x0E, 0x00, 0x00, 0x00) ;
+        datalen += 2;
+
+        Uint3byteToMemLe(&data[datalen], fsize);
+        datalen += 3;
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "App: %06x. File num: 0x%02x type: 0x%02x data[%zu]: %s", appid, data[0], filetype, datalen, sprint_hex(data, datalen));
+        }
+
+        DesfirePrintCreateFileSettings(filetype, data, datalen);
+
+        res = DesfireCreateFile(&dctx, filetype, data, datalen, true);  // check length only if we dont use raw mode
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Desfire CreateFile command " _RED_("error") ". Result: %d", res);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        PrintAndLogEx(SUCCESS, "%s file %02x in the app %06x created " _GREEN_("successfully"), GetDesfireFileType(filetype), data[0], appid);
+
+        DropField();
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "finished");
+    return PM3_SUCCESS;
+}
+
+int CmdHF14ANdefWrite(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a ndefwrite",
+                  "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.\n",
+                  "hf 14a ndefwrite -d 0300FE      -> write empty record to tag\n"
+                  "hf 14a ndefwrite -f myfilename\n"
+                  "hf 14a ndefwrite -d 003fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("d", NULL, "<hex>", "raw NDEF hex bytes"),
+        arg_str0("f", "file", "<fn>", "write raw NDEF file to tag"),
+        arg_lit0("p", NULL, "fix NDEF record headers / terminator block if missing"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t raw[256] = {0};
+    int rawlen = 0;
+    CLIGetHexWithReturn(ctx, 1, raw, &rawlen);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool fix_msg = arg_get_lit(ctx, 3);
+    bool verbose = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if (g_session.pm3_present == false) {
+        return PM3_ENOTTY;
+    }
+
+    if ((rawlen && fnlen) || (rawlen == 0 && fnlen == 0)) {
+        PrintAndLogEx(WARNING, "Please specify either raw hex or filename");
+        return PM3_EINVARG;
+    }
+
+    int res = PM3_SUCCESS;
+    int32_t bytes = rawlen;
+
+    // read dump file
+    if (fnlen) {
+        uint8_t *dump = NULL;
+        size_t bytes_read = 0;
+        res = pm3_load_dump(filename, (void **)&dump, &bytes_read, sizeof(raw));
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        memcpy(raw, dump, bytes_read);
+        bytes = bytes_read;
+        free(dump);
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Num of bytes... %i  (raw %i)", bytes, rawlen);
+    }
+
+    // Has raw bytes ndef message header?bytes
+    switch (raw[0]) {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+        case 0x03:
+        case 0xFD:
+        case 0xFE:
+            break;
+        default: {
+            if (fix_msg == false) {
+                PrintAndLogEx(WARNING, "raw NDEF message doesn't have a proper header,  continuing...");
+            } else {
+                if (bytes + 2 > sizeof(raw)) {
+                    PrintAndLogEx(WARNING, "no room for header, exiting...");
+                    return PM3_EMALLOC;
+                }
+                uint8_t tmp_raw[256];
+                memcpy(tmp_raw, raw, sizeof(tmp_raw));
+                raw[0] = 0x00;
+                raw[1] = bytes;
+                memcpy(raw + 2, tmp_raw, sizeof(raw) - 2);
+                bytes += 2;
+                PrintAndLogEx(SUCCESS, "Added generic message header (0x03)");
+            }
+        }
+    }
+
+    // Has raw bytes ndef a terminator block?
+    if (raw[bytes - 1] != 0xFE) {
+        if (fix_msg == false) {
+            PrintAndLogEx(WARNING, "raw NDEF message doesn't have a terminator block,  continuing...");
+        } else {
+
+            if (bytes + 1 > sizeof(raw)) {
+                PrintAndLogEx(WARNING, "no room for terminator block, exiting...");
+                return PM3_EMALLOC;
+            }
+            raw[bytes] = 0xFE;
+            bytes++;
+            PrintAndLogEx(SUCCESS, "Added terminator block (0xFE)");
+        }
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Num of Bytes... %u", bytes);
+        print_buffer(raw, bytes, 0);
+    }
+
+
+    // setup desfire authentication context
+    // authenticae to the new AID 00 00 01
+    uint8_t aes_key[] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    DesfireContext_t dctx;
+    dctx.secureChannel = DACNone;
+    DesfireSetKey(&dctx, 0, T_AES, aes_key);
+    DesfireSetKdf(&dctx, MFDES_KDF_ALGO_NONE, NULL, 0);
+    DesfireSetCommandSet(&dctx, DCCNativeISO);
+    DesfireSetCommMode(&dctx, DCMPlain);
+    res = DesfireSelectAndAuthenticateEx(&dctx, DACEV1, 0x000001, false, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(INFO, "failed aid auth..");
+        return res;
+    }
+
+    // write ndef file
+
+    // hf mfdes write --aid 000002 --fid 02 -
+    // -n 0 -t aes -k 00000000000000000000000000000000 -m plain
+    uint8_t fnum = 0x02;
+    uint32_t offset = 0;
+
+    res = DesfireWriteFile(&dctx, fnum, offset, bytes, raw);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Desfire WriteFile command " _RED_("error") ". Result: %d", res);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Write data file %02x " _GREEN_("success"), fnum);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "finished");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
+    {"-----------", CmdHelp,              AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
     {"list",        CmdHF14AList,         AlwaysAvailable, "List ISO 14443-a history"},
-    {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
-    {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},
-    {"ndefread",    CmdHF14ANdefRead,     IfPm3Iso14443a,  "Read an NDEF file from ISO 14443-A Type 4 tag"},
-    {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "Collect n>0 ISO14443-a UIDs in one go"},
-    {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "Simulate ISO 14443-a tag"},
-    {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},
-    {"apdu",        CmdHF14AAPDU,         IfPm3Iso14443a,  "Send ISO 14443-4 APDU to tag"},
-    {"chaining",    CmdHF14AChaining,     IfPm3Iso14443a,  "Control ISO 14443-4 input chaining"},
-    {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
+    {"-----------", CmdHelp,              IfPm3Iso14443a,  "---------------------- " _CYAN_("operations") " ---------------------"},
     {"antifuzz",    CmdHF14AAntiFuzz,     IfPm3Iso14443a,  "Fuzzing the anticollision phase.  Warning! Readers may react strange"},
     {"config",      CmdHf14AConfig,       IfPm3Iso14443a,  "Configure 14a settings (use with caution)"},
+    {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "Collect n>0 ISO14443-a UIDs in one go"},
+    {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
+    {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "Simulate ISO 14443-a tag"},
+    {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},
+    {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
+    {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},
+    {"-----------", CmdHelp,              IfPm3Iso14443a,  "------------------------- " _CYAN_("apdu") " -------------------------"},
+    {"apdu",        CmdHF14AAPDU,         IfPm3Iso14443a,  "Send ISO 14443-4 APDU to tag"},
     {"apdufind",    CmdHf14AFindapdu,     IfPm3Iso14443a,  "Enumerate APDUs - CLA/INS/P1P2"},
+    {"chaining",    CmdHF14AChaining,     IfPm3Iso14443a,  "Control ISO 14443-4 input chaining"},
+    {"-----------", CmdHelp,              IfPm3Iso14443a,  "------------------------- " _CYAN_("ndef") " -------------------------"},
+    {"ndefformat",  CmdHF14ANdefFormat,   IfPm3Iso14443a,  "Format ISO 14443-A as NFC Type 4 tag"},
+    {"ndefread",    CmdHF14ANdefRead,     IfPm3Iso14443a,  "Read an NDEF file from ISO 14443-A Type 4 tag"},
+    {"ndefwrite",   CmdHF14ANdefWrite,    IfPm3Iso14443a,  "Write NDEF records to ISO 14443-A tag"},
     {NULL, NULL, NULL, NULL}
 };
 

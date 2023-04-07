@@ -555,7 +555,7 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out) {
         return PM3_ESOFT;
 
     uint8_t *data = resp.data.asBytes;
-    em4x50_word_t words[EM4X50_NO_WORDS];
+    em4x50_word_t words[EM4X50_NO_WORDS] = {0};
     prepare_result(data, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF, words);
 
     if (out != NULL)
@@ -628,7 +628,7 @@ int CmdEM4x50Info(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
-        arg_lit0("v", "verbose", "additional output of data section"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
 
@@ -939,7 +939,7 @@ int CmdEM4x50WritePwd(const char *Cmd) {
         return PM3_SUCCESS;
 
     if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Writing password (" _RED_("failed") ")");
+        PrintAndLogEx(FAILED, "Writing password ( " _RED_("fail") " )");
         return PM3_EFAILED;
     }
 

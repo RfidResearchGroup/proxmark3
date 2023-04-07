@@ -12,7 +12,7 @@
 #
 #    This code is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation; either version 2 of the License, or
+#    the Free Software Foundation; either version 3 of the License, or
 #    (at your option) any later version.
 #
 #    This code is distributed in the hope that it will be useful,
@@ -122,7 +122,7 @@ def pm3_lf_t55xx(child):
 def pm3_flash_sm(child):
     try:
         print("[+] Updating smart card fw")
-        child.sendline('smart upgrade -f sim011.bin')
+        child.sendline('smart upgrade -f sim013.bin')
         i = child.expect('pm3 --> ')
         msg = escape_ansi(str(child.before))
         print("================")
@@ -204,7 +204,7 @@ def main():
     flash_mem = "baudrate................24 mhz".lower()
 
     # check smartcard fw version
-    sm_version = "version.................v3.11".lower()
+    sm_version = "version.................v4.12".lower()
 
     # check LF
     lf_search = "valid hid prox id found!".lower()

@@ -33,6 +33,7 @@
 #include "legicrf.h"
 #include "BigBuf.h"
 #include "iclass_cmd.h"
+#include "hfops.h"
 #include "iso14443a.h"
 #include "iso14443b.h"
 #include "iso15693.h"
@@ -344,7 +345,7 @@ static void print_debug_level(void) {
     char dbglvlstr[20] = {0};
     switch (g_dbglevel) {
         case DBG_NONE:
-            sprintf(dbglvlstr, "none");
+            sprintf(dbglvlstr, "off");
             break;
         case DBG_ERROR:
             sprintf(dbglvlstr, "error");
@@ -450,6 +451,12 @@ static void SendCapabilities(void) {
 #ifdef WITH_FPC_USART
     if (g_reply_via_fpc)
         capabilities.baudrate = g_usart_baudrate;
+#endif
+
+#ifdef RDV4
+    capabilities.is_rdv4 = true;
+#else
+    capabilities.is_rdv4 = false;
 #endif
 
 #ifdef WITH_FLASH
@@ -1220,6 +1227,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x70_write_key((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }
+        case CMD_LF_EM4X70_BRUTE: {
+            em4x70_brute((em4x70_data_t *)packet->data.asBytes, true);
+            break;
+        }
 #endif
 
 #ifdef WITH_ZX8211
@@ -1255,12 +1266,27 @@ static void PacketReceived(PacketCommandNG *packet) {
             ReaderIso15693(NULL);
             break;
         }
+        case CMD_HF_ISO15693_EML_CLEAR: {
+            EmlClearIso15693();
+            break;
+        }
+        case CMD_HF_ISO15693_EML_SETMEM: {
+            struct p {
+                uint32_t offset;
+                uint8_t count;
+                uint8_t data[];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            EmlSetMemIso15693(payload->count, payload->data, payload->offset);
+            break;
+        }
         case CMD_HF_ISO15693_SIMULATE: {
             struct p {
                 uint8_t uid[8];
+                uint8_t block_size;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            SimTagIso15693(payload->uid);
+            SimTagIso15693(payload->uid, payload->block_size);
             break;
         }
         case CMD_HF_ISO15693_CSETUID: {
@@ -1271,20 +1297,76 @@ static void PacketReceived(PacketCommandNG *packet) {
             SetTag15693Uid(payload->uid);
             break;
         }
-        case CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY: {
+        case CMD_HF_ISO15693_SLIX_DISABLE_EAS: {
             struct p {
                 uint8_t pwd[4];
+                bool usepwd;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            DisablePrivacySlixLIso15693(payload->pwd);
+            DisableEAS_AFISlixIso15693(payload->pwd, payload->usepwd);
             break;
         }
-        case CMD_HF_ISO15693_SLIX_L_DISABLE_AESAFI: {
+        case CMD_HF_ISO15693_SLIX_ENABLE_EAS: {
+            struct p {
+                uint8_t pwd[4];
+                bool usepwd;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            EnableEAS_AFISlixIso15693(payload->pwd, payload->usepwd);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_WRITE_PWD: {
+            struct p {
+                uint8_t old_pwd[4];
+                uint8_t new_pwd[4];
+                uint8_t pwd_id;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            WritePasswordSlixIso15693(payload->old_pwd, payload->new_pwd, payload->pwd_id);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY: {
             struct p {
                 uint8_t pwd[4];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            DisableEAS_AFISlixLIso15693(payload->pwd);
+            DisablePrivacySlixIso15693(payload->pwd);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            EnablePrivacySlixIso15693(payload->pwd);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            PassProtectAFISlixIso15693(payload->pwd);
+            break;
+        }
+        case CMD_HF_ISO15693_WRITE_AFI: {
+            struct p {
+                uint8_t pwd[4];
+                bool use_pwd;
+                uint8_t uid[8];
+                bool use_uid;
+                uint8_t afi;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            WriteAFIIso15693(payload->pwd, payload->use_pwd, payload->uid, payload->use_uid, payload->afi);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS: {
+            struct p {
+                uint8_t pwd[4];
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            PassProtextEASSlixIso15693(payload->pwd);
             break;
         }
 
@@ -1384,6 +1466,26 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 #endif
 
+#ifdef WITH_GENERAL_HF
+        case CMD_HF_ACQ_RAW_ADC: {
+            uint32_t samplesCount = 0;
+            memcpy(&samplesCount, packet->data.asBytes, 4);
+            HfReadADC(samplesCount, true);
+            break;
+        }
+        case CMD_HF_TEXKOM_SIMULATE: {
+            struct p {
+                uint8_t data[8];
+                uint8_t modulation;
+                uint32_t timeout;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            HfSimulateTkm(payload->data, payload->modulation, payload->timeout);
+            break;
+        }
+
+#endif
+
 #ifdef WITH_ISO14443a
         case CMD_HF_ISO14443A_PRINT_CONFIG: {
             printHf14aConfig();
@@ -1428,6 +1530,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             iso14443a_antifuzz(payload->flag);
             break;
         }
+        // EPA related
         case CMD_HF_EPA_COLLECT_NONCE: {
             EPA_PACE_Collect_Nonce(packet);
             break;
@@ -1436,6 +1539,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             EPA_PACE_Replay(packet);
             break;
         }
+        case CMD_HF_EPA_PACE_SIMULATE: {
+            EPA_PACE_Simulate(packet);
+            break;
+        }
+
         case CMD_HF_MIFARE_READER: {
             struct p {
                 uint8_t first_run;
@@ -1476,7 +1584,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_VALUE: {
-            MifareValue(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            MifareValue(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFAREU_WRITEBL: {
@@ -1578,7 +1686,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareECardLoadExt(payload->sectorcnt, payload->keytype);
             break;
         }
-        // Work with "magic Chinese" card
+        // Gen1a / 1b - "magic Chinese" card
         case CMD_HF_MIFARE_CSETBL: {
             MifareCSetBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
@@ -1605,13 +1713,53 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareGen3Freez();
             break;
         }
+        // Gen 4 GTU magic cards
         case CMD_HF_MIFARE_G4_RDBL: {
             struct p {
                 uint8_t blockno;
                 uint8_t pwd[4];
+                uint8_t workFlags;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareG4ReadBlk(payload->blockno, payload->pwd);
+            MifareG4ReadBlk(payload->blockno, payload->pwd, payload->workFlags);
+            break;
+        }
+        case CMD_HF_MIFARE_G4_WRBL: {
+            struct p {
+                uint8_t blockno;
+                uint8_t pwd[4];
+                uint8_t data[16]; // data to be written
+                uint8_t workFlags;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareG4WriteBlk(payload->blockno, payload->pwd, payload->data, payload->workFlags);
+            break;
+        }
+        case CMD_HF_MIFARE_G4_GDM_CONFIG: {
+            struct p {
+                uint8_t key[6];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareReadConfigBlockGDM(payload->key);
+            break;
+        }
+        case CMD_HF_MIFARE_G4_GDM_WRCFG: {
+            struct p {
+                uint8_t data[16];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareWriteConfigBlockGDM(payload->data);
+            break;
+        }
+        case CMD_HF_MIFARE_G4_GDM_WRBL: {
+            struct p {
+                uint8_t blockno;
+                uint8_t keytype;
+                uint8_t key[6];
+                uint8_t data[16]; // data to be written
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareWriteBlockGDM(payload->blockno, payload->keytype, payload->key, payload->data);
             break;
         }
         case CMD_HF_MIFARE_PERSONALIZE_UID: {
@@ -1763,11 +1911,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p {
                 uint32_t samplesToSkip;
                 uint32_t triggersToSkip;
+                uint8_t skipMode;
+                uint8_t skipRatio;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
 
             uint16_t len = 0;
-            int res = HfSniff(payload->samplesToSkip, payload->triggersToSkip, &len);
+            int res = HfSniff(payload->samplesToSkip, payload->triggersToSkip, &len, payload->skipMode, payload->skipRatio);
 
             struct {
                 uint16_t len;
@@ -2143,20 +2293,26 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint32_t size = packet->oldarg[1];
 
             uint8_t *buff = BigBuf_malloc(size);
-            rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)buff, size, RDV40_SPIFFS_SAFETY_SAFE);
+            if (buff == NULL) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Could not allocate buffer");
+                // Trigger a finish downloading signal with an PM3_EMALLOC
+                reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_EMALLOC, NULL, 0);
+            } else {
+                rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)buff, size, RDV40_SPIFFS_SAFETY_SAFE);
+                // arg0 = filename
+                // arg1 = size
+                // arg2 = RFU
 
-            // arg0 = filename
-            // arg1 = size
-            // arg2 = RFU
-
-            for (size_t i = 0; i < size; i += PM3_CMD_DATA_SIZE) {
-                size_t len = MIN((size - i), PM3_CMD_DATA_SIZE);
-                int result = reply_old(CMD_SPIFFS_DOWNLOADED, i, len, 0, buff + i, len);
-                if (result != PM3_SUCCESS)
-                    Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
+                for (size_t i = 0; i < size; i += PM3_CMD_DATA_SIZE) {
+                    size_t len = MIN((size - i), PM3_CMD_DATA_SIZE);
+                    int result = reply_old(CMD_SPIFFS_DOWNLOADED, i, len, 0, buff + i, len);
+                    if (result != PM3_SUCCESS)
+                        Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
+                }
+                // Trigger a finish downloading signal with an ACK frame
+                reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_SUCCESS, NULL, 0);
+                BigBuf_free();
             }
-            // Trigger a finish downloading signal with an ACK frame
-            reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
         }
@@ -2263,6 +2419,30 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_OFF();
             break;
         }
+        case CMD_SPIFFS_ELOAD: {
+            LED_B_ON();
+
+            uint8_t *em = BigBuf_get_EM_addr();
+            if (em == NULL) {
+                reply_ng(CMD_SPIFFS_ELOAD, PM3_EMALLOC, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
+
+            char *fn = (char *)packet->data.asBytes;
+
+            uint32_t size = size_in_spiffs(fn);
+            if (size == 0) {
+                reply_ng(CMD_SPIFFS_ELOAD, PM3_SUCCESS, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
+
+            rdv40_spiffs_read_as_filetype(fn, em, size, RDV40_SPIFFS_SAFETY_SAFE);
+            reply_ng(CMD_SPIFFS_ELOAD, PM3_SUCCESS, NULL, 0);
+            LED_B_OFF();
+            break;
+        }
         case CMD_FLASHMEM_SET_SPIBAUDRATE: {
             if (packet->length != sizeof(uint32_t))
                 break;
@@ -2318,8 +2498,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                 LED_B_OFF();
                 break;
             }
-            if (page < 3)
+            if (page < 3) {
                 isok = Flash_WipeMemoryPage(page);
+                // let spiffs check and update its info post flash erase
+                rdv40_spiffs_check();
+            }
 
             reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
             LED_B_OFF();
@@ -2521,7 +2704,18 @@ void  __attribute__((noreturn)) AppMain(void) {
 #endif
 
 #ifdef WITH_SMARTCARD
-    I2C_init();
+    I2C_init(false);
+#endif
+
+#ifdef WITH_FLASH
+    if (FlashInit()) {
+        uint64_t flash_uniqueID = 0;
+        if (!Flash_CheckBusy(BUSY_TIMEOUT)) { // OK because firmware was built for devices with flash
+            Flash_UniqueID((uint8_t *)(&flash_uniqueID));
+        }
+        FlashStop();
+        usb_update_serial(flash_uniqueID);
+    }
 #endif
 
 #ifdef WITH_FPC_USART

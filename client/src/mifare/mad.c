@@ -125,6 +125,7 @@ static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool ver
         PrintAndLogEx(INFO, fmt, " (unknown)");
         return PM3_ENODATA;
     }
+
     const char *vmad = mad_json_get_str(elm, "mad");
     const char *application = mad_json_get_str(elm, "application");
     const char *company = mad_json_get_str(elm, "company");
@@ -132,7 +133,7 @@ static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool ver
     const char *integrator = mad_json_get_str(elm, "system_integrator");
 
     if (application && company) {
-        size_t result_len = 4 + strlen(application) + strlen(company);
+        size_t result_len = 6 + strlen(application) + strlen(company);
         char result[result_len];
         snprintf(result, result_len, " %s [%s]", application, company);
         PrintAndLogEx(INFO, fmt, result);
@@ -187,7 +188,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
     if (sector0 == NULL)
         return PM3_EINVARG;
 
-    uint8_t GPB = sector0[3 * 16 + 9];
+    uint8_t GPB = sector0[(3 * 16) + 9];
     if (verbose)
         PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x"), "GPB", GPB);
 
@@ -213,7 +214,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
     int res = madCRCCheck(sector0, true, 1);
 
     if (verbose && res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x") " (%s)", "CRC8", sector0[16], _GREEN_("ok"));
+        PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x") " ( %s )", "CRC8", sector0[16], _GREEN_("ok"));
 
     if (mad_ver == 2 && sector10) {
         int res2 = madCRCCheck(sector10, true, 2);
@@ -221,7 +222,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
             res = res2;
 
         if (verbose && !res2)
-            PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x") " (%s)", "CRC8", sector10[0], _GREEN_("ok"));
+            PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x") " ( %s )", "CRC8", sector10[0], _GREEN_("ok"));
     }
 
     // MA (multi-application card)
@@ -316,7 +317,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
 
     int ibs = MADInfoByteDecode(sector, swapmad, 1, verbose);
 
-    if (ibs) {
+    if (ibs > 0) {
         PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02x"), ibs);
     } else {
         PrintAndLogEx(WARNING, "Card publisher " _RED_("not") " present " _YELLOW_("0x%02x"), ibs);
@@ -353,13 +354,13 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
     int res = madCRCCheck(sector, true, 2);
     if (verbose) {
         if (res == PM3_SUCCESS)
-            PrintAndLogEx(SUCCESS, "CRC8 (%s)", _GREEN_("ok"));
+            PrintAndLogEx(SUCCESS, "CRC8 ( %s )", _GREEN_("ok"));
         else
-            PrintAndLogEx(WARNING, "CRC8 (%s)", _RED_("fail"));
+            PrintAndLogEx(WARNING, "CRC8 ( %s )", _RED_("fail"));
     }
 
     int ibs = MADInfoByteDecode(sector, swapmad, 2, verbose);
-    if (ibs) {
+    if (ibs > 0) {
         PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02x"), ibs);
     } else {
         PrintAndLogEx(WARNING, "Card publisher " _RED_("not") " present " _YELLOW_("0x%02x"), ibs);
@@ -389,12 +390,12 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
     return PM3_SUCCESS;
 }
 
-int MADDFDecodeAndPrint(uint32_t short_aid) {
+int MADDFDecodeAndPrint(uint32_t short_aid, bool verbose) {
     open_mad_file(&mad_known_aids, false);
 
-    char fmt[50];
+    char fmt[128];
     snprintf(fmt, sizeof(fmt), "  MAD AID Function 0x%04X    :" _YELLOW_("%s"), short_aid, "%s");
-    print_aid_description(mad_known_aids, short_aid, fmt, false);
+    print_aid_description(mad_known_aids, short_aid, fmt, verbose);
     close_mad_file(mad_known_aids);
     return PM3_SUCCESS;
 }
@@ -404,4 +405,19 @@ bool HasMADKey(uint8_t *d) {
         return false;
 
     return (memcmp(d + (3 * MFBLOCK_SIZE), g_mifare_mad_key, sizeof(g_mifare_mad_key)) == 0);
+}
+
+int DetectHID(uint8_t *d, uint16_t manufacture) {
+    if (d == NULL)
+        return -1;
+
+    // find HID
+    for (int i = 1; i < 16; i++) {
+        uint16_t aid = madGetAID(d, false, 1, i);
+        if (aid == manufacture) {
+            return i;
+        }
+    }
+
+    return -1;
 }

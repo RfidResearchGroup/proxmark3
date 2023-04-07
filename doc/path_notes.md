@@ -22,7 +22,7 @@
   - [Gory details](#gory-details)
 - [Scripts](#scripts)
     - [Proxmark command script (.cmd)](#proxmark-command-script-cmd)
-    - [Shebangs (on *nix)](#shebangs-on-nix)
+    - [Shebangs (on \*nix)](#shebangs-on-nix)
 
 
 With the recent (2019-09-01) changes and creation of `make install`  command it is easy to get lost.
@@ -64,7 +64,7 @@ The recovery / firmware files will be copied to
 ```
 
 * Proxmark3 firmware: `bootrom.elf`, `fullimage.elf`, `proxmark3_recovery.bin` (used for JTAG)
-* SIM firmware: `sim011.bin`, `sim011.sha512.txt`
+* SIM firmware: `sim013.bin`, `sim013.sha512.txt`
 
 
 ## Traces

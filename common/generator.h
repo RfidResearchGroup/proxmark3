@@ -36,6 +36,8 @@ uint16_t ul_ev1_packgenC(const uint8_t *uid);
 uint16_t ul_ev1_packgenD(const uint8_t *uid);
 uint16_t ul_ev1_packgenE(const uint8_t *uid);
 
+uint32_t ul_c_otpgenA(const uint8_t *uid);
+
 int mfc_algo_ving_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key);
 int mfc_algo_ving_all(uint8_t *uid, uint8_t *keys);
 

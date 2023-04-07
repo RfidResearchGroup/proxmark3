@@ -37,7 +37,11 @@
 #include "cmdsmartcard.h"   // smart select fct
 #include "proxendian.h"
 #include "iclass_cmd.h"
+#include "crypto/asn1utils.h"      // ASN1 decoder
+#include "preferences.h"
 
+
+#define PICOPASS_BLOCK_SIZE    8
 #define NUM_CSNS               9
 #define ICLASS_KEYS_MAX        8
 #define ICLASS_AUTH_RETRY      10
@@ -55,12 +59,13 @@ static uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 static uint8_t zeros[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static int CmdHelp(const char *Cmd);
+static void printIclassSIO(uint8_t *iclass_dump);
 
 static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
     { 0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78 },
-    { 0x76, 0x65, 0x54, 0x43, 0x32, 0x21, 0x10, 0x00 },
+    { 0xFD, 0xCB, 0x5A, 0x52, 0xEA, 0x8F, 0x30, 0x90 },
     { 0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0x96, 0x87 },
-    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    { 0x76, 0x65, 0x54, 0x43, 0x32, 0x21, 0x10, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
@@ -83,7 +88,7 @@ static int cmp_uint32(const void *a, const void *b) {
 
 bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *tmac, uint8_t *key) {
 
-    iclass_prekey_t *prekey = calloc(ICLASS_KEYS_MAX, sizeof(iclass_prekey_t));
+    iclass_prekey_t *prekey = calloc(ICLASS_KEYS_MAX * 2, sizeof(iclass_prekey_t));
     if (prekey == NULL) {
         return false;
     }
@@ -93,17 +98,20 @@ bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *
     memcpy(ccnr + 8, rmac, 4);
 
     GenerateMacKeyFrom(csn, ccnr, false, false, (uint8_t *)iClass_Key_Table, ICLASS_KEYS_MAX, prekey);
-    qsort(prekey, ICLASS_KEYS_MAX, sizeof(iclass_prekey_t), cmp_uint32);
+    GenerateMacKeyFrom(csn, ccnr, false, true, (uint8_t *)iClass_Key_Table, ICLASS_KEYS_MAX, prekey + ICLASS_KEYS_MAX);
+    qsort(prekey, ICLASS_KEYS_MAX * 2, sizeof(iclass_prekey_t), cmp_uint32);
 
     iclass_prekey_t lookup;
     memcpy(lookup.mac, tmac, 4);
 
     // binsearch
-    iclass_prekey_t *item = (iclass_prekey_t *) bsearch(&lookup, prekey, ICLASS_KEYS_MAX, sizeof(iclass_prekey_t), cmp_uint32);
+    iclass_prekey_t *item = (iclass_prekey_t *) bsearch(&lookup, prekey, ICLASS_KEYS_MAX * 2, sizeof(iclass_prekey_t), cmp_uint32);
     if (item != NULL) {
         memcpy(key, item->key, 8);
+        free(prekey);
         return true;
     }
+    free(prekey);
     return false;
 }
 
@@ -277,7 +285,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
 
     // get header from card
     PrintAndLogEx(INFO, "trying to read a card..");
-    int res = read_iclass_csn(false, false);
+    int res = read_iclass_csn(false, false, false);
     if (res == PM3_SUCCESS) {
         cc = &iclass_last_known_card;
         // calc diversified key for selected card
@@ -584,19 +592,19 @@ static void mem_app_config(const picopass_hdr_t *hdr) {
 
     PrintAndLogEx(INFO, "------------------------- " _CYAN_("KeyAccess") " ------------------------");
     PrintAndLogEx(INFO, " * Kd, Debit key, AA1    Kc, Credit key, AA2 *");
-    uint8_t book = isset(mem, 0x20);
-    if (book) {
-        PrintAndLogEx(INFO, "    Read A....... debit");
-        PrintAndLogEx(INFO, "    Read B....... credit");
-        PrintAndLogEx(INFO, "    Write A...... debit");
-        PrintAndLogEx(INFO, "    Write B...... credit");
+    uint8_t keyAccess = isset(mem, 0x01);
+    if (keyAccess) {
+        PrintAndLogEx(INFO, "    Read AA1....... debit");
+        PrintAndLogEx(INFO, "    Write AA1...... debit");
+        PrintAndLogEx(INFO, "    Read AA2....... credit");
+        PrintAndLogEx(INFO, "    Write AA2...... credit");
         PrintAndLogEx(INFO, "    Debit........ debit or credit");
         PrintAndLogEx(INFO, "    Credit....... credit");
     } else {
-        PrintAndLogEx(INFO, "    Read A....... debit or credit");
-        PrintAndLogEx(INFO, "    Read B....... debit or credit");
-        PrintAndLogEx(INFO, "    Write A...... credit");
-        PrintAndLogEx(INFO, "    Write B...... credit");
+        PrintAndLogEx(INFO, "    Read AA1....... debit or credit");
+        PrintAndLogEx(INFO, "    Write AA1...... credit");
+        PrintAndLogEx(INFO, "    Read AA2....... debit or credit");
+        PrintAndLogEx(INFO, "    Write AA2...... credit");
         PrintAndLogEx(INFO, "    Debit........ debit or credit");
         PrintAndLogEx(INFO, "    Credit....... credit");
     }
@@ -652,14 +660,19 @@ static int CmdHFiClassSniff(const char *Cmd) {
     bool jam_epurse_update = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
-    const uint8_t update_epurse_sequence[2] = {0x87, 0x02};
+    if (jam_epurse_update) {
+        PrintAndLogEx(INFO, "Sniff with jam of iCLASS e-purse updates...");
+    }
 
     struct {
         uint8_t jam_search_len;
         uint8_t jam_search_string[2];
     } PACKED payload;
 
+    memset(&payload, 0, sizeof(payload));
+
     if (jam_epurse_update) {
+        const uint8_t update_epurse_sequence[2] = {0x87, 0x02};
         payload.jam_search_len = sizeof(update_epurse_sequence);
         memcpy(payload.jam_search_string, update_epurse_sequence, sizeof(payload.jam_search_string));
     }
@@ -693,7 +706,7 @@ static int CmdHFiClassSim(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int sim_type = arg_get_int(ctx, 1);
+    int sim_type = arg_get_int_def(ctx, 1, 3);
 
     int csn_len = 0;
     uint8_t csn[8] = {0};
@@ -892,18 +905,24 @@ static int CmdHFiClassInfo(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool shallow_mod = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
-    return info_iclass();
+    return info_iclass(shallow_mod);
 }
 
-int read_iclass_csn(bool loop, bool verbose) {
+int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
 
     iclass_card_select_t payload = {
         .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
     };
+
+    if (shallow_mod) {
+        payload.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
+    }
 
     int res = PM3_SUCCESS;
 
@@ -960,30 +979,33 @@ static int CmdHFiClassReader(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool cm = arg_get_lit(ctx, 1);
+    bool shallow_mod = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     if (cm) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
-    return read_iclass_csn(cm, true);
+    return read_iclass_csn(cm, true, shallow_mod);
 }
 
 static int CmdHFiClassELoad(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass eload",
                   "Load emulator memory with data from (bin/eml/json) iCLASS dump file",
-                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
                   "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.eml\n"
+                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin -m\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "filename of dump (bin/eml/json)"),
+        arg_lit0("m", "mem",  "use RDV4 spiffs"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -998,7 +1020,38 @@ static int CmdHFiClassELoad(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    bool use_spiffs = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
+
+    // use RDV4 spiffs
+    if (use_spiffs && IfPm3Flash() == false) {
+        PrintAndLogEx(WARNING, "Device not compiled to support spiffs");
+        return PM3_EINVARG;
+    }
+
+    if (use_spiffs) {
+
+        if (fnlen > 32) {
+            PrintAndLogEx(WARNING, "filename too long for spiffs, expected 32, got %u", fnlen);
+            return PM3_EINVARG;
+        }
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_SPIFFS_ELOAD, (uint8_t *)filename, fnlen);
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_SPIFFS_ELOAD, &resp, 2000) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Loading file from spiffs to emulatore memory failed");
+            return PM3_EFLASH;
+        }
+
+        PrintAndLogEx(SUCCESS, "File transfered from spiffs to device emulator memory");
+        return PM3_SUCCESS;
+    }
 
     // read dump file
     uint8_t *dump = NULL;
@@ -1076,9 +1129,7 @@ static int CmdHFiClassESave(const char *Cmd) {
         FillFileNameByUID(fptr, dump, "-dump", 8);
     }
 
-    saveFile(filename, ".bin", dump, bytes);
-    saveFileEML(filename, dump, bytes, 8);
-    saveFileJSON(filename, jsfIclass, dump, bytes, NULL);
+    pm3_save_dump(filename, dump, bytes, jsfIclass, PICOPASS_BLOCK_SIZE);
     free(dump);
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
@@ -1098,6 +1149,7 @@ static int CmdHFiClassEView(const char *Cmd) {
         arg_param_begin,
         arg_int0("s", "size", "<256|2048>", "number of bytes to save (default 256)"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1105,6 +1157,7 @@ static int CmdHFiClassEView(const char *Cmd) {
     uint16_t blocks = 32;
     uint16_t bytes = arg_get_int_def(ctx, 1, 256);
     bool verbose = arg_get_lit(ctx, 2);
+    bool dense_output = g_session.dense_output || arg_get_lit(ctx, 3);
     blocks = bytes / 8;
 
     CLIParserFree(ctx);
@@ -1139,9 +1192,43 @@ static int CmdHFiClassEView(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    printIclassDumpContents(dump, 1, blocks, bytes);
+    printIclassDumpContents(dump, 1, blocks, bytes, dense_output);
+
+    if (verbose) {
+        printIclassSIO(dump);
+    }
+
     free(dump);
     return PM3_SUCCESS;
+}
+
+static void iclass_decode_credentials(uint8_t *data) {
+    BLOCK79ENCRYPTION encryption = (data[(6 * 8) + 7] & 0x03);
+    bool has_values = (memcmp(data + (8 * 7), empty, 8) != 0) && (memcmp(data + (8 * 7), zeros, 8) != 0);
+    if (has_values && encryption == None) {
+
+        //todo:  remove preamble/sentinel
+        uint32_t top = 0, mid = 0, bot = 0;
+
+        PrintAndLogEx(INFO, "Block 7 decoder");
+
+        char hexstr[16 + 1] = {0};
+        hex_to_buffer((uint8_t *)hexstr, data + (8 * 7), 8, sizeof(hexstr) - 1, 0, 0, true);
+        hexstring_to_u96(&top, &mid, &bot, hexstr);
+
+        char binstr[64 + 1];
+        hextobinstring(binstr, hexstr);
+        char *pbin = binstr;
+        while (strlen(pbin) && *(++pbin) == '0');
+
+        PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), pbin);
+
+        PrintAndLogEx(INFO, "Wiegand decode");
+        wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
+        HIDTryUnpack(&packed);
+    } else {
+        PrintAndLogEx(INFO, "No credential found");
+    }
 }
 
 static int CmdHFiClassDecrypt(const char *Cmd) {
@@ -1167,6 +1254,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         arg_str0("k", "key", "<hex>", "3DES transport key"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "d6", "decode as block 6"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(clictx, Cmd, argtable, false);
@@ -1190,6 +1278,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     bool verbose = arg_get_lit(clictx, 4);
     bool use_decode6 = arg_get_lit(clictx, 5);
+    bool dense_output = g_session.dense_output || arg_get_lit(clictx, 6);
     CLIParserFree(clictx);
 
     // sanity checks
@@ -1296,21 +1385,36 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         //uint8_t numblocks4userid = GetNumberBlocksForUserId(decrypted + (6 * 8));
 
+        bool decrypted_block789 = false;
         for (uint8_t blocknum = 0; blocknum < limit; ++blocknum) {
 
             uint16_t idx = blocknum * 8;
             memcpy(enc_data, decrypted + idx, 8);
 
-            if (aa1_encryption == RFU || aa1_encryption == None)
-                continue;
+            switch (aa1_encryption) {
+                // Right now, only 3DES is supported
+                case TRIPLEDES:
+                    // Decrypt block 7,8,9 if configured.
+                    if (blocknum > 6 && blocknum <= 9 && memcmp(enc_data, empty, 8) != 0) {
+                        if (use_sc) {
+                            Decrypt(enc_data, decrypted + idx);
+                        } else {
+                            mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
+                        }
+                        decrypted_block789 = true;
+                    }
+                    break;
+                case DES:
+                case RFU:
+                case None:
+                // Nothing to do for None anyway...
+                default:
+                    continue;
+            }
 
-            // Decrypted block 7,8,9 if configured.
-            if (blocknum > 6 && blocknum <= 9 && memcmp(enc_data, empty, 8) != 0) {
-                if (use_sc) {
-                    Decrypt(enc_data, decrypted + idx);
-                } else {
-                    mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
-                }
+            if (decrypted_block789) {
+                // Set the 2 last bits of block6 to 0 to mark the data as decrypted
+                decrypted[(6 * 8) + 7] &= 0xFC;
             }
         }
 
@@ -1325,11 +1429,13 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         strcat(fptr, "hf-iclass-");
         FillFileNameByUID(fptr, hdr->csn, "-dump-decrypted", sizeof(hdr->csn));
 
-        saveFile(fptr, ".bin", decrypted, decryptedlen);
-        saveFileEML(fptr, decrypted, decryptedlen, 8);
-        saveFileJSON(fptr, jsfIclass, decrypted, decryptedlen, NULL);
+        pm3_save_dump(fptr, decrypted, decryptedlen, jsfIclass, PICOPASS_BLOCK_SIZE);
 
-        printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen);
+        printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen, dense_output);
+
+        if (verbose) {
+            printIclassSIO(decrypted);
+        }
 
         PrintAndLogEx(NORMAL, "");
 
@@ -1342,33 +1448,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         }
 
         // decode block 7-8-9
-        has_values = (memcmp(decrypted + (8 * 7), empty, 8) != 0) && (memcmp(decrypted + (8 * 7), zeros, 8) != 0);
-        if (has_values) {
-
-            //todo:  remove preamble/sentinel
-            uint32_t top = 0, mid, bot;
-            mid = bytes_to_num(decrypted + (8 * 7), 4);
-            bot = bytes_to_num(decrypted + (8 * 7) + 4, 4);
-
-            PrintAndLogEx(INFO, "Block 7 decoder");
-
-            char hexstr[16 + 1] = {0};
-            hex_to_buffer((uint8_t *)hexstr, decrypted + (8 * 7), 8, sizeof(hexstr) - 1, 0, 0, true);
-
-            char binstr[8 * 8 + 1] = {0};
-            hextobinstring(binstr, hexstr);
-            size_t i = 0;
-            while (i < strlen(binstr) && binstr[i++] == '0');
-
-            PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), binstr + i);
-
-            PrintAndLogEx(INFO, "Wiegand decode");
-            wiegand_message_t packed = initialize_message_object(top, mid, bot, strlen(binstr + i));
-            HIDTryUnpack(&packed);
-
-        } else {
-            PrintAndLogEx(INFO, "No credential found");
-        }
+        iclass_decode_credentials(decrypted);
 
         // decode block 9
         has_values = (memcmp(decrypted + (8 * 9), empty, 8) != 0) && (memcmp(decrypted + (8 * 9), zeros, 8) != 0);
@@ -1495,11 +1575,15 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose) {
+static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose, bool shallow_mod) {
 
     iclass_card_select_t payload = {
         .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
     };
+
+    if (shallow_mod) {
+        payload.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
+    }
 
     clearCommandBuffer();
     PacketResponseNG resp;
@@ -1554,6 +1638,9 @@ static int CmdHFiClassDump(const char *Cmd) {
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "raw, the key is interpreted as raw block 3/4"),
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
+        arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0(NULL, "force", "force unsecure card read"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1637,6 +1724,9 @@ static int CmdHFiClassDump(const char *Cmd) {
     bool elite = arg_get_lit(ctx, 6);
     bool rawkey = arg_get_lit(ctx, 7);
     bool use_replay = arg_get_lit(ctx, 8);
+    bool dense_output = g_session.dense_output || arg_get_lit(ctx, 9);
+    bool force = arg_get_lit(ctx, 10);
+    bool shallow_mod = arg_get_lit(ctx, 11);
 
     CLIParserFree(ctx);
 
@@ -1655,6 +1745,11 @@ static int CmdHFiClassDump(const char *Cmd) {
     iclass_card_select_t payload_rdr = {
         .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
     };
+
+    if (shallow_mod) {
+        payload_rdr.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
+    }
+
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload_rdr, sizeof(iclass_card_select_t));
@@ -1703,6 +1798,12 @@ static int CmdHFiClassDump(const char *Cmd) {
         }
     }
 
+    //
+    if (force) {
+        pagemap = PICOPASS_NON_SECURE_PAGEMODE;
+        PrintAndLogEx(INFO, "Forcing NON SECURE PAGE dumping");
+    }
+
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
         PrintAndLogEx(INFO, "Dumping all available memory, block 3 - %u (0x%02x)", app_limit1, app_limit1);
         if (auth) {
@@ -1728,6 +1829,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         .req.use_replay = use_replay,
         .req.send_reply = true,
         .req.do_auth = auth,
+        .req.shallow_mod = shallow_mod,
         .end_block = app_limit1,
     };
     memcpy(payload.req.key, key, 8);
@@ -1737,7 +1839,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         payload.start_block = 3;
         payload.req.do_auth = false;
     } else {
-        payload.start_block = 6;
+        payload.start_block = 5;
     }
 
     clearCommandBuffer();
@@ -1869,7 +1971,7 @@ write_dump:
         PrintAndLogEx(INFO, "Reading AA2 failed. dumping AA1 data to file");
 
     // print the dump
-    printIclassDumpContents(tag_data, 1, (bytes_got / 8), bytes_got);
+    printIclassDumpContents(tag_data, 1, (bytes_got / 8), bytes_got, dense_output);
 
     // use CSN as filename
     if (filename[0] == 0) {
@@ -1879,9 +1981,8 @@ write_dump:
 
     // save the dump to .bin file
     PrintAndLogEx(SUCCESS, "saving dump file - %u blocks read", bytes_got / 8);
-    saveFile(filename, ".bin", tag_data, bytes_got);
-    saveFileEML(filename, tag_data, bytes_got, 8);
-    saveFileJSON(filename, jsfIclass, tag_data, bytes_got, NULL);
+
+    pm3_save_dump(filename, tag_data, bytes_got, jsfIclass, PICOPASS_BLOCK_SIZE);
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass decrypt -f") "` to decrypt dump file");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
@@ -1889,7 +1990,7 @@ write_dump:
     return PM3_SUCCESS;
 }
 
-static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose, bool use_secure_pagemode) {
+static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *macdata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose, bool use_secure_pagemode, bool shallow_mod) {
 
     iclass_writeblock_req_t payload = {
         .req.use_raw = rawkey,
@@ -1899,9 +2000,14 @@ static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *KEY, bo
         .req.blockno = blockno,
         .req.send_reply = true,
         .req.do_auth = use_secure_pagemode,
+        .req.shallow_mod = shallow_mod,
     };
     memcpy(payload.req.key, KEY, 8);
     memcpy(payload.data, bldata, sizeof(payload.data));
+
+    if (replay) {
+        memcpy(payload.mac, macdata, sizeof(payload.mac));
+    }
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ICLASS_WRITEBL, (uint8_t *)&payload, sizeof(payload));
@@ -1933,11 +2039,13 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
         arg_int1("b", "block", "<dec>", "The block number to read"),
         arg_str1("d", "data", "<hex>", "data to write as 8 hex bytes"),
+        arg_str0("m", "mac", "<hex>", "replay mac data (4 hex bytes)"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1988,11 +2096,25 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    bool use_credit_key = arg_get_lit(ctx, 5);
-    bool elite = arg_get_lit(ctx, 6);
-    bool rawkey = arg_get_lit(ctx, 7);
-    bool use_replay = arg_get_lit(ctx, 8);
-    bool verbose = arg_get_lit(ctx, 9);
+    int mac_len = 0;
+    uint8_t mac[4] = {0};
+    CLIGetHexWithReturn(ctx, 5, mac, &mac_len);
+
+    if (mac_len) {
+        if (mac_len != 4) {
+            PrintAndLogEx(ERR, "MAC must be 4 hex bytes (8 hex symbols)");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+
+    bool use_credit_key = arg_get_lit(ctx, 6);
+    bool elite = arg_get_lit(ctx, 7);
+    bool rawkey = arg_get_lit(ctx, 8);
+    bool use_replay = arg_get_lit(ctx, 9);
+    bool verbose = arg_get_lit(ctx, 10);
+    bool shallow_mod = arg_get_lit(ctx, 11);
 
     CLIParserFree(ctx);
 
@@ -2001,7 +2123,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    int isok = iclass_write_block(blockno, data, key, use_credit_key, elite, rawkey, use_replay, verbose, auth);
+    int isok = iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
     switch (isok) {
         case PM3_SUCCESS:
             PrintAndLogEx(SUCCESS, "Wrote block %3d/0x%02X successful", blockno, blockno);
@@ -2037,6 +2159,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2086,6 +2209,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     bool elite = arg_get_lit(ctx, 7);
     bool rawkey = arg_get_lit(ctx, 8);
     bool verbose = arg_get_lit(ctx, 9);
+    bool shallow_mod = arg_get_lit(ctx, 10);
 
     CLIParserFree(ctx);
 
@@ -2136,6 +2260,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     payload->req.blockno = startblock;
     payload->req.send_reply = true;
     payload->req.do_auth = true;
+    payload->req.shallow_mod = shallow_mod;
     memcpy(payload->req.key, key, 8);
 
     payload->item_cnt = (endblock - startblock + 1);
@@ -2189,7 +2314,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     return resp.status;
 }
 
-static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool replay, bool verbose, bool auth, uint8_t *out) {
+static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool replay, bool verbose, bool auth, bool shallow_mod, uint8_t *out) {
 
     iclass_auth_req_t payload = {
         .use_raw = rawkey,
@@ -2199,6 +2324,7 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
         .blockno = blockno,
         .send_reply = true,
         .do_auth = auth,
+        .shallow_mod = shallow_mod,
     };
     memcpy(payload.key, KEY, 8);
 
@@ -2252,6 +2378,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
         arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2302,6 +2429,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     bool rawkey = arg_get_lit(ctx, 6);
     bool use_replay = arg_get_lit(ctx, 7);
     bool verbose = arg_get_lit(ctx, 8);
+    bool shallow_mod = arg_get_lit(ctx, 9);
 
     CLIParserFree(ctx);
 
@@ -2321,7 +2449,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     }
 
     uint8_t data[8] = {0};
-    int res = iclass_read_block(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, data);
+    int res = iclass_read_block(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, data);
     if (res != PM3_SUCCESS)
         return res;
 
@@ -2363,23 +2491,21 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
             if (memcmp(dec_data, empty, 8) != 0) {
 
                 //todo:  remove preamble/sentinel
-
-                uint32_t top = 0, mid, bot;
-                mid = bytes_to_num(dec_data, 4);
-                bot = bytes_to_num(dec_data + 4, 4);
+                uint32_t top = 0, mid = 0, bot = 0;
 
                 char hexstr[16 + 1] = {0};
                 hex_to_buffer((uint8_t *)hexstr, dec_data, 8, sizeof(hexstr) - 1, 0, 0, true);
-                char binstr[64 + 1] = {0};
-                hextobinstring(binstr, hexstr);
-                size_t i = 0;
-                while (i < strlen(binstr) && binstr[i++] == '0');
+                hexstring_to_u96(&top, &mid, &bot, hexstr);
 
-                i &= 0x3C;
-                PrintAndLogEx(SUCCESS, "      bin : %s", binstr + i);
+                char binstr[64 + 1];
+                hextobinstring(binstr, hexstr);
+                char *pbin = binstr;
+                while (strlen(pbin) && *(++pbin) == '0');
+
+                PrintAndLogEx(SUCCESS, "      bin : %s", pbin);
                 PrintAndLogEx(INFO, "");
                 PrintAndLogEx(INFO, "------------------------------ " _CYAN_("wiegand") " -------------------------------");
-                wiegand_message_t packed = initialize_message_object(top, mid, bot, strlen(binstr + i));
+                wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
                 HIDTryUnpack(&packed);
             } else {
                 PrintAndLogEx(INFO, "no credential found");
@@ -2438,7 +2564,61 @@ static int CmdHFiClass_loclass(const char *Cmd) {
     return bruteforceFileNoKeys(filename);
 }
 
-void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize) {
+static void detect_credential(uint8_t *data, bool *legacy, bool *se, bool *sr) {
+    bool r1 = !memcmp(data + (5 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
+
+    uint8_t pattern_se[] = {0x05, 0x00};
+    bool r2 = byte_strstr(data + (6 * 8), 6 * 8, pattern_se, sizeof(pattern_se)) != -1;
+
+    uint8_t pattern_sr[] = {0x05, 0x00, 0x05, 0x00};
+    bool r3 = byte_strstr(data + (11 * 8), 6 * 8, pattern_sr, sizeof(pattern_sr)) != -1;
+
+    *legacy = (r1) && (data[6 * 8] != 0x30);
+    *se = (r2) && (data[6 * 8] == 0x30);
+    *sr = (r3) && (data[10 * 8] == 0x30);
+    r1 = NULL, r2 = NULL, r3 = NULL;
+}
+
+// print ASN1 decoded array in TLV view
+static void printIclassSIO(uint8_t *iclass_dump) {
+
+    bool isLegacy, isSE, isSR;
+    detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
+
+    int dlen = 0;
+    uint8_t *sio_start;
+    if (isSE) {
+
+        sio_start = iclass_dump + (6 * 8);
+        uint8_t pattern_se[] = {0x05, 0x00};
+        dlen = byte_strstr(sio_start, 8 * 8, pattern_se, sizeof(pattern_se));
+        if (dlen == -1) {
+            return;
+        }
+        dlen += sizeof(pattern_se);
+    } else if (isSR) {
+
+        sio_start = iclass_dump + (10 * 8);
+        uint8_t pattern_sr[] = {0x05, 0x00, 0x05, 0x00};
+        dlen = byte_strstr(sio_start, 8 * 8, pattern_sr, sizeof(pattern_sr));
+        if (dlen == -1) {
+            return;
+        }
+        dlen += sizeof(pattern_sr);
+    } else {
+        return;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
+    print_hex_noascii_break(sio_start, dlen, 32);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
+    asn1_print(sio_start, dlen, "  ");
+    PrintAndLogEx(NORMAL, "");
+}
+
+void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize, bool dense_output) {
 
     picopass_hdr_t *hdr = (picopass_hdr_t *)iclass_dump;
 //    picopass_ns_hdr_t *ns_hdr = (picopass_ns_hdr_t *)iclass_dump;
@@ -2479,13 +2659,18 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     );
     */
     uint8_t pagemap = get_pagemap(hdr);
-    int i = startblock;
 
+    bool isLegacy = false, isSE = false, isSR = false;
+    if (filemaxblock >= 17) {
+        detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
+    }
+
+    int i = startblock;
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------------------------- " _CYAN_("Tag memory") " ---------------------------");
+    PrintAndLogEx(INFO, "--------------------------- " _CYAN_("Tag memory") " ----------------------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, " block#  | data                    | ascii    |lck| info");
-    PrintAndLogEx(INFO, "---------+-------------------------+----------+---+--------------");
+    PrintAndLogEx(INFO, "---------+-------------------------+----------+---+----------------");
     PrintAndLogEx(INFO, "  0/0x00 | " _GREEN_("%s") "| " _GREEN_("%s") " |   | CSN "
                   , sprint_hex(iclass_dump, 8)
                   , sprint_ascii(iclass_dump, 8)
@@ -2494,8 +2679,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     if (i != 1)
         PrintAndLogEx(INFO, "  ......");
 
-    uint8_t fb = (iclass_dump + (6 * 8))[0];
-
+    bool in_repeated_block = false;
     while (i <= endblock) {
         uint8_t *blk = iclass_dump + (i * 8);
 
@@ -2537,25 +2721,21 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 
         const char *lockstr = (bl_lock) ? _RED_("x") : " ";
 
+        const char *block_info;
+        bool regular_print_block = false;
         if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
             const char *info_nonks[] = {"CSN", "Config", "AIA", "User"};
-            const char *s = info_nonks[3];
             if (i < 3) {
-                s = info_nonks[i];
+                block_info = info_nonks[i];
+            } else {
+                block_info = info_nonks[3];
             }
 
-            PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s "
-                          , i
-                          , i
-                          , sprint_hex_ascii(blk, 8)
-                          , lockstr
-                          , s
-                         );
-
+            regular_print_block = true;
         } else {
             const char *info_ks[] = {"CSN", "Config", "E-purse", "Debit", "Credit", "AIA", "User"};
 
-            if (i >= 6 && i <= 9 && fb != 0x30) {
+            if (i >= 6 && i <= 9 && isLegacy && isSE == false) {
                 // legacy credential
                 PrintAndLogEx(INFO, "%3d/0x%02X | " _YELLOW_("%s") "| " _YELLOW_("%s") " | %s | User / Cred "
                               , i
@@ -2564,9 +2744,18 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
                               , sprint_ascii(blk, 8)
                               , lockstr
                              );
-            } else if (i >= 6 && i <= 11 && fb == 0x30) {
+            } else if (i >= 6 && i <= 12 && isSE) {
                 // SIO credential
-                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | User / SIO"
+                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | User / SIO / SE"
+                              , i
+                              , i
+                              , sprint_hex(blk, 8)
+                              , sprint_ascii(blk, 8)
+                              , lockstr
+                             );
+            } else if (i >= 10 && i <= 16 && isSR) {
+                // SIO credential
+                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | User / SIO / SR"
                               , i
                               , i
                               , sprint_hex(blk, 8)
@@ -2574,18 +2763,53 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
                               , lockstr
                              );
             } else {
-                const char *s = info_ks[6];
                 if (i < 6) {
-                    s = info_ks[i];
+                    block_info = info_ks[i];
+                } else {
+                    block_info = info_ks[6];
                 }
-                PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s ", i, i, sprint_hex_ascii(blk, 8), lockstr, s);
+
+                regular_print_block = true;
             }
         }
+
+        if (regular_print_block) {
+            // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
+            // but the blocks in between are replaced with a single line of "*" if dense_output is enabled
+            if (dense_output && i > 6 && i < (endblock - 1) && !in_repeated_block && !memcmp(blk, blk - 8, 8) &&
+                    !memcmp(blk, blk + 8, 8) && !memcmp(blk, blk + 16, 8)) {
+                // we're in a user block that isn't the first user block nor last two user blocks,
+                // and the current block data is the same as the previous and next two block
+                in_repeated_block = true;
+                PrintAndLogEx(INFO, "  ......");
+            } else if (in_repeated_block && (memcmp(blk, blk + 8, 8) || i == endblock)) {
+                // in a repeating block, but the next block doesn't match anymore, or we're at the end block
+                in_repeated_block = false;
+            }
+
+            if (in_repeated_block == false) {
+                PrintAndLogEx(INFO,
+                              "%3d/0x%02X | %s | %s | %s ",
+                              i,
+                              i,
+                              sprint_hex_ascii(blk, 8),
+                              lockstr,
+                              block_info);
+            }
+        }
+
         i++;
     }
-    PrintAndLogEx(INFO, "---------+-------------------------+----------+---+--------------");
-    PrintAndLogEx(HINT, _YELLOW_("yellow") " = legacy credential");
-    PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO credential");
+    PrintAndLogEx(INFO, "---------+-------------------------+----------+---+----------------");
+    if (isLegacy)
+        PrintAndLogEx(HINT, _YELLOW_("yellow") " = legacy credential");
+
+    if (isSE)
+        PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO / SE credential");
+
+    if (isSR)
+        PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO / SR credential");
+
     PrintAndLogEx(NORMAL, "");
 }
 
@@ -2602,6 +2826,7 @@ static int CmdHFiClassView(const char *Cmd) {
         arg_int0(NULL, "first", "<dec>", "Begin printing from this block (default block 6)"),
         arg_int0(NULL, "last", "<dec>", "End printing at this block (default 0, ALL)"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2613,6 +2838,7 @@ static int CmdHFiClassView(const char *Cmd) {
     int startblock = arg_get_int_def(ctx, 2, 0);
     int endblock = arg_get_int_def(ctx, 3, 0);
     bool verbose = arg_get_lit(ctx, 4);
+    bool dense_output = g_session.dense_output || arg_get_lit(ctx, 5);
 
     CLIParserFree(ctx);
 
@@ -2633,7 +2859,13 @@ static int CmdHFiClassView(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     print_picopass_header((picopass_hdr_t *) dump);
     print_picopass_info((picopass_hdr_t *) dump);
-    printIclassDumpContents(dump, startblock, endblock, bytes_read);
+    printIclassDumpContents(dump, startblock, endblock, bytes_read, dense_output);
+    iclass_decode_credentials(dump);
+
+    if (verbose) {
+        printIclassSIO(dump);
+    }
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -2793,7 +3025,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
 
     if (givenCSN == false) {
         uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        if (select_only(csn, CCNR, true) == false) {
+        if (select_only(csn, CCNR, true, false) == false) {
             DropField();
             return PM3_ESOFT;
         }
@@ -2991,6 +3223,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3002,6 +3235,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     bool use_credit_key = arg_get_lit(ctx, 2);
     bool use_elite = arg_get_lit(ctx, 3);
     bool use_raw = arg_get_lit(ctx, 4);
+    bool shallow_mod = arg_get_lit(ctx, 5);
 
     CLIParserFree(ctx);
 
@@ -3031,7 +3265,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
 
     bool got_csn = false;
     for (uint8_t i = 0; i < ICLASS_AUTH_RETRY; i++) {
-        got_csn = select_only(CSN, CCNR, false);
+        got_csn = select_only(CSN, CCNR, false, shallow_mod);
         if (got_csn == false)
             PrintAndLogEx(WARNING, "one more try");
         else
@@ -3113,6 +3347,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         }
         packet->use_credit_key = use_credit_key;
         packet->count = curr_chunk_cnt;
+        packet->shallow_mod = shallow_mod;
         // copy chunk of pre calculated macs to packet
         memcpy(packet->items, (pre + chunk_offset), (4 * curr_chunk_cnt));
 
@@ -3457,7 +3692,6 @@ void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elit
     for (int i = 0; i < iclass_tc; i++)
         pthread_join(threads[i], NULL);
 
-    PrintAndLogEx(NORMAL, "");
 }
 
 // print diversified keys
@@ -3600,7 +3834,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass encode",
-                  "Encode binary wiegand to block 7\n"
+                  "Encode binary wiegand to block 7,8,9\n"
                   "Use either --bin or --wiegand/--fc/--cn",
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337\n"
                   "hf iclass encode --fc 31 --cn 337 --ki 0                            -> FC 31 CN 337\n"
@@ -3618,6 +3852,8 @@ static int CmdHFiClassEncode(const char *Cmd) {
         arg_u64_0(NULL, "fc", "<dec>", "facility code"),
         arg_u64_0(NULL, "cn", "<dec>", "card number"),
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
+        arg_lit0("v", NULL, "verbose (print encoded blocks)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3661,6 +3897,9 @@ static int CmdHFiClassEncode(const char *Cmd) {
     char format[16] = {0};
     int format_len = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)format, sizeof(format), &format_len);
+
+    bool shallow_mod = arg_get_lit(ctx, 10);
+    bool verbose = arg_get_lit(ctx, 11);
 
     CLIParserFree(ctx);
 
@@ -3752,8 +3991,12 @@ static int CmdHFiClassEncode(const char *Cmd) {
             return PM3_ESOFT;
         }
 
+        // iceman: only for formats w length smaller than 37.
+        // Needs a check.
+
+        // increase length to allow setting bit just above real data
+        packed.Length++;
         // Set sentinel bit
-        packed.Length++;// increase length to allow setting bit just above real data
         set_bit_by_position(&packed, true, 0);
 
 #ifdef HOST_LITTLE_ENDIAN
@@ -3776,16 +4019,27 @@ static int CmdHFiClassEncode(const char *Cmd) {
         iclass_encrypt_block_data(credential + 24, enc_key);
     }
 
+    if (verbose) {
+        for (uint8_t i = 0; i < 4; i++) {
+            PrintAndLogEx(INFO, "Block %d/0x0%x -> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
+        }
+    }
+
+    if (!g_session.pm3_present) {
+        PrintAndLogEx(ERR, "Device offline\n");
+        return PM3_EFAILED;
+    }
+
     int isok = PM3_SUCCESS;
     // write
     for (uint8_t i = 0; i < 4; i++) {
-        isok = iclass_write_block(6 + i, credential + (i * 8), key, use_credit_key, elite, rawkey, false, false, auth);
+        isok = iclass_write_block(6 + i, credential + (i * 8), NULL, key, use_credit_key, elite, rawkey, false, false, auth, shallow_mod);
         switch (isok) {
             case PM3_SUCCESS:
                 PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _GREEN_("ok") " )  --> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
                 break;
             default:
-                PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
+                PrintAndLogEx(INFO, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
                 break;
         }
     }
@@ -3950,11 +4204,16 @@ int CmdHFiClass(const char *Cmd) {
 // DESFIRE|                       |                                   |
 //}
 
-int info_iclass(void) {
+int info_iclass(bool shallow_mod) {
 
     iclass_card_select_t payload = {
         .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
     };
+
+    if (shallow_mod) {
+        payload.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
+    }
+
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload, sizeof(iclass_card_select_t));
@@ -4049,4 +4308,3 @@ int info_iclass(void) {
 
     return PM3_SUCCESS;
 }
-

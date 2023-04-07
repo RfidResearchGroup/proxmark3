@@ -31,6 +31,7 @@
 #include "nfc/ndef.h"          // NDEFRecordsDecodeAndPrint
 #include "cmdnfc.h"            // print_type4_cc_info
 #include "commonutil.h"        // get_sw
+#include "protocols.h"         // ISO7816 APDU return codes
 
 #define TIMEOUT 2000
 
@@ -46,7 +47,7 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     PrintAndLogEx(SUCCESS, "------------ " _CYAN_("ST System file") " ------------");
 
     uint16_t len = (d[0] << 8 | d[1]);
-    PrintAndLogEx(SUCCESS, " len      %u bytes (" _GREEN_("0x%04X") ")", len, len);
+    PrintAndLogEx(SUCCESS, " len      %u bytes ( " _GREEN_("0x%04X") " )", len, len);
 
     if (d[2] == 0x80) {
         PrintAndLogEx(SUCCESS, " ST reserved  ( 0x%02X )", d[2]);
@@ -98,7 +99,7 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     PrintAndLogEx(SUCCESS, "      Device#  " _YELLOW_("%s"), sprint_hex_inrow(d + 10, 5));
 
     uint16_t mem = (d[0xF] << 8 | d[0x10]);
-    PrintAndLogEx(SUCCESS, " Memory Size - 1   %u bytes (" _GREEN_("0x%04X") ")", mem, mem);
+    PrintAndLogEx(SUCCESS, " Memory Size - 1   %u bytes ( " _GREEN_("0x%04X") " )", mem, mem);
 
     PrintAndLogEx(SUCCESS, " IC Reference code %u ( 0x%02X )", d[0x12], d[0x12]);
 
@@ -136,7 +137,7 @@ static int infoHFST25TA(void) {
     }
 
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -156,7 +157,7 @@ static int infoHFST25TA(void) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -172,7 +173,7 @@ static int infoHFST25TA(void) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -192,7 +193,7 @@ static int infoHFST25TA(void) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting system file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -210,7 +211,7 @@ static int infoHFST25TA(void) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading system file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -287,6 +288,7 @@ int CmdHFST25TANdefRead(const char *Cmd) {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "16 byte read password"),
         arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
+        arg_litn("v",  "verbose",  0, 2, "show technical data"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -294,6 +296,7 @@ int CmdHFST25TANdefRead(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     if (pwdlen == 0) {
@@ -327,7 +330,7 @@ int CmdHFST25TANdefRead(const char *Cmd) {
     }
 
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -347,7 +350,7 @@ int CmdHFST25TANdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -376,7 +379,7 @@ int CmdHFST25TANdefRead(const char *Cmd) {
             }
 
             sw = get_sw(response, resplen);
-            if (sw != 0x9000) {
+            if (sw != ISO7816_OK) {
                 PrintAndLogEx(ERR, "Verify password failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                 DropField();
                 return PM3_ESOFT;
@@ -395,7 +398,7 @@ int CmdHFST25TANdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -404,7 +407,7 @@ int CmdHFST25TANdefRead(const char *Cmd) {
     if (fnlen != 0) {
         saveFile(filename, ".bin", response + 2, resplen - 4);
     }
-    NDEFRecordsDecodeAndPrint(response + 2, resplen - 4);
+    NDEFRecordsDecodeAndPrint(response + 2, resplen - 4, verbose);
     return PM3_SUCCESS;
 }
 
@@ -493,7 +496,7 @@ static int CmdHFST25TAProtect(const char *Cmd) {
     }
 
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -513,7 +516,7 @@ static int CmdHFST25TAProtect(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -532,7 +535,7 @@ static int CmdHFST25TAProtect(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Verify password failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -551,7 +554,7 @@ static int CmdHFST25TAProtect(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "changing protection failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -637,7 +640,7 @@ static int CmdHFST25TAPwd(const char *Cmd) {
     }
 
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -657,7 +660,7 @@ static int CmdHFST25TAPwd(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -676,7 +679,7 @@ static int CmdHFST25TAPwd(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Verify password failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;
@@ -697,7 +700,7 @@ static int CmdHFST25TAPwd(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "password change failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
         return PM3_ESOFT;

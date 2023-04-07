@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
 # Output a version_pm3.c file that includes information about the current build
 # From mkversion.pl

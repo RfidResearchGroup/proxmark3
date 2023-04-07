@@ -290,9 +290,9 @@ int testMAC(void) {
     doMAC(cc_nr, div_key, calculated_mac);
 
     if (memcmp(calculated_mac, correct_MAC, 4) == 0) {
-        PrintAndLogEx(SUCCESS, "    MAC calculation (%s)", _GREEN_("ok"));
+        PrintAndLogEx(SUCCESS, "    MAC calculation ( %s )", _GREEN_("ok"));
     } else {
-        PrintAndLogEx(FAILED, "    MAC calculation (%s)", _RED_("failed"));
+        PrintAndLogEx(FAILED, "    MAC calculation ( %s )", _RED_("fail"));
         printarr("    Calculated_MAC", calculated_mac, 4);
         printarr("    Correct_MAC   ", correct_MAC, 4);
         return PM3_ESOFT;

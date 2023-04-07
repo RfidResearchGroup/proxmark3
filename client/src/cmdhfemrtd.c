@@ -194,7 +194,7 @@ static bool emrtd_exchange_commands(sAPDU_t apdu, bool include_le, uint16_t le, 
         return false;
     }
 
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(DEBUG, "Command failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         return false;
     }
@@ -716,7 +716,8 @@ static const uint8_t jpeg_header[4] = { 0xFF, 0xD8, 0xFF, 0xE0 };
 static const uint8_t jpeg2k_header[6] = { 0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50 };
 
 static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const char *path) {
-    int offset, datalen = 0;
+    size_t offset;
+    int datalen = 0;
 
     // This is a hacky impl that just looks for the image header. I'll improve it eventually.
     // based on mrpkey.py
@@ -738,6 +739,7 @@ static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const c
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
     if (filepath == NULL)
         return PM3_EMALLOC;
+
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_DG2].filename);
@@ -1343,7 +1345,7 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
     } else if (mrz[0] == 'P') {
         PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Passport"));
     } else if (mrz[0] == 'A') {
-        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("German Residency Permit"));
+        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Residency Permit"));
     } else {
         PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Unknown"));
     }
@@ -1431,42 +1433,7 @@ static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen) {
         return PM3_ESOFT;
     }
 
-    bool is_jpg = (data[offset] == 0xFF);
-
-    size_t fn_len = strlen(dg_table[EF_DG2].filename) + 4 + 1;
-    char *fn = calloc(fn_len, sizeof(uint8_t));
-    if (fn == NULL)
-        return PM3_EMALLOC;
-
-    snprintf(fn, fn_len * sizeof(uint8_t), "%s.%s", dg_table[EF_DG2].filename, (is_jpg) ? "jpg" : "jp2");
-
-    PrintAndLogEx(DEBUG, "image filename `" _YELLOW_("%s") "`", fn);
-
-    char *path;
-    if (searchHomeFilePath(&path, NULL, fn, false) != PM3_SUCCESS) {
-        free(fn);
-        return PM3_EFILE;
-    }
-    free(fn);
-
-    // remove old file
-    if (fileExists(path)) {
-        PrintAndLogEx(DEBUG, "Delete old temp file `" _YELLOW_("%s") "`", path);
-        remove(path);
-    }
-
-    // temp file.
-    PrintAndLogEx(DEBUG, "Save temp file `" _YELLOW_("%s") "`", path);
-    saveFile(path, "", data + offset, datalen);
-
-    PrintAndLogEx(DEBUG, "view temp file `" _YELLOW_("%s") "`", path);
-    ShowPictureWindow(path);
-    msleep(500);
-
-    // delete temp file
-    PrintAndLogEx(DEBUG, "Deleting temp file `" _YELLOW_("%s") "`", path);
-    remove(path);
-    //free(path);
+    ShowPictureWindow(data + offset, datalen);
     return PM3_SUCCESS;
 }
 
@@ -1491,42 +1458,7 @@ static int emrtd_print_ef_dg5_info(uint8_t *data, size_t datalen) {
         return PM3_ESOFT;
     }
 
-    bool is_jpg = (data[offset] == 0xFF);
-
-    size_t fn_len = strlen(dg_table[EF_DG5].filename) + 4 + 1;
-    char *fn = calloc(fn_len, sizeof(uint8_t));
-    if (fn == NULL)
-        return PM3_EMALLOC;
-
-    snprintf(fn, fn_len * sizeof(uint8_t), "%s.%s", dg_table[EF_DG5].filename, (is_jpg) ? "jpg" : "jp2");
-
-    PrintAndLogEx(DEBUG, "image filename `" _YELLOW_("%s") "`", fn);
-
-    char *path;
-    if (searchHomeFilePath(&path, NULL, fn, false) != PM3_SUCCESS) {
-        free(fn);
-        return PM3_EFILE;
-    }
-    free(fn);
-
-    // remove old file
-    if (fileExists(path)) {
-        PrintAndLogEx(DEBUG, "Delete old temp file `" _YELLOW_("%s") "`", path);
-        remove(path);
-    }
-
-    // temp file.
-    PrintAndLogEx(DEBUG, "Save temp file `" _YELLOW_("%s") "`", path);
-    saveFile(path, "", data + offset, datalen);
-
-    PrintAndLogEx(DEBUG, "view temp file `" _YELLOW_("%s") "`", path);
-    ShowPictureWindow(path);
-    msleep(500);
-
-    // delete temp file
-    PrintAndLogEx(DEBUG, "Deleting temp file `" _YELLOW_("%s") "`", path);
-    remove(path);
-    //free(path);
+    ShowPictureWindow(data + offset, datalen);
     return PM3_SUCCESS;
 }
 
@@ -1913,7 +1845,7 @@ static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
     return PM3_SUCCESS;
 }
 
-int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available) {
+int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available, bool only_fast) {
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
     uint8_t ssc[8] = { 0x00 };
@@ -1999,7 +1931,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
             PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
-        if (dg->fastdump && !dg->pace && !dg->eac) {
+        if (((dg->fastdump && only_fast) || !only_fast) && !dg->pace && !dg->eac) {
             if (emrtd_select_and_read(response, &resplen, dg->fileid, ks_enc, ks_mac, ssc, BAC)) {
                 if (dg->parser != NULL)
                     dg->parser(response, resplen);
@@ -2025,14 +1957,16 @@ int infoHF_EMRTD_offline(const char *path) {
     uint8_t *data;
     size_t datalen = 0;
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
-    if (filepath == NULL)
+    if (filepath == NULL) {
         return PM3_EMALLOC;
+    }
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_COM].filename);
 
-    if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to read EF_COM.");
+    if ((loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) &&
+            (loadFile_safeEx(filepath, ".bin", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS)) {
+        PrintAndLogEx(ERR, "Failed to read EF_COM");
         free(filepath);
         return PM3_ESOFT;
     }
@@ -2064,26 +1998,33 @@ int infoHF_EMRTD_offline(const char *path) {
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_CardAccess].filename);
 
-    if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS) {
+    if ((loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS) ||
+            (loadFile_safeEx(filepath, ".bin", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS)) {
         emrtd_print_ef_cardaccess_info(data, datalen);
         free(data);
     } else {
-        PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE.");
+        PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE");
     }
 
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_SOD].filename);
 
-    if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to read EF_SOD.");
+    if ((loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS) &&
+            (loadFile_safeEx(filepath, ".bin", (void **)&data, (size_t *)&datalen, false) != PM3_SUCCESS)) {
+        PrintAndLogEx(ERR, "Failed to read EF_SOD");
         free(filepath);
+        return PM3_ESOFT;
+    }
+
+    // coverity scan CID 395630,
+    if (data == NULL) {
         return PM3_ESOFT;
     }
 
     res = emrtd_parse_ef_sod_hashes(data, datalen, *dg_hashes_sod, &hash_algo);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail.");
+        PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail");
     }
     free(data);
 
@@ -2098,10 +2039,12 @@ int infoHF_EMRTD_offline(const char *path) {
             strcpy(filepath, path);
             strncat(filepath, PATHSEP, 2);
             strcat(filepath, dg->filename);
-            if (loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS) {
+            if ((loadFile_safeEx(filepath, ".BIN", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS) ||
+                    (loadFile_safeEx(filepath, ".bin", (void **)&data, (size_t *)&datalen, false) == PM3_SUCCESS)) {
                 // we won't halt on parsing errors
-                if (dg->parser != NULL)
+                if (dg->parser != NULL) {
                     dg->parser(data, datalen);
+                }
 
                 PrintAndLogEx(DEBUG, "EF_DG%i hash algo: %i", dg->dgnum, hash_algo);
                 // Check file hash
@@ -2119,13 +2062,6 @@ int infoHF_EMRTD_offline(const char *path) {
     emrtd_print_ef_sod_info(*dg_hashes_calc, *dg_hashes_sod, hash_algo, false);
 
     return PM3_SUCCESS;
-}
-
-static void text_to_upper(uint8_t *data, int datalen) {
-    // Loop over text to make lowercase text uppercase
-    for (int i = 0; i < datalen; i++) {
-        data[i] = toupper(data[i]);
-    }
 }
 
 static bool validate_date(uint8_t *data, int datalen) {
@@ -2148,7 +2084,9 @@ static int CmdHFeMRTDDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf emrtd dump",
                   "Dump all files on an eMRTD",
-                  "hf emrtd dump"
+                  "hf emrtd dump\n"
+                  "hf emrtd dump --dir ../dump\n"
+                  "hf emrtd dump -n 123456789 -d 19890101 -e 20250401"
                  );
 
     void *argtable[] = {
@@ -2157,7 +2095,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
         arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars"),
-        arg_str0(NULL, "path", "<dirpath>", "save dump to the given dirpath"),
+        arg_str0(NULL, "dir", "<str>", "save dump to the given dirpath"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2173,7 +2111,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
-        text_to_upper(docnum, slen);
+        strn_upper((char *)docnum, slen);
         if (slen != 9) {
             // Pad to 9 with <
             memset(docnum + slen, '<', 9 - slen);
@@ -2206,7 +2144,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
             error = true;
         } else {
             BAC = true;
-            text_to_upper(mrz, slen);
+            strn_upper((char *)mrz, slen);
             memcpy(docnum, &mrz[0], 9);
             memcpy(dob,    &mrz[13], 6);
             memcpy(expiry, &mrz[21], 6);
@@ -2246,7 +2184,10 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf emrtd info",
                   "Display info about an eMRTD",
-                  "hf emrtd info"
+                  "hf emrtd info\n"
+                  "hf emrtd info --dir ../dumps\n"
+                  "hf emrtd info -n 123456789 -d 19890101 -e 20250401\n"
+                  "hf emrtd info -n 123456789 -d 19890101 -e 20250401 -i"
                  );
 
     void *argtable[] = {
@@ -2255,7 +2196,8 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
         arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars (passports only)"),
-        arg_str0(NULL, "path", "<dirpath>", "display info from offline dump stored in dirpath"),
+        arg_str0(NULL, "dir", "<str>", "display info from offline dump stored in dirpath"),
+        arg_lit0("i", "images", "show images"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2271,7 +2213,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
-        text_to_upper(docnum, slen);
+        strn_upper((char *)docnum, slen);
         if (slen != 9) {
             memset(docnum + slen, '<', 9 - slen);
         }
@@ -2303,7 +2245,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
             error = true;
         } else {
             BAC = true;
-            text_to_upper(mrz, slen);
+            strn_upper((char *)mrz, slen);
             memcpy(docnum, &mrz[0], 9);
             memcpy(dob,    &mrz[13], 6);
             memcpy(expiry, &mrz[21], 6);
@@ -2322,8 +2264,9 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     }
     uint8_t path[FILENAME_MAX] = { 0x00 };
     bool is_offline = CLIParamStrToBuf(arg_get_str(ctx, 5), path, sizeof(path), &slen) == 0 && slen > 0;
+    bool show_images = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
-    if ((! IfPm3Iso14443()) && (! is_offline)) {
+    if ((IfPm3Iso14443() == false) && (is_offline == false)) {
         PrintAndLogEx(WARNING, "Only offline mode is available");
         error = true;
     }
@@ -2337,7 +2280,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
         if (g_debugMode >= 2) {
             SetAPDULogging(true);
         }
-        int res = infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC);
+        int res = infoHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC, !show_images);
         SetAPDULogging(restore_apdu_logging);
         return res;
     }

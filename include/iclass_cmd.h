@@ -32,6 +32,7 @@
 //#define FLAG_ICLASS_READER_ONLY_ONCE   0x04
 #define FLAG_ICLASS_READER_CREDITKEY   0x08
 #define FLAG_ICLASS_READER_AIA         0x10
+#define FLAG_ICLASS_READER_SHALLOW_MOD 0x20
 
 // iCLASS reader status flags
 #define FLAG_ICLASS_NULL               0x00
@@ -60,6 +61,7 @@ typedef struct {
     bool use_replay;
     bool send_reply;
     bool do_auth;
+    bool shallow_mod;
     uint8_t blockno;
 } PACKED iclass_auth_req_t;
 
@@ -82,6 +84,7 @@ typedef struct {
 typedef struct {
     iclass_auth_req_t req;
     uint8_t data[8];
+    uint8_t mac[4];
 } PACKED iclass_writeblock_req_t;
 
 // iCLASS dump data structure
@@ -102,6 +105,7 @@ typedef struct iclass_premac {
 
 typedef struct {
     bool use_credit_key;
+    bool shallow_mod;
     uint8_t count;
     iclass_premac_t items[];
 } PACKED iclass_chk_t;

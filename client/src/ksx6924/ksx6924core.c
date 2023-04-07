@@ -38,6 +38,7 @@
 #include "util.h"
 #include "comms.h"         // clearCommandBuffer
 #include "commonutil.h"    // ntohl (pm3 version)
+#include "protocols.h"     // ISO7816 APDU return codes
 
 // Date type. This is the actual on-card format.
 typedef struct {
@@ -66,6 +67,16 @@ typedef struct {
     uint8_t rfu[8];
 } PACKED _ksx6924_internal_purse_info_t;
 
+typedef struct {
+    uint8_t ALGep;
+    uint8_t VKep;
+    uint8_t BALep[4];   // uint32_t big-endian
+    uint8_t IDcenter;
+    uint8_t IDep[8];    // bcd
+    uint8_t NTep[4];
+    uint8_t Sign1[4];
+} PACKED _ksx6924_initialize_card_response_t;
+
 // Declares a structure for simple enums.
 #define MAKE_ENUM_TYPE(KEY_TYPE) \
    struct _ksx6924_enum_ ## KEY_TYPE { \
@@ -88,7 +99,7 @@ typedef struct {
          KEY_TYPE key, const char* defaultValue) { \
       struct _ksx6924_enum_ ## KEY_TYPE *r = bsearch( \
          &key, KSX6924_ENUM_ ## NAME, \
-         sizeof(KSX6924_ENUM_ ## NAME) / sizeof(KSX6924_ENUM_ ## NAME [0]), \
+         ARRAYLEN(KSX6924_ENUM_ ## NAME), \
          sizeof(KSX6924_ENUM_ ## NAME [0]), \
          _ksx6924_ ## KEY_TYPE ## _enum_compare); \
       if (r == NULL) { \
@@ -114,17 +125,17 @@ MAKE_ENUM_CONST(Alg, uint8_t,
 
 // KSX6924LookupTMoneyIDCenter
 MAKE_ENUM_CONST(TMoneyIDCenter, uint8_t,
-{ 0x00, "reserved" },
+{ 0x00, "Reserved" },
 { 0x01, "Korea Financial Telecommunications and Clearings Institute" },
 { 0x02, "A-Cash" },
 { 0x03, "Mybi" },
-
+{ 0x04, "Reserved" },
 { 0x05, "V-Cash" },
 { 0x06, "Mondex Korea" },
 { 0x07, "Korea Expressway Corporation" },
-{ 0x08, "Korea Smart Card Corporation" },
+{ 0x08, "Tmoney Co., Ltd." },
 { 0x09, "KORAIL Networks" },
-
+{ 0x0a, "Reserved" },
 { 0x0b, "EB Card Corporation" },
 { 0x0c, "Seoul Bus Transport Association" },
 { 0x0d, "Cardnet" },
@@ -165,17 +176,17 @@ MAKE_ENUM_CONST(TMoneyTCode, uint8_t,
 // KSX6924LookupTMoneyCCode
 MAKE_ENUM_CONST(TMoneyCCode, uint8_t,
 { 0x00, "None" },
-{ 0x01, "KB Kookmin Bank" },
-{ 0x02, "Nonghyup Bank" },
+{ 0x01, "KB Card" },
+{ 0x02, "NH Card" },
 { 0x03, "Lotte Card" },
 { 0x04, "BC Card" },
 { 0x05, "Samsung Card" },
-{ 0x06, "Shinhan Bank" },
+{ 0x06, "Shinhan Card" },
 { 0x07, "Citibank Korea" },
 { 0x08, "Korea Exchange Bank" },
-{ 0x09, "Woori" },
+{ 0x09, "Woori Card" },
 { 0x0a, "Hana SK Card" },
-{ 0x0b, "Hyundai Capital Services" },
+{ 0x0b, "Hyundai Card" },
                );
 
 static const char *KSX6924_UNKNOWN = "Unknown";
@@ -392,7 +403,7 @@ bool KSX6924TrySelect(void) {
         return false;
     }
 
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         if (sw) {
             PrintAndLogEx(FAILED,
                           "Not a KS X 6924 card! APDU response: %04x - %s",
@@ -434,7 +445,7 @@ bool KSX6924GetBalance(uint32_t *result) {
         return false;
     }
 
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         return false;
     }
 
@@ -446,7 +457,7 @@ bool KSX6924GetBalance(uint32_t *result) {
 /**
  * Perform transaction initialization.
  */
-bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t mpda4, uint8_t *result) {
+bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t mpda4, uint8_t *result, size_t *result_len) {
 
     if (result == NULL) {
         return false;
@@ -466,15 +477,74 @@ bool KSX6924InitializeCard(uint8_t mpda1, uint8_t mpda2, uint8_t mpda3, uint8_t 
         return false;
     }
 
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         return false;
     }
 
     //*result = ntohl(*(uint32_t*)(arr));
     memcpy(result, arr, rlen + 2); // skip 2 sw bytes
+    memcpy(result_len, &rlen, sizeof(size_t));
     return true;
 }
 
+/**
+ * Parses Initialize Card response
+ */
+bool KSX6924ParseInitializeCardResponse(const uint8_t *initCardResponse, size_t resp_len, struct ksx6924_initialize_card_response *ret) {
+
+    memset(ret, 0, sizeof(struct ksx6924_initialize_card_response));
+
+    if (resp_len != sizeof(_ksx6924_initialize_card_response_t)) {
+        // Invalid size!
+        PrintAndLogEx(FAILED, "Expected %ld bytes, got %ld\n", sizeof(_ksx6924_initialize_card_response_t), resp_len);
+        return false;
+    }
+
+    const _ksx6924_initialize_card_response_t *internalInitCardResponse = (const _ksx6924_initialize_card_response_t *)initCardResponse;
+
+    // Simple copies
+    ret->ALGep = internalInitCardResponse->ALGep;
+    ret->VKep = internalInitCardResponse->VKep;
+    ret->IDcenter = internalInitCardResponse->IDcenter;
+
+    // Fields that need rewriting
+    hex_to_buffer(ret->IDep, internalInitCardResponse->IDep,
+                  sizeof(internalInitCardResponse->IDep),
+                  sizeof(ret->IDep) - 1,
+                  0,    // min_str_len
+                  0,    // spaces_between
+                  false // uppercase
+                 );
+
+    ret->BALep = MemBeToUint4byte((uint8_t *)internalInitCardResponse->BALep);
+    ret->NTep = MemBeToUint4byte((uint8_t *)internalInitCardResponse->NTep);
+
+    memcpy(&ret->Sign1, &internalInitCardResponse->Sign1, 4);
+
+    // TODO
+    return true;
+};
+
+/**
+ * Prints out a Initialize Card response
+ */
+void KSX6924PrintInitializeCardResponse(const struct ksx6924_initialize_card_response *response) {
+
+    if (response == NULL) {
+        return;
+    }
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("KS X 6924 Initialize Card Response") " ---------------------------");
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "  ALGep (Algorithm Identifier)........ %02x ( %s )", response->ALGep, KSX6924LookupAlg(response->ALGep, KSX6924_UNKNOWN));
+    PrintAndLogEx(INFO, "  VKep (Version of Key) .............. %02x", response->VKep);
+    PrintAndLogEx(INFO, "  BALep (Balance...................... %" PRIu32, response->BALep);
+    PrintAndLogEx(INFO, "  IDcenter (Issuer ID) ............... %02x ( %s )", response->IDcenter, KSX6924LookupTMoneyIDCenter(response->IDcenter, KSX6924_UNKNOWN));
+    PrintAndLogEx(INFO, "  IDep (Card number) ................. %s", response->IDep);
+    PrintAndLogEx(INFO, "  NTep (Number of Transaction + 1) ... %" PRIu32, response->NTep);
+    PrintAndLogEx(INFO, "  Sign1 .............................. %s", sprint_hex(response->Sign1, sizeof(response->Sign1)));
+    PrintAndLogEx(INFO, "");
+}
 
 /**
  * Issues a proprietary "get record" command (CLA=90, INS=4C).
@@ -505,7 +575,7 @@ bool KSX6924ProprietaryGetRecord(uint8_t id, uint8_t *result, size_t result_len)
         return false;
     }
 
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         return false;
     }
 

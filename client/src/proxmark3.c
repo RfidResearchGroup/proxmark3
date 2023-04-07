@@ -41,7 +41,7 @@ static int mainret = PM3_ESOFT;
 
 #ifndef LIBPM3
 #define BANNERMSG1 ""
-#define BANNERMSG2 "   [ :snowflake: ]"
+#define BANNERMSG2 "   [ :coffee: ]"
 #define BANNERMSG3 ""
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
@@ -576,6 +576,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      --incognito                         do not use history, prefs file nor log files");
         PrintAndLogEx(NORMAL, "\nOptions in flasher mode:");
         PrintAndLogEx(NORMAL, "      --flash                             flash Proxmark3, requires at least one --image");
+        PrintAndLogEx(NORMAL, "      --reboot-bootloader                 reboot Proxmark3 into bootloader mode");
         PrintAndLogEx(NORMAL, "      --unlock-bootloader                 Enable flashing of bootloader area *DANGEROUS* (need --flash)");
         PrintAndLogEx(NORMAL, "      --force                             Enable flashing even if firmware seems to not match client version");
         PrintAndLogEx(NORMAL, "      --image <imagefile>                 image to flash. Can be specified several times.");
@@ -696,6 +697,22 @@ finish2:
     PrintAndLogEx(INFO, "\nHave a nice day!");
     return ret;
 }
+
+static int reboot_bootloader_pm3(char *serial_port_name) {
+    if (serial_port_name == NULL) {
+        PrintAndLogEx(ERR, "You must specify a port.\n");
+        return PM3_EINVARG;
+    }
+
+    if (OpenProxmark(&g_session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED) == false) {
+        PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
+        return PM3_ETIMEOUT;
+    }
+
+    PrintAndLogEx(NORMAL, _GREEN_(" found"));
+    return flash_reboot_bootloader(serial_port_name);
+}
+
 #endif //LIBPM3
 
 void pm3_init(void) {
@@ -732,6 +749,7 @@ int main(int argc, char *argv[]) {
     strncpy(exec_name, basename(argv[0]), sizeof(exec_name) - 1);
 
     bool flash_mode = false;
+    bool reboot_bootloader_mode = false;
     bool flash_can_write_bl = false;
     bool flash_force = false;
     bool debug_mode_forced = false;
@@ -944,6 +962,12 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        // go to flash mode
+        if (strcmp(argv[i], "--reboot-to-bootloader") == 0) {
+            reboot_bootloader_mode = true;
+            continue;
+        }
+
         // unlock bootloader area
         if (strcmp(argv[i], "--unlock-bootloader") == 0) {
             flash_can_write_bl = true;
@@ -1001,6 +1025,11 @@ int main(int argc, char *argv[]) {
         exit(EXIT_SUCCESS);
     }
 
+    if (reboot_bootloader_mode) {
+        reboot_bootloader_pm3(port);
+        exit(EXIT_SUCCESS);
+    }
+
     if (script_cmd) {
         while (script_cmd[strlen(script_cmd) - 1] == ' ')
             script_cmd[strlen(script_cmd) - 1] = 0x00;
@@ -1043,7 +1072,7 @@ int main(int argc, char *argv[]) {
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
 
     // ascii art only in interactive client
-    if (!script_cmds_file && !script_cmd && g_session.stdinOnTTY && g_session.stdoutOnTTY && !flash_mode)
+    if (!script_cmds_file && !script_cmd && g_session.stdinOnTTY && g_session.stdoutOnTTY && !flash_mode && !reboot_bootloader_mode)
         showBanner();
 
     // Save settings if not loaded from settings json file.
