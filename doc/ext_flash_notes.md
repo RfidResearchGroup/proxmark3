@@ -19,9 +19,9 @@ External 256kbytes flash is a unique feature of the RDV4 edition.
 
 Flash memory is
 
-* 256kb (0x40000= 262144)
-* divided into 4 pages of 64kb (0x10000 = 65536)
-* 4 pages divided into 16 sectors of 4kb (0x1000 = 4096), so last sector is at 0x3F000
+* 256KB (0x40000= 262144)
+* divided into 4 pages of 64KB (0x10000 = 65536)
+* 4 pages divided into 16 sectors of 4KB (0x1000 = 4096), so last sector is at 0x3F000
 
 Therefore a flash address can be interpreted as such:
 ```

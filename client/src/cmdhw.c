@@ -133,7 +133,7 @@ static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
             break;
     }
 
-    PrintAndLogEx(NORMAL, "    Memory.... " _YELLOW_("%u") " Kb ( " _YELLOW_("%2.0f%%") " used )"
+    PrintAndLogEx(NORMAL, "    Memory.... " _YELLOW_("%u") " KB ( " _YELLOW_("%2.0f%%") " used )"
                   , mem_avail
                   , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
                  );
