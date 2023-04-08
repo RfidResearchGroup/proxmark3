@@ -2861,6 +2861,11 @@ tryNested:
                             }
                             case PM3_ESTATIC_NONCE:
                                 PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
+                                // Show the results to the user
+                                PrintAndLogEx(NORMAL, "");
+                                PrintAndLogEx(SUCCESS, _GREEN_("found keys:"));
+                                printKeyTable(sector_cnt, e_sector);
+                                PrintAndLogEx(NORMAL, "");
                                 free(e_sector);
                                 free(fptr);
                                 return isOK;
@@ -2902,6 +2907,11 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                 }
                                 case PM3_ESTATIC_NONCE: {
                                     PrintAndLogEx(ERR, "\nError: Static encrypted nonce detected. Aborted\n");
+                                    // Show the results to the user
+                                    PrintAndLogEx(NORMAL, "");
+                                    PrintAndLogEx(SUCCESS, _GREEN_("found keys:"));
+                                    printKeyTable(sector_cnt, e_sector);
+                                    PrintAndLogEx(NORMAL, "");
                                     break;
                                 }
                                 default: {
@@ -3880,8 +3890,11 @@ void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
 }
 
 void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {
-    char strA[12 + 1] = {0};
-    char strB[12 + 1] = {0};
+    char strA[26 + 1] = {0};
+    char strB[26 + 1] = {0};
+    char resA[20 + 1] = {0};
+    char resB[20 + 1] = {0};
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
     PrintAndLogEx(SUCCESS, " Sec | Blk | key A        |res| key B        |res");
@@ -3898,7 +3911,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
             snprintf(strB, sizeof(strB), "%012" PRIX64, e_sector[i].Key[1]);
 
         if (e_sector[i].foundKey[0] > 1) {
-            PrintAndLogEx(SUCCESS, " "_YELLOW_("%03d")" | %03d | " _GREEN_("%s")" | " _YELLOW_("%c")" | " _GREEN_("%s")" | " _YELLOW_("%c")
+            PrintAndLogEx(SUCCESS, " "_YELLOW_("%03d")" | %03d | " _GREEN_("%s")" | " _BRIGHT_GREEN_("%c")" | " _GREEN_("%s")" | " _BRIGHT_GREEN_("%c")
                           , i
                           , mfSectorTrailerOfSector(i)
                           , strA, e_sector[i].foundKey[0]
@@ -3911,11 +3924,27 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
             if (start_sector == 0)
                 s = i;
 
-            PrintAndLogEx(SUCCESS, " "_YELLOW_("%03d")" | %03d | " _GREEN_("%s")" | " _YELLOW_("%d")" | " _GREEN_("%s")" | " _YELLOW_("%d")
+            if (e_sector[i].foundKey[0])  {
+                snprintf(strA, sizeof(strA), _GREEN_("%012" PRIX64), e_sector[i].Key[0]);
+                snprintf(resA, sizeof(resA), _BRIGHT_GREEN_("%d"), 1);
+            } else {
+                snprintf(strA, sizeof(strA), _RED_("%s"), "------------");
+                snprintf(resA, sizeof(resA), _RED_("%d"), 0);
+            }
+
+            if (e_sector[i].foundKey[1]) {
+                snprintf(strB, sizeof(strB), _GREEN_("%012" PRIX64), e_sector[i].Key[1]);                
+                snprintf(resB, sizeof(resB), _BRIGHT_GREEN_("%d"), 1);
+            } else {
+                snprintf(strB, sizeof(strB), _RED_("%s"), "------------");
+                snprintf(resB, sizeof(resB), _RED_("%d"), 0);
+            }
+
+            PrintAndLogEx(SUCCESS, " " _YELLOW_("%03d") " | %03d | %s | %s | %s | %s"
                           , s
                           , mfSectorTrailerOfSector(s)
-                          , strA, e_sector[i].foundKey[0]
-                          , strB, e_sector[i].foundKey[1]
+                          , strA, resA
+                          , strB, resB
                          );
         }
     }
@@ -3933,7 +3962,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
                       " )"
                      );
     } else {
-        PrintAndLogEx(SUCCESS, "( " _YELLOW_("0") ":Failed / " _YELLOW_("1") ":Success )");
+        PrintAndLogEx(SUCCESS, "( " _RED_("0") ":Failed / " _GREEN_("1") ":Success )");
     }
 
     // MAD detection
