@@ -102,21 +102,21 @@ We define generic Proxmark3 platforms as following devices.
 When it comes to these new unknown models we are depending on the community to report in if this repo works and what they did to make it work.
 
 
-**256kb flash memory size of generic Proxmark3 platforms**
+**256KB flash memory size of generic Proxmark3 platforms**
 
 > ⚠ **Note**: 
 > You need to keep a eye on how large your ARM chip built-in flash memory is. 
-> With 512kb you are fine but if its 256kb you need to compile this repo with even less functionality.
+> With 512KB you are fine but if its 256KB you need to compile this repo with even less functionality.
 > When running the `./pm3-flash-all` you can see which size your device have if you have the bootloader from this repo installed. 
 > Otherwise you will find the size reported in the start message when running the Proxmark3 client `./pm3`.
 >
-> [OBS! Read the 256kb flash memory advisory](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#256kb-versions)
+> [OBS! Read the 256KB flash memory advisory](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#256KB-versions)
 
 
 # What has changed?
 
 Proxmark3 RDV4 hardware modifications:
-  * added flash memory 256kb
+  * added flash memory 256KB
   * added smart card module
   * added FPC connector for peripherals such as Bluetooth+battery addon
   * improved antennas

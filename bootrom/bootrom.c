@@ -310,10 +310,10 @@ void BootROM(void) {
     LED_B_OFF();
     LED_A_OFF();
 
-    // Set the first 256kb memory flashspeed
+    // Set the first 256KB memory flashspeed
     AT91C_BASE_EFC0->EFC_FMR = AT91C_MC_FWS_1FWS | MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);
 
-    // 9 = 256, 10+ is 512kb
+    // 9 = 256, 10+ is 512KB
     uint8_t id = (*(AT91C_DBGU_CIDR) & 0xF00) >> 8;
     if (id > 9)
         AT91C_BASE_EFC1->EFC_FMR = AT91C_MC_FWS_1FWS | MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);
