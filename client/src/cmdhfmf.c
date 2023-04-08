@@ -488,6 +488,9 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
     size_t alen = 0, blen = 0;
     uint8_t *keyA, *keyB;
     if (loadFileBinaryKey(keyfn, "", (void**)&keyA, (void**)&keyB, &alen, &blen) != PM3_SUCCESS) {
+        if (keyA) {
+            free(keyA);
+        }
         free(fptr);
         return PM3_ESOFT;
     }
@@ -829,7 +832,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     }
 
     int status  = resp.oldarg[0];
-    if (status) {
+    if (status > 0) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
         PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf rdbl") "` to verify");
     } else if (status == PM3_ETEAROFF) {
@@ -7985,7 +7988,12 @@ static int CmdHF14AMfValue(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 14, data, &dlen);
     CLIParserFree(ctx);
 
-    uint8_t action = 4; // 0 Increment, 1 - Decrement, 2 - Restore, 3 - Set, 4 - Get, 5 - Decode from data
+    // sanity checks
+
+
+    // Action:  0 Increment, 1 - Decrement, 2 - Restore, 3 - Set, 4 - Get, 5 - Decode from data
+    // iceman:  TODO - should be enum
+    uint8_t action = 4; 
     uint32_t value = 0;
 
     // Need to check we only have 1 of inc/dec/set and get the value from the selected option
@@ -8040,7 +8048,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
         }
     }
 
-    if (optionsprovided > 1) { // more then one option provided
+    if (optionsprovided > 1) {
         PrintAndLogEx(WARNING, "must have one and only one of --inc, --dec, --set or --data");
         return PM3_EINVARG;
     }
@@ -8056,37 +8064,56 @@ static int CmdHF14AMfValue(const char *Cmd) {
     }
 
     // don't want to write value data and break something
-    if ((blockno == 0) || (mfIsSectorTrailer(blockno)) || (trnval == 0) || (trnval != -1 && mfIsSectorTrailer(trnval))) {
+    if ((blockno == 0) || 
+        (mfIsSectorTrailer(blockno)) || 
+        (trnval == 0) || 
+        (trnval != -1 && mfIsSectorTrailer(trnval))) {
         PrintAndLogEx(WARNING, "invalid block number, should be a data block");
         return PM3_EINVARG;
     }
 
     if (action < 4) {
+
         uint8_t isok = true;
         if (g_session.pm3_present == false)
             return PM3_ENOTTY;
+
         // 0 Increment, 1 - Decrement, 2 - Restore, 3 - Set, 4 - Get, 5 - Decode from data
-        if (action <= 2) { // increment/decrement/restore value
+        if (action <= 2) {
+
             uint8_t block[MFBLOCK_SIZE] = {0x00};
             memcpy(block, (uint8_t *)&value, 4);
-            uint8_t cmddata[34];
-            memcpy(cmddata, key, sizeof(key));  // Key == 6 data went to 10, so lets offset 9 for inc/dec
-            if (action == 0)
-                PrintAndLogEx(INFO, "Value incremented by : %d", value);
-            if (action == 1)
-                PrintAndLogEx(INFO, "Value decremented by : %d", value);
 
-            cmddata[9] = action; // 00 if increment, 01 if decrement, 02 if restore
+            uint8_t cmddata[34];
+            memcpy(cmddata, key, sizeof(key));  
+            // Key == 6 data went to 10, so lets offset 9 for inc/dec
+
+            if (action == 0) {
+                PrintAndLogEx(INFO, "Value incremented by : %d", (int32_t)value);
+            }
+            if (action == 1) {
+                PrintAndLogEx(INFO, "Value decremented by : %d", (int32_t)value);
+            }
+
+            // 00 if increment, 01 if decrement, 02 if restore
+            cmddata[9] = action; 
+            
             if (trnval != -1) {
-                cmddata[10] = trnval; // transfer to block
+
+                // transfer to block
+                cmddata[10] = trnval; 
+                
                 memcpy(cmddata + 27, transferkey, sizeof(transferkey));
-                if (mfSectorNum(trnval) != mfSectorNum(blockno))
+                if (mfSectorNum(trnval) != mfSectorNum(blockno)) {
                     cmddata[33] = 1; // should send nested auth
-                PrintAndLogEx(INFO, "Transfer block no %d to block %d", blockno, trnval);
+                }
+                PrintAndLogEx(INFO, "Transfer block no %u to block %" PRId64, blockno, trnval);
+
             } else {
                 cmddata[10] = 0;
-                PrintAndLogEx(INFO, "Writing block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
+                PrintAndLogEx(INFO, "Writing block no %u, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
             }
+
             memcpy(cmddata + 11, block, sizeof(block));
 
             clearCommandBuffer();
@@ -8097,7 +8124,6 @@ static int CmdHF14AMfValue(const char *Cmd) {
                 PrintAndLogEx(FAILED, "Command execute timeout");
                 return PM3_ETIMEOUT;
             }
-
             isok = resp.oldarg[0] & 0xff;
         } else { // set value
             // To set a value block (or setup) we can use the normal mifare classic write block
@@ -8129,7 +8155,8 @@ static int CmdHF14AMfValue(const char *Cmd) {
 
         if (isok) {
             PrintAndLogEx(SUCCESS, "Update ... : " _GREEN_("success"));
-            getval = true; // all ok so set flag to read current value
+            getval = true; 
+            // all ok so set flag to read current value
         } else {
             PrintAndLogEx(FAILED, "Update ... : " _RED_("failed"));
         }
@@ -8141,7 +8168,8 @@ static int CmdHF14AMfValue(const char *Cmd) {
         int res = -1;
 
         if (action == 5) {
-            res = PM3_SUCCESS; // already have data from command line
+            res = PM3_SUCCESS;
+            // already have data from command line
         } else {
             if (trnval == -1) {
                 res = mfReadBlock(blockno, keytype, key, data);
