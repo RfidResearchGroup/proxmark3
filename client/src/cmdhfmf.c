@@ -505,6 +505,14 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
             PrintAndLogEx(NORMAL, "." NOLF);
             fflush(stdout);
 
+            if (kbd_enter_pressed()) {
+                PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+                free(fptr);
+                free(keyA);
+                free(keyB);
+                return PM3_EOPABORTED;
+            }
+
             payload.blockno = mfFirstBlockOfSector(sectorNo) + mfNumBlocksPerSector(sectorNo) - 1;
             payload.keytype = current_key;
 
