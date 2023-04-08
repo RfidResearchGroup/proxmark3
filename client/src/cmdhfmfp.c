@@ -738,7 +738,7 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     keyn[0] = uKeyNum >> 8;
     keyn[1] = uKeyNum & 0xff;
     if (verbose)
-        PrintAndLogEx(INFO, "--block:%d sector[%d]:%02x key:%04x", blockn, mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
+        PrintAndLogEx(INFO, "--block:%d sector[%u]:%02x key:%04x", blockn, mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
 
     mf4Session_t mf4session;
     int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
@@ -837,7 +837,7 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     keyn[0] = uKeyNum >> 8;
     keyn[1] = uKeyNum & 0xff;
     if (verbose)
-        PrintAndLogEx(INFO, "--sector[%d]:%02x key:%04x", mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
+        PrintAndLogEx(INFO, "--sector[%u]:%02x key:%04x", mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
 
     mf4Session_t mf4session;
     int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
@@ -945,7 +945,7 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     keyn[0] = uKeyNum >> 8;
     keyn[1] = uKeyNum & 0xff;
     if (verbose)
-        PrintAndLogEx(INFO, "--block:%d sector[%d]:%02x key:%04x", blockNum & 0xff, mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
+        PrintAndLogEx(INFO, "--block:%d sector[%u]:%02x key:%04x", blockNum & 0xff, mfNumBlocksPerSector(sectorNum), sectorNum, uKeyNum);
 
     mf4Session_t mf4session;
     int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);

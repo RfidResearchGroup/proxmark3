@@ -407,12 +407,12 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
     keyn[0] = uKeyNum >> 8;
     keyn[1] = uKeyNum & 0xff;
     if (verbose)
-        PrintAndLogEx(INFO, "--sector[%d]:%02x key:%04x", mfNumBlocksPerSector(sectorNo), sectorNo, uKeyNum);
+        PrintAndLogEx(INFO, "--sector[%u]:%02x key:%04x", mfNumBlocksPerSector(sectorNo), sectorNo, uKeyNum);
 
     mf4Session_t _session;
     int res = MifareAuth4(&_session, keyn, key, true, true, true, verbose, false);
     if (res) {
-        PrintAndLogEx(ERR, "Sector %d authentication error: %d", sectorNo, res);
+        PrintAndLogEx(ERR, "Sector %u authentication error: %d", sectorNo, res);
         return res;
     }
 
@@ -423,18 +423,18 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
     for (int n = firstBlockNo; n < firstBlockNo + mfNumBlocksPerSector(sectorNo); n++) {
         res = MFPReadBlock(&_session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
         if (res) {
-            PrintAndLogEx(ERR, "Sector %d read error: %d", sectorNo, res);
+            PrintAndLogEx(ERR, "Sector %u read error: %d", sectorNo, res);
             DropField();
             return res;
         }
 
         if (datalen && data[0] != 0x90) {
-            PrintAndLogEx(ERR, "Sector %d card read error: %02x %s", sectorNo, data[0], mfpGetErrorDescription(data[0]));
+            PrintAndLogEx(ERR, "Sector %u card read error: %02x %s", sectorNo, data[0], mfpGetErrorDescription(data[0]));
             DropField();
             return 5;
         }
         if (datalen != 1 + 16 + 8 + 2) {
-            PrintAndLogEx(ERR, "Sector %d error returned data length:%d", sectorNo, datalen);
+            PrintAndLogEx(ERR, "Sector %u error returned data length:%d", sectorNo, datalen);
             DropField();
             return 6;
         }

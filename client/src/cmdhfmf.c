@@ -927,7 +927,8 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         return PM3_EINVARG;
     }
     uint8_t sector = (uint8_t)s;
-    uint8_t sc_size = mfNumBlocksPerSector(sector) * MFBLOCK_SIZE;
+    uint16_t sc_size = mfNumBlocksPerSector(sector) * MFBLOCK_SIZE;
+
     uint8_t *data = calloc(sc_size, sizeof(uint8_t));
     if (data == NULL) {
         PrintAndLogEx(ERR, "failed to allocate memory");
