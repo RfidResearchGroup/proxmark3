@@ -39,7 +39,7 @@ example = [[
     ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -k ffffffff -w 1]]..ansicolors.reset..[[
 
     -- Wipe tag, turn into NTAG215, set sig, version, NTAG pwd/pak, and OTP.
-    ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -w 1 -t 15 -u 04112233445566 -s 112233445566778899001122334455667788990011223344556677 -p FFFFFFFF -a 8080 -o 11111111]]..ansicolors.reset..[[
+    ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -w 1 -t 18 -u 04112233445566 -s 112233445566778899001122334455667788990011223344556677 -p FFFFFFFF -a 8080 -o 11111111]]..ansicolors.reset..[[
 
 ]]
 usage = [[
