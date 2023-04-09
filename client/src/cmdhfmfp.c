@@ -597,6 +597,7 @@ static int CmdHFMFPCommitPerso(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp commitp",
                   "Executes Commit Perso command. Can be used in SL0 mode only.",
+                  "OBS! This command will not be executed if CardConfigKey, CardMasterKey and L3SwitchKey AES keys are not written.",
                   "hf mfp commitp\n"
                   //                "hf mfp commitp --sl 1"
                  );
@@ -689,7 +690,7 @@ static int CmdHFMFPRdbl(const char *Cmd) {
         arg_lit0("b",  "keyb", "Use key B (def: keyA)"),
         arg_lit0("p",  "plain", "Plain communication mode between reader and card"),
         arg_int1(NULL, "blk", "<0..255>", "Block number"),
-        arg_str0(NULL, "key", "<hex>", "Key, 16 hex bytes"),
+        arg_str0("k", "key", "<hex>", "Key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1056,7 +1057,8 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
                 }
 
                 // 5 - auth error (rnd not equal)
-                if (res != 5) {
+                // PM3 client says that RND not equal is -16. Corrected. Seems to work.
+                if (res != -16) {
                     if (verbose)
                         PrintAndLogEx(ERR, "\nExchange error. Aborted.");
                     else
