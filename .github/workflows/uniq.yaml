@@ -1,0 +1,23 @@
+name: Check uniq keys
+
+on:
+  push:
+    paths:
+      - 'client/dictionaries/**'
+  pull_request:
+    paths:
+      - 'client/dictionaries/**'
+  workflow_dispatch:
+
+
+jobs:
+  check-unique:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: check unique keys in dic filesç
+        shell: bash
+        run: |
+          find . -type f -name "*.dic" | xargs -I {} sh -c "echo {} && cat {} | grep -v '#' | sort | uniq -i -d -c | sort -n -r "
+          if [[ $(find . -type f -name "*.dic" | xargs -I {} sh -c "echo {} && cat {} | grep -v '#' | sort | uniq -i -d -c | sort -n -r " | grep -v "./" | wc -l) -gt 0 ]]; then exit 1; fi
+          
