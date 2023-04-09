@@ -1128,10 +1128,10 @@ A.k.a ultimate magic card,  most promenent feature is shadow mode (GTU) and opti
 
 Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 
-- [Identify](#identify)
-- [Magic commands](#magic-commands)
-- [Characteristics](#characteristics)
-- [Proxmark3 commands](#proxmark3-commands)
+- [Identify](#identify-16)
+- [Magic commands](#magic-commands-9)
+- [Characteristics](#characteristics-12)
+- [Proxmark3 commands](#proxmark3-commands-9)
 - [Change ATQA / SAK](#change-atqa--sak)
 - [Change ATS](#change-ats)
 - [Set UID length (4, 7, 10)](#set-uid-length-4-7-10)
@@ -1186,19 +1186,22 @@ script run hf_mf_ultimatecard -h -k <passwd> -c -w <type> -u <uid> -t <type> -p 
 Arguments
     -h      this help
     -c      read magic configuration
-    -u      UID (8-14 hexsymbols), set UID on tag
+    -u      UID (8-20 hexsymbols), set UID on tag
     -t      tag type to impersonate
-                 1 = Mifare Mini S20 4-byte     12 = NTAG 210
-                 2 = Mifare Mini S20 7-byte     13 = NTAG 212
-                 3 = Mifare 1k S50 4-byte       14 = NTAG 213
-                 4 = Mifare 1k S50 7-byte       15 = NTAG 215
-                 5 = Mifare 4k S70 4-byte       16 = NTAG 216
-                 6 = Mifare 4k S70 7-byte       17 = NTAG I2C 1K
-            ***  7 = UL -   NOT WORKING FULLY   18 = NTAG I2C 2K
-            ***  8 = UL-C - NOT WORKING FULLY   19 = NTAG I2C 1K PLUS
-                 9 = UL EV1 48b                 20 = NTAG I2C 2K PLUS
-                10 = UL EV1 128b                21 = NTAG 213F
-            *** 11 = UL Plus - NOT WORKING YET  22 = NTAG 216F
+                 1 = Mifare Mini S20 4-byte 
+                 2 = Mifare Mini S20 7-byte 15 = NTAG 210
+                 3 = Mifare Mini S20 10-byte 16 = NTAG 212
+                 4 = Mifare 1k S50 4-byte   17 = NTAG 213
+                 5 = Mifare 1k S50 7-byte   18 = NTAG 215
+                 6 = Mifare 1k S50 10-byte  19 = NTAG 216 
+                 7 = Mifare 4k S70 4-byte   20 = NTAG I2C 1K
+                 8 = Mifare 4k S70 7-byte   21 = NTAG I2C 2K
+                 9 = Mifare 4k S70 10-byte  22 = NTAG I2C 1K PLUS
+            ***  10 = UL -   NOT WORKING FULLY   23 = NTAG I2C 2K PLUS
+            ***  11 = UL-C - NOT WORKING FULLY   24 = NTAG 213F
+                 12 = UL EV1 48b                25 = NTAG 216F
+                 13 = UL EV1 128b        
+            ***  14 = UL Plus - NOT WORKING YET  
 
     -p      NTAG password (8 hexsymbols),  set NTAG password on tag.
     -a      NTAG pack ( 4 hexsymbols), set NTAG pack on tag.
@@ -1365,17 +1368,19 @@ MFC mode 4b UID
 
 => UID `00010203`
 
-`script run hf_mf_ultimatecard -t 3 -u 00010203`
+`script run hf_mf_ultimatecard -t 4 -u 00010203`
 
 MFC mode 7b UID  
 
 => UID `00010203040506`
 
-`script run hf_mf_ultimatecard -t 3 -u 00010203040506`
+`script run hf_mf_ultimatecard -t 5 -u 00010203040506`
 
 MFC mode, 10b UID
 
 => UID `00010203040506070809`
+
+`script run hf_mf_ultimatecard -t 6 -u 00010203040506070809`
 
 Ultralight mode, 4b UID 
 
@@ -1387,9 +1392,9 @@ Ultralight mode, 7b UID
 
 👉 the UID is composed of first two blocks as in regular Ultralights
  * Examples
-   * UL-EV1 48b = `script run hf_mf_ultimatecard -t 9 -u 00010203040506`
-   * UL EV1 128b = `script run hf_mf_ultimatecard -t 10 -u 00010203040506`
-   * NTAG 215 = `script run hf_mf_ultimatecard -t 15 -u 00010203040506`
+   * UL-EV1 48b = `script run hf_mf_ultimatecard -t 12 -u 00010203040506`
+   * UL EV1 128b = `script run hf_mf_ultimatecard -t 13 -u 00010203040506`
+   * NTAG 215 = `script run hf_mf_ultimatecard -t 18 -u 00010203040506`
 
 Ultralight mode, 10b UID  
 => UID `00010203040506070809`  
@@ -1486,10 +1491,10 @@ If you use it, please enter the pre-write mode first. At this time, write the fu
 After writing, set it to on. At this time, after writing the data, the first time you read the data just written, the next time you read It is the pre-written data. All modes support this operation. It should be noted that using any block to read and write in this mode may give wrong results.
 
 Example: 
-`script run hf_mf_ultimatecard -w 1 -g 00 -t 15 -u 04112233445566 -s 112233445566778899001122334455667788990011223344556677 -p FFFFFFFF -a 8080 -o 11111111 -g 01`
+`script run hf_mf_ultimatecard -w 1 -g 00 -t 18 -u 04112233445566 -s 112233445566778899001122334455667788990011223344556677 -p FFFFFFFF -a 8080 -o 11111111 -g 01`
    * -w 1 = wipe the card in Ultralight Mode
    * -g 00 = turn on pre-write mode
-   * -t 15 = change the type of card to NTAG 215
+   * -t 18 = change the type of card to NTAG 215
    * -u = set the uid
    * -s = set the signature
    * -p = set the NTAG password
