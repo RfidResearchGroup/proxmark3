@@ -15,7 +15,7 @@ Useful docs:
   * [MIFARE Classic block0](#mifare-classic-block0)
   * [MIFARE Classic Gen1A aka UID](#mifare-classic-gen1a-aka-uid)
   * [MIFARE Classic Gen1B](#mifare-classic-gen1b)
-  * [MIFARE Classic Gen1A OTP/One Time Programming](#mifare-classic-gen1a-otp/one-time-programming)
+  * [MIFARE Classic Gen1A OTP/One Time Programming](#mifare-classic-gen1a-otpone-time-programming)
   * [MIFARE Classic DirectWrite aka Gen2 aka CUID](#mifare-classic-directwrite-aka-gen2-aka-cuid)
   * [MIFARE Classic DirectWrite, FUID version aka 1-write](#mifare-classic-directwrite-fuid-version-aka-1-write)
   * [MIFARE Classic DirectWrite, UFUID version](#mifare-classic-directwrite-ufuid-version)
