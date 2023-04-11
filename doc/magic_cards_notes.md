@@ -109,6 +109,8 @@ UID 7b:
 ## MIFARE Classic Gen1A aka UID
 ^[Top](#top)
 
+aka MF ZERO
+
 ### Identify
 ^[Top](#top)
 
@@ -440,7 +442,7 @@ hf 14a reader
 ## MIFARE Classic DirectWrite, FUID version aka 1-write
 ^[Top](#top)
 
-aka. MF OTP
+aka MF OTP
 
 Same as MIFARE Classic DirectWrite, but block0 can be written only once.
 
@@ -872,7 +874,7 @@ See `--uid` and `--full`
 ## MIFARE Ultralight EV1 DirectWrite
 ^[Top](#top)
 
-aka. UL2
+aka UL2
 
 Similar to MFUL DirectWrite
 
