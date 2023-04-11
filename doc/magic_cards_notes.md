@@ -15,6 +15,7 @@ Useful docs:
   * [MIFARE Classic block0](#mifare-classic-block0)
   * [MIFARE Classic Gen1A aka UID](#mifare-classic-gen1a-aka-uid)
   * [MIFARE Classic Gen1B](#mifare-classic-gen1b)
+  * [MIFARE Classic Gen1A OTP/One Time Programming](#mifare-classic-gen1a-otp/one-time-programming)
   * [MIFARE Classic DirectWrite aka Gen2 aka CUID](#mifare-classic-directwrite-aka-gen2-aka-cuid)
   * [MIFARE Classic DirectWrite, FUID version aka 1-write](#mifare-classic-directwrite-fuid-version-aka-1-write)
   * [MIFARE Classic DirectWrite, UFUID version](#mifare-classic-directwrite-ufuid-version)
@@ -264,7 +265,32 @@ hf 14a info
 * Read: `40(7)`, `30xx`
 * Write: `40(7)`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
+## MIFARE Classic Gen1A OTP/One Time Programming
+^[Top](#top)
 
+aka MF OTP 2.0
+
+Similar to Gen1A, but after first block 0 edit, tag no longer replies to 0x40 command.
+
+Initial UID is 00000000
+
+All bytes are 00 from factory wherever possible.
+
+### Identify
+^[Top](#top)
+
+Only possible before personalization.
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 1a
+```
+
+### Magic commands
+^[Top](#top)
+
+* Write: `40(7)`, `43`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
 ## MIFARE Classic DirectWrite aka Gen2 aka CUID
 ^[Top](#top)
@@ -414,6 +440,8 @@ hf 14a reader
 ## MIFARE Classic DirectWrite, FUID version aka 1-write
 ^[Top](#top)
 
+aka. MF OTP
+
 Same as MIFARE Classic DirectWrite, but block0 can be written only once.
 
 Initial UID is AA55C396
@@ -545,7 +573,7 @@ When writing to persistent memory it is possible to write _bad_ ACL and perm-bri
 
 **OBS**
 
-It is possible to write a configuration that perma locks the tag,  ie no more magic
+It is possible to write a configuration that perma locks the tag, i.e. no more magic
 
 ### Identify
 ^[Top](#top)
@@ -844,6 +872,8 @@ See `--uid` and `--full`
 ## MIFARE Ultralight EV1 DirectWrite
 ^[Top](#top)
 
+aka. UL2
+
 Similar to MFUL DirectWrite
 
 ### Identify
@@ -879,6 +909,12 @@ hf 14a info
 
 * BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
 * ATS: 850000A00A000AC30004030101000B0316D7
+
+#### MIFARE Ultralight EV1 DirectWrite flavour 3
+^[Top](#top)
+
+* BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
+* ATS: 850000A000000A3C0004030101000E03
 
 ## MIFARE Ultralight C Gen1A
 ^[Top](#top)
@@ -918,6 +954,11 @@ hf 14a info
 * BCC: computed
 * ATS: 0A78008102DBA0C119402AB5
 * Anticol shortcut (CL1/3000): fails
+
+**TODO**
+
+* UL-X, UL-Y, UL-Z, ULtra, UL-5 ?
+
 
 # NTAG
 ^[Top](#top)
