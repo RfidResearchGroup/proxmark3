@@ -596,8 +596,7 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
 static int CmdHFMFPCommitPerso(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp commitp",
-                  "Executes Commit Perso command. Can be used in SL0 mode only.",
-                  "OBS! This command will not be executed if CardConfigKey, CardMasterKey and L3SwitchKey AES keys are not written.",
+                  "Executes Commit Perso command. Can be used in SL0 mode only.\nOBS! This command will not be executed if CardConfigKey, CardMasterKey and L3SwitchKey AES keys are not written.",
                   "hf mfp commitp\n"
                   //                "hf mfp commitp --sl 1"
                  );
