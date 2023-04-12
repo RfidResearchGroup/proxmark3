@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed the USB enumeration process (@wh201906)
  - Fixed `hf mf rdsc` - now correctly gets size in bytes when sector is larger than 32 (@iceman1001)
  - Changed `hf mf supercard` - Support editing UID and recovery of keys from second generation card (@AloneLiberty)
  - Added iClass credit key to default iClass key table and reorganized key order (@GuruSteve)
