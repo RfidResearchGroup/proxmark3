@@ -7986,7 +7986,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
         PrintAndLogEx(WARNING, "Input key type must be A or B");
         return PM3_EINVARG;
     } else if (arg_get_lit(ctx, 10)) {
-        keytype = MF_KEY_B;;
+        transferkeytype = MF_KEY_B;;
     }
 
     int keylen = 0;
