@@ -2722,12 +2722,6 @@ void  __attribute__((noreturn)) AppMain(void) {
     usart_init(USART_BAUD_RATE, USART_PARITY);
 #endif
 
-    // This is made as late as possible to ensure enumeration without timeout
-    // against device such as http://www.hobbytronics.co.uk/usb-host-board-v2
-    usb_disable();
-    usb_enable();
-    allow_send_wtx = true;
-
 #ifdef WITH_FLASH
     // If flash is not present, BUSY_TIMEOUT kicks in, let's do it after USB
     loadT55xxConfig();
@@ -2735,8 +2729,17 @@ void  __attribute__((noreturn)) AppMain(void) {
     //
     // Enforce a spiffs check/garbage collection at boot so we are likely to never
     // fall under the 2 contigous free blocks availables
+    // This is a time-consuming process on large flash.
     rdv40_spiffs_check();
 #endif
+
+    // This is made as late as possible to ensure enumeration without timeout
+    // against device such as http://www.hobbytronics.co.uk/usb-host-board-v2
+    // In other words, keep the interval between usb_enable() and the main loop as short as possible.
+    // (AT91F_CDC_Enumerate() will be called in the main loop)
+    usb_disable();
+    usb_enable();
+    allow_send_wtx = true;
 
     for (;;) {
         WDT_HIT();
