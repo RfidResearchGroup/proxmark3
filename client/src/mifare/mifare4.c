@@ -289,8 +289,9 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     uint8_t kenc[16] = {0};
     memcpy(&kenc[0], &RndA[11], 5);
     memcpy(&kenc[5], &RndB[11], 5);
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 5; i++) {
         kenc[10 + i] = RndA[4 + i] ^ RndB[4 + i];
+    }
     kenc[15] = 0x11;
 
     aes_encode(NULL, key, kenc, kenc, 16);
@@ -301,8 +302,9 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     uint8_t kmac[16] = {0};
     memcpy(&kmac[0], &RndA[7], 5);
     memcpy(&kmac[5], &RndB[7], 5);
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 5; i++) {
         kmac[10 + i] = RndA[0 + i] ^ RndB[0 + i];
+    }
     kmac[15] = 0x22;
 
     aes_encode(NULL, key, kmac, kmac, 16);
