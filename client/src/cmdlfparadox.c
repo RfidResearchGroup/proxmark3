@@ -49,7 +49,7 @@ static int CmdHelp(const char *Cmd);
 // This function will calculate the bitstream for a paradox card and place the result in bs.
 // It returns the calculated CRC from the fc and cn.
 // CRC calculation by mwalker33
-static uint8_t GetParadoxBits(const unsigned long fc, const unsigned long cn, unsigned int *bs){
+static uint8_t GetParadoxBits(const uint32_t fc, const uint32_t cn, unsigned int *bs){
 
     uint8_t manchester[13] = { 0x00 }; // check size needed
     uint32_t t1;
@@ -292,6 +292,11 @@ static int CmdParadoxClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (fc > 999 || cn > 99999){
+        PrintAndLogEx(FAILED, "FC has a max value of 999 and CN has a max value of 99999");
+        return PM3_EINVARG;
+    }
+
     uint32_t blocks[4] = {0};
 
     if (raw_len != 0) {
@@ -304,6 +309,7 @@ static int CmdParadoxClone(const char *Cmd) {
             blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
         }
     } else {
+        //This function generates the bitstream and puts it in blocks. it returns the crc but we don't need it here
         GetParadoxBits(fc, cn, blocks);
     }
 
