@@ -424,21 +424,8 @@ static int CmdParadoxSim(const char *Cmd) {
 
     return PM3_SUCCESS;
 }
-/*
 
-    if (sscanf(Cmd, "%u %u", &fc, &cn) != 2) return usage_lf_paradox_sim();
 
-    facilitycode = (fc & 0x000000FF);
-    cardnumber = (cn & 0x0000FFFF);
-
-    // if ( GetParadoxBits(facilitycode, cardnumber, bs) != PM3_SUCCESS) {
-    // PrintAndLogEx(ERR, "Error with tag bitstream generation.");
-    // return 1;
-    // }
-
-    PrintAndLogEx(NORMAL, "Simulating Paradox - Facility Code: %u, CardNumber: %u", facilitycode, cardnumber);
-
-*/
 static command_t CommandTable[] = {
     {"help",   CmdHelp,          AlwaysAvailable, "This help"},
     {"demod",  CmdParadoxDemod,  AlwaysAvailable, "demodulate a Paradox FSK tag from the GraphBuffer"},
