@@ -1024,7 +1024,7 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
 
                 for (int retry = 0; retry < 4; retry++) {
                     res = MifareAuth4(NULL, keyn, keyList[i], selectCard, true, false, false, true);
-                    if (res == PM3_SUCCESS || PM3_EWRONGANSWER)
+                    if (res == PM3_SUCCESS || res == PM3_EWRONGANSWER)
                         break;
 
                     if (verbose)
