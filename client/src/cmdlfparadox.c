@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include "commonutil.h"   // ARRAYLEN
 #include "cmdparser.h"    // command_t
 #include "comms.h"
@@ -309,7 +308,7 @@ static int CmdParadoxClone(const char *Cmd) {
             blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
         }
     } else {
-        //This function generates the bitstream and puts it in blocks. it returns the crc but we don't need it here
+        //This function generates the bitstream and puts it in blocks. it returns the crc, but we don't need it here
         GetParadoxBits(fc, cn, blocks);
     }
 
@@ -389,7 +388,7 @@ static int CmdParadoxSim(const char *Cmd) {
             PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
             return PM3_EINVARG;
         }
-    } else{
+    } else {
         uint32_t blocks[4] = {0};
         GetParadoxBits(fc,cn,blocks);
         for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
