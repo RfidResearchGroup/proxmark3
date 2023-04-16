@@ -287,6 +287,11 @@ static int CmdParadoxClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if ((fc || cn) && raw_len != 0) {
+        PrintAndLogEx(FAILED, "Can't specify both FC/CN and RAW at the same time");
+        return PM3_EINVARG;
+    }
+
     uint32_t blocks[4] = {0};
 
     if (raw_len != 0) {
