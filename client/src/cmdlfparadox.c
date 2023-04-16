@@ -254,7 +254,7 @@ static int CmdParadoxClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf paradox clone",
                   "clone a paradox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
-                  "lf paradox clone --fc 96 --cn 40426                     -> encode for T55x7 tag with fc and cn\n"
+                  "lf paradox clone --fc 96 --cn 40426 [--q5|--em]         -> encode for T55x7 tag with fc and cn\n"
                   "lf paradox clone --raw 0f55555695596a6a9999a59a         -> encode for T55x7 tag\n"
                   "lf paradox clone --raw 0f55555695596a6a9999a59a --q5    -> encode for Q5/T5555 tag\n"
                   "lf paradox clone --raw 0f55555695596a6a9999a59a --em    -> encode for EM4305/4469"
@@ -353,12 +353,15 @@ static int CmdParadoxSim(const char *Cmd) {
     CLIParserInit(&ctx, "lf paradox sim",
                   "Enables simulation of paradox card with specified card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
-                  "lf paradox sim --raw 0f55555695596a6a9999a59a"
+                  "lf paradox sim --raw 0f55555695596a6a9999a59a           -> simulate tag"
+                  "lf paradox clone --fc 96 --cn 40426                     -> simulate tag with fc and cn\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("r", "raw", "<hex>", " raw hex data. 12 bytes"),
+        arg_u64_0(NULL, "fc", "<dec>", "facility code"),
+        arg_u64_0(NULL, "cn", "<dec>", "card number"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -367,13 +370,32 @@ static int CmdParadoxSim(const char *Cmd) {
     // skip first block,  3*4 = 12 bytes left
     uint8_t raw[12] = {0};
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
+
+    uint32_t fc = arg_get_u32_def(ctx, 2, 0);
+    uint32_t cn = arg_get_u32_def(ctx, 3, 0);
     CLIParserFree(ctx);
 
-    if (raw_len != 12) {
-        PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
+    if ((fc || cn) && raw_len != 0) {
+        PrintAndLogEx(FAILED, "Can't specify both FC/CN and RAW at the same time");
         return PM3_EINVARG;
     }
 
+    if (fc > 999 || cn > 99999){
+        PrintAndLogEx(FAILED, "FC has a max value of 999 and CN has a max value of 99999");
+        return PM3_EINVARG;
+    }
+    if (raw_len != 0) {
+        if (raw_len != 12) {
+            PrintAndLogEx(ERR, "Data must be 12 bytes (24 HEX characters)  %d", raw_len);
+            return PM3_EINVARG;
+        }
+    } else{
+        uint32_t blocks[4] = {0};
+        GetParadoxBits(fc,cn,blocks);
+        for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+            num_to_bytes(blocks[i], sizeof(uint32_t), raw + ((i - 1) * 4));
+        }
+    }
     PrintAndLogEx(SUCCESS, "Simulating Paradox -  raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
 
     uint8_t bs[sizeof(raw) * 8];
