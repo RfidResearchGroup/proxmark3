@@ -46,6 +46,54 @@ static int CmdHelp(const char *Cmd);
 // Paradox Prox demod - FSK2a RF/50 with preamble of 00001111 (then manchester encoded)
 // print full Paradox Prox ID and some bit format details if found
 
+// This function will calculate the bitstream for a paradox card and place the result in bs.
+// It returns the calculated CRC from the fc and cn.
+// CRC calculation by mwalker33
+static uint8_t GetParadoxBits(const unsigned long fc, const unsigned long cn, unsigned int *bs){
+
+    uint8_t manchester[13] = { 0x00 }; // check size needed
+    uint32_t t1;
+
+    manchester[0] = 0x0F; // preamble
+    manchester[1] = 0x05; // Leading zeros  - Note: from this byte on, is part of the CRC calculation
+    manchester[2] = 0x55; // Leading zeros          its 4 bits out for the CRC, so we need to move
+    manchester[3] = 0x55; // Leading zeros          back 4 bits once we have the crc (done below)
+
+    // add FC
+    t1 = manchesterEncode2Bytes(fc);
+    manchester[4] = (t1 >> 8) & 0xFF;
+    manchester[5] = t1 & 0xFF;
+
+    // add cn
+    t1 = manchesterEncode2Bytes(cn);
+    manchester[6] = (t1 >> 24) & 0xFF;
+    manchester[7] = (t1 >> 16) & 0xFF;
+    manchester[8] = (t1 >> 8) & 0xFF;
+    manchester[9] = t1 & 0xFF;
+
+    uint8_t crc = (CRC8Maxim(manchester + 1, 9) ^ 0x6) & 0xFF;
+
+    // add crc
+    t1 = manchesterEncode2Bytes(crc);
+    manchester[10] = (t1 >> 8) & 0xFF;
+    manchester[11] = t1 & 0xFF;
+
+    // move left 4 bits left 4 bits - Now that we have the CRC we need to re-align the data.
+    for (int i = 1; i < 12; i++)
+        manchester[i] = (manchester[i] << 4) + (manchester[i + 1] >> 4);
+
+    // Add trailing 1010 (11)
+    manchester[11] |= (1 << 3);
+    manchester[11] |= (1 << 1);
+
+    // move into tag blocks
+
+    for (int i = 0; i < 12; i++)
+        bs[1 + (i / 4)] += (manchester[i] << (8 * (3 - i % 4)));
+
+    return crc;
+}
+
 int demodParadox(bool verbose) {
     (void) verbose; // unused so far
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
@@ -131,6 +179,12 @@ int demodParadox(bool verbose) {
     uint32_t rawLo = bytebits_to_byte(bits + idx + 64, 32);
     uint32_t rawHi = bytebits_to_byte(bits + idx + 32, 32);
     uint32_t rawHi2 = bytebits_to_byte(bits + idx, 32);
+
+    uint32_t blocks[4] = {0};
+    uint8_t crc = GetParadoxBits(fc,cardnum,blocks);
+    if(chksum != crc)
+        PrintAndLogEx(ERR,"CRC Error! Calculated CRC is " _GREEN_("%d") " but card CRC is " _RED_("%d") ".",crc,chksum);
+
 
     PrintAndLogEx(INFO, "Paradox - ID: " _GREEN_("%x%08x") " FC: " _GREEN_("%d") " Card: " _GREEN_("%d") ", Checksum: %02x, Raw: %08x%08x%08x",
                   hi >> 10,
@@ -245,44 +299,7 @@ static int CmdParadoxClone(const char *Cmd) {
             blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
         }
     } else {
-        uint8_t manchester[13] = { 0x00 }; // check size needed
-        uint32_t t1;
-
-        manchester[0] = 0x0F; // preamble
-        manchester[1] = 0x05; // Leading zeros  - Note: from this byte on, is part of the CRC calculation
-        manchester[2] = 0x55; // Leading zeros          its 4 bits out for the CRC, so we need too move
-        manchester[3] = 0x55; // Leading zeros          back 4 bits once we have the crc (done below)
-
-        // add FC
-        t1 = manchesterEncode2Bytes(fc);
-        manchester[4] = (t1 >> 8) & 0xFF;
-        manchester[5] = t1 & 0xFF;
-
-        // add cn
-        t1 = manchesterEncode2Bytes(cn);
-        manchester[6] = (t1 >> 24) & 0xFF;
-        manchester[7] = (t1 >> 16) & 0xFF;
-        manchester[8] = (t1 >> 8) & 0xFF;
-        manchester[9] = t1 & 0xFF;
-
-        uint8_t crc = (CRC8Maxim(manchester + 1, 9) ^ 0x6) & 0xFF;
-
-        // add crc
-        t1 = manchesterEncode2Bytes(crc);
-        manchester[10] = (t1 >> 8) & 0xFF;
-        manchester[11] = t1 & 0xFF;
-
-        // move left 4 bits left 4 bits - Now that we have the CRC we need to re-align the data.
-        for (int i = 1; i < 12; i++)
-            manchester[i] = (manchester[i] << 4) + (manchester[i + 1] >> 4);
-
-        // Add trailing 1010 (11)
-        manchester[11] |= (1 << 3);
-        manchester[11] |= (1 << 1);
-
-        // move into tag blocks
-        for (int i = 0; i < 12; i++)
-            blocks[1 + (i / 4)] += (manchester[i] << (8 * (3 - i % 4)));
+        GetParadoxBits(fc, cn, blocks);
     }
 
     // Paradox - FSK2a, data rate 50, 3 data blocks
