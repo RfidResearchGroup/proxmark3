@@ -397,7 +397,8 @@ int t55xxWrite(uint8_t block, bool page1, bool usepwd, bool testMode, uint32_t p
 }
 
 void printT5xxHeader(uint8_t page) {
-    PrintAndLogEx(SUCCESS, "Reading Page %d:", page);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Page " _YELLOW_("%d"), page);
     PrintAndLogEx(SUCCESS, "blk | hex data | binary                           | ascii");
     PrintAndLogEx(SUCCESS, "----+----------+----------------------------------+-------");
 }
@@ -815,7 +816,7 @@ static void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
             break;
     }
 
-    PrintAndLogEx(NORMAL, msg);
+    PrintAndLogEx(SUCCESS, msg);
 }
 
 static int CmdT55xxWakeUp(const char *Cmd) {
@@ -2222,14 +2223,15 @@ static int CmdT55xxDump(const char *Cmd) {
                   "lf t55xx dump -f my_lf_dump"
                  );
 
-    // 1 (help) + 3 (two user specified params) + (5 T55XX_DLMODE_SINGLE)
-    void *argtable[4 + 5] = {
+    // 1 (help) + 4 (two user specified params) + (5 T55XX_DLMODE_SINGLE)
+    void *argtable[5 + 5] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "filename (default is generated on blk 0)"),
         arg_lit0("o", "override", "override, force pwd read despite danger to card"),
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
+        arg_lit0(NULL, "ns", "no save"),
     };
-    uint8_t idx = 4;
+    uint8_t idx = 5;
     arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, T55XX_DLMODE_SINGLE);
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
@@ -2251,10 +2253,12 @@ static int CmdT55xxDump(const char *Cmd) {
         usepwd = true;
     }
 
-    bool r0 = arg_get_lit(ctx, 4);
-    bool r1 = arg_get_lit(ctx, 5);
-    bool r2 = arg_get_lit(ctx, 6);
-    bool r3 = arg_get_lit(ctx, 7);
+    bool nosave = arg_get_lit(ctx, 4);
+
+    bool r0 = arg_get_lit(ctx, 5);
+    bool r1 = arg_get_lit(ctx, 6);
+    bool r2 = arg_get_lit(ctx, 7);
+    bool r3 = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     if ((r0 + r1 + r2 + r3) > 1) {
@@ -2278,8 +2282,9 @@ static int CmdT55xxDump(const char *Cmd) {
     // will save the dump file if ALL page 0 is OK
     printT5xxHeader(0);
     for (uint8_t i = 0; i < 8; ++i) {
-        if (T55xxReadBlock(i, 0, usepwd, override, password, downlink_mode) != PM3_SUCCESS)
+        if (T55xxReadBlock(i, 0, usepwd, override, password, downlink_mode) != PM3_SUCCESS) {
             success = false;
+        }
 
         // only show override warning on the first block read
         if (override == 1) {
@@ -2287,12 +2292,14 @@ static int CmdT55xxDump(const char *Cmd) {
         }
     }
     printT5xxHeader(1);
-    for (uint8_t i = 0; i < 4; i++)
-        if (T55xxReadBlock(i, 1, usepwd, override, password, downlink_mode) != PM3_SUCCESS)
+    for (uint8_t i = 0; i < 4; i++) {
+        if (T55xxReadBlock(i, 1, usepwd, override, password, downlink_mode) != PM3_SUCCESS) {
             T55x7_SaveBlockData(8 + i, 0x00);
+        }
+    }
 
     // all ok, save dump to file
-    if (success) {
+    if (success && nosave == false) {
 
         // set default filename, if not set by user
         if (strlen(filename) == 0) {
@@ -4019,7 +4026,11 @@ static int CmdT55xxSniff(const char *Cmd) {
     // setup and sample data from Proxmark
     // if not directed to existing sample/graphbuffer
     if (use_graphbuf == false) {
+
+        // make loop to call sniff with skip samples..
+        // then build it up by adding 
         CmdLFSniff("");
+
     }
 
     // Headings
