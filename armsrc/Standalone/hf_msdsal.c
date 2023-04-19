@@ -168,7 +168,7 @@ void RunMod(void) {
     //Expiration date: 17/11
     //Service code: 201
     //Discretionary data: 0000030000991
-    //char token[19] = {0x44,0x12,0x34,0x56,0x05,0x78,0x12,0x34,0xd1,0x71,0x12,0x01,0x00,0x00,0x03,0x00,0x00,0x99,0x1f};
+    //char token[19] = {0x44,0x12,0x34,0x56,0x05,0x78,0x56,0x78,0xd1,0x71,0x12,0x01,0x00,0x00,0x03,0x00,0x00,0x99,0x1f};
     //
     // It is possible to initialize directly the emulation mode, having "token" with data and set "chktoken" = true ;)
     //
@@ -185,11 +185,11 @@ void RunMod(void) {
     // in case there is a read command received we shouldn't break
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
 
-    uint8_t visauid[7] = {0x01, 0x02, 0x03, 0x04};
+    uint8_t visauid[7] = {0x05, 0x06, 0x07, 0x08};
     memcpy(data, visauid, 4);
 
     // to initialize the emulation
-    uint8_t tagType = 4; // 4 = ISO/IEC 14443-4 - javacard (JCOP)
+    uint8_t tagType = 11; // 11 = ISO/IEC 14443-4 - javacard (JCOP)
     tag_response_info_t *responses;
     uint32_t cuid = 0;
     uint32_t counters[3] = { 0x00, 0x00, 0x00 };
@@ -376,7 +376,8 @@ void RunMod(void) {
 
                 // dynamic_response_info will be in charge of responses
                 dynamic_response_info.response_n = 0;
-
+                
+                //Dbprintf("receivedCmd: %02x\n", receivedCmd);
                 // received a REQUEST
                 if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) {
                     odd_reply = !odd_reply;
@@ -386,30 +387,35 @@ void RunMod(void) {
 
                     // received a HALT
                 } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {
-//                    DbpString(_YELLOW_("+") "Received a HALT");
+                    //DbpString(_YELLOW_("+") "Received a HALT");
                     p_response = NULL;
 
                     // received a WAKEUP
                 } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) {
-//                    DbpString(_YELLOW_("+") "WAKEUP Received");
+                    //DbpString(_YELLOW_("+") "WAKEUP Received");
                     prevCmd = 0;
                     p_response = &responses[RESP_INDEX_ATQA];
 
                     // received request for UID (cascade 1)
                 } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {
-//                    DbpString(_YELLOW_("+") "Request for UID C1");
-                    p_response = &responses[RESP_INDEX_UIDC1];
+                    //DbpString(_YELLOW_("+") "Request for UID C1");
+                    p_response = &responses[RESP_INDEX_UIDC1];                    
 
                     // received a SELECT (cascade 1)
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {
-//                    DbpString(_YELLOW_("+") "Request for SELECT S1");
-                    p_response = &responses[RESP_INDEX_SAKC1];
+                    //DbpString(_YELLOW_("+") "Request for SELECT S1");
+                    p_response = &responses[RESP_INDEX_SAKC1];                    
 
                     // received a RATS request
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {
-//                    DbpString(_YELLOW_("+") "Request for RATS");
+                    DbpString(_YELLOW_("+") "Request for RATS");
                     prevCmd = 0;
-                    p_response = &responses[RESP_INDEX_RATS];
+                    //p_response = &responses[RESP_INDEX_RATS];
+
+                    static uint8_t rRATS[] = { 0x13, 0x78, 0x80, 0x72, 0x02, 0x80, 0x31, 0x80, 0x66, 0xb1, 0x84, 0x0c, 0x01, 0x6e, 0x01, 0x83, 0x00, 0x90, 0x00 };                    
+
+                    memcpy(&dynamic_response_info.response[0], rRATS, sizeof(rRATS));
+                    dynamic_response_info.response_n = sizeof(rRATS);
 
                 } else {
                     DbpString(_YELLOW_("[ ") "Card reader command" _YELLOW_(" ]"));
@@ -483,6 +489,7 @@ void RunMod(void) {
                         }
                     }
                 }
+
                 if (dynamic_response_info.response_n > 0) {
                     DbpString(_GREEN_("[ ") "Proxmark3 answer" _GREEN_(" ]"));
                     Dbhexdump(dynamic_response_info.response_n, dynamic_response_info.response, false);
