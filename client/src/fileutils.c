@@ -85,6 +85,8 @@ DumpFileType_t getfiletype(const char *filename) {
             o = JSON;
         } else if (str_endswith(s, "dic")) {
             o = DICTIONARY;
+        } else if (str_endswith(s, "mct")) {
+            o = MCT;
         } else {
             // mfd, trc, trace is binary
             o = BIN;
@@ -113,27 +115,6 @@ int fileExists(const char *filename) {
 }
 
 /**
- * @brief checks if path is file.
- * @param filename
- * @return
- */
-/*
-static bool is_regular_file(const char *filename) {
-#ifdef _WIN32
-    struct _stat st;
-    if (_stat(filename, &st) == -1)
-        return false;
-#else
-    struct stat st;
-//    stat(filename, &st);
-    if (lstat(filename, &st) == -1)
-        return false;
-#endif
-    return S_ISREG(st.st_mode) != 0;
-}
-*/
-
-/**
  * @brief checks if path is directory.
  * @param filename
  * @return
@@ -151,68 +132,6 @@ static bool is_directory(const char *filename) {
 #endif
     return S_ISDIR(st.st_mode) != 0;
 }
-
-/**
- * @brief create a new directory.
- * @param dirname
- * @return
- */
-// Not used...
-/*
-#ifdef _WIN32
-#define make_dir(a) _mkdir(a)
-#else
-#define make_dir(a) mkdir(a,0755) //note 0755 MUST have leading 0 for octal linux file permissions
-#endif
-bool create_path(const char *dirname) {
-
-    if (dirname == NULL) // nothing to do
-        return false;
-
-    if ((strlen(dirname) == 1) && (dirname[0] == '/'))
-        return true;
-
-    if ((strlen(dirname) == 2) && (dirname[1] == ':'))
-        return true;
-
-    if (fileExists(dirname) == 0) {
-
-        char *bs = strrchr(dirname, '\\');
-        char *fs = strrchr(dirname, '/');
-
-        if ((bs == NULL) && (fs != NULL)) {
-            *fs = 0x00;
-            create_path (dirname);
-            *fs = '/';
-        }
-
-        if ((bs != NULL) && (fs == NULL)) {
-            *bs = 0x00;
-            create_path (dirname);
-            *bs = '\\';
-        }
-
-        if ((bs != NULL) && (fs != NULL)) {
-            if (strlen (bs) > strlen (fs)) {
-                *fs = 0x00; // No slash
-                create_path (dirname);
-                *fs = '/';
-            } else {
-                *bs = 0x00;
-                create_path (dirname);
-                *bs = '\\';
-            }
-
-        }
-
-        if (make_dir(dirname) != 0) {
-           PrintAndLogEx(ERR, "could not create directory.... "_RED_("%s"),dirname);
-           return false;
-        }
-    }
-    return true;
-}
-*/
 
 bool setDefaultPath(savePaths_t pathIndex, const char *path) {
 
@@ -1041,7 +960,8 @@ out:
     free(fileName);
     return retval;
 }
-int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
+
+int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, "", false);
     if (res != PM3_SUCCESS) {
@@ -1096,7 +1016,8 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
             return PM3_EFILE;
         }
 
-        if (line[0] == '#')
+        // skip lines like "+Sector:"
+        if (line[0] == '+')
             continue;
 
         strcleanrn(line, sizeof(line));
@@ -1110,7 +1031,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from text file " _YELLOW_("%s"), counter, preferredName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from MCT file " _YELLOW_("%s"), counter, preferredName);
 
 
     uint8_t *newdump = realloc(*pdata, counter);
@@ -2106,6 +2027,10 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
         case DICTIONARY: {
             PrintAndLogEx(ERR, "Error: Only BIN/EML/JSON formats allowed");
             return PM3_EINVARG;
+        }
+        case MCT: {
+            res = loadFileMCT_safe(fn, pdump, dumplen);
+            break; 
         }
     }
 

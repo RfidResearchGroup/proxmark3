@@ -56,6 +56,7 @@ typedef enum {
     EML,
     JSON,
     DICTIONARY,
+    MCT,
 } DumpFileType_t;
 
 int fileExists(const char *filename);
@@ -176,8 +177,18 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
  * @param datalen the number of bytes loaded from file
  * @return 0 for ok, 1 for failz
 */
-int loadFileEML(const char *preferredName, void *data, size_t *datalen);
 int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen);
+
+/**
+ * @brief  Utility function to load data from a textfile (MCT). This method takes a preferred name.
+ * E.g. dumpdata-15.mct
+ *
+ * @param preferredName
+ * @param data The data array to store the loaded bytes from file
+ * @param datalen the number of bytes loaded from file
+ * @return 0 for ok, 1 for failz
+*/
+int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen);
 
 /**
  * @brief  Utility function to load data from a JSON textfile. This method takes a preferred name.

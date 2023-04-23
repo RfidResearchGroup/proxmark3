@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added the possibility to load `.MCT` dump files (@iceman1001)
  - Changed `lf t55xx dump --ns` - now supports `no save` of memory (@iceman1001)
  - Fixed the USB enumeration process (@wh201906)
  - Fixed `hf mf rdsc` - now correctly gets size in bytes when sector is larger than 32 (@iceman1001)
