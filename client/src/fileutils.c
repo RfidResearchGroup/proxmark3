@@ -181,37 +181,55 @@ static size_t path_size(savePaths_t a) {
 }
 
 char *newfilenamemcopy(const char *preferredName, const char *suffix) {
+    return newfilenamemcopyEx(preferredName, suffix, spDefault);
+}
+
+char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePaths_t e_save_path) {
     if (preferredName == NULL || suffix == NULL) {
         return NULL;
     }
 
     uint16_t p_namelen = strlen(preferredName);
-    if (str_endswith(preferredName, suffix))
+    if (str_endswith(preferredName, suffix)) {
         p_namelen -= strlen(suffix);
+    }
 
-    // 10: room for filenum to ensure new filename
-    const size_t len = p_namelen + strlen(suffix) + 1 + 10;
+    int save_path_len = path_size(e_save_path);
 
-    int foobar = path_size(spDefault);
-    (void) foobar;
+    // 1: null terminator
+    // 16: room for filenum to ensure new filename
+    // save_path_len + strlen(PATHSEP):  the user preference save paths
+    const size_t len = p_namelen + strlen(suffix) + 1 + 16 + save_path_len + strlen(PATHSEP);
 
     char *fileName = (char *) calloc(len, sizeof(uint8_t));
     if (fileName == NULL) {
         return NULL;
     }
 
+    char *pfn = fileName;
+
+    // user preference save paths
+    if (save_path_len) {
+        snprintf(pfn, save_path_len + strlen(PATHSEP) + 1, "%s%s", g_session.defaultPaths[e_save_path], PATHSEP);
+        pfn += save_path_len + strlen(PATHSEP);
+    }
+
     int num = 1;
 
-    snprintf(fileName, len, "%.*s%s", p_namelen, preferredName, suffix);
+    // modify filename
+    snprintf(pfn, len, "%.*s%s", p_namelen, preferredName, suffix);
+
+    // check complete path/filename if exists
     while (fileExists(fileName)) {
-        snprintf(fileName, len, "%.*s-%d%s", p_namelen, preferredName, num, suffix);
+        // modify filename
+        snprintf(pfn, len, "%.*s-%03d%s", p_namelen, preferredName, num, suffix);
         num++;
     }
 
-    PrintAndLogEx(INFO, "FILE PATH:  %s", fileName);
     return fileName;
 }
 
+// --------- SAVE FILES
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen) {
 
     if (data == NULL || datalen == 0) {
@@ -240,13 +258,14 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     return PM3_SUCCESS;
 }
 
+// dump file
 int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t blocksize) {
 
     if (data == NULL || datalen == 0) {
         return PM3_EINVARG;
     }
 
-    char *fileName = newfilenamemcopy(preferredName, ".eml");
+    char *fileName = newfilenamemcopyEx(preferredName, ".eml", spDump);
     if (fileName == NULL) {
         return PM3_EMALLOC;
     }
@@ -290,16 +309,19 @@ out:
     return retval;
 }
 
+// dump file (normally,  we also got preference file, etc)
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *)) {
-    return saveFileJSONex(preferredName, ftype, data, datalen, true, callback);
+    return saveFileJSONex(preferredName, ftype, data, datalen, true, callback, spDump);
 }
-int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *)) {
+int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *), savePaths_t e_save_path) {
 
+    if (ftype != jsfCustom) {
     if (data == NULL || datalen == 0) {
         return PM3_EINVARG;
     }
+    }
 
-    char *fileName = newfilenamemcopy(preferredName, ".json");
+    char *fileName = newfilenamemcopyEx(preferredName, ".json", e_save_path);
     if (fileName == NULL) {
         return PM3_EMALLOC;
     }
@@ -638,7 +660,7 @@ int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool
     if (overwrite)
         filename = filenamemcopy(preferredName, ".json");
     else
-        filename = newfilenamemcopy(preferredName, ".json");
+        filename = newfilenamemcopyEx(preferredName, ".json", spDump);
 
     if (filename == NULL)
         return PM3_EMALLOC;
@@ -658,13 +680,14 @@ int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool
     return PM3_EFILE;
 }
 
+// wave file of trace,
 int saveFileWAVE(const char *preferredName, const int *data, size_t datalen) {
 
     if (data == NULL || datalen == 0) {
         return PM3_EINVARG;
     }
 
-    char *fileName = newfilenamemcopy(preferredName, ".wav");
+    char *fileName = newfilenamemcopyEx(preferredName, ".wav", spTrace);
     if (fileName == NULL) {
         return PM3_EMALLOC;
     }
@@ -710,13 +733,14 @@ out:
     return retval;
 }
 
+// Signal trace file, PM3
 int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
 
     if (data == NULL || datalen == 0) {
         return PM3_EINVARG;
     }
 
-    char *fileName = newfilenamemcopy(preferredName, ".pm3");
+    char *fileName = newfilenamemcopyEx(preferredName, ".pm3", spTrace);
     if (fileName == NULL) {
         return PM3_EMALLOC;
     }
@@ -743,11 +767,12 @@ out:
     return retval;
 }
 
+// key file dump
 int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_sector) {
 
     if (e_sector == NULL) return PM3_EINVARG;
 
-    char *fileName = newfilenamemcopy(preferredName, ".bin");
+    char *fileName = newfilenamemcopyEx(preferredName, ".bin", spDump);
     if (fileName == NULL) return PM3_EMALLOC;
 
     FILE *f = fopen(fileName, "wb");
@@ -785,66 +810,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
     return PM3_SUCCESS;
 }
 
-int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen) {
-
-    if (data == NULL) return 1;
-    char *fileName = filenamemcopy(preferredName, suffix);
-    if (fileName == NULL) return PM3_EINVARG;
-
-    int retval = PM3_SUCCESS;
-
-    FILE *f = fopen(fileName, "rb");
-    if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
-        free(fileName);
-        return PM3_EFILE;
-    }
-
-    // get filesize in order to malloc memory
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    if (fsize <= 0) {
-        PrintAndLogEx(FAILED, "error, when getting filesize");
-        retval = PM3_EFILE;
-        goto out;
-    }
-
-    uint8_t *dump = calloc(fsize, sizeof(uint8_t));
-    if (!dump) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
-        retval = PM3_EMALLOC;
-        goto out;
-    }
-
-    size_t bytes_read = fread(dump, 1, fsize, f);
-
-    if (bytes_read != fsize) {
-        PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
-        free(dump);
-        retval = PM3_EFILE;
-        goto out;
-    }
-
-    if (bytes_read > maxdatalen) {
-        PrintAndLogEx(WARNING, "Warning, bytes read exceed calling array limit. Max bytes is %zu bytes", maxdatalen);
-        bytes_read = maxdatalen;
-    }
-
-    memcpy((data), dump, bytes_read);
-    free(dump);
-
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file " _YELLOW_("%s"), bytes_read, fileName);
-
-    *datalen = bytes_read;
-
-out:
-    fclose(f);
-    free(fileName);
-    return retval;
-}
-
+// --------- LOAD FILES
 int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen) {
     return loadFile_safeEx(preferredName, suffix, pdata, datalen, true);
 }
@@ -894,34 +860,53 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
 
     *datalen = bytes_read;
 
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
+    }
     return PM3_SUCCESS;
 }
 
-int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
+int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, "", false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
 
-    if (data == NULL) return PM3_EINVARG;
-
-    char *fileName = filenamemcopy(preferredName, ".eml");
-    if (fileName == NULL) return PM3_EMALLOC;
-
-    size_t counter = 0;
-    int retval = PM3_SUCCESS, hexlen = 0;
-
-    FILE *f = fopen(fileName, "r");
+    FILE *f = fopen(path, "r");
     if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked. '" _YELLOW_("%s")"'", fileName);
-        retval = PM3_EFILE;
-        goto out;
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+    free(path);
+
+    // get filesize in order to malloc memory
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (fsize <= 0) {
+        PrintAndLogEx(FAILED, "error, when getting filesize");
+        fclose(f);
+        return PM3_EFILE;
+    }
+
+    *pdata = calloc(fsize, sizeof(uint8_t));
+    if (!*pdata) {
+        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        fclose(f);
+        return PM3_EMALLOC;
     }
 
     // 128 + 2 newline chars + 1 null terminator
     char line[131];
     memset(line, 0, sizeof(line));
     uint8_t buf[64] = {0x00};
+    size_t counter = 0;
+    int retval = PM3_SUCCESS, hexlen = 0;
 
-    uint8_t *udata = (uint8_t *)data;
+    uint8_t *tmp = (uint8_t *)*pdata;
 
     while (!feof(f)) {
 
@@ -933,8 +918,7 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
 
             fclose(f);
             PrintAndLogEx(FAILED, "File reading error.");
-            retval = PM3_EFILE;
-            goto out;
+            return PM3_EFILE;
         }
 
         if (line[0] == '#')
@@ -942,22 +926,29 @@ int loadFileEML(const char *preferredName, void *data, size_t *datalen) {
 
         strcleanrn(line, sizeof(line));
 
-        int res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
+        res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
         if (res == 0) {
-            memcpy(udata + counter, buf, hexlen);
+            memcpy(tmp + counter, buf, hexlen);
             counter += hexlen;
         } else {
             retval = PM3_ESOFT;
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from text file " _YELLOW_("%s"), counter, fileName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from text file " _YELLOW_("%s"), counter, preferredName);
+
+
+    uint8_t *newdump = realloc(*pdata, counter);
+    if (newdump == NULL) {
+        free(*pdata);
+        return PM3_EMALLOC;
+    } else {
+        *pdata = newdump;
+    }
 
     if (datalen)
         *datalen = counter;
 
-out:
-    free(fileName);
     return retval;
 }
 
@@ -1824,51 +1815,84 @@ int searchAndList(const char *pm3dir, const char *ext) {
 }
 
 static int searchFinalFile(char **foundpath, const char *pm3dir, const char *searchname, bool silent) {
-    if ((foundpath == NULL) || (pm3dir == NULL) || (searchname == NULL)) return PM3_ESOFT;
+
+    if ((foundpath == NULL) || (pm3dir == NULL) || (searchname == NULL)) {
+        return PM3_ESOFT;
+    }
+
     // explicit absolute (/) or relative path (./) => try only to match it directly
     char *filename = calloc(strlen(searchname) + 1, sizeof(char));
-    if (filename == NULL) return PM3_EMALLOC;
+    if (filename == NULL) {
+        return PM3_EMALLOC;
+    }
+
     strcpy(filename, searchname);
     if ((g_debugMode == 2) && (!silent)) {
-        PrintAndLogEx(INFO, "Searching %s", filename);
+        PrintAndLogEx(INFO, "pm3dir...... %s", pm3dir);
+        PrintAndLogEx(INFO, "Searching... %s", filename);
     }
+
+    // try implicit relative path
+    PrintAndLogEx(DEBUG, "Searching implicit relative paths");
+    if (fileExists(filename)) {
+        *foundpath = filename;
+        if ((g_debugMode == 2) && (!silent)) {
+            PrintAndLogEx(INFO, "Found %s", *foundpath);
+        }
+        return PM3_SUCCESS;
+    }
+
     if (((strlen(filename) > 1) && (filename[0] == '/')) ||
             ((strlen(filename) > 2) && (filename[0] == '.') && (filename[1] == '/'))) {
-        if (fileExists(filename)) {
-            *foundpath = filename;
+        goto out;
+    }
+
+    // try the session paths
+    PrintAndLogEx(DEBUG, "Searching preferences paths");
+    for (int i = 0; i < spItemCount; i++) {
+
+        size_t sn = strlen(g_session.defaultPaths[i]) + strlen(filename) + strlen(PATHSEP) + 1;
+        char *default_path = calloc(sn, sizeof(char));
+        if (default_path == NULL) {
+            goto out;
+        }
+
+        snprintf(default_path, sn, "%s%s%s", g_session.defaultPaths[i], PATHSEP, filename);
+
+        if ((g_debugMode == 2) && (!silent)) {
+            PrintAndLogEx(INFO, "Searching %s", default_path);
+        }
+
+        if (fileExists(default_path)) {
+            free(filename);
+            *foundpath = default_path;
             if ((g_debugMode == 2) && (!silent)) {
                 PrintAndLogEx(INFO, "Found %s", *foundpath);
             }
             return PM3_SUCCESS;
         } else {
-            goto out;
+            free(default_path);
         }
     }
-    // else
 
-    // try implicit relative path
-    {
-        if (fileExists(filename)) {
-            *foundpath = filename;
-            if ((g_debugMode == 2) && (!silent)) {
-                PrintAndLogEx(INFO, "Found %s", *foundpath);
-            }
-            return PM3_SUCCESS;
-        }
-    }
     // try pm3 dirs in user .proxmark3 (user mode)
+    PrintAndLogEx(DEBUG, "Searching user .proxmark3 paths");
     const char *user_path = get_my_user_directory();
     if (user_path != NULL) {
         char *path = calloc(strlen(user_path) + strlen(PM3_USER_DIRECTORY) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
-        if (path == NULL)
+        if (path == NULL) {
             goto out;
+        }
+
         strcpy(path, user_path);
         strcat(path, PM3_USER_DIRECTORY);
         strcat(path, pm3dir);
         strcat(path, filename);
+
         if ((g_debugMode == 2) && (!silent)) {
             PrintAndLogEx(INFO, "Searching %s", path);
         }
+
         if (fileExists(path)) {
             free(filename);
             *foundpath = path;
@@ -1880,7 +1904,9 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
             free(path);
         }
     }
+
     // try pm3 dirs in current client workdir (dev mode)
+    PrintAndLogEx(DEBUG, "Searching current workdir paths");
     const char *exec_path = get_my_executable_directory();
     if ((exec_path != NULL) &&
             ((strcmp(DICTIONARIES_SUBDIR, pm3dir) == 0) ||
@@ -1913,23 +1939,28 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
             free(path);
         }
     }
+
     // try pm3 dirs in current repo workdir (dev mode)
+    PrintAndLogEx(DEBUG, "Searching PM3 dirs in current workdir");
     if ((exec_path != NULL) &&
             ((strcmp(TRACES_SUBDIR, pm3dir) == 0) ||
              (strcmp(FIRMWARES_SUBDIR, pm3dir) == 0) ||
              (strcmp(BOOTROM_SUBDIR, pm3dir) == 0) ||
              (strcmp(FULLIMAGE_SUBDIR, pm3dir) == 0))) {
-        const char *above = "../";
-        char *path = calloc(strlen(exec_path) + strlen(above) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
-        if (path == NULL)
+        char *path = calloc(strlen(exec_path) + strlen(ABOVE) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
+        if (path == NULL) {
             goto out;
+        }
+
         strcpy(path, exec_path);
-        strcat(path, above);
+        strcat(path, ABOVE);
         strcat(path, pm3dir);
         strcat(path, filename);
+
         if ((g_debugMode == 2) && (!silent)) {
             PrintAndLogEx(INFO, "Searching %s", path);
         }
+
         if (fileExists(path)) {
             free(filename);
             *foundpath = path;
@@ -1941,18 +1972,24 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
             free(path);
         }
     }
+
     // try pm3 dirs in pm3 installation dir (install mode)
+    PrintAndLogEx(DEBUG, "Searching PM3 installation dir paths");
     if (exec_path != NULL) {
         char *path = calloc(strlen(exec_path) + strlen(PM3_SHARE_RELPATH) + strlen(pm3dir) + strlen(filename) + 1, sizeof(char));
-        if (path == NULL)
+        if (path == NULL) {
             goto out;
+        }
+
         strcpy(path, exec_path);
         strcat(path, PM3_SHARE_RELPATH);
         strcat(path, pm3dir);
         strcat(path, filename);
+
         if ((g_debugMode == 2) && (!silent)) {
             PrintAndLogEx(INFO, "Searching %s", path);
         }
+
         if (fileExists(path)) {
             free(filename);
             *foundpath = path;
@@ -1988,15 +2025,15 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
         free(filename);
         return PM3_EFILE;
     }
+
     int res = searchFinalFile(foundpath, pm3dir, filename, silent);
     if (res != PM3_SUCCESS) {
-        if ((res == PM3_EFILE) && (!silent))
+        if ((res == PM3_EFILE) && (!silent)) {
             PrintAndLogEx(FAILED, "Error - can't find `" _YELLOW_("%s") "`", filename);
+        }
+    }
         free(filename);
         return res;
-    }
-    free(filename);
-    return PM3_SUCCESS;
 }
 
 int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen) {
