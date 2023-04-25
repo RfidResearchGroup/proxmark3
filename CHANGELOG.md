@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mfu dump --ns` - now supports `no save` of card memory (@iceman1001)
  - Changed the PM3 client to honor the preferences dump/trace paths. experimental support (@iceman1001)
  - Added the possibility to load `.MCT` dump files (@iceman1001)
  - Changed `lf t55xx dump --ns` - now supports `no save` of memory (@iceman1001)
