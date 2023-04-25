@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed the PM3 client to honor the preferences dump/trace paths. experimental support (@iceman1001)
+ - Added the possibility to load `.MCT` dump files (@iceman1001)
  - Changed `lf t55xx dump --ns` - now supports `no save` of memory (@iceman1001)
  - Fixed the USB enumeration process (@wh201906)
  - Fixed `hf mf rdsc` - now correctly gets size in bytes when sector is larger than 32 (@iceman1001)
@@ -50,6 +52,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf legic einfo` - views emulator menory (@0xdeb)
  - Changed `hf legic view` - now also print the decoded info of the dump file (@0xdeb)
  - Now `script run hf_mf_ultimatecard.lua -u` supports 10bytes UID (@alejandro12120)
+ - Update documentation for installation on macOS with MacPorts (@linuxgemini)
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)
