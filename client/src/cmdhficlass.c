@@ -3836,9 +3836,9 @@ static int CmdHFiClassEncode(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass encode",
                   "Encode binary wiegand to block 7,8,9\n"
                   "Use either --bin or --wiegand/--fc/--cn",
-                  "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337\n"
-                  "hf iclass encode --fc 31 --cn 337 --ki 0                            -> FC 31 CN 337\n"
-                  "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite    -> FC 31 CN 337,  writing w elite key"
+                  "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337 (H10301)\n"
+                  "hf iclass encode -w H10301 --fc 31 --cn 337 --ki 0                  -> FC 31 CN 337 (H10301)\n"
+                  "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite    -> FC 31 CN 337 (H10301), writing w elite key"
                  );
 
     void *argtable[] = {
