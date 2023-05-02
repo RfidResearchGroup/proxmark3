@@ -2292,7 +2292,7 @@
         "Vendor": "NXP",
         "Country": "",
         "Name": "MIFARE 2GO",
-        "Description": "RID used by MIFARE 2GO-based cards",
+        "Description": "AID prefix used by MIFARE 2GO-based cards",
         "Type": ""
     },
     {
@@ -2324,7 +2324,7 @@
         "Vendor": "MasterCard International",
         "Country": "",
         "Name": "Mastercard Private Label Transit",
-        "Description": "RID Used by transit cards that use private label mastercards (E.g. Ventra and HOP)",
+        "Description": "AID prefix used by transit cards that use private label mastercards (E.g. Ventra and HOP)",
         "Type": "transit"
     }
 ]
