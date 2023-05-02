@@ -55,6 +55,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf legic view` - now also print the decoded info of the dump file (@0xdeb)
  - Now `script run hf_mf_ultimatecard.lua -u` supports 10bytes UID (@alejandro12120)
  - Update documentation for installation on macOS with MacPorts (@linuxgemini)
+ - Added possible Paxton id to hitag2 tag info output
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)
