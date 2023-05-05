@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `nfc decode` - now handles NDEF Signature version1 records better (@iceman1001)
  - Added new standalone mode `LF_MULTIHID` - HID26 (H1031) multi simulator (@flamebarke)
  - Changed `hf 14b dump --ns` - now supports `no save` of card memory (@iceman1001)
  - Changed `hf mfu dump --ns` - now supports `no save` of card memory (@iceman1001)
