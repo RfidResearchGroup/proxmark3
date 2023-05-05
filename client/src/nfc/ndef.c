@@ -39,8 +39,6 @@
 #define NDEF_VCARDTEXT    "text/vcard"
 #define NDEF_XVCARDTEXT   "text/x-vcard"
 
-
-
 static const char *TypeNameFormat_s[] = {
     "Empty Record",
     "Well Known Record",
@@ -295,8 +293,8 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
     bool sigURI = sig[indx] & 0x80;
     indx++;
 
-    PrintAndLogEx(SUCCESS, "\tSignature type... " _YELLOW_("%s"), ((sigType < stNA) ? ndefSigType_s[sigType] : ndefSigType_s[stNA]));
-    PrintAndLogEx(SUCCESS, "\tSignature URI.... " _YELLOW_("%s"), (sigURI ? "present" : "not present"));
+    PrintAndLogEx(SUCCESS, "\tType...... " _YELLOW_("%s"), ((sigType < stNA) ? ndefSigType_s[sigType] : ndefSigType_s[stNA]));
+    PrintAndLogEx(SUCCESS, "\tURI....... " _YELLOW_("%s"), (sigURI ? "present" : "not present"));
 
     if (sigType == 0 && sigURI == false) {
         PrintAndLogEx(INFO, "\tRecord should be considered a start marker");
@@ -327,7 +325,7 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
             PrintAndLogEx(SUCCESS, "\t\ts: %s", sprint_hex(sval + 32 - slen, slen));
         }
     } else {
-        PrintAndLogEx(SUCCESS, "\tSignature [%u]...", intsiglen);
+        PrintAndLogEx(SUCCESS, "\tData [%u]...", intsiglen);
         print_hex_noascii_break(&sig[indx], intsiglen, 32);
     }
 
@@ -817,7 +815,7 @@ static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
         return PM3_SUCCESS;
     }
     PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
-    uint16_t ooblen = (ndef->Payload[1] << 8 | ndef->Payload[0]);
+    uint16_t ooblen =  MemBeToUint2byte(ndef->Payload);
     PrintAndLogEx(INFO, "OOB data len.... %u", ooblen);
     PrintAndLogEx(INFO, "BT MAC.......... " _YELLOW_("%s"), sprint_hex(ndef->Payload + 2, 6));
     // Let's check payload[8]. Tells us a bit about the UUID's. If 0x07 then it tells us a service UUID is 128bit
@@ -856,6 +854,38 @@ static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
     return PM3_SUCCESS;
 }
 
+// https://raw.githubusercontent.com/haldean/ndef/master/docs/NFCForum-TS-RTD_1.0.pdf   
+static int ndefDecodeExternal_record(NDEFHeader_t *ndef) {
+    
+    if (ndef->TypeLen == 0) {
+        PrintAndLogEx(INFO, "no type");
+        return PM3_SUCCESS;
+    }
+        
+    if (ndef->PayloadLen == 0) {
+        PrintAndLogEx(INFO, "no payload");
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(INFO
+                    , "    URN... " _GREEN_("urn:nfc:ext:%.*s")
+                    , (int)ndef->TypeLen
+                    , ndef->Type
+                    );
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Payload [%u]...", ndef->PayloadLen);
+    print_hex_noascii_break(ndef->Payload, ndef->PayloadLen, 32);
+    
+    // do a character check?
+    if (!strncmp((char *)ndef->Type, "pilet.ee:ekaart:2", ndef->TypeLen)) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, _GREEN_("Ekaart detected") " - Trying ASN1 decode...");
+        asn1_print(ndef->Payload, ndef->PayloadLen, " ");
+    }
+    return PM3_SUCCESS;
+}
+
 static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
 
     PrintAndLogEx(INFO, "");
@@ -863,7 +893,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
         case tnfEmptyRecord:
             PrintAndLogEx(INFO, "Empty Record");
             if (ndef->TypeLen != 0 || ndef->IDLen != 0 || ndef->PayloadLen != 0) {
-                PrintAndLogEx(FAILED, "unexpected data in TNF_EMPTY record");
+                PrintAndLogEx(FAILED, "unexpected data in empty record");
                 break;
             }
             break;
@@ -959,19 +989,32 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
         }
         case tnfAbsoluteURIRecord:
             PrintAndLogEx(INFO, "Absolute URI Record");
-            PrintAndLogEx(INFO, "    payload : %.*s", (int)ndef->PayloadLen, ndef->Payload);
+            PrintAndLogEx(INFO, "    payload : " _YELLOW_("%.*s"), (int)ndef->PayloadLen, ndef->Payload);
             break;
         case tnfExternalRecord:
             PrintAndLogEx(INFO, "External Record");
-            PrintAndLogEx(INFO, "- decoder to be impl -");
+            ndefDecodeExternal_record(ndef);
             break;
         case tnfUnknownRecord:
             PrintAndLogEx(INFO, "Unknown Record");
-            PrintAndLogEx(INFO, "- decoder to be impl -");
+            if (ndef->TypeLen != 0) {
+                PrintAndLogEx(FAILED, "unexpected type field");
+                break;
+            }
             break;
         case tnfUnchangedRecord:
             PrintAndLogEx(INFO, "Unchanged Record");
             PrintAndLogEx(INFO, "- decoder to be impl -");
+            break;
+        case tnfReservedRecord:
+            PrintAndLogEx(INFO, "Reserved Record");
+            if (ndef->TypeLen != 0) {
+                PrintAndLogEx(FAILED, "unexpected type field");
+                break;
+            }
+            break;
+        default:
+            PrintAndLogEx(FAILED, "unexpected tnf value... 0x%02x", ndef->TypeNameFormat);
             break;
     }
     PrintAndLogEx(INFO, "");
