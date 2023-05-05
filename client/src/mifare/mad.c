@@ -421,3 +421,51 @@ int DetectHID(uint8_t *d, uint16_t manufacture) {
 
     return -1;
 }
+
+int convert_mad_to_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen) {
+
+    if (in == NULL || out == NULL || ilen == 0 ) {
+        return PM3_EINVARG;        
+    }
+
+    // MAD detection
+    if (HasMADKey(in) == false) {
+        PrintAndLogEx(FAILED, "No MAD key was detected in the dump file");
+        return PM3_ESOFT;
+    }
+
+    uint8_t sector0[MFBLOCK_SIZE * 4] = {0};
+    uint8_t sector10[MFBLOCK_SIZE * 4] = {0};
+
+    memcpy(sector0, in, sizeof(sector0));
+    if (ilen == MIFARE_4K_MAX_BYTES) {
+        memcpy(sector10, in + (MF_MAD2_SECTOR * 4 * MFBLOCK_SIZE), sizeof(sector10));
+    }
+
+    uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+    size_t madlen = 0;
+    if (MADDecode(sector0, sector10, mad, &madlen, false)) {
+        PrintAndLogEx(ERR, "can't decode MAD");
+        return PM3_ESOFT;
+    }
+
+    uint16_t ndef_aid = 0xE103;
+    for (int i = 0; i < madlen; i++) {
+        if (ndef_aid == mad[i]) {
+            uint8_t tmp[MFBLOCK_SIZE * 4] = {0};
+            memset(tmp, 0x00, sizeof(tmp));
+
+            // sector i dump (skip first sector +1)
+            memcpy(tmp, in + (i + 1) * sizeof(tmp), sizeof(tmp));
+
+            // debug print
+            // print_hex_noascii_break(tmp, sizeof(tmp) - MFBLOCK_SIZE, MFBLOCK_SIZE);
+
+            // copy to out (skip ST)
+            memcpy(out, tmp, sizeof(tmp) - MFBLOCK_SIZE);
+            out += sizeof(tmp) - MFBLOCK_SIZE;
+            *olen += sizeof(tmp) -MFBLOCK_SIZE;
+        }
+    }
+    return PM3_SUCCESS;
+}

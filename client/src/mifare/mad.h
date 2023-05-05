@@ -30,4 +30,5 @@ int MADCardHolderInfoDecode(uint8_t *data, size_t datalen, bool verbose);
 void MADPrintHeader(void);
 bool HasMADKey(uint8_t *d);
 int DetectHID(uint8_t *d, uint16_t manufacture);
+int convert_mad_to_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen);
 #endif // _MAD_H_

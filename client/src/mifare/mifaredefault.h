@@ -21,8 +21,25 @@
 
 #include "common.h"
 
-#define MFKEY_SIZE 6
-#define MFBLOCK_SIZE 16
+#define MFKEY_SIZE              6
+#define MFBLOCK_SIZE            16
+
+#define MIFARE_4K_MAXBLOCK      256
+#define MIFARE_2K_MAXBLOCK      128
+#define MIFARE_1K_MAXBLOCK      64
+#define MIFARE_MINI_MAXBLOCK    20
+
+#define MIFARE_4K_MAXSECTOR     40
+#define MIFARE_2K_MAXSECTOR     32
+#define MIFARE_1K_MAXSECTOR     16
+#define MIFARE_MINI_MAXSECTOR   5
+
+#define MIFARE_4K_MAX_BYTES     4096
+#define MIFARE_2K_MAX_BYTES     2048
+#define MIFARE_1K_MAX_BYTES     1024
+#define MIFARE_MINI_MAX_BYTES   320
+
+#define MIFARE_KEY_SIZE         6
 
 static const uint64_t g_mifare_default_keys[] = {
     0xffffffffffff, // Default key (first key used by program if no user defined key)
