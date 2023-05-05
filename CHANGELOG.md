@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `nfc decode -f` - now can detect and convert MFC dumpfiles to NDEF byte arrays (@iceman1001)
+ - Changed `nfc decode` - now handles EXTERNAL RECORDS better (@iceman1001)
+ - Fixed `nfc decode` - now handles NDEF Signature version1 records better (@iceman1001)
+ - Added new standalone mode `LF_MULTIHID` - HID26 (H1031) multi simulator (@flamebarke)
+ - Changed `hf 14b dump --ns` - now supports `no save` of card memory (@iceman1001)
+ - Changed `hf mfu dump --ns` - now supports `no save` of card memory (@iceman1001)
  - Changed the PM3 client to honor the preferences dump/trace paths. experimental support (@iceman1001)
  - Added the possibility to load `.MCT` dump files (@iceman1001)
  - Changed `lf t55xx dump --ns` - now supports `no save` of memory (@iceman1001)
@@ -53,6 +59,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf legic view` - now also print the decoded info of the dump file (@0xdeb)
  - Now `script run hf_mf_ultimatecard.lua -u` supports 10bytes UID (@alejandro12120)
  - Update documentation for installation on macOS with MacPorts (@linuxgemini)
+ - Added possible Paxton id to hitag2 tag info output
+ - Changed `hf mf sim` - reduce 50ms threshold to 6ms for reset to idle #1974 (@net147)
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)

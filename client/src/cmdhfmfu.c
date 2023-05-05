@@ -2439,6 +2439,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         arg_lit0("l", NULL, "Swap entered key's endianness"),
         arg_int0("p", "page", "<dec>", "Manually set start page number to start from"),
         arg_int0("q", "qty", "<dec>", "Manually set number of pages to dump"),
+        arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2454,6 +2455,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     bool swap_endian = arg_get_lit(ctx, 3);
     int start_page = arg_get_int_def(ctx, 4, 0);
     int pages = arg_get_int_def(ctx, 5, 16);
+    bool nosave = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -2649,21 +2651,24 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     printMFUdumpEx(&dump_file_data, pages, start_page);
 
-    // user supplied filename?
-    if (fnlen < 1) {
+    if (nosave == false) {
+        // user supplied filename?
+        if (fnlen < 1) {
+            PrintAndLogEx(INFO, "Using UID as filename");
+            uint8_t uid[7] = {0};
+            memcpy(uid, (uint8_t *)&dump_file_data.data, 3);
+            memcpy(uid + 3, (uint8_t *)&dump_file_data.data + 4, 4);
+            strcat(filename, "hf-mfu-");
+            FillFileNameByUID(filename, uid, "-dump", sizeof(uid));
+        }
 
-        PrintAndLogEx(INFO, "Using UID as filename");
-        uint8_t uid[7] = {0};
-        memcpy(uid, (uint8_t *)&dump_file_data.data, 3);
-        memcpy(uid + 3, (uint8_t *)&dump_file_data.data + 4, 4);
-        strcat(filename, "hf-mfu-");
-        FillFileNameByUID(filename, uid, "-dump", sizeof(uid));
+        uint16_t datalen = pages * MFU_BLOCK_SIZE + MFU_DUMP_PREFIX_LENGTH;
+        pm3_save_dump(filename, (uint8_t *)&dump_file_data, datalen, jsfMfuMemory, MFU_BLOCK_SIZE);
+
+        if (is_partial) {
+            PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
+        }
     }
-    uint16_t datalen = pages * MFU_BLOCK_SIZE + MFU_DUMP_PREFIX_LENGTH;
-    pm3_save_dump(filename, (uint8_t *)&dump_file_data, datalen, jsfMfuMemory, MFU_BLOCK_SIZE);
-
-    if (is_partial)
-        PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
 
     return PM3_SUCCESS;
 }

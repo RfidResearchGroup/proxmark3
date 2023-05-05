@@ -39,8 +39,6 @@
 #define NDEF_VCARDTEXT    "text/vcard"
 #define NDEF_XVCARDTEXT   "text/x-vcard"
 
-
-
 static const char *TypeNameFormat_s[] = {
     "Empty Record",
     "Well Known Record",
@@ -289,22 +287,35 @@ static int ndef_print_signature(uint8_t *data, uint8_t data_len, uint8_t *signat
 }
 
 static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
-    size_t indx = 1;
 
+    size_t indx = 1;
     uint8_t sigType = sig[indx] & 0x7f;
     bool sigURI = sig[indx] & 0x80;
+    indx++;
 
-    PrintAndLogEx(SUCCESS, "\tsignature type: %s", ((sigType < stNA) ? ndefSigType_s[sigType] : ndefSigType_s[stNA]));
-    PrintAndLogEx(SUCCESS, "\tsignature uri: %s", (sigURI ? "present" : "not present"));
+    PrintAndLogEx(SUCCESS, "\tType...... " _YELLOW_("%s"), ((sigType < stNA) ? ndefSigType_s[sigType] : ndefSigType_s[stNA]));
+    PrintAndLogEx(SUCCESS, "\tURI....... " _YELLOW_("%s"), (sigURI ? "present" : "not present"));
 
-    size_t intsiglen = (sig[indx + 1] << 8) + sig[indx + 2];
+    if (sigType == 0 && sigURI == false) {
+        PrintAndLogEx(INFO, "\tRecord should be considered a start marker");
+    }
+    if (sigType == 0 && sigURI) {
+        PrintAndLogEx(INFO, _RED_("\tSignature record is invalid"));
+    }
+
+    uint16_t intsiglen = MemBeToUint2byte(sig + indx);
+    indx += 2;
+
     // ecdsa 0x04
     if (sigType == stECDSA_P192 || sigType == stECDSA_P256) {
-        indx += 3;
+
         int slen = 24;
-        if (sigType == stECDSA_P256)
+        if (sigType == stECDSA_P256) {
             slen = 32;
-        PrintAndLogEx(SUCCESS, "\tsignature [%zu]: %s", intsiglen, sprint_hex_inrow(&sig[indx], intsiglen));
+        }
+        
+        PrintAndLogEx(SUCCESS, "\tSignature [%u]...", intsiglen);
+        print_hex_noascii_break(&sig[indx], intsiglen, 32);
 
         uint8_t rval[300] = {0};
         uint8_t sval[300] = {0};
@@ -313,38 +324,53 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
             PrintAndLogEx(SUCCESS, "\t\tr: %s", sprint_hex(rval + 32 - slen, slen));
             PrintAndLogEx(SUCCESS, "\t\ts: %s", sprint_hex(sval + 32 - slen, slen));
         }
+    } else {
+        PrintAndLogEx(SUCCESS, "\tData [%u]...", intsiglen);
+        print_hex_noascii_break(&sig[indx], intsiglen, 32);
     }
+
     indx += intsiglen;
 
     if (sigURI) {
-        size_t intsigurilen = (sig[indx] << 8) + sig[indx + 1];
+
+        uint16_t intsigurilen = MemBeToUint2byte(sig + indx);
         indx += 2;
-        PrintAndLogEx(SUCCESS, "\tsignature uri [%zu]: %.*s", intsigurilen, (int)intsigurilen, &sig[indx]);
+
+        PrintAndLogEx(SUCCESS, "\tSignature URI... " _YELLOW_("%.*s"), (int)intsigurilen, &sig[indx]);
         indx += intsigurilen;
     }
+
+    // CERTIFICATE SECTION
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_("Certificate"));
 
     uint8_t certFormat = (sig[indx] >> 4) & 0x07;
     uint8_t certCount = sig[indx] & 0x0f;
     bool certURI = sig[indx] & 0x80;
+    indx++;
 
-    PrintAndLogEx(SUCCESS, "\tcertificate format: %s", ((certFormat < sfNA) ? ndefCertificateFormat_s[certFormat] : ndefCertificateFormat_s[sfNA]));
-    PrintAndLogEx(SUCCESS, "\tcertificates count: %d", certCount);
+    PrintAndLogEx(SUCCESS, "\tFormat............ " _YELLOW_("%s"), ((certFormat < sfNA) ? ndefCertificateFormat_s[certFormat] : ndefCertificateFormat_s[sfNA]));
+    if (certCount) {
+        PrintAndLogEx(SUCCESS, "\tNum of certs#..... " _YELLOW_("%d"), certCount);
+    }
 
     // print certificates
-    indx++;
-    for (int i = 0; i < certCount; i++) {
-        size_t intcertlen = (sig[indx + 1] << 8) + sig[indx + 2];
+    for (uint8_t i = 0; i < certCount; i++) {
+        uint16_t intcertlen = MemBeToUint2byte(sig + indx);
         indx += 2;
 
-        PrintAndLogEx(SUCCESS, "\tcertificate %d [%zu]: %s", i + 1, intcertlen, sprint_hex_inrow(&sig[indx], intcertlen));
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(SUCCESS, "\tCertificate %u [%u]...", i + 1, intcertlen);
+        print_hex_noascii_break(&sig[indx], intcertlen, 32);
+
         indx += intcertlen;
     }
 
-    // have certificate uri
+    // print certificate uri
     if ((indx <= siglen) && certURI) {
-        size_t inturilen = (sig[indx] << 8) + sig[indx + 1];
+        uint16_t inturilen = MemBeToUint2byte(sig + indx);
         indx += 2;
-        PrintAndLogEx(SUCCESS, "\tcertificate uri [%zu]: %.*s", inturilen, (int)inturilen, &sig[indx]);
+        PrintAndLogEx(SUCCESS, "\tCertificate URI... " _YELLOW_("%.*s"), (int)inturilen, &sig[indx]);
     }
 
     return PM3_SUCCESS;
@@ -417,9 +443,9 @@ static int ndefDecodeSig2(uint8_t *sig, size_t siglen) {
 }
 
 static int ndefDecodeSig(uint8_t *sig, size_t siglen) {
-    PrintAndLogEx(SUCCESS, "\tsignature version : \t" _GREEN_("0x%02x"), sig[0]);
+    PrintAndLogEx(SUCCESS, "\tVersion... " _GREEN_("0x%02x"), sig[0]);
     if (sig[0] != 0x01 && sig[0] != 0x20) {
-        PrintAndLogEx(ERR, "signature version unknown.");
+        PrintAndLogEx(ERR, _RED_("Version unknown"));
         return PM3_ESOFT;
     }
 
@@ -789,7 +815,7 @@ static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
         return PM3_SUCCESS;
     }
     PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
-    uint16_t ooblen = (ndef->Payload[1] << 8 | ndef->Payload[0]);
+    uint16_t ooblen =  MemBeToUint2byte(ndef->Payload);
     PrintAndLogEx(INFO, "OOB data len.... %u", ooblen);
     PrintAndLogEx(INFO, "BT MAC.......... " _YELLOW_("%s"), sprint_hex(ndef->Payload + 2, 6));
     // Let's check payload[8]. Tells us a bit about the UUID's. If 0x07 then it tells us a service UUID is 128bit
@@ -828,6 +854,38 @@ static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
     return PM3_SUCCESS;
 }
 
+// https://raw.githubusercontent.com/haldean/ndef/master/docs/NFCForum-TS-RTD_1.0.pdf   
+static int ndefDecodeExternal_record(NDEFHeader_t *ndef) {
+    
+    if (ndef->TypeLen == 0) {
+        PrintAndLogEx(INFO, "no type");
+        return PM3_SUCCESS;
+    }
+        
+    if (ndef->PayloadLen == 0) {
+        PrintAndLogEx(INFO, "no payload");
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(INFO
+                    , "    URN... " _GREEN_("urn:nfc:ext:%.*s")
+                    , (int)ndef->TypeLen
+                    , ndef->Type
+                    );
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Payload [%u]...", ndef->PayloadLen);
+    print_hex_noascii_break(ndef->Payload, ndef->PayloadLen, 32);
+    
+    // do a character check?
+    if (!strncmp((char *)ndef->Type, "pilet.ee:ekaart:2", ndef->TypeLen)) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, _GREEN_("Ekaart detected") " - Trying ASN1 decode...");
+        asn1_print(ndef->Payload, ndef->PayloadLen, " ");
+    }
+    return PM3_SUCCESS;
+}
+
 static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
 
     PrintAndLogEx(INFO, "");
@@ -835,7 +893,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
         case tnfEmptyRecord:
             PrintAndLogEx(INFO, "Empty Record");
             if (ndef->TypeLen != 0 || ndef->IDLen != 0 || ndef->PayloadLen != 0) {
-                PrintAndLogEx(FAILED, "unexpected data in TNF_EMPTY record");
+                PrintAndLogEx(FAILED, "unexpected data in empty record");
                 break;
             }
             break;
@@ -931,19 +989,32 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
         }
         case tnfAbsoluteURIRecord:
             PrintAndLogEx(INFO, "Absolute URI Record");
-            PrintAndLogEx(INFO, "    payload : %.*s", (int)ndef->PayloadLen, ndef->Payload);
+            PrintAndLogEx(INFO, "    payload : " _YELLOW_("%.*s"), (int)ndef->PayloadLen, ndef->Payload);
             break;
         case tnfExternalRecord:
             PrintAndLogEx(INFO, "External Record");
-            PrintAndLogEx(INFO, "- decoder to be impl -");
+            ndefDecodeExternal_record(ndef);
             break;
         case tnfUnknownRecord:
             PrintAndLogEx(INFO, "Unknown Record");
-            PrintAndLogEx(INFO, "- decoder to be impl -");
+            if (ndef->TypeLen != 0) {
+                PrintAndLogEx(FAILED, "unexpected type field");
+                break;
+            }
             break;
         case tnfUnchangedRecord:
             PrintAndLogEx(INFO, "Unchanged Record");
             PrintAndLogEx(INFO, "- decoder to be impl -");
+            break;
+        case tnfReservedRecord:
+            PrintAndLogEx(INFO, "Reserved Record");
+            if (ndef->TypeLen != 0) {
+                PrintAndLogEx(FAILED, "unexpected type field");
+                break;
+            }
+            break;
+        default:
+            PrintAndLogEx(FAILED, "unexpected tnf value... 0x%02x", ndef->TypeNameFormat);
             break;
     }
     PrintAndLogEx(INFO, "");

@@ -1467,12 +1467,12 @@ int convert_mfc_2_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen) 
 
         if (mfIsSectorTrailer(blockno) == false) {
             memcpy(out, in, MFBLOCK_SIZE);
+            out += MFBLOCK_SIZE;
+            *olen += MFBLOCK_SIZE;
         }
         blockno++;
-        out += MFBLOCK_SIZE;
         in += MFBLOCK_SIZE;
         ilen -= MFBLOCK_SIZE;
-        *olen += MFBLOCK_SIZE;
     }
     return PM3_SUCCESS;
 }

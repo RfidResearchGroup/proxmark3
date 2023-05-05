@@ -324,6 +324,37 @@ static int CmdLFHitagSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+
+static void printHitag2PaxtonDowngrade(const uint8_t *data) {
+
+    uint64_t bytes = 0;
+    uint64_t num = 0;
+    uint64_t paxton_id = 0;
+    uint16_t skip = 48;
+    uint16_t digit = 0;
+    uint64_t mask = 0xF80000000000;
+
+    for (int i = 16; i < 22; i++) {
+        bytes = (bytes * 0x100) + data[i];
+    }
+
+    for (int j = 0; j< 8; j++) {
+        num = bytes & mask;
+        skip -= 5;
+        mask = mask >> 5;
+        digit = (num >> skip & 15);
+        paxton_id = (paxton_id * 10) + digit;
+
+        if (j == 5) {
+            skip -= 2;
+            mask = mask >> 2;
+        }
+    }
+
+    PrintAndLogEx(INFO, "-------- " _CYAN_("Possible de-scramble patterns") " ---------");
+    PrintAndLogEx(SUCCESS, "Paxton id: %lu | 0x%lx", paxton_id, paxton_id);
+}
+
 static void printHitag2Configuration(uint8_t config) {
 
     char msg[100];
@@ -630,6 +661,8 @@ static int CmdLFHitagReader(const char *Cmd) {
 
         // print data
         print_hex_break(data, 48, 4);
+
+        printHitag2PaxtonDowngrade(data);
     }
     return PM3_SUCCESS;
 }
