@@ -57,6 +57,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Now `script run hf_mf_ultimatecard.lua -u` supports 10bytes UID (@alejandro12120)
  - Update documentation for installation on macOS with MacPorts (@linuxgemini)
  - Added possible Paxton id to hitag2 tag info output
+ - Changed `hf mf sim` - reduce 50ms threshold to 6ms for reset to idle #1974 (@net147)
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)

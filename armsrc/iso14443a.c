@@ -2084,8 +2084,8 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
                     if (timer == 0) {
                         timer = GetTickCount();
                     } else {
-                        // 50ms no field --> card to idle state
-                        if (GetTickCountDelta(timer) > 50) {
+                        // 6ms no field --> card to idle state
+                        if (GetTickCountDelta(timer) > 6) {
                             return 2;
                         }
                     }
