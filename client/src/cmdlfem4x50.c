@@ -19,6 +19,7 @@
 #include "cliparser.h"
 #include "cmdlfem4x50.h"
 #include <ctype.h>
+#include <math.h>
 #include "cmdparser.h"    // command_t
 #include "util_posix.h"  // msclock
 #include "fileutils.h"
@@ -368,6 +369,7 @@ int CmdEM4x50Brute(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     em4x50_data_t etd;
+    bzero(&etd, sizeof(etd));
 
     int mode_len = 64;
     char mode[64];
@@ -379,48 +381,83 @@ int CmdEM4x50Brute(const char *Cmd) {
     } else if(strcmp(mode, "charset") == 0){
         etd.bruteforce_mode = BRUTEFORCE_MODE_CHARSET;
     } else {
-        PrintAndLogEx(FAILED, "unknown bruteforce mode: %s", mode);
+        PrintAndLogEx(FAILED, "Unknown bruteforce mode: %s", mode);
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "Chosen mode2: %d", etd.bruteforce_mode);
+    if(etd.bruteforce_mode == BRUTEFORCE_MODE_RANGE){
+        int begin_len = 0;
+        uint8_t begin[4] = {0x0};
+        CLIGetHexWithReturn(ctx, 2, begin, &begin_len);
 
-    // int first_len = 0;
-    // uint8_t first[4] = {0, 0, 0, 0};
-    //  CLIGetHexWithReturn(ctx, 1, first, &first_len);
-    //  int last_len = 0;
-    //  uint8_t last[4] = {0, 0, 0, 0};
-    //  CLIGetHexWithReturn(ctx, 2, last, &last_len);
+        int end_len = 0;
+        uint8_t end[4] = {0x0};
+        CLIGetHexWithReturn(ctx, 3, end, &end_len);
+
+        if(begin_len!=4){
+            PrintAndLogEx(FAILED, "'begin' parameter must be 4 bytes");
+            return PM3_EINVARG;
+        }
+
+        if(end_len!=4){
+            PrintAndLogEx(FAILED, "'end' parameter must be 4 bytes");
+            return PM3_EINVARG;
+        }
+
+        etd.password1 = BYTES2UINT32_BE(begin);
+        etd.password2 = BYTES2UINT32_BE(end);
+    } else if(etd.bruteforce_mode == BRUTEFORCE_MODE_CHARSET){
+        bool enable_digits = arg_get_lit(ctx, 4);
+        bool enable_uppercase = arg_get_lit(ctx, 5);
+
+        if(enable_digits)
+            etd.bruteforce_charset |= CHARSET_DIGITS;
+        if(enable_uppercase)
+            etd.bruteforce_charset |= CHARSET_UPPERCASE;
+    
+        if(etd.bruteforce_charset == 0){
+            PrintAndLogEx(FAILED, "Please enable at least one charset when using charset bruteforce mode.");
+            return PM3_EINVARG;
+        }
+
+         PrintAndLogEx(INFO, "Enabled charsets: %s%s", 
+                            enable_digits ? "digits " : "",
+                            enable_uppercase ? "uppercase " : "");
+
+    }
+
     CLIParserFree(ctx);
-/*
-    if (first_len != 4) {
-        PrintAndLogEx(FAILED, "password length must be 4 bytes");
-        return PM3_EINVARG;
-    }
-    if (last_len != 4) {
-        PrintAndLogEx(FAILED, "password length must be 4 bytes");
-        return PM3_EINVARG;
-    }
-
-    em4x50_data_t etd;
-    etd.password1 = BYTES2UINT32_BE(first);
-    etd.password2 = BYTES2UINT32_BE(last);
-
+  
     // 27 passwords/second (empirical value)
     const int speed = 27;
+    int no_iter = 0;
+
+    if(etd.bruteforce_mode == BRUTEFORCE_MODE_RANGE){
+        no_iter = etd.password2 - etd.password1 + 1;
+        PrintAndLogEx(INFO, "Trying " _YELLOW_("%i") " passwords in range [0x%08x, 0x%08x]"
+                  , no_iter
+                  , etd.password1
+                  , etd.password2
+                 );
+    } else if(etd.bruteforce_mode == BRUTEFORCE_MODE_CHARSET){
+        unsigned int digits = 0;
+
+        if(etd.bruteforce_charset & CHARSET_DIGITS)
+            digits += CHARSET_DIGITS_SIZE;
+
+        if(etd.bruteforce_charset & CHARSET_UPPERCASE)
+            digits += CHARSET_UPPERCASE_SIZE;
+
+        no_iter = pow(digits, 4);
+    }
 
     // print some information
-    int no_iter = etd.password2 - etd.password1 + 1;
     int dur_s = no_iter / speed;
     int dur_h = dur_s / 3600;
     int dur_m = (dur_s - dur_h * 3600) / 60;
 
     dur_s -= dur_h * 3600 + dur_m * 60;
-    PrintAndLogEx(INFO, "Trying " _YELLOW_("%i") " passwords in range [0x%08x, 0x%08x]"
-                  , no_iter
-                  , etd.password1
-                  , etd.password2
-                 );
+    
     PrintAndLogEx(INFO, "Estimated duration: %ih %im %is", dur_h, dur_m, dur_s);
 
     // start
@@ -434,7 +471,7 @@ int CmdEM4x50Brute(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", resp.data.asDwords[0]);
     else
         PrintAndLogEx(WARNING, "brute pwd failed");
-*/
+
     return PM3_SUCCESS;
 }
 
@@ -1214,7 +1251,7 @@ int CmdEM4x50Sim(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",   CmdHelp,              AlwaysAvailable, "This help"},
     {"-----------", CmdHelp,         AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
-    {"brute",   CmdEM4x50Brute,      IfPm3EM4x50,     "Simple bruteforce attack to find password"},
+    {"brute",   CmdEM4x50Brute,      IfPm3EM4x50,     "Bruteforce attack to find password"},
     {"chk",     CmdEM4x50Chk,        IfPm3EM4x50,     "Check passwords from dictionary"},
     {"dump",    CmdEM4x50Dump,       IfPm3EM4x50,     "Dump EM4x50 tag"},
     {"info",    CmdEM4x50Info,       IfPm3EM4x50,     "Tag information"},

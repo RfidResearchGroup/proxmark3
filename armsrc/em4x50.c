@@ -703,7 +703,7 @@ void em4x50_login(uint32_t *password, bool ledcontrol) {
     reply_ng(CMD_LF_EM4X50_LOGIN, status, NULL, 0);
 }
 
-// envoke password search
+// invoke password search
 void em4x50_brute(em4x50_data_t *etd, bool ledcontrol) {
     em4x50_setup_read();
 

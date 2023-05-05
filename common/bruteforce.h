@@ -34,6 +34,7 @@ typedef uint8_t bruteforce_mode_t;
 
 
 typedef uint8_t bruteforce_charset_t;
+// bit flags - can be used together using logical OR
 #define CHARSET_DIGITS 1
 #define CHARSET_UPPERCASE 2
 
