@@ -134,12 +134,12 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
     return fptr;
 }
 
-static int32_t initSectorTable(sector_t **src, int32_t items) {
+static int initSectorTable(sector_t **src, size_t items) {
 
     (*src) = calloc(items, sizeof(sector_t));
 
     if (*src == NULL)
-        return -1;
+        return PM3_EMALLOC;
 
     // empty e_sector
     for (int i = 0; i < items; ++i) {
@@ -148,7 +148,7 @@ static int32_t initSectorTable(sector_t **src, int32_t items) {
             (*src)[i].foundKey[j] = false;
         }
     }
-    return items;
+    return PM3_SUCCESS;
 }
 
 static void decode_print_st(uint16_t blockno, uint8_t *data) {
@@ -2390,7 +2390,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-
     // detect MFC EV1 Signature
     bool is_ev1 = detect_mfc_ev1_signature();
     if (is_ev1) {
@@ -2400,9 +2399,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // create/initialize key storage structure
     uint32_t e_sector_size = sector_cnt > sectorno ? sector_cnt : sectorno + 1;
-    res = initSectorTable(&e_sector, e_sector_size);
-    if (res != e_sector_size) {
-        free(e_sector);
+    if (initSectorTable(&e_sector, e_sector_size) != PM3_SUCCESS) {
         return PM3_EMALLOC;
     }
 
@@ -3195,8 +3192,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
     // create/initialize key storage structure
     sector_t *e_sector = NULL;
-    int32_t res = initSectorTable(&e_sector, sectorsCnt);
-    if (res != sectorsCnt) {
+    if (initSectorTable(&e_sector, sectorsCnt) != PM3_SUCCESS) {
         free(keyBlock);
         return PM3_EMALLOC;
     }
@@ -3231,7 +3227,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                 if (size == keycnt - i)
                     lastChunk = true;
 
-                res = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector, false);
+                int res = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector, false);
 
                 if (firstChunk)
                     firstChunk = false;
@@ -3438,8 +3434,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
     // create/initialize key storage structure
     sector_t *e_sector = NULL;
-    int32_t res = initSectorTable(&e_sector, SectorsCnt);
-    if (res != SectorsCnt) {
+    if (initSectorTable(&e_sector, SectorsCnt) != PM3_SUCCESS) {
         free(keyBlock);
         return PM3_EMALLOC;
     }
@@ -3597,19 +3592,18 @@ out:
     return PM3_SUCCESS;
 }
 
-void showSectorTable(sector_t *k_sector, uint8_t k_sectorsCount) {
+void showSectorTable(sector_t *k_sector, uint8_t k_sectors_cnt) {
     if (k_sector != NULL) {
-        printKeyTable(k_sectorsCount, k_sector);
+        printKeyTable(k_sectors_cnt, k_sector);
         free(k_sector);
     }
 }
 
-void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, bool setEmulatorMem, bool verbose) {
+void readerAttack(sector_t *k_sector, uint8_t k_sectors_cnt, nonces_t data, bool setEmulatorMem, bool verbose) {
 
+    // init if needed
     if (k_sector == NULL) {
-        int32_t res = initSectorTable(&k_sector, k_sectorsCount);
-        if (res != k_sectorsCount) {
-            free(k_sector);
+        if (initSectorTable(&k_sector, k_sectors_cnt) != PM3_SUCCESS) {
             return;
         }
     }
@@ -4566,12 +4560,9 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    sector_t *e_sector = NULL;
-
     // create/initialize key storage structure
-    int32_t res = initSectorTable(&e_sector, sectors_cnt);
-    if (res != sectors_cnt) {
-        free(e_sector);
+    sector_t *e_sector = NULL;
+    if (initSectorTable(&e_sector, sectors_cnt) != PM3_SUCCESS) {
         return PM3_EMALLOC;
     }
 
