@@ -3606,9 +3606,6 @@ void showSectorTable(sector_t *k_sector, uint8_t k_sectorsCount) {
 
 void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, bool setEmulatorMem, bool verbose) {
 
-    uint64_t key = 0;
-    bool success = false;
-
     if (k_sector == NULL) {
         int32_t res = initSectorTable(&k_sector, k_sectorsCount);
         if (res != k_sectorsCount) {
@@ -3617,8 +3614,8 @@ void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, boo
         }
     }
 
-    success = mfkey32_moebius(&data, &key);
-    if (success) {
+    uint64_t key = 0;
+    if (mfkey32_moebius(&data, &key)) {
         uint8_t sector = data.sector;
         uint8_t keytype = data.keytype;
 
@@ -3633,7 +3630,7 @@ void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, boo
 
         //set emulator memory for keys
         if (setEmulatorMem) {
-            uint8_t memBlock[16] = {0, 0, 0, 0, 0, 0, 0xff, 0x0F, 0x80, 0x69, 0, 0, 0, 0, 0, 0};
+            uint8_t memBlock[16] = {0, 0, 0, 0, 0, 0, 0xFF, 0x07, 0x80, 0x69, 0, 0, 0, 0, 0, 0};
             num_to_bytes(k_sector[sector].Key[0], 6, memBlock);
             num_to_bytes(k_sector[sector].Key[1], 6, memBlock + 10);
             //iceman,  guessing this will not work so well for 4K tags.
