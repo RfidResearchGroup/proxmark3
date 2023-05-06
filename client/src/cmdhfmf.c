@@ -2355,7 +2355,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Attack key storage variables
     uint8_t *keyBlock = NULL;
     uint32_t key_cnt = 0;
-    sector_t *e_sector;
     uint8_t tmp_key[6] = {0};
 
     // Nested and Hardnested returned status
@@ -2398,8 +2397,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     }
 
     // create/initialize key storage structure
-    uint32_t e_sector_size = sector_cnt > sectorno ? sector_cnt : sectorno + 1;
-    if (initSectorTable(&e_sector, e_sector_size) != PM3_SUCCESS) {
+    sector_t *e_sector = NULL;
+    uint32_t e_sector_cnt = (sector_cnt > sectorno) ? sector_cnt : sectorno + 1;
+    if (initSectorTable(&e_sector, e_sector_cnt) != PM3_SUCCESS) {
         return PM3_EMALLOC;
     }
 
