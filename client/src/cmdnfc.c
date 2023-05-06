@@ -118,8 +118,6 @@ static int CmdNfcDecode(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "MFC dump file detected. Converting...");
             uint8_t ndef[4096] = {0};
             uint16_t ndeflen = 0;
-            // uint8_t skip = (4 * MFBLOCK_SIZE);
-            // convert_mfc_2_arr(dump + skip, bytes_read - skip, ndef, &ndeflen);
 
             if (convert_mad_to_arr(dump, bytes_read, ndef, &ndeflen) != PM3_SUCCESS) {
                 PrintAndLogEx(FAILED, "Failed converting, aborting...");
