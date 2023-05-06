@@ -2841,7 +2841,7 @@ tryNested:
                                 }
                                 break;
                             }
-                            case PM3_ESTATIC_NONCE:
+                            case PM3_ESTATIC_NONCE: {
                                 PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
 
                                 e_sector[current_sector_i].Key[current_key_type_i] = 0xffffffffffff;;
@@ -2854,6 +2854,7 @@ tryNested:
                                 free(e_sector);
                                 free(fptr);
                                 return isOK;
+                            }
                             case PM3_SUCCESS: {
                                 calibrate = false;
                                 e_sector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmp_key, 6);
@@ -2878,6 +2879,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                           slow ? "Yes" : "No");
                         }
 
+                        foundkey = 0;
                         isOK = mfnestedhard(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, NULL, false, false, slow, 0, &foundkey, NULL);
                         DropField();
                         if (isOK) {
