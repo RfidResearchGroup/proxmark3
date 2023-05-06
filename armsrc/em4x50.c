@@ -633,12 +633,21 @@ static int login(uint32_t password) {
     return PM3_EFAILED;
 }
 
-// searching for password in given range
-static bool brute(uint32_t start, uint32_t stop, uint32_t *pwd) {
+// searching for password using chosen bruteforce algorithm
+static bool brute(em4x50_data_t *etd, uint32_t *pwd) {
+
+    generator_context_t ctx;
     bool pwd_found = false;
+    int generator_ret = 0;
     int cnt = 0;
 
-    for (*pwd = start; *pwd <= stop; (*pwd)++) {
+    bf_generator_init(&ctx, etd->bruteforce_mode);
+
+    if(etd->bruteforce_mode == BRUTEFORCE_MODE_CHARSET)
+        bf_generator_set_charset(&ctx, etd->bruteforce_charset);
+
+    while ( (generator_ret=bf_generate32(&ctx)) == GENERATOR_NEXT) {
+        *pwd = ctx.current_key32;
 
         WDT_HIT();
 
@@ -715,7 +724,7 @@ void em4x50_brute(em4x50_data_t *etd, bool ledcontrol) {
             LED_C_OFF();
             LED_D_ON();
         }
-        bsuccess = brute(etd->password1, etd->password2, &pwd);
+        bsuccess = brute(etd, &pwd);
     }
 
     if (ledcontrol) LEDsoff();

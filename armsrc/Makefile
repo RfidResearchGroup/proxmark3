@@ -46,6 +46,7 @@ SRC_CRC = crc.c crc16.c crc32.c
 SRC_ICLASS = iclass.c optimized_cipherutils.c optimized_ikeys.c optimized_elite.c optimized_cipher.c
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
 SRC_NFCBARCODE = thinfilm.c
+SRC_BRUTEFORCE = bruteforce.c
 
 #   SRC_BEE = bee.c
 
@@ -143,6 +144,7 @@ THUMBSRC = start.c \
     $(SRC_FELICA) \
     $(SRC_STANDALONE) \
     $(SRC_ZX) \
+    $(SRC_BRUTEFORCE) \
     appmain.c \
     printf.c \
     dbprint.c \

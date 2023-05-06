@@ -13,11 +13,11 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// functions for bruteforcing card keys
+// functions for bruteforcing card keys - key generators
 //-----------------------------------------------------------------------------
 
-#ifndef __BRUTEFORCE_H
-#define __BRUTEFORCE_H
+#ifndef BRUTEFORCE_H__
+#define BRUTEFORCE_H__
 
 #include "common.h"
 
@@ -69,11 +69,11 @@ typedef struct {
 
 } generator_context_t;
 
-void generator_init(generator_context_t *ctx, uint8_t mode);
-int generator_set_charset(generator_context_t *ctx, uint8_t charsets);
-int generate32(generator_context_t *ctx);
-int _generate_mode_range32(generator_context_t *ctx);
-int _generate_mode_charset32(generator_context_t *ctx);
-int _generate_mode_smart32(generator_context_t *ctx);
-int array_increment(uint8_t *data, uint8_t data_len, uint8_t modulo);
-#endif
+void bf_generator_init(generator_context_t *ctx, uint8_t mode);
+int bf_generator_set_charset(generator_context_t *ctx, uint8_t charsets);
+int bf_generate32(generator_context_t *ctx);
+int _bf_generate_mode_range32(generator_context_t *ctx);
+int _bf_generate_mode_charset32(generator_context_t *ctx);
+int _bf_generate_mode_smart32(generator_context_t *ctx);
+int bf_array_increment(uint8_t *data, uint8_t data_len, uint8_t modulo);
+#endif // BRUTEFORCE_H__
