@@ -127,21 +127,3 @@ int bf_array_increment(uint8_t *data, uint8_t data_len, uint8_t modulo) {
 
     return 0;
 }
-
-/*
-int main(){
-    generator_context_t ctx;
-    generator_init(&ctx, BRUTEFORCE_MODE_CHARSET);
-    generator_set_charset(&ctx, CHARSET_DIGITS | CHARSET_UPPERCASE);
-
-   int ret = 0;
-    while( (ret=generate32(&ctx)) == GENERATOR_NEXT){
-        printf("%X\n", ctx.current_key32);
-    }
-
-    // printf("Charset len: %d\n", ctx.charset_length);
-    //  printf("Digits len: %d\n", sizeof(charset_digits));
-    //  printf("Uppercase len: %d\n", sizeof(charset_uppercase));
-    return 1;
-}
-*/
