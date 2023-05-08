@@ -3882,6 +3882,8 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
     PrintAndLogEx(SUCCESS, " Sec | Blk | key A        |res| key B        |res");
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
 
+    uint64_t ndef_key = 0xD3F7D3F7D3F7;
+    bool has_ndef_key = false;
     bool extended_legend = false;
     for (uint8_t i = 0; i < sectorscnt; i++) {
 
@@ -3889,20 +3891,32 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
             extended_legend = true;
         }
 
+        if (e_sector[i].Key[0] == ndef_key || e_sector[i].Key[1] == ndef_key) {
+            has_ndef_key = true;
+        }
+
         if (e_sector[i].foundKey[0]) {
             snprintf(strA, sizeof(strA), _GREEN_("%012" PRIX64), e_sector[i].Key[0]);
-            snprintf(resA, sizeof(resA), _BRIGHT_GREEN_("%c"), e_sector[i].foundKey[0]);
+            if (extended_legend) {
+                snprintf(resA, sizeof(resA), _BRIGHT_GREEN_("%c"), e_sector[i].foundKey[0]);
+            } else {
+                snprintf(resA, sizeof(resA), _BRIGHT_GREEN_("%d"), e_sector[i].foundKey[0]);
+            }
         } else {
             snprintf(strA, sizeof(strA), _RED_("%s"), "------------");
-            snprintf(resA, sizeof(resA), _RED_("%d"), 0);
+            snprintf(resA, sizeof(resA), _RED_("0"));
         }
 
         if (e_sector[i].foundKey[1]) {
             snprintf(strB, sizeof(strB), _GREEN_("%012" PRIX64), e_sector[i].Key[1]);
-            snprintf(resB, sizeof(resB), _BRIGHT_GREEN_("%c"), e_sector[i].foundKey[1]);
+            if (extended_legend) {
+                snprintf(resB, sizeof(resB), _BRIGHT_GREEN_("%c"), e_sector[i].foundKey[1]);
+            } else {
+                snprintf(resB, sizeof(resB), _BRIGHT_GREEN_("%d"), e_sector[i].foundKey[1]);
+            }
         } else {
             snprintf(strB, sizeof(strB), _RED_("%s"), "------------");
-            snprintf(resB, sizeof(resB), _RED_("%d"), 0);
+            snprintf(resB, sizeof(resB), _RED_("0"));
         }
 
         // keep track if we use start_sector or i
@@ -3939,8 +3953,12 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
     }
 
     // MAD detection
-    if (e_sector[MF_MAD1_SECTOR].foundKey[0] && e_sector[MF_MAD1_SECTOR].Key[MF_KEY_A] == 0xA0A1A2A3A4A5) {
+    if (e_sector[MF_MAD1_SECTOR].foundKey[0] && e_sector[MF_MAD1_SECTOR].Key[0] == 0xA0A1A2A3A4A5) {
         PrintAndLogEx(HINT, "MAD key detected. Try " _YELLOW_("`hf mf mad`") " for more details");
+    }
+    // NDEF detection
+    if (has_ndef_key) {
+        PrintAndLogEx(HINT, "NDEF key detected. Try " _YELLOW_("`hf mf ndefread`") " for more details");
     }
     PrintAndLogEx(NORMAL, "");
 }
