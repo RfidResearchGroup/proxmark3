@@ -349,6 +349,7 @@ const static vocabulory_t vocabulory[] = {
     { 0, "hf mf gen3freeze" }, 
     { 0, "hf mf ggetblk" }, 
     { 0, "hf mf gload" }, 
+    { 0, "hf mf gsave" }, 
     { 0, "hf mf gsetblk" }, 
     { 0, "hf mf gview" }, 
     { 0, "hf mf ndefformat" }, 

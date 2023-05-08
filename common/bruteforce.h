@@ -25,11 +25,11 @@ typedef uint8_t bruteforce_mode_t;
 // bruteforcing all keys sequentially between X and Y
 #define BRUTEFORCE_MODE_RANGE 1
 
-// try keys based on limited charset/passphrases 
+// try keys based on limited charset/passphrases
 // some payment systems use user-provided passphrase as system key
 #define BRUTEFORCE_MODE_CHARSET 2
 
-// "smart" mode - try some predictable patterns 
+// "smart" mode - try some predictable patterns
 #define BRUTEFORCE_MODE_SMART 3
 
 
@@ -57,8 +57,8 @@ typedef struct {
     uint32_t current_key32;
     uint8_t mode;
     uint8_t charset[
-        CHARSET_DIGITS_SIZE
-        + CHARSET_UPPERCASE_SIZE
+     CHARSET_DIGITS_SIZE
+     + CHARSET_UPPERCASE_SIZE
     ];
     uint8_t charset_length;
 

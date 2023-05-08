@@ -3391,6 +3391,20 @@
             ],
             "usage": "hf jooki sim [-h] [-b <base64>]"
         },
+        "hf ksx6924 balance": {
+            "command": "hf ksx6924 balance",
+            "description": "Gets the current purse balance",
+            "notes": [
+                "hf ksx6924 balance"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --keep keep field ON for next command",
+                "-a, --apdu Show APDU requests and responses"
+            ],
+            "usage": "hf ksx6924 balance [-hka]"
+        },
         "hf ksx6924 help": {
             "command": "hf ksx6924 help",
             "description": "help This help",
@@ -3398,19 +3412,6 @@
             "offline": true,
             "options": [],
             "usage": ""
-        },
-        "hf ksx6924 select": {
-            "command": "hf ksx6924 select",
-            "description": "Selects KS X 6924 application, and leaves field up",
-            "notes": [
-                "hf ksx6924 select"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-a, --apdu Show APDU requests and responses"
-            ],
-            "usage": "hf ksx6924 select [-ha]"
         },
         "hf ksx6924 info": {
             "command": "hf ksx6924 info",
@@ -3426,23 +3427,9 @@
             ],
             "usage": "hf ksx6924 info [-hka]"
         },
-        "hf ksx6924 balance": {
-            "command": "hf ksx6924 balance",
-            "description": "Gets the current purse balance",
-            "notes": [
-                "hf ksx6924 balance"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-k, --keep keep field ON for next command",
-                "-a, --apdu Show APDU requests and responses"
-            ],
-            "usage": "hf ksx6924 balance [-hka]"
-        },
         "hf ksx6924 init": {
             "command": "hf ksx6924 init",
-            "description": "Perform transaction initialization (mpda)",
+            "description": "Perform transaction initialization with Mpda (Money of Purchase Transaction)",
             "notes": [
                 "hf ksx6924 init 000003e8 -> Mpda"
             ],
@@ -3468,7 +3455,19 @@
             ],
             "usage": "hf ksx6924 prec [-hka] <record 1byte HEX>"
         },
-        
+        "hf ksx6924 select": {
+            "command": "hf ksx6924 select",
+            "description": "Selects KS X 6924 application, and leaves field up",
+            "notes": [
+                "hf ksx6924 select"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses"
+            ],
+            "usage": "hf ksx6924 select [-ha]"
+        },
         "hf legic crc": {
             "command": "hf legic crc",
             "description": "Calculates the legic crc8/crc16 on the given data",
@@ -3971,7 +3970,7 @@
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
-                "--emu from emulator memory"
+                "--emu to emulator memory"
             ],
             "usage": "hf mf csave [-h] [-f <fn>] [--mini] [--1k] [--2k] [--4k] [--emu]"
         },
@@ -4347,6 +4346,27 @@
                 "--end <dec> index of block to end writing (default last block)"
             ],
             "usage": "hf mf gload [-hv] [--mini] [--1k] [--2k] [--4k] [-p <hex>] [-f <fn>] [--emu] [--start <dec>] [--end <dec>]"
+        },
+        "hf mf gsave": {
+            "command": "hf mf gsave",
+            "description": "Save `magic gen4 gtu` card memory into three files (BIN/EML/JSON)or into emulator memory",
+            "notes": [
+                "hf mf gsave",
+                "hf mf gsave --4k",
+                "hf mf gsave -p DEADBEEF -f hf-mf-01020304.json"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--mini MIFARE Classic Mini / S20",
+                "--1k MIFARE Classic 1k / S50 (def)",
+                "--2k MIFARE Classic/Plus 2k",
+                "--4k MIFARE Classic 4k / S70",
+                "-p, --pwd <hex> password 4bytes",
+                "-f, --file <fn> filename of dump",
+                "--emu to emulator memory"
+            ],
+            "usage": "hf mf gsave [-h] [--mini] [--1k] [--2k] [--4k] [-p <hex>] [-f <fn>] [--emu]"
         },
         "hf mf gsetblk": {
             "command": "hf mf gsetblk",
@@ -6176,7 +6196,7 @@
         },
         "hf mfu esave": {
             "command": "hf mfu esave",
-            "description": "Saves emulator memory to a MIFARE Ultralight/NTAG dump file (bin/eml/json) By default number of pages saved depends on defined tag type. You can overrife this with option --end.",
+            "description": "Saves emulator memory to a MIFARE Ultralight/NTAG dump file (bin/eml/json) By default number of pages saved depends on defined tag type. You can override this with option --end.",
             "notes": [
                 "hf mfu esave",
                 "hf mfu esave --end 255 -> saves whole memory",
@@ -6192,7 +6212,7 @@
         },
         "hf mfu eview": {
             "command": "hf mfu eview",
-            "description": "Displays emulator memory By default number of pages shown depends on defined tag type. You can overrife this with option --end.",
+            "description": "Displays emulator memory By default number of pages shown depends on defined tag type. You can override this with option --end.",
             "notes": [
                 "hf mfu eview",
                 "hf mfu eview --end 255 -> dumps whole memory"
@@ -7799,15 +7819,19 @@
             "command": "lf em 4x50 brute",
             "description": "Tries to bruteforce the password of a EM4x50 card. Function can be stopped by pressing pm3 button.",
             "notes": [
-                "lf em 4x50 brute --first 12330000 --last 12340000 -> tries pwds from 0x12330000 to 0x1234000000"
+                "lf em 4x50 brute --mode range --begin 12330000 --end 12340000 -> tries pwds from 0x12330000 to 0x12340000",
+                "lf em 4x50 brute --mode charset --digits --uppercase -> tries all combinations of ASCII codes for digits and uppercase letters"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--first <hex> first password (start), 4 bytes, lsb",
-                "--last <hex> last password (stop), 4 bytes, lsb"
+                "--mode <str> Bruteforce mode (range|charset)",
+                "--begin <hex> Range mode - start of the key range",
+                "--end <hex> Range mode - end of the key range",
+                "--digits Charset mode - include ASCII codes for digits",
+                "--uppercase Charset mode - include ASCII codes for uppercase letters"
             ],
-            "usage": "lf em 4x50 brute [-h] --first <hex> --last <hex>"
+            "usage": "lf em 4x50 brute [-h] --mode <str> [--begin <hex>] [--end <hex>] [--digits] [--uppercase]"
         },
         "lf em 4x50 chk": {
             "command": "lf em 4x50 chk",
@@ -11616,8 +11640,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 732,
+        "commands_extracted": 733,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2022-11-20T20:19:15"
+        "extracted_on": "2023-05-08T17:05:11"
     }
 }

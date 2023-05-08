@@ -370,7 +370,7 @@ Check column "offline" for their availability.
 |`hf ksx6924 select      `|N       |`Select application, and leave field up`
 |`hf ksx6924 info        `|N       |`Get info about a KS X 6924 (T-Money, Snapper+) transit card`
 |`hf ksx6924 balance     `|N       |`Get current purse balance`
-|`hf ksx6924 init        `|N       |`Perform transaction initialization with Mpda (Money of Purchase Transaction)`
+|`hf ksx6924 init        `|N       |`Perform transaction initialization with Mpda`
 |`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
 
 
@@ -512,6 +512,7 @@ Check column "offline" for their availability.
 |`hf mf gen3freeze       `|N       |`Perma lock UID changes. irreversible`
 |`hf mf ggetblk          `|N       |`Read block from card`
 |`hf mf gload            `|N       |`Load dump to card`
+|`hf mf gsave            `|N       |`Save dump from card into file or emulator`
 |`hf mf gsetblk          `|N       |`Write block to card`
 |`hf mf gview            `|N       |`View card`
 |`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
@@ -851,7 +852,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf em 4x50 help        `|Y       |`This help`
-|`lf em 4x50 brute       `|N       |`Simple bruteforce attack to find password`
+|`lf em 4x50 brute       `|N       |`Bruteforce attack to find password`
 |`lf em 4x50 chk         `|N       |`Check passwords from dictionary`
 |`lf em 4x50 dump        `|N       |`Dump EM4x50 tag`
 |`lf em 4x50 info        `|N       |`Tag information`

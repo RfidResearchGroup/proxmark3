@@ -373,19 +373,19 @@ int CmdEM4x50Brute(const char *Cmd) {
 
     int mode_len = 64;
     char mode[64];
-    CLIGetStrWithReturn(ctx, 1, (uint8_t*) mode, &mode_len);
+    CLIGetStrWithReturn(ctx, 1, (uint8_t *) mode, &mode_len);
     PrintAndLogEx(INFO, "Chosen mode: %s", mode);
 
-    if(strcmp(mode, "range") == 0){
+    if (strcmp(mode, "range") == 0) {
         etd.bruteforce_mode = BRUTEFORCE_MODE_RANGE;
-    } else if(strcmp(mode, "charset") == 0){
+    } else if (strcmp(mode, "charset") == 0) {
         etd.bruteforce_mode = BRUTEFORCE_MODE_CHARSET;
     } else {
         PrintAndLogEx(FAILED, "Unknown bruteforce mode: %s", mode);
         return PM3_EINVARG;
     }
 
-    if(etd.bruteforce_mode == BRUTEFORCE_MODE_RANGE){
+    if (etd.bruteforce_mode == BRUTEFORCE_MODE_RANGE) {
         int begin_len = 0;
         uint8_t begin[4] = {0x0};
         CLIGetHexWithReturn(ctx, 2, begin, &begin_len);
@@ -394,58 +394,58 @@ int CmdEM4x50Brute(const char *Cmd) {
         uint8_t end[4] = {0x0};
         CLIGetHexWithReturn(ctx, 3, end, &end_len);
 
-        if(begin_len!=4){
+        if (begin_len != 4) {
             PrintAndLogEx(FAILED, "'begin' parameter must be 4 bytes");
             return PM3_EINVARG;
         }
 
-        if(end_len!=4){
+        if (end_len != 4) {
             PrintAndLogEx(FAILED, "'end' parameter must be 4 bytes");
             return PM3_EINVARG;
         }
 
         etd.password1 = BYTES2UINT32_BE(begin);
         etd.password2 = BYTES2UINT32_BE(end);
-    } else if(etd.bruteforce_mode == BRUTEFORCE_MODE_CHARSET){
+    } else if (etd.bruteforce_mode == BRUTEFORCE_MODE_CHARSET) {
         bool enable_digits = arg_get_lit(ctx, 4);
         bool enable_uppercase = arg_get_lit(ctx, 5);
 
-        if(enable_digits)
+        if (enable_digits)
             etd.bruteforce_charset |= CHARSET_DIGITS;
-        if(enable_uppercase)
+        if (enable_uppercase)
             etd.bruteforce_charset |= CHARSET_UPPERCASE;
-    
-        if(etd.bruteforce_charset == 0){
+
+        if (etd.bruteforce_charset == 0) {
             PrintAndLogEx(FAILED, "Please enable at least one charset when using charset bruteforce mode.");
             return PM3_EINVARG;
         }
 
-         PrintAndLogEx(INFO, "Enabled charsets: %s%s", 
-                            enable_digits ? "digits " : "",
-                            enable_uppercase ? "uppercase " : "");
+        PrintAndLogEx(INFO, "Enabled charsets: %s%s",
+                      enable_digits ? "digits " : "",
+                      enable_uppercase ? "uppercase " : "");
 
     }
 
     CLIParserFree(ctx);
-  
+
     // 27 passwords/second (empirical value)
     const int speed = 27;
     int no_iter = 0;
 
-    if(etd.bruteforce_mode == BRUTEFORCE_MODE_RANGE){
+    if (etd.bruteforce_mode == BRUTEFORCE_MODE_RANGE) {
         no_iter = etd.password2 - etd.password1 + 1;
         PrintAndLogEx(INFO, "Trying " _YELLOW_("%i") " passwords in range [0x%08x, 0x%08x]"
-                  , no_iter
-                  , etd.password1
-                  , etd.password2
-                 );
-    } else if(etd.bruteforce_mode == BRUTEFORCE_MODE_CHARSET){
+                      , no_iter
+                      , etd.password1
+                      , etd.password2
+                     );
+    } else if (etd.bruteforce_mode == BRUTEFORCE_MODE_CHARSET) {
         unsigned int digits = 0;
 
-        if(etd.bruteforce_charset & CHARSET_DIGITS)
+        if (etd.bruteforce_charset & CHARSET_DIGITS)
             digits += CHARSET_DIGITS_SIZE;
 
-        if(etd.bruteforce_charset & CHARSET_UPPERCASE)
+        if (etd.bruteforce_charset & CHARSET_UPPERCASE)
             digits += CHARSET_UPPERCASE_SIZE;
 
         no_iter = pow(digits, 4);
@@ -457,7 +457,7 @@ int CmdEM4x50Brute(const char *Cmd) {
     int dur_m = (dur_s - dur_h * 3600) / 60;
 
     dur_s -= dur_h * 3600 + dur_m * 60;
-    
+
     PrintAndLogEx(INFO, "Estimated duration: %ih %im %is", dur_h, dur_m, dur_s);
 
     // start
