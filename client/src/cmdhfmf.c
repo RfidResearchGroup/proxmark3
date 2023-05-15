@@ -18,7 +18,6 @@
 
 #include "cmdhfmf.h"
 #include <ctype.h>
-
 #include "cmdparser.h"             // command_t
 #include "commonutil.h"            // ARRAYLEN
 #include "comms.h"                 // clearCommandBuffer
@@ -37,23 +36,6 @@
 #include "crypto/libpcrypto.h"
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
-
-#define MIFARE_4K_MAXBLOCK      256
-#define MIFARE_2K_MAXBLOCK      128
-#define MIFARE_1K_MAXBLOCK      64
-#define MIFARE_MINI_MAXBLOCK    20
-
-#define MIFARE_4K_MAXSECTOR     40
-#define MIFARE_2K_MAXSECTOR     32
-#define MIFARE_1K_MAXSECTOR     16
-#define MIFARE_MINI_MAXSECTOR   5
-
-#define MIFARE_4K_MAX_BYTES     4096
-#define MIFARE_2K_MAX_BYTES     2048
-#define MIFARE_1K_MAX_BYTES     1024
-#define MIFARE_MINI_MAX_BYTES   320
-
-#define MIFARE_KEY_SIZE         6
 
 static int CmdHelp(const char *Cmd);
 
@@ -152,12 +134,12 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
     return fptr;
 }
 
-static int32_t initSectorTable(sector_t **src, int32_t items) {
+static int initSectorTable(sector_t **src, size_t items) {
 
     (*src) = calloc(items, sizeof(sector_t));
 
     if (*src == NULL)
-        return -1;
+        return PM3_EMALLOC;
 
     // empty e_sector
     for (int i = 0; i < items; ++i) {
@@ -166,7 +148,7 @@ static int32_t initSectorTable(sector_t **src, int32_t items) {
             (*src)[i].foundKey[j] = false;
         }
     }
-    return items;
+    return PM3_SUCCESS;
 }
 
 static void decode_print_st(uint16_t blockno, uint8_t *data) {
@@ -2373,7 +2355,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Attack key storage variables
     uint8_t *keyBlock = NULL;
     uint32_t key_cnt = 0;
-    sector_t *e_sector;
     uint8_t tmp_key[6] = {0};
 
     // Nested and Hardnested returned status
@@ -2408,7 +2389,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-
     // detect MFC EV1 Signature
     bool is_ev1 = detect_mfc_ev1_signature();
     if (is_ev1) {
@@ -2417,10 +2397,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     }
 
     // create/initialize key storage structure
-    uint32_t e_sector_size = sector_cnt > sectorno ? sector_cnt : sectorno + 1;
-    res = initSectorTable(&e_sector, e_sector_size);
-    if (res != e_sector_size) {
-        free(e_sector);
+    sector_t *e_sector = NULL;
+    uint32_t e_sector_cnt = (sector_cnt > sectorno) ? sector_cnt : sectorno + 1;
+    if (initSectorTable(&e_sector, e_sector_cnt) != PM3_SUCCESS) {
         return PM3_EMALLOC;
     }
 
@@ -2859,7 +2838,7 @@ tryNested:
                                 }
                                 break;
                             }
-                            case PM3_ESTATIC_NONCE:
+                            case PM3_ESTATIC_NONCE: {
                                 PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
 
                                 e_sector[current_sector_i].Key[current_key_type_i] = 0xffffffffffff;;
@@ -2872,6 +2851,7 @@ tryNested:
                                 free(e_sector);
                                 free(fptr);
                                 return isOK;
+                            }
                             case PM3_SUCCESS: {
                                 calibrate = false;
                                 e_sector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmp_key, 6);
@@ -2896,6 +2876,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                           slow ? "Yes" : "No");
                         }
 
+                        foundkey = 0;
                         isOK = mfnestedhard(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, NULL, false, false, slow, 0, &foundkey, NULL);
                         DropField();
                         if (isOK) {
@@ -3211,8 +3192,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
     // create/initialize key storage structure
     sector_t *e_sector = NULL;
-    int32_t res = initSectorTable(&e_sector, sectorsCnt);
-    if (res != sectorsCnt) {
+    if (initSectorTable(&e_sector, sectorsCnt) != PM3_SUCCESS) {
         free(keyBlock);
         return PM3_EMALLOC;
     }
@@ -3247,7 +3227,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                 if (size == keycnt - i)
                     lastChunk = true;
 
-                res = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector, false);
+                int res = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector, false);
 
                 if (firstChunk)
                     firstChunk = false;
@@ -3454,8 +3434,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
     // create/initialize key storage structure
     sector_t *e_sector = NULL;
-    int32_t res = initSectorTable(&e_sector, SectorsCnt);
-    if (res != SectorsCnt) {
+    if (initSectorTable(&e_sector, SectorsCnt) != PM3_SUCCESS) {
         free(keyBlock);
         return PM3_EMALLOC;
     }
@@ -3613,28 +3592,24 @@ out:
     return PM3_SUCCESS;
 }
 
-void showSectorTable(sector_t *k_sector, uint8_t k_sectorsCount) {
+void showSectorTable(sector_t *k_sector, uint8_t k_sectors_cnt) {
     if (k_sector != NULL) {
-        printKeyTable(k_sectorsCount, k_sector);
+        printKeyTable(k_sectors_cnt, k_sector);
         free(k_sector);
     }
 }
 
-void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, bool setEmulatorMem, bool verbose) {
+void readerAttack(sector_t *k_sector, uint8_t k_sectors_cnt, nonces_t data, bool setEmulatorMem, bool verbose) {
 
-    uint64_t key = 0;
-    bool success = false;
-
+    // init if needed
     if (k_sector == NULL) {
-        int32_t res = initSectorTable(&k_sector, k_sectorsCount);
-        if (res != k_sectorsCount) {
-            free(k_sector);
+        if (initSectorTable(&k_sector, k_sectors_cnt) != PM3_SUCCESS) {
             return;
         }
     }
 
-    success = mfkey32_moebius(&data, &key);
-    if (success) {
+    uint64_t key = 0;
+    if (mfkey32_moebius(&data, &key)) {
         uint8_t sector = data.sector;
         uint8_t keytype = data.keytype;
 
@@ -3649,7 +3624,7 @@ void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, boo
 
         //set emulator memory for keys
         if (setEmulatorMem) {
-            uint8_t memBlock[16] = {0, 0, 0, 0, 0, 0, 0xff, 0x0F, 0x80, 0x69, 0, 0, 0, 0, 0, 0};
+            uint8_t memBlock[16] = {0, 0, 0, 0, 0, 0, 0xFF, 0x07, 0x80, 0x69, 0, 0, 0, 0, 0, 0};
             num_to_bytes(k_sector[sector].Key[0], 6, memBlock);
             num_to_bytes(k_sector[sector].Key[1], 6, memBlock + 10);
             //iceman,  guessing this will not work so well for 4K tags.
@@ -3907,6 +3882,8 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
     PrintAndLogEx(SUCCESS, " Sec | Blk | key A        |res| key B        |res");
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
 
+    uint64_t ndef_key = 0xD3F7D3F7D3F7;
+    bool has_ndef_key = false;
     bool extended_legend = false;
     for (uint8_t i = 0; i < sectorscnt; i++) {
 
@@ -3914,20 +3891,32 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
             extended_legend = true;
         }
 
+        if (e_sector[i].Key[0] == ndef_key || e_sector[i].Key[1] == ndef_key) {
+            has_ndef_key = true;
+        }
+
         if (e_sector[i].foundKey[0]) {
             snprintf(strA, sizeof(strA), _GREEN_("%012" PRIX64), e_sector[i].Key[0]);
-            snprintf(resA, sizeof(resA), _BRIGHT_GREEN_("%c"), e_sector[i].foundKey[0]);
+            if (extended_legend) {
+                snprintf(resA, sizeof(resA), _BRIGHT_GREEN_("%c"), e_sector[i].foundKey[0]);
+            } else {
+                snprintf(resA, sizeof(resA), _BRIGHT_GREEN_("%d"), e_sector[i].foundKey[0]);
+            }
         } else {
             snprintf(strA, sizeof(strA), _RED_("%s"), "------------");
-            snprintf(resA, sizeof(resA), _RED_("%d"), 0);
+            snprintf(resA, sizeof(resA), _RED_("0"));
         }
 
         if (e_sector[i].foundKey[1]) {
             snprintf(strB, sizeof(strB), _GREEN_("%012" PRIX64), e_sector[i].Key[1]);
-            snprintf(resB, sizeof(resB), _BRIGHT_GREEN_("%c"), e_sector[i].foundKey[1]);
+            if (extended_legend) {
+                snprintf(resB, sizeof(resB), _BRIGHT_GREEN_("%c"), e_sector[i].foundKey[1]);
+            } else {
+                snprintf(resB, sizeof(resB), _BRIGHT_GREEN_("%d"), e_sector[i].foundKey[1]);
+            }
         } else {
             snprintf(strB, sizeof(strB), _RED_("%s"), "------------");
-            snprintf(resB, sizeof(resB), _RED_("%d"), 0);
+            snprintf(resB, sizeof(resB), _RED_("0"));
         }
 
         // keep track if we use start_sector or i
@@ -3964,8 +3953,12 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
     }
 
     // MAD detection
-    if (e_sector[MF_MAD1_SECTOR].foundKey[0] && e_sector[MF_MAD1_SECTOR].Key[MF_KEY_A] == 0xA0A1A2A3A4A5) {
+    if (e_sector[MF_MAD1_SECTOR].foundKey[0] && e_sector[MF_MAD1_SECTOR].Key[0] == 0xA0A1A2A3A4A5) {
         PrintAndLogEx(HINT, "MAD key detected. Try " _YELLOW_("`hf mf mad`") " for more details");
+    }
+    // NDEF detection
+    if (has_ndef_key) {
+        PrintAndLogEx(HINT, "NDEF key detected. Try " _YELLOW_("`hf mf ndefread`") " for more details");
     }
     PrintAndLogEx(NORMAL, "");
 }
@@ -4585,12 +4578,9 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    sector_t *e_sector = NULL;
-
     // create/initialize key storage structure
-    int32_t res = initSectorTable(&e_sector, sectors_cnt);
-    if (res != sectors_cnt) {
-        free(e_sector);
+    sector_t *e_sector = NULL;
+    if (initSectorTable(&e_sector, sectors_cnt) != PM3_SUCCESS) {
         return PM3_EMALLOC;
     }
 

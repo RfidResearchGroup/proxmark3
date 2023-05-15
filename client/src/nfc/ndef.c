@@ -499,6 +499,51 @@ static int ndefDecodePayloadDeviceInfo(uint8_t *payload, size_t len) {
     return PM3_SUCCESS;
 }
 
+static int ndefDecodePayloadHandoverRequest(uint8_t *payload, size_t len) {
+    if (payload == NULL)
+        return PM3_EINVARG;
+    if (len < 1)
+        return PM3_EINVARG;
+
+    PrintAndLogEx(INFO, _CYAN_("Handover Request"));
+    uint8_t *p = payload;
+    uint8_t major = (*(p) >> 4) & 0x0F;
+    uint8_t minor = *(p) & 0x0F;    
+    p++;
+
+    PrintAndLogEx(INFO, "Version....... " _YELLOW_("%u.%u"), major, minor);
+    if (major != 1 && minor != 2) {
+        PrintAndLogEx(FAILED, "Wrong version numbers");
+    }
+
+    uint16_t collision = MemBeToUint2byte(p);
+    p += 2;
+    PrintAndLogEx(INFO, "Collision Resolution... " _YELLOW_("%u"), collision);
+    PrintAndLogEx(NORMAL, "");
+
+    return PM3_SUCCESS;
+}
+
+static int ndefDecodePayloadHandoverSelect(uint8_t *payload, size_t len) {
+    if (payload == NULL)
+        return PM3_EINVARG;
+    if (len < 1)
+        return PM3_EINVARG;
+
+    PrintAndLogEx(INFO, _CYAN_("Handover select"));
+
+    uint8_t *p = payload;
+    uint8_t major = (*(p) >> 4) & 0x0F;
+    uint8_t minor = *(p) & 0x0F;
+    p++;
+    PrintAndLogEx(INFO, "Version....... " _YELLOW_("%u.%u"), major, minor);
+    if (major != 1 && minor != 2) {
+        PrintAndLogEx(FAILED, "Wrong version numbers");
+    }
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static int ndefDecodePayloadSmartPoster(uint8_t *ndef, size_t ndeflen, bool print, bool verbose) {
     if (print) {
         PrintAndLogEx(INFO, _YELLOW_("Well Known Record - Smartposter {"));
@@ -817,7 +862,11 @@ static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
     PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
     uint16_t ooblen =  MemBeToUint2byte(ndef->Payload);
     PrintAndLogEx(INFO, "OOB data len.... %u", ooblen);
-    PrintAndLogEx(INFO, "BT MAC.......... " _YELLOW_("%s"), sprint_hex(ndef->Payload + 2, 6));
+
+    uint8_t rev[6] = {0};
+    reverse_array_copy(ndef->Payload + 2, 6, rev);
+    PrintAndLogEx(INFO, "BT MAC.......... " _YELLOW_("%s"), sprint_hex(rev, sizeof(rev)));
+    
     // Let's check payload[8]. Tells us a bit about the UUID's. If 0x07 then it tells us a service UUID is 128bit
     switch (ndef->Payload[8]) {
         case 0x02:
@@ -942,13 +991,11 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
             }
 
             if (!strncmp((char *)ndef->Type, "Hr", ndef->TypeLen)) {
-                PrintAndLogEx(INFO, _CYAN_("Handover request"));
-                PrintAndLogEx(INFO, "- decoder to be impl -");
+                ndefDecodePayloadHandoverRequest(ndef->Payload, ndef->PayloadLen);
             }
 
             if (!strncmp((char *)ndef->Type, "Hs", ndef->TypeLen)) {
-                PrintAndLogEx(INFO, _CYAN_("Handover select"));
-                PrintAndLogEx(INFO, "- decoder to be impl -");
+                ndefDecodePayloadHandoverSelect(ndef->Payload, ndef->PayloadLen);
             }
 
             if (!strncmp((char *)ndef->Type, "ac", ndef->TypeLen)) {
