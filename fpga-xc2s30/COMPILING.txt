@@ -1,0 +1,34 @@
+HOW TO COMPILE IN 2023
+
+Much has changed in the many years since this was released, Spartan 2 family of devices is obsolete and no longer supported by recent tools.
+Xilinx has been bought by AMD...
+This is a general overview of what works currently in Windows 10/11:
+	* Download ISE 10.1 (later versions do NOT support Spartan 2)
+	* The download is 6GB in size and to reach the download page you need to register and login with an account!
+	* Download location is https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/archive-ise.html
+	* Install ISE 10.1 to C:\Xilinx\10.1\ISE_DS\
+	* During install you need to provide Registration Code 11LTAJ5ZJK3PXTUBMF0C0J6C4
+
+Alternative 1 (prefered for development)
+	* Install the latest Proxspace from https://github.com/Gator96100/ProxSpace
+	* Enter Prosxpace command line
+	* Set your path with "export PATH=$PATH:/C/Xilinx/10.1/ISE_DS/ISE/bin/nt64" or some other more permanent way
+	* Change directory into the source directory of proxmak3/fpga-xc2s30
+	* make all
+	* make clean
+
+Alternative 2
+	* In direcotry proxmak3/fpga-xc2s30 open the file make.bat with a text editor
+	* Check and if neccessary update the line "SET PATH=C:\Xilinx\10.1\ISE_DS\ISE\bin\nt64;C:\Xilinx\10.1\ISE_DS\ISE\lib\nt64;%PATH%"
+	* Run make.bat
+
+If no errors come up there should be four files created "fpga_felica.bit", "fpga_hf.bit", "fpga_hf_15.bit" and "fpga_lf.bit"
+
+IMPORTANT NOTE
+
+If you chose to run the ISE 10.1 GUI on WIndows 10 or 11 the program will crash as soon as you try to open a file.
+The generally accepted workaround for that problem is this:
+	* Use the Windows System Properties to edit the "Environment Variables"
+	* Change the SYSTEM PATH and edit "%XILINX%\bin\nt64;%XILINX%\lib\nt64;" to "%XILINX%\bin\nt;%XILINX%\lib\nt;"
+	* Edit the shortcut properties for the ISE shortcut on your desktop and change "C:\Xilinx\10.1\ISE_DS\ISE\bin\nt64\ise.exe" to "C:\Xilinx\10.1\ISE_DS\ISE\bin\nt\ise.exe"
+	* After this you can run the shortcut and use the ISE Design Suite 10.1 as expected.
