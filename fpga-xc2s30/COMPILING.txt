@@ -18,7 +18,7 @@ Alternative 1 (prefered for development)
 	* make clean
 
 Alternative 2
-	* In direcotry proxmak3/fpga-xc2s30 open the file make.bat with a text editor
+	* In directory proxmak3/fpga-xc2s30 open the file make.bat with a text editor
 	* Check and if neccessary update the line "SET PATH=C:\Xilinx\10.1\ISE_DS\ISE\bin\nt64;C:\Xilinx\10.1\ISE_DS\ISE\lib\nt64;%PATH%"
 	* Run make.bat
 
