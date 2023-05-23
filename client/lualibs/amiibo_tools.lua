@@ -55,6 +55,9 @@ amiibo_tools.db =
     ["0x00000003039bff02"] = {
       name = "Mario - Power Up Band"
     },
+    ["0x000000030430ff02"] = {
+      name = "Golden - Power Up Band"
+    },
     ["0x0000010000190002"] = {
       name = "Dr. Mario"
     },
@@ -213,6 +216,9 @@ amiibo_tools.db =
     },
     ["0x0100000003990902"] = {
       name = "Link - Link's Awakening"
+    },
+    ["0x0100000004180902"] = {
+      name = "Link - Tears of the Kingdom"
     },
     ["0x0100010000160002"] = {
       name = "Toon Link"
@@ -1834,6 +1840,9 @@ amiibo_tools.db =
     ["0x0800010003820002"] = {
       name = "Inkling"
     },
+    ["0x0800010004150402"] = {
+      name = "Inkling - Yellow"
+    },
     ["0x08000200003f0402"] = {
       name = "Inkling Boy"
     },
@@ -1870,8 +1879,14 @@ amiibo_tools.db =
     ["0x08050200038f0402"] = {
       name = "Octoling Boy"
     },
+    ["0x08050200041b0402"] = {
+      name = "Octoling - Blue"
+    },
     ["0x0805030003900402"] = {
       name = "Octoling Octopus"
+    },
+    ["0x08060100041c0402"] = {
+      name = "Smallfry"
     },
     ["0x09c0010102690e02"] = {
       name = "Mario - Soccer"
@@ -2374,6 +2389,9 @@ amiibo_tools.db =
     ["0x3380000003781402"] = {
       name = "Solaire of Astora"
     },
+    ["0x33c0000004200002"] = {
+      name = "Kazuya"
+    },
     ["0x3480000000310002"] = {
       name = "Mega Man"
     },
@@ -2455,6 +2473,9 @@ amiibo_tools.db =
     ["0x3600010003620002"] = {
       name = "Cloud - Player 2"
     },
+    ["0x3601000004210002"] = {
+      name = "Sephiroth"
+    },
     ["0x3640000003a20002"] = {
       name = "Hero"
     },
@@ -2520,6 +2541,12 @@ amiibo_tools.db =
     },
     ["0x3c80000003a40002"] = {
       name = "Terry"
+    },
+    ["0x3dc0000004220002"] = {
+      name = "Steve"
+    },
+    ["0x3dc1000004230002"] = {
+      name = "Alex"
     }
   },
   game_series = {
@@ -2621,6 +2648,7 @@ amiibo_tools.db =
     ["0x324"] = "Bayonetta",
     ["0x334"] = "Pac-man",
     ["0x338"] = "Dark Souls",
+    ["0x33c"] = "Tekken",
     ["0x348"] = "Megaman",
     ["0x34c"] = "Street fighter",
     ["0x350"] = "Monster Hunter",
@@ -2635,7 +2663,8 @@ amiibo_tools.db =
     ["0x38c"] = "Diablo",
     ["0x3a0"] = "Persona",
     ["0x3b4"] = "Banjo Kazooie",
-    ["0x3c8"] = "Fatal Fury"
+    ["0x3c8"] = "Fatal Fury",
+    ["0x3dc"] = "Minecraft"
   },
   types = {
     ["0x00"] = "Figure",
