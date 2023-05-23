@@ -2690,7 +2690,7 @@ static void wait4response(uint8_t b) {
 int CmdHF14MfUTamper(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu tamper",
-                  "Set the congiguration of the NTAG 213TT tamper feature\n"
+                  "Set the configuration of the NTAG 213TT tamper feature\n"
                   "Supports:\n"
                   "NTAG 213TT\n",
                   "hf mfu tamper -e               -> enable tamper feature\n"
@@ -4697,7 +4697,7 @@ static command_t CommandTable[] = {
     {"restore",  CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump onto a MFU MAGIC tag"},
     {"view",     CmdHF14AMfuView,           AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",     CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
-    {"tamper",   CmdHF14MfUTamper,         IfPm3Iso14443a, "Cofigure the tamper feature on an NTAG 213TT"},
+    {"tamper",   CmdHF14MfUTamper,          IfPm3Iso14443a,  "Configure the tamper feature on an NTAG 213TT"},
     {"---------", CmdHelp,                  IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
     {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "Load Ultralight dump file into emulator memory"},
     {"esave",    CmdHF14AMfuESave,          IfPm3Iso14443a,  "Save Ultralight dump file from emulator memory"},

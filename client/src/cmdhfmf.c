@@ -1109,7 +1109,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                   "Restore MIFARE Classic dump file to tag.\n"
                   "\n"
                   "The key file and dump file will program the card sector trailers.\n"
-                  "By default we authenticate to card with key B 0xFFFFFFFFFFFF.\n"
+                  "By default we authenticate to card with key 0xFFFFFFFFFFFF.\n"
                   "If access rights in dump file is all zeros,  it will be replaced with default values\n"
                   "\n"
                   "`--uid` param is used for filename templates `hf-mf-<uid>-dump.bin` and `hf-mf-<uid>-key.bin.\n"
@@ -1321,56 +1321,37 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             uint8_t wdata[26];
             memcpy(wdata + 10, bldata, sizeof(bldata));
 
-            if (use_keyfile_for_auth) {
-                for (int8_t kt = MF_KEY_B; kt > -1; kt--) {
-
+            for (int8_t kt = MF_KEY_B; kt > -1; kt--) {
+                if (use_keyfile_for_auth) {
                     if (kt == MF_KEY_A)
                         memcpy(wdata, keyA[s], 6);
                     else
                         memcpy(wdata, keyB[s], 6);
-
-                    PrintAndLogEx(INFO, "block %3d: %s", mfFirstBlockOfSector(s) + b, sprint_hex(bldata, sizeof(bldata)));
-
-                    clearCommandBuffer();
-                    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, mfFirstBlockOfSector(s) + b, kt, 0, wdata, sizeof(wdata));
-                    PacketResponseNG resp;
-                    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                        uint8_t isOK  = resp.oldarg[0] & 0xff;
-                        if (isOK == 0) {
-                            if (b == 0) {
-                                PrintAndLogEx(INFO, "Writing to manufacture block w key %c ( " _RED_("fail") " )", (kt == MF_KEY_A) ? 'A' : 'B');
-                            } else {
-                                PrintAndLogEx(FAILED, "Write to block %u w key %c ( " _RED_("fail") " ) ", b, (kt == MF_KEY_A) ? 'A' : 'B');
-                            }
-                        } else {
-                            // if success,  skip to next block
-                            break;
-                        }
-                    } else {
-                        PrintAndLogEx(WARNING, "Command execute timeout");
-                    }
+                } else {
+                    // use default key to authenticate for the write command
+                    memcpy(wdata, default_key, 6);
                 }
-            } else {
-                // use default key to authenticate for the write command
-                memcpy(wdata, default_key, 6);
                 PrintAndLogEx(INFO, "block %3d: %s", mfFirstBlockOfSector(s) + b, sprint_hex(bldata, sizeof(bldata)));
 
                 clearCommandBuffer();
-                SendCommandMIX(CMD_HF_MIFARE_WRITEBL, mfFirstBlockOfSector(s) + b, MF_KEY_B, 0, wdata, sizeof(wdata));
+                SendCommandMIX(CMD_HF_MIFARE_WRITEBL, mfFirstBlockOfSector(s) + b, kt, 0, wdata, sizeof(wdata));
                 PacketResponseNG resp;
                 if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
                     uint8_t isOK  = resp.oldarg[0] & 0xff;
                     if (isOK == 0) {
                         if (b == 0) {
-                            PrintAndLogEx(INFO, "Writing to manufacture block w key B ( " _RED_("fail") " )");
+                            PrintAndLogEx(INFO, "Writing to manufacture block w key %c ( " _RED_("fail") " )", (kt == MF_KEY_A) ? 'A' : 'B');
                         } else {
-                            PrintAndLogEx(FAILED, "Write to block %u w key B ( " _RED_("fail") " )", b);
+                            PrintAndLogEx(FAILED, "Write to block %u w key %c ( " _RED_("fail") " ) ", b, (kt == MF_KEY_A) ? 'A' : 'B');
                         }
+                    } else {
+                        // if success,  skip to next block
+                        break;
                     }
                 } else {
                     PrintAndLogEx(WARNING, "Command execute timeout");
                 }
-            } // end use_keyfile_for_auth
+            }
         } // end loop B
     } // end loop S
 

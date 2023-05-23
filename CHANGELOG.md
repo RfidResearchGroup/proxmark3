@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Added python3 script to convert amiibo nfc Flipper Zero files to eml files to be used with Proxmark3 (@OscarAkaElvis)
+ - Changed `hf mf restore` - Auth both key A and key B with default password (@wh201906)
  - Changed `nfc decode -f` - now can detect and convert MFC dumpfiles to NDEF byte arrays (@iceman1001)
  - Changed `nfc decode` - now handles EXTERNAL RECORDS better (@iceman1001)
  - Fixed `nfc decode` - now handles NDEF Signature version1 records better (@iceman1001)
@@ -62,6 +63,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Update documentation for installation on macOS with MacPorts (@linuxgemini)
  - Added possible Paxton id to hitag2 tag info output
  - Changed `hf mf sim` - reduce 50ms threshold to 6ms for reset to idle #1974 (@net147)
+ - Update `amiibo_tools.lua` with new identifiers and create a python script `update_amiibo_tools_lua.py` to automate the process in the future. (@CorySolovewicz)
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)
