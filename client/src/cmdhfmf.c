@@ -137,15 +137,14 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
 static int initSectorTable(sector_t **src, size_t items) {
 
     (*src) = calloc(items, sizeof(sector_t));
-
     if (*src == NULL)
         return PM3_EMALLOC;
 
     // empty e_sector
-    for (int i = 0; i < items; ++i) {
-        for (int j = 0; j < 2; ++j) {
+    for (int i = 0; i < items; i++) {
+        for (int j = 0; j < 2; j++) {
             (*src)[i].Key[j] = 0xffffffffffff;
-            (*src)[i].foundKey[j] = false;
+            (*src)[i].foundKey[j] = 0;
         }
     }
     return PM3_SUCCESS;
