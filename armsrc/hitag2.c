@@ -655,6 +655,7 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
     *txlen = 0;
 
     if (bPwd && (bAuthenticating == false) && write) {
+        SpinDelay(2);
         if (hitag2_write_page(rx, rxlen, tx, txlen) == false) {
             return false;
         }
