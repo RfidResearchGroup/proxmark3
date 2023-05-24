@@ -304,7 +304,9 @@ static int mf_print_keys(uint16_t n, uint8_t *d) {
         return PM3_EMALLOC;
     }
 
-    for (uint16_t i = 0; i < n; i++) {
+    // n is number of blocks,  but in the loop its a zero based index.
+    // n = 20,   i = 0-19
+    for (uint16_t i = 0; i < n - 1; i++) {
         if (mfIsSectorTrailer(i)) {
             e_sector[mfSectorNum(i)].foundKey[0] = 1;
             e_sector[mfSectorNum(i)].Key[0] = bytes_to_num(d + (i * MFBLOCK_SIZE), MIFARE_KEY_SIZE);
