@@ -1190,11 +1190,9 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
         rATQA[0] &= 0xBF;
 
         if(tagType == 11){
-            rSAKc1[0] = sak & 0xFC & 0X70;
-            DbpString(_YELLOW_("[ ") "Passando no Sak Penegui" _YELLOW_(" ]"));
+            rSAKc1[0] = sak & 0xFC & 0X70;            
         }else{
-            rSAKc1[0] = sak & 0xFB;
-            //DbpString(_YELLOW_("[ ") "Passando no Sak Antigo" _YELLOW_(" ]"));
+            rSAKc1[0] = sak & 0xFB;            
         }
         
         AddCrc14A(rSAKc1, sizeof(rSAKc1) - 2);
