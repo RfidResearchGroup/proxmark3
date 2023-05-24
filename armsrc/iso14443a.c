@@ -1151,6 +1151,11 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
             sak = 0x20;
         }
         break;
+        case 11: { // ISO/IEC 14443-4 - javacard (JCOP)
+            rATQA[0] = 0x04;
+            sak = 0x20;
+        }
+        break;
 
         default: {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Error: unknown tagtype (%d)", tagType);
@@ -1183,7 +1188,13 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
 
         // Configure the ATQA and SAK accordingly
         rATQA[0] &= 0xBF;
-        rSAKc1[0] = sak & 0xFB;
+
+        if(tagType == 11){
+            rSAKc1[0] = sak & 0xFC & 0X70;            
+        }else{
+            rSAKc1[0] = sak & 0xFB;            
+        }
+        
         AddCrc14A(rSAKc1, sizeof(rSAKc1) - 2);
 
         *cuid = bytes_to_num(data, 4);
