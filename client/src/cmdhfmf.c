@@ -141,8 +141,8 @@ static int initSectorTable(sector_t **src, size_t items) {
         return PM3_EMALLOC;
 
     // empty e_sector
-    for (int i = 0; i < items; i++) {
-        for (int j = 0; j < 2; j++) {
+    for (size_t i = 0; i < items; i++) {
+        for (uint8_t j = 0; j < 2; j++) {
             (*src)[i].Key[j] = 0xffffffffffff;
             (*src)[i].foundKey[j] = 0;
         }
@@ -294,19 +294,21 @@ static int mf_print_keys(uint16_t n, uint8_t *d) {
             sectors = MIFARE_4K_MAXSECTOR;
             break;
         case MIFARE_1K_MAXBLOCK:
+            sectors = MIFARE_1K_MAXSECTOR;
+            break;
         default:
             sectors = MIFARE_1K_MAXSECTOR;
+            n = MIFARE_1K_MAXBLOCK;
             break;
     }
 
     sector_t *e_sector = calloc(sectors, sizeof(sector_t));
-    if (e_sector == NULL)  {
+    if (e_sector == NULL) {
         return PM3_EMALLOC;
     }
 
-    // n is number of blocks,  but in the loop its a zero based index.
-    // n = 20,   i = 0-19
-    for (uint16_t i = 0; i < n - 1; i++) {
+    for (uint16_t i = 0; i < n; i++) {
+
         if (mfIsSectorTrailer(i)) {
             e_sector[mfSectorNum(i)].foundKey[0] = 1;
             e_sector[mfSectorNum(i)].Key[0] = bytes_to_num(d + (i * MFBLOCK_SIZE), MIFARE_KEY_SIZE);
@@ -2380,7 +2382,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // create/initialize key storage structure
     sector_t *e_sector = NULL;
-    uint32_t e_sector_cnt = (sector_cnt > sectorno) ? sector_cnt : sectorno + 1;
+    size_t e_sector_cnt = (sector_cnt > sectorno) ? sector_cnt : sectorno + 1;
     if (initSectorTable(&e_sector, e_sector_cnt) != PM3_SUCCESS) {
         return PM3_EMALLOC;
     }
@@ -3151,7 +3153,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         m1 = true;
     }
 
-    uint8_t sectorsCnt = 1;
+    uint8_t sectorsCnt = MIFARE_1K_MAXSECTOR;
     if (m0) {
         sectorsCnt = MIFARE_MINI_MAXSECTOR;
     } else if (m1) {
@@ -3367,42 +3369,42 @@ static int CmdHF14AMfChk(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t SectorsCnt = 1;
+    size_t sectors_cnt = 1;
     if (m0) {
-        SectorsCnt = MIFARE_MINI_MAXSECTOR;
+        sectors_cnt = MIFARE_MINI_MAXSECTOR;
     } else if (m1) {
-        SectorsCnt = MIFARE_1K_MAXSECTOR;
+        sectors_cnt = MIFARE_1K_MAXSECTOR;
     } else if (m2) {
-        SectorsCnt = MIFARE_2K_MAXSECTOR;
+        sectors_cnt = MIFARE_2K_MAXSECTOR;
     } else if (m4) {
-        SectorsCnt = MIFARE_4K_MAXSECTOR;
+        sectors_cnt = MIFARE_4K_MAXSECTOR;
     }
 
     if (singleSector) {
-        uint8_t MinSectorsCnt = 0;
+        size_t min_sectors_cnt = 0;
         // find a MIFARE type that can accommodate the provided block number
         uint8_t s =  mfSectorNum(blockNo);
         if (s < MIFARE_MINI_MAXSECTOR) {
-            MinSectorsCnt = MIFARE_MINI_MAXSECTOR;
+            min_sectors_cnt = MIFARE_MINI_MAXSECTOR;
         } else if (s < MIFARE_1K_MAXSECTOR) {
-            MinSectorsCnt = MIFARE_1K_MAXSECTOR;
+            min_sectors_cnt = MIFARE_1K_MAXSECTOR;
         } else if (s < MIFARE_2K_MAXSECTOR) {
-            MinSectorsCnt = MIFARE_2K_MAXSECTOR;
+            min_sectors_cnt = MIFARE_2K_MAXSECTOR;
         } else if (s < MIFARE_4K_MAXSECTOR) {
-            MinSectorsCnt = MIFARE_4K_MAXSECTOR;
+            min_sectors_cnt = MIFARE_4K_MAXSECTOR;
         } else {
             PrintAndLogEx(WARNING, "Provided block out of possible MIFARE Type memory map");
             return PM3_EINVARG;
         }
-        if (SectorsCnt == 1) {
-            SectorsCnt = MinSectorsCnt;
-        } else if (SectorsCnt < MinSectorsCnt) {
+        if (sectors_cnt == 1) {
+            sectors_cnt = min_sectors_cnt;
+        } else if (sectors_cnt < min_sectors_cnt) {
             PrintAndLogEx(WARNING, "Provided block out of provided MIFARE Type memory map");
             return PM3_EINVARG;
         }
     }
-    if (SectorsCnt == 1) {
-        SectorsCnt = MIFARE_1K_MAXSECTOR;
+    if (sectors_cnt == 1) {
+        sectors_cnt = MIFARE_1K_MAXSECTOR;
     }
 
     uint8_t *keyBlock = NULL;
@@ -3416,7 +3418,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
     // create/initialize key storage structure
     sector_t *e_sector = NULL;
-    if (initSectorTable(&e_sector, SectorsCnt) != PM3_SUCCESS) {
+    if (initSectorTable(&e_sector, sectors_cnt) != PM3_SUCCESS) {
         free(keyBlock);
         return PM3_EMALLOC;
     }
@@ -3441,7 +3443,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
         // loop sectors but block is used as to keep track of from which blocks to test
         int b = blockNo;
-        for (int i = mfSectorNum(b); i < SectorsCnt; ++i) {
+        for (int i = mfSectorNum(b); i < sectors_cnt; ++i) {
 
             // skip already found keys.
             if (e_sector[i].foundKey[trgKeyType]) continue;
@@ -3480,7 +3482,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
         // loop sectors but block is used as to keep track of from which blocks to test
         int b = blockNo;
-        for (int i = mfSectorNum(b); i < SectorsCnt; i++) {
+        for (int i = mfSectorNum(b); i < sectors_cnt; i++) {
 
             // KEY A but not KEY B
             if (e_sector[i].foundKey[0] && !e_sector[i].foundKey[1]) {
@@ -3526,13 +3528,13 @@ out:
     if (singleSector)
         printKeyTableEx(1, e_sector, mfSectorNum(blockNo));
     else
-        printKeyTable(SectorsCnt, e_sector);
+        printKeyTable(sectors_cnt, e_sector);
 
     if (transferToEml) {
         // fast push mode
         g_conn.block_after_ACK = true;
         uint8_t block[16] = {0x00};
-        for (int i = 0; i < SectorsCnt; ++i) {
+        for (int i = 0; i < sectors_cnt; ++i) {
             uint8_t blockno = mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1;
             mfEmlGetMem(block, blockno, 1);
 
@@ -3542,7 +3544,7 @@ out:
             if (e_sector[i].foundKey[1])
                 num_to_bytes(e_sector[i].Key[1], 6, block + 10);
 
-            if (i == SectorsCnt - 1) {
+            if (i == sectors_cnt - 1) {
                 // Disable fast mode on last packet
                 g_conn.block_after_ACK = false;
             }
@@ -3553,7 +3555,7 @@ out:
 
     if (createDumpFile) {
         char *fptr = GenerateFilename("hf-mf-", "-key.bin");
-        if (createMfcKeyDump(fptr, SectorsCnt, e_sector) != PM3_SUCCESS) {
+        if (createMfcKeyDump(fptr, sectors_cnt, e_sector) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Failed to save keys to file");
         }
         free(fptr);
@@ -3574,14 +3576,14 @@ out:
     return PM3_SUCCESS;
 }
 
-void showSectorTable(sector_t *k_sector, uint8_t k_sectors_cnt) {
+void showSectorTable(sector_t *k_sector, size_t k_sectors_cnt) {
     if (k_sector != NULL) {
         printKeyTable(k_sectors_cnt, k_sector);
         free(k_sector);
     }
 }
 
-void readerAttack(sector_t *k_sector, uint8_t k_sectors_cnt, nonces_t data, bool setEmulatorMem, bool verbose) {
+void readerAttack(sector_t *k_sector, size_t k_sectors_cnt, nonces_t data, bool setEmulatorMem, bool verbose) {
 
     // init if needed
     if (k_sector == NULL) {
@@ -3715,22 +3717,19 @@ static int CmdHF14AMfSim(const char *Cmd) {
     }
     CLIParserFree(ctx);
 
-    sector_t *k_sector = NULL;
-
     //Validations
     if (atqalen > 0) {
         if (atqalen != 2) {
             PrintAndLogEx(WARNING, "Wrong ATQA length");
             return PM3_EINVARG;
-
         }
         flags |= FLAG_FORCED_ATQA;
     }
+
     if (saklen > 0) {
         if (saklen != 1) {
             PrintAndLogEx(WARNING, "Wrong SAK length");
             return PM3_EINVARG;
-
         }
         flags |= FLAG_FORCED_SAK;
     }
@@ -3740,7 +3739,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
         flags |= FLAG_UID_IN_EMUL;
     }
 
-    uint8_t k_sectorsCount = 40;
+    size_t k_sectors_cnt = MIFARE_4K_MAXSECTOR;
     char csize[13] = { 0 };
 
     if ((m0 + m1 + m2 + m4) > 1) {
@@ -3751,19 +3750,19 @@ static int CmdHF14AMfSim(const char *Cmd) {
     if (m0) {
         flags |= FLAG_MF_MINI;
         snprintf(csize, sizeof(csize), "MINI");
-        k_sectorsCount = MIFARE_MINI_MAXSECTOR;
+        k_sectors_cnt = MIFARE_MINI_MAXSECTOR;
     } else if (m1) {
         flags |= FLAG_MF_1K;
         snprintf(csize, sizeof(csize), "1K");
-        k_sectorsCount = MIFARE_1K_MAXSECTOR;
+        k_sectors_cnt = MIFARE_1K_MAXSECTOR;
     } else if (m2) {
         flags |= FLAG_MF_2K;
         snprintf(csize, sizeof(csize), "2K with RATS");
-        k_sectorsCount = MIFARE_2K_MAXSECTOR;
+        k_sectors_cnt = MIFARE_2K_MAXSECTOR;
     } else if (m4) {
         flags |= FLAG_MF_4K;
         snprintf(csize, sizeof(csize), "4K");
-        k_sectorsCount = MIFARE_4K_MAXSECTOR;
+        k_sectors_cnt = MIFARE_4K_MAXSECTOR;
     } else {
         PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
         return PM3_EINVARG;
@@ -3801,15 +3800,26 @@ static int CmdHF14AMfSim(const char *Cmd) {
     if (flags & FLAG_INTERACTIVE) {
         PrintAndLogEx(INFO, "Press pm3-button or send another cmd to abort simulation");
 
-        while (!kbd_enter_pressed()) {
-            if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) continue;
-            if (!(flags & FLAG_NR_AR_ATTACK)) break;
-            if ((resp.oldarg[0] & 0xffff) != CMD_HF_MIFARE_SIMULATE) break;
+        sector_t *k_sector = NULL;
+
+        while (kbd_enter_pressed() == 0) {
+
+            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false)
+                continue;
+
+            if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)
+                break;
+            
+            if ((resp.oldarg[0] & 0xffff) != CMD_HF_MIFARE_SIMULATE)
+                break;
+
             nonces_t data[1];
             memcpy(data, resp.data.asBytes, sizeof(data));
-            readerAttack(k_sector, k_sectorsCount, data[0], setEmulatorMem, verbose);
+            readerAttack(k_sector, k_sectors_cnt, data[0], setEmulatorMem, verbose);
         }
-        showSectorTable(k_sector, k_sectorsCount);
+        //iceman:  readerAttack call frees k_sector.  this call below is useless.
+        showSectorTable(k_sector, k_sectors_cnt);
+
     } else {
         PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
     }
@@ -3849,11 +3859,11 @@ static int CmdHF14AMfKeyBrute(const char *Cmd) {
 }
 */
 
-void printKeyTable(uint8_t sectorscnt, sector_t *e_sector) {
+void printKeyTable(size_t sectorscnt, sector_t *e_sector) {
     return printKeyTableEx(sectorscnt, e_sector, 0);
 }
 
-void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {
+void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {
     char strA[26 + 1] = {0};
     char strB[26 + 1] = {0};
     char resA[20 + 1] = {0};
@@ -3867,7 +3877,7 @@ void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_secto
     uint64_t ndef_key = 0xD3F7D3F7D3F7;
     bool has_ndef_key = false;
     bool extended_legend = false;
-    for (uint8_t i = 0; i < sectorscnt; i++) {
+    for (size_t i = 0; i < sectorscnt; i++) {
 
         if ((e_sector[i].foundKey[0] > 1) || (e_sector[i].foundKey[1] > 1)) {
             extended_legend = true;
@@ -4545,7 +4555,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
         m1 = true;
     }
 
-    uint8_t sectors_cnt = MIFARE_1K_MAXSECTOR;
+    size_t sectors_cnt = MIFARE_1K_MAXSECTOR;
 
     if (m0) {
         sectors_cnt = MIFARE_MINI_MAXSECTOR;
