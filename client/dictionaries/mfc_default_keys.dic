@@ -267,11 +267,18 @@ E3429281EFC1
 AAFB06045877
 #
 # gym
+#
 # Fysiken A
 3E65E4FB65B3
 #
 # Fysiken B
 25094DF6F148
+#
+# gym wistband A form https://mattionline.de/fitnessstudio-armband-reverse-engineering/ / https://mattionline.de/milazycracker/
+# 3E65E4FB65B3 # the same as Fysiken A
+# gym wistband B
+81CC25EBBB6A
+195DC63DB3A3
 #
 # CleverFit
 A05DBD98E0FC
