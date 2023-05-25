@@ -67,6 +67,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added possible Paxton id to hitag2 tag info output
  - Changed `hf mf sim` - reduce 50ms threshold to 6ms for reset to idle #1974 (@net147)
  - Update `amiibo_tools.lua` with new identifiers and create a python script `update_amiibo_tools_lua.py` to automate the process in the future. (@CorySolovewicz)
+ - Added `lf paradox sim --fc --cn` - Simulates Paradox fob from facility code and card number (jerji)
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)
