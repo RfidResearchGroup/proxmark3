@@ -523,7 +523,8 @@ Check column "offline" for their availability.
 |`hf mf gsave            `|N       |`Save dump from card into file or emulator`
 |`hf mf gsetblk          `|N       |`Write block to card`
 |`hf mf gview            `|N       |`View card`
-|`hf mf gdmconfig        `|N       |`Read config block from card`
+|`hf mf gdmcfg           `|N       |`Read config block from card`
+|`hf mf gdmsetcfg        `|N       |`Write config block to card`
 |`hf mf gdmsetblk        `|N       |`Write block to card`
 |`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
 |`hf mf ndefread         `|N       |`Read and print NDEF records from card`
@@ -568,7 +569,7 @@ Check column "offline" for their availability.
 |`hf mfu restore         `|N       |`Restore a dump onto a MFU MAGIC tag`
 |`hf mfu view            `|Y       |`Display content from tag dump file`
 |`hf mfu wrbl            `|N       |`Write block`
-|`hf mfu tamper          `|N       |`Cofigure the tamper feature on an NTAG 213TT`
+|`hf mfu tamper          `|N       |`Configure the tamper feature on an NTAG 213TT`
 |`hf mfu eload           `|N       |`Load Ultralight dump file into emulator memory`
 |`hf mfu esave           `|N       |`Save Ultralight dump file from emulator memory`
 |`hf mfu eview           `|N       |`View emulator memory`

@@ -4028,7 +4028,7 @@ static int CmdT55xxSniff(const char *Cmd) {
     if (use_graphbuf == false) {
 
         // make loop to call sniff with skip samples..
-        // then build it up by adding 
+        // then build it up by adding
         CmdLFSniff("");
 
     }

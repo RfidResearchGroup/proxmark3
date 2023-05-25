@@ -1300,7 +1300,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
                 break;
             }
             */
-         
+
             uint32_t nttmp = prng_successor(nt1, 100); //NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
             for (i = 101; i < 1200; i++) {
                 nttmp = prng_successor(nttmp, 1);
@@ -1354,7 +1354,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     LED_C_ON();
 
     //  get crypted nonces for target sector
-    for (i = 0; ((i < 2) && (isOK == PM3_SUCCESS)); i++) { 
+    for (i = 0; ((i < 2) && (isOK == PM3_SUCCESS)); i++) {
 
         // look for exactly two different nonces
 

@@ -48,7 +48,7 @@ static int CmdHelp(const char *Cmd);
 // This function will calculate the bitstream for a paradox card and place the result in bs.
 // It returns the calculated CRC from the fc and cn.
 // CRC calculation by mwalker33
-static uint8_t GetParadoxBits(const uint32_t fc, const uint32_t cn, unsigned int *bs){
+static uint8_t GetParadoxBits(const uint32_t fc, const uint32_t cn, unsigned int *bs) {
 
     uint8_t manchester[13] = { 0x00 }; // check size needed
     uint32_t t1;
@@ -180,9 +180,9 @@ int demodParadox(bool verbose) {
     uint32_t rawHi2 = bytebits_to_byte(bits + idx, 32);
 
     uint32_t blocks[4] = {0};
-    uint8_t crc = GetParadoxBits(fc,cardnum,blocks);
-    if(chksum != crc)
-        PrintAndLogEx(ERR,"CRC Error! Calculated CRC is " _GREEN_("%d") " but card CRC is " _RED_("%d") ".",crc,chksum);
+    uint8_t crc = GetParadoxBits(fc, cardnum, blocks);
+    if (chksum != crc)
+        PrintAndLogEx(ERR, "CRC Error! Calculated CRC is " _GREEN_("%d") " but card CRC is " _RED_("%d") ".", crc, chksum);
 
 
     PrintAndLogEx(INFO, "Paradox - ID: " _GREEN_("%x%08x") " FC: " _GREEN_("%d") " Card: " _GREEN_("%d") ", Checksum: %02x, Raw: %08x%08x%08x",
@@ -291,7 +291,7 @@ static int CmdParadoxClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fc > 999 || cn > 99999){
+    if (fc > 999 || cn > 99999) {
         PrintAndLogEx(FAILED, "FC has a max value of 999 and CN has a max value of 99999");
         return PM3_EINVARG;
     }
@@ -379,7 +379,7 @@ static int CmdParadoxSim(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fc > 999 || cn > 99999){
+    if (fc > 999 || cn > 99999) {
         PrintAndLogEx(FAILED, "FC has a max value of 999 and CN has a max value of 99999");
         return PM3_EINVARG;
     }
@@ -390,7 +390,7 @@ static int CmdParadoxSim(const char *Cmd) {
         }
     } else {
         uint32_t blocks[4] = {0};
-        GetParadoxBits(fc,cn,blocks);
+        GetParadoxBits(fc, cn, blocks);
         for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
             num_to_bytes(blocks[i], sizeof(uint32_t), raw + ((i - 1) * 4));
         }

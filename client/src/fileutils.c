@@ -316,9 +316,9 @@ int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, s
 int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *), savePaths_t e_save_path) {
 
     if (ftype != jsfCustom) {
-    if (data == NULL || datalen == 0) {
-        return PM3_EINVARG;
-    }
+        if (data == NULL || datalen == 0) {
+            return PM3_EINVARG;
+        }
     }
 
     char *fileName = newfilenamemcopyEx(preferredName, ".json", e_save_path);
@@ -2032,8 +2032,8 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
             PrintAndLogEx(FAILED, "Error - can't find `" _YELLOW_("%s") "`", filename);
         }
     }
-        free(filename);
-        return res;
+    free(filename);
+    return res;
 }
 
 int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen) {
@@ -2067,7 +2067,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
         }
         case MCT: {
             res = loadFileMCT_safe(fn, pdump, dumplen);
-            break; 
+            break;
         }
     }
 
