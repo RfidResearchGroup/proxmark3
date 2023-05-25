@@ -41,6 +41,7 @@
 #include "atrs.h"                // getATRinfo
 #include "desfire.h"             // desfire enums
 #include "mifare/desfirecore.h"  // desfire context
+#include "mifare/mifaredefault.h"
 
 static bool g_apdu_in_framing_enable = true;
 bool Get_apdu_in_framing(void) {
@@ -738,9 +739,6 @@ int CmdHF14ASim(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    sector_t *k_sector = NULL;
-    uint8_t k_sectorsCount = 40;
-
     if (useUIDfromEML) {
         flags |= FLAG_UID_IN_EMUL;
     }
@@ -761,17 +759,24 @@ int CmdHF14ASim(const char *Cmd) {
     SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
+    sector_t *k_sector = NULL;
+    size_t k_sectors_cnt = MIFARE_4K_MAXSECTOR;
+
     PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
 
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0) continue;
-        if (resp.status != PM3_SUCCESS) break;
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0)
+            continue;
 
-        if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) break;
+        if (resp.status != PM3_SUCCESS)
+            break;
+
+        if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)
+            break;
 
         nonces_t *data = (nonces_t *)resp.data.asBytes;
-        readerAttack(k_sector, k_sectorsCount, data[0], setEmulatorMem, verbose);
+        readerAttack(k_sector, k_sectors_cnt, data[0], setEmulatorMem, verbose);
 
         keypress = kbd_enter_pressed();
     }
@@ -783,7 +788,8 @@ int CmdHF14ASim(const char *Cmd) {
         }
 
         if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK)) {
-            showSectorTable(k_sector, k_sectorsCount);
+            //iceman:  readerAttack call frees k_sector , this call is useless.
+            showSectorTable(k_sector, k_sectors_cnt);
         }
     }
 

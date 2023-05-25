@@ -56,15 +56,16 @@ typedef enum {
     EML,
     JSON,
     DICTIONARY,
+    MCT,
 } DumpFileType_t;
 
 int fileExists(const char *filename);
-//bool create_path(const char *dirname);
 
 // set a path in the path list g_session.defaultPaths
 bool setDefaultPath(savePaths_t pathIndex, const char *path);
 
 char *newfilenamemcopy(const char *preferredName, const char *suffix);
+char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePaths_t save_path);
 
 /**
  * @brief Utility function to save data to a binary file. This method takes a preferred name, but if that
@@ -104,7 +105,7 @@ int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t
  * @return 0 for ok, 1 for failz
  */
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *));
-int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *));
+int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *), savePaths_t e_save_path);
 int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool verbose);
 int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool verbose, bool overwrite);
 /** STUB
@@ -143,20 +144,6 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
 
 /**
  * @brief Utility function to load data from a binary file. This method takes a preferred name.
- * E.g. dumpdata-15.bin
- *
- * @param preferredName
- * @param suffix the file suffix. Including the ".".
- * @param data The data array to store the loaded bytes from file
- * @param maxdatalen the number of bytes that your data array has
- * @param datalen the number of bytes loaded from file
- * @return PM3_SUCCESS for ok, PM3_E* for failz
-*/
-int loadFile(const char *preferredName, const char *suffix, void *data, size_t maxdatalen, size_t *datalen);
-
-
-/**
- * @brief Utility function to load data from a binary file. This method takes a preferred name.
  * E.g. dumpdata-15.bin,  tries to search for it,  and allocated memory.
  *
  * @param preferredName
@@ -176,8 +163,18 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
  * @param datalen the number of bytes loaded from file
  * @return 0 for ok, 1 for failz
 */
-int loadFileEML(const char *preferredName, void *data, size_t *datalen);
 int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen);
+
+/**
+ * @brief  Utility function to load data from a textfile (MCT). This method takes a preferred name.
+ * E.g. dumpdata-15.mct
+ *
+ * @param preferredName
+ * @param data The data array to store the loaded bytes from file
+ * @param datalen the number of bytes loaded from file
+ * @return 0 for ok, 1 for failz
+*/
+int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen);
 
 /**
  * @brief  Utility function to load data from a JSON textfile. This method takes a preferred name.

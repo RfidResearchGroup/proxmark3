@@ -30,11 +30,10 @@ int CmdHFMFNDEFRead(const char *Cmd);    // used by "nfc mf cread"
 int CmdHFMFNDEFFormat(const char *Cmd);  // used by "nfc mf cformat"
 int CmdHFMFNDEFWrite(const char *Cmd);  // used by "nfc mf cwrite"
 
-void showSectorTable(sector_t *k_sector, uint8_t k_sectorsCount);
-void readerAttack(sector_t *k_sector, uint8_t k_sectorsCount, nonces_t data, bool setEmulatorMem, bool verbose);
-void printKeyTable(uint8_t sectorscnt, sector_t *e_sector);
-void printKeyTableEx(uint8_t sectorscnt, sector_t *e_sector, uint8_t start_sector);
-void printKeyTable_fast(uint8_t sectorscnt, icesector_t *e_sector, uint64_t bar, uint64_t foo);
+void showSectorTable(sector_t *k_sector, size_t k_sectors_cnt);
+void readerAttack(sector_t *k_sector, size_t k_sectors_cnt, nonces_t data, bool setEmulatorMem, bool verbose);
+void printKeyTable(size_t sectorscnt, sector_t *e_sector);
+void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector);
 
 int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len);
 #endif

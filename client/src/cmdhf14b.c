@@ -1359,6 +1359,7 @@ static int CmdHF14BDump(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "(optional) filename,  if no <name> UID will be used as filename"),
+        arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1366,6 +1367,7 @@ static int CmdHF14BDump(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool nosave = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
 
@@ -1514,15 +1516,17 @@ static int CmdHF14BDump(const char *Cmd) {
 
         print_sr_blocks(data, cardsize, card.uid);
 
-        // save to file
-        if (fnlen < 1) {
-            PrintAndLogEx(INFO, "using UID as filename");
-            char *fptr = filename + snprintf(filename, sizeof(filename), "hf-14b-");
-            FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
-        }
+        if (nosave == false) {
+            // save to file
+            if (fnlen < 1) {
+                PrintAndLogEx(INFO, "using UID as filename");
+                char *fptr = filename + snprintf(filename, sizeof(filename), "hf-14b-");
+                FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
+            }
 
-        size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
-        pm3_save_dump(filename, data, datalen, jsf14b, ST25TB_SR_BLOCK_SIZE);
+            size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
+            pm3_save_dump(filename, data, datalen, jsf14b, ST25TB_SR_BLOCK_SIZE);
+        }
     }
 
     return switch_off_field_14b();

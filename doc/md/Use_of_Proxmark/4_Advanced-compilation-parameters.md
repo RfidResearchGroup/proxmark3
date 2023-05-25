@@ -108,6 +108,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | LF_HIDBRUTE     | HID corporate 1000 bruteforce - Federico dotta & Maurizio Agazzini
 | LF_HIDFCBRUTE   | LF HID facility code bruteforce - ss23
 | LF_ICEHID       | LF HID collector to flashmem - Iceman1001
+| LF_MULTIHID     | LF HID 26 Bit (H1031) multi simulator - Shain Lakin
 | LF_NEDAP_SIM    | LF Nedap ID simulator
 | LF_NEXID        | Nexwatch credentials detection mode - jrjgjk & Zolorah
 | LF_PROXBRUTE    | HID ProxII bruteforce - Brad Antoniewicz

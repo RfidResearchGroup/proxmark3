@@ -31,7 +31,8 @@ typedef enum {
     tnfAbsoluteURIRecord    = 0x03,
     tnfExternalRecord       = 0x04,
     tnfUnknownRecord        = 0x05,
-    tnfUnchangedRecord      = 0x06
+    tnfUnchangedRecord      = 0x06,
+    tnfReservedRecord       = 0x07,
 } TypeNameFormat_t;
 
 typedef enum {

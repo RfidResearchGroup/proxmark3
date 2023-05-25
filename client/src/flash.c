@@ -236,11 +236,14 @@ static int check_segs(flash_file_t *ctx, int can_write_bl, uint32_t flash_size) 
 }
 
 static int print_and_validate_version(struct version_information_t *vi) {
-    if (vi->magic != VERSION_INFORMATION_MAGIC)
+    if (vi->magic != VERSION_INFORMATION_MAGIC) {
         return PM3_EFILE;
+    }
+
     char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
     FormatVersionInformation(temp, sizeof(temp), "", vi);
     PrintAndLogEx(SUCCESS, _CYAN_("ELF file version") _YELLOW_(" %s"), temp);
+
     if (strlen(g_version_information.armsrc) == 9) {
         if (strncmp(vi->armsrc, g_version_information.armsrc, 9) != 0) {
             PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));

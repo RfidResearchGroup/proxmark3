@@ -1006,15 +1006,17 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
         for (uint8_t keyAB = startKeyAB; keyAB <= endKeyAB; keyAB++) {
             // main cycle with key check
             for (int i = 0; i < keyListLen; i++) {
+ 
+                // allow client abort every iteration
+                if (kbd_enter_pressed()) {
+                    PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+                    DropField();
+                    return PM3_EOPABORTED;
+                }
+
                 if (i % 10 == 0) {
-
-                    if (verbose == false)
+                    if (verbose == false) {
                         PrintAndLogEx(NORMAL, "." NOLF);
-
-                    if (kbd_enter_pressed()) {
-                        PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
-                        DropField();
-                        return PM3_EOPABORTED;
                     }
                 }
 
@@ -1024,7 +1026,7 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
 
                 for (int retry = 0; retry < 4; retry++) {
                     res = MifareAuth4(NULL, keyn, keyList[i], selectCard, true, false, false, true);
-                    if (res == PM3_SUCCESS || PM3_EWRONGANSWER)
+                    if (res == PM3_SUCCESS || res == PM3_EWRONGANSWER)
                         break;
 
                     if (verbose)
@@ -1036,9 +1038,6 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
                     selectCard = true;
                     msleep(100);
                 }
-
-                if (verbose)
-                    PrintAndLogEx(WARNING, "\nsector %02d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(keyList[i], 16), res);
 
                 // key for [sector,keyAB] found
                 if (res == PM3_SUCCESS) {
@@ -1052,8 +1051,13 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
                     DropField();
                     selectCard = true;
                     msleep(50);
+
+                    // break out from keylist check loop, 
                     break;
                 }
+
+                if (verbose)
+                    PrintAndLogEx(WARNING, "\nsector %02d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(keyList[i], 16), res);
 
                 // RES can be: 
                 // PM3_ERFTRANS     -7
