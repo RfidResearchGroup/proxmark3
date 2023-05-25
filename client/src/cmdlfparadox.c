@@ -352,13 +352,13 @@ static int CmdParadoxSim(const char *Cmd) {
     CLIParserInit(&ctx, "lf paradox sim",
                   "Enables simulation of paradox card with specified card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
-                  "lf paradox sim --raw 0f55555695596a6a9999a59a           -> simulate tag"
+                  "lf paradox sim --raw 0f55555695596a6a9999a59a           -> simulate tag\n"
                   "lf paradox clone --fc 96 --cn 40426                     -> simulate tag with fc and cn\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("r", "raw", "<hex>", " raw hex data. 12 bytes"),
+        arg_str0("r", "raw", "<hex>", "raw hex data. 12 bytes"),
         arg_u64_0(NULL, "fc", "<dec>", "facility code"),
         arg_u64_0(NULL, "cn", "<dec>", "card number"),
         arg_param_end
