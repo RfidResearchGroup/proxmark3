@@ -2171,7 +2171,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         default :
             break;
     }
-    
+
     if ((tests == 0) && IfPm3Iso14443a()) {
         DropField();
     }
@@ -2389,14 +2389,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     if (is_ev1) {
         PrintAndLogEx(INFO, "MIFARE Classic EV1 card detected");
-        // Store the keys
-        e_sector[16].Key[MF_KEY_A] = bytes_to_num((uint8_t *)g_mifare_signature_key_a, sizeof(g_mifare_signature_key_a));
-        e_sector[16].foundKey[MF_KEY_A] = 'D';
-
-        e_sector[17].Key[MF_KEY_A] = bytes_to_num((uint8_t *)g_mifare_signature_key_a, sizeof(g_mifare_signature_key_a));
-        e_sector[17].foundKey[MF_KEY_A] = 'D';
-        e_sector[17].Key[MF_KEY_B] = bytes_to_num((uint8_t *)g_mifare_signature_key_b, sizeof(g_mifare_signature_key_b));
-        e_sector[17].foundKey[MF_KEY_B] = 'D';
 
         // use found key if not supplied
         if (known_key == false) {
@@ -2431,7 +2423,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         PrintAndLogEx(INFO, " key supplied .. " _YELLOW_("%s"), known_key ? "True" : "False");
         PrintAndLogEx(INFO, " known sector .. " _YELLOW_("%d"), sectorno);
         PrintAndLogEx(INFO, " keytype ....... " _YELLOW_("%c"), (keytype == MF_KEY_B) ? 'B' : 'A');
-        PrintAndLogEx(INFO, " known key ..... " _YELLOW_("%s"), sprint_hex(key, sizeof(key)));
+        PrintAndLogEx(INFO, " known key ..... " _YELLOW_("%s"), sprint_hex_inrow(key, sizeof(key)));
 
         if (has_staticnonce == NONCE_STATIC)
             PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("STATIC"));
@@ -2458,10 +2450,10 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         }
 
         if (mfCheckKeys(mfFirstBlockOfSector(sectorno), keytype, true, 1, key, &key64) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "target sector %3u key type %c -- using valid key [ " _GREEN_("%s") "] (used for nested / hardnested attack)",
+            PrintAndLogEx(INFO, "target sector %3u key type %c -- using valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
                           sectorno,
                           (keytype == MF_KEY_B) ? 'B' : 'A',
-                          sprint_hex(key, sizeof(key))
+                          sprint_hex_inrow(key, sizeof(key))
                          );
 
             // Store the key for the nested / hardnested attack (if supplied by the user)
@@ -2474,7 +2466,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             PrintAndLogEx(FAILED, "Key is wrong. Can't authenticate to sector"_RED_("%3d") " key type "_RED_("%c") " key " _RED_("%s"),
                           sectorno,
                           (keytype == MF_KEY_B) ? 'B' : 'A',
-                          sprint_hex(key, sizeof(key))
+                          sprint_hex_inrow(key, sizeof(key))
                          );
             PrintAndLogEx(WARNING, "falling back to dictionary");
         }
@@ -2482,31 +2474,34 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         // Check if the user supplied key is used by other sectors
         for (int i = 0; i < sector_cnt; i++) {
             for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
-                if (e_sector[i].foundKey[j] == 0) {
-                    if (mfCheckKeys(mfFirstBlockOfSector(i), j, true, 1, key, &key64) == PM3_SUCCESS) {
-                        e_sector[i].Key[j] = bytes_to_num(key, 6);
-                        e_sector[i].foundKey[j] = 'U';
 
-                        // If the user supplied secctor / keytype was wrong --> just be nice and correct it ;)
-                        if (known_key == false) {
-                            num_to_bytes(e_sector[i].Key[j], 6, key);
-                            known_key = true;
-                            sectorno = i;
-                            keytype = j;
-                            PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
-                                          i,
-                                          (j == MF_KEY_B) ? 'B' : 'A',
-                                          sprint_hex_inrow(key, sizeof(key))
-                                         );
-                        } else {
-                            PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
-                                          i,
-                                          (j == MF_KEY_B)  ? 'B' : 'A',
-                                          sprint_hex_inrow(key, sizeof(key))
-                                         );
-                        }
-                        ++num_found_keys;
+                if (e_sector[i].foundKey[j]) {
+                    continue;
+                }
+
+                if (mfCheckKeys(mfFirstBlockOfSector(i), j, true, 1, key, &key64) == PM3_SUCCESS) {
+                    e_sector[i].Key[j] = bytes_to_num(key, 6);
+                    e_sector[i].foundKey[j] = 'U';
+
+                    // If the user supplied secctor / keytype was wrong --> just be nice and correct it ;)
+                    if (known_key == false) {
+                        num_to_bytes(e_sector[i].Key[j], 6, key);
+                        known_key = true;
+                        sectorno = i;
+                        keytype = j;
+                        PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
+                                        i,
+                                        (j == MF_KEY_B) ? 'B' : 'A',
+                                        sprint_hex_inrow(key, sizeof(key))
+                                        );
+                    } else {
+                        PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
+                                        i,
+                                        (j == MF_KEY_B)  ? 'B' : 'A',
+                                        sprint_hex_inrow(key, sizeof(key))
+                                        );
                     }
+                    ++num_found_keys;
                 }
             }
         }
@@ -2551,7 +2546,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         PrintAndLogEx(INFO, "." NOLF);
         // Check all the sectors
         for (int i = 0; i < sector_cnt; i++) {
-            for (int j = 0; j < 2; j++) {
+            for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
                 // Check if the key is known
                 if (e_sector[i].foundKey[j] == 0) {
                     for (uint32_t k = 0; k < key_cnt; k++) {
@@ -2608,28 +2603,30 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Analyse the dictionary attack
     for (int i = 0; i < sector_cnt; i++) {
         for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
-            if (e_sector[i].foundKey[j] == 1) {
-                e_sector[i].foundKey[j] = 'D';
-                num_to_bytes(e_sector[i].Key[j], 6, tmp_key);
+            if (e_sector[i].foundKey[j] != 1) {
+                continue;
+            }
 
-                // Store valid credentials for the nested / hardnested attack if none exist
-                if (known_key == false) {
-                    num_to_bytes(e_sector[i].Key[j], 6, key);
-                    known_key = true;
-                    sectorno = i;
-                    keytype = j;
-                    PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
-                                  i,
-                                  (j == MF_KEY_B) ? 'B' : 'A',
-                                  sprint_hex_inrow(tmp_key, sizeof(tmp_key))
-                                 );
-                } else {
-                    PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
-                                  i,
-                                  (j == MF_KEY_B) ? 'B' : 'A',
-                                  sprint_hex_inrow(tmp_key, sizeof(tmp_key))
-                                 );
-                }
+            e_sector[i].foundKey[j] = 'D';
+            num_to_bytes(e_sector[i].Key[j], 6, tmp_key);
+
+            // Store valid credentials for the nested / hardnested attack if none exist
+            if (known_key == false) {
+                num_to_bytes(e_sector[i].Key[j], 6, key);
+                known_key = true;
+                sectorno = i;
+                keytype = j;
+                PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
+                                i,
+                                (j == MF_KEY_B) ? 'B' : 'A',
+                                sprint_hex_inrow(tmp_key, sizeof(tmp_key))
+                                );
+            } else {
+                PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
+                                i,
+                                (j == MF_KEY_B) ? 'B' : 'A',
+                                sprint_hex_inrow(tmp_key, sizeof(tmp_key))
+                                );
             }
         }
     }
@@ -2690,7 +2687,8 @@ noValidKeyFound:
 
     // Iterate over each sector and key(A/B)
     for (current_sector_i = 0; current_sector_i < sector_cnt; current_sector_i++) {
-        for (current_key_type_i = 0; current_key_type_i < 2; current_key_type_i++) {
+
+        for (current_key_type_i = MF_KEY_A; current_key_type_i <= MF_KEY_B; current_key_type_i++) {
 
             // If the key is already known, just skip it
             if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
