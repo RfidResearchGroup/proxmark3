@@ -2154,29 +2154,26 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 
     uint64_t foundkey = 0;
     int16_t isOK = mfnestedhard(blockno, keytype, key, trg_blockno, trg_keytype, known_target_key ? trg_key : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
-
+    switch (isOK) {
+        case PM3_ETIMEOUT :
+            PrintAndLogEx(ERR, "Error: No response from Proxmark3\n");
+            break;
+        case PM3_EOPABORTED:
+            PrintAndLogEx(WARNING, "Button pressed. Aborted\n");
+            break;
+        case PM3_ESTATIC_NONCE:
+            PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
+            break;
+        case PM3_EFAILED: {
+            PrintAndLogEx(FAILED, "\nFailed to recover a key...");
+            break;
+        }
+        default :
+            break;
+    }
+    
     if ((tests == 0) && IfPm3Iso14443a()) {
         DropField();
-    }
-
-    if (isOK) {
-        switch (isOK) {
-            case PM3_ETIMEOUT :
-                PrintAndLogEx(ERR, "Error: No response from Proxmark3\n");
-                break;
-            case PM3_EOPABORTED:
-                PrintAndLogEx(WARNING, "Button pressed. Aborted\n");
-                break;
-            case PM3_ESTATIC_NONCE:
-                PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
-                break;
-            case PM3_EFAILED: {
-                PrintAndLogEx(FAILED, "\nFailed to recover a key...");
-                break;
-            }
-            default :
-                break;
-        }
     }
     return isOK;
 }
