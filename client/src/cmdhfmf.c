@@ -2170,6 +2170,10 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
             case PM3_ESTATIC_NONCE:
                 PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
                 break;
+            case PM3_EFAILED: {
+                PrintAndLogEx(FAILED, "\nFailed to recover a key...");
+                break;
+            }
             default :
                 break;
         }
@@ -2862,7 +2866,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                         foundkey = 0;
                         isOK = mfnestedhard(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, NULL, false, false, slow, 0, &foundkey, NULL);
                         DropField();
-                        if (isOK) {
+                        if (isOK != PM3_SUCCESS) {
                             switch (isOK) {
                                 case PM3_ETIMEOUT: {
                                     PrintAndLogEx(ERR, "\nError: No response from Proxmark3");
@@ -2884,6 +2888,10 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                     printKeyTable(sector_cnt, e_sector);
                                     PrintAndLogEx(NORMAL, "");
                                     break;
+                                }
+                                case PM3_EFAILED: {
+                                    PrintAndLogEx(FAILED, "\nFailed to recover a key...");
+                                    continue;
                                 }
                                 default: {
                                     break;
