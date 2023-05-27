@@ -2014,11 +2014,16 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint32_t waittime;
             } PACKED;
             struct p *payload = (struct p *) &packet->data.asBytes;
+
             uint16_t available;
             uint16_t pre_available = 0;
             uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
             uint32_t wait = payload->waittime;
+
+            StartTicks();
+
             uint32_t ti = GetTickCount();
+
             while (true) {
                 WaitMS(50);
                 available = usart_rxdata_available();
@@ -2039,6 +2044,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             } else {
                 reply_ng(CMD_USART_RX, PM3_ENODATA, NULL, 0);
             }
+
+            StopTicks();  
             BigBuf_free();
             LED_B_OFF();
             break;
