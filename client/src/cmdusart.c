@@ -157,7 +157,7 @@ static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
     ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000); // such large timeout needed
     if (ret == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
-        if (strcmp((char *)data, "hc01.comV2.0") == 0) {
+        if (strcmp((char *)data, "hc01.comV2.0") == 0 || strcmp((char *)data, "BT SPP V3.0") == 0) {
             PrintAndLogEx(SUCCESS, "Add-on " _GREEN_("found!"));
             return PM3_SUCCESS;
         }
