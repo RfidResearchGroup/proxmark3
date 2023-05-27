@@ -320,6 +320,52 @@ static int mf_print_keys(uint16_t n, uint8_t *d) {
     return PM3_SUCCESS;
 }
 
+// MFC dump ,  extract and save the keys to key file
+static int mf_save_keys_from_arr(uint16_t n, uint8_t *d) {
+    uint8_t sectors = 0;
+    switch (n) {
+        case MIFARE_MINI_MAXBLOCK:
+            sectors = MIFARE_MINI_MAXSECTOR;
+            break;
+        case MIFARE_2K_MAXBLOCK:
+            sectors = MIFARE_2K_MAXSECTOR;
+            break;
+        case MIFARE_4K_MAXBLOCK:
+            sectors = MIFARE_4K_MAXSECTOR;
+            break;
+        case MIFARE_1K_MAXBLOCK:
+        default:
+            sectors = MIFARE_1K_MAXSECTOR;
+            break;
+    }
+
+    uint16_t keysize = 2 * MIFARE_KEY_SIZE * sectors;
+
+    uint8_t *keys = calloc(keysize, sizeof(uint8_t));
+    if (keys == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    uint8_t sector = 0;
+    for (uint16_t i = 0; i < n; i++) {
+        if (mfIsSectorTrailer(i)) {
+           // key A offset in ST block
+           memcpy(keys + (MIFARE_KEY_SIZE * sector), d + (i * MFBLOCK_SIZE), MIFARE_KEY_SIZE);
+
+           // key B offset in ST block
+           memcpy(keys + (MIFARE_KEY_SIZE * sectors) + (MIFARE_KEY_SIZE * sector), d + (i * MFBLOCK_SIZE) + 10, MIFARE_KEY_SIZE);
+
+           sector++;
+        }
+    }
+
+    char fn[FILE_PATH_SIZE] = {0};
+    snprintf(fn, sizeof(fn), "hf-mf-%s-keys", sprint_hex_inrow(d, 4));
+    saveFile(fn, ".bin", keys, keysize);
+    free(keys);
+    return PM3_SUCCESS;
+}
+
 /*
 static void mf_print_values(uint16_t n, uint8_t *d) {
 
@@ -4396,6 +4442,7 @@ static int CmdHF14AMfEView(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "sk", "Save extracted keys to file"),         
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4404,6 +4451,7 @@ static int CmdHF14AMfEView(const char *Cmd) {
     bool m2 = arg_get_lit(ctx, 3);
     bool m4 = arg_get_lit(ctx, 4);
     bool verbose = arg_get_lit(ctx, 5);
+    bool save_keys = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     // validations
@@ -4449,6 +4497,11 @@ static int CmdHF14AMfEView(const char *Cmd) {
     if (verbose) {
         mf_print_keys(block_cnt, dump);
     }
+
+    if (save_keys) {
+        mf_save_keys_from_arr(block_cnt, dump);
+    }
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -7028,6 +7081,7 @@ static int CmdHF14AMfView(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "filename of dump"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "sk", "Save extracted keys to file"), 
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -7035,6 +7089,7 @@ static int CmdHF14AMfView(const char *Cmd) {
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
+    bool save_keys = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     // read dump file
@@ -7063,6 +7118,10 @@ static int CmdHF14AMfView(const char *Cmd) {
     if (verbose) {
         mf_print_keys(block_cnt, dump);
         mf_analyse_acl(block_cnt, dump);
+    }
+
+    if (save_keys) {
+        mf_save_keys_from_arr(block_cnt, dump);
     }
 
     int sector = DetectHID(dump, 0x4910);
