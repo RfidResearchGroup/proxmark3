@@ -34,7 +34,6 @@
 
 #include "commonutil.h"  // ARRAYLEN
 #include "comms.h"
-
 #include "proxmark3.h"
 #include "ui.h"
 #include "util_posix.h"
@@ -48,7 +47,8 @@
 #define NUM_CHECK_BITFLIPS_THREADS      (num_CPUs())
 #define NUM_REDUCTION_WORKING_THREADS   (num_CPUs())
 
-#define IGNORE_BITFLIP_THRESHOLD        0.99 // ignore bitflip arrays which have nearly only valid states
+// ignore bitflip arrays which have nearly only valid states
+#define IGNORE_BITFLIP_THRESHOLD        0.9901
 
 #define STATE_FILES_DIRECTORY           "hardnested_tables/"
 #define STATE_FILE_TEMPLATE             "bitflip_%d_%03" PRIx16 "_states.bin.bz2"
@@ -57,7 +57,11 @@
 // #define DEBUG_REDUCTION
 
 // possible sum property values
-static uint16_t sums[NUM_SUMS] = {0, 32, 56, 64, 80, 96, 104, 112, 120, 128, 136, 144, 152, 160, 176, 192, 200, 224, 256};
+static uint16_t sums[NUM_SUMS] = {
+    0,   32,  56,  64,  80,  96,  104, 112,
+    120, 128, 136, 144, 152, 160, 176, 192,
+    200, 224, 256
+};
 
 // number of possible partial sum property values
 #define NUM_PART_SUMS                  9
@@ -505,8 +509,11 @@ static void free_sum_bitarrays(void) {
 static char failstr[250] = "";
 #endif
 
-static const float p_K0[NUM_SUMS] = { // the probability that a random nonce has a Sum Property K
-    0.0290, 0.0083, 0.0006, 0.0339, 0.0048, 0.0934, 0.0119, 0.0489, 0.0602, 0.4180, 0.0602, 0.0489, 0.0119, 0.0934, 0.0048, 0.0339, 0.0006, 0.0083, 0.0290
+// the probability that a random nonce has a Sum Property K
+static const float p_K0[NUM_SUMS] = { 
+    0.0290, 0.0083, 0.0006, 0.0339, 0.0048, 0.0934, 0.0119, 0.0489,
+    0.0602, 0.4180, 0.0602, 0.0489, 0.0119, 0.0934, 0.0048, 0.0339,
+    0.0006, 0.0083, 0.0290
 };
 static float my_p_K[NUM_SUMS];
 static const float *p_K;
@@ -1275,6 +1282,7 @@ static void apply_sum_a0(void) {
 }
 
 static void simulate_MFplus_RNG(uint32_t test_cuid, uint64_t test_key, uint32_t *nt_enc, uint8_t *par_enc) {
+
     struct Crypto1State sim_cs = {0, 0};
 
     // init cryptostate with key:
@@ -1285,12 +1293,20 @@ static void simulate_MFplus_RNG(uint32_t test_cuid, uint64_t test_key, uint32_t 
 
     *par_enc = 0;
     uint32_t nt = (rand() & 0xff) << 24 | (rand() & 0xff) << 16 | (rand() & 0xff) << 8 | (rand() & 0xff);
+
     for (int8_t byte_pos = 3; byte_pos >= 0; byte_pos--) {
+
         uint8_t nt_byte_dec = (nt >> (8 * byte_pos)) & 0xff;
-        uint8_t nt_byte_enc = crypto1_byte(&sim_cs, nt_byte_dec ^ (test_cuid >> (8 * byte_pos)), false) ^ nt_byte_dec; // encode the nonce byte
+
+        // encode the nonce byte
+        uint8_t nt_byte_enc = crypto1_byte(&sim_cs, nt_byte_dec ^ (test_cuid >> (8 * byte_pos)), false) ^ nt_byte_dec;
         *nt_enc = (*nt_enc << 8) | nt_byte_enc;
-        uint8_t ks_par = filter(sim_cs.odd);                         // the keystream bit to encode/decode the parity bit
-        uint8_t nt_byte_par_enc = ks_par ^ oddparity8(nt_byte_dec);  // determine the nt byte's parity and encode it
+
+        // the keystream bit to encode/decode the parity bit
+        uint8_t ks_par = filter(sim_cs.odd);
+
+        // determine the nt byte's parity and encode it
+        uint8_t nt_byte_par_enc = ks_par ^ oddparity8(nt_byte_dec);
         *par_enc = (*par_enc << 1) | nt_byte_par_enc;
     }
 }
