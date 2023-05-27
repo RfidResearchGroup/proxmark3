@@ -199,7 +199,7 @@ The ROLE command takes its parameter after an equal sign:
 
 |Command            |Description                                           |Reply         |
 |-------------------|------------------------------------------------------|--------------|
-|`AT+VERSION`       |print firmware version                                |`hc01.comV2.0`|
+|`AT+VERSION`       |print firmware version                                |`hc01.comV2.0` or `BT SPP V3.0`|
 |`AT+BAUD8`         |set baudrate to 115200                                |`OK115200`    |
 |`AT+PIN1234`       |set PINCODE to 1234. (must be numbers)                |`OKsetPIN`    |
 |`AT+NAMEPM3_RDV4.0`|set device name (as shown to BT hosts) to `PM3_RDV4.0`|`OKsetname`   |

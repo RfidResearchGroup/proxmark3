@@ -923,7 +923,7 @@ static int ndefDecodeExternal_record(NDEFHeader_t *ndef) {
                     );
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Payload [%u]...", ndef->PayloadLen);
+    PrintAndLogEx(INFO, "Payload [%zu]...", ndef->PayloadLen);
     print_hex_noascii_break(ndef->Payload, ndef->PayloadLen, 32);
     
     // do a character check?

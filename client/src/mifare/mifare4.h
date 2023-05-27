@@ -77,9 +77,9 @@ const char *mfGetAccessConditionsDesc(uint8_t blockn, const uint8_t *data);
 uint8_t mfNumBlocksPerSector(uint8_t sectorNo);
 uint8_t mfFirstBlockOfSector(uint8_t sectorNo);
 uint8_t mfSectorTrailerOfSector(uint8_t sectorNo);
-uint8_t mfSectorTrailer(uint8_t blockNo);
-bool mfIsSectorTrailer(uint8_t blockNo);
-uint8_t mfSectorNum(uint8_t blockNo);
+uint8_t mfSectorTrailer(uint16_t blockNo);
+bool mfIsSectorTrailer(uint16_t blockNo);
+uint8_t mfSectorNum(uint16_t blockNo);
 
 
 #endif // mifare4.h

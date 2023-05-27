@@ -18,6 +18,19 @@ A5A4A3A2A1A0
 # MAD access key B
 89ECA97F8C2A
 #
+# Mifare 1k EV1 (S50) hidden blocks, Signature data
+# 16 A
+5C8FF9990DA2
+#
+# 17 A
+75CCB59C9BED
+#
+# 16 B
+D01AFEEB890A
+#
+# 17 B
+4B791BEA7BCC
+#
 #
 B0B1B2B3B4B5
 C0C1C2C3C4C5
@@ -111,7 +124,7 @@ F1D83F964314
 # Access control system
 605F5E5D5C5B
 #
-#NSP Global keys A and B (uk housing access control)
+# NSP Global keys A and B (uk housing access control)
 199404281970
 199404281998
 #
@@ -263,15 +276,24 @@ E3429281EFC1
 460722122510
 #
 # 3dprinter
-# EPI Envisionte# 3dprinter
+# EPI Envisionte
 AAFB06045877
 #
 # gym
+#
 # Fysiken A
 3E65E4FB65B3
 #
 # Fysiken B
 25094DF6F148
+#
+#
+# https://mattionline.de/fitnessstudio-armband-reverse-engineering/ 
+# https://mattionline.de/milazycracker/
+# gym wistband A, same as Fysiken A
+# gym wistband B
+81CC25EBBB6A
+195DC63DB3A3
 #
 # CleverFit
 A05DBD98E0FC
@@ -279,6 +301,10 @@ A05DBD98E0FC
 # GoFit
 AA4DDA458EBB 
 EAB8066C7479
+#
+# Nordic Wellness A, same as Fysiken A
+# Nordic Wellness B
+E5519E1CC92B
 #
 # Hotel KeyCard
 D3B595E9DD63
@@ -625,19 +651,6 @@ A8844B0BCA06
 # VIGIK1 B
 564C505F4D41
 BA5B895DA162
-#
-# Vigik mystery Keys Mifare 1k EV1 (S50)
-# 16 A
-5C8FF9990DA2
-#
-# 17 A
-75CCB59C9BED
-#
-# 16 B
-D01AFEEB890A
-#
-# 17 B
-4B791BEA7BCC
 #
 # BTCINO UNDETERMINED SPREAKD 0x01->0x13 key
 021209197591
@@ -2150,3 +2163,7 @@ D201DBB6AB6E
 # Data from Discord, French pool
 9B7C25052FC3
 494446555455
+#
+# Data from Discord, seems to be related to ASSA
+427553754D47
+
