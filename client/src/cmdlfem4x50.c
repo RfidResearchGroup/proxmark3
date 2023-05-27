@@ -369,7 +369,7 @@ int CmdEM4x50Brute(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     em4x50_data_t etd;
-    bzero(&etd, sizeof(etd));
+    memset(&etd, 0, sizeof(etd));
 
     int mode_len = 64;
     char mode[64];
