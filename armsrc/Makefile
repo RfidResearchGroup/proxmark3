@@ -77,7 +77,7 @@ else
 endif
 
 ifneq (,$(findstring WITH_EM4x50,$(APP_CFLAGS)))
-	SRC_EM4x50 = em4x50.c
+	SRC_EM4x50 = em4x50.c bruteforce.c
 else
 	SRC_EM4x50 =
 endif
