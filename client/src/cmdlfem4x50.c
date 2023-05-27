@@ -382,6 +382,7 @@ int CmdEM4x50Brute(const char *Cmd) {
         etd.bruteforce_mode = BRUTEFORCE_MODE_CHARSET;
     } else {
         PrintAndLogEx(FAILED, "Unknown bruteforce mode: %s", mode);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -396,11 +397,13 @@ int CmdEM4x50Brute(const char *Cmd) {
 
         if (begin_len != 4) {
             PrintAndLogEx(FAILED, "'begin' parameter must be 4 bytes");
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
 
         if (end_len != 4) {
             PrintAndLogEx(FAILED, "'end' parameter must be 4 bytes");
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
 
@@ -417,6 +420,7 @@ int CmdEM4x50Brute(const char *Cmd) {
 
         if (etd.bruteforce_charset == 0) {
             PrintAndLogEx(FAILED, "Please enable at least one charset when using charset bruteforce mode.");
+            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
 
