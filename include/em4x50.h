@@ -20,6 +20,7 @@
 #define EM4X50_H__
 
 #include "common.h"
+#include "bruteforce.h"
 
 #define EM4X50_NO_WORDS             34
 
@@ -62,6 +63,8 @@ typedef struct {
     uint32_t password2;
     uint32_t word;
     uint32_t addresses;
+    bruteforce_mode_t bruteforce_mode;
+    bruteforce_charset_t bruteforce_charset;
 } PACKED em4x50_data_t;
 
 typedef struct {
