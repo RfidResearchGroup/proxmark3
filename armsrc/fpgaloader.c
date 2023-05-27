@@ -393,7 +393,7 @@ static int bitparse_find_section(int bitstream_version, char section_name, uint3
     while (numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH) {
         char current_name = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
         numbytes++;
-        uint16_t current_length = 0;
+        uint32_t current_length = 0;
         if (current_name < 'a' || current_name > 'e') {
             /* Strange section name, abort */
             break;
