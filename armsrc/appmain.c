@@ -2051,11 +2051,16 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) &packet->data.asBytes;
             usart_writebuffer_sync(payload->data, packet->length - sizeof(payload));
+
             uint16_t available;
             uint16_t pre_available = 0;
             uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
             uint32_t wait = payload->waittime;
+
+            StartTicks();
+
             uint32_t ti = GetTickCount();
+
             while (true) {
                 WaitMS(50);
                 available = usart_rxdata_available();
@@ -2070,12 +2075,15 @@ static void PacketReceived(PacketCommandNG *packet) {
                 if (GetTickCountDelta(ti) > wait)
                     break;
             }
+
             if (available > 0) {
                 uint16_t len = usart_read_ng(dest, available);
                 reply_ng(CMD_USART_TXRX, PM3_SUCCESS, dest, len);
             } else {
                 reply_ng(CMD_USART_TXRX, PM3_ENODATA, NULL, 0);
             }
+
+            StopTicks();
             BigBuf_free();
             LED_B_OFF();
             break;
@@ -2718,9 +2726,6 @@ void  __attribute__((noreturn)) AppMain(void) {
     }
 #endif
 
-#ifdef WITH_FPC_USART
-    usart_init(USART_BAUD_RATE, USART_PARITY);
-#endif
 
 #ifdef WITH_FLASH
     // If flash is not present, BUSY_TIMEOUT kicks in, let's do it after USB
@@ -2731,6 +2736,10 @@ void  __attribute__((noreturn)) AppMain(void) {
     // fall under the 2 contigous free blocks availables
     // This is a time-consuming process on large flash.
     rdv40_spiffs_check();
+#endif
+
+#ifdef WITH_FPC_USART
+    usart_init(USART_BAUD_RATE, USART_PARITY);
 #endif
 
     // This is made as late as possible to ensure enumeration without timeout
