@@ -30,8 +30,8 @@
 #include "util_posix.h" // msclock
 #include "util_darwin.h" // en/dis-ableNapp();
 
-//#define COMMS_DEBUG
-//#define COMMS_DEBUG_RAW
+// #define COMMS_DEBUG
+// #define COMMS_DEBUG_RAW
 
 // Serial port that we are communicating with the PM3 on.
 static serial_port sp = NULL;
@@ -369,6 +369,7 @@ __attribute__((force_align_arg_pointer))
         }
 
         res = uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen);
+
         if ((res == PM3_SUCCESS) && (rxlen == sizeof(PacketResponseNGPreamble))) {
             rx.magic = rx_raw.pre.magic;
             uint16_t length = rx_raw.pre.length;
@@ -380,6 +381,7 @@ __attribute__((force_align_arg_pointer))
                     PrintAndLogEx(WARNING, "Received packet frame with incompatible length: 0x%04x", length);
                     error = true;
                 }
+
                 if ((!error) && (length > 0)) { // Get the variable length payload
 
                     res = uart_receive(sp, (uint8_t *)&rx_raw.data, length, &rxlen);
@@ -418,10 +420,10 @@ __attribute__((force_align_arg_pointer))
                         rx.length = 0; // set received length to 0
                     else {  // old frames can't be empty
                         PrintAndLogEx(WARNING, "Received empty MIX packet frame (length: 0x00)");
-
                         error = true;
                     }
                 }
+
                 if (!error) {                        // Get the postamble
                     res = uart_receive(sp, (uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), &rxlen);
                     if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseNGPostamble))) {
@@ -429,6 +431,7 @@ __attribute__((force_align_arg_pointer))
                         error = true;
                     }
                 }
+
                 if (!error) {                        // Check CRC, accept MAGIC as placeholder
                     rx.crc = rx_raw.foopost.crc;
                     if (rx.crc != RESPONSENG_POSTAMBLE_MAGIC) {
