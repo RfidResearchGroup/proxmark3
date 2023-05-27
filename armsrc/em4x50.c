@@ -641,12 +641,12 @@ static bool brute(em4x50_data_t *etd, uint32_t *pwd) {
     int generator_ret = 0;
     int cnt = 0;
 
-    bf_generator_init(&ctx, etd->bruteforce_mode);
+    bf_generator_init(&ctx, etd->bruteforce_mode, BF_KEY_SIZE_32);
 
-    if (etd->bruteforce_mode == BRUTEFORCE_MODE_CHARSET)
+    if (etd->bruteforce_mode == BF_MODE_CHARSET)
         bf_generator_set_charset(&ctx, etd->bruteforce_charset);
 
-    while ((generator_ret = bf_generate32(&ctx)) == GENERATOR_NEXT) {
+    while ((generator_ret = bf_generate32(&ctx)) == BF_GENERATOR_NEXT) {
         *pwd = ctx.current_key32;
 
         WDT_HIT();

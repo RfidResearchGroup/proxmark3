@@ -28,22 +28,22 @@ uint8_t charset_uppercase[] = {
     'X', 'Y', 'Z'
 };
 
-void bf_generator_init(generator_context_t *ctx, uint8_t mode) {
+void bf_generator_init(generator_context_t *ctx, uint8_t mode, uint8_t key_size) {
     memset(ctx, 0, sizeof(generator_context_t));
     ctx->mode = mode;
 }
 
 int bf_generator_set_charset(generator_context_t *ctx, uint8_t charsets) {
-    if (ctx->mode != BRUTEFORCE_MODE_CHARSET) {
+    if (ctx->mode != BF_MODE_CHARSET) {
         return -1;
     }
 
-    if (charsets & CHARSET_DIGITS) {
+    if (charsets & BF_CHARSET_DIGITS) {
         memcpy(ctx->charset, charset_digits, sizeof(charset_digits));
         ctx->charset_length += sizeof(charset_digits);
     }
 
-    if (charsets & CHARSET_UPPERCASE) {
+    if (charsets & BF_CHARSET_UPPERCASE) {
         memcpy(ctx->charset + ctx->charset_length, charset_uppercase, sizeof(charset_uppercase));
         ctx->charset_length += sizeof(charset_uppercase);
     }
@@ -54,19 +54,19 @@ int bf_generator_set_charset(generator_context_t *ctx, uint8_t charsets) {
 int bf_generate32(generator_context_t *ctx) {
 
     switch (ctx->mode) {
-        case BRUTEFORCE_MODE_RANGE:
+        case BF_MODE_RANGE:
             return _bf_generate_mode_range32(ctx);
-        case BRUTEFORCE_MODE_CHARSET:
+        case BF_MODE_CHARSET:
             return _bf_generate_mode_charset32(ctx);
     }
 
-    return GENERATOR_ERROR;
+    return BF_GENERATOR_ERROR;
 }
 
 int _bf_generate_mode_range32(generator_context_t *ctx) {
 
     if (ctx->current_key32 >= ctx->range_high) {
-        return GENERATOR_END;
+        return BF_GENERATOR_END;
     }
 
     // we use flag1 as indicator if value of range_low was already emitted
@@ -74,17 +74,17 @@ int _bf_generate_mode_range32(generator_context_t *ctx) {
     if (ctx->current_key32 <= ctx->range_low && ctx->flag1 == false) {
         ctx->current_key32 = ctx->range_low;
         ctx->pos[0] = true;
-        return GENERATOR_NEXT;
+        return BF_GENERATOR_NEXT;
     }
 
     ctx->current_key32++;
-    return GENERATOR_NEXT;
+    return BF_GENERATOR_NEXT;
 }
 
 int _bf_generate_mode_charset32(generator_context_t *ctx) {
 
     if (ctx->flag1)
-        return GENERATOR_END;
+        return BF_GENERATOR_END;
 
     ctx->current_key32 = ctx->charset[ctx->pos[0]] << 24 | ctx->charset[ctx->pos[1]] << 16 |
                          ctx->charset[ctx->pos[2]] << 8 | ctx->charset[ctx->pos[3]];
@@ -94,7 +94,7 @@ int _bf_generate_mode_charset32(generator_context_t *ctx) {
         // set flag1 to emit value last time and end generation
         ctx->flag1 = true;
 
-    return GENERATOR_NEXT;
+    return BF_GENERATOR_NEXT;
 }
 
 // increments values in array with carryover using modulo limit for each byte

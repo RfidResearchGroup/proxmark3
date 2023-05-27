@@ -377,15 +377,15 @@ int CmdEM4x50Brute(const char *Cmd) {
     PrintAndLogEx(INFO, "Chosen mode: %s", mode);
 
     if (strcmp(mode, "range") == 0) {
-        etd.bruteforce_mode = BRUTEFORCE_MODE_RANGE;
+        etd.bruteforce_mode = BF_MODE_RANGE;
     } else if (strcmp(mode, "charset") == 0) {
-        etd.bruteforce_mode = BRUTEFORCE_MODE_CHARSET;
+        etd.bruteforce_mode = BF_MODE_CHARSET;
     } else {
         PrintAndLogEx(FAILED, "Unknown bruteforce mode: %s", mode);
         return PM3_EINVARG;
     }
 
-    if (etd.bruteforce_mode == BRUTEFORCE_MODE_RANGE) {
+    if (etd.bruteforce_mode == BF_MODE_RANGE) {
         int begin_len = 0;
         uint8_t begin[4] = {0x0};
         CLIGetHexWithReturn(ctx, 2, begin, &begin_len);
@@ -406,14 +406,14 @@ int CmdEM4x50Brute(const char *Cmd) {
 
         etd.password1 = BYTES2UINT32_BE(begin);
         etd.password2 = BYTES2UINT32_BE(end);
-    } else if (etd.bruteforce_mode == BRUTEFORCE_MODE_CHARSET) {
+    } else if (etd.bruteforce_mode == BF_MODE_CHARSET) {
         bool enable_digits = arg_get_lit(ctx, 4);
         bool enable_uppercase = arg_get_lit(ctx, 5);
 
         if (enable_digits)
-            etd.bruteforce_charset |= CHARSET_DIGITS;
+            etd.bruteforce_charset |= BF_CHARSET_DIGITS;
         if (enable_uppercase)
-            etd.bruteforce_charset |= CHARSET_UPPERCASE;
+            etd.bruteforce_charset |= BF_CHARSET_UPPERCASE;
 
         if (etd.bruteforce_charset == 0) {
             PrintAndLogEx(FAILED, "Please enable at least one charset when using charset bruteforce mode.");
@@ -432,21 +432,21 @@ int CmdEM4x50Brute(const char *Cmd) {
     const int speed = 27;
     int no_iter = 0;
 
-    if (etd.bruteforce_mode == BRUTEFORCE_MODE_RANGE) {
+    if (etd.bruteforce_mode == BF_MODE_RANGE) {
         no_iter = etd.password2 - etd.password1 + 1;
         PrintAndLogEx(INFO, "Trying " _YELLOW_("%i") " passwords in range [0x%08x, 0x%08x]"
                       , no_iter
                       , etd.password1
                       , etd.password2
                      );
-    } else if (etd.bruteforce_mode == BRUTEFORCE_MODE_CHARSET) {
+    } else if (etd.bruteforce_mode == BF_MODE_CHARSET) {
         unsigned int digits = 0;
 
-        if (etd.bruteforce_charset & CHARSET_DIGITS)
-            digits += CHARSET_DIGITS_SIZE;
+        if (etd.bruteforce_charset & BF_CHARSET_DIGITS)
+            digits += BF_CHARSET_DIGITS_SIZE;
 
-        if (etd.bruteforce_charset & CHARSET_UPPERCASE)
-            digits += CHARSET_UPPERCASE_SIZE;
+        if (etd.bruteforce_charset & BF_CHARSET_UPPERCASE)
+            digits += BF_CHARSET_UPPERCASE_SIZE;
 
         no_iter = pow(digits, 4);
     }
