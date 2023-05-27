@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed truncated FPGA upload due to incorrect integer size variable (@d18c7db)
  - Rebuilt the Spartan-2 `fpga_*.bit` files to include the `hi_iso14443a.v` update (@d18c7db)
  - Added minor orphaned change from `hi_iso14443a.v` in `fpga-xc3s100e` to `hi_iso14443a.v` in `fpga-xc2s30` (@d18c7db)
  - Added python3 script to convert amiibo nfc Flipper Zero files to eml files to be used with Proxmark3 (@OscarAkaElvis)
