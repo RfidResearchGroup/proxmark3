@@ -263,7 +263,6 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
     sp->fd = open(pcPortName, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
     if (sp->fd == -1) {
-        PrintAndLogEx(ERR, "error: UART file descriptor");
         uart_close(sp);
         return INVALID_SERIAL_PORT;
     }
