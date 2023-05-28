@@ -98,6 +98,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         free(prefix);
 
         if (strlen(pcPortName) <= 4) {
+            PrintAndLogEx(ERR, "error: tcp port name length too short");
             free(sp);
             return INVALID_SERIAL_PORT;
         }
@@ -193,6 +194,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     sp->hPort = CreateFileA(acPortName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
     if (sp->hPort == INVALID_HANDLE_VALUE) {
         uart_close(sp);
+        PrintAndLogEx(ERR, "error:  invalid handle");
         return INVALID_SERIAL_PORT;
     }
 
