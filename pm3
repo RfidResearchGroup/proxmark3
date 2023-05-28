@@ -115,7 +115,7 @@ function get_pm3_list_Linux {
     if $FINDBTDIRECT; then
         # check if the MAC of a Proxmark3 was registered in the known devices
         for MAC in $(dbus-send --system --print-reply --type=method_call --dest='org.bluez' '/' org.freedesktop.DBus.ObjectManager.GetManagedObjects 2>/dev/null|\
-                         awk '/"Address"/{getline;gsub(/"/,"",$3);a=$3}/Name/{getline;if (/PM3_RDV4/) print a}'); do
+                         awk '/"Address"/{getline;gsub(/"/,"",$3);a=$3}/Name/{getline;if (/PM3_RDV4/ || /Proxmark3 SE/) print a}'); do
             PM3LIST+=("bt:$MAC")
         done
         # we don't probe the device so there is no guarantee the device is actually present
