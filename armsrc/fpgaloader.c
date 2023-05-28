@@ -423,7 +423,7 @@ static int bitparse_find_section(int bitstream_version, char section_name, uint3
             break;
         }
 
-        for (uint16_t i = 0; i < current_length && numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH; i++) {
+        for (uint32_t i = 0; i < current_length && numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH; i++) {
             get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
             numbytes++;
         }
