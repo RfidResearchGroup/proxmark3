@@ -1256,52 +1256,40 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         free(fptr);
     }
 
-    FILE *f;
-    if ((f = fopen(keyfilename, "rb")) == NULL) {
-        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), keyfilename);
-        return PM3_EFILE;
-    }
-
-    // key arrays
-    uint8_t keyA[40][6];
-    uint8_t keyB[40][6];
-
-    // read key file
-    size_t bytes_read;
-    for (uint8_t s = 0; s < sectors; s++) {
-        bytes_read = fread(keyA[s], 1, 6, f);
-        if (bytes_read != 6) {
-            PrintAndLogEx(ERR, "File reading error  " _YELLOW_("%s"), keyfilename);
-            fclose(f);
-            return PM3_EFILE;
+    //
+    size_t alen = 0, blen = 0;
+    uint8_t *keyA, *keyB;
+    if (loadFileBinaryKey(keyfilename, "", (void**)&keyA, (void**)&keyB, &alen, &blen) != PM3_SUCCESS) {
+        if (keyA) {
+            free(keyA);
         }
+        return PM3_ESOFT;
     }
 
-    for (uint8_t s = 0; s < sectors; s++) {
-        bytes_read = fread(keyB[s], 1, 6, f);
-        if (bytes_read != 6) {
-            PrintAndLogEx(ERR, "File reading error " _YELLOW_("%s"), keyfilename);
-            fclose(f);
-            return PM3_EFILE;
-        }
-    }
-    fclose(f);
 
     // try reading card uid and create filename
     if (datafnlen == 0) {
         char *fptr = GenerateFilename("hf-mf-", "-dump.bin");
-        if (fptr == NULL)
+        if (fptr == NULL) {
+            if (keyA) {
+                free(keyA);
+            }
+            if (keyB) {
+                free(keyB);
+            }
             return PM3_ESOFT;
-
+        }
         strcpy(datafilename, fptr);
         free(fptr);
     }
 
     // read dump file
     uint8_t *dump = NULL;
-    bytes_read = 0;
+    size_t bytes_read = 0;
     int res = pm3_load_dump(datafilename, (void **)&dump, &bytes_read, (MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK));
     if (res != PM3_SUCCESS) {
+        free(keyA);
+        free(keyB);
         return res;
     }
 
@@ -1326,19 +1314,10 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             if (mfNumBlocksPerSector(s) - 1 == b) {
                 if (use_keyfile_for_auth == false) {
                     // replace KEY A
-                    bldata[0]  = (keyA[s][0]);
-                    bldata[1]  = (keyA[s][1]);
-                    bldata[2]  = (keyA[s][2]);
-                    bldata[3]  = (keyA[s][3]);
-                    bldata[4]  = (keyA[s][4]);
-                    bldata[5]  = (keyA[s][5]);
+                    memcpy(bldata, keyA + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+
                     // replace KEY B
-                    bldata[10] = (keyB[s][0]);
-                    bldata[11] = (keyB[s][1]);
-                    bldata[12] = (keyB[s][2]);
-                    bldata[13] = (keyB[s][3]);
-                    bldata[14] = (keyB[s][4]);
-                    bldata[15] = (keyB[s][5]);
+                    memcpy(bldata + 10, keyB + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                 }
 
                 // ensure access right isn't messed up.
@@ -1372,12 +1351,12 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             for (int8_t kt = MF_KEY_B; kt > -1; kt--) {
                 if (use_keyfile_for_auth) {
                     if (kt == MF_KEY_A)
-                        memcpy(wdata, keyA[s], 6);
+                        memcpy(wdata, keyA + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                     else
-                        memcpy(wdata, keyB[s], 6);
+                        memcpy(wdata, keyB+ (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                 } else {
                     // use default key to authenticate for the write command
-                    memcpy(wdata, default_key, 6);
+                    memcpy(wdata, default_key, MIFARE_KEY_SIZE);
                 }
                 PrintAndLogEx(INFO, "block %3d: %s", mfFirstBlockOfSector(s) + b, sprint_hex(bldata, sizeof(bldata)));
 
@@ -1404,6 +1383,8 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     } // end loop S
 
     free(ref_dump);
+    free(keyA);
+    free(keyB);
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
