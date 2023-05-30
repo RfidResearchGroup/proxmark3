@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add more bitstream header parser sanity checks, get bitstream name from compiled bitstream header not from filename (@d18c7db)
  - Fixed truncated FPGA upload due to incorrect integer size variable (@d18c7db)
  - Changed `usart btfactory` - handles the new BT board with version "BT SPP V3.0" (@iceman1001) 
  - Changed `hf mf eview --sk` - now can extract keys and save to file (@iceman1001)
