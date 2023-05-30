@@ -5919,8 +5919,9 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint16_t ndef_aid = NDEF_MFC_AID;
-    if (aidlen == 2)
+    if (aidlen == 2){
         ndef_aid = (aid[0] << 8) + aid[1];
+    }
 
     uint8_t ndefkey[6] = {0};
     memcpy(ndefkey, g_mifare_ndef_key, 6);
@@ -7007,6 +7008,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
         PrintAndLogEx(INFO, "Forcing overwrite of sector 0 / block 0 ");
     else
         PrintAndLogEx(INFO, "Skipping sector 0 / block 0");
+
     PrintAndLogEx(NORMAL, "");
 
     uint8_t zeros[MFBLOCK_SIZE] = {0};
@@ -7018,7 +7020,12 @@ static int CmdHF14AMfWipe(const char *Cmd) {
 
         for (uint8_t b = 0; b < mfNumBlocksPerSector(s); b++) {
 
-            // Skipp write to manufacture block if not enforced
+            if (kbd_enter_pressed()) {
+                PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+                goto out;
+            }
+
+            // Skip write to manufacture block if not enforced
             if (s == 0 && b == 0 && gen2 == false) {
                 continue;
             }
