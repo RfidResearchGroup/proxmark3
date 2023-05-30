@@ -1266,6 +1266,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    PrintAndLogEx(INFO, "Using `" _YELLOW_("%s") "`", keyfilename);
 
     // try reading card uid and create filename
     if (datafnlen == 0) {
@@ -6116,39 +6117,27 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
         DropField();
     }
 
+
     // load key file if exist
     if (strlen(keyFilename)) {
-
-        FILE *f;
-        if ((f = fopen(keyFilename, "rb")) == NULL) {
-            // PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), keyFilename);
+        //
+        size_t alen = 0, blen = 0;
+        uint8_t *tmpA, *tmpB;
+        if (loadFileBinaryKey(keyFilename, "", (void**)&tmpA, (void**)&tmpB, &alen, &blen) != PM3_SUCCESS) {
+            if (tmpA) {
+                free(tmpA);
+            }
             goto skipfile;
         }
 
         PrintAndLogEx(INFO, "Using `" _YELLOW_("%s") "`", keyFilename);
-
-        // Read keys A from file
-        size_t bytes_read;
-        for (uint8_t i = 0; i < numSectors; i++) {
-            bytes_read = fread(keyA[i], 1, MFKEY_SIZE, f);
-            if (bytes_read != MFKEY_SIZE) {
-                PrintAndLogEx(ERR, "File reading error.");
-                fclose(f);
-                return PM3_EFILE;
-            }
+        
+        for (int i=0; i < numSectors; i++) {
+            memcpy(keyA[i], tmpA + (i *MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+            memcpy(keyB[i], tmpB + (i *MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
         }
-
-        // Read keys B from file
-        for (uint8_t i = 0; i < numSectors; i++) {
-            bytes_read = fread(keyB[i], 1, MFKEY_SIZE, f);
-            if (bytes_read != MFKEY_SIZE) {
-                PrintAndLogEx(ERR, "File reading error.");
-                fclose(f);
-                return PM3_EFILE;
-            }
-        }
-
-        fclose(f);
+        free(tmpA);
+        free(tmpB); 
     }
 
 skipfile:
@@ -6191,7 +6180,6 @@ skipfile:
                     }
                     break;
                 }
-
             }
 
             // write to card,  try B key first
@@ -6206,7 +6194,6 @@ skipfile:
     }
 
     PrintAndLogEx(NORMAL, "");
-
     return PM3_SUCCESS;
 }
 
