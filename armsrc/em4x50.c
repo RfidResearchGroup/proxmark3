@@ -646,8 +646,8 @@ static bool brute(em4x50_data_t *etd, uint32_t *pwd) {
     if (etd->bruteforce_mode == BF_MODE_CHARSET)
         bf_generator_set_charset(&ctx, etd->bruteforce_charset);
 
-    while ((generator_ret = bf_generate32(&ctx)) == BF_GENERATOR_NEXT) {
-        *pwd = ctx.current_key32;
+    while ((generator_ret = bf_generate(&ctx)) == BF_GENERATOR_NEXT) {
+        *pwd = bf_get_key32(&ctx);
 
         WDT_HIT();
 

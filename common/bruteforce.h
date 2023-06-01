@@ -55,12 +55,13 @@ extern uint8_t charset_uppercase[];
 
 // structure to hold key generator temporary data
 typedef struct {
-    // position of each of 4 bytes in 32 bit key in charset mode
+    // position of each of bytes in charset mode - used to iterate over alphabets
     // add more bytes to support larger keys
     // pos[0] is most significant byte - all maths avoid relying on little/big endian memory layout
     uint8_t pos[6]; // max supported key is now 48 bit
+
     uint8_t key_length; // bytes
-    uint32_t current_key32;
+    uint64_t current_key; // Use 64 bit and truncate when needed.
     uint8_t mode;
     uint8_t charset[
      BF_CHARSET_DIGITS_SIZE
@@ -77,9 +78,12 @@ typedef struct {
 
 void bf_generator_init(generator_context_t *ctx, uint8_t mode, uint8_t key_size);
 int bf_generator_set_charset(generator_context_t *ctx, uint8_t charsets);
-int bf_generate32(generator_context_t *ctx);
-int _bf_generate_mode_range32(generator_context_t *ctx);
-int _bf_generate_mode_charset32(generator_context_t *ctx);
-int _bf_generate_mode_smart32(generator_context_t *ctx);
+int bf_generate(generator_context_t *ctx);
+int _bf_generate_mode_range(generator_context_t *ctx);
+int _bf_generate_mode_charset(generator_context_t *ctx);
+int _bf_generate_mode_smart(generator_context_t *ctx);
 int bf_array_increment(uint8_t *data, uint8_t data_len, uint8_t modulo);
+uint32_t bf_get_key32(generator_context_t *ctx);
+uint32_t bf_get_key48(generator_context_t *ctx);
+
 #endif // BRUTEFORCE_H__

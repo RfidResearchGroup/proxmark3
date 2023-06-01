@@ -51,46 +51,56 @@ int bf_generator_set_charset(generator_context_t *ctx, uint8_t charsets) {
     return 0;
 }
 
-int bf_generate32(generator_context_t *ctx) {
+int bf_generate(generator_context_t *ctx) {
 
     switch (ctx->mode) {
         case BF_MODE_RANGE:
-            return _bf_generate_mode_range32(ctx);
+            return _bf_generate_mode_range(ctx);
         case BF_MODE_CHARSET:
-            return _bf_generate_mode_charset32(ctx);
+            return _bf_generate_mode_charset(ctx);
     }
 
     return BF_GENERATOR_ERROR;
 }
 
-int _bf_generate_mode_range32(generator_context_t *ctx) {
+int _bf_generate_mode_range(generator_context_t *ctx) {
 
-    if (ctx->current_key32 >= ctx->range_high) {
+    if (ctx->key_length != BF_KEY_SIZE_32 && ctx->key_length != BF_KEY_SIZE_48)
+            return BF_GENERATOR_ERROR;
+
+    if (ctx->current_key >= ctx->range_high) {
         return BF_GENERATOR_END;
     }
 
     // we use flag1 as indicator if value of range_low was already emitted
     // so the range generated is <range_low, range_high>
-    if (ctx->current_key32 <= ctx->range_low && ctx->flag1 == false) {
-        ctx->current_key32 = ctx->range_low;
-        ctx->pos[0] = true;
+    if (ctx->current_key <= ctx->range_low && ctx->flag1 == false) {
+        ctx->current_key = ctx->range_low;
+        ctx->flag1 = true;
         return BF_GENERATOR_NEXT;
     }
 
-    ctx->current_key32++;
+    ctx->current_key++;
     return BF_GENERATOR_NEXT;
 }
 
-int _bf_generate_mode_charset32(generator_context_t *ctx) {
+int _bf_generate_mode_charset(generator_context_t *ctx) {
+
+    if (ctx->key_length != BF_KEY_SIZE_32 && ctx->key_length != BF_KEY_SIZE_48)
+        return BF_GENERATOR_ERROR;
 
     if (ctx->flag1)
         return BF_GENERATOR_END;
 
-    ctx->current_key32 = ctx->charset[ctx->pos[0]] << 24 | ctx->charset[ctx->pos[1]] << 16 |
-                         ctx->charset[ctx->pos[2]] << 8 | ctx->charset[ctx->pos[3]];
+    uint8_t key_byte = 0;
+
+    for (key_byte = 0; key_byte < ctx->key_length;key_byte++){
+        ctx->current_key |= ctx->charset[ctx->pos[key_byte]] << ((ctx->key_length - key_byte) - 1 * 8);
+    }
 
 
-    if (bf_array_increment(ctx->pos, 4, ctx->charset_length) == -1)
+
+    if (bf_array_increment(ctx->pos, ctx->key_length, ctx->charset_length) == -1)
         // set flag1 to emit value last time and end generation
         ctx->flag1 = true;
 
@@ -126,4 +136,9 @@ int bf_array_increment(uint8_t *data, uint8_t data_len, uint8_t modulo) {
     }
 
     return 0;
+}
+
+// get current key casted to 32 bit
+uint32_t bf_get_key32(generator_context_t *ctx){
+    return ctx->current_key & 0xFFFFFFFF;
 }
