@@ -2,6 +2,27 @@
 
 # Notes on Chinese Magic Cards
 
+# Table of Contents
+
+- [Low Frequency](#low-frequency)
+  * [5577](#5577)
+  * [5200](#5200)
+  * [ID82xx series](#id82xx-series)
+    - [ID8210](#id8210)
+    - [ID8211](#id8211)
+    - [ID8265](#id8265)
+    - [ID8268/8278/8310](#id826882788310)
+    - [K8678](#k8678)
+- [High Frequency](#high-frequency)
+  * [MIFARE Classic UID](#mifare-classic-uid)
+  * [MIFARE Classic CUID](#mifare-classic-cuid)
+  * [MIFARE Classic FUID](#mifare-classic-fuid)
+  * [Magic "85" cards](#magic-85-cards)
+    - [MIFARE Classic UFUID](#mifare-classic-ufuid)
+    - [MIFARE Classic GDM aka Gen4](#mifare-classic-gdm-aka-gen4)
+  * [MIFARE Classic, other chips](#mifare-classic-other-chips)
+  
+
 ## Low Frequency
 
 ### 5577
@@ -321,5 +342,5 @@ hf mf gdmsetcfg
 
 **TODO**
 
-* ZXUID, EUID, ICUID ?
+* ZXUID, EUID, ICUID; NSCK-II ?
 * Some cards exhibit a specific SAK=28 ??

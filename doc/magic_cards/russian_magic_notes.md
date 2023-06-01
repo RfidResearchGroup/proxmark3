@@ -2,6 +2,29 @@
 
 # Notes on Russian Magic Cards
 
+# Table of Contents
+
+- [Low Frequency](#low-frequency)
+  * [H1 (RW125FL, RW64bit)](#h1-rw125fl-rw64bit)
+  * [H2 (T5577, RW125T5)](#h2-t5577-rw125t5)
+  * [H3 (EM4305, RW125EM)](#h3-em4305-rw125em)
+  * [H5](#h5)
+  * [H5.5](#h55)
+  * [H7](#h7)
+  * [OTP](#otp)
+  * [i57/i57v2](#i57i57v2)
+- [High Frequency](#high-frequency)
+  * [MIFARE ZERO](#mifare-zero)
+  * [MF-8](#mf-8)
+  * [MIFARE OTP](#mifare-otp)
+  * [MIFARE OTP 2.0](#mifare-otp-20)
+  * [MF3](#mf3)
+  * [MIFARE UL-Y](#mifare-ul-y)
+  * [MIFARE ULtra](#mifare-ultra)
+  * [MIFARE UL-5](#mifare-ul-5)
+  * [MIFARE, other chips](#mifare-other-chips)
+  
+
 ## Low Frequency
 
 ### H1 (RW125FL, RW64bit)
@@ -11,7 +34,7 @@ Tag supports EM410x format, and nothing else.
 No locking functions.
 No info, as this tag is ceasing its' existence.
 
-### H2 (T5577)
+### H2 (T5577, RW125T5)
 ^[Top](#top)
 
 Tag supports all formats which send data in 24(28) bytes (without password).
@@ -27,7 +50,7 @@ lf search
 Not all tags will show up with this, however.
 Some H2 tags ignore test mode commands.
 
-### H3 (EM4305)
+### H3 (EM4305, RW125EM)
 
 Tag is original EM4305, and can store 8 bytes of EM410x ID data.
 Locking is done with lock pages. Tearoff attacks can be accomplished.
