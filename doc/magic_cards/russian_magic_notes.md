@@ -19,6 +19,7 @@
   * [MIFARE OTP](#mifare-otp)
   * [MIFARE OTP 2.0](#mifare-otp-20)
   * [MF3](#mf3)
+  * [MIFARE UL2](#mifare-ul2)
   * [MIFARE UL-Y](#mifare-ul-y)
   * [MIFARE ULtra](#mifare-ultra)
   * [MIFARE UL-5](#mifare-ul-5)
@@ -197,6 +198,24 @@ Most advanced tag, but possible to detect. Replacement for [OTP2](#mifare-otp-20
 
 Tag seems to behave like [MF-8](#mf-8), but it is unknown what is special about it.
 Try issuing a write to block 0.
+
+### MIFARE UL2
+
+Ultralight magic EV1, amount of pages can be picked when purchasing (20/41/44 pgs.).
+Behavior: allows writes to page 0-2; allows rewriting lock+OTP bits.
+
+#### Identify
+
+There is no reliable way to identify UL2 magic.
+To identify some, try changing page 0.
+
+#### Characteristics
+
+MIFARE UL2 variation 1:
+ATQA/SAK: fixed
+BCC: play blindly the page0/2 BCC0/1, beware!
+ATS: `85 00 00 A0 00 00 0A 3C 00 04 03 01 01 00 0E 03`
+Pages: 41
 
 ### MIFARE UL-Y
 ^[Top](#top)
