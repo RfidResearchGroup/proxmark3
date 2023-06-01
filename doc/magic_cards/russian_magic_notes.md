@@ -27,12 +27,14 @@
   
 
 ## Low Frequency
+^[Top](#top)
 
 ### H1 (RW125FL, RW64bit)
 ^[Top](#top)
 
 Tag supports EM410x format, and nothing else.
 No locking functions.
+
 No info, as this tag is ceasing its' existence.
 
 ### H2 (T5577, RW125T5)
@@ -42,6 +44,7 @@ Tag supports all formats which send data in 24(28) bytes (without password).
 Locking is done with lock bits in the beginning of each page, which are not transmitted.
 
 #### Identify
+^[Top](#top)
 
 ```
 lf search
@@ -52,11 +55,14 @@ Not all tags will show up with this, however.
 Some H2 tags ignore test mode commands.
 
 ### H3 (EM4305, RW125EM)
+^[Top](#top)
 
 Tag is original EM4305, and can store 8 bytes of EM410x ID data.
 Locking is done with lock pages. Tearoff attacks can be accomplished.
 
 #### Identify
+^[Top](#top)
+
 ```
 lf search
 ...
@@ -65,45 +71,60 @@ lf search
 H3 chips usually come with a pre-programmed code, with `0x00` as the 2nd byte.
 
 ### H5
+^[Top](#top)
 
 Tag has ceased production, as it was leaked. Some companies continue its' sale with a major discount.
+
 Because it is hard to obtain this chip, there is no information.
 
 ### H5.5
+^[Top](#top)
 
 Tag is manufactured by iKey, and is sold as a replacement to [H5](#h5) chips.
+
 Locking support is unknown.
 
 #### Identify
+^[Top](#top)
 
 Tag has completely random EM410x ID from factory.
+
 Engravings on fobs: "H5.5"
 
 ### H7
+^[Top](#top)
 
 Tag is manufactured by iKey, and is sold as the most professional EM410x blank. Targeted to cloning StroyMaster keys.
+
 Locking support cannot be described, as there is conflicting information (see [iKey forums](https://ikey.ru/forum/topic/3199-%D0%BA%D0%BE%D0%BF%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-rfid-%D1%81%D1%87%D0%B8%D1%82%D1%8B%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C-atis/))
 
 #### Identify
+^[Top](#top)
 
 Tag has completely random EM410x ID from factory.
+
 Engravings on fobs: "H7" (stretched)
 
 ### OTP
+^[Top](#top)
 
 Tag is similar to [H1](#h1-rw125fl-rw64bit), but after writing new ID, tag becomes original EM410x.
 
 #### Identify
+^[Top](#top)
 
 Initial EM410x ID is `0000 000000`
+
 Engravings on fobs: "OTP"
 
 ### i57/i57v2
+^[Top](#top)
 
 Tag has ceased production, and can no longer be purchased.
 No info.
 
 ## High Frequency
+^[Top](#top)
 
 ### MIFARE ZERO
 ^[Top](#top)
@@ -136,7 +157,9 @@ As MF-8 is a very new blank, it is assumed to be the last variation of its' chip
 ^[Top](#top)
 
 No way to reliably identify MF-8 is known. 
-The best way is to try writing block 0. Or you can try:
+The best way is to try writing block 0. 
+
+Or you can try:
 ```
 hf 14a info
 ...
@@ -197,11 +220,13 @@ Most advanced tag, but possible to detect. Replacement for [OTP2](#mifare-otp-20
 ^[Top](#top)
 
 Tag seems to behave like [MF-8](#mf-8), but it is unknown what is special about it.
+
 Try issuing a write to block 0.
 
 ### MIFARE UL2
 
 Ultralight magic EV1, amount of pages can be picked when purchasing (20/41/44 pgs.).
+
 Behavior: allows writes to page 0-2; allows rewriting lock+OTP bits.
 
 #### Identify
@@ -211,11 +236,11 @@ To identify some, try changing page 0.
 
 #### Characteristics
 
-MIFARE UL2 variation 1:
-ATQA/SAK: fixed
-BCC: play blindly the page0/2 BCC0/1, beware!
-ATS: `85 00 00 A0 00 00 0A 3C 00 04 03 01 01 00 0E 03`
-Pages: 41
+MIFARE UL2 flavour 1:
+- ATQA/SAK: fixed
+- BCC: play blindly the page0/2 BCC0/1, beware!
+- ATS: `85 00 00 A0 00 00 0A 3C 00 04 03 01 01 00 0E 03`
+- Pages: 41
 
 ### MIFARE UL-Y
 ^[Top](#top)
@@ -259,6 +284,7 @@ Remember that this is not a reliable method of identification, as it interferes 
 ^[Top](#top)
 
 Ultralight EV1 magic; 41 page. Recommended for Vizit RF3.1 with 41 page and if [ULtra](#mifare-ultra) has failed.
+
 Behavior: similar to Ultra, but after editing page 0, tag becomes original Mifare Ultralight EV1.
 
 **WARNING!** When using UL-5 to clone, write UID pages in inverse and do NOT make mistakes! This tag does not allow reversing one-way actions (OTP page, lock bits).
@@ -276,6 +302,7 @@ TAG IC Signature: 00000000000000000000000000000000000000000000000000000000000000
 ```
 
 After personalization it is not possible to identify UL-5. 
+
 Some chips have UID of `AA 55 C3 A4 30 61 80`.
 
 ### MIFARE, other chips
