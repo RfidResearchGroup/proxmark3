@@ -424,8 +424,8 @@ int DetectHID(uint8_t *d, uint16_t manufacture) {
 
 int convert_mad_to_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen) {
 
-    if (in == NULL || out == NULL || ilen == 0 ) {
-        return PM3_EINVARG;        
+    if (in == NULL || out == NULL || ilen == 0) {
+        return PM3_EINVARG;
     }
 
     // MAD detection
@@ -464,7 +464,7 @@ int convert_mad_to_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen)
             // copy to out (skip ST)
             memcpy(out, tmp, sizeof(tmp) - MFBLOCK_SIZE);
             out += sizeof(tmp) - MFBLOCK_SIZE;
-            *olen += sizeof(tmp) -MFBLOCK_SIZE;
+            *olen += sizeof(tmp) - MFBLOCK_SIZE;
         }
     }
     return PM3_SUCCESS;
