@@ -9632,7 +9632,7 @@
             "command": "lf paradox clone",
             "description": "clone a paradox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
             "notes": [
-                "lf paradox clone --fc 96 --cn 40426 [--q5|--em] -> encode for T55x7 tag with fc and cn",
+                "lf paradox clone --fc 96 --cn 40426 -> encode for T55x7 tag with fc and cn",
                 "lf paradox clone --raw 0f55555695596a6a9999a59a -> encode for T55x7 tag",
                 "lf paradox clone --raw 0f55555695596a6a9999a59a --q5 -> encode for Q5/T5555 tag",
                 "lf paradox clone --raw 0f55555695596a6a9999a59a --em -> encode for EM4305/4469"
@@ -9652,13 +9652,14 @@
             "command": "lf paradox demod",
             "description": "Try to find Paradox preamble, if found decode / descramble data",
             "notes": [
-                "lf paradox demod"
+                "lf paradox demod --old -> Display previous checksum version"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "--old optional - Display previous checksum version"
             ],
-            "usage": "lf paradox demod [-h]"
+            "usage": "lf paradox demod [-h] [--old]"
         },
         "lf paradox help": {
             "command": "lf paradox help",
@@ -9672,21 +9673,23 @@
             "command": "lf paradox reader",
             "description": "read a Paradox tag",
             "notes": [
-                "lf Paradox reader -@ -> continuous reader mode"
+                "lf paradox reader -@ -> continuous reader mode",
+                "lf paradox reader --old -> Display previous checksum version"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-@ optional - continuous reader mode"
+                "-@ optional - continuous reader mode",
+                "--old optional - Display previous checksum version"
             ],
-            "usage": "lf paradox reader [-h@]"
+            "usage": "lf paradox reader [-h@] [--old]"
         },
         "lf paradox sim": {
             "command": "lf paradox sim",
             "description": "Enables simulation of paradox card with specified card number. Simulation runs until the button is pressed or another USB command is issued.",
             "notes": [
                 "lf paradox sim --raw 0f55555695596a6a9999a59a -> simulate tag",
-                "lf paradox clone --fc 96 --cn 40426 -> simulate tag with fc and cn"
+                "lf paradox sim --fc 96 --cn 40426 -> simulate tag with fc and cn"
             ],
             "offline": false,
             "options": [
@@ -11618,7 +11621,7 @@
         },
         "script help": {
             "command": "script help",
-            "description": "This is a feature to run Lua/Cmd/Python scripts. You can place scripts within the luascripts/cmdscripts/pyscripts folders. --------------------------------------------------------------------------------------- script list available offline: yes",
+            "description": "This is a feature to run Lua/Cmd scripts. You can place scripts within the luascripts/cmdscripts folders. --------------------------------------------------------------------------------------- script list available offline: yes",
             "notes": [],
             "offline": true,
             "options": [],
@@ -12015,6 +12018,6 @@
     "metadata": {
         "commands_extracted": 755,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-05-25T01:54:13"
+        "extracted_on": "2023-06-04T15:36:56"
     }
 }

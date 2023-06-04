@@ -35,6 +35,13 @@
 #include "cliparser.h"
 
 static int CmdHelp(const char *Cmd);
+
+static const uint8_t paradox_lut[] = {
+    0xDB, 0xFC, 0x3F, 0xC5, 0x50, 0x14, 0x05, 0x47,
+    0x9F, 0xED, 0x7D, 0x59, 0x22, 0x84, 0x21, 0x4E,
+    0x39, 0x48, 0x12, 0x88, 0x53, 0xDE, 0xBB, 0xE4,
+    0xB4, 0x2D, 0x4D, 0x55, 0xCA, 0xBE, 0xA3, 0xE2
+};
 // FC:108, Card01827
 // 00000000  01101100       00000111     00100011
 // hex(0xED xor 0x7D xor 0x22 xor 0x84 xor 0xDE xor 0xBB xor 0xE4 xor 0x4D xor 0xA3 xor 0xE2 xor 0x47) 0xFC
@@ -93,7 +100,7 @@ static uint8_t GetParadoxBits(const uint32_t fc, const uint32_t cn, unsigned int
     return crc;
 }
 
-int demodParadox(bool verbose) {
+int demodParadox(bool verbose, bool oldChksum) {
     (void) verbose; // unused so far
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
@@ -174,7 +181,29 @@ int demodParadox(bool verbose) {
     uint32_t fc = ((hi & 0x3) << 6) | (lo >> 26);
     uint32_t cardnum = (lo >> 10) & 0xFFFF;
     uint8_t chksum = (lo >> 2) & 0xFF;
+    if (oldChksum) {
+        // Calc CRC & Checksum
+        // 000088f0b - FC: 8 - Card: 36619 - Checksum: 05 - RAW: 0f55555559595aa559a5566a
+        // checksum?
+        uint8_t calc_chksum = 0x47;
+        uint8_t pos = 0;
+        for (uint8_t i = 0; i < 8; i++) {
 
+            uint8_t ice = rawhex[i + 1];
+            for (uint8_t j = 0x80; j > 0; j >>= 2) {
+
+                if (ice & j) {
+                    calc_chksum ^= paradox_lut[pos];
+                }
+                pos++;
+            }
+        }
+        uint32_t crc = CRC8Maxim(rawhex + 1, 8);
+        PrintAndLogEx(INFO, " FSK/MAN raw : %s", sprint_hex(rawhex, sizeof(rawhex)));
+        PrintAndLogEx(INFO, "         raw : %s = (maxim crc8) %02x == %02x", sprint_hex(rawhex + 1, 8), crc,
+                      calc_chksum);
+        //    PrintAndLogEx(DEBUG, " OTHER sample CRC-8/MAXIM : 55 55 69 A5 55 6A 59 5A  = FC");
+    }
     uint32_t rawLo = bytebits_to_byte(bits + idx + 64, 32);
     uint32_t rawHi = bytebits_to_byte(bits + idx + 32, 32);
     uint32_t rawHi2 = bytebits_to_byte(bits + idx, 32);
@@ -208,32 +237,37 @@ static int CmdParadoxDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf paradox demod",
                   "Try to find Paradox preamble, if found decode / descramble data",
-                  "lf paradox demod"
+                  "lf paradox demod --old   -> Display previous checksum version"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0(NULL, "old", "optional - Display previous checksum version"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool old = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
-    return demodParadox(true);
+    return demodParadox(true, old);
 }
 
 static int CmdParadoxReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf paradox reader",
                   "read a Paradox tag",
-                  "lf Paradox reader -@   -> continuous reader mode"
+                  "lf paradox reader -@   -> continuous reader mode\n"
+                  "lf paradox reader --old   -> Display previous checksum version"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_lit0(NULL, "old", "optional - Display previous checksum version"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool cm = arg_get_lit(ctx, 1);
+    bool old = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     if (cm) {
@@ -242,7 +276,7 @@ static int CmdParadoxReader(const char *Cmd) {
 
     do {
         lf_read(false, 10000);
-        demodParadox(!cm);
+        demodParadox(!cm, old);
     } while (cm && !kbd_enter_pressed());
 
     return PM3_SUCCESS;
@@ -253,7 +287,7 @@ static int CmdParadoxClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf paradox clone",
                   "clone a paradox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
-                  "lf paradox clone --fc 96 --cn 40426 [--q5|--em]         -> encode for T55x7 tag with fc and cn\n"
+                  "lf paradox clone --fc 96 --cn 40426         -> encode for T55x7 tag with fc and cn\n"
                   "lf paradox clone --raw 0f55555695596a6a9999a59a         -> encode for T55x7 tag\n"
                   "lf paradox clone --raw 0f55555695596a6a9999a59a --q5    -> encode for Q5/T5555 tag\n"
                   "lf paradox clone --raw 0f55555695596a6a9999a59a --em    -> encode for EM4305/4469"
@@ -353,7 +387,7 @@ static int CmdParadoxSim(const char *Cmd) {
                   "Enables simulation of paradox card with specified card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf paradox sim --raw 0f55555695596a6a9999a59a           -> simulate tag\n"
-                  "lf paradox clone --fc 96 --cn 40426                     -> simulate tag with fc and cn\n"
+                  "lf paradox sim --fc 96 --cn 40426                     -> simulate tag with fc and cn\n"
                  );
 
     void *argtable[] = {
