@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed truncated FPGA upload due to incorrect integer size variable (@d18c7db)
+ - Changed `usart btfactory` - handles the new BT board with version "BT SPP V3.0" (@iceman1001) 
+ - Changed `hf mf eview --sk` - now can extract keys and save to file (@iceman1001)
+ - Changed `hf mf view --sk` - now can extract keys and save to file (@iceman1001)
  - Changed `hf mf sim` - reduce 6ms threshold to 4ms for reset to idle #1974 (@net147)
  - Rebuilt the Spartan-2 `fpga_*.bit` files to include the `hi_iso14443a.v` update (@d18c7db)
  - Added minor orphaned change from `hi_iso14443a.v` in `fpga-xc3s100e` to `hi_iso14443a.v` in `fpga-xc2s30` (@d18c7db)
@@ -22,7 +26,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf mf supercard` - Support editing UID and recovery of keys from second generation card (@AloneLiberty)
  - Added iClass credit key to default iClass key table and reorganized key order (@GuruSteve)
  - Changed `hf mf value` - ability to use transfer on different block (@AloneLiberty)
- - Change `hf mf dump --ns` - dump command now supports `no save` of MFC card memory (@iceman1001)
+ - Changed `hf mf dump --ns` - dump command now supports `no save` of MFC card memory (@iceman1001)
  - Added `hf mf gdmsetcfg` - Supprt Gen4 GDM write configuration block (@iceman1001)
  - Added `hf mf gdmcfg` - Support Gen4 GDM read configuration block (@iceman1001)
  - Changed magic note to include a section about GDM tags (@iceman1001)
@@ -62,12 +66,13 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf legic info` command for other sources (@0xdeb)
  - Added `hf legic einfo` - views emulator menory (@0xdeb)
  - Changed `hf legic view` - now also print the decoded info of the dump file (@0xdeb)
- - Now `script run hf_mf_ultimatecard.lua -u` supports 10bytes UID (@alejandro12120)
- - Update documentation for installation on macOS with MacPorts (@linuxgemini)
+ - Changed `script run hf_mf_ultimatecard.lua -u` to support 10bytes UID (@alejandro12120)
+ - Updated documentation for installation on macOS with MacPorts (@linuxgemini)
  - Added possible Paxton id to hitag2 tag info output
  - Changed `hf mf sim` - reduce 50ms threshold to 6ms for reset to idle #1974 (@net147)
  - Update `amiibo_tools.lua` with new identifiers and create a python script `update_amiibo_tools_lua.py` to automate the process in the future. (@CorySolovewicz)
  - Added `lf paradox sim --fc --cn` - Simulates Paradox fob from facility code and card number (jerji)
+
 
 ## [Nitride.4.16191][2023-01-29]
  - Changed `build_all_firmwares.sh` to fit GENERIC 256kb firmware images (@doegox)

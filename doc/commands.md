@@ -875,7 +875,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf em 4x50 help        `|Y       |`This help`
-|`lf em 4x50 brute       `|N       |`Simple bruteforce attack to find password`
+|`lf em 4x50 brute       `|N       |`Bruteforce attack to find password`
 |`lf em 4x50 chk         `|N       |`Check passwords from dictionary`
 |`lf em 4x50 dump        `|N       |`Dump EM4x50 tag`
 |`lf em 4x50 info        `|N       |`Tag information`

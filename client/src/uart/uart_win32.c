@@ -98,6 +98,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         free(prefix);
 
         if (strlen(pcPortName) <= 4) {
+            PrintAndLogEx(ERR, "error: tcp port name length too short");
             free(sp);
             return INVALID_SERIAL_PORT;
         }

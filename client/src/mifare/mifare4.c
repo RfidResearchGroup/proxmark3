@@ -530,7 +530,7 @@ uint8_t mfSectorTrailerOfSector(uint8_t sectorNo) {
 }
 
 // assumes blockno is 0-255..
-uint8_t mfSectorTrailer(uint8_t blockNo) {
+uint8_t mfSectorTrailer(uint16_t blockNo) {
     if (blockNo < 32 * 4) {
         return (blockNo | 0x03);
     } else {
@@ -539,15 +539,15 @@ uint8_t mfSectorTrailer(uint8_t blockNo) {
 }
 
 // assumes blockno is 0-255..
-bool mfIsSectorTrailer(uint8_t blockNo) {
+bool mfIsSectorTrailer(uint16_t blockNo) {
     return (blockNo == mfSectorTrailer(blockNo));
 }
 
 // assumes blockno is 0-255..
-uint8_t mfSectorNum(uint8_t blockNo) {
+uint8_t mfSectorNum(uint16_t blockNo) {
     if (blockNo < 32 * 4)
-        return blockNo / 4;
+        return (blockNo / 4);
     else
-        return 32 + (blockNo - 32 * 4) / 16;
+        return (32 + (blockNo - 32 * 4) / 16);
 
 }

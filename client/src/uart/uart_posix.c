@@ -285,6 +285,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
     // Try to retrieve the old (current) terminal info struct
     if (tcgetattr(sp->fd, &sp->tiOld) == -1) {
+        PrintAndLogEx(ERR, "error: UART get terminal info attribute");
         uart_close(sp);
         return INVALID_SERIAL_PORT;
     }
@@ -305,6 +306,8 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
     // Try to set the new terminal info struct
     if (tcsetattr(sp->fd, TCSANOW, &sp->tiNew) == -1) {
+        PrintAndLogEx(ERR, "error: UART set terminal info attribute");
+        perror("tcsetattr() error");
         uart_close(sp);
         return INVALID_SERIAL_PORT;
     }

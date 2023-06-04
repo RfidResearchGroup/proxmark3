@@ -367,5 +367,21 @@
         "Name": "University of Ljubljana Student ID",
         "Description": "",
         "Type": "student"
+    },
+    {
+        "AID": "27E178",
+        "Vendor": "Disney",
+        "Country": "US",
+        "Name": "Disney MagicBand",
+        "Description": "",
+        "Type": "payment system"
+    },
+    {
+        "AID": "44434C",
+        "Vendor": "Disney",
+        "Country": "US",
+        "Name": "Disney MagicBand",
+        "Description": "AID found on MagicBand desfire cards",
+        "Type": "payment system"
     }
 ]

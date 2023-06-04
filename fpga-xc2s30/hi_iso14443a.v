@@ -222,7 +222,7 @@ reg signed [10:0] rx_mod_falling_edge_max;
 reg signed [10:0] rx_mod_rising_edge_max;
 reg curbit;
 
-`define EDGE_DETECT_THRESHOLD   3
+`define EDGE_DETECT_THRESHOLD   5
 `define EDGE_DETECT_THRESHOLDHIGH   20
 
 always @(negedge adc_clk)

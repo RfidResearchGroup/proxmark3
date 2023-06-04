@@ -4370,9 +4370,10 @@
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--sk Save extracted keys to file"
             ],
-            "usage": "hf mf eview [-hv] [--mini] [--1k] [--2k] [--4k]"
+            "usage": "hf mf eview [-hv] [--mini] [--1k] [--2k] [--4k] [--sk]"
         },
         "hf mf fchk": {
             "command": "hf mf fchk",
@@ -4950,9 +4951,10 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> filename of dump",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--sk Save extracted keys to file"
             ],
-            "usage": "hf mf view [-hv] -f <fn>"
+            "usage": "hf mf view [-hv] -f <fn> [--sk]"
         },
         "hf mf wipe": {
             "command": "hf mf wipe",
@@ -8061,15 +8063,19 @@
             "command": "lf em 4x50 brute",
             "description": "Tries to bruteforce the password of a EM4x50 card. Function can be stopped by pressing pm3 button.",
             "notes": [
-                "lf em 4x50 brute --first 12330000 --last 12340000 -> tries pwds from 0x12330000 to 0x1234000000"
+                "lf em 4x50 brute --mode range --begin 12330000 --end 12340000 -> tries pwds from 0x12330000 to 0x12340000",
+                "lf em 4x50 brute --mode charset --digits --uppercase -> tries all combinations of ASCII codes for digits and uppercase letters"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--first <hex> first password (start), 4 bytes, lsb",
-                "--last <hex> last password (stop), 4 bytes, lsb"
+                "--mode <str> Bruteforce mode (range|charset)",
+                "--begin <hex> Range mode - start of the key range",
+                "--end <hex> Range mode - end of the key range",
+                "--digits Charset mode - include ASCII codes for digits",
+                "--uppercase Charset mode - include ASCII codes for uppercase letters"
             ],
-            "usage": "lf em 4x50 brute [-h] --first <hex> --last <hex>"
+            "usage": "lf em 4x50 brute [-h] --mode <str> [--begin <hex>] [--end <hex>] [--digits] [--uppercase]"
         },
         "lf em 4x50 chk": {
             "command": "lf em 4x50 chk",
@@ -10896,7 +10902,7 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> SPIFFS file to view",
-                "-c, --cols <dec> column breaks (def 32)"
+                "-c, --cols <dec> column breaks (def 16)"
             ],
             "usage": "mem spiffs view [-h] -f <fn> [-c <dec>]"
         },
@@ -12019,5 +12025,6 @@
         "commands_extracted": 755,
         "extracted_by": "PM3Help2JSON v1.00",
         "extracted_on": "2023-06-04T15:36:56"
+
     }
 }

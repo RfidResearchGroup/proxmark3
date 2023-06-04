@@ -308,7 +308,6 @@ static int mf_print_keys(uint16_t n, uint8_t *d) {
     }
 
     for (uint16_t i = 0; i < n; i++) {
-
         if (mfIsSectorTrailer(i)) {
             e_sector[mfSectorNum(i)].foundKey[0] = 1;
             e_sector[mfSectorNum(i)].Key[0] = bytes_to_num(d + (i * MFBLOCK_SIZE), MIFARE_KEY_SIZE);
@@ -318,6 +317,52 @@ static int mf_print_keys(uint16_t n, uint8_t *d) {
     }
     printKeyTable(sectors, e_sector);
     free(e_sector);
+    return PM3_SUCCESS;
+}
+
+// MFC dump ,  extract and save the keys to key file
+static int mf_save_keys_from_arr(uint16_t n, uint8_t *d) {
+    uint8_t sectors = 0;
+    switch (n) {
+        case MIFARE_MINI_MAXBLOCK:
+            sectors = MIFARE_MINI_MAXSECTOR;
+            break;
+        case MIFARE_2K_MAXBLOCK:
+            sectors = MIFARE_2K_MAXSECTOR;
+            break;
+        case MIFARE_4K_MAXBLOCK:
+            sectors = MIFARE_4K_MAXSECTOR;
+            break;
+        case MIFARE_1K_MAXBLOCK:
+        default:
+            sectors = MIFARE_1K_MAXSECTOR;
+            break;
+    }
+
+    uint16_t keysize = 2 * MIFARE_KEY_SIZE * sectors;
+
+    uint8_t *keys = calloc(keysize, sizeof(uint8_t));
+    if (keys == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    uint8_t sector = 0;
+    for (uint16_t i = 0; i < n; i++) {
+        if (mfIsSectorTrailer(i)) {
+            // key A offset in ST block
+            memcpy(keys + (MIFARE_KEY_SIZE * sector), d + (i * MFBLOCK_SIZE), MIFARE_KEY_SIZE);
+
+            // key B offset in ST block
+            memcpy(keys + (MIFARE_KEY_SIZE * sectors) + (MIFARE_KEY_SIZE * sector), d + (i * MFBLOCK_SIZE) + 10, MIFARE_KEY_SIZE);
+
+            sector++;
+        }
+    }
+
+    char fn[FILE_PATH_SIZE] = {0};
+    snprintf(fn, sizeof(fn), "hf-mf-%s-keys", sprint_hex_inrow(d, 4));
+    saveFile(fn, ".bin", keys, keysize);
+    free(keys);
     return PM3_SUCCESS;
 }
 
@@ -1211,52 +1256,41 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         free(fptr);
     }
 
-    FILE *f;
-    if ((f = fopen(keyfilename, "rb")) == NULL) {
-        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), keyfilename);
-        return PM3_EFILE;
-    }
-
-    // key arrays
-    uint8_t keyA[40][6];
-    uint8_t keyB[40][6];
-
-    // read key file
-    size_t bytes_read;
-    for (uint8_t s = 0; s < sectors; s++) {
-        bytes_read = fread(keyA[s], 1, 6, f);
-        if (bytes_read != 6) {
-            PrintAndLogEx(ERR, "File reading error  " _YELLOW_("%s"), keyfilename);
-            fclose(f);
-            return PM3_EFILE;
+    //
+    size_t alen = 0, blen = 0;
+    uint8_t *keyA, *keyB;
+    if (loadFileBinaryKey(keyfilename, "", (void **)&keyA, (void **)&keyB, &alen, &blen) != PM3_SUCCESS) {
+        if (keyA) {
+            free(keyA);
         }
+        return PM3_ESOFT;
     }
 
-    for (uint8_t s = 0; s < sectors; s++) {
-        bytes_read = fread(keyB[s], 1, 6, f);
-        if (bytes_read != 6) {
-            PrintAndLogEx(ERR, "File reading error " _YELLOW_("%s"), keyfilename);
-            fclose(f);
-            return PM3_EFILE;
-        }
-    }
-    fclose(f);
+    PrintAndLogEx(INFO, "Using `" _YELLOW_("%s") "`", keyfilename);
 
     // try reading card uid and create filename
     if (datafnlen == 0) {
         char *fptr = GenerateFilename("hf-mf-", "-dump.bin");
-        if (fptr == NULL)
+        if (fptr == NULL) {
+            if (keyA) {
+                free(keyA);
+            }
+            if (keyB) {
+                free(keyB);
+            }
             return PM3_ESOFT;
-
+        }
         strcpy(datafilename, fptr);
         free(fptr);
     }
 
     // read dump file
     uint8_t *dump = NULL;
-    bytes_read = 0;
+    size_t bytes_read = 0;
     int res = pm3_load_dump(datafilename, (void **)&dump, &bytes_read, (MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK));
     if (res != PM3_SUCCESS) {
+        free(keyA);
+        free(keyB);
         return res;
     }
 
@@ -1281,19 +1315,10 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             if (mfNumBlocksPerSector(s) - 1 == b) {
                 if (use_keyfile_for_auth == false) {
                     // replace KEY A
-                    bldata[0]  = (keyA[s][0]);
-                    bldata[1]  = (keyA[s][1]);
-                    bldata[2]  = (keyA[s][2]);
-                    bldata[3]  = (keyA[s][3]);
-                    bldata[4]  = (keyA[s][4]);
-                    bldata[5]  = (keyA[s][5]);
+                    memcpy(bldata, keyA + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+
                     // replace KEY B
-                    bldata[10] = (keyB[s][0]);
-                    bldata[11] = (keyB[s][1]);
-                    bldata[12] = (keyB[s][2]);
-                    bldata[13] = (keyB[s][3]);
-                    bldata[14] = (keyB[s][4]);
-                    bldata[15] = (keyB[s][5]);
+                    memcpy(bldata + 10, keyB + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                 }
 
                 // ensure access right isn't messed up.
@@ -1327,12 +1352,12 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             for (int8_t kt = MF_KEY_B; kt > -1; kt--) {
                 if (use_keyfile_for_auth) {
                     if (kt == MF_KEY_A)
-                        memcpy(wdata, keyA[s], 6);
+                        memcpy(wdata, keyA + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                     else
-                        memcpy(wdata, keyB[s], 6);
+                        memcpy(wdata, keyB + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                 } else {
                     // use default key to authenticate for the write command
-                    memcpy(wdata, default_key, 6);
+                    memcpy(wdata, default_key, MIFARE_KEY_SIZE);
                 }
                 PrintAndLogEx(INFO, "block %3d: %s", mfFirstBlockOfSector(s) + b, sprint_hex(bldata, sizeof(bldata)));
 
@@ -1359,6 +1384,8 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     } // end loop S
 
     free(ref_dump);
+    free(keyA);
+    free(keyB);
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -2155,25 +2182,26 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 
     uint64_t foundkey = 0;
     int16_t isOK = mfnestedhard(blockno, keytype, key, trg_blockno, trg_keytype, known_target_key ? trg_key : NULL, nonce_file_read, nonce_file_write, slow, tests, &foundkey, filename);
+    switch (isOK) {
+        case PM3_ETIMEOUT :
+            PrintAndLogEx(ERR, "Error: No response from Proxmark3\n");
+            break;
+        case PM3_EOPABORTED:
+            PrintAndLogEx(WARNING, "Button pressed. Aborted\n");
+            break;
+        case PM3_ESTATIC_NONCE:
+            PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
+            break;
+        case PM3_EFAILED: {
+            PrintAndLogEx(FAILED, "\nFailed to recover a key...");
+            break;
+        }
+        default :
+            break;
+    }
 
     if ((tests == 0) && IfPm3Iso14443a()) {
         DropField();
-    }
-
-    if (isOK) {
-        switch (isOK) {
-            case PM3_ETIMEOUT :
-                PrintAndLogEx(ERR, "Error: No response from Proxmark3\n");
-                break;
-            case PM3_EOPABORTED:
-                PrintAndLogEx(WARNING, "Button pressed. Aborted\n");
-                break;
-            case PM3_ESTATIC_NONCE:
-                PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
-                break;
-            default :
-                break;
-        }
     }
     return isOK;
 }
@@ -2389,14 +2417,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     if (is_ev1) {
         PrintAndLogEx(INFO, "MIFARE Classic EV1 card detected");
-        // Store the keys
-        e_sector[16].Key[MF_KEY_A] = bytes_to_num((uint8_t *)g_mifare_signature_key_a, sizeof(g_mifare_signature_key_a));
-        e_sector[16].foundKey[MF_KEY_A] = 'D';
-
-        e_sector[17].Key[MF_KEY_A] = bytes_to_num((uint8_t *)g_mifare_signature_key_a, sizeof(g_mifare_signature_key_a));
-        e_sector[17].foundKey[MF_KEY_A] = 'D';
-        e_sector[17].Key[MF_KEY_B] = bytes_to_num((uint8_t *)g_mifare_signature_key_b, sizeof(g_mifare_signature_key_b));
-        e_sector[17].foundKey[MF_KEY_B] = 'D';
 
         // use found key if not supplied
         if (known_key == false) {
@@ -2431,7 +2451,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         PrintAndLogEx(INFO, " key supplied .. " _YELLOW_("%s"), known_key ? "True" : "False");
         PrintAndLogEx(INFO, " known sector .. " _YELLOW_("%d"), sectorno);
         PrintAndLogEx(INFO, " keytype ....... " _YELLOW_("%c"), (keytype == MF_KEY_B) ? 'B' : 'A');
-        PrintAndLogEx(INFO, " known key ..... " _YELLOW_("%s"), sprint_hex(key, sizeof(key)));
+        PrintAndLogEx(INFO, " known key ..... " _YELLOW_("%s"), sprint_hex_inrow(key, sizeof(key)));
 
         if (has_staticnonce == NONCE_STATIC)
             PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("STATIC"));
@@ -2458,10 +2478,10 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         }
 
         if (mfCheckKeys(mfFirstBlockOfSector(sectorno), keytype, true, 1, key, &key64) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "target sector %3u key type %c -- using valid key [ " _GREEN_("%s") "] (used for nested / hardnested attack)",
+            PrintAndLogEx(INFO, "target sector %3u key type %c -- using valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
                           sectorno,
                           (keytype == MF_KEY_B) ? 'B' : 'A',
-                          sprint_hex(key, sizeof(key))
+                          sprint_hex_inrow(key, sizeof(key))
                          );
 
             // Store the key for the nested / hardnested attack (if supplied by the user)
@@ -2474,7 +2494,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             PrintAndLogEx(FAILED, "Key is wrong. Can't authenticate to sector"_RED_("%3d") " key type "_RED_("%c") " key " _RED_("%s"),
                           sectorno,
                           (keytype == MF_KEY_B) ? 'B' : 'A',
-                          sprint_hex(key, sizeof(key))
+                          sprint_hex_inrow(key, sizeof(key))
                          );
             PrintAndLogEx(WARNING, "falling back to dictionary");
         }
@@ -2482,31 +2502,34 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         // Check if the user supplied key is used by other sectors
         for (int i = 0; i < sector_cnt; i++) {
             for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
-                if (e_sector[i].foundKey[j] == 0) {
-                    if (mfCheckKeys(mfFirstBlockOfSector(i), j, true, 1, key, &key64) == PM3_SUCCESS) {
-                        e_sector[i].Key[j] = bytes_to_num(key, 6);
-                        e_sector[i].foundKey[j] = 'U';
 
-                        // If the user supplied secctor / keytype was wrong --> just be nice and correct it ;)
-                        if (known_key == false) {
-                            num_to_bytes(e_sector[i].Key[j], 6, key);
-                            known_key = true;
-                            sectorno = i;
-                            keytype = j;
-                            PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
-                                          i,
-                                          (j == MF_KEY_B) ? 'B' : 'A',
-                                          sprint_hex_inrow(key, sizeof(key))
-                                         );
-                        } else {
-                            PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
-                                          i,
-                                          (j == MF_KEY_B)  ? 'B' : 'A',
-                                          sprint_hex_inrow(key, sizeof(key))
-                                         );
-                        }
-                        ++num_found_keys;
+                if (e_sector[i].foundKey[j]) {
+                    continue;
+                }
+
+                if (mfCheckKeys(mfFirstBlockOfSector(i), j, true, 1, key, &key64) == PM3_SUCCESS) {
+                    e_sector[i].Key[j] = bytes_to_num(key, 6);
+                    e_sector[i].foundKey[j] = 'U';
+
+                    // If the user supplied secctor / keytype was wrong --> just be nice and correct it ;)
+                    if (known_key == false) {
+                        num_to_bytes(e_sector[i].Key[j], 6, key);
+                        known_key = true;
+                        sectorno = i;
+                        keytype = j;
+                        PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
+                                      i,
+                                      (j == MF_KEY_B) ? 'B' : 'A',
+                                      sprint_hex_inrow(key, sizeof(key))
+                                     );
+                    } else {
+                        PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
+                                      i,
+                                      (j == MF_KEY_B)  ? 'B' : 'A',
+                                      sprint_hex_inrow(key, sizeof(key))
+                                     );
                     }
+                    ++num_found_keys;
                 }
             }
         }
@@ -2551,7 +2574,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         PrintAndLogEx(INFO, "." NOLF);
         // Check all the sectors
         for (int i = 0; i < sector_cnt; i++) {
-            for (int j = 0; j < 2; j++) {
+            for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
                 // Check if the key is known
                 if (e_sector[i].foundKey[j] == 0) {
                     for (uint32_t k = 0; k < key_cnt; k++) {
@@ -2608,28 +2631,30 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Analyse the dictionary attack
     for (int i = 0; i < sector_cnt; i++) {
         for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
-            if (e_sector[i].foundKey[j] == 1) {
-                e_sector[i].foundKey[j] = 'D';
-                num_to_bytes(e_sector[i].Key[j], 6, tmp_key);
+            if (e_sector[i].foundKey[j] != 1) {
+                continue;
+            }
 
-                // Store valid credentials for the nested / hardnested attack if none exist
-                if (known_key == false) {
-                    num_to_bytes(e_sector[i].Key[j], 6, key);
-                    known_key = true;
-                    sectorno = i;
-                    keytype = j;
-                    PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
-                                  i,
-                                  (j == MF_KEY_B) ? 'B' : 'A',
-                                  sprint_hex_inrow(tmp_key, sizeof(tmp_key))
-                                 );
-                } else {
-                    PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
-                                  i,
-                                  (j == MF_KEY_B) ? 'B' : 'A',
-                                  sprint_hex_inrow(tmp_key, sizeof(tmp_key))
-                                 );
-                }
+            e_sector[i].foundKey[j] = 'D';
+            num_to_bytes(e_sector[i].Key[j], 6, tmp_key);
+
+            // Store valid credentials for the nested / hardnested attack if none exist
+            if (known_key == false) {
+                num_to_bytes(e_sector[i].Key[j], 6, key);
+                known_key = true;
+                sectorno = i;
+                keytype = j;
+                PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
+                              i,
+                              (j == MF_KEY_B) ? 'B' : 'A',
+                              sprint_hex_inrow(tmp_key, sizeof(tmp_key))
+                             );
+            } else {
+                PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
+                              i,
+                              (j == MF_KEY_B) ? 'B' : 'A',
+                              sprint_hex_inrow(tmp_key, sizeof(tmp_key))
+                             );
             }
         }
     }
@@ -2690,7 +2715,8 @@ noValidKeyFound:
 
     // Iterate over each sector and key(A/B)
     for (current_sector_i = 0; current_sector_i < sector_cnt; current_sector_i++) {
-        for (current_key_type_i = 0; current_key_type_i < 2; current_key_type_i++) {
+
+        for (current_key_type_i = MF_KEY_A; current_key_type_i <= MF_KEY_B; current_key_type_i++) {
 
             // If the key is already known, just skip it
             if (e_sector[current_sector_i].foundKey[current_key_type_i] == 0) {
@@ -2863,7 +2889,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                         foundkey = 0;
                         isOK = mfnestedhard(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, NULL, false, false, slow, 0, &foundkey, NULL);
                         DropField();
-                        if (isOK) {
+                        if (isOK != PM3_SUCCESS) {
                             switch (isOK) {
                                 case PM3_ETIMEOUT: {
                                     PrintAndLogEx(ERR, "\nError: No response from Proxmark3");
@@ -2885,6 +2911,10 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                     printKeyTable(sector_cnt, e_sector);
                                     PrintAndLogEx(NORMAL, "");
                                     break;
+                                }
+                                case PM3_EFAILED: {
+                                    PrintAndLogEx(FAILED, "\nFailed to recover a key...");
+                                    continue;
                                 }
                                 default: {
                                     break;
@@ -4394,6 +4424,7 @@ static int CmdHF14AMfEView(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "sk", "Save extracted keys to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4402,6 +4433,7 @@ static int CmdHF14AMfEView(const char *Cmd) {
     bool m2 = arg_get_lit(ctx, 3);
     bool m4 = arg_get_lit(ctx, 4);
     bool verbose = arg_get_lit(ctx, 5);
+    bool save_keys = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     // validations
@@ -4447,6 +4479,11 @@ static int CmdHF14AMfEView(const char *Cmd) {
     if (verbose) {
         mf_print_keys(block_cnt, dump);
     }
+
+    if (save_keys) {
+        mf_save_keys_from_arr(block_cnt, dump);
+    }
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -5864,8 +5901,9 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint16_t ndef_aid = NDEF_MFC_AID;
-    if (aidlen == 2)
+    if (aidlen == 2) {
         ndef_aid = (aid[0] << 8) + aid[1];
+    }
 
     uint8_t ndefkey[6] = {0};
     memcpy(ndefkey, g_mifare_ndef_key, 6);
@@ -6079,39 +6117,27 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
         DropField();
     }
 
+
     // load key file if exist
     if (strlen(keyFilename)) {
-
-        FILE *f;
-        if ((f = fopen(keyFilename, "rb")) == NULL) {
-            // PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), keyFilename);
+        //
+        size_t alen = 0, blen = 0;
+        uint8_t *tmpA, *tmpB;
+        if (loadFileBinaryKey(keyFilename, "", (void **)&tmpA, (void **)&tmpB, &alen, &blen) != PM3_SUCCESS) {
+            if (tmpA) {
+                free(tmpA);
+            }
             goto skipfile;
         }
 
         PrintAndLogEx(INFO, "Using `" _YELLOW_("%s") "`", keyFilename);
 
-        // Read keys A from file
-        size_t bytes_read;
-        for (uint8_t i = 0; i < numSectors; i++) {
-            bytes_read = fread(keyA[i], 1, MFKEY_SIZE, f);
-            if (bytes_read != MFKEY_SIZE) {
-                PrintAndLogEx(ERR, "File reading error.");
-                fclose(f);
-                return PM3_EFILE;
-            }
+        for (int i = 0; i < numSectors; i++) {
+            memcpy(keyA[i], tmpA + (i * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+            memcpy(keyB[i], tmpB + (i * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
         }
-
-        // Read keys B from file
-        for (uint8_t i = 0; i < numSectors; i++) {
-            bytes_read = fread(keyB[i], 1, MFKEY_SIZE, f);
-            if (bytes_read != MFKEY_SIZE) {
-                PrintAndLogEx(ERR, "File reading error.");
-                fclose(f);
-                return PM3_EFILE;
-            }
-        }
-
-        fclose(f);
+        free(tmpA);
+        free(tmpB);
     }
 
 skipfile:
@@ -6154,7 +6180,6 @@ skipfile:
                     }
                     break;
                 }
-
             }
 
             // write to card,  try B key first
@@ -6169,7 +6194,6 @@ skipfile:
     }
 
     PrintAndLogEx(NORMAL, "");
-
     return PM3_SUCCESS;
 }
 
@@ -6952,6 +6976,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
         PrintAndLogEx(INFO, "Forcing overwrite of sector 0 / block 0 ");
     else
         PrintAndLogEx(INFO, "Skipping sector 0 / block 0");
+
     PrintAndLogEx(NORMAL, "");
 
     uint8_t zeros[MFBLOCK_SIZE] = {0};
@@ -6963,7 +6988,12 @@ static int CmdHF14AMfWipe(const char *Cmd) {
 
         for (uint8_t b = 0; b < mfNumBlocksPerSector(s); b++) {
 
-            // Skipp write to manufacture block if not enforced
+            if (kbd_enter_pressed()) {
+                PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+                goto out;
+            }
+
+            // Skip write to manufacture block if not enforced
             if (s == 0 && b == 0 && gen2 == false) {
                 continue;
             }
@@ -7026,6 +7056,7 @@ static int CmdHF14AMfView(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "filename of dump"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "sk", "Save extracted keys to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -7033,6 +7064,7 @@ static int CmdHF14AMfView(const char *Cmd) {
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
+    bool save_keys = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     // read dump file
@@ -7061,6 +7093,10 @@ static int CmdHF14AMfView(const char *Cmd) {
     if (verbose) {
         mf_print_keys(block_cnt, dump);
         mf_analyse_acl(block_cnt, dump);
+    }
+
+    if (save_keys) {
+        mf_save_keys_from_arr(block_cnt, dump);
     }
 
     int sector = DetectHID(dump, 0x4910);

@@ -45,7 +45,10 @@ static const uint64_t g_mifare_default_keys[] = {
     0xffffffffffff, // Default key (first key used by program if no user defined key)
     0xa0a1a2a3a4a5, // NFCForum MAD key
     0xd3f7d3f7d3f7, // NDEF public key
-    0x4b791bea7bcc, // MFC EV1 Signature B
+    0x4b791bea7bcc, // MFC EV1 Signature 17 B
+    0x5C8FF9990DA2, // MFC EV1 Signature 16 A
+    0xD01AFEEB890A, // MFC EV1 Signature 16 B
+    0x75CCB59C9BED, // MFC EV1 Signature 17 A
     0xfc00018778f7, // Public Transport
     0x6471a5ef2d1a, // SimonsVoss
     0x4E3552426B32, // ID06
@@ -72,6 +75,11 @@ static const uint64_t g_mifare_default_keys[] = {
     0x199404281998, // NSP B
     0x6A1987C40A21, // SALTO
     0x7F33625BC129, // SALTO
+    0x484944204953, // HID
+    0x204752454154, // HID
+    0x3B7E4FD575AD, // HID
+    0x11496F97752A, // HID
+    0x3E65E4FB65B3, // Gym
     0x000000000000, // Blank key
     0xb0b1b2b3b4b5,
     0xaabbccddeeff,
