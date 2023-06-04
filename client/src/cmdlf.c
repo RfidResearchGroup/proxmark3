@@ -1680,7 +1680,7 @@ int CmdLFfind(const char *Cmd) {
             goto out;
         }
     }
-    if (demodParadox(true) == PM3_SUCCESS) {
+    if (demodParadox(true, false) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paradox ID") " found!");
         if (search_cont) {
             found++;
