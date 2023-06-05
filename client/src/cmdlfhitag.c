@@ -338,7 +338,7 @@ static void printHitag2PaxtonDowngrade(const uint8_t *data) {
         bytes = (bytes * 0x100) + data[i];
     }
 
-    for (int j = 0; j< 8; j++) {
+    for (int j = 0; j < 8; j++) {
         num = bytes & mask;
         skip -= 5;
         mask = mask >> 5;

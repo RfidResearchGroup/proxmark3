@@ -376,7 +376,7 @@ void RunMod(void) {
 
                 // dynamic_response_info will be in charge of responses
                 dynamic_response_info.response_n = 0;
-                
+
                 //Dbprintf("receivedCmd: %02x\n", receivedCmd);
                 // received a REQUEST
                 if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) {
@@ -399,12 +399,12 @@ void RunMod(void) {
                     // received request for UID (cascade 1)
                 } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {
                     //DbpString(_YELLOW_("+") "Request for UID C1");
-                    p_response = &responses[RESP_INDEX_UIDC1];                    
+                    p_response = &responses[RESP_INDEX_UIDC1];
 
                     // received a SELECT (cascade 1)
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {
                     //DbpString(_YELLOW_("+") "Request for SELECT S1");
-                    p_response = &responses[RESP_INDEX_SAKC1];                    
+                    p_response = &responses[RESP_INDEX_SAKC1];
 
                     // received a RATS request
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {
@@ -412,7 +412,7 @@ void RunMod(void) {
                     prevCmd = 0;
                     //p_response = &responses[RESP_INDEX_RATS];
 
-                    static uint8_t rRATS[] = { 0x13, 0x78, 0x80, 0x72, 0x02, 0x80, 0x31, 0x80, 0x66, 0xb1, 0x84, 0x0c, 0x01, 0x6e, 0x01, 0x83, 0x00, 0x90, 0x00 };                    
+                    static uint8_t rRATS[] = { 0x13, 0x78, 0x80, 0x72, 0x02, 0x80, 0x31, 0x80, 0x66, 0xb1, 0x84, 0x0c, 0x01, 0x6e, 0x01, 0x83, 0x00, 0x90, 0x00 };
 
                     memcpy(&dynamic_response_info.response[0], rRATS, sizeof(rRATS));
                     dynamic_response_info.response_n = sizeof(rRATS);

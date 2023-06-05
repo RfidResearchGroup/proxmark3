@@ -1354,9 +1354,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> (optional) filename, if no <name> UID will be used as filename"
+                "-f, --file <fn> (optional) filename, if no <name> UID will be used as filename",
+                "--ns no save to file"
             ],
-            "usage": "hf 14b dump [-h] [-f <fn>]"
+            "usage": "hf 14b dump [-h] [-f <fn>] [--ns]"
         },
         "hf 14b help": {
             "command": "hf 14b help",
@@ -4218,9 +4219,10 @@
                 "--mini MIFARE Classic Mini / S20",
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
-                "--4k MIFARE Classic 4k / S70"
+                "--4k MIFARE Classic 4k / S70",
+                "--ns no save to file"
             ],
-            "usage": "hf mf dump [-h] [-f <fn>] [-k <fn>] [--mini] [--1k] [--2k] [--4k]"
+            "usage": "hf mf dump [-h] [-f <fn>] [-k <fn>] [--mini] [--1k] [--2k] [--4k] [--ns]"
         },
         "hf mf ecfill": {
             "command": "hf mf ecfill",
@@ -4368,9 +4370,10 @@
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--sk Save extracted keys to file"
             ],
-            "usage": "hf mf eview [-hv] [--mini] [--1k] [--2k] [--4k]"
+            "usage": "hf mf eview [-hv] [--mini] [--1k] [--2k] [--4k] [--sk]"
         },
         "hf mf fchk": {
             "command": "hf mf fchk",
@@ -4400,18 +4403,18 @@
             ],
             "usage": "hf mf fchk [-h] [-k <hex>]... [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [--mem] [-f <fn>]"
         },
-        "hf mf gdmconfig": {
-            "command": "hf mf gdmconfig",
+        "hf mf gdmcfg": {
+            "command": "hf mf gdmcfg",
             "description": "Get configuration data from magic gen4 GDM card.",
             "notes": [
-                "hf mf gdmconfig"
+                "hf mf gdmcfg"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-k, --key <hex> key 6 bytes"
             ],
-            "usage": "hf mf gdmconfig [-h] [-k <hex>]"
+            "usage": "hf mf gdmcfg [-h] [-k <hex>]"
         },
         "hf mf gdmsetblk": {
             "command": "hf mf gdmsetblk",
@@ -4430,6 +4433,19 @@
                 "--force override warnings"
             ],
             "usage": "hf mf gdmsetblk [-hab] --blk <dec> [-d <hex>] [-k <hex>] [--force]"
+        },
+        "hf mf gdmsetcfg": {
+            "command": "hf mf gdmsetcfg",
+            "description": "Set configuration data on a magic gen4 GDM card",
+            "notes": [
+                "hf mf gdmsetcfg -d 850000000000000000005A5A00000008"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-d, --data <hex> bytes to write, 16 hex bytes"
+            ],
+            "usage": "hf mf gdmsetcfg [-h] -d <hex>"
         },
         "hf mf gen3blk": {
             "command": "hf mf gen3blk",
@@ -4902,6 +4918,7 @@
                 "hf mf value --blk 16 -k FFFFFFFFFFFF --inc 10",
                 "hf mf value --blk 16 -k FFFFFFFFFFFF -b --dec 10",
                 "hf mf value --blk 16 -k FFFFFFFFFFFF -b --get",
+                "hf mf value --blk 16 -k FFFFFFFFFFFF --res --transfer 30 --tk FFFFFFFFFFFF -> transfer block 16 value to block 30 (even if block can't be incremented by ACL)",
                 "hf mf value --get -d 87D612007829EDFF87D6120011EE11EE"
             ],
             "offline": true,
@@ -4910,14 +4927,19 @@
                 "-k, --key <hex> key, 6 hex bytes",
                 "-a input key type is key A (def)",
                 "-b input key type is key B",
-                "--inc <dec> Incremenet value by X (0 - 2147483647)",
-                "--dec <dec> Dcrement value by X (0 - 2147483647)",
+                "--inc <dec> Increment value by X (0 - 2147483647)",
+                "--dec <dec> Decrement value by X (0 - 2147483647)",
                 "--set <dec> Set value to X (-2147483647 - 2147483647)",
+                "--transfer <dec> Transfer value to other block (after inc/dec/restore)",
+                "--tkey <hex> transfer key, 6 hex bytes (if transfer is preformed to other sector)",
+                "--ta transfer key type is key A (def)",
+                "--tb transfer key type is key B",
                 "--get Get value from block",
+                "--res Restore (copy value to card buffer, should be used with --transfer)",
                 "--blk <dec> block number",
                 "-d, --data <hex> block data to extract values from (16 hex bytes)"
             ],
-            "usage": "hf mf value [-hab] [-k <hex>] [--inc <dec>] [--dec <dec>] [--set <dec>] [--get] [--blk <dec>] [-d <hex>]"
+            "usage": "hf mf value [-hab] [-k <hex>] [--inc <dec>] [--dec <dec>] [--set <dec>] [--transfer <dec>] [--tkey <hex>] [--ta] [--tb] [--get] [--res] [--blk <dec>] [-d <hex>]"
         },
         "hf mf view": {
             "command": "hf mf view",
@@ -4929,9 +4951,10 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> filename of dump",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--sk Save extracted keys to file"
             ],
-            "usage": "hf mf view [-hv] -f <fn>"
+            "usage": "hf mf view [-hv] -f <fn> [--sk]"
         },
         "hf mf wipe": {
             "command": "hf mf wipe",
@@ -6146,7 +6169,7 @@
         },
         "hf mfp commitp": {
             "command": "hf mfp commitp",
-            "description": "Executes Commit Perso command. Can be used in SL0 mode only.",
+            "description": "Executes Commit Perso command. Can be used in SL0 mode only. OBS! This command will not be executed if CardConfigKey, CardMasterKey and L3SwitchKey AES keys are not written.",
             "notes": [
                 "hf mfp commitp"
             ],
@@ -6246,9 +6269,9 @@
                 "-b, --keyb Use key B (def: keyA)",
                 "-p, --plain Plain communication mode between reader and card",
                 "--blk <0..255> Block number",
-                "--key <hex> Key, 16 hex bytes"
+                "-k, --key <hex> Key, 16 hex bytes"
             ],
-            "usage": "hf mfp rdbl [-hvbp] [-n <dec>] --blk <0..255> [--key <hex>]"
+            "usage": "hf mfp rdbl [-hvbp] [-n <dec>] --blk <0..255> [-k <hex>]"
         },
         "hf mfp rdsc": {
             "command": "hf mfp rdsc",
@@ -6335,9 +6358,10 @@
                 "-k, --key <hex> Key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)",
                 "-l Swap entered key's endianness",
                 "-p, --page <dec> Manually set start page number to start from",
-                "-q, --qty <dec> Manually set number of pages to dump"
+                "-q, --qty <dec> Manually set number of pages to dump",
+                "--ns no save to file"
             ],
-            "usage": "hf mfu dump [-hl] [-f <fn>] [-k <hex>] [-p <dec>] [-q <dec>]"
+            "usage": "hf mfu dump [-hl] [-f <fn>] [-k <hex>] [-p <dec>] [-q <dec>] [--ns]"
         },
         "hf mfu eload": {
             "command": "hf mfu eload",
@@ -6565,7 +6589,7 @@
         },
         "hf mfu tamper": {
             "command": "hf mfu tamper",
-            "description": "Set the congiguration of the NTAG 213TT tamper feature Supports: NTAG 213TT",
+            "description": "Set the configuration of the NTAG 213TT tamper feature Supports: NTAG 213TT",
             "notes": [
                 "hf mfu tamper -e -> enable tamper feature",
                 "hf mfu tamper -d -> disable tamper feature",
@@ -8039,15 +8063,19 @@
             "command": "lf em 4x50 brute",
             "description": "Tries to bruteforce the password of a EM4x50 card. Function can be stopped by pressing pm3 button.",
             "notes": [
-                "lf em 4x50 brute --first 12330000 --last 12340000 -> tries pwds from 0x12330000 to 0x1234000000"
+                "lf em 4x50 brute --mode range --begin 12330000 --end 12340000 -> tries pwds from 0x12330000 to 0x12340000",
+                "lf em 4x50 brute --mode charset --digits --uppercase -> tries all combinations of ASCII codes for digits and uppercase letters"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--first <hex> first password (start), 4 bytes, lsb",
-                "--last <hex> last password (stop), 4 bytes, lsb"
+                "--mode <str> Bruteforce mode (range|charset)",
+                "--begin <hex> Range mode - start of the key range",
+                "--end <hex> Range mode - end of the key range",
+                "--digits Charset mode - include ASCII codes for digits",
+                "--uppercase Charset mode - include ASCII codes for uppercase letters"
             ],
-            "usage": "lf em 4x50 brute [-h] --first <hex> --last <hex>"
+            "usage": "lf em 4x50 brute [-h] --mode <str> [--begin <hex>] [--end <hex>] [--digits] [--uppercase]"
         },
         "lf em 4x50 chk": {
             "command": "lf em 4x50 chk",
@@ -9630,13 +9658,14 @@
             "command": "lf paradox demod",
             "description": "Try to find Paradox preamble, if found decode / descramble data",
             "notes": [
-                "lf paradox demod"
+                "lf paradox demod --old -> Display previous checksum version"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "--old optional - Display previous checksum version"
             ],
-            "usage": "lf paradox demod [-h]"
+            "usage": "lf paradox demod [-h] [--old]"
         },
         "lf paradox help": {
             "command": "lf paradox help",
@@ -9650,27 +9679,32 @@
             "command": "lf paradox reader",
             "description": "read a Paradox tag",
             "notes": [
-                "lf Paradox reader -@ -> continuous reader mode"
+                "lf paradox reader -@ -> continuous reader mode",
+                "lf paradox reader --old -> Display previous checksum version"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-@ optional - continuous reader mode"
+                "-@ optional - continuous reader mode",
+                "--old optional - Display previous checksum version"
             ],
-            "usage": "lf paradox reader [-h@]"
+            "usage": "lf paradox reader [-h@] [--old]"
         },
         "lf paradox sim": {
             "command": "lf paradox sim",
             "description": "Enables simulation of paradox card with specified card number. Simulation runs until the button is pressed or another USB command is issued.",
             "notes": [
-                "lf paradox sim --raw 0f55555695596a6a9999a59a"
+                "lf paradox sim --raw 0f55555695596a6a9999a59a -> simulate tag",
+                "lf paradox sim --fc 96 --cn 40426 -> simulate tag with fc and cn"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-r, --raw <hex> raw hex data. 12 bytes"
+                "-r, --raw <hex> raw hex data. 12 bytes",
+                "--fc <dec> facility code",
+                "--cn <dec> card number"
             ],
-            "usage": "lf paradox sim [-h] [-r <hex>]"
+            "usage": "lf paradox sim [-h] [-r <hex>] [--fc <dec>] [--cn <dec>]"
         },
         "lf pcf7931 config": {
             "command": "lf pcf7931 config",
@@ -10199,12 +10233,13 @@
                 "-f, --file <fn> filename (default is generated on blk 0)",
                 "-o, --override override, force pwd read despite danger to card",
                 "-p, --pwd <hex> password (4 hex bytes)",
+                "--ns no save",
                 "--r0 downlink - fixed bit length",
                 "--r1 downlink - long leading reference",
                 "--r2 downlink - leading zero",
                 "--r3 downlink - 1 of 4 coding reference"
             ],
-            "usage": "lf t55xx dump [-ho] [-f <fn>] [-p <hex>] [--r0] [--r1] [--r2] [--r3]"
+            "usage": "lf t55xx dump [-ho] [-f <fn>] [-p <hex>] [--ns] [--r0] [--r1] [--r2] [--r3]"
         },
         "lf t55xx help": {
             "command": "lf t55xx help",
@@ -10867,7 +10902,7 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> SPIFFS file to view",
-                "-c, --cols <dec> column breaks (def 32)"
+                "-c, --cols <dec> column breaks (def 16)"
             ],
             "usage": "mem spiffs view [-h] -f <fn> [-c <dec>]"
         },
@@ -11592,7 +11627,7 @@
         },
         "script help": {
             "command": "script help",
-            "description": "This is a feature to run Lua/Cmd/Python scripts. You can place scripts within the luascripts/cmdscripts/pyscripts folders. --------------------------------------------------------------------------------------- script list available offline: yes",
+            "description": "This is a feature to run Lua/Cmd scripts. You can place scripts within the luascripts/cmdscripts folders. --------------------------------------------------------------------------------------- script list available offline: yes",
             "notes": [],
             "offline": true,
             "options": [],
@@ -11987,8 +12022,9 @@
         }
     },
     "metadata": {
-        "commands_extracted": 754,
+        "commands_extracted": 755,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-03-26T15:04:49"
+        "extracted_on": "2023-06-04T15:36:56"
+
     }
 }

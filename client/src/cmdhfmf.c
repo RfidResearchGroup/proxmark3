@@ -349,13 +349,13 @@ static int mf_save_keys_from_arr(uint16_t n, uint8_t *d) {
     uint8_t sector = 0;
     for (uint16_t i = 0; i < n; i++) {
         if (mfIsSectorTrailer(i)) {
-           // key A offset in ST block
-           memcpy(keys + (MIFARE_KEY_SIZE * sector), d + (i * MFBLOCK_SIZE), MIFARE_KEY_SIZE);
+            // key A offset in ST block
+            memcpy(keys + (MIFARE_KEY_SIZE * sector), d + (i * MFBLOCK_SIZE), MIFARE_KEY_SIZE);
 
-           // key B offset in ST block
-           memcpy(keys + (MIFARE_KEY_SIZE * sectors) + (MIFARE_KEY_SIZE * sector), d + (i * MFBLOCK_SIZE) + 10, MIFARE_KEY_SIZE);
+            // key B offset in ST block
+            memcpy(keys + (MIFARE_KEY_SIZE * sectors) + (MIFARE_KEY_SIZE * sector), d + (i * MFBLOCK_SIZE) + 10, MIFARE_KEY_SIZE);
 
-           sector++;
+            sector++;
         }
     }
 
@@ -484,7 +484,7 @@ static int mf_analyse_st_block(uint8_t blockno, uint8_t *block, bool force) {
  * @param numSectors: size of the card
  * @param keyFileName: filename containing keys or NULL.
 */
-static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t numSectors, char *keyfn){
+static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t numSectors, char *keyfn) {
 
     // Select card to get UID/UIDLEN/ATQA/SAK information
     clearCommandBuffer();
@@ -517,7 +517,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
 
     size_t alen = 0, blen = 0;
     uint8_t *keyA, *keyB;
-    if (loadFileBinaryKey(keyfn, "", (void**)&keyA, (void**)&keyB, &alen, &blen) != PM3_SUCCESS) {
+    if (loadFileBinaryKey(keyfn, "", (void **)&keyA, (void **)&keyB, &alen, &blen) != PM3_SUCCESS) {
         if (keyA) {
             free(keyA);
         }
@@ -607,7 +607,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
                     received = WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500);
                 } else {
                     // data block. Check if it can be read with key A or key B
-                    if ((rights[sectorNo][data_area] == 0x03) || (rights[sectorNo][data_area] == 0x05)) { 
+                    if ((rights[sectorNo][data_area] == 0x03) || (rights[sectorNo][data_area] == 0x05)) {
                         // only key B would work
                         payload.blockno = mfFirstBlockOfSector(sectorNo) + blockNo;
                         payload.keytype = MF_KEY_B;
@@ -617,7 +617,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
                         SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
                         received = WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500);
                     } else {
-                       // key A would work
+                        // key A would work
                         payload.blockno = mfFirstBlockOfSector(sectorNo) + blockNo;
                         payload.keytype = current_key;
                         memcpy(payload.key, (current_key == MF_KEY_A) ? keyA + (sectorNo * MIFARE_KEY_SIZE) : keyB + (sectorNo * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
@@ -649,9 +649,9 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
 
                     uint8_t *data  = resp.data.asBytes;
 
-                    if (mfIsSectorTrailer(blockNo)) { 
+                    if (mfIsSectorTrailer(blockNo)) {
                         // sector trailer. Fill in the keys.
-                        memcpy(data     , keyA + (sectorNo * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+                        memcpy(data, keyA + (sectorNo * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                         memcpy(data + 10, keyB + (sectorNo * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                     }
 
@@ -1096,7 +1096,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     } else if (m2) {
         numSectors = MIFARE_2K_MAXSECTOR;
         bytes = MIFARE_2K_MAX_BYTES;
-    } else if (m4) {        
+    } else if (m4) {
         numSectors = MIFARE_4K_MAXSECTOR;
         bytes = MIFARE_4K_MAX_BYTES;
     } else {
@@ -1259,7 +1259,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     //
     size_t alen = 0, blen = 0;
     uint8_t *keyA, *keyB;
-    if (loadFileBinaryKey(keyfilename, "", (void**)&keyA, (void**)&keyB, &alen, &blen) != PM3_SUCCESS) {
+    if (loadFileBinaryKey(keyfilename, "", (void **)&keyA, (void **)&keyB, &alen, &blen) != PM3_SUCCESS) {
         if (keyA) {
             free(keyA);
         }
@@ -1354,7 +1354,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                     if (kt == MF_KEY_A)
                         memcpy(wdata, keyA + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                     else
-                        memcpy(wdata, keyB+ (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+                        memcpy(wdata, keyB + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                 } else {
                     // use default key to authenticate for the write command
                     memcpy(wdata, default_key, MIFARE_KEY_SIZE);
@@ -2518,16 +2518,16 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                         sectorno = i;
                         keytype = j;
                         PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
-                                        i,
-                                        (j == MF_KEY_B) ? 'B' : 'A',
-                                        sprint_hex_inrow(key, sizeof(key))
-                                        );
+                                      i,
+                                      (j == MF_KEY_B) ? 'B' : 'A',
+                                      sprint_hex_inrow(key, sizeof(key))
+                                     );
                     } else {
                         PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
-                                        i,
-                                        (j == MF_KEY_B)  ? 'B' : 'A',
-                                        sprint_hex_inrow(key, sizeof(key))
-                                        );
+                                      i,
+                                      (j == MF_KEY_B)  ? 'B' : 'A',
+                                      sprint_hex_inrow(key, sizeof(key))
+                                     );
                     }
                     ++num_found_keys;
                 }
@@ -2645,16 +2645,16 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 sectorno = i;
                 keytype = j;
                 PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
-                                i,
-                                (j == MF_KEY_B) ? 'B' : 'A',
-                                sprint_hex_inrow(tmp_key, sizeof(tmp_key))
-                                );
+                              i,
+                              (j == MF_KEY_B) ? 'B' : 'A',
+                              sprint_hex_inrow(tmp_key, sizeof(tmp_key))
+                             );
             } else {
                 PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
-                                i,
-                                (j == MF_KEY_B) ? 'B' : 'A',
-                                sprint_hex_inrow(tmp_key, sizeof(tmp_key))
-                                );
+                              i,
+                              (j == MF_KEY_B) ? 'B' : 'A',
+                              sprint_hex_inrow(tmp_key, sizeof(tmp_key))
+                             );
             }
         }
     }
@@ -3839,7 +3839,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
 
             if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)
                 break;
-            
+
             if ((resp.oldarg[0] & 0xffff) != CMD_HF_MIFARE_SIMULATE)
                 break;
 
@@ -3949,11 +3949,11 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
         }
 
         PrintAndLogEx(SUCCESS, " " _YELLOW_("%03d") " | %03d | %s | %s | %s | %s"
-                    , s
-                    , mfSectorTrailerOfSector(s)
-                    , strA, resA
-                    , strB, resB
-                    );
+                      , s
+                      , mfSectorTrailerOfSector(s)
+                      , strA, resA
+                      , strB, resB
+                     );
     }
 
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
@@ -4424,7 +4424,7 @@ static int CmdHF14AMfEView(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0("v", "verbose", "verbose output"),
-        arg_lit0(NULL, "sk", "Save extracted keys to file"),         
+        arg_lit0(NULL, "sk", "Save extracted keys to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5901,7 +5901,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint16_t ndef_aid = NDEF_MFC_AID;
-    if (aidlen == 2){
+    if (aidlen == 2) {
         ndef_aid = (aid[0] << 8) + aid[1];
     }
 
@@ -6123,7 +6123,7 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
         //
         size_t alen = 0, blen = 0;
         uint8_t *tmpA, *tmpB;
-        if (loadFileBinaryKey(keyFilename, "", (void**)&tmpA, (void**)&tmpB, &alen, &blen) != PM3_SUCCESS) {
+        if (loadFileBinaryKey(keyFilename, "", (void **)&tmpA, (void **)&tmpB, &alen, &blen) != PM3_SUCCESS) {
             if (tmpA) {
                 free(tmpA);
             }
@@ -6131,13 +6131,13 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
         }
 
         PrintAndLogEx(INFO, "Using `" _YELLOW_("%s") "`", keyFilename);
-        
-        for (int i=0; i < numSectors; i++) {
-            memcpy(keyA[i], tmpA + (i *MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
-            memcpy(keyB[i], tmpB + (i *MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+
+        for (int i = 0; i < numSectors; i++) {
+            memcpy(keyA[i], tmpA + (i * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+            memcpy(keyB[i], tmpB + (i * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
         }
         free(tmpA);
-        free(tmpB); 
+        free(tmpB);
     }
 
 skipfile:
@@ -6680,7 +6680,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    #define SUPER_MAX_TRACES    7
+#define SUPER_MAX_TRACES    7
 
     uint8_t trace = 0;
     uint8_t traces[SUPER_MAX_TRACES][16];
@@ -7056,7 +7056,7 @@ static int CmdHF14AMfView(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "filename of dump"),
         arg_lit0("v", "verbose", "verbose output"),
-        arg_lit0(NULL, "sk", "Save extracted keys to file"), 
+        arg_lit0(NULL, "sk", "Save extracted keys to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -7964,24 +7964,24 @@ static int CmdHF14AMfValue(const char *Cmd) {
                   "hf mf value --blk 16 -k FFFFFFFFFFFF -b --get\n"
                   "hf mf value --blk 16 -k FFFFFFFFFFFF --res --transfer 30 --tk FFFFFFFFFFFF --> transfer block 16 value to block 30 (even if block can't be incremented by ACL)\n"
                   "hf mf value --get -d 87D612007829EDFF87D6120011EE11EE\n"
-    );
+                 );
     void *argtable[] = {
-            arg_param_begin,
-            arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
-            arg_lit0("a", NULL, "input key type is key A (def)"),
-            arg_lit0("b", NULL, "input key type is key B"),
-            arg_u64_0(NULL, "inc", "<dec>", "Increment value by X (0 - 2147483647)"),
-            arg_u64_0(NULL, "dec", "<dec>", "Decrement value by X (0 - 2147483647)"),
-            arg_u64_0(NULL, "set", "<dec>", "Set value to X (-2147483647 - 2147483647)"),
-            arg_u64_0(NULL, "transfer", "<dec>", "Transfer value to other block (after inc/dec/restore)"),
-            arg_str0(NULL, "tkey", "<hex>", "transfer key, 6 hex bytes (if transfer is preformed to other sector)"),
-            arg_lit0(NULL, "ta", "transfer key type is key A (def)"),
-            arg_lit0(NULL, "tb", "transfer key type is key B"),
-            arg_lit0(NULL, "get", "Get value from block"),
-            arg_lit0(NULL, "res", "Restore (copy value to card buffer, should be used with --transfer)"),
-            arg_int0(NULL, "blk", "<dec>", "block number"),
-            arg_str0("d", "data", "<hex>", "block data to extract values from (16 hex bytes)"),
-            arg_param_end
+        arg_param_begin,
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_lit0("a", NULL, "input key type is key A (def)"),
+        arg_lit0("b", NULL, "input key type is key B"),
+        arg_u64_0(NULL, "inc", "<dec>", "Increment value by X (0 - 2147483647)"),
+        arg_u64_0(NULL, "dec", "<dec>", "Decrement value by X (0 - 2147483647)"),
+        arg_u64_0(NULL, "set", "<dec>", "Set value to X (-2147483647 - 2147483647)"),
+        arg_u64_0(NULL, "transfer", "<dec>", "Transfer value to other block (after inc/dec/restore)"),
+        arg_str0(NULL, "tkey", "<hex>", "transfer key, 6 hex bytes (if transfer is preformed to other sector)"),
+        arg_lit0(NULL, "ta", "transfer key type is key A (def)"),
+        arg_lit0(NULL, "tb", "transfer key type is key B"),
+        arg_lit0(NULL, "get", "Get value from block"),
+        arg_lit0(NULL, "res", "Restore (copy value to card buffer, should be used with --transfer)"),
+        arg_int0(NULL, "blk", "<dec>", "block number"),
+        arg_str0("d", "data", "<hex>", "block data to extract values from (16 hex bytes)"),
+        arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
@@ -8038,7 +8038,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
 
     // Action:  0 Increment, 1 - Decrement, 2 - Restore, 3 - Set, 4 - Get, 5 - Decode from data
     // iceman:  TODO - should be enum
-    uint8_t action = 4; 
+    uint8_t action = 4;
     uint32_t value = 0;
 
     // Need to check we only have 1 of inc/dec/set and get the value from the selected option
@@ -8109,10 +8109,10 @@ static int CmdHF14AMfValue(const char *Cmd) {
     }
 
     // don't want to write value data and break something
-    if ((blockno == 0) || 
-        (mfIsSectorTrailer(blockno)) || 
-        (trnval == 0) || 
-        (trnval != -1 && mfIsSectorTrailer(trnval))) {
+    if ((blockno == 0) ||
+            (mfIsSectorTrailer(blockno)) ||
+            (trnval == 0) ||
+            (trnval != -1 && mfIsSectorTrailer(trnval))) {
         PrintAndLogEx(WARNING, "invalid block number, should be a data block");
         return PM3_EINVARG;
     }
@@ -8130,7 +8130,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
             memcpy(block, (uint8_t *)&value, 4);
 
             uint8_t cmddata[34];
-            memcpy(cmddata, key, sizeof(key));  
+            memcpy(cmddata, key, sizeof(key));
             // Key == 6 data went to 10, so lets offset 9 for inc/dec
 
             if (action == 0) {
@@ -8141,13 +8141,13 @@ static int CmdHF14AMfValue(const char *Cmd) {
             }
 
             // 00 if increment, 01 if decrement, 02 if restore
-            cmddata[9] = action; 
-            
+            cmddata[9] = action;
+
             if (trnval != -1) {
 
                 // transfer to block
-                cmddata[10] = trnval; 
-                
+                cmddata[10] = trnval;
+
                 memcpy(cmddata + 27, transferkey, sizeof(transferkey));
                 if (mfSectorNum(trnval) != mfSectorNum(blockno)) {
                     cmddata[33] = 1; // should send nested auth
@@ -8200,7 +8200,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
 
         if (isok) {
             PrintAndLogEx(SUCCESS, "Update ... : " _GREEN_("success"));
-            getval = true; 
+            getval = true;
             // all ok so set flag to read current value
         } else {
             PrintAndLogEx(FAILED, "Update ... : " _RED_("failed"));
