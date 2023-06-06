@@ -2045,7 +2045,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 reply_ng(CMD_USART_RX, PM3_ENODATA, NULL, 0);
             }
 
-            StopTicks();  
+            StopTicks();
             BigBuf_free();
             LED_B_OFF();
             break;

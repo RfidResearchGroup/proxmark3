@@ -313,7 +313,7 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
         if (sigType == stECDSA_P256) {
             slen = 32;
         }
-        
+
         PrintAndLogEx(SUCCESS, "\tSignature [%u]...", intsiglen);
         print_hex_noascii_break(&sig[indx], intsiglen, 32);
 
@@ -508,7 +508,7 @@ static int ndefDecodePayloadHandoverRequest(uint8_t *payload, size_t len) {
     PrintAndLogEx(INFO, _CYAN_("Handover Request"));
     uint8_t *p = payload;
     uint8_t major = (*(p) >> 4) & 0x0F;
-    uint8_t minor = *(p) & 0x0F;    
+    uint8_t minor = *(p) & 0x0F;
     p++;
 
     PrintAndLogEx(INFO, "Version....... " _YELLOW_("%u.%u"), major, minor);
@@ -866,7 +866,7 @@ static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
     uint8_t rev[6] = {0};
     reverse_array_copy(ndef->Payload + 2, 6, rev);
     PrintAndLogEx(INFO, "BT MAC.......... " _YELLOW_("%s"), sprint_hex(rev, sizeof(rev)));
-    
+
     // Let's check payload[8]. Tells us a bit about the UUID's. If 0x07 then it tells us a service UUID is 128bit
     switch (ndef->Payload[8]) {
         case 0x02:
@@ -903,29 +903,29 @@ static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
     return PM3_SUCCESS;
 }
 
-// https://raw.githubusercontent.com/haldean/ndef/master/docs/NFCForum-TS-RTD_1.0.pdf   
+// https://raw.githubusercontent.com/haldean/ndef/master/docs/NFCForum-TS-RTD_1.0.pdf
 static int ndefDecodeExternal_record(NDEFHeader_t *ndef) {
-    
+
     if (ndef->TypeLen == 0) {
         PrintAndLogEx(INFO, "no type");
         return PM3_SUCCESS;
     }
-        
+
     if (ndef->PayloadLen == 0) {
         PrintAndLogEx(INFO, "no payload");
         return PM3_SUCCESS;
     }
 
     PrintAndLogEx(INFO
-                    , "    URN... " _GREEN_("urn:nfc:ext:%.*s")
-                    , (int)ndef->TypeLen
-                    , ndef->Type
-                    );
+                  , "    URN... " _GREEN_("urn:nfc:ext:%.*s")
+                  , (int)ndef->TypeLen
+                  , ndef->Type
+                 );
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Payload [%zu]...", ndef->PayloadLen);
     print_hex_noascii_break(ndef->Payload, ndef->PayloadLen, 32);
-    
+
     // do a character check?
     if (!strncmp((char *)ndef->Type, "pilet.ee:ekaart:2", ndef->TypeLen)) {
         PrintAndLogEx(NORMAL, "");

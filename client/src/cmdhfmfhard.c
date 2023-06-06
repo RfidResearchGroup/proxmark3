@@ -510,7 +510,7 @@ static char failstr[250] = "";
 #endif
 
 // the probability that a random nonce has a Sum Property K
-static const float p_K0[NUM_SUMS] = { 
+static const float p_K0[NUM_SUMS] = {
     0.0290, 0.0083, 0.0006, 0.0339, 0.0048, 0.0934, 0.0119, 0.0489,
     0.0602, 0.4180, 0.0602, 0.0489, 0.0119, 0.0934, 0.0048, 0.0339,
     0.0006, 0.0083, 0.0290

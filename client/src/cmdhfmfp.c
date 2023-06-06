@@ -1006,7 +1006,7 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
         for (uint8_t keyAB = startKeyAB; keyAB <= endKeyAB; keyAB++) {
             // main cycle with key check
             for (int i = 0; i < keyListLen; i++) {
- 
+
                 // allow client abort every iteration
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
@@ -1052,14 +1052,14 @@ static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyA
                     selectCard = true;
                     msleep(50);
 
-                    // break out from keylist check loop, 
+                    // break out from keylist check loop,
                     break;
                 }
 
                 if (verbose)
                     PrintAndLogEx(WARNING, "\nsector %02d key %d [%s] res: %d", sector, keyAB, sprint_hex_inrow(keyList[i], 16), res);
 
-                // RES can be: 
+                // RES can be:
                 // PM3_ERFTRANS     -7
                 // PM3_EWRONGANSWER -16
                 if (res == PM3_ERFTRANS) {

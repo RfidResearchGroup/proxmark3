@@ -8,15 +8,15 @@ Author: Cory Solovewicz
 
 Description:
 This is a python script to automate what the updating of the amiibo_tools.lua
-file which holds a lua table of all known amiibos. Previously updating the 
+file which holds a lua table of all known amiibos. Previously updating the
 amiibo_tools.lua was a very manual process.
 
-This script automates the following original command: 
+This script automates the following original command:
 curl https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json | jq 'del(.amiibos[].release)' | jq 'del(.characters)' | pbcopy --> transform to table
-And outputs the formatted file as amiibo_tools.lua 
-If everything goes well, this should be an updated copy of amiibo_tools.lua 
-which can then be placed in the /lualibs/ directory. 
-The temporary amiibo.json file is then deleted 
+And outputs the formatted file as amiibo_tools.lua
+If everything goes well, this should be an updated copy of amiibo_tools.lua
+which can then be placed in the /lualibs/ directory.
+The temporary amiibo.json file is then deleted
 
 Dependencies:
 python3 -m pip install jq
@@ -25,7 +25,7 @@ How to run:
 python update_amiibo_tools_lua.py
 The script will create the file amiibo_tools.lua
 
-After running, manually backup the original /lualibs/amiibo_tools.lua and move the 
+After running, manually backup the original /lualibs/amiibo_tools.lua and move the
 updated amiibo_tools.lua to the /lualibs/ directory.
 -----------------------------------------------------------------------------
 """
