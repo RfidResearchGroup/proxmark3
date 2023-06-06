@@ -12,7 +12,7 @@
     - [ID8211](#id8211)
     - [ID8265](#id8265)
     - [ID8268/8278/8310](#id826882788310)
-    - [K8678](#k8678)
+  * [K8678](#k8678)
 - [High Frequency](#high-frequency)
   * [MIFARE Classic UID](#mifare-classic-uid)
   * [MIFARE Classic CUID](#mifare-classic-cuid)
@@ -204,6 +204,7 @@ Variations of CUID cards are explained in `magic_cards_notes.md`.
 
 ### MIFARE Classic FUID
 ^[Top](#top)
+
 Sold as "anti-clone bypass".
 Behavior: same as CUID, but after editing block 0, tag becomes original S50 chip.
 
