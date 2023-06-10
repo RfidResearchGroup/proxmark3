@@ -1075,10 +1075,11 @@ static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen, b
         return res;
 
     ndefPrintHeader(&NDEFHeader, verbose);
-    PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, _CYAN_("Payload info"));
 
     if (verbose) {
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, _CYAN_("Payload info"));
+
         if (NDEFHeader.TypeLen) {
             PrintAndLogEx(INFO, "Type data");
             print_buffer(NDEFHeader.Type, NDEFHeader.TypeLen, 1);
@@ -1229,7 +1230,9 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 break;
             }
             case 0xFE: {
-                PrintAndLogEx(SUCCESS, "NDEF Terminator detected");
+                if (verbose) {
+                    PrintAndLogEx(SUCCESS, "NDEF Terminator detected");
+                }
                 return PM3_SUCCESS;
             }
             default: {
