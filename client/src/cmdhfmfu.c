@@ -1305,10 +1305,10 @@ typedef struct {
 } mfu_otp_identify_t;
 
 static mfu_otp_identify_t mfu_otp_ident_table[] = {
-    { "SALTO", 12, 4, "534C544F", ul_c_otpgenA, NULL },
-//    { "SAFLOK", 12, 4, NULL, ul_c_otpgenB, NULL },
-//    { "VINGCARD", 12, 4, NULL, ul_c_otpgenC, NULL },
-//    { "DORMA KABA", 12, 4, NULL, ul_c_otpgenD, NULL },
+    { "SALTO tag", 12, 4, "534C544F", ul_c_otpgenA, NULL },
+//    { "SAFLOK tag", 12, 4, NULL, ul_c_otpgenB, NULL },
+//    { "VINGCARD tag", 12, 4, NULL, ul_c_otpgenC, NULL },
+//    { "DORMA KABA tag", 12, 4, NULL, ul_c_otpgenD, NULL },
     { NULL, 0, 0, NULL, NULL, NULL }
 };
 
@@ -1826,6 +1826,8 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             ulc_print_configuration(ulc_conf);
         else
             locked = true;
+
+        mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
 
         if ((tagtype & MAGIC)) {
             //just read key
@@ -3622,10 +3624,10 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, "------------------.---------------");
+    PrintAndLogEx(INFO, "------------------.------------------");
     PrintAndLogEx(INFO, " Using UID 4b: " _YELLOW_("%s"), sprint_hex(uid, 4));
     PrintAndLogEx(INFO, " Using UID 7b: " _YELLOW_("%s"), sprint_hex(uid, 7));
-    PrintAndLogEx(INFO, "----------------------------------");
+    PrintAndLogEx(INFO, "-------------------------------------");
     PrintAndLogEx(INFO, " algo               | pwd      | pack");
     PrintAndLogEx(INFO, "--------------------+----------+-----");
     PrintAndLogEx(INFO, " Transport EV1      | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
@@ -3643,7 +3645,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     PrintAndLogEx(INFO, " SALTO algo");
     PrintAndLogEx(INFO, " Dorma Kaba algo");
     PrintAndLogEx(INFO, " STiD algo");
-    PrintAndLogEx(INFO, "----------------------------------");
+    PrintAndLogEx(INFO, "-------------------------------------");
     return PM3_SUCCESS;
 }
 
