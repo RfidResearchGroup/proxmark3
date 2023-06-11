@@ -195,6 +195,20 @@ uint32_t ul_ev1_pwdgenF(const uint8_t *uid) {
     return pwd;
 }
 
+// Solution from @atc1441
+// https://gist.github.com/atc1441/41af75048e4c22af1f5f0d4c1d94bb56
+// Philips Sonicare toothbrush NFC head
+uint32_t ul_ev1_pwdgenG(const uint8_t *uid, const uint8_t *mfg) {
+
+    init_table(CRC_PHILIPS);
+    // UID
+    uint32_t crc1 = crc16_philips(uid, 7);
+    // MFG string
+    uint32_t crc2 = crc16_fast(mfg, 10, crc1, false, false);
+
+    return (BSWAP_16(crc2) << 16 | BSWAP_16(crc1));
+}
+
 // pack generation for algo 1-3
 uint16_t ul_ev1_packgenA(const uint8_t *uid) {
     uint16_t pack = (uid[0] ^ uid[1] ^ uid[2]) << 8 | (uid[2] ^ 8);
@@ -224,11 +238,24 @@ uint16_t ul_ev1_packgenD(const uint8_t *uid) {
     p ^= 0x5555;
     return BSWAP_16(p & 0xFFFF);
 }
-
 uint16_t ul_ev1_packgenE(const uint8_t *uid) {
 
     uint32_t pwd = ul_ev1_pwdgenE(uid);
     return (0xAD << 8 | ((pwd >> 24) & 0xFF));
+}
+
+uint16_t ul_ev1_packgenG(const uint8_t *uid, const uint8_t *mfg) {
+    init_table(CRC_PHILIPS);
+    // UID
+    uint32_t crc1 = crc16_philips(uid, 7);
+    // MFG string
+    uint32_t crc2 = crc16_fast(mfg, 10, crc1, false, false);
+    // PWD
+    uint32_t pwd = (BSWAP_16(crc2) << 16 | BSWAP_16(crc1));
+
+    uint8_t pb[4];
+    num_to_bytes(pwd, 4, pb);
+    return BSWAP_16(crc16_fast(pb, 4, crc2, false, false));
 }
 
 
