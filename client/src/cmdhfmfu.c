@@ -1391,6 +1391,18 @@ static mfu_identify_t mfu_ident_table[] = {
         "hf mfu dump -k %08x"
     },
     */
+    {
+        "Philips Toothbrush", "0004040201010F03",
+        16, 20, "0310D1010C55027068696C6970732E636F6DFE00",
+        ul_ev1_pwdgen_def, ul_ev1_packgen_def,
+        "hf mfu pwdgen -r"
+    },
+    {
+        "Philips Toothbrush", "0004040201010F03",
+        16, 36, "0320D1011C55027068696C6970732E636F6D2F6E6663627275736868656164746170FE00",
+        ul_ev1_pwdgen_def, ul_ev1_packgen_def,
+        "hf mfu pwdgen -r"
+    },
     {NULL, NULL, 0, 0, NULL, NULL, NULL, NULL}
 };
 
@@ -1412,7 +1424,7 @@ static mfu_identify_t *mfu_match_fingerprint(uint8_t *version, uint8_t *data) {
         uint8_t mtmp[40] = {0};
         param_gethex_to_eol(mfu_ident_table[i].match, 0, mtmp, sizeof(mtmp), &ml);
 
-        bool m2 = (memcmp(mtmp, data + mfu_ident_table[i].mpos, mfu_ident_table[i].mlen) == 0);
+       bool m2 = (memcmp(mtmp, data + mfu_ident_table[i].mpos, mfu_ident_table[i].mlen) == 0);
         if (m2) {
             PrintAndLogEx(DEBUG, "(fingerprint) found %s", mfu_ident_table[i].desc);
             return &mfu_ident_table[i];
@@ -3581,11 +3593,26 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     if (selftest)
         return generator_selftest();
 
+    uint8_t philips_mfg[10] = {0};
+
     if (use_tag) {
         // read uid from tag
         int res = ul_read_uid(uid);
         if (res != PM3_SUCCESS) {
             return res;
+        }
+
+        iso14a_card_select_t card;
+        if (ul_select(&card)) {
+            // Philips toothbrush needs page 0x21-0x23
+            uint8_t data[16] = {0x00};
+            int status = ul_read(0x21, data, sizeof(data));        
+            if (status == -1) {
+                PrintAndLogEx(DEBUG, "Error: tag didn't answer to READ");
+            } else if (status == 16) {
+                memcpy(philips_mfg, data + 2, sizeof(philips_mfg));
+            }
+            DropField();
         }
 
     } else {
@@ -3599,19 +3626,23 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     PrintAndLogEx(INFO, " Using UID 4b: " _YELLOW_("%s"), sprint_hex(uid, 4));
     PrintAndLogEx(INFO, " Using UID 7b: " _YELLOW_("%s"), sprint_hex(uid, 7));
     PrintAndLogEx(INFO, "----------------------------------");
-    PrintAndLogEx(INFO, " algo            | pwd      | pack");
-    PrintAndLogEx(INFO, "-----------------+----------+-----");
-    PrintAndLogEx(INFO, " Transport EV1   | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
-    PrintAndLogEx(INFO, " Amiibo          | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
-    PrintAndLogEx(INFO, " Lego Dimension  | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
-    PrintAndLogEx(INFO, " XYZ 3D printer  | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
-    PrintAndLogEx(INFO, " Xiaomi purifier | %08X | %04X", ul_ev1_pwdgenE(uid), ul_ev1_packgenE(uid));
-    PrintAndLogEx(INFO, " NTAG tools      | %08X | %04X", ul_ev1_pwdgenF(uid), ul_ev1_packgen_def(uid));
-    PrintAndLogEx(INFO, "-----------------+----------+-----");
+    PrintAndLogEx(INFO, " algo               | pwd      | pack");
+    PrintAndLogEx(INFO, "--------------------+----------+-----");
+    PrintAndLogEx(INFO, " Transport EV1      | %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
+    PrintAndLogEx(INFO, " Amiibo             | %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
+    PrintAndLogEx(INFO, " Lego Dimension     | %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
+    PrintAndLogEx(INFO, " XYZ 3D printer     | %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
+    PrintAndLogEx(INFO, " Xiaomi purifier    | %08X | %04X", ul_ev1_pwdgenE(uid), ul_ev1_packgenE(uid));
+    PrintAndLogEx(INFO, " NTAG tools         | %08X | %04X", ul_ev1_pwdgenF(uid), ul_ev1_packgen_def(uid));
+    if (philips_mfg[0] != 0) {
+        PrintAndLogEx(INFO, " Philips Toothbrush | %08X | %04X", ul_ev1_pwdgenG(uid, philips_mfg), ul_ev1_packgenG(uid, philips_mfg));
+    }
+    PrintAndLogEx(INFO, "--------------------+----------+-----");
     PrintAndLogEx(INFO, " Vingcard algo");
     PrintAndLogEx(INFO, " Saflok algo");
     PrintAndLogEx(INFO, " SALTO algo");
     PrintAndLogEx(INFO, " Dorma Kaba algo");
+    PrintAndLogEx(INFO, " STiD algo");
     PrintAndLogEx(INFO, "----------------------------------");
     return PM3_SUCCESS;
 }
