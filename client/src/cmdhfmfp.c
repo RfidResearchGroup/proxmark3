@@ -1097,10 +1097,6 @@ static void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], uint3
 }
 
 static int CmdHFMFPChk(const char *Cmd) {
-    int res;
-    uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {{0}};
-    uint32_t keyListLen = 0;
-    uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {{{0}}};
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp chk",
@@ -1132,6 +1128,10 @@ static int CmdHFMFPChk(const char *Cmd) {
     bool keyB = arg_get_lit(ctx, 2);
     uint8_t startSector = arg_get_int_def(ctx, 3, 0);
     uint8_t endSector = arg_get_int_def(ctx, 4, 0);
+
+    uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {{0}};
+    uint32_t keyListLen = 0;
+    uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {{{0}}};
 
     uint8_t vkey[16] = {0};
     int vkeylen = 0;
@@ -1222,6 +1222,8 @@ static int CmdHFMFPChk(const char *Cmd) {
     if (pattern2b)
         Fill2bPattern(keyList, &keyListLen, &startPattern);
 
+    int res = PM3_SUCCESS;
+
     // dictionary mode
     size_t endFilePosition = 0;
     if (dict_filenamelen) {
@@ -1265,6 +1267,7 @@ static int CmdHFMFPChk(const char *Cmd) {
             Fill2bPattern(keyList, &keyListLen, &startPattern);
             continue;
         }
+
         if (dict_filenamelen && endFilePosition) {
             if (verbose == false)
                 PrintAndLogEx(NORMAL, "d" NOLF);
@@ -1274,6 +1277,7 @@ static int CmdHFMFPChk(const char *Cmd) {
             if (res == PM3_SUCCESS && endFilePosition) {
                 keyListLen = keycnt;
             }
+
             continue;
         }
         break;
@@ -1282,26 +1286,38 @@ static int CmdHFMFPChk(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
 
     // print result
+    char strA[46 + 1] = {0};
+    char strB[46 + 1] = {0};
+
     bool printedHeader = false;
-    for (uint8_t sector = startSector; sector <= endSector; sector++) {
-        if (foundKeys[0][sector][0] || foundKeys[1][sector][0]) {
-            if (!printedHeader) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, "-------+--------------------------------+---------------------------------");
-                PrintAndLogEx(INFO, "|sector|            key A               |            key B               |");
-                PrintAndLogEx(INFO, "|------+--------------------------------+--------------------------------|");
-                printedHeader = true;
-            }
-            PrintAndLogEx(INFO, "|  %02d  |%32s|%32s|",
-                          sector,
-                          (foundKeys[0][sector][0] == 0) ? "------              " : sprint_hex_inrow(&foundKeys[0][sector][1], AES_KEY_LEN),
-                          (foundKeys[1][sector][0] == 0) ? "------              " : sprint_hex_inrow(&foundKeys[1][sector][1], AES_KEY_LEN));
+    for (uint8_t s = startSector; s <= endSector; s++) {
+        if (printedHeader == false) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------");
+            PrintAndLogEx(INFO, " Sec | key A                            | key B");
+            PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------");
+            printedHeader = true;
         }
+
+        if (foundKeys[0][s][0]) {
+            snprintf(strA, sizeof(strA), _GREEN_("%s"), sprint_hex_inrow(&foundKeys[0][s][1], AES_KEY_LEN));
+        } else {
+            snprintf(strA, sizeof(strA), _RED_("%s"), "--------------------------------");
+        }
+
+        if (foundKeys[1][s][0]) {
+            snprintf(strB, sizeof(strB), _GREEN_("%s"), sprint_hex_inrow(&foundKeys[1][s][1], AES_KEY_LEN));
+        } else {
+            snprintf(strB, sizeof(strB), _RED_("%s"), "--------------------------------");
+        }
+
+        PrintAndLogEx(INFO, " " _YELLOW_("%03d") " | %s | %s", s, strA, strB);       
     }
-    if (!printedHeader)
+
+    if (printedHeader == false)
         PrintAndLogEx(INFO, "No keys found(");
     else
-        PrintAndLogEx(INFO, "'------+--------------------------------+--------------------------------'\n");
+        PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------\n");
 
     // save keys to json
     if ((jsonnamelen > 0) && printedHeader) {
