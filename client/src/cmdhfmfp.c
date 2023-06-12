@@ -33,6 +33,7 @@
 #include "fileutils.h"
 #include "protocols.h"
 #include "crypto/libpcrypto.h"
+#include "cmdhfmf.h"    // printblock, header
 
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static uint16_t CardAddresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
@@ -766,25 +767,25 @@ static int CmdHFMFPRdbl(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    uint8_t sector = mfSectorNum(blockn);
+    mf_print_sector_hdr(sector);
+
     int indx = blockn;
     for (int i = 0; i < blocksCount; i++)  {
-        PrintAndLogEx(INFO, "data[%03d]: %s", indx, sprint_hex(&data[1 + i * 16], 16));
+        mf_print_block_one(indx, data + 1 + (i * MFBLOCK_SIZE), verbose);
         indx++;
-        if (mfIsSectorTrailer(indx) && i != blocksCount - 1) {
-            PrintAndLogEx(INFO, "data[%03d]: ------------------- trailer -------------------", indx);
-            indx++;
+    }
+
+    if (memcmp(&data[(blocksCount * 16) + 1], mac, 8)) {
+        PrintAndLogEx(WARNING, "WARNING: mac not equal...");
+        PrintAndLogEx(WARNING, "MAC   card... " _YELLOW_("%s"), sprint_hex_inrow(&data[1 + (blocksCount * MFBLOCK_SIZE)], 8));
+        PrintAndLogEx(WARNING, "MAC reader... " _YELLOW_("%s"), sprint_hex_inrow(mac, sizeof(mac)));
+    } else {
+        if (verbose) {
+            PrintAndLogEx(INFO, "MAC... " _YELLOW_("%s"), sprint_hex_inrow(&data[1 + (blocksCount * MFBLOCK_SIZE)], 8));
         }
     }
-
-    if (memcmp(&data[blocksCount * 16 + 1], mac, 8)) {
-        PrintAndLogEx(WARNING, "WARNING: mac not equal...");
-        PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[blocksCount * 16 + 1], 8));
-        PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
-    } else {
-        if (verbose)
-            PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[blocksCount * 16 + 1], 8));
-    }
-
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -850,9 +851,7 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     int datalen = 0;
     uint8_t mac[8] = {0};
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "  # | sector " _GREEN_("%02d") " / " _GREEN_("0x%02X") "                                | ascii", sectorNum, sectorNum);
-    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+    mf_print_sector_hdr(sectorNum);
 
     for (int blockno = mfFirstBlockOfSector(sectorNum); blockno < mfFirstBlockOfSector(sectorNum) + mfNumBlocksPerSector(sectorNum); blockno++) {
 
@@ -875,12 +874,7 @@ static int CmdHFMFPRdsc(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        // PrintAndLogEx(INFO, "data[%03d]: %s", n, sprint_hex(&data[1], 16));
-        if (blockno == 0) {
-            PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(data + 1, MFBLOCK_SIZE));
-        } else {
-            PrintAndLogEx(INFO, "%3d | %s ", blockno, sprint_hex_ascii(data + 1, MFBLOCK_SIZE));
-        }
+        mf_print_block_one(blockno, data + 1, verbose);
 
         if (memcmp(&data[1 + 16], mac, 8)) {
             PrintAndLogEx(WARNING, "WARNING: mac on block %d not equal...", blockno);

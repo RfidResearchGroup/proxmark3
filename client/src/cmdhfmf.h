@@ -33,7 +33,11 @@ int CmdHFMFNDEFWrite(const char *Cmd);  // used by "nfc mf cwrite"
 void showSectorTable(sector_t *k_sector, size_t k_sectors_cnt);
 void readerAttack(sector_t *k_sector, size_t k_sectors_cnt, nonces_t data, bool setEmulatorMem, bool verbose);
 void printKeyTable(size_t sectorscnt, sector_t *e_sector);
-void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector);
+void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector, bool singel_sector);
+
+bool mfc_value(const uint8_t *d, int32_t *val);
+void mf_print_sector_hdr(uint8_t sector);
+void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose);
 
 int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len);
 #endif

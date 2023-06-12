@@ -207,7 +207,7 @@ static char GetFormatFromSector(uint8_t sectors) {
     }
 }
 
-static bool mfc_value(const uint8_t *d, int32_t *val) {
+bool mfc_value(const uint8_t *d, int32_t *val) {
     // values
     int32_t a = (int32_t)MemLeToUint4byte(d);
     uint32_t a_inv = MemLeToUint4byte(d + 4);
@@ -225,7 +225,7 @@ static bool mfc_value(const uint8_t *d, int32_t *val) {
     return val_checks;
 }
 
-static void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose) {
+void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose) {
     if (blockno == 0) {
         PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
     } else if (mfIsSectorTrailer(blockno)) {
@@ -389,7 +389,7 @@ static void mf_print_values(uint16_t n, uint8_t *d) {
 }
 */
 
-static void mf_print_sector_hdr(uint8_t sector) {
+void mf_print_sector_hdr(uint8_t sector) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "  # | sector " _GREEN_("%02d") " / " _GREEN_("0x%02X") "                                | ascii", sector, sector);
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
