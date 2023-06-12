@@ -172,7 +172,7 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
     const ecdsa_publickey_t nxp_plus_public_keys[] = {
         {"MIFARE Plus EV1",  "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"},
         {"MIFARE Plus Ev_x", "04BB49AE4447E6B1B6D21C098C1538B594A11A4A1DBF3D5E673DEACDEB3CC512D1C08AFA1A2768CE20A200BACD2DC7804CD7523A0131ABF607"},
-        {"MIFARE Plus Trojka", "040F732E0EA7DF2B38F791BF89425BF7DCDF3EE4D976669E3831F324FF15751BD52AFF1782F72FF2731EEAD5F63ABE7D126E03C856FFB942AF"}
+        {"MIFARE Plus Troika", "040F732E0EA7DF2B38F791BF89425BF7DCDF3EE4D976669E3831F324FF15751BD52AFF1782F72FF2731EEAD5F63ABE7D126E03C856FFB942AF"}
     };
 
     uint8_t i;
@@ -849,8 +849,14 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     uint8_t data[250] = {0};
     int datalen = 0;
     uint8_t mac[8] = {0};
-    for (int n = mfFirstBlockOfSector(sectorNum); n < mfFirstBlockOfSector(sectorNum) + mfNumBlocksPerSector(sectorNum); n++) {
-        res = MFPReadBlock(&mf4session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "  # | sector " _GREEN_("%02d") " / " _GREEN_("0x%02X") "                                | ascii", sectorNum, sectorNum);
+    PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
+
+    for (int blockno = mfFirstBlockOfSector(sectorNum); blockno < mfFirstBlockOfSector(sectorNum) + mfNumBlocksPerSector(sectorNum); blockno++) {
+
+        res = MFPReadBlock(&mf4session, plain, blockno & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
         if (res) {
             PrintAndLogEx(ERR, "Read error: %d", res);
             DropField();
@@ -862,25 +868,32 @@ static int CmdHFMFPRdsc(const char *Cmd) {
             DropField();
             return PM3_ESOFT;
         }
-        if (datalen != 1 + 16 + 8 + 2) {
+
+        if (datalen != 1 + MFBLOCK_SIZE + 8 + 2) {
             PrintAndLogEx(ERR, "Error return length:%d", datalen);
             DropField();
             return PM3_ESOFT;
         }
 
-        PrintAndLogEx(INFO, "data[%03d]: %s", n, sprint_hex(&data[1], 16));
+        // PrintAndLogEx(INFO, "data[%03d]: %s", n, sprint_hex(&data[1], 16));
+        if (blockno == 0) {
+            PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(data + 1, MFBLOCK_SIZE));
+        } else {
+            PrintAndLogEx(INFO, "%3d | %s ", blockno, sprint_hex_ascii(data + 1, MFBLOCK_SIZE));
+        }
 
         if (memcmp(&data[1 + 16], mac, 8)) {
-            PrintAndLogEx(WARNING, "WARNING: mac on block %d not equal...", n);
-            PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[1 + 16], 8));
-            PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
+            PrintAndLogEx(WARNING, "WARNING: mac on block %d not equal...", blockno);
+            PrintAndLogEx(WARNING, "MAC   card... " _YELLOW_("%s"), sprint_hex_inrow(&data[1 + MFBLOCK_SIZE], 8));
+            PrintAndLogEx(WARNING, "MAC reader... " _YELLOW_("%s"), sprint_hex_inrow(mac, sizeof(mac)));
         } else {
-            if (verbose)
-                PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1 + 16], 8));
+            if (verbose) {
+                PrintAndLogEx(INFO, "MAC... " _YELLOW_("%s"), sprint_hex_inrow(&data[1 + MFBLOCK_SIZE], 8));
+            }
         }
     }
+    PrintAndLogEx(NORMAL, "");
     DropField();
-
     return PM3_SUCCESS;
 }
 
