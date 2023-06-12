@@ -49,12 +49,12 @@ static const uint64_t g_mifare_default_keys[] = {
     0x5C8FF9990DA2, // MFC EV1 Signature 16 A
     0xD01AFEEB890A, // MFC EV1 Signature 16 B
     0x75CCB59C9BED, // MFC EV1 Signature 17 A
+    0x000000000000, // Blank key
+    0xb0b1b2b3b4b5,
     0xfc00018778f7, // Public Transport
     0x6471a5ef2d1a, // SimonsVoss
     0x4E3552426B32, // ID06
-    0x6A1987C40A21, // Salto
     0xef1232ab18a0, // Schlage
-    0x3B7E4FD575AD, //
     0xb7bf0c13066e, // Gallagher
     0x135b88a94b8b, // Saflok
     0x2A2C13CC242A, // Dorma Kaba
@@ -80,8 +80,6 @@ static const uint64_t g_mifare_default_keys[] = {
     0x3B7E4FD575AD, // HID
     0x11496F97752A, // HID
     0x3E65E4FB65B3, // Gym
-    0x000000000000, // Blank key
-    0xb0b1b2b3b4b5,
     0xaabbccddeeff,
     0x1a2b3c4d5e6f,
     0x123456789abc,
