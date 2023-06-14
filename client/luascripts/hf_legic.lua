@@ -221,7 +221,7 @@ end
 ---
 -- curency-codes for Legic-Cash-Segments (ISO 4217)
 local currency = {
-  ["03d2"]="EUR",
+  ["03D2"]="EUR",
   ["0348"]="USD",
   ["033A"]="GBP",
   ["02F4"]="CHF"
@@ -1447,7 +1447,10 @@ function dumpLegicCash(tag, x)
      print("--------------------------------\n\tLegic-Cash Values\n--------------------------------")
      local limit, curr, balance, rid, tcv
      -- currency of balance & limit
-     curr=currency[tag.SEG[x].data[8]..tag.SEG[x].data[9]]
+     curr=string.upper(tag.SEG[x].data[8]..tag.SEG[x].data[9])
+     if currency[curr] ~= nil then
+       curr = currency[curr]
+     end
      -- maximum balance
      limit=string.format("%4.2f", tonumber(tag.SEG[x].data[10]..tag.SEG[x].data[11]..tag.SEG[x].data[12], 16)/100)
      -- current balance
@@ -1784,17 +1787,17 @@ end
 
 ---
 -- edit Segment Data
-function editSegmentData(data)
+function editSegmentData(data, uid)
     io.write("\n")
     if istable(data) == false then print("no Segment-Data found") end
 
-    local lc = check4LegicCash(data)
+    local lc = check4LegicCash(data, uid)
 
     for i=0, #data-1 do
         data[i]=input(accyan.."Data"..i..acoff..": ", data[i])
     end
     if (lc) then
-        data = fixLegicCash(data)
+        data = fixLegicCash(data, uid)
     end
     return data
 end
@@ -1917,7 +1920,7 @@ function autoSelectSegment(tag, s)
     repeat
       io.write(". ")
       x=x-1
-      res=check4LegicCash(tag.SEG[x].data)
+      res=check4LegicCash(tag.SEG[x].data, uid)
     until ( res or x==0 )
    end
    ---
@@ -2011,7 +2014,7 @@ end
 
 ---
 -- edit Legic Cash
-function editLegicCash(data)
+function editLegicCash(data, uid)
   local limit, curr, balance, rid, tcv
   -- currency of balance & limit
   curr=currency[data[8]..data[9]]
@@ -2064,12 +2067,12 @@ function editLegicCash(data)
     data[20]=string.sub(rid, 5, 6)
   end
 
-  return fixLegicCash(data)
+  return fixLegicCash(data, uid)
 end
 
 ---
 -- chack for signature of a 'Legic-Cash-Segment'
-function check4LegicCash(data)
+function check4LegicCash(data, uid)
   if(#data==32) then
     local stamp_len=(#data-25)
     local stamp=""
@@ -2077,9 +2080,9 @@ function check4LegicCash(data)
       stamp=stamp..data[i].." "
     end
     if (data[7]=="01") then
-      if (("%04x"):format(utils.Crc16(dumpTable(data, "", 0, 12))) == data[13]..data[14]) then
-        if (("%04x"):format(utils.Crc16(dumpTable(data, "", 15, 20))) == data[21]..data[22]) then
-          if (("%04x"):format(utils.Crc16(dumpTable(data, "", 23, 29))) == data[30]..data[31]) then
+      if (("%04x"):format(utils.Crc16Legic(dumpTable(data, "", 0, 12), uid)) == data[13]..data[14]) then
+        if (("%04x"):format(utils.Crc16Legic(dumpTable(data, "", 15, 20), uid)) == data[21]..data[22]) then
+          if (("%04x"):format(utils.Crc16Legic(dumpTable(data, "", 23, 29), uid)) == data[30]..data[31]) then
             io.write(accyan.."Legic-Cash Segment detected "..acoff)
             return true
           end
@@ -2156,7 +2159,7 @@ end
 
 ---
 -- repair / fix crc's of a 'Legic-Cash-Segment'
-function fixLegicCash(data)
+function fixLegicCash(data, uid)
   if(#data==32 and data[7]=="01") then
     local crc1, crc2, crc3
     -- set shadow-balance equal to balance
@@ -2168,9 +2171,9 @@ function fixLegicCash(data)
     data[27]=data[19]
     data[28]=data[20]
     -- calculate all crc's
-    crc1=("%04x"):format(utils.Crc16(dumpTable(data, "", 0, 12)))
-    crc2=("%04x"):format(utils.Crc16(dumpTable(data, "", 15, 20)))
-    crc3=("%04x"):format(utils.Crc16(dumpTable(data, "", 23, 29)))
+    crc1=("%04x"):format(utils.Crc16Legic(dumpTable(data, "", 0, 12), uid))
+    crc2=("%04x"):format(utils.Crc16Legic(dumpTable(data, "", 15, 20), uid))
+    crc3=("%04x"):format(utils.Crc16Legic(dumpTable(data, "", 23, 29), uid))
     -- set crc's
     data[13]=string.sub(crc1, 1, 2)
     data[14]=string.sub(crc1, 3, 4)
@@ -2413,7 +2416,7 @@ function modifyMode()
                     for i=0, #inTAG.SEG do
                       if(check43rdPartyCash1(uid, inTAG.SEG[i].data)) then
                         io.write(accyan.."in Segment index: "..inTAG.SEG[i].index ..acoff.. "\n")
-                      elseif(check4LegicCash(inTAG.SEG[i].data)) then
+                      elseif(check4LegicCash(inTAG.SEG[i].data, uid)) then
                         io.write(accyan.."in Segment index: "..inTAG.SEG[i].index..acoff.."\n")
                         lc=true;
                         lci=inTAG.SEG[i].index;
@@ -2520,7 +2523,7 @@ function modifyMode()
               if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
               else sel=selectSegment(inTAG) end
               if (istable(inTAG.SEG[sel])) then
-                inTAG.SEG[sel].data=editSegmentData(inTAG.SEG[sel].data)
+                inTAG.SEG[sel].data=editSegmentData(inTAG.SEG[sel].data, inTAG.MCC)
               end
             end,
     ---
@@ -2587,13 +2590,15 @@ function modifyMode()
                 else
                     x = selectSegment(inTAG)
                 end
-                inTAG.SEG[x].data=fixLegicCash(inTAG.SEG[x].data)
+                local uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
+                inTAG.SEG[x].data=fixLegicCash(inTAG.SEG[x].data, uid)
               end,
     ---
-    -- edit legic-cash values fixLegicCash(data)
+    -- edit legic-cash values fixLegicCash(data, mcc)
     ["elc"] = function(x)
                 x=autoSelectSegment(inTAG, "legiccash")
-                inTAG.SEG[x].data=editLegicCash(inTAG.SEG[x].data)
+                local uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
+                inTAG.SEG[x].data=editLegicCash(inTAG.SEG[x].data, uid)
               end,
     ---
     -- dump legic-cash human-readable
