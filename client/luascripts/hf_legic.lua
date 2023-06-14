@@ -2523,7 +2523,8 @@ function modifyMode()
               if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
               else sel=selectSegment(inTAG) end
               if (istable(inTAG.SEG[sel])) then
-                inTAG.SEG[sel].data=editSegmentData(inTAG.SEG[sel].data, inTAG.MCC)
+		local uid = inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
+                inTAG.SEG[sel].data=editSegmentData(inTAG.SEG[sel].data, uid)
               end
             end,
     ---
@@ -2594,7 +2595,7 @@ function modifyMode()
                 inTAG.SEG[x].data=fixLegicCash(inTAG.SEG[x].data, uid)
               end,
     ---
-    -- edit legic-cash values fixLegicCash(data, mcc)
+    -- edit legic-cash values fixLegicCash(data, uid)
     ["elc"] = function(x)
                 x=autoSelectSegment(inTAG, "legiccash")
                 local uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
