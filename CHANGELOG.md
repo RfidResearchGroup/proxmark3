@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fix LegicCash segment handling in `hf_legic.lua` script (@jmichelp)
  - Fixed `trace list` - now handles marking of crc bytes w color a bit better (@iceman1001)
  - Changed `hf mfu pwdgen -r` - now generates pwd/pack for Philips Sonicare, thanks @ckuenzi, @atc1441 (@iceman1001)
  - Changed `hf mfu info` - now detects Philips Sonicare devices (@iceman1001)
