@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Fixed `hf 15693/iclass sniff` trace timings (@nvx)
+ - Fix LegicCash segment handling in `hf_legic.lua` script (@jmichelp)
  - Fixed `trace list` - now handles marking of crc bytes w color a bit better (@iceman1001)
  - Changed `hf mfu pwdgen -r` - now generates pwd/pack for Philips Sonicare, thanks @ckuenzi, @atc1441 (@iceman1001)
  - Changed `hf mfu info` - now detects Philips Sonicare devices (@iceman1001)
