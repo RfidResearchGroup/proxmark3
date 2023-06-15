@@ -660,26 +660,14 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
                 char *cb_str = str_dup(pos1 + 1);
 
-                if (hdr->isResponse) {
-                    if (g_session.supports_colors) {
-                        if (crcStatus == 0) {
-                            snprintf(pos1, 24, AEND " " _RED_("%s"), cb_str);
-                        } else {
-                            snprintf(pos1, 24, AEND " " _GREEN_("%s"), cb_str);
-                        }
+                if (g_session.supports_colors) {
+                    if (crcStatus == 0) {
+                        snprintf(pos1, 24, AEND " " _RED_("%s"), cb_str);
                     } else {
-                        snprintf(pos1, 9, "[%s]", cb_str);
+                        snprintf(pos1, 24, AEND " " _GREEN_("%s"), cb_str);
                     }
                 } else {
-                    if (g_session.supports_colors) {
-                        if (crcStatus == 0) {
-                            snprintf(pos1, 24, AEND " " _RED_("%s"), cb_str);
-                        } else {
-                            snprintf(pos1, 24, AEND " " _GREEN_("%s"), cb_str);
-                        }
-                    } else {
-                        snprintf(pos1, 9, "[%s]", cb_str);
-                    }
+                    snprintf(pos1, 9, "[%s]", cb_str);
                 }
 
                 // odd case of second crc byte is alone in a new line
@@ -690,26 +678,14 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                     pos1 = line[((data_len - 2) / TRACE_MAX_HEX_BYTES) + 1];
                     cb_str = str_dup(pos1);
 
-                    if (hdr->isResponse) {
-                        if (g_session.supports_colors) {
-                            if (crcStatus == 0) {
-                                snprintf(pos1, 24, _RED_("%s"), cb_str);
-                            } else {
-                                snprintf(pos1, 24, _GREEN_("%s"), cb_str);
-                            }
+                    if (g_session.supports_colors) {
+                        if (crcStatus == 0) {
+                            snprintf(pos1, 24, _RED_("%s"), cb_str);
                         } else {
-                            snprintf(pos1, 9, "[%s]", cb_str);
+                            snprintf(pos1, 24, _GREEN_("%s"), cb_str);
                         }
                     } else {
-                        if (g_session.supports_colors) {
-                            if (crcStatus == 0) {
-                                snprintf(pos1, 24, _RED_("%s"), cb_str);
-                            } else {
-                                snprintf(pos1, 24, _GREEN_("%s"), cb_str);
-                            }
-                        } else {
-                            snprintf(pos1, 9, "[%s]", cb_str);
-                        }
+                        snprintf(pos1, 9, "[%s]", cb_str);
                     }
                 }
 
