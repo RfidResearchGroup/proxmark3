@@ -1109,7 +1109,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfp chk",
                   "Checks keys on MIFARE Plus card",
                   "hf mfp chk -k 000102030405060708090a0b0c0d0e0f  -> check key on sector 0 as key A and B\n"
-                  "hf mfp chk -s 2 -a                              -> check default key list on sector 2, key A\n"
+                  "hf mfp chk -s 2 -a                              -> check default key list on sector 2, only key A\n"
                   "hf mfp chk -d mfp_default_keys -s0 -e6          -> check keys from dictionary against sectors 0-6\n"
                   "hf mfp chk --pattern1b -j keys                  -> check all 1-byte keys pattern and save found keys to json\n"
                   "hf mfp chk --pattern2b --startp2b FA00          -> check all 2-byte keys pattern. Start from key FA00FA00...FA00");
@@ -1208,10 +1208,10 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     uint8_t startKeyAB = 0;
     uint8_t endKeyAB = 1;
-    if (keyA && !keyB)
+    if (keyA && (keyB == false))
         endKeyAB = 0;
 
-    if (!keyA && keyB)
+    if ((keyA == false) && keyB)
         startKeyAB = 1;
 
     if (endSector < startSector)
@@ -1219,8 +1219,9 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     // 1-byte pattern search mode
     if (pattern1b) {
-        for (int i = 0; i < 0x100; i++)
+        for (int i = 0; i < 0x100; i++) {
             memset(keyList[i], i, 16);
+        }
 
         keyListLen = 0x100;
     }
@@ -1245,8 +1246,9 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     if (keyListLen == 0) {
         for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
-            if (hex_to_bytes(g_mifare_plus_default_keys[i], keyList[keyListLen], 16) != 16)
+            if (hex_to_bytes(g_mifare_plus_default_keys[i], keyList[keyListLen], 16) != 16) {
                 break;
+            }
 
             keyListLen++;
         }
@@ -1259,16 +1261,20 @@ static int CmdHFMFPChk(const char *Cmd) {
         PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " keys", keyListLen);
     }
 
-    if (verbose == false)
+    if (verbose == false) {
         PrintAndLogEx(INFO, "Search keys");
+    }
 
     while (true) {
-        res = MFPKeyCheck(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys, verbose);
-        if (res == PM3_EOPABORTED)
+        res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys, verbose);
+        if (res == PM3_EOPABORTED) {
             break;
+        }
+
         if (pattern2b && startPattern < 0x10000) {
-            if (verbose == false)
+            if (verbose == false) {
                 PrintAndLogEx(NORMAL, "p" NOLF);
+            }
 
             keyListLen = 0;
             Fill2bPattern(keyList, &keyListLen, &startPattern);
@@ -1604,7 +1610,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "");
 
-    if (!datalen) {
+    if (datalen == 0) {
         PrintAndLogEx(ERR, "no NDEF data");
         return PM3_SUCCESS;
     }
@@ -1618,8 +1624,20 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
     if (fnlen != 0) {
         saveFile(filename, ".bin", data, datalen);
     }
-    NDEFDecodeAndPrint(data, datalen, verbose);
-    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -vv`") " for more details");
+
+    res = NDEFDecodeAndPrint(data, datalen, verbose);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
+        res = NDEFRecordsDecodeAndPrint(data, datalen, verbose);
+    }
+
+    if (verbose == false) {
+        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -v`") " for more details");
+    } else {
+        if (verbose2 == false) {
+            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -vv`") " for more details");
+        }
+    }
     return PM3_SUCCESS;
 }
 
