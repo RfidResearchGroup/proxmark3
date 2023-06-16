@@ -70,7 +70,7 @@ static uint8_t *gs_mfuc_key = NULL;
 
 uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
     if (n < 3) return 2;
-    if (isResponse && (n < 6)) return 2;
+    if (isResponse && (n == 5)) return 2;
     if (d[1] == 0x50 &&
             d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
             d[0] <= ISO14443A_CMD_ANTICOLL_OR_SELECT_3) {

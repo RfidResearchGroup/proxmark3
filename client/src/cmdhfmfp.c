@@ -33,6 +33,7 @@
 #include "fileutils.h"
 #include "protocols.h"
 #include "crypto/libpcrypto.h"
+#include "cmdhfmf.h"    // printblock, header
 
 static const uint8_t DefaultKey[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static uint16_t CardAddresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
@@ -172,7 +173,7 @@ static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature
     const ecdsa_publickey_t nxp_plus_public_keys[] = {
         {"MIFARE Plus EV1",  "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"},
         {"MIFARE Plus Ev_x", "04BB49AE4447E6B1B6D21C098C1538B594A11A4A1DBF3D5E673DEACDEB3CC512D1C08AFA1A2768CE20A200BACD2DC7804CD7523A0131ABF607"},
-        {"MIFARE Plus Trojka", "040F732E0EA7DF2B38F791BF89425BF7DCDF3EE4D976669E3831F324FF15751BD52AFF1782F72FF2731EEAD5F63ABE7D126E03C856FFB942AF"}
+        {"MIFARE Plus Troika", "040F732E0EA7DF2B38F791BF89425BF7DCDF3EE4D976669E3831F324FF15751BD52AFF1782F72FF2731EEAD5F63ABE7D126E03C856FFB942AF"}
     };
 
     uint8_t i;
@@ -766,25 +767,25 @@ static int CmdHFMFPRdbl(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    uint8_t sector = mfSectorNum(blockn);
+    mf_print_sector_hdr(sector);
+
     int indx = blockn;
     for (int i = 0; i < blocksCount; i++)  {
-        PrintAndLogEx(INFO, "data[%03d]: %s", indx, sprint_hex(&data[1 + i * 16], 16));
+        mf_print_block_one(indx, data + 1 + (i * MFBLOCK_SIZE), verbose);
         indx++;
-        if (mfIsSectorTrailer(indx) && i != blocksCount - 1) {
-            PrintAndLogEx(INFO, "data[%03d]: ------------------- trailer -------------------", indx);
-            indx++;
+    }
+
+    if (memcmp(&data[(blocksCount * 16) + 1], mac, 8)) {
+        PrintAndLogEx(WARNING, "WARNING: mac not equal...");
+        PrintAndLogEx(WARNING, "MAC   card... " _YELLOW_("%s"), sprint_hex_inrow(&data[1 + (blocksCount * MFBLOCK_SIZE)], 8));
+        PrintAndLogEx(WARNING, "MAC reader... " _YELLOW_("%s"), sprint_hex_inrow(mac, sizeof(mac)));
+    } else {
+        if (verbose) {
+            PrintAndLogEx(INFO, "MAC... " _YELLOW_("%s"), sprint_hex_inrow(&data[1 + (blocksCount * MFBLOCK_SIZE)], 8));
         }
     }
-
-    if (memcmp(&data[blocksCount * 16 + 1], mac, 8)) {
-        PrintAndLogEx(WARNING, "WARNING: mac not equal...");
-        PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[blocksCount * 16 + 1], 8));
-        PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
-    } else {
-        if (verbose)
-            PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[blocksCount * 16 + 1], 8));
-    }
-
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -849,8 +850,12 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     uint8_t data[250] = {0};
     int datalen = 0;
     uint8_t mac[8] = {0};
-    for (int n = mfFirstBlockOfSector(sectorNum); n < mfFirstBlockOfSector(sectorNum) + mfNumBlocksPerSector(sectorNum); n++) {
-        res = MFPReadBlock(&mf4session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
+
+    mf_print_sector_hdr(sectorNum);
+
+    for (int blockno = mfFirstBlockOfSector(sectorNum); blockno < mfFirstBlockOfSector(sectorNum) + mfNumBlocksPerSector(sectorNum); blockno++) {
+
+        res = MFPReadBlock(&mf4session, plain, blockno & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
         if (res) {
             PrintAndLogEx(ERR, "Read error: %d", res);
             DropField();
@@ -862,25 +867,27 @@ static int CmdHFMFPRdsc(const char *Cmd) {
             DropField();
             return PM3_ESOFT;
         }
-        if (datalen != 1 + 16 + 8 + 2) {
+
+        if (datalen != 1 + MFBLOCK_SIZE + 8 + 2) {
             PrintAndLogEx(ERR, "Error return length:%d", datalen);
             DropField();
             return PM3_ESOFT;
         }
 
-        PrintAndLogEx(INFO, "data[%03d]: %s", n, sprint_hex(&data[1], 16));
+        mf_print_block_one(blockno, data + 1, verbose);
 
         if (memcmp(&data[1 + 16], mac, 8)) {
-            PrintAndLogEx(WARNING, "WARNING: mac on block %d not equal...", n);
-            PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[1 + 16], 8));
-            PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
+            PrintAndLogEx(WARNING, "WARNING: mac on block %d not equal...", blockno);
+            PrintAndLogEx(WARNING, "MAC   card... " _YELLOW_("%s"), sprint_hex_inrow(&data[1 + MFBLOCK_SIZE], 8));
+            PrintAndLogEx(WARNING, "MAC reader... " _YELLOW_("%s"), sprint_hex_inrow(mac, sizeof(mac)));
         } else {
-            if (verbose)
-                PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1 + 16], 8));
+            if (verbose) {
+                PrintAndLogEx(INFO, "MAC... " _YELLOW_("%s"), sprint_hex_inrow(&data[1 + MFBLOCK_SIZE], 8));
+            }
         }
     }
+    PrintAndLogEx(NORMAL, "");
     DropField();
-
     return PM3_SUCCESS;
 }
 
@@ -993,7 +1000,7 @@ static int CmdHFMFPWrbl(const char *Cmd) {
 #define AES_KEY_LEN        16
 #define MAX_KEYS_LIST_LEN  1024
 
-static int MFPKeyCheck(uint8_t startSector, uint8_t endSector, uint8_t startKeyAB, uint8_t endKeyAB,
+static int plus_key_check(uint8_t startSector, uint8_t endSector, uint8_t startKeyAB, uint8_t endKeyAB,
                        uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], size_t keyListLen, uint8_t foundKeys[2][64][AES_KEY_LEN + 1],
                        bool verbose) {
     int res;
@@ -1097,16 +1104,12 @@ static void Fill2bPattern(uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN], uint3
 }
 
 static int CmdHFMFPChk(const char *Cmd) {
-    int res;
-    uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {{0}};
-    uint32_t keyListLen = 0;
-    uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {{{0}}};
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp chk",
                   "Checks keys on MIFARE Plus card",
                   "hf mfp chk -k 000102030405060708090a0b0c0d0e0f  -> check key on sector 0 as key A and B\n"
-                  "hf mfp chk -s 2 -a                              -> check default key list on sector 2, key A\n"
+                  "hf mfp chk -s 2 -a                              -> check default key list on sector 2, only key A\n"
                   "hf mfp chk -d mfp_default_keys -s0 -e6          -> check keys from dictionary against sectors 0-6\n"
                   "hf mfp chk --pattern1b -j keys                  -> check all 1-byte keys pattern and save found keys to json\n"
                   "hf mfp chk --pattern2b --startp2b FA00          -> check all 2-byte keys pattern. Start from key FA00FA00...FA00");
@@ -1132,6 +1135,10 @@ static int CmdHFMFPChk(const char *Cmd) {
     bool keyB = arg_get_lit(ctx, 2);
     uint8_t startSector = arg_get_int_def(ctx, 3, 0);
     uint8_t endSector = arg_get_int_def(ctx, 4, 0);
+
+    uint8_t keyList[MAX_KEYS_LIST_LEN][AES_KEY_LEN] = {{0}};
+    uint32_t keyListLen = 0;
+    uint8_t foundKeys[2][64][AES_KEY_LEN + 1] = {{{0}}};
 
     uint8_t vkey[16] = {0};
     int vkeylen = 0;
@@ -1201,10 +1208,10 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     uint8_t startKeyAB = 0;
     uint8_t endKeyAB = 1;
-    if (keyA && !keyB)
+    if (keyA && (keyB == false))
         endKeyAB = 0;
 
-    if (!keyA && keyB)
+    if ((keyA == false) && keyB)
         startKeyAB = 1;
 
     if (endSector < startSector)
@@ -1212,8 +1219,9 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     // 1-byte pattern search mode
     if (pattern1b) {
-        for (int i = 0; i < 0x100; i++)
+        for (int i = 0; i < 0x100; i++) {
             memset(keyList[i], i, 16);
+        }
 
         keyListLen = 0x100;
     }
@@ -1221,6 +1229,8 @@ static int CmdHFMFPChk(const char *Cmd) {
     // 2-byte pattern search mode
     if (pattern2b)
         Fill2bPattern(keyList, &keyListLen, &startPattern);
+
+    int res = PM3_SUCCESS;
 
     // dictionary mode
     size_t endFilePosition = 0;
@@ -1236,8 +1246,9 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     if (keyListLen == 0) {
         for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
-            if (hex_to_bytes(g_mifare_plus_default_keys[i], keyList[keyListLen], 16) != 16)
+            if (hex_to_bytes(g_mifare_plus_default_keys[i], keyList[keyListLen], 16) != 16) {
                 break;
+            }
 
             keyListLen++;
         }
@@ -1250,21 +1261,26 @@ static int CmdHFMFPChk(const char *Cmd) {
         PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " keys", keyListLen);
     }
 
-    if (verbose == false)
+    if (verbose == false) {
         PrintAndLogEx(INFO, "Search keys");
+    }
 
     while (true) {
-        res = MFPKeyCheck(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys, verbose);
-        if (res == PM3_EOPABORTED)
+        res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, keyList, keyListLen, foundKeys, verbose);
+        if (res == PM3_EOPABORTED) {
             break;
+        }
+
         if (pattern2b && startPattern < 0x10000) {
-            if (verbose == false)
+            if (verbose == false) {
                 PrintAndLogEx(NORMAL, "p" NOLF);
+            }
 
             keyListLen = 0;
             Fill2bPattern(keyList, &keyListLen, &startPattern);
             continue;
         }
+
         if (dict_filenamelen && endFilePosition) {
             if (verbose == false)
                 PrintAndLogEx(NORMAL, "d" NOLF);
@@ -1274,6 +1290,7 @@ static int CmdHFMFPChk(const char *Cmd) {
             if (res == PM3_SUCCESS && endFilePosition) {
                 keyListLen = keycnt;
             }
+
             continue;
         }
         break;
@@ -1282,26 +1299,38 @@ static int CmdHFMFPChk(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
 
     // print result
+    char strA[46 + 1] = {0};
+    char strB[46 + 1] = {0};
+
     bool printedHeader = false;
-    for (uint8_t sector = startSector; sector <= endSector; sector++) {
-        if (foundKeys[0][sector][0] || foundKeys[1][sector][0]) {
-            if (!printedHeader) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, "-------+--------------------------------+---------------------------------");
-                PrintAndLogEx(INFO, "|sector|            key A               |            key B               |");
-                PrintAndLogEx(INFO, "|------+--------------------------------+--------------------------------|");
-                printedHeader = true;
-            }
-            PrintAndLogEx(INFO, "|  %02d  |%32s|%32s|",
-                          sector,
-                          (foundKeys[0][sector][0] == 0) ? "------              " : sprint_hex_inrow(&foundKeys[0][sector][1], AES_KEY_LEN),
-                          (foundKeys[1][sector][0] == 0) ? "------              " : sprint_hex_inrow(&foundKeys[1][sector][1], AES_KEY_LEN));
+    for (uint8_t s = startSector; s <= endSector; s++) {
+        if (printedHeader == false) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------");
+            PrintAndLogEx(INFO, " Sec | key A                            | key B");
+            PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------");
+            printedHeader = true;
         }
+
+        if (foundKeys[0][s][0]) {
+            snprintf(strA, sizeof(strA), _GREEN_("%s"), sprint_hex_inrow(&foundKeys[0][s][1], AES_KEY_LEN));
+        } else {
+            snprintf(strA, sizeof(strA), _RED_("%s"), "--------------------------------");
+        }
+
+        if (foundKeys[1][s][0]) {
+            snprintf(strB, sizeof(strB), _GREEN_("%s"), sprint_hex_inrow(&foundKeys[1][s][1], AES_KEY_LEN));
+        } else {
+            snprintf(strB, sizeof(strB), _RED_("%s"), "--------------------------------");
+        }
+
+        PrintAndLogEx(INFO, " " _YELLOW_("%03d") " | %s | %s", s, strA, strB);       
     }
-    if (!printedHeader)
+
+    if (printedHeader == false)
         PrintAndLogEx(INFO, "No keys found(");
     else
-        PrintAndLogEx(INFO, "'------+--------------------------------+--------------------------------'\n");
+        PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------\n");
 
     // save keys to json
     if ((jsonnamelen > 0) && printedHeader) {
@@ -1581,7 +1610,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "");
 
-    if (!datalen) {
+    if (datalen == 0) {
         PrintAndLogEx(ERR, "no NDEF data");
         return PM3_SUCCESS;
     }
@@ -1595,8 +1624,20 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
     if (fnlen != 0) {
         saveFile(filename, ".bin", data, datalen);
     }
-    NDEFDecodeAndPrint(data, datalen, verbose);
-    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -vv`") " for more details");
+
+    res = NDEFDecodeAndPrint(data, datalen, verbose);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
+        res = NDEFRecordsDecodeAndPrint(data, datalen, verbose);
+    }
+
+    if (verbose == false) {
+        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -v`") " for more details");
+    } else {
+        if (verbose2 == false) {
+            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -vv`") " for more details");
+        }
+    }
     return PM3_SUCCESS;
 }
 

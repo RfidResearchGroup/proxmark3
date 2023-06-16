@@ -250,16 +250,13 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     if (g_session.incognito) {
         PrintAndLogEx(INFO, "No history will be recorded");
     } else {
-        bool loaded_history = false;
         if (searchHomeFilePath(&g_session.history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
             g_session.history_path = NULL;
-        } else {
-            loaded_history = (pm3line_load_history(g_session.history_path) == PM3_SUCCESS);
-        }
-        if (loaded_history) {
-            pm3line_install_signals();
-        } else {
             PrintAndLogEx(ERR, "No history will be recorded");
+        } else {
+            if (pm3line_load_history(g_session.history_path) != PM3_SUCCESS) {
+                PrintAndLogEx(INFO, "No previous history could be loaded");
+            }
         }
     }
 

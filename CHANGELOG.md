@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `pm3-flash-all` shell script now correctly identify the if running on outdated bootloader (@iceman1001)
+ - Fixed `hf 15693/iclass sniff` trace timings (@nvx)
+ - Fix LegicCash segment handling in `hf_legic.lua` script (@jmichelp)
+ - Fixed `trace list` - now handles marking of crc bytes w color a bit better (@iceman1001)
+ - Changed `hf mfu pwdgen -r` - now generates pwd/pack for Philips Sonicare, thanks @ckuenzi, @atc1441 (@iceman1001)
+ - Changed `hf mfu info` - now detects Philips Sonicare devices (@iceman1001)
  - Fixed truncated FPGA upload due to incorrect integer size variable (@d18c7db)
  - Changed `usart btfactory` - handles the new BT board with version "BT SPP V3.0" (@iceman1001) 
  - Changed `hf mf eview --sk` - now can extract keys and save to file (@iceman1001)
