@@ -21,8 +21,6 @@
 
 #include "common.h"
 
-typedef uint8_t bruteforce_mode_t;
-
 #define BF_KEY_SIZE_32 4
 #define BF_KEY_SIZE_48 6
 
@@ -37,7 +35,6 @@ typedef uint8_t bruteforce_mode_t;
 #define BF_MODE_SMART 3
 
 
-typedef uint8_t bruteforce_charset_t;
 // bit flags - can be used together using logical OR
 #define BF_CHARSET_DIGITS 1
 #define BF_CHARSET_UPPERCASE 2
@@ -49,9 +46,11 @@ typedef uint8_t bruteforce_charset_t;
 #define BF_CHARSET_DIGITS_SIZE 10
 #define BF_CHARSET_UPPERCASE_SIZE 25
 
-
 extern uint8_t charset_digits[];
 extern uint8_t charset_uppercase[];
+
+typedef uint8_t bruteforce_charset_t;
+typedef uint8_t bruteforce_mode_t;
 
 // structure to hold key generator temporary data
 typedef struct {
@@ -71,12 +70,17 @@ typedef struct {
 
     uint32_t range_low;
     uint32_t range_high;
+    uint16_t smart_mode_stage;
     // flags to use internally by generators as they wish
     bool flag1, flag2, flag3;
+    // counters to use internally by generators as they wish
+    uint32_t counter1, counter2;
 
 } generator_context_t;
 
+
 void bf_generator_init(generator_context_t *ctx, uint8_t mode, uint8_t key_size);
+void bf_generator_clear(generator_context_t *ctx); // clear flags and counters used by generators
 int bf_generator_set_charset(generator_context_t *ctx, uint8_t charsets);
 int bf_generate(generator_context_t *ctx);
 int _bf_generate_mode_range(generator_context_t *ctx);
@@ -84,6 +88,16 @@ int _bf_generate_mode_charset(generator_context_t *ctx);
 int _bf_generate_mode_smart(generator_context_t *ctx);
 int bf_array_increment(uint8_t *data, uint8_t data_len, uint8_t modulo);
 uint32_t bf_get_key32(generator_context_t *ctx);
-uint32_t bf_get_key48(generator_context_t *ctx);
+uint64_t bf_get_key48(generator_context_t *ctx);
+
+// smart mode
+typedef int (smart_generator_t)(generator_context_t *ctx);
+
+int bf_generate_mode_smart(generator_context_t *ctx);
+
+int smart_generator_test1(generator_context_t *ctx);
+int smart_generator_test2(generator_context_t *ctx);
+
+extern smart_generator_t *smart_generators[]; // array of smart cracking functions
 
 #endif // BRUTEFORCE_H__
