@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `pm3-flash-all` shell script now correctly identify the if running on outdated bootloader (@iceman1001)
  - Fixed `hf 15693/iclass sniff` trace timings (@nvx)
  - Fix LegicCash segment handling in `hf_legic.lua` script (@jmichelp)
  - Fixed `trace list` - now handles marking of crc bytes w color a bit better (@iceman1001)

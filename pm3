@@ -144,7 +144,8 @@ function get_pm3_list_Windows {
         DEV=${DEV/ */}
         #prevent soft bricking when using pm3-flash-all on an outdated bootloader
         if [ $(basename -- "$0") = "pm3-flash-all" ]; then
-            if [ ! $(wmic /locale:ms_409 path Win32_SerialPort Where "DeviceID='$DEV'" Get PNPDeviceID 2>/dev/null | awk -b '/^USB/{print $1}') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
+            line=$(wmic /locale:ms_409 path Win32_SerialPort Where "DeviceID='$DEV'" Get PNPDeviceID 2>/dev/null | awk -b '/^USB/{print $1}');
+            if [[ ! $line =~ ^"USB\VID_9AC4&PID_4B8F\ICEMAN" ]]; then
                 echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
                 exit 1
             fi
@@ -189,9 +190,11 @@ function get_pm3_list_WSL {
         DEV=$(echo $DEV | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p')
         # ttyS counterpart takes some more time to appear
         if [ -e "$DEV" ]; then
+
             #prevent soft bricking when using pm3-flash-all on an outdated bootloader
             if [ $(basename -- "$0") = "pm3-flash-all" ]; then
-                if [ ! $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null | tr -dc '[:print:]') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
+                line=$($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null | tr -dc '[:print:]');
+                if [[ ! $line =~ ^"USB\VID_9AC4&PID_4B8F\ICEMAN" ]]; then
                     echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
                     exit 1
                 fi
