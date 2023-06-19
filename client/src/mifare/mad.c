@@ -331,12 +331,22 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
     for (int i = 1; i < 16; i++) {
         uint16_t aid = madGetAID(sector, swapmad, 1, i);
         if (aid < 6) {
-            PrintAndLogEx(INFO, (ibs == i) ? _MAGENTA_(" %02d [%04X] (%s)") : " %02d [%04X] (%s)", i, aid, aid_admin[aid]);
+            PrintAndLogEx(INFO, 
+                (ibs == i) ? _MAGENTA_(" %02d [%04X] %s") : " %02d [" _GREEN_("%04X") "] %s",
+                i,
+                aid,
+                aid_admin[aid]
+            );
+
         } else if (prev_aid == aid) {
-            PrintAndLogEx(INFO, (ibs == i) ? _MAGENTA_(" %02d [%04X] (continuation)") : " %02d [%04X] (continuation)", i, aid);
+            PrintAndLogEx(INFO, 
+                (ibs == i) ? _MAGENTA_(" %02d [%04X] continuation") : " %02d [" _YELLOW_("%04X") "] continuation",
+                i,
+                aid
+            );
         } else {
-            char fmt[30];
-            snprintf(fmt, sizeof(fmt), (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i, aid, "%s");
+            char fmt[60];
+            snprintf(fmt, sizeof(fmt), (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [" _GREEN_("%04X") "]%s", i, aid, "%s");
             print_aid_description(mad_known_aids, aid, fmt, verbose);
             prev_aid = aid;
         }
