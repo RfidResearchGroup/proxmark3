@@ -551,19 +551,19 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             if (atslen > 0)
                 JsonSaveBufAsHexCompact(root, "$.Card.ATS", &data[14], atslen);
 
-            uint8_t vdata[2][64][16 + 1] = {{{0}}};
-            memcpy(vdata, &data[14 + atslen], 2 * 64 * 17);
+            uint8_t vdata[2][64][17] = {{{0}}};
+            memcpy(vdata, data + (14 + atslen), 2 * 64 * 17);
 
             for (size_t i = 0; i < datalen; i++) {
                 char path[PATH_MAX_LENGTH] = {0};
 
                 if (vdata[0][i][0]) {
-                    snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyA", mfSectorNum(i));
+                    snprintf(path, sizeof(path), "$.SectorKeys.%zu.KeyA", i);
                     JsonSaveBufAsHexCompact(root, path, &vdata[0][i][1], 16);
                 }
 
                 if (vdata[1][i][0]) {
-                    snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyB", mfSectorNum(i));
+                    snprintf(path, sizeof(path), "$.SectorKeys.%zu.KeyB", i);
                     JsonSaveBufAsHexCompact(root, path, &vdata[1][i][1], 16);
                 }
             }
