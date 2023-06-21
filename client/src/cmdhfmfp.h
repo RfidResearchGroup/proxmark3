@@ -20,6 +20,10 @@
 
 #include "common.h"
 
+
+#define AES_KEY_LEN            16
+#define MAX_AES_KEYS_LIST_LEN  1024
+
 int CmdHFMFP(const char *Cmd);
 int CmdHFMFPNDEFRead(const char *Cmd);
 
