@@ -29,6 +29,7 @@
 #include "cmdhficlass.h"  // pagemap
 #include "protocols.h"    // iclass defines
 #include "cmdhftopaz.h"   // TOPAZ defines
+#include "cmdhfmfp.h"     // MFP / AES defines
 
 #ifdef _WIN32
 #include "scandir.h"
@@ -543,13 +544,14 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             break;
         }
         case jsfMfPlusKeys: {
-            JsonSaveStr(root, "FileType", "mfp");
+            JsonSaveStr(root, "FileType", "mfpkeys");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);
             JsonSaveBufAsHexCompact(root, "$.Card.SAK", &data[10], 1);
             JsonSaveBufAsHexCompact(root, "$.Card.ATQA", &data[11], 2);
             uint8_t atslen = data[13];
-            if (atslen > 0)
+            if (atslen > 0) {
                 JsonSaveBufAsHexCompact(root, "$.Card.ATS", &data[14], atslen);
+            }
 
             uint8_t vdata[2][64][17] = {{{0}}};
             memcpy(vdata, data + (14 + atslen), 2 * 64 * 17);
@@ -559,12 +561,12 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
 
                 if (vdata[0][i][0]) {
                     snprintf(path, sizeof(path), "$.SectorKeys.%zu.KeyA", i);
-                    JsonSaveBufAsHexCompact(root, path, &vdata[0][i][1], 16);
+                    JsonSaveBufAsHexCompact(root, path, &vdata[0][i][1], AES_KEY_LEN);
                 }
 
                 if (vdata[1][i][0]) {
                     snprintf(path, sizeof(path), "$.SectorKeys.%zu.KeyB", i);
-                    JsonSaveBufAsHexCompact(root, path, &vdata[1][i][1], 16);
+                    JsonSaveBufAsHexCompact(root, path, &vdata[1][i][1], AES_KEY_LEN);
                 }
             }
             break;
@@ -1296,6 +1298,40 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
         *datalen += sptr;
     }
+
+    if (!strcmp(ctype, "mfpkeys")) {
+
+        JsonLoadBufAsHex(root, "$.Card.UID", udata.bytes, 7, datalen);
+        JsonLoadBufAsHex(root, "$.Card.SAK", udata.bytes + 10, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.ATQA", udata.bytes + 11, 2, datalen);
+        uint8_t atslen = udata.bytes[13];
+        if (atslen > 0) {
+            JsonLoadBufAsHex(root, "$.Card.ATS", udata.bytes + 14, atslen, datalen);
+        }
+
+        size_t sptr = (14 + atslen);
+
+        // memcpy(vdata, udata.bytes + (14 + atslen), 2 * 64 * 17);
+        for (size_t i = 0; i < 64; i++) {
+            
+            if ((sptr + (AES_KEY_LEN * 2)) > maxdatalen) {
+                break;
+            }
+
+            size_t offset = (14 + atslen) + (i * 2 * AES_KEY_LEN);
+
+            char blocks[40] = {0};
+            snprintf(blocks, sizeof(blocks), "$.SectorKeys.%zu.KeyA", i);
+            JsonLoadBufAsHex(root, blocks, udata.bytes + offset, AES_KEY_LEN, datalen);
+
+            snprintf(blocks, sizeof(blocks), "$.SectorKeys.%zu.KeyB", i);
+            JsonLoadBufAsHex(root, blocks, udata.bytes + offset + AES_KEY_LEN, AES_KEY_LEN, datalen);
+
+            sptr += (2 * AES_KEY_LEN);
+        }
+        *datalen += sptr;
+    }
+
 out:
 
     if (callback != NULL) {
