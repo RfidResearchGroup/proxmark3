@@ -35,6 +35,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <inttypes.h>
 //#include <mbedtls/aes.h>
 #include "util_posix.h"
 #include "randoms.h"
