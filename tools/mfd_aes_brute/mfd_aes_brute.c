@@ -33,6 +33,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include "util_posix.h"
 
 #define AEND  "\x1b[0m"
