@@ -7015,33 +7015,33 @@ static int CmdHF14AMfWipe(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t keyA[MIFARE_4K_MAXSECTOR * 6];
-    uint8_t keyB[MIFARE_4K_MAXSECTOR * 6];
+    uint8_t keyA[MIFARE_4K_MAXSECTOR * MIFARE_KEY_SIZE];
+    uint8_t keyB[MIFARE_4K_MAXSECTOR * MIFARE_KEY_SIZE];
     uint8_t num_sectors = 0;
 
     uint8_t mf[MFBLOCK_SIZE];
     switch (keyslen) {
-        case (MIFARE_MINI_MAXSECTOR * 2 * 6): {
+        case (MIFARE_MINI_MAXSECTOR * 2 * MIFARE_KEY_SIZE): {
             PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic Mini 320b");
-            memcpy(keyA, keys, (MIFARE_MINI_MAXSECTOR * 6));
-            memcpy(keyB, keys + (MIFARE_MINI_MAXSECTOR * 6), (MIFARE_MINI_MAXSECTOR * 6));
+            memcpy(keyA, keys, (MIFARE_MINI_MAXSECTOR * MIFARE_KEY_SIZE));
+            memcpy(keyB, keys + (MIFARE_MINI_MAXSECTOR * MIFARE_KEY_SIZE), (MIFARE_MINI_MAXSECTOR * MIFARE_KEY_SIZE));
             num_sectors = NumOfSectors('0');
             memcpy(mf, "\x11\x22\x33\x44\x44\x09\x04\x00\x62\x63\x64\x65\x66\x67\x68\x69", MFBLOCK_SIZE);
             break;
         }
-        case (MIFARE_1K_MAXSECTOR * 2 * 6): {
+        case (MIFARE_1K_MAXSECTOR * 2 * MIFARE_KEY_SIZE): {
             PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic 1K");
-            memcpy(keyA, keys, (MIFARE_1K_MAXSECTOR * 6));
-            memcpy(keyB, keys + (MIFARE_1K_MAXSECTOR * 6), (MIFARE_1K_MAXSECTOR * 6));
+            memcpy(keyA, keys, (MIFARE_1K_MAXSECTOR * MIFARE_KEY_SIZE));
+            memcpy(keyB, keys + (MIFARE_1K_MAXSECTOR * MIFARE_KEY_SIZE), (MIFARE_1K_MAXSECTOR * MIFARE_KEY_SIZE));
             num_sectors = NumOfSectors('1');
 
             memcpy(mf, "\x11\x22\x33\x44\x44\x08\x04\x00\x62\x63\x64\x65\x66\x67\x68\x69", MFBLOCK_SIZE);
             break;
         }
-        case (MIFARE_4K_MAXSECTOR * 2 * 6): {
+        case (MIFARE_4K_MAXSECTOR * 2 * MIFARE_KEY_SIZE): {
             PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic 4K");
-            memcpy(keyA, keys, (MIFARE_4K_MAXSECTOR * 6));
-            memcpy(keyB, keys + (MIFARE_4K_MAXSECTOR * 6), (MIFARE_4K_MAXSECTOR * 6));
+            memcpy(keyA, keys, (MIFARE_4K_MAXSECTOR * MIFARE_KEY_SIZE));
+            memcpy(keyB, keys + (MIFARE_4K_MAXSECTOR * MIFARE_KEY_SIZE), (MIFARE_4K_MAXSECTOR * MIFARE_KEY_SIZE));
             num_sectors = NumOfSectors('4');
             memcpy(mf, "\x11\x22\x33\x44\x44\x18\x02\x00\x62\x63\x64\x65\x66\x67\x68\x69", MFBLOCK_SIZE);
             break;
@@ -7063,6 +7063,8 @@ static int CmdHF14AMfWipe(const char *Cmd) {
     memset(zeros, 0x00, sizeof(zeros));
     uint8_t st[MFBLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07, 0x80, 0x69, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
+    PrintAndLogEx(INFO, " blk | ");
+    PrintAndLogEx(INFO, "-----+------------------------------------------------------------");
     // time to wipe card
     for (uint8_t s = 0; s < num_sectors; s++) {
 
@@ -7095,11 +7097,11 @@ static int CmdHF14AMfWipe(const char *Cmd) {
             for (int8_t kt = MF_KEY_B; kt > -1; kt--) {
 
                 if (kt == MF_KEY_A)
-                    memcpy(data, keyA + (s * 6), 6);
+                    memcpy(data, keyA + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                 else
-                    memcpy(data, keyB + (s * 6), 6);
+                    memcpy(data, keyB + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
 
-                PrintAndLogEx(INFO, "block %3d: %s" NOLF, mfFirstBlockOfSector(s) + b, sprint_hex(data + 10, MFBLOCK_SIZE));
+                PrintAndLogEx(INFO, " %3d | %s" NOLF, mfFirstBlockOfSector(s) + b, sprint_hex(data + 10, MFBLOCK_SIZE));
                 clearCommandBuffer();
                 SendCommandMIX(CMD_HF_MIFARE_WRITEBL, mfFirstBlockOfSector(s) + b, kt, 0, data, sizeof(data));
                 PacketResponseNG resp;
@@ -7118,6 +7120,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
         }
     }
 
+    PrintAndLogEx(INFO, "-----+------------------------------------------------------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Done!");
 out:
