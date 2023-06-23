@@ -785,7 +785,8 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
                   " \n"
                   "`--force` param is used to override warnings like bad ACL and BLOCK 0 writes.\n"
                   "          if not specified, it will exit if detected",
-                  "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 000102030405060708090a0b0c0d0e0f"
+                  "hf mf wrbl --blk 1 -d 000102030405060708090a0b0c0d0e0f\n"
+                  "hf mf wrbl --blk 1 -k A0A1A2A3A4A5 -d 000102030405060708090a0b0c0d0e0f\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -813,13 +814,18 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     bool force = arg_get_lit(ctx, 4);
 
     int keylen = 0;
-    uint8_t key[6] = {0};
+    uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     CLIGetHexWithReturn(ctx, 5, key, &keylen);
 
     uint8_t block[MFBLOCK_SIZE] = {0x00};
     int blen = 0;
     CLIGetHexWithReturn(ctx, 6, block, &blen);
     CLIParserFree(ctx);
+
+    if (keylen && keylen != 6) {
+        PrintAndLogEx(WARNING, "Key must be 12 hex digits. Got %d", keylen);
+        return PM3_EINVARG;
+    }
 
     if (blen != MFBLOCK_SIZE) {
         PrintAndLogEx(WARNING, "block data must include 16 HEX bytes. Got %i", blen);
@@ -879,7 +885,8 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf rdbl",
                   "Read MIFARE Classic block",
-                  "hf mf rdbl --blk 0 -k FFFFFFFFFFFF\n"
+                  "hf mf rdbl --blk 0\n"
+                  "hf mf rdbl --blk 0 -k A0A1A2A3A4A5\n"
                   "hf mf rdbl --blk 3 -v   -> get block 3, decode sector trailer\n"
                  );
     void *argtable[] = {
@@ -904,10 +911,15 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     }
 
     int keylen = 0;
-    uint8_t key[6] = {0};
+    uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     CLIGetHexWithReturn(ctx, 4, key, &keylen);
     bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
+
+    if (keylen && keylen != 6) {
+        PrintAndLogEx(WARNING, "Key must be 12 hex digits. Got %d", keylen);
+        return PM3_EINVARG;
+    }
 
     if (b > 255) {
         return PM3_EINVARG;
@@ -934,7 +946,8 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf rdsc",
                   "Read MIFARE Classic sector",
-                  "hf mf rdsc -s 0 -k FFFFFFFFFFFF\n"
+                  "hf mf rdsc -s 0\n"
+                  "hf mf rdsc -s 0 -k A0A1A2A3A4A5\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -956,17 +969,23 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     }
 
     int keylen = 0;
-    uint8_t key[6] = {0};
+    uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
 
     int s = arg_get_int_def(ctx, 4, 0);
     bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
+    if (keylen && keylen != 6) {
+        PrintAndLogEx(WARNING, "Key must be 12 hex digits. Got %d", keylen);
+        return PM3_EINVARG;
+    }
+
     if (s > MIFARE_4K_MAXSECTOR) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
         return PM3_EINVARG;
     }
+
     uint8_t sector = (uint8_t)s;
     uint16_t sc_size = mfNumBlocksPerSector(sector) * MFBLOCK_SIZE;
 
@@ -1266,7 +1285,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "Using `" _YELLOW_("%s") "`", keyfilename);
+    PrintAndLogEx(INFO, "Using key file... `" _YELLOW_("%s") "`", keyfilename);
 
     // try reading card uid and create filename
     if (datafnlen == 0) {
@@ -5679,7 +5698,6 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             block_cnt = MIFARE_4K_MAXBLOCK;
 
         if (verbose) {
-            PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
             PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
         }
 
@@ -5733,6 +5751,11 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             PrintAndLogEx(INFO, "");
             PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
         }
+
+        if (haveMAD2) {
+            MAD2DecodeAndPrint(dump + (MIFARE_1K_MAXBLOCK * MF_MAD2_SECTOR), swapmad, verbose);
+        }
+
         free(dump);
         return PM3_SUCCESS;
     }
@@ -5916,8 +5939,9 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     uint8_t data[4096] = {0};
     int datalen = 0;
 
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(INFO, "reading MAD v1 sector");
+    }
 
     if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, sector0)) {
         PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
@@ -5925,22 +5949,22 @@ int CmdHFMFNDEFRead(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    if (verbose) {
+        PrintAndLogEx(INFO, "reading MAD v2 sector");
+    }
+
+    if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, sector10)) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD 2 or doesn't have MAD 2 on default keys");
+            PrintAndLogEx(INFO, "Skipping MAD 2");
+        }
+    }
+
     bool haveMAD2 = false;
-    int res = MADCheck(sector0, NULL, verbose, &haveMAD2);
+    int res = MADCheck(sector0, sector10, verbose, &haveMAD2);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "MAD error %d", res);
         return res;
-    }
-
-    if (haveMAD2) {
-        if (verbose)
-            PrintAndLogEx(INFO, "reading MAD v2 sector");
-
-        if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, sector10)) {
-            PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD or doesn't have MAD on default keys");
-            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
-            return PM3_ESOFT;
-        }
     }
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
