@@ -484,8 +484,8 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     if (res == PM3_ETEAROFF) {
         retval = PM3_ETEAROFF;
         goto OUT;
-    } else if (res) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    } else if (res != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         retval = PM3_ESOFT;
         goto OUT;
     }
@@ -554,7 +554,7 @@ void MifareWriteBlockGDM(uint8_t blockno, uint8_t keytype, uint8_t *key, uint8_t
     if (res == PM3_ETEAROFF) {
         retval = PM3_ETEAROFF;
         goto OUT;
-    } else if (res) {
+    } else if (res != PM3_SUCCESS) {
         retval = PM3_ESOFT;
         goto OUT;
     }
@@ -688,8 +688,8 @@ void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
             break;
         };
 
-        if (mifare_classic_value(pcs, cuid, blockNo, blockdata, action)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+        if (mifare_classic_value(pcs, cuid, blockNo, blockdata, action) != PM3_SUCCESS) {
+            if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
             break;
         };
 
@@ -777,8 +777,8 @@ static void MifareUWriteBlockEx(uint8_t arg0, uint8_t arg1, uint8_t *datain, boo
         }
     }
 
-    if (mifare_ultra_writeblock(blockNo, blockdata)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    if (mifare_ultra_writeblock(blockNo, blockdata) != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         OnError(0);
         return;
     };
@@ -851,8 +851,8 @@ void MifareUWriteBlockCompat(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
         }
     }
 
-    if (mifare_ultra_writeblock_compat(blockNo, blockdata)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    if (mifare_ultra_writeblock_compat(blockNo, blockdata) != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         OnError(0);
         return;
     };
@@ -896,8 +896,8 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
     blockdata[1] = pwd[6];
     blockdata[2] = pwd[5];
     blockdata[3] = pwd[4];
-    if (mifare_ultra_writeblock(44, blockdata)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    if (mifare_ultra_writeblock(44, blockdata) != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         OnError(44);
         return;
     };
@@ -906,8 +906,8 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
     blockdata[1] = pwd[2];
     blockdata[2] = pwd[1];
     blockdata[3] = pwd[0];
-    if (mifare_ultra_writeblock(45, blockdata)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    if (mifare_ultra_writeblock(45, blockdata) != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         OnError(45);
         return;
     };
@@ -916,8 +916,8 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
     blockdata[1] = pwd[14];
     blockdata[2] = pwd[13];
     blockdata[3] = pwd[12];
-    if (mifare_ultra_writeblock(46, blockdata)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    if (mifare_ultra_writeblock(46, blockdata) != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         OnError(46);
         return;
     };
@@ -926,8 +926,8 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
     blockdata[1] = pwd[10];
     blockdata[2] = pwd[9];
     blockdata[3] = pwd[8];
-    if (mifare_ultra_writeblock(47, blockdata)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    if (mifare_ultra_writeblock(47, blockdata) != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         OnError(47);
         return;
     };
@@ -1522,7 +1522,6 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
         target_ks[0] = nt2 ^ target_nt[0];
 
         // second collection
-
         if (mifare_classic_halt(pcs, cuid)) {
             continue;
         }
@@ -2835,6 +2834,10 @@ OUT:
     BigBuf_free();
     crypto1_deinit(pcs);
 }
+
+// FUDAN card w static encrypted nonces
+// 2B F9 1C 1B D5 08 48 48 03 A4 B1 B1 75 FF 2D 90
+//                         ^^                   ^^
 
 void OnSuccessMagic(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

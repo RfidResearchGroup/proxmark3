@@ -24,9 +24,9 @@
 #include "ui.h"
 #include "crypto/libpcrypto.h"
 
-static bool VerboseMode = false;
+static bool g_verbose_mode = false;
 void mfpSetVerboseMode(bool verbose) {
-    VerboseMode = verbose;
+    g_verbose_mode = verbose;
 }
 
 static const PlusErrorsElm_t PlusErrors[] = {
@@ -340,12 +340,12 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
 }
 
 static int intExchangeRAW14aPlus(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
-    if (VerboseMode)
+    if (g_verbose_mode)
         PrintAndLogEx(INFO, ">>> %s", sprint_hex(datain, datainlen));
 
     int res = ExchangeRAW14a(datain, datainlen, activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen, false);
 
-    if (VerboseMode)
+    if (g_verbose_mode)
         PrintAndLogEx(INFO, "<<< %s", sprint_hex(dataout, *dataoutlen));
 
     return res;
@@ -367,7 +367,7 @@ int MFPCommitPerso(bool activateField, bool leaveSignalON, uint8_t *dataout, int
 int MFPReadBlock(mf4Session_t *mf4session, bool plain, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
     uint8_t rcmd[4 + 8] = {(plain ? (0x37) : (0x33)), blockNum, 0x00, blockCount};
     if (!plain && mf4session)
-        CalculateMAC(mf4session, mtypReadCmd, blockNum, blockCount, rcmd, 4, &rcmd[4], VerboseMode);
+        CalculateMAC(mf4session, mtypReadCmd, blockNum, blockCount, rcmd, 4, &rcmd[4], g_verbose_mode);
 
     int res = intExchangeRAW14aPlus(rcmd, plain ? 4 : sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
     if (res)
@@ -377,7 +377,7 @@ int MFPReadBlock(mf4Session_t *mf4session, bool plain, uint8_t blockNum, uint8_t
         mf4session->R_Ctr++;
 
     if (mf4session && mac && *dataoutlen > 11)
-        CalculateMAC(mf4session, mtypReadResp, blockNum, blockCount, dataout, *dataoutlen - 8 - 2, mac, VerboseMode);
+        CalculateMAC(mf4session, mtypReadResp, blockNum, blockCount, dataout, *dataoutlen - 8 - 2, mac, g_verbose_mode);
 
     return 0;
 }
@@ -386,7 +386,7 @@ int MFPWriteBlock(mf4Session_t *mf4session, uint8_t blockNum, uint8_t *data, boo
     uint8_t rcmd[1 + 2 + 16 + 8] = {0xA3, blockNum, 0x00};
     memmove(&rcmd[3], data, 16);
     if (mf4session)
-        CalculateMAC(mf4session, mtypWriteCmd, blockNum, 1, rcmd, 19, &rcmd[19], VerboseMode);
+        CalculateMAC(mf4session, mtypWriteCmd, blockNum, 1, rcmd, 19, &rcmd[19], g_verbose_mode);
 
     int res = intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
     if (res)
@@ -396,7 +396,7 @@ int MFPWriteBlock(mf4Session_t *mf4session, uint8_t blockNum, uint8_t *data, boo
         mf4session->W_Ctr++;
 
     if (mf4session && mac && *dataoutlen > 3)
-        CalculateMAC(mf4session, mtypWriteResp, blockNum, 1, dataout, *dataoutlen, mac, VerboseMode);
+        CalculateMAC(mf4session, mtypWriteResp, blockNum, 1, dataout, *dataoutlen, mac, g_verbose_mode);
 
     return 0;
 }
