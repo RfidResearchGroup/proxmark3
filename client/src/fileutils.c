@@ -29,7 +29,7 @@
 #include "cmdhficlass.h"  // pagemap
 #include "protocols.h"    // iclass defines
 #include "cmdhftopaz.h"   // TOPAZ defines
-#include "cmdhfmfp.h"     // MFP / AES defines
+#include "mifare/mifaredefault.h"     // MFP / AES defines
 
 #ifdef _WIN32
 #include "scandir.h"
