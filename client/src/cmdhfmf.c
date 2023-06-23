@@ -590,12 +590,13 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
             current_key = MF_KEY_A;
             uint8_t data_area = (sectorNo < 32) ? blockNo : blockNo / 5;
             if (rights[sectorNo][data_area] == 0x07) {                                     // no key would work
-                PrintAndLogEx(WARNING, "access rights do not allow reading of sector %2d block %3d, skipping", sectorNo, blockNo);
+                PrintAndLogEx(WARNING, "access rights do not allow reading of sector " _YELLOW_("%2d") " block " _YELLOW_("%3d") ", skipping", sectorNo, blockNo);
                 continue;
             }
 
             for (uint8_t tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
-                if (mfIsSectorTrailer(blockNo)) {
+
+                if (mfIsSectorTrailerBasedOnBlocks(sectorNo, blockNo)) {
 
                     // sector trailer. At least the Access Conditions can always be read with key A.
                     payload.blockno = mfFirstBlockOfSector(sectorNo) + blockNo;
@@ -649,16 +650,16 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
 
                     uint8_t *data  = resp.data.asBytes;
 
-                    if (mfIsSectorTrailer(blockNo)) {
+                    if (mfIsSectorTrailerBasedOnBlocks(sectorNo, blockNo)) {
                         // sector trailer. Fill in the keys.
                         memcpy(data, keyA + (sectorNo * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                         memcpy(data + 10, keyB + (sectorNo * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
                     }
 
                     memcpy(carddata + (MFBLOCK_SIZE * (mfFirstBlockOfSector(sectorNo) + blockNo)), data, MFBLOCK_SIZE);
-                    PrintAndLogEx(SUCCESS, "successfully read block %2d of sector %2d.", blockNo, sectorNo);
+                    PrintAndLogEx(INPLACE, "successfully read block " _YELLOW_("%2d") " of sector " _YELLOW_("%2d"), blockNo, sectorNo);
                 } else {
-                    PrintAndLogEx(FAILED, "could not read block %2d of sector %2d", blockNo, sectorNo);
+                    PrintAndLogEx(FAILED, "\ncould not read block %2d of sector %2d", blockNo, sectorNo);
                 }
             } else {
                 PrintAndLogEx(WARNING, "command execute timeout when trying to read block %2d of sector %2d.", blockNo, sectorNo);
@@ -1125,7 +1126,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     // read card
     iso14a_card_select_t card ;
-    uint8_t *mem = calloc(MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, sizeof(uint8_t));
+    uint8_t *mem = calloc(MIFARE_4K_MAX_BYTES, sizeof(uint8_t));
     if (mem == NULL) {
         PrintAndLogEx(ERR, "failed to allocate memory");
         return PM3_EMALLOC;
