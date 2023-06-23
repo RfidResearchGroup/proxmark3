@@ -1277,7 +1277,6 @@ static int CmdHFMFPChk(const char *Cmd) {
                 keyListLen = keycnt;
             }
 
-            PrintAndLogEx(INFO, "ICE pos... %zu - %zu", old_pos, endFilePosition);
             continue;
         }
         break;
@@ -1730,14 +1729,14 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,                 IfPm3Iso14443a,  "------------------- " _CYAN_("operations") " ---------------------"},
     {"auth",        CmdHFMFPAuth,            IfPm3Iso14443a,  "Authentication"},
     {"chk",         CmdHFMFPChk,             IfPm3Iso14443a,  "Check keys"},
-    {"dump",        CmdHFMFPDump,            IfPm3Iso14443a,  "Dump MIFARE Classic tag to binary file"},
+//    {"dump",        CmdHFMFPDump,            IfPm3Iso14443a,  "Dump MIFARE Plus tag to binary file"},
     {"info",        CmdHFMFPInfo,            IfPm3Iso14443a,  "Info about MIFARE Plus tag"},
     {"mad",         CmdHFMFPMAD,             IfPm3Iso14443a,  "Check and print MAD"},
     {"rdbl",        CmdHFMFPRdbl,            IfPm3Iso14443a,  "Read blocks from card"},
     {"rdsc",        CmdHFMFPRdsc,            IfPm3Iso14443a,  "Read sectors from card"},
     {"wrbl",        CmdHFMFPWrbl,            IfPm3Iso14443a,  "Write block to card"},
     {"-----------", CmdHelp,                 IfPm3Iso14443a,  "---------------- " _CYAN_("personalization") " -------------------"},
-    {"commitp",     CmdHFMFPCommitPerso,     IfPm3Iso14443a,  "Move card to SL1 or SL3 mode"},
+    {"commitp",     CmdHFMFPCommitPerso,     IfPm3Iso14443a,  "Configure security layer (SL1/SL3 mode)"},
     {"initp",       CmdHFMFPInitPerso,       IfPm3Iso14443a,  "Fill all the card's keys in SL0 mode"},
     {"wrp",         CmdHFMFPWritePerso,      IfPm3Iso14443a,  "Write Perso command"},
     {"-----------", CmdHelp,                 IfPm3Iso14443a,  "---------------------- " _CYAN_("ndef") " ------------------------"},
