@@ -4081,7 +4081,7 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    if (s >= MIFARE_4K_MAXSECTOR) {v
+    if (s >= MIFARE_4K_MAXSECTOR) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
         return PM3_EINVARG;
     }
