@@ -1291,7 +1291,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
         { .response = rPPS,       .response_n = sizeof(rPPS)      },  // PPS response
         { .response = rPACK,      .response_n = sizeof(rPACK)     }   // PACK response
     };
-
+    
     // "precompile" responses. There are 12 predefined responses with a total of 84 bytes data to transmit.
 
     // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
@@ -3094,13 +3094,33 @@ void ReaderIso14443a(PacketCommandNG *c) {
             }
         }
 
-        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
-            FpgaDisableTracing();
-            reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+        if ((param & ISO14A_TOPAZMODE)) {
+
+            if (cmd[0] == TOPAZ_WRITE_E8 || cmd[0] == TOPAZ_WRITE_NE8) {
+                if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+                    FpgaDisableTracing();
+                    reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+                } else {
+                    arg0 = ReaderReceive(buf, par);
+                    FpgaDisableTracing();
+                    reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+                }
+            } else { 
+                arg0 = ReaderReceive(buf, par);
+                FpgaDisableTracing();
+                reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+            }
+
         } else {
-            arg0 = ReaderReceive(buf, par);
-            FpgaDisableTracing();
-            reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+
+            if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+                FpgaDisableTracing();
+                reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+            } else {
+                arg0 = ReaderReceive(buf, par);
+                FpgaDisableTracing();
+                reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+            }
         }
     }
 
