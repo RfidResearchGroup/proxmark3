@@ -280,8 +280,8 @@ static void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose) {
     PrintAndLogEx(NORMAL, "");
 }
 
+// assumes n is in number of blocks 0..255
 static int mf_print_keys(uint16_t n, uint8_t *d) {
-
     uint8_t sectors = 0;
     switch (n) {
         case MIFARE_MINI_MAXBLOCK:
@@ -321,6 +321,7 @@ static int mf_print_keys(uint16_t n, uint8_t *d) {
 }
 
 // MFC dump ,  extract and save the keys to key file
+// assumes n is in number of blocks 0..255
 static int mf_save_keys_from_arr(uint16_t n, uint8_t *d) {
     uint8_t sectors = 0;
     switch (n) {
@@ -412,6 +413,7 @@ static bool mf_write_block(const uint8_t *key, uint8_t keytype, uint8_t blockno,
     return (resp.oldarg[0] & 0xff);
 }
 
+// assumes n is in number of blocks 0..255
 static void mf_analyse_acl(uint16_t n, uint8_t *d) {
 
     for (uint16_t b = 3; b < n; b++) {
@@ -6252,7 +6254,7 @@ skipfile:
                     memcpy(block, firstblocks[b], MFBLOCK_SIZE);
                     break;
                 default: {
-                    if (mfIsSectorTrailer(j)) {
+                    if (mfIsSectorTrailerBasedOnBlocks(i,j)) {
                         // ST NDEF
                         memcpy(block, firstblocks[7], MFBLOCK_SIZE);
                     }
@@ -7078,7 +7080,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
 
             uint8_t data[26];
             memset(data, 0, sizeof(data));
-            if (mfIsSectorTrailer(b)) {
+            if (mfIsSectorTrailerBasedOnBlocks(s, b)) {
                 memcpy(data + 10, st, sizeof(st));
             } else {
                 memcpy(data + 10, zeros, sizeof(zeros));
