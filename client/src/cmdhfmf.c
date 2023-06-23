@@ -984,7 +984,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (s > MIFARE_4K_MAXSECTOR) {
+    if (s >= MIFARE_4K_MAXSECTOR) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
         return PM3_EINVARG;
     }
@@ -1321,6 +1321,9 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", datafilename);
 
+    PrintAndLogEx(INFO, " blk | ");
+    PrintAndLogEx(INFO, "-----+------------------------------------------------------------");
+
     // main loop for restoring.
     // a bit more complicated than needed
     // this is because of two things.
@@ -1334,7 +1337,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             memcpy(bldata, dump, MFBLOCK_SIZE);
 
             // if sector trailer
-            if (mfNumBlocksPerSector(s) - 1 == b) {
+            if (mfIsSectorTrailerBasedOnBlocks(s, b)) {
                 if (use_keyfile_for_auth == false) {
                     // replace KEY A
                     memcpy(bldata, keyA + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
@@ -1381,33 +1384,40 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                     // use default key to authenticate for the write command
                     memcpy(wdata, default_key, MIFARE_KEY_SIZE);
                 }
-                PrintAndLogEx(INFO, "block %3d: %s", mfFirstBlockOfSector(s) + b, sprint_hex(bldata, sizeof(bldata)));
+
+                PrintAndLogEx(INFO, " %3d | %s", mfFirstBlockOfSector(s) + b, sprint_hex(bldata, sizeof(bldata)));
 
                 clearCommandBuffer();
                 SendCommandMIX(CMD_HF_MIFARE_WRITEBL, mfFirstBlockOfSector(s) + b, kt, 0, wdata, sizeof(wdata));
                 PacketResponseNG resp;
-                if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                    uint8_t isOK  = resp.oldarg[0] & 0xff;
-                    if (isOK == 0) {
-                        if (b == 0) {
-                            PrintAndLogEx(INFO, "Writing to manufacture block w key %c ( " _RED_("fail") " )", (kt == MF_KEY_A) ? 'A' : 'B');
-                        } else {
-                            PrintAndLogEx(FAILED, "Write to block %u w key %c ( " _RED_("fail") " ) ", b, (kt == MF_KEY_A) ? 'A' : 'B');
-                        }
-                    } else {
-                        // if success,  skip to next block
-                        break;
-                    }
-                } else {
+                if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
                     PrintAndLogEx(WARNING, "Command execute timeout");
+                    continue;
+                } 
+
+                int isOK  = resp.oldarg[0] & 0xff;
+                if (isOK == 1) {
+                    // if success,  skip to next block
+                    break;
+                } else if (isOK == PM3_ETEAROFF) {
+                    PrintAndLogEx(INFO, "Tear off triggerd. Recommendation is not to use tear-off with restore command");
+                    return isOK;
+                } else {
+                    if (b == 0) {
+                        PrintAndLogEx(INFO, "Writing to manufacture block w key %c ( " _RED_("fail") " )", (kt == MF_KEY_A) ? 'A' : 'B');
+                    } else {
+                        PrintAndLogEx(FAILED, "Write to block %u w key %c ( " _RED_("fail") " ) ", b, (kt == MF_KEY_A) ? 'A' : 'B');
+                    }
                 }
-            }
+            } // end loop key types
         } // end loop B
     } // end loop S
 
     free(ref_dump);
     free(keyA);
     free(keyB);
+    PrintAndLogEx(INFO, "-----+------------------------------------------------------------");    
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -4071,7 +4081,7 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    if (s > 39) {
+    if (s >= MIFARE_4K_MAXSECTOR) {v
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
         return PM3_EINVARG;
     }
@@ -5065,7 +5075,8 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
     int s = arg_get_int_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
-    if (s > 39) {
+
+    if (s >= MIFARE_4K_MAXSECTOR) {
         PrintAndLogEx(WARNING, "Sector number must be less then 40");
         return PM3_EINVARG;
     }
@@ -7021,7 +7032,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
 
     uint8_t mf[MFBLOCK_SIZE];
     switch (keyslen) {
-        case (MIFARE_MINI_MAXSECTOR * 2 * MIFARE_KEY_SIZE): {
+        case (MIFARE_MINI_MAX_KEY_SIZE): {
             PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic Mini 320b");
             memcpy(keyA, keys, (MIFARE_MINI_MAXSECTOR * MIFARE_KEY_SIZE));
             memcpy(keyB, keys + (MIFARE_MINI_MAXSECTOR * MIFARE_KEY_SIZE), (MIFARE_MINI_MAXSECTOR * MIFARE_KEY_SIZE));
@@ -7029,7 +7040,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
             memcpy(mf, "\x11\x22\x33\x44\x44\x09\x04\x00\x62\x63\x64\x65\x66\x67\x68\x69", MFBLOCK_SIZE);
             break;
         }
-        case (MIFARE_1K_MAXSECTOR * 2 * MIFARE_KEY_SIZE): {
+        case (MIFARE_1K_MAX_KEY_SIZE): {
             PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic 1K");
             memcpy(keyA, keys, (MIFARE_1K_MAXSECTOR * MIFARE_KEY_SIZE));
             memcpy(keyB, keys + (MIFARE_1K_MAXSECTOR * MIFARE_KEY_SIZE), (MIFARE_1K_MAXSECTOR * MIFARE_KEY_SIZE));
@@ -7038,7 +7049,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
             memcpy(mf, "\x11\x22\x33\x44\x44\x08\x04\x00\x62\x63\x64\x65\x66\x67\x68\x69", MFBLOCK_SIZE);
             break;
         }
-        case (MIFARE_4K_MAXSECTOR * 2 * MIFARE_KEY_SIZE): {
+        case (MIFARE_4K_MAX_KEY_SIZE): {
             PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic 4K");
             memcpy(keyA, keys, (MIFARE_4K_MAXSECTOR * MIFARE_KEY_SIZE));
             memcpy(keyB, keys + (MIFARE_4K_MAXSECTOR * MIFARE_KEY_SIZE), (MIFARE_4K_MAXSECTOR * MIFARE_KEY_SIZE));
