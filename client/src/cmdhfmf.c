@@ -3446,6 +3446,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
             PrintAndLogEx(WARNING, "Provided block out of possible MIFARE Type memory map");
             return PM3_EINVARG;
         }
+
         if (sectors_cnt == 1) {
             sectors_cnt = min_sectors_cnt;
         } else if (sectors_cnt < min_sectors_cnt) {
@@ -3453,6 +3454,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
             return PM3_EINVARG;
         }
     }
+
     if (sectors_cnt == 1) {
         sectors_cnt = MIFARE_1K_MAXSECTOR;
     }
@@ -3520,6 +3522,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
             }
             if (singleSector)
                 break;
+
             b < 127 ? (b += 4) : (b += 16);
         }
     }
@@ -3974,6 +3977,7 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
                       , strA, resA
                       , strB, resB
                      );
+
     }
 
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
@@ -5614,28 +5618,27 @@ static int CmdHF14AMfAuth4(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf auth4",
                   "Executes AES authentication command in ISO14443-4",
-                  "hf mf auth4 4000 000102030405060708090a0b0c0d0e0f -> executes authentication\n"
-                  "hf mf auth4 9003 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> executes authentication\n");
+                  "hf mf auth4 -n 4000 -k 000102030405060708090a0b0c0d0e0f -> executes authentication\n"
+                  "hf mf auth4 -n 9003 -k FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> executes authentication\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL,  NULL,     "<Key Num (HEX 2 bytes)>", NULL),
-        arg_str1(NULL,  NULL,     "<Key Value (HEX 16 bytes)>", NULL),
+        arg_str1("n", NULL, "<hex>", "key num, 2 hex bytes"),
+        arg_str1("k", "key", "<hex>", "key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-
     CLIGetHexWithReturn(ctx, 1, keyn, &keynlen);
     CLIGetHexWithReturn(ctx, 2, key, &keylen);
     CLIParserFree(ctx);
 
     if (keynlen != 2) {
-        PrintAndLogEx(ERR, "<Key Num> must be 2 bytes long instead of: %d", keynlen);
+        PrintAndLogEx(ERR, "Key number must be 2 bytes. Got... %d", keynlen);
         return PM3_ESOFT;
     }
 
     if (keylen != 16) {
-        PrintAndLogEx(ERR, "<Key Value> must be 16 bytes long instead of: %d", keylen);
+        PrintAndLogEx(ERR, "Key must be 16 bytes. Got... %d", keylen);
         return PM3_ESOFT;
     }
 
@@ -5655,12 +5658,12 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v",  "verbose",  "show technical data"),
-        arg_str0(NULL, "aid",      "<aid>", "print all sectors with specified aid"),
-        arg_str0("k",  "key",      "<key>", "key for printing sectors"),
+        arg_str0(NULL, "aid",      "<hex>", "print all sectors with specified aid"),
+        arg_str0("k",  "key",      "<hex>", "key for printing sectors"),
         arg_lit0("b",  "keyb",     "use key B for access printing sectors (by default: key A)"),
         arg_lit0(NULL, "be",       "(optional, BigEndian)"),
         arg_lit0(NULL, "dch",      "decode Card Holder information"),
-        arg_str0("f", "file", "<fn>", "load dump file and decode MAD"),
+        arg_str0("f", "file",      "<fn>", "load dump file and decode MAD"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5685,17 +5688,17 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         // read dump file
         uint8_t *dump = NULL;
         size_t bytes_read = 0;
-        int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK));
+        int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, MIFARE_4K_MAX_BYTES);
         if (res != PM3_SUCCESS) {
             return res;
         }
 
         uint16_t block_cnt = MIN(MIFARE_1K_MAXBLOCK, (bytes_read / MFBLOCK_SIZE));
-        if (bytes_read == 320)
+        if (bytes_read == MIFARE_MINI_MAX_BYTES)
             block_cnt = MIFARE_MINI_MAXBLOCK;
-        else if (bytes_read == 2048)
+        else if (bytes_read == MIFARE_2K_MAX_BYTES)
             block_cnt = MIFARE_2K_MAXBLOCK;
-        else if (bytes_read == 4096)
+        else if (bytes_read == MIFARE_4K_MAX_BYTES)
             block_cnt = MIFARE_4K_MAXBLOCK;
 
         if (verbose) {
@@ -5765,8 +5768,8 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         return PM3_ENOTTY;
 
 
-    uint8_t sector0[16 * 4] = {0};
-    uint8_t sector10[16 * 4] = {0};
+    uint8_t sector0[MFBLOCK_SIZE * 4] = {0};
+    uint8_t sector10[MFBLOCK_SIZE * 4] = {0};
 
     bool got_first = true;
     if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0) != PM3_SUCCESS) {
@@ -5820,7 +5823,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
         // user specified key
         if (keylen == 6) {
-            memcpy(akey, userkey, 6);
+            memcpy(akey, userkey, sizeof(akey));
         }
 
         uint16_t aaid = 0x0004;
@@ -5833,7 +5836,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
             for (int i = 0; i < madlen; i++) {
                 if (aaid == mad[i]) {
-                    uint8_t vsector[16 * 4] = {0};
+                    uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
                     if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
                         PrintAndLogEx(ERR, "error, read sector %d", i + 1);
@@ -5841,7 +5844,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
                     }
 
                     for (int j = 0; j < (verbose ? 4 : 3); j ++)
-                        PrintAndLogEx(NORMAL, " [%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * 16], 16));
+                        PrintAndLogEx(NORMAL, " [%03d] %s", (i + 1) * 4 + j, sprint_hex(&vsector[j * MFBLOCK_SIZE], MFBLOCK_SIZE));
                 }
             }
         }
@@ -5851,21 +5854,22 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(INFO, "-------- " _CYAN_("Card Holder Info 0x%04x") " --------", aaid);
 
-            uint8_t data[4096] = {0};
+            uint8_t data[MIFARE_4K_MAX_BYTES] = {0};
             int datalen = 0;
 
             for (int i = 0; i < madlen; i++) {
                 if (aaid == mad[i]) {
 
-                    uint8_t vsector[16 * 4] = {0};
+                    uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
                     if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
                         PrintAndLogEx(ERR, "error, read sector %d", i + 1);
                         return PM3_ESOFT;
                     }
 
-                    memcpy(&data[datalen], vsector, 16 * 3);
-                    datalen += 16 * 3;
+                    // skip ST block hence only 3 blocks copy
+                    memcpy(&data[datalen], vsector, MFBLOCK_SIZE * 3);
+                    datalen += MFBLOCK_SIZE * 3;
                 }
             }
 
@@ -5879,9 +5883,16 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
     if (verbose) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "------------ " _CYAN_("MAD sector raw") " -------------");
-        for (int i = 0; i < 4; i ++)
-            PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(&sector0[i * 16], 16));
+        PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v1 sector raw") " -------------");
+        for (int i = 0; i < 4; i ++) {
+            PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(&sector0[i * MFBLOCK_SIZE], MFBLOCK_SIZE));
+        }
+
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v2 sector raw") " -------------");
+        for (int i = 0; i < 4; i ++) {
+            PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex(&sector10[i * MFBLOCK_SIZE], MFBLOCK_SIZE));
+        }
     }
 
     return PM3_SUCCESS;
@@ -5912,12 +5923,15 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 1);
     bool verbose2 = arg_get_lit(ctx, 1) > 1;
     uint8_t aid[2] = {0};
+
     int aidlen;
     CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
     uint8_t key[6] = {0};
+
     int keylen;
     CLIGetHexWithReturn(ctx, 3, key, &keylen);
     bool keyB = arg_get_lit(ctx, 4);
+
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
@@ -5970,7 +5984,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    res = MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen, false);
+    res = MADDecode(sector0, sector10, mad, &madlen, false);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return res;
@@ -6386,7 +6400,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    // decode MAD
+    // decode MAD v1
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
     res = MADDecode(sector0, NULL, mad, &madlen, false);
@@ -7130,7 +7144,7 @@ static int CmdHF14AMfView(const char *Cmd) {
         PrintAndLogEx(INFO, "");
         PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
 
-        // decode MAD
+        // decode MAD v1
         uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
         size_t madlen = 0;
         res = MADDecode(dump, NULL, mad, &madlen, false);
