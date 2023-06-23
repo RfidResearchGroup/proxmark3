@@ -1369,8 +1369,99 @@ static int CmdHFMFPChk(const char *Cmd) {
         free(fptr);
     }
 
+    // MAD detection
+    if ((memcmp(&foundKeys[0][0][1], "\xA0\xA1\xA2\xA3\xA4\xA5\xA6\xA7\xA0\xA1\xA2\xA3\xA4\xA5\xA6\xA7", AES_KEY_LEN) == 0)) {
+        PrintAndLogEx(HINT, "MAD key detected. Try " _YELLOW_("`hf mfp mad`") " for more details");
+    }
+
+    // NDEF detection
+    if (has_ndef_key) {
+        PrintAndLogEx(HINT, "NDEF key detected. Try " _YELLOW_("`hf mfp ndefread -h`") " for more details");
+    }
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
+
+static int CmdHFMFPDump(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp dump",
+                  "Dump MIFARE Plus tag to binary file\n"
+                  "If no <name> given, UID will be used as filename",
+                  "hf mfp dump\n"
+                  "hf mfp dump --keys hf-mf-066C8B78-key.bin --> MIFARE Plus with keys from specified file\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f",  "file", "<fn>", "filename of dump"),
+        arg_str0("k",  "keys", "<fn>", "filename of keys"),
+        arg_lit0(NULL, "ns", "no save to file"),
+        arg_lit0("v",  "verbose",   "Verbose mode"),        
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int datafnlen = 0;
+    char data_fn[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)data_fn, FILE_PATH_SIZE, &datafnlen);
+
+    int keyfnlen = 0;
+    char key_fn[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)key_fn, FILE_PATH_SIZE, &keyfnlen);
+
+    bool nosave = arg_get_lit(ctx, 3);
+    bool verbose = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    mfpSetVerboseMode(verbose);
+
+    // read card
+    uint8_t *mem = calloc(MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, sizeof(uint8_t));
+    if (mem == NULL) {
+        PrintAndLogEx(ERR, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+/*
+    iso14a_card_select_t card ;
+    int res = mfp_read_tag(&card, mem, key_fn);
+    if (res != PM3_SUCCESS) {
+        free(mem);
+        return res;
+    }
+*/
+
+    // Skip saving card data to file
+    if (nosave) {
+        PrintAndLogEx(INFO, "Called with no save option");
+        free(mem);
+        return PM3_SUCCESS;
+    }
+/*
+    // Save to file
+    if (strlen(data_fn) < 1) {
+
+        char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-dump")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
+        strcpy(fptr, "hf-mfp-");
+
+        FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
+
+        strcpy(data_fn, fptr);
+        free(fptr);
+    }
+
+    saveFile(data_fn, ".bin", mem, MIFARE_4K_MAX_BYTES);
+    saveFileEML(data_fn, mem, MIFARE_4K_MAX_BYTES, MFBLOCK_SIZE);
+
+    iso14a_mf_extdump_t xdump;
+    xdump.card_info = card;
+    xdump.dump = mem;
+    xdump.dumplen = MIFARE_4K_MAX_BYTES;
+    saveFileJSON(data_fn, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
+*/
+    free(mem);
+    return PM3_SUCCESS;
+}
+
 
 static int CmdHFMFPMAD(const char *Cmd) {
 
@@ -1729,7 +1820,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,                 IfPm3Iso14443a,  "------------------- " _CYAN_("operations") " ---------------------"},
     {"auth",        CmdHFMFPAuth,            IfPm3Iso14443a,  "Authentication"},
     {"chk",         CmdHFMFPChk,             IfPm3Iso14443a,  "Check keys"},
-//    {"dump",        CmdHFMFPDump,            IfPm3Iso14443a,  "Dump MIFARE Plus tag to binary file"},
+    {"dump",        CmdHFMFPDump,            IfPm3Iso14443a,  "Dump MIFARE Plus tag to binary file"},
     {"info",        CmdHFMFPInfo,            IfPm3Iso14443a,  "Info about MIFARE Plus tag"},
     {"mad",         CmdHFMFPMAD,             IfPm3Iso14443a,  "Check and print MAD"},
     {"rdbl",        CmdHFMFPRdbl,            IfPm3Iso14443a,  "Read blocks from card"},
