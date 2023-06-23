@@ -2231,29 +2231,30 @@ int infoHF14B(bool verbose, bool do_aid_search) {
 int readHF14B(bool loop, bool verbose) {
     bool found = false;
     do {
+        found = false;
+
         // try std 14b (atqb)
-        found = HF14B_std_reader(verbose);
+        found |= HF14B_std_reader(verbose);
         if (found && loop)
             continue;
 
         // try ST Microelectronics 14b
-        found = HF14B_st_reader(verbose);
+        found |= HF14B_st_reader(verbose);
         if (found && loop)
             continue;
 
         // try ASK CT 14b
-        found = HF14B_ask_ct_reader(verbose);
+        found |= HF14B_ask_ct_reader(verbose);
         if (found && loop)
             continue;
 
         // try unknown 14b read commands (to be identified later)
         // could be read of calypso, CEPAS, moneo, or pico pass.
-        found = HF14B_other_reader(verbose);
+        found |= HF14B_other_reader(verbose);
         if (found && loop)
             continue;
 
     } while (loop && kbd_enter_pressed() == false);
-
 
     if (verbose && found == false) {
         PrintAndLogEx(FAILED, "no ISO 14443-B tag found");
