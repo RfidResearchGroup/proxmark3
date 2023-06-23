@@ -3221,7 +3221,7 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain) {
         return;
     };
 
-    if (mifare_desfire_des_auth1(cuid, dataout)) {
+    if (mifare_desfire_des_auth1(cuid, dataout) != PM3_SUCCESS) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Authentication part1: Fail.");
         OnError(4);
         return;
@@ -3241,7 +3241,7 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain) {
 
     isOK = mifare_desfire_des_auth2(cuid, key, dataout);
 
-    if (isOK) {
+    if (isOK != PM3_SUCCESS) {
         if (g_dbglevel >= DBG_EXTENDED) Dbprintf("Authentication part2: Failed");
         OnError(4);
         return;

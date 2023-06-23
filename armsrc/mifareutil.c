@@ -433,7 +433,7 @@ int mifare_classic_writeblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t
     }
 
     if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
         return PM3_EFAILED;
     }
 
@@ -805,9 +805,10 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData) {
 
     len = mifare_sendcmd_special(NULL, 1, 0x02, data, receivedAnswer, receivedAnswerPar, NULL);
     if (len == 1) {
-        if (g_dbglevel >= DBG_ERROR)
+        if (g_dbglevel >= DBG_INFO) {
             Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
-        return 1;
+        }
+        return PM3_EFAILED;
     }
 
     if (len == 12) {
@@ -818,9 +819,9 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData) {
                      receivedAnswer[10], receivedAnswer[11]);
         }
         memcpy(blockData, receivedAnswer, 12);
-        return 0;
+        return PM3_SUCCESS;
     }
-    return 1;
+    return PM3_EFAILED;
 }
 
 int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
@@ -835,9 +836,10 @@ int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
     len = mifare_sendcmd_special2(NULL, 1, 0x03, data, receivedAnswer, receivedAnswerPar, NULL);
 
     if ((receivedAnswer[0] == 0x03) && (receivedAnswer[1] == 0xae)) {
-        if (g_dbglevel >= DBG_ERROR)
+        if (g_dbglevel >= DBG_ERROR) {
             Dbprintf("Auth Error: %02x %02x", receivedAnswer[0], receivedAnswer[1]);
-        return 1;
+        }
+        return PM3_EFAILED;
     }
 
     if (len == 12) {
@@ -848,7 +850,7 @@ int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
                      receivedAnswer[10], receivedAnswer[11]);
         }
         memcpy(blockData, receivedAnswer, 12);
-        return 0;
+        return PM3_SUCCESS;
     }
-    return 1;
+    return PM3_EFAILED;
 }
