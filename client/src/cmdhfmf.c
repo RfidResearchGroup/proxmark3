@@ -3407,8 +3407,9 @@ static int CmdHF14AMfChk(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 12), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     CLIParserFree(ctx);
-    bool singleSector = blockNo > -1;
-    if (! singleSector) {
+
+    bool singleSector = (blockNo > -1);
+    if (singleSector == false) {
         // start from first trailer block
         blockNo = 3;
     }
@@ -3431,9 +3432,11 @@ static int CmdHF14AMfChk(const char *Cmd) {
     }
 
     if (singleSector) {
-        size_t min_sectors_cnt = 0;
+
         // find a MIFARE type that can accommodate the provided block number
+        size_t min_sectors_cnt = 0;
         uint8_t s =  mfSectorNum(blockNo);
+
         if (s < MIFARE_MINI_MAXSECTOR) {
             min_sectors_cnt = MIFARE_MINI_MAXSECTOR;
         } else if (s < MIFARE_1K_MAXSECTOR) {
@@ -3578,9 +3581,9 @@ out:
     PrintAndLogEx(SUCCESS, _GREEN_("found keys:"));
 
     //print keys
-    if (singleSector)
-        printKeyTableEx(1, e_sector, mfSectorNum(blockNo));
-    else
+//    if (singleSector)
+//        printKeyTableEx(1, e_sector, mfSectorNum(blockNo));
+//    else
         printKeyTable(sectors_cnt, e_sector);
 
     if (transferToEml) {
@@ -5760,6 +5763,25 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             MAD2DecodeAndPrint(dump + (MIFARE_1K_MAXBLOCK * MF_MAD2_SECTOR), swapmad, verbose);
         }
 
+        if (aidlen == 2 || decodeholder) {
+            uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+            size_t madlen = 0;
+            if (MADDecode(dump, dump + (0x10 * MIFARE_1K_MAXBLOCK), mad, &madlen, swapmad)) {
+                PrintAndLogEx(ERR, "can't decode MAD");
+                free(dump);
+                return PM3_ESOFT;
+            }
+
+            uint16_t aaid = 0x0004;
+            if (aidlen == 2) {
+                aaid = (aid[0] << 8) + aid[1];
+            }
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "-------- " _CYAN_("Card Holder Info 0x%04x") " --------", aaid);
+
+            MADCardHolderInfoDecode(dump, bytes_read, verbose);
+        }
         free(dump);
         return PM3_SUCCESS;
     }
@@ -5795,17 +5817,34 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    got_first = true;
+    if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector10) != PM3_SUCCESS) {
+        if (verbose) {
+            PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD 2 or doesn't have MAD 2 on default keys");
+        }
+        got_first = false;
+    } else {
+        PrintAndLogEx(INFO, "Authentication ( " _GREEN_("ok") " )");
+    }
+
+    // User supplied key
+    if (got_first == false && keylen == 6) {
+        PrintAndLogEx(INFO, "Trying user specified key...");
+        if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, userkey, sector10) != PM3_SUCCESS) {
+            if (verbose) {
+                PrintAndLogEx(ERR, "error, read sector 10. card doesn't have MAD 2 or the custom key is wrong");
+            }
+        } else {
+            PrintAndLogEx(INFO, "Authentication ( " _GREEN_("ok") " )");
+        }
+    }
+
     MADPrintHeader();
 
     bool haveMAD2 = false;
     MAD1DecodeAndPrint(sector0, swapmad, verbose, &haveMAD2);
 
     if (haveMAD2) {
-        if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector10)) {
-            PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD or doesn't have MAD on default keys");
-            return PM3_ESOFT;
-        }
-
         MAD2DecodeAndPrint(sector10, swapmad, verbose);
     }
 
