@@ -381,7 +381,7 @@ static int mf_save_keys_from_arr(uint16_t n, uint8_t *d) {
     }
 
     char fn[FILE_PATH_SIZE] = {0};
-    snprintf(fn, sizeof(fn), "hf-mf-%s-keys", sprint_hex_inrow(d, 4));
+    snprintf(fn, sizeof(fn), "hf-mf-%s-key", sprint_hex_inrow(d, 4));
     saveFile(fn, ".bin", keys, keysize);
     free(keys);
     return PM3_SUCCESS;
