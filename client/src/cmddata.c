@@ -2939,7 +2939,7 @@ static int CmdDiff(const char *Cmd) {
 //                    "data diff -a fileA --cb\n"
                   "data diff --fa fileA -b fileB\n"
                   "data diff --fa fileA --fb fileB\n"
-                  "data diff --ea --cb\n"
+//                  "data diff --ea --cb\n"
                  );
 
     void *argtable[] = {
@@ -3082,11 +3082,20 @@ static int CmdDiff(const char *Cmd) {
     if (inB == NULL)
         PrintAndLogEx(INFO, "inB null");
 
-    int hdr_sln = (width * 4) + 2;
+    int hdr_sln = (width * 4) + 2;    
+    char hdr0[300] = {0};
 
-    char hdr0[200] = " #  | " _CYAN_("a");
-    memset(hdr0 + strlen(hdr0), ' ', hdr_sln - 2);
-    strcat(hdr0 + strlen(hdr0), "| " _CYAN_("b"));
+    int max_fn_space = (width * 5);
+
+    if (fnlenA && fnlenB && (max_fn_space > fnlenA) && (max_fn_space > fnlenB)) {
+        snprintf(hdr0, sizeof(hdr0) - 1, " #  | " _CYAN_("%.*s"), max_fn_space, filenameA);
+        memset(hdr0 + strlen(hdr0), ' ', hdr_sln - strlen(filenameA) - 1 );
+        snprintf(hdr0 + strlen(hdr0), sizeof(hdr0) - 1 - strlen(hdr0), "| " _CYAN_("%.*s"), max_fn_space, filenameB);
+    } else {
+        strcat(hdr0, " #  | " _CYAN_("a"));
+        memset(hdr0 + strlen(hdr0), ' ', hdr_sln - 2);
+        strcat(hdr0 + strlen(hdr0), "| " _CYAN_("b"));
+    }
 
     char hdr1[200] = "----+";
     memset(hdr1 + strlen(hdr1), '-', hdr_sln);
