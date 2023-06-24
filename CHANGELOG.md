@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Changed `hf topaz dump --ns` - now supports nosave param (@iceman1001)
+ - Added `hf mf supercard --furui` - now supports key recovery from Furui detection card. Thanks foxushka! (@iceman1001)
+ - Added `hf topaz dump --ns` - now supports nosave param (@iceman1001)
  - Changed `hf topaz rdbl` - unified output (@iceman1001)
  - Fixed `hf topaz wrbl` - now supports tear off and write_nonerase command (@iceman1001)
  - Fixed `hf mf` commands (@iceman1001)
