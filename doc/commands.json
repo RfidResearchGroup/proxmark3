@@ -3966,14 +3966,16 @@
             "command": "hf mf auth4",
             "description": "Executes AES authentication command in ISO14443-4",
             "notes": [
-                "hf mf auth4 4000 000102030405060708090a0b0c0d0e0f -> executes authentication",
-                "hf mf auth4 9003 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> executes authentication"
+                "hf mf auth4 -n 4000 -k 000102030405060708090a0b0c0d0e0f -> executes authentication",
+                "hf mf auth4 -n 9003 -k FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> executes authentication"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-n <hex> key num, 2 hex bytes",
+                "-k, --key <hex> key, 16 hex bytes"
             ],
-            "usage": "hf mf auth4 [-h] <Key Num (HEX 2 bytes)> <Key Value (HEX 16 bytes)>"
+            "usage": "hf mf auth4 [-h] -n <hex> -k <hex>"
         },
         "hf mf autopwn": {
             "command": "hf mf autopwn",
@@ -4655,14 +4657,14 @@
             "options": [
                 "-h, --help This help",
                 "-v, --verbose show technical data",
-                "--aid <aid> print all sectors with specified aid",
-                "-k, --key <key> key for printing sectors",
+                "--aid <hex> print all sectors with specified aid",
+                "-k, --key <hex> key for printing sectors",
                 "-b, --keyb use key B for access printing sectors (by default: key A)",
                 "--be (optional, BigEndian)",
                 "--dch decode Card Holder information",
                 "-f, --file <fn> load dump file and decode MAD"
             ],
-            "usage": "hf mf mad [-hvb] [--aid <aid>] [-k <key>] [--be] [--dch] [-f <fn>]"
+            "usage": "hf mf mad [-hvb] [--aid <hex>] [-k <hex>] [--be] [--dch] [-f <fn>]"
         },
         "hf mf nack": {
             "command": "hf mf nack",
@@ -4784,7 +4786,8 @@
             "command": "hf mf rdbl",
             "description": "Read MIFARE Classic block",
             "notes": [
-                "hf mf rdbl --blk 0 -k FFFFFFFFFFFF",
+                "hf mf rdbl --blk 0",
+                "hf mf rdbl --blk 0 -k A0A1A2A3A4A5",
                 "hf mf rdbl --blk 3 -v -> get block 3, decode sector trailer"
             ],
             "offline": false,
@@ -4802,7 +4805,8 @@
             "command": "hf mf rdsc",
             "description": "Read MIFARE Classic sector",
             "notes": [
-                "hf mf rdsc -s 0 -k FFFFFFFFFFFF"
+                "hf mf rdsc -s 0",
+                "hf mf rdsc -s 0 -k A0A1A2A3A4A5"
             ],
             "offline": false,
             "options": [
@@ -4906,9 +4910,10 @@
             "options": [
                 "-h, --help This help",
                 "-r, --reset Reset card",
-                "-u, --uid <hex> New UID (4 hex bytes)"
+                "-u, --uid <hex> New UID (4 hex bytes)",
+                "--furui Furui detection card"
             ],
-            "usage": "hf mf supercard [-hr] [-u <hex>]"
+            "usage": "hf mf supercard [-hr] [-u <hex>] [--furui]"
         },
         "hf mf value": {
             "command": "hf mf value",
@@ -4976,7 +4981,8 @@
             "command": "hf mf wrbl",
             "description": "Write MIFARE Classic block with 16 hex bytes of data Sector 0 / Block 0 - Manufacturer block When writing to block 0 you must use a VALID block 0 data (UID, BCC, SAK, ATQA) Writing an invalid block 0 means rendering your Magic GEN2 card undetectable. Look in the magic_cards_notes.md file for help to resolve it. `--force` param is used to override warnings like bad ACL and BLOCK 0 writes. if not specified, it will exit if detected",
             "notes": [
-                "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 000102030405060708090a0b0c0d0e0f"
+                "hf mf wrbl --blk 1 -d 000102030405060708090a0b0c0d0e0f",
+                "hf mf wrbl --blk 1 -k A0A1A2A3A4A5 -d 000102030405060708090a0b0c0d0e0f"
             ],
             "offline": false,
             "options": [
@@ -6126,7 +6132,7 @@
         },
         "hf mfp auth": {
             "command": "hf mfp auth",
-            "description": "Executes AES authentication command for Mifare Plus card",
+            "description": "Executes AES authentication command for MIFARE Plus card",
             "notes": [
                 "hf mfp auth --ki 4000 --key 000102030405060708090a0b0c0d0e0f -> executes authentication",
                 "hf mfp auth --ki 9003 --key FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -v -> executes authentication and shows all the system data"
@@ -6145,9 +6151,9 @@
             "description": "Checks keys on MIFARE Plus card",
             "notes": [
                 "hf mfp chk -k 000102030405060708090a0b0c0d0e0f -> check key on sector 0 as key A and B",
-                "hf mfp chk -s 2 -a -> check default key list on sector 2, key A",
+                "hf mfp chk -s 2 -a -> check default key list on sector 2, only key A",
                 "hf mfp chk -d mfp_default_keys -s0 -e6 -> check keys from dictionary against sectors 0-6",
-                "hf mfp chk --pattern1b -j keys -> check all 1-byte keys pattern and save found keys to json",
+                "hf mfp chk --pattern1b --dump -> check all 1-byte keys pattern and save found keys to file",
                 "hf mfp chk --pattern2b --startp2b FA00 -> check all 2-byte keys pattern. Start from key FA00FA00...FA00"
             ],
             "offline": false,
@@ -6162,10 +6168,10 @@
                 "--pattern1b Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)",
                 "--pattern2b Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)",
                 "--startp2b <pattern> Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)",
-                "-j, --json <fn> Json filename to save keys",
+                "--dump Dump found keys to JSON file",
                 "-v, --verbose Verbose mode"
             ],
-            "usage": "hf mfp chk [-habv] [-s <0..255>] [-e <0..255>] [-k <hex>] [-d <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [-j <fn>]"
+            "usage": "hf mfp chk [-habv] [-s <0..255>] [-e <0..255>] [-k <hex>] [-d <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [--dump]"
         },
         "hf mfp commitp": {
             "command": "hf mfp commitp",
@@ -6180,9 +6186,26 @@
             ],
             "usage": "hf mfp commitp [-hv]"
         },
+        "hf mfp dump": {
+            "command": "hf mfp dump",
+            "description": "Dump MIFARE Plus tag to binary file If no <name> given, UID will be used as filename",
+            "notes": [
+                "hf mfp dump",
+                "hf mfp dump --keys hf-mf-066C8B78-key.bin -> MIFARE Plus with keys from specified file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of dump",
+                "-k, --keys <fn> filename of keys",
+                "--ns no save to file",
+                "-v, --verbose Verbose mode"
+            ],
+            "usage": "hf mfp dump [-hv] [-f <fn>] [-k <fn>] [--ns]"
+        },
         "hf mfp help": {
             "command": "hf mfp help",
-            "description": "help This help",
+            "description": "help This help list List MIFARE Plus history",
             "notes": [],
             "offline": true,
             "options": [],
@@ -6215,9 +6238,30 @@
             ],
             "usage": "hf mfp initp [-hv] [-k <hex>]"
         },
+        "hf mfp list": {
+            "command": "hf mfp list",
+            "description": "Alias of `trace list -t mf` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "notes": [
+                "hf mf list --frame -> show frame delay times",
+                "hf mf list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-1, --buffer use data from trace buffer",
+                "--frame show frame delay times",
+                "-c mark CRC bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into Wireshark using encapsulation type \"ISO 14443\"",
+                "-f, --file <fn> filename of dictionary"
+            ],
+            "usage": "hf mf list [-h1crux] [--frame] [-f <fn>]"
+        },
         "hf mfp mad": {
             "command": "hf mfp mad",
-            "description": "Checks and prints Mifare Application Directory (MAD)",
+            "description": "Checks and prints MIFARE Application Directory (MAD)",
             "notes": [
                 "hf mfp mad",
                 "hf mfp mad --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> read and print NDEF data from MAD aid"
@@ -6233,6 +6277,14 @@
                 "--dch Decode Card Holder information"
             ],
             "usage": "hf mfp mad [-hvb] [--aid <hex>] [-k <hex>] [--be] [--dch]"
+        },
+        "hf mfp ndefformat": {
+            "command": "hf mfp ndefformat",
+            "description": "format MIFARE Plus Tag as a NFC tag with Data Exchange Format (NDEF) If no <name> given, UID will be used as filename. It will try default keys and MAD keys to detect if tag is already formatted in order to write.",
+            "notes": [],
+            "offline": false,
+            "options": [],
+            "usage": ""
         },
         "hf mfp ndefread": {
             "command": "hf mfp ndefread",
@@ -6254,9 +6306,27 @@
             ],
             "usage": "hf mfp ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
         },
+        "hf mfp ndefwrite": {
+            "command": "hf mfp ndefwrite",
+            "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.",
+            "notes": [
+                "hf mfp ndefwrite -d 0300FE -> write empty record to tag",
+                "hf mfp ndefwrite -f myfilename",
+                "hf mfp ndefwrite -d 033fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-d <hex> raw NDEF hex bytes",
+                "-f, --file <fn> write raw NDEF file to tag",
+                "-p fix NDEF record headers / terminator block if missing",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf mfp ndefwrite [-hpv] [-d <hex>] [-f <fn>]"
+        },
         "hf mfp rdbl": {
             "command": "hf mfp rdbl",
-            "description": "Reads several blocks from Mifare Plus card",
+            "description": "Reads blocks from MIFARE Plus card",
             "notes": [
                 "hf mfp rdbl --blk 0 --key 000102030405060708090a0b0c0d0e0f -> executes authentication and read block 0 data",
                 "hf mfp rdbl --blk 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF"
@@ -6293,7 +6363,7 @@
         },
         "hf mfp wrbl": {
             "command": "hf mfp wrbl",
-            "description": "Writes one block to Mifare Plus card",
+            "description": "Writes one block to MIFARE Plus card",
             "notes": [
                 "hf mfp wrbl --blk 1 -d ff0000000000000000000000000000ff --key 000102030405060708090a0b0c0d0e0f -> write block 1 data",
                 "hf mfp wrbl --blk 2 -d ff0000000000000000000000000000ff -v -> write block 2 data with default key 0xFF..0xFF"
@@ -7024,9 +7094,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump"
+                "-f, --file <fn> filename of dump",
+                "--ns no save to file"
             ],
-            "usage": "hf topaz dump [-h] [-f <fn>]"
+            "usage": "hf topaz dump [-h] [-f <fn>] [--ns]"
         },
         "hf topaz help": {
             "command": "hf topaz help",
@@ -7086,16 +7157,16 @@
         },
         "hf topaz rdbl": {
             "command": "hf topaz rdbl",
-            "description": "Read a block",
+            "description": "Read Topaz block",
             "notes": [
-                "hf topaz rdbl -b 7"
+                "hf topaz rdbl --blk 7"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-b, --block <dec> Block number to write"
+                "--blk <dec> Block number"
             ],
-            "usage": "hf topaz rdbl [-h] -b <dec>"
+            "usage": "hf topaz rdbl [-h] --blk <dec>"
         },
         "hf topaz reader": {
             "command": "hf topaz reader",
@@ -7151,17 +7222,17 @@
         },
         "hf topaz wrbl": {
             "command": "hf topaz wrbl",
-            "description": "Write a block",
+            "description": "Write Topaz block with 8 hex bytes of data",
             "notes": [
-                "hf topaz wrbl -b 7 -d 1122334455667788"
+                "hf topaz wrbl --blk 7 -d 1122334455667788"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-b, --block <dec> Block number to write",
+                "--blk <dec> Block number",
                 "-d, --data <hex> Block data (8 hex bytes)"
             ],
-            "usage": "hf topaz wrbl [-h] -b <dec> -d <hex>"
+            "usage": "hf topaz wrbl [-h] --blk <dec> -d <hex>"
         },
         "hf tune": {
             "command": "hf tune",
@@ -12022,9 +12093,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 755,
+        "commands_extracted": 759,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-06-04T15:36:56"
-
+        "extracted_on": "2023-06-24T15:16:04"
     }
 }

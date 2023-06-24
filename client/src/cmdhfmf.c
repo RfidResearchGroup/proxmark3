@@ -1395,7 +1395,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
                     PrintAndLogEx(WARNING, "Command execute timeout");
                     continue;
-                } 
+                }
 
                 int isOK  = resp.oldarg[0] & 0xff;
                 if (isOK == 1) {
@@ -1406,14 +1406,14 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                     goto out;
                 } else {
                     if (b == 0) {
-                        PrintAndLogEx(INFO, "Writing to manufacture block w key " _YELLOW_("%c") " ( " _RED_("fail") " )", 
-                            (kt == MF_KEY_A) ? 'A' : 'B'
-                        );
+                        PrintAndLogEx(INFO, "Writing to manufacture block w key " _YELLOW_("%c") " ( " _RED_("fail") " )",
+                                      (kt == MF_KEY_A) ? 'A' : 'B'
+                                     );
                     } else {
                         PrintAndLogEx(FAILED, "Write to block " _YELLOW_("%u") " w key " _YELLOW_("%c") " ( " _RED_("fail") " ) ",
-                            blockno,
-                            (kt == MF_KEY_A) ? 'A' : 'B'
-                        );
+                                      blockno,
+                                      (kt == MF_KEY_A) ? 'A' : 'B'
+                                     );
                     }
                 }
             } // end loop key types
@@ -1424,7 +1424,7 @@ out:
     free(ref_dump);
     free(keyA);
     free(keyB);
-    PrintAndLogEx(INFO, "-----+------------------------------------------------------------");    
+    PrintAndLogEx(INFO, "-----+------------------------------------------------------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
@@ -3604,7 +3604,7 @@ out:
 //    if (singleSector)
 //        printKeyTableEx(1, e_sector, mfSectorNum(blockNo));
 //    else
-        printKeyTable(sectors_cnt, e_sector);
+    printKeyTable(sectors_cnt, e_sector);
 
     if (transferToEml) {
         // fast push mode
@@ -6273,7 +6273,7 @@ skipfile:
                     memcpy(block, firstblocks[b], MFBLOCK_SIZE);
                     break;
                 default: {
-                    if (mfIsSectorTrailerBasedOnBlocks(i,j)) {
+                    if (mfIsSectorTrailerBasedOnBlocks(i, j)) {
                         // ST NDEF
                         memcpy(block, firstblocks[7], MFBLOCK_SIZE);
                     }
@@ -6787,12 +6787,12 @@ static int mfc_furui_recovery(uint8_t items, uint8_t tracedata[FURUI_MAX_TRACES]
 
                 uint64_t key64 = -1;
                 if (mfkey32_moebius(&data, &key64)) {
-                    PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ "_GREEN_("%012" PRIX64) " ]", 
-                        sprint_hex_inrow(tracedata[i], 4), 
-                        data.sector, 
-                        (data.keytype == 0x60) ? 'A' : 'B',
-                        key64
-                    );
+                    PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ "_GREEN_("%012" PRIX64) " ]",
+                                  sprint_hex_inrow(tracedata[i], 4),
+                                  data.sector,
+                                  (data.keytype == 0x60) ? 'A' : 'B',
+                                  key64
+                                 );
                     break;
                 }
             }
@@ -6836,11 +6836,11 @@ static int mfc_supercard_gen2_recovery(uint8_t items, uint8_t tracedata[FURUI_MA
                 uint64_t key64 = -1;
                 if (mfkey32_moebius(&data, &key64)) {
                     PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ "_GREEN_("%012" PRIX64) " ]",
-                        sprint_hex_inrow(tmp, 4),
-                        data.sector,
-                        (data.keytype == 0x60) ? 'A' : 'B',
-                        key64
-                    );
+                                  sprint_hex_inrow(tmp, 4),
+                                  data.sector,
+                                  (data.keytype == 0x60) ? 'A' : 'B',
+                                  key64
+                                 );
                     break;
                 }
             }
@@ -6957,7 +6957,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
         // recover key from collected traces
         return mfc_supercard_gen2_recovery(i, tracedata);
-    } 
+    }
 
     // Super card generation 1
 
@@ -6978,7 +6978,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         uint8_t aCHANGE[] = {0x00, 0xa6, 0xa0, 0x00, 0x05, 0xff, 0xff, 0xff, 0xff, 0x00};
         memcpy(aCHANGE + 5, uid, uidlen);
         res = ExchangeAPDU14a(aCHANGE, sizeof(aCHANGE), activate_field, keep_field_on, response, sizeof(response),
-                                &resplen);
+                              &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Super card UID change [ " _RED_("fail") " ]");
             DropField();
@@ -6998,7 +6998,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         // --------------- RESET CARD ----------------
         uint8_t aRESET[] = {0x00, 0xa6, 0xc0, 0x00};
         res = ExchangeAPDU14a(aRESET, sizeof(aRESET), activate_field, keep_field_on, response, sizeof(response),
-                                &resplen);
+                              &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Super card reset [ " _RED_("fail") " ]");
             DropField();

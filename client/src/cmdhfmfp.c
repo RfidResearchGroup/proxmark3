@@ -995,8 +995,8 @@ static int CmdHFMFPWrbl(const char *Cmd) {
 }
 
 static int plus_key_check(uint8_t startSector, uint8_t endSector, uint8_t startKeyAB, uint8_t endKeyAB,
-                       uint8_t keyList[MAX_AES_KEYS_LIST_LEN][AES_KEY_LEN], size_t keyListLen, uint8_t foundKeys[2][64][AES_KEY_LEN + 1],
-                       bool verbose) {
+                          uint8_t keyList[MAX_AES_KEYS_LIST_LEN][AES_KEY_LEN], size_t keyListLen, uint8_t foundKeys[2][64][AES_KEY_LEN + 1],
+                          bool verbose) {
     int res;
     bool selectCard = true;
     uint8_t keyn[2] = {0};
@@ -1296,10 +1296,10 @@ static int CmdHFMFPChk(const char *Cmd) {
     for (uint8_t s = startSector; s <= endSector; s++) {
 
         if ((memcmp(&foundKeys[0][s][1], ndef_key, AES_KEY_LEN) == 0) ||
-            (memcmp(&foundKeys[1][s][1], ndef_key, AES_KEY_LEN) == 0)) {
+                (memcmp(&foundKeys[1][s][1], ndef_key, AES_KEY_LEN) == 0)) {
             has_ndef_key = true;
         }
-        
+
         if (printedHeader == false) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------");
@@ -1320,7 +1320,7 @@ static int CmdHFMFPChk(const char *Cmd) {
             snprintf(strB, sizeof(strB), _RED_("%s"), "--------------------------------");
         }
 
-        PrintAndLogEx(INFO, " " _YELLOW_("%03d") " | %s | %s", s, strA, strB);       
+        PrintAndLogEx(INFO, " " _YELLOW_("%03d") " | %s | %s", s, strA, strB);
     }
 
     if (printedHeader == false)
@@ -1395,7 +1395,7 @@ static int CmdHFMFPDump(const char *Cmd) {
         arg_str0("f",  "file", "<fn>", "filename of dump"),
         arg_str0("k",  "keys", "<fn>", "filename of keys"),
         arg_lit0(NULL, "ns", "no save to file"),
-        arg_lit0("v",  "verbose",   "Verbose mode"),        
+        arg_lit0("v",  "verbose",   "Verbose mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1421,14 +1421,14 @@ static int CmdHFMFPDump(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-/*
-    iso14a_card_select_t card ;
-    int res = mfp_read_tag(&card, mem, key_fn);
-    if (res != PM3_SUCCESS) {
-        free(mem);
-        return res;
-    }
-*/
+    /*
+        iso14a_card_select_t card ;
+        int res = mfp_read_tag(&card, mem, key_fn);
+        if (res != PM3_SUCCESS) {
+            free(mem);
+            return res;
+        }
+    */
 
     // Skip saving card data to file
     if (nosave) {
@@ -1436,28 +1436,28 @@ static int CmdHFMFPDump(const char *Cmd) {
         free(mem);
         return PM3_SUCCESS;
     }
-/*
-    // Save to file
-    if (strlen(data_fn) < 1) {
+    /*
+        // Save to file
+        if (strlen(data_fn) < 1) {
 
-        char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-dump")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
-        strcpy(fptr, "hf-mfp-");
+            char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-dump")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
+            strcpy(fptr, "hf-mfp-");
 
-        FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
+            FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
 
-        strcpy(data_fn, fptr);
-        free(fptr);
-    }
+            strcpy(data_fn, fptr);
+            free(fptr);
+        }
 
-    saveFile(data_fn, ".bin", mem, MIFARE_4K_MAX_BYTES);
-    saveFileEML(data_fn, mem, MIFARE_4K_MAX_BYTES, MFBLOCK_SIZE);
+        saveFile(data_fn, ".bin", mem, MIFARE_4K_MAX_BYTES);
+        saveFileEML(data_fn, mem, MIFARE_4K_MAX_BYTES, MFBLOCK_SIZE);
 
-    iso14a_mf_extdump_t xdump;
-    xdump.card_info = card;
-    xdump.dump = mem;
-    xdump.dumplen = MIFARE_4K_MAX_BYTES;
-    saveFileJSON(data_fn, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
-*/
+        iso14a_mf_extdump_t xdump;
+        xdump.card_info = card;
+        xdump.dump = mem;
+        xdump.dumplen = MIFARE_4K_MAX_BYTES;
+        saveFileJSON(data_fn, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
+    */
     free(mem);
     return PM3_SUCCESS;
 }

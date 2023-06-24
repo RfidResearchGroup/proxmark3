@@ -1313,7 +1313,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
         // memcpy(vdata, udata.bytes + (14 + atslen), 2 * 64 * 17);
         for (size_t i = 0; i < 64; i++) {
-            
+
             if ((sptr + (AES_KEY_LEN * 2)) > maxdatalen) {
                 break;
             }

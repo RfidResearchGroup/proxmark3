@@ -1291,7 +1291,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
         { .response = rPPS,       .response_n = sizeof(rPPS)      },  // PPS response
         { .response = rPACK,      .response_n = sizeof(rPACK)     }   // PACK response
     };
-    
+
     // "precompile" responses. There are 12 predefined responses with a total of 84 bytes data to transmit.
 
     // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
@@ -3105,7 +3105,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
                     FpgaDisableTracing();
                     reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
                 }
-            } else { 
+            } else {
                 arg0 = ReaderReceive(buf, par);
                 FpgaDisableTracing();
                 reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));

@@ -224,7 +224,7 @@ static int topaz_write_erase8_block(uint8_t blockno, uint8_t *block_data) {
     uint16_t resp_len = 11;
     uint8_t response[11] = {0};
 
-    // 
+    //
 
     if (topaz_send_cmd(wr8_cmd, sizeof(wr8_cmd), response, &resp_len, true) == PM3_ETIMEOUT) {
         topaz_switch_off_field();
@@ -267,12 +267,12 @@ static int topaz_write_nonerase8_block(uint8_t blockno, uint8_t *block_data) {
         return res;
     }
 
-    // ADD 
+    // ADD
     // 7 6 5 4 3 2 1 0
     //           b b b --- Byte  0 - 7
-    //   B B B B --------- BLOCK 
+    //   B B B B --------- BLOCK
     // r ----------------- 0
-    // 
+    //
 
     uint8_t wr8_cmd[] = {TOPAZ_WRITE_NE8, blockno, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     memcpy(wr8_cmd + 10, uid_echo, 4);
@@ -281,7 +281,7 @@ static int topaz_write_nonerase8_block(uint8_t blockno, uint8_t *block_data) {
     uint16_t resp_len = 11;
     uint8_t response[11] = {0};
 
-    // 
+    //
     if (topaz_send_cmd(wr8_cmd, sizeof(wr8_cmd), response, &resp_len, true) == PM3_ETIMEOUT) {
         topaz_switch_off_field();
         return PM3_ESOFT;
@@ -883,7 +883,7 @@ static int CmdHFTopazDump(const char *Cmd) {
     if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
         if (set_dynamic) {
-           free(topaz_tag.dynamic_memory);
+            free(topaz_tag.dynamic_memory);
         }
         return PM3_SUCCESS;
     }
@@ -1034,7 +1034,7 @@ static int CmdHFTopazWrBl(const char *Cmd) {
     PrintAndLogEx(INFO, "Block: %0d (0x%02X) [ %s]", blockno, blockno, sprint_hex(data, dlen));
 
     int res;
-   if (blockno != 13 && blockno != 14) {
+    if (blockno != 13 && blockno != 14) {
         // send write/erase block
         res = topaz_write_erase8_block(blockno, data);
     } else {

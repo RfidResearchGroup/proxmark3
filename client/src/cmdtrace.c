@@ -571,9 +571,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     //2 Not crc-command
 
     // Draw the data column
-    #define TRACE_MAX_LINES      36
+#define TRACE_MAX_LINES      36
     // number of hex bytes to be printed per row  (16 data + 2 crc)
-    #define TRACE_MAX_HEX_BYTES  18
+#define TRACE_MAX_HEX_BYTES  18
 
     char line[TRACE_MAX_LINES][160] = {{0}};
 
@@ -700,8 +700,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     // mark short bytes (less than 8 Bit + Parity)
     if (protocol == ISO_14443A ||
-        protocol == PROTO_MIFARE ||
-        protocol == THINFILM) {
+            protocol == PROTO_MIFARE ||
+            protocol == THINFILM) {
 
         // approximated with 128 * (9 * data_len);
         uint16_t bitime = 1056 + 32;
@@ -874,13 +874,13 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         } else {
 
 
-            if (last_line && (memcmp(crc, "\x20\x20\x20\x20", 4) != 0) && g_session.supports_colors && markCRCBytes) {                
+            if (last_line && (memcmp(crc, "\x20\x20\x20\x20", 4) != 0) && g_session.supports_colors && markCRCBytes) {
                 str_padder = 85;
                 // odd case of multiline,  and last single byte on empty row has been colorised...
                 if (strlen(line[j]) < 14) {
                     str_padder = 81;
                 }
-            } 
+            }
 
             if (hdr->isResponse) {
                 PrintAndLogEx(NORMAL, "            |            |     |%-*s | %s| %s",
@@ -909,7 +909,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen, hdr->isResponse);
             uint8_t crcc = iso14443A_CRC_check(hdr->isResponse, mfData, mfDataLen);
 
-            //iceman: colorise crc bytes here will need a refactor of code from above. 
+            //iceman: colorise crc bytes here will need a refactor of code from above.
             PrintAndLogEx(NORMAL, "            |            |  *  |%-*s | %-4s| %s",
                           str_padder,
                           sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
