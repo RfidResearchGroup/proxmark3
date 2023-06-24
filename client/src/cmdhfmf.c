@@ -1385,10 +1385,12 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                     memcpy(wdata, default_key, MIFARE_KEY_SIZE);
                 }
 
-                PrintAndLogEx(INFO, " %3d | %s", mfFirstBlockOfSector(s) + b, sprint_hex(bldata, sizeof(bldata)));
+                uint16_t blockno = (mfFirstBlockOfSector(s) + b);
+
+                PrintAndLogEx(INFO, " %3d | %s", blockno, sprint_hex(bldata, sizeof(bldata)));
 
                 clearCommandBuffer();
-                SendCommandMIX(CMD_HF_MIFARE_WRITEBL, mfFirstBlockOfSector(s) + b, kt, 0, wdata, sizeof(wdata));
+                SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, kt, 0, wdata, sizeof(wdata));
                 PacketResponseNG resp;
                 if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
                     PrintAndLogEx(WARNING, "Command execute timeout");
@@ -1401,18 +1403,24 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                     break;
                 } else if (isOK == PM3_ETEAROFF) {
                     PrintAndLogEx(INFO, "Tear off triggerd. Recommendation is not to use tear-off with restore command");
-                    return isOK;
+                    goto out;
                 } else {
                     if (b == 0) {
-                        PrintAndLogEx(INFO, "Writing to manufacture block w key %c ( " _RED_("fail") " )", (kt == MF_KEY_A) ? 'A' : 'B');
+                        PrintAndLogEx(INFO, "Writing to manufacture block w key " _YELLOW_("%c") " ( " _RED_("fail") " )", 
+                            (kt == MF_KEY_A) ? 'A' : 'B'
+                        );
                     } else {
-                        PrintAndLogEx(FAILED, "Write to block %u w key %c ( " _RED_("fail") " ) ", b, (kt == MF_KEY_A) ? 'A' : 'B');
+                        PrintAndLogEx(FAILED, "Write to block " _YELLOW_("%u") " w key " _YELLOW_("%c") " ( " _RED_("fail") " ) ",
+                            blockno,
+                            (kt == MF_KEY_A) ? 'A' : 'B'
+                        );
                     }
                 }
             } // end loop key types
         } // end loop B
     } // end loop S
 
+out:
     free(ref_dump);
     free(keyA);
     free(keyB);
