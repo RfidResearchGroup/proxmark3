@@ -226,10 +226,37 @@ bool mfc_value(const uint8_t *d, int32_t *val) {
 }
 
 void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose) {
+
     if (blockno == 0) {
-        PrintAndLogEx(INFO, "%3d | " _RED_("%s"), blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
+        char ascii[24] = {0};
+        ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
+        PrintAndLogEx(INFO, "%3d | " _RED_("%s") "| " _RED_("%s"),
+            blockno,
+            sprint_hex(d, MFBLOCK_SIZE),
+            ascii
+        );
     } else if (mfIsSectorTrailer(blockno)) {
-        PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s"), blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
+
+        char keya[26] = {0};
+        hex_to_buffer((uint8_t *)keya, d, MIFARE_KEY_SIZE, sizeof(keya) - 1, 0, 1, true);
+
+        char acl[20] = {0};
+        hex_to_buffer((uint8_t *)acl, d + MIFARE_KEY_SIZE, 4, sizeof(acl) - 1, 0, 1, true);
+
+        char keyb[26] = {0};
+        hex_to_buffer((uint8_t *)keyb, d + 10, MIFARE_KEY_SIZE, sizeof(keyb) - 1, 0, 1, true);
+
+        char ascii[24] = {0};
+        ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
+
+        PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s") _MAGENTA_("%s") _YELLOW_("%s") "| " _YELLOW_("%s"),
+            blockno,
+            keya,
+            acl,
+            keyb,
+            ascii
+        );
+
     } else {
         int32_t value = 0;
         if (verbose && mfc_value(d, &value)) {
@@ -249,7 +276,15 @@ static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
     }
 
     if (blockno == 0) {
-        PrintAndLogEx(INFO, "%s| %3d | " _RED_("%s"), secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
+        char ascii[24] = {0};
+        ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
+        PrintAndLogEx(INFO, "%s| %3d | " _RED_("%s") "| " _RED_("%s"),
+            secstr,
+            blockno,
+            sprint_hex(d, MFBLOCK_SIZE),
+            ascii
+        );
+
     } else if (mfIsSectorTrailer(blockno)) {
 
         char keya[26] = {0};
