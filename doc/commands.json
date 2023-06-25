@@ -332,8 +332,7 @@
                 "data diff -a fileA -b fileB",
                 "data diff -a fileA --eb",
                 "data diff --fa fileA -b fileB",
-                "data diff --fa fileA --fb fileB",
-                "data diff --ea --cb"
+                "data diff --fa fileA --fb fileB"
             ],
             "offline": true,
             "options": [
@@ -12095,6 +12094,6 @@
     "metadata": {
         "commands_extracted": 759,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-06-24T15:16:04"
+        "extracted_on": "2023-06-25T20:30:44"
     }
 }

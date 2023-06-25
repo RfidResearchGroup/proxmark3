@@ -2357,7 +2357,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
         // Auth
         if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), keytype, ui64Key, AUTH_FIRST)) {
             retval = PM3_EPARTIAL;
-            if (g_dbglevel > DBG_ERROR) { 
+            if (g_dbglevel > DBG_ERROR) {
                 Dbprintf("Sector %2d - Auth error", s);
             }
             continue;
@@ -2387,7 +2387,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
 
                 if (b < NumBlocksPerSector(s) - 1) {
                     emlSetMem(data, FirstBlockOfSector(s) + b, 1);
-                } else { 
+                } else {
                     // sector trailer, keep the keys, set only the AC
                     uint8_t st[16] = {0x00};
                     emlGetMem(st, FirstBlockOfSector(s) + b, 1);

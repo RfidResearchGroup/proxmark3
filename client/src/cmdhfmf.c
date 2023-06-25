@@ -231,10 +231,10 @@ void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose) {
         char ascii[24] = {0};
         ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
         PrintAndLogEx(INFO, "%3d | " _RED_("%s") "| " _RED_("%s"),
-            blockno,
-            sprint_hex(d, MFBLOCK_SIZE),
-            ascii
-        );
+                      blockno,
+                      sprint_hex(d, MFBLOCK_SIZE),
+                      ascii
+                     );
     } else if (mfIsSectorTrailer(blockno)) {
 
         char keya[26] = {0};
@@ -250,13 +250,13 @@ void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose) {
         ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
 
         PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s") _MAGENTA_("%s") "%02X " _YELLOW_("%s") "| " _YELLOW_("%s"),
-            blockno,
-            keya,
-            acl,
-            d[9],
-            keyb,
-            ascii
-        );
+                      blockno,
+                      keya,
+                      acl,
+                      d[9],
+                      keyb,
+                      ascii
+                     );
 
     } else {
         int32_t value = 0;
@@ -280,11 +280,11 @@ static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
         char ascii[24] = {0};
         ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
         PrintAndLogEx(INFO, "%s| %3d | " _RED_("%s") "| " _RED_("%s"),
-            secstr,
-            blockno,
-            sprint_hex(d, MFBLOCK_SIZE),
-            ascii
-        );
+                      secstr,
+                      blockno,
+                      sprint_hex(d, MFBLOCK_SIZE),
+                      ascii
+                     );
 
     } else if (mfIsSectorTrailer(blockno)) {
 
@@ -301,14 +301,14 @@ static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
         ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
 
         PrintAndLogEx(INFO, "%s| %3d | " _YELLOW_("%s") _MAGENTA_("%s") "%02X " _YELLOW_("%s") "| " _YELLOW_("%s"),
-            secstr,
-            blockno,
-            keya,
-            acl,
-            d[9],
-            keyb,
-            ascii
-        );
+                      secstr,
+                      blockno,
+                      keya,
+                      acl,
+                      d[9],
+                      keyb,
+                      ascii
+                     );
     } else {
         int32_t value = 0;
         if (verbose && mfc_value(d, &value)) {

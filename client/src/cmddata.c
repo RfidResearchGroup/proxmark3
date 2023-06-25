@@ -3082,14 +3082,14 @@ static int CmdDiff(const char *Cmd) {
     if (inB == NULL)
         PrintAndLogEx(INFO, "inB null");
 
-    int hdr_sln = (width * 4) + 2;    
+    int hdr_sln = (width * 4) + 2;
     char hdr0[300] = {0};
 
     int max_fn_space = (width * 5);
 
     if (fnlenA && fnlenB && (max_fn_space > fnlenA) && (max_fn_space > fnlenB)) {
         snprintf(hdr0, sizeof(hdr0) - 1, " #  | " _CYAN_("%.*s"), max_fn_space, filenameA);
-        memset(hdr0 + strlen(hdr0), ' ', hdr_sln - strlen(filenameA) - 1 );
+        memset(hdr0 + strlen(hdr0), ' ', hdr_sln - strlen(filenameA) - 1);
         snprintf(hdr0 + strlen(hdr0), sizeof(hdr0) - 1 - strlen(hdr0), "| " _CYAN_("%.*s"), max_fn_space, filenameB);
     } else {
         strcat(hdr0, " #  | " _CYAN_("a"));
