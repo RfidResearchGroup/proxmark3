@@ -241,7 +241,7 @@ void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose) {
         hex_to_buffer((uint8_t *)keya, d, MIFARE_KEY_SIZE, sizeof(keya) - 1, 0, 1, true);
 
         char acl[20] = {0};
-        hex_to_buffer((uint8_t *)acl, d + MIFARE_KEY_SIZE, 4, sizeof(acl) - 1, 0, 1, true);
+        hex_to_buffer((uint8_t *)acl, d + MIFARE_KEY_SIZE, 3, sizeof(acl) - 1, 0, 1, true);
 
         char keyb[26] = {0};
         hex_to_buffer((uint8_t *)keyb, d + 10, MIFARE_KEY_SIZE, sizeof(keyb) - 1, 0, 1, true);
@@ -249,10 +249,11 @@ void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose) {
         char ascii[24] = {0};
         ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
 
-        PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s") _MAGENTA_("%s") _YELLOW_("%s") "| " _YELLOW_("%s"),
+        PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s") _MAGENTA_("%s") "%02X " _YELLOW_("%s") "| " _YELLOW_("%s"),
             blockno,
             keya,
             acl,
+            d[9],
             keyb,
             ascii
         );
@@ -291,7 +292,7 @@ static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
         hex_to_buffer((uint8_t *)keya, d, MIFARE_KEY_SIZE, sizeof(keya) - 1, 0, 1, true);
 
         char acl[20] = {0};
-        hex_to_buffer((uint8_t *)acl, d + MIFARE_KEY_SIZE, 4, sizeof(acl) - 1, 0, 1, true);
+        hex_to_buffer((uint8_t *)acl, d + MIFARE_KEY_SIZE, 3, sizeof(acl) - 1, 0, 1, true);
 
         char keyb[26] = {0};
         hex_to_buffer((uint8_t *)keyb, d + 10, MIFARE_KEY_SIZE, sizeof(keyb) - 1, 0, 1, true);
@@ -299,11 +300,12 @@ static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
         char ascii[24] = {0};
         ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
 
-        PrintAndLogEx(INFO, "%s| %3d | " _YELLOW_("%s") _MAGENTA_("%s") _YELLOW_("%s") "| " _YELLOW_("%s"),
+        PrintAndLogEx(INFO, "%s| %3d | " _YELLOW_("%s") _MAGENTA_("%s") "%02X " _YELLOW_("%s") "| " _YELLOW_("%s"),
             secstr,
             blockno,
             keya,
             acl,
+            d[9],
             keyb,
             ascii
         );
