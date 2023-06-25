@@ -434,7 +434,13 @@ LDFLAGS += $(MYLDFLAGS)
 
 PM3LDFLAGS = $(LDFLAGS)
 ifeq ($(platform),Darwin)
-    PM3LDFLAGS += -framework Foundation -framework AppKit
+    ifeq ($(shell uname -p),arm64)
+        # The platform is iOS
+        PM3LDFLAGS += -framework Foundation -framework UIKit
+    else
+        # M* macOS devices return arm
+        PM3LDFLAGS += -framework Foundation -framework AppKit
+    endif
 endif
 
 ###################
