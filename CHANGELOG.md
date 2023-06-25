@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+
+## [Seven][2023-06-25]
  - Added support for compiling on iOS (@The-SamminAter)
  - Fixed viewing MFC dump - border char is now white (@iceman1001)
  - Changed `data diff` - to print filenames in header if it fits (@iceman1001)
