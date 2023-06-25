@@ -383,7 +383,7 @@ if (APPLE)
     if (EXISTS /private/var/mobile)
         message(STATUS "iOS detected.")
         set(ADDITIONAL_LNK "-framework Foundation" "-framework UIKit")
-    else
+    else (EXISTS /private/var/mobile)
         message(STATUS "macOS detected.")
         set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
     endif (EXISTS /private/var/mobile)
