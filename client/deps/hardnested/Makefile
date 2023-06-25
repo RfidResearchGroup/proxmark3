@@ -22,6 +22,9 @@ endif
 ifneq ($(findstring aarch64, $(cpu_arch)), )
     IS_SIMD_ARCH=arm64
 endif
+ifneq ($(findstring iP, $(cpu_arch)), )
+    IS_SIMD_ARCH=arm64
+endif
 
 ifneq ($(IS_SIMD_ARCH), )
     MULTIARCHSRCS = hardnested_bf_core.c hardnested_bitarray_core.c
