@@ -893,7 +893,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
 
                     // Compliance of MIFARE Classic EV1 1K Datasheet footnote of Table 8
                     // If access bits show that key B is Readable, any subsequent memory access will be refused.
-                    
+
                     if (cardAUTHKEY == AUTHKEYB && IsKeyBReadable(blockNo)) {
                         EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
                         FpgaDisableTracing();

@@ -1846,7 +1846,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
         Dbprintf("DecodeTagFSK count..... %d", dtagfsk.count);
         Dbprintf("DecodeReader State..... %d", dreader.state);
         Dbprintf("DecodeReader byteCnt... %d", dreader.byteCount);
-        Dbprintf("DecodeReader posCount.. %d", dreader.posCount);    
+        Dbprintf("DecodeReader posCount.. %d", dreader.posCount);
     }
     Dbprintf("Trace length........... " _YELLOW_("%d"), BigBuf_get_traceLen());
 }
