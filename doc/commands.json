@@ -2867,7 +2867,7 @@
             "command": "hf fudan wrbl",
             "description": "Write fudan block with 4 hex bytes of data",
             "notes": [
-                "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 01020304"
+                "hf fudan wrbl --blk 1 -k FFFFFFFFFFFF -d 01020304"
             ],
             "offline": false,
             "options": [
