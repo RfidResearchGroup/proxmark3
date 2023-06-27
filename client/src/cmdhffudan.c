@@ -355,7 +355,7 @@ static int CmdHFFudanWrBl(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fudan wrbl",
                   "Write fudan block with 4 hex bytes of data\n",
-                  "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 01020304"
+                  "hf fudan wrbl --blk 1 -k FFFFFFFFFFFF -d 01020304"
                  );
     void *argtable[] = {
         arg_param_begin,
