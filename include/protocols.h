@@ -263,6 +263,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_GEN_3         9
 #define MAGIC_GEN_4GTU      10
 #define MAGIC_GEN_4GDM      11
+#define MAGIC_QL88          12
+
 
 // Commands for configuration of Gen4 GTU cards.
 // see https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/magic_cards_notes.md
