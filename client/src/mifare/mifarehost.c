@@ -1431,6 +1431,8 @@ int detect_mf_magic(bool is_mfc) {
         case MAGIC_NTAG21X:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("NTAG21x"));
             break;
+        case MAGIC_QL88:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("QL88"));
         default:
             break;
     }

@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 
 ## [Seven.4.16717][2023-06-25]
+ - Change `hf 14a info` - now identifes QL88 tags (@iceman1001)
  - Added support for compiling on iOS (@The-SamminAter)
  - Fixed viewing MFC dump - border char is now white (@iceman1001)
  - Changed `data diff` - to print filenames in header if it fits (@iceman1001)

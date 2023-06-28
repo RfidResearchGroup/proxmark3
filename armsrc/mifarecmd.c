@@ -2631,6 +2631,7 @@ void MifareCIdent(bool is_mfc) {
     uint8_t gen4gmd[4] = {MIFARE_MAGIC_GDM_AUTH_KEY, 0x00, 0x6C, 0x92};
     uint8_t gen4GetConf[8] = {GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
     uint8_t superGen1[9] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10, 0x14, 0x1D};
+
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_malloc(10);
@@ -2787,7 +2788,24 @@ void MifareCIdent(bool is_mfc) {
                         isGen = MAGIC_GEN_4GDM;
                     }
                 }
+
+                if (isGen != MAGIC_GEN_4GDM) {
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                    SpinDelay(40);
+                    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+                    res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+                    if (res == 2) {
+                        struct Crypto1State mpcs = {0, 0};
+                        struct Crypto1State *pcs;
+                        pcs = &mpcs;
+                        if (mifare_classic_authex(pcs, cuid, 68, MF_KEY_B, 0x707B11FC1481, AUTH_FIRST, NULL, NULL) == 0) {
+                            isGen = MAGIC_QL88;
+                        }
+                        crypto1_deinit(pcs);
+                    }
+                }
             }
+
         }
     };
 
