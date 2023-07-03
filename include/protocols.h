@@ -191,12 +191,13 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MIFARE_CMD_TRANSFER         0xB0
 
 #define MIFARE_MAGIC_GDM_AUTH_KEY   0x80
+#define MIFARE_MAGIC_GDM_READBLOCK  0x38
 #define MIFARE_MAGIC_GDM_WRITEBLOCK 0xA8
 #define MIFARE_MAGIC_GDM_READ_CFG   0xE0
 #define MIFARE_MAGIC_GDM_WRITE_CFG  0xE1
 
 #define MIFARE_EV1_PERSONAL_UID     0x40
-#define MIFARE_EV1_SETMODE          0x43
+#define MIFARE_EV1_SETMOD           0x43
 #define MIFARE_EV1_UIDF0            0x00
 #define MIFARE_EV1_UIDF1            0x40
 #define MIFARE_EV1_UIDF2            0x20
