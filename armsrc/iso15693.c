@@ -1835,20 +1835,20 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
     switch_off();
 
     DbpString("");
-    DbpString(_CYAN_("Sniff statistics"));
-    DbpString("=================================");
-    Dbprintf("  DecodeTag State........%d", dtag.state);
-    Dbprintf("  DecodeTag byteCnt......%d", dtag.len);
-    Dbprintf("  DecodeTag posCount.....%d", dtag.posCount);
-    Dbprintf("  DecodeTagFSK State.....%d", dtagfsk.state);
-    Dbprintf("  DecodeTagFSK byteCnt...%d", dtagfsk.len);
-    Dbprintf("  DecodeTagFSK count.....%d", dtagfsk.count);
-    Dbprintf("  DecodeReader State.....%d", dreader.state);
-    Dbprintf("  DecodeReader byteCnt...%d", dreader.byteCount);
-    Dbprintf("  DecodeReader posCount..%d", dreader.posCount);
-    Dbprintf("  Trace length..........." _YELLOW_("%d"), BigBuf_get_traceLen());
-    DbpString("");
-
+    if (g_dbglevel > DBG_ERROR) {
+        DbpString(_CYAN_("Sniff statistics"));
+        DbpString("=================================");
+        Dbprintf("DecodeTag State........ %d", dtag.state);
+        Dbprintf("DecodeTag byteCnt...... %d", dtag.len);
+        Dbprintf("DecodeTag posCount..... %d", dtag.posCount);
+        Dbprintf("DecodeTagFSK State..... %d", dtagfsk.state);
+        Dbprintf("DecodeTagFSK byteCnt... %d", dtagfsk.len);
+        Dbprintf("DecodeTagFSK count..... %d", dtagfsk.count);
+        Dbprintf("DecodeReader State..... %d", dreader.state);
+        Dbprintf("DecodeReader byteCnt... %d", dreader.byteCount);
+        Dbprintf("DecodeReader posCount.. %d", dreader.posCount);
+    }
+    Dbprintf("Trace length........... " _YELLOW_("%d"), BigBuf_get_traceLen());
 }
 
 // Initialize Proxmark3 as ISO15693 reader

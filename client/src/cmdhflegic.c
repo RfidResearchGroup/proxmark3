@@ -682,7 +682,7 @@ static int CmdLegicCalcCrc(const char *Cmd) {
 
     switch (type) {
         case 16:
-            init_table(CRC_LEGIC);
+            init_table(CRC_LEGIC_16);
             PrintAndLogEx(SUCCESS, "Legic crc16: %X", crc16_legic(data, data_len, mcc[0]));
             break;
         default:

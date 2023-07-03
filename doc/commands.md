@@ -538,17 +538,21 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf mfp help            `|Y       |`This help`
-|`hf mfp info            `|N       |`Info about Mifare Plus tag`
-|`hf mfp wrp             `|N       |`Write Perso command`
-|`hf mfp initp           `|N       |`Fill all the card's keys in SL0 mode`
-|`hf mfp commitp         `|N       |`Move card to SL1 or SL3 mode`
+|`hf mfp list            `|Y       |`List MIFARE Plus history`
 |`hf mfp auth            `|N       |`Authentication`
-|`hf mfp rdbl            `|N       |`Read blocks`
-|`hf mfp rdsc            `|N       |`Read sectors`
-|`hf mfp wrbl            `|N       |`Write blocks`
 |`hf mfp chk             `|N       |`Check keys`
+|`hf mfp dump            `|N       |`Dump MIFARE Plus tag to binary file`
+|`hf mfp info            `|N       |`Info about MIFARE Plus tag`
 |`hf mfp mad             `|N       |`Check and print MAD`
+|`hf mfp rdbl            `|N       |`Read blocks from card`
+|`hf mfp rdsc            `|N       |`Read sectors from card`
+|`hf mfp wrbl            `|N       |`Write block to card`
+|`hf mfp commitp         `|N       |`Configure security layer (SL1/SL3 mode)`
+|`hf mfp initp           `|N       |`Fill all the card's keys in SL0 mode`
+|`hf mfp wrp             `|N       |`Write Perso command`
+|`hf mfp ndefformat      `|N       |`Format MIFARE Plus Tag as NFC Tag`
 |`hf mfp ndefread        `|N       |`Read and print NDEF records from card`
+|`hf mfp ndefwrite       `|N       |`Write NDEF records to card`
 
 
 ### hf mfu
@@ -704,14 +708,14 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf topaz help          `|Y       |`This help`
-|`hf topaz dump          `|N       |`Dump TOPAZ family tag to file`
 |`hf topaz list          `|Y       |`List Topaz history`
+|`hf topaz dump          `|N       |`Dump TOPAZ family tag to file`
 |`hf topaz info          `|N       |`Tag information`
+|`hf topaz raw           `|N       |`Send raw hex data to tag`
+|`hf topaz rdbl          `|N       |`Read block`
 |`hf topaz reader        `|N       |`Act like a Topaz reader`
 |`hf topaz sim           `|N       |`Simulate Topaz tag`
 |`hf topaz sniff         `|N       |`Sniff Topaz reader-tag communication`
-|`hf topaz raw           `|N       |`Send raw hex data to tag`
-|`hf topaz rdbl          `|N       |`Read block`
 |`hf topaz view          `|Y       |`Display content from tag dump file`
 |`hf topaz wrbl          `|N       |`Write block`
 

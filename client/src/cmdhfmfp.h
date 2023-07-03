@@ -20,6 +20,30 @@
 
 #include "common.h"
 
+
+#define AES_KEY_LEN            16
+#define MAX_AES_KEYS_LIST_LEN  1024
+
+typedef enum {
+    MFP_UNKNOWN = 0,
+    DESFIRE_MF3ICD40,
+    DESFIRE_EV1,
+    DESFIRE_EV2,
+    DESFIRE_EV3,
+    DESFIRE_LIGHT,
+    PLUS_EV1,
+} nxp_cardtype_t;
+
+typedef struct mfp_key_item {
+    uint8_t a[16];
+    uint8_t b[16];
+} mfp_key_item_t;
+
+typedef struct mfp_keys {
+    uint8_t success;
+    mfp_key_item_t *keys;
+} mfp_keys_t;
+
 int CmdHFMFP(const char *Cmd);
 int CmdHFMFPNDEFRead(const char *Cmd);
 

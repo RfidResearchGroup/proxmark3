@@ -484,8 +484,8 @@ void MifareWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     if (res == PM3_ETEAROFF) {
         retval = PM3_ETEAROFF;
         goto OUT;
-    } else if (res) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    } else if (res != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         retval = PM3_ESOFT;
         goto OUT;
     }
@@ -554,7 +554,7 @@ void MifareWriteBlockGDM(uint8_t blockno, uint8_t keytype, uint8_t *key, uint8_t
     if (res == PM3_ETEAROFF) {
         retval = PM3_ETEAROFF;
         goto OUT;
-    } else if (res) {
+    } else if (res != PM3_SUCCESS) {
         retval = PM3_ESOFT;
         goto OUT;
     }
@@ -688,8 +688,8 @@ void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
             break;
         };
 
-        if (mifare_classic_value(pcs, cuid, blockNo, blockdata, action)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+        if (mifare_classic_value(pcs, cuid, blockNo, blockdata, action) != PM3_SUCCESS) {
+            if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
             break;
         };
 
@@ -777,8 +777,8 @@ static void MifareUWriteBlockEx(uint8_t arg0, uint8_t arg1, uint8_t *datain, boo
         }
     }
 
-    if (mifare_ultra_writeblock(blockNo, blockdata)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    if (mifare_ultra_writeblock(blockNo, blockdata) != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         OnError(0);
         return;
     };
@@ -851,8 +851,8 @@ void MifareUWriteBlockCompat(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
         }
     }
 
-    if (mifare_ultra_writeblock_compat(blockNo, blockdata)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    if (mifare_ultra_writeblock_compat(blockNo, blockdata) != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         OnError(0);
         return;
     };
@@ -896,8 +896,8 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
     blockdata[1] = pwd[6];
     blockdata[2] = pwd[5];
     blockdata[3] = pwd[4];
-    if (mifare_ultra_writeblock(44, blockdata)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    if (mifare_ultra_writeblock(44, blockdata) != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         OnError(44);
         return;
     };
@@ -906,8 +906,8 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
     blockdata[1] = pwd[2];
     blockdata[2] = pwd[1];
     blockdata[3] = pwd[0];
-    if (mifare_ultra_writeblock(45, blockdata)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    if (mifare_ultra_writeblock(45, blockdata) != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         OnError(45);
         return;
     };
@@ -916,8 +916,8 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
     blockdata[1] = pwd[14];
     blockdata[2] = pwd[13];
     blockdata[3] = pwd[12];
-    if (mifare_ultra_writeblock(46, blockdata)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    if (mifare_ultra_writeblock(46, blockdata) != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         OnError(46);
         return;
     };
@@ -926,8 +926,8 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
     blockdata[1] = pwd[10];
     blockdata[2] = pwd[9];
     blockdata[3] = pwd[8];
-    if (mifare_ultra_writeblock(47, blockdata)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Write block error");
+    if (mifare_ultra_writeblock(47, blockdata) != PM3_SUCCESS) {
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
         OnError(47);
         return;
     };
@@ -1522,7 +1522,6 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
         target_ks[0] = nt2 ^ target_nt[0];
 
         // second collection
-
         if (mifare_classic_halt(pcs, cuid)) {
             continue;
         }
@@ -2303,64 +2302,98 @@ int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype) {
 
 int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
 
-    uint32_t cuid = 0;
-    struct Crypto1State mpcs = {0, 0};
-    struct Crypto1State *pcs;
-    pcs = &mpcs;
-
-    // variables
-    uint8_t dataoutbuf[16] = {0x00};
-    uint8_t dataoutbuf2[16] = {0x00};
-    uint8_t uid[10] = {0x00};
-
     LED_A_ON();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     clear_trace();
     set_tracing(true);
 
+    // variables
+    bool have_uid = false;
+    uint8_t cascade_levels = 0;
+    uint32_t cuid = 0;
+    uint8_t uid[10] = {0x00};
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs;
+    pcs = &mpcs;
+
     int retval = PM3_SUCCESS;
 
-    if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-        retval = PM3_ESOFT;
-        if (g_dbglevel > DBG_ERROR) Dbprintf("Can't select card");
-        goto out;
-    }
+    for (uint8_t s = 0; s < sectorcnt; s++) {
+        uint64_t ui64Key = emlGetKey(s, keytype);
 
-    for (uint8_t sectorNo = 0; sectorNo < sectorcnt; sectorNo++) {
-        uint64_t ui64Key = emlGetKey(sectorNo, keytype);
-        if (sectorNo == 0) {
-            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keytype, ui64Key, AUTH_FIRST)) {
-                retval = PM3_EPARTIAL;
-                if (g_dbglevel > DBG_ERROR) Dbprintf("Sector[%2d]. Auth error", sectorNo);
+        // MFC 1K EV1 sector 16,17 don't use key A.
+        if ((sectorcnt == 18) && (keytype == 0) && s > 15) {
+            continue;
+        }
+
+        // use fast select
+        if (have_uid == false) { // need a full select cycle to get the uid first
+            iso14a_card_select_t card_info;
+            if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
                 continue;
             }
-        } else {
-            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(sectorNo), keytype, ui64Key, AUTH_NESTED)) {
-                retval = PM3_EPARTIAL;
-                if (g_dbglevel > DBG_ERROR) Dbprintf("Sector[%2d]. Auth nested error", sectorNo);
+
+            switch (card_info.uidlen) {
+                case 4 :
+                    cascade_levels = 1;
+                    break;
+                case 7 :
+                    cascade_levels = 2;
+                    break;
+                case 10:
+                    cascade_levels = 3;
+                    break;
+                default:
+                    break;
+            }
+            have_uid = true;
+        } else { // no need for anticollision. We can directly select the card
+            if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
                 continue;
             }
         }
 
-        for (uint8_t blockNo = 0; blockNo < NumBlocksPerSector(sectorNo); blockNo++) {
-            if (mifare_classic_readblock(pcs, cuid, FirstBlockOfSector(sectorNo) + blockNo, dataoutbuf)) {
-                retval = PM3_EPARTIAL;
-
-                if (g_dbglevel > DBG_ERROR) Dbprintf("Error reading sector %2d block %2d", sectorNo, blockNo);
-                continue;
+        // Auth
+        if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), keytype, ui64Key, AUTH_FIRST)) {
+            retval = PM3_EPARTIAL;
+            if (g_dbglevel > DBG_ERROR) {
+                Dbprintf("Sector %2d - Auth error", s);
             }
+            continue;
+        }
 
-            if (memcmp(dataoutbuf, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16) == 0) {
-                continue;
-            }
+#define MAX_RETRIES 2
 
-            if (blockNo < NumBlocksPerSector(sectorNo) - 1) {
-                emlSetMem(dataoutbuf, FirstBlockOfSector(sectorNo) + blockNo, 1);
-            } else { // sector trailer, keep the keys, set only the AC
-                emlGetMem(dataoutbuf2, FirstBlockOfSector(sectorNo) + blockNo, 1);
-                memcpy(dataoutbuf2 + 6, dataoutbuf + 6, 4);
-                emlSetMem(dataoutbuf2,  FirstBlockOfSector(sectorNo) + blockNo, 1);
+        uint8_t data[16] = {0x00};
+        for (uint8_t b = 0; b < NumBlocksPerSector(s); b++) {
+
+            memset(data, 0x00, sizeof(data));
+
+            for (uint8_t r = 0; r < MAX_RETRIES; r++) {
+
+                if (mifare_classic_readblock(pcs, cuid, FirstBlockOfSector(s) + b, data)) {
+                    retval |= PM3_EPARTIAL;
+                    if (g_dbglevel > DBG_ERROR) {
+                        Dbprintf("Error reading sector %2d block %2d", s, b);
+                    }
+                    continue;
+                }
+
+                // No need to copy empty
+                if (memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16) == 0) {
+                    continue;
+                }
+
+                if (b < NumBlocksPerSector(s) - 1) {
+                    emlSetMem(data, FirstBlockOfSector(s) + b, 1);
+                } else {
+                    // sector trailer, keep the keys, set only the AC
+                    uint8_t st[16] = {0x00};
+                    emlGetMem(st, FirstBlockOfSector(s) + b, 1);
+                    memcpy(st + 6, data + 6, 4);
+                    emlSetMem(st,  FirstBlockOfSector(s) + b, 1);
+                }
             }
         }
     }
@@ -2368,9 +2401,6 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
     int res = mifare_classic_halt(pcs, cuid);
     (void)res;
 
-    if (g_dbglevel >= DBG_INFO) DbpString("Emulator fill sectors finished");
-
-out:
     crypto1_deinit(pcs);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
@@ -2601,6 +2631,7 @@ void MifareCIdent(bool is_mfc) {
     uint8_t gen4gmd[4] = {MIFARE_MAGIC_GDM_AUTH_KEY, 0x00, 0x6C, 0x92};
     uint8_t gen4GetConf[8] = {GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
     uint8_t superGen1[9] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10, 0x14, 0x1D};
+
     uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_malloc(10);
@@ -2757,7 +2788,24 @@ void MifareCIdent(bool is_mfc) {
                         isGen = MAGIC_GEN_4GDM;
                     }
                 }
+
+                if (isGen != MAGIC_GEN_4GDM) {
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                    SpinDelay(40);
+                    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+                    res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+                    if (res == 2) {
+                        struct Crypto1State mpcs = {0, 0};
+                        struct Crypto1State *pcs;
+                        pcs = &mpcs;
+                        if (mifare_classic_authex(pcs, cuid, 68, MF_KEY_B, 0x707B11FC1481, AUTH_FIRST, NULL, NULL) == 0) {
+                            isGen = MAGIC_QL88;
+                        }
+                        crypto1_deinit(pcs);
+                    }
+                }
             }
+
         }
     };
 
@@ -2835,6 +2883,10 @@ OUT:
     BigBuf_free();
     crypto1_deinit(pcs);
 }
+
+// FUDAN card w static encrypted nonces
+// 2B F9 1C 1B D5 08 48 48 03 A4 B1 B1 75 FF 2D 90
+//                         ^^                   ^^
 
 void OnSuccessMagic(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -3218,7 +3270,7 @@ void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain) {
         return;
     };
 
-    if (mifare_desfire_des_auth1(cuid, dataout)) {
+    if (mifare_desfire_des_auth1(cuid, dataout) != PM3_SUCCESS) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Authentication part1: Fail.");
         OnError(4);
         return;
@@ -3238,7 +3290,7 @@ void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain) {
 
     isOK = mifare_desfire_des_auth2(cuid, key, dataout);
 
-    if (isOK) {
+    if (isOK != PM3_SUCCESS) {
         if (g_dbglevel >= DBG_EXTENDED) Dbprintf("Authentication part2: Failed");
         OnError(4);
         return;

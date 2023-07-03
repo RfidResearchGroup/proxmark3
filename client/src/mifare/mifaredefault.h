@@ -21,6 +21,9 @@
 
 #include "common.h"
 
+#define AES_KEY_LEN             16
+#define MAX_AES_KEYS_LIST_LEN   1024
+
 #define MFKEY_SIZE              6
 #define MFBLOCK_SIZE            16
 
@@ -40,6 +43,12 @@
 #define MIFARE_MINI_MAX_BYTES   320
 
 #define MIFARE_KEY_SIZE         6
+
+#define MIFARE_MINI_MAX_KEY_SIZE    (MIFARE_MINI_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
+#define MIFARE_1K_MAX_KEY_SIZE      (MIFARE_1K_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
+#define MIFARE_2K_MAX_KEY_SIZE      (MIFARE_2K_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
+#define MIFARE_4K_MAX_KEY_SIZE      (MIFARE_4K_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
+
 
 static const uint64_t g_mifare_default_keys[] = {
     0xffffffffffff, // Default key (first key used by program if no user defined key)

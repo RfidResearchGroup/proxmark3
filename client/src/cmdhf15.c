@@ -48,7 +48,7 @@
 #define Logic1                  Iso15693Logic1
 #define FrameEOF                Iso15693FrameEOF
 #define CARD_MEMORY_SIZE        4096
-#define HF15_UID_LENGTH		8
+#define HF15_UID_LENGTH         8
 
 #ifndef Crc15
 # define Crc15(data, len)       Crc16ex(CRC_15693, (data), (len))

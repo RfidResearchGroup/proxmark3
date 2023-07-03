@@ -189,6 +189,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             free(sp);
             return INVALID_SERIAL_PORT;
         }
+
         int sfd = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
         if (sfd == -1) {
             PrintAndLogEx(ERR, "Error opening Bluetooth socket");
@@ -196,6 +197,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             free(sp);
             return INVALID_SERIAL_PORT;
         }
+
         if (connect(sfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
             PrintAndLogEx(ERR, "Error: cannot connect device " _YELLOW_("%s") " over Bluetooth", addrstr);
             close(sfd);

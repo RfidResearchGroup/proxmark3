@@ -927,7 +927,7 @@ static int ndefDecodeExternal_record(NDEFHeader_t *ndef) {
     print_hex_noascii_break(ndef->Payload, ndef->PayloadLen, 32);
 
     // do a character check?
-    if (!strncmp((char *)ndef->Type, "pilet.ee:ekaart:2", ndef->TypeLen)) {
+    if (!strncmp((char *)ndef->Type, "pilet.ee:ekaart:", ndef->TypeLen - 1)) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, _GREEN_("Ekaart detected") " - Trying ASN1 decode...");
         asn1_print(ndef->Payload, ndef->PayloadLen, " ");

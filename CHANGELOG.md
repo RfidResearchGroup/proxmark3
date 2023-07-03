@@ -3,6 +3,20 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+
+## [Seven.4.16717][2023-06-25]
+ - Change `hf 14a info` - now identifes QL88 tags (@iceman1001)
+ - Added support for compiling on iOS (@The-SamminAter)
+ - Fixed viewing MFC dump - border char is now white (@iceman1001)
+ - Changed `data diff` - to print filenames in header if it fits (@iceman1001)
+ - Changed viewing MFC dump files - it now colors ACL + GPB bytes (@iceman1001)
+ - Added `hf mf supercard --furui` - now supports key recovery from Furui detection card. Thanks foxushka! (@iceman1001)
+ - Added `hf topaz dump --ns` - now supports nosave param (@iceman1001)
+ - Changed `hf topaz rdbl` - unified output (@iceman1001)
+ - Fixed `hf topaz wrbl` - now supports tear off and write_nonerase command (@iceman1001)
+ - Fixed `hf mf` commands (@iceman1001)
+ - Fixed `hf mfp` commands (@iceman1001)
+ - Added more default keys (@iceman1001)  Thanks anon!
  - Fixed `pm3-flash-all` shell script now correctly identify the if running on outdated bootloader (@iceman1001)
  - Fixed `hf 15693/iclass sniff` trace timings (@nvx)
  - Fix LegicCash segment handling in `hf_legic.lua` script (@jmichelp)

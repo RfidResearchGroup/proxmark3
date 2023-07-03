@@ -1424,7 +1424,7 @@ static mfu_identify_t *mfu_match_fingerprint(uint8_t *version, uint8_t *data) {
         uint8_t mtmp[40] = {0};
         param_gethex_to_eol(mfu_ident_table[i].match, 0, mtmp, sizeof(mtmp), &ml);
 
-       bool m2 = (memcmp(mtmp, data + mfu_ident_table[i].mpos, mfu_ident_table[i].mlen) == 0);
+        bool m2 = (memcmp(mtmp, data + mfu_ident_table[i].mpos, mfu_ident_table[i].mlen) == 0);
         if (m2) {
             PrintAndLogEx(DEBUG, "(fingerprint) found %s", mfu_ident_table[i].desc);
             return &mfu_ident_table[i];
@@ -3608,7 +3608,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
         if (ul_select(&card)) {
             // Philips toothbrush needs page 0x21-0x23
             uint8_t data[16] = {0x00};
-            int status = ul_read(0x21, data, sizeof(data));        
+            int status = ul_read(0x21, data, sizeof(data));
             if (status == -1) {
                 PrintAndLogEx(DEBUG, "Error: tag didn't answer to READ");
             } else if (status == 16) {

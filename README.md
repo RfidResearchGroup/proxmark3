@@ -1,4 +1,4 @@
-# Iceman Fork - Proxmark3 a RFID / NFC project.
+# Iceman Fork - Proxmark3
 
 The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the vast majority of RFID tags on a global scale. Originally built by Jonathan Westhues, the device is now the goto tool for RFID Analysis for the enthusiast. Iceman repository is considered to be the pinnacle of features and functionality, enabling a huge range of extremely useful and convenient commands and LUA scripts to automate chip identification, penetration testing, and programming
 

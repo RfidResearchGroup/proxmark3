@@ -2520,11 +2520,11 @@ function modifyMode()
     ---
     -- edit data-portion of single segment
     ["ed"] = function(x)
-              if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
-              else sel=selectSegment(inTAG) end
+              if (type(x) == "string" and string.len(x)>0) then sel=tonumber(x,10)
+              else sel = selectSegment(inTAG) end
               if (istable(inTAG.SEG[sel])) then
-		local uid = inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
-                inTAG.SEG[sel].data=editSegmentData(inTAG.SEG[sel].data, uid)
+                local uid = inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
+                inTAG.SEG[sel].data = editSegmentData(inTAG.SEG[sel].data, uid)
               end
             end,
     ---

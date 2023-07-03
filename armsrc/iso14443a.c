@@ -3094,13 +3094,33 @@ void ReaderIso14443a(PacketCommandNG *c) {
             }
         }
 
-        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
-            FpgaDisableTracing();
-            reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+        if ((param & ISO14A_TOPAZMODE)) {
+
+            if (cmd[0] == TOPAZ_WRITE_E8 || cmd[0] == TOPAZ_WRITE_NE8) {
+                if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+                    FpgaDisableTracing();
+                    reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+                } else {
+                    arg0 = ReaderReceive(buf, par);
+                    FpgaDisableTracing();
+                    reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+                }
+            } else {
+                arg0 = ReaderReceive(buf, par);
+                FpgaDisableTracing();
+                reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+            }
+
         } else {
-            arg0 = ReaderReceive(buf, par);
-            FpgaDisableTracing();
-            reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+
+            if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+                FpgaDisableTracing();
+                reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+            } else {
+                arg0 = ReaderReceive(buf, par);
+                FpgaDisableTracing();
+                reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+            }
         }
     }
 

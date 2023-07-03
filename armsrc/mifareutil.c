@@ -433,8 +433,8 @@ int mifare_classic_writeblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t
     }
 
     if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
-        return 1;
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+        return PM3_EFAILED;
     }
 
     uint8_t d_block[18], d_block_enc[18];
@@ -465,11 +465,11 @@ int mifare_classic_writeblock_ex(struct Crypto1State *pcs, uint32_t uid, uint8_t
         res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 3)) << 3;
 
         if ((len != 1) || (res != 0x0A)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd send data2 Error: %02x", res);
-            return 2;
+            if (g_dbglevel >= DBG_INFO) Dbprintf("Cmd send data2 Error: %02x", res);
+            return PM3_EFAILED;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int mifare_classic_write_cfg_block_gdm(struct Crypto1State *pcs, uint32_t uid, uint8_t *blockData) {
@@ -480,7 +480,7 @@ int mifare_classic_write_cfg_block_gdm(struct Crypto1State *pcs, uint32_t uid, u
 
     uint16_t len = mifare_sendcmd_short(pcs, 1, MIFARE_MAGIC_GDM_WRITE_CFG, 0, receivedAnswer, receivedAnswerPar, NULL);
     if ((len != 1) || (receivedAnswer[0] != 0x0A)) {
-        return 1;
+        return PM3_EFAILED;
     }
 
     uint8_t d_block[18], d_block_enc[18];
@@ -511,13 +511,11 @@ int mifare_classic_write_cfg_block_gdm(struct Crypto1State *pcs, uint32_t uid, u
         res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 3)) << 3;
 
         if ((len != 1) || (res != 0x0A)) {
-            return 2;
+            return PM3_EFAILED;
         }
     }
-    return 0;
+    return PM3_SUCCESS;
 }
-
-
 
 int mifare_classic_value(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData, uint8_t action) {
     // variables
@@ -540,8 +538,8 @@ int mifare_classic_value(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo
     len = mifare_sendcmd_short(pcs, 1, command, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 
     if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
-        return 1;
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+        return PM3_EFAILED;
     }
 
     memcpy(d_block, blockData, 4);
@@ -566,12 +564,12 @@ int mifare_classic_value(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo
         res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 3)) << 3;
 
         if ((len != 1) || (res != 0x0A)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd send data2 Error: %02x", res);
-            return 2;
+            if (g_dbglevel >= DBG_INFO) Dbprintf("Cmd send data2 Error: %02x", res);
+            return PM3_EFAILED;
         }
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
@@ -585,9 +583,10 @@ int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL);
 
     if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
-        if (g_dbglevel >= DBG_ERROR)
+        if (g_dbglevel >= DBG_INFO) {
             Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0], len);
-        return 1;
+        }
+        return PM3_EFAILED;
     }
 
     memcpy(d_block, blockData, 16);
@@ -599,11 +598,12 @@ int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
     len = ReaderReceive(receivedAnswer, receivedAnswerPar);
 
     if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
-        if (g_dbglevel >= DBG_ERROR)
+        if (g_dbglevel >= DBG_INFO) {
             Dbprintf("Cmd Send Data Error: %02x %d", receivedAnswer[0], len);
-        return 2;
+        }
+        return PM3_EFAILED;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
@@ -618,11 +618,12 @@ int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
     len = mifare_sendcmd(MIFARE_ULC_WRITE, block, sizeof(block), receivedAnswer, receivedAnswerPar, NULL);
 
     if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
-        if (g_dbglevel >= DBG_ERROR)
+        if (g_dbglevel >= DBG_INFO) {
             Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0], len);
-        return 1;
+        }
+        return PM3_EFAILED;
     }
-    return 0;
+    return PM3_SUCCESS;
 }
 int mifare_classic_halt_ex(struct Crypto1State *pcs) {
     uint8_t receivedAnswer[4] = {0x00, 0x00, 0x00, 0x00};
@@ -729,8 +730,8 @@ int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum) {
 
 uint64_t emlGetKey(int sectorNum, int keyType) {
     uint8_t key[6] = {0x00};
-    uint8_t *emCARD = BigBuf_get_EM_addr();
-    memcpy(key, emCARD + 16 * (FirstBlockOfSector(sectorNum) + NumBlocksPerSector(sectorNum) - 1) + keyType * 10, 6);
+    uint8_t *em = BigBuf_get_EM_addr();
+    memcpy(key, em + 16 * (FirstBlockOfSector(sectorNum) + NumBlocksPerSector(sectorNum) - 1) + keyType * 10, 6);
     return bytes_to_num(key, 6);
 }
 
@@ -804,9 +805,10 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData) {
 
     len = mifare_sendcmd_special(NULL, 1, 0x02, data, receivedAnswer, receivedAnswerPar, NULL);
     if (len == 1) {
-        if (g_dbglevel >= DBG_ERROR)
+        if (g_dbglevel >= DBG_INFO) {
             Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
-        return 1;
+        }
+        return PM3_EFAILED;
     }
 
     if (len == 12) {
@@ -817,9 +819,9 @@ int mifare_desfire_des_auth1(uint32_t uid, uint8_t *blockData) {
                      receivedAnswer[10], receivedAnswer[11]);
         }
         memcpy(blockData, receivedAnswer, 12);
-        return 0;
+        return PM3_SUCCESS;
     }
-    return 1;
+    return PM3_EFAILED;
 }
 
 int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
@@ -834,9 +836,10 @@ int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
     len = mifare_sendcmd_special2(NULL, 1, 0x03, data, receivedAnswer, receivedAnswerPar, NULL);
 
     if ((receivedAnswer[0] == 0x03) && (receivedAnswer[1] == 0xae)) {
-        if (g_dbglevel >= DBG_ERROR)
+        if (g_dbglevel >= DBG_ERROR) {
             Dbprintf("Auth Error: %02x %02x", receivedAnswer[0], receivedAnswer[1]);
-        return 1;
+        }
+        return PM3_EFAILED;
     }
 
     if (len == 12) {
@@ -847,7 +850,7 @@ int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
                      receivedAnswer[10], receivedAnswer[11]);
         }
         memcpy(blockData, receivedAnswer, 12);
-        return 0;
+        return PM3_SUCCESS;
     }
-    return 1;
+    return PM3_EFAILED;
 }

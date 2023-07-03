@@ -683,8 +683,13 @@ static int CmdHFiClassSniff(const char *Cmd) {
 
     WaitForResponse(CMD_HF_ICLASS_SNIFF, &resp);
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass list") "` to view captured tracelog");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -f hf_iclass_mytrace") "` to save tracelog for later analysing");
+    if (jam_epurse_update) {
+        PrintAndLogEx(HINT, "Verify if the jam worked by comparing value in trace and block 2");
+    }
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
