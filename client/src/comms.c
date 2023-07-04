@@ -623,6 +623,7 @@ int TestProxmark(pm3_device_t *dev) {
 
     PacketResponseNG resp;
     uint16_t len = 32;
+    bool is_tcp_conn = false;
     uint8_t data[len];
     for (uint16_t i = 0; i < len; i++)
         data[i] = i & 0xFF;
@@ -665,16 +666,17 @@ int TestProxmark(pm3_device_t *dev) {
     memcpy(&g_pm3_capabilities, resp.data.asBytes, MIN(sizeof(capabilities_t), resp.length));
     g_conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
     g_conn.uart_speed = g_pm3_capabilities.baudrate;
+    is_tcp_conn = memcmp(g_conn.serial_port_name, "tcp:", 4) == 0;
 
     PrintAndLogEx(INFO, "Communicating with PM3 over %s%s%s",
                   g_conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
-                  memcmp(g_conn.serial_port_name, "tcp:", 4) == 0 ? " over " _YELLOW_("TCP") : "",
+                  is_tcp_conn ? " over " _YELLOW_("TCP") : "",
                   memcmp(g_conn.serial_port_name, "bt:", 3) == 0 ? " over " _YELLOW_("BT") : "");
 
     if (g_conn.send_via_fpc_usart) {
         PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", g_conn.uart_speed);
     } else {
-        int res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
+        int res = uart_reconfigure_timeouts(is_tcp_conn ? UART_TCP_CLIENT_RX_TIMEOUT_MS : UART_USB_CLIENT_RX_TIMEOUT_MS);
         if (res != PM3_SUCCESS) {
             return res;
         }
