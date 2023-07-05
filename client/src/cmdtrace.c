@@ -910,11 +910,19 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             uint8_t crcc = iso14443A_CRC_check(hdr->isResponse, mfData, mfDataLen);
 
             //iceman: colorise crc bytes here will need a refactor of code from above.
-            PrintAndLogEx(NORMAL, "            |            |  *  |%-*s | %-4s| %s",
-                          str_padder,
-                          sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
-                          (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
-                          explanation);
+            if (hdr->isResponse) {
+                PrintAndLogEx(NORMAL, "            |            |  *  |%-*s | %-4s| %s",
+                              str_padder,
+                              sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
+                              (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
+                              explanation);
+            } else {
+                PrintAndLogEx(NORMAL, "            |            |  *  |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                              str_padder,
+                              sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
+                              (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
+                              explanation);
+            }
         }
     }
 

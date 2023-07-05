@@ -821,7 +821,7 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
         }
 
         for (uint8_t blockNo = 0; isOK && blockNo < NumBlocksPerSector(s); blockNo++) {
-            if (isOK && mifare_classic_readblock(pcs, colin_cjcuid, FirstBlockOfSector(s) + blockNo, dataoutbuf)) {
+            if (isOK && mifare_classic_readblock(pcs, FirstBlockOfSector(s) + blockNo, dataoutbuf)) {
                 isOK = false;
                 break;
             };
@@ -838,7 +838,7 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
         }
     }
 
-    int res = mifare_classic_halt(pcs, colin_cjcuid);
+    int res = mifare_classic_halt(pcs);
     (void)res;
 
     crypto1_deinit(pcs);
@@ -986,7 +986,7 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
                 break;
             };
 
-            if (mifare_classic_halt(NULL, colin_cjcuid)) {
+            if (mifare_classic_halt(NULL)) {
                 DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
@@ -1006,7 +1006,7 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
                 break;
             };
 
-            if (mifare_classic_halt(NULL, colin_cjcuid)) {
+            if (mifare_classic_halt(NULL)) {
                 DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
@@ -1043,7 +1043,7 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
         };
 
         if (workFlags & 0x04) {
-            if (mifare_classic_halt(NULL, colin_cjcuid)) {
+            if (mifare_classic_halt(NULL)) {
                 cjSetCursFRight();
 
                 DbprintfEx(FLAG_NEWLINE, "Halt error");
