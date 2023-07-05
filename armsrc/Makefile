@@ -103,9 +103,6 @@ endif
 # Generic standalone Mode injection of source code
 include Standalone/Makefile.inc
 
-#the FPGA bitstream files. Note: order matters!
-FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit fpga_felica.bit fpga_hf_15.bit
-
 #the lz4 source files required for decompressing the fpga config at run time
 SRC_LZ4 = lz4.c
 #additional defines required to compile lz4

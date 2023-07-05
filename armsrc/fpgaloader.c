@@ -404,16 +404,22 @@ static int bitparse_find_section(int bitstream_version, char section_name, uint3
                 /* Four byte length field */
                 current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 24;
                 current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 16;
-                numbytes += 2;
-            default: /* Fall through, two byte length field */
+                current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 8;
+                current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 0;
+                numbytes += 4;
+                if (current_length > 300*1024) {
+                    /* section e should never exceed about 300KB, if the length is too big limit it but still send the bitstream just in case */
+                    current_length = 300*1024;
+                }
+                break;
+            default: /* Two byte length field */
                 current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 8;
                 current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 0;
                 numbytes += 2;
-        }
-
-        if (current_name != 'e' && current_length > 255) {
-            /* Maybe a parse error */
-            break;
+                if (current_length > 64) {
+                    /* if text field is too long, keep it but truncate it */
+                    current_length = 64;
+                }
         }
 
         if (current_name == section_name) {
