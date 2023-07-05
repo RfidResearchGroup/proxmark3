@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Fixed timeout of TCP connections (@wh201906)
+ - Fixed the timeout of TCP connections (@wh201906)
+ - Made the connection timeout configurable (@wh201906)
 
 ## [Seven.4.16717][2023-06-25]
  - Change `hf 14a info` - now identifes QL88 tags (@iceman1001)
