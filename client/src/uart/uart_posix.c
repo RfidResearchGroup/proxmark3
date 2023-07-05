@@ -69,6 +69,10 @@ int uart_reconfigure_timeouts(uint32_t value) {
     return PM3_SUCCESS;
 }
 
+uint32_t uart_get_timeouts(void) {
+    return newtimeout_value;
+}
+
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
     serial_port_unix_t_t *sp = calloc(sizeof(serial_port_unix_t_t), sizeof(uint8_t));
 
