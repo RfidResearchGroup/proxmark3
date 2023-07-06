@@ -337,6 +337,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfzx8211.c
         ${PM3_ROOT}/client/src/cmdmain.c
         ${PM3_ROOT}/client/src/cmdnfc.c
+				${PM3_ROOT}/client/src/cmdvas.c
         ${PM3_ROOT}/client/src/cmdparser.c
         ${PM3_ROOT}/client/src/cmdpiv.c
         ${PM3_ROOT}/client/src/cmdscript.c
