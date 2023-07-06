@@ -38,6 +38,7 @@
 #include "mbedtls/ecp.h"
 #include "mbedtls/bignum.h"
 #include "mbedtls/ecdh.h"
+#include "mbedtls/ecc_point_compression.h"
 
 uint8_t ecpData[] = { 0x6a, 0x01, 0x00, 0x00, 0x04 };
 uint8_t aid[] = { 0x4f, 0x53, 0x45, 0x2e, 0x56, 0x41, 0x53, 0x2e, 0x30, 0x31 };
@@ -187,9 +188,7 @@ static int LoadReaderPrivateKey(uint8_t *buf, size_t bufLen, mbedtls_ecp_keypair
 
 	tlvdb_free(derRoot);
 
-	if (mbedtls_mpi_read_binary(&privKey->Q.X, pubkeyCoordsTlv->value + 2, 32)
-			|| mbedtls_mpi_read_binary(&privKey->Q.Y, pubkeyCoordsTlv->value + 34, 32)
-			|| mbedtls_mpi_lset(&privKey->Q.Z, 1)) {
+	if (mbedtls_ecp_point_read_binary(&privKey->grp, &privKey->Q, pubkeyCoordsTlv->value + 1, 65)) {
 		PrintAndLogEx(FAILED, "Failed to read in public key coordinates");
 		return PM3_EINVARG;
 	}
@@ -216,9 +215,20 @@ static int GetPrivateKeyHint(mbedtls_ecp_keypair *privKey, uint8_t *keyHint) {
 }
 
 static int LoadMobileEphemeralKey(uint8_t *xcoordBuf, mbedtls_ecp_keypair *pubKey) {
-	if (mbedtls_mpi_read_binary(&pubKey->Q.X, xcoordBuf, 32)) {
+	uint8_t compressedEcKey[33] = {0};
+	compressedEcKey[0] = 0x02;
+	memcpy(compressedEcKey + 1, xcoordBuf, 32);
+
+	uint8_t decompressedEcKey[65] = {0};
+	size_t decompressedEcKeyLen = 0;
+	if (mbedtls_ecp_decompress(&pubKey->grp, compressedEcKey, sizeof(compressedEcKey), decompressedEcKey, &decompressedEcKeyLen, sizeof(decompressedEcKey))) {
 		return PM3_EINVARG;
 	}
+
+	if (mbedtls_ecp_point_read_binary(&pubKey->grp, &pubKey->Q, decompressedEcKey, decompressedEcKeyLen)) {
+		return PM3_EINVARG;
+	}
+
 	return PM3_SUCCESS;
 }
 
@@ -400,6 +410,65 @@ static int CmdVASReader(const char *Cmd) {
 }
 
 static int CmdVASDecrypt(const char *Cmd) {
+	CLIParserContext *ctx;
+	CLIParserInit(&ctx, "nfc vas decrypt",
+								"Decrypt a previously captured cryptogram",
+								"nfc vas reader -p pass.com.example.ticket -k ./priv.key -> select pass and decrypt with priv.key\nnfc vas reader --url https://example.com -> URL Only mode");
+	void *argtable[] = {
+		arg_param_begin,
+		arg_str0("p", NULL, "<pid>", "pass type id"),
+		arg_str0("k", NULL, "<key>", "path to terminal private key"),
+		arg_str0(NULL, NULL, "<hex>", "cryptogram to decrypt"),
+		arg_param_end
+	};
+	CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+	struct arg_str *passTypeIdArg = arg_get_str(ctx, 1);
+	int passTypeIdLen = arg_get_str_len(ctx, 1);
+	uint8_t pidHash[32] = {0};
+	sha256hash((uint8_t *) passTypeIdArg->sval[0], passTypeIdLen, pidHash);
+
+	uint8_t cryptogram[120] = {0};
+	int cryptogramLen = 0;
+	CLIGetHexWithReturn(ctx, 3, cryptogram, &cryptogramLen);
+
+	struct arg_str *keyPathArg = arg_get_str(ctx, 2);
+	int keyPathLen = arg_get_str_len(ctx, 2);
+
+	if (keyPathLen == 0 && passTypeIdLen > 0) {
+		PrintAndLogEx(FAILED, "Must provide path to terminal private key if a pass type id is provided");	
+		CLIParserFree(ctx);
+		return PM3_EINVARG;
+	}
+
+	uint8_t *keyData = NULL;
+	size_t keyDataLen = 0;
+	if (loadFile_safe(keyPathArg->sval[0], "", (void **)&keyData, &keyDataLen) != PM3_SUCCESS) {
+		CLIParserFree(ctx);
+		return PM3_EINVARG;
+	}
+
+	mbedtls_ecp_keypair privKey;
+	mbedtls_ecp_keypair_init(&privKey);
+
+	if (LoadReaderPrivateKey(keyData, keyDataLen, &privKey) != PM3_SUCCESS) {
+		CLIParserFree(ctx);
+		mbedtls_ecp_keypair_free(&privKey);
+		return PM3_EINVARG;
+	}
+
+	uint8_t message[64] = {0};
+	size_t messageLen = 0;
+	uint8_t timestamp[4] = {0};
+
+	if (DecryptVASCryptogram(cryptogram, cryptogramLen, &privKey, message, &messageLen, timestamp) != PM3_SUCCESS) {
+		CLIParserFree(ctx);
+		mbedtls_ecp_keypair_free(&privKey);
+		return PM3_EINVARG;
+	}
+
+	CLIParserFree(ctx);
+	mbedtls_ecp_keypair_free(&privKey);
 	return PM3_SUCCESS;
 }
 
@@ -412,7 +481,7 @@ static int CmdHelp(const char *Cmd);
 static command_t CommandTable[] = {
 	{"--------",  CmdHelp,        AlwaysAvailable,  "----------- " _CYAN_("Value Added Service") " -----------"},
 	{"reader",    CmdVASReader,   IfPm3Iso14443a,   "Read and decrypt VAS message"},
-	{"decrypt",   CmdVASDecrypt,  AlwaysAvailable,  "Decrypt a VAS cryptogram"},
+	{"decrypt",   CmdVASDecrypt,  AlwaysAvailable,  "Decrypt a previously captured VAS cryptogram"},
 	{"sim",       CmdVASSim,      IfPm3Iso14443a,   "Simulate a VAS mobile credential"},
 	{"--------",  CmdHelp,        AlwaysAvailable,  "----------------- " _CYAN_("General") " -----------------"},
 	{"help",      CmdHelp,        AlwaysAvailable,  "This help"},
