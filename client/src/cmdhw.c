@@ -947,7 +947,7 @@ static int CmdTimeout(const char *Cmd) {
     uint32_t oldTimeout = uart_get_timeouts();
 
     // timeout is not given/invalid, just show the current timeout then return
-    if(arg < 0) {
+    if (arg < 0) {
         PrintAndLogEx(INFO, "Current communication timeout: %ums", oldTimeout);
         return PM3_SUCCESS;
     }
@@ -956,8 +956,7 @@ static int CmdTimeout(const char *Cmd) {
     // UART_USB_CLIENT_RX_TIMEOUT_MS is considered as the minimum required timeout.
     if (newTimeout < UART_USB_CLIENT_RX_TIMEOUT_MS) {
         PrintAndLogEx(WARNING, "Timeout less than %ums might cause errors.", UART_USB_CLIENT_RX_TIMEOUT_MS);
-    }
-    else if(newTimeout > 5000) {
+    } else if (newTimeout > 5000) {
         PrintAndLogEx(WARNING, "Timeout greater than 5000ms makes the client unresponsive.");
     }
     uart_reconfigure_timeouts(newTimeout);

@@ -213,9 +213,14 @@ clean:
 
 help:
 	@echo "################################################################"
-	@echo "# Valid targets are: $(TARGETS)"
+	@echo "#"
 	@echo "#   <target> - Builds only one of the above listed targets"
 	@echo "#   all      - Builds the FPGA bitstreams for all targets"
 	@echo "#   clean    - Keeps .bit files but cleans intermediate build files for all targets"
+	@echo "#"
+	@echo "#"
+	@echo "# Valid targets are:"
+	@echo "#   $(TARGETS)"
+	@echo "#"
 	@echo "################################################################"
 

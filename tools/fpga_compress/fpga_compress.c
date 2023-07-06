@@ -283,7 +283,7 @@ static int bitparse_find_section(FILE *infile, char section_name, unsigned int *
                 for (int i = 0; i < 4; i++) {
                     tmp = fgetc(infile);
                     /* image length sanity check, should be under 300KB */
-                    if ( (tmp < 0) || (tmp > 300*1024) ) {
+                    if ((tmp < 0) || (tmp > 300 * 1024)) {
                         break;
                     }
                     current_length += tmp << (24 - (i * 8));
@@ -294,7 +294,7 @@ static int bitparse_find_section(FILE *infile, char section_name, unsigned int *
                 for (int i = 0; i < 2; i++) {
                     tmp = fgetc(infile);
                     /* if name, date or time fields are too long, we probably shouldn't parse them */
-                    if ( (tmp < 0) || (tmp > 64) ){
+                    if ((tmp < 0) || (tmp > 64)) {
                         break;
                     }
                     current_length += tmp << (8 - (i * 8));
@@ -345,7 +345,7 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
         }
 
         strncat(dst, tempstr, len - strlen(dst) - 1);
-        }
+    }
 
     strncat(dst, " image ", len - strlen(dst) - 1);
     if (bitparse_find_section(infile, 'b', &fpga_info_len)) {

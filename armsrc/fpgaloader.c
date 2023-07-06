@@ -407,9 +407,9 @@ static int bitparse_find_section(int bitstream_version, char section_name, uint3
                 current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 8;
                 current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 0;
                 numbytes += 4;
-                if (current_length > 300*1024) {
+                if (current_length > 300 * 1024) {
                     /* section e should never exceed about 300KB, if the length is too big limit it but still send the bitstream just in case */
-                    current_length = 300*1024;
+                    current_length = 300 * 1024;
                 }
                 break;
             default: /* Two byte length field */
