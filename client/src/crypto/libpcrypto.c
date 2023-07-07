@@ -38,6 +38,7 @@
 #include "libpcrypto.h"
 #include "util.h"
 #include "ui.h"
+#include "math.h"
 
 void des_encrypt(void *out, const void *in, const void *key) {
     mbedtls_des_context ctx;
