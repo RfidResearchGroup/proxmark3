@@ -433,6 +433,8 @@ static int CmdVASReader(const char *Cmd) {
 		return PM3_EINVARG;
 	}
 
+	free(keyData);
+
 	struct arg_str *urlArg = arg_get_str(ctx, 3);
 	int urlLen = arg_get_str_len(ctx, 3);
 	const char *url = NULL;
@@ -523,6 +525,8 @@ static int CmdVASDecrypt(const char *Cmd) {
 		return PM3_EINVARG;
 	}
 
+	free(keyData);
+
 	uint8_t message[64] = {0};
 	size_t messageLen = 0;
 	uint32_t timestamp = 0;
@@ -541,17 +545,12 @@ static int CmdVASDecrypt(const char *Cmd) {
 	return PM3_SUCCESS;
 }
 
-static int CmdVASSim(const char *Cmd) {
-	return PM3_SUCCESS;
-}
-
 static int CmdHelp(const char *Cmd);
 
 static command_t CommandTable[] = {
 	{"--------",  CmdHelp,        AlwaysAvailable,  "----------- " _CYAN_("Value Added Service") " -----------"},
 	{"reader",    CmdVASReader,   IfPm3Iso14443a,   "Read and decrypt VAS message"},
 	{"decrypt",   CmdVASDecrypt,  AlwaysAvailable,  "Decrypt a previously captured VAS cryptogram"},
-	{"sim",       CmdVASSim,      IfPm3Iso14443a,   "Simulate a VAS mobile credential"},
 	{"--------",  CmdHelp,        AlwaysAvailable,  "----------------- " _CYAN_("General") " -----------------"},
 	{"help",      CmdHelp,        AlwaysAvailable,  "This help"},
 	{NULL, NULL, NULL, NULL}
