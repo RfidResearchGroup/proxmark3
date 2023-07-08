@@ -326,7 +326,6 @@ static int DecryptVASCryptogram(uint8_t *pidHash, uint8_t *cryptogram, size_t cr
 	for (int i = 0; i < 4; ++i) {
 		*timestamp = (*timestamp << 8) | decryptedData[i];
 	}
-	*timestamp = *timestamp + 978328800; // Unix offset for Jan 1, 2001
 
 	return PM3_SUCCESS;
 }
@@ -398,6 +397,7 @@ static int CmdVASReader(const char *Cmd) {
 		arg_str0("p", NULL, "<pid>", "pass type id"),
 		arg_str0("k", NULL, "<key>", "path to terminal private key"),
 		arg_str0(NULL, "url", "<url>", "a URL to provide to the mobile device"),
+		arg_lit0("@", NULL, "continuous mode"),
 		arg_lit0("v", "verbose", "log additional information"),
 		arg_param_end
 	};
@@ -442,21 +442,33 @@ static int CmdVASReader(const char *Cmd) {
 		url = urlArg->sval[0];
 	}
 
-	bool verbose = arg_get_lit(ctx, 4);
-
-	uint8_t cryptogram[120] = {0};
-	size_t cryptogramLen = 0;
+	bool continuous = arg_get_lit(ctx, 4);
+	bool verbose = arg_get_lit(ctx, 5);
 
 	PrintAndLogEx(INFO, "Requesting pass type id: %s", sprint_ascii((uint8_t *) passTypeIdArg->sval[0], passTypeIdLen));
 
-	if (VASReader(passTypeIdLen > 0 ? pidHash : NULL, url, urlLen, cryptogram, &cryptogramLen, verbose) != PM3_SUCCESS) {
+	if (continuous) {
+		PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
+	}
+
+	uint8_t cryptogram[120] = {0};
+	size_t cryptogramLen = 0;
+	int readerErr = -1;
+
+	do {
+		readerErr = VASReader(passTypeIdLen > 0 ? pidHash : NULL, url, urlLen, cryptogram, &cryptogramLen, verbose);
+
+		if (readerErr == 0 || kbd_enter_pressed()) {
+			break;
+		}
+		
+		msleep(200);
+	} while (continuous);
+
+	if (readerErr) {
 		CLIParserFree(ctx);
 		mbedtls_ecp_keypair_free(&privKey);
 		return PM3_EINVARG;
-	}
-
-	if (verbose) {
-		PrintAndLogEx(INFO, "Got cryptogram response: %s", sprint_hex(cryptogram, cryptogramLen));
 	}
 
 	uint8_t message[64] = {0};
@@ -470,7 +482,7 @@ static int CmdVASReader(const char *Cmd) {
 	}
 
 	PrintAndLogEx(SUCCESS, "Message: %s", sprint_ascii(message, messageLen));
-	PrintAndLogEx(SUCCESS, "Timestamp: %d", timestamp);
+	PrintAndLogEx(SUCCESS, "Timestamp: %d (secs since Jan 1, 2001)", timestamp);
 
 	CLIParserFree(ctx);
 	mbedtls_ecp_keypair_free(&privKey);
@@ -538,7 +550,7 @@ static int CmdVASDecrypt(const char *Cmd) {
 	}
 
 	PrintAndLogEx(SUCCESS, "Message: %s", sprint_ascii(message, messageLen));
-	PrintAndLogEx(SUCCESS, "Timestamp: %d", timestamp);
+	PrintAndLogEx(SUCCESS, "Timestamp: %d (secs since Jan 1, 2001)", timestamp);
 
 	CLIParserFree(ctx);
 	mbedtls_ecp_keypair_free(&privKey);
