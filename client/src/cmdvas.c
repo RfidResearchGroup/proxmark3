@@ -39,6 +39,7 @@
 #include "mbedtls/bignum.h"
 #include "mbedtls/ecdh.h"
 #include "mbedtls/ecc_point_compression.h"
+#include "mbedtls/gcm.h"
 
 uint8_t ecpData[] = { 0x6a, 0x01, 0x00, 0x00, 0x04 };
 uint8_t aid[] = { 0x4f, 0x53, 0x45, 0x2e, 0x56, 0x41, 0x53, 0x2e, 0x30, 0x31 };
@@ -232,7 +233,35 @@ static int LoadMobileEphemeralKey(uint8_t *xcoordBuf, mbedtls_ecp_keypair *pubKe
 	return PM3_SUCCESS;
 }
 
-static int DecryptVASCryptogram(uint8_t *cryptogram, size_t cryptogramLen, mbedtls_ecp_keypair *privKey, uint8_t *out, size_t *outLen, uint8_t *timestamp) {
+static int internalVasDecrypt(uint8_t *cipherText, size_t cipherTextLen, uint8_t *sharedSecret, uint8_t *ansiSharedInfo, size_t ansiSharedInfoLen, uint8_t *gcmAad, size_t gcmAadLen, uint8_t *out, size_t *outLen) {
+	uint8_t key[32] = {0};
+	if (ansi_x963_sha256(sharedSecret, 32, ansiSharedInfo, ansiSharedInfoLen, sizeof(key), key)) {
+		PrintAndLogEx(FAILED, "ANSI X9.63 key derivation failed");
+		return PM3_EINVARG;
+	}
+
+	uint8_t iv[16] = {0};
+
+	mbedtls_gcm_context gcmCtx;
+	mbedtls_gcm_init(&gcmCtx);
+	if (mbedtls_gcm_setkey(&gcmCtx, MBEDTLS_CIPHER_ID_AES, key, sizeof(key) * 8)) {
+		PrintAndLogEx(FAILED, "Unable to use key in GCM context");
+		return PM3_EINVARG;
+	}
+
+	if (mbedtls_gcm_auth_decrypt(&gcmCtx, cipherTextLen - 16, iv, sizeof(iv), gcmAad, gcmAadLen, cipherText + cipherTextLen - 16, 16, cipherText, out)) {
+		PrintAndLogEx(FAILED, "Failed to perform GCM decryption");
+		return PM3_EINVARG;
+	}
+
+	mbedtls_gcm_free(&gcmCtx);
+
+	*outLen = cipherTextLen - 16;
+
+	return PM3_SUCCESS;
+}
+
+static int DecryptVASCryptogram(uint8_t *pidHash, uint8_t *cryptogram, size_t cryptogramLen, mbedtls_ecp_keypair *privKey, uint8_t *out, size_t *outLen, uint32_t *timestamp) {
 	uint8_t keyHint[4] = {0};
 	if (GetPrivateKeyHint(privKey, keyHint) != PM3_SUCCESS) {
 		PrintAndLogEx(FAILED, "Unable to generate key hint");
@@ -263,9 +292,42 @@ static int DecryptVASCryptogram(uint8_t *cryptogram, size_t cryptogramLen, mbedt
 		PrintAndLogEx(FAILED, "Failed to generate ECDH shared secret");
 		return PM3_EINVARG;
 	}
-
-	mbedtls_mpi_free(&sharedSecret);
 	mbedtls_ecp_keypair_free(&mobilePubKey);
+
+	uint8_t sharedSecretBytes[32] = {0};
+	if (mbedtls_mpi_write_binary(&sharedSecret, sharedSecretBytes, sizeof(sharedSecretBytes))) {
+		mbedtls_mpi_free(&sharedSecret);
+		PrintAndLogEx(FAILED, "Failed to generate ECDH shared secret");
+		return PM3_EINVARG;
+	}
+	mbedtls_mpi_free(&sharedSecret);
+
+	uint8_t string1[27] = "ApplePay encrypted VAS data";
+	uint8_t string2[13] = "id-aes256-GCM";
+
+	uint8_t method1SharedInfo[73] = {0};
+	method1SharedInfo[0] = 13;
+	memcpy(method1SharedInfo + 1, string2, sizeof(string2));
+	memcpy(method1SharedInfo + 1 + sizeof(string2), string1, sizeof(string1));
+	memcpy(method1SharedInfo + 1 + sizeof(string2) + sizeof(string1), pidHash, 32);
+
+	uint8_t decryptedData[68] = {0};
+	size_t decryptedDataLen = 0;
+	if (internalVasDecrypt(cryptogram + 4 + 32, cryptogramLen - 4 - 32, sharedSecretBytes, method1SharedInfo, sizeof(method1SharedInfo), NULL, 0, decryptedData, &decryptedDataLen)) {
+		if (internalVasDecrypt(cryptogram + 4 + 32, cryptogramLen - 4 - 32, sharedSecretBytes, string1, sizeof(string1), pidHash, 32, decryptedData, &decryptedDataLen)) {
+			return PM3_EINVARG;
+		}
+	}
+
+	memcpy(out, decryptedData + 4, decryptedDataLen - 4);
+	*outLen = decryptedDataLen - 4;
+
+	*timestamp = 0;
+	for (int i = 0; i < 4; ++i) {
+		*timestamp = (*timestamp << 8) | decryptedData[i];
+	}
+	*timestamp = *timestamp + 978328800; // Unix offset for Jan 1, 2001
+
 	return PM3_SUCCESS;
 }
 
@@ -383,11 +445,12 @@ static int CmdVASReader(const char *Cmd) {
 	uint8_t cryptogram[120] = {0};
 	size_t cryptogramLen = 0;
 
-	int s = VASReader(passTypeIdLen > 0 ? pidHash : NULL, url, urlLen, cryptogram, &cryptogramLen, verbose);
-	if (s != PM3_SUCCESS) {
+	PrintAndLogEx(INFO, "Requesting pass type id: %s", sprint_ascii((uint8_t *) passTypeIdArg->sval[0], passTypeIdLen));
+
+	if (VASReader(passTypeIdLen > 0 ? pidHash : NULL, url, urlLen, cryptogram, &cryptogramLen, verbose) != PM3_SUCCESS) {
 		CLIParserFree(ctx);
 		mbedtls_ecp_keypair_free(&privKey);
-		return s;
+		return PM3_EINVARG;
 	}
 
 	if (verbose) {
@@ -396,17 +459,20 @@ static int CmdVASReader(const char *Cmd) {
 
 	uint8_t message[64] = {0};
 	size_t messageLen = 0;
-	uint8_t timestamp[4] = {0};
+	uint32_t timestamp = 0;
 
-	if (DecryptVASCryptogram(cryptogram, cryptogramLen, &privKey, message, &messageLen, timestamp) != PM3_SUCCESS) {
+	if (DecryptVASCryptogram(pidHash, cryptogram, cryptogramLen, &privKey, message, &messageLen, &timestamp) != PM3_SUCCESS) {
 		CLIParserFree(ctx);
 		mbedtls_ecp_keypair_free(&privKey);
 		return PM3_EINVARG;
 	}
 
+	PrintAndLogEx(SUCCESS, "Message: %s", sprint_ascii(message, messageLen));
+	PrintAndLogEx(SUCCESS, "Timestamp: %d", timestamp);
+
 	CLIParserFree(ctx);
 	mbedtls_ecp_keypair_free(&privKey);
-	return s;
+	return PM3_SUCCESS;
 }
 
 static int CmdVASDecrypt(const char *Cmd) {
@@ -459,13 +525,16 @@ static int CmdVASDecrypt(const char *Cmd) {
 
 	uint8_t message[64] = {0};
 	size_t messageLen = 0;
-	uint8_t timestamp[4] = {0};
+	uint32_t timestamp = 0;
 
-	if (DecryptVASCryptogram(cryptogram, cryptogramLen, &privKey, message, &messageLen, timestamp) != PM3_SUCCESS) {
+	if (DecryptVASCryptogram(pidHash, cryptogram, cryptogramLen, &privKey, message, &messageLen, &timestamp) != PM3_SUCCESS) {
 		CLIParserFree(ctx);
 		mbedtls_ecp_keypair_free(&privKey);
 		return PM3_EINVARG;
 	}
+
+	PrintAndLogEx(SUCCESS, "Message: %s", sprint_ascii(message, messageLen));
+	PrintAndLogEx(SUCCESS, "Timestamp: %d", timestamp);
 
 	CLIParserFree(ctx);
 	mbedtls_ecp_keypair_free(&privKey);
