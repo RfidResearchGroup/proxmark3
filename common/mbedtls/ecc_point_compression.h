@@ -1,5 +1,5 @@
 /*
-* Not original to the mbedtls library. Taken from 
+* Not original to the mbedtls library. Taken from
 * https://github.com/mwarning/mbedtls_ecp_compression
 * to solve mbedtls' lack of support for elliptic point
 * compression and decompression

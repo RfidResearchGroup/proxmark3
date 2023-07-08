@@ -1,5 +1,5 @@
 /*
-* Not original to the mbedtls library. Taken from 
+* Not original to the mbedtls library. Taken from
 * https://github.com/mwarning/mbedtls_ecp_compression
 * to solve mbedtls' lack of support for elliptic point
 * compression and decompression
@@ -35,13 +35,13 @@ int mbedtls_ecp_decompress(
     *olen = 2 * plen + 1;
 
     if (osize < *olen)
-        return(MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL);
+        return (MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL);
 
     if (ilen != plen + 1)
-        return(MBEDTLS_ERR_ECP_BAD_INPUT_DATA);
+        return (MBEDTLS_ERR_ECP_BAD_INPUT_DATA);
 
     if (input[0] != 0x02 && input[0] != 0x03)
-        return(MBEDTLS_ERR_ECP_BAD_INPUT_DATA);
+        return (MBEDTLS_ERR_ECP_BAD_INPUT_DATA);
 
     // output will consist of 0x04|X|Y
     memcpy(output, input, ilen);
@@ -97,7 +97,7 @@ cleanup:
     mbedtls_mpi_free(&x);
     mbedtls_mpi_free(&n);
 
-    return(ret);
+    return (ret);
 }
 
 int mbedtls_ecp_compress(
@@ -112,13 +112,13 @@ int mbedtls_ecp_compress(
     *olen = plen + 1;
 
     if (osize < *olen)
-        return(MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL);
+        return (MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL);
 
     if (ilen != 2 * plen + 1)
         return (MBEDTLS_ERR_ECP_BAD_INPUT_DATA);
 
     if (input[0] != 0x04)
-        return(MBEDTLS_ERR_ECP_BAD_INPUT_DATA);
+        return (MBEDTLS_ERR_ECP_BAD_INPUT_DATA);
 
     // output will consist of 0x0?|X
     memcpy(output, input, *olen);
@@ -126,5 +126,5 @@ int mbedtls_ecp_compress(
     // Encode even/odd of Y into first byte (either 0x02 or 0x03)
     output[0] = 0x02 + (input[2 * plen] & 1);
 
-    return(0);
+    return (0);
 }
