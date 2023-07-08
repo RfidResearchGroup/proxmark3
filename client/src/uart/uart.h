@@ -74,8 +74,12 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed);
  */
 uint32_t uart_get_speed(const serial_port sp);
 
-/* Reconfigure timeouts
+/* Reconfigure timeouts (ms)
  */
 int uart_reconfigure_timeouts(uint32_t value);
-#endif // _UART_H_
 
+/* Get timeouts (ms)
+ */
+uint32_t uart_get_timeouts(void);
+
+#endif // _UART_H_

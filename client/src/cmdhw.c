@@ -33,6 +33,7 @@
 #include "pm3_cmd.h"
 #include "pmflash.h"      // rdv40validation_t
 #include "cmdflashmem.h"  // get_signature..
+#include "uart/uart.h" // configure timeout
 
 static int CmdHelp(const char *Cmd);
 
@@ -924,6 +925,46 @@ static int CmdTia(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdTimeout(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw timeout",
+                  "Set the communication timeout on the client side",
+                  "hw timeout --> Show current timeout\n"
+                  "hw timeout -t 20 --> Set the timeout to 20ms\n"
+                  "hw timeout -t 500 --> Set the timeout to 500ms\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("t", "timeout", "<dec>", "timeout in ms"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int32_t arg = arg_get_int_def(ctx, 1, -1);
+    CLIParserFree(ctx);
+
+    uint32_t oldTimeout = uart_get_timeouts();
+
+    // timeout is not given/invalid, just show the current timeout then return
+    if (arg < 0) {
+        PrintAndLogEx(INFO, "Current communication timeout: %ums", oldTimeout);
+        return PM3_SUCCESS;
+    }
+
+    uint32_t newTimeout = arg;
+    // UART_USB_CLIENT_RX_TIMEOUT_MS is considered as the minimum required timeout.
+    if (newTimeout < UART_USB_CLIENT_RX_TIMEOUT_MS) {
+        PrintAndLogEx(WARNING, "Timeout less than %ums might cause errors.", UART_USB_CLIENT_RX_TIMEOUT_MS);
+    } else if (newTimeout > 5000) {
+        PrintAndLogEx(WARNING, "Timeout greater than 5000ms makes the client unresponsive.");
+    }
+    uart_reconfigure_timeouts(newTimeout);
+    PrintAndLogEx(INFO, "Old communication timeout: %ums", oldTimeout);
+    PrintAndLogEx(INFO, "New communication timeout: %ums", newTimeout);
+    return PM3_SUCCESS;
+}
+
 static int CmdPing(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw ping",
@@ -1062,6 +1103,7 @@ static command_t CommandTable[] = {
     {"status",        CmdStatus,       IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
     {"tearoff",       CmdTearoff,      IfPm3Present,    "Program a tearoff hook for the next command supporting tearoff"},
     {"tia",           CmdTia,          IfPm3Present,    "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
+    {"timeout",       CmdTimeout,      AlwaysAvailable, "Set the communication timeout on the client side"},
     {"tune",          CmdTune,         IfPm3Present,    "Measure antenna tuning"},
     {"version",       CmdVersion,      AlwaysAvailable, "Show version information about the client and the connected Proxmark3, if any"},
     {NULL, NULL, NULL, NULL}

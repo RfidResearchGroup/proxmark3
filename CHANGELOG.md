@@ -4,6 +4,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Added support for Apple Wallet NFC Passes with the Value Added Services protocol implementation (@gm3197)
+ - Fixed the timeout of TCP connections (@wh201906)
+ - Made the connection timeout configurable (@wh201906)
 
 ## [Seven.4.16717][2023-06-25]
  - Change `hf 14a info` - now identifes QL88 tags (@iceman1001)

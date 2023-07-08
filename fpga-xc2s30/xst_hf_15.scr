@@ -1,1 +1,0 @@
-run -ifn fpga_hf_15.v -ifmt Verilog -ofn fpga_hf_15.ngc -ofmt NGC -p xc2s30-5-vq100 -top fpga_hf_15 -opt_mode area -opt_level 2 -resource_sharing yes -fsm_style bram -fsm_encoding compact
