@@ -194,6 +194,7 @@ static const hintAIDList_t hintAIDList[] = {
     { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (ppse)", "emv" },
     { "\x41\x44\x20\x46\x31", 5, "CIPURSE", "hf cipurse" },
     { "\xd2\x76\x00\x00\x85\x01\x00", 7, "desfire", "hf mfdes" },
+    { "\x4F\x53\x45\x2E\x56\x41\x53\x2E\x30\x31",10, "Apple VAS", "hf vas"},
 };
 
 // iso14a apdu input frame length
@@ -2416,10 +2417,9 @@ int infoHF14A4Applications(bool verbose) {
     }
 
     if (found) {
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "---------------------------------------------------");
-        else
-            PrintAndLogEx(INFO, "Short AID search:");
+        }
 
         if (found >= ARRAYLEN(hintAIDList) - 1) {
             PrintAndLogEx(HINT, "Hint: card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
