@@ -233,7 +233,9 @@ static int LoadMobileEphemeralKey(uint8_t *xcoordBuf, mbedtls_ecp_keypair *pubKe
     return PM3_SUCCESS;
 }
 
-static int internalVasDecrypt(uint8_t *cipherText, size_t cipherTextLen, uint8_t *sharedSecret, uint8_t *ansiSharedInfo, size_t ansiSharedInfoLen, uint8_t *gcmAad, size_t gcmAadLen, uint8_t *out, size_t *outLen) {
+static int internalVasDecrypt(uint8_t *cipherText, size_t cipherTextLen, uint8_t *sharedSecret,
+                              uint8_t *ansiSharedInfo, size_t ansiSharedInfoLen, 
+                              uint8_t *gcmAad, size_t gcmAadLen, uint8_t *out, size_t *outLen) {
     uint8_t key[32] = {0};
     if (ansi_x963_sha256(sharedSecret, 32, ansiSharedInfo, ansiSharedInfoLen, sizeof(key), key)) {
         PrintAndLogEx(FAILED, "ANSI X9.63 key derivation failed");
@@ -490,7 +492,7 @@ static int CmdVASDecrypt(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf vas decrypt",
                   "Decrypt a previously captured cryptogram",
-                  "hf vas decrypt --pid pass.com.passkit.pksamples.nfcdemo -f vas_privkey.der -d 00000000\n"
+                  "hf vas decrypt --pid pass.com.passkit.pksamples.nfcdemo -f vas_privkey.der -d c0b77375eae416b79449347f9fe838c05cdb57dc7470b97b93b806cb348771d9bfbe29d58538c7c7d7c3d015fa205b68bfccd726058a62f7f44085ac98dbf877120fd9059f1507b956e0a6d56d0a\n"
             );
 
     void *argtable[] = {
