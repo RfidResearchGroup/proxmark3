@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Added support for Apple Wallet NFC Passes with the Value Added Services protocol implementation (@gm3197)
+ - Fix compiling liblua on iOS (@The-SamminAter)
  - Fixed the timeout of TCP connections (@wh201906)
  - Made the connection timeout configurable (@wh201906)
 
