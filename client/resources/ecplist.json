@@ -22,7 +22,7 @@
     {
         "value": "6a01cf0000",
         "name": "Ignore",
-        "description": "iPhones before IOS17 emit this frame so that other apple devices don't react to the field during background reading. Also emited during NFCReaderSession subtypes"
+        "description": "iPhones before IOS17 emit this frame so that other Apple devices don't react to the field during background reading. Also emitted during NFCReaderSession subtypes"
     },
 
     
@@ -81,7 +81,7 @@
     {
         "value": "6a02890500010001deadbeef6969",
         "name": "NameDrop",
-        "description": "Device does not respond to poll due to this frame, but it serves as a trigger for AirDrop frame. Data part contains BLE MAC address"
+        "description": "Triggers a warp animation. Device does not respond to poll after this frame, but it serves as a trigger for AirDrop frame. Data part contains BLE MAC address"
     },
     {
         "value": "6a02890500010000000000000000",
