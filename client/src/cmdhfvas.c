@@ -16,7 +16,7 @@
 // An implementation of the Value Added Service protocol
 //-----------------------------------------------------------------------------
 
-#include "cmdvas.h"
+#include "cmdhfvas.h"
 #include "cliparser.h"
 #include "cmdparser.h"
 #include "comms.h"
@@ -561,14 +561,14 @@ static int CmdHelp(const char *Cmd);
 
 static command_t CommandTable[] = {
     {"--------",  CmdHelp,        AlwaysAvailable,  "----------- " _CYAN_("Value Added Service") " -----------"},
+    {"help",      CmdHelp,        AlwaysAvailable,  "This help"},
+    {"--------",  CmdHelp,        AlwaysAvailable,  "----------------- " _CYAN_("General") " -----------------"},
     {"reader",    CmdVASReader,   IfPm3Iso14443a,   "Read and decrypt VAS message"},
     {"decrypt",   CmdVASDecrypt,  AlwaysAvailable,  "Decrypt a previously captured VAS cryptogram"},
-    {"--------",  CmdHelp,        AlwaysAvailable,  "----------------- " _CYAN_("General") " -----------------"},
-    {"help",      CmdHelp,        AlwaysAvailable,  "This help"},
     {NULL, NULL, NULL, NULL}
 };
 
-int CmdVAS(const char *Cmd) {
+int CmdHFVAS(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 };

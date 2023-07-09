@@ -28,7 +28,6 @@
 #include "cmdhfst25ta.h"
 #include "cmdhfthinfilm.h"
 #include "cmdhftopaz.h"
-#include "cmdvas.h"
 #include "cmdnfc.h"
 #include "fileutils.h"
 #include "mifare/mifaredefault.h"
@@ -422,7 +421,6 @@ static command_t CommandTable[] = {
 //    {"type5",       CmdNFCType5,      AlwaysAvailable, "{ NFC Forum Tag Type 5...             }"},
     {"mf",          CmdNFCMF,         AlwaysAvailable, "{ NFC Type MIFARE Classic/Plus Tag... }"},
     {"barcode",     CmdNFCBarcode,    AlwaysAvailable, "{ NFC Barcode Tag...                  }"},
-    {"vas",         CmdVAS,           AlwaysAvailable, "{ Apple Value Added Service           }"},
 //    {"--------",    CmdHelp,          AlwaysAvailable, "--------------------- " _CYAN_("NFC peer-to-peer") " ------------"},
 //    {"isodep",      CmdISODEP,        AlwaysAvailable, "{ ISO-DEP protocol...                 }"},
 //    {"llcp",        CmdNFCLLCP,       AlwaysAvailable, "{ Logical Link Control Protocol...    }"},

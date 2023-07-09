@@ -298,6 +298,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhftexkom.c
         ${PM3_ROOT}/client/src/cmdhfthinfilm.c
         ${PM3_ROOT}/client/src/cmdhftopaz.c
+        ${PM3_ROOT}/client/src/cmdhfvas.c
         ${PM3_ROOT}/client/src/cmdhfwaveshare.c
         ${PM3_ROOT}/client/src/cmdhfxerox.c
         ${PM3_ROOT}/client/src/cmdhw.c
@@ -337,7 +338,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfzx8211.c
         ${PM3_ROOT}/client/src/cmdmain.c
         ${PM3_ROOT}/client/src/cmdnfc.c
-				${PM3_ROOT}/client/src/cmdvas.c
         ${PM3_ROOT}/client/src/cmdparser.c
         ${PM3_ROOT}/client/src/cmdpiv.c
         ${PM3_ROOT}/client/src/cmdscript.c

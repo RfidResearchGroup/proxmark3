@@ -16,11 +16,11 @@
 // An implementation of the Value Added Service protocol
 //-----------------------------------------------------------------------------
 
-#ifndef CMDVAS_H__
-#define CMDVAS_H__
+#ifndef CMDHFVAS_H__
+#define CMDHFVAS_H__
 
 #include "common.h"
 
-int CmdVAS(const char *Cmd);
+int CmdHFVAS(const char *Cmd);
 
 #endif
