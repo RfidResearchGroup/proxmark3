@@ -200,7 +200,7 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     // 1: null terminator
     // 16: room for filenum to ensure new filename
     // save_path_len + strlen(PATHSEP):  the user preference save paths
-    const size_t len = p_namelen + strlen(suffix) + 1 + 16 + save_path_len + strlen(PATHSEP);
+    const size_t len = p_namelen + strlen(suffix) + 1 + 16 + save_path_len + strlen(PATHSEP) + strlen(g_session.defaultPaths[e_save_path]);
 
     char *fileName = (char *) calloc(len, sizeof(uint8_t));
     if (fileName == NULL) {
