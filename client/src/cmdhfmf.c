@@ -1093,7 +1093,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
     }
 
     if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "fast dump reported back failure w KEY A,  swapping to KEY B");
+        PrintAndLogEx(FAILED, "fast dump reported back failure w KEY A,  swapping to KEY B");
 
         // ecfill key B
         payload.keytype = MF_KEY_B;
@@ -1107,8 +1107,8 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
         }
 
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "fast dump reported back failure w KEY B");
-            PrintAndLogEx(INFO, "Dump file is " _RED_("PARTIAL") " complete");
+            PrintAndLogEx(FAILED, "fast dump reported back failure w KEY B");
+            PrintAndLogEx(FAILED, "Dump file is " _RED_("PARTIAL") " complete");
         }
     }
     return PM3_SUCCESS;
@@ -2478,6 +2478,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     uint8_t num_found_keys = 0;
 
     // ------------------------------
+
+    uint32_t tagT = GetHF14AMfU_Type();
+    if (tagT != UL_ERROR) {
+        PrintAndLogEx(ERR, "Detected a MIFARE Ultralight/C/NTAG Compatible card.");
+        PrintAndLogEx(ERR, "This command targets " _YELLOW_("MIFARE Classic"));
+        return PM3_ESOFT;
+    }
 
     // Select card to get UID/UIDLEN/ATQA/SAK information
     clearCommandBuffer();
@@ -3993,23 +4000,24 @@ static int CmdHF14AMfKeyBrute(const char *Cmd) {
 */
 
 void printKeyTable(size_t sectorscnt, sector_t *e_sector) {
-    return printKeyTableEx(sectorscnt, e_sector, 0);
+    return printKeyTableEx(sectorscnt, e_sector, 0, false);
 }
 
-void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {
+void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector, bool singel_sector) {
     char strA[26 + 1] = {0};
     char strB[26 + 1] = {0};
     char resA[20 + 1] = {0};
     char resB[20 + 1] = {0};
+
+    uint64_t ndef_key = 0xD3F7D3F7D3F7;
+    bool has_ndef_key = false;
+    bool extended_legend = false;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
     PrintAndLogEx(SUCCESS, " Sec | Blk | key A        |res| key B        |res");
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
 
-    uint64_t ndef_key = 0xD3F7D3F7D3F7;
-    bool has_ndef_key = false;
-    bool extended_legend = false;
     for (size_t i = 0; i < sectorscnt; i++) {
 
         if ((e_sector[i].foundKey[0] > 1) || (e_sector[i].foundKey[1] > 1)) {
@@ -8517,7 +8525,7 @@ static command_t CommandTable[] = {
     {"nack",        CmdHf14AMfNack,         IfPm3Iso14443a,  "Test for MIFARE NACK bug"},
     {"chk",         CmdHF14AMfChk,          IfPm3Iso14443a,  "Check keys"},
     {"fchk",        CmdHF14AMfChk_fast,     IfPm3Iso14443a,  "Check keys fast, targets all keys on card"},
-    {"decrypt",     CmdHf14AMfDecryptBytes, AlwaysAvailable, "[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace"},
+    {"decrypt",     CmdHf14AMfDecryptBytes, AlwaysAvailable, "Decrypt Crypto1 data from sniff or trace"},
     {"supercard",   CmdHf14AMfSuperCard,    IfPm3Iso14443a,  "Extract info from a `super card`"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
     {"auth4",       CmdHF14AMfAuth4,        IfPm3Iso14443a,  "ISO14443-4 AES authentication"},
