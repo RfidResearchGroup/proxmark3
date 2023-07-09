@@ -389,9 +389,12 @@ static int VASReader(uint8_t *pidHash, const char *url, size_t urlLen, uint8_t *
 
 static int CmdVASReader(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "nfc vas reader",
+    CLIParserInit(&ctx, "hf vas reader",
                   "Read and decrypt VAS message",
-                  "nfc vas reader -p pass.com.example.ticket -k ./priv.key -> select pass and decrypt with priv.key\nnfc vas reader --url https://example.com -> URL Only mode");
+                  "hf vas reader -p pass.com.example.ticket -k client/resources/vas_priv.key -> select pass and decrypt with priv.key\n"
+                  "hf vas reader --url https://example.com -> URL Only mode"
+                );
+
     void *argtable[] = {
         arg_param_begin,
         arg_str0("p", NULL, "<pid>", "pass type id"),
@@ -491,9 +494,12 @@ static int CmdVASReader(const char *Cmd) {
 
 static int CmdVASDecrypt(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "nfc vas decrypt",
+    CLIParserInit(&ctx, "hf vas decrypt",
                   "Decrypt a previously captured cryptogram",
-                  "nfc vas reader -p pass.com.example.ticket -k ./priv.key -> select pass and decrypt with priv.key\nnfc vas reader --url https://example.com -> URL Only mode");
+                  "hf vas reader -p pass.com.example.ticket -k client/resources/vas_priv.key -> select pass and decrypt with priv.key\n"
+                  "hf vas reader --url https://example.com -> URL Only mode"
+            );
+
     void *argtable[] = {
         arg_param_begin,
         arg_str0("p", NULL, "<pid>", "pass type id"),
