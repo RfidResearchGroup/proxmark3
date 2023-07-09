@@ -390,177 +390,169 @@ static int VASReader(uint8_t *pidHash, const char *url, size_t urlLen, uint8_t *
 static int CmdVASReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf vas reader",
-                  "Read and decrypt VAS message",
-                  "hf vas reader -p pass.com.example.ticket -k client/resources/vas_priv.key -> select pass and decrypt with priv.key\n"
-                  "hf vas reader --url https://example.com -> URL Only mode"
+                  "Read and decrypt Value Added Services (VAS) message",
+                  "hf vas reader --url https://example.com    -> URL Only mode\n"                  
+                  "hf vas reader --pid pass.com.passkit.pksamples.nfcdemo -f vas_privkey.der -@\n"
                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("p", NULL, "<pid>", "pass type id"),
-        arg_str0("k", NULL, "<key>", "path to terminal private key"),
-        arg_str0(NULL, "url", "<url>", "a URL to provide to the mobile device"),
+        arg_str0(NULL, "pid", "<str>", "PID, pass type id"),
+        arg_str0("f", "file", "<fn>", "path to terminal private key file"),
+        arg_str0(NULL, "url", "<str>", "a URL to provide to the mobile device"),
         arg_lit0("@", NULL, "continuous mode"),
         arg_lit0("v", "verbose", "log additional information"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    struct arg_str *passTypeIdArg = arg_get_str(ctx, 1);
-    int passTypeIdLen = arg_get_str_len(ctx, 1);
-    uint8_t pidHash[32] = {0};
-    sha256hash((uint8_t *) passTypeIdArg->sval[0], passTypeIdLen, pidHash);
+    int pidlen = 0;
+    char pid[512] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)pid, 512, &pidlen);
 
-    struct arg_str *keyPathArg = arg_get_str(ctx, 2);
-    int keyPathLen = arg_get_str_len(ctx, 2);
+    int keyfnlen = 0;
+    char keyfn[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)keyfn, FILE_PATH_SIZE, &keyfnlen);
 
-    if (keyPathLen == 0 && passTypeIdLen > 0) {
+    if (keyfnlen == 0 && pidlen > 0) {
         PrintAndLogEx(FAILED, "Must provide path to terminal private key if a pass type id is provided");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    uint8_t *keyData = NULL;
-    size_t keyDataLen = 0;
-    if (loadFile_safe(keyPathArg->sval[0], "", (void **)&keyData, &keyDataLen) != PM3_SUCCESS) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
+    int urllen = 0;
+    char url[512] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)url, 512, &urllen);
+
+    bool continuous = arg_get_lit(ctx, 4);
+    bool verbose = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
+
+    // santity checks
+    uint8_t *key_data = NULL;
+    size_t key_datalen = 0;
+    if (loadFile_safe(keyfn, "", (void **)&key_data, &key_datalen) != PM3_SUCCESS) {
+        return PM3_EFILE;
     }
 
     mbedtls_ecp_keypair privKey;
     mbedtls_ecp_keypair_init(&privKey);
 
-    if (LoadReaderPrivateKey(keyData, keyDataLen, &privKey) != PM3_SUCCESS) {
-        CLIParserFree(ctx);
+    if (LoadReaderPrivateKey(key_data, key_datalen, &privKey) != PM3_SUCCESS) {
+        free(key_data);
         mbedtls_ecp_keypair_free(&privKey);
-        return PM3_EINVARG;
+        return PM3_ESOFT;
     }
+    free(key_data);
 
-    free(keyData);
-
-    struct arg_str *urlArg = arg_get_str(ctx, 3);
-    int urlLen = arg_get_str_len(ctx, 3);
-    const char *url = NULL;
-    if (urlLen > 0) {
-        url = urlArg->sval[0];
-    }
-
-    bool continuous = arg_get_lit(ctx, 4);
-    bool verbose = arg_get_lit(ctx, 5);
-
-    PrintAndLogEx(INFO, "Requesting pass type id: %s", sprint_ascii((uint8_t *) passTypeIdArg->sval[0], passTypeIdLen));
+    PrintAndLogEx(INFO, "Requesting pass type id... " _GREEN_("%s"), sprint_ascii((uint8_t *) pid, pidlen));
 
     if (continuous) {
         PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
     }
 
+    uint8_t pidhash[32] = {0};
+    sha256hash((uint8_t *) pid, pidlen, pidhash);
+
+    size_t clen = 0;
+    size_t mlen = 0;
     uint8_t cryptogram[120] = {0};
-    size_t cryptogramLen = 0;
-    int readerErr = -1;
+    uint8_t msg[64] = {0};
+    uint32_t timestamp = 0;
+    int res = PM3_SUCCESS;
 
     do {
-        readerErr = VASReader(passTypeIdLen > 0 ? pidHash : NULL, url, urlLen, cryptogram, &cryptogramLen, verbose);
-
-        if (readerErr == 0 || kbd_enter_pressed()) {
+        if (continuous && kbd_enter_pressed()) {
             break;
         }
+        
+        res = VASReader( (pidlen > 0) ? pidhash : NULL, url, urllen, cryptogram, &clen, verbose);
+        if (res == PM3_SUCCESS) {
 
-        msleep(200);
+            res = DecryptVASCryptogram(pidhash, cryptogram, clen, &privKey, msg, &mlen, &timestamp);
+            if (res == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "Timestamp... " _YELLOW_("%d") " (secs since Jan 1, 2001)", timestamp);
+                PrintAndLogEx(SUCCESS, "Message..... " _YELLOW_("%s"), sprint_ascii(msg, mlen));
+                // extra sleep after successfull read
+                if (continuous) {
+                    msleep(3000);
+                }
+            }
+        }
+        msleep(300);        
     } while (continuous);
 
-    if (readerErr) {
-        CLIParserFree(ctx);
-        mbedtls_ecp_keypair_free(&privKey);
-        return PM3_EINVARG;
-    }
-
-    uint8_t message[64] = {0};
-    size_t messageLen = 0;
-    uint32_t timestamp = 0;
-
-    if (DecryptVASCryptogram(pidHash, cryptogram, cryptogramLen, &privKey, message, &messageLen, &timestamp) != PM3_SUCCESS) {
-        CLIParserFree(ctx);
-        mbedtls_ecp_keypair_free(&privKey);
-        return PM3_EINVARG;
-    }
-
-    PrintAndLogEx(SUCCESS, "Message: %s", sprint_ascii(message, messageLen));
-    PrintAndLogEx(SUCCESS, "Timestamp: %d (secs since Jan 1, 2001)", timestamp);
-
-    CLIParserFree(ctx);
     mbedtls_ecp_keypair_free(&privKey);
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int CmdVASDecrypt(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf vas decrypt",
                   "Decrypt a previously captured cryptogram",
-                  "hf vas reader -p pass.com.example.ticket -k client/resources/vas_priv.key -> select pass and decrypt with priv.key\n"
-                  "hf vas reader --url https://example.com -> URL Only mode"
+                  "hf vas decrypt --pid pass.com.passkit.pksamples.nfcdemo -f vas_privkey.der -d 00000000\n"
             );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("p", NULL, "<pid>", "pass type id"),
-        arg_str0("k", NULL, "<key>", "path to terminal private key"),
-        arg_str0(NULL, NULL, "<hex>", "cryptogram to decrypt"),
+        arg_str0(NULL, "pid", "<str>", "PID, pass type id"),
+        arg_str0("f", "file", "<fn>", "path to terminal private key file"),
+        arg_str0("d", "data", "<hex>", "cryptogram to decrypt"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    struct arg_str *passTypeIdArg = arg_get_str(ctx, 1);
-    int passTypeIdLen = arg_get_str_len(ctx, 1);
-    uint8_t pidHash[32] = {0};
-    sha256hash((uint8_t *) passTypeIdArg->sval[0], passTypeIdLen, pidHash);
+    int pidlen = 0;
+    char pid[512] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)pid, 512, &pidlen);
 
-    uint8_t cryptogram[120] = {0};
-    int cryptogramLen = 0;
-    CLIGetHexWithReturn(ctx, 3, cryptogram, &cryptogramLen);
+    int keyfnlen = 0;
+    char keyfn[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)keyfn, FILE_PATH_SIZE, &keyfnlen);
 
-    struct arg_str *keyPathArg = arg_get_str(ctx, 2);
-    int keyPathLen = arg_get_str_len(ctx, 2);
-
-    if (keyPathLen == 0 && passTypeIdLen > 0) {
+    if (keyfnlen == 0 && pidlen > 0) {
         PrintAndLogEx(FAILED, "Must provide path to terminal private key if a pass type id is provided");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    uint8_t *keyData = NULL;
-    size_t keyDataLen = 0;
-    if (loadFile_safe(keyPathArg->sval[0], "", (void **)&keyData, &keyDataLen) != PM3_SUCCESS) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
+    int clen = 0;
+    uint8_t cryptogram[120] = {0};
+    CLIGetHexWithReturn(ctx, 3, cryptogram, &clen);
+    CLIParserFree(ctx);
+
+    // santity checks
+    uint8_t *key_data = NULL;
+    size_t key_datalen = 0;
+    if (loadFile_safe(keyfn, "", (void **)&key_data, &key_datalen) != PM3_SUCCESS) {
+        return PM3_EFILE;
     }
 
     mbedtls_ecp_keypair privKey;
     mbedtls_ecp_keypair_init(&privKey);
 
-    if (LoadReaderPrivateKey(keyData, keyDataLen, &privKey) != PM3_SUCCESS) {
-        CLIParserFree(ctx);
+    if (LoadReaderPrivateKey(key_data, key_datalen, &privKey) != PM3_SUCCESS) {
+        free(key_data);
         mbedtls_ecp_keypair_free(&privKey);
-        return PM3_EINVARG;
+        return PM3_EFILE;
     }
+    free(key_data);
 
-    free(keyData);
+    uint8_t pidhash[32] = {0};
+    sha256hash((uint8_t *) pid, pidlen, pidhash);
 
-    uint8_t message[64] = {0};
-    size_t messageLen = 0;
+    size_t mlen = 0;
+    uint8_t msg[64] = {0};
     uint32_t timestamp = 0;
 
-    if (DecryptVASCryptogram(pidHash, cryptogram, cryptogramLen, &privKey, message, &messageLen, &timestamp) != PM3_SUCCESS) {
-        CLIParserFree(ctx);
-        mbedtls_ecp_keypair_free(&privKey);
-        return PM3_EINVARG;
+    int res = DecryptVASCryptogram(pidhash, cryptogram, clen, &privKey, msg, &mlen, &timestamp);
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Timestamp... " _YELLOW_("%d") " (secs since Jan 1, 2001)", timestamp);
+        PrintAndLogEx(SUCCESS, "Message..... " _YELLOW_("%s"), sprint_ascii(msg, mlen));
     }
 
-    PrintAndLogEx(SUCCESS, "Message: %s", sprint_ascii(message, messageLen));
-    PrintAndLogEx(SUCCESS, "Timestamp: %d (secs since Jan 1, 2001)", timestamp);
-
-    CLIParserFree(ctx);
     mbedtls_ecp_keypair_free(&privKey);
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int CmdHelp(const char *Cmd);
