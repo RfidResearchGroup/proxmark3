@@ -18,6 +18,7 @@
 
 #include "crypto/libpcrypto.h"
 #include "crypto/asn1utils.h"
+#include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -34,8 +35,10 @@
 #include <mbedtls/entropy.h>
 #include <mbedtls/error.h>
 #include <mbedtls/blowfish.h>
+#include "libpcrypto.h"
 #include "util.h"
 #include "ui.h"
+#include "math.h"
 
 void des_encrypt(void *out, const void *in, const void *key) {
     mbedtls_des_context ctx;
@@ -629,6 +632,37 @@ int blowfish_decrypt(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output,
     if (mbedtls_blowfish_crypt_cbc(&blow, MBEDTLS_BLOWFISH_DECRYPT, length, iiv, input, output))
         return 2;
     mbedtls_blowfish_free(&blow);
+
+    return 0;
+}
+
+// Implementation from http://www.secg.org/sec1-v2.pdf#subsubsection.3.6.1
+int ansi_x963_sha256(uint8_t *sharedSecret, size_t sharedSecretLen, uint8_t *sharedInfo, size_t sharedInfoLen, size_t keyDataLen, uint8_t *keyData) {
+    // sha256 hash has (practically) no max input len, so skipping that step
+
+    if (keyDataLen >= 32 * (pow(2, 32) - 1)) {
+        return 1;
+    }
+
+    uint32_t counter = 0x00000001;
+
+    for (int i = 0; i < (keyDataLen / 32); ++i) {
+        uint8_t *hashMaterial = malloc(4 + sharedSecretLen + sharedInfoLen);
+        memcpy(hashMaterial, sharedSecret, sharedSecretLen);
+        hashMaterial[sharedSecretLen] = (counter >> 24);
+        hashMaterial[sharedSecretLen + 1] = (counter >> 16) & 0xFF;
+        hashMaterial[sharedSecretLen + 2] = (counter >> 8) & 0xFF;
+        hashMaterial[sharedSecretLen + 3] = counter & 0xFF;
+        memcpy(hashMaterial + sharedSecretLen + 4, sharedInfo, sharedInfoLen);
+
+        uint8_t hash[32] = {0};
+        sha256hash(hashMaterial, 4 + sharedSecretLen + sharedInfoLen, hash);
+        free(hashMaterial);
+
+        memcpy(keyData + (32 * i), hash, 32);
+
+        counter++;
+    }
 
     return 0;
 }
