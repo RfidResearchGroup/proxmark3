@@ -204,7 +204,7 @@ void TLVPrintAIDlistFromSelectTLV(struct tlvdb *tlv) {
             break;
         }
         PrintAndLogEx(INFO, "| %s|   %s  | %s|",
-                      sprint_hex_inrow_ex(tgAID->value, tgAID->len, 17),
+                      sprint_hex_inrow_ex(tgAID->value, tgAID->len, 16),
                       (tgPrio) ? sprint_hex(tgPrio->value, 1) : "   ",
                       (tgName) ? sprint_ascii_ex(tgName->value, tgName->len, 24) : "                        ");
 
@@ -473,7 +473,7 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
     return res;
 }
 
-int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvdb *tlv) {
+int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvdb *tlv, bool verbose) {
     uint8_t aidbuf[APDU_AID_LEN] = {0};
     int aidlen = 0;
     uint8_t data[APDU_RES_LEN] = {0};
@@ -500,12 +500,16 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
                     if (LeaveFieldON == false)
                         DropFieldEx(channel);
 
-                    PrintAndLogEx(WARNING, "exiting...");
+                    if (verbose) {
+                        PrintAndLogEx(WARNING, "exiting...");
+                    }
                     return 1;
                 }
 
                 retrycnt = 0;
-                PrintAndLogEx(FAILED, "Retry failed [%s]. Skipped...", AIDlist[i].aid);
+                if (verbose) {
+                    PrintAndLogEx(FAILED, "Retry failed [%s]. Skipped...", AIDlist[i].aid);
+                }
             }
             continue;
         }

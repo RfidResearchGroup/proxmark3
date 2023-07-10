@@ -28,12 +28,13 @@
 #include "iso7816/iso7816core.h"
 #include "emv_pki.h"
 
-enum TransactionType {
+typedef enum TransactionType {
     TT_MSD,
     TT_VSDC,        // contact only. not standard for contactless
     TT_QVSDCMCHIP,
     TT_CDA,
-};
+    TT_END,
+} TransactionType_t;
 extern const char *TransactionTypeStr[];
 
 enum CardPSVendor {
@@ -62,7 +63,7 @@ int EMVExchange(Iso7816CommandChannel channel, bool LeaveFieldON, sAPDU_t apdu, 
 
 // search application
 int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv);
-int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvdb *tlv);
+int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvdb *tlv, bool verbose);
 int EMVSelectPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 int EMVSelect(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 // select application
