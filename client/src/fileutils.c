@@ -190,17 +190,12 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
         return NULL;
     }
 
-    uint16_t p_namelen = strlen(preferredName);
-    if (str_endswith(preferredName, suffix)) {
-        p_namelen -= strlen(suffix);
-    }
-
-    int save_path_len = path_size(e_save_path);
 
     // 1: null terminator
     // 16: room for filenum to ensure new filename
     // save_path_len + strlen(PATHSEP):  the user preference save paths
-    const size_t len = p_namelen + strlen(suffix) + 1 + 16 + save_path_len + strlen(PATHSEP) + strlen(g_session.defaultPaths[e_save_path]);
+    //const size_t len = p_namelen + strlen(suffix) + 1 + 16 + save_path_len + strlen(PATHSEP);
+    const size_t len = FILE_PATH_SIZE * 2;
 
     char *fileName = (char *) calloc(len, sizeof(uint8_t));
     if (fileName == NULL) {
@@ -210,17 +205,21 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     char *pfn = fileName;
 
     // user preference save paths
+    int save_path_len = path_size(e_save_path);
     if (save_path_len) {
-        snprintf(pfn, save_path_len + strlen(PATHSEP) + 1, "%s%s", g_session.defaultPaths[e_save_path], PATHSEP);
+        snprintf(pfn, len, "%s%s", g_session.defaultPaths[e_save_path], PATHSEP);
         pfn += save_path_len + strlen(PATHSEP);
     }
 
-    int num = 1;
-
+    uint16_t p_namelen = strlen(preferredName);
+    if (str_endswith(preferredName, suffix)) {
+        p_namelen -= strlen(suffix);
+    }
     // modify filename
     snprintf(pfn, len, "%.*s%s", p_namelen, preferredName, suffix);
 
     // check complete path/filename if exists
+    int num = 1;
     while (fileExists(fileName)) {
         // modify filename
         snprintf(pfn, len, "%.*s-%03d%s", p_namelen, preferredName, num, suffix);
