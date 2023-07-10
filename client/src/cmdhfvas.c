@@ -187,10 +187,9 @@ static int LoadReaderPrivateKey(uint8_t *buf, size_t bufLen, mbedtls_ecp_keypair
         return PM3_EINVARG;
     }
 
-    tlvdb_free(derRoot);
-
     if (mbedtls_ecp_point_read_binary(&privKey->grp, &privKey->Q, pubkeyCoordsTlv->value + 1, 65)) {
         PrintAndLogEx(FAILED, "Failed to read in public key coordinates");
+        tlvdb_free(derRoot);
         return PM3_EINVARG;
     }
 
@@ -199,6 +198,7 @@ static int LoadReaderPrivateKey(uint8_t *buf, size_t bufLen, mbedtls_ecp_keypair
         return PM3_EINVARG;
     }
 
+    tlvdb_free(derRoot);
     return PM3_SUCCESS;
 }
 
