@@ -762,9 +762,9 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, -K, --keep Keep field ON for next command",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-k, --keep Keep field ON for next command",
+                "-a, --apdu Show APDU requests and responses",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
             "usage": "emv challenge [-hkaw]"
         },
@@ -778,19 +778,19 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-s, -S, --select Activate field and select card",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results",
-                "-j, -J, --jload Load transaction parameters from `emv_defparams.json` file",
-                "-f, -F, --forceaid Force search AID. Search AID instead of execute PPSE",
+                "-s, --select Activate field and select card",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results",
+                "-j, --jload Load transaction parameters from `emv_defparams.json` file",
+                "--force Force search AID. Search AID instead of execute PPSE",
                 "By default: Transaction type - MSD",
-                "-v, -V, --qvsdc Transaction type - qVSDC or M/Chip",
-                "-c, -C, --qvsdccda Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)",
-                "-x, -X, --vsdc Transaction type - VSDC. For test only. Not a standard behavior",
-                "-g, -G, --acgpo VISA. generate AC from GPO",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-v, --qvsdc Transaction type - qVSDC or M/Chip",
+                "-c, --qvsdccda Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)",
+                "-x, --vsdc Transaction type - VSDC. For test only. Not a standard behavior",
+                "-g, --acgpo VISA. generate AC from GPO",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
-            "usage": "emv exec [-hsatjfvcxgw] By default:"
+            "usage": "emv exec [-hsatjvcxgw] [--force] By default:"
         },
         "emv genac": {
             "command": "emv genac",
@@ -804,14 +804,14 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, -K, --keep Keep field ON for next command",
-                "-c, -C, --cda Executes CDA transaction. Needs to get SDAD in results.",
-                "-d, -D, --decision <aac|tc|arqc> Terminal decision. aac - declined, tc - approved, arqc - online authorisation requested",
-                "-p, -P, --params Load parameters from `emv_defparams.json` file for CDOLdata making from CDOL and parameters",
-                "-m, -M, --make Make CDOLdata from CDOL (tag 8C and 8D) and parameters (def: use default parameters)",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results of selected applets",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-k, --keep Keep field ON for next command",
+                "-c, --cda Executes CDA transaction. Needs to get SDAD in results.",
+                "-d, --decision <aac|tc|arqc> Terminal decision. aac - declined, tc - approved, arqc - online authorisation requested",
+                "-p, --params Load parameters from `emv_defparams.json` file for CDOLdata making from CDOL and parameters",
+                "-m, --make Make CDOLdata from CDOL (tag 8C and 8D) and parameters (def: use default parameters)",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results of selected applets",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> CDOLdata/CDOL"
             ],
             "usage": "emv genac [-hkcpmatw] [-d <aac|tc|arqc>] <hex> [<hex>]..."
@@ -827,12 +827,12 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, -K, --keep Keep field ON for next command",
-                "-p, -P, --params Load parameters from `emv_defparams.json` file for PDOLdata making from PDOL and parameters",
-                "-m, -M, --make Make PDOLdata from PDOL (tag 9F38) and parameters (def: uses default parameters)",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results of selected applets",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-k, --keep Keep field ON for next command",
+                "-p, --params Load parameters from `emv_defparams.json` file for PDOLdata making from PDOL and parameters",
+                "-m, --make Make PDOLdata from PDOL (tag 9F38) and parameters (def: uses default parameters)",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results of selected applets",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> PDOLdata/PDOL"
             ],
             "usage": "emv gpo [-hkpmatw] [<hex>]..."
@@ -848,12 +848,12 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, -K, --keep Keep field ON for next command",
-                "-p, -P, --params Load parameters from `emv_defparams.json` file for DDOLdata making from DDOL and parameters",
-                "-m, -M, --make Make DDOLdata from DDOL (tag 9F49) and parameters (def: use default parameters)",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results of selected applets",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-k, --keep Keep field ON for next command",
+                "-p, --params Load parameters from `emv_defparams.json` file for DDOLdata making from DDOL and parameters",
+                "-m, --make Make DDOLdata from DDOL (tag 9F49) and parameters (def: use default parameters)",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results of selected applets",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> DDOLdata/DDOL"
             ],
             "usage": "emv intauth [-hkpmatw] <hex> [<hex>]..."
@@ -889,15 +889,30 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-s, -S, --select Activate field and select card",
-                "-k, -K, --keep Keep field ON for next command",
+                "-s, --select Activate field and select card",
+                "-k, --keep Keep field ON for next command",
                 "-1, --pse PSE (1PAY.SYS.DDF01) mode",
                 "-2, --ppse PPSE (2PAY.SYS.DDF01) mode (def)",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results of selected applets",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results of selected applets",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
             "usage": "emv pse [-hsk12atw]"
+        },
+        "emv reader": {
+            "command": "emv reader",
+            "description": "Act as a EMV reader to identify tag. Look for EMV tags until Enter or the pm3 button is pressed",
+            "notes": [
+                "emv reader",
+                "emv reader -@ -> Continuous mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-@ continuous reader mode"
+            ],
+            "usage": "emv reader [-hw@]"
         },
         "emv readrec": {
             "command": "emv readrec",
@@ -909,10 +924,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, -K, --keep Keep field ON for next command",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results of selected applets",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-k, --keep Keep field ON for next command",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results of selected applets",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> <SFI 1 byte><SFIrecord 1 byte"
             ],
             "usage": "emv readrec [-hkatw] <hex> [<hex>]..."
@@ -927,9 +942,9 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, -T, --selftest Self test",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-t, --selftest Self test",
+                "-a, --apdu Show APDU requests and responses",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
             "usage": "emv roca [-htaw]"
         },
@@ -943,18 +958,18 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results",
-                "-e, -E, --extract Extract TLV elements and fill Application Data",
-                "-j, -J, --jload Load transaction parameters from `emv_defparams.json` file",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results",
+                "-e, --extract Extract TLV elements and fill Application Data",
+                "-j, --jload Load transaction parameters from `emv_defparams.json` file",
                 "By default: Transaction type - MSD",
-                "-v, -V, --qvsdc Transaction type - qVSDC or M/Chip",
-                "-c, -C, --qvsdccda Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)",
-                "-x, -X, --vsdc Transaction type - VSDC. For test only. Not a standard behavior",
-                "-g, -G, --acgpo VISA. generate AC from GPO",
-                "-m, -M, --merge Merge output file with card's data. (warning: the file may be corrupted!)",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<fn> JSON output filename"
+                "-v, --qvsdc Transaction type - qVSDC or M/Chip",
+                "-c, --qvsdccda Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)",
+                "-x, --vsdc Transaction type - VSDC. For test only. Not a standard behavior",
+                "-g, --acgpo VISA. generate AC from GPO",
+                "-m, --merge Merge output file with card's data. (warning: the file may be corrupted!)",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "<fn> JSON output file name"
             ],
             "usage": "emv scan [-hatejvcxgmw] By default: <fn>"
         },
@@ -968,11 +983,11 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-s, -S, --select Activate field and select card",
-                "-k, -K, --keep Keep field ON for next command",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results of selected applets",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-s, --select Activate field and select card",
+                "-k, --keep Keep field ON for next command",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results of selected applets",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
             "usage": "emv search [-hskatw]"
         },
@@ -986,11 +1001,11 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-s, -S, --select Activate field and select card",
-                "-k, -K, --keep Keep field for next command",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-s, --select Activate field and select card",
+                "-k, --keep Keep field for next command",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> Applet AID"
             ],
             "usage": "emv select [-hskatw] <hex>"
@@ -7091,6 +7106,39 @@
             ],
             "usage": "hf tune [-h] [-n <dec>] [--bar] [--mix] [--value]"
         },
+        "hf vas decrypt": {
+            "command": "hf vas decrypt",
+            "description": "Decrypt a previously captured cryptogram",
+            "notes": [
+                "hf vas decrypt --pid pass.com.passkit.pksamples.nfcdemo -f vas_privkey.der -d c0b77375eae416b79449347f9fe838c05cdb57dc7470b97b93b806cb348771d9bfbe29d58538c7c7d7c3d015fa205b68bfccd726058a62f7f44085ac98dbf877120fd9059f1507b956e0a6d56d0a"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--pid <str> PID, pass type id",
+                "-f, --file <fn> path to terminal private key file",
+                "-d, --data <hex> cryptogram to decrypt"
+            ],
+            "usage": "hf vas decrypt [-h] [--pid <str>] [-f <fn>] [-d <hex>]"
+        },
+        "hf vas reader": {
+            "command": "hf vas reader",
+            "description": "Read and decrypt Value Added Services (VAS) message",
+            "notes": [
+                "hf vas reader --url https://example.com -> URL Only mode",
+                "hf vas reader --pid pass.com.passkit.pksamples.nfcdemo -f vas_privkey.der -@"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--pid <str> PID, pass type id",
+                "-f, --file <fn> path to terminal private key file",
+                "--url <str> a URL to provide to the mobile device",
+                "-@ continuous mode",
+                "-v, --verbose log additional information"
+            ],
+            "usage": "hf vas reader [-h@v] [--pid <str>] [-f <fn>] [--url <str>]"
+        },
         "hf waveshare loadbmp": {
             "command": "hf waveshare loadbmp",
             "description": "Load BMP file to Waveshare NFC ePaper.",
@@ -7390,6 +7438,21 @@
                 "-h, --help This help"
             ],
             "usage": "hw tia [-h]"
+        },
+        "hw timeout": {
+            "command": "hw timeout",
+            "description": "Set the communication timeout on the client side",
+            "notes": [
+                "hw timeout -> Show current timeout",
+                "hw timeout -t 20 -> Set the timeout to 20ms",
+                "hw timeout -t 500 -> Set the timeout to 500ms"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-t, --timeout <dec> timeout in ms"
+            ],
+            "usage": "hw timeout [-h] [-t <dec>]"
         },
         "hw tune": {
             "command": "hw tune",
@@ -11622,8 +11685,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 675,
+        "commands_extracted": 679,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-06-27T13:20:13"
+        "extracted_on": "2023-07-10T14:40:45"
     }
 }

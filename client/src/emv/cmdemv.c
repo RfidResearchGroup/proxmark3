@@ -76,7 +76,7 @@ static void PrintChannel(Iso7816CommandChannel channel) {
 }
 
 static int emv_parse_card_details(uint8_t *response, size_t reslen) {
- 
+
     struct tlvdb *root = tlvdb_parse_multi(response, reslen);
     if (root == NULL) {
         return PM3_EINVARG;
@@ -123,7 +123,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
     if (acc_full != NULL) {
         const struct tlv *acc_tlv = tlvdb_get_tlv(acc_full);
         if (acc_tlv->len == 2) {
-            uint16_t acc = MemBeToUint2byte((const uint8_t*)acc_tlv->value);
+            uint16_t acc = MemBeToUint2byte((const uint8_t *)acc_tlv->value);
             PrintAndLogEx(INFO, "Currency Code........ " _YELLOW_("%02X"), acc);
         }
     }
@@ -132,12 +132,12 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
     struct tlvdb *aeffect_full = tlvdb_find_full(root, 0x5F25);
     if (aeffect_full != NULL) {
         const struct tlv *aaeffect_tlv = tlvdb_get_tlv(aeffect_full);
-        if (aaeffect_tlv->len == 3) {            
+        if (aaeffect_tlv->len == 3) {
             PrintAndLogEx(INFO, "Effective date....... " _YELLOW_("20%02x-%02x-%02x"),
-                aaeffect_tlv->value[0],
-                aaeffect_tlv->value[1],
-                aaeffect_tlv->value[2]
-            );
+                          aaeffect_tlv->value[0],
+                          aaeffect_tlv->value[1],
+                          aaeffect_tlv->value[2]
+                         );
         }
     }
 
@@ -145,12 +145,12 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
     struct tlvdb *aexd_full = tlvdb_find_full(root, 0x5F24);
     if (aexd_full != NULL) {
         const struct tlv *aexd_tlv = tlvdb_get_tlv(aexd_full);
-        if (aexd_tlv->len == 3) {            
+        if (aexd_tlv->len == 3) {
             PrintAndLogEx(INFO, "Expiration date...... " _YELLOW_("20%02x-%02x-%02x"),
-                aexd_tlv->value[0],
-                aexd_tlv->value[1],
-                aexd_tlv->value[2]
-            );
+                          aexd_tlv->value[0],
+                          aexd_tlv->value[1],
+                          aexd_tlv->value[2]
+                         );
         }
     }
 
@@ -158,17 +158,17 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
     struct tlvdb *apan_full = tlvdb_find_full(root, 0x5A);
     if (apan_full != NULL) {
         const struct tlv *apan_tlv = tlvdb_get_tlv(apan_full);
-        if (apan_tlv->len == 8) {            
+        if (apan_tlv->len == 8) {
             PrintAndLogEx(INFO, "PAN.................. " _YELLOW_("%02x%02x %02x%02x %02x%02x %02x%02x"),
-                apan_tlv->value[0],
-                apan_tlv->value[1],
-                apan_tlv->value[2],
-                apan_tlv->value[3],
-                apan_tlv->value[4],
-                apan_tlv->value[5],
-                apan_tlv->value[6],
-                apan_tlv->value[7]
-            );
+                          apan_tlv->value[0],
+                          apan_tlv->value[1],
+                          apan_tlv->value[2],
+                          apan_tlv->value[3],
+                          apan_tlv->value[4],
+                          apan_tlv->value[5],
+                          apan_tlv->value[6],
+                          apan_tlv->value[7]
+                         );
         }
     }
 
@@ -176,7 +176,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
     struct tlvdb *apansq_full = tlvdb_find_full(root, 0x5F34);
     if (apansq_full != NULL) {
         const struct tlv *apansq_tlv = tlvdb_get_tlv(apansq_full);
-        if (apansq_tlv->len == 1) {            
+        if (apansq_tlv->len == 1) {
             PrintAndLogEx(INFO, "PAN Sequence......... " _YELLOW_("%u"), apansq_tlv->value[0]);
         }
     }
@@ -185,7 +185,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
     struct tlvdb *chm_full = tlvdb_find_full(root, 0x5F20);
     if (chm_full != NULL) {
         const struct tlv *chm_tlv = tlvdb_get_tlv(chm_full);
-        if (chm_tlv->len) {            
+        if (chm_tlv->len) {
             PrintAndLogEx(INFO, "Cardhold Name........ " _YELLOW_("%s"), sprint_ascii(chm_tlv->value, chm_tlv->len));
         }
     }
@@ -194,7 +194,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
     struct tlvdb *track1_full = tlvdb_find_full(root, 0x56);
     if (track1_full != NULL) {
         const struct tlv *track1_tlv = tlvdb_get_tlv(track1_full);
-        if (track1_tlv->len) {            
+        if (track1_tlv->len) {
             PrintAndLogEx(INFO, "Track 1.............. " _YELLOW_("%s"), sprint_ascii(track1_tlv->value, track1_tlv->len));
         }
     }
@@ -203,7 +203,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
     struct tlvdb *track2_full = tlvdb_find_full(root, 0x9F6B);
     if (track2_full != NULL) {
         const struct tlv *track2_tlv = tlvdb_get_tlv(track2_full);
-        if (track2_tlv->len) {            
+        if (track2_tlv->len) {
             PrintAndLogEx(INFO, "Track 2.............. " _YELLOW_("%s"), sprint_hex_inrow(track2_tlv->value, track2_tlv->len));
         }
     }
@@ -212,7 +212,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
     struct tlvdb *track2_eq_full = tlvdb_find_full(root, 0x57);
     if (track2_eq_full != NULL) {
         const struct tlv *track2_eq_tlv = tlvdb_get_tlv(track2_eq_full);
-        if (track2_eq_tlv->len) {            
+        if (track2_eq_tlv->len) {
             PrintAndLogEx(INFO, "Track 2 equivalent... " _YELLOW_("%s"), sprint_hex_inrow(track2_eq_tlv->value, track2_eq_tlv->len));
         }
     }
@@ -2272,7 +2272,7 @@ out:
     return ret;
 }
 
-static int CmdEMVReader(const char *Cmd){
+static int CmdEMVReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv reader",
                   "Act as a EMV reader to identify tag. Look for EMV tags until Enter or the pm3 button is pressed",
@@ -2385,9 +2385,9 @@ static int CmdEMVReader(const char *Cmd){
 
             emv_parse_card_details(buf, len);
 
-             if (tlvdb_get(tlvRoot, 0x77, NULL)) {
+            if (tlvdb_get(tlvRoot, 0x77, NULL)) {
                 break;
-             }
+            }
         }
 
         const struct tlv *AFL = tlvdb_get(tlvRoot, 0x94, NULL);
@@ -2441,7 +2441,7 @@ static command_t CommandTable[] =  {
     {"search",      CmdEMVSearch,                   IfPm3Iso14443,   "Try to select all applets from applets list and print installed applets"},
     {"select",      CmdEMVSelect,                   IfPm3Iso14443,   "Select applet"},
     /*
-    {"-----------", CmdHelp,                        IfPm3Iso14443a,  "---------------------- " _CYAN_("simulation") " ---------------------"},    
+    {"-----------", CmdHelp,                        IfPm3Iso14443a,  "---------------------- " _CYAN_("simulation") " ---------------------"},
     {"getrng",      CmdEMVGetrng,                   IfPm3Iso14443,   "get random number from terminal"},
     {"eload",       CmdEmvELoad,                    IfPm3Iso14443,   "load EMV tag into device"},
     {"dump",        CmdEmvDump,                     IfPm3Iso14443,   "dump EMV tag values"},

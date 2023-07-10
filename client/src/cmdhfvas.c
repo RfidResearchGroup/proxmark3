@@ -235,7 +235,7 @@ static int LoadMobileEphemeralKey(uint8_t *xcoordBuf, mbedtls_ecp_keypair *pubKe
 }
 
 static int internalVasDecrypt(uint8_t *cipherText, size_t cipherTextLen, uint8_t *sharedSecret,
-                              uint8_t *ansiSharedInfo, size_t ansiSharedInfoLen, 
+                              uint8_t *ansiSharedInfo, size_t ansiSharedInfoLen,
                               uint8_t *gcmAad, size_t gcmAadLen, uint8_t *out, size_t *outLen) {
     uint8_t key[32] = {0};
     if (ansi_x963_sha256(sharedSecret, 32, ansiSharedInfo, ansiSharedInfoLen, sizeof(key), key)) {
@@ -394,9 +394,9 @@ static int CmdVASReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf vas reader",
                   "Read and decrypt Value Added Services (VAS) message",
-                  "hf vas reader --url https://example.com    -> URL Only mode\n"                  
+                  "hf vas reader --url https://example.com    -> URL Only mode\n"
                   "hf vas reader --pid pass.com.passkit.pksamples.nfcdemo -f vas_privkey.der -@\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -468,8 +468,8 @@ static int CmdVASReader(const char *Cmd) {
         if (continuous && kbd_enter_pressed()) {
             break;
         }
-        
-        res = VASReader( (pidlen > 0) ? pidhash : NULL, url, urllen, cryptogram, &clen, verbose);
+
+        res = VASReader((pidlen > 0) ? pidhash : NULL, url, urllen, cryptogram, &clen, verbose);
         if (res == PM3_SUCCESS) {
 
             res = DecryptVASCryptogram(pidhash, cryptogram, clen, &privKey, msg, &mlen, &timestamp);
@@ -482,7 +482,7 @@ static int CmdVASReader(const char *Cmd) {
                 }
             }
         }
-        msleep(300);        
+        msleep(300);
     } while (continuous);
 
     mbedtls_ecp_keypair_free(&privKey);
@@ -494,7 +494,7 @@ static int CmdVASDecrypt(const char *Cmd) {
     CLIParserInit(&ctx, "hf vas decrypt",
                   "Decrypt a previously captured cryptogram",
                   "hf vas decrypt --pid pass.com.passkit.pksamples.nfcdemo -f vas_privkey.der -d c0b77375eae416b79449347f9fe838c05cdb57dc7470b97b93b806cb348771d9bfbe29d58538c7c7d7c3d015fa205b68bfccd726058a62f7f44085ac98dbf877120fd9059f1507b956e0a6d56d0a\n"
-            );
+                 );
 
     void *argtable[] = {
         arg_param_begin,

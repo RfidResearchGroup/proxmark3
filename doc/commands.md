@@ -141,19 +141,20 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`emv help               `|Y       |`This help`
+|`emv list               `|Y       |`List ISO7816 history`
+|`emv test               `|Y       |`Crypto logic test`
+|`emv challenge          `|N       |`Generate challenge`
 |`emv exec               `|N       |`Executes EMV contactless transaction`
+|`emv genac              `|N       |`Generate ApplicationCryptogram`
+|`emv gpo                `|N       |`Execute GetProcessingOptions`
+|`emv intauth            `|N       |`Internal authentication`
 |`emv pse                `|N       |`Execute PPSE. It selects 2PAY.SYS.DDF01 or 1PAY.SYS.DDF01 directory`
+|`emv reader             `|N       |`Act like an EMV reader`
+|`emv readrec            `|N       |`Read files from card`
+|`emv roca               `|N       |`Extract public keys and run ROCA test`
+|`emv scan               `|N       |`Scan EMV card and save it contents to json file for emulator`
 |`emv search             `|N       |`Try to select all applets from applets list and print installed applets`
 |`emv select             `|N       |`Select applet`
-|`emv gpo                `|N       |`Execute GetProcessingOptions`
-|`emv readrec            `|N       |`Read files from card`
-|`emv genac              `|N       |`Generate ApplicationCryptogram`
-|`emv challenge          `|N       |`Generate challenge`
-|`emv intauth            `|N       |`Internal authentication`
-|`emv scan               `|N       |`Scan EMV card and save it contents to json file for emulator`
-|`emv test               `|Y       |`Crypto logic test`
-|`emv list               `|Y       |`List ISO7816 history`
-|`emv roca               `|N       |`Extract public keys and run ROCA test`
 
 
 ### hf
@@ -482,7 +483,7 @@ Check column "offline" for their availability.
 |`hf mf nack             `|N       |`Test for MIFARE NACK bug`
 |`hf mf chk              `|N       |`Check keys`
 |`hf mf fchk             `|N       |`Check keys fast, targets all keys on card`
-|`hf mf decrypt          `|Y       |`[nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace`
+|`hf mf decrypt          `|Y       |`Decrypt Crypto1 data from sniff or trace`
 |`hf mf supercard        `|N       |`Extract info from a `super card``
 |`hf mf auth4            `|N       |`ISO14443-4 AES authentication`
 |`hf mf acl              `|Y       |`Decode and print MIFARE Classic access rights bytes`
@@ -720,16 +721,15 @@ Check column "offline" for their availability.
 |`hf topaz wrbl          `|N       |`Write block`
 
 
-### hf xerox
+### hf vas
 
- { Fuji/Xerox cartridge RFIDs...       }
+ { Apple Value Added Service           }
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`hf xerox help          `|Y       |`This help`
-|`hf xerox info          `|N       |`Short info on Fuji/Xerox tag`
-|`hf xerox reader        `|N       |`Act like a Fuji/Xerox reader`
-|`hf xerox dump          `|N       |`Read all memory pages of an Fuji/Xerox tag, save to file`
+|`hf vas help            `|Y       |`This help`
+|`hf vas reader          `|N       |`Read and decrypt VAS message`
+|`hf vas decrypt         `|Y       |`Decrypt a previously captured VAS cryptogram`
 
 
 ### hf waveshare
@@ -740,6 +740,18 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf waveshare help      `|Y       |`This help`
 |`hf waveshare loadbmp   `|N       |`Load BMP file to Waveshare NFC ePaper`
+
+
+### hf xerox
+
+ { Fuji/Xerox cartridge RFIDs...       }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf xerox help          `|Y       |`This help`
+|`hf xerox info          `|N       |`Short info on Fuji/Xerox tag`
+|`hf xerox reader        `|N       |`Act like a Fuji/Xerox reader`
+|`hf xerox dump          `|N       |`Read all memory pages of an Fuji/Xerox tag, save to file`
 
 
 ### hw
@@ -765,6 +777,7 @@ Check column "offline" for their availability.
 |`hw status              `|N       |`Show runtime status information about the connected Proxmark3`
 |`hw tearoff             `|N       |`Program a tearoff hook for the next command supporting tearoff`
 |`hw tia                 `|N       |`Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider`
+|`hw timeout             `|Y       |`Set the communication timeout on the client side`
 |`hw tune                `|N       |`Measure antenna tuning`
 |`hw version             `|Y       |`Show version information about the client and the connected Proxmark3, if any`
 
