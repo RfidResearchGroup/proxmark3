@@ -195,6 +195,7 @@ static int LoadReaderPrivateKey(uint8_t *buf, size_t bufLen, mbedtls_ecp_keypair
 
     if (mbedtls_ecp_check_pubkey(&privKey->grp, &privKey->Q)) {
         PrintAndLogEx(FAILED, "VAS protocol requires an elliptic key on the P-256 curve");
+        tlvdb_free(derRoot);
         return PM3_EINVARG;
     }
 
