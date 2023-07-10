@@ -87,7 +87,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
     if (prefname_full != NULL) {
         const struct tlv *prefname_tlv = tlvdb_get_tlv(prefname_full);
         if (prefname_tlv->len) {
-            char *name[64] = {0};
+            char name[64] = {0};
             size_t n = MIN(sizeof(name), prefname_tlv->len);
             memcpy(name, prefname_tlv->value, n);
             PrintAndLogEx(INFO, "Application.......... " _YELLOW_("%s"), name);
@@ -99,7 +99,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
     if (alabel != NULL) {
         const struct tlv *alabel_tlv = tlvdb_get_tlv(alabel);
         if (alabel_tlv->len) {
-            char *name[64] = {0};
+            char name[64] = {0};
             size_t n = MIN(sizeof(name), alabel_tlv->len);
             memcpy(name, alabel_tlv->value, n);
             PrintAndLogEx(INFO, "Label................ " _YELLOW_("%s"), name);
@@ -111,7 +111,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
     if (lang_full != NULL) {
         const struct tlv *lang_tlv = tlvdb_get_tlv(lang_full);
         if (lang_tlv->len) {
-            char *lang[16] = {0};
+            char lang[16] = {0};
             size_t n = MIN(sizeof(lang), lang_tlv->len);
             memcpy(lang, lang_tlv->value, n);
             PrintAndLogEx(INFO, "Language............. " _YELLOW_("%s"), lang);
