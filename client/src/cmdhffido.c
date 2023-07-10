@@ -97,14 +97,14 @@ static int CmdHFFidoInfo(const char *Cmd) {
 
     if (!strncmp((char *)buf, "U2F_V2", 7)) {
         if (!strncmp((char *)buf, "FIDO_2_0", 8)) {
-            PrintAndLogEx(INFO, "FIDO2 authenticator detected. Version: %.*s", (int)len, buf);
+            PrintAndLogEx(INFO, "FIDO2 authenticator detected. Version... " _YELLOW_("%.*s"), (int)len, buf);
         } else {
             PrintAndLogEx(INFO, "FIDO authenticator detected (not standard U2F).");
             PrintAndLogEx(INFO, "Non U2F authenticator version:");
             print_buffer((const unsigned char *)buf, len, 1);
         }
     } else {
-        PrintAndLogEx(INFO, "FIDO U2F authenticator detected. Version: %.*s", (int)len, buf);
+        PrintAndLogEx(INFO, "FIDO U2F authenticator detected. Version... " _YELLOW_("%.*s"), (int)len, buf);
     }
 
     res = FIDO2GetInfo(buf, sizeof(buf), &len, &sw);
@@ -409,8 +409,8 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
                   "hf fido auth --kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with 2 parameters, filled 0x00 and key handle\n"
                   "hf fido auth \n"
                   "--kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f\n"
-                  "--cp 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f \n"
-                  "--ap 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters");
+                  "--cpx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f \n"
+                  "--apx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters");
 
     void *argtable[] = {
         arg_param_begin,
