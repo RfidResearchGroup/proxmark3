@@ -1145,10 +1145,28 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdRelay(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "smart relay",
+                  "Turn pm3 into pcsc reader and relay to host OS via vpcd",
+                  "smart relay"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("p", "port", "<int>", "vpcd socket port (default: 35963)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+		CLIParserFree(ctx);
+}
+
 static command_t CommandTable[] = {
     {"help",     CmdHelp,               AlwaysAvailable, "This help"},
     {"list",     CmdSmartList,          AlwaysAvailable, "List ISO 7816 history"},
     {"info",     CmdSmartInfo,          IfPm3Smartcard,  "Tag information"},
+		{"relay",    CmdRelay,              IfPm3Iso14443a,  "Turn pm3 into pcsc reader and relay to host OS via vpcd"},
     {"reader",   CmdSmartReader,        IfPm3Smartcard,  "Act like an IS07816 reader"},
     {"raw",      CmdSmartRaw,           IfPm3Smartcard,  "Send raw hex data to tag"},
     {"upgrade",  CmdSmartUpgrade,       AlwaysAvailable, "Upgrade sim module firmware"},
