@@ -20,6 +20,7 @@
 #include <string.h>
 #include "cmdparser.h"          // command_t
 #include "commonutil.h"         // ARRAYLEN
+#include "iso7816/iso7816core.h"
 #include "protocols.h"
 #include "cmdtrace.h"
 #include "proxmark3.h"
@@ -32,6 +33,10 @@
 #include "crc16.h"              // crc
 #include "cliparser.h"          // cliparsing
 #include "atrs.h"               // ATR lookup
+#include "mbedtls/net_sockets.h"
+#include "mifare.h"
+#include "util_posix.h"
+#include "cmdhf14a.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -1145,6 +1150,46 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static void atsToEmulatedAtr(uint8_t *ats, uint8_t *atr, int *atrLen) {
+		int historicalLen = 0;
+		int offset = 2;
+
+		if (ats[0] < 2) {
+			historicalLen = 0;
+		} else {
+
+			if ((ats[1] & 64) != 0) {
+				offset++;
+			}
+			if ((ats[1] & 32) != 0) {
+				offset++;
+			}
+			if ((ats[1] & 16) != 0) {
+				offset++;
+			}
+
+			if (offset >= ats[0]) {
+				historicalLen = 0;
+			} else {
+				historicalLen = ats[0] - offset;
+			}
+		}
+
+		atr[0] = 0x3B;
+		atr[1] = 0x80 | historicalLen;
+		atr[2] = 0x80;
+		atr[3] = 0x01;
+		
+		uint8_t tck = 0;
+		for (int i = 0; i < historicalLen; ++i) {
+			atr[4 + i] = ats[offset + i];
+			tck = tck ^ ats[offset + i];
+		}
+		atr[4 + historicalLen] = tck;
+
+		*atrLen = 5 + historicalLen;
+}
+
 static int CmdRelay(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart relay",
@@ -1154,12 +1199,103 @@ static int CmdRelay(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("p", "port", "<int>", "vpcd socket port (default: 35963)"),
+				arg_str0(NULL, "host", "<str>", "vpcd socket host (default: localhost)"),
+        arg_str0("p", "port", "<int>", "vpcd socket port (default: 35963)"),
+				arg_lit0("v", "verbose", "display APDU transactions between OS and card"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
+		uint8_t host[100] = {0};
+		int hostLen = sizeof(host);
+		CLIGetStrWithReturn(ctx, 1, host, &hostLen);
+		if (hostLen == 0) {
+			strcpy((char *) host, "localhost");
+		}
+
+		uint8_t port[6] = {0};
+		int portLen = sizeof(port);
+		CLIGetStrWithReturn(ctx, 2, port, &portLen);
+		if (portLen == 0) {
+			strcpy((char *) port, "35963");
+		}
+
+		bool verbose = arg_get_lit(ctx, 3);
+
 		CLIParserFree(ctx);
+
+		mbedtls_net_context netCtx;
+		mbedtls_net_init(&netCtx);
+
+		PrintAndLogEx(INFO, "Relaying pm3 to host OS pcsc daemon. Press " _GREEN_("Enter") " to exit");
+
+		uint8_t cmdbuf[512] = {0};
+		bool haveCard = false;
+		iso14a_card_select_t selectedCard;
+
+		do {
+			if (haveCard) {
+				int bytesRead = mbedtls_net_recv_timeout(&netCtx, cmdbuf, sizeof(cmdbuf), 100);
+
+				if (bytesRead == MBEDTLS_ERR_SSL_TIMEOUT || bytesRead == MBEDTLS_ERR_SSL_WANT_READ) {
+					continue;
+				}
+
+				if (bytesRead > 0) {
+					if (cmdbuf[2] == 0x04) { // vpcd GET ATR
+						uint8_t atr[20] = {0};
+						int atrLen = 0;
+						atsToEmulatedAtr(selectedCard.ats, atr, &atrLen);
+
+						uint8_t res[22] = {0};
+						res[1] = atrLen;
+						memcpy(res + 2, atr, atrLen);
+						mbedtls_net_send(&netCtx, res, 2 + atrLen);
+					} else if (cmdbuf[1] != 0x01) { // vpcd APDU
+						int apduLen = (cmdbuf[0] << 8) + cmdbuf[1];
+
+						uint8_t apduRes[APDU_RES_LEN] = {0};
+						int apduResLen = 0;
+						
+						if (verbose) {
+							PrintAndLogEx(INFO, ">> %s", sprint_hex(cmdbuf + 2, apduLen));
+						}
+
+						if (ExchangeAPDU14a(cmdbuf + 2, apduLen, true, true, apduRes, sizeof(apduRes), &apduResLen) != PM3_SUCCESS) {
+							haveCard = false;
+							mbedtls_net_close(&netCtx);
+							continue;
+						}
+
+						if (verbose) {
+							PrintAndLogEx(INFO, "<< %s", sprint_hex(apduRes, apduResLen));
+						}
+
+						uint8_t res[APDU_RES_LEN + 2] = {0};
+						res[0] = (apduResLen >> 8) & 0xFF;
+						res[1] = apduResLen & 0xFF;
+						memcpy(res + 2, apduRes, apduResLen);
+						mbedtls_net_send(&netCtx, res, 2 + apduResLen);
+					}
+				}
+			} else {
+				if (SelectCard14443A_4(false, false, &selectedCard) == PM3_SUCCESS) {
+					if (mbedtls_net_connect(&netCtx, (char *) host, (char *) port, MBEDTLS_NET_PROTO_TCP)) {
+						PrintAndLogEx(FAILED, "Failed to connect to vpcd socket");
+						return PM3_EINVARG;
+					}
+
+					haveCard = true;
+				}
+				msleep(300);
+			}
+		} while (!kbd_enter_pressed());
+
+		mbedtls_net_close(&netCtx);
+		mbedtls_net_free(&netCtx);
+		DropField();
+
+		return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {

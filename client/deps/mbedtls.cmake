@@ -43,6 +43,7 @@ add_library(pm3rrg_rdv4_mbedtls STATIC
         ../../common/mbedtls/x509.c
         ../../common/mbedtls/x509_crl.c
         ../../common/mbedtls/x509_crt.c
+				../../common/mbedtls/net_sockets.c
         )
 
 target_include_directories(pm3rrg_rdv4_mbedtls PRIVATE ../../common)
