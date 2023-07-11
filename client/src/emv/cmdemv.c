@@ -89,16 +89,15 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose){
     }
 
     // decoder
-    char delim[2] = "^";
     char *tmp = str_ndup((const char*)d, n);
-
     uint8_t i = 0;
+    char delim[2] = "^";
     char *token = strtok(tmp, delim);
     while (token != NULL) {
 
         switch(i) {
             case 0:
-                PrintAndLogEx(INFO, "PAN............ %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
+                PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
                     token[1], token[2],token[3], token[4],
                     token[5], token[6],token[7], token[8],
                     token[9], token[10],token[11], token[12],
@@ -106,25 +105,25 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose){
                 );
                 break;
             case 1:
-                PrintAndLogEx(INFO, "CardHolder..... %s", token);
+                PrintAndLogEx(INFO, "CardHolder............... %s", token);
                 break;
             case 2:
-                if (strlen(token) < 17) {
+                if (strlen(token) < 14) {
                     break;
                 }
-                PrintAndLogEx(INFO, "Expiry date.... %.*s", 4, token);
+                PrintAndLogEx(INFO, "Expiry date.............. %.*s ( %c%c/%c%c )", 4, token, token[2], token[3], token[0], token[1]);
                 token += 4;
 
-                PrintAndLogEx(INFO, "Service code... %.*s", 3, token);
+                PrintAndLogEx(INFO, "Service code............. %.*s", 3, token);
                 token += 3;
 
-                PrintAndLogEx(INFO, "Unknown........ %.*s", 4, token);
+                PrintAndLogEx(INFO, "Unknown.................. %.*s", 4, token);
                 token += 4;
 
-                PrintAndLogEx(INFO, "CVV / iCvv..... %.*s", 3, token);
+                PrintAndLogEx(INFO, "CVV / iCvv............... %.*s", 3, token);
                 token +=3;
 
-                PrintAndLogEx(INFO, "Trailing....... %s", token);
+                PrintAndLogEx(INFO, "Trailing................. %s", token);
                 break;
             default:
                 break;
@@ -132,6 +131,51 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose){
         token = strtok(0, delim);
         i++;
     }
+    free(tmp);
+    return PM3_SUCCESS;
+}
+
+static int emv_parse_track2(const uint8_t *d, size_t n, bool verbose) {
+    if (d == NULL || n < 10) {
+        return PM3_EINVARG;
+    }
+    if (verbose == false) {
+        return PM3_SUCCESS;
+    }
+
+    // decoder
+    uint8_t s[80] = {0};
+    hex_to_buffer(s, d, n, n, 0, 0, true);
+    uint8_t *tmp = s;
+
+    if (tmp[0] == ';')
+        tmp++;
+
+    PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
+        tmp[0], tmp[1], tmp[2],tmp[3],
+        tmp[4], tmp[5], tmp[6],tmp[7],
+        tmp[8], tmp[9], tmp[10],tmp[11],
+        tmp[12],tmp[13], tmp[14],tmp[15]
+    );
+    tmp += 16;
+
+    if (tmp[0] == '=' || tmp[0] == 'D')
+        tmp++;
+
+    PrintAndLogEx(INFO, "Expiry date.............. %.*s ( %c%c/%c%c )", 4, tmp, tmp[2], tmp[3], tmp[0], tmp[1]);
+    tmp += 4;
+
+    PrintAndLogEx(INFO, "Service code............. %.*s", 3, tmp);
+    tmp += 3;
+
+    PrintAndLogEx(INFO, "Pin verification value... %.*s", 4, tmp);
+    tmp += 4;
+
+    PrintAndLogEx(INFO, "CVV / iCvv............... %.*s", 3, tmp);
+    tmp +=3;
+
+    PrintAndLogEx(INFO, "Trailing................. %s", tmp);
+
     return PM3_SUCCESS;
 }
 
@@ -266,6 +310,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen, bool verbose
         const struct tlv *track2_tlv = tlvdb_get_tlv(track2_full);
         if (track2_tlv->len) {
             PrintAndLogEx(INFO, "Track 2.............. " _YELLOW_("%s"), sprint_hex_inrow(track2_tlv->value, track2_tlv->len));
+            emv_parse_track2(track2_tlv->value, track2_tlv->len, verbose);
         }
     }
 
@@ -275,6 +320,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen, bool verbose
         const struct tlv *track2_eq_tlv = tlvdb_get_tlv(track2_eq_full);
         if (track2_eq_tlv->len) {
             PrintAndLogEx(INFO, "Track 2 equivalent... " _YELLOW_("%s"), sprint_hex_inrow(track2_eq_tlv->value, track2_eq_tlv->len));
+            emv_parse_track2(track2_eq_tlv->value, track2_eq_tlv->len, verbose);
         }
     }
 
