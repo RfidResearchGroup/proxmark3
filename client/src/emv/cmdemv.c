@@ -75,7 +75,111 @@ static void PrintChannel(Iso7816CommandChannel channel) {
     }
 }
 
-static int emv_parse_card_details(uint8_t *response, size_t reslen) {
+static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose){
+    if (d == NULL || n < 10) {
+        return PM3_EINVARG;
+    }
+    if (verbose == false) {
+        return PM3_SUCCESS;
+    }
+
+    // sanity checks
+    if (d[0] != 'B') {
+        return PM3_EINVARG;
+    }
+
+    // decoder
+    char *tmp = str_ndup((const char*)d, n);
+    uint8_t i = 0;
+    char delim[2] = "^";
+    char *token = strtok(tmp, delim);
+    while (token != NULL) {
+
+        switch(i) {
+            case 0:
+                PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
+                    token[1], token[2],token[3], token[4],
+                    token[5], token[6],token[7], token[8],
+                    token[9], token[10],token[11], token[12],
+                    token[13], token[14],token[15], token[16]
+                );
+                break;
+            case 1:
+                PrintAndLogEx(INFO, "CardHolder............... %s", token);
+                break;
+            case 2:
+                if (strlen(token) < 14) {
+                    break;
+                }
+                PrintAndLogEx(INFO, "Expiry date.............. %.*s ( %c%c/%c%c )", 4, token, token[2], token[3], token[0], token[1]);
+                token += 4;
+
+                PrintAndLogEx(INFO, "Service code............. %.*s", 3, token);
+                token += 3;
+
+                PrintAndLogEx(INFO, "Unknown.................. %.*s", 4, token);
+                token += 4;
+
+                PrintAndLogEx(INFO, "CVV / iCvv............... %.*s", 3, token);
+                token +=3;
+
+                PrintAndLogEx(INFO, "Trailing................. %s", token);
+                break;
+            default:
+                break;
+        }
+        token = strtok(0, delim);
+        i++;
+    }
+    free(tmp);
+    return PM3_SUCCESS;
+}
+
+static int emv_parse_track2(const uint8_t *d, size_t n, bool verbose) {
+    if (d == NULL || n < 10) {
+        return PM3_EINVARG;
+    }
+    if (verbose == false) {
+        return PM3_SUCCESS;
+    }
+
+    // decoder
+    uint8_t s[80] = {0};
+    hex_to_buffer(s, d, n, n, 0, 0, true);
+    uint8_t *tmp = s;
+
+    if (tmp[0] == ';')
+        tmp++;
+
+    PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
+        tmp[0], tmp[1], tmp[2],tmp[3],
+        tmp[4], tmp[5], tmp[6],tmp[7],
+        tmp[8], tmp[9], tmp[10],tmp[11],
+        tmp[12],tmp[13], tmp[14],tmp[15]
+    );
+    tmp += 16;
+
+    if (tmp[0] == '=' || tmp[0] == 'D')
+        tmp++;
+
+    PrintAndLogEx(INFO, "Expiry date.............. %.*s ( %c%c/%c%c )", 4, tmp, tmp[2], tmp[3], tmp[0], tmp[1]);
+    tmp += 4;
+
+    PrintAndLogEx(INFO, "Service code............. %.*s", 3, tmp);
+    tmp += 3;
+
+    PrintAndLogEx(INFO, "Pin verification value... %.*s", 4, tmp);
+    tmp += 4;
+
+    PrintAndLogEx(INFO, "CVV / iCvv............... %.*s", 3, tmp);
+    tmp +=3;
+
+    PrintAndLogEx(INFO, "Trailing................. %s", tmp);
+
+    return PM3_SUCCESS;
+}
+
+static int emv_parse_card_details(uint8_t *response, size_t reslen, bool verbose) {
 
     struct tlvdb *root = tlvdb_parse_multi(response, reslen);
     if (root == NULL) {
@@ -196,6 +300,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
         const struct tlv *track1_tlv = tlvdb_get_tlv(track1_full);
         if (track1_tlv->len) {
             PrintAndLogEx(INFO, "Track 1.............. " _YELLOW_("%s"), sprint_ascii(track1_tlv->value, track1_tlv->len));
+            emv_parse_track1(track1_tlv->value, track1_tlv->len, verbose);
         }
     }
 
@@ -205,6 +310,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
         const struct tlv *track2_tlv = tlvdb_get_tlv(track2_full);
         if (track2_tlv->len) {
             PrintAndLogEx(INFO, "Track 2.............. " _YELLOW_("%s"), sprint_hex_inrow(track2_tlv->value, track2_tlv->len));
+            emv_parse_track2(track2_tlv->value, track2_tlv->len, verbose);
         }
     }
 
@@ -214,6 +320,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen) {
         const struct tlv *track2_eq_tlv = tlvdb_get_tlv(track2_eq_full);
         if (track2_eq_tlv->len) {
             PrintAndLogEx(INFO, "Track 2 equivalent... " _YELLOW_("%s"), sprint_hex_inrow(track2_eq_tlv->value, track2_eq_tlv->len));
+            emv_parse_track2(track2_eq_tlv->value, track2_eq_tlv->len, verbose);
         }
     }
 
@@ -2282,6 +2389,7 @@ static int CmdEMVReader(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("w", "wired", "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_lit0("v", "verbose", "verbose"),
         arg_lit0("@",  NULL,   "continuous reader mode"),
         arg_param_end
     };
@@ -2293,14 +2401,13 @@ static int CmdEMVReader(const char *Cmd) {
     }
 
     uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
-
-    bool continuous = arg_get_lit(ctx, 2);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool continuous = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     if (continuous) {
         PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
     }
-
 
     uint8_t AID[APDU_AID_LEN] = {0};
     size_t AIDlen = 0;
@@ -2353,7 +2460,7 @@ static int CmdEMVReader(const char *Cmd) {
         }
 
         // decode application parts
-        emv_parse_card_details(buf, len);
+        emv_parse_card_details(buf, len, verbose);
 
         for (TransactionType_t tt = TT_MSD; tt < TT_END; tt++) {
 
@@ -2383,7 +2490,7 @@ static int CmdEMVReader(const char *Cmd) {
 
             ProcessGPOResponseFormat1(tlvRoot, buf, len, false);
 
-            emv_parse_card_details(buf, len);
+            emv_parse_card_details(buf, len, verbose);
 
             if (tlvdb_get(tlvRoot, 0x77, NULL)) {
                 break;
@@ -2412,7 +2519,7 @@ static int CmdEMVReader(const char *Cmd) {
                     if (res) {
                         continue;
                     }
-                    emv_parse_card_details(buf, len);
+                    emv_parse_card_details(buf, len, verbose);
                 }
             }
         }
