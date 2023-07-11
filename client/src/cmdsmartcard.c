@@ -1193,8 +1193,8 @@ static void atsToEmulatedAtr(uint8_t *ats, uint8_t *atr, int *atrLen) {
 static int CmdRelay(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart relay",
-                  "Turn pm3 into pcsc reader and relay to host OS via vpcd",
-                  "smart relay"
+                  "Make pm3 available to host OS smartcard driver via vpcd to enable use with other software such as GlobalPlatform Pro",
+                  "Requires the virtual smartcard daemon to be installed and running, see https://frankmorgner.github.io/vsmartcard/virtualsmartcard/README.html"
                  );
 
     void *argtable[] = {
@@ -1242,7 +1242,7 @@ static int CmdRelay(const char *Cmd) {
 				}
 
 				if (bytesRead > 0) {
-					if (cmdbuf[2] == 0x04) { // vpcd GET ATR
+					if (cmdbuf[1] == 0x01 && cmdbuf[2] == 0x04) { // vpcd GET ATR
 						uint8_t atr[20] = {0};
 						int atrLen = 0;
 						atsToEmulatedAtr(selectedCard.ats, atr, &atrLen);
@@ -1281,7 +1281,10 @@ static int CmdRelay(const char *Cmd) {
 			} else {
 				if (SelectCard14443A_4(false, false, &selectedCard) == PM3_SUCCESS) {
 					if (mbedtls_net_connect(&netCtx, (char *) host, (char *) port, MBEDTLS_NET_PROTO_TCP)) {
-						PrintAndLogEx(FAILED, "Failed to connect to vpcd socket");
+						PrintAndLogEx(FAILED, "Failed to connect to vpcd socket. Ensure you have vpcd installed and running");
+						mbedtls_net_close(&netCtx);
+						mbedtls_net_free(&netCtx);
+						DropField();
 						return PM3_EINVARG;
 					}
 
