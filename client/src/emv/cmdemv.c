@@ -75,7 +75,7 @@ static void PrintChannel(Iso7816CommandChannel channel) {
     }
 }
 
-static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose){
+static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose) {
     if (d == NULL || n < 10) {
         return PM3_EINVARG;
     }
@@ -89,20 +89,20 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose){
     }
 
     // decoder
-    char *tmp = str_ndup((const char*)d, n);
+    char *tmp = str_ndup((const char *)d, n);
     uint8_t i = 0;
     char delim[2] = "^";
     char *token = strtok(tmp, delim);
     while (token != NULL) {
 
-        switch(i) {
+        switch (i) {
             case 0:
                 PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
-                    token[1], token[2],token[3], token[4],
-                    token[5], token[6],token[7], token[8],
-                    token[9], token[10],token[11], token[12],
-                    token[13], token[14],token[15], token[16]
-                );
+                              token[1], token[2], token[3], token[4],
+                              token[5], token[6], token[7], token[8],
+                              token[9], token[10], token[11], token[12],
+                              token[13], token[14], token[15], token[16]
+                             );
                 break;
             case 1:
                 PrintAndLogEx(INFO, "CardHolder............... %s", token);
@@ -121,7 +121,7 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose){
                 token += 4;
 
                 PrintAndLogEx(INFO, "CVV / iCvv............... %.*s", 3, token);
-                token +=3;
+                token += 3;
 
                 PrintAndLogEx(INFO, "Trailing................. %s", token);
                 break;
@@ -152,11 +152,11 @@ static int emv_parse_track2(const uint8_t *d, size_t n, bool verbose) {
         tmp++;
 
     PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
-        tmp[0], tmp[1], tmp[2],tmp[3],
-        tmp[4], tmp[5], tmp[6],tmp[7],
-        tmp[8], tmp[9], tmp[10],tmp[11],
-        tmp[12],tmp[13], tmp[14],tmp[15]
-    );
+                  tmp[0], tmp[1], tmp[2], tmp[3],
+                  tmp[4], tmp[5], tmp[6], tmp[7],
+                  tmp[8], tmp[9], tmp[10], tmp[11],
+                  tmp[12], tmp[13], tmp[14], tmp[15]
+                 );
     tmp += 16;
 
     if (tmp[0] == '=' || tmp[0] == 'D')
@@ -172,7 +172,7 @@ static int emv_parse_track2(const uint8_t *d, size_t n, bool verbose) {
     tmp += 4;
 
     PrintAndLogEx(INFO, "CVV / iCvv............... %.*s", 3, tmp);
-    tmp +=3;
+    tmp += 3;
 
     PrintAndLogEx(INFO, "Trailing................. %s", tmp);
 
