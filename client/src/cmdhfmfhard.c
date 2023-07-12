@@ -1280,31 +1280,32 @@ __attribute__((force_align_arg_pointer))
 
 static void check_for_BitFlipProperties(bool time_budget) {
     // create and run worker threads
-    pthread_t thread_id[NUM_CHECK_BITFLIPS_THREADS];
+    const size_t num_check_bitflip_threads = NUM_CHECK_BITFLIPS_THREADS;
+    pthread_t thread_id[num_check_bitflip_threads];
 
-    uint8_t args[NUM_CHECK_BITFLIPS_THREADS][3];
-    uint16_t bytes_per_thread = (256 + (NUM_CHECK_BITFLIPS_THREADS / 2)) / NUM_CHECK_BITFLIPS_THREADS;
-    for (uint32_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
+    uint8_t args[num_check_bitflip_threads][3];
+    uint16_t bytes_per_thread = (256 + (num_check_bitflip_threads / 2)) / num_check_bitflip_threads;
+    for (uint32_t i = 0; i < num_check_bitflip_threads; i++) {
         args[i][0] = i * bytes_per_thread;
         args[i][1] = MIN(args[i][0] + bytes_per_thread - 1, 255);
         args[i][2] = time_budget;
     }
     // args[][] is uint8_t so max 255, no need to check it
-    // args[NUM_CHECK_BITFLIPS_THREADS - 1][1] = MAX(args[NUM_CHECK_BITFLIPS_THREADS - 1][1], 255);
+    // args[num_check_bitflip_threads - 1][1] = MAX(args[num_check_bitflip_threads - 1][1], 255);
 
     // start threads
-    for (uint32_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
+    for (uint32_t i = 0; i < num_check_bitflip_threads; i++) {
         pthread_create(&thread_id[i], NULL, check_for_BitFlipProperties_thread, args[i]);
     }
 
     // wait for threads to terminate:
-    for (uint32_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
+    for (uint32_t i = 0; i < num_check_bitflip_threads; i++) {
         pthread_join(thread_id[i], NULL);
     }
 
     if (hardnested_stage & CHECK_2ND_BYTES) {
         hardnested_stage &= ~CHECK_1ST_BYTES; // we are done with 1st stage, except...
-        for (uint32_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
+        for (uint32_t i = 0; i < num_check_bitflip_threads; i++) {
             if (args[i][1] != 0) {
                 hardnested_stage |= CHECK_1ST_BYTES;  // ... when any of the threads didn't complete in time
                 break;
@@ -2114,10 +2115,11 @@ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
     init_book_of_work();
 
     // create and run worker threads
-    pthread_t thread_id[NUM_REDUCTION_WORKING_THREADS];
+    const size_t num_reduction_working_threads = NUM_REDUCTION_WORKING_THREADS;
+    pthread_t thread_id[num_reduction_working_threads];
 
-    uint16_t sums1[NUM_REDUCTION_WORKING_THREADS][3];
-    for (uint32_t i = 0; i < NUM_REDUCTION_WORKING_THREADS; i++) {
+    uint16_t sums1[num_reduction_working_threads][3];
+    for (uint32_t i = 0; i < num_reduction_working_threads; i++) {
         sums1[i][0] = sum_a0_idx;
         sums1[i][1] = sum_a8_idx;
         sums1[i][2] = i + 1;
@@ -2125,7 +2127,7 @@ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
     }
 
     // wait for threads to terminate:
-    for (uint32_t i = 0; i < NUM_REDUCTION_WORKING_THREADS; i++) {
+    for (uint32_t i = 0; i < num_reduction_working_threads; i++) {
         pthread_join(thread_id[i], NULL);
     }
 
