@@ -221,7 +221,7 @@ reg curbit;
 `ifdef PM3ICOPYX
 `define EDGE_DETECT_THRESHOLD   3
 `else
-`define EDGE_DETECT_THRESHOLD   5
+`define EDGE_DETECT_THRESHOLD   7
 `endif
 `define EDGE_DETECT_THRESHOLDHIGH   20
 
