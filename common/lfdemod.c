@@ -268,12 +268,20 @@ static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, bool isLong, bo
     *validLong = false;
     uint8_t bLen = isLong ? 110 : 55;
     uint16_t parityCol[4] = { 0, 0, 0, 0 };
+
     for (int word = 0; word < bLen; word += 5) {
         for (int bit = 0; bit < 5; bit++) {
-            if (word + bit >= bLen) break;
+
+            if (word + bit >= bLen) {
+                break;
+            }
+
             parityWd = (parityWd << 1) | bits[startIdx + word + bit];
-            if ((word <= 50) && (bit < 4))
+
+            if ((word <= 50) && (bit < 4)) {
                 parityCol[bit] = (parityCol[bit] << 1) | bits[startIdx + word + bit];
+            }
+
             bits[bitCnt++] = (bits[startIdx + word + bit]);
         }
         if (word + 5 > bLen) break;
@@ -293,12 +301,15 @@ static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, bool isLong, bo
     if (!isLong && validRowParitySkipColP && validColParity) {
         *validShort = true;
     }
+
     if (isLong && validRowParity) {
         *validLong = true;
     }
+
     if (isLong && validRowParitySkipColP && validColParity) {
         *validShortExtended = true;
     }
+
     if (*validShort || *validShortExtended || *validLong) {
         return bitCnt;
     } else {
