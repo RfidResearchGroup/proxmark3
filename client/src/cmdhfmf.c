@@ -2242,7 +2242,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     }
 
     // detect MFC EV1 Signature
-    if (detect_mfc_ev1_signature() && keylen == 0) {
+    if (g_session.pm3_present && detect_mfc_ev1_signature() && keylen == 0) {
         PrintAndLogEx(INFO, "MIFARE Classic EV1 card detected");
         blockno = 69;
         keytype = MF_KEY_B;
