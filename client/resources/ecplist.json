@@ -57,6 +57,11 @@
         "description": ""
     },
 
+    {
+        "value": "6a02c3020602ffff",
+        "name": "Access: Hotel: Hilton",
+        "description": "TCI might be a wildcard before a reservation is made"
+    },
 
     {
         "value": "6a02cb0206021100deadbeefdeadbeef",
@@ -65,9 +70,44 @@
     },
 
     {
+        "value": "6a02c30209010001",
+        "name": "Access: Car Pairing: BMW",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for BMW"
+    },
+    {
         "value": "6a02c30209010201",
-        "name": "Access: Mercedes Pairing",
-        "description": "Device does not respond to this frame. Displays a car pairing popup for Mercedes"
+        "name": "Access: Car Pairing: Mercedes",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Mercedes"
+    },
+    {
+        "value": "6a02c30209010051",
+        "name": "Access: Car Pairing: Genesis",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Genesis"
+    },
+    {
+        "value": "6a02c30209010041",
+        "name": "Access: Car Pairing: KIA",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for KIA"
+    },
+    {
+        "value": "6a02c30209010301",
+        "name": "Access: Car Pairing: Hyundai",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Hyundai"
+    },
+    {
+        "value": "6a02c30209010701",
+        "name": "Access: Car Pairing: BYD",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for BYD"
+    },
+    {
+        "value": "6a02c30209010241",
+        "name": "Access: Car Pairing: Denza",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Denza"
+    },
+    {
+        "value": "6a02c30209010091",
+        "name": "Access: Car Pairing: Lotus",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Lotus"
     },
 
 

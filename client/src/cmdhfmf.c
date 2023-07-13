@@ -2241,28 +2241,29 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         snprintf(filename, FILE_PATH_SIZE, "hf-mf-%s-nonces.bin", uid);
     }
 
-    // detect MFC EV1 Signature
-    if (detect_mfc_ev1_signature() && keylen == 0) {
-        PrintAndLogEx(INFO, "MIFARE Classic EV1 card detected");
-        blockno = 69;
-        keytype = MF_KEY_B;
-        memcpy(key, g_mifare_signature_key_b, sizeof(g_mifare_signature_key_b));
-    }
-
-    if (known_target_key == false && nonce_file_read == false) {
-
-        // check if tag doesn't have static nonce
-        if (detect_classic_static_nonce() == NONCE_STATIC) {
-            PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
-            PrintAndLogEx(HINT, "\tTry use `" _YELLOW_("hf mf staticnested") "`");
-            return PM3_EOPABORTED;
+    if (g_session.pm3_present && !tests) {
+        // detect MFC EV1 Signature
+        if (detect_mfc_ev1_signature() && keylen == 0) {
+            PrintAndLogEx(INFO, "MIFARE Classic EV1 card detected");
+            blockno = 69;
+            keytype = MF_KEY_B;
+            memcpy(key, g_mifare_signature_key_b, sizeof(g_mifare_signature_key_b));
         }
 
-        uint64_t key64 = 0;
-        // check if we can authenticate to sector
-        if (mfCheckKeys(blockno, keytype, true, 1, key, &key64) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to block: %3d  key type: %c", blockno, (keytype == MF_KEY_B) ? 'B' : 'A');
-            return PM3_EWRONGANSWER;
+        if (known_target_key == false && nonce_file_read == false) {
+            // check if tag doesn't have static nonce
+            if (detect_classic_static_nonce() == NONCE_STATIC) {
+                PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
+                PrintAndLogEx(HINT, "\tTry use `" _YELLOW_("hf mf staticnested") "`");
+                return PM3_EOPABORTED;
+            }
+
+            uint64_t key64 = 0;
+            // check if we can authenticate to sector
+            if (mfCheckKeys(blockno, keytype, true, 1, key, &key64) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Key is wrong. Can't authenticate to block: %3d  key type: %c", blockno, (keytype == MF_KEY_B) ? 'B' : 'A');
+                return PM3_EWRONGANSWER;
+            }
         }
     }
 

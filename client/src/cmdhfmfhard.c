@@ -52,6 +52,7 @@
 
 #define STATE_FILES_DIRECTORY           "hardnested_tables/"
 #define STATE_FILE_TEMPLATE             "bitflip_%d_%03" PRIx16 "_states.bin.bz2"
+#define STATE_FILE_TEMPLATE_RAW         "bitflip_%d_%03" PRIx16 "_states.bin"
 
 #define DEBUG_KEY_ELIMINATION
 // #define DEBUG_REDUCTION
@@ -260,10 +261,13 @@ static void init_bitflip_bitarrays(void) {
 
     char state_files_path[strlen(get_my_executable_directory()) + strlen(STATE_FILES_DIRECTORY) + strlen(STATE_FILE_TEMPLATE) + 1];
     char state_file_name[strlen(STATE_FILE_TEMPLATE) + 1];
+    char state_file_raw_name[strlen(STATE_FILE_TEMPLATE_RAW) + 1];
 
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
         num_effective_bitflips[odd_even] = 0;
         for (uint16_t bitflip = 0x001; bitflip < 0x400; bitflip++) {
+            bool open_uncompressed = false;
+
             bitflip_bitarrays[odd_even][bitflip] = NULL;
             count_bitflip_bitarrays[odd_even][bitflip] = 1 << 24;
 
@@ -273,14 +277,21 @@ static void init_bitflip_bitarrays(void) {
 
             char *path;
             if (searchFile(&path, RESOURCES_SUBDIR, state_files_path, "", true) != PM3_SUCCESS) {
-                continue;
+                snprintf(state_file_raw_name, sizeof(state_file_raw_name), STATE_FILE_TEMPLATE_RAW, odd_even, bitflip);
+                strncpy(state_files_path, STATE_FILES_DIRECTORY, sizeof(state_files_path) - 1);
+                strncat(state_files_path, state_file_raw_name, sizeof(state_files_path) - (strlen(STATE_FILES_DIRECTORY) + 1));
+                if (searchFile(&path, RESOURCES_SUBDIR, state_files_path, "", true) == PM3_SUCCESS) {
+                    open_uncompressed = true;
+                } else {
+                    continue;
+                }
             }
 
             FILE *statesfile = fopen(path, "rb");
             free(path);
             if (statesfile == NULL) {
                 continue;
-            } else {
+            } else if (!open_uncompressed) {
                 fseek(statesfile, 0, SEEK_END);
                 int fsize = ftell(statesfile);
                 if (fsize == -1) {
@@ -335,6 +346,52 @@ static void init_bitflip_bitarrays(void) {
 #endif
                 }
                 BZ2_bzDecompressEnd(&compressed_stream);
+            } else {
+                fseek(statesfile, 0, SEEK_END);
+                int fsize = ftell(statesfile);
+                if (fsize == -1) {
+                    PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
+                    fclose(statesfile);
+                    exit(5);
+                }
+                uint32_t filesize = (uint32_t)fsize;
+                rewind(statesfile);
+
+                uint32_t count = 0;
+                size_t bytesread = fread(&count, 1, sizeof(count), statesfile);
+                if (bytesread != 4) {
+                    PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
+                    fclose(statesfile);
+                    exit(5);
+                }
+
+                if ((float)count / (1 << 24) < IGNORE_BITFLIP_THRESHOLD) {
+                    uint32_t *bitset = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
+                    if (bitset == NULL) {
+                        PrintAndLogEx(ERR, "Out of memory error in init_bitflip_statelists(). Aborting...\n");
+                        fclose(statesfile);
+                        exit(4);
+                    }
+
+                    bytesread = fread(bitset, 1, filesize-sizeof(count), statesfile);
+                    if (bytesread != filesize-sizeof(count)) {
+                        PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
+                        fclose(statesfile);
+                        exit(5);
+                    }
+
+                    effective_bitflip[odd_even][num_effective_bitflips[odd_even]++] = bitflip;
+                    bitflip_bitarrays[odd_even][bitflip] = bitset;
+                    count_bitflip_bitarrays[odd_even][bitflip] = count;
+#if defined (DEBUG_REDUCTION)
+                    PrintAndLogEx(INFO, "(%03" PRIx16 " %s:%5.1f%%) ", bitflip, odd_even ? "odd " : "even", (float)count / (1 << 24) * 100.0);
+                    line++;
+                    if (line == 8) {
+                        PrintAndLogEx(NORMAL, "");
+                        line = 0;
+                    }
+#endif
+                }
             }
         }
         effective_bitflip[odd_even][num_effective_bitflips[odd_even]] = 0x400; // EndOfList marker
@@ -1223,31 +1280,32 @@ __attribute__((force_align_arg_pointer))
 
 static void check_for_BitFlipProperties(bool time_budget) {
     // create and run worker threads
-    pthread_t thread_id[NUM_CHECK_BITFLIPS_THREADS];
+    const size_t num_check_bitflip_threads = NUM_CHECK_BITFLIPS_THREADS;
+    pthread_t thread_id[num_check_bitflip_threads];
 
-    uint8_t args[NUM_CHECK_BITFLIPS_THREADS][3];
-    uint16_t bytes_per_thread = (256 + (NUM_CHECK_BITFLIPS_THREADS / 2)) / NUM_CHECK_BITFLIPS_THREADS;
-    for (uint32_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
+    uint8_t args[num_check_bitflip_threads][3];
+    uint16_t bytes_per_thread = (256 + (num_check_bitflip_threads / 2)) / num_check_bitflip_threads;
+    for (uint32_t i = 0; i < num_check_bitflip_threads; i++) {
         args[i][0] = i * bytes_per_thread;
         args[i][1] = MIN(args[i][0] + bytes_per_thread - 1, 255);
         args[i][2] = time_budget;
     }
     // args[][] is uint8_t so max 255, no need to check it
-    // args[NUM_CHECK_BITFLIPS_THREADS - 1][1] = MAX(args[NUM_CHECK_BITFLIPS_THREADS - 1][1], 255);
+    // args[num_check_bitflip_threads - 1][1] = MAX(args[num_check_bitflip_threads - 1][1], 255);
 
     // start threads
-    for (uint32_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
+    for (uint32_t i = 0; i < num_check_bitflip_threads; i++) {
         pthread_create(&thread_id[i], NULL, check_for_BitFlipProperties_thread, args[i]);
     }
 
     // wait for threads to terminate:
-    for (uint32_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
+    for (uint32_t i = 0; i < num_check_bitflip_threads; i++) {
         pthread_join(thread_id[i], NULL);
     }
 
     if (hardnested_stage & CHECK_2ND_BYTES) {
         hardnested_stage &= ~CHECK_1ST_BYTES; // we are done with 1st stage, except...
-        for (uint32_t i = 0; i < NUM_CHECK_BITFLIPS_THREADS; i++) {
+        for (uint32_t i = 0; i < num_check_bitflip_threads; i++) {
             if (args[i][1] != 0) {
                 hardnested_stage |= CHECK_1ST_BYTES;  // ... when any of the threads didn't complete in time
                 break;
@@ -2057,10 +2115,11 @@ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
     init_book_of_work();
 
     // create and run worker threads
-    pthread_t thread_id[NUM_REDUCTION_WORKING_THREADS];
+    const size_t num_reduction_working_threads = NUM_REDUCTION_WORKING_THREADS;
+    pthread_t thread_id[num_reduction_working_threads];
 
-    uint16_t sums1[NUM_REDUCTION_WORKING_THREADS][3];
-    for (uint32_t i = 0; i < NUM_REDUCTION_WORKING_THREADS; i++) {
+    uint16_t sums1[num_reduction_working_threads][3];
+    for (uint32_t i = 0; i < num_reduction_working_threads; i++) {
         sums1[i][0] = sum_a0_idx;
         sums1[i][1] = sum_a8_idx;
         sums1[i][2] = i + 1;
@@ -2068,7 +2127,7 @@ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
     }
 
     // wait for threads to terminate:
-    for (uint32_t i = 0; i < NUM_REDUCTION_WORKING_THREADS; i++) {
+    for (uint32_t i = 0; i < num_reduction_working_threads; i++) {
         pthread_join(thread_id[i], NULL);
     }
 
