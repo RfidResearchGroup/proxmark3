@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added ISO4217 currency lookup (@iceman1001)
+ - Fixed bad free in loadfilebinarykey fct.  Thanks to @gentilkiwi
  - Changed `emv reader -v` - now can decode track1/2 data if found (@iceman1001)
  - Added `emv reader` - act as a EMV reader (@iceman1001)
  - Added support for Apple Wallet NFC Passes with the Value Added Services protocol implementation (@gm3197)

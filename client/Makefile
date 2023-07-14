@@ -678,6 +678,7 @@ SRCS =  mifare/aiddesfire.c \
 		generator.c \
 		graph.c \
 		jansson_path.c \
+		iso4217.c \
 		iso7816/apduinfo.c \
 		iso7816/iso7816core.c \
 		loclass/cipher.c \
