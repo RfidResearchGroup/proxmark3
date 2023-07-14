@@ -2600,8 +2600,10 @@ out:
 static int CmdEMVReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv reader",
-                  "Act as a EMV reader to identify tag. Look for EMV tags until Enter or the pm3 button is pressed",
+                  "Act as a EMV reader to identify tag. Look for EMV tags until Enter or the pm3 button is pressed\n"
+                  "In `verbose` mode it will also try to extract and decode the transaction logs stored on card in either channel.\n",
                   "emv reader\n"
+                  "emv reader -v\n"
                   "emv reader -@     -> Continuous mode\n"
                  );
     void *argtable[] = {
