@@ -89,7 +89,7 @@ static int emv_calc_cvv(const uint8_t *pan, size_t panlen, const uint8_t *expiry
     uint8_t *pd = d;
 
     memcpy(pd, pan, panlen);
-    pd += panlen;    
+    pd += panlen;
     memcpy(pd, expiry, 4);
     pd += 4;
 
@@ -129,7 +129,7 @@ static int emv_calc_cvv(const uint8_t *pan, size_t panlen, const uint8_t *expiry
 
     PrintAndLogEx(INFO, "enc... %s", sprint_hex_inrow(encrypted, sizeof(encrypted)));
 
-    memset(encrypted, 0, sizeof(encrypted));    
+    memset(encrypted, 0, sizeof(encrypted));
     des3_encrypt(encrypted, d, key, 2);
     PrintAndLogEx(INFO, "enc... %s", sprint_hex_inrow(encrypted, sizeof(encrypted)));
 
@@ -195,23 +195,23 @@ static struct tlvdb *emv_logtemplate_parse(const struct tlv *tlv, const unsigned
 }
 
 static int emv_parse_log(struct tlvdb *ttdb, const uint8_t *d, size_t n) {
-/*
-    The Log Format (9F4F) is a list in tag and length format (i.e., "TL" instead of TLV) See description in Table 33 on page 141.
+    /*
+        The Log Format (9F4F) is a list in tag and length format (i.e., "TL" instead of TLV) See description in Table 33 on page 141.
 
-    In your example, "9F 27 01 9F 02 06 5F 2A 02 9A 03 9F 36 02 9F 52 06 DF 3E 01 9F 21 03 9F 7C 14" means:
+        In your example, "9F 27 01 9F 02 06 5F 2A 02 9A 03 9F 36 02 9F 52 06 DF 3E 01 9F 21 03 9F 7C 14" means:
 
-    9F27 01 (Cryptogram Information Data)
-    9F02 06 (Amount, Authorised)
-    5F2A 02 (Transaction Currency Code)
-    9A 03 (Transaction Date)
-    9F36 02 (Application Transaction Counter)
-    9F52 06 (Terminal Compatibility Indicator)
-    DF3E 01
-    9F21 03 (Transaction Time)
-    9F7C 14 (Visa Customer Exclusive Data)
+        9F27 01 (Cryptogram Information Data)
+        9F02 06 (Amount, Authorised)
+        5F2A 02 (Transaction Currency Code)
+        9A 03 (Transaction Date)
+        9F36 02 (Application Transaction Counter)
+        9F52 06 (Terminal Compatibility Indicator)
+        DF3E 01
+        9F21 03 (Transaction Time)
+        9F7C 14 (Visa Customer Exclusive Data)
 
-*/
-    int pos = 0; 
+    */
+    int pos = 0;
     struct tlvdb *tp = ttdb;
     while (tp) {
         const struct tlv *tpitem = tlvdb_get_tlv(tp);
@@ -237,12 +237,12 @@ static int emv_parse_log(struct tlvdb *ttdb, const uint8_t *d, size_t n) {
                 PrintAndLogEx(INFO, "%-30s... " _YELLOW_("%s"), s, sprint_hex_inrow(d + pos, tpitem->len));
                 break;
         }
-        
+
         pos += tpitem->len;
 
         tp = tlvdb_elm_get_next(tp);
     }
-    return PM3_SUCCESS; 
+    return PM3_SUCCESS;
 }
 
 static int emv_extract_log_info(uint8_t *response, size_t reslen, uint8_t *lid,  uint8_t *lrecs) {
@@ -269,7 +269,7 @@ static int emv_extract_log_info(uint8_t *response, size_t reslen, uint8_t *lid, 
     return res;
 }
 
-static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose){
+static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose) {
     if (d == NULL || n < 10) {
         return PM3_EINVARG;
     }
@@ -283,31 +283,31 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose){
     }
 
     // decoder
-    char *tmp = str_ndup((const char*)d, n);
+    char *tmp = str_ndup((const char *)d, n);
     uint8_t i = 0;
     char delim[2] = "^";
     char *token = strtok(tmp, delim);
     while (token != NULL) {
 
-        switch(i) {
+        switch (i) {
             case 0: {
                 size_t a = strlen(token);
                 if (a == 16) {
                     PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
-                        token[1], token[2],token[3], token[4],
-                        token[5], token[6],token[7], token[8],
-                        token[9], token[10],token[11], token[12],
-                        token[13], token[14],token[15], token[16]
-                    );
+                                  token[1], token[2], token[3], token[4],
+                                  token[5], token[6], token[7], token[8],
+                                  token[9], token[10], token[11], token[12],
+                                  token[13], token[14], token[15], token[16]
+                                 );
                 } else if (a == 19) {
                     PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c",
-                        token[1], token[2],token[3], token[4],
-                        token[5], token[6],token[7], token[8],
-                        token[9], token[10],token[11], token[12],
-                        token[13], token[14],token[15], token[16],
-                        token[17], token[18],token[19]
-                    );
-                } 
+                                  token[1], token[2], token[3], token[4],
+                                  token[5], token[6], token[7], token[8],
+                                  token[9], token[10], token[11], token[12],
+                                  token[13], token[14], token[15], token[16],
+                                  token[17], token[18], token[19]
+                                 );
+                }
                 break;
             }
             case 1:
@@ -327,7 +327,7 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose){
                 token += 4;
 
                 PrintAndLogEx(INFO, "CVV / iCvv............... %.*s", 3, token);
-                token +=3;
+                token += 3;
 
                 PrintAndLogEx(INFO, "Trailing................. %s", token);
                 break;
@@ -358,11 +358,11 @@ static int emv_parse_track2(const uint8_t *d, size_t n, bool verbose) {
         tmp++;
 
     PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
-        tmp[0], tmp[1], tmp[2],tmp[3],
-        tmp[4], tmp[5], tmp[6],tmp[7],
-        tmp[8], tmp[9], tmp[10],tmp[11],
-        tmp[12],tmp[13], tmp[14],tmp[15]
-    );
+                  tmp[0], tmp[1], tmp[2], tmp[3],
+                  tmp[4], tmp[5], tmp[6], tmp[7],
+                  tmp[8], tmp[9], tmp[10], tmp[11],
+                  tmp[12], tmp[13], tmp[14], tmp[15]
+                 );
     tmp += 16;
 
     if (tmp[0] == '=' || tmp[0] == 'D')
@@ -378,7 +378,7 @@ static int emv_parse_track2(const uint8_t *d, size_t n, bool verbose) {
     tmp += 4;
 
     PrintAndLogEx(INFO, "CVV / iCvv............... %.*s", 3, tmp);
-    tmp +=3;
+    tmp += 3;
 
     PrintAndLogEx(INFO, "Trailing................. %s", tmp);
 
@@ -2694,7 +2694,7 @@ static int CmdEMVReader(const char *Cmd) {
                 continue;
             }
             // Log template tag
-            if (extra_data[i] == 0x9F4F )  {
+            if (extra_data[i] == 0x9F4F)  {
                 struct tlvdb *ttdb = tlvdb_find_full(tlvRoot, extra_data[i]);
                 const struct tlv *ttag = tlvdb_get_tlv(ttdb);
                 tlogDB = emv_logtemplate_parse(ttag, buf, len);
@@ -2764,8 +2764,8 @@ static int CmdEMVReader(const char *Cmd) {
         }
 
         // only check for logs file if we found 0x9F4D
-        if ( verbose && log_found  && log_template_found ) {
-        
+        if (verbose && log_found  && log_template_found) {
+
             for (int i = 1; i <= log_file_records; i++) {
                 res = EMVReadRecord(channel, true, log_file_id, i, buf, sizeof(buf), &len, &sw, tlvRoot);
                 if (res) {
@@ -2786,7 +2786,7 @@ static int CmdEMVReader(const char *Cmd) {
 
         // free tlv object
         tlvdb_free(tlvRoot);
-        
+
     } while (continuous);
 
     DropFieldEx(channel);

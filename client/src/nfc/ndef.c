@@ -1050,7 +1050,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
 
 
             if (str_startswith(begin, NDEF_BLUEAPPL_EP)) {
-               ndefDecodeMime_bt(ndef);
+                ndefDecodeMime_bt(ndef);
             }
             if (str_startswith(begin, NDEF_BLUEAPPL_SECURE_LE)) {
                 ndefDecodeMime_bt_secure_le_oob(ndef);

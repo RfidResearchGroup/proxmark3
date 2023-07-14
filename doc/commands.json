@@ -901,18 +901,20 @@
         },
         "emv reader": {
             "command": "emv reader",
-            "description": "Act as a EMV reader to identify tag. Look for EMV tags until Enter or the pm3 button is pressed",
+            "description": "Act as a EMV reader to identify tag. Look for EMV tags until Enter or the pm3 button is pressed In `verbose` mode it will also try to extract and decode the transaction logs stored on card in either channel.",
             "notes": [
                 "emv reader",
+                "emv reader -v",
                 "emv reader -@ -> Continuous mode"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-v, --verbose verbose",
                 "-@ continuous reader mode"
             ],
-            "usage": "emv reader [-hw@]"
+            "usage": "emv reader [-hwv@]"
         },
         "emv readrec": {
             "command": "emv readrec",
@@ -2653,8 +2655,8 @@
                 "hf fido auth --kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with 2 parameters, filled 0x00 and key handle",
                 "hf fido auth",
                 "--kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f",
-                "--cp 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f",
-                "--ap 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters"
+                "--cpx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f",
+                "--apx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters"
             ],
             "offline": false,
             "options": [
@@ -11687,6 +11689,6 @@
     "metadata": {
         "commands_extracted": 679,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-07-10T18:33:37"
+        "extracted_on": "2023-07-14T16:33:40"
     }
 }

@@ -373,8 +373,8 @@ static void init_bitflip_bitarrays(void) {
                         exit(4);
                     }
 
-                    bytesread = fread(bitset, 1, filesize-sizeof(count), statesfile);
-                    if (bytesread != filesize-sizeof(count)) {
+                    bytesread = fread(bitset, 1, filesize - sizeof(count), statesfile);
+                    if (bytesread != filesize - sizeof(count)) {
                         PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
                         fclose(statesfile);
                         exit(5);

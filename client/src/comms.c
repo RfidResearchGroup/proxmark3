@@ -670,10 +670,10 @@ int TestProxmark(pm3_device_t *dev) {
     bool is_bt_conn = (memcmp(g_conn.serial_port_name, "bt:", 3) == 0);
 
     PrintAndLogEx(INFO, "Communicating with PM3 over %s%s%s",
-                (g_conn.send_via_fpc_usart) ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
-                (is_tcp_conn) ? " over " _YELLOW_("TCP") : "",
-                (is_bt_conn) ? " over " _YELLOW_("BT") : ""
-            );
+                  (g_conn.send_via_fpc_usart) ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
+                  (is_tcp_conn) ? " over " _YELLOW_("TCP") : "",
+                  (is_bt_conn) ? " over " _YELLOW_("BT") : ""
+                 );
 
     if (g_conn.send_via_fpc_usart) {
         PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", g_conn.uart_speed);
