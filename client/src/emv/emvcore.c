@@ -586,6 +586,10 @@ int EMVReadRecord(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t SFI,
     return res;
 }
 
+int EMVGetData(Iso7816CommandChannel channel, bool LeaveFieldON, uint16_t foo, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
+    return EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU_t) {0x80, 0xCA, ((foo >> 8) & 0xFF), (foo & 0xFF), 0, NULL}, true, Result, MaxResultLen, ResultLen, sw, tlv);
+}
+
 int EMVAC(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t RefControl, uint8_t *CDOL, size_t CDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     return EMVExchange(channel, LeaveFieldON, (sAPDU_t) {0x80, 0xae, RefControl, 0x00, CDOLLen, CDOL}, Result, MaxResultLen, ResultLen, sw, tlv);
 }

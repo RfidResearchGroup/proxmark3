@@ -35,6 +35,10 @@
 #include "fileutils.h"
 #include "protocols.h"      // ISO7816 APDU return codes
 #include "commonutil.h"     // MemBeToUint2byte
+#include <mbedtls/des.h>    // DES
+#include "crypto/libpcrypto.h"
+#include "iso4217.h"        // currency lookup
+
 
 static int CmdHelp(const char *Cmd);
 
@@ -75,6 +79,193 @@ static void PrintChannel(Iso7816CommandChannel channel) {
     }
 }
 
+static int emv_calc_cvv(const uint8_t *pan, size_t panlen, const uint8_t *expiry, const uint8_t *servicecode, const uint8_t *atc) {
+
+    uint8_t key[16] = {0};
+    memset(key, 0x30, sizeof(key));
+
+    uint8_t d[32] = {0};
+    uint8_t *pd = d;
+
+    memcpy(pd, pan, panlen);
+    pd += panlen;    
+    memcpy(pd, expiry, 4);
+    pd += 4;
+
+    // cvv/cvc
+    memcpy(pd, servicecode, 3);
+    pd += 3;
+
+    // atc
+    memcpy(pd, atc, 4);
+
+    uint8_t encrypted[16] = {0};
+
+    // zero padding?!?
+
+    mbedtls_des_context ctx;
+    mbedtls_des_setkey_enc(&ctx, key);
+    mbedtls_des_crypt_ecb(&ctx, d, encrypted);
+    mbedtls_des_crypt_ecb(&ctx, d + 6, encrypted + 6);
+
+    // xor
+    for (size_t i = 16; i < 32; i++) {
+        d[i] ^= encrypted[i - 16];
+    }
+
+    mbedtls_des_free(&ctx);
+
+    PrintAndLogEx(INFO, "key... %s", sprint_hex_inrow(key, sizeof(key)));
+    PrintAndLogEx(INFO, "d..... %s", sprint_hex_inrow(d, sizeof(d)));
+
+/*
+    mbedtls_des3_context ctx3;
+    mbedtls_des3_init(&ctx3);
+    mbedtls_des3_set2key_enc(&ctx3, key);
+    mbedtls_des3_set2key_dec(&ctx3, key);
+    mbedtls_des3_crypt_ecb(&ctx3, d, encrypted);
+    mbedtls_des3_free(&ctx3);
+
+    PrintAndLogEx(INFO, "enc... %s", sprint_hex_inrow(encrypted, sizeof(encrypted)));
+
+    memset(encrypted, 0, sizeof(encrypted));    
+    des3_encrypt(encrypted, d, key, 2);
+    PrintAndLogEx(INFO, "enc... %s", sprint_hex_inrow(encrypted, sizeof(encrypted)));
+  */
+    return PM3_SUCCESS;
+}
+
+static size_t logtemplate_calculate_len(const struct tlv *tlv, size_t data_len) {
+    if (!tlv)
+        return 0;
+
+    const unsigned char *buf = tlv->value;
+    size_t left = tlv->len;
+    size_t count = 0;
+
+    while (left) {
+        struct tlv cur_tlv;
+        if (!tlv_parse_tl(&buf, &left, &cur_tlv))
+            return 0;
+
+        count += cur_tlv.len;
+
+        /* Last tag can be of variable length */
+        if (cur_tlv.len == 0 && left == 0)
+            count = data_len;
+    }
+
+    return count;
+}
+
+static struct tlvdb *emv_logtemplate_parse(const struct tlv *tlv, const unsigned char *data, size_t data_len) {
+    if (!tlv)
+        return NULL;
+
+    const unsigned char *buf = tlv->value;
+    size_t left = tlv->len;
+    size_t res_len = logtemplate_calculate_len(tlv, data_len);
+    size_t pos = 0;
+    struct tlvdb *db = NULL;
+
+    while (left) {
+        struct tlv cur_tlv;
+        if (!tlv_parse_tl(&buf, &left, &cur_tlv) || pos + cur_tlv.len > res_len) {
+            tlvdb_free(db);
+            return NULL;
+        }
+
+        /* Last tag can be of variable length */
+        if (cur_tlv.len == 0 && left == 0)
+            cur_tlv.len = res_len - pos;
+
+        struct tlvdb *tag_db = tlvdb_fixed(cur_tlv.tag, cur_tlv.len, data + pos);
+        if (!db)
+            db = tag_db;
+        else
+            tlvdb_add(db, tag_db);
+
+        pos += cur_tlv.len;
+    }
+
+    return db;
+}
+
+static int emv_parse_log(struct tlvdb *ttdb, const uint8_t *d, size_t n) {
+/*
+    The Log Format (9F4F) is a list in tag and length format (i.e., "TL" instead of TLV) See description in Table 33 on page 141.
+
+    In your example, "9F 27 01 9F 02 06 5F 2A 02 9A 03 9F 36 02 9F 52 06 DF 3E 01 9F 21 03 9F 7C 14" means:
+
+    9F27 01 (Cryptogram Information Data)
+    9F02 06 (Amount, Authorised)
+    5F2A 02 (Transaction Currency Code)
+    9A 03 (Transaction Date)
+    9F36 02 (Application Transaction Counter)
+    9F52 06 (Terminal Compatibility Indicator)
+    DF3E 01
+    9F21 03 (Transaction Time)
+    9F7C 14 (Visa Customer Exclusive Data)
+
+*/
+    int pos = 0; 
+    struct tlvdb *tp = ttdb;
+    while (tp) {
+        const struct tlv *tpitem = tlvdb_get_tlv(tp);
+
+        const char *s = emv_get_tag_name(tpitem);
+
+        switch (tpitem->tag) {
+            case 0x5F2A:
+                if (tpitem->len == 2) {
+
+                    char tmp[5] = {0};
+                    snprintf(tmp, sizeof(tmp), "%x%02x", d[pos], d[pos + 1]);
+                    const char *cn = getCurrencyInfo(tmp);
+                    PrintAndLogEx(INFO, "%-30s... " _YELLOW_("%s") " ( %x%02x )", s, cn, d[pos], d[pos + 1]);
+                }
+                break;
+            case 0x9A:
+                if (tpitem->len == 3) {
+                    PrintAndLogEx(INFO, "%-30s... " _YELLOW_("20%02x-%02x-%02x"), s, d[pos], d[pos + 1], d[pos + 2]);
+                }
+                break;
+            default:
+                PrintAndLogEx(INFO, "%-30s... " _YELLOW_("%s"), s, sprint_hex_inrow(d + pos, tpitem->len));
+                break;
+        }
+        
+        pos += tpitem->len;
+
+        tp = tlvdb_elm_get_next(tp);
+    }
+    return PM3_SUCCESS; 
+}
+
+static int emv_extract_log_info(uint8_t *response, size_t reslen, uint8_t *lid,  uint8_t *lrecs) {
+
+    struct tlvdb *t = tlvdb_parse_multi(response, reslen);
+    if (t == NULL) {
+        PrintAndLogEx(INFO, "root null");
+        return PM3_EINVARG;
+    }
+
+    int res = PM3_ESOFT;
+    struct tlvdb *logs = tlvdb_find_full(t, 0x9F4D);
+    if (logs != NULL) {
+        const struct tlv *tlv = tlvdb_get_tlv(logs);
+        if (tlv->len == 2) {
+            *lid = tlv->value[0];
+            *lrecs = tlv->value[1];
+            PrintAndLogEx(DEBUG, "Logs EMV...  SFI %u Records # %u", *lid, *lrecs);
+            res = PM3_SUCCESS;
+        }
+    }
+
+    tlvdb_free(t);
+    return res;
+}
+
 static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose){
     if (d == NULL || n < 10) {
         return PM3_EINVARG;
@@ -96,14 +287,26 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose){
     while (token != NULL) {
 
         switch(i) {
-            case 0:
-                PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
-                    token[1], token[2],token[3], token[4],
-                    token[5], token[6],token[7], token[8],
-                    token[9], token[10],token[11], token[12],
-                    token[13], token[14],token[15], token[16]
-                );
+            case 0: {
+                size_t a = strlen(token);
+                if (a == 16) {
+                    PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
+                        token[1], token[2],token[3], token[4],
+                        token[5], token[6],token[7], token[8],
+                        token[9], token[10],token[11], token[12],
+                        token[13], token[14],token[15], token[16]
+                    );
+                } else if (a == 19) {
+                    PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c",
+                        token[1], token[2],token[3], token[4],
+                        token[5], token[6],token[7], token[8],
+                        token[9], token[10],token[11], token[12],
+                        token[13], token[14],token[15], token[16],
+                        token[17], token[18],token[19]
+                    );
+                } 
                 break;
+            }
             case 1:
                 PrintAndLogEx(INFO, "CardHolder............... %s", token);
                 break;
@@ -228,7 +431,12 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen, bool verbose
         const struct tlv *acc_tlv = tlvdb_get_tlv(acc_full);
         if (acc_tlv->len == 2) {
             uint16_t acc = MemBeToUint2byte((const uint8_t *)acc_tlv->value);
-            PrintAndLogEx(INFO, "Currency Code........ " _YELLOW_("%02X"), acc);
+
+            char tmp[5] = {0};
+            snprintf(tmp, sizeof(tmp), "%x%02x", acc_tlv->value[0], acc_tlv->value[1]);
+            const char *cn = getCurrencyInfo(tmp);
+
+            PrintAndLogEx(INFO, "Currency Code........ " _YELLOW_("%s") " ( %x )", cn, acc);
         }
     }
 
@@ -2087,6 +2295,16 @@ static int CmdEMVList(const char *Cmd) {
 }
 
 static int CmdEMVTest(const char *Cmd) {
+
+    uint8_t pan[16] = "4000340099900505";
+    uint8_t expiry[4] = "2102";
+    uint8_t servicecode[3] = "101";
+    uint8_t atc[4] = "1001";
+
+    emv_calc_cvv(pan, 16, expiry, servicecode, atc);
+    return PM3_SUCCESS;
+
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv test",
                   "Executes tests\n",
@@ -2462,6 +2680,33 @@ static int CmdEMVReader(const char *Cmd) {
         // decode application parts
         emv_parse_card_details(buf, len, verbose);
 
+        // transaction log information
+        uint8_t log_file_id = 0x0B;
+        uint8_t log_file_records = 31;
+        struct tlvdb *tlogDB = NULL;
+
+
+        // try getting the LOG TEMPLATE.
+        bool log_found = false;
+        bool log_template_found = false;
+        if (emv_extract_log_info(buf, len, &log_file_id, &log_file_records) == PM3_SUCCESS) {
+            log_found = true;
+        }
+
+        uint16_t extra_data[] = { 0x9F36, 0x9F13, 0x9F17, 0x9F4D, 0x9F4F };
+        for (int i = 0; i < ARRAYLEN(extra_data); i++) {
+            if (EMVGetData(channel, true, extra_data[i], buf, sizeof(buf), &len, &sw, tlvRoot)) {
+                continue;
+            }
+            // Log template tag
+            if (extra_data[i] == 0x9F4F )  {
+                struct tlvdb *ttdb = tlvdb_find_full(tlvRoot, extra_data[i]);
+                const struct tlv *ttag = tlvdb_get_tlv(ttdb);
+                tlogDB = emv_logtemplate_parse(ttag, buf, len);
+                log_template_found = true;
+            }
+        }
+
         for (TransactionType_t tt = TT_MSD; tt < TT_END; tt++) {
 
             // create transaction parameters
@@ -2498,7 +2743,6 @@ static int CmdEMVReader(const char *Cmd) {
         }
 
         const struct tlv *AFL = tlvdb_get(tlvRoot, 0x94, NULL);
-
         if (AFL && AFL->len) {
 
             if (AFL->len % 4) {
@@ -2524,8 +2768,33 @@ static int CmdEMVReader(const char *Cmd) {
             }
         }
 
+        // only check for logs file if we found 0x9F4D
+        if ( verbose && log_found  && log_template_found ) {
+        
+            for (int i = 1; i <= log_file_records; i++) {
+                res = EMVReadRecord(channel, true, log_file_id, i, buf, sizeof(buf), &len, &sw, tlvRoot);
+                if (res) {
+                    continue;
+                }
+
+                if (sw == 0x6A83)
+                    break;
+
+                PrintAndLogEx(INFO, "");
+                PrintAndLogEx(INFO, "Transaction log # " _YELLOW_("%u"), i);
+                PrintAndLogEx(INFO, "---------------------");
+                emv_parse_log(tlogDB, buf, len);
+                PrintAndLogEx(INFO, "");
+            }
+            tlvdb_free(tlogDB);
+        }
+
+        // free tlv object
+        tlvdb_free(tlvRoot);
+        
     } while (continuous);
 
+    DropFieldEx(channel);
     return PM3_SUCCESS;
 }
 
