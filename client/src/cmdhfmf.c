@@ -577,9 +577,6 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
     size_t alen = 0, blen = 0;
     uint8_t *keyA, *keyB;
     if (loadFileBinaryKey(keyfn, "", (void **)&keyA, (void **)&keyB, &alen, &blen) != PM3_SUCCESS) {
-        if (keyA) {
-            free(keyA);
-        }
         free(fptr);
         return PM3_ESOFT;
     }
@@ -1339,9 +1336,6 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     size_t alen = 0, blen = 0;
     uint8_t *keyA, *keyB;
     if (loadFileBinaryKey(keyfilename, "", (void **)&keyA, (void **)&keyB, &alen, &blen) != PM3_SUCCESS) {
-        if (keyA) {
-            free(keyA);
-        }
         return PM3_ESOFT;
     }
 
@@ -6289,9 +6283,6 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
         size_t alen = 0, blen = 0;
         uint8_t *tmpA, *tmpB;
         if (loadFileBinaryKey(keyFilename, "", (void **)&tmpA, (void **)&tmpB, &alen, &blen) != PM3_SUCCESS) {
-            if (tmpA) {
-                free(tmpA);
-            }
             goto skipfile;
         }
 

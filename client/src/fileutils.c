@@ -1609,6 +1609,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     if (*keyb == NULL) {
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
         fclose(f);
+        free(*keya);
         return PM3_EMALLOC;
     }
 
