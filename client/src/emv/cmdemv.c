@@ -2295,16 +2295,6 @@ static int CmdEMVList(const char *Cmd) {
 }
 
 static int CmdEMVTest(const char *Cmd) {
-
-    uint8_t pan[16] = "4000340099900505";
-    uint8_t expiry[4] = "2102";
-    uint8_t servicecode[3] = "101";
-    uint8_t atc[4] = "1001";
-
-    emv_calc_cvv(pan, 16, expiry, servicecode, atc);
-    return PM3_SUCCESS;
-
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv test",
                   "Executes tests\n",
