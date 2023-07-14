@@ -79,6 +79,7 @@ static void PrintChannel(Iso7816CommandChannel channel) {
     }
 }
 
+/*
 static int emv_calc_cvv(const uint8_t *pan, size_t panlen, const uint8_t *expiry, const uint8_t *servicecode, const uint8_t *atc) {
 
     uint8_t key[16] = {0};
@@ -118,7 +119,7 @@ static int emv_calc_cvv(const uint8_t *pan, size_t panlen, const uint8_t *expiry
     PrintAndLogEx(INFO, "key... %s", sprint_hex_inrow(key, sizeof(key)));
     PrintAndLogEx(INFO, "d..... %s", sprint_hex_inrow(d, sizeof(d)));
 
-/*
+
     mbedtls_des3_context ctx3;
     mbedtls_des3_init(&ctx3);
     mbedtls_des3_set2key_enc(&ctx3, key);
@@ -131,9 +132,11 @@ static int emv_calc_cvv(const uint8_t *pan, size_t panlen, const uint8_t *expiry
     memset(encrypted, 0, sizeof(encrypted));    
     des3_encrypt(encrypted, d, key, 2);
     PrintAndLogEx(INFO, "enc... %s", sprint_hex_inrow(encrypted, sizeof(encrypted)));
-  */
+
     return PM3_SUCCESS;
 }
+*/
+
 
 static size_t logtemplate_calculate_len(const struct tlv *tlv, size_t data_len) {
     if (!tlv)
