@@ -108,7 +108,7 @@ then, install proxmark dependencies:
 sudo apt-get install --no-install-recommends \
   git ca-certificates build-essential pkg-config \
   libreadline-dev gcc-arm-none-eabi libnewlib-dev \
-  libbz2-dev libpython3-dev qtbase5-dev libssl-dev
+  libbz2-dev liblz4-dev libpython3-dev qtbase5-dev libssl-dev
 ```
 
 _note_
