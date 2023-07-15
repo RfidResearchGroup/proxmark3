@@ -145,7 +145,7 @@ int16_t mifare_cmd_writeblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t write
     LED_B_OFF();
     LED_C_OFF();
 
-    uint8_t retval = PM3_SUCCESS;
+    int retval = PM3_SUCCESS;
 
     if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
