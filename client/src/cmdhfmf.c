@@ -1822,7 +1822,7 @@ jumptoend:
 static int CmdHF14AMfNestedStatic(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf staticnested",
-                  "Execute Nested attack against MIFARE Classic card with static nonce for key recovery.\n"
+                  "Execute static nested attack against MIFARE Classic card with static nonce for key recovery.\n"
                   "Supply a known key from one block to recover all keys",
                   "hf mf staticnested --mini --blk 0 -a -k FFFFFFFFFFFF\n"
                   "hf mf staticnested --1k --blk 0 -a -k FFFFFFFFFFFF\n"
