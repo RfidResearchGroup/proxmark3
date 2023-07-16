@@ -359,7 +359,7 @@ static void init_bitflip_bitarrays(void) {
                 }
                 uint32_t filesize = (uint32_t)fsize;
                 rewind(statesfile);
-                char *compressed_data = malloc(filesize);
+                char *compressed_data = calloc(filesize, sizeof(uint8_t));
                 if (compressed_data == NULL) {
                     PrintAndLogEx(ERR, "Out of memory error in init_bitflip_statelists(). Aborting...\n");
                     fclose(statesfile);
@@ -372,50 +372,53 @@ static void init_bitflip_bitarrays(void) {
                     fclose(statesfile);
                     exit(5);
                 }
-                char *uncompressed_data = malloc((sizeof(uint32_t) * (1 << 19)) + sizeof(uint32_t));
+                fclose(statesfile);
+
+                char *uncompressed_data = calloc((sizeof(uint32_t) * (1 << 19)) + sizeof(uint32_t), sizeof(uint8_t));
                 if (uncompressed_data == NULL) {
-                    PrintAndLogEx(ERR, "Out of memory error in init_bitflip_statelists(). Aborting...\n");
+                    PrintAndLogEx(ERR,   "Out of memory error in init_bitflip_statelists(). Aborting...\n");
                     free(compressed_data);
-                    fclose(statesfile);
                     exit(4);
                 }
+
                 LZ4F_decompressionContext_t ctx;
                 LZ4F_errorCode_t result = LZ4F_createDecompressionContext(&ctx, LZ4F_VERSION);
                 if (LZ4F_isError(result)) {
                     PrintAndLogEx(ERR, "File read error with %s (3) Failed to create decompression context: %s. Aborting...\n", state_file_name, LZ4F_getErrorName(result));
                     free(compressed_data);
                     free(uncompressed_data);
-                    fclose(statesfile);
                     exit(5);
                 }
+
                 size_t expected_output_size = (sizeof(uint32_t) * (1 << 19)) + sizeof(uint32_t);
                 size_t consumed_input_size = filesize;
                 size_t generated_output_size = expected_output_size;
                 result = LZ4F_decompress(ctx, uncompressed_data, &generated_output_size, compressed_data, &consumed_input_size, NULL);
+
                 LZ4F_freeDecompressionContext(ctx);
                 free(compressed_data);
+
                 if (LZ4F_isError(result)) {
                     PrintAndLogEx(ERR, "File read error with %s (3) %s. Aborting...\n", state_file_name, LZ4F_getErrorName(result));
                     free(uncompressed_data);
-                    fclose(statesfile);
                     exit(5);
                 }
                 if (generated_output_size != expected_output_size) {
                     PrintAndLogEx(ERR, "File read error with %s (3) got %lu instead of %lu bytes. Aborting...\n", state_file_name, generated_output_size, expected_output_size);
                     free(uncompressed_data);
-                    fclose(statesfile);
                     exit(5);
                 }
+
                 uint32_t count = ((uint32_t *)uncompressed_data)[0];
+
                 if ((float)count / (1 << 24) < IGNORE_BITFLIP_THRESHOLD) {
                     uint32_t *bitset = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
                     if (bitset == NULL) {
                         PrintAndLogEx(ERR, "Out of memory error in init_bitflip_statelists(). Aborting...\n");
                         free(uncompressed_data);
-                        fclose(statesfile);
                         exit(4);
                     }
-                    memcpy(bitset, uncompressed_data + 1, sizeof(uint32_t) * (1 << 19));
+                    memcpy(bitset, uncompressed_data + sizeof(uint32_t), sizeof(uint32_t) * (1 << 19));
                     effective_bitflip[odd_even][num_effective_bitflips[odd_even]++] = bitflip;
                     bitflip_bitarrays[odd_even][bitflip] = bitset;
                     count_bitflip_bitarrays[odd_even][bitflip] = count;
@@ -432,7 +435,7 @@ static void init_bitflip_bitarrays(void) {
                 nlz4++;
                 continue;
             } else if (open_bz2compressed) {
-                bz_stream compressed_stream;
+
                 fseek(statesfile, 0, SEEK_END);
                 int fsize = ftell(statesfile);
                 if (fsize == -1) {
@@ -447,11 +450,12 @@ static void init_bitflip_bitarrays(void) {
                 if (bytesread != filesize) {
                     PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
                     fclose(statesfile);
-                    //BZ2_bzDecompressEnd(&compressed_stream);
                     exit(5);
                 }
                 fclose(statesfile);
+
                 uint32_t count = 0;
+                bz_stream compressed_stream;
                 init_bunzip2(&compressed_stream, input_buffer, filesize, (char *)&count, sizeof(count));
                 int res = BZ2_bzDecompress(&compressed_stream);
                 if (res != BZ_OK) {
