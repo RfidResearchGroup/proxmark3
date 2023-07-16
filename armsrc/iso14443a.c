@@ -142,6 +142,66 @@ Default HF 14a config is set to:
 */
 static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
 
+
+// Polling frames and configurations 
+
+/*static iso14a_polling_frame REQA_FRAME = { 
+    { 0x26 }, 1, 7, 0 
+};*/
+
+static const iso14a_polling_frame WUPA_FRAME = { 
+    { 0x52 }, 1, 7, 0,
+};
+
+static const iso14a_polling_frame MAGWUPA1_FRAME = { 
+    { 0x7A }, 1, 7, 0 
+};
+
+static const iso14a_polling_frame MAGWUPA2_FRAME = { 
+    { 0x7B }, 1, 7, 0 
+};
+
+static const iso14a_polling_frame MAGWUPA3_FRAME = { 
+    { 0x7C }, 1, 7, 0 
+};
+
+static const iso14a_polling_frame MAGWUPA4_FRAME = { 
+    { 0x7D }, 1, 7, 0 
+};
+
+static const iso14a_polling_frame ECP_FRAME = { 
+    .frame={ 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8},
+    .frame_length=15, 
+    .last_byte_bits=8, 
+    .extra_delay=0 
+};
+
+static iso14a_polling_parameters WUPA_POLLING_PARAMETERS = {
+    .frames={ WUPA_FRAME }, 
+    .frame_count=1, 
+    .extra_timeout=0,
+};
+
+static iso14a_polling_parameters MAGSAFE_POLLING_PARAMETERS = {
+    .frames={ WUPA_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME }, 
+    .frame_count=5,
+    .extra_timeout=0
+};
+
+// Extra 100ms give enough time for Apple devices to proccess field info and make a decision
+static iso14a_polling_parameters ECP_POLLING_PARAMETERS = {
+    .frames={ WUPA_FRAME, ECP_FRAME }, 
+    .frame_count=2,
+    .extra_timeout=100
+};
+
+static iso14a_polling_parameters FULL_POLLING_PARAMETERS = {
+    .frames={ WUPA_FRAME, ECP_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME }, 
+    .frame_count=6,
+    .extra_timeout=100
+};
+
+
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
     Dbprintf("  [a] Anticol override.... %s%s%s",
@@ -2508,57 +2568,34 @@ static void iso14a_set_ATS_times(const uint8_t *ats) {
     }
 }
 
-static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_magsafe) {
 
-#define ECP_DELAY 10
-#define ECP_RETRY_TIMEOUT 100
-#define WUPA_RETRY_TIMEOUT 10    // 10ms
-
-
-    // 0x26 - REQA
-    // 0x52 - WAKE-UP
-    // 0x7A - MAGESAFE WAKE UP
-    uint8_t wupa[] = { ISO14443A_CMD_WUPA };
-
-    // if magsafe, set it outofbounds
-    if (use_magsafe) {
-        wupa[0] = MAGSAFE_CMD_WUPA_4;
-    }
-
-    if (use_ecp) {
-        // In case a device was already selected, we send a S-BLOCK deselect to bring it into an idle state so it can be selected again
-        uint8_t deselect_cmd[] = {0xc2, 0xe0, 0xb4};
-        ReaderTransmit(deselect_cmd, sizeof(deselect_cmd), NULL);
-        // Read response if present
-        (void) ReaderReceive(resp, resp_par);
-    }
+static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters parameters) {
+    #define WUPA_RETRY_TIMEOUT 10 
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
 
     bool first_try = true;
-    uint32_t retry_timeout = use_ecp ? ECP_RETRY_TIMEOUT : WUPA_RETRY_TIMEOUT;
+    uint32_t retry_timeout = WUPA_RETRY_TIMEOUT * parameters.frame_count + parameters.extra_timeout;
     uint32_t start_time;
     int len;
 
-    // we may need several tries if we did send an unknown command or a wrong authentication before...
+    uint8_t current_frame = 0;
+
     do {
-        if (use_ecp && !first_try) {
-            uint8_t ecp[] = { 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8};
-            ReaderTransmit(ecp, sizeof(ecp), NULL);
-            SpinDelay(ECP_DELAY);
+        iso14a_polling_frame frame_parameters = parameters.frames[current_frame];
+
+        if (frame_parameters.last_byte_bits == 8) {
+            ReaderTransmit(frame_parameters.frame, frame_parameters.frame_length, NULL);
+            
+        } else {
+            ReaderTransmitBitsPar(frame_parameters.frame, frame_parameters.last_byte_bits, NULL, NULL);
         }
 
-        if (use_magsafe) {
-            if (wupa[0] == MAGSAFE_CMD_WUPA_4) {
-                wupa[0] = MAGSAFE_CMD_WUPA_1;
-            } else {
-                wupa[0]++;
-            }
+        if (frame_parameters.extra_delay) {
+            SpinDelay(frame_parameters.extra_delay);
         }
-
-        // Broadcast for a card, WUPA (0x52) will force response from all cards in the field
-        ReaderTransmitBitsPar(wupa, 7, NULL, NULL);
+        
         // Receive the ATQA
         len = ReaderReceive(resp, resp_par);
 
@@ -2568,14 +2605,31 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, bool use_ecp, bool use_mags
         }
 
         first_try = false;
+
+        // Go over frame configurations
+        current_frame = current_frame < (parameters.frame_count - 1) ? current_frame + 1 : 0;
     } while (len == 0 && GetTickCountDelta(start_time) <= retry_timeout);
 
     iso14a_set_timeout(save_iso14a_timeout);
     return len;
 }
 
+
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
     return iso14443a_select_cardEx(uid_ptr, p_card, cuid_ptr, anticollision, num_cascades, no_rats, false, false);
+}
+
+
+// This method is temporary. Main intention is to move "special" polling frame configuration to the client
+iso14a_polling_parameters iso14a_get_polling_parameters(bool use_ecp, bool use_magsafe) {
+    if (use_ecp && use_magsafe) {
+        return FULL_POLLING_PARAMETERS;
+    } else if (use_ecp) {
+        return ECP_POLLING_PARAMETERS;
+    } else if (use_magsafe) {
+        return MAGSAFE_POLLING_PARAMETERS;
+    } 
+    return WUPA_POLLING_PARAMETERS;
 }
 
 // performs iso14443a anticollision (optional) and card select procedure
@@ -2599,7 +2653,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
         p_card->ats_len = 0;
     }
 
-    if (GetATQA(resp, resp_par, use_ecp, use_magsafe) == false) {
+    if (GetATQA(resp, resp_par, iso14a_get_polling_parameters(use_ecp, use_magsafe)) == false) {
         return 0;
     }
 
@@ -2624,11 +2678,11 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             memcpy(p_card->uid, resp, 4);
 
             // select again?
-            if (GetATQA(resp, resp_par, false, false) == false) {
+            if (GetATQA(resp, resp_par, WUPA_POLLING_PARAMETERS) == false) {
                 return 0;
             }
 
-            if (GetATQA(resp, resp_par, false, false) == false) {
+            if (GetATQA(resp, resp_par, WUPA_POLLING_PARAMETERS) == false) {
                 return 0;
             }
 
@@ -2827,7 +2881,7 @@ int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades) {
     uint8_t sak = 0x04; // cascade uid
     int cascade_level = 0;
 
-    if (!GetATQA(resp, resp_par, false, false)) {
+    if (!GetATQA(resp, resp_par, WUPA_POLLING_PARAMETERS)) {
         return 0;
     }
 
