@@ -4806,7 +4806,7 @@
         },
         "hf mf staticnested": {
             "command": "hf mf staticnested",
-            "description": "Execute Nested attack against MIFARE Classic card with static nonce for key recovery. Supply a known key from one block to recover all keys",
+            "description": "Execute static nested attack against MIFARE Classic card with static nonce for key recovery. Supply a known key from one block to recover all keys",
             "notes": [
                 "hf mf staticnested --mini --blk 0 -a -k FFFFFFFFFFFF",
                 "hf mf staticnested --1k --blk 0 -a -k FFFFFFFFFFFF",
@@ -11689,6 +11689,6 @@
     "metadata": {
         "commands_extracted": 679,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-07-14T16:33:40"
+        "extracted_on": "2023-07-16T13:30:30"
     }
 }

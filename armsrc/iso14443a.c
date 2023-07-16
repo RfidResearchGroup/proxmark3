@@ -143,62 +143,62 @@ Default HF 14a config is set to:
 static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
 
 
-// Polling frames and configurations 
+// Polling frames and configurations
 
-/*static iso14a_polling_frame REQA_FRAME = { 
-    { 0x26 }, 1, 7, 0 
+/*static iso14a_polling_frame REQA_FRAME = {
+    { 0x26 }, 1, 7, 0
 };*/
 
-static const iso14a_polling_frame WUPA_FRAME = { 
+static const iso14a_polling_frame WUPA_FRAME = {
     { 0x52 }, 1, 7, 0,
 };
 
-static const iso14a_polling_frame MAGWUPA1_FRAME = { 
-    { 0x7A }, 1, 7, 0 
+static const iso14a_polling_frame MAGWUPA1_FRAME = {
+    { 0x7A }, 1, 7, 0
 };
 
-static const iso14a_polling_frame MAGWUPA2_FRAME = { 
-    { 0x7B }, 1, 7, 0 
+static const iso14a_polling_frame MAGWUPA2_FRAME = {
+    { 0x7B }, 1, 7, 0
 };
 
-static const iso14a_polling_frame MAGWUPA3_FRAME = { 
-    { 0x7C }, 1, 7, 0 
+static const iso14a_polling_frame MAGWUPA3_FRAME = {
+    { 0x7C }, 1, 7, 0
 };
 
-static const iso14a_polling_frame MAGWUPA4_FRAME = { 
-    { 0x7D }, 1, 7, 0 
+static const iso14a_polling_frame MAGWUPA4_FRAME = {
+    { 0x7D }, 1, 7, 0
 };
 
-static const iso14a_polling_frame ECP_FRAME = { 
-    .frame={ 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8},
-    .frame_length=15, 
-    .last_byte_bits=8, 
-    .extra_delay=0 
+static const iso14a_polling_frame ECP_FRAME = {
+    .frame = { 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8},
+    .frame_length = 15,
+    .last_byte_bits = 8,
+    .extra_delay = 0
 };
 
 static iso14a_polling_parameters WUPA_POLLING_PARAMETERS = {
-    .frames={ WUPA_FRAME }, 
-    .frame_count=1, 
-    .extra_timeout=0,
+    .frames = { WUPA_FRAME },
+    .frame_count = 1,
+    .extra_timeout = 0,
 };
 
 static iso14a_polling_parameters MAGSAFE_POLLING_PARAMETERS = {
-    .frames={ WUPA_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME }, 
-    .frame_count=5,
-    .extra_timeout=0
+    .frames = { WUPA_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME },
+    .frame_count = 5,
+    .extra_timeout = 0
 };
 
 // Extra 100ms give enough time for Apple devices to proccess field info and make a decision
 static iso14a_polling_parameters ECP_POLLING_PARAMETERS = {
-    .frames={ WUPA_FRAME, ECP_FRAME }, 
-    .frame_count=2,
-    .extra_timeout=100
+    .frames = { WUPA_FRAME, ECP_FRAME },
+    .frame_count = 2,
+    .extra_timeout = 100
 };
 
 static iso14a_polling_parameters FULL_POLLING_PARAMETERS = {
-    .frames={ WUPA_FRAME, ECP_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME }, 
-    .frame_count=6,
-    .extra_timeout=100
+    .frames = { WUPA_FRAME, ECP_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME },
+    .frame_count = 6,
+    .extra_timeout = 100
 };
 
 
@@ -2570,7 +2570,7 @@ static void iso14a_set_ATS_times(const uint8_t *ats) {
 
 
 static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters parameters) {
-    #define WUPA_RETRY_TIMEOUT 10 
+#define WUPA_RETRY_TIMEOUT 10
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
@@ -2587,7 +2587,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters p
 
         if (frame_parameters.last_byte_bits == 8) {
             ReaderTransmit(frame_parameters.frame, frame_parameters.frame_length, NULL);
-            
+
         } else {
             ReaderTransmitBitsPar(frame_parameters.frame, frame_parameters.last_byte_bits, NULL, NULL);
         }
@@ -2595,7 +2595,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters p
         if (frame_parameters.extra_delay) {
             SpinDelay(frame_parameters.extra_delay);
         }
-        
+
         // Receive the ATQA
         len = ReaderReceive(resp, resp_par);
 
@@ -2628,7 +2628,7 @@ iso14a_polling_parameters iso14a_get_polling_parameters(bool use_ecp, bool use_m
         return ECP_POLLING_PARAMETERS;
     } else if (use_magsafe) {
         return MAGSAFE_POLLING_PARAMETERS;
-    } 
+    }
     return WUPA_POLLING_PARAMETERS;
 }
 
