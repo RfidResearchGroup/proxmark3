@@ -155,5 +155,4 @@ typedef struct {
     } state;
 } PACKED nonces_t;
 
-
 #endif // _MIFARE_H_

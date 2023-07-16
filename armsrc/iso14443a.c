@@ -144,17 +144,11 @@ static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
 
 
 // Polling frames and configurations 
-
-static const iso14a_polling_frame WUPA_FRAME = { 
-    { 0x52 }, 1, 7, 0,
-};
-
 static iso14a_polling_parameters WUPA_POLLING_PARAMETERS = {
-    .frames={ WUPA_FRAME }, 
+    .frames={ {{ 0x52 }, 1, 7, 0} }, 
     .frame_count=1, 
     .extra_timeout=0,
 };
-
 
 
 void printHf14aConfig(void) {
@@ -3034,9 +3028,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
 
             arg0 = iso14443a_select_cardEx(
                 NULL, card, NULL, true, 0, (param & ISO14A_NO_RATS), 
-                (param & ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters *)cmd : &WUPA_POLLING_PARAMETER
+                (param & ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters *)cmd : &WUPA_POLLING_PARAMETERS
             );
-            // This can be improved by adding a cmd parser pointer and moving it by struct length to allow combining data with polling params
+            // TODO: Improve by adding a cmd parser pointer and moving it by struct length to allow combining data with polling params
             FpgaDisableTracing();
 
             reply_mix(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));

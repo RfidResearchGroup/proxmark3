@@ -54,6 +54,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
 iso14a_polling_parameters iso14a_get_polling_parameters(bool use_ecp, bool use_magsafe);
 int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card);
+int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card_select_t *card, iso14a_polling_parameters *polling_parameters);
 
 bool Get_apdu_in_framing(void);
 void Set_apdu_in_framing(bool v);
