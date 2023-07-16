@@ -109,18 +109,18 @@ typedef enum {
 } resp_index_t;
 
 // Defines a frame that will be used in a polling sequence
-// ECP Frames are up to (7 + 16) bytes long, this config should cover future and other cases
+// ECP Frames are up to (7 + 16) bytes long, 24 bytes should cover future and other cases
 typedef struct {
-    uint8_t frame[32];
+    uint8_t frame[24];
     uint8_t frame_length;
     uint8_t last_byte_bits;
     uint16_t extra_delay;
 } iso14a_polling_frame;
 
 // Defines polling sequence configuration
-// 4 magsafe, 1 wupa, 1 reqa, 1 ecp, 1 extra
+// 6 would be enough for 4 magsafe, 1 wupa, 1 ecp,
 typedef struct {
-   iso14a_polling_frame frames[8]; 
+   iso14a_polling_frame frames[6]; 
    uint8_t frame_count;
    uint16_t extra_timeout;
 } iso14a_polling_parameters;
