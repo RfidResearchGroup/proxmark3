@@ -143,62 +143,62 @@ Default HF 14a config is set to:
 static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
 
 
-// Polling frames and configurations
+// Polling frames and configurations 
 
-/*static iso14a_polling_frame REQA_FRAME = {
-    { 0x26 }, 1, 7, 0
+/*static iso14a_polling_frame REQA_FRAME = { 
+    { 0x26 }, 1, 7, 0 
 };*/
 
-static const iso14a_polling_frame WUPA_FRAME = {
+static const iso14a_polling_frame WUPA_FRAME = { 
     { 0x52 }, 1, 7, 0,
 };
 
-static const iso14a_polling_frame MAGWUPA1_FRAME = {
-    { 0x7A }, 1, 7, 0
+static const iso14a_polling_frame MAGWUPA1_FRAME = { 
+    { 0x7A }, 1, 7, 0 
 };
 
-static const iso14a_polling_frame MAGWUPA2_FRAME = {
-    { 0x7B }, 1, 7, 0
+static const iso14a_polling_frame MAGWUPA2_FRAME = { 
+    { 0x7B }, 1, 7, 0 
 };
 
-static const iso14a_polling_frame MAGWUPA3_FRAME = {
-    { 0x7C }, 1, 7, 0
+static const iso14a_polling_frame MAGWUPA3_FRAME = { 
+    { 0x7C }, 1, 7, 0 
 };
 
-static const iso14a_polling_frame MAGWUPA4_FRAME = {
-    { 0x7D }, 1, 7, 0
+static const iso14a_polling_frame MAGWUPA4_FRAME = { 
+    { 0x7D }, 1, 7, 0 
 };
 
-static const iso14a_polling_frame ECP_FRAME = {
-    .frame = { 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8},
-    .frame_length = 15,
-    .last_byte_bits = 8,
-    .extra_delay = 0
+static const iso14a_polling_frame ECP_FRAME = { 
+    .frame={ 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8},
+    .frame_length=15, 
+    .last_byte_bits=8, 
+    .extra_delay=0 
 };
 
 static iso14a_polling_parameters WUPA_POLLING_PARAMETERS = {
-    .frames = { WUPA_FRAME },
-    .frame_count = 1,
-    .extra_timeout = 0,
+    .frames={ WUPA_FRAME }, 
+    .frame_count=1, 
+    .extra_timeout=0,
 };
 
 static iso14a_polling_parameters MAGSAFE_POLLING_PARAMETERS = {
-    .frames = { WUPA_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME },
-    .frame_count = 5,
-    .extra_timeout = 0
+    .frames={ WUPA_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME }, 
+    .frame_count=5,
+    .extra_timeout=0
 };
 
 // Extra 100ms give enough time for Apple devices to proccess field info and make a decision
 static iso14a_polling_parameters ECP_POLLING_PARAMETERS = {
-    .frames = { WUPA_FRAME, ECP_FRAME },
-    .frame_count = 2,
-    .extra_timeout = 100
+    .frames={ WUPA_FRAME, ECP_FRAME }, 
+    .frame_count=2,
+    .extra_timeout=100
 };
 
 static iso14a_polling_parameters FULL_POLLING_PARAMETERS = {
-    .frames = { WUPA_FRAME, ECP_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME },
-    .frame_count = 6,
-    .extra_timeout = 100
+    .frames={ WUPA_FRAME, ECP_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME }, 
+    .frame_count=6,
+    .extra_timeout=100
 };
 
 
@@ -2569,33 +2569,32 @@ static void iso14a_set_ATS_times(const uint8_t *ats) {
 }
 
 
-static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters parameters) {
-#define WUPA_RETRY_TIMEOUT 10
+static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters *polling_parameters) {
+    #define WUPA_RETRY_TIMEOUT 10 
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
 
     bool first_try = true;
-    uint32_t retry_timeout = WUPA_RETRY_TIMEOUT * parameters.frame_count + parameters.extra_timeout;
+    uint32_t retry_timeout = WUPA_RETRY_TIMEOUT * polling_parameters->frame_count + polling_parameters->extra_timeout;
     uint32_t start_time;
     int len;
 
     uint8_t current_frame = 0;
 
     do {
-        iso14a_polling_frame frame_parameters = parameters.frames[current_frame];
+        iso14a_polling_frame *frame_parameters = &polling_parameters->frames[current_frame];
 
-        if (frame_parameters.last_byte_bits == 8) {
-            ReaderTransmit(frame_parameters.frame, frame_parameters.frame_length, NULL);
-
+        if (frame_parameters->last_byte_bits == 8) {
+            ReaderTransmit(frame_parameters->frame, frame_parameters->frame_length, NULL);
         } else {
-            ReaderTransmitBitsPar(frame_parameters.frame, frame_parameters.last_byte_bits, NULL, NULL);
+            ReaderTransmitBitsPar(frame_parameters->frame, frame_parameters->last_byte_bits, NULL, NULL);
         }
 
-        if (frame_parameters.extra_delay) {
-            SpinDelay(frame_parameters.extra_delay);
+        if (frame_parameters->extra_delay) {
+            SpinDelay(frame_parameters->extra_delay);
         }
-
+        
         // Receive the ATQA
         len = ReaderReceive(resp, resp_par);
 
@@ -2606,8 +2605,8 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters p
 
         first_try = false;
 
-        // Go over frame configurations
-        current_frame = current_frame < (parameters.frame_count - 1) ? current_frame + 1 : 0;
+        // Go over frame configurations, loop back when we reach the end
+        current_frame = current_frame < (polling_parameters->frame_count - 1) ? current_frame + 1 : 0;
     } while (len == 0 && GetTickCountDelta(start_time) <= retry_timeout);
 
     iso14a_set_timeout(save_iso14a_timeout);
@@ -2616,7 +2615,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters p
 
 
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
-    return iso14443a_select_cardEx(uid_ptr, p_card, cuid_ptr, anticollision, num_cascades, no_rats, false, false);
+    return iso14443a_select_cardEx(uid_ptr, p_card, cuid_ptr, anticollision, num_cascades, no_rats, &WUPA_POLLING_PARAMETERS);
 }
 
 
@@ -2628,7 +2627,7 @@ iso14a_polling_parameters iso14a_get_polling_parameters(bool use_ecp, bool use_m
         return ECP_POLLING_PARAMETERS;
     } else if (use_magsafe) {
         return MAGSAFE_POLLING_PARAMETERS;
-    }
+    } 
     return WUPA_POLLING_PARAMETERS;
 }
 
@@ -2638,7 +2637,7 @@ iso14a_polling_parameters iso14a_get_polling_parameters(bool use_ecp, bool use_m
 // if anticollision is false, then the UID must be provided in uid_ptr[]
 // and num_cascades must be set (1: 4 Byte UID, 2: 7 Byte UID, 3: 10 Byte UID)
 // requests ATS unless no_rats is true
-int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats, bool use_ecp, bool use_magsafe) {
+int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats, iso14a_polling_parameters *polling_parameters) {
 
     uint8_t resp[MAX_FRAME_SIZE] = {0}; // theoretically. A usual RATS will be much smaller
     uint8_t resp_par[MAX_PARITY_SIZE] = {0};
@@ -2653,7 +2652,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
         p_card->ats_len = 0;
     }
 
-    if (GetATQA(resp, resp_par, iso14a_get_polling_parameters(use_ecp, use_magsafe)) == false) {
+    if (GetATQA(resp, resp_par, polling_parameters) == false) {
         return 0;
     }
 
@@ -2678,11 +2677,11 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             memcpy(p_card->uid, resp, 4);
 
             // select again?
-            if (GetATQA(resp, resp_par, WUPA_POLLING_PARAMETERS) == false) {
+            if (GetATQA(resp, resp_par, &WUPA_POLLING_PARAMETERS) == false) {
                 return 0;
             }
 
-            if (GetATQA(resp, resp_par, WUPA_POLLING_PARAMETERS) == false) {
+            if (GetATQA(resp, resp_par, &WUPA_POLLING_PARAMETERS) == false) {
                 return 0;
             }
 
@@ -2881,7 +2880,7 @@ int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades) {
     uint8_t sak = 0x04; // cascade uid
     int cascade_level = 0;
 
-    if (!GetATQA(resp, resp_par, WUPA_POLLING_PARAMETERS)) {
+    if (!GetATQA(resp, resp_par, &WUPA_POLLING_PARAMETERS)) {
         return 0;
     }
 
@@ -3089,7 +3088,8 @@ void ReaderIso14443a(PacketCommandNG *c) {
         // if failed selecting, turn off antenna and quite.
         if (!(param & ISO14A_NO_SELECT)) {
             iso14a_card_select_t *card = (iso14a_card_select_t *)buf;
-            arg0 = iso14443a_select_cardEx(NULL, card, NULL, true, 0, (param & ISO14A_NO_RATS), (param & ISO14A_USE_ECP), (param & ISO14A_USE_MAGSAFE));
+            iso14a_polling_parameters polling_parameters = iso14a_get_polling_parameters(param & ISO14A_USE_ECP, param & ISO14A_USE_MAGSAFE);
+            arg0 = iso14443a_select_cardEx(NULL, card, NULL, true, 0, (param & ISO14A_NO_RATS), &polling_parameters);
             FpgaDisableTracing();
 
             reply_mix(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
