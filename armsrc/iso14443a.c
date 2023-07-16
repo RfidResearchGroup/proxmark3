@@ -145,35 +145,8 @@ static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
 
 // Polling frames and configurations 
 
-/*static iso14a_polling_frame REQA_FRAME = { 
-    { 0x26 }, 1, 7, 0 
-};*/
-
 static const iso14a_polling_frame WUPA_FRAME = { 
     { 0x52 }, 1, 7, 0,
-};
-
-static const iso14a_polling_frame MAGWUPA1_FRAME = { 
-    { 0x7A }, 1, 7, 0 
-};
-
-static const iso14a_polling_frame MAGWUPA2_FRAME = { 
-    { 0x7B }, 1, 7, 0 
-};
-
-static const iso14a_polling_frame MAGWUPA3_FRAME = { 
-    { 0x7C }, 1, 7, 0 
-};
-
-static const iso14a_polling_frame MAGWUPA4_FRAME = { 
-    { 0x7D }, 1, 7, 0 
-};
-
-static const iso14a_polling_frame ECP_FRAME = { 
-    .frame={ 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8},
-    .frame_length=15, 
-    .last_byte_bits=8, 
-    .extra_delay=0 
 };
 
 static iso14a_polling_parameters WUPA_POLLING_PARAMETERS = {
@@ -182,24 +155,6 @@ static iso14a_polling_parameters WUPA_POLLING_PARAMETERS = {
     .extra_timeout=0,
 };
 
-static iso14a_polling_parameters MAGSAFE_POLLING_PARAMETERS = {
-    .frames={ WUPA_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME }, 
-    .frame_count=5,
-    .extra_timeout=0
-};
-
-// Extra 100ms give enough time for Apple devices to proccess field info and make a decision
-static iso14a_polling_parameters ECP_POLLING_PARAMETERS = {
-    .frames={ WUPA_FRAME, ECP_FRAME }, 
-    .frame_count=2,
-    .extra_timeout=100
-};
-
-static iso14a_polling_parameters FULL_POLLING_PARAMETERS = {
-    .frames={ WUPA_FRAME, ECP_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME }, 
-    .frame_count=6,
-    .extra_timeout=100
-};
 
 
 void printHf14aConfig(void) {
@@ -2619,18 +2574,6 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
 }
 
 
-// This method is temporary. Main intention is to move "special" polling frame configuration to the client
-iso14a_polling_parameters iso14a_get_polling_parameters(bool use_ecp, bool use_magsafe) {
-    if (use_ecp && use_magsafe) {
-        return FULL_POLLING_PARAMETERS;
-    } else if (use_ecp) {
-        return ECP_POLLING_PARAMETERS;
-    } else if (use_magsafe) {
-        return MAGSAFE_POLLING_PARAMETERS;
-    } 
-    return WUPA_POLLING_PARAMETERS;
-}
-
 // performs iso14443a anticollision (optional) and card select procedure
 // fills the uid and cuid pointer unless NULL
 // fills the card info record unless NULL
@@ -3088,8 +3031,12 @@ void ReaderIso14443a(PacketCommandNG *c) {
         // if failed selecting, turn off antenna and quite.
         if (!(param & ISO14A_NO_SELECT)) {
             iso14a_card_select_t *card = (iso14a_card_select_t *)buf;
-            iso14a_polling_parameters polling_parameters = iso14a_get_polling_parameters(param & ISO14A_USE_ECP, param & ISO14A_USE_MAGSAFE);
-            arg0 = iso14443a_select_cardEx(NULL, card, NULL, true, 0, (param & ISO14A_NO_RATS), &polling_parameters);
+
+            arg0 = iso14443a_select_cardEx(
+                NULL, card, NULL, true, 0, (param & ISO14A_NO_RATS), 
+                (param & ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters *)cmd : &WUPA_POLLING_PARAMETER
+            );
+            // This can be improved by adding a cmd parser pointer and moving it by struct length to allow combining data with polling params
             FpgaDisableTracing();
 
             reply_mix(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));

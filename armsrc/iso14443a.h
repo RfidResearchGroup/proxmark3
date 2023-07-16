@@ -108,24 +108,6 @@ typedef enum {
     RESP_INDEX_PACK,
 } resp_index_t;
 
-// Defines a frame that will be used in a polling sequence
-// ECP Frames are up to (7 + 16) bytes long, 24 bytes should cover future and other cases
-typedef struct {
-    uint8_t frame[24];
-    uint8_t frame_length;
-    uint8_t last_byte_bits;
-    uint16_t extra_delay;
-} iso14a_polling_frame;
-
-// Defines polling sequence configuration
-// 6 would be enough for 4 magsafe, 1 wupa, 1 ecp,
-typedef struct {
-   iso14a_polling_frame frames[6]; 
-   uint8_t frame_count;
-   uint16_t extra_timeout;
-} iso14a_polling_parameters;
-
-
 #ifndef AddCrc14A
 # define AddCrc14A(data, len) compute_crc(CRC_14443_A, (data), (len), (data)+(len), (data)+(len)+1)
 #endif
@@ -166,7 +148,6 @@ void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t
 void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *timing);
 uint16_t ReaderReceive(uint8_t *receivedAnswer, uint8_t *par);
 
-iso14a_polling_parameters iso14a_get_polling_parameters(bool use_ecp, bool use_magsafe);
 void iso14443a_setup(uint8_t fpga_minor_mode);
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint8_t *res);
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats);

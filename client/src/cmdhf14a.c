@@ -434,6 +434,71 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     return 0;
 }
 
+iso14a_polling_parameters iso14a_get_polling_parameters(bool use_ecp, bool use_magsafe) {
+
+    iso14a_polling_frame WUPA_FRAME = { 
+        { 0x52 }, 1, 7, 0,
+    };
+
+    iso14a_polling_frame MAGWUPA1_FRAME = { 
+        { 0x7A }, 1, 7, 0 
+    };
+
+    iso14a_polling_frame MAGWUPA2_FRAME = { 
+        { 0x7B }, 1, 7, 0 
+    };
+
+    iso14a_polling_frame MAGWUPA3_FRAME = { 
+        { 0x7C }, 1, 7, 0 
+    };
+
+    iso14a_polling_frame MAGWUPA4_FRAME = { 
+        { 0x7D }, 1, 7, 0 
+    };
+
+    iso14a_polling_frame ECP_FRAME = { 
+        .frame={ 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8},
+        .frame_length=15, 
+        .last_byte_bits=8, 
+        .extra_delay=0 
+    };
+
+    iso14a_polling_parameters WUPA_POLLING_PARAMETERS = {
+        .frames={ WUPA_FRAME }, 
+        .frame_count=1, 
+        .extra_timeout=0,
+    };
+
+    iso14a_polling_parameters MAGSAFE_POLLING_PARAMETERS = {
+        .frames={ WUPA_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME }, 
+        .frame_count=5,
+        .extra_timeout=0
+    };
+
+    // Extra 100ms give enough time for Apple devices to proccess field info and make a decision
+    iso14a_polling_parameters ECP_POLLING_PARAMETERS = {
+        .frames={ WUPA_FRAME, ECP_FRAME }, 
+        .frame_count=2,
+        .extra_timeout=100
+    };
+
+    iso14a_polling_parameters FULL_POLLING_PARAMETERS = {
+        .frames={ WUPA_FRAME, ECP_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME }, 
+        .frame_count=6,
+        .extra_timeout=100
+    };
+
+    if (use_ecp && use_magsafe) {
+        return FULL_POLLING_PARAMETERS;
+    } else if (use_ecp) {
+        return ECP_POLLING_PARAMETERS;
+    } else if (use_magsafe) {
+        return MAGSAFE_POLLING_PARAMETERS;
+    } 
+    return WUPA_POLLING_PARAMETERS;
+}
+
+
 static int CmdHF14AReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a reader",
@@ -473,12 +538,10 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_NO_RATS;
     }
 
-    if (arg_get_lit(ctx, 5)) {
-        cm |= ISO14A_USE_ECP;
-    }
-
-    if (arg_get_lit(ctx, 6)) {
-        cm |= ISO14A_USE_MAGSAFE;
+    iso14a_polling_parameters polling_parameters;
+    if (arg_get_lit(ctx, 5) || arg_get_lit(ctx, 6)) {
+        cm |= ISO14A_USE_CUSTOM_POLLING;
+        polling_parameters = iso14a_get_polling_parameters(arg_get_lit(ctx, 5), arg_get_lit(ctx, 6));
     }
 
     bool continuous = arg_get_lit(ctx, 7);
@@ -494,7 +557,13 @@ static int CmdHF14AReader(const char *Cmd) {
     }
     do {
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
+
+        if (cm & ISO14A_USE_CUSTOM_POLLING) {
+            SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, (uint8_t *)&polling_parameters, sizeof(polling_parameters));
+        } else {
+            SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
+        }
+        
 
         if (ISO14A_CONNECT & cm) {
             PacketResponseNG resp;
