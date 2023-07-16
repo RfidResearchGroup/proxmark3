@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added support for LZ4 compressed hadnested tables (@doegox)
  - Changed `emv reader -v` - now tries to print found transactions logs (@iceman1001)
  - Added ISO4217 currency lookup (@iceman1001)
  - Fixed bad free in loadfilebinarykey fct.  Thanks to @gentilkiwi

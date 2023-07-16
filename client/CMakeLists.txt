@@ -183,6 +183,13 @@ else(EMBED_BZIP2)
     find_package (BZip2 REQUIRED)
 endif(EMBED_BZIP2)
 
+find_path(LZ4_INCLUDE_DIRS lz4frame.h)
+find_library(LZ4_LIBRARIES lz4)
+
+if (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
+    set(LZ4_FOUND ON)
+endif (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
+
 if (NOT SKIPWHEREAMISYSTEM EQUAL 1)
     find_path(WHEREAMI_INCLUDE_DIRS whereami.h)
     find_library(WHEREAMI_LIBRARIES whereami)
@@ -457,6 +464,11 @@ if (BZIP2_FOUND)
     set(ADDITIONAL_LNK ${BZIP2_LIBRARIES} ${ADDITIONAL_LNK})
 endif (BZIP2_FOUND)
 
+if (LZ4_FOUND)
+    set(ADDITIONAL_DIRS ${LZ4_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${LZ4_LIBRARIES} ${ADDITIONAL_LNK})
+endif (LZ4_FOUND)
+
 if (WHEREAMI_FOUND)
     set(ADDITIONAL_DIRS ${WHEREAMI_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${WHEREAMI_LIBRARIES} ${ADDITIONAL_LNK})
@@ -494,6 +506,12 @@ if (EMBED_BZIP2)
 else (EMBED_BZIP2)
     message(STATUS "Bzip2 library:     system library found")
 endif (EMBED_BZIP2)
+
+if (LZ4_FOUND)
+    message(STATUS "LZ4 library:       system library found")
+else (LZ4_FOUND)
+    message(SEND_ERROR "LZ4 library:       system library not found and no local library implemented")
+endif (LZ4_FOUND)
 
 if (SKIPJANSSONSYSTEM EQUAL 1)
     message(STATUS "Jansson library:   local library forced")

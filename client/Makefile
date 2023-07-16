@@ -242,6 +242,9 @@ endif
 ## BZIP2
 LDLIBS += -lbz2
 
+## LZ4
+LDLIBS += -llz4
+
 ## Bluez (optional)
 ifneq ($(SKIPBT),1)
     BTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags bluez 2>/dev/null)
