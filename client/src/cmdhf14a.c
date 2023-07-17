@@ -54,6 +54,35 @@ void Set_apdu_in_framing(bool v) {
 static int CmdHelp(const char *Cmd);
 static int waitCmd(bool i_select, uint32_t timeout, bool verbose);
 
+
+static const iso14a_polling_frame WUPA_FRAME = { 
+    { 0x52 }, 1, 7, 0,
+};
+
+static const iso14a_polling_frame MAGWUPA1_FRAME = { 
+    { 0x7A }, 1, 7, 0 
+};
+
+static const iso14a_polling_frame MAGWUPA2_FRAME = { 
+    { 0x7B }, 1, 7, 0 
+};
+
+static const iso14a_polling_frame MAGWUPA3_FRAME = { 
+    { 0x7C }, 1, 7, 0 
+};
+
+static const iso14a_polling_frame MAGWUPA4_FRAME = { 
+    { 0x7D }, 1, 7, 0 
+};
+
+static const  iso14a_polling_frame ECP_FRAME = { 
+    .frame={ 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8},
+    .frame_length=15, 
+    .last_byte_bits=8, 
+    .extra_delay=0 
+};
+
+
 static const manufactureName_t manufactureMapping[] = {
     // ID,  "Vendor Country"
     { 0x01, "Motorola UK" },
@@ -434,6 +463,41 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     return 0;
 }
 
+iso14a_polling_parameters iso14a_get_polling_parameters(bool use_ecp, bool use_magsafe) {
+    // Extra 100ms give enough time for Apple (ECP) devices to proccess field info and make a decision
+    
+    if (use_ecp && use_magsafe) {
+        iso14a_polling_parameters full_polling_parameters = {
+            .frames={ WUPA_FRAME, ECP_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME }, 
+            .frame_count=6,
+            .extra_timeout=100
+        };
+        return full_polling_parameters;
+    } else if (use_ecp) {
+        iso14a_polling_parameters ecp_polling_parameters = {
+            .frames={ WUPA_FRAME, ECP_FRAME }, 
+            .frame_count=2,
+            .extra_timeout=100
+        };
+        return ecp_polling_parameters;
+    } else if (use_magsafe) {
+        iso14a_polling_parameters magsafe_polling_parameters = {
+            .frames={ WUPA_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME }, 
+            .frame_count=5,
+            .extra_timeout=0
+        };
+        return magsafe_polling_parameters;
+    } 
+
+    iso14a_polling_parameters wupa_polling_parameters = {
+        .frames={ WUPA_FRAME }, 
+        .frame_count=1, 
+        .extra_timeout=0,
+    };
+    return wupa_polling_parameters;
+}
+
+
 static int CmdHF14AReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a reader",
@@ -473,12 +537,14 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_NO_RATS;
     }
 
-    if (arg_get_lit(ctx, 5)) {
-        cm |= ISO14A_USE_ECP;
-    }
+    bool use_ecp = arg_get_lit(ctx, 5);
+    bool use_magsafe = arg_get_lit(ctx, 6);
 
-    if (arg_get_lit(ctx, 6)) {
-        cm |= ISO14A_USE_MAGSAFE;
+    iso14a_polling_parameters * polling_parameters = NULL;
+    iso14a_polling_parameters parameters = iso14a_get_polling_parameters(use_ecp, use_magsafe);
+    if (use_ecp || use_magsafe) {
+        cm |= ISO14A_USE_CUSTOM_POLLING;
+        polling_parameters = &parameters;
     }
 
     bool continuous = arg_get_lit(ctx, 7);
@@ -494,7 +560,13 @@ static int CmdHF14AReader(const char *Cmd) {
     }
     do {
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
+
+        if (cm & ISO14A_USE_CUSTOM_POLLING) {
+            SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters));
+        } else {
+            SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
+        }
+        
 
         if (ISO14A_CONNECT & cm) {
             PacketResponseNG resp;
@@ -831,7 +903,6 @@ int CmdHF14ASniff(const char *Cmd) {
 }
 
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool silentMode) {
-
     uint16_t cmdc = 0;
     *dataoutlen = 0;
 
@@ -893,8 +964,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     return 0;
 }
 
-int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card) {
-
+int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card_select_t *card, iso14a_polling_parameters *polling_parameters) {
     // global vars should be prefixed with g_
     gs_frame_len = 0;
     gs_frames_num = 0;
@@ -907,7 +977,12 @@ int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card
 
     // Anticollision + SELECT card
     PacketResponseNG resp;
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    if (polling_parameters != NULL) {
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_USE_CUSTOM_POLLING, 0, 0, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters));
+    } else {
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    }
+    
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
@@ -971,6 +1046,10 @@ int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card
     }
 
     return PM3_SUCCESS;
+}
+
+int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card) {
+    return SelectCard14443A_4_WithParameters(disconnect, verbose, card, NULL);
 }
 
 static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chainingout) {
@@ -1354,14 +1433,13 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         flags |= ISO14A_NO_RATS;
     }
 
-    if (use_ecp) {
-        flags |= ISO14A_USE_ECP;
+    // TODO: allow to use reader command with both data and polling configuration
+    if (use_ecp | use_magsafe) {
+        PrintAndLogEx(WARNING, "ECP and Magsafe not supported with this command at this moment. Instead use 'hf 14a reader -sk --ecp/--mag'");
+        // flags |= ISO14A_USE_MAGSAFE;
+        // flags |= ISO14A_USE_ECP;
     }
-
-    if (use_magsafe) {
-        flags |= ISO14A_USE_MAGSAFE;
-    }
-
+    
     // Max buffer is PM3_CMD_DATA_SIZE
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
