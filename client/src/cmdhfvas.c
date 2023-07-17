@@ -41,18 +41,18 @@
 #include "mbedtls/ecc_point_compression.h"
 #include "mbedtls/gcm.h"
 
-static const iso14a_polling_frame WUPA_FRAME = { 
-    .frame={ 0x52 },
-    .frame_length=1,
-    .last_byte_bits=7,
-    .extra_delay=0,
+static const iso14a_polling_frame WUPA_FRAME = {
+    .frame = { 0x52 },
+    .frame_length = 1,
+    .last_byte_bits = 7,
+    .extra_delay = 0,
 };
 
 static const iso14a_polling_frame ECP_VAS_ONLY_FRAME = {
-    .frame={0x6a, 0x01, 0x00, 0x00, 0x02, 0xe4, 0xd2},
-    .frame_length=7,
-    .last_byte_bits=8,
-    .extra_delay=0,
+    .frame = {0x6a, 0x01, 0x00, 0x00, 0x02, 0xe4, 0xd2},
+    .frame_length = 7,
+    .last_byte_bits = 8,
+    .extra_delay = 0,
 };
 
 uint8_t aid[] = { 0x4f, 0x53, 0x45, 0x2e, 0x56, 0x41, 0x53, 0x2e, 0x30, 0x31 };
@@ -350,9 +350,9 @@ static int VASReader(uint8_t *pidHash, const char *url, size_t urlLen, uint8_t *
     clearCommandBuffer();
 
     iso14a_polling_parameters polling_parameters = {
-        .frames={ WUPA_FRAME, ECP_VAS_ONLY_FRAME }, 
-        .frame_count=2,
-        .extra_timeout=250
+        .frames = { WUPA_FRAME, ECP_VAS_ONLY_FRAME },
+        .frame_count = 2,
+        .extra_timeout = 250
     };
 
     if (SelectCard14443A_4_WithParameters(false, false, NULL, &polling_parameters) != PM3_SUCCESS) {

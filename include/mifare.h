@@ -91,9 +91,9 @@ typedef struct {
 // Defines polling sequence configuration
 // 6 would be enough for 4 magsafe, 1 wupa, 1 ecp,
 typedef struct {
-   iso14a_polling_frame frames[6]; 
-   uint8_t frame_count;
-   uint16_t extra_timeout;
+    iso14a_polling_frame frames[6];
+    uint8_t frame_count;
+    uint16_t extra_timeout;
 } iso14a_polling_parameters;
 
 typedef struct {
