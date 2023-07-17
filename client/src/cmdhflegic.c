@@ -536,20 +536,21 @@ static int CmdLegicSim(const char *Cmd) {
     SendCommandNG(CMD_HF_LEGIC_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
-    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
-    bool keypress = kbd_enter_pressed();
-    while (keypress == false) {
-        keypress = kbd_enter_pressed();
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "User aborted");
+            break;
+        }
 
         if (WaitForResponseTimeout(CMD_HF_LEGIC_SIMULATE, &resp, 1500)) {
             break;
         }
-
     }
-    if (keypress)
-        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
 
     PrintAndLogEx(INFO, "Done");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf legic list") "` to view trace log");
     return PM3_SUCCESS;
 }
 
