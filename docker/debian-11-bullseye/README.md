@@ -9,7 +9,7 @@ If all tests OK,  the script will finish with PASS.
 The script is to be run in proxmark root folder inside the docker env.
 
 ```
-docker/debian-bullseye/run_tests.sh;
+docker/debian-11-bullseye/run_tests.sh;
 ```
 
 Or if you want to run single test,
