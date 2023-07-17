@@ -242,6 +242,9 @@ endif
 ## BZIP2
 LDLIBS += -lbz2
 
+## LZ4
+LDLIBS += -llz4
+
 ## Bluez (optional)
 ifneq ($(SKIPBT),1)
     BTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags bluez 2>/dev/null)
@@ -434,7 +437,13 @@ LDFLAGS += $(MYLDFLAGS)
 
 PM3LDFLAGS = $(LDFLAGS)
 ifeq ($(platform),Darwin)
-    PM3LDFLAGS += -framework Foundation -framework AppKit
+    ifeq ($(shell uname -p),arm64)
+        # The platform is iOS
+        PM3LDFLAGS += -framework Foundation -framework UIKit
+    else
+        # M* macOS devices return arm
+        PM3LDFLAGS += -framework Foundation -framework AppKit
+    endif
 endif
 
 ###################
@@ -591,6 +600,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdhfthinfilm.c \
 		cmdhftopaz.c \
 		cmdhftexkom.c \
+		cmdhfvas.c \
 		cmdhfwaveshare.c \
 		cmdhfxerox.c \
 		cmdhw.c \
@@ -671,6 +681,7 @@ SRCS =  mifare/aiddesfire.c \
 		generator.c \
 		graph.c \
 		jansson_path.c \
+		iso4217.c \
 		iso7816/apduinfo.c \
 		iso7816/iso7816core.c \
 		loclass/cipher.c \

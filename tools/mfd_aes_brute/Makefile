@@ -9,6 +9,9 @@ MYLDLIBS = -lcrypto
 cpu_arch = $(shell uname -m)
 ifneq ($(findstring arm64, $(cpu_arch)), )
     MYCFLAGS += -mcpu=native
+# iOS 'fun'
+else ifneq ($(findstring iP, $(cpu_arch)), )
+    MYCFLAGS += -mcpu=native
 else
     MYCFLAGS += -march=native
 endif

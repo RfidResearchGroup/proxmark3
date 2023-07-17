@@ -32,12 +32,16 @@
 
 #define STRBOOL(p) ((p) ? "1" : "0")
 
-#define NDEF_WIFIAPPL_WSC "application/vnd.wfa.wsc"
-#define NDEF_WIFIAPPL_P2P "application/vnd.wfa.p2p"
-#define NDEF_BLUEAPPL     "application/vnd.bluetooth"
-#define NDEF_JSONAPPL     "application/json"
-#define NDEF_VCARDTEXT    "text/vcard"
-#define NDEF_XVCARDTEXT   "text/x-vcard"
+#define NDEF_WIFIAPPL_WSC    "application/vnd.wfa.wsc"
+#define NDEF_WIFIAPPL_P2P    "application/vnd.wfa.p2p"
+#define NDEF_JSONAPPL        "application/json"
+#define NDEF_VCARDTEXT       "text/vcard"
+#define NDEF_XVCARDTEXT      "text/x-vcard"
+
+#define NDEF_BLUEAPPL_EP        "application/vnd.bluetooth.ep.oob"
+#define NDEF_BLUEAPPL_LE        "application/vnd.bluetooth.le.oob"
+#define NDEF_BLUEAPPL_SECURE_LE "application/vnd.bluetooth.secure.le.oob"
+
 
 static const char *TypeNameFormat_s[] = {
     "Empty Record",
@@ -854,6 +858,26 @@ static int ndefDecodeMime_json(NDEFHeader_t *ndef) {
     return PM3_SUCCESS;
 }
 
+static int ndefDecodeMime_bt_secure_le_oob(NDEFHeader_t *ndef) {
+    if (ndef->PayloadLen == 0) {
+        PrintAndLogEx(INFO, "no payload");
+        return PM3_SUCCESS;
+    }
+    PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
+    PrintAndLogEx(INFO, "To be implemented. Feel free to contribute!");
+    return PM3_SUCCESS;
+}
+
+static int ndefDecodeMime_bt_le_oob(NDEFHeader_t *ndef) {
+    if (ndef->PayloadLen == 0) {
+        PrintAndLogEx(INFO, "no payload");
+        return PM3_SUCCESS;
+    }
+    PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
+    PrintAndLogEx(INFO, "To be implemented. Feel free to contribute!");
+    return PM3_SUCCESS;
+}
+
 static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
     if (ndef->PayloadLen == 0) {
         PrintAndLogEx(INFO, "no payload");
@@ -927,7 +951,7 @@ static int ndefDecodeExternal_record(NDEFHeader_t *ndef) {
     print_hex_noascii_break(ndef->Payload, ndef->PayloadLen, 32);
 
     // do a character check?
-    if (!strncmp((char *)ndef->Type, "pilet.ee:ekaart:2", ndef->TypeLen)) {
+    if (!strncmp((char *)ndef->Type, "pilet.ee:ekaart:", ndef->TypeLen - 1)) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, _GREEN_("Ekaart detected") " - Trying ASN1 decode...");
         asn1_print(ndef->Payload, ndef->PayloadLen, " ");
@@ -1023,9 +1047,18 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
             if (str_startswith(begin, NDEF_VCARDTEXT) || str_startswith(begin, NDEF_XVCARDTEXT)) {
                 ndefDecodeMime_vcard(ndef);
             }
-            if (str_startswith(begin, NDEF_BLUEAPPL)) {
+
+
+            if (str_startswith(begin, NDEF_BLUEAPPL_EP)) {
                 ndefDecodeMime_bt(ndef);
             }
+            if (str_startswith(begin, NDEF_BLUEAPPL_SECURE_LE)) {
+                ndefDecodeMime_bt_secure_le_oob(ndef);
+            }
+            if (str_startswith(begin, NDEF_BLUEAPPL_LE)) {
+                ndefDecodeMime_bt_le_oob(ndef);
+            }
+
             if (str_startswith(begin, NDEF_JSONAPPL)) {
                 ndefDecodeMime_json(ndef);
             }
@@ -1075,10 +1108,11 @@ static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen, b
         return res;
 
     ndefPrintHeader(&NDEFHeader, verbose);
-    PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, _CYAN_("Payload info"));
 
     if (verbose) {
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, _CYAN_("Payload info"));
+
         if (NDEFHeader.TypeLen) {
             PrintAndLogEx(INFO, "Type data");
             print_buffer(NDEFHeader.Type, NDEFHeader.TypeLen, 1);
@@ -1229,7 +1263,9 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 break;
             }
             case 0xFE: {
-                PrintAndLogEx(SUCCESS, "NDEF Terminator detected");
+                if (verbose) {
+                    PrintAndLogEx(SUCCESS, "NDEF Terminator detected");
+                }
                 return PM3_SUCCESS;
             }
             default: {

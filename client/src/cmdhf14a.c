@@ -194,6 +194,7 @@ static const hintAIDList_t hintAIDList[] = {
     { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (ppse)", "emv" },
     { "\x41\x44\x20\x46\x31", 5, "CIPURSE", "hf cipurse" },
     { "\xd2\x76\x00\x00\x85\x01\x00", 7, "desfire", "hf mfdes" },
+    { "\x4F\x53\x45\x2E\x56\x41\x53\x2E\x30\x31", 10, "Apple VAS", "hf vas"},
 };
 
 // iso14a apdu input frame length
@@ -1008,7 +1009,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
         *dataoutlen += dlen;
 
         if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
-            PrintAndLogEx(ERR, "APDU: Buffer too small(%d), needs %d bytes", *dataoutlen, maxdataoutlen);
+            PrintAndLogEx(DEBUG, "ERR: APDU: Buffer too small(%d), needs %d bytes", *dataoutlen, maxdataoutlen);
             return PM3_EAPDU_FAIL;
         }
 
@@ -1020,19 +1021,19 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
         }
 
         if (!iLen) {
-            PrintAndLogEx(ERR, "APDU: No APDU response");
+            PrintAndLogEx(DEBUG, "ERR: APDU: No APDU response");
             return PM3_EAPDU_FAIL;
         }
 
         // check apdu length
         if (iLen < 2 && iLen >= 0) {
-            PrintAndLogEx(ERR, "APDU: Small APDU response, len %d", iLen);
+            PrintAndLogEx(DEBUG, "ERR: APDU: Small APDU response, len %d", iLen);
             return PM3_EAPDU_FAIL;
         }
 
         // check block TODO
         if (iLen == -2) {
-            PrintAndLogEx(ERR, "APDU: Block type mismatch");
+            PrintAndLogEx(DEBUG, "ERR: APDU: Block type mismatch");
             return PM3_EAPDU_FAIL;
         }
 
@@ -1045,11 +1046,11 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
 
         // CRC Check
         if (iLen == -1) {
-            PrintAndLogEx(ERR, "APDU: ISO 14443A CRC error");
+            PrintAndLogEx(DEBUG, "ERR: APDU: ISO 14443A CRC error");
             return PM3_EAPDU_FAIL;
         }
     } else {
-        PrintAndLogEx(ERR, "APDU: Reply timeout");
+        PrintAndLogEx(DEBUG, "ERR: APDU: Reply timeout");
         return PM3_EAPDU_FAIL;
     }
 
@@ -2362,7 +2363,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf st info`"));
 
     if (isEMV)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv search -s`"));
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv reader`"));
 
     if (isFUDAN) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf fudan dump`"));
@@ -2416,10 +2417,9 @@ int infoHF14A4Applications(bool verbose) {
     }
 
     if (found) {
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "---------------------------------------------------");
-        else
-            PrintAndLogEx(INFO, "Short AID search:");
+        }
 
         if (found >= ARRAYLEN(hintAIDList) - 1) {
             PrintAndLogEx(HINT, "Hint: card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");

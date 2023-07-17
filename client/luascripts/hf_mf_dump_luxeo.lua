@@ -231,12 +231,25 @@ local function main(args)
     print(acblue.."UID: "..tag.uid..acoff)
     print(acblue..string.format("XTEA key: %08X %08X %08X %08X", xteakey[0], xteakey[1], xteakey[2], xteakey[3])..acoff)
 
-    edata, cdata = readtag("415A54454B4D", xteakey)
+    local keys = {
+        "415A54454B4D",
+        "4B6A43059B64",
+        "C8BE6250C9C5",
+    }
+
+    for i, key in ipairs(keys) do
+        edata, cdata = readtag(key, xteakey)
+        if edata and cdata then
+            goto continue
+        end
+    end
 
     if edata == nil or cdata == nil then
         print("ERROR Reading tag!")
         return nil
     end
+
+    ::continue::
 
     print("Ciphered data:")
     for key,value in ipairs(edata) do

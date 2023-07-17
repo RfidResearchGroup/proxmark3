@@ -60,6 +60,7 @@
 #include "ticks.h"
 #include "commonutil.h"
 #include "crc16.h"
+#include "protocols.h"
 
 
 #ifdef WITH_LCD
@@ -1556,7 +1557,9 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_MIFARE_READBL: {
             mf_readblock_t *payload = (mf_readblock_t *)packet->data.asBytes;
-            MifareReadBlock(payload->blockno, payload->keytype, payload->key);
+            uint8_t outbuf[16];
+            int16_t retval = mifare_cmd_readblocks(MIFARE_AUTH_KEYA + (payload->keytype & 1), payload->key, ISO14443A_CMD_READBLOCK, payload->blockno, 1, outbuf);
+            reply_ng(CMD_HF_MIFARE_READBL, retval, outbuf, sizeof(outbuf));
             break;
         }
         case CMD_HF_MIFAREU_READBL: {
@@ -1580,7 +1583,19 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_WRITEBL: {
-            MifareWriteBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            uint8_t block_no = packet->oldarg[0];
+            uint8_t key_type = packet->oldarg[1];
+            uint8_t *key = packet->data.asBytes;
+            uint8_t *block_data = packet->data.asBytes + 10;
+
+            int16_t retval = mifare_cmd_writeblocks(MIFARE_AUTH_KEYA + (key_type & 1), key, ISO14443A_CMD_WRITEBLOCK, block_no, 1, block_data);
+
+            // convert ng style retval to old status
+            if (retval >= 0) {
+                retval = 1;
+            }
+
+            reply_mix(CMD_ACK, retval, 0, 0, 0, 0);
             break;
         }
         case CMD_HF_MIFARE_VALUE: {
@@ -1740,7 +1755,9 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t key[6];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareReadConfigBlockGDM(payload->key);
+            uint8_t outbuf[16];
+            int16_t retval = mifare_cmd_readblocks(MIFARE_MAGIC_GDM_AUTH_KEY, payload->key, MIFARE_MAGIC_GDM_READ_CFG, 0, 1, outbuf);
+            reply_ng(CMD_HF_MIFARE_G4_GDM_CONFIG, retval, outbuf, sizeof(outbuf));
             break;
         }
         case CMD_HF_MIFARE_G4_GDM_WRCFG: {
@@ -1748,18 +1765,20 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t data[16];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareWriteConfigBlockGDM(payload->data);
+            uint8_t key[6] = {0, 0, 0, 0, 0, 0};
+            int16_t retval = mifare_cmd_writeblocks(MIFARE_MAGIC_GDM_AUTH_KEY, key, MIFARE_MAGIC_GDM_WRITE_CFG, 0, 1, payload->data);
+            reply_ng(CMD_HF_MIFARE_G4_GDM_WRCFG, retval, NULL, 0);
             break;
         }
         case CMD_HF_MIFARE_G4_GDM_WRBL: {
             struct p {
                 uint8_t blockno;
-                uint8_t keytype;
                 uint8_t key[6];
                 uint8_t data[16]; // data to be written
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareWriteBlockGDM(payload->blockno, payload->keytype, payload->key, payload->data);
+            int16_t retval = mifare_cmd_writeblocks(MIFARE_MAGIC_GDM_AUTH_KEY, payload->key, MIFARE_MAGIC_GDM_WRITEBLOCK, payload->blockno, 1, payload->data);
+            reply_ng(CMD_HF_MIFARE_G4_GDM_WRBL, retval, NULL, 0);
             break;
         }
         case CMD_HF_MIFARE_PERSONALIZE_UID: {

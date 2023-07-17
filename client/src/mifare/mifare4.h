@@ -79,6 +79,7 @@ uint8_t mfFirstBlockOfSector(uint8_t sectorNo);
 uint8_t mfSectorTrailerOfSector(uint8_t sectorNo);
 uint8_t mfSectorTrailer(uint16_t blockNo);
 bool mfIsSectorTrailer(uint16_t blockNo);
+bool mfIsSectorTrailerBasedOnBlocks(uint8_t sectorno, uint16_t blockno);
 uint8_t mfSectorNum(uint16_t blockNo);
 
 

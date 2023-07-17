@@ -58,7 +58,8 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | `SKIPLUASYSTEM` | yes | **no** |   |
 | lualibs/pm3_cmd.lua | yes | add_custom_command **but unused** | |
 | lualibs/mfc_default_keys.lua | yes | add_custom_command **but unused** | |
-| dep lz4 |  |  | (in_common) not yet used, future. See `get_lz4.sh` for upstream fetch & patch |
+| dep lz4 | sys | sys | + in_common only used by FW. See `get_lz4.sh` for upstream fetch & patch |
+| lz4 detection | **none** | find, Cross:gitclone | |
 | dep libm | sys | sys | |
 | libm detection | **none** | **none** (1) | (1) cf https://cmake.org/pipermail/cmake/2019-March/069168.html ? |
 | dep mbedtls | in_common | in_common | no sys lib: missing support for CMAC in def conf (btw no .pc available) |

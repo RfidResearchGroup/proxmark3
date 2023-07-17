@@ -95,14 +95,6 @@
             ],
             "usage": "analyse freq [-h] [-F <int>] [-L <int>] [-C <int>]"
         },
-        "analyse help": {
-            "command": "analyse help",
-            "description": "help This help lcr Generate final byte for XOR LRC crc Stub method for CRC evaluations chksum Checksum with adding, masking and one's complement dates Look for datestamps in a given array of bytes lfsr LFSR tests a num bits test nuid create NUID from 7byte UID demodbuff Load binary string to DemodBuffer freq Calc wave lengths foo muxer units convert ETU <> US <> SSP_CLK (3.39MHz)",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "analyse lcr": {
             "command": "analyse lcr",
             "description": "Specifying the bytes of a UID with a known LRC will find the last byte value needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.",
@@ -332,8 +324,7 @@
                 "data diff -a fileA -b fileB",
                 "data diff -a fileA --eb",
                 "data diff --fa fileA -b fileB",
-                "data diff --fa fileA --fb fileB",
-                "data diff --ea --cb"
+                "data diff --fa fileA --fb fileB"
             ],
             "offline": true,
             "options": [
@@ -403,14 +394,6 @@
                 "-y <dec> plot grid Y coord"
             ],
             "usage": "data grid [-h] [-x <dec>] [-y <dec>]"
-        },
-        "data help": {
-            "command": "data help",
-            "description": "help This help ----------- ------------------------- Modulation------------------------- biphaserawdecode Biphase decode bin stream in DemodBuffer detectclock Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer fsktonrz Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode Manchester decode binary stream in DemodBuffer modulation Identify LF signal for clock and modulation rawdemod Demodulate the data in the GraphBuffer and output binary ----------- ------------------------- Graph------------------------- askedgedetect Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave autocorr Autocorrelation over window dirthreshold Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev. decimate Decimate samples undecimate Un-decimate samples hide Hide graph window hpf Remove DC offset from trace iir Apply IIR buttersworth filter on plot data grid overlay grid on graph window ltrim Trim samples from left of trace mtrim Trim out samples from the specified start to the specified stop norm Normalize max/min to +/-128 plot Show graph window rtrim Trim samples from right of trace setgraphmarkers Set blue and orange marker in graph window shiftgraphzero Shift 0 for Graphed wave + or - shift value timescale Set a timescale to get a differential reading between the yellow and purple markers as time duration zerocrossings Count time between zero-crossings convertbitstream Convert GraphBuffer's 0/1 values to 127 / -127 getbitstream Convert GraphBuffer's >=1 values to 1 and <1 to 0 ----------- ------------------------- General------------------------- asn1 asn1 decoder bin2hex Converts binary to hexadecimal clear Clears bigbuf on deviceside and graph window diff diff of input files hex2bin Converts hexadecimal to binary load Load contents of file into graph window num Converts dec/hex/bin print Print the data in the DemodBuffer save Save signal trace data (from graph window) setdebugmode Set Debugging Level on client side",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "data hex2bin": {
             "command": "data hex2bin",
@@ -779,9 +762,9 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, -K, --keep Keep field ON for next command",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-k, --keep Keep field ON for next command",
+                "-a, --apdu Show APDU requests and responses",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
             "usage": "emv challenge [-hkaw]"
         },
@@ -795,19 +778,19 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-s, -S, --select Activate field and select card",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results",
-                "-j, -J, --jload Load transaction parameters from `emv_defparams.json` file",
-                "-f, -F, --forceaid Force search AID. Search AID instead of execute PPSE",
+                "-s, --select Activate field and select card",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results",
+                "-j, --jload Load transaction parameters from `emv_defparams.json` file",
+                "--force Force search AID. Search AID instead of execute PPSE",
                 "By default: Transaction type - MSD",
-                "-v, -V, --qvsdc Transaction type - qVSDC or M/Chip",
-                "-c, -C, --qvsdccda Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)",
-                "-x, -X, --vsdc Transaction type - VSDC. For test only. Not a standard behavior",
-                "-g, -G, --acgpo VISA. generate AC from GPO",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-v, --qvsdc Transaction type - qVSDC or M/Chip",
+                "-c, --qvsdccda Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)",
+                "-x, --vsdc Transaction type - VSDC. For test only. Not a standard behavior",
+                "-g, --acgpo VISA. generate AC from GPO",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
-            "usage": "emv exec [-hsatjfvcxgw] By default:"
+            "usage": "emv exec [-hsatjvcxgw] [--force] By default:"
         },
         "emv genac": {
             "command": "emv genac",
@@ -821,14 +804,14 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, -K, --keep Keep field ON for next command",
-                "-c, -C, --cda Executes CDA transaction. Needs to get SDAD in results.",
-                "-d, -D, --decision <aac|tc|arqc> Terminal decision. aac - declined, tc - approved, arqc - online authorisation requested",
-                "-p, -P, --params Load parameters from `emv_defparams.json` file for CDOLdata making from CDOL and parameters",
-                "-m, -M, --make Make CDOLdata from CDOL (tag 8C and 8D) and parameters (def: use default parameters)",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results of selected applets",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-k, --keep Keep field ON for next command",
+                "-c, --cda Executes CDA transaction. Needs to get SDAD in results.",
+                "-d, --decision <aac|tc|arqc> Terminal decision. aac - declined, tc - approved, arqc - online authorisation requested",
+                "-p, --params Load parameters from `emv_defparams.json` file for CDOLdata making from CDOL and parameters",
+                "-m, --make Make CDOLdata from CDOL (tag 8C and 8D) and parameters (def: use default parameters)",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results of selected applets",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> CDOLdata/CDOL"
             ],
             "usage": "emv genac [-hkcpmatw] [-d <aac|tc|arqc>] <hex> [<hex>]..."
@@ -844,23 +827,15 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, -K, --keep Keep field ON for next command",
-                "-p, -P, --params Load parameters from `emv_defparams.json` file for PDOLdata making from PDOL and parameters",
-                "-m, -M, --make Make PDOLdata from PDOL (tag 9F38) and parameters (def: uses default parameters)",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results of selected applets",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-k, --keep Keep field ON for next command",
+                "-p, --params Load parameters from `emv_defparams.json` file for PDOLdata making from PDOL and parameters",
+                "-m, --make Make PDOLdata from PDOL (tag 9F38) and parameters (def: uses default parameters)",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results of selected applets",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> PDOLdata/PDOL"
             ],
             "usage": "emv gpo [-hkpmatw] [<hex>]..."
-        },
-        "emv help": {
-            "command": "emv help",
-            "description": "help This help test Crypto logic test list List ISO7816 history",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "emv intauth": {
             "command": "emv intauth",
@@ -873,12 +848,12 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, -K, --keep Keep field ON for next command",
-                "-p, -P, --params Load parameters from `emv_defparams.json` file for DDOLdata making from DDOL and parameters",
-                "-m, -M, --make Make DDOLdata from DDOL (tag 9F49) and parameters (def: use default parameters)",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results of selected applets",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-k, --keep Keep field ON for next command",
+                "-p, --params Load parameters from `emv_defparams.json` file for DDOLdata making from DDOL and parameters",
+                "-m, --make Make DDOLdata from DDOL (tag 9F49) and parameters (def: use default parameters)",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results of selected applets",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> DDOLdata/DDOL"
             ],
             "usage": "emv intauth [-hkpmatw] <hex> [<hex>]..."
@@ -914,15 +889,32 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-s, -S, --select Activate field and select card",
-                "-k, -K, --keep Keep field ON for next command",
+                "-s, --select Activate field and select card",
+                "-k, --keep Keep field ON for next command",
                 "-1, --pse PSE (1PAY.SYS.DDF01) mode",
                 "-2, --ppse PPSE (2PAY.SYS.DDF01) mode (def)",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results of selected applets",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results of selected applets",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
             "usage": "emv pse [-hsk12atw]"
+        },
+        "emv reader": {
+            "command": "emv reader",
+            "description": "Act as a EMV reader to identify tag. Look for EMV tags until Enter or the pm3 button is pressed In `verbose` mode it will also try to extract and decode the transaction logs stored on card in either channel.",
+            "notes": [
+                "emv reader",
+                "emv reader -v",
+                "emv reader -@ -> Continuous mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-v, --verbose verbose",
+                "-@ continuous reader mode"
+            ],
+            "usage": "emv reader [-hwv@]"
         },
         "emv readrec": {
             "command": "emv readrec",
@@ -934,10 +926,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, -K, --keep Keep field ON for next command",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results of selected applets",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-k, --keep Keep field ON for next command",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results of selected applets",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> <SFI 1 byte><SFIrecord 1 byte"
             ],
             "usage": "emv readrec [-hkatw] <hex> [<hex>]..."
@@ -952,9 +944,9 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, -T, --selftest Self test",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-t, --selftest Self test",
+                "-a, --apdu Show APDU requests and responses",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
             "usage": "emv roca [-htaw]"
         },
@@ -968,18 +960,18 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results",
-                "-e, -E, --extract Extract TLV elements and fill Application Data",
-                "-j, -J, --jload Load transaction parameters from `emv_defparams.json` file",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results",
+                "-e, --extract Extract TLV elements and fill Application Data",
+                "-j, --jload Load transaction parameters from `emv_defparams.json` file",
                 "By default: Transaction type - MSD",
-                "-v, -V, --qvsdc Transaction type - qVSDC or M/Chip",
-                "-c, -C, --qvsdccda Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)",
-                "-x, -X, --vsdc Transaction type - VSDC. For test only. Not a standard behavior",
-                "-g, -G, --acgpo VISA. generate AC from GPO",
-                "-m, -M, --merge Merge output file with card's data. (warning: the file may be corrupted!)",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "<fn> JSON output filename"
+                "-v, --qvsdc Transaction type - qVSDC or M/Chip",
+                "-c, --qvsdccda Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)",
+                "-x, --vsdc Transaction type - VSDC. For test only. Not a standard behavior",
+                "-g, --acgpo VISA. generate AC from GPO",
+                "-m, --merge Merge output file with card's data. (warning: the file may be corrupted!)",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "<fn> JSON output file name"
             ],
             "usage": "emv scan [-hatejvcxgmw] By default: <fn>"
         },
@@ -993,11 +985,11 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-s, -S, --select Activate field and select card",
-                "-k, -K, --keep Keep field ON for next command",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results of selected applets",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
+                "-s, --select Activate field and select card",
+                "-k, --keep Keep field ON for next command",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results of selected applets",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
             "usage": "emv search [-hskatw]"
         },
@@ -1011,11 +1003,11 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-s, -S, --select Activate field and select card",
-                "-k, -K, --keep Keep field for next command",
-                "-a, -A, --apdu Show APDU requests and responses",
-                "-t, -T, --tlv TLV decode results",
-                "-w, -W, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-s, --select Activate field and select card",
+                "-k, --keep Keep field for next command",
+                "-a, --apdu Show APDU requests and responses",
+                "-t, --tlv TLV decode results",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<hex> Applet AID"
             ],
             "usage": "emv select [-hskatw] <hex>"
@@ -1046,14 +1038,6 @@
                 "-h, --help This help"
             ],
             "usage": "quit [-h]"
-        },
-        "help": {
-            "command": "help",
-            "description": "help Use `<command> help` for details of a command prefs { Edit client/device preferences... } -------- ----------------------- Technology ----------------------- analyse { Analyse utils... } data { Plot window / data buffer manipulation... } emv { EMV ISO-14443 / ISO-7816... } hf { High frequency commands... } hw { Hardware commands... } lf { Low frequency commands... } nfc { NFC commands... } piv { PIV commands... } reveng { CRC calculations from RevEng software... } smart { Smart card ISO-7816 commands... } script { Scripting commands... } trace { Trace manipulation... } wiegand { Wiegand format manipulation... } -------- ----------------------- General ----------------------- clear Clear screen hints Turn hints on / off msleep Add a pause in milliseconds rem Add a text line in log file quit exit Exit program",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf 14a antifuzz": {
             "command": "hf 14a antifuzz",
@@ -1131,21 +1115,18 @@
             ],
             "usage": "hf 14a chaining [-h10]"
         },
-        "hf 14a config": {
-            "command": "hf 14a config",
-            "description": "--------------------------------------------------------------------------------------- hf 14a cuids available offline: no",
-            "notes": [],
+        "hf 14a cuids": {
+            "command": "hf 14a cuids",
+            "description": "Collect n>0 ISO14443-a UIDs in one go",
+            "notes": [
+                "hf 14a cuids -n 5 -> Collect 5 UIDs"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
-        },
-        "hf 14a help": {
-            "command": "hf 14a help",
-            "description": "----------- ----------------------- General ----------------------- help This help list List ISO 14443-a history",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-n, --num <dec> Number of UIDs to collect"
+            ],
+            "usage": "hf 14a cuids [-h] [-n <dec>]"
         },
         "hf 14a info": {
             "command": "hf 14a info",
@@ -1358,14 +1339,6 @@
                 "--ns no save to file"
             ],
             "usage": "hf 14b dump [-h] [-f <fn>] [--ns]"
-        },
-        "hf 14b help": {
-            "command": "hf 14b help",
-            "description": "help This help list List ISO-14443-B history view Display content from tag dump file",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf 14b info": {
             "command": "hf 14b info",
@@ -1627,14 +1600,6 @@
                 "-h, --help This help"
             ],
             "usage": "hf 15 findafi [-h]"
-        },
-        "hf 15 help": {
-            "command": "hf 15 help",
-            "description": "----------- --------------------- General --------------------- help This help list List ISO-15693 history demod Demodulate ISO-15693 from tag",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf 15 info": {
             "command": "hf 15 info",
@@ -2126,14 +2091,6 @@
             ],
             "usage": "hf cipurse formatall [-hav] [-n <dec>] [-k <hex>] [--sreq <plain|mac|encode>] [--sresp <plain|mac|encode>] [--no-auth]"
         },
-        "hf cipurse help": {
-            "command": "hf cipurse help",
-            "description": "help This help. test Regression tests",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "hf cipurse info": {
             "command": "hf cipurse info",
             "description": "Get info from CIPURSE tags",
@@ -2305,14 +2262,6 @@
             ],
             "usage": "hf emrtd dump [-h] [-n <alphanum>] [-d <YYMMDD>] [-e <YYMMDD>] [-m <[0-9A-Z<]>] [--dir <str>]"
         },
-        "hf emrtd help": {
-            "command": "hf emrtd help",
-            "description": "help This help info Display info about an eMRTD list List ISO 14443A/7816 history",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "hf emrtd info": {
             "command": "hf emrtd info",
             "description": "Display info about an eMRTD",
@@ -2369,14 +2318,6 @@
                 "-d, --delay <dec> delay between attempts"
             ],
             "usage": "hf epa cnonces [-h] --size <dec> --num <dec> -d <dec>"
-        },
-        "hf epa help": {
-            "command": "hf epa help",
-            "description": "help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf epa replay": {
             "command": "hf epa replay",
@@ -2448,14 +2389,6 @@
                 "-v, --verbose verbose output"
             ],
             "usage": "hf felica auth2 [-hv] [-i <hex>] [-c <hex>] [-k <hex>]"
-        },
-        "hf felica help": {
-            "command": "hf felica help",
-            "description": "help This help ----------- ----------------------- General ----------------------- list List ISO 18092/FeliCa history ----------- ----------------------- FeliCa Standard ----------------------- ----------- ----------------------- FeliCa Light -----------------------",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf felica info": {
             "command": "hf felica info",
@@ -2537,11 +2470,25 @@
         },
         "hf felica rdbl": {
             "command": "hf felica rdbl",
-            "description": "Use this command to read block data from authentication-not-required Service.",
-            "notes": [],
+            "description": "Use this command to read block data from authentication-not-required Service. - Mode shall be Mode0. - Successful == block data - Unsuccessful == Status Flag1 and Flag2",
+            "notes": [
+                "hf felica rdbl --sn 01 --scl 8B00 --bn 01 --ble 8000",
+                "hf felica rdbl --sn 01 --scl 4B18 --bn 01 --ble 8000 -b",
+                "hf felica rdbl -i 01100910c11bc407 --sn 01 --scl 8B00 --bn 01 --ble 8000"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-b get all block list elements 00 -> FF",
+                "-i <hex> set custom IDm",
+                "-l, --long use 3 byte block list element block number",
+                "--sn <hex> number of service",
+                "--scl <hex> service code list",
+                "--bn <hex> number of block",
+                "--ble <hex> block list element (def 2|3 bytes)",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf felica rdbl [-hblv] [-i <hex>] [--sn <hex>] [--scl <hex>] [--bn <hex>] [--ble <hex>]"
         },
         "hf felica reader": {
             "command": "hf felica reader",
@@ -2665,11 +2612,23 @@
         },
         "hf felica wrbl": {
             "command": "hf felica wrbl",
-            "description": "Use this command to write block data to authentication-not-required Service.",
-            "notes": [],
+            "description": "Use this command to write block data to authentication-not-required Service. - Mode shall be Mode0. - Un-/Ssuccessful == Status Flag1 and Flag2",
+            "notes": [
+                "hf felica wrbl --sn 01 --scl CB10 --bn 01 --ble 8001 -d 0102030405060708090A0B0C0D0E0F10",
+                "hf felica wrbl -i 01100910c11bc407 --sn 01 --scl CB10 --bn 01 --ble 8001 -d 0102030405060708090A0B0C0D0E0F10"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-d, --data <hex> data, 16 hex bytes",
+                "-i <hex> set custom IDm",
+                "--sn <hex> number of service",
+                "--scl <hex> service code list",
+                "--bn <hex> number of block",
+                "--ble <hex> block list element (def 2|3 bytes)",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf felica wrbl [-hv] [-d <hex>] [-i <hex>] [--sn <hex>] [--scl <hex>] [--bn <hex>] [--ble <hex>]"
         },
         "hf fido assert": {
             "command": "hf fido assert",
@@ -2696,8 +2655,8 @@
                 "hf fido auth --kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with 2 parameters, filled 0x00 and key handle",
                 "hf fido auth",
                 "--kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f",
-                "--cp 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f",
-                "--ap 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters"
+                "--cpx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f",
+                "--apx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters"
             ],
             "offline": false,
             "options": [
@@ -2716,14 +2675,6 @@
                 "--apx <hex> Application parameter (32 bytes hex)"
             ],
             "usage": "hf fido auth [-havuc] default mode: [-f <fn>] [-k <hex>] [--kh <hex>] [--cp <str>] [--ap <str>] [--cpx <hex>] [--apx <hex>]"
-        },
-        "hf fido help": {
-            "command": "hf fido help",
-            "description": "help This help. list List ISO 14443A history",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf fido info": {
             "command": "hf fido info",
@@ -2812,14 +2763,6 @@
             ],
             "usage": "hf fudan dump [-h] [-f <fn>]"
         },
-        "hf fudan help": {
-            "command": "hf fudan help",
-            "description": "help This help view Display content from tag dump file",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "hf fudan rdbl": {
             "command": "hf fudan rdbl",
             "description": "Read fudan block",
@@ -2868,7 +2811,7 @@
             "command": "hf fudan wrbl",
             "description": "Write fudan block with 4 hex bytes of data",
             "notes": [
-                "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 01020304"
+                "hf fudan wrbl --blk 1 -k FFFFFFFFFFFF -d 01020304"
             ],
             "offline": false,
             "options": [
@@ -2954,14 +2897,6 @@
             ],
             "usage": "hf gallagher diversify [-h] --aid <hex> [--keynum <dec>] [--uid <hex>] [--sitekey <hex>] [--apdu]"
         },
-        "hf gallagher help": {
-            "command": "hf gallagher help",
-            "description": "help This help diversifykey Diversify Gallagher key decode Decode Gallagher credential block",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "hf gallagher reader": {
             "command": "hf gallagher reader",
             "description": "Read a Gallagher DESFire tag from the Card Application Directory, CAD Specify site key is required if using non-default key",
@@ -2979,14 +2914,6 @@
                 "-v, --verbose Verbose mode"
             ],
             "usage": "hf gallagher reader [-h@v] [--aid <hex>] [--sitekey <hex>] [--apdu]"
-        },
-        "hf help": {
-            "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } jooki { Jooki RFIDs... } iclass { ICLASS RFIDs... } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } xerox { Fuji/Xerox cartridge RFIDs... } waveshare { Waveshare NFC ePaper... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf iclass calcnewkey": {
             "command": "hf iclass calcnewkey",
@@ -3049,11 +2976,23 @@
         },
         "hf iclass decrypt": {
             "command": "hf iclass decrypt",
-            "description": "3DES decrypt data This is a naive implementation, it tries to decrypt every block after block 6. Correct behaviour would be to decrypt only the application areas where the key is valid, which is defined by the configuration block.",
-            "notes": [],
+            "description": "3DES decrypt data This is a naive implementation, it tries to decrypt every block after block 6. Correct behaviour would be to decrypt only the application areas where the key is valid, which is defined by the configuration block. OBS! In order to use this function, the file `iclass_decryptionkey.bin` must reside in the resources directory. The file should be 16 bytes binary data or... make sure your cardhelper is placed in the sim module",
+            "notes": [
+                "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin",
+                "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin -k 000102030405060708090a0b0c0d0e0f",
+                "hf iclass decrypt -d 1122334455667788 -k 000102030405060708090a0b0c0d0e0f"
+            ],
             "offline": true,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of dump file (bin/eml/json)",
+                "-d, --data <hex> 3DES encrypted data",
+                "-k, --key <hex> 3DES transport key",
+                "-v, --verbose verbose output",
+                "--d6 decode as block 6",
+                "-z, --dense dense dump output style"
+            ],
+            "usage": "hf iclass decrypt [-hvz] [-f <fn>] [-d <hex>] [-k <hex>] [--d6]"
         },
         "hf iclass dump": {
             "command": "hf iclass dump",
@@ -3170,14 +3109,6 @@
                 "-z, --dense dense dump output style"
             ],
             "usage": "hf iclass eview [-hvz] [-s <256|2048>]"
-        },
-        "hf iclass help": {
-            "command": "hf iclass help",
-            "description": "----------- --------------------- operations --------------------- help This help info Tag information list List iclass history ----------- --------------------- recovery --------------------- loclass Use loclass to perform bruteforce reader attack lookup Uses authentication trace to check for key in dictionary file ----------- --------------------- simulation --------------------- ----------- --------------------- utils --------------------- configcard Reader configuration card calcnewkey Calc diversified keys (blocks 3 & 4) to write new keys encode Encode binary wiegand to block 7 encrypt Encrypt given block data decrypt Decrypt given block data or tag dump file managekeys Manage keys to use with iclass commands permutekey Permute function from 'heart of darkness' paper view Display content from tag dump file",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf iclass info": {
             "command": "hf iclass info",
@@ -3484,14 +3415,6 @@
             ],
             "usage": "hf jooki encode [-hrtv] [-u <hex>] [--dragon] [--fox] [--ghost] [--knight] [--whale] [--blackdragon] [--blackfox] [--blackknight] [--blackwhale] [--whitedragon] [--whitefox] [--whiteknight] [--whitewhale] [--tid <dec>] [--fid <dec>]"
         },
-        "hf jooki help": {
-            "command": "hf jooki help",
-            "description": "help This help decode Decode Jooki token encode Encode Jooki token",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "hf jooki sim": {
             "command": "hf jooki sim",
             "description": "Simulate a Jooki token. Either `hf mfu eload` before or use `-d` param",
@@ -3519,14 +3442,6 @@
                 "-a, --apdu Show APDU requests and responses"
             ],
             "usage": "hf ksx6924 balance [-hka]"
-        },
-        "hf ksx6924 help": {
-            "command": "hf ksx6924 help",
-            "description": "help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf ksx6924 info": {
             "command": "hf ksx6924 info",
@@ -3676,14 +3591,6 @@
                 "--1024 LEGIC Prime MIM1024"
             ],
             "usage": "hf legic eview [-h] [--22] [--256] [--1024]"
-        },
-        "hf legic help": {
-            "command": "hf legic help",
-            "description": "----------- --------------------- operations --------------------- help This help list List LEGIC history ----------- --------------------- simulation --------------------- ----------- --------------------- utils --------------------- crc Calculate Legic CRC over given bytes view Display deobfuscated and decoded content from tag dump file",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf legic info": {
             "command": "hf legic info",
@@ -3853,14 +3760,6 @@
             ],
             "usage": "hf lto dump [-h] [-f <fn>]"
         },
-        "hf lto help": {
-            "command": "hf lto help",
-            "description": "help This help list List LTO-CM history",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "hf lto info": {
             "command": "hf lto info",
             "description": "Get info from LTO tags",
@@ -3966,14 +3865,16 @@
             "command": "hf mf auth4",
             "description": "Executes AES authentication command in ISO14443-4",
             "notes": [
-                "hf mf auth4 4000 000102030405060708090a0b0c0d0e0f -> executes authentication",
-                "hf mf auth4 9003 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> executes authentication"
+                "hf mf auth4 -n 4000 -k 000102030405060708090a0b0c0d0e0f -> executes authentication",
+                "hf mf auth4 -n 9003 -k FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> executes authentication"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-n <hex> key num, 2 hex bytes",
+                "-k, --key <hex> key, 16 hex bytes"
             ],
-            "usage": "hf mf auth4 [-h] <Key Num (HEX 2 bytes)> <Key Value (HEX 16 bytes)>"
+            "usage": "hf mf auth4 [-h] -n <hex> -k <hex>"
         },
         "hf mf autopwn": {
             "command": "hf mf autopwn",
@@ -4449,19 +4350,32 @@
         },
         "hf mf gen3blk": {
             "command": "hf mf gen3blk",
-            "description": "Overwrite full manufacturer block for magic Gen3 card - You can specify part of manufacturer block as 4/7-bytes for UID change only",
-            "notes": [],
+            "description": "Overwrite full manufacturer block for magic Gen3 card - You can specify part of manufacturer block as 4/7-bytes for UID change only NOTE: BCC, SAK, ATQA will be calculated automatically",
+            "notes": [
+                "hf mf gen3blk -> print current data",
+                "hf mf gen3blk -d 01020304 -> set 4 byte uid",
+                "hf mf gen3blk -d 01020304050607 -> set 7 byte uid",
+                "hf mf gen3blk -d 01020304FFFFFFFF0102030405060708"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-d, --data <hex> manufacturer block data up to 16 hex bytes"
+            ],
+            "usage": "hf mf gen3blk [-h] [-d <hex>]"
         },
         "hf mf gen3freeze": {
             "command": "hf mf gen3freeze",
-            "description": "Perma lock further UID changes. No more UID changes available after operation completed",
-            "notes": [],
+            "description": "Perma lock further UID changes. No more UID changes available after operation completed Note: operation is ! irreversible !",
+            "notes": [
+                "hf mf gen3freeze -y"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-y, --yes confirm UID lock operation"
+            ],
+            "usage": "hf mf gen3freeze -y[h]"
         },
         "hf mf gen3uid": {
             "command": "hf mf gen3uid",
@@ -4614,14 +4528,6 @@
             ],
             "usage": "hf mf hardnested [-habrstw] [-k <hex>] [--blk <dec>] [--tblk <dec>] [--ta] [--tb] [--tk <hex>] [-u <hex>] [-f <fn>] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
         },
-        "hf mf help": {
-            "command": "hf mf help",
-            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt [nt] [ar_enc] [at_enc] [data] - to decrypt sniff or trace acl Decode and print MIFARE Classic access rights bytes mad Checks and prints MAD value Value blocks view Display content from tag dump file",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "hf mf list": {
             "command": "hf mf list",
             "description": "Alias of `trace list -t mf` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
@@ -4655,14 +4561,14 @@
             "options": [
                 "-h, --help This help",
                 "-v, --verbose show technical data",
-                "--aid <aid> print all sectors with specified aid",
-                "-k, --key <key> key for printing sectors",
+                "--aid <hex> print all sectors with specified aid",
+                "-k, --key <hex> key for printing sectors",
                 "-b, --keyb use key B for access printing sectors (by default: key A)",
                 "--be (optional, BigEndian)",
                 "--dch decode Card Holder information",
                 "-f, --file <fn> load dump file and decode MAD"
             ],
-            "usage": "hf mf mad [-hvb] [--aid <aid>] [-k <key>] [--be] [--dch] [-f <fn>]"
+            "usage": "hf mf mad [-hvb] [--aid <hex>] [-k <hex>] [--be] [--dch] [-f <fn>]"
         },
         "hf mf nack": {
             "command": "hf mf nack",
@@ -4679,11 +4585,22 @@
         },
         "hf mf ndefformat": {
             "command": "hf mf ndefformat",
-            "description": "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF) If no <name> given, UID will be used as filename. It will try default keys and MAD keys to detect if tag is already formatted in order to write.",
-            "notes": [],
+            "description": "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF) If no <name> given, UID will be used as filename. It will try default keys and MAD keys to detect if tag is already formatted in order to write. If not, it will try finding a key file based on your UID. ie, if you ran autopwn before",
+            "notes": [
+                "hf mf ndefformat",
+                "hf mf ndefformat --1k -> MIFARE Classic 1k",
+                "hf mf ndefformat --keys hf-mf-01020304-key.bin -> MIFARE 1k with keys from specified file"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-k, --keys <fn> filename of keys",
+                "--mini MIFARE Classic Mini / S20",
+                "--1k MIFARE Classic 1k / S50 (def)",
+                "--2k MIFARE Classic/Plus 2k",
+                "--4k MIFARE Classic 4k / S70"
+            ],
+            "usage": "hf mf ndefformat [-h] [-k <fn>] [--mini] [--1k] [--2k] [--4k]"
         },
         "hf mf ndefread": {
             "command": "hf mf ndefread",
@@ -4784,7 +4701,8 @@
             "command": "hf mf rdbl",
             "description": "Read MIFARE Classic block",
             "notes": [
-                "hf mf rdbl --blk 0 -k FFFFFFFFFFFF",
+                "hf mf rdbl --blk 0",
+                "hf mf rdbl --blk 0 -k A0A1A2A3A4A5",
                 "hf mf rdbl --blk 3 -v -> get block 3, decode sector trailer"
             ],
             "offline": false,
@@ -4802,7 +4720,8 @@
             "command": "hf mf rdsc",
             "description": "Read MIFARE Classic sector",
             "notes": [
-                "hf mf rdsc -s 0 -k FFFFFFFFFFFF"
+                "hf mf rdsc -s 0",
+                "hf mf rdsc -s 0 -k A0A1A2A3A4A5"
             ],
             "offline": false,
             "options": [
@@ -4817,11 +4736,27 @@
         },
         "hf mf restore": {
             "command": "hf mf restore",
-            "description": "Restore MIFARE Classic dump file to tag.",
-            "notes": [],
+            "description": "Restore MIFARE Classic dump file to tag. The key file and dump file will program the card sector trailers. By default we authenticate to card with key 0xFFFFFFFFFFFF. If access rights in dump file is all zeros, it will be replaced with default values `--uid` param is used for filename templates `hf-mf-<uid>-dump.bin` and `hf-mf-<uid>-key.bin. if not specified, it will read the card uid instead. `--ka` param you can indicate that the key file should be used for authentication instead. if so we also try both B/A keys `--force` param is used to override warnings and allow bad ACL block writes. if not specified, it will skip blocks with bad ACL.",
+            "notes": [
+                "hf mf restore",
+                "hf mf restore --1k --uid 04010203",
+                "hf mf restore --1k --uid 04010203 -k hf-mf-AABBCCDD-key.bin",
+                "hf mf restore --4k"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "--mini MIFARE Classic Mini / S20",
+                "--1k MIFARE Classic 1k / S50 (def)",
+                "--2k MIFARE Classic/Plus 2k",
+                "--4k MIFARE Classic 4k / S70",
+                "-u, --uid <hex> uid, (4|7|10 hex bytes)",
+                "-f, --file <fn> specify dump filename (bin/eml/json)",
+                "-k, --kfn <fn> key filename",
+                "--ka use specified keyfile to authenticate",
+                "--force override warnings"
+            ],
+            "usage": "hf mf restore [-h] [--mini] [--1k] [--2k] [--4k] [-u <hex>] [-f <fn>] [-k <fn>] [--ka] [--force]"
         },
         "hf mf setmod": {
             "command": "hf mf setmod",
@@ -4871,7 +4806,7 @@
         },
         "hf mf staticnested": {
             "command": "hf mf staticnested",
-            "description": "Execute Nested attack against MIFARE Classic card with static nonce for key recovery. Supply a known key from one block to recover all keys",
+            "description": "Execute static nested attack against MIFARE Classic card with static nonce for key recovery. Supply a known key from one block to recover all keys",
             "notes": [
                 "hf mf staticnested --mini --blk 0 -a -k FFFFFFFFFFFF",
                 "hf mf staticnested --1k --blk 0 -a -k FFFFFFFFFFFF",
@@ -4906,9 +4841,10 @@
             "options": [
                 "-h, --help This help",
                 "-r, --reset Reset card",
-                "-u, --uid <hex> New UID (4 hex bytes)"
+                "-u, --uid <hex> New UID (4 hex bytes)",
+                "--furui Furui detection card"
             ],
-            "usage": "hf mf supercard [-hr] [-u <hex>]"
+            "usage": "hf mf supercard [-hr] [-u <hex>] [--furui]"
         },
         "hf mf value": {
             "command": "hf mf value",
@@ -4976,7 +4912,8 @@
             "command": "hf mf wrbl",
             "description": "Write MIFARE Classic block with 16 hex bytes of data Sector 0 / Block 0 - Manufacturer block When writing to block 0 you must use a VALID block 0 data (UID, BCC, SAK, ATQA) Writing an invalid block 0 means rendering your Magic GEN2 card undetectable. Look in the magic_cards_notes.md file for help to resolve it. `--force` param is used to override warnings like bad ACL and BLOCK 0 writes. if not specified, it will exit if detected",
             "notes": [
-                "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 000102030405060708090a0b0c0d0e0f"
+                "hf mf wrbl --blk 1 -d 000102030405060708090a0b0c0d0e0f",
+                "hf mf wrbl --blk 1 -k A0A1A2A3A4A5 -d 000102030405060708090a0b0c0d0e0f"
             ],
             "offline": false,
             "options": [
@@ -5791,14 +5728,6 @@
             ],
             "usage": "hf mfdes getuid [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--isoid <hex>]"
         },
-        "hf mfdes help": {
-            "command": "hf mfdes help",
-            "description": "help This help list List DESFire (ISO 14443A) history test Regression crypto tests",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "hf mfdes info": {
             "command": "hf mfdes info",
             "description": "Get info from MIFARE DESfire tags",
@@ -6126,7 +6055,7 @@
         },
         "hf mfp auth": {
             "command": "hf mfp auth",
-            "description": "Executes AES authentication command for Mifare Plus card",
+            "description": "Executes AES authentication command for MIFARE Plus card",
             "notes": [
                 "hf mfp auth --ki 4000 --key 000102030405060708090a0b0c0d0e0f -> executes authentication",
                 "hf mfp auth --ki 9003 --key FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -v -> executes authentication and shows all the system data"
@@ -6145,9 +6074,9 @@
             "description": "Checks keys on MIFARE Plus card",
             "notes": [
                 "hf mfp chk -k 000102030405060708090a0b0c0d0e0f -> check key on sector 0 as key A and B",
-                "hf mfp chk -s 2 -a -> check default key list on sector 2, key A",
+                "hf mfp chk -s 2 -a -> check default key list on sector 2, only key A",
                 "hf mfp chk -d mfp_default_keys -s0 -e6 -> check keys from dictionary against sectors 0-6",
-                "hf mfp chk --pattern1b -j keys -> check all 1-byte keys pattern and save found keys to json",
+                "hf mfp chk --pattern1b --dump -> check all 1-byte keys pattern and save found keys to file",
                 "hf mfp chk --pattern2b --startp2b FA00 -> check all 2-byte keys pattern. Start from key FA00FA00...FA00"
             ],
             "offline": false,
@@ -6162,10 +6091,10 @@
                 "--pattern1b Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)",
                 "--pattern2b Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)",
                 "--startp2b <pattern> Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)",
-                "-j, --json <fn> Json filename to save keys",
+                "--dump Dump found keys to JSON file",
                 "-v, --verbose Verbose mode"
             ],
-            "usage": "hf mfp chk [-habv] [-s <0..255>] [-e <0..255>] [-k <hex>] [-d <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [-j <fn>]"
+            "usage": "hf mfp chk [-habv] [-s <0..255>] [-e <0..255>] [-k <hex>] [-d <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [--dump]"
         },
         "hf mfp commitp": {
             "command": "hf mfp commitp",
@@ -6180,13 +6109,22 @@
             ],
             "usage": "hf mfp commitp [-hv]"
         },
-        "hf mfp help": {
-            "command": "hf mfp help",
-            "description": "help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
+        "hf mfp dump": {
+            "command": "hf mfp dump",
+            "description": "Dump MIFARE Plus tag to binary file If no <name> given, UID will be used as filename",
+            "notes": [
+                "hf mfp dump",
+                "hf mfp dump --keys hf-mf-066C8B78-key.bin -> MIFARE Plus with keys from specified file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of dump",
+                "-k, --keys <fn> filename of keys",
+                "--ns no save to file",
+                "-v, --verbose Verbose mode"
+            ],
+            "usage": "hf mfp dump [-hv] [-f <fn>] [-k <fn>] [--ns]"
         },
         "hf mfp info": {
             "command": "hf mfp info",
@@ -6215,9 +6153,30 @@
             ],
             "usage": "hf mfp initp [-hv] [-k <hex>]"
         },
+        "hf mfp list": {
+            "command": "hf mfp list",
+            "description": "Alias of `trace list -t mf` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "notes": [
+                "hf mf list --frame -> show frame delay times",
+                "hf mf list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-1, --buffer use data from trace buffer",
+                "--frame show frame delay times",
+                "-c mark CRC bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into Wireshark using encapsulation type \"ISO 14443\"",
+                "-f, --file <fn> filename of dictionary"
+            ],
+            "usage": "hf mf list [-h1crux] [--frame] [-f <fn>]"
+        },
         "hf mfp mad": {
             "command": "hf mfp mad",
-            "description": "Checks and prints Mifare Application Directory (MAD)",
+            "description": "Checks and prints MIFARE Application Directory (MAD)",
             "notes": [
                 "hf mfp mad",
                 "hf mfp mad --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> read and print NDEF data from MAD aid"
@@ -6233,6 +6192,20 @@
                 "--dch Decode Card Holder information"
             ],
             "usage": "hf mfp mad [-hvb] [--aid <hex>] [-k <hex>] [--be] [--dch]"
+        },
+        "hf mfp ndefformat": {
+            "command": "hf mfp ndefformat",
+            "description": "format MIFARE Plus Tag as a NFC tag with Data Exchange Format (NDEF) If no <name> given, UID will be used as filename. It will try default keys and MAD keys to detect if tag is already formatted in order to write. If not, it will try finding a key file based on your UID. ie, if you ran autopwn before",
+            "notes": [
+                "hf mfp ndefformat",
+                "hf mfp ndefformat --keys hf-mf-01020304-key.bin -> with keys from specified file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --keys <fn> filename of keys"
+            ],
+            "usage": "hf mfp ndefformat [-h] [-k <fn>]"
         },
         "hf mfp ndefread": {
             "command": "hf mfp ndefread",
@@ -6254,9 +6227,27 @@
             ],
             "usage": "hf mfp ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
         },
+        "hf mfp ndefwrite": {
+            "command": "hf mfp ndefwrite",
+            "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.",
+            "notes": [
+                "hf mfp ndefwrite -d 0300FE -> write empty record to tag",
+                "hf mfp ndefwrite -f myfilename",
+                "hf mfp ndefwrite -d 033fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-d <hex> raw NDEF hex bytes",
+                "-f, --file <fn> write raw NDEF file to tag",
+                "-p fix NDEF record headers / terminator block if missing",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf mfp ndefwrite [-hpv] [-d <hex>] [-f <fn>]"
+        },
         "hf mfp rdbl": {
             "command": "hf mfp rdbl",
-            "description": "Reads several blocks from Mifare Plus card",
+            "description": "Reads blocks from MIFARE Plus card",
             "notes": [
                 "hf mfp rdbl --blk 0 --key 000102030405060708090a0b0c0d0e0f -> executes authentication and read block 0 data",
                 "hf mfp rdbl --blk 1 -v -> executes authentication and shows sector 1 data with default key 0xFF..0xFF"
@@ -6293,7 +6284,7 @@
         },
         "hf mfp wrbl": {
             "command": "hf mfp wrbl",
-            "description": "Writes one block to Mifare Plus card",
+            "description": "Writes one block to MIFARE Plus card",
             "notes": [
                 "hf mfp wrbl --blk 1 -d ff0000000000000000000000000000ff --key 000102030405060708090a0b0c0d0e0f -> write block 1 data",
                 "hf mfp wrbl --blk 2 -d ff0000000000000000000000000000ff -v -> write block 2 data with default key 0xFF..0xFF"
@@ -6407,14 +6398,6 @@
                 "-e, --end <dec> index of last block"
             ],
             "usage": "hf mfu eview [-h] [-e <dec>]"
-        },
-        "hf mfu help": {
-            "command": "hf mfu help",
-            "description": "help This help keygen Generate 3DES MIFARE diversified keys pwdgen Generate pwd from known algos view Display content from tag dump file",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf mfu info": {
             "command": "hf mfu info",
@@ -6639,14 +6622,6 @@
             ],
             "usage": "hf mfu wrbl [-hl] [-k <hex>] -b <dec> -d <hex> [--force]"
         },
-        "hf ntag424 help": {
-            "command": "hf ntag424 help",
-            "description": "help This help view Display content from tag dump file",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "hf ntag424 info": {
             "command": "hf ntag424 info",
             "description": "Get info about NXP NTAG424 DNA Family styled tag.",
@@ -6711,14 +6686,6 @@
             ],
             "usage": "hf search [-hv]"
         },
-        "hf seos help": {
-            "command": "hf seos help",
-            "description": "help This help list List SEOS history",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "hf seos info": {
             "command": "hf seos info",
             "description": "Get info from SEOS tags",
@@ -6768,14 +6735,6 @@
                 "--sratio <dec, ms> Skip ratio. It applied the function above to (ratio * 2) samples. For ratio = 1 it 2 samples."
             ],
             "usage": "hf sniff [-h] [--sp <dec>] [--st <dec>] [--smode [none|drop|min|max|avg]] [--sratio <dec, ms>]"
-        },
-        "hf st25ta help": {
-            "command": "hf st25ta help",
-            "description": "help This help list List ISO 14443A/7816 history ndefread read NDEF file on tag",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf st25ta info": {
             "command": "hf st25ta info",
@@ -6874,14 +6833,6 @@
             ],
             "usage": "hf st25ta sim [-h] -u <hex>"
         },
-        "hf tesla help": {
-            "command": "hf tesla help",
-            "description": "help This help list List ISO 14443A/7816 history",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "hf tesla info": {
             "command": "hf tesla info",
             "description": "Get info about TESLA Key tag",
@@ -6914,14 +6865,6 @@
                 "-f, --file <fn> filename of dictionary"
             ],
             "usage": "hf tesla list [-h1crux] [--frame] [-f <fn>]"
-        },
-        "hf texkom help": {
-            "command": "hf texkom help",
-            "description": "help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf texkom reader": {
             "command": "hf texkom reader",
@@ -6959,14 +6902,6 @@
                 "--timeout <dec, ms> Simulation timeout in the ms. If not specified or 0 - infinite. Command can be skipped by pressing the button"
             ],
             "usage": "hf texkom sim [-hvt] [--raw <hex 8 bytes>] [--id <hex 4 bytes>] [--timeout <dec, ms>]"
-        },
-        "hf thinfilm help": {
-            "command": "hf thinfilm help",
-            "description": "help This help list List NFC Barcode / Thinfilm history - not correct",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf thinfilm info": {
             "command": "hf thinfilm info",
@@ -7024,17 +6959,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump"
+                "-f, --file <fn> filename of dump",
+                "--ns no save to file"
             ],
-            "usage": "hf topaz dump [-h] [-f <fn>]"
-        },
-        "hf topaz help": {
-            "command": "hf topaz help",
-            "description": "help This help list List Topaz history view Display content from tag dump file",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
+            "usage": "hf topaz dump [-h] [-f <fn>] [--ns]"
         },
         "hf topaz info": {
             "command": "hf topaz info",
@@ -7086,16 +7014,16 @@
         },
         "hf topaz rdbl": {
             "command": "hf topaz rdbl",
-            "description": "Read a block",
+            "description": "Read Topaz block",
             "notes": [
-                "hf topaz rdbl -b 7"
+                "hf topaz rdbl --blk 7"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-b, --block <dec> Block number to write"
+                "--blk <dec> Block number"
             ],
-            "usage": "hf topaz rdbl [-h] -b <dec>"
+            "usage": "hf topaz rdbl [-h] --blk <dec>"
         },
         "hf topaz reader": {
             "command": "hf topaz reader",
@@ -7151,17 +7079,17 @@
         },
         "hf topaz wrbl": {
             "command": "hf topaz wrbl",
-            "description": "Write a block",
+            "description": "Write Topaz block with 8 hex bytes of data",
             "notes": [
-                "hf topaz wrbl -b 7 -d 1122334455667788"
+                "hf topaz wrbl --blk 7 -d 1122334455667788"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-b, --block <dec> Block number to write",
+                "--blk <dec> Block number",
                 "-d, --data <hex> Block data (8 hex bytes)"
             ],
-            "usage": "hf topaz wrbl [-h] -b <dec> -d <hex>"
+            "usage": "hf topaz wrbl [-h] --blk <dec> -d <hex>"
         },
         "hf tune": {
             "command": "hf tune",
@@ -7180,13 +7108,38 @@
             ],
             "usage": "hf tune [-h] [-n <dec>] [--bar] [--mix] [--value]"
         },
-        "hf waveshare help": {
-            "command": "hf waveshare help",
-            "description": "help This help",
-            "notes": [],
+        "hf vas decrypt": {
+            "command": "hf vas decrypt",
+            "description": "Decrypt a previously captured cryptogram",
+            "notes": [
+                "hf vas decrypt --pid pass.com.passkit.pksamples.nfcdemo -f vas_privkey.der -d c0b77375eae416b79449347f9fe838c05cdb57dc7470b97b93b806cb348771d9bfbe29d58538c7c7d7c3d015fa205b68bfccd726058a62f7f44085ac98dbf877120fd9059f1507b956e0a6d56d0a"
+            ],
             "offline": true,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "--pid <str> PID, pass type id",
+                "-f, --file <fn> path to terminal private key file",
+                "-d, --data <hex> cryptogram to decrypt"
+            ],
+            "usage": "hf vas decrypt [-h] [--pid <str>] [-f <fn>] [-d <hex>]"
+        },
+        "hf vas reader": {
+            "command": "hf vas reader",
+            "description": "Read and decrypt Value Added Services (VAS) message",
+            "notes": [
+                "hf vas reader --url https://example.com -> URL Only mode",
+                "hf vas reader --pid pass.com.passkit.pksamples.nfcdemo -f vas_privkey.der -@"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--pid <str> PID, pass type id",
+                "-f, --file <fn> path to terminal private key file",
+                "--url <str> a URL to provide to the mobile device",
+                "-@ continuous mode",
+                "-v, --verbose log additional information"
+            ],
+            "usage": "hf vas reader [-h@v] [--pid <str>] [-f <fn>] [--url <str>]"
         },
         "hf waveshare loadbmp": {
             "command": "hf waveshare loadbmp",
@@ -7223,14 +7176,6 @@
                 "-d, --decrypt decrypt secret blocks"
             ],
             "usage": "hf xerox dump [-hd] [-f <fn>]"
-        },
-        "hf xerox help": {
-            "command": "hf xerox help",
-            "description": "help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hf xerox info": {
             "command": "hf xerox info",
@@ -7345,14 +7290,6 @@
                 "-h, --help This help"
             ],
             "usage": "hw fpgaoff [-h]"
-        },
-        "hw help": {
-            "command": "hw help",
-            "description": "------------- ----------------------- Hardware ----------------------- help This help connect Connect Proxmark3 to serial port version Show version information about the client and the connected Proxmark3, if any",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "hw lcd": {
             "command": "hw lcd",
@@ -7504,6 +7441,21 @@
             ],
             "usage": "hw tia [-h]"
         },
+        "hw timeout": {
+            "command": "hw timeout",
+            "description": "Set the communication timeout on the client side",
+            "notes": [
+                "hw timeout -> Show current timeout",
+                "hw timeout -t 20 -> Set the timeout to 20ms",
+                "hw timeout -t 500 -> Set the timeout to 500ms"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-t, --timeout <dec> timeout in ms"
+            ],
+            "usage": "hw timeout [-h] [-t <dec>]"
+        },
         "hw tune": {
             "command": "hw tune",
             "description": "Measure antenna tuning",
@@ -7579,14 +7531,6 @@
             ],
             "usage": "lf awid demod [-h]"
         },
-        "lf awid help": {
-            "command": "lf awid help",
-            "description": "help this help demod demodulate an AWID FSK tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf awid reader": {
             "command": "lf awid reader",
             "description": "read a AWID Prox tag",
@@ -7655,11 +7599,29 @@
         },
         "lf config": {
             "command": "lf config",
-            "description": "Get/Set config for LF sampling, bit/sample, decimation, frequency These changes are temporary, will be reset after a power cycle.",
-            "notes": [],
+            "description": "Get/Set config for LF sampling, bit/sample, decimation, frequency These changes are temporary, will be reset after a power cycle. - use `lf read` performs a read (active field) - use `lf sniff` performs a sniff (no active field)",
+            "notes": [
+                "lf config -> shows current config",
+                "lf config -b 8 --125 -> samples at 125 kHz, 8 bps",
+                "lf config -b 4 --134 --dec 3 -> samples at 134 kHz, averages three samples into one, stored with a resolution of 4 bits per sample",
+                "lf config --trig 20 -s 10000 -> trigger sampling when above 20, skip 10 000 first samples after triggered",
+                "lf config --reset -> reset back to default values"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "--125 125 kHz frequency",
+                "--134 134 kHz frequency",
+                "-a, --avg <0|1> averaging - if set, will average the stored sample value when decimating (default 1)",
+                "-b, --bps <1-8> sets resolution of bits per sample (default 8)",
+                "--dec <1-8> sets decimation. A value of N saves only 1 in N samples (default 1)",
+                "--divisor <19-255> Manually set freq divisor. 88 -> 134 kHz, 95 -> 125 kHz",
+                "-f, --freq <47-600> manually set frequency in kHz",
+                "-r, --reset reset values to defaults",
+                "-s, --skip <dec> sets a number of samples to skip before capture (default 0)",
+                "-t, --trig <0-128> sets trigger threshold. 0 means no threshold"
+            ],
+            "usage": "lf config [-hr] [--125] [--134] [-a <0|1>] [-b <1-8>] [--dec <1-8>] [--divisor <19-255>] [-f <47-600>] [-s <dec>] [-t <0-128>]"
         },
         "lf cotag demod": {
             "command": "lf cotag demod",
@@ -7672,14 +7634,6 @@
                 "-h, --help This help"
             ],
             "usage": "lf cotag demod [-h]"
-        },
-        "lf cotag help": {
-            "command": "lf cotag help",
-            "description": "help This help demod demodulate an COTAG tag",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf cotag reader": {
             "command": "lf cotag reader",
@@ -7724,14 +7678,6 @@
                 "-h, --help This help"
             ],
             "usage": "lf destron demod [-h]"
-        },
-        "lf destron help": {
-            "command": "lf destron help",
-            "description": "help This help demod demodulate an Destron tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf destron reader": {
             "command": "lf destron reader",
@@ -7815,14 +7761,6 @@
                 "-a, --amp amplify signal"
             ],
             "usage": "lf em 410x demod [-hia] [--clk <dec>] [--err <dec>] [--len <dec>]"
-        },
-        "lf em 410x help": {
-            "command": "lf em 410x help",
-            "description": "help This help demod demodulate a EM410x tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf em 410x reader": {
             "command": "lf em 410x reader",
@@ -7949,14 +7887,6 @@
                 "-f, --file <fn> override filename prefix (optional). Default is based on UID"
             ],
             "usage": "lf em 4x05 dump [-h] [-p <hex>] [-f <fn>]"
-        },
-        "lf em 4x05 help": {
-            "command": "lf em 4x05 help",
-            "description": "help This help demod demodulate a EM4x05/EM4x69 tag from the GraphBuffer sniff Attempt to recover em4x05 commands from sample buffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf em 4x05 info": {
             "command": "lf em 4x05 info",
@@ -8147,14 +8077,6 @@
             ],
             "usage": "lf em 4x50 eview [-h]"
         },
-        "lf em 4x50 help": {
-            "command": "lf em 4x50 help",
-            "description": "help This help ----------- --------------------- operations --------------------- ----------- --------------------- simulation ---------------------",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf em 4x50 info": {
             "command": "lf em 4x50 info",
             "description": "Tag information EM4x50.",
@@ -8320,14 +8242,6 @@
             ],
             "usage": "lf em 4x70 brute [-h] [--par] -b <dec> --rnd <hex> --frn <hex> [-s <hex>]"
         },
-        "lf em 4x70 help": {
-            "command": "lf em 4x70 help",
-            "description": "help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf em 4x70 info": {
             "command": "lf em 4x70 info",
             "description": "Tag Information EM4x70 Tag variants include ID48 automotive transponder. ID48 does not use command parity (default). V4070 and EM4170 do require parity bit.",
@@ -8402,14 +8316,6 @@
             ],
             "usage": "lf em 4x70 writepin [-h] [--par] -p <hex>"
         },
-        "lf em help": {
-            "command": "lf em help",
-            "description": "help This help 410x { EM 4102 commands... } 4x05 { EM 4205 / 4305 / 4369 / 4469 commands... } 4x50 { EM 4350 / 4450 commands... } 4x70 { EM 4070 / 4170 commands... }",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf fdxb clone": {
             "command": "lf fdxb clone",
             "description": "clone a FDX-B tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
@@ -8442,14 +8348,6 @@
                 "-h, --help This help"
             ],
             "usage": "lf fdxb demod [-h]"
-        },
-        "lf fdxb help": {
-            "command": "lf fdxb help",
-            "description": "help this help demod demodulate a FDX-B ISO11784/85 tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf fdxb reader": {
             "command": "lf fdxb reader",
@@ -8514,14 +8412,6 @@
                 "-h, --help This help"
             ],
             "usage": "lf gallagher demod [-h]"
-        },
-        "lf gallagher help": {
-            "command": "lf gallagher help",
-            "description": "help This help demod demodulate an GALLAGHER tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf gallagher reader": {
             "command": "lf gallagher reader",
@@ -8588,14 +8478,6 @@
             ],
             "usage": "lf gproxii demod [-h] [-r <hex>]"
         },
-        "lf gproxii help": {
-            "command": "lf gproxii help",
-            "description": "help this help demod demodulate a G Prox II tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf gproxii reader": {
             "command": "lf gproxii reader",
             "description": "read a Guardall tag",
@@ -8624,14 +8506,6 @@
                 "--cn <dec> 16-bit value card number"
             ],
             "usage": "lf gproxii sim [-h] --xor <dec> --fmt <dec> --fc <dec> --cn <dec>"
-        },
-        "lf help": {
-            "command": "lf help",
-            "description": "help This help ----------- -------------- Low Frequency -------------- awid { AWID RFIDs... } cotag { COTAG CHIPs... } destron { FDX-A Destron RFIDs... } em { EM CHIPs & RFIDs... } fdxb { FDX-B RFIDs... } gallagher { GALLAGHER RFIDs... } gproxii { Guardall Prox II RFIDs... } hid { HID Prox RFIDs... } hitag { Hitag CHIPs... } idteck { Idteck RFIDs... } indala { Indala RFIDs... } io { ioProx RFIDs... } jablotron { Jablotron RFIDs... } keri { KERI RFIDs... } motorola { Motorola RFIDs... } nedap { Nedap RFIDs... } nexwatch { NexWatch RFIDs... } noralsy { Noralsy RFIDs... } pac { PAC/Stanley RFIDs... } paradox { Paradox RFIDs... } pcf7931 { PCF7931 CHIPs... } presco { Presco RFIDs... } pyramid { Farpointe/Pyramid RFIDs... } securakey { Securakey RFIDs... } ti { TI CHIPs... } t55xx { T55xx CHIPs... } viking { Viking RFIDs... } visa2000 { Visa2000 RFIDs... } ----------- --------------------- General --------------------- search Read and Search for valid known tag",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf hid brute": {
             "command": "lf hid brute",
@@ -8696,14 +8570,6 @@
                 "-h, --help This help"
             ],
             "usage": "lf hid demod [-h]"
-        },
-        "lf hid help": {
-            "command": "lf hid help",
-            "description": "help this help demod demodulate HID Prox tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf hid reader": {
             "command": "lf hid reader",
@@ -8797,14 +8663,6 @@
                 "-m Card type HitagM"
             ],
             "usage": "lf hitag eload [-h12sm] -f <fn>"
-        },
-        "lf hitag help": {
-            "command": "lf hitag help",
-            "description": "help This help list List Hitag trace history",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf hitag info": {
             "command": "lf hitag info",
@@ -8946,14 +8804,6 @@
             ],
             "usage": "lf idteck demod [-h]"
         },
-        "lf idteck help": {
-            "command": "lf idteck help",
-            "description": "help This help demod demodulate an Idteck tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf idteck reader": {
             "command": "lf idteck reader",
             "description": "read a Idteck tag",
@@ -9018,11 +8868,26 @@
         },
         "lf indala clone": {
             "command": "lf indala clone",
-            "description": "clone Indala UID to T55x7 or Q5/T5555 tag using different known formats",
-            "notes": [],
+            "description": "clone Indala UID to T55x7 or Q5/T5555 tag using different known formats Warning, encoding with FC/CN doesn't always work",
+            "notes": [
+                "lf indala clone --heden 888",
+                "lf indala clone --fc 123 --cn 1337",
+                "lf indala clone --fc 123 --cn 1337 --4041x",
+                "lf indala clone -r a0000000a0002021",
+                "lf indala clone -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-r, --raw <hex> raw bytes",
+                "--heden <decimal> Card number for Heden 2L format",
+                "--fc <decimal> Facility code (26 bit H10301 format)",
+                "--cn <decimal> Card number (26 bit H10301 format)",
+                "--q5 Optional - specify writing to Q5/T5555 tag",
+                "--em Optional - specify writing to EM4305/4469 tag",
+                "--4041x Optional - specify Indala 4041X format, must use with fc and cn"
+            ],
+            "usage": "lf indala clone [-h] [-r <hex>] [--heden <decimal>] [--fc <decimal>] [--cn <decimal>] [--q5] [--em] [--4041x]"
         },
         "lf indala demod": {
             "command": "lf indala demod",
@@ -9041,14 +8906,6 @@
                 "-i, --invert optional - invert output"
             ],
             "usage": "lf indala demod [-hi] [--clock <dec>] [--maxerr <dec>]"
-        },
-        "lf indala help": {
-            "command": "lf indala help",
-            "description": "help This help demod Demodulate an Indala tag (PSK1) from the GraphBuffer altdemod Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf indala reader": {
             "command": "lf indala reader",
@@ -9115,14 +8972,6 @@
                 "-h, --help This help"
             ],
             "usage": "lf io demod [-h]"
-        },
-        "lf io help": {
-            "command": "lf io help",
-            "description": "help this help demod demodulate an ioProx tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf io reader": {
             "command": "lf io reader",
@@ -9193,14 +9042,6 @@
             ],
             "usage": "lf jablotron demod [-h]"
         },
-        "lf jablotron help": {
-            "command": "lf jablotron help",
-            "description": "help This help demod demodulate an Jablotron tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf jablotron reader": {
             "command": "lf jablotron reader",
             "description": "read a jablotron tag",
@@ -9257,14 +9098,6 @@
             ],
             "usage": "lf keri demod [-h]"
         },
-        "lf keri help": {
-            "command": "lf keri help",
-            "description": "help This help demod demodulate an KERI tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf keri reader": {
             "command": "lf keri reader",
             "description": "read a keri tag",
@@ -9320,14 +9153,6 @@
             ],
             "usage": "lf motorola demod [-h]"
         },
-        "lf motorola help": {
-            "command": "lf motorola help",
-            "description": "help This help demod demodulate an MOTOROLA tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf motorola reader": {
             "command": "lf motorola reader",
             "description": "read a Motorola tag",
@@ -9382,14 +9207,6 @@
                 "-h, --help This help"
             ],
             "usage": "lf nedap demod [-h]"
-        },
-        "lf nedap help": {
-            "command": "lf nedap help",
-            "description": "help This help demod demodulate Nedap tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf nedap reader": {
             "command": "lf nedap reader",
@@ -9457,14 +9274,6 @@
             ],
             "usage": "lf nexwatch demod [-h]"
         },
-        "lf nexwatch help": {
-            "command": "lf nexwatch help",
-            "description": "help This help demod demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf nexwatch reader": {
             "command": "lf nexwatch reader",
             "description": "read a Nexwatch tag",
@@ -9531,14 +9340,6 @@
             ],
             "usage": "lf noralsy demod [-h]"
         },
-        "lf noralsy help": {
-            "command": "lf noralsy help",
-            "description": "help This help demod demodulate an Noralsy tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf noralsy reader": {
             "command": "lf noralsy reader",
             "description": "read a Noralsy tag",
@@ -9597,14 +9398,6 @@
                 "-h, --help This help"
             ],
             "usage": "lf pac demod [-h]"
-        },
-        "lf pac help": {
-            "command": "lf pac help",
-            "description": "help This help demod demodulate a PAC tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf pac reader": {
             "command": "lf pac reader",
@@ -9667,14 +9460,6 @@
             ],
             "usage": "lf paradox demod [-h] [--old]"
         },
-        "lf paradox help": {
-            "command": "lf paradox help",
-            "description": "help This help demod demodulate a Paradox FSK tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf paradox reader": {
             "command": "lf paradox reader",
             "description": "read a Paradox tag",
@@ -9724,14 +9509,6 @@
                 "--lp <dec> offset, low pulses position (in us)"
             ],
             "usage": "lf pcf7931 config [-hr] [-p <hex>] [-d <dec>] [--lw <dec>] [--lp <dec>]"
-        },
-        "lf pcf7931 help": {
-            "command": "lf pcf7931 help",
-            "description": "help This help config Configure the password, the tags initialization delay and time offsets (optional)",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf pcf7931 reader": {
             "command": "lf pcf7931 reader",
@@ -9791,14 +9568,6 @@
             ],
             "usage": "lf presco demod [-h]"
         },
-        "lf presco help": {
-            "command": "lf presco help",
-            "description": "help This help demod demodulate Presco tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf presco reader": {
             "command": "lf presco reader",
             "description": "read a presco tag",
@@ -9857,14 +9626,6 @@
                 "-h, --help This help"
             ],
             "usage": "lf pyramid demod [-h]"
-        },
-        "lf pyramid help": {
-            "command": "lf pyramid help",
-            "description": "help this help demod demodulate a Pyramid FSK tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf pyramid reader": {
             "command": "lf pyramid reader",
@@ -9958,14 +9719,6 @@
             ],
             "usage": "lf securakey demod [-h]"
         },
-        "lf securakey help": {
-            "command": "lf securakey help",
-            "description": "help This help demod demodulate an Securakey tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf securakey reader": {
             "command": "lf securakey reader",
             "description": "read a Securakey tag",
@@ -10044,11 +9797,27 @@
         },
         "lf simfsk": {
             "command": "lf simfsk",
-            "description": "Simulate FSK tag from DemodBuffer or input. There are about four FSK modulations to know of. FSK1 - where fc/8 = high and fc/5 = low FSK1a - is inverted FSK1, ie: fc/5 = high and fc/8 = low FSK2 - where fc/10 = high and fc/8 = low FSK2a - is inverted FSK2, ie: fc/10 = high and fc/8 = low",
-            "notes": [],
+            "description": "Simulate FSK tag from DemodBuffer or input. There are about four FSK modulations to know of. FSK1 - where fc/8 = high and fc/5 = low FSK1a - is inverted FSK1, ie: fc/5 = high and fc/8 = low FSK2 - where fc/10 = high and fc/8 = low FSK2a - is inverted FSK2, ie: fc/10 = high and fc/8 = low NOTE: if you set one clock manually set them all manually",
+            "notes": [
+                "lf simfsk -c 40 --high 8 --low 5 -d 010203 -> FSK1 rf/40 data 010203",
+                "lf simfsk -c 40 --high 5 --low 8 -d 010203 -> FSK1a rf/40 data 010203",
+                "lf simfsk -c 64 --high 10 --low 8 -d 010203 -> FSK2 rf/64 data 010203",
+                "lf simfsk -c 64 --high 8 --low 10 -d 010203 -> FSK2a rf/64 data 010203",
+                "",
+                "lf simfsk -c 50 --high 10 --low 8 -d 1D5559555569A9A555A59569 -> simulate HID Prox tag manually",
+                "lf simfsk -c 50 --high 10 --low 8 --stt -d 011DB2487E8D811111111111 -> simulate AWID tag manually"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-c, --clk <dec> manually set clock - can autodetect if using DemodBuffer (default 64)",
+                "--low <dec> manually set larger Field Clock",
+                "--high <dec> manually set smaller Field Clock",
+                "--stt TBD! - STT to enable a gap between playback repetitions (default: no gap)",
+                "-d, --data <hex> data to sim - omit to use DemodBuffer",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "lf simfsk [-hv] [-c <dec>] [--low <dec>] [--high <dec>] [--stt] [-d <hex>]"
         },
         "lf simpsk": {
             "command": "lf simpsk",
@@ -10074,19 +9843,38 @@
         },
         "lf sniff": {
             "command": "lf sniff",
-            "description": "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually. Usually a trigger and skip samples is a good thing to set before doing a low frequency sniff.",
-            "notes": [],
+            "description": "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually. Usually a trigger and skip samples is a good thing to set before doing a low frequency sniff. - use `lf config` to set parameters. - use `data plot` to look at sniff signal. - use `lf search -1` to see if signal can be automatic decoded",
+            "notes": [
+                "lf sniff -v",
+                "lf sniff -s 3000 -@ -> oscilloscope style"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-s, --samples <dec> number of samples to collect",
+                "-v, --verbose verbose output",
+                "-@ continuous sniffing mode"
+            ],
+            "usage": "lf sniff [-hv@] [-s <dec>]"
         },
         "lf t55xx bruteforce": {
             "command": "lf t55xx bruteforce",
-            "description": "This command uses bruteforce to scan a number range. Try reading Page 0, block 7 before.",
-            "notes": [],
+            "description": "This command uses bruteforce to scan a number range. Try reading Page 0, block 7 before. WARNING this may brick non-password protected chips!",
+            "notes": [
+                "lf t55xx bruteforce --r2 -s aaaaaa77 -e aaaaaa99"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-s, --start <hex> search start password (4 hex bytes)",
+                "-e, --end <hex> search end password (4 hex bytes)",
+                "--r0 downlink - fixed bit length",
+                "--r1 downlink - long leading reference",
+                "--r2 downlink - leading zero",
+                "--r3 downlink - 1 of 4 coding reference",
+                "--all try all downlink modes (def)"
+            ],
+            "usage": "lf t55xx bruteforce [-h] -s <hex> -e <hex> [--r0] [--r1] [--r2] [--r3] [--all]"
         },
         "lf t55xx chk": {
             "command": "lf t55xx chk",
@@ -10241,14 +10029,6 @@
             ],
             "usage": "lf t55xx dump [-ho] [-f <fn>] [-p <hex>] [--ns] [--r0] [--r1] [--r2] [--r3]"
         },
-        "lf t55xx help": {
-            "command": "lf t55xx help",
-            "description": "----------- ---------------------------- notice ----------------------------- Remember to run `lf t55xx detect` first whenever a new card is placed on the Proxmark3 or the config block changed. help This help ----------- --------------------- operations --------------------- config Set/Get T55XX configuration (modulation, inverted, offset, rate) detect Try detecting the tag modulation from reading the configuration block info Show T55x7 configuration data (page 0/ blk 0) trace Show T55x7 traceability data (page 1/ blk 0-1) ----------- --------------------- recovery --------------------- sniff Attempt to recover T55xx commands from sample buffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf t55xx info": {
             "command": "lf t55xx info",
             "description": "Show T55x7 configuration data (page 0/ blk 0) from reading the configuration block from tag. Use `-c` to specify a config block data to be used instead of reading tag.",
@@ -10315,19 +10095,45 @@
         },
         "lf t55xx read": {
             "command": "lf t55xx read",
-            "description": "Read T55xx block data. This commands defaults to page 0.",
-            "notes": [],
+            "description": "Read T55xx block data. This commands defaults to page 0. * * * WARNING * * * Use of read with password on a tag not configured for a password can damage the tag * * * * * * * * * *",
+            "notes": [
+                "lf t55xx read -b 0 -> read data from block 0",
+                "lf t55xx read -b 0 --pwd 01020304 -> read data from block 0, pwd 01020304",
+                "lf t55xx read -b 0 --pwd 01020304 -o -> read data from block 0, pwd 01020304, override"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-b, --blk <0-7> block number to read",
+                "-p, --pwd <hex> password (4 hex bytes)",
+                "-o, --override override safety check",
+                "--pg1 read page 1",
+                "--r0 downlink - fixed bit length (detected def)",
+                "--r1 downlink - long leading reference",
+                "--r2 downlink - leading zero",
+                "--r3 downlink - 1 of 4 coding reference"
+            ],
+            "usage": "lf t55xx read [-ho] -b <0-7> [-p <hex>] [--pg1] [--r0] [--r1] [--r2] [--r3]"
         },
         "lf t55xx recoverpw": {
             "command": "lf t55xx recoverpw",
-            "description": "This command uses a few tricks to try to recover mangled password. Try reading Page 0, block 7 before.",
-            "notes": [],
+            "description": "This command uses a few tricks to try to recover mangled password. Try reading Page 0, block 7 before. WARNING this may brick non-password protected chips!",
+            "notes": [
+                "lf t55xx recoverpw",
+                "lf t55xx recoverpw -p 11223344",
+                "lf t55xx recoverpw -p 11223344 --r3"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-p, --pwd <hex> password (4 hex bytes)",
+                "--r0 downlink - fixed bit length",
+                "--r1 downlink - long leading reference",
+                "--r2 downlink - leading zero",
+                "--r3 downlink - 1 of 4 coding reference",
+                "--all try all downlink modes (def)"
+            ],
+            "usage": "lf t55xx recoverpw [-h] [-p <hex>] [--r0] [--r1] [--r2] [--r3] [--all]"
         },
         "lf t55xx resetread": {
             "command": "lf t55xx resetread",
@@ -10483,14 +10289,6 @@
             ],
             "usage": "lf ti demod [-h]"
         },
-        "lf ti help": {
-            "command": "lf ti help",
-            "description": "help This help demod Demodulate raw bits for TI LF tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf ti reader": {
             "command": "lf ti reader",
             "description": "read a TI tag",
@@ -10567,14 +10365,6 @@
             ],
             "usage": "lf viking demod [-h]"
         },
-        "lf viking help": {
-            "command": "lf viking help",
-            "description": "help This help demod demodulate a Viking tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "lf viking reader": {
             "command": "lf viking reader",
             "description": "read a Viking AM tag",
@@ -10629,14 +10419,6 @@
                 "-h, --help This help"
             ],
             "usage": "lf visa2000 demod [-h]"
-        },
-        "lf visa2000 help": {
-            "command": "lf visa2000 help",
-            "description": "help This help demod demodulate an VISA2000 tag from the GraphBuffer",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "lf visa2000 reader": {
             "command": "lf visa2000 reader",
@@ -10695,14 +10477,6 @@
                 "-c, --cols <dec> column breaks (def 32)"
             ],
             "usage": "mem dump [-hv] [-o <dec>] [-l <dec>] [-f <fn>] [-c <dec>]"
-        },
-        "mem help": {
-            "command": "mem help",
-            "description": "help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "mem info": {
             "command": "mem info",
@@ -10782,14 +10556,6 @@
                 "-e, --eml also save in EML format"
             ],
             "usage": "mem spiffs dump [-he] -s <fn> [-d <fn>]"
-        },
-        "mem spiffs help": {
-            "command": "mem spiffs help",
-            "description": "help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "mem spiffs info": {
             "command": "mem spiffs info",
@@ -10944,14 +10710,6 @@
             ],
             "usage": "msleep [-h] [-t <ms>]"
         },
-        "nfc barcode help": {
-            "command": "nfc barcode help",
-            "description": "-------- ------------------ NFC Barcode -------------------- -------- --------------------- General --------------------- help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "nfc barcode read": {
             "command": "nfc barcode read",
             "description": "Get info from Thinfilm tags",
@@ -10995,21 +10753,24 @@
             ],
             "usage": "nfc decode [-hv] [-d <hex>] [-f <fn>]"
         },
-        "nfc help": {
-            "command": "nfc help",
-            "description": "-------- --------------------- NFC Tags -------------------- type1 { NFC Forum Tag Type 1... } type2 { NFC Forum Tag Type 2... } type4a { NFC Forum Tag Type 4 ISO14443A... } type4b { NFC Forum Tag Type 4 ISO14443B... } mf { NFC Type MIFARE Classic/Plus Tag... } barcode { NFC Barcode Tag... } -------- --------------------- General --------------------- help This help decode Decode NDEF records",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "nfc mf cformat": {
             "command": "nfc mf cformat",
-            "description": "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF) If no <name> given, UID will be used as filename. It will try default keys and MAD keys to detect if tag is already formatted in order to write.",
-            "notes": [],
+            "description": "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF) If no <name> given, UID will be used as filename. It will try default keys and MAD keys to detect if tag is already formatted in order to write. If not, it will try finding a key file based on your UID. ie, if you ran autopwn before",
+            "notes": [
+                "hf mf ndefformat",
+                "hf mf ndefformat --1k -> MIFARE Classic 1k",
+                "hf mf ndefformat --keys hf-mf-01020304-key.bin -> MIFARE 1k with keys from specified file"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help",
+                "-k, --keys <fn> filename of keys",
+                "--mini MIFARE Classic Mini / S20",
+                "--1k MIFARE Classic 1k / S50 (def)",
+                "--2k MIFARE Classic/Plus 2k",
+                "--4k MIFARE Classic 4k / S70"
+            ],
+            "usage": "hf mf ndefformat [-h] [-k <fn>] [--mini] [--1k] [--2k] [--4k]"
         },
         "nfc mf cread": {
             "command": "nfc mf cread",
@@ -11053,14 +10814,6 @@
             ],
             "usage": "hf mf ndefwrite [-hpv] [-d <hex>] [-f <fn>] [--mini] [--1k] [--2k] [--4k]"
         },
-        "nfc mf help": {
-            "command": "nfc mf help",
-            "description": "-------- --------- NFC Type MIFARE Classic/Plus Tag -------- -------- --------------------- General --------------------- help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "nfc mf pread": {
             "command": "nfc mf pread",
             "description": "Prints NFC Data Exchange Format (NDEF)",
@@ -11081,14 +10834,6 @@
             ],
             "usage": "hf mfp ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
         },
-        "nfc type1 help": {
-            "command": "nfc type1 help",
-            "description": "-------- -------------- NFC Forum Tag Type 1 --------------- -------- --------------------- General --------------------- help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "nfc type1 read": {
             "command": "nfc type1 read",
             "description": "Get info from Topaz tags",
@@ -11103,14 +10848,6 @@
                 "-v, --verbose verbose output"
             ],
             "usage": "hf topaz info [-hv] [-f <fn>]"
-        },
-        "nfc type2 help": {
-            "command": "nfc type2 help",
-            "description": "-------- -------------- NFC Forum Tag Type 2 --------------- -------- --------------------- General --------------------- help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "nfc type2 read": {
             "command": "nfc type2 read",
@@ -11141,14 +10878,6 @@
                 "-v, --verbose show technical data"
             ],
             "usage": "hf 14a ndefformat [-hv]"
-        },
-        "nfc type4a help": {
-            "command": "nfc type4a help",
-            "description": "-------- --------- NFC Forum Tag Type 4 ISO14443A ---------- -------- --------------------- General --------------------- help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "nfc type4a read": {
             "command": "nfc type4a read",
@@ -11198,14 +10927,6 @@
                 "-v, --verbose verbose output"
             ],
             "usage": "hf 14a ndefwrite [-hpv] [-d <hex>] [-f <fn>]"
-        },
-        "nfc type4b help": {
-            "command": "nfc type4b help",
-            "description": "-------- --------- NFC Forum Tag Type 4 ISO14443B ------------- -------- --------------------- General --------------------- help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "nfc type4b read": {
             "command": "nfc type4b read",
@@ -11262,14 +10983,6 @@
                 "<hex> Tag ID to read, between 1 and 3 bytes."
             ],
             "usage": "piv getdata [-hskatw] [--aid <hex>] <hex>"
-        },
-        "piv help": {
-            "command": "piv help",
-            "description": "help This help list List ISO7816 history",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "piv list": {
             "command": "piv list",
@@ -11438,14 +11151,6 @@
             ],
             "usage": "prefs get savepaths [-h]"
         },
-        "prefs help": {
-            "command": "prefs help",
-            "description": "help This help get { Get a preference } set { Set a preference } show Show all preferences",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "prefs set barmode": {
             "command": "prefs set barmode",
             "description": "Set persistent preference of HF/LF tune command styled output in the client",
@@ -11519,14 +11224,6 @@
                 "--none don't show emoji or text"
             ],
             "usage": "prefs set emoji [-h] [--alias] [--emoji] [--alttext] [--none]"
-        },
-        "prefs set help": {
-            "command": "prefs set help",
-            "description": "help This help barmode Set bar mode clientdebug Set client debug level clientdelay Set client execution delay color Set color support emoji Set emoji display hints Set hint display savepaths ... to be adjusted next ... output Set dump output style plotsliders Set plot slider display",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "prefs set hints": {
             "command": "prefs set hints",
@@ -11625,13 +11322,17 @@
             ],
             "usage": "rem [-h] <string> [<string>]..."
         },
-        "script help": {
-            "command": "script help",
-            "description": "This is a feature to run Lua/Cmd scripts. You can place scripts within the luascripts/cmdscripts folders. --------------------------------------------------------------------------------------- script list available offline: yes",
-            "notes": [],
+        "script list": {
+            "command": "script list",
+            "description": "List available Lua, Cmd and Python scripts",
+            "notes": [
+                "script list"
+            ],
             "offline": true,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "script list [-h]"
         },
         "script run": {
             "command": "script run",
@@ -11659,14 +11360,6 @@
                 "-t, --tlv executes TLV decoder if it possible"
             ],
             "usage": "smart brute [-ht]"
-        },
-        "smart help": {
-            "command": "smart help",
-            "description": "help This help list List ISO 7816 history upgrade Upgrade sim module firmware",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "smart info": {
             "command": "smart info",
@@ -11752,14 +11445,6 @@
             ],
             "usage": "smart setclock [-h] [--16mhz] [--8mhz] [--4mhz]"
         },
-        "smart upgrade": {
-            "command": "smart upgrade",
-            "description": "[=] ------------------------------------------------------------------- [!] WARNING - sim module firmware upgrade [!] A dangerous command, do wrong and you could brick the sim module [=] -------------------------------------------------------------------",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "trace extract": {
             "command": "trace extract",
             "description": "Extracts protocol authentication challenges from trace buffer",
@@ -11773,14 +11458,6 @@
                 "-1, --buffer use data from trace buffer"
             ],
             "usage": "trace extract [-h1]"
-        },
-        "trace help": {
-            "command": "trace help",
-            "description": "help This help extract Extract authentication challenges found in trace list List protocol data in trace buffer load Load trace from file save Save trace buffer to file",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "trace list": {
             "command": "trace list",
@@ -11854,11 +11531,15 @@
         },
         "usart btfactory": {
             "command": "usart btfactory",
-            "description": "Reset BT add-on to factory settings This requires 1) BTpower to be turned ON 2) BT add-on to NOT be connected => the add-on blue LED must blink",
-            "notes": [],
+            "description": "Reset BT add-on to factory settings This requires 1) BTpower to be turned ON 2) BT add-on to NOT be connected => the add-on blue LED must blink WARNING: process only if strictly needed!",
+            "notes": [
+                "usart btfactory"
+            ],
             "offline": false,
-            "options": [],
-            "usage": ""
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "usart btfactory [-h]"
         },
         "usart btpin": {
             "command": "usart btpin",
@@ -11890,14 +11571,6 @@
                 "-O, --odd odd parity"
             ],
             "usage": "usart config [-hNEO] [-b <dec>]"
-        },
-        "usart help": {
-            "command": "usart help",
-            "description": "help This help",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
         },
         "usart rx": {
             "command": "usart rx",
@@ -12000,14 +11673,6 @@
             ],
             "usage": "wiegand encode [-h] [--fc <dec>] --cn <dec> [--issue <dec>] [--oem <dec>] [-w <format>] [--pre]"
         },
-        "wiegand help": {
-            "command": "wiegand help",
-            "description": "help This help list List available wiegand formats encode Encode to wiegand raw hex (currently for HID Prox) decode Convert raw hex to decoded wiegand format (currently for HID Prox)",
-            "notes": [],
-            "offline": true,
-            "options": [],
-            "usage": ""
-        },
         "wiegand list": {
             "command": "wiegand list",
             "description": "List available wiegand formats",
@@ -12022,9 +11687,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 755,
+        "commands_extracted": 679,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-06-04T15:36:56"
-
+        "extracted_on": "2023-07-16T13:30:30"
     }
 }

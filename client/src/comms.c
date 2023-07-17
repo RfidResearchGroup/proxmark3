@@ -621,7 +621,6 @@ bool OpenProxmark(pm3_device_t **dev, const char *port, bool wait_for_port, int 
 // check if we can communicate with Pm3
 int TestProxmark(pm3_device_t *dev) {
 
-    PacketResponseNG resp;
     uint16_t len = 32;
     uint8_t data[len];
     for (uint16_t i = 0; i < len; i++)
@@ -642,6 +641,7 @@ int TestProxmark(pm3_device_t *dev) {
     timeout = 1000;
 #endif
 
+    PacketResponseNG resp;
     if (WaitForResponseTimeoutW(CMD_PING, &resp, timeout, false) == 0) {
         return PM3_ETIMEOUT;
     }
@@ -666,15 +666,19 @@ int TestProxmark(pm3_device_t *dev) {
     g_conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
     g_conn.uart_speed = g_pm3_capabilities.baudrate;
 
+    bool is_tcp_conn = (memcmp(g_conn.serial_port_name, "tcp:", 4) == 0);
+    bool is_bt_conn = (memcmp(g_conn.serial_port_name, "bt:", 3) == 0);
+
     PrintAndLogEx(INFO, "Communicating with PM3 over %s%s%s",
-                  g_conn.send_via_fpc_usart ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
-                  memcmp(g_conn.serial_port_name, "tcp:", 4) == 0 ? " over " _YELLOW_("TCP") : "",
-                  memcmp(g_conn.serial_port_name, "bt:", 3) == 0 ? " over " _YELLOW_("BT") : "");
+                  (g_conn.send_via_fpc_usart) ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
+                  (is_tcp_conn) ? " over " _YELLOW_("TCP") : "",
+                  (is_bt_conn) ? " over " _YELLOW_("BT") : ""
+                 );
 
     if (g_conn.send_via_fpc_usart) {
         PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", g_conn.uart_speed);
     } else {
-        int res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
+        int res = uart_reconfigure_timeouts(is_tcp_conn ? UART_TCP_CLIENT_RX_TIMEOUT_MS : UART_USB_CLIENT_RX_TIMEOUT_MS);
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -769,7 +773,6 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
 
         if (msclock() - tmp_clk > 3000 && show_warning) {
             // 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
-//            PrintAndLogEx(INFO, "Waiting for a response from the Proxmark3...");
             PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
             show_warning = false;
         }

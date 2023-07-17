@@ -31,6 +31,14 @@ D01AFEEB890A
 # 17 B
 4B791BEA7BCC
 #
+# QL88 keys
+# 17 A/B
+2612C6DE84CA
+707B11FC1481
+#
+# QL88 diversifed 
+03F9067646AE
+2352C5B56D85
 #
 B0B1B2B3B4B5
 C0C1C2C3C4C5
@@ -144,6 +152,9 @@ F1D83F964314
 200000000000
 222222222222
 27DD91F1FCF1
+#
+# Hotel system
+505209016A1F
 #
 # Directory and eventlog KeyB
 2BA9621E0A36
@@ -927,9 +938,9 @@ FBF225DC5D58
 # Data  https://pastebin.com/BEm6bdAE
 # vingcard.txt
 # Note: most likely diversified
+96A301BCE267
 4708111C8604
 3D50D902EA48
-96A301BCE267
 6700F10FEC09
 7A09CC1DB70A
 560F7CFF2D81
@@ -2045,6 +2056,9 @@ D144BD193063
 # Data from "the more the marriott" mifare project (colonelborkmundus)
 # aka The Horde
 #
+# These keys seem to be from Vingcard / Saflok system which means they are diversified
+# and not static default keys.  To verify this, the UID from such a card is needed.
+#
 # 20230125-01, Elite Member Marriott Rewards
 43012BD9EB87
 # 20230125-02, Elite Member Marriott Rewards
@@ -2125,7 +2139,6 @@ D23C1CB1216E
 # 20230413-78, Caesars
 A1D92F808CAF
 # 20230413-79, The Cosmopolitan, Vegas
-# 96A301BCE267
 # 20230413-80, Aria
 1153C319B4F8
 # 20230413-81, Aria

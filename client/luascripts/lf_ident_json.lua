@@ -113,7 +113,7 @@ local function getDefault(block0)
 
     block0 = block0:upper()
 
-    local  T55X7_DEFAULT_CONFIG_BLOCK   =   '000880E8' --// compat mode, RF/32, manchester, STT, 7 data blocks
+    local T55X7_DEFAULT_CONFIG_BLOCK    =   '000880E8' --// compat mode, RF/32, manchester, STT, 7 data blocks
     local T55X7_RAW_CONFIG_BLOCK        =   '000880E0' --// compat mode, RF/32, manchester, 7 data blocks
     local T55X7_EM_UNIQUE_CONFIG_BLOCK  =   '00148040' --// emulate em4x02/unique - compat mode, manchester, RF/64, 2 data blocks
     -- FDXB requires data inversion and BiPhase 57 is simply BipHase 50 inverted, so we can either do it using the modulation scheme or the inversion flag

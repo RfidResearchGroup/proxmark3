@@ -282,7 +282,8 @@ static int bitparse_find_section(FILE *infile, char section_name, unsigned int *
                 /* Four byte length field */
                 for (int i = 0; i < 4; i++) {
                     tmp = fgetc(infile);
-                    if (tmp < 0) {
+                    /* image length sanity check, should be under 300KB */
+                    if ((tmp < 0) || (tmp > 300 * 1024)) {
                         break;
                     }
                     current_length += tmp << (24 - (i * 8));
@@ -292,7 +293,8 @@ static int bitparse_find_section(FILE *infile, char section_name, unsigned int *
             default: /* Fall through, two byte length field */
                 for (int i = 0; i < 2; i++) {
                     tmp = fgetc(infile);
-                    if (tmp < 0) {
+                    /* if name, date or time fields are too long, we probably shouldn't parse them */
+                    if ((tmp < 0) || (tmp > 64)) {
                         break;
                     }
                     current_length += tmp << (8 - (i * 8));
@@ -334,14 +336,16 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
         }
     }
 
-    if (!memcmp("fpga_lf", basename(infile_name), 7))
-        strncat(dst, "LF", len - strlen(dst) - 1);
-    else if (!memcmp("fpga_hf_15", basename(infile_name), 10))
-        strncat(dst, "HF 15", len - strlen(dst) - 1);
-    else if (!memcmp("fpga_hf.", basename(infile_name), 8))
-        strncat(dst, "HF", len - strlen(dst) - 1);
-    else if (!memcmp("fpga_felica", basename(infile_name), 7))
-        strncat(dst, "HF FeliCa", len - strlen(dst) - 1);
+    if (bitparse_find_section(infile, 'a', &fpga_info_len)) {
+        for (uint32_t i = 0; i < fpga_info_len; i++) {
+            char c = (char)fgetc(infile);
+            if (i < sizeof(tempstr)) {
+                tempstr[i] = c;
+            }
+        }
+
+        strncat(dst, tempstr, len - strlen(dst) - 1);
+    }
 
     strncat(dst, " image ", len - strlen(dst) - 1);
     if (bitparse_find_section(infile, 'b', &fpga_info_len)) {

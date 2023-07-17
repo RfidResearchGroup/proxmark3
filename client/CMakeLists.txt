@@ -96,11 +96,12 @@ if (CMAKE_TOOLCHAIN_FILE)
     endif (ANDROID)
     set(EMBED_READLINE ON)
     set(EMBED_BZIP2 ON)
+    set(EMBED_LZ4 ON)
 endif (CMAKE_TOOLCHAIN_FILE)
 
-if (EMBED_READLINE OR EMBED_BZIP2)
+if (EMBED_READLINE OR EMBED_BZIP2 OR EMBED_LZ4)
     include(ExternalProject)
-endif (EMBED_READLINE OR EMBED_BZIP2)
+endif (EMBED_READLINE OR EMBED_BZIP2 OR EMBED_LZ4)
 
 if (NOT SKIPREADLINE EQUAL 1)
     if (APPLE)
@@ -162,6 +163,7 @@ if (NOT SKIPJANSSONSYSTEM EQUAL 1)
 endif (NOT SKIPJANSSONSYSTEM EQUAL 1)
 
 if(EMBED_BZIP2)
+    cmake_policy(SET CMP0114 NEW)
     set(BZIP2_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
     # Specify SOURCE_DIR will cause some errors
     ExternalProject_Add(bzip2
@@ -182,6 +184,34 @@ if(EMBED_BZIP2)
 else(EMBED_BZIP2)
     find_package (BZip2 REQUIRED)
 endif(EMBED_BZIP2)
+
+if(EMBED_LZ4)
+    cmake_policy(SET CMP0114 NEW)
+    set(LZ4_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/lz4/src/lz4)
+    # Specify SOURCE_DIR will cause some errors
+    ExternalProject_Add(lz4
+        GIT_REPOSITORY        https://android.googlesource.com/platform/external/lz4
+        GIT_TAG               platform-tools-30.0.2
+        PREFIX                deps/lz4
+        # SOURCE_DIR            ${CMAKE_CURRENT_SOURCE_DIR}/deps/lz4
+        CONFIGURE_COMMAND     mkdir -p ${LZ4_BUILD_DIR} && git archive --format tar HEAD | tar -C ${LZ4_BUILD_DIR} -x
+        BUILD_IN_SOURCE       ON
+        BUILD_COMMAND         make -C ${LZ4_BUILD_DIR}/lib -j4 CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} liblz4.a
+        INSTALL_COMMAND       ""
+        LOG_DOWNLOAD          ON
+    )
+    ExternalProject_Add_StepTargets(lz4 configure build install)
+    set(LZ4_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/deps/lz4/src/lz4/lib)
+    set(LZ4_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/lz4/src/lz4/lib/liblz4.a)
+    set(LZ4_FOUND ON)
+else(EMBED_LZ4)
+    find_path(LZ4_INCLUDE_DIRS lz4frame.h)
+    find_library(LZ4_LIBRARIES lz4)
+endif(EMBED_LZ4)
+
+if (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
+    set(LZ4_FOUND ON)
+endif (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
 
 if (NOT SKIPWHEREAMISYSTEM EQUAL 1)
     find_path(WHEREAMI_INCLUDE_DIRS whereami.h)
@@ -298,6 +328,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhftexkom.c
         ${PM3_ROOT}/client/src/cmdhfthinfilm.c
         ${PM3_ROOT}/client/src/cmdhftopaz.c
+        ${PM3_ROOT}/client/src/cmdhfvas.c
         ${PM3_ROOT}/client/src/cmdhfwaveshare.c
         ${PM3_ROOT}/client/src/cmdhfxerox.c
         ${PM3_ROOT}/client/src/cmdhw.c
@@ -348,6 +379,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/fileutils.c
         ${PM3_ROOT}/client/src/flash.c
         ${PM3_ROOT}/client/src/graph.c
+		${PM3_ROOT}/client/src/iso4217.c
         ${PM3_ROOT}/client/src/jansson_path.c
         ${PM3_ROOT}/client/src/preferences.c
         ${PM3_ROOT}/client/src/pm3.c
@@ -380,7 +412,23 @@ message(STATUS "CMAKE_SYSTEM_PROCESSOR := ${CMAKE_SYSTEM_PROCESSOR}")
 if (APPLE)
     message(STATUS "Apple device detected.")
     set(ADDITIONAL_SRC ${PM3_ROOT}/client/src/util_darwin.h  ${PM3_ROOT}/client/src/util_darwin.m ${ADDITIONAL_SRC})
-    set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
+
+    find_library(UIKIT_LIBRARY UIKit)
+    if (NOT UIKIT_LIBRARY)
+        message(STATUS "UIKit.framework NOT found!")
+    else()
+        message(STATUS "UIKit.framework found! ${UIKIT_LIBRARY}")
+        set(ADDITIONAL_LNK "-framework Foundation" "-framework UIKit")
+    endif()
+
+    find_library(APPKIT_LIBRARY AppKit)
+    if (NOT APPKIT_LIBRARY)
+      message(STATUS "AppKit.framework NOT found!")
+    else()
+      message(STATUS "AppKit.framework found! ${APPKIT_LIBRARY}")
+      set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
+    endif()
+
 endif (APPLE)
 
 if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
@@ -439,6 +487,11 @@ if (BZIP2_FOUND)
     set(ADDITIONAL_LNK ${BZIP2_LIBRARIES} ${ADDITIONAL_LNK})
 endif (BZIP2_FOUND)
 
+if (LZ4_FOUND)
+    set(ADDITIONAL_DIRS ${LZ4_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${LZ4_LIBRARIES} ${ADDITIONAL_LNK})
+endif (LZ4_FOUND)
+
 if (WHEREAMI_FOUND)
     set(ADDITIONAL_DIRS ${WHEREAMI_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${WHEREAMI_LIBRARIES} ${ADDITIONAL_LNK})
@@ -471,11 +524,25 @@ else (SKIPBT EQUAL 1)
     endif (BLUEZ_FOUND)
 endif(SKIPBT EQUAL 1)
 
-if (EMBED_BZIP2)
-    message(STATUS "Bzip2 library:     embedded")
-else (EMBED_BZIP2)
-    message(STATUS "Bzip2 library:     system library found")
-endif (EMBED_BZIP2)
+if (BZIP2_FOUND)
+    if (EMBED_BZIP2)
+        message(STATUS "Bzip2 library:     embedded")
+    else (EMBED_BZIP2)
+        message(STATUS "Bzip2 library:     system library found")
+    endif (EMBED_BZIP2)
+else (BZIP2_FOUND)
+    message(SEND_ERROR "Bzip2 library:     Bzip2 not found")
+endif (BZIP2_FOUND)
+
+if (LZ4_FOUND)
+    if (EMBED_LZ4)
+        message(STATUS "LZ4 library:       embedded")
+    else (EMBED_LZ4)
+        message(STATUS "LZ4 library:       system library found")
+    endif (EMBED_LZ4)
+else (LZ4_FOUND)
+    message(SEND_ERROR "LZ4 library:       LZ4 not found")
+endif (LZ4_FOUND)
 
 if (SKIPJANSSONSYSTEM EQUAL 1)
     message(STATUS "Jansson library:   local library forced")
@@ -575,6 +642,9 @@ endif (EMBED_READLINE)
 if (EMBED_BZIP2)
     add_dependencies(proxmark3 bzip2)
 endif (EMBED_BZIP2)
+if (EMBED_LZ4)
+    add_dependencies(proxmark3 lz4)
+endif (EMBED_LZ4)
 
 if (MINGW)
     # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)

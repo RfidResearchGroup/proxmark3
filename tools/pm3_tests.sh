@@ -235,7 +235,7 @@ fi
 while true; do
     if $TESTALL || $TESTCOMMON; then
       echo -e "\n${C_BLUE}Testing common:${C_NC}"
-      if ! CheckFileExist "hardnested tables exists"       "$RESOURCEPATH/hardnested_tables/bitflip_0_001_states.bin.bz2"; then break; fi
+      if ! CheckFileExist "hardnested tables exists"       "$RESOURCEPATH/hardnested_tables/bitflip_0_001_states.bin.lz4"; then break; fi
       if ! CheckFileExist "simmodule fw file exists"       "$RESOURCEPATH/sim013.bin"; then break; fi
       if ! CheckFileExist "iCLASS dictionary exists"       "$DICPATH/iclass_default_keys.dic"; then break; fi
       if ! CheckFileExist "MFC dictionary exists"          "$DICPATH/mfc_default_keys.dic"; then break; fi
@@ -437,8 +437,7 @@ while true; do
       if ! CheckExecute slow "lf T55 hid_48 test2"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_hid_48.pm3; lf hid demod'" \
                                                                      "HID Corporate 1000 48-bit"; then break; fi
       if ! CheckExecute slow "lf T55 indala_hedem test"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_hedem.pm3; lf search -1'" "Indala ID found"; then break; fi
-      if ! CheckExecute slow "lf T55 indala_hedem test2"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_hedem.pm3; lf indala demod'" \
-                                                                     "Heden-2L    \| 888"; then break; fi
+      if ! CheckExecute slow "lf T55 indala_hedem test2"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_hedem.pm3; lf indala demod'" "Heden-2L...... 888"; then break; fi
       if ! CheckExecute slow "lf T55 indala test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala.pm3; lf search -1'" "Indala ID found"; then break; fi
       if ! CheckExecute slow "lf T55 indala test2"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala.pm3; lf indala demod'" \
                                                                      "Fmt 26 FC: 123 Card: 1337 Parity: 11"; then break; fi
@@ -501,7 +500,7 @@ while true; do
                                                                      "Visa2000 - Card 112233, Raw: 564953320001B66900000183"; then break; fi
 
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
-      if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "at_enc"; then break; fi
+      if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "content from tag dump file"; then break; fi
       if ! CheckExecute slow retry ignore "hf mf hardnested long test"  "$CLIENTBIN -c 'hf mf hardnested -t --tk 000000000000'" "found:"; then break; fi
       if ! CheckExecute slow "hf iclass loclass long test" "$CLIENTBIN -c 'hf iclass loclass --long'" "verified \( ok \)"; then break; fi
       if ! CheckExecute slow "emv long test"               "$CLIENTBIN -c 'emv test -l'" "Test\(s\) \[ ok"; then break; fi

@@ -730,7 +730,9 @@ static bool Pack_C15001(wiegand_card_t *card, wiegand_message_t *packed, bool pr
 static bool Unpack_C15001(wiegand_message_t *packed, wiegand_card_t *card) {
     memset(card, 0, sizeof(wiegand_card_t));
 
-    if (packed->Length != 36) return false; // Wrong length? Stop here.
+
+    if (packed->Length != 36)
+        return false; // Wrong length? Stop here.
 
     card->OEM = get_linear_field(packed, 1, 10);
     card->FacilityCode = get_linear_field(packed, 11, 8);
@@ -976,8 +978,10 @@ static bool Pack_C1k48s(wiegand_card_t *card, wiegand_message_t *packed, bool pr
     packed->Mid |= (evenparity32((packed->Mid & 0x00001B6D) ^ (packed->Bot & 0xB6DB6DB6))) << 14;
     packed->Bot |= (oddparity32((packed->Mid & 0x000036DB) ^ (packed->Bot & 0x6DB6DB6C)));
     packed->Mid |= (oddparity32((packed->Mid & 0x00007FFF) ^ (packed->Bot & 0xFFFFFFFF))) << 15;
+
     if (preamble)
         return add_HID_header(packed);
+
     return true;
 }
 

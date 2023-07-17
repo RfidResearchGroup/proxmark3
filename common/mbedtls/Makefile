@@ -21,7 +21,10 @@ MYSRCS = \
 	cipher.c \
 	cmac.c \
 	des.c \
+	ecc_point_compression.c \
+	ecdh.c \
 	ecdsa.c \
+	gcm.c \
 	md.c \
 	md5.c \
 	oid.c \

@@ -29,6 +29,7 @@
 #include "cmdhficlass.h"  // pagemap
 #include "protocols.h"    // iclass defines
 #include "cmdhftopaz.h"   // TOPAZ defines
+#include "mifare/mifaredefault.h"     // MFP / AES defines
 
 #ifdef _WIN32
 #include "scandir.h"
@@ -189,17 +190,11 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
         return NULL;
     }
 
-    uint16_t p_namelen = strlen(preferredName);
-    if (str_endswith(preferredName, suffix)) {
-        p_namelen -= strlen(suffix);
-    }
-
-    int save_path_len = path_size(e_save_path);
-
     // 1: null terminator
     // 16: room for filenum to ensure new filename
     // save_path_len + strlen(PATHSEP):  the user preference save paths
-    const size_t len = p_namelen + strlen(suffix) + 1 + 16 + save_path_len + strlen(PATHSEP);
+    //const size_t len = p_namelen + strlen(suffix) + 1 + 16 + save_path_len + strlen(PATHSEP);
+    const size_t len = FILE_PATH_SIZE;
 
     char *fileName = (char *) calloc(len, sizeof(uint8_t));
     if (fileName == NULL) {
@@ -209,17 +204,21 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     char *pfn = fileName;
 
     // user preference save paths
+    int save_path_len = path_size(e_save_path);
     if (save_path_len) {
-        snprintf(pfn, save_path_len + strlen(PATHSEP) + 1, "%s%s", g_session.defaultPaths[e_save_path], PATHSEP);
+        snprintf(pfn, len, "%s%s", g_session.defaultPaths[e_save_path], PATHSEP);
         pfn += save_path_len + strlen(PATHSEP);
     }
 
-    int num = 1;
-
+    uint16_t p_namelen = strlen(preferredName);
+    if (str_endswith(preferredName, suffix)) {
+        p_namelen -= strlen(suffix);
+    }
     // modify filename
     snprintf(pfn, len, "%.*s%s", p_namelen, preferredName, suffix);
 
     // check complete path/filename if exists
+    int num = 1;
     while (fileExists(fileName)) {
         // modify filename
         snprintf(pfn, len, "%.*s-%03d%s", p_namelen, preferredName, num, suffix);
@@ -543,28 +542,29 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             break;
         }
         case jsfMfPlusKeys: {
-            JsonSaveStr(root, "FileType", "mfp");
+            JsonSaveStr(root, "FileType", "mfpkeys");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", &data[0], 7);
             JsonSaveBufAsHexCompact(root, "$.Card.SAK", &data[10], 1);
             JsonSaveBufAsHexCompact(root, "$.Card.ATQA", &data[11], 2);
             uint8_t atslen = data[13];
-            if (atslen > 0)
+            if (atslen > 0) {
                 JsonSaveBufAsHexCompact(root, "$.Card.ATS", &data[14], atslen);
+            }
 
-            uint8_t vdata[2][64][16 + 1] = {{{0}}};
-            memcpy(vdata, &data[14 + atslen], 2 * 64 * 17);
+            uint8_t vdata[2][64][17] = {{{0}}};
+            memcpy(vdata, data + (14 + atslen), 2 * 64 * 17);
 
             for (size_t i = 0; i < datalen; i++) {
                 char path[PATH_MAX_LENGTH] = {0};
 
                 if (vdata[0][i][0]) {
-                    snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyA", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &vdata[0][i][1], 16);
+                    snprintf(path, sizeof(path), "$.SectorKeys.%zu.KeyA", i);
+                    JsonSaveBufAsHexCompact(root, path, &vdata[0][i][1], AES_KEY_LEN);
                 }
 
                 if (vdata[1][i][0]) {
-                    snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyB", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &vdata[1][i][1], 16);
+                    snprintf(path, sizeof(path), "$.SectorKeys.%zu.KeyB", i);
+                    JsonSaveBufAsHexCompact(root, path, &vdata[1][i][1], AES_KEY_LEN);
                 }
             }
             break;
@@ -1296,6 +1296,40 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
         *datalen += sptr;
     }
+
+    if (!strcmp(ctype, "mfpkeys")) {
+
+        JsonLoadBufAsHex(root, "$.Card.UID", udata.bytes, 7, datalen);
+        JsonLoadBufAsHex(root, "$.Card.SAK", udata.bytes + 10, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.ATQA", udata.bytes + 11, 2, datalen);
+        uint8_t atslen = udata.bytes[13];
+        if (atslen > 0) {
+            JsonLoadBufAsHex(root, "$.Card.ATS", udata.bytes + 14, atslen, datalen);
+        }
+
+        size_t sptr = (14 + atslen);
+
+        // memcpy(vdata, udata.bytes + (14 + atslen), 2 * 64 * 17);
+        for (size_t i = 0; i < 64; i++) {
+
+            if ((sptr + (AES_KEY_LEN * 2)) > maxdatalen) {
+                break;
+            }
+
+            size_t offset = (14 + atslen) + (i * 2 * AES_KEY_LEN);
+
+            char blocks[40] = {0};
+            snprintf(blocks, sizeof(blocks), "$.SectorKeys.%zu.KeyA", i);
+            JsonLoadBufAsHex(root, blocks, udata.bytes + offset, AES_KEY_LEN, datalen);
+
+            snprintf(blocks, sizeof(blocks), "$.SectorKeys.%zu.KeyB", i);
+            JsonLoadBufAsHex(root, blocks, udata.bytes + offset + AES_KEY_LEN, AES_KEY_LEN, datalen);
+
+            sptr += (2 * AES_KEY_LEN);
+        }
+        *datalen += sptr;
+    }
+
 out:
 
     if (callback != NULL) {
@@ -1575,6 +1609,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     if (*keyb == NULL) {
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
         fclose(f);
+        free(*keya);
         return PM3_EMALLOC;
     }
 

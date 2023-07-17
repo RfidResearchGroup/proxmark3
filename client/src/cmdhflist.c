@@ -70,7 +70,7 @@ static uint8_t *gs_mfuc_key = NULL;
 
 uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
     if (n < 3) return 2;
-    if (isResponse && (n < 6)) return 2;
+    if (isResponse && (n == 5)) return 2;
     if (d[1] == 0x50 &&
             d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
             d[0] <= ISO14443A_CMD_ANTICOLL_OR_SELECT_3) {
@@ -189,7 +189,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             if (cmd[1] == 0x01 && cmdsize == 7) {
                 snprintf(exp, size, "ECP1");
                 return PM3_SUCCESS;
-            } else if (cmd[1] == 0x02 && cmdsize == (cmd[2] & 0x0f) + 7) {
+            } else if (cmd[1] == 0x02 && cmdsize == (cmd[2] & 0x0F) + 7) {
                 // Byte 3 is the reader type
                 switch (cmd[3]) {
                     case 0x01:
@@ -200,6 +200,9 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                         break;
                     case 0x03:
                         snprintf(exp, size, "ECP2 (Identity)");
+                        break;
+                    case 0x05:
+                        snprintf(exp, size, "ECP2 (AirDrop)");
                         break;
                     default:
                         snprintf(exp, size, "ECP2");
@@ -496,7 +499,7 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
 
                 uint8_t key[8];
                 if (check_known_default(csn, epurse, rmac, tmac, key)) {
-                    snprintf(exp, size, "CHECK ( %s )", sprint_hex_inrow(key, 8));
+                    snprintf(exp, size, "CHECK ( " _GREEN_("%s") " )", sprint_hex_inrow(key, 8));
                 } else {
                     snprintf(exp, size, "CHECK");
                 }

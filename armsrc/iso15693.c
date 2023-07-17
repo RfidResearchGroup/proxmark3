@@ -1736,14 +1736,19 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
         // no need to try decoding reader data if the tag is sending
         if (!tag_is_active) {
 
-            if (Handle15693SampleFromReader((sniffdata & 0x02) >> 1, &dreader)) {
+            int extra_8s = 1;
+            if (Handle15693SampleFromReader((sniffdata & 0x02) >> 1, &dreader) ||
+                    (++extra_8s && Handle15693SampleFromReader(sniffdata & 0x01, &dreader))) {
 
-                uint32_t eof_time = dma_start_time + (samples * 16) + 8 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
                 if (dreader.byteCount > 0) {
+                    // sof/eof_times are in ssp_clk, which is 13.56MHz / 4
+                    // not sure where the extra +8's on the EOF time comes from though, if someone knows update this comment
+                    uint32_t eof_time = dma_start_time + (samples * 16) + (extra_8s * 8) - DELAY_READER_TO_ARM_SNIFF; // end of EOF
                     uint32_t sof_time = eof_time
-                                        - dreader.byteCount * (dreader.Coding == CODING_1_OUT_OF_4 ? 128 * 16 : 2048 * 16) // time for byte transfers
-                                        - 32 * 16  // time for SOF transfer
-                                        - 16 * 16; // time for EOF transfer
+                                        - dreader.byteCount * (dreader.Coding == CODING_1_OUT_OF_4 ? 1024 : 16384) // time for byte transfers
+                                        - 256  // time for SOF transfer (1024/fc / 4)
+                                        - 128; // time for EOF transfer (512/fc / 4)
+                    // sof/eof_times * 4 here to bring from ssp_clk freq to RF carrier freq
                     LogTrace_ISO15693(dreader.output, dreader.byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
 
                     if (!iclass) { // Those flags don't exist in iClass
@@ -1751,27 +1756,8 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
                         expect_fast_answer = dreader.output[0] & ISO15_REQ_DATARATE_HIGH;
                     }
                 }
+
                 // And ready to receive another command.
-                //DecodeReaderReset(&dreader); // already reseted
-                DecodeTagReset(&dtag);
-                DecodeTagFSKReset(&dtagfsk);
-                reader_is_active = false;
-                expect_tag_answer = true;
-            } else if (Handle15693SampleFromReader(sniffdata & 0x01, &dreader)) {
-
-                uint32_t eof_time = dma_start_time + (samples * 16) + 16 - DELAY_READER_TO_ARM_SNIFF; // end of EOF
-                if (dreader.byteCount > 0) {
-                    uint32_t sof_time = eof_time
-                                        - dreader.byteCount * (dreader.Coding == CODING_1_OUT_OF_4 ? 128 * 16 : 2048 * 16) // time for byte transfers
-                                        - 32 * 16  // time for SOF transfer
-                                        - 16 * 16; // time for EOF transfer
-                    LogTrace_ISO15693(dreader.output, dreader.byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
-                    if (!iclass) { // Those flags don't exist in iClass
-                        expect_fsk_answer = dreader.output[0] & ISO15_REQ_SUBCARRIER_TWO;
-                        expect_fast_answer = dreader.output[0] & ISO15_REQ_DATARATE_HIGH;
-                    }
-                }
-                // And ready to receive another command
                 //DecodeReaderReset(&dreader); // already reseted
                 DecodeTagReset(&dtag);
                 DecodeTagFSKReset(&dtagfsk);
@@ -1782,21 +1768,26 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
             }
         }
 
-        if (!reader_is_active && expect_tag_answer) {                       // no need to try decoding tag data if the reader is currently sending or no answer expected yet
+        // no need to try decoding tag data if the reader is currently sending or no answer expected yet
+        if (!reader_is_active && expect_tag_answer) {
 
             if (!expect_fsk_answer) {
+                // single subcarrier tag response
                 if (Handle15693SamplesFromTag((sniffdata >> 4) << 2, &dtag, expect_fast_answer)) {
 
+                    // sof/eof_times are in ssp_clk, which is 13.56MHz / 4
                     uint32_t eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
                     if (dtag.lastBit == SOF_PART2) {
                         eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
                     }
                     uint32_t sof_time = eof_time
-                                        - dtag.len * 8 * 8 * 16 // time for byte transfers
-                                        - (32 * 16)  // time for SOF transfer
-                                        - (dtag.lastBit != SOF_PART2 ? (32 * 16) : 0); // time for EOF transfer
+                                        - dtag.len * 1024 // time for byte transfers (4096/fc / 4)
+                                        - 512             // time for SOF transfer (2048/fc / 4)
+                                        - (dtag.lastBit != SOF_PART2 ? 512 : 0); // time for EOF transfer (2048/fc / 4)
 
+                    // sof/eof_times * 4 here to bring from ssp_clk freq to RF carrier freq
                     LogTrace_ISO15693(dtag.output, dtag.len, (sof_time * 4), (eof_time * 4), NULL, false);
+
                     // And ready to receive another response.
                     DecodeTagReset(&dtag);
                     DecodeTagFSKReset(&dtagfsk);
@@ -1807,26 +1798,23 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
                     tag_is_active = (dtag.state >= STATE_TAG_RECEIVING_DATA);
                 }
             } else {
+                // dual subcarrier tag response
                 if (FREQ_IS_0((sniffdata >> 2) & 0x3)) // tolerate 1 00
                     sniffdata = sniffdata_prev;
 
                 if (Handle15693FSKSamplesFromTag((sniffdata >> 2) & 0x3, &dtagfsk, expect_fast_answer)) {
-                    expect_fsk_answer = false;
-                } else {
-                    tag_is_active = (dtagfsk.state >= STATE_FSK_RECEIVING_DATA_484);
-                }
-                if (!expect_fsk_answer) {
-                    // FSK answer no more expected: switch back to ASK
                     if (dtagfsk.len > 0) {
+                        // sof/eof_times are in ssp_clk, which is 13.56MHz / 4
                         uint32_t eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
                         if (dtagfsk.lastBit == SOF) {
                             eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
                         }
                         uint32_t sof_time = eof_time
-                                            - dtagfsk.len * 8 * 8 * 16 // time for byte transfers
-                                            - (32 * 16)  // time for SOF transfer
-                                            - (dtagfsk.lastBit != SOF ? (32 * 16) : 0); // time for EOF transfer
+                                            - dtagfsk.len * 1016 // time for byte transfers (4064/fc / 4) - FSK is slightly different
+                                            - 512                // time for SOF transfer (2048/fc / 4)
+                                            - (dtagfsk.lastBit != SOF ? 512 : 0); // time for EOF transfer (2048/fc / 4)
 
+                        // sof/eof_times * 4 here to bring from ssp_clk freq to RF carrier freq
                         LogTrace_ISO15693(dtagfsk.output, dtagfsk.len, (sof_time * 4), (eof_time * 4), NULL, false);
                     }
 
@@ -1834,6 +1822,10 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
                     DecodeReaderReset(&dreader);
                     expect_tag_answer = false;
                     tag_is_active = false;
+                    // FSK answer no more expected: switch back to ASK
+                    expect_fsk_answer = false;
+                } else {
+                    tag_is_active = (dtagfsk.state >= STATE_FSK_RECEIVING_DATA_484);
                 }
             }
         }
@@ -1843,20 +1835,20 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
     switch_off();
 
     DbpString("");
-    DbpString(_CYAN_("Sniff statistics"));
-    DbpString("=================================");
-    Dbprintf("  DecodeTag State........%d", dtag.state);
-    Dbprintf("  DecodeTag byteCnt......%d", dtag.len);
-    Dbprintf("  DecodeTag posCount.....%d", dtag.posCount);
-    Dbprintf("  DecodeTagFSK State.....%d", dtagfsk.state);
-    Dbprintf("  DecodeTagFSK byteCnt...%d", dtagfsk.len);
-    Dbprintf("  DecodeTagFSK count.....%d", dtagfsk.count);
-    Dbprintf("  DecodeReader State.....%d", dreader.state);
-    Dbprintf("  DecodeReader byteCnt...%d", dreader.byteCount);
-    Dbprintf("  DecodeReader posCount..%d", dreader.posCount);
-    Dbprintf("  Trace length..........." _YELLOW_("%d"), BigBuf_get_traceLen());
-    DbpString("");
-
+    if (g_dbglevel > DBG_ERROR) {
+        DbpString(_CYAN_("Sniff statistics"));
+        DbpString("=================================");
+        Dbprintf("DecodeTag State........ %d", dtag.state);
+        Dbprintf("DecodeTag byteCnt...... %d", dtag.len);
+        Dbprintf("DecodeTag posCount..... %d", dtag.posCount);
+        Dbprintf("DecodeTagFSK State..... %d", dtagfsk.state);
+        Dbprintf("DecodeTagFSK byteCnt... %d", dtagfsk.len);
+        Dbprintf("DecodeTagFSK count..... %d", dtagfsk.count);
+        Dbprintf("DecodeReader State..... %d", dreader.state);
+        Dbprintf("DecodeReader byteCnt... %d", dreader.byteCount);
+        Dbprintf("DecodeReader posCount.. %d", dreader.posCount);
+    }
+    Dbprintf("Trace length........... " _YELLOW_("%d"), BigBuf_get_traceLen());
 }
 
 // Initialize Proxmark3 as ISO15693 reader

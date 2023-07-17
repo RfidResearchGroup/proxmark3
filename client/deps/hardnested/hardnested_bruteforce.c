@@ -78,6 +78,8 @@ THE SOFTWARE.
 #define DEBUG_KEY_ELIMINATION           1
 // #define DEBUG_BRUTE_FORCE
 
+#define MIN_BUCKETS_SIZE                128
+
 typedef enum {
     EVEN_STATE = 0,
     ODD_STATE = 1
@@ -88,7 +90,8 @@ static uint32_t bf_test_nonce[256];
 static uint8_t bf_test_nonce_2nd_byte[256];
 static uint8_t bf_test_nonce_par[256];
 static uint32_t bucket_count = 0;
-static statelist_t *buckets[128];
+static size_t buckets_allocated = 0;
+static statelist_t **buckets = NULL;
 static uint32_t keys_found = 0;
 static uint64_t num_keys_tested;
 static uint64_t found_bs_key = 0;
@@ -157,6 +160,7 @@ crack_states_thread(void *x) {
         uint8_t *best_first_bytes;
     } *thread_arg;
 
+    const int num_brute_force_threads = NUM_BRUTE_FORCE_THREADS;
     thread_arg = (struct arg *)x;
     const int thread_id = thread_arg->thread_ID;
     uint32_t current_bucket = thread_id;
@@ -188,7 +192,7 @@ crack_states_thread(void *x) {
                 }
             }
         }
-        current_bucket += NUM_BRUTE_FORCE_THREADS;
+        current_bucket += num_brute_force_threads;
     }
     return NULL;
 }
@@ -294,11 +298,33 @@ static void write_benchfile(statelist_t *candidates) {
 #endif
 
 
+static bool ensure_buckets_alloc(size_t need_buckets) {
+    if (need_buckets > buckets_allocated) {
+        size_t alloc_sz = ((buckets_allocated == 0) ? MIN_BUCKETS_SIZE : (buckets_allocated * 2));
+        while (need_buckets > alloc_sz) {
+            alloc_sz *= 2;
+        }
+
+        buckets = realloc(buckets, sizeof(statelist_t *) * alloc_sz);
+        if (buckets == NULL) {
+            buckets_allocated = 0;
+            return false;
+        }
+        memset(buckets + buckets_allocated, 0, (alloc_sz - buckets_allocated) * sizeof(statelist_t *));
+        buckets_allocated = alloc_sz;
+    }
+
+    return true;
+}
+
+
 bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint32_t num_acquired_nonces, uint64_t maximum_states, noncelist_t *nonces, uint8_t *best_first_bytes, uint64_t *found_key) {
 #if defined (WRITE_BENCH_FILE)
     write_benchfile(candidates);
 #endif
     bool silent = (bf_rate != NULL);
+
+    const int num_brute_force_threads = NUM_BRUTE_FORCE_THREADS;
 
     keys_found = 0;
     num_keys_tested = 0;
@@ -310,6 +336,11 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
     bucket_count = 0;
     for (statelist_t *p = candidates; p != NULL; p = p->next) {
         if (p->states[ODD_STATE] != NULL && p->states[EVEN_STATE] != NULL) {
+            if (!ensure_buckets_alloc(bucket_count + 1)) {
+                PrintAndLogEx(ERR, "Can't allocate buckets, abort!");
+                return false;
+            }
+
             buckets[bucket_count] = p;
             bucket_count++;
         }
@@ -322,7 +353,7 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
         return false;
 #endif
 
-    pthread_t threads[NUM_BRUTE_FORCE_THREADS];
+    pthread_t threads[num_brute_force_threads];
     struct args {
         bool silent;
         int thread_ID;
@@ -331,9 +362,9 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
         uint64_t maximum_states;
         noncelist_t *nonces;
         uint8_t *best_first_bytes;
-    } thread_args[NUM_BRUTE_FORCE_THREADS];
+    } thread_args[num_brute_force_threads];
 
-    for (uint32_t i = 0; i < NUM_BRUTE_FORCE_THREADS; i++) {
+    for (uint32_t i = 0; i < num_brute_force_threads; i++) {
         thread_args[i].thread_ID = i;
         thread_args[i].silent = silent;
         thread_args[i].cuid = cuid;
@@ -343,9 +374,13 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
         thread_args[i].best_first_bytes = best_first_bytes;
         pthread_create(&threads[i], NULL, crack_states_thread, (void *)&thread_args[i]);
     }
-    for (uint32_t i = 0; i < NUM_BRUTE_FORCE_THREADS; i++) {
+    for (uint32_t i = 0; i < num_brute_force_threads; i++) {
         pthread_join(threads[i], 0);
     }
+
+    free(buckets);
+    buckets = NULL;
+    buckets_allocated = 0;
 
     uint64_t elapsed_time = msclock() - start_time;
 
@@ -434,30 +469,31 @@ static bool read_bench_data(statelist_t *test_candidates) {
 
 
 float brute_force_benchmark(void) {
-    statelist_t test_candidates[NUM_BRUTE_FORCE_THREADS];
+    const int num_brute_force_threads = NUM_BRUTE_FORCE_THREADS;
+    statelist_t test_candidates[num_brute_force_threads];
 
     test_candidates[0].states[ODD_STATE] = calloc(1, (TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
     test_candidates[0].states[EVEN_STATE] = calloc(1, (TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
-    for (uint32_t i = 0; i < NUM_BRUTE_FORCE_THREADS - 1; i++) {
+    for (uint32_t i = 0; i < num_brute_force_threads - 1; i++) {
         test_candidates[i].next = test_candidates + i + 1;
         test_candidates[i + 1].states[ODD_STATE] = test_candidates[0].states[ODD_STATE];
         test_candidates[i + 1].states[EVEN_STATE] = test_candidates[0].states[EVEN_STATE];
     }
-    test_candidates[NUM_BRUTE_FORCE_THREADS - 1].next = NULL;
+    test_candidates[num_brute_force_threads - 1].next = NULL;
 
     if (!read_bench_data(test_candidates)) {
         PrintAndLogEx(NORMAL, "Couldn't read benchmark data. Assuming brute force rate of %1.0f states per second", DEFAULT_BRUTE_FORCE_RATE);
         return DEFAULT_BRUTE_FORCE_RATE;
     }
 
-    for (uint32_t i = 0; i < NUM_BRUTE_FORCE_THREADS; i++) {
+    for (uint32_t i = 0; i < num_brute_force_threads; i++) {
         test_candidates[i].len[ODD_STATE] = TEST_BENCH_SIZE;
         test_candidates[i].len[EVEN_STATE] = TEST_BENCH_SIZE;
         test_candidates[i].states[ODD_STATE][TEST_BENCH_SIZE] = -1;
         test_candidates[i].states[EVEN_STATE][TEST_BENCH_SIZE] = -1;
     }
 
-    uint64_t maximum_states = TEST_BENCH_SIZE * TEST_BENCH_SIZE * (uint64_t)NUM_BRUTE_FORCE_THREADS;
+    uint64_t maximum_states = TEST_BENCH_SIZE * TEST_BENCH_SIZE * (uint64_t)num_brute_force_threads;
 
     float bf_rate;
     uint64_t found_key = 0;
