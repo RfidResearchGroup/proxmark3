@@ -75,11 +75,13 @@ static int CmdCOTAGDemod(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
-    return demodCOTAG(true);
+    return demodCOTAG(verbose);
 }
 
 // When reading a COTAG.
@@ -152,7 +154,7 @@ static int CmdCOTAGReader(const char *Cmd) {
         case 0:
         case 2: {
             CmdPlot("");
-            CmdGrid("384");
+            CmdGrid("-x 384");
             getSamples(0, false);
             break;
         }
