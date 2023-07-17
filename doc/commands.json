@@ -3534,13 +3534,17 @@
             "command": "hf legic einfo",
             "description": "It decodes and displays emulator memory",
             "notes": [
-                "hf legic einfo"
+                "hf legic einfo",
+                "hf legic eview --22"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "--22 LEGIC Prime MIM22",
+                "--256 LEGIC Prime MIM256 (def)",
+                "--1024 LEGIC Prime MIM1024"
             ],
-            "usage": "hf legic einfo [-h]"
+            "usage": "hf legic einfo [-h] [--22] [--256] [--1024]"
         },
         "hf legic eload": {
             "command": "hf legic eload",
@@ -7631,9 +7635,10 @@
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-v, --verbose verbose output"
             ],
-            "usage": "lf cotag demod [-h]"
+            "usage": "lf cotag demod [-hv]"
         },
         "lf cotag reader": {
             "command": "lf cotag reader",
@@ -11689,6 +11694,6 @@
     "metadata": {
         "commands_extracted": 679,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-07-16T13:30:30"
+        "extracted_on": "2023-07-17T15:46:12"
     }
 }

@@ -143,11 +143,11 @@ Default HF 14a config is set to:
 static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
 
 
-// Polling frames and configurations 
+// Polling frames and configurations
 static iso14a_polling_parameters WUPA_POLLING_PARAMETERS = {
-    .frames={ {{ 0x52 }, 1, 7, 0} }, 
-    .frame_count=1, 
-    .extra_timeout=0,
+    .frames = { {{ 0x52 }, 1, 7, 0} },
+    .frame_count = 1,
+    .extra_timeout = 0,
 };
 
 
@@ -2519,7 +2519,7 @@ static void iso14a_set_ATS_times(const uint8_t *ats) {
 
 
 static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters *polling_parameters) {
-    #define WUPA_RETRY_TIMEOUT 10 
+#define WUPA_RETRY_TIMEOUT 10
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
@@ -2543,7 +2543,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters *
         if (frame_parameters->extra_delay) {
             SpinDelay(frame_parameters->extra_delay);
         }
-        
+
         // Receive the ATQA
         len = ReaderReceive(resp, resp_par);
 
@@ -3027,9 +3027,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
             iso14a_card_select_t *card = (iso14a_card_select_t *)buf;
 
             arg0 = iso14443a_select_cardEx(
-                NULL, card, NULL, true, 0, (param & ISO14A_NO_RATS), 
-                (param & ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters *)cmd : &WUPA_POLLING_PARAMETERS
-            );
+                       NULL, card, NULL, true, 0, (param & ISO14A_NO_RATS),
+                       (param & ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters *)cmd : &WUPA_POLLING_PARAMETERS
+                   );
             // TODO: Improve by adding a cmd parser pointer and moving it by struct length to allow combining data with polling params
             FpgaDisableTracing();
 
