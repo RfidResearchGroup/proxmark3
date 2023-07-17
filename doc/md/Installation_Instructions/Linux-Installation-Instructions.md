@@ -65,7 +65,7 @@ If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to 
 ^[Top](#top)
 
 ```sh
-sudo pacman -Syu git base-devel readline bzip2 arm-none-eabi-gcc arm-none-eabi-newlib qt5-base bluez python --needed
+sudo pacman -Syu git base-devel readline bzip2 lz4 arm-none-eabi-gcc arm-none-eabi-newlib qt5-base bluez python --needed
 ```
 
 If you don't need the native Bluetooth support in the client, you can skip the installation of `bluez`.
@@ -78,7 +78,7 @@ If you don't need support for Python3 scripts in the Proxmark3 client, you can s
 ^[Top](#top)
 
 ```sh
-sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel qt5-qtbase-devel bluez-libs-devel python3-devel libatomic openssl-devel
+sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel lz4-devel qt5-qtbase-devel bluez-libs-devel python3-devel libatomic openssl-devel
 ```
 
 If you don't need the native Bluetooth support in the client, you can skip the installation of `bluez-libs-devel`.
