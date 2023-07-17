@@ -162,6 +162,7 @@ if (NOT SKIPJANSSONSYSTEM EQUAL 1)
 endif (NOT SKIPJANSSONSYSTEM EQUAL 1)
 
 if(EMBED_BZIP2)
+    cmake_policy(SET CMP0114 NEW)
     set(BZIP2_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
     # Specify SOURCE_DIR will cause some errors
     ExternalProject_Add(bzip2
