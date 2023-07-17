@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf legic einfo` - now accepts the three different cardsizes as params (@iceman1001)
+ - Fix `lf cotag reader -1` - now doesn't fail (@iceman1001)
  - Added support for LZ4 compressed hadnested tables (@doegox)
  - Changed `emv reader -v` - now tries to print found transactions logs (@iceman1001)
  - Added ISO4217 currency lookup (@iceman1001)

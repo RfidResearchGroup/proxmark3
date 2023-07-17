@@ -1226,15 +1226,36 @@ static int CmdLegicEInfo(const char *Cmd) {
     CLIParserInit(&ctx, "hf legic einfo",
                   "It decodes and displays emulator memory",
                   "hf legic einfo\n"
+                  "hf legic eview --22\n"
                  );
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0(NULL, "22", "LEGIC Prime MIM22"),
+        arg_lit0(NULL, "256", "LEGIC Prime MIM256 (def)"),
+        arg_lit0(NULL, "1024", "LEGIC Prime MIM1024"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool m1 = arg_get_lit(ctx, 1);
+    bool m2 = arg_get_lit(ctx, 2);
+    bool m3 = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
+    // validations
+    if (m1 + m2 + m3 > 1) {
+        PrintAndLogEx(WARNING, "Only specify one LEGIC Prime Type");
+        return PM3_EINVARG;
+    } else if (m1 + m2 + m3 == 0) {
+        m2 = true;
+    }
+
     size_t card_size = LEGIC_PRIME_MIM256;
+    if (m1)
+        card_size = LEGIC_PRIME_MIM22;
+    else if (m2)
+        card_size = LEGIC_PRIME_MIM256;
+    else if (m3)
+        card_size = LEGIC_PRIME_MIM1024;
 
     uint8_t *dump = calloc(card_size, sizeof(uint8_t));
     if (dump == NULL) {
