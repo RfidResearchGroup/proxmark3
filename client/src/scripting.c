@@ -1269,8 +1269,9 @@ static int l_searchfile(lua_State *L) {
     size_t size;
     // data
     const char *filename = luaL_checklstring(L, 1, &size);
-    if (size == 0)
+    if (size == 0) {
         return returnToLuaWithError(L, "Must specify filename");
+    }
 
     const char *suffix =  luaL_checklstring(L, 2, &size);
     char *path;

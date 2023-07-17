@@ -96,10 +96,63 @@ Known issues; needs to be fixed:
 * last byte in last segment is handled incorrectly when it is the last bytes on the card itself (MIM256: => byte 256)
 --]]
 
+
+---
+-- requirements
+local utils       = require('utils')
+local getopt      = require('getopt')
+local ansicolors  = require('ansicolors')
+
+---
+-- global variables / defines
+local bxor    = bit32.bxor
+local bbit    = bit32.extract
+local input   = utils.input
+local confirm = utils.confirm
+
+---
+-- init ansicolor-values & ansicolors switch
+local colored_output = true
+local acoff  = ""
+local acgreen= ""
+local accyan = ""
+local acred  = ""
+local acyellow = ""
+local acblue = ""
+local acmagenta = ""
+
+local acy = ansicolors.yellow
+local acr = ansicolors.reset
+
+--- Helper ---
+---
+-- default colors (change to whatever you want)
+function load_colors(onoff)
+  if (onoff) then
+    -- colors
+    acgreen = ansicolors.green
+    accyan  = ansicolors.cyan
+    acred   = ansicolors.red
+    acyellow= ansicolors.yellow
+    acblue  = ansicolors.blue
+    acmagenta= ansicolors.magenta
+    acoff   = ansicolors.reset
+  else
+    -- 'no color'
+    acgreen = ""
+    accyan  = ""
+    acred   = ""
+    acyellow= ""
+    acblue  = ""
+    acmagenta= ""
+    acoff   = ""
+  end
+end
+
+
 example = "script run hf_legic"
 author  = "Mosci, uhei"
-version = "1.0.4"
-
+version = "1.0.5"
 desc =
 [[
 
@@ -109,23 +162,23 @@ it's kinda interactive with following commands in three categories:
 
     Data I/O                    Segment Manipulation                   Token-Data
   -----------------             --------------------                -----------------
-  rt => read    Tag             as => add    Segment                mt => make Token
-  wt => write   Tag             es => edit   Segment Header         et => edit Token data
-                                ed => edit   Segment Data           tk => toggle KGH-Flag
-      File I/O                  rs => remove Segment
-  -----------------             cc => check  Segment-CRC
-  lf => load bin File           ck => check  KGH
-  sf => save eml/bin File       ds => dump   Segments
-  xf => xor to File
+  ]]..acy..[[rt]]..acr..[[ => read Tag                ]]..acy..[[as]]..acr..[[ => add Segment                   ]]..acy..[[mt]]..acr..[[ => make Token
+  ]]..acy..[[wt]]..acr..[[ => write Tag               ]]..acy..[[es]]..acr..[[ => edit Segment Header           ]]..acy..[[et]]..acr..[[ => edit Token data
+                                ]]..acy..[[ed]]..acr..[[ => edit Segment Data             ]]..acy..[[tk]]..acr..[[ => toggle KGH-Flag
+      File I/O                  ]]..acy..[[rs]]..acr..[[ => remove Segment
+  -----------------             ]]..acy..[[cc]]..acr..[[ => check Segment-CRC
+  ]]..acy..[[lf]]..acr..[[ => load bin File           ]]..acy..[[ck]]..acr..[[ => check KGH
+  ]]..acy..[[sf]]..acr..[[ => save eml/bin File       ]]..acy..[[ds]]..acr..[[ => dump Segments
+  ]]..acy..[[xf]]..acr..[[ => xor to File
 
 
  (partially) known Segments              Virtual Tags                     Script Output
  ---------------------------    -------------------------------     ------------------------
- dlc => dump  Legic-Cash        ct => copy  mainTag to backupTag    tac => toggle ansicolors
- elc => edit  Legic-Cash        tc => copy  backupTag to mainTag
- d3p => dump  3rd-Party-Cash    tt => switch mainTag & backupTag
- e3p => edit  3rd-Party-Cash    di => dump  mainTag
-                                do => dump  backupTag
+ ]]..acy..[[dlc]]..acr..[[ => dump Legic-Cash         ]]..acy..[[ct]]..acr..[[ => copy mainTag to backupTag     ]]..acy..[[tac]]..acr..[[ => toggle ansicolors
+ ]]..acy..[[elc]]..acr..[[ => edit Legic-Cash         ]]..acy..[[tc]]..acr..[[ => copy backupTag to mainTag
+ ]]..acy..[[d3p]]..acr..[[ => dump 3rd-Party-Cash     ]]..acy..[[tt]]..acr..[[ => switch mainTag & backupTag
+ ]]..acy..[[e3p]]..acr..[[ => edit 3rd-Party-Cash     ]]..acy..[[di]]..acr..[[ => dump mainTag
+                                ]]..acy..[[do]]..acr..[[ => dump backupTag
 
 
 
@@ -170,55 +223,6 @@ tac: 'toggle ansicolors'- switch on and off the colored text-output of this scri
 currentTag="inTAG"
 
 ---
--- requirements
-local utils       = require('utils')
-local getopt      = require('getopt')
-local ansicolors  = require('ansicolors')
-
----
--- global variables / defines
-local bxor    = bit32.bxor
-local bbit    = bit32.extract
-local input   = utils.input
-local confirm = utils.confirm
-
----
--- init ansicolor-values & ansicolors switch
-local colored_output = true
-local acoff  = ""
-local acgreen= ""
-local accyan = ""
-local acred  = ""
-local acyellow = ""
-local acblue = ""
-local acmagenta = ""
-
---- Helper ---
----
--- default colors (change to whatever you want)
-function load_colors(onoff)
-  if (onoff) then
-    -- colors
-    acgreen = ansicolors.green
-    accyan  = ansicolors.cyan
-    acred   = ansicolors.red
-    acyellow= ansicolors.yellow
-    acblue  = ansicolors.blue
-    acmagenta= ansicolors.magenta
-    acoff   = ansicolors.reset
-  else
-    -- 'no color'
-    acgreen = ""
-    accyan  = ""
-    acred   = ""
-    acyellow= ""
-    acblue  = ""
-    acmagenta= ""
-    acoff   = ""
-  end
-end
-
----
 -- curency-codes for Legic-Cash-Segments (ISO 4217)
 local currency = {
   ["03D2"]="EUR",
@@ -237,7 +241,11 @@ end
 ---
 -- Usage help
 function help()
-    print(desc)
+    -- the proxmark3 client can't handle such long strings
+    -- by breaking up at specific points it still looks good.
+    print(string.sub(desc, 0, 1961))
+    print(string.sub(desc, 1962, 3925))
+    print(string.sub(desc, 3926, #desc))
     print("Version: "..version)
     print("Example usage: "..example)
 end
@@ -306,18 +314,6 @@ function xorBytes(inBytes, crc)
 end
 
 ---
--- check availability of file
-function file_check(file_name)
-    local file_found = io.open(file_name, "r")
-    if file_found == nil then
-        return false
-    else
-        file_found:close()
-        return true
-    end
-end
-
----
 -- split csv-string into table
 local function split(str, sep)
     local sep = sep or ','
@@ -328,6 +324,23 @@ local function split(str, sep)
         table.insert(fields, str)
     end
     return fields
+end
+
+---
+-- check availability of file
+function file_check(file_name)
+
+  local arr = split(file_name, ".")
+  local path = core.search_file(arr[1], "."..arr[2])
+  if (path == nil) then return false end
+
+  local file_found = io.open(path, "r")
+  if file_found == nil then
+      return false, ""
+  else
+      file_found:close()
+      return true, path
+  end
 end
 
 ---
@@ -358,8 +371,13 @@ end
 function getInputBytes(infile)
     local line
     local bytes = {}
-    local fhi,err = io.open(infile,"rb")
-    if err then oops("failed to read from file ".. infile); return false; end
+
+    local arr = split(infile, ".")
+    local path = core.search_file(arr[1], "."..arr[2])
+    if (path == nil) then oops("failed to read from file ".. infile); return false; end
+    
+    local fhi,err = io.open(path,"rb")
+    if err then oops("failed to read from file ".. path); return false; end
 
     file_data = fhi:read("*a");
     for i = 1, #file_data do
@@ -367,7 +385,7 @@ function getInputBytes(infile)
     end
     fhi:close()
     if (bytes[7]=='00') then return false end
-    print(#bytes .. " bytes from "..infile.." loaded")
+    print(#bytes .. " bytes from "..path.." loaded")
     return bytes
 end
 
@@ -613,12 +631,13 @@ local function readFile(filename)
     print(accyan)
     local bytes = {}
     local tag = {}
-    if  file_check(filename) == false then
+
+    local res, path = file_check(filename)
+    if not res then
         return oops("input file: "..acyellow..filename..acoff.." not found")
     end
 
-    bytes = getInputBytes(filename)
-
+    bytes = getInputBytes(path)
     if bytes == false then return oops('couldnt get input bytes') end
 
     -- make plain bytes
@@ -640,12 +659,14 @@ local function save_BIN(data, filename)
     local fn = filename..ext
 
     -- Make sure we don't overwrite a file
-    while file_check(fn) do
+    local res, path = file_check(fn)
+    while res == false do
         fn = filename..ext:gsub(ext, "-"..tostring(counter)..ext)
         counter = counter + 1
+        res, path = file_check(fn)
     end
 
-    outfile = io.open(fn, 'wb')
+    outfile = io.open(path, 'wb')
 
     local i = 1
     while data[i] do
@@ -660,17 +681,19 @@ end
 -- write bytes to file
 function writeFile(bytes, filename)
     local emlext = ".eml"
+    local res, path 
     if (filename ~= 'MyLegicClone') then
-        if (file_check(filename..emlext)) then
-            local answer = confirm("\nthe output-file "..filename..emlext.." already exists!\nthis will delete the previous content!\ncontinue?")
+        res, path = file_check(filename..emlext)
+        if res then
+            local answer = confirm("\nthe output-file "..path.." already exists!\nthis will delete the previous content!\ncontinue?")
             if not answer then return print("user abort") end
         end
     end
     local line
     local bcnt = 0
-    local fho, err = io.open(filename..emlext, "w")
+    local fho, err = io.open(path, "w")
     if err then
-        return oops("OOps ... failed to open output-file ".. filename..emlext)
+        return oops("OOps ... failed to open output-file ".. path)
     end
 
     bytes = xorBytes(bytes, bytes[5])
@@ -692,11 +715,10 @@ function writeFile(bytes, filename)
     end
     fho:close()
 
-    -- save binary
-    local fn_bin, fn_bin_num = save_BIN(bytes, filename)
-
     print("\nwrote "..acyellow..(#bytes * 3)..acoff.." bytes to " ..acyellow..filename..emlext..acoff)
 
+    -- save binary
+    local fn_bin, fn_bin_num = save_BIN(bytes, filename)
     if fn_bin and fn_bin_num then
         print("\nwrote "..acyellow..fn_bin_num..acoff.." bytes to BINARY file "..acyellow..fn_bin..acoff)
     end
@@ -731,10 +753,16 @@ function readFromPM3()
     infile=getRandomTempName()
     core.console("hf legic dump -f "..infile)
     tag=readFile(infile..".bin")
-    os.remove(infile)
-    os.remove(infile..".bin")
-    os.remove(infile..".eml")
-    os.remove(infile..".json")
+
+    res, path = file_check(infile..".bin")
+    if not res then return nil end
+    os.remove(path)
+
+    res, path = file_check(infile..".eml")    
+    os.remove(path)
+
+    res, path = file_check(infile..".json")
+    os.remove(path)
     return tag
 end
 
@@ -758,16 +786,20 @@ end
 ---
 -- save mapping to file
 local function saveTagMap(map, filename)
+
+    local res, path
+
     if #filename > 0 then
-        if file_check(filename) then
-            local answer = confirm("\nthe output-file "..acyellow..filename..acoff.." alredy exists!\nthis will delete the previous content!\ncontinue?")
+       res, path = file_check(filename)
+        if res then
+            local answer = confirm("\nthe output-file "..acyellow..path..acoff.." alredy exists!\nthis will delete the previous content!\ncontinue?")
             if not answer then return print("user abort") end
         end
     end
 
     local line
-    local fho,err = io.open(filename, "w")
-    if err then oops("OOps ... failed to open output-file "..acyellow..filename..acoff) end
+    local fho,err = io.open(path, "w")
+    if err then oops("OOps ... failed to open output-file "..acyellow..path..acoff) end
 
     -- write line to new file
     for k, v in pairs(map) do
@@ -842,10 +874,13 @@ function loadTagMap(filename)
   local line, fields
   local temp={}
   local offset=0
-    if not file_check(filename) then
-        return oops("input file: "..acyellow..filename..acoff.." not found")
-    else
-        local fhi,err = io.open(filename)
+
+  local res, path = file_check(filename)
+  if not res then
+      return oops("input file: "..acyellow..filename..acoff.." not found")
+  else
+       
+    local fhi,err = io.open(path)
     while true do
         line = fhi:read()
         if line == nil then
@@ -971,6 +1006,7 @@ Mappings:  im = insert       am = add       rm = remove
     CRC8: ac8 = add         sc8 = show     rc8 = remove
         :   q = exit          h = Help
   ]]
+
   --if(#tagMap.mappings==0) then oops("no mappings in tagMap"); return tagMap end
   print("tagMap edit-mode submenu")
   repeat
@@ -2293,25 +2329,25 @@ function modifyHelp()
 
          Data I/O                    Segment Manipulation                Token-Data
      -----------------               --------------------           ---------------------
-     rt => read    Tag               as => add    Segment           mt => make Token
-     wt => write   Tag               es => edit   Segment Header    et => edit Token data
-                                     ed => edit   Segment Data      tk => toggle KGH-Flag
-         File I/O                    rs => remove Segment
-     -----------------               cc => check  Segment-CRC
-     lf => load bin File             ck => check  KGH
-     sf => save eml/bin File         ds => dump   Segments
-     xf => xor to File
+     ]]..acy..[[rt]]..acr..[[ => read Tag                  ]]..acy..[[as]]..acr..[[ => add Segment              ]]..acy..[[mt]]..acr..[[ => make Token
+     ]]..acy..[[wt]]..acr..[[ => write Tag                 ]]..acy..[[es]]..acr..[[ => edit Segment Header      ]]..acy..[[et]]..acr..[[ => edit Token data
+                                     ]]..acy..[[ed]]..acr..[[ => edit Segment Data        ]]..acy..[[tk]]..acr..[[ => toggle KGH-Flag
+         File I/O                    ]]..acy..[[rs]]..acr..[[ => remove Segment
+     -----------------               ]]..acy..[[cc]]..acr..[[ => check Segment-CRC
+     ]]..acy..[[lf]]..acr..[[ => load bin File             ]]..acy..[[ck]]..acr..[[ => check KGH
+     ]]..acy..[[sf]]..acr..[[ => save eml/bin File         ]]..acy..[[ds]]..acr..[[ => dump Segments
+     ]]..acy..[[xf]]..acr..[[ => xor to File
 
 
          Virtual Tags                       tagMap                   (partial) known Segments
  --------------------------------    ---------------------          ---------------------------
- ct => copy  mainTag to backupTag    mm => make (new) Map           dlc => dump  Legic-Cash
- tc => copy  backupTag to mainTag    em => edit Map submenu         elc => edit  Legic-Cash
- tt => switch mainTag & backupTag    lm => load map from file       d3p => dump  3rd-Party-Cash
- di => dump  mainTag                 sm => save map to file         e3p => edit  3rd-Party-Cash
- do => dump  backupTag
+ ]]..acy..[[xf]]..acr..[[ => copy mainTag to backupTag     ]]..acy..[[mm]]..acr..[[ => make (new) Map           ]]..acy..[[dlc]]..acr..[[ => dump Legic-Cash
+ ]]..acy..[[xf]]..acr..[[ => copy backupTag to mainTag     ]]..acy..[[em]]..acr..[[ => edit Map submenu         ]]..acy..[[elc]]..acr..[[ => edit Legic-Cash
+ ]]..acy..[[xf]]..acr..[[ => switch mainTag & backupTag    ]]..acy..[[lm]]..acr..[[ => load map from file       ]]..acy..[[d3p]]..acr..[[ => dump 3rd-Party-Cash
+ ]]..acy..[[xf]]..acr..[[ => dump mainTag                  ]]..acy..[[sm]]..acr..[[ => save map to file         ]]..acy..[[e3p]]..acr..[[ => edit 3rd-Party-Cash
+ ]]..acy..[[xf]]..acr..[[ => dump backupTag
 
-                            h => this help                q => quit
+                            ]]..acy..[[h]]..acr..[[ => this help                ]]..acy..[[q]]..acr..[[ => quit
   ]]
   return t
 end
@@ -2325,8 +2361,10 @@ function modifyMode()
     ---
     -- helptext
      ["h"] = function(x)
-              print("  Version: "..version);
-              print(modifyHelp().."\n".."tags im Memory: "..(istable(inTAG) and ((currentTag=='inTAG') and acgreen.."*mainTAG"..acoff or "mainTAG") or "").."  "..(istable(backupTAG) and ((currentTag=='backupTAG') and acgreen.."*backupTAG"..acoff or "backupTAG") or ""))
+              print("  Version: "..acgreen..version..acr);
+              print(modifyHelp())
+              print("\n".."tags im Memory: "..(istable(inTAG) and ((currentTag=='inTAG') and acgreen.."*mainTAG"..acoff or "mainTAG") or "").."  "..(istable(backupTAG) and ((currentTag=='backupTAG') and acgreen.."*backupTAG"..acoff or "backupTAG") or ""))
+              print("")
             end,
     ---
     -- read real Tag with PM3 into virtual 'mainTAG'
@@ -2375,8 +2413,9 @@ function modifyMode()
               end
               inTAG=readFile(filename)
               -- check for existing tagMap
-              if (file_check(filename..".map")) then
-                if(confirm(accyan.."Mapping-File for "..acoff..filename..accyan.." found - load it also?"..acoff)) then
+              local res, path = file_check(filename..".map")
+              if res then
+                if(confirm(accyan.."Mapping-File for "..acoff..path..accyan.." found - load it also?"..acoff)) then
                   tagMap=loadTagMap(filename..".map")
                 end
               end
@@ -2388,7 +2427,7 @@ function modifyMode()
                 outfile = input("enter filename:", "hf-legic-"..inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2)
                 bytes = tagToBytes(inTAG)
                 --bytes=xorBytes(bytes, inTAG.MCC)
-                if (bytes) then
+                if (bytes) then                
                   writeFile(bytes, outfile)
                 end
                end
@@ -2743,10 +2782,13 @@ end
 function main(args)
   -- set init colors/switch (can be toggled with 'tac' => 'toggle ansicolors')
   load_colors(colored_output)
-    if (#args == 0 ) then modifyMode() end
+  if (#args == 0 ) then modifyMode() end
   --- variables
-  local inTAG, backupTAG, outTAG, outfile, interactive, crc, ofs, cfs, dfs
-    -- just a spacer for better readability
+  local inTAG, backupTAG, outTAG, outfile, interactive, crc
+  local ofs=false
+  local cfs=false
+  local dfs=false
+  -- just a spacer for better readability
   print()
   --- parse arguments
     for o, a in getopt.getopt(args, 'hrmi:do:c:') do
@@ -2755,7 +2797,7 @@ function main(args)
     -- read tag from PM3
     if o == "r" then inTAG=readFromPM3() end
     -- input file
-        if o == "i" then inTAG=readFile(a) end
+    if o == "i" then inTAG=readFile(a) end
     -- dump virtual-Tag
     if o == "d" then dfs=true end
     -- interacive modifying
@@ -2793,7 +2835,10 @@ function main(args)
 
     -- write to outfile
     if (bytes) then
-      writeFile(bytes, outfile)
+      
+      if (outfile) then
+        writeFile(bytes, outfile)
+      end
       --- read real tag into virtual tag
       -- inTAG=readFromPM3() end
       --- or simply use the bytes that where wriiten
