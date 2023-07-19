@@ -122,6 +122,7 @@ local acblue = ""
 local acmagenta = ""
 
 local acy = ansicolors.yellow
+local acc = ansicolors.cyan
 local acr = ansicolors.reset
 
 --- Helper ---
@@ -137,6 +138,10 @@ function load_colors(onoff)
     acblue  = ansicolors.blue
     acmagenta= ansicolors.magenta
     acoff   = ansicolors.reset
+
+    acy = ansicolors.yellow
+    acc = ansicolors.cyan
+    acr = ansicolors.reset
   else
     -- 'no color'
     acgreen = ""
@@ -146,6 +151,10 @@ function load_colors(onoff)
     acblue  = ""
     acmagenta= ""
     acoff   = ""
+
+    acy = ""
+    acc = ""
+    acr = ""
   end
 end
 
@@ -156,68 +165,66 @@ version = "1.0.5"
 desc =
 [[
 
-This script helps you to read, create and modify Legic Prime Tags (MIM22, MIM256, MIM1024)
+This script helps you to read, create and modify Legic Prime Tags ( MIM22, MIM256, MIM1024 )
 The virtual tag (and therefore the file to be saved) is always a MIM1024 tag.
 it's kinda interactive with following commands in three categories:
 
     Data I/O                    Segment Manipulation                   Token-Data
   -----------------             --------------------                -----------------
-  ]]..acy..[[rt]]..acr..[[ => read Tag                ]]..acy..[[as]]..acr..[[ => add Segment                   ]]..acy..[[mt]]..acr..[[ => make Token
-  ]]..acy..[[wt]]..acr..[[ => write Tag               ]]..acy..[[es]]..acr..[[ => edit Segment Header           ]]..acy..[[et]]..acr..[[ => edit Token data
+  ]]..acy..[[rt]]..acr..[[ -> read Tag                ]]..acy..[[as]]..acr..[[ -> add Segment                   ]]..acy..[[mt]]..acr..[[ -> make Token
+  ]]..acy..[[wt]]..acr..[[ -> write Tag               ]]..acy..[[es]]..acr..[[ -> edit Segment Header           ]]..acy..[[et]]..acr..[[ -> edit Token data
                                 ]]..acy..[[ed]]..acr..[[ => edit Segment Data             ]]..acy..[[tk]]..acr..[[ => toggle KGH-Flag
       File I/O                  ]]..acy..[[rs]]..acr..[[ => remove Segment
-  -----------------             ]]..acy..[[cc]]..acr..[[ => check Segment-CRC
-  ]]..acy..[[lf]]..acr..[[ => load bin File           ]]..acy..[[ck]]..acr..[[ => check KGH
-  ]]..acy..[[sf]]..acr..[[ => save eml/bin File       ]]..acy..[[ds]]..acr..[[ => dump Segments
-  ]]..acy..[[xf]]..acr..[[ => xor to File
+  -----------------             ]]..acy..[[cc]]..acr..[[ -> check Segment-CRC
+  ]]..acy..[[lf]]..acr..[[ -> load bin File           ]]..acy..[[ck]]..acr..[[ -> check KGH
+  ]]..acy..[[sf]]..acr..[[ -> save eml/bin File       ]]..acy..[[ds]]..acr..[[ -> dump Segments
+  ]]..acy..[[xf]]..acr..[[ -> xor to File
 
 
  (partially) known Segments              Virtual Tags                     Script Output
  ---------------------------    -------------------------------     ------------------------
- ]]..acy..[[dlc]]..acr..[[ => dump Legic-Cash         ]]..acy..[[ct]]..acr..[[ => copy mainTag to backupTag     ]]..acy..[[tac]]..acr..[[ => toggle ansicolors
- ]]..acy..[[elc]]..acr..[[ => edit Legic-Cash         ]]..acy..[[tc]]..acr..[[ => copy backupTag to mainTag
- ]]..acy..[[d3p]]..acr..[[ => dump 3rd-Party-Cash     ]]..acy..[[tt]]..acr..[[ => switch mainTag & backupTag
- ]]..acy..[[e3p]]..acr..[[ => edit 3rd-Party-Cash     ]]..acy..[[di]]..acr..[[ => dump mainTag
+ ]]..acy..[[dlc]]..acr..[[ -> dump Legic-Cash         ]]..acy..[[ct]]..acr..[[ -> copy mainTag to backupTag     ]]..acy..[[tac]]..acr..[[ -> toggle ansicolors
+ ]]..acy..[[elc]]..acr..[[ -> edit Legic-Cash         ]]..acy..[[tc]]..acr..[[ -> copy backupTag to mainTag
+ ]]..acy..[[d3p]]..acr..[[ -> dump 3rd-Party-Cash     ]]..acy..[[tt]]..acr..[[ -> switch mainTag & backupTag
+ ]]..acy..[[e3p]]..acr..[[ -> edit 3rd-Party-Cash     ]]..acy..[[di]]..acr..[[ -> dump mainTag
                                 ]]..acy..[[do]]..acr..[[ => dump backupTag
 
-
-
- rt: 'read tag'         - reads a tag placed near to the PM3
- wt: 'write tag'        - writes the content of the 'virtual inTag' to a tag placed near to th PM3
+ rt: 'read tag'          - reads a tag placed near to the PM3
+ wt: 'write tag'         - writes the content of the 'virtual inTag' to a tag placed near to th PM3
                           without the need of changing anything - MCD,MSN,MCC will be read from the tag
                           before and applied to the output.
 
- lf: 'load file'        - load a (xored) binary file (*.bin) from the local Filesystem into the 'virtual inTag'
- sf: 'save file'        - saves the 'virtual inTag' to the local Filesystem as eml and bin (xored with Tag-MCC)
- xf: 'xor file'         - saves the 'virtual inTag' to the local Filesystem (xored with chosen MCC - use '00' for plain values)
+ lf: 'load file'         - load a (xored) binary file (*.bin) from the local Filesystem into the 'virtual inTag'
+ sf: 'save file'         - saves the 'virtual inTag' to the local Filesystem as eml and bin (xored with Tag-MCC)
+ xf: 'xor file'          - saves the 'virtual inTag' to the local Filesystem (xored with chosen MCC - use '00' for plain values)
 
- ct: 'copy tag'         - copy the 'virtual Tag' to a second 'virtual TAG' - not useful yet, but inernally needed
- tc: 'copy tag'         - copy the 'second virtual Tag' to 'virtual TAG' - not useful yet, but inernally needed
- tt: 'toggle tag'       - copy mainTag to BackupTag and backupTag to mainTag
+ ct: 'copy tag'          - copy the 'virtual Tag' to a second 'virtual TAG' - not useful yet, but inernally needed
+ tc: 'copy tag'          - copy the 'second virtual Tag' to 'virtual TAG' - not useful yet, but inernally needed
+ tt: 'toggle tag'        - copy mainTag to BackupTag and backupTag to mainTag
 
- di: 'dump mainTag'     - shows the current content of the 'virtual Tag'
- do: 'dump backupTag'   - shows the current content of the 'virtual outTag'
- ds: 'dump Segments'    - will show the content of a selected Segment
- as: 'add Segment'      - will add a 'empty' Segment to the inTag
- es: 'edit Segment'     - edit the Segment-Header of a selected Segment (len, WRP, WRC, RD, valid)
+ di: 'dump mainTag'      - shows the current content of the 'virtual Tag'
+ do: 'dump backupTag'    - shows the current content of the 'virtual outTag'
+ ds: 'dump Segments'     - will show the content of a selected Segment
+ as: 'add Segment'       - will add a 'empty' Segment to the inTag
+ es: 'edit Segment'      - edit the Segment-Header of a selected Segment (len, WRP, WRC, RD, valid)
                           all other Segment-Header-Values are either calculated or not needed to edit (yet)
- ed: 'edit data'        - edit the Data of a Segment (ADF-Aera / Stamp & Payload specific Data)
- et: 'edit Token'       - edit Data of a Token (CDF-Area / SAM, SAM64, SAM63, IAM, GAM specific Data)
- mt: 'make Token'       - create a Token 'from scratch' (guided)
- rs: 'remove segment'   - removes a Segment (except Segment 00, but this can be set to valid=0 for Master-Token)
- cc: 'check Segment-CRC'- checks & calculates (if check failed) the Segment-CRC of all Segments
- ck: 'check KGH-CRC'    - checks the and calculates a 'Kaba Group Header' if one was detected
+ ed: 'edit data'         - edit the Data of a Segment (ADF-Aera / Stamp & Payload specific Data)
+ et: 'edit Token'        - edit Data of a Token (CDF-Area / SAM, SAM64, SAM63, IAM, GAM specific Data)
+ mt: 'make Token'        - create a Token 'from scratch' (guided)
+ rs: 'remove segment'    - removes a Segment (except Segment 00, but this can be set to valid=0 for Master-Token)
+ cc: 'check Segment-CRC' - checks & calculates (if check failed) the Segment-CRC of all Segments
+ ck: 'check KGH-CRC'     - checks the and calculates a 'Kaba Group Header' if one was detected
                           'Kaba Group Header CRC calculation'
- tk: 'toggle KGH'       - toggle the (script-internal) flag for kgh-calculation for a segment
- xc: 'etra c'           - show string that was used to calculate the kgh-crc of a segment
+ tk: 'toggle KGH'        - toggle the (script-internal) flag for kgh-calculation for a segment
+ xc: 'etra c'            - show string that was used to calculate the kgh-crc of a segment
 
-dlc: 'dump Legic-Cash'  - show balance and checksums of a Legic-Cash Segment
-elc: 'edit Legic-Cash'  - edit values of a Legic-Cash Segment
+dlc: 'dump Legic-Cash'   - show balance and checksums of a Legic-Cash Segment
+elc: 'edit Legic-Cash'   - edit values of a Legic-Cash Segment
 
-d3p: 'dump 3rd Party'   - show balance, history and checksums of a (yet) unknown 3rd-Party Cash Segment
-e3p: 'edit 3rd Party'   - edit Data in 3rd-Party Cash Segment
+d3p: 'dump 3rd Party'    - show balance, history and checksums of a (yet) unknown 3rd-Party Cash Segment
+e3p: 'edit 3rd Party'    - edit Data in 3rd-Party Cash Segment
 
-tac: 'toggle ansicolors'- switch on and off the colored text-output of this script
+tac: 'toggle ansicolors' - switch on and off the colored text-output of this script
                           default can be changed by setting the variable 'colored_output' to false
 ]]
 currentTag="inTAG"
@@ -361,7 +368,7 @@ end
 function bytesToTable(bytes, bstart, bend)
     local t={}
     for i=0, (bend-bstart) do
-        t[i]=bytes[bstart+i]
+        t[i]=padString(bytes[bstart+i])
     end
     return t
 end
@@ -942,20 +949,21 @@ function dumpTagMap(tag, tagMap)
       end
       if (isPosCrc8(tagMap, v['start'])>0) then
         if ( checkMapCrc8(tagMap, bytes, isPosCrc8(tagMap, v['start']) ) ) then
-          io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..acgreen..v['name']..acoff..":")
+          io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..acgreen..v['name']..acoff)
         else
-          io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..acred..v['name']..acoff..":")
+          io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..acred..v['name']..acoff)
         end
       else
-        io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..((v['highlight']) and acmagenta or acyellow)..v['name']..acoff..":")
+        io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..((v['highlight']) and acmagenta or acyellow)..v['name']..acoff)
       end
-      temp=""
-      for i=((string.len(v['name']))/10), 2 do
-        temp=temp.."\t"
-      end
+      
+      temp = ""
+      while (#v['name'] + temp:len()) < 20 do temp = temp.." " end
+
       for i=v['start'], v['end'] do
         temp=temp..bytes[i].." "
       end
+
       print(temp)
       lastend=v['end']
     end
@@ -1001,10 +1009,21 @@ end
 -- edit existing Map
 function editTagMap(tag, tagMap)
   local t = [[
-    Data:  dm = show         dr = dump raw
-Mappings:  im = insert       am = add       rm = remove
-    CRC8: ac8 = add         sc8 = show     rc8 = remove
-        :   q = exit          h = Help
+]]..acc..[[Data]]..acr..[[
+
+    ]]..acy..[[dm]]..acr..[[  - show         ]]..acy..[[dr]]..acr..[[  - dump raw
+
+]]..acc..[[Mappings]]..acr..[[
+
+    ]]..acy..[[im]]..acr..[[  - insert       ]]..acy..[[am]]..acr..[[  - add    
+    ]]..acy..[[rm]]..acr..[[  - remove       ]]..acy..[[mas]]..acr..[[ - map all segments
+
+]]..acc..[[CRC8]]..acr..[[
+
+    ]]..acy..[[ac8]]..acr..[[ - add          ]]..acy..[[sc8]]..acr..[[ - show 
+    ]]..acy..[[rc8]]..acr..[[ - remove
+      
+    ]]..acy..[[q]]..acr..[[   - exit         ]]..acy..[[h]]..acr..[[   - Help
   ]]
 
   --if(#tagMap.mappings==0) then oops("no mappings in tagMap"); return tagMap end
@@ -2341,11 +2360,11 @@ function modifyHelp()
 
          Virtual Tags                       tagMap                   (partial) known Segments
  --------------------------------    ---------------------          ---------------------------
- ]]..acy..[[xf]]..acr..[[ => copy mainTag to backupTag     ]]..acy..[[mm]]..acr..[[ => make (new) Map           ]]..acy..[[dlc]]..acr..[[ => dump Legic-Cash
- ]]..acy..[[xf]]..acr..[[ => copy backupTag to mainTag     ]]..acy..[[em]]..acr..[[ => edit Map submenu         ]]..acy..[[elc]]..acr..[[ => edit Legic-Cash
- ]]..acy..[[xf]]..acr..[[ => switch mainTag & backupTag    ]]..acy..[[lm]]..acr..[[ => load map from file       ]]..acy..[[d3p]]..acr..[[ => dump 3rd-Party-Cash
- ]]..acy..[[xf]]..acr..[[ => dump mainTag                  ]]..acy..[[sm]]..acr..[[ => save map to file         ]]..acy..[[e3p]]..acr..[[ => edit 3rd-Party-Cash
- ]]..acy..[[xf]]..acr..[[ => dump backupTag
+ ]]..acy..[[ct]]..acr..[[ => copy mainTag to backupTag     ]]..acy..[[mm]]..acr..[[ => make (new) Map           ]]..acy..[[dlc]]..acr..[[ => dump Legic-Cash
+ ]]..acy..[[tc]]..acr..[[ => copy backupTag to mainTag     ]]..acy..[[em]]..acr..[[ => edit Map submenu         ]]..acy..[[elc]]..acr..[[ => edit Legic-Cash
+ ]]..acy..[[tt]]..acr..[[ => switch mainTag & backupTag    ]]..acy..[[lm]]..acr..[[ => load map from file       ]]..acy..[[d3p]]..acr..[[ => dump 3rd-Party-Cash
+ ]]..acy..[[di]]..acr..[[ => dump mainTag                  ]]..acy..[[sm]]..acr..[[ => save map to file         ]]..acy..[[e3p]]..acr..[[ => edit 3rd-Party-Cash
+ ]]..acy..[[do]]..acr..[[ => dump backupTag
 
                             ]]..acy..[[h]]..acr..[[ => this help                ]]..acy..[[q]]..acr..[[ => quit
   ]]
