@@ -6159,10 +6159,10 @@
         },
         "hf mfp list": {
             "command": "hf mfp list",
-            "description": "Alias of `trace list -t mf` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t mfp` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf mf list --frame -> show frame delay times",
-                "hf mf list -1 -> use trace buffer"
+                "hf mfp list --frame -> show frame delay times",
+                "hf mfp list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
@@ -6176,7 +6176,7 @@
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
                 "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf mf list [-h1crux] [--frame] [-f <fn>]"
+            "usage": "hf mfp list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf mfp mad": {
             "command": "hf mfp mad",
@@ -11488,6 +11488,7 @@
                 "trace list -t seos -> interpret as SEOS",
                 "trace list -t thinfilm -> interpret as Thinfilm",
                 "trace list -t topaz -> interpret as Topaz",
+                "trace list -t mfp -> interpret as MIFARE Plus",
                 "",
                 "trace list -t mf -f mfc_default_keys.dic -> use default dictionary file",
                 "trace list -t 14a --frame -> show frame delay times",
@@ -11694,6 +11695,6 @@
     "metadata": {
         "commands_extracted": 679,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-07-17T15:46:12"
+        "extracted_on": "2023-07-19T19:11:10"
     }
 }
