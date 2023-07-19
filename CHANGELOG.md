@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mfp list` - interprets MIFARE Plus commands in traces (@DidierA)
  - Changed `hf legic sim` - loop and return codes on deviceside updated to DEFINES (@iceman1001)
  - Changed `hf legic einfo` - now accepts the three different cardsizes as params (@iceman1001)
  - Fix `lf cotag reader -1` - now doesn't fail (@iceman1001)
