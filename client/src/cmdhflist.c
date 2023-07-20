@@ -273,11 +273,13 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 MifareAuthState = masNone;
                 break;
             case ISO14443A_CMD_RATS:
-                snprintf(exp, size, "RATS");
+                snprintf(exp, size, "RATS - FSDI=0x%x, CID=0x%x", (cmd[1] & 0xF0) >> 4, (cmd[1] & 0x0F) );
                 break;
+            /* Actually, PPSS is Dx
             case ISO14443A_CMD_PPS:
                 snprintf(exp, size, "PPS");
                 break;
+            */
             case ISO14443A_CMD_OPTS:
                 snprintf(exp, size, "OPTIONAL TIMESLOT");
                 break;
@@ -423,10 +425,14 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                     snprintf(exp, size, "FAST WRITE (" _MAGENTA_("%d-%d") ")", cmd[1], cmd[2]);
                 else
                     snprintf(exp, size, "?");
-
                 break;
+
             default:
-                return PM3_ESOFT;
+                if ( (cmd[0] & 0xF0) == 0xD0  && ( cmdsize == 4 || cmdsize == 5 )) {
+                    snprintf(exp, size, "PPSS - CID=0x%x", cmd[0] & 0x0F) ;
+                } else {
+                    return PM3_ESOFT;
+                }
         }
     } else {
         if (gs_mfuc_state == 1) {
