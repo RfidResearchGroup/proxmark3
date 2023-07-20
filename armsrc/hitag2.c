@@ -281,7 +281,7 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
         }
         break;
 
-        // Received RWD authentication challenge and respnse
+        // Received RWD authentication challenge and response
         case 64: {
             // Store the authentication attempt
             if (auth_table_len < (AUTH_TABLE_LENGTH - 8)) {
@@ -891,7 +891,7 @@ static bool hitag2_test_auth_attempts(uint8_t *rx, const size_t rxlen, uint8_t *
             if (bCrypto) {
                 Dbprintf("auth: %02x%02x%02x%02x%02x%02x%02x%02x Failed, removed entry!", NrAr[0], NrAr[1], NrAr[2], NrAr[3], NrAr[4], NrAr[5], NrAr[6], NrAr[7]);
 
-                // Removing failed entry from authentiations table
+                // Removing failed entry from authentications table
                 memcpy(auth_table + auth_table_pos, auth_table + auth_table_pos + 8, 8);
                 auth_table_len -= 8;
 
