@@ -225,10 +225,10 @@ static int CmdLFHitagEload(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify dump filename"),
-        arg_lit0("1", NULL, "Card type Hitag 1"),
-        arg_lit0("2", NULL, "Card type Hitag 2"),
-        arg_lit0("s", NULL, "Card type Hitag S"),
-        arg_lit0("m", NULL, "Card type Hitag M"),
+        arg_lit0("1", "ht1", "Card type Hitag 1"),
+        arg_lit0("2", "ht2", "Card type Hitag 2"),
+        arg_lit0("s", "hts", "Card type Hitag S"),
+        arg_lit0("m", "htm", "Card type Hitag μ"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -560,8 +560,8 @@ static int CmdLFHitagReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "hts", "Hitag S"),
-        arg_lit0(NULL, "ht2", "Hitag 2"),
+        arg_lit0("s", "hts", "Hitag S"),
+        arg_lit0("2", "ht2", "Hitag 2"),
         arg_lit0(NULL, "pwd", "password mode"),
         arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
         arg_lit0(NULL, "crypto", "crypto mode"),
@@ -803,8 +803,8 @@ static int CmdLFHitagWriter(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "hts", "Hitag S"),
-        arg_lit0(NULL, "ht2", "Hitag 2"),
+        arg_lit0("s", "hts", "Hitag S"),
+        arg_lit0("2", "ht2", "Hitag 2"),
         arg_lit0(NULL, "pwd", "password mode"),
         arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
         arg_lit0(NULL, "crypto", "crypto mode"),
