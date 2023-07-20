@@ -1399,7 +1399,7 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                     }
                     break;
 
-                default:
+                default: {
                     // Messages for commands that do not need args are treated here
                     const char *annotation = mfpGetAnnotationForCode(cmd[pos]) ;
                     if (annotation != NULL) {
@@ -1408,6 +1408,7 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         found_annotation = false;
                     }
                     break;
+                }
             }
             if (found_annotation) {
                 break;
