@@ -915,11 +915,11 @@ int DetectStrongNRZClk(const uint8_t *dest, size_t size, int peak, int low, bool
 // detect nrz clock by reading #peaks vs no peaks(or errors)
 int DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx) {
     size_t i = 0;
-    uint8_t clk[] = {8, 16, 32, 40, 50, 64, 100, 128, 255};
+    uint16_t clk[] = {8, 16, 32, 40, 50, 64, 100, 128, 255, 272, 384};
     size_t loopCnt = 4096;  //don't need to loop through entire array...
 
     //if we already have a valid clock quit
-    for (; i < 8; ++i)
+    for (; i < ARRAYLEN(clk); ++i)
         if (clk[i] == clock) return clock;
 
     if (size < 20) return 0;
@@ -946,7 +946,7 @@ int DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx)
     uint8_t tol = 0;
     uint16_t smplCnt = 0;
     int16_t peakcnt = 0;
-    int16_t peaksdet[] = {0, 0, 0, 0, 0, 0, 0, 0};
+    int16_t peaksdet[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint16_t minPeak = 255;
     bool firstpeak = true;
     //test for large clipped waves - ignore first peak
@@ -969,10 +969,10 @@ int DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx)
     bool errBitHigh = 0, bitHigh = 0, lastPeakHigh = 0;
     uint8_t ignoreCnt = 0, ignoreWindow = 4;
     int lastBit = 0;
-    size_t bestStart[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    size_t bestStart[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     peakcnt = 0;
     //test each valid clock from smallest to greatest to see which lines up
-    for (clkCnt = 0; clkCnt < 8; ++clkCnt) {
+    for (clkCnt = 0; clkCnt < ARRAYLEN(bestStart); ++clkCnt) {
         //ignore clocks smaller than smallest peak
         if (clk[clkCnt] < minPeak - (clk[clkCnt] / 4)) continue;
         //try lining up the peaks by moving starting point (try first 256)
@@ -1025,7 +1025,7 @@ int DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx)
     }
 
     uint8_t best = 0;
-    for (int m = 7; m > 0; m--) {
+    for (int m = ARRAYLEN(peaksdet); m > 0; m--) {
         if ((peaksdet[m] >= (peaksdet[best] - 1)) && (peaksdet[m] <= peaksdet[best] + 1) && lowestTransition) {
             if (clk[m] > (lowestTransition - (clk[m] / 8)) && clk[m] < (lowestTransition + (clk[m] / 8))) {
                 best = m;
