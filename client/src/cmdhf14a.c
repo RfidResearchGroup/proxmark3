@@ -605,7 +605,7 @@ static int CmdHF14AReader(const char *Cmd) {
                     } else {
                         PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
                     }
-
+                    PrintAndLogEx(NORMAL, "");
                 }
                 DropField();
                 res = PM3_ESOFT;
@@ -623,6 +623,7 @@ static int CmdHF14AReader(const char *Cmd) {
                         PrintAndLogEx(SUCCESS, " ATS: [%d] "  _GREEN_("%s"), card.ats_len, sprint_hex(card.ats, card.ats_len));
                     }
                 }
+                PrintAndLogEx(NORMAL, "");
             }
             if (!disconnectAfter) {
                 if (!silent) PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
@@ -903,6 +904,7 @@ int CmdHF14ASniff(const char *Cmd) {
 }
 
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool silentMode) {
+
     uint16_t cmdc = 0;
     *dataoutlen = 0;
 
