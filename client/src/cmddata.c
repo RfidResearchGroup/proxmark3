@@ -1106,17 +1106,15 @@ static int CmdDetectClockRate(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data detectclock",
                   "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer",
-                  "data detectclock -A   --> detect clock of an ask wave in GraphBuffer\n"
-                  "data detectclock -F   --> detect clock of an fsk wave in GraphBuffer\n"
-                  "data detectclock -N   --> detect clock of an psk wave in GraphBuffer\n"
-                  "data detectclock -P   --> detect clock of an nrz/direct wave in GraphBuffer"
+                  "data detectclock --ask\n"
+                  "data detectclock --nzr   --> detect clock of an nrz/direct wave in GraphBuffer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("A", "ASK", "specify ASK modulation clock detection"),
-        arg_lit0("F", "FSK", "specify FSK modulation clock detection"),
-        arg_lit0("N", "NZR", "specify NZR/DIRECT modulation clock detection"),
-        arg_lit0("P", "PSK", "specify PSK modulation clock detection"),
+        arg_lit0(NULL, "ask", "specify ASK modulation clock detection"),
+        arg_lit0(NULL, "fsk", "specify FSK modulation clock detection"),
+        arg_lit0(NULL, "nzr", "specify NZR/DIRECT modulation clock detection"),
+        arg_lit0(NULL, "psk", "specify PSK modulation clock detection"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
