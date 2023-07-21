@@ -2922,7 +2922,7 @@ static int CmdAsn1Decoder(const char *Cmd) {
     bool selftest = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
     if (selftest) {
-//        return asn1_selftest();
+        return asn1_selftest();
     }
 
     // print ASN1 decoded array in TLV view
