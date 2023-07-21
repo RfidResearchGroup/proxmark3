@@ -754,7 +754,9 @@ int CmdHF14ASim(const char *Cmd) {
                   "hf 14a sim -t 7                 -> MFU EV1 / NTAG 215 Amiibo\n"
                   "hf 14a sim -t 8                 -> MIFARE Classic 4k\n"
                   "hf 14a sim -t 9                 -> FM11RF005SH Shanghai Metro\n"
-                  "hf 14a sim -t 10                -> ST25TA IKEA Rothult\n");
+                  "hf 14a sim -t 10                -> ST25TA IKEA Rothult\n"
+                  "hf 14a sim -t 11                -> javacard (JCOP)\n"
+                  );
 
     void *argtable[] = {
         arg_param_begin,
@@ -808,7 +810,7 @@ int CmdHF14ASim(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (tagtype > 10) {
+    if (tagtype > 11) {
         PrintAndLogEx(ERR, "Undefined tag %d", tagtype);
         return PM3_EINVARG;
     }
