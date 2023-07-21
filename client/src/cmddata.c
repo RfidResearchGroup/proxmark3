@@ -440,7 +440,7 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
         clk /= 2;
     }
     if (errCnt < 0 || bitlen < 16) { //if fatal error (or -1)
-        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, %s bitlen:%zu, clock:%d"
+        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, %s bitlen:%zu, clock:%i"
                       , errCnt
                       , (invert) ? "inverted," : ""
                       , bitlen
@@ -451,7 +451,7 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
     }
 
     if (errCnt > maxErr) {
-        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%zu, clock:%d"
+        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%zu, clock:%i"
                       , errCnt
                       , bitlen
                       , clk
@@ -461,7 +461,7 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
     }
 
     if (verbose) {
-        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) using clock:%d, %sbits found:%zu, start index %d"
+        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) using clock:%i, %sbits found:%zu, start index %d"
                       , clk
                       , (invert) ? "inverted, " : ""
                       , bitlen
@@ -475,14 +475,14 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
 
     if (verbose) {
         if (errCnt > 0)
-            PrintAndLogEx(DEBUG, "# Errors during demoding (shown as 7 in bit stream): %d", errCnt);
+            PrintAndLogEx(DEBUG, "# Errors during demoding (shown as 7 in bit stream)... " _RED_("%d"), errCnt);
 
         if (askType) {
-            PrintAndLogEx(SUCCESS, _YELLOW_("ASK/Manchester") " - clock %d - decoded bitstream", clk);
-            PrintAndLogEx(INFO, "---------------------------------------------");
+            PrintAndLogEx(SUCCESS, _YELLOW_("ASK/Manchester") " - clock " _YELLOW_("%i") " - decoded bitstream", clk);
+            PrintAndLogEx(INFO, "-----------------------------------------------");
         } else {
-            PrintAndLogEx(SUCCESS, _YELLOW_("ASK/Raw") " - clock %d - decoded bitstream", clk);
-            PrintAndLogEx(INFO, "--------------------------------------");
+            PrintAndLogEx(SUCCESS, _YELLOW_("ASK/Raw") " - clock " _YELLOW_("%i") " - decoded bitstream", clk);
+            PrintAndLogEx(INFO, "----------------------------------------");
         }
 
         printDemodBuff(0, false, false, false);
@@ -1369,7 +1369,7 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
 
     if (errCnt > 0 && (verbose || g_debugMode)) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Errors during Demoding (shown as 7 in bit stream): %d", errCnt);
     if (verbose || g_debugMode) {
-        PrintAndLogEx(NORMAL, "NRZ demoded bitstream:");
+        PrintAndLogEx(SUCCESS, "NRZ demoded bitstream:");
         // Now output the bitstream to the scrollback by line of 16 bits
         printDemodBuff(0, false, invert, false);
     }
