@@ -228,7 +228,7 @@ static int CmdLFHitagEload(const char *Cmd) {
         arg_lit0("1", "ht1", "Card type Hitag 1"),
         arg_lit0("2", "ht2", "Card type Hitag 2"),
         arg_lit0("s", "hts", "Card type Hitag S"),
-        arg_lit0("m", "htm", "Card type Hitag μ"),
+        arg_lit0("m", "htm", "Card type Hitag \xce\xbc"), // μ
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
