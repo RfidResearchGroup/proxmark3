@@ -2911,14 +2911,19 @@ static int CmdAsn1Decoder(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("d", NULL, "<hex>", "ASN1 encoded byte array"),
+        arg_str0("d", NULL, "<hex>", "ASN1 encoded byte array"),
+        arg_lit0("t", "test", "perform selftest"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int dlen = 2048;
     uint8_t data[2048];
     CLIGetHexWithReturn(ctx, 1, data, &dlen);
+    bool selftest = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
+    if (selftest) {
+//        return asn1_selftest();
+    }
 
     // print ASN1 decoded array in TLV view
     PrintAndLogEx(INFO, "---------------- " _CYAN_("ASN1 TLV") " -----------------");
