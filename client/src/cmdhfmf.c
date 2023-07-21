@@ -7034,8 +7034,14 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         // --------------- CHANGE UID ----------------
         uint8_t aCHANGE[] = {0x00, 0xa6, 0xa0, 0x00, 0x05, 0xff, 0xff, 0xff, 0xff, 0x00};
         memcpy(aCHANGE + 5, uid, uidlen);
-        res = ExchangeAPDU14a(aCHANGE, sizeof(aCHANGE), activate_field, keep_field_on, response, sizeof(response),
-                              &resplen);
+        res = ExchangeAPDU14a(
+                aCHANGE, sizeof(aCHANGE),
+                activate_field,
+                keep_field_on,
+                response, sizeof(response),
+                &resplen
+            );
+
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Super card UID change [ " _RED_("fail") " ]");
             DropField();
@@ -7054,8 +7060,14 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
         // --------------- RESET CARD ----------------
         uint8_t aRESET[] = {0x00, 0xa6, 0xc0, 0x00};
-        res = ExchangeAPDU14a(aRESET, sizeof(aRESET), activate_field, keep_field_on, response, sizeof(response),
-                              &resplen);
+        res = ExchangeAPDU14a(
+                aRESET, sizeof(aRESET),
+                activate_field,
+                keep_field_on,
+                response, sizeof(response),
+                &resplen
+            );
+
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Super card reset [ " _RED_("fail") " ]");
             DropField();
@@ -7144,7 +7156,12 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
     uint64_t key64 = -1;
     if (mfkey32_moebius(&data, &key64)) {
-        PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ " _GREEN_("%012" PRIX64) " ]", sprint_hex_inrow(outA, 4), data.sector, (data.keytype == 0x60) ? 'A' : 'B', key64);
+        PrintAndLogEx(SUCCESS, "UID: %s Sector %02x key %c [ " _GREEN_("%012" PRIX64) " ]",
+                sprint_hex_inrow(outA, 4),
+                data.sector,
+                (data.keytype == 0x60) ? 'A' : 'B',
+                key64
+            );
     } else {
         PrintAndLogEx(FAILED, "failed to recover any key");
     }
