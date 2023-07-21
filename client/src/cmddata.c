@@ -527,7 +527,7 @@ static int Cmdaskmandemod(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool amplify = arg_get_lit(ctx, 1);
-    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 2, 0) & 0xFF;
+    uint16_t clk = (uint16_t)arg_get_int_def(ctx, 2, 0);
     bool invert = arg_get_lit(ctx, 3);
     bool st = arg_get_lit(ctx, 4);
     uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 5, 100) & 0xFF;
@@ -773,7 +773,7 @@ static int Cmdaskrawdemod(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool amplify = arg_get_lit(ctx, 1);
-    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 2, 0) & 0xFF;
+    uint16_t clk = (uint16_t)arg_get_int_def(ctx, 2, 0);
     bool invert = arg_get_lit(ctx, 3);
     bool st = arg_get_lit(ctx, 4);
     uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 5, 100) & 0xFF;
@@ -3313,6 +3313,9 @@ cleanup:
 }
 
 int centerThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down) {
+    if (len < 5) {
+        return PM3_EINVARG;
+    }
 
     for (size_t i = 0; i < len; ++i) {
         if ((in[i] <= up) && (in[i] >= down)) {
@@ -3362,6 +3365,46 @@ static int CmdCenterThreshold(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int envelope_square(const int *in, int *out, size_t len) {
+    if (len < 10) {
+        return PM3_EINVARG;
+    }
+
+    for (size_t i = 0; i < len - 5; i++) {
+
+        if (in[i] == 0 && in[i+1] == 0 && in[i+2] == 0 && in[i+3] == 0 && in[i+4] == 0) {
+            i += 4;
+            continue;
+        }
+
+        out[i] = 255;
+    }
+    return PM3_SUCCESS;
+}
+
+static int CmdEnvelope(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data envelop",
+                  "Create an square envelop of the samples",
+                  "data envelop"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    envelope_square(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen);
+
+    uint8_t bits[g_GraphTraceLen];
+    size_t size = getFromGraphBuf(bits);
+    // set signal properties low/high/mean/amplitude and is_noice detection
+    computeSignalProperties(bits, size);
+    RepaintGraphWindow();
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable,  "This help"},
 
@@ -3378,6 +3421,7 @@ static command_t CommandTable[] = {
     {"autocorr",        CmdAutoCorr,             AlwaysAvailable,  "Autocorrelation over window"},
     {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable,  "Max rising higher up-thres/ Min falling lower down-thres"},
     {"decimate",        CmdDecimate,             AlwaysAvailable,  "Decimate samples"},
+    {"envelope",        CmdEnvelope,             AlwaysAvailable,  "Generate square envelope of samples"},
     {"undecimate",      CmdUndecimate,           AlwaysAvailable,  "Un-decimate samples"},
     {"hide",            CmdHide,                 AlwaysAvailable,  "Hide graph window"},
     {"hpf",             CmdHpf,                  AlwaysAvailable,  "Remove DC offset from trace"},

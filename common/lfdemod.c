@@ -436,10 +436,10 @@ static size_t findModStart(const uint8_t *src, size_t size, uint8_t expWaveSize)
 }
 
 static int getClosestClock(int testclk) {
-    const uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 100, 128, 256, 384};
-    const uint8_t limit[]  = {1,  2,  4,  4,  5,  8,   8,   8,   8,   8};
+    const uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 100, 128, 256, 272, 384};
+    const uint8_t limit[]  =  {1,  2,  4,  4,  5,  8,   8,   8,   8,   24,   24};
 
-    for (uint8_t i = 0; i < 10; i++) {
+    for (uint8_t i = 0; i < ARRAYLEN(clocks); i++) {
         if (testclk >= clocks[i] - limit[i] && testclk <= clocks[i] + limit[i])
             return clocks[i];
     }
@@ -613,7 +613,7 @@ bool DetectCleanAskWave(const uint8_t *dest, size_t size, uint8_t high, uint8_t 
 // based on count of low to low
 int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clock) {
     size_t i = 100;
-    size_t minClk = 512;
+    size_t minClk = 768;
     uint16_t shortestWaveIdx = 0;
 
     // get to first full low to prime loop and skip incomplete first pulse
@@ -622,11 +622,11 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
     if (i == size)
         return -1;
-    if (size < 512)
+    if (size < 768)
         return -2;
 
     // clock, numoftimes, first idx
-    uint16_t tmpclk[10][3] = {
+    uint16_t tmpclk[11][3] = {
         {8,   0, 0},
         {16,  0, 0},
         {32,  0, 0},
@@ -636,11 +636,12 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
         {100, 0, 0},
         {128, 0, 0},
         {256, 0, 0},
+        {272, 0, 0},
         {384, 0, 0},
     };
 
     // loop through all samples (well, we don't want to go out-of-bounds)
-    while (i < (size - 512)) {
+    while (i < (size - 768)) {
         // measure from low to low
         size_t startwave = i;
 
@@ -655,7 +656,7 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
         int foo = getClosestClock(minClk);
         if (foo > 0) {
-            for (uint8_t j = 0; j < 10; j++) {
+            for (uint8_t j = 0; j < 11; j++) {
                 if (tmpclk[j][0] == foo) {
                     tmpclk[j][1]++;
 
@@ -669,8 +670,17 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
     }
 
     // find the clock with most hits and it the first index it was encountered.
+    int possible_clks = 0;
+    for (uint8_t j = 0; j < 11; j++) {
+        if (tmpclk[j][1] > 0) {
+            possible_clks++;
+        }
+    }
+
+    uint16_t second_shortest = 0;
+    int second = 0;
     int max = 0;
-    for (uint8_t j = 0; j < 10; j++) {
+    for (int j = 10; j > -1; j--) {
         if (g_debugMode == 2) {
             prnt("DEBUG, ASK,  clocks %u | hits %u | idx %u"
                  , tmpclk[j][0]
@@ -678,11 +688,21 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
                  , tmpclk[j][2]
                 );
         }
+
         if (max < tmpclk[j][1]) {
+            second = *clock;
+            second_shortest = shortestWaveIdx;
+
             *clock = tmpclk[j][0];
             shortestWaveIdx = tmpclk[j][2];
             max = tmpclk[j][1];
         }
+    }
+
+    // ASK clock 8 is very rare and usually gives us false positives
+    if (possible_clks > 1 && *clock == 8) {
+        *clock = second;
+        shortestWaveIdx = second_shortest;
     }
 
     if (*clock == 0)
@@ -712,9 +732,9 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
     }
 
     size_t i = 1;
-    uint8_t num_clks = 9;
+    uint8_t num_clks = 10;
     // first 255 value pos0 is placeholder for user inputed clock.
-    uint16_t clk[] = {255, 8, 16, 32, 40, 50, 64, 100, 128, 255};
+    uint16_t clk[] = {255, 8, 16, 32, 40, 50, 64, 100, 128, 255, 272};
 
     // sometimes there is a strange end wave - filter out this
     size -= 60;
@@ -755,8 +775,8 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 
     uint8_t clkCnt, tol;
     size_t j = 0;
-    uint16_t bestErr[] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
-    uint8_t bestStart[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint16_t bestErr[] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
+    uint8_t bestStart[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     size_t errCnt, arrLoc, loopEnd;
 
     if (found_clk) {
