@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added new sample trace file for cotag w fc/272. Thanks s1acky! (@iceman1001)
+ - Fixed `hf legic eload` - now it doesn't crash client (@doegox)
+ - Changed `lf hitag *` - rework client side (@doegox)
+ - Changed data commands to handle ask/nrz clocks above 256 (@iceman1001)
+ - Added `data envelope` - almost acts like data askedgedetect (@iceman1001)
+ - Added `data cthreshold` - acts like an inverted dirtythreshold command. Remove center values (@iceman1001)
  - Added `hf mfp list` - interprets MIFARE Plus commands in traces (@DidierA)
  - Changed `hf legic sim` - loop and return codes on deviceside updated to DEFINES (@iceman1001)
  - Changed `hf legic einfo` - now accepts the three different cardsizes as params (@iceman1001)
