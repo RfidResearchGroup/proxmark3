@@ -1165,6 +1165,10 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
             sak = 0x20;
         }
         break;
+        case 12: { // HID Seos 4K card
+            rATQA[0] = 0x01;
+            sak = 0x20;
+        }
 
         default: {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Error: unknown tagtype (%d)", tagType);
