@@ -20,6 +20,7 @@
 #define CMDLFCOTAG_H__
 
 #include "common.h"
+#include <stdbool.h>
 
 #ifndef COTAG_BITS
 #define COTAG_BITS 264
