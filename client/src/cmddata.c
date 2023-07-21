@@ -3320,14 +3320,14 @@ int centerThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down)
     for (size_t i = 0; i < len; ++i) {
         if ((in[i] <= up) && (in[i] >= down)) {
             out[i] = 0;
-        } 
+        }
     }
 
     // clean out spikes.
     for (size_t i = 2; i < len - 2; ++i) {
 
-        int a = out[i-2] + out[i-1];
-        int b = out[i+2] + out[i+1];
+        int a = out[i - 2] + out[i - 1];
+        int b = out[i + 2] + out[i + 1];
         if (a == 0 && b == 0) {
             out[i] = 0;
         }
@@ -3372,7 +3372,7 @@ static int envelope_square(const int *in, int *out, size_t len) {
 
     for (size_t i = 0; i < len - 5; i++) {
 
-        if (in[i] == 0 && in[i+1] == 0 && in[i+2] == 0 && in[i+3] == 0 && in[i+4] == 0) {
+        if (in[i] == 0 && in[i + 1] == 0 && in[i + 2] == 0 && in[i + 3] == 0 && in[i + 4] == 0) {
             i += 4;
             continue;
         }

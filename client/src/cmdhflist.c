@@ -273,7 +273,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 MifareAuthState = masNone;
                 break;
             case ISO14443A_CMD_RATS:
-                snprintf(exp, size, "RATS - FSDI=%x, CID=%x", (cmd[1] & 0xF0) >> 4, (cmd[1] & 0x0F) );
+                snprintf(exp, size, "RATS - FSDI=%x, CID=%x", (cmd[1] & 0xF0) >> 4, (cmd[1] & 0x0F));
                 break;
             /* Actually, PPSS is Dx
             case ISO14443A_CMD_PPS:
@@ -428,7 +428,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 break;
 
             default:
-                if ( (cmd[0] & 0xF0) == 0xD0  && ( cmdsize == 4 || cmdsize == 5 )) {
+                if ((cmd[0] & 0xF0) == 0xD0  && (cmdsize == 4 || cmdsize == 5)) {
                     snprintf(exp, size, "PPS - CID=%x", cmd[0] & 0x0F) ;
                 } else {
                     return PM3_ESOFT;
@@ -1241,7 +1241,7 @@ const char *mfpGetAnnotationForCode(uint8_t code) {
         { 0, NULL}
     } ;
 
-    for (struct mfp_code_msg *p=messages ; p->annotation != NULL ; p++) {
+    for (struct mfp_code_msg *p = messages ; p->annotation != NULL ; p++) {
         if (p->code == code) {
             return p->annotation ;
         }
@@ -1249,8 +1249,8 @@ const char *mfpGetAnnotationForCode(uint8_t code) {
     return NULL ;
 }
 
-const char *mfpGetEncryptedForCode(uint8_t code){
-    /* 
+const char *mfpGetEncryptedForCode(uint8_t code) {
+    /*
     encrypted  |plain : bit 1
     30 A0 0000  32 A2   0010
     31 A1 0001  33 A3   0011
@@ -1263,10 +1263,10 @@ const char *mfpGetEncryptedForCode(uint8_t code){
     return "ENCRYPTED" ;
 }
 
-/* 
+/*
     response       |command
     NOMAC   MAC     UnMACed   MACed
-    30      31      34      30,A0      
+    30      31      34      30,A0
     32      33      35      31,A1
     A0      A1      36      32,A2
     A2      A3      37      33,A3
@@ -1274,14 +1274,14 @@ const char *mfpGetEncryptedForCode(uint8_t code){
     bit 2 is command: UNMACed if 1, MACed if 0
 */
 const char *mfpGetResponseMacedForCode(uint8_t code) {
-    if (( code & 0x01) == 0x00) {
+    if ((code & 0x01) == 0x00) {
         return "NoMAC" ;
     }
     return "MAC" ;
 }
 
 const char *mfpGetCommandMacedForCode(uint8_t code) {
-    if (( code & 0x04) == 0x04) {
+    if ((code & 0x04) == 0x04) {
         return "UnMACed" ;
     }
     return "MACed" ;
@@ -1322,14 +1322,14 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             if (cmdsize > (data - cmd)) {
                 data_size = cmdsize - (data - cmd);
             }
-            uint8_t opcode=cmd[pos] ;
+            uint8_t opcode = cmd[pos] ;
             switch (opcode) {
                 case MFP_AUTHENTICATEFIRST:
                 case MFP_AUTHENTICATEFIRST_VARIANT:
                     if (data_size > 1) {
                         // key : uint16_t uKeyNum = 0x4000 + sectorNum * 2 + (keyB ? 1 : 0);
                         uint16_t uKeyNum = MemLeToUint2byte(data) ;
-                        snprintf(exp, size, "FIRST AUTH (Keynr 0x%04X: %c sector %d)", uKeyNum, uKeyNum & 0x0001 ? 'B' : 'A', (uKeyNum - 0x4000)/2 );
+                        snprintf(exp, size, "FIRST AUTH (Keynr 0x%04X: %c sector %d)", uKeyNum, uKeyNum & 0x0001 ? 'B' : 'A', (uKeyNum - 0x4000) / 2);
                     } else {
                         snprintf(exp, size, "FIRST AUTH") ;
                     }
@@ -1360,7 +1360,7 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         uint16_t uBlockNum = MemLeToUint2byte(data) ;
                         uint8_t uQty = data[2] ;
                         if (uQty != 1) {
-                            snprintf(exp, size, "READ %s(%u-%u) %s_%s", encrypted, uBlockNum, uBlockNum+uQty-1, responseMaced, commandMaced);
+                            snprintf(exp, size, "READ %s(%u-%u) %s_%s", encrypted, uBlockNum, uBlockNum + uQty - 1, responseMaced, commandMaced);
                         } else {
                             snprintf(exp, size, "READ %s(%u) %s_%s", encrypted, uBlockNum, responseMaced, commandMaced);
                         }
@@ -1369,11 +1369,11 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                     }
                     break;
                 }
-                
+
                 case MFP_WRITEPLAINNOMAC    :
                 case MFP_WRITEPLAINMAC      :
                 case MFP_WRITEENCRYPTEDNOMAC:
-                case MFP_WRITEENCRYPTEDMAC  :{
+                case MFP_WRITEENCRYPTEDMAC  : {
                     const char *encrypted = mfpGetEncryptedForCode(opcode) ;
                     const char *responseMaced = mfpGetResponseMacedForCode(opcode) ;
 
@@ -1397,12 +1397,12 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 case MFP_DECREMENTTRANSFERNOMAC:
                 case MFP_DECREMENTTRANSFERMAC  :
                 case MFP_RESTORENOMAC          :
-                case MFP_RESTOREMAC            :{
+                case MFP_RESTOREMAC            : {
                     const char *responseMaced = mfpGetResponseMacedForCode(opcode) ;
                     const char *annotation = mfpGetAnnotationForCode(opcode) ;
                     if (annotation == NULL) {
                         //should not happen outside of default case: it means an entry is mising in mfpGetAnnotationForCode()
-                        annotation="?? MISSING OPCODE" ;
+                        annotation = "?? MISSING OPCODE" ;
                     }
 
                     if (data_size > 1) {

@@ -631,7 +631,7 @@ static int CmdLFHitagReader(const char *Cmd) {
         memcpy(key, "MIKR", 4);
         keylen = 4;
     }
-   if ((keylen == 0) && use_crypto) {
+    if ((keylen == 0) && use_crypto) {
         memcpy(key, "ONMIKR", 6);
         keylen = 6;
     }
@@ -888,7 +888,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
         memcpy(key, "MIKR", 4);
         keylen = 4;
     }
-   if ((keylen == 0) && use_crypto) {
+    if ((keylen == 0) && use_crypto) {
         memcpy(key, "ONMIKR", 6);
         keylen = 6;
     }
@@ -1047,7 +1047,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
         memcpy(key, "MIKR", 4);
         keylen = 4;
     }
-   if ((keylen == 0) && use_crypto) {
+    if ((keylen == 0) && use_crypto) {
         memcpy(key, "ONMIKR", 6);
         keylen = 6;
     }

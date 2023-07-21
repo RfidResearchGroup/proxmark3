@@ -120,12 +120,12 @@ int asn1_selftest(void) {
 
     /*
 
-    ICEMAN: 
+    ICEMAN:
     Problem to be solved,  how to extract data back from our asn1 decoder to compare with the expected text found in the following test cases.
     Thanks @Mistial for the suggestion and links.
 
     These test cases are from the project lapo-luchini's asn1js   (ISC license which is like MIT license)
-    https://github.com/lapo-luchini/asn1js/blob/trunk/test.js 
+    https://github.com/lapo-luchini/asn1js/blob/trunk/test.js
 
 
     const asn1_test tests[] = {
@@ -211,7 +211,7 @@ int asn1_selftest(void) {
         {"181531393835313130363231303632372E332D31323334", "1985-11-06 21:06:27.3 UTC-12:34", "UTC offsets with minutes"},
         // GitHub issue #54
         {"181331393835313130363231303632372E332B3134", "1985-11-06 21:06:27.3 UTC+14:00", "UTC offset +13 and +14"},
-        };    
+        };
 
     int tot = ARRAYLEN(tests);
 
@@ -238,7 +238,7 @@ int asn1_selftest(void) {
         if (t) {
             bool candump = false;
             if (asn1_tag_dump(&t->tag, 0, &candump)) {
-                count++; 
+                count++;
             }
             tlvdb_free(t);
         }
@@ -250,6 +250,6 @@ int asn1_selftest(void) {
     PrintAndLogEx(NORMAL, "");
 
     */
-     
+
     return PM3_SUCCESS;
 }

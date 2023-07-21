@@ -382,7 +382,7 @@ function getInputBytes(infile)
     local arr = split(infile, ".")
     local path = core.search_file(arr[1], "."..arr[2])
     if (path == nil) then oops("failed to read from file ".. infile); return false; end
-    
+
     local fhi,err = io.open(path,"rb")
     if err then oops("failed to read from file ".. path); return false; end
 
@@ -688,7 +688,7 @@ end
 -- write bytes to file
 function writeFile(bytes, filename)
     local emlext = ".eml"
-    local res, path 
+    local res, path
     if (filename ~= 'MyLegicClone') then
         res, path = file_check(filename..emlext)
         if res then
@@ -765,7 +765,7 @@ function readFromPM3()
     if not res then return nil end
     os.remove(path)
 
-    res, path = file_check(infile..".eml")    
+    res, path = file_check(infile..".eml")
     os.remove(path)
 
     res, path = file_check(infile..".json")
@@ -886,7 +886,7 @@ function loadTagMap(filename)
   if not res then
       return oops("input file: "..acyellow..filename..acoff.." not found")
   else
-       
+
     local fhi,err = io.open(path)
     while true do
         line = fhi:read()
@@ -956,7 +956,7 @@ function dumpTagMap(tag, tagMap)
       else
         io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..((v['highlight']) and acmagenta or acyellow)..v['name']..acoff)
       end
-      
+
       temp = ""
       while (#v['name'] + temp:len()) < 20 do temp = temp.." " end
 
@@ -1015,14 +1015,14 @@ function editTagMap(tag, tagMap)
 
 ]]..acc..[[Mappings]]..acr..[[
 
-    ]]..acy..[[im]]..acr..[[  - insert       ]]..acy..[[am]]..acr..[[  - add    
+    ]]..acy..[[im]]..acr..[[  - insert       ]]..acy..[[am]]..acr..[[  - add
     ]]..acy..[[rm]]..acr..[[  - remove       ]]..acy..[[mas]]..acr..[[ - map all segments
 
 ]]..acc..[[CRC8]]..acr..[[
 
-    ]]..acy..[[ac8]]..acr..[[ - add          ]]..acy..[[sc8]]..acr..[[ - show 
+    ]]..acy..[[ac8]]..acr..[[ - add          ]]..acy..[[sc8]]..acr..[[ - show
     ]]..acy..[[rc8]]..acr..[[ - remove
-      
+
     ]]..acy..[[q]]..acr..[[   - exit         ]]..acy..[[h]]..acr..[[   - Help
   ]]
 
@@ -2446,7 +2446,7 @@ function modifyMode()
                 outfile = input("enter filename:", "hf-legic-"..inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2)
                 bytes = tagToBytes(inTAG)
                 --bytes=xorBytes(bytes, inTAG.MCC)
-                if (bytes) then                
+                if (bytes) then
                   writeFile(bytes, outfile)
                 end
                end
@@ -2854,7 +2854,7 @@ function main(args)
 
     -- write to outfile
     if (bytes) then
-      
+
       if (outfile) then
         writeFile(bytes, outfile)
       end

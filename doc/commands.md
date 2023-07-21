@@ -98,10 +98,11 @@ Check column "offline" for their availability.
 |`data manrawdecode      `|Y       |`Manchester decode binary stream in DemodBuffer`
 |`data modulation        `|Y       |`Identify LF signal for clock and modulation`
 |`data rawdemod          `|Y       |`Demodulate the data in the GraphBuffer and output binary`
-|`data askedgedetect     `|Y       |`Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave`
+|`data askedgedetect     `|Y       |`Adjust Graph for manual ASK demod`
 |`data autocorr          `|Y       |`Autocorrelation over window`
-|`data dirthreshold      `|Y       |`Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.`
+|`data dirthreshold      `|Y       |`Max rising higher up-thres/ Min falling lower down-thres`
 |`data decimate          `|Y       |`Decimate samples`
+|`data envelope          `|Y       |`Generate square envelope of samples`
 |`data undecimate        `|Y       |`Un-decimate samples`
 |`data hide              `|Y       |`Hide graph window`
 |`data hpf               `|Y       |`Remove DC offset from trace`
@@ -111,10 +112,11 @@ Check column "offline" for their availability.
 |`data mtrim             `|Y       |`Trim out samples from the specified start to the specified stop`
 |`data norm              `|Y       |`Normalize max/min to +/-128`
 |`data plot              `|Y       |`Show graph window`
+|`data cthreshold        `|Y       |`Average out all values between`
 |`data rtrim             `|Y       |`Trim samples from right of trace`
 |`data setgraphmarkers   `|Y       |`Set blue and orange marker in graph window`
 |`data shiftgraphzero    `|Y       |`Shift 0 for Graphed wave + or - shift value`
-|`data timescale         `|Y       |`Set a timescale to get a differential reading between the yellow and purple markers as time duration`
+|`data timescale         `|Y       |`Set cursor display timescale`
 |`data zerocrossings     `|Y       |`Count time between zero-crossings`
 |`data convertbitstream  `|Y       |`Convert GraphBuffer's 0/1 values to 127 / -127`
 |`data getbitstream      `|Y       |`Convert GraphBuffer's >=1 values to 1 and <1 to 0`
@@ -986,15 +988,16 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf hitag help          `|Y       |`This help`
-|`lf hitag eload         `|N       |`Load Hitag dump file into emulator memory`
 |`lf hitag list          `|Y       |`List Hitag trace history`
-|`lf hitag info          `|N       |`Hitag2 tag information`
-|`lf hitag reader        `|N       |`Act like a Hitag reader`
-|`lf hitag sim           `|N       |`Simulate Hitag transponder`
+|`lf hitag info          `|N       |`Hitag 2 tag information`
+|`lf hitag dump          `|N       |`Dump Hitag 2 tag`
+|`lf hitag read          `|N       |`Read Hitag memory`
+|`lf hitag wrbl          `|N       |`Write a block (page) in Hitag memory`
 |`lf hitag sniff         `|N       |`Eavesdrop Hitag communication`
-|`lf hitag writer        `|N       |`Act like a Hitag writer`
-|`lf hitag dump          `|N       |`Dump Hitag2 tag`
-|`lf hitag cc            `|N       |`Test all challenges`
+|`lf hitag cc            `|N       |`Hitag S: test all provided challenges`
+|`lf hitag ta            `|N       |`Hitag 2: test all recorded authentications`
+|`lf hitag eload         `|N       |`Load Hitag dump file into emulator memory`
+|`lf hitag sim           `|N       |`Simulate Hitag transponder`
 
 
 ### lf idteck
