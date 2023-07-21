@@ -729,7 +729,6 @@ static int CmdLFHitagSCheckChallenges(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-
     CLIParserFree(ctx);
 
     clearCommandBuffer();
@@ -757,6 +756,7 @@ static int CmdLFHitag2CheckChallenges(const char *Cmd) {
                   "Test recorded authentications (replay?)",
                   "lf hitag ta"
                  );
+    CLIParserFree(ctx);
 
     clearCommandBuffer();
     SendCommandMIX(CMD_LF_HITAG_READER, RHT2F_TEST_AUTH_ATTEMPTS, 0, 0, NULL, 0);
