@@ -273,7 +273,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 MifareAuthState = masNone;
                 break;
             case ISO14443A_CMD_RATS:
-                snprintf(exp, size, "RATS - FSDI=0x%x, CID=0x%x", (cmd[1] & 0xF0) >> 4, (cmd[1] & 0x0F) );
+                snprintf(exp, size, "RATS - FSDI=%x, CID=%x", (cmd[1] & 0xF0) >> 4, (cmd[1] & 0x0F) );
                 break;
             /* Actually, PPSS is Dx
             case ISO14443A_CMD_PPS:
@@ -429,7 +429,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
 
             default:
                 if ( (cmd[0] & 0xF0) == 0xD0  && ( cmdsize == 4 || cmdsize == 5 )) {
-                    snprintf(exp, size, "PPSS - CID=0x%x", cmd[0] & 0x0F) ;
+                    snprintf(exp, size, "PPS - CID=%x", cmd[0] & 0x0F) ;
                 } else {
                     return PM3_ESOFT;
                 }
@@ -1202,7 +1202,10 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         }
     }
 }
-// codes for which no data is interpreted, returns the message to print.
+
+// MIFARE Plus
+
+// returns the message to print for a given opcode.
 const char *mfpGetAnnotationForCode(uint8_t code) {
     struct mfp_code_msg {
         uint8_t code;
@@ -1222,6 +1225,19 @@ const char *mfpGetAnnotationForCode(uint8_t code) {
         { MFDES_PREPARE_PC,         "PREPARE PROXIMITY CHECK"},
         { MFDES_PROXIMITY_CHECK,    "PROXIMITY CHECK"},
         { MFDES_VERIFY_PC,          "VERIFY PROXIMITY CHECK"},
+        { MFDES_COMMIT_READER_ID,   "COMMIT READER ID"},
+        { MFP_INCREMENTNOMAC,       "INCREMENT"},
+        { MFP_INCREMENTMAC,         "INCREMENT"},
+        { MFP_DECREMENTMAC,         "DECREMENT"},
+        { MFP_DECREMENTNOMAC,       "DECREMENT"},
+        { MFP_TRANSFERNOMAC,        "TRANSFER"},
+        { MFP_TRANSFERMAC,          "TRANSFER"},
+        { MFP_INCREMENTTRANSFERNOMAC, "INCREMENT, TRANSFER"},
+        { MFP_INCREMENTTRANSFERMAC, "INCREMENT, TRANSFER"},
+        { MFP_DECREMENTTRANSFERNOMAC, "DECREMENT, TRANSFER"},
+        { MFP_DECREMENTTRANSFERMAC, "DECREMENT, TRANSFER"},
+        { MFP_RESTORENOMAC,         "RESTORE"},
+        { MFP_RESTOREMAC,           "RESTORE"},
         { 0, NULL}
     } ;
 
@@ -1233,7 +1249,44 @@ const char *mfpGetAnnotationForCode(uint8_t code) {
     return NULL ;
 }
 
-// MIFARE Plus
+const char *mfpGetEncryptedForCode(uint8_t code){
+    /* 
+    encrypted  |plain : bit 1
+    30 A0 0000  32 A2   0010
+    31 A1 0001  33 A3   0011
+    34    0100  36      0110
+    35    0101  37      0111
+    */
+    if ((code & 0x02) == 2) {
+        return "PLAIN" ;
+    }
+    return "ENCRYPTED" ;
+}
+
+/* 
+    response       |command
+    NOMAC   MAC     UnMACed   MACed
+    30      31      34      30,A0      
+    32      33      35      31,A1
+    A0      A1      36      32,A2
+    A2      A3      37      33,A3
+    bit 0 is response: NOMAC if 0, MAC if 1
+    bit 2 is command: UNMACed if 1, MACed if 0
+*/
+const char *mfpGetResponseMacedForCode(uint8_t code) {
+    if (( code & 0x01) == 0x00) {
+        return "NoMAC" ;
+    }
+    return "MAC" ;
+}
+
+const char *mfpGetCommandMacedForCode(uint8_t code) {
+    if (( code & 0x04) == 0x04) {
+        return "UnMACed" ;
+    }
+    return "MACed" ;
+}
+
 void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     // If we are in Mifare Classic Authenticated mode, all the work has already be done elsewhere
@@ -1269,8 +1322,8 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             if (cmdsize > (data - cmd)) {
                 data_size = cmdsize - (data - cmd);
             }
-
-            switch (cmd[pos]) {
+            uint8_t opcode=cmd[pos] ;
+            switch (opcode) {
                 case MFP_AUTHENTICATEFIRST:
                 case MFP_AUTHENTICATEFIRST_VARIANT:
                     if (data_size > 1) {
@@ -1295,119 +1348,75 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 case MFP_READENCRYPTEDMAC_MACED:
                 case MFP_READENCRYPTEDNOMAC_UNMACED:
                 case MFP_READENCRYPTEDMAC_UNMACED:
-                    if (data_size > 2) {
-                        uint16_t uBlockNum = MemLeToUint2byte(data) ;
-                        uint8_t uQty = data[2] ;
-                        if (uQty != 1) {
-                            snprintf(exp, size, "READ ENCRYPTED(%u-%u)", uBlockNum, uBlockNum+uQty-1);
-                        } else {
-                            snprintf(exp, size, "READ ENCRYPTED(%u)", uBlockNum);
-                        }
-                    } else {
-                        snprintf(exp, size, "READ ENCRYPTED ?");
-                    }
-                    break;
-
                 case MFP_READPLAINNOMAC_MACED:
                 case MFP_READPLAINMAC_MACED:
                 case MFP_READPLAINNOMAC_UNMACED:
-                case MFP_READPLAINMAC_UNMACED:
+                case MFP_READPLAINMAC_UNMACED: {
+                    const char *encrypted = mfpGetEncryptedForCode(opcode) ;
+                    const char *responseMaced = mfpGetResponseMacedForCode(opcode) ;
+                    const char *commandMaced = mfpGetCommandMacedForCode(opcode) ;
+
                     if (data_size > 2) {
                         uint16_t uBlockNum = MemLeToUint2byte(data) ;
                         uint8_t uQty = data[2] ;
                         if (uQty != 1) {
-                            snprintf(exp, size, "READ PLAIN(%u-%u)", uBlockNum, uBlockNum+uQty-1);
+                            snprintf(exp, size, "READ %s(%u-%u) %s_%s", encrypted, uBlockNum, uBlockNum+uQty-1, responseMaced, commandMaced);
                         } else {
-                            snprintf(exp, size, "READ PLAIN(%u)", uBlockNum);
+                            snprintf(exp, size, "READ %s(%u) %s_%s", encrypted, uBlockNum, responseMaced, commandMaced);
                         }
                     } else {
-                        snprintf(exp, size, "READ PLAIN ?");
+                        snprintf(exp, size, "READ %s %s_%s ?", encrypted, responseMaced, commandMaced);
                     }
                     break;
-
+                }
+                
                 case MFP_WRITEPLAINNOMAC    :
                 case MFP_WRITEPLAINMAC      :
-                    if (data_size > 1) {
-                        uint16_t uBlockNum = MemLeToUint2byte(data) ;
-                        snprintf(exp, size, "WRITE PLAIN(%u)", uBlockNum);
-                    } else {
-                        snprintf(exp, size, "WRITE PLAIN ?");
-                    }
-                    break;
-
                 case MFP_WRITEENCRYPTEDNOMAC:
-                case MFP_WRITEENCRYPTEDMAC  :
+                case MFP_WRITEENCRYPTEDMAC  :{
+                    const char *encrypted = mfpGetEncryptedForCode(opcode) ;
+                    const char *responseMaced = mfpGetResponseMacedForCode(opcode) ;
+
                     if (data_size > 1) {
                         uint16_t uBlockNum = MemLeToUint2byte(data) ;
-                        snprintf(exp, size, "WRITE ENCRYPTED(%u)", uBlockNum);
+                        snprintf(exp, size, "WRITE %s(%u) %s", encrypted, uBlockNum, responseMaced);
                     } else {
-                        snprintf(exp, size, "WRITE ENCRYPTED ?");
+                        snprintf(exp, size, "WRITE %s %s ?", encrypted, responseMaced);
                     }
                     break;
+                }
 
                 case MFP_INCREMENTNOMAC        :
                 case MFP_INCREMENTMAC          :
-                    if (data_size > 1) {
-                        uint16_t uBlockNum = MemLeToUint2byte(data) ;
-                        snprintf(exp, size, "INCREMENT(%u)", uBlockNum);
-                    } else {
-                        snprintf(exp, size, "INCREMENT ?");
-                    }
-                    break;
-
                 case MFP_DECREMENTNOMAC        :
                 case MFP_DECREMENTMAC          :
-                    if (data_size > 1) {
-                        uint16_t uBlockNum = MemLeToUint2byte(data) ;
-                        snprintf(exp, size, "DECREMENT(%u)", uBlockNum);
-                    } else {
-                        snprintf(exp, size, "DECREMENT ?");
-                    }
-                    break;
-
                 case MFP_TRANSFERNOMAC         :
                 case MFP_TRANSFERMAC           :
-                    if (data_size > 1) {
-                        uint16_t uBlockNum = MemLeToUint2byte(data) ;
-                        snprintf(exp, size, "TRANSFER(%u)", uBlockNum);
-                    } else {
-                        snprintf(exp, size, "TRANSFER ?");
-                    }
-                    break;
-
                 case MFP_INCREMENTTRANSFERNOMAC:
                 case MFP_INCREMENTTRANSFERMAC  :
-                    if (data_size > 1) {
-                        uint16_t uBlockNum = MemLeToUint2byte(data) ;
-                        snprintf(exp, size, "INCREMENT, TRANSFER(%u)", uBlockNum);
-                    } else {
-                        snprintf(exp, size, "INCREMENT, TRANSFER ?");
-                    }
-                    break;
-
                 case MFP_DECREMENTTRANSFERNOMAC:
                 case MFP_DECREMENTTRANSFERMAC  :
-                    if (data_size > 1) {
-                        uint16_t uBlockNum = MemLeToUint2byte(data) ;
-                        snprintf(exp, size, "DECREMENT, TRANSFER(%u)", uBlockNum);
-                    } else {
-                        snprintf(exp, size, "DECREMENT, TRANSFER ?");
-                    }
-                    break;
-
                 case MFP_RESTORENOMAC          :
-                case MFP_RESTOREMAC            :
+                case MFP_RESTOREMAC            :{
+                    const char *responseMaced = mfpGetResponseMacedForCode(opcode) ;
+                    const char *annotation = mfpGetAnnotationForCode(opcode) ;
+                    if (annotation == NULL) {
+                        //should not happen outside of default case: it means an entry is mising in mfpGetAnnotationForCode()
+                        annotation="?? MISSING OPCODE" ;
+                    }
+
                     if (data_size > 1) {
                         uint16_t uBlockNum = MemLeToUint2byte(data) ;
-                        snprintf(exp, size, "RESTORE(%u)", uBlockNum);
+                        snprintf(exp, size, "%s(%u) %s", annotation, uBlockNum, responseMaced);
                     } else {
-                        snprintf(exp, size, "RESTORE ?");
+                        snprintf(exp, size, "%s %s ?", annotation, responseMaced);
                     }
                     break;
+                }
 
                 default: {
                     // Messages for commands that do not need args are treated here
-                    const char *annotation = mfpGetAnnotationForCode(cmd[pos]) ;
+                    const char *annotation = mfpGetAnnotationForCode(opcode) ;
                     if (annotation != NULL) {
                         snprintf(exp, size, "%s", annotation) ;
                     } else {
