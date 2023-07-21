@@ -3312,6 +3312,56 @@ cleanup:
     return PM3_SUCCESS;
 }
 
+int centerThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down) {
+
+    for (size_t i = 0; i < len; ++i) {
+        if ((in[i] <= up) && (in[i] >= down)) {
+            out[i] = 0;
+        } 
+    }
+
+    // clean out spikes.
+    for (size_t i = 2; i < len - 2; ++i) {
+
+        int a = out[i-2] + out[i-1];
+        int b = out[i+2] + out[i+1];
+        if (a == 0 && b == 0) {
+            out[i] = 0;
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+static int CmdCenterThreshold(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data cthreshold",
+                  "Inverse of dirty threshold command,  all values between up and down will be average out",
+                  "data cthreshold -u 10 -d -10"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("d", "down", "<dec>", "threshold down"),
+        arg_int1("u", "up", "<dec>", "threshold up"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int8_t down = arg_get_int(ctx, 1);
+    int8_t up = arg_get_int(ctx, 2);
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "Applying up threshold: " _YELLOW_("%i") ", down threshold: " _YELLOW_("%i") "\n", up, down);
+
+    centerThreshold(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, up, down);
+
+    // set signal properties low/high/mean/amplitude and isnoice detection
+    uint8_t bits[g_GraphTraceLen];
+    size_t size = getFromGraphBuf(bits);
+    // set signal properties low/high/mean/amplitude and is_noice detection
+    computeSignalProperties(bits, size);
+    RepaintGraphWindow();
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable,  "This help"},
 
@@ -3324,9 +3374,9 @@ static command_t CommandTable[] = {
     {"rawdemod",        CmdRawDemod,             AlwaysAvailable,  "Demodulate the data in the GraphBuffer and output binary"},
 
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Graph") "-------------------------"},
-    {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable,  "Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave"},
+    {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable,  "Adjust Graph for manual ASK demod"},
     {"autocorr",        CmdAutoCorr,             AlwaysAvailable,  "Autocorrelation over window"},
-    {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable,  "Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
+    {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable,  "Max rising higher up-thres/ Min falling lower down-thres"},
     {"decimate",        CmdDecimate,             AlwaysAvailable,  "Decimate samples"},
     {"undecimate",      CmdUndecimate,           AlwaysAvailable,  "Un-decimate samples"},
     {"hide",            CmdHide,                 AlwaysAvailable,  "Hide graph window"},
@@ -3337,10 +3387,13 @@ static command_t CommandTable[] = {
     {"mtrim",           CmdMtrim,                AlwaysAvailable,  "Trim out samples from the specified start to the specified stop"},
     {"norm",            CmdNorm,                 AlwaysAvailable,  "Normalize max/min to +/-128"},
     {"plot",            CmdPlot,                 AlwaysAvailable,  "Show graph window"},
+
+    {"cthreshold",      CmdCenterThreshold,      AlwaysAvailable,  "Average out all values between"},
+
     {"rtrim",           CmdRtrim,                AlwaysAvailable,  "Trim samples from right of trace"},
     {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable,  "Set blue and orange marker in graph window"},
     {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable,  "Shift 0 for Graphed wave + or - shift value"},
-    {"timescale",       CmdTimeScale,            AlwaysAvailable,  "Set a timescale to get a differential reading between the yellow and purple markers as time duration"},
+    {"timescale",       CmdTimeScale,            AlwaysAvailable,  "Set cursor display timescale"},
     {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable,  "Count time between zero-crossings"},
     {"convertbitstream", CmdConvertBitStream,    AlwaysAvailable,  "Convert GraphBuffer's 0/1 values to 127 / -127"},
     {"getbitstream",    CmdGetBitStream,         AlwaysAvailable,  "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
