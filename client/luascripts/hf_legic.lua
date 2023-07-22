@@ -269,7 +269,6 @@ local function padString(str)
   if (#str == 1) then
     return '0'..str
   end
-
   return str
 end
 
@@ -336,6 +335,7 @@ end
 ---
 -- check availability of file
 function file_check(file_name)
+  if not file_name then return false, "" end
 
   local arr = split(file_name, ".")
   local path = core.search_file(arr[1], "."..arr[2])
@@ -2424,8 +2424,7 @@ function modifyMode()
     ---
     -- load file into mainTAG
     ["lf"] = function(x)
-
-              if (type(x)=='string' and file_check(x)) then
+              if (x and not x=="" and type(x)=='string' and file_check(x)) then
                 filename = x
               else
                 filename = input("enter filename: ", "legic.temp")
@@ -2782,7 +2781,7 @@ function modifyMode()
   }
   repeat
     -- default message / prompt
-    ic=input("Legic command? ('h' for help - 'q' for quit)", "h")
+    ic=input("Legic command? ('"..acy.."h"..acr.."' for help - '"..acy.."q"..acr.."' for quit)", acy.."h"..acr)
     -- command actions decisions (first match, longer commands before shorter)
     if (type(actions[string.lower(string.sub(ic,0,3))])=='function') then
       actions[string.lower(string.sub(ic,0,3))](string.sub(ic,5))
