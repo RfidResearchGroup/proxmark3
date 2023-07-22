@@ -1601,7 +1601,8 @@ int CmdGrid(const char *Cmd) {
     g_PlotGridX = arg_get_dbl_def(ctx, 1, 0);
     g_PlotGridY = arg_get_dbl_def(ctx, 2, 0);
     CLIParserFree(ctx);
-    PrintAndLogEx(INFO, "Setting X %.0f  Y %.0f", g_PlotGridX, g_PlotGridY);
+
+    PrintAndLogEx(DEBUG, "Setting X %.0f  Y %.0f", g_PlotGridX, g_PlotGridY);
     g_PlotGridXdefault = g_PlotGridX;
     g_PlotGridYdefault = g_PlotGridY;
     RepaintGraphWindow();
