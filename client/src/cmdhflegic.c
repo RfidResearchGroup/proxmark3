@@ -58,32 +58,33 @@ static bool legic_xor(uint8_t *data, uint16_t cardsize) {
 }
 
 static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buffer) {
-    int i = 0, k = 0, segmentNum = 0, segment_len = 0, segment_flag = 0;
-    int crc = 0, wrp = 0, wrc = 0;
-    uint8_t stamp_len = 0;
-    char token_type[6] = {0, 0, 0, 0, 0, 0};
-    int dcf = 0;
-    int bIsSegmented = 0;
-    int return_value = PM3_SUCCESS;
 
     if (!(card_size == LEGIC_PRIME_MIM22 || card_size == LEGIC_PRIME_MIM256 || card_size == LEGIC_PRIME_MIM1024)) {
         PrintAndLogEx(FAILED, "Bytebuffer is not any known legic card size! (MIM22, MIM256, MIM1024)");
-        return_value = PM3_EFAILED;
         return PM3_EFAILED;
     }
 
     // copy input buffer into newly allocated buffer, because the existing code mutates the data inside.
     uint8_t *data = calloc(card_size, sizeof(uint8_t));
-    if (!data) {
+    if (data == NULL) {
         PrintAndLogEx(WARNING, "Cannot allocate memory");
         return PM3_EMALLOC;
     }
     memcpy(data, input_buffer, card_size);
 
+    int i = 0, k = 0, segmentNum = 0, segment_len = 0, segment_flag = 0;
+    int wrp = 0, wrc = 0, dcf = 0;
+    uint8_t stamp_len = 0;
+    char token_type[6] = {0, 0, 0, 0, 0, 0};
+    int bIsSegmented = 0;
+    int return_value = PM3_SUCCESS;
+
     // Output CDF System area (9 bytes) plus remaining header area (12 bytes)
-    crc = data[4];
+    int crc = data[4];
     uint32_t calc_crc = CRC8Legic(data, 4);
 
+    PrintAndLogEx(INFO, "--------------------- " _CYAN_("Tag Information") " ----------------------");
+    PrintAndLogEx(NORMAL, "");    
     PrintAndLogEx(SUCCESS, " " _CYAN_("CDF: System Area"));
     PrintAndLogEx(INFO, "------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "MCD: " _GREEN_("%02X") " MSN: " _GREEN_("%s") " MCC: " _GREEN_("%02X") " ( %s )",
@@ -196,6 +197,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
         goto out;
     }
 
+    PrintAndLogEx(INFO, "");
     PrintAndLogEx(SUCCESS, _CYAN_("ADF: User Area"));
     PrintAndLogEx(INFO, "------------------------------------------------------");
 
@@ -271,14 +273,14 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
                 PrintAndLogEx(INFO, "");
                 PrintAndLogEx(SUCCESS, _CYAN_("WRC protected area:") "   (I %d | K %d| WRC %d)", i, k, wrc);
                 PrintAndLogEx(INFO, "");
-                PrintAndLogEx(INFO, "## | data");
-                PrintAndLogEx(INFO, "---+------------------------------------------------");
+                PrintAndLogEx(INFO, "## | data                                            | ascii");
+                PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
 
                 for (k = i; k < (i + wrc); ++k)
                     data[k] ^= crc;
 
                 print_hex_break(data + i, wrc, 16);
-                PrintAndLogEx(INFO, "---+------------------------------------------------");
+                PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
                 PrintAndLogEx(INFO, "");
                 i += wrc;
             }
@@ -286,14 +288,14 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
             if (hasWRP) {
                 PrintAndLogEx(SUCCESS, _CYAN_("Remaining write protected area:") "  (I %d | K %d | WRC %d | WRP %d  WRP_LEN %d)", i, k, wrc, wrp, wrp_len);
                 PrintAndLogEx(INFO, "");
-                PrintAndLogEx(INFO, "## | data");
-                PrintAndLogEx(INFO, "---+------------------------------------------------");
+                PrintAndLogEx(INFO, "## | data                                            | ascii");
+                PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
 
                 for (k = i; k < (i + wrp_len); ++k)
                     data[k] ^= crc;
 
                 print_hex_break(data + i, wrp_len, 16);
-                PrintAndLogEx(INFO, "---+------------------------------------------------");
+                PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
                 PrintAndLogEx(INFO, "");
                 i += wrp_len;
 
@@ -309,14 +311,14 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
             if (remain_seg_payload_len > 0) {
                 PrintAndLogEx(SUCCESS, _CYAN_("Remaining segment payload:") "  (I %d | K %d | Remain LEN %d)", i, k, remain_seg_payload_len);
                 PrintAndLogEx(INFO, "");
-                PrintAndLogEx(INFO, "## | data");
-                PrintAndLogEx(INFO, "---+------------------------------------------------");
+                PrintAndLogEx(INFO, "## | data                                            | ascii");
+                PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
 
                 for (k = i; k < (i + remain_seg_payload_len); ++k)
                     data[k] ^= crc;
 
                 print_hex_break(data + i, remain_seg_payload_len, 16);
-                PrintAndLogEx(INFO, "---+------------------------------------------------\n");
+                PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------\n");
                 i += remain_seg_payload_len;
             }
             // end with last segment
@@ -354,10 +356,10 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
         if (hasWRC) {
             PrintAndLogEx(SUCCESS, _CYAN_("WRC protected area:") "   (I %d | WRC %d)", i, wrc);
             PrintAndLogEx(INFO, "");
-            PrintAndLogEx(INFO, "## | data");
-            PrintAndLogEx(INFO, "---+------------------------------------------------");
+            PrintAndLogEx(INFO, "## | data                                            | ascii");
+            PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
             print_hex_break(data + i, wrc, 16);
-            PrintAndLogEx(INFO, "----+------------------------------------------------");
+            PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
             PrintAndLogEx(INFO, "");
             i += wrc;
         }
@@ -365,10 +367,10 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
         if (hasWRP) {
             PrintAndLogEx(SUCCESS, _CYAN_("Remaining write protected area:") "  (I %d | WRC %d | WRP %d | WRP_LEN %d)", i, wrc, wrp, wrp_len);
             PrintAndLogEx(INFO, "");
-            PrintAndLogEx(INFO, "## | data");
-            PrintAndLogEx(INFO, "---+------------------------------------------------");
+            PrintAndLogEx(INFO, "## | data                                            | ascii");
+            PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
             print_hex_break(data + i, wrp_len, 16);
-            PrintAndLogEx(INFO, "---+------------------------------------------------");
+            PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
             PrintAndLogEx(INFO, "");
             i += wrp_len;
 
@@ -386,10 +388,10 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
         if (remain_seg_payload_len > 0) {
             PrintAndLogEx(SUCCESS, _CYAN_("Remaining segment payload:") "  (I %d | Remain LEN %d)", i, remain_seg_payload_len);
             PrintAndLogEx(INFO, "");
-            PrintAndLogEx(INFO, "## | data");
-            PrintAndLogEx(INFO, "---+------------------------------------------------");
+            PrintAndLogEx(INFO, "## | data                                            | ascii");
+            PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
             print_hex_break(data + i, remain_seg_payload_len, 16);
-            PrintAndLogEx(INFO, "---+------------------------------------------------\n");
+            PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------\n");
         }
     }
 
@@ -411,9 +413,11 @@ static int CmdLegicInfo(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);    
     CLIParserFree(ctx);
 
     uint16_t datalen = 0;
@@ -429,7 +433,7 @@ static int CmdLegicInfo(const char *Cmd) {
 
     // allocate receiver buffer
     uint8_t *data = calloc(card.cardsize, sizeof(uint8_t));
-    if (!data) {
+    if (data == NULL) {
         PrintAndLogEx(WARNING, "Cannot allocate memory");
         return PM3_EMALLOC;
     }
@@ -441,8 +445,15 @@ static int CmdLegicInfo(const char *Cmd) {
         return status;
     }
 
-    decode_and_print_memory(card.cardsize, data);
+    if (verbose) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "## |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | ascii");
+        PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
+        print_hex_break(data, datalen, 16);
+    }
 
+    PrintAndLogEx(NORMAL, "");
+    decode_and_print_memory(card.cardsize, data);
     free(data);
     return PM3_SUCCESS;
 }
@@ -1186,6 +1197,7 @@ static int CmdLegicEView(const char *Cmd) {
         arg_lit0(NULL, "22", "LEGIC Prime MIM22"),
         arg_lit0(NULL, "256", "LEGIC Prime MIM256 (def)"),
         arg_lit0(NULL, "1024", "LEGIC Prime MIM1024"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1193,6 +1205,7 @@ static int CmdLegicEView(const char *Cmd) {
     bool m1 = arg_get_lit(ctx, 1);
     bool m2 = arg_get_lit(ctx, 2);
     bool m3 = arg_get_lit(ctx, 3);
+    bool verbose = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     // validations
@@ -1224,10 +1237,16 @@ static int CmdLegicEView(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
+    if (verbose) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "## |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | ascii");
+        PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
+        print_hex_break(dump, bytes, 16);
+    }
+
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "## |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | ascii");
-    PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
-    print_hex_break(dump, bytes, 16);
+    decode_and_print_memory(bytes, dump);
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -1380,12 +1399,14 @@ static int CmdLegicView(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Filename of dump"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     // read dump file
@@ -1396,14 +1417,15 @@ static int CmdLegicView(const char *Cmd) {
         return res;
     }
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "## |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | ascii");
-    PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
-    print_hex_break(dump, bytes_read, 16);
+    if (verbose) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "## |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F | ascii");
+        PrintAndLogEx(INFO, "---+-------------------------------------------------+-----------------");
+        print_hex_break(dump, bytes_read, 16);
+    }
 
     PrintAndLogEx(NORMAL, "");
     decode_and_print_memory(bytes_read, dump);
-
     free(dump);
     return PM3_SUCCESS;
 }

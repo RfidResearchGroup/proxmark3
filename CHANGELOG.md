@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change `hf legic view/eview/info` - now in verbose mode will print raw hex dump (@iceman1001)
  - Added new test for cotag demod using data commands in pm3_test.sh (@iceman1001)
  - Added new sample trace file for cotag w fc/272. Thanks s1acky! (@iceman1001)
  - Fixed `hf legic eload` - now it doesn't crash client (@doegox)
