@@ -1118,10 +1118,12 @@ uint16_t countFC(const uint8_t *bits, size_t size, bool fskAdj) {
         fcH = fcLens[best2];
         fcL = fcLens[best1];
     }
+    /*
     if ((size - 180) / fcH / 3 > fcCnts[best1] + fcCnts[best2]) {
         if (g_debugMode == 2) prnt("DEBUG countfc: fc is too large: %zu > %u. Not psk or fsk", (size - 180) / fcH / 3, fcCnts[best1] + fcCnts[best2]);
         return 0; //lots of waves not psk or fsk
     }
+    */
     // TODO: take top 3 answers and compare to known Field clocks to get top 2
 
     uint16_t fcs = (((uint16_t)fcH) << 8) | fcL;
@@ -1132,8 +1134,8 @@ uint16_t countFC(const uint8_t *bits, size_t size, bool fskAdj) {
 // detect psk clock by reading each phase shift
 // a phase shift is determined by measuring the sample length of each wave
 int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShift, uint8_t *curPhase, uint8_t *fc) {
-    uint8_t clk[] = {255, 16, 32, 40, 50, 64, 100, 128, 255}; //255 is not a valid clock
-    uint16_t loopCnt = 4096;  //don't need to loop through entire array...
+    uint16_t clk[] = {255, 16, 32, 40, 50, 64, 100, 128, 256, 272, 384}; // 255 is not a valid clock
+    uint16_t loopCnt = 4096;  // don't need to loop through entire array...
 
     if (size < 160 + 20) return 0;
     // size must be larger than 20 here, and 160 later on.
@@ -1154,8 +1156,8 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
 
     uint8_t clkCnt;
     uint16_t waveLenCnt, fullWaveLen = 0;
-    uint16_t bestErr[] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
-    uint16_t peaksdet[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint16_t bestErr[] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
+    uint16_t peaksdet[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     //find start of modulating data in trace
     size_t i = findModStart(dest, size, *fc);
@@ -1177,7 +1179,7 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
     }
 
     //test each valid clock from greatest to smallest to see which lines up
-    for (clkCnt = 7; clkCnt >= 1 ; clkCnt--) {
+    for (clkCnt = 9; clkCnt >= 1 ; clkCnt--) {
         uint8_t tol = *fc / 2;
         size_t lastClkBit = firstFullWave; //set end of wave as clock align
         size_t waveStart = 0;
@@ -1217,8 +1219,8 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
     }
     //all tested with errors
     //return the highest clk with the most peaks found
-    uint8_t best = 7;
-    for (i = 7; i >= 1; i--) {
+    uint8_t best = 9;
+    for (i = 9; i >= 1; i--) {
         if (peaksdet[i] > peaksdet[best])
             best = i;
 
