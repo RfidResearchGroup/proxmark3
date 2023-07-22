@@ -352,18 +352,21 @@ int CmdLFCommandRead(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(DEBUG, "Cmd read - settings");
+    PrintAndLogEx(DEBUG, _CYAN_("Cmd read - settings"));
     PrintAndLogEx(DEBUG, "-------------------");
-    PrintAndLogEx(DEBUG, "delay: %u ,  zero %u , one %u , samples %u", payload.delay, payload.period_0,  payload.period_1, payload.samples);
-    PrintAndLogEx(DEBUG, "Extra symbols");
+    PrintAndLogEx(DEBUG, "delay... " _YELLOW_("%u")" zero... " _YELLOW_("%u") " one... " _YELLOW_("%u")" samples... %u", payload.delay, payload.period_0,  payload.period_1, payload.samples);
+    PrintAndLogEx(DEBUG, "");
+    PrintAndLogEx(DEBUG, _CYAN_("Extra symbols"));
     PrintAndLogEx(DEBUG, "-------------");
     for (i = 0; i < LF_CMDREAD_MAX_EXTRA_SYMBOLS; i++) {
         if (payload.symbol_extra[i] == 0x00)
             continue;
 
-        PrintAndLogEx(DEBUG, "  %c - %u", payload.symbol_extra[i], payload.period_extra[i]);
+        PrintAndLogEx(DEBUG, "  %c ... " _YELLOW_("%u"), payload.symbol_extra[i], payload.period_extra[i]);
     }
-    PrintAndLogEx(DEBUG, "data: %s", payload.data);
+    PrintAndLogEx(DEBUG, "");
+    PrintAndLogEx(DEBUG, "data... " _YELLOW_("%s"), payload.data);
+    PrintAndLogEx(DEBUG, "");
 
     if (cm) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
@@ -1825,7 +1828,7 @@ static command_t CommandTable[] = {
     {"io",          CmdLFIO,            AlwaysAvailable, "{ ioProx RFIDs...            }"},
     {"jablotron",   CmdLFJablotron,     AlwaysAvailable, "{ Jablotron RFIDs...         }"},
     {"keri",        CmdLFKeri,          AlwaysAvailable, "{ KERI RFIDs...              }"},
-    {"motorola",    CmdLFMotorola,      AlwaysAvailable, "{ Motorola RFIDs...          }"},
+    {"motorola",    CmdLFMotorola,      AlwaysAvailable, "{ Motorola Flexpass RFIDs... }"},
     {"nedap",       CmdLFNedap,         AlwaysAvailable, "{ Nedap RFIDs...             }"},
     {"nexwatch",    CmdLFNEXWATCH,      AlwaysAvailable, "{ NexWatch RFIDs...          }"},
     {"noralsy",     CmdLFNoralsy,       AlwaysAvailable, "{ Noralsy RFIDs...           }"},
