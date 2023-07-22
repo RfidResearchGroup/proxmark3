@@ -740,7 +740,7 @@ static int Cmdaskbiphdemod(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    uint16_t clk = (uint16_t)arg_get_int_def(ctx, 1, 0);
     bool invert = arg_get_lit(ctx, 2);
     int offset = arg_get_int_def(ctx, 3, 0);
     uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 4, 50) & 0xFF;
@@ -1397,7 +1397,7 @@ static int CmdNRZrawDemod(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    uint16_t clk = (uint16_t)arg_get_int_def(ctx, 1, 0);
     bool invert = arg_get_lit(ctx, 2);
     uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 3, 100) & 0xFF;
     CLIParserFree(ctx);
@@ -1427,7 +1427,7 @@ int CmdPSK1rawDemod(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    uint16_t clk = (uint16_t)arg_get_int_def(ctx, 1, 0);
     bool invert = arg_get_lit(ctx, 2);
     uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 3, 100) & 0xFF;
     CLIParserFree(ctx);
@@ -3370,14 +3370,19 @@ static int envelope_square(const int *in, int *out, size_t len) {
         return PM3_EINVARG;
     }
 
-    for (size_t i = 0; i < len - 5; i++) {
 
-        if (in[i] == 0 && in[i + 1] == 0 && in[i + 2] == 0 && in[i + 3] == 0 && in[i + 4] == 0) {
-            i += 4;
+    size_t i = 0;
+    while ( i < len - 8) {
+
+        if (in[i] == 0 && in[i+1] == 0 && in[i+2] == 0 && in[i+3] == 0 &&
+            in[i+4] == 0 && in[i+5] == 0 && in[i+6] == 0 && in[i+7] == 0) {
+
+            i += 8;
             continue;
         }
 
         out[i] = 255;
+        i++;
     }
     return PM3_SUCCESS;
 }
