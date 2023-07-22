@@ -85,7 +85,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
     uint32_t calc_crc = CRC8Legic(data, 4);
 
     PrintAndLogEx(SUCCESS, " " _CYAN_("CDF: System Area"));
-    PrintAndLogEx(NORMAL, "------------------------------------------------------");
+    PrintAndLogEx(INFO, "------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "MCD: " _GREEN_("%02X") " MSN: " _GREEN_("%s") " MCC: " _GREEN_("%02X") " ( %s )",
                   data[0],
                   sprint_hex(data + 1, 3),
@@ -134,7 +134,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
             stamp_len = 0xfc - data[6];
         }
 
-        PrintAndLogEx(SUCCESS, "DCF: %d (%02x %02x), Token Type=" _YELLOW_("%s") " (OLE=%01u), OL=%02u, FL=%02u",
+        PrintAndLogEx(SUCCESS, "DCF: %d (%02x %02x) Token Type=" _YELLOW_("%s") " (OLE=%01u) OL=%02u FL=%02u",
                       dcf,
                       data[5],
                       data[6],
@@ -153,7 +153,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
             strncpy(token_type, "IM", sizeof(token_type) - 1);
         }
 
-        PrintAndLogEx(SUCCESS, "DCF: %d (%02x %02x), Token Type = %s (OLE = %01u)",
+        PrintAndLogEx(SUCCESS, "DCF: %d (%02x %02x) Token Type = %s (OLE = %01u)",
                       dcf,
                       data[5],
                       data[6],
@@ -166,7 +166,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
     if (dcf != 0xFFFF) {
 
         if (bIsSegmented) {
-            PrintAndLogEx(SUCCESS, "WRP = %02u, WRC = %01u, RD = %01u, SSC = %02X",
+            PrintAndLogEx(SUCCESS, "WRP = %02u WRC = %01u RD = %01u SSC = %02X",
                           data[7] & 0x0f,
                           (data[7] & 0x70) >> 4,
                           (data[7] & 0x80) >> 7,
@@ -185,7 +185,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
             }
         }
     }
-    PrintAndLogEx(NORMAL, "------------------------------------------------------");
+    PrintAndLogEx(INFO, "------------------------------------------------------");
 
     uint8_t segCrcBytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint32_t segCalcCRC = 0;
@@ -197,7 +197,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
     }
 
     PrintAndLogEx(SUCCESS, _CYAN_("ADF: User Area"));
-    PrintAndLogEx(NORMAL, "------------------------------------------------------");
+    PrintAndLogEx(INFO, "------------------------------------------------------");
 
     if (bIsSegmented) {
 
@@ -208,8 +208,8 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
         for (segmentNum = 1; segmentNum < 128; segmentNum++) {
             // for decoding the segment header we need at least 4 bytes left in buffer
             if ((i + 4) > card_size) {
-                PrintAndLogEx(FAILED, "Cannot read segment header, because the input buffer is too small. "
-                              "Please check that the data is correct and properly aligned. ");
+                PrintAndLogEx(FAILED, "Cannot read segment header, because the input buffer is too small.");
+                PrintAndLogEx(FAILED, "Please check that the data is correct and properly aligned");
                 return_value = PM3_EOUTOFBOUND;
                 goto out;
             }
@@ -236,20 +236,20 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
             segCalcCRC = CRC8Legic(segCrcBytes, 8);
             segCRC = data[i + 4] ^ crc;
 
-            PrintAndLogEx(SUCCESS, "Segment     | " _YELLOW_("%02u"), segmentNum);
-            PrintAndLogEx(SUCCESS, "raw header  | 0x%02X 0x%02X 0x%02X 0x%02X",
+            PrintAndLogEx(SUCCESS, "Segment....... " _YELLOW_("%02u"), segmentNum);
+            PrintAndLogEx(SUCCESS, "Raw header.... 0x%02X 0x%02X 0x%02X 0x%02X",
                           data[i] ^ crc,
                           data[i + 1] ^ crc,
                           data[i + 2] ^ crc,
                           data[i + 3] ^ crc
                          );
-            PrintAndLogEx(SUCCESS, "Segment len | %u,  Flag: 0x%X (valid:%01u, last:%01u)",
+            PrintAndLogEx(SUCCESS, "Segment len... %u  Flag: 0x%X (valid:%01u last:%01u)",
                           segment_len,
                           segment_flag,
                           (segment_flag & 0x4) >> 2,
                           (segment_flag & 0x8) >> 3
                          );
-            PrintAndLogEx(SUCCESS, "            | WRP: %02u, WRC: %02u, RD: %01u, CRC: 0x%02X ( %s )",
+            PrintAndLogEx(SUCCESS, "              WRP: %02u WRC: %02u RD: %01u CRC: 0x%02X ( %s )",
                           wrp,
                           wrc,
                           ((data[i + 3] ^ crc) & 0x80) >> 7,
@@ -268,28 +268,33 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
             }
 
             if (hasWRC) {
-                PrintAndLogEx(SUCCESS, "\nWRC protected area:   (I %d | K %d| WRC %d)", i, k, wrc);
-                PrintAndLogEx(NORMAL, "\nrow  | data");
-                PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
+                PrintAndLogEx(INFO, "");
+                PrintAndLogEx(SUCCESS, _CYAN_("WRC protected area:") "   (I %d | K %d| WRC %d)", i, k, wrc);
+                PrintAndLogEx(INFO, "");
+                PrintAndLogEx(INFO, "## | data");
+                PrintAndLogEx(INFO, "---+------------------------------------------------");
 
                 for (k = i; k < (i + wrc); ++k)
                     data[k] ^= crc;
 
                 print_hex_break(data + i, wrc, 16);
-                PrintAndLogEx(NORMAL, "-----+------------------------------------------------\n");
+                PrintAndLogEx(INFO, "---+------------------------------------------------");
+                PrintAndLogEx(INFO, "");
                 i += wrc;
             }
 
             if (hasWRP) {
-                PrintAndLogEx(SUCCESS, "Remaining write protected area:  (I %d | K %d | WRC %d | WRP %d  WRP_LEN %d)", i, k, wrc, wrp, wrp_len);
-                PrintAndLogEx(NORMAL, "\nrow  | data");
-                PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
+                PrintAndLogEx(SUCCESS, _CYAN_("Remaining write protected area:") "  (I %d | K %d | WRC %d | WRP %d  WRP_LEN %d)", i, k, wrc, wrp, wrp_len);
+                PrintAndLogEx(INFO, "");
+                PrintAndLogEx(INFO, "## | data");
+                PrintAndLogEx(INFO, "---+------------------------------------------------");
 
                 for (k = i; k < (i + wrp_len); ++k)
                     data[k] ^= crc;
 
                 print_hex_break(data + i, wrp_len, 16);
-                PrintAndLogEx(NORMAL, "-----+------------------------------------------------\n");
+                PrintAndLogEx(INFO, "---+------------------------------------------------");
+                PrintAndLogEx(INFO, "");
                 i += wrp_len;
 
                 // does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
@@ -302,15 +307,16 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
                 }
             }
             if (remain_seg_payload_len > 0) {
-                PrintAndLogEx(SUCCESS, "Remaining segment payload:  (I %d | K %d | Remain LEN %d)", i, k, remain_seg_payload_len);
-                PrintAndLogEx(NORMAL, "\nrow  | data");
-                PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
+                PrintAndLogEx(SUCCESS, _CYAN_("Remaining segment payload:") "  (I %d | K %d | Remain LEN %d)", i, k, remain_seg_payload_len);
+                PrintAndLogEx(INFO, "");
+                PrintAndLogEx(INFO, "## | data");
+                PrintAndLogEx(INFO, "---+------------------------------------------------");
 
                 for (k = i; k < (i + remain_seg_payload_len); ++k)
                     data[k] ^= crc;
 
                 print_hex_break(data + i, remain_seg_payload_len, 16);
-                PrintAndLogEx(NORMAL, "-----+------------------------------------------------\n");
+                PrintAndLogEx(INFO, "---+------------------------------------------------\n");
                 i += remain_seg_payload_len;
             }
             // end with last segment
@@ -331,7 +337,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
         int wrp_len = (wrp - wrc);
         int remain_seg_payload_len = (card_size - 22 - wrp);
 
-        PrintAndLogEx(SUCCESS, "Unsegmented card - WRP: %02u, WRC: %02u, RD: %01u",
+        PrintAndLogEx(SUCCESS, "Unsegmented card - WRP: %02u WRC: %02u RD: %01u",
                       wrp,
                       wrc,
                       (data[7] & 0x80) >> 7
@@ -346,20 +352,24 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
         }
 
         if (hasWRC) {
-            PrintAndLogEx(SUCCESS, "WRC protected area:   (I %d | WRC %d)", i, wrc);
-            PrintAndLogEx(NORMAL, "\nrow  | data");
-            PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
+            PrintAndLogEx(SUCCESS, _CYAN_("WRC protected area:") "   (I %d | WRC %d)", i, wrc);
+            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(INFO, "## | data");
+            PrintAndLogEx(INFO, "---+------------------------------------------------");
             print_hex_break(data + i, wrc, 16);
-            PrintAndLogEx(NORMAL, "-----+------------------------------------------------\n");
+            PrintAndLogEx(INFO, "----+------------------------------------------------");
+            PrintAndLogEx(INFO, "");
             i += wrc;
         }
 
         if (hasWRP) {
-            PrintAndLogEx(SUCCESS, "Remaining write protected area:  (I %d | WRC %d | WRP %d | WRP_LEN %d)", i, wrc, wrp, wrp_len);
-            PrintAndLogEx(NORMAL, "\nrow  | data");
-            PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
+            PrintAndLogEx(SUCCESS, _CYAN_("Remaining write protected area:") "  (I %d | WRC %d | WRP %d | WRP_LEN %d)", i, wrc, wrp, wrp_len);
+            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(INFO, "## | data");
+            PrintAndLogEx(INFO, "---+------------------------------------------------");
             print_hex_break(data + i, wrp_len, 16);
-            PrintAndLogEx(NORMAL, "-----+------------------------------------------------\n");
+            PrintAndLogEx(INFO, "---+------------------------------------------------");
+            PrintAndLogEx(INFO, "");
             i += wrp_len;
 
             // Q: does this one work?
@@ -374,11 +384,12 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
         }
 
         if (remain_seg_payload_len > 0) {
-            PrintAndLogEx(SUCCESS, "Remaining segment payload:  (I %d | Remain LEN %d)", i, remain_seg_payload_len);
-            PrintAndLogEx(NORMAL, "\nrow  | data");
-            PrintAndLogEx(NORMAL, "-----+------------------------------------------------");
+            PrintAndLogEx(SUCCESS, _CYAN_("Remaining segment payload:") "  (I %d | Remain LEN %d)", i, remain_seg_payload_len);
+            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(INFO, "## | data");
+            PrintAndLogEx(INFO, "---+------------------------------------------------");
             print_hex_break(data + i, remain_seg_payload_len, 16);
-            PrintAndLogEx(NORMAL, "-----+------------------------------------------------\n");
+            PrintAndLogEx(INFO, "---+------------------------------------------------\n");
         }
     }
 
