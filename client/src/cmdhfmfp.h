@@ -20,10 +20,6 @@
 
 #include "common.h"
 
-
-#define AES_KEY_LEN            16
-#define MAX_AES_KEYS_LIST_LEN  1024
-
 typedef enum {
     MFP_UNKNOWN = 0,
     DESFIRE_MF3ICD40,
