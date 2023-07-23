@@ -742,9 +742,21 @@ static size_t communication_delay(void) {
 bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
 
     PacketResponseNG resp;
-
-    if (response == NULL)
+    if (response == NULL) {
         response = &resp;
+    }
+
+    // init to ZERO
+    resp.cmd = 0,
+    resp.length = 0,
+    resp.magic = 0,
+    resp.status = 0,
+    resp.crc = 0,        
+    resp.ng = false,
+    resp.oldarg[0] = 0;
+    resp.oldarg[1] = 0;    
+    resp.oldarg[2] = 0;
+    memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
 
     // Add delay depending on the communication channel & speed
     if (ms_timeout != (size_t) - 1)
@@ -811,8 +823,21 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
     if (bytes == 0) return true;
 
     PacketResponseNG resp;
-    if (response == NULL)
+    if (response == NULL) {
         response = &resp;
+    }
+
+    // init to ZERO
+    resp.cmd = 0,
+    resp.length = 0,
+    resp.magic = 0,
+    resp.status = 0,
+    resp.crc = 0,        
+    resp.ng = false,
+    resp.oldarg[0] = 0;
+    resp.oldarg[1] = 0;    
+    resp.oldarg[2] = 0;
+    memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
 
     // clear
     clearCommandBuffer();
