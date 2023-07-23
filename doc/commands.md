@@ -1070,7 +1070,7 @@ Check column "offline" for their availability.
 
 ### lf motorola
 
- { Motorola RFIDs...          }
+ { Motorola Flexpass RFIDs... }
 
 |command                  |offline |description
 |-------                  |------- |-----------

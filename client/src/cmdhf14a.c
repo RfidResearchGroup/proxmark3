@@ -757,7 +757,7 @@ int CmdHF14ASim(const char *Cmd) {
                   "hf 14a sim -t 10                -> ST25TA IKEA Rothult\n"
                   "hf 14a sim -t 11                -> Javacard (JCOP)\n"
                   "hf 14a sim -t 12                -> 4K Seos card\n"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,

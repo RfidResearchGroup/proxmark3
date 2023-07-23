@@ -3373,10 +3373,10 @@ static int envelope_square(const int *in, int *out, size_t len) {
 
 
     size_t i = 0;
-    while ( i < len - 8) {
+    while (i < len - 8) {
 
-        if (in[i] == 0 && in[i+1] == 0 && in[i+2] == 0 && in[i+3] == 0 &&
-            in[i+4] == 0 && in[i+5] == 0 && in[i+6] == 0 && in[i+7] == 0) {
+        if (in[i] == 0 && in[i + 1] == 0 && in[i + 2] == 0 && in[i + 3] == 0 &&
+                in[i + 4] == 0 && in[i + 5] == 0 && in[i + 6] == 0 && in[i + 7] == 0) {
 
             i += 8;
             continue;

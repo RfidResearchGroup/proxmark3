@@ -1297,19 +1297,21 @@
                 "hf 14a sim -t 7 -> MFU EV1 / NTAG 215 Amiibo",
                 "hf 14a sim -t 8 -> MIFARE Classic 4k",
                 "hf 14a sim -t 9 -> FM11RF005SH Shanghai Metro",
-                "hf 14a sim -t 10 -> ST25TA IKEA Rothult"
+                "hf 14a sim -t 10 -> ST25TA IKEA Rothult",
+                "hf 14a sim -t 11 -> Javacard (JCOP)",
+                "hf 14a sim -t 12 -> 4K Seos card"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, --type <1-10> Simulation type to use",
+                "-t, --type <1-12> Simulation type to use",
                 "-u, --uid <hex> <4|7|10> hex bytes UID",
                 "-n, --num <dec> Exit simulation after <numreads> blocks have been read by reader. 0 = infinite",
                 "-x Performs the 'reader attack', nr/ar attack against a reader",
                 "--sk Fill simulator keys from found keys",
                 "-v, --verbose verbose output"
             ],
-            "usage": "hf 14a sim [-hxv] -t <1-10> [-u <hex>] [-n <dec>] [--sk]"
+            "usage": "hf 14a sim [-hxv] -t <1-12> [-u <hex>] [-n <dec>] [--sk]"
         },
         "hf 14a sniff": {
             "command": "hf 14a sniff",
@@ -3617,9 +3619,10 @@
                 "-h, --help This help",
                 "--22 LEGIC Prime MIM22",
                 "--256 LEGIC Prime MIM256 (def)",
-                "--1024 LEGIC Prime MIM1024"
+                "--1024 LEGIC Prime MIM1024",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf legic eview [-h] [--22] [--256] [--1024]"
+            "usage": "hf legic eview [-hv] [--22] [--256] [--1024]"
         },
         "hf legic info": {
             "command": "hf legic info",
@@ -3629,9 +3632,10 @@
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf legic info [-h]"
+            "usage": "hf legic info [-hv]"
         },
         "hf legic list": {
             "command": "hf legic list",
@@ -3723,9 +3727,10 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> Filename of dump"
+                "-f, --file <fn> Filename of dump",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf legic view [-h] -f <fn>"
+            "usage": "hf legic view [-hv] -f <fn>"
         },
         "hf legic wipe": {
             "command": "hf legic wipe",
@@ -9204,7 +9209,7 @@
         },
         "lf motorola demod": {
             "command": "lf motorola demod",
-            "description": "Try to find Motorola preamble, if found decode / descramble data",
+            "description": "Try to find Motorola Flexpass preamble, if found decode / descramble data",
             "notes": [
                 "lf motorola demod"
             ],
@@ -9216,7 +9221,7 @@
         },
         "lf motorola reader": {
             "command": "lf motorola reader",
-            "description": "read a Motorola tag",
+            "description": "read a Motorola Flexpass tag",
             "notes": [
                 "lf motorola reader -@ -> continuous reader mode"
             ],
@@ -11751,6 +11756,6 @@
     "metadata": {
         "commands_extracted": 681,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-07-21T16:22:30"
+        "extracted_on": "2023-07-23T09:14:42"
     }
 }

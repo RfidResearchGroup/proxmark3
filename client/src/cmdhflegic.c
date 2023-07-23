@@ -84,7 +84,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
     uint32_t calc_crc = CRC8Legic(data, 4);
 
     PrintAndLogEx(INFO, "--------------------- " _CYAN_("Tag Information") " ----------------------");
-    PrintAndLogEx(NORMAL, "");    
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, " " _CYAN_("CDF: System Area"));
     PrintAndLogEx(INFO, "------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "MCD: " _GREEN_("%02X") " MSN: " _GREEN_("%s") " MCC: " _GREEN_("%02X") " ( %s )",
@@ -417,7 +417,7 @@ static int CmdLegicInfo(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(ctx, 1);    
+    bool verbose = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
     uint16_t datalen = 0;
