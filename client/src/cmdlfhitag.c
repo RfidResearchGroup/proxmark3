@@ -72,14 +72,14 @@ static int CmdLFHitagList(const char *Cmd) {
     }
 
     // Query for the actual size of the trace
-    PacketResponseNG response;
-    if (!GetFromDevice(BIG_BUF, got, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 2500, false)) {
+    PacketResponseNG resp;
+    if (!GetFromDevice(BIG_BUF, got, PM3_CMD_DATA_SIZE, 0, NULL, 0, &resp, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(got);
         return PM3_ETIMEOUT;
     }
 
-    uint16_t traceLen = response.arg[2];
+    uint16_t traceLen = resp.arg[2];
     if (traceLen > PM3_CMD_DATA_SIZE) {
         uint8_t *p = realloc(got, traceLen);
         if (p == NULL) {

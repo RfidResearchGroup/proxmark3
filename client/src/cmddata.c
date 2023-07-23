@@ -1758,8 +1758,8 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
     if (verbose)
         PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") " bytes from device memory", n);
 
-    PacketResponseNG response;
-    if (!GetFromDevice(BIG_BUF, got, n, start, NULL, 0, &response, 10000, true)) {
+    PacketResponseNG resp;
+    if (!GetFromDevice(BIG_BUF, got, n, start, NULL, 0, &resp, 10000, true)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -1769,8 +1769,8 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
     uint8_t bits_per_sample = 8;
 
     // Old devices without this feature would send 0 at arg[0]
-    if (response.oldarg[0] > 0 && (ignore_lf_config == false)) {
-        sample_config *sc = (sample_config *) response.data.asBytes;
+    if (resp.oldarg[0] > 0 && (ignore_lf_config == false)) {
+        sample_config *sc = (sample_config *) resp.data.asBytes;
         if (verbose) PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") " bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
         bits_per_sample = sc->bits_per_sample;
     }

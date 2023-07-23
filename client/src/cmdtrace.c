@@ -986,15 +986,15 @@ static int download_trace(void) {
     PrintAndLogEx(INFO, "downloading tracelog data from device");
 
     // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
-    PacketResponseNG response;
-    if (!GetFromDevice(BIG_BUF, gs_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
+    PacketResponseNG resp;
+    if (!GetFromDevice(BIG_BUF, gs_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &resp, 4000, true)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         free(gs_trace);
         gs_trace = NULL;
         return PM3_ETIMEOUT;
     }
 
-    gs_traceLen = response.oldarg[2];
+    gs_traceLen = resp.oldarg[2];
 
     // if tracelog buffer was larger and we need to download more.
     if (gs_traceLen > PM3_CMD_DATA_SIZE) {
