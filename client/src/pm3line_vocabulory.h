@@ -288,6 +288,7 @@ const static vocabulory_t vocabulory[] = {
     { 1, "hf iclass managekeys" }, 
     { 1, "hf iclass permutekey" }, 
     { 1, "hf iclass view" }, 
+    { 0, "hf iclass sam" }, 
     { 1, "hf legic help" }, 
     { 0, "hf legic dump" }, 
     { 0, "hf legic info" }, 

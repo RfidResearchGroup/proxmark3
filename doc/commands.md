@@ -427,6 +427,7 @@ Check column "offline" for their availability.
 |`hf iclass managekeys   `|Y       |`Manage keys to use with iclass commands`
 |`hf iclass permutekey   `|Y       |`Permute function from 'heart of darkness' paper`
 |`hf iclass view         `|Y       |`Display content from tag dump file`
+|`hf iclass sam          `|N       |`SAM tests`
 
 
 ### hf legic

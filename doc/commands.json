@@ -3303,6 +3303,20 @@
             ],
             "usage": "hf iclass restore [-hv] -f <fn> [-k <hex>] [--ki <dec>] --first <dec> --last <dec> [--credit] [--elite] [--raw] [--shallow]"
         },
+        "hf iclass sam": {
+            "command": "hf iclass sam",
+            "description": "Manage via SAM",
+            "notes": [
+                "hf iclass sam"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-d, --data <hex> data",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf iclass sam [-hv] [-d <hex>]"
+        },
         "hf iclass sim": {
             "command": "hf iclass sim",
             "description": "Simulate a iCLASS legacy/standard tag",
@@ -11754,8 +11768,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 681,
+        "commands_extracted": 682,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-07-23T09:14:42"
+        "extracted_on": "2023-07-23T09:59:37"
     }
 }

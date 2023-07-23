@@ -88,9 +88,9 @@ bool IsHIDSamPresent(bool verbose) {
     uint8_t T0 = card.atr[1];
     uint8_t K = T0 & 0x0F;
     if (K > 4 && verbose) {
-        if (byte_strstr(card.atr, card.atr_len, (const uint8_t*)"Grace", 5)> -1) {
+        if (byte_strstr(card.atr, card.atr_len, (const uint8_t *)"Grace", 5) > -1) {
             PrintAndLogEx(SUCCESS, "SAM (Grace) detected");
-        } else if (byte_strstr(card.atr, card.atr_len, (const uint8_t*)"Hopper", 6) > -1) {
+        } else if (byte_strstr(card.atr, card.atr_len, (const uint8_t *)"Hopper", 6) > -1) {
             PrintAndLogEx(SUCCESS, "SAM (Hopper) detected");
         }
     }
