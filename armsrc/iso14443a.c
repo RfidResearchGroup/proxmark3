@@ -1054,8 +1054,8 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
         case 1: { // MIFARE Classic 1k
             rATQA[0] = 0x04;
             sak = 0x08;
+            break;
         }
-        break;
         case 2: { // MIFARE Ultralight
             rATQA[0] = 0x44;
             sak = 0x00;
@@ -1085,32 +1085,31 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
             // READ_SIG
             memcpy(rSIGN, mfu_header->signature, 32);
             AddCrc14A(rSIGN, sizeof(rSIGN) - 2);
-
+            break;
         }
-        break;
         case 3: { // MIFARE DESFire
             rATQA[0] = 0x44;
             rATQA[1] = 0x03;
             sak = 0x20;
             memcpy(rRATS, "\x06\x75\x77\x81\x02\x80\x00\x00", 8);
+            break;
         }
-        break;
         case 4: { // ISO/IEC 14443-4 - javacard (JCOP)
             rATQA[0] = 0x04;
             sak = 0x28;
+            break;
         }
-        break;
         case 5: { // MIFARE TNP3XXX
             rATQA[0] = 0x01;
             rATQA[1] = 0x0f;
             sak = 0x01;
+            break;
         }
-        break;
         case 6: { // MIFARE Mini 320b
             rATQA[0] = 0x44;
             sak = 0x09;
+            break;
         }
-        break;
         case 7: { // NTAG
             rATQA[0] = 0x44;
             sak = 0x00;
@@ -1140,41 +1139,39 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
             // READ_SIG
             memcpy(rSIGN, mfu_header->signature, 32);
             AddCrc14A(rSIGN, sizeof(rSIGN) - 2);
-
+            break;
         }
-        break;
         case 8: { // MIFARE Classic 4k
             rATQA[0] = 0x02;
             sak = 0x18;
+            break;
         }
-        break;
         case 9: { // FM11RF005SH (Shanghai Metro)
             rATQA[0] = 0x03;
             rATQA[1] = 0x00;
             sak = 0x0A;
+            break;
         }
-        break;
         case 10: { // ST25TA IKEA Rothult
             rATQA[0] = 0x42;
             rATQA[1] = 0x00;
             sak = 0x20;
+            break;
         }
-        break;
         case 11: { // ISO/IEC 14443-4 - javacard (JCOP)
             rATQA[0] = 0x04;
             sak = 0x20;
+            break;
         }
-        break;
         case 12: { // HID Seos 4K card
             rATQA[0] = 0x01;
             sak = 0x20;
+            break;
         }
-
         default: {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Error: unknown tagtype (%d)", tagType);
             return false;
         }
-        break;
     }
 
     // if uid not supplied then get from emulator memory
