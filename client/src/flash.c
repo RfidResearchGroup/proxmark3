@@ -240,7 +240,8 @@ static int print_and_validate_version(struct version_information_t *vi) {
         return PM3_EFILE;
     }
 
-    char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+    // same limit as for ARM image
+    char temp[PM3_CMD_DATA_SIZE - 12] = {0};
     FormatVersionInformation(temp, sizeof(temp), "", vi);
     PrintAndLogEx(SUCCESS, _CYAN_("ELF file version") _YELLOW_(" %s"), temp);
 
