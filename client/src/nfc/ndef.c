@@ -121,7 +121,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose);
 static uint16_t ndefTLVGetLength(const uint8_t *data, size_t *indx) {
     uint16_t len = 0;
     if (data[0] == 0xFF) {
-        len = (data[1] << 8) + data[2];
+        len = MemBeToUint2byte(data + 1);
         *indx += 3;
     } else {
         len = data[0];
