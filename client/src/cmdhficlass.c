@@ -40,7 +40,6 @@
 #include "crypto/asn1utils.h"      // ASN1 decoder
 #include "preferences.h"
 
-
 #define PICOPASS_BLOCK_SIZE    8
 #define NUM_CSNS               9
 #define ICLASS_KEYS_MAX        8
@@ -400,9 +399,10 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
 
         // encrypted 0xFF
         PrintAndLogEx(INFO, "Setting 0xFF's... " NOLF);
-        for (uint8_t i = 0x16; i <= app1_limit; i++) {
+        for (uint16_t i = 0x16; i < (app1_limit + 1); i++) {
             memcpy(data + (i * 8), ffs, sizeof(ffs));
         }
+
         PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
 
         // revert potential modified app1_limit
@@ -443,14 +443,14 @@ static void fuse_config(const picopass_hdr_t *hdr) {
 
     uint16_t otp = (hdr->conf.otp[1] << 8 | hdr->conf.otp[0]);
 
-    PrintAndLogEx(INFO, "    Raw: " _YELLOW_("%s"), sprint_hex((uint8_t *)&hdr->conf, 8));
-    PrintAndLogEx(INFO, "         " _YELLOW_("%02X") ".....................  app limit", hdr->conf.app_limit);
-    PrintAndLogEx(INFO, "            " _YELLOW_("%04X") " ( %5u )......  OTP", otp, otp);
-    PrintAndLogEx(INFO, "                  " _YELLOW_("%02X") "............  block write lock", hdr->conf.block_writelock);
-    PrintAndLogEx(INFO, "                     " _YELLOW_("%02X") ".........  chip", hdr->conf.chip_config);
-    PrintAndLogEx(INFO, "                        " _YELLOW_("%02X") "......  mem", hdr->conf.mem_config);
-    PrintAndLogEx(INFO, "                           " _YELLOW_("%02X") "...  EAS", hdr->conf.eas);
-    PrintAndLogEx(INFO, "                              " _YELLOW_("%02X") "  fuses", hdr->conf.fuses);
+    PrintAndLogEx(INFO, "    Raw... " _YELLOW_("%s"), sprint_hex((uint8_t *)&hdr->conf, 8));
+    PrintAndLogEx(INFO, "           " _YELLOW_("%02X") " ( %3u ).............  app limit", hdr->conf.app_limit, hdr->conf.app_limit);
+    PrintAndLogEx(INFO, "              " _YELLOW_("%04X") " ( %5u )......  OTP", otp, otp);
+    PrintAndLogEx(INFO, "                    " _YELLOW_("%02X") "............  block write lock", hdr->conf.block_writelock);
+    PrintAndLogEx(INFO, "                       " _YELLOW_("%02X") ".........  chip", hdr->conf.chip_config);
+    PrintAndLogEx(INFO, "                          " _YELLOW_("%02X") "......  mem", hdr->conf.mem_config);
+    PrintAndLogEx(INFO, "                             " _YELLOW_("%02X") "...  EAS", hdr->conf.eas);
+    PrintAndLogEx(INFO, "                                " _YELLOW_("%02X") "  fuses", hdr->conf.fuses);
 
     uint8_t fuses = hdr->conf.fuses;
 
@@ -594,47 +594,47 @@ static void mem_app_config(const picopass_hdr_t *hdr) {
     PrintAndLogEx(INFO, " * Kd, Debit key, AA1    Kc, Credit key, AA2 *");
     uint8_t keyAccess = isset(mem, 0x01);
     if (keyAccess) {
-        PrintAndLogEx(INFO, "    Read AA1....... debit");
-        PrintAndLogEx(INFO, "    Write AA1...... debit");
-        PrintAndLogEx(INFO, "    Read AA2....... credit");
-        PrintAndLogEx(INFO, "    Write AA2...... credit");
+        PrintAndLogEx(INFO, "    Read AA1..... debit");
+        PrintAndLogEx(INFO, "    Write AA1.... debit");
+        PrintAndLogEx(INFO, "    Read AA2..... credit");
+        PrintAndLogEx(INFO, "    Write AA2.... credit");
         PrintAndLogEx(INFO, "    Debit........ debit or credit");
         PrintAndLogEx(INFO, "    Credit....... credit");
     } else {
-        PrintAndLogEx(INFO, "    Read AA1....... debit or credit");
-        PrintAndLogEx(INFO, "    Write AA1...... credit");
-        PrintAndLogEx(INFO, "    Read AA2....... debit or credit");
-        PrintAndLogEx(INFO, "    Write AA2...... credit");
+        PrintAndLogEx(INFO, "    Read AA1..... debit or credit");
+        PrintAndLogEx(INFO, "    Write AA1.... credit");
+        PrintAndLogEx(INFO, "    Read AA2..... debit or credit");
+        PrintAndLogEx(INFO, "    Write AA2.... credit");
         PrintAndLogEx(INFO, "    Debit........ debit or credit");
         PrintAndLogEx(INFO, "    Credit....... credit");
     }
 }
 
 void print_picopass_info(const picopass_hdr_t *hdr) {
-    PrintAndLogEx(INFO, "-------------------- " _CYAN_("card configuration") " --------------------");
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("Card configuration") " --------------------");
     fuse_config(hdr);
     mem_app_config(hdr);
 }
 
 void print_picopass_header(const picopass_hdr_t *hdr) {
-    PrintAndLogEx(INFO, "--------------------------- " _CYAN_("card") " ---------------------------");
-    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s") " uid", sprint_hex(hdr->csn, sizeof(hdr->csn)));
-    PrintAndLogEx(SUCCESS, " Config: %s Card configuration", sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
-    PrintAndLogEx(SUCCESS, "E-purse: %s Card challenge, CC", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
+    PrintAndLogEx(INFO, "--------------------------- " _CYAN_("Card") " ---------------------------");
+    PrintAndLogEx(SUCCESS, "    CSN... " _GREEN_("%s") " uid", sprint_hex(hdr->csn, sizeof(hdr->csn)));
+    PrintAndLogEx(SUCCESS, " Config... %s card configuration", sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
+    PrintAndLogEx(SUCCESS, "E-purse... %s card challenge, CC", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
 
     if (memcmp(hdr->key_d, zeros, sizeof(zeros)) && memcmp(hdr->key_d, empty, sizeof(empty))) {
-        PrintAndLogEx(SUCCESS, "     Kd: " _YELLOW_("%s") " debit key", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
+        PrintAndLogEx(SUCCESS, "     Kd... " _YELLOW_("%s") " debit key", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
     } else {
-        PrintAndLogEx(SUCCESS, "     Kd: %s debit key ( hidden )", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
+        PrintAndLogEx(SUCCESS, "     Kd... %s debit key ( hidden )", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
     }
 
     if (memcmp(hdr->key_c, zeros, sizeof(zeros)) && memcmp(hdr->key_c, empty, sizeof(empty))) {
-        PrintAndLogEx(SUCCESS, "     Kc: " _YELLOW_("%s") " credit key", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
+        PrintAndLogEx(SUCCESS, "     Kc... " _YELLOW_("%s") " credit key", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
     } else {
-        PrintAndLogEx(SUCCESS, "     Kc: %s credit key ( hidden )", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
+        PrintAndLogEx(SUCCESS, "     Kc... %s credit key ( hidden )", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
     }
 
-    PrintAndLogEx(SUCCESS, "    AIA: %s Application Issuer area", sprint_hex(hdr->app_issuer_area, sizeof(hdr->app_issuer_area)));
+    PrintAndLogEx(SUCCESS, "    AIA... %s application issuer area", sprint_hex(hdr->app_issuer_area, sizeof(hdr->app_issuer_area)));
 }
 
 static int CmdHFiClassList(const char *Cmd) {
@@ -2469,7 +2469,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
         return PM3_SUCCESS;
 
     // crypto helper available.
-    PrintAndLogEx(INFO, "----------------------------- " _CYAN_("cardhelper") " -----------------------------");
+    PrintAndLogEx(INFO, "----------------------------- " _CYAN_("Cardhelper") " -----------------------------");
 
     switch (blockno) {
         case 6: {
@@ -2509,7 +2509,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 
                 PrintAndLogEx(SUCCESS, "      bin : %s", pbin);
                 PrintAndLogEx(INFO, "");
-                PrintAndLogEx(INFO, "------------------------------ " _CYAN_("wiegand") " -------------------------------");
+                PrintAndLogEx(INFO, "------------------------------ " _CYAN_("Wiegand") " -------------------------------");
                 wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
                 HIDTryUnpack(&packed);
             } else {
@@ -4147,6 +4147,48 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFiClassSAM(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass sam",
+                  "Manage via SAM\n",
+                  "hf iclass sam\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("d", "data", "<hex>", "data"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int dlen = 0;
+    uint8_t data[128] = {0};
+    CLIGetHexWithReturn(ctx, 1, data, &dlen);
+
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    Iso7816CommandChannel channel = CC_CONTACT;
+    if (IfPm3Smartcard() == false) {
+        if (channel == CC_CONTACT) {
+            PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support, exiting");
+            return PM3_EDEVNOTSUPP;
+        }
+    }
+
+    int res = IsHIDSamPresent(verbose);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    SetAPDULogging(verbose);
+
+// do things with sending apdus..
+
+    SetAPDULogging(false);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
@@ -4156,7 +4198,7 @@ static command_t CommandTable[] = {
     {"list",        CmdHFiClassList,            AlwaysAvailable, "List iclass history"},
     {"rdbl",        CmdHFiClass_ReadBlock,      IfPm3Iclass,     "Read Picopass / iCLASS block"},
     {"reader",      CmdHFiClassReader,          IfPm3Iclass,     "Act like a Picopass / iCLASS reader"},
-    {"restore",     CmdHFiClassRestore,        IfPm3Iclass,      "Restore a dump file onto a Picopass / iCLASS tag"},
+    {"restore",     CmdHFiClassRestore,         IfPm3Iclass,      "Restore a dump file onto a Picopass / iCLASS tag"},
     {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "Eavesdrop Picopass / iCLASS communication"},
     {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "Write Picopass / iCLASS block"},
 
@@ -4165,7 +4207,7 @@ static command_t CommandTable[] = {
     {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "Check keys"},
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
-    {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("simulation") " ---------------------"},
+    {"-----------", CmdHelp,                    IfPm3Iclass,     "--------------------- " _CYAN_("simulation") " ---------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Load Picopass / iCLASS dump file into emulator memory"},
     {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "Save emulator memory to file"},
@@ -4180,6 +4222,8 @@ static command_t CommandTable[] = {
     {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "Manage keys to use with iclass commands"},
     {"permutekey",  CmdHFiClassPermuteKey,      AlwaysAvailable, "Permute function from 'heart of darkness' paper"},
     {"view",        CmdHFiClassView,            AlwaysAvailable, "Display content from tag dump file"},
+    {"-----------", CmdHelp,                    IfPm3Smartcard,  "--------------------- " _CYAN_("SAM") " ---------------------"},
+    {"sam",         CmdHFiClassSAM,             IfPm3Smartcard,  "SAM tests"},
     {NULL, NULL, NULL, NULL}
 };
 

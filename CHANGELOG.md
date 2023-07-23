@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf iclass config` - now loops correct in keyroll generation (@iceman1001)
+ - Added `hf iclass sam` - skeleton command (@iceman1001)
  - Changed `lf cotag demo` - a new decoder (@iceman1001)
  - Changed `hf legic view/eview/info` - now in verbose mode will print raw hex dump (@iceman1001)
  - Added new test for cotag demod using data commands in pm3_test.sh (@iceman1001)
@@ -15,7 +17,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf mfp list` - interprets MIFARE Plus commands in traces (@DidierA)
  - Changed `hf legic sim` - loop and return codes on deviceside updated to DEFINES (@iceman1001)
  - Changed `hf legic einfo` - now accepts the three different cardsizes as params (@iceman1001)
- - Fix `lf cotag reader -1` - now doesn't fail (@iceman1001)
+ - Fixed `lf cotag reader -1` - now doesn't fail (@iceman1001)
  - Added support for LZ4 compressed hadnested tables (@doegox)
  - Changed `emv reader -v` - now tries to print found transactions logs (@iceman1001)
  - Added ISO4217 currency lookup (@iceman1001)
@@ -23,10 +25,10 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `emv reader -v` - now can decode track1/2 data if found (@iceman1001)
  - Added `emv reader` - act as a EMV reader (@iceman1001)
  - Added support for Apple Wallet NFC Passes with the Value Added Services protocol implementation (@gm3197)
- - Fix compiling liblua on iOS (@The-SamminAter)
+ - Fixed compiling liblua on iOS (@The-SamminAter)
  - Changed `hf_mf_luxeo_dump.lua` - now have list of keys to iterate (@iceman1001)
  - Fixed the timeout of TCP connections (@wh201906)
- - Made the connection timeout configurable (@wh201906)
+ - Changed the connection timeout configurable (@wh201906)
 
 ## [Seven.4.16717][2023-06-25]
  - Change `hf 14a info` - now identifes QL88 tags (@iceman1001)
@@ -43,7 +45,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added more default keys (@iceman1001)  Thanks anon!
  - Fixed `pm3-flash-all` shell script now correctly identify the if running on outdated bootloader (@iceman1001)
  - Fixed `hf 15693/iclass sniff` trace timings (@nvx)
- - Fix LegicCash segment handling in `hf_legic.lua` script (@jmichelp)
+ - Fixed LegicCash segment handling in `hf_legic.lua` script (@jmichelp)
  - Fixed `trace list` - now handles marking of crc bytes w color a bit better (@iceman1001)
  - Changed `hf mfu pwdgen -r` - now generates pwd/pack for Philips Sonicare, thanks @ckuenzi, @atc1441 (@iceman1001)
  - Changed `hf mfu info` - now detects Philips Sonicare devices (@iceman1001)
@@ -133,11 +135,11 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf mfu info` - now also does a simple OTP fingerprinting (@iceman1001)
  - Changed `hf mf wrbl` - now checks for strict readonly ACL's in the data to write (@iceman1001)
  - Changed `hf mf view` - verbose printing if strict readonly ACL's exists in dump file (@iceman1001)
- - Add command `piv authsign` to get a buffer signed by the selected key (@jmichelp)
- - Add command `piv scan` which tries to read all known containers on PIV (@jmichelp)
- - Add support for PIV commands, over wired and contactless interfaces (@jmichelp)
- - Add `--shallow` option to `hf iclass` reader commands to do shallow (ASK) reader modulation instead of OOK (@nvx)
- - Improved NXP SLI/SLIX series tag identification (@nvx)
+ - Added command `piv authsign` to get a buffer signed by the selected key (@jmichelp)
+ - Added command `piv scan` which tries to read all known containers on PIV (@jmichelp)
+ - Added support for PIV commands, over wired and contactless interfaces (@jmichelp)
+ - Added `--shallow` option to `hf iclass` reader commands to do shallow (ASK) reader modulation instead of OOK (@nvx)
+ - Change and improved NXP SLI/SLIX series tag identification (@nvx)
  - Fixed buffer overflow in "lf em 4x05 sniff" (@HeinrichsH)
  - Fixed potential NULL array printing (@jmichelp)
  - Added PIV aid to resource file (@jmichelp)
