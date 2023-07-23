@@ -366,10 +366,11 @@ static int mf_print_keys(uint16_t n, uint8_t *d) {
 
     for (uint16_t i = 0; i < n; i++) {
         if (mfIsSectorTrailer(i)) {
-            e_sector[mfSectorNum(i)].foundKey[0] = 1;
-            e_sector[mfSectorNum(i)].Key[0] = bytes_to_num(d + (i * MFBLOCK_SIZE), MIFARE_KEY_SIZE);
-            e_sector[mfSectorNum(i)].foundKey[1] = 1;
-            e_sector[mfSectorNum(i)].Key[1] = bytes_to_num(d + (i * MFBLOCK_SIZE) + 10, MIFARE_KEY_SIZE);
+            uint8_t sec = mfSectorNum(i);
+            e_sector[sec].foundKey[0] = 1;
+            e_sector[sec].Key[0] = bytes_to_num(d + (i * MFBLOCK_SIZE), MIFARE_KEY_SIZE);
+            e_sector[sec].foundKey[1] = 1;
+            e_sector[sec].Key[1] = bytes_to_num(d + (i * MFBLOCK_SIZE) + 10, MIFARE_KEY_SIZE);
         }
     }
     printKeyTable(sectors, e_sector);
