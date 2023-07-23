@@ -412,11 +412,14 @@ static bool read_bench_data(statelist_t *test_candidates) {
         return false;
     }
     free(path);
-    bytes_read = fread(&nonces_to_bruteforce, 1, sizeof(nonces_to_bruteforce), benchfile);
-    if (bytes_read != sizeof(nonces_to_bruteforce)) {
+
+    // read 4 bytes of data ?
+    bytes_read = fread(&nonces_to_bruteforce, 1, sizeof(uint32_t), benchfile);
+    if (bytes_read != sizeof(uint32_t)) {
         fclose(benchfile);
         return false;
     }
+
     for (uint32_t i = 0; i < nonces_to_bruteforce && i < 256; i++) {
         bytes_read = fread(&bf_test_nonce[i], 1, sizeof(uint32_t), benchfile);
         if (bytes_read != sizeof(uint32_t)) {
@@ -430,11 +433,13 @@ static bool read_bench_data(statelist_t *test_candidates) {
             return false;
         }
     }
+
     bytes_read = fread(&num_states, 1, sizeof(uint32_t), benchfile);
     if (bytes_read != sizeof(uint32_t)) {
         fclose(benchfile);
         return false;
     }
+
     for (states_read = 0; states_read < MIN(num_states, TEST_BENCH_SIZE); states_read++) {
         bytes_read = fread(test_candidates->states[EVEN_STATE] + states_read, 1, sizeof(uint32_t), benchfile);
         if (bytes_read != sizeof(uint32_t)) {
@@ -442,9 +447,11 @@ static bool read_bench_data(statelist_t *test_candidates) {
             return false;
         }
     }
+
     for (uint32_t i = states_read; i < TEST_BENCH_SIZE; i++) {
         test_candidates->states[EVEN_STATE][i] = test_candidates->states[EVEN_STATE][i - states_read];
     }
+
     for (uint32_t i = states_read; i < num_states; i++) {
         bytes_read = fread(&temp, 1, sizeof(uint32_t), benchfile);
         if (bytes_read != sizeof(uint32_t)) {
@@ -452,6 +459,7 @@ static bool read_bench_data(statelist_t *test_candidates) {
             return false;
         }
     }
+
     for (states_read = 0; states_read < MIN(num_states, TEST_BENCH_SIZE); states_read++) {
         bytes_read = fread(test_candidates->states[ODD_STATE] + states_read, 1, sizeof(uint32_t), benchfile);
         if (bytes_read != sizeof(uint32_t)) {
@@ -459,6 +467,7 @@ static bool read_bench_data(statelist_t *test_candidates) {
             return false;
         }
     }
+
     for (uint32_t i = states_read; i < TEST_BENCH_SIZE; i++) {
         test_candidates->states[ODD_STATE][i] = test_candidates->states[ODD_STATE][i - states_read];
     }
