@@ -200,7 +200,7 @@ static int jooki_create_ndef(uint8_t *b64ndef, uint8_t *ndefrecord) {
 static void jooki_printEx(uint8_t *b64, uint8_t *iv, uint8_t tid, uint8_t fid, uint8_t *uid, bool verbose) {
     int idx = jooki_lookup(tid, fid);
 
-    PrintAndLogEx(INFO, "Encoded URL.. %s ( %s )", sprint_hex(b64, 12), b64);
+    PrintAndLogEx(INFO, "Encoded URL.. %s ( " _YELLOW_("%s") " )", sprint_hex(b64, 12), b64);
     PrintAndLogEx(INFO, "Figurine..... %02x %02x - " _GREEN_("%s, %s")
                   , tid
                   , fid
@@ -574,7 +574,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
             break;
         }
 
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0)
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false)
             continue;
 
         if (resp.status != PM3_SUCCESS)

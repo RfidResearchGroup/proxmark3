@@ -418,11 +418,10 @@ static int CmdHf14AConfig(const char *Cmd) {
 }
 
 int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
 
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_ACK, &resp);
-
     memcpy(card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
     uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
@@ -548,16 +547,17 @@ static int CmdHF14AReader(const char *Cmd) {
     }
 
     bool continuous = arg_get_lit(ctx, 7);
-
     CLIParserFree(ctx);
 
-    int res = PM3_SUCCESS;
-
-    if (!disconnectAfter)
+    if (!disconnectAfter == false) {
         cm |= ISO14A_NO_DISCONNECT;
+    }
+
     if (continuous) {
         PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
     }
+
+    int res = PM3_SUCCESS;
     do {
         clearCommandBuffer();
 
@@ -570,8 +570,7 @@ static int CmdHF14AReader(const char *Cmd) {
 
         if (ISO14A_CONNECT & cm) {
             PacketResponseNG resp;
-            if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-                if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
+            if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
                 DropField();
                 res = PM3_ESOFT;
                 goto plot;
@@ -589,7 +588,6 @@ static int CmdHF14AReader(const char *Cmd) {
             uint64_t select_status = resp.oldarg[0];
 
             if (select_status == 0) {
-                if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
                 DropField();
                 res = PM3_ESOFT;
                 goto plot;
@@ -625,8 +623,8 @@ static int CmdHF14AReader(const char *Cmd) {
                 }
                 PrintAndLogEx(NORMAL, "");
             }
-            if (!disconnectAfter) {
-                if (!silent) PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
+            if ((disconnectAfter == false) && (silent == false)) {
+               PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
             }
         }
 plot:
@@ -1865,8 +1863,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-        if (verbose) PrintAndLogEx(WARNING, "iso14443a card select failed");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return 0;
     }
@@ -1883,7 +1881,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     uint64_t select_status = resp.oldarg[0];
 
     if (select_status == 0) {
-        if (verbose) PrintAndLogEx(WARNING, "iso14443a card select failed");
+        PrintAndLogEx(DEBUG, "iso14443a card select failed");
         DropField();
         return select_status;
     }
