@@ -144,12 +144,15 @@ typedef struct lz4_stream_s {
 // Call it either with opened infile + outsize=0
 // or with opened infile, opened outfiles, num_outfiles and valid outsize
 static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles, long *outsize) {
+
     if (num_outfiles > 10) {
         return (EXIT_FAILURE);
     }
-    LZ4_streamDecode_t lz4StreamDecode_body = {{ 0 }};
-    char outbuf[FPGA_RING_BUFFER_BYTES];
 
+    LZ4_streamDecode_t lz4StreamDecode_body = {{ 0 }};
+    char outbuf[FPGA_RING_BUFFER_BYTES] = {0};
+
+    // file size
     fseek(infile, 0L, SEEK_END);
     long infile_size = ftell(infile);
     fseek(infile, 0L, SEEK_SET);
@@ -168,17 +171,30 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
     char *outbufall = NULL;
     if (*outsize >  0) {
         outbufall = calloc(*outsize, sizeof(char));
+        if (outbufall == NULL) {
+            return (EXIT_FAILURE);
+        }
     }
+
     char *inbuf = calloc(infile_size, sizeof(char));
+    if (inbuf == NULL) {
+        if (outbufall) {
+            free(outbufall);
+        }
+        return (EXIT_FAILURE);
+    }
+
     size_t num_read = fread(inbuf, sizeof(char), infile_size, infile);
 
     if (num_read != infile_size) {
+
         if (*outsize >  0) {
             fclose(infile);
             for (uint16_t j = 0; j < num_outfiles; j++) {
                 fclose(outfiles[j]);
             }
         }
+
         if (outbufall) {
             free(outbufall);
         }
