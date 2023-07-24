@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Added `hf 15 vie` - view ISO15693 dump files (@iceman1001)
+ - Added `hf 15 view` - view ISO15693 dump files (@iceman1001)
  - Fixed `hf iclass config` - now loops correct in keyroll generation (@iceman1001)
  - Added `hf iclass sam` - skeleton command (@iceman1001)
  - Changed `lf cotag demo` - a new decoder (@iceman1001)
@@ -19,7 +19,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf legic sim` - loop and return codes on deviceside updated to DEFINES (@iceman1001)
  - Changed `hf legic einfo` - now accepts the three different cardsizes as params (@iceman1001)
  - Fixed `lf cotag reader -1` - now doesn't fail (@iceman1001)
- - Added support for LZ4 compressed hadnested tables (@doegox)
+ - Added support for LZ4 compressed hardnested tables (@doegox)
  - Changed `emv reader -v` - now tries to print found transactions logs (@iceman1001)
  - Added ISO4217 currency lookup (@iceman1001)
  - Fixed bad free in loadfilebinarykey fct.  Thanks to @gentilkiwi
