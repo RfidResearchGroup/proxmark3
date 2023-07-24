@@ -83,7 +83,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
     int crc = data[4];
     uint32_t calc_crc = CRC8Legic(data, 4);
 
-    PrintAndLogEx(INFO, "--------------------- " _CYAN_("Tag Information") " ----------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ----------------------------------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, " " _CYAN_("CDF: System Area"));
     PrintAndLogEx(INFO, "------------------------------------------------------");

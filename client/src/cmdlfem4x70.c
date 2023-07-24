@@ -35,8 +35,6 @@ static void print_info_result(const uint8_t *data) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(INFO, "-----------------------------------------------");
-
     PrintAndLogEx(INFO, "Block |   data   | info");
     PrintAndLogEx(INFO, "------+----------+-----------------------------");
 

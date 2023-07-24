@@ -4282,7 +4282,7 @@ int info_iclass(bool shallow_mod) {
     picopass_ns_hdr_t *ns_hdr = &r->header.ns_hdr;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--------------------- " _CYAN_("Tag Information") " ----------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ----------------------------------------");
 
     if ((r->status & FLAG_ICLASS_CSN) == FLAG_ICLASS_CSN) {
         PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s") " uid", sprint_hex(hdr->csn, sizeof(hdr->csn)));
