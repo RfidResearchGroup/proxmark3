@@ -624,7 +624,7 @@ static int CmdHF14AReader(const char *Cmd) {
                 PrintAndLogEx(NORMAL, "");
             }
             if ((disconnectAfter == false) && (silent == false)) {
-               PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
+                PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
             }
         }
 plot:
