@@ -1064,7 +1064,13 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
     size_t bytes_read = 0;
     if (loadFile_safe(filename, ".bmp", (void **)&bmp, &bytes_read) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
-        return PM3_EIO;
+        return PM3_EFILE;
+    }
+    if (bmp == NULL) {
+        return PM3_EMALLOC;
+    }
+    if (bytes_read < sizeof(bmp_header_t)) {
+        return PM3_ESOFT;
     }
 
     int depth = picture_bit_depth(bmp, bytes_read, model_nr);
