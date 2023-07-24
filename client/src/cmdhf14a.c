@@ -2432,22 +2432,22 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     if (isMifareUltralight)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu info`"));
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfu info") "`");
 
     if (isMifarePlus && isMagic == 0 && isEMV == false)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfp info`"));
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfp info") "`");
 
     if (isMifareDESFire && isMagic == 0 && isEMV == false)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes info`"));
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfdes info") "`");
 
     if (isST)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf st info`"));
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf st info") "`");
 
     if (isEMV)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv reader`"));
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("emv reader") "`");
 
     if (isFUDAN) {
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf fudan dump`"));
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf fudan dump") "`");
         /*
         PrintAndLogEx(HINT, "  hf 14a raw -a -b 7 -k 26");
         PrintAndLogEx(HINT, "  hf 14a raw -k -c 3000");
@@ -2507,7 +2507,7 @@ int infoHF14A4Applications(bool verbose) {
         } else {
             for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
                 if (cardFound[i] && strlen(hintAIDList[i].hint))
-                    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("%s") " commands", hintAIDList[i].hint);
+                    PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("%s") "` commands", hintAIDList[i].hint);
             }
         }
     }
