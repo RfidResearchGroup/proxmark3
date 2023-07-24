@@ -282,19 +282,22 @@ check_script:
 
             // read script file
             if (fgets(script_cmd_buf, sizeof(script_cmd_buf), current_cmdscriptfile()) == NULL) {
-                if (!pop_cmdscriptfile())
+                if (pop_cmdscriptfile() == false) {
                     break;
-
+                }
                 goto check_script;
-            } else {
-                prompt_ctx = PROXPROMPT_CTX_SCRIPTFILE;
-                // remove linebreaks
-                strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
-
-                cmd = str_dup(script_cmd_buf);
-                if (cmd != NULL)
-                    printprompt = true;
             }
+
+            prompt_ctx = PROXPROMPT_CTX_SCRIPTFILE;
+
+            // remove linebreaks
+            strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
+
+            cmd = str_dup(script_cmd_buf);
+            if (cmd != NULL) {
+                printprompt = true;
+            }
+
         } else {
             // If there is a script command
             if (execCommand) {
@@ -429,8 +432,9 @@ check_script:
         msleep(100); // Make sure command is sent before killing client
     }
 
-    while (current_cmdscriptfile())
+    while (current_cmdscriptfile()) {
         pop_cmdscriptfile();
+    }
 
     pm3line_flush_history();
 
