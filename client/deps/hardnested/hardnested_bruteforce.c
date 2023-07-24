@@ -415,7 +415,7 @@ static bool read_bench_data(statelist_t *test_candidates) {
 
     // read 4 bytes of data ?
     bytes_read = fread(&nonces_to_bruteforce, 1, sizeof(uint32_t), benchfile);
-    if (bytes_read != sizeof(uint32_t)) {
+    if (bytes_read != sizeof(uint32_t) || (nonces_to_bruteforce >= 256)) {
         fclose(benchfile);
         return false;
     }
