@@ -1070,6 +1070,7 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
         return PM3_EMALLOC;
     }
     if (bytes_read < sizeof(bmp_header_t)) {
+        free(bmp);
         return PM3_ESOFT;
     }
 
