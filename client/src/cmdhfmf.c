@@ -153,26 +153,37 @@ static int initSectorTable(sector_t **src, size_t items) {
 static void decode_print_st(uint16_t blockno, uint8_t *data) {
     if (mfIsSectorTrailer(blockno)) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "----------------------- " _CYAN_("Sector trailer decoder") " -----------------------");
+        PrintAndLogEx(INFO, "-------------------------- " _CYAN_("Sector trailer decoder") " --------------------------");
         PrintAndLogEx(INFO, "key A........ " _GREEN_("%s"), sprint_hex_inrow(data, 6));
         PrintAndLogEx(INFO, "acr.......... " _GREEN_("%s"), sprint_hex_inrow(data + 6, 3));
         PrintAndLogEx(INFO, "user / gpb... " _GREEN_("%02x"), data[9]);
         PrintAndLogEx(INFO, "key B........ " _GREEN_("%s"), sprint_hex_inrow(data + 10, 6));
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "  # | Access rights");
-        PrintAndLogEx(INFO, "----+-----------------------------------------------------------------");
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, "  # | access rights");
+        PrintAndLogEx(INFO, "----+-----------------------------------------------------------------------");
 
         if (mfValidateAccessConditions(&data[6]) == false) {
             PrintAndLogEx(WARNING, _RED_("Invalid Access Conditions"));
         }
+
 
         int bln = mfFirstBlockOfSector(mfSectorNum(blockno));
         int blinc = (mfNumBlocksPerSector(mfSectorNum(blockno)) > 4) ? 5 : 1;
         for (int i = 0; i < 4; i++) {
             PrintAndLogEx(INFO, "%3d%c| " _YELLOW_("%s"), bln, ((blinc > 1) && (i < 3) ? '+' : ' '), mfGetAccessConditionsDesc(i, &data[6]));
             bln += blinc;
+
+            if (i == 3) {
+                uint8_t cond = mf_get_accesscondition(i, &data[6]);
+                if (cond == 0 || cond == 1 || cond == 2) {
+                    PrintAndLogEx(INFO, "");
+                    PrintAndLogEx(INFO, "OBS! Key B is readable, it SHALL NOT be able to authenticate on original MFC");
+                }
+            }
         }
-        PrintAndLogEx(INFO, "----------------------------------------------------------------------");
+
+
+        PrintAndLogEx(INFO, "----------------------------------------------------------------------------");
         PrintAndLogEx(NORMAL, "");
     }
 }
