@@ -274,7 +274,7 @@ static int ndef_print_signature(uint8_t *data, uint8_t data_len, uint8_t *signat
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, " IC signature public key name: %s", ndef_public_keys[i].desc);
+    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), ndef_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %s", ndef_public_keys[i].value);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: %s", get_curve_name(ndef_public_keys[i].grp_id));
     PrintAndLogEx(INFO, "               NDEF Signature: %s", sprint_hex_inrow(signature, 32));
