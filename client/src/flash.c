@@ -286,7 +286,7 @@ int flash_load(flash_file_t *ctx, bool force) {
         goto fail;
     }
 
-    ctx->elf = calloc(fsize, sizeof(uint8_t));
+    ctx->elf = calloc(fsize + 1, sizeof(uint8_t));
     if (!ctx->elf) {
         PrintAndLogEx(ERR, "Error, cannot allocate memory");
         res = PM3_EMALLOC;
