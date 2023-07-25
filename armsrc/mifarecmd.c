@@ -73,9 +73,10 @@ int16_t mifare_cmd_readblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t read_c
     struct Crypto1State *pcs = &mpcs;
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
     clear_trace();
     set_tracing(true);
+    
+    uint32_t timeout = iso14a_get_timeout();
 
     LED_A_ON();
     LED_B_OFF();
@@ -95,6 +96,10 @@ int16_t mifare_cmd_readblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t read_c
         goto OUT;
     };
 
+    // frame waiting time (FWT) in 1/fc
+    uint32_t fwt = 256 * 16 * (1 << 6); 
+    iso14a_set_timeout(fwt / (8 * 16));
+
     for (uint8_t i = 0; i < count; i++) {
         if (mifare_classic_readblock_ex(pcs, block_no + i, block_data + (i * 16), read_cmd)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Read block error");
@@ -112,11 +117,11 @@ int16_t mifare_cmd_readblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t read_c
 OUT:
     crypto1_deinit(pcs);
 
+    iso14a_set_timeout(timeout);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
     BigBuf_free();
-
     return retval;
 }
 
@@ -2072,6 +2077,12 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
 
     int retval = PM3_SUCCESS;
 
+    // increase time-out.  Magic card etc are slow
+    uint32_t timeout = iso14a_get_timeout();
+    // frame waiting time (FWT) in 1/fc
+    uint32_t fwt = 256 * 16 * (1 << 7); 
+    iso14a_set_timeout(fwt / (8 * 16));
+
     for (uint8_t s = 0; s < sectorcnt; s++) {
         uint64_t ui64Key = emlGetKey(s, keytype);
 
@@ -2110,7 +2121,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
         // Auth
         if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), keytype, ui64Key, AUTH_FIRST)) {
             retval = PM3_EPARTIAL;
-            if (g_dbglevel > DBG_ERROR) {
+            if (g_dbglevel >= DBG_ERROR) {
                 Dbprintf("Sector %2d - Auth error", s);
             }
             continue;
@@ -2122,31 +2133,43 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
         for (uint8_t b = 0; b < NumBlocksPerSector(s); b++) {
 
             memset(data, 0x00, sizeof(data));
+            uint8_t tb = FirstBlockOfSector(s) + b;
+            uint8_t r = 0;
+            for (; r < MAX_RETRIES; r++) {
 
-            for (uint8_t r = 0; r < MAX_RETRIES; r++) {
-
-                if (mifare_classic_readblock(pcs, FirstBlockOfSector(s) + b, data)) {
+                int res = mifare_classic_readblock(pcs, tb, data);
+                if (res == 1) {
                     retval |= PM3_EPARTIAL;
-                    if (g_dbglevel > DBG_ERROR) {
-                        Dbprintf("Error reading sector %2d block %2d", s, b);
+                    if (g_dbglevel >= DBG_ERROR) {
+                        Dbprintf("Error No rights reading sector %2d block %2d", s, b);
                     }
+                    break;
+                }
+                // retry if wrong len.
+                if (res != 0) {
                     continue;
                 }
 
                 // No need to copy empty
                 if (memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16) == 0) {
-                    continue;
+                    break;
                 }
 
-                if (b < NumBlocksPerSector(s) - 1) {
-                    emlSetMem(data, FirstBlockOfSector(s) + b, 1);
-                } else {
+                if (IsSectorTrailer(b)) {
                     // sector trailer, keep the keys, set only the AC
                     uint8_t st[16] = {0x00};
-                    emlGetMem(st, FirstBlockOfSector(s) + b, 1);
+                    emlGetMem(st, tb, 1);
                     memcpy(st + 6, data + 6, 4);
-                    emlSetMem(st,  FirstBlockOfSector(s) + b, 1);
+                    emlSetMem(st,  tb, 1);
+                } else {
+                    emlSetMem(data, tb, 1);
                 }
+                break;
+            }
+
+            // if we failed all retries,  notify client
+            if (r == MAX_RETRIES) {
+                retval |= PM3_EPARTIAL;
             }
         }
     }
@@ -2154,6 +2177,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
     int res = mifare_classic_halt(pcs);
     (void)res;
 
+    iso14a_set_timeout(timeout);
     crypto1_deinit(pcs);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
@@ -2322,6 +2346,12 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         set_tracing(true);
     }
 
+    // increase time-out.  Magic card etc are slow
+    uint32_t timeout = iso14a_get_timeout();
+    // frame waiting time (FWT) in 1/fc
+    uint32_t fwt = 256 * 16 * (1 << 7); 
+    iso14a_set_timeout(fwt / (8 * 16));
+
     //loop doesn't loop just breaks out if error or done
     while (true) {
         if (workFlags & MAGIC_WUPC) {
@@ -2343,7 +2373,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         }
 
         // read block
-        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 18)) {
+        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL) != MAX_MIFARE_FRAME_SIZE)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("read block send command error");
             errormsg = 0;
             break;
@@ -2371,6 +2401,8 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
 
     if (workFlags & MAGIC_OFF)
         OnSuccessMagic();
+
+    iso14a_set_timeout(timeout);
 }
 
 void MifareCIdent(bool is_mfc) {

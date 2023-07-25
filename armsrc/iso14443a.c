@@ -2365,8 +2365,9 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
         }
 
         // timeout already in ms + 100ms guard time
-        if (GetTickCountDelta(receive_timer) > timeout + 100)
+        if (GetTickCountDelta(receive_timer) > timeout + 100) {
             break;
+        }
     }
     return false;
 }
@@ -2401,15 +2402,17 @@ void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing) {
 }
 
 static uint16_t ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t offset, uint8_t *par) {
-    if (!GetIso14443aAnswerFromTag(receivedAnswer, par, offset))
+    if (GetIso14443aAnswerFromTag(receivedAnswer, par, offset) == false) {
         return 0;
+    }
     LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
     return Demod.len;
 }
 
 uint16_t ReaderReceive(uint8_t *receivedAnswer, uint8_t *par) {
-    if (!GetIso14443aAnswerFromTag(receivedAnswer, par, 0))
+    if (GetIso14443aAnswerFromTag(receivedAnswer, par, 0) == false) {
         return 0;
+    }
     LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
     return Demod.len;
 }

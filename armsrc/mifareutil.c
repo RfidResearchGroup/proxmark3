@@ -116,7 +116,9 @@ uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t
 
     uint16_t len = ReaderReceive(answer, par);
 
-    if (answer_parity) *answer_parity = par[0];
+    if (answer_parity) {
+        *answer_parity = par[0];
+    }
 
     if (pcs && (crypted == CRYPT_ALL)) {
         if (len == 1) {
@@ -127,8 +129,9 @@ uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t
             res |= (crypto1_bit(pcs, 0, 0) ^ BIT(answer[0], 3)) << 3;
             answer[0] = res;
         } else {
-            for (pos = 0; pos < len; pos++)
+            for (pos = 0; pos < len; pos++) {
                 answer[pos] = crypto1_byte(pcs, 0x00, 0) ^ answer[pos];
+            }
         }
     }
     return len;
@@ -238,11 +241,15 @@ int mifare_classic_readblock_ex(struct Crypto1State *pcs, uint8_t blockNo, uint8
 
     uint16_t len = mifare_sendcmd_short(pcs, 1, iso_byte, blockNo, receivedAnswer, receivedAnswerPar, NULL);
     if (len == 1) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error %02x", receivedAnswer[0]);
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("Block " _YELLOW_("%3d") " Cmd 0x%02x Cmd Error %02x", blockNo, iso_byte, receivedAnswer[0]);
+        }
         return 1;
     }
     if (len != 18) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("wrong response len %d (expected 18)", len);
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("Block " _YELLOW_("%3d") " Cmd 0x%02x Wrong response len, expected 18 got " _RED_("%d"), blockNo, iso_byte, len);
+        }
         return 2;
     }
 
@@ -701,13 +708,15 @@ void emlClearMem(void) {
 
 uint8_t SectorTrailer(uint8_t blockNo) {
     if (blockNo <= MIFARE_2K_MAXBLOCK) {
-        if (g_dbglevel >= DBG_EXTENDED)
+        if (g_dbglevel >= DBG_EXTENDED) {
             Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x03));
+        }
         return (blockNo | 0x03);
     } else {
-        if (g_dbglevel >= DBG_EXTENDED)
-            Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x0f));
-        return (blockNo | 0x0f);
+        if (g_dbglevel >= DBG_EXTENDED) {
+            Dbprintf("Sector Trailer for block %d : %d", blockNo, (blockNo | 0x0F));
+        }
+        return (blockNo | 0x0F);
     }
 }
 
