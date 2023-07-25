@@ -379,7 +379,8 @@ static int mf_print_keys(uint16_t n, uint8_t *d) {
         if (mfIsSectorTrailer(i) == false) {
             continue;
         }
-        uint8_t sec = MIN(sectors, mfSectorNum(i));
+        // zero based index...
+        uint8_t sec = MIN(sectors - 1, mfSectorNum(i));
         e_sector[sec].foundKey[0] = 1;
         e_sector[sec].Key[0] = bytes_to_num(d + (i * MFBLOCK_SIZE), MIFARE_KEY_SIZE);
         e_sector[sec].foundKey[1] = 1;
