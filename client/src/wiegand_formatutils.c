@@ -148,7 +148,7 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
             len = 32;
         } else {
 
-            printf("hid preamble detected\n");
+            PrintAndLogEx(DEBUG, "hid preamble detected");
             len = 32;
 
             if ((data->Mid ^ 0x20) == 0) { hfmt = data->Bot; len = 0; }
