@@ -1352,7 +1352,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "Using key file... `" _YELLOW_("%s") "`", keyfilename);
+    PrintAndLogEx(INFO, "Using key file `" _YELLOW_("%s") "`", keyfilename);
 
     // try reading card uid and create filename
     if (datafnlen == 0) {
@@ -1383,10 +1383,9 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     // default authentication key
     uint8_t default_key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-    PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", datafilename);
-
-    PrintAndLogEx(INFO, " blk | ");
-    PrintAndLogEx(INFO, "-----+------------------------------------------------------------");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, " blk | data                                            | status");
+    PrintAndLogEx(INFO, "-----+-------------------------------------------------+----------------");
 
     // main loop for restoring.
     // a bit more complicated than needed
@@ -1402,6 +1401,8 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 
             // if sector trailer
             if (mfIsSectorTrailerBasedOnBlocks(s, b)) {
+
+                // keep the current keys on the card
                 if (use_keyfile_for_auth == false) {
                     // replace KEY A
                     memcpy(bldata, keyA + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
@@ -1440,18 +1441,19 @@ static int CmdHF14AMfRestore(const char *Cmd) {
 
             for (int8_t kt = MF_KEY_B; kt > -1; kt--) {
                 if (use_keyfile_for_auth) {
-                    if (kt == MF_KEY_A)
+
+                    if (kt == MF_KEY_A) {
                         memcpy(wdata, keyA + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
-                    else
+                    } else {
                         memcpy(wdata, keyB + (s * MIFARE_KEY_SIZE), MIFARE_KEY_SIZE);
+                    }
+
                 } else {
                     // use default key to authenticate for the write command
                     memcpy(wdata, default_key, MIFARE_KEY_SIZE);
                 }
 
                 uint16_t blockno = (mfFirstBlockOfSector(s) + b);
-
-                PrintAndLogEx(INFO, " %3d | %s", blockno, sprint_hex(bldata, sizeof(bldata)));
 
                 clearCommandBuffer();
                 SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, kt, 0, wdata, sizeof(wdata));
@@ -1464,22 +1466,20 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 int isOK  = resp.oldarg[0] & 0xff;
                 if (isOK == 1) {
                     // if success,  skip to next block
+                    PrintAndLogEx(INFO, " %3d | %s| ( " _GREEN_("ok") " )", blockno, sprint_hex(bldata, sizeof(bldata)));
                     break;
-                } else if (isOK == PM3_ETEAROFF) {
+                }
+                // write somehow failed.  Lets determine why.
+                if (isOK == PM3_ETEAROFF) {
                     PrintAndLogEx(INFO, "Tear off triggerd. Recommendation is not to use tear-off with restore command");
                     goto out;
-                } else {
-                    if (b == 0) {
-                        PrintAndLogEx(INFO, "Writing to manufacture block w key " _YELLOW_("%c") " ( " _RED_("fail") " )",
-                                      (kt == MF_KEY_A) ? 'A' : 'B'
-                                     );
-                    } else {
-                        PrintAndLogEx(FAILED, "Write to block " _YELLOW_("%u") " w key " _YELLOW_("%c") " ( " _RED_("fail") " ) ",
-                                      blockno,
-                                      (kt == MF_KEY_A) ? 'A' : 'B'
-                                     );
-                    }
                 }
+
+                PrintAndLogEx(INFO, " %3d | %s| ( " _RED_("fail") " ) key " _YELLOW_("%c"),
+                        blockno,
+                        sprint_hex(bldata, sizeof(bldata)),
+                        (kt == MF_KEY_A) ? 'A' : 'B'
+                    );
             } // end loop key types
         } // end loop B
     } // end loop S
@@ -1488,7 +1488,7 @@ out:
     free(ref_dump);
     free(keyA);
     free(keyB);
-    PrintAndLogEx(INFO, "-----+------------------------------------------------------------");
+    PrintAndLogEx(INFO, "-----+-------------------------------------------------+----------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;

@@ -215,6 +215,7 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     if (str_endswith(preferredName, suffix)) {
         p_namelen -= strlen(suffix);
     }
+
     // modify filename
     snprintf(pfn, len, "%.*s%s", (int)p_namelen, preferredName, suffix);
 
@@ -862,7 +863,7 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
     *datalen = bytes_read;
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
+        PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file `" _YELLOW_("%s") "`", bytes_read, preferredName);
     }
     return PM3_SUCCESS;
 }
@@ -936,7 +937,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from text file " _YELLOW_("%s"), counter, preferredName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from text file `" _YELLOW_("%s") "`", counter, preferredName);
 
 
     uint8_t *newdump = realloc(*pdata, counter);
@@ -1023,7 +1024,7 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from MCT file " _YELLOW_("%s"), counter, preferredName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from MCT file `" _YELLOW_("%s") "`", counter, preferredName);
 
 
     uint8_t *newdump = realloc(*pdata, counter);
@@ -1059,7 +1060,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     json_error_t error;
     json_t *root = json_load_file(path, 0, &error);
     if (verbose)
-        PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), path);
+        PrintAndLogEx(SUCCESS, "loaded from JSON file `" _YELLOW_("%s") "`", path);
 
     free(path);
 
@@ -1467,7 +1468,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     }
     fclose(f);
     if (verbose)
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file " _YELLOW_("%s"), vkeycnt, path);
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", vkeycnt, path);
 
     if (datalen)
         *datalen = counter;
