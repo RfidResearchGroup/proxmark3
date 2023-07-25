@@ -210,18 +210,19 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
         pfn += save_path_len + strlen(PATHSEP);
     }
 
-    uint16_t p_namelen = strlen(preferredName);
+    // remove file extension if exist in name
+    size_t p_namelen = strlen(preferredName);
     if (str_endswith(preferredName, suffix)) {
         p_namelen -= strlen(suffix);
     }
     // modify filename
-    snprintf(pfn, len, "%.*s%s", p_namelen, preferredName, suffix);
+    snprintf(pfn, len, "%.*s%s", (int)p_namelen, preferredName, suffix);
 
     // check complete path/filename if exists
     int num = 1;
     while (fileExists(fileName)) {
         // modify filename
-        snprintf(pfn, len, "%.*s-%03d%s", p_namelen, preferredName, num, suffix);
+        snprintf(pfn, len, "%.*s-%03d%s", (int)p_namelen, preferredName, num, suffix);
         num++;
     }
 
