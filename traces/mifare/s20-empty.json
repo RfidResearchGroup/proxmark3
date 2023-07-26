@@ -1,0 +1,93 @@
+{
+  "Created": "proxmark3",
+  "FileType": "mfcard",
+  "Card": {
+    "UID": "1D357AE9",
+    "ATQA": "0400",
+    "SAK": "09"
+  },
+  "blocks": {
+    "0": "1D357AE9BB890400C846002000000017",
+    "1": "00000000000000000000000000000000",
+    "2": "00000000000000000000000000000000",
+    "3": "FFFFFFFFFFFFFF078069FFFFFFFFFFFF",
+    "4": "00000000000000000000000000000000",
+    "5": "00000000000000000000000000000000",
+    "6": "00000000000000000000000000000000",
+    "7": "FFFFFFFFFFFFFF078069FFFFFFFFFFFF",
+    "8": "00000000000000000000000000000000",
+    "9": "00000000000000000000000000000000",
+    "10": "00000000000000000000000000000000",
+    "11": "FFFFFFFFFFFFFF078069FFFFFFFFFFFF",
+    "12": "00000000000000000000000000000000",
+    "13": "00000000000000000000000000000000",
+    "14": "00000000000000000000000000000000",
+    "15": "FFFFFFFFFFFFFF078069FFFFFFFFFFFF",
+    "16": "00000000000000000000000000000000",
+    "17": "00000000000000000000000000000000",
+    "18": "00000000000000000000000000000000",
+    "19": "FFFFFFFFFFFFFF078069FFFFFFFFFFFF"
+  },
+  "SectorKeys": {
+    "0": {
+      "KeyA": "FFFFFFFFFFFF",
+      "KeyB": "FFFFFFFFFFFF",
+      "AccessConditions": "FF078069",
+      "AccessConditionsText": {
+        "block0": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block1": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block2": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block3": "write A by A; read/write ACCESS by A; read/write B by A",
+        "UserData": "69"
+      }
+    },
+    "1": {
+      "KeyA": "FFFFFFFFFFFF",
+      "KeyB": "FFFFFFFFFFFF",
+      "AccessConditions": "FF078069",
+      "AccessConditionsText": {
+        "block4": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block5": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block6": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block7": "write A by A; read/write ACCESS by A; read/write B by A",
+        "UserData": "69"
+      }
+    },
+    "2": {
+      "KeyA": "FFFFFFFFFFFF",
+      "KeyB": "FFFFFFFFFFFF",
+      "AccessConditions": "FF078069",
+      "AccessConditionsText": {
+        "block8": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block9": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block10": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block11": "write A by A; read/write ACCESS by A; read/write B by A",
+        "UserData": "69"
+      }
+    },
+    "3": {
+      "KeyA": "FFFFFFFFFFFF",
+      "KeyB": "FFFFFFFFFFFF",
+      "AccessConditions": "FF078069",
+      "AccessConditionsText": {
+        "block12": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block13": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block14": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block15": "write A by A; read/write ACCESS by A; read/write B by A",
+        "UserData": "69"
+      }
+    },
+    "4": {
+      "KeyA": "FFFFFFFFFFFF",
+      "KeyB": "FFFFFFFFFFFF",
+      "AccessConditions": "FF078069",
+      "AccessConditionsText": {
+        "block16": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block17": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block18": "read AB; write AB; increment AB; decrement transfer restore AB",
+        "block19": "write A by A; read/write ACCESS by A; read/write B by A",
+        "UserData": "69"
+      }
+    }
+  }
+}
