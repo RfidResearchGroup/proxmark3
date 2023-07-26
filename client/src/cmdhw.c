@@ -1096,7 +1096,7 @@ int set_fpga_mode(uint8_t mode) {
         return PM3_ETIMEOUT;
     }
     if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "failed to set FPGA mode");        
+        PrintAndLogEx(ERR, "failed to set FPGA mode");
     }
     return resp.status;
 }

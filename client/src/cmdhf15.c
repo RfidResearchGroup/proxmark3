@@ -790,17 +790,17 @@ static int NxpSysInfo(uint8_t *uid) {
     PrintAndLogEx(INFO, "--- " _CYAN_("NXP Sysinfo"));
     PrintAndLogEx(INFO, "  raw... %s", sprint_hex(recv, 8));
     PrintAndLogEx(INFO, "    " _CYAN_("Password protection configuration:"));
-    PrintAndLogEx(INFO, "      * Page L read%s password protected",  ((recv[2] & 0x01) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "      * Page L read%s password protected", ((recv[2] & 0x01) ? "" : _GREEN_(" not")));
     PrintAndLogEx(INFO, "      * Page L write%s password protected", ((recv[2] & 0x02) ? "" : _GREEN_(" not")));
-    PrintAndLogEx(INFO, "      * Page H read%s password protected",  ((recv[2] & 0x10) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "      * Page H read%s password protected", ((recv[2] & 0x10) ? "" : _GREEN_(" not")));
     PrintAndLogEx(INFO, "      * Page H write%s password protected", ((recv[2] & 0x20) ? "" : _GREEN_(" not")));
 
     PrintAndLogEx(INFO, "    " _CYAN_("Lock bits:"));
     // AFI lock bit
-    PrintAndLogEx(INFO, "      * AFI%s locked",   ((recv[3] & 0x01) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "      * AFI%s locked", ((recv[3] & 0x01) ? "" : _GREEN_(" not")));
 
     // EAS lock bit
-    PrintAndLogEx(INFO, "      * EAS%s locked",   ((recv[3] & 0x02) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "      * EAS%s locked", ((recv[3] & 0x02) ? "" : _GREEN_(" not")));
 
     // DSFID lock bit
     PrintAndLogEx(INFO, "      * DSFID%s locked", ((recv[3] & 0x03) ? "" : _GREEN_(" not")));

@@ -236,10 +236,12 @@ Check column "offline" for their availability.
 |`hf 15 reader           `|N       |`Act like an ISO-15693 reader`
 |`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO-15693 tag`
 |`hf 15 samples          `|N       |`Acquire samples as reader (enables carrier, sends inquiry)`
+|`hf 15 view             `|Y       |`Display content from tag dump file`
+|`hf 15 wrbl             `|N       |`Write a block`
+|`hf 15 sim              `|N       |`Fake an ISO-15693 tag`
 |`hf 15 eload            `|N       |`Load image file into emulator to be used by 'sim' command`
 |`hf 15 esave            `|N       |`Save emulator memory into image file`
 |`hf 15 eview            `|N       |`View emulator memory`
-|`hf 15 sim              `|N       |`Fake an ISO-15693 tag`
 |`hf 15 slixwritepwd     `|N       |`Writes a password on a SLIX ISO-15693 tag`
 |`hf 15 slixeasdisable   `|N       |`Disable EAS mode on SLIX ISO-15693 tag`
 |`hf 15 slixeasenable    `|N       |`Enable EAS mode on SLIX ISO-15693 tag`
@@ -247,7 +249,6 @@ Check column "offline" for their availability.
 |`hf 15 slixprivacyenable`|N       |`Enable privacy mode on SLIX ISO-15693 tag`
 |`hf 15 passprotectafi   `|N       |`Password protect AFI - Cannot be undone`
 |`hf 15 passprotecteas   `|N       |`Password protect EAS - Cannot be undone`
-|`hf 15 wrbl             `|N       |`Write a block`
 |`hf 15 findafi          `|N       |`Brute force AFI of an ISO-15693 tag`
 |`hf 15 writeafi         `|N       |`Writes the AFI on an ISO-15693 tag`
 |`hf 15 writedsfid       `|N       |`Writes the DSFID on an ISO-15693 tag`
@@ -404,13 +405,14 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf iclass help         `|Y       |`This help`
+|`hf iclass list         `|Y       |`List iclass history`
 |`hf iclass dump         `|N       |`Dump Picopass / iCLASS tag to file`
 |`hf iclass info         `|Y       |`Tag information`
-|`hf iclass list         `|Y       |`List iclass history`
 |`hf iclass rdbl         `|N       |`Read Picopass / iCLASS block`
 |`hf iclass reader       `|N       |`Act like a Picopass / iCLASS reader`
 |`hf iclass restore      `|N       |`Restore a dump file onto a Picopass / iCLASS tag`
 |`hf iclass sniff        `|N       |`Eavesdrop Picopass / iCLASS communication`
+|`hf iclass view         `|Y       |`Display content from tag dump file`
 |`hf iclass wrbl         `|N       |`Write Picopass / iCLASS block`
 |`hf iclass chk          `|N       |`Check keys`
 |`hf iclass loclass      `|Y       |`Use loclass to perform bruteforce reader attack`
@@ -426,7 +428,6 @@ Check column "offline" for their availability.
 |`hf iclass decrypt      `|Y       |`Decrypt given block data or tag dump file`
 |`hf iclass managekeys   `|Y       |`Manage keys to use with iclass commands`
 |`hf iclass permutekey   `|Y       |`Permute function from 'heart of darkness' paper`
-|`hf iclass view         `|Y       |`Display content from tag dump file`
 |`hf iclass sam          `|N       |`SAM tests`
 
 
@@ -878,14 +879,14 @@ Check column "offline" for their availability.
 |`lf em 4x05 help        `|Y       |`This help`
 |`lf em 4x05 brute       `|N       |`Bruteforce password`
 |`lf em 4x05 chk         `|N       |`Check passwords from dictionary`
-|`lf em 4x05 demod       `|Y       |`demodulate a EM4x05/EM4x69 tag from the GraphBuffer`
-|`lf em 4x05 dump        `|N       |`dump EM4x05/EM4x69 tag`
-|`lf em 4x05 info        `|N       |`tag information EM4x05/EM4x69`
-|`lf em 4x05 read        `|N       |`read word data from EM4x05/EM4x69`
+|`lf em 4x05 demod       `|Y       |`Demodulate a EM4x05/EM4x69 tag from the GraphBuffer`
+|`lf em 4x05 dump        `|N       |`Dump EM4x05/EM4x69 tag`
+|`lf em 4x05 info        `|N       |`Tag information`
+|`lf em 4x05 read        `|N       |`Read word data from EM4x05/EM4x69`
 |`lf em 4x05 sniff       `|Y       |`Attempt to recover em4x05 commands from sample buffer`
-|`lf em 4x05 unlock      `|N       |`execute tear off against EM4x05/EM4x69`
-|`lf em 4x05 wipe        `|N       |`wipe EM4x05/EM4x69 tag`
-|`lf em 4x05 write       `|N       |`write word data to EM4x05/EM4x69`
+|`lf em 4x05 unlock      `|N       |`Execute tear off against EM4x05/EM4x69`
+|`lf em 4x05 wipe        `|N       |`Wipe EM4x05/EM4x69 tag`
+|`lf em 4x05 write       `|N       |`Write word data to EM4x05/EM4x69`
 
 
 ### lf em 4x50

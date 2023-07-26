@@ -75,7 +75,7 @@ int16_t mifare_cmd_readblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t read_c
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     clear_trace();
     set_tracing(true);
-    
+
     uint32_t timeout = iso14a_get_timeout();
 
     LED_A_ON();
@@ -97,7 +97,7 @@ int16_t mifare_cmd_readblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t read_c
     };
 
     // frame waiting time (FWT) in 1/fc
-    uint32_t fwt = 256 * 16 * (1 << 6); 
+    uint32_t fwt = 256 * 16 * (1 << 6);
     iso14a_set_timeout(fwt / (8 * 16));
 
     for (uint8_t i = 0; i < count; i++) {
@@ -2080,7 +2080,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
     // increase time-out.  Magic card etc are slow
     uint32_t timeout = iso14a_get_timeout();
     // frame waiting time (FWT) in 1/fc
-    uint32_t fwt = 256 * 16 * (1 << 7); 
+    uint32_t fwt = 256 * 16 * (1 << 7);
     iso14a_set_timeout(fwt / (8 * 16));
 
     for (uint8_t s = 0; s < sectorcnt; s++) {
@@ -2349,7 +2349,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
     // increase time-out.  Magic card etc are slow
     uint32_t timeout = iso14a_get_timeout();
     // frame waiting time (FWT) in 1/fc
-    uint32_t fwt = 256 * 16 * (1 << 7); 
+    uint32_t fwt = 256 * 16 * (1 << 7);
     iso14a_set_timeout(fwt / (8 * 16));
 
     //loop doesn't loop just breaks out if error or done

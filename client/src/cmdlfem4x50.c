@@ -215,7 +215,7 @@ int CmdEM4x50ELoad(const char *Cmd) {
 
     // upload to emulator memory
     em4x50_seteml(data, 0, DUMP_FILESIZE);
-    PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`lf em 4x50 sim -h`"));    
+    PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`lf em 4x50 sim -h`"));
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }

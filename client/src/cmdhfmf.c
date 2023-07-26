@@ -1479,10 +1479,10 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 }
 
                 PrintAndLogEx(INFO, " %3d | %s| ( " _RED_("fail") " ) key " _YELLOW_("%c"),
-                        blockno,
-                        sprint_hex(bldata, sizeof(bldata)),
-                        (kt == MF_KEY_A) ? 'A' : 'B'
-                    );
+                              blockno,
+                              sprint_hex(bldata, sizeof(bldata)),
+                              (kt == MF_KEY_A) ? 'A' : 'B'
+                             );
             } // end loop key types
         } // end loop B
     } // end loop S
@@ -4352,7 +4352,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
     }
 
     // ICEMAN:  bug.  if device has been using ICLASS commands,
-    // the device needs to load the HF fpga image. It takes 1.5 second.    
+    // the device needs to load the HF fpga image. It takes 1.5 second.
     set_fpga_mode(2);
 
     uint8_t *data = NULL;
@@ -7925,7 +7925,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
     CLIParserFree(ctx);
 
     // ICEMAN:  bug.  if device has been using ICLASS commands,
-    // the device needs to load the HF fpga image. It takes 1.5 second.    
+    // the device needs to load the HF fpga image. It takes 1.5 second.
     set_fpga_mode(2);
 
     // validations
@@ -8008,7 +8008,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
 
         int res = mfG4GetBlock(pwd, i, dump + (i * MFBLOCK_SIZE), flags);
         if (res !=  PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL,"");
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "Can't get magic card block: %u. error=%d", i, res);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);

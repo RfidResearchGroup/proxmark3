@@ -1082,7 +1082,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     } else {
         dump = newdump;
     }
-    
+
     if (verbose) {
         print_picopass_header((picopass_hdr_t *) dump);
         print_picopass_info((picopass_hdr_t *) dump);
@@ -1094,7 +1094,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     uint16_t bytes_sent = 0;
     iclass_upload_emul(dump, bytes_read, &bytes_sent);
     free(dump);
-    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", bytes_sent);    
+    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", bytes_sent);
     PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf iclass sim -h`"));
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;

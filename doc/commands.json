@@ -1895,6 +1895,19 @@
             ],
             "usage": "hf 15 sniff [-h]"
         },
+        "hf 15 view": {
+            "command": "hf 15 view",
+            "description": "Print a ISO-15693 tag dump file (bin/eml/json)",
+            "notes": [
+                "hf 15 view -f hf-iclass-AA162D30F8FF12F1-dump.bin"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of dump (bin/eml/json)"
+            ],
+            "usage": "hf 15 view [-h] -f <fn>"
+        },
         "hf 15 wrbl": {
             "command": "hf 15 wrbl",
             "description": "Write block on ISO-15693 tag",
@@ -4375,13 +4388,11 @@
             "options": [
                 "-h, --help This help",
                 "--blk <dec> block number",
-                "-a input key type is key A (def)",
-                "-b input key type is key B",
                 "-d, --data <hex> bytes to write, 16 hex bytes",
                 "-k, --key <hex> key, 6 hex bytes",
                 "--force override warnings"
             ],
-            "usage": "hf mf gdmsetblk [-hab] --blk <dec> [-d <hex>] [-k <hex>] [--force]"
+            "usage": "hf mf gdmsetblk [-h] --blk <dec> [-d <hex>] [-k <hex>] [--force]"
         },
         "hf mf gdmsetcfg": {
             "command": "hf mf gdmsetcfg",
@@ -11768,8 +11779,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 682,
+        "commands_extracted": 683,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-07-23T09:59:37"
+        "extracted_on": "2023-07-26T21:49:57"
     }
 }
