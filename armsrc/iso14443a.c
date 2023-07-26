@@ -1110,7 +1110,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
             sak = 0x09;
             break;
         }
-        case 7: { // NTAG
+        case 7: { // NTAG 215
             rATQA[0] = 0x44;
             sak = 0x00;
             // some first pages of UL/NTAG dump is special data
@@ -1274,6 +1274,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
 
     AddCrc14A(rPPS, sizeof(rPPS) - 2);
 
+    // EV1/NTAG,  set PWD w AMIIBO algo if all zero.
     if (tagType == 7) {
         uint8_t pwd[4];
         uint8_t gen_pwd[4];

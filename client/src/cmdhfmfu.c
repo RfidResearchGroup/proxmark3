@@ -3104,7 +3104,7 @@ static int CmdHF14AMfUSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("t", "type", "<1..10> ", "Simulation type to use"),
+        arg_int1("t", "type", "<1..12> ", "Simulation type to use"),
         arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
         arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks. 0 = infinite"),
         arg_lit0("v", "verbose", "Verbose output"),
