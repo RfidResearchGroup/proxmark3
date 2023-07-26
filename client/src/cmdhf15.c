@@ -1133,7 +1133,7 @@ static int CmdHF15ELoad(const char *Cmd) {
     }
     free(data);
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", offset);
+    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%zu") " bytes to emulator memory", offset);
 
     PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf 15 sim -h`"));
     PrintAndLogEx(INFO, "Done!");
