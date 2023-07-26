@@ -312,7 +312,7 @@ uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length) {
         memcpy(mem + offset, data, length);
         return 0;
     }
-    Dbprintf("Error, trying to set memory outside of bounds! %d  > %d", (offset + length), CARD_MEMORY_SIZE);
+    Dbprintf("Error, trying to set memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
     return 1;
 }
 
