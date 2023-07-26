@@ -3067,6 +3067,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Filename of dump"),
         arg_int0("q", "qty", "<dec>", "Number of blocks to load from eml file"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3083,6 +3084,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
     free(nc);
 
     PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfu sim -t 7`") " to simulate an Amiibo.");
+    PrintAndLogEx(INFO, "Done!");
     return res;
 }
 

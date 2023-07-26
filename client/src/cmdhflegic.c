@@ -805,6 +805,9 @@ void legic_chk_iv(uint32_t *iv) {
 
 void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 
+    PrintAndLogEx(INFO, "Uploading to emulator memory");
+    PrintAndLogEx(INFO, "." NOLF);
+
     // fast push mode
     g_conn.block_after_ACK = true;
     for (size_t i = offset; i < numofbytes; i += LEGIC_PACKET_SIZE) {
@@ -823,7 +826,11 @@ void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
         clearCommandBuffer();
         SendCommandNG(CMD_HF_LEGIC_ESET, (uint8_t *)payload, sizeof(legic_packet_t) + len);
         free(payload);
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
     }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", numofbytes);
 }
 
 static int CmdLegicReader(const char *Cmd) {
@@ -1100,10 +1107,11 @@ static int CmdLegicELoad(const char *Cmd) {
         legic_xor(dump, bytes_read);
     }
 
-    PrintAndLogEx(SUCCESS, "Uploading to emulator memory");
     legic_seteml(dump, 0, bytes_read);
 
     free(dump);
+
+    PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf legic sim -h`"));
     PrintAndLogEx(SUCCESS, "Done!");
     return PM3_SUCCESS;
 }

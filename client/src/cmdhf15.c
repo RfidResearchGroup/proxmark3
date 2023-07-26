@@ -1133,6 +1133,7 @@ static int CmdHF15ELoad(const char *Cmd) {
     }
     free(data);
     PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", offset);
 
     PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf 15 sim -h`"));
     PrintAndLogEx(INFO, "Done!");
@@ -1288,12 +1289,13 @@ static int CmdHF15Sim(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
-    PrintAndLogEx(INFO, "press " _YELLOW_("`Pm3 button`") " to cancel");
+    PrintAndLogEx(INFO, "Press " _YELLOW_("`pm3-button`") " to abort simulation");
 
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     WaitForResponse(CMD_HF_ISO15693_SIMULATE, &resp);
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 

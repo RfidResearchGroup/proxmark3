@@ -165,6 +165,8 @@ static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len
 
 static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 
+    PrintAndLogEx(INFO, "uploading to emulator memory");
+    PrintAndLogEx(INFO, "." NOLF);
     // fast push mode
     g_conn.block_after_ACK = true;
     for (size_t i = offset; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
@@ -176,7 +178,11 @@ static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
         }
         clearCommandBuffer();
         SendCommandOLD(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
     }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", numofbytes);
 }
 
 int CmdEM4x50ELoad(const char *Cmd) {
@@ -208,9 +214,8 @@ int CmdEM4x50ELoad(const char *Cmd) {
     }
 
     // upload to emulator memory
-    PrintAndLogEx(INFO, "Uploading to emulator memory contents of " _YELLOW_("%s"), filename);
     em4x50_seteml(data, 0, DUMP_FILESIZE);
-
+    PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`lf em 4x50 sim -h`"));    
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -1221,7 +1226,7 @@ int CmdEM4x50Sim(const char *Cmd) {
     }
 
     int status = PM3_EFAILED;
-    PrintAndLogEx(INFO, "Simulating data from emulator memory");
+    PrintAndLogEx(INFO, "Starting simulating");
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&password, sizeof(password));

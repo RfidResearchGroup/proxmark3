@@ -144,25 +144,32 @@ static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t *bytes_sent) {
     *bytes_sent = 0;
     uint16_t bytes_remaining = n;
 
+    PrintAndLogEx(INFO, "Uploading to emulator memory");
+    PrintAndLogEx(INFO, "." NOLF);
+
     while (bytes_remaining > 0) {
         uint32_t bytes_in_packet = MIN(PM3_CMD_DATA_SIZE - 4, bytes_remaining);
         if (bytes_in_packet == bytes_remaining) {
             // Disable fast mode on last packet
             g_conn.block_after_ACK = false;
         }
-        clearCommandBuffer();
 
         struct p *payload = calloc(4 + bytes_in_packet, sizeof(uint8_t));
         payload->offset = *bytes_sent;
         payload->len = bytes_in_packet;
         memcpy(payload->data, d + *bytes_sent, bytes_in_packet);
 
+        clearCommandBuffer();
         SendCommandNG(CMD_HF_ICLASS_EML_MEMSET, (uint8_t *)payload, 4 + bytes_in_packet);
         free(payload);
 
         bytes_remaining -= bytes_in_packet;
         *bytes_sent += bytes_in_packet;
+
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
     }
+    PrintAndLogEx(NORMAL, "");
 }
 
 static const char *card_types[] = {
@@ -1011,6 +1018,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "filename of dump (bin/eml/json)"),
         arg_lit0("m", "mem",  "use RDV4 spiffs"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1026,6 +1034,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     }
 
     bool use_spiffs = arg_get_lit(ctx, 2);
+    bool verbose = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     // use RDV4 spiffs
@@ -1073,15 +1082,21 @@ static int CmdHFiClassELoad(const char *Cmd) {
     } else {
         dump = newdump;
     }
+    
+    if (verbose) {
+        print_picopass_header((picopass_hdr_t *) dump);
+        print_picopass_info((picopass_hdr_t *) dump);
+    }
 
-    print_picopass_header((picopass_hdr_t *) dump);
-    print_picopass_info((picopass_hdr_t *) dump);
+    PrintAndLogEx(NORMAL, "");
 
     //Send to device
     uint16_t bytes_sent = 0;
     iclass_upload_emul(dump, bytes_read, &bytes_sent);
     free(dump);
-    PrintAndLogEx(SUCCESS, "sent %u bytes of data to device emulator memory", bytes_sent);
+    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", bytes_sent);    
+    PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf iclass sim -h`"));
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 

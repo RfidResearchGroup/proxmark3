@@ -4264,6 +4264,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         arg_lit0(NULL, "ul", "MIFARE Ultralight family"),
         arg_lit0("m", "mem",  "use RDV4 spiffs"),
         arg_int0("q", "qty", "<dec>", "manually set number of blocks (overrides)"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4280,7 +4281,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
     bool use_spiffs = arg_get_lit(ctx, 7);
     int numblks = arg_get_int_def(ctx, 8, -1);
-
+    bool verbose = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     // validations
@@ -4372,8 +4373,10 @@ int CmdHF14AMfELoad(const char *Cmd) {
             return res;
         }
 
-        mfu_dump_t *mfu_dump = (mfu_dump_t *)data;
-        printMFUdumpEx(mfu_dump, mfu_dump->pages + 1, 0);
+        if (verbose) {
+            mfu_dump_t *mfu_dump = (mfu_dump_t *)data;
+            printMFUdumpEx(mfu_dump, mfu_dump->pages + 1, 0);
+        }
 
         // update expected blocks to match converted data.
         block_cnt = bytes_read / MFU_BLOCK_SIZE;
@@ -4389,23 +4392,28 @@ int CmdHF14AMfELoad(const char *Cmd) {
     size_t offset = 0;
     int cnt = 0;
 
+    // 12 is the size of the struct the fct mfEmlSetMem_xt uses to transfer to device
+    uint16_t max_avail_blocks = ((PM3_CMD_DATA_SIZE - 12) / block_width) * block_width;
+
     while (bytes_read && cnt < block_cnt) {
         if (bytes_read == block_width) {
             // Disable fast mode on last packet
             g_conn.block_after_ACK = false;
         }
 
-        if (mfEmlSetMem_xt(data + offset, cnt, 1, block_width) != PM3_SUCCESS) {
+        uint16_t chunk_size = MIN(max_avail_blocks, bytes_read);
+        uint16_t blocks_to_send = chunk_size / block_width;
+
+        if (mfEmlSetMem_xt(data + offset, cnt, blocks_to_send, block_width) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Can't set emulator mem at block: %3d", cnt);
             free(data);
             return PM3_ESOFT;
         }
+        cnt += blocks_to_send;
+        offset += chunk_size;
+        bytes_read -= chunk_size;
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
-
-        cnt++;
-        offset += block_width;
-        bytes_read -= block_width;
     }
     free(data);
     PrintAndLogEx(NORMAL, "");
@@ -4424,8 +4432,8 @@ int CmdHF14AMfELoad(const char *Cmd) {
             PrintAndLogEx(WARNING, "Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", cnt, block_cnt);
             return PM3_SUCCESS;
         }
+        PrintAndLogEx(INFO, "Done!");
     }
-    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -5326,6 +5334,10 @@ static int CmdHF14AMfCSave(const char *Cmd) {
             }
             if (mfEmlSetMem(dump + (i * MFBLOCK_SIZE), i, 5) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "Can't set emul block: " _YELLOW_("%d"), i);
+            }
+            if (i % 64 == 0) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(INFO, "" NOLF) ;
             }
             PrintAndLogEx(NORMAL, "." NOLF);
             fflush(stdout);
@@ -7836,14 +7848,6 @@ static int CmdHF14AGen4View(const char *Cmd) {
 
     for (uint16_t i = 0; i < block_cnt; i++) {
 
-        // 4k READs can be long, so we split status each 64 blocks.
-        if (i % 64 == 0) {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "" NOLF) ;
-        }
-        PrintAndLogEx(NORMAL, "." NOLF);
-        fflush(stdout);
-
         uint8_t flags = 0 ;
         if (i == 0)            flags |= MAGIC_INIT ;
         if (i + 1 == block_cnt)  flags |= MAGIC_OFF ;
@@ -7854,6 +7858,14 @@ static int CmdHF14AGen4View(const char *Cmd) {
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);
             return PM3_ESOFT;
+        }
+
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
+        // 4k READs can be long, so we split status each 64 blocks.
+        if (i % 64 == 0) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "" NOLF) ;
         }
     }
 
@@ -7939,8 +7951,6 @@ static int CmdHF14AGen4Save(const char *Cmd) {
         PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
         return PM3_EINVARG;
     }
-    PrintAndLogEx(SUCCESS, "Dumping magic gen4 GTU MIFARE Classic " _GREEN_("%s") " card memory", s);
-    PrintAndLogEx(INFO, "." NOLF);
 
     // Select card to get UID/UIDLEN information
     clearCommandBuffer();
@@ -7975,63 +7985,72 @@ static int CmdHF14AGen4Save(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
+    PrintAndLogEx(SUCCESS, "Dumping magic gen4 GTU MIFARE Classic " _GREEN_("%s") " card memory", s);
+    PrintAndLogEx(INFO, "." NOLF);
+
     for (uint16_t i = 0; i < block_cnt; i++) {
-
-        // 4k READs can be long, so we split status each 64 blocks.
-        if (i % 64 == 0) {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "" NOLF) ;
-        }
-        PrintAndLogEx(NORMAL, "." NOLF);
-        fflush(stdout);
-
         uint8_t flags = 0 ;
-        if (i == 0)            flags |= MAGIC_INIT ;
-        if (i + 1 == block_cnt)  flags |= MAGIC_OFF ;
+        if (i == 0) {
+            flags |= MAGIC_INIT;
+        }
+        if (i + 1 == block_cnt) {
+            flags |= MAGIC_OFF;
+        }
 
         int res = mfG4GetBlock(pwd, i, dump + (i * MFBLOCK_SIZE), flags);
         if (res !=  PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL,"");
             PrintAndLogEx(WARNING, "Can't get magic card block: %u. error=%d", i, res);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);
             return PM3_ESOFT;
+        }
+
+
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
+        // 4k READs can be long, so we split status each 64 blocks.
+        if (i % 64 == 0 && i != 0) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "" NOLF) ;
         }
     }
 
     PrintAndLogEx(NORMAL, "");
 
     if (fill_emulator) {
-        PrintAndLogEx(INFO, "uploading to emulator memory" NOLF);
+        PrintAndLogEx(INFO, "uploading to emulator memory");
+        PrintAndLogEx(INFO, "." NOLF);
         // fast push mode
         g_conn.block_after_ACK = true;
 
         size_t offset = 0;
-        int       cnt = 0;
+        int cnt = 0;
         uint16_t bytes_left = bytes ;
 
-        while (bytes_left > 0 && cnt < block_cnt) {
-            // 4k writes can be long, so we split status each 64 blocks.
-            if (cnt % 64 == 0) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, "" NOLF) ;
-            }
-            PrintAndLogEx(NORMAL, "." NOLF);
-            fflush(stdout);
+        // 12 is the size of the struct the fct mfEmlSetMem_xt uses to transfer to device
+        uint16_t max_avail_blocks = ((PM3_CMD_DATA_SIZE - 12) / MFBLOCK_SIZE) * MFBLOCK_SIZE;
 
+        while (bytes_left > 0 && cnt < block_cnt) {
             if (bytes_left == MFBLOCK_SIZE) {
                 // Disable fast mode on last packet
                 g_conn.block_after_ACK = false;
             }
 
-            if (mfEmlSetMem_xt(dump + offset, cnt, 1, MFBLOCK_SIZE) != PM3_SUCCESS) {
+            uint16_t chunk_size = MIN(max_avail_blocks, bytes_left);
+            uint16_t blocks_to_send = chunk_size / MFBLOCK_SIZE;
+
+            if (mfEmlSetMem_xt(dump + offset, cnt, blocks_to_send, MFBLOCK_SIZE) != PM3_SUCCESS) {
                 PrintAndLogEx(FAILED, "Can't set emulator mem at block: %3d", cnt);
                 free(dump);
                 return PM3_ESOFT;
             }
 
-            cnt++;
-            offset += MFBLOCK_SIZE;
-            bytes_left -= MFBLOCK_SIZE;
+            cnt += blocks_to_send;
+            offset += chunk_size;
+            bytes_left -= chunk_size;
+            PrintAndLogEx(NORMAL, "." NOLF);
+            fflush(stdout);
         }
 
         PrintAndLogEx(NORMAL, "");
