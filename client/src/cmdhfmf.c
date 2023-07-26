@@ -8161,8 +8161,6 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int1(NULL, "blk", "<dec>", "block number"),
-        arg_lit0("a", NULL, "input key type is key A (def)"),
-        arg_lit0("b", NULL, "input key type is key B"),
         arg_str0("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
         arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
         arg_lit0(NULL, "force", "override warnings"),
@@ -8172,24 +8170,15 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
 
     int b = arg_get_int_def(ctx, 1, 1);
 
-    uint8_t keytype = MF_KEY_A;
-    if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
-        CLIParserFree(ctx);
-        PrintAndLogEx(WARNING, "Input key type must be A or B");
-        return PM3_EINVARG;
-    } else if (arg_get_lit(ctx, 3)) {
-        keytype = MF_KEY_B;;
-    }
-
     uint8_t block[MFBLOCK_SIZE] = {0x00};
     int blen = 0;
-    CLIGetHexWithReturn(ctx, 4, block, &blen);
+    CLIGetHexWithReturn(ctx, 2, block, &blen);
 
     int keylen = 0;
     uint8_t key[6] = {0};
-    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+    CLIGetHexWithReturn(ctx, 3, key, &keylen);
 
-    bool force = arg_get_lit(ctx, 6);
+    bool force = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     if (blen != MFBLOCK_SIZE) {
@@ -8213,18 +8202,16 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "Writing block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
+    PrintAndLogEx(INFO, "Writing block no %d, key %s", blockno, sprint_hex_inrow(key, sizeof(key)));
     PrintAndLogEx(INFO, "data: %s", sprint_hex(block, sizeof(block)));
 
     struct p {
         uint8_t blockno;
-        uint8_t keytype;
         uint8_t key[6];
         uint8_t data[MFBLOCK_SIZE]; // data to be written
     } PACKED payload;
 
     payload.blockno = blockno;
-    payload.keytype = keytype;
     memcpy(payload.key, key, sizeof(payload.key));
     memcpy(payload.data, block, sizeof(payload.data));
 
@@ -8243,7 +8230,6 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
         return resp.status;
     } else {
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
-        PrintAndLogEx(HINT, "Maybe access rights? Try specify keytype `" _YELLOW_("hf mf gdmsetblk -%c ...") "` instead", (keytype == MF_KEY_A) ? 'b' : 'a');
     }
     return PM3_SUCCESS;
 }
