@@ -380,7 +380,8 @@ static int mf_print_keys(uint16_t n, uint8_t *d) {
             continue;
         }
         // zero based index...
-        uint8_t sec = MIN(sectors - 1, mfSectorNum(i));
+        uint8_t lookup = mfSectorNum(i);
+        uint8_t sec = MIN(sectors - 1, lookup);
         e_sector[sec].foundKey[0] = 1;
         e_sector[sec].Key[0] = bytes_to_num(d + (i * MFBLOCK_SIZE), MIFARE_KEY_SIZE);
         e_sector[sec].foundKey[1] = 1;
