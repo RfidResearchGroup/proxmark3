@@ -36,6 +36,7 @@
 #include "crypto/libpcrypto.h"
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
+#include "cmdhw.h"                 // set_fpga_mode
 
 static int CmdHelp(const char *Cmd);
 
@@ -4350,6 +4351,10 @@ int CmdHF14AMfELoad(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
+    // ICEMAN:  bug.  if device has been using ICLASS commands,
+    // the device needs to load the HF fpga image. It takes 1.5 second.    
+    set_fpga_mode(2);
+
     uint8_t *data = NULL;
     size_t bytes_read = 0;
     int res = pm3_load_dump(filename, (void **)&data, &bytes_read, (block_width * block_cnt + hdr_len));
@@ -7918,6 +7923,10 @@ static int CmdHF14AGen4Save(const char *Cmd) {
 
     bool fill_emulator = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
+
+    // ICEMAN:  bug.  if device has been using ICLASS commands,
+    // the device needs to load the HF fpga image. It takes 1.5 second.    
+    set_fpga_mode(2);
 
     // validations
     if (pwd_len != 4 && pwd_len != 0) {

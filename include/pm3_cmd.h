@@ -416,6 +416,8 @@ typedef struct {
 
 #define CMD_SPIFFS_WIPE                                                   0x013A
 
+#define CMD_SET_FPGAMODE                                                  0x013F
+
 // This take a +0x2000 as they are high level helper and special functions
 // As the others, they may have safety level argument if it makes sense
 #define CMD_SPIFFS_PRINT_TREE                                             0x2130

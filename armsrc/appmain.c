@@ -783,6 +783,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             g_reply_via_usb = false;
             break;
         }
+        case CMD_SET_FPGAMODE: {
+            uint8_t mode = packet->data.asBytes[0];
+            if (mode >= FPGA_BITSTREAM_LF && mode <= FPGA_BITSTREAM_HF_15) {
+                FpgaDownloadAndGo(mode);
+                reply_ng(CMD_SET_FPGAMODE, PM3_SUCCESS, NULL, 0);
+            }
+            reply_ng(CMD_SET_FPGAMODE, PM3_EINVARG, NULL, 0);
+            break;
+        }
         // emulator
         case CMD_SET_DBGMODE: {
             g_dbglevel = packet->data.asBytes[0];

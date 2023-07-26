@@ -873,13 +873,13 @@ out:
 int mfReadSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *data) {
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, (uint8_t *)key, 6);
+    SendCommandMIX(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, (uint8_t *)key, MIFARE_KEY_SIZE);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.oldarg[0] & 0xff;
+        uint8_t isOK  = resp.oldarg[0] & 0xFF;
 
         if (isOK) {
-            memcpy(data, resp.data.asBytes, mfNumBlocksPerSector(sectorNo) * 16);
+            memcpy(data, resp.data.asBytes, mfNumBlocksPerSector(sectorNo) * MFBLOCK_SIZE);
             return PM3_SUCCESS;
         } else {
             return PM3_EUNDEF;
@@ -902,7 +902,7 @@ int mfReadBlock(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *d
     SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) {
-        memcpy(data, resp.data.asBytes, 16);
+        memcpy(data, resp.data.asBytes, MFBLOCK_SIZE);
 
         if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(DEBUG, "failed reading block");
@@ -918,7 +918,7 @@ int mfReadBlock(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *d
 // EMULATOR
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 
-    size_t size = blocksCount * 16;
+    size_t size = blocksCount * MFBLOCK_SIZE;
     if (size > PM3_CMD_DATA_SIZE) {
         return PM3_ESOFT;
     }
@@ -982,7 +982,7 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
 int mfCSetUID(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const uint8_t *sak, uint8_t *old_uid, uint8_t *verifed_uid, uint8_t wipecard) {
 
     uint8_t params = MAGIC_SINGLE;
-    uint8_t block0[16];
+    uint8_t block0[MFBLOCK_SIZE];
     memset(block0, 0x00, sizeof(block0));
 
     int res = mfCGetBlock(0, block0, params);
@@ -1045,11 +1045,11 @@ int mfCSetUID(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const uint8_t *
 }
 
 int mfCWipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak) {
-    uint8_t block0[16] = {0x00, 0x56, 0x78, 0xBB, 0x95, 0x08, 0x04, 0x00, 0x02, 0xB2, 0x1E, 0x24, 0x23, 0x27, 0x1E, 0x1D};
-    // uint8_t block0[16] = {0x04, 0x03, 0x02, 0x01, 0x04, 0x08, 0x04, 0x00, 0x64, 0xB9, 0x95, 0x11, 0x4D, 0x20, 0x42, 0x09};
-    uint8_t blockD[16] = {0x00};
+    uint8_t block0[MFBLOCK_SIZE] = {0x00, 0x56, 0x78, 0xBB, 0x95, 0x08, 0x04, 0x00, 0x02, 0xB2, 0x1E, 0x24, 0x23, 0x27, 0x1E, 0x1D};
+    // uint8_t block0[MFBLOCK_SIZE] = {0x04, 0x03, 0x02, 0x01, 0x04, 0x08, 0x04, 0x00, 0x64, 0xB9, 0x95, 0x11, 0x4D, 0x20, 0x42, 0x09};
+    uint8_t blockD[MFBLOCK_SIZE] = {0x00};
     // default transport ACL
-    uint8_t blockK[16] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07, 0x80, 0x69, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t blockK[MFBLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07, 0x80, 0x69, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t params = MAGIC_SINGLE;
 
     if (uid != NULL) {
@@ -1095,16 +1095,18 @@ int mfCWipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak) {
 }
 
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
-
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_CSETBL, params, blockNo, 0, data, 16);
+    SendCommandMIX(CMD_HF_MIFARE_CSETBL, params, blockNo, 0, data, MFBLOCK_SIZE);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 3500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
-        if (uid != NULL)
+        if (uid != NULL) {
             memcpy(uid, resp.data.asBytes, 4);
-        if (!isOK)
+        }
+
+        if (!isOK) {
             return PM3_EUNDEF;
+        }
     } else {
         PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
@@ -1118,9 +1120,10 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
-        if (!isOK)
+        if (!isOK) {
             return PM3_EUNDEF;
-        memcpy(data, resp.data.asBytes, 16);
+        }
+        memcpy(data, resp.data.asBytes, MFBLOCK_SIZE);
     } else {
         PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
@@ -1145,11 +1148,11 @@ int mfGen3UID(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid) {
 
 int mfGen3Block(uint8_t *block, int blockLen, uint8_t *newBlock) {
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_GEN3BLK, blockLen, 0, 0, block, 16);
+    SendCommandMIX(CMD_HF_MIFARE_GEN3BLK, blockLen, 0, 0, block, MFBLOCK_SIZE);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3BLK, &resp, 3500)) {
         if (resp.status == PM3_SUCCESS && newBlock) {
-            memcpy(newBlock, resp.data.asBytes, 16);
+            memcpy(newBlock, resp.data.asBytes, MFBLOCK_SIZE);
         }
         return resp.status;
     } else {
@@ -1187,7 +1190,7 @@ int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags
         if (resp.status != PM3_SUCCESS) {
             return PM3_EUNDEF;
         }
-        memcpy(data, resp.data.asBytes, 16);
+        memcpy(data, resp.data.asBytes, MFBLOCK_SIZE);
     } else {
         PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
@@ -1199,7 +1202,7 @@ int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags
     struct p {
         uint8_t blockno;
         uint8_t pwd[4];
-        uint8_t data[16];
+        uint8_t data[MFBLOCK_SIZE];
         uint8_t workFlags;
     } PACKED payload;
     payload.blockno = blockno;

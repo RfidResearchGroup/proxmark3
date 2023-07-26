@@ -1083,6 +1083,23 @@ static int CmdBreak(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int set_fpga_mode(uint8_t mode) {
+    if (mode < 1 || mode > 4) {
+        return PM3_EINVARG;
+    }
+    uint8_t d[] = {mode};
+    clearCommandBuffer();
+    SendCommandNG(CMD_SET_FPGAMODE, d, sizeof(d));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_SET_FPGAMODE, &resp, 1000) == false) {
+        PrintAndLogEx(WARNING, "command execution timeout");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to set FPGA mode");        
+    }
+    return resp.status;
+}
 
 static command_t CommandTable[] = {
     {"-------------", CmdHelp,         AlwaysAvailable, "----------------------- " _CYAN_("Hardware") " -----------------------"},
