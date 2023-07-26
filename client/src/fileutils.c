@@ -205,8 +205,8 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
 
     // user preference save paths
     size_t save_path_len = path_size(e_save_path);
-    if (save_path_len) {
-        snprintf(pfn, len, "%s%s", g_session.defaultPaths[e_save_path], PATHSEP);
+    if (save_path_len < FILE_PATH_SIZE ) {
+        snprintf(pfn, len, "%.*s%s", (int)save_path_len, g_session.defaultPaths[e_save_path], PATHSEP);
         pfn += save_path_len + strlen(PATHSEP);
     }
 
