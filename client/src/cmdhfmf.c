@@ -3113,7 +3113,7 @@ all_found:
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_MEMCLR, NULL, 0);
 
-    PrintAndLogEx(INFO, "transferring keys to simulator memory" NOLF);
+    PrintAndLogEx(INFO, "transferring keys to simulator memory " NOLF);
 
     bool transfer_status = true;
     for (current_sector_i = 0; current_sector_i < sector_cnt; current_sector_i++) {
