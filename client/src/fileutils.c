@@ -2085,6 +2085,9 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
         }
         case EML: {
             res = loadFileEML_safe(fn, pdump, dumplen);
+            if (res == PM3_ESOFT) {
+                PrintAndLogEx(WARNING, "file IO failed");
+            }
             break;
         }
         case JSON: {
@@ -2094,8 +2097,15 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
                 return PM3_EMALLOC;
             }
             res = loadFileJSON(fn, *pdump, maxdumplen, dumplen, NULL);
-            if (res != PM3_SUCCESS) {
-                free(*pdump);
+            if (res == PM3_SUCCESS)
+                return res;
+
+            free(*pdump);
+
+            if (res == PM3_ESOFT) {
+                PrintAndLogEx(WARNING, "JSON objects failed to load");
+            } else if (res == PM3_EMALLOC) {
+                PrintAndLogEx(WARNING, "Wrong size of allocated memory. Check your parameters");
             }
             break;
         }
@@ -2107,11 +2117,6 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             res = loadFileMCT_safe(fn, pdump, dumplen);
             break;
         }
-    }
-
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fn);
-        return PM3_EFILE;
     }
 
     return res;

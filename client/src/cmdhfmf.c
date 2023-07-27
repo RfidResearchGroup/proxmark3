@@ -4318,12 +4318,16 @@ int CmdHF14AMfELoad(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "%d blocks ( %u bytes ) to upload", block_cnt, block_cnt * block_width);
+    PrintAndLogEx(INFO, "Upload " _YELLOW_("%u") " blocks " _YELLOW_("%u") " bytes", block_cnt, block_cnt * block_width);
 
     if (numblks > 0) {
         block_cnt = MIN(numblks, block_cnt);
-        PrintAndLogEx(INFO, "overriding number of blocks, will use %d blocks ( %u bytes )", block_cnt, block_cnt * block_width);
+        PrintAndLogEx(INFO, "overriding number of blocks, will use " _YELLOW_("%u") " blocks " _YELLOW_("%u") " bytes", block_cnt, block_cnt * block_width);
     }
+
+    // ICEMAN:  bug.  if device has been using ICLASS commands,
+    // the device needs to load the HF fpga image. It takes 1.5 second.
+    set_fpga_mode(2);
 
     // use RDV4 spiffs
     if (use_spiffs && IfPm3Flash() == false) {
@@ -4354,10 +4358,6 @@ int CmdHF14AMfELoad(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "File transfered from spiffs to device emulator memory");
         return PM3_SUCCESS;
     }
-
-    // ICEMAN:  bug.  if device has been using ICLASS commands,
-    // the device needs to load the HF fpga image. It takes 1.5 second.
-    set_fpga_mode(2);
 
     uint8_t *data = NULL;
     size_t bytes_read = 0;
