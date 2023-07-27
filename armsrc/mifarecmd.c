@@ -97,7 +97,7 @@ int16_t mifare_cmd_readblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t read_c
     };
 
     // frame waiting time (FWT) in 1/fc
-    uint32_t fwt = 256 * 16 * (1 << 6);
+    uint32_t fwt = 256 * 16 * (1 << 7);
     iso14a_set_timeout(fwt / (8 * 16));
 
     for (uint8_t i = 0; i < count; i++) {
@@ -1810,8 +1810,8 @@ OUT:
                 emlSetMem_xt(block, blockno, 1, sizeof(block));
             }
 
-            MifareECardLoad(sectorcnt, 0);
-            MifareECardLoad(sectorcnt, 1);
+            MifareECardLoad(sectorcnt, MF_KEY_A);
+            MifareECardLoad(sectorcnt, MF_KEY_B);
         }
     } else {
         // partial/none keys found
