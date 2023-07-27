@@ -91,7 +91,7 @@ static bool wait_for(bool value, const uint32_t timeout) {
 //  - A bit length >80.2us is a 1
 //  - A bit length <80.2us is a 0
 //  - A bit length >148.6us is a code violation
-static int8_t rx_bit(void) {
+static int32_t rx_bit(void) {
     // backup ts for threshold calculation
     uint32_t bit_start = last_frame_end;
 
@@ -246,7 +246,7 @@ static int32_t rx_frame(uint8_t *len) {
     for (*len = 0; true; ++(*len)) {
         // receive next bit
         LED_B_ON();
-        int8_t bit = rx_bit();
+        int32_t bit = rx_bit();
         LED_B_OFF();
 
         // check for code violation and to short / long frame
