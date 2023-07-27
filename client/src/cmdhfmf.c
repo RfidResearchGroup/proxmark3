@@ -2552,7 +2552,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (has_staticnonce == NONCE_NORMAL)  {
         prng_type = detect_classic_prng();
         if (prng_type < 0) {
-            PrintAndLogEx(FAILED, "\nNo tag detected or other tag communication error (%u)", prng_type);
+            PrintAndLogEx(FAILED, "\nNo tag detected or other tag communication error (%i)", prng_type);
             free(e_sector);
             free(fptr);
             return PM3_ESOFT;
