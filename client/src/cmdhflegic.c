@@ -888,7 +888,7 @@ static int CmdLegicDump(const char *Cmd) {
     uint16_t dumplen = card.cardsize;
 
     legic_print_type(dumplen, 0);
-    PrintAndLogEx(SUCCESS, "Reading tag memory %d b...", dumplen);
+    PrintAndLogEx(SUCCESS, "Reading tag memory." NOLF);
 
     legic_packet_t *payload = calloc(1, sizeof(legic_packet_t));
     payload->offset = 0;
