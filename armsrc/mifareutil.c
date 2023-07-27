@@ -209,8 +209,8 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     uint32_t save_timeout = iso14a_get_timeout();
 
     // set timeout for authentication response
-    if (save_timeout > 103)
-        iso14a_set_timeout(103);
+    if (save_timeout > 106)
+        iso14a_set_timeout(106);
 
     // Receive 4 byte tag answer
     len = ReaderReceive(receivedAnswer, receivedAnswerPar);
