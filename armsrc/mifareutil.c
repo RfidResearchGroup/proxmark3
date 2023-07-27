@@ -617,16 +617,9 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo) {
         return sectorNo * 4;
     else
         return 32 * 4 + (sectorNo - 32) * 16;
-
 }
 
 // work with emulator memory
-void emlSetMem(uint8_t *data, int blockNum, int blocksCount) {
-    uint32_t offset = blockNum * 16;
-    uint32_t len =  blocksCount * 16;
-    emlSet(data, offset, len);
-}
-
 void emlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int block_width) {
     uint32_t offset = blockNum * block_width;
     uint32_t len =  blocksCount * block_width;
@@ -634,18 +627,18 @@ void emlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int block_width)
 }
 
 void emlGetMem(uint8_t *data, int blockNum, int blocksCount) {
-    uint8_t *emCARD = BigBuf_get_EM_addr();
-    memcpy(data, emCARD + blockNum * 16, blocksCount * 16);
+    uint8_t *mem = BigBuf_get_EM_addr();
+    memcpy(data, mem + blockNum * 16, blocksCount * 16);
 }
 
 void emlGetMemBt(uint8_t *data, int offset, int byteCount) {
-    uint8_t *emCARD = BigBuf_get_EM_addr();
-    memcpy(data, emCARD + offset, byteCount);
+    uint8_t *mem = BigBuf_get_EM_addr();
+    memcpy(data, mem + offset, byteCount);
 }
 
 int emlCheckValBl(int blockNum) {
-    uint8_t *emCARD = BigBuf_get_EM_addr();
-    uint8_t *data = emCARD + blockNum * 16;
+    uint8_t *mem = BigBuf_get_EM_addr();
+    uint8_t *data = mem + blockNum * 16;
 
     if ((data[0] != (data[4] ^ 0xff)) || (data[0] != data[8]) ||
             (data[1] != (data[5] ^ 0xff)) || (data[1] != data[9]) ||
@@ -659,8 +652,8 @@ int emlCheckValBl(int blockNum) {
 }
 
 int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum) {
-    uint8_t *emCARD = BigBuf_get_EM_addr();
-    uint8_t *data = emCARD + blockNum * 16;
+    uint8_t *mem = BigBuf_get_EM_addr();
+    uint8_t *data = mem + blockNum * 16;
 
     if (emlCheckValBl(blockNum))
         return 1;
@@ -671,8 +664,8 @@ int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum) {
 }
 
 int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum) {
-    uint8_t *emCARD = BigBuf_get_EM_addr();
-    uint8_t *data = emCARD + blockNum * 16;
+    uint8_t *mem = BigBuf_get_EM_addr();
+    uint8_t *data = mem + blockNum * 16;
 
     memcpy(data + 0, &blReg, 4);
     memcpy(data + 8, &blReg, 4);
@@ -683,29 +676,29 @@ int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum) {
     data[13] = blBlock ^ 0xff;
     data[14] = blBlock;
     data[15] = blBlock ^ 0xff;
-
     return 0;
 }
 
 uint64_t emlGetKey(int sectorNum, int keyType) {
     uint8_t key[6] = {0x00};
-    uint8_t *em = BigBuf_get_EM_addr();
-    memcpy(key, em + 16 * (FirstBlockOfSector(sectorNum) + NumBlocksPerSector(sectorNum) - 1) + keyType * 10, 6);
+    uint8_t *mem = BigBuf_get_EM_addr();
+    memcpy(key, mem + 16 * (FirstBlockOfSector(sectorNum) + NumBlocksPerSector(sectorNum) - 1) + keyType * 10, 6);
     return bytes_to_num(key, 6);
 }
 
 void emlClearMem(void) {
     const uint8_t trailer[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07, 0x80, 0x69, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     const uint8_t uid[]   =   {0xe6, 0x84, 0x87, 0xf3, 0x16, 0x88, 0x04, 0x00, 0x46, 0x8e, 0x45, 0x55, 0x4d, 0x70, 0x41, 0x04};
-    uint8_t *emCARD = BigBuf_get_EM_addr();
-    memset(emCARD, 0, CARD_MEMORY_SIZE);
+    uint8_t *mem = BigBuf_get_EM_addr();
+    memset(mem, 0, CARD_MEMORY_SIZE);
 
     // fill sectors trailer data
-    for (uint16_t b = 3; b < MIFARE_4K_MAXBLOCK; ((b < MIFARE_2K_MAXBLOCK - 4) ? (b += 4) : (b += 16)))
-        emlSetMem((uint8_t *)trailer, b, 1);
+    for (uint16_t b = 3; b < MIFARE_4K_MAXBLOCK; ((b < MIFARE_2K_MAXBLOCK - 4) ? (b += 4) : (b += 16))) {
+        emlSetMem_xt((uint8_t *)trailer, b, 1, 16);
+    }
 
     // uid
-    emlSetMem((uint8_t *)uid, 0, 1);
+    emlSetMem_xt((uint8_t *)uid, 0, 1, 16);
     return;
 }
 

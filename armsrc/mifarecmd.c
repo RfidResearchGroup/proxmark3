@@ -2019,15 +2019,6 @@ void MifareEMemClr(void) {
     emlClearMem();
 }
 
-void MifareEMemSet(uint8_t blockno, uint8_t blockcnt, uint8_t blockwidth, uint8_t *datain) {
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
-    if (blockwidth == 0)
-        blockwidth = 16; // backwards compat... default bytewidth
-
-    emlSetMem_xt(datain, blockno, blockcnt, blockwidth); // data, block num, blocks count, block byte width
-}
-
 void MifareEMemGet(uint8_t blockno, uint8_t blockcnt) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
@@ -2167,9 +2158,9 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
                     uint8_t st[16] = {0x00};
                     emlGetMem(st, tb, 1);
                     memcpy(st + 6, data + 6, 4);
-                    emlSetMem(st,  tb, 1);
+                    emlSetMem_xt(st,  tb, 1, 16);
                 } else {
-                    emlSetMem(data, tb, 1);
+                    emlSetMem_xt(data, tb, 1, 16);
                 }
                 break;
             }

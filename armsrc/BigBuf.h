@@ -56,6 +56,7 @@ bool RAMFUNC LogTraceBits(const uint8_t *btBytes, uint16_t bitLen, uint32_t time
 bool LogTrace_ISO15693(const uint8_t *bytes, uint16_t len, uint32_t ts_start, uint32_t ts_end, uint8_t *parity, bool reader2tag);
 
 uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length);
+uint8_t emlGet(uint8_t *out, uint32_t offset, uint32_t length);
 
 typedef struct {
     int max;

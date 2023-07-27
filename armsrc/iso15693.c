@@ -2119,23 +2119,12 @@ void Iso15693InitTag(void) {
     StartCountSspClk();
 }
 
-
 void EmlClearIso15693(void) {
     // Resetting the bitstream also frees the BigBuf memory, so we do this here to prevent
     // an inconvenient reset in the future by Iso15693InitTag
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
     BigBuf_Clear_EM();
     reply_ng(CMD_HF_ISO15693_EML_CLEAR, PM3_SUCCESS, NULL, 0);
-}
-
-void EmlSetMemIso15693(uint8_t count, uint8_t *data, uint32_t offset) {
-    uint8_t *emCARD = BigBuf_get_EM_addr();
-    memcpy(emCARD + offset, data, count);
-}
-
-void EmlGetMemIso15693(uint8_t count, uint8_t *output, uint32_t offset) {
-    uint8_t *emCARD = BigBuf_get_EM_addr();
-    memcpy(output, emCARD + offset, count);
 }
 
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
@@ -2296,8 +2285,11 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 }
                 // Block data
                 if (block_size * (block_idx + j + 1) <= CARD_MEMORY_SIZE) {
-                    EmlGetMemIso15693(block_size, resp_readblock + (work_offset + security_offset),
-                                      block_size * (block_idx + j));
+                    emlGet(
+                        resp_readblock + (work_offset + security_offset),
+                        block_size * (block_idx + j),
+                        block_size
+                    );
                 } else {
                     memset(resp_readblock + work_offset + security_offset, 0, block_size);
                 }
@@ -2334,7 +2326,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             uint8_t *data = cmd + 3 + address_offset + multi_offset;
 
             // write data
-            EmlSetMemIso15693(block_count * block_size, data, block_idx * block_size);
+            emlSet(data, (block_idx * block_size), (block_count * block_size));
 
             // Build WRITE_(MULTI_)BLOCK response
             int response_length = 3;

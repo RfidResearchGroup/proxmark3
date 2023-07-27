@@ -1272,7 +1272,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                                 memcpy(receivedCmd_dec, response, 16); // don't change anything
                             }
                         }
-                        emlSetMem(receivedCmd_dec, cardWRBL, 1);
+                        emlSetMem_xt(receivedCmd_dec, cardWRBL, 1, 16);
                         EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK)); // always ACK?
                         FpgaDisableTracing();
 
