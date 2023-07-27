@@ -476,14 +476,20 @@ void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
 
     Dbprintf("Legic Prime, simulating uid... " _YELLOW_("%02X%02X%02X%02X"), legic_mem[0], legic_mem[1], legic_mem[2], legic_mem[3]);
 
+    uint16_t counter = 0;
     while (BUTTON_PRESS() == false) {
 
         WDT_HIT();
 
-        if (data_available()) {
-            res = PM3_EOPABORTED;
-            goto OUT;
+        if (counter >= 1000) {
+            if (data_available()) {
+                res = PM3_EOPABORTED;
+                goto OUT;
+            }
+            counter = 0;
         }
+        counter++;
+
         // wait for carrier, restart after timeout
         if (wait_for(RWD_PULSE, GetCountSspClk() + TAG_BIT_PERIOD) == false) {
             continue;
