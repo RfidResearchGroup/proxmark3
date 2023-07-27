@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `mem load -m` - now correctly erase all allocated flash memory (@iceman1001)
+ - Fixed emulator quick dump to handle MFC Ev1 extra sectors (@iceman100)
  - Removed some empty dump files (@iceman1001)
  - Added a fct to choose fpga mode (@iceman1001)
  - Changed `hf mf eload/gsave` - fast uploading to emulator memory (@iceman1001)
