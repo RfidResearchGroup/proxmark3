@@ -2596,7 +2596,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
         p_card->ats_len = 0;
     }
 
-    if (GetATQA(resp, resp_par, polling_parameters) == false) {
+    if (GetATQA(resp, resp_par, polling_parameters) == 0) {
         return 0;
     }
 
@@ -2621,11 +2621,11 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             memcpy(p_card->uid, resp, 4);
 
             // select again?
-            if (GetATQA(resp, resp_par, &WUPA_POLLING_PARAMETERS) == false) {
+            if (GetATQA(resp, resp_par, &WUPA_POLLING_PARAMETERS) == 0) {
                 return 0;
             }
 
-            if (GetATQA(resp, resp_par, &WUPA_POLLING_PARAMETERS) == false) {
+            if (GetATQA(resp, resp_par, &WUPA_POLLING_PARAMETERS) == 0) {
                 return 0;
             }
 
@@ -2824,7 +2824,7 @@ int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades) {
     uint8_t sak = 0x04; // cascade uid
     int cascade_level = 0;
 
-    if (!GetATQA(resp, resp_par, &WUPA_POLLING_PARAMETERS)) {
+    if (GetATQA(resp, resp_par, &WUPA_POLLING_PARAMETERS) == 0) {
         return 0;
     }
 
@@ -2851,7 +2851,9 @@ int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades) {
         ReaderTransmit(sel_uid, sizeof(sel_uid), NULL);
 
         // Receive the SAK
-        if (!ReaderReceive(resp, resp_par)) return 0;
+        if (!ReaderReceive(resp, resp_par)) {
+            return 0;
+        }
 
         sak = resp[0];
 

@@ -2071,23 +2071,32 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
     // increase time-out.  Magic card etc are slow
     uint32_t timeout = iso14a_get_timeout();
     // frame waiting time (FWT) in 1/fc
-    uint32_t fwt = 256 * 16 * (1 << 7);
+    uint32_t fwt = 256 * 16 * (1 << 6);
     iso14a_set_timeout(fwt / (8 * 16));
 
     for (uint8_t s = 0; s < sectorcnt; s++) {
 
+        uint64_t ui64Key = emlGetKey(s, keytype);
+
         if (sectorcnt == 18) {
             // MFC 1K EV1, skip sector 16 since its lockdown
             if (s == 16) {
+                // unknown sector trailer, keep the keys, set only the AC
+                uint8_t st[16] = {0x00};
+                emlGetMem(st, FirstBlockOfSector(s) + 3, 1);
+                memcpy(st + 6, "\x70\xF0\xF8\x69", 4);
+                emlSetMem_xt(st, FirstBlockOfSector(s) + 3, 1, 16);
                 continue;
             }
+
+            // ICEMAN: ugly hack,  we don't want to trigger the partial load message
             // MFC 1K EV1 sector 17 don't use key A.
-            if (keytype == 0) {
-                continue;
+            // not mention we don't save signatures in our MFC dump files.
+            if (s == 17 && keytype == 0) {
+                ui64Key = 0x4B791BEA7BCC;
+                keytype = 1;
             }
         }
-
-        uint64_t ui64Key = emlGetKey(s, keytype);
 
         // use fast select
         if (have_uid == false) { // need a full select cycle to get the uid first
@@ -2124,6 +2133,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
             }
             continue;
         }
+
 
 #define MAX_RETRIES 2
 
