@@ -3072,9 +3072,10 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> filename of dump (bin/eml/json)",
-                "-m, --mem use RDV4 spiffs"
+                "-m, --mem use RDV4 spiffs",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf iclass eload [-hm] -f <fn>"
+            "usage": "hf iclass eload [-hmv] -f <fn>"
         },
         "hf iclass encode": {
             "command": "hf iclass encode",
@@ -4281,9 +4282,10 @@
                 "--4k MIFARE Classic 4k / S70",
                 "--ul MIFARE Ultralight family",
                 "-m, --mem use RDV4 spiffs",
-                "-q, --qty <dec> manually set number of blocks (overrides)"
+                "-q, --qty <dec> manually set number of blocks (overrides)",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf mf eload [-hm] -f <fn> [--mini] [--1k] [--2k] [--4k] [--ul] [-q <dec>]"
+            "usage": "hf mf eload [-hmv] -f <fn> [--mini] [--1k] [--2k] [--4k] [--ul] [-q <dec>]"
         },
         "hf mf esave": {
             "command": "hf mf esave",
@@ -6424,9 +6426,10 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Filename of dump",
-                "-q, --qty <dec> Number of blocks to load from eml file"
+                "-q, --qty <dec> Number of blocks to load from eml file",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf mfu eload [-h] -f <fn> [-q <dec>]"
+            "usage": "hf mfu eload [-hv] -f <fn> [-q <dec>]"
         },
         "hf mfu esave": {
             "command": "hf mfu esave",
@@ -6488,6 +6491,27 @@
                 "-r Read UID from tag"
             ],
             "usage": "hf mfu keygen [-hr] [-u <hex>]"
+        },
+        "hf mfu list": {
+            "command": "hf mfu list",
+            "description": "Alias of `trace list -t 14a` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "notes": [
+                "hf 14a list --frame -> show frame delay times",
+                "hf 14a list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-1, --buffer use data from trace buffer",
+                "--frame show frame delay times",
+                "-c mark CRC bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into Wireshark using encapsulation type \"ISO 14443\"",
+                "-f, --file <fn> filename of dictionary"
+            ],
+            "usage": "hf 14a list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf mfu ndefread": {
             "command": "hf mfu ndefread",
@@ -6622,12 +6646,12 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, --type <1..10> Simulation type to use",
+                "-t, --type <1..12> Simulation type to use",
                 "-u, --uid <hex> <4|7|10> hex bytes UID",
                 "-n, --num <dec> Exit simulation after <numreads> blocks. 0 = infinite",
                 "-v, --verbose Verbose output"
             ],
-            "usage": "hf mfu sim [-hv] -t <1..10> [-u <hex>] [-n <dec>]"
+            "usage": "hf mfu sim [-hv] -t <1..12> [-u <hex>] [-n <dec>]"
         },
         "hf mfu tamper": {
             "command": "hf mfu tamper",
@@ -11779,8 +11803,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 683,
+        "commands_extracted": 684,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-07-26T21:49:57"
+        "extracted_on": "2023-07-27T21:41:37"
     }
 }

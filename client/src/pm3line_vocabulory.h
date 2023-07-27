@@ -388,6 +388,7 @@ const static vocabulory_t vocabulory[] = {
     { 0, "hf mfp ndefread" }, 
     { 0, "hf mfp ndefwrite" }, 
     { 1, "hf mfu help" }, 
+    { 1, "hf mfu list" }, 
     { 1, "hf mfu keygen" }, 
     { 1, "hf mfu pwdgen" }, 
     { 0, "hf mfu otptear" }, 

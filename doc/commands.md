@@ -567,6 +567,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf mfu help            `|Y       |`This help`
+|`hf mfu list            `|Y       |`List MIFARE Ultralight / NTAG history`
 |`hf mfu keygen          `|Y       |`Generate 3DES MIFARE diversified keys`
 |`hf mfu pwdgen          `|Y       |`Generate pwd from known algos`
 |`hf mfu otptear         `|N       |`Tear-off test on OTP bits`
