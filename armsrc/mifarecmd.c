@@ -2084,12 +2084,19 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
     iso14a_set_timeout(fwt / (8 * 16));
 
     for (uint8_t s = 0; s < sectorcnt; s++) {
-        uint64_t ui64Key = emlGetKey(s, keytype);
 
-        // MFC 1K EV1 sector 16,17 don't use key A.
-        if ((sectorcnt == 18) && (keytype == 0) && s > 15) {
-            continue;
+        if (sectorcnt == 18) {
+            // MFC 1K EV1, skip sector 16 since its lockdown
+            if (s == 16) {
+                continue;
+            }
+            // MFC 1K EV1 sector 17 don't use key A.
+            if (keytype == 0) {
+                continue;
+            }
         }
+
+        uint64_t ui64Key = emlGetKey(s, keytype);
 
         // use fast select
         if (have_uid == false) { // need a full select cycle to get the uid first
