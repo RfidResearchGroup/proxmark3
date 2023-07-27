@@ -194,7 +194,7 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     // 16: room for filenum to ensure new filename
     // save_path_len + strlen(PATHSEP):  the user preference save paths
     //const size_t len = p_namelen + strlen(suffix) + 1 + 16 + save_path_len + strlen(PATHSEP);
-    const size_t len = FILE_PATH_SIZE;
+    size_t len = FILE_PATH_SIZE;
 
     char *fileName = (char *) calloc(len, sizeof(uint8_t));
     if (fileName == NULL) {
@@ -207,8 +207,8 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     size_t save_path_len = path_size(e_save_path);
     if (save_path_len && save_path_len < (FILE_PATH_SIZE - strlen(PATHSEP))) {
         snprintf(pfn, len, "%s%s", g_session.defaultPaths[e_save_path], PATHSEP);
-        pfn += save_path_len;
-        pfn += strlen(PATHSEP);
+        pfn += save_path_len + strlen(PATHSEP);
+        len -= save_path_len + strlen(PATHSEP);
     }
 
     // remove file extension if exist in name
@@ -217,11 +217,17 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
         p_namelen -= strlen(suffix);
     }
 
+    len -= strlen(suffix) + 1;
+    len -= p_namelen;
+
     // modify filename
     snprintf(pfn, len, "%.*s%s", (int)p_namelen, preferredName, suffix);
 
-    // check complete path/filename if exists
+    // "-001"
+    len -= 4;
+
     int num = 1;
+    // check complete path/filename if exists
     while (fileExists(fileName)) {
         // modify filename
         snprintf(pfn, len, "%.*s-%03d%s", (int)p_namelen, preferredName, num, suffix);
