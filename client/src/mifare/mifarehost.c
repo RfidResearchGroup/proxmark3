@@ -947,7 +947,7 @@ int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 }
 
 int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
-    return mfEmlSetMem_xt(data, blockNum, blocksCount, 16);
+    return mfEmlSetMem_xt(data, blockNum, blocksCount, MFBLOCK_SIZE);
 }
 
 int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
@@ -961,7 +961,7 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
 
     size_t size = ((size_t) blocksCount) * blockBtWidth;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(struct p))) {
-        return PM3_ESOFT;
+        return PM3_EINVARG;
     }
 
     size_t paylen = sizeof(struct p) + size;
@@ -1271,7 +1271,7 @@ int detect_classic_prng(void) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(cmd), 0, cmd, sizeof(cmd));
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "PRNG UID: Reply timeout.");
         return PM3_ETIMEOUT;
     }
@@ -1281,7 +1281,7 @@ int detect_classic_prng(void) {
         PrintAndLogEx(ERR, "error:  selecting tag failed,  can't detect prng\n");
         return PM3_ERFTRANS;
     }
-    if (!WaitForResponseTimeout(CMD_ACK, &respA, 2500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &respA, 2500) == false) {
         PrintAndLogEx(WARNING, "PRNG data: Reply timeout.");
         return PM3_ETIMEOUT;
     }

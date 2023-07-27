@@ -61,6 +61,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "protocols.h"
+#include "mifareutil.h"
 
 
 #ifdef WITH_LCD
@@ -1287,7 +1288,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t data[];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            EmlSetMemIso15693(payload->count, payload->data, payload->offset);
+            emlSet(payload->data, payload->offset, payload->count);
             break;
         }
         case CMD_HF_ISO15693_SIMULATE: {
@@ -1693,7 +1694,14 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t data[];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareEMemSet(payload->blockno, payload->blockcnt, payload->blockwidth, payload->data);
+
+            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+            // backwards compat... default bytewidth
+            if (payload->blockwidth == 0)
+                payload->blockwidth = 16;
+
+            emlSetMem_xt(payload->data, payload->blockno, payload->blockcnt, payload->blockwidth);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMGET: {
