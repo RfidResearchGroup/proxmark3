@@ -144,7 +144,7 @@ static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
 
 
 // Polling frames and configurations
-static iso14a_polling_parameters WUPA_POLLING_PARAMETERS = {
+static iso14a_polling_parameters_t WUPA_POLLING_PARAMETERS = {
     .frames = { {{ 0x52 }, 1, 7, 0} },
     .frame_count = 1,
     .extra_timeout = 0,
@@ -2523,7 +2523,7 @@ static void iso14a_set_ATS_times(const uint8_t *ats) {
 }
 
 
-static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters *polling_parameters) {
+static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters_t *polling_parameters) {
 #define WUPA_RETRY_TIMEOUT 10
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
@@ -2537,7 +2537,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters *
     uint8_t current_frame = 0;
 
     do {
-        iso14a_polling_frame *frame_parameters = &polling_parameters->frames[current_frame];
+        iso14a_polling_frame_t *frame_parameters = &polling_parameters->frames[current_frame];
 
         if (frame_parameters->last_byte_bits == 8) {
             ReaderTransmit(frame_parameters->frame, frame_parameters->frame_length, NULL);
@@ -2579,7 +2579,9 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
 // if anticollision is false, then the UID must be provided in uid_ptr[]
 // and num_cascades must be set (1: 4 Byte UID, 2: 7 Byte UID, 3: 10 Byte UID)
 // requests ATS unless no_rats is true
-int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats, iso14a_polling_parameters *polling_parameters) {
+int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr,
+                bool anticollision, uint8_t num_cascades, bool no_rats,
+                iso14a_polling_parameters_t *polling_parameters) {
 
     uint8_t resp[MAX_FRAME_SIZE] = {0}; // theoretically. A usual RATS will be much smaller
     uint8_t resp_par[MAX_PARITY_SIZE] = {0};
@@ -3033,7 +3035,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
 
             arg0 = iso14443a_select_cardEx(
                        NULL, card, NULL, true, 0, (param & ISO14A_NO_RATS),
-                       (param & ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters *)cmd : &WUPA_POLLING_PARAMETERS
+                       (param & ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters_t *)cmd : &WUPA_POLLING_PARAMETERS
                    );
             // TODO: Improve by adding a cmd parser pointer and moving it by struct length to allow combining data with polling params
             FpgaDisableTracing();

@@ -86,15 +86,15 @@ typedef struct {
     uint8_t frame_length;
     uint8_t last_byte_bits;
     uint16_t extra_delay;
-} iso14a_polling_frame;
+} PACKED iso14a_polling_frame_t;
 
 // Defines polling sequence configuration
 // 6 would be enough for 4 magsafe, 1 wupa, 1 ecp,
 typedef struct {
-    iso14a_polling_frame frames[6];
+    iso14a_polling_frame_t frames[6];
     uint8_t frame_count;
     uint16_t extra_timeout;
-} iso14a_polling_parameters;
+} PACKED iso14a_polling_parameters_t;
 
 typedef struct {
     uint8_t *response;

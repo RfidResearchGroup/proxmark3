@@ -41,14 +41,14 @@
 #include "mbedtls/ecc_point_compression.h"
 #include "mbedtls/gcm.h"
 
-static const iso14a_polling_frame WUPA_FRAME = {
+static const iso14a_polling_frame_t WUPA_FRAME = {
     .frame = { 0x52 },
     .frame_length = 1,
     .last_byte_bits = 7,
     .extra_delay = 0,
 };
 
-static const iso14a_polling_frame ECP_VAS_ONLY_FRAME = {
+static const iso14a_polling_frame_t ECP_VAS_ONLY_FRAME = {
     .frame = {0x6a, 0x01, 0x00, 0x00, 0x02, 0xe4, 0xd2},
     .frame_length = 7,
     .last_byte_bits = 8,
@@ -349,7 +349,7 @@ static int DecryptVASCryptogram(uint8_t *pidHash, uint8_t *cryptogram, size_t cr
 static int VASReader(uint8_t *pidHash, const char *url, size_t urlLen, uint8_t *cryptogram, size_t *cryptogramLen, bool verbose) {
     clearCommandBuffer();
 
-    iso14a_polling_parameters polling_parameters = {
+    iso14a_polling_parameters_t polling_parameters = {
         .frames = { WUPA_FRAME, ECP_VAS_ONLY_FRAME },
         .frame_count = 2,
         .extra_timeout = 250
