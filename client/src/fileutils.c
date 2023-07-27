@@ -175,7 +175,7 @@ static char *filenamemcopy(const char *preferredName, const char *suffix) {
 }
 
 static size_t path_size(savePaths_t a) {
-    if (a == spItemCount) {
+    if (a >= spItemCount) {
         return 0;
     }
     return strlen(g_session.defaultPaths[a]);
@@ -205,9 +205,10 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
 
     // user preference save paths
     size_t save_path_len = path_size(e_save_path);
-    if (save_path_len < FILE_PATH_SIZE ) {
-        snprintf(pfn, len, "%.*s%s", (int)save_path_len, g_session.defaultPaths[e_save_path], PATHSEP);
-        pfn += save_path_len + strlen(PATHSEP);
+    if (save_path_len && save_path_len < (FILE_PATH_SIZE - strlen(PATHSEP))) {
+        snprintf(pfn, len, "%s%s", g_session.defaultPaths[e_save_path], PATHSEP);
+        pfn += save_path_len;
+        pfn += strlen(PATHSEP);
     }
 
     // remove file extension if exist in name
