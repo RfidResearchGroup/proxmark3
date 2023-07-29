@@ -549,7 +549,7 @@ static int CmdHF14AReader(const char *Cmd) {
     bool continuous = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
-    if (!disconnectAfter == false) {
+    if (disconnectAfter == false) {
         cm |= ISO14A_NO_DISCONNECT;
     }
 
