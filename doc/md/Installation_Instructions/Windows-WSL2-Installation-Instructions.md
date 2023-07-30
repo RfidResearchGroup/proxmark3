@@ -161,6 +161,7 @@ appropriately.  Note that this may need to be run again, such as when the WSL2
 distributions have been restarted.  I don't know why ... but it's a small hiccup.
 
 ```sh
+sudo service udev restart
 sudo udevadm trigger --action=change
 ```
 
@@ -171,12 +172,6 @@ this may simply result in the following cryptic error message:
 $ sudo udevadm control --reload-rules
 [sudo] password for root:
 Failed to send reload request: No such file or directory
-```
-
-_Note that the following should **NOT** be required:_
-
-```sh
-sudo service udev restart
 ```
 
 ## Verify Device Exists
