@@ -226,11 +226,12 @@ static uint32_t get_rising_pulse_length(void) {
 
 static uint32_t get_pulse_length(edge_detection_t edge) {
 
-    if (edge == RISING_EDGE)
+    if (edge == RISING_EDGE) {
         return get_rising_pulse_length();
-    else if (edge == FALLING_EDGE)
+    }
+    if (edge == FALLING_EDGE) {
         return get_falling_pulse_length();
-
+    }
     return 0;
 }
 
@@ -327,15 +328,71 @@ static void em4x70_send_word(const uint16_t word) {
 static bool check_ack(void) {
     // returns true if signal structue corresponds to ACK, anything else is
     // counted as NAK (-> false)
-    // ACK  64 + 64
+    // ACK 64 + 64
     // NAK 64 + 48
     if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD) &&
-            check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
+        check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
         // ACK
         return true;
     }
 
     // Otherwise it was a NAK or Listen Window
+    return false;
+}
+
+static bool wait_for_ack_or_nak(uint32_t maximum_wait_ticks) {
+    uint32_t start_ticks = GetTicks();
+    uint32_t pulse_lengths[2] = {0,0};
+    //
+    // repeatedly get pulse lengths...
+    // ACK is returned when device is acknowledging receipt of data
+    // NAK is __optionally__ returned if device detected corrupt request
+    //
+    // When is find_listen_window() called?
+    // * authenticate() - before sending EM4X70_COMMAND_AUTH  and related data
+    // * send_pin()     - before sending EM4X70_COMMAND_PIN   and related data
+    // * write()        - before sending EM4X70_COMMAND_WRITE and related data 
+    // * find_em4x70_tag(), as a way to speed up detection via `lf search`
+    // * send_command_and_read(), before 
+    //
+
+
+    uint32_t pl_prior   = 0;
+    uint32_t pl_current = 0;
+    for (uint32_t current_tick = GetTicks(); current_tick - start_ticks < maximum_wait_ticks; current_tick = GetTicks()) {
+
+        // returns true if signal structue corresponds to ACK, anything else is
+        // counted as NAK (-> false)
+        //     ACK  64 + 64
+        //     NAK  64 + 48
+        //
+        //     LWIP 80 + 80 (flips polarity) 96 + 64 ...
+        //
+        // BUT... with current tolerance of 8 in check_pulse_length(), this actually tests for:
+        //     ACK [56..72] + [56..72]
+        //     NAK [56..72] + [40..56)
+        //     And with a +/- tolerance of 8, if actually value was 72, it would also match 80 or 64 (from LWIP)
+        //
+        // first signal could indicate either an ACK or NAK ... check which it is more likely to be
+        pl_prior   = pl_current;
+        pl_current = get_pulse_length(FALLING_EDGE);
+
+        // continue if prior pulse length wasn't ~= 64
+        if (!check_pulse_length(pl_prior, 2 * EM4X70_T_TAG_FULL_PERIOD)) {
+            continue; // next loop iteration
+        }
+        // continue if current pulse length doesn't indicate ACK or NAK
+        if        (pl_current >  (EM4X70_T_TAG_FULL_PERIOD + EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_TOLERANCE) { // >  64 --> continue searching
+            continue;
+        } else if (pl_current >= (EM4X70_T_TAG_FULL_PERIOD + EM4X70_T_TAG_FULL_PERIOD) - EM4X70_T_TAG_TOLERANCE) { // >= 56 --> ACK
+            return true;  // explicit ACK received
+        } else if (pl_current >= (EM4X70_T_TAG_FULL_PERIOD + EM4X70_T_TAG_HALF_PERIOD) - EM4X70_T_TAG_TOLERANCE) { // >= 48 --> NAK
+            return false; // explicit NAK received
+        } else {
+            continue;
+        }
+    }
+    // Did not detect either an ACK nor NAK in requested time
     return false;
 }
 
@@ -495,7 +552,6 @@ static int send_pin(const uint32_t pin) {
 }
 
 static int write(const uint16_t word, const uint8_t address) {
-
     // writes <word> to specified <address>
     if (find_listen_window(true)) {
 
@@ -508,8 +564,12 @@ static int write(const uint16_t word, const uint8_t address) {
         // send data word
         em4x70_send_word(word);
 
+        WDT_HIT();
+
         // Wait TWA
         WaitTicks(EM4X70_T_TAG_TWA);
+        // TODO - use WaitForAckOrNak(2*EM4X70_T_TAG_TWA + 2*EM4x70_T_TAG_FULL_CYCLE)
+        // instead of a hard-coded wait time where signal is ignored?
 
         // look for ACK sequence
         if (check_ack()) {
@@ -518,10 +578,15 @@ static int write(const uint16_t word, const uint8_t address) {
             // for saving data and should return with ACK
             WaitTicks(EM4X70_T_TAG_WEE);
             if (check_ack()) {
-
                 return PM3_SUCCESS;
+            } else {
+                Dbprintf("em4x70::write() - failed to get 2nd ACK sequence @ line %d\n", __LINE__);
             }
-        }
+        } else {
+            Dbprintf("em4x70::write() - failed to get 1st ACK sequence @ line %d\n", __LINE__);
+        } 
+    } else {
+        Dbprintf("em4x70::write() - failed to find listen window @ line %d\n", __LINE__);
     }
     return PM3_ESOFT;
 }
@@ -536,20 +601,22 @@ static bool find_listen_window(bool command) {
         80 ( 64 + 16 )
         Flip Polarity
         96 ( 64 + 32 )
-        64 ( 32 + 16 +16 )*/
+        64 ( 32 + 16 +16 )
+        */
 
-        if (check_pulse_length(get_pulse_length(RISING_EDGE), (2 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
-                check_pulse_length(get_pulse_length(RISING_EDGE), (2 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
-                check_pulse_length(get_pulse_length(FALLING_EDGE), (2 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD) &&
-                check_pulse_length(get_pulse_length(FALLING_EDGE),         EM4X70_T_TAG_FULL_PERIOD + (2 * EM4X70_T_TAG_HALF_PERIOD))) {
+        if (check_pulse_length(get_pulse_length(RISING_EDGE),  (2 * EM4X70_T_TAG_FULL_PERIOD) +      EM4X70_T_TAG_HALF_PERIOD ) &&
+            check_pulse_length(get_pulse_length(RISING_EDGE),  (2 * EM4X70_T_TAG_FULL_PERIOD) +      EM4X70_T_TAG_HALF_PERIOD ) &&
+            check_pulse_length(get_pulse_length(FALLING_EDGE), (2 * EM4X70_T_TAG_FULL_PERIOD) +      EM4X70_T_TAG_FULL_PERIOD ) &&
+            check_pulse_length(get_pulse_length(FALLING_EDGE),      EM4X70_T_TAG_FULL_PERIOD  + (2 * EM4X70_T_TAG_HALF_PERIOD))) {
 
             if (command) {
                 /* Here we are after the 64 duration edge.
-                    *   em4170 says we need to wait about 48 RF clock cycles.
-                    *   depends on the delay between tag and us
-                    *
-                    *   I've found between 4-5 quarter periods (32-40) works best
-                    */
+                 *   em4170 says we need to wait about 48 RF clock cycles.
+                 *   depends on the delay between tag and us
+                 *
+                 *   I've found between 4-5 quarter periods (32-40) works best
+                 */
+                // TODO: make the time to wait after detection of LWIP configurable to account for antenna designs?
                 WaitTicks(4 * EM4X70_T_TAG_QUARTER_PERIOD);
                 // Send RM Command
                 em4x70_send_bit(0);
@@ -766,9 +833,11 @@ void em4x70_write(em4x70_data_t *etd, bool ledcontrol) {
     init_tag();
     em4x70_setup_read();
 
-    // Find the Tag
-    if (get_signalproperties() && find_em4x70_tag()) {
-
+    if (!get_signalproperties()) {
+        Dbprintf("Failed to get signal properties @ line %d\n", __LINE__);
+    } else if (!find_em4x70_tag()) {
+        Dbprintf("Failed to find em4x70_tag @ line %d\n", __LINE__);
+    } else {
         // Write
         status = write(etd->word, etd->address) == PM3_SUCCESS;
 
@@ -779,7 +848,6 @@ void em4x70_write(em4x70_data_t *etd, bool ledcontrol) {
                 em4x70_read_um2();
             }
         }
-
     }
 
     StopTicks();
@@ -1203,4 +1271,7 @@ void em4x70_authbranch(em4x70_authbranch_t *abd, bool ledcontrol) {
     return;
 }
 
-
+void em4x70_debug_level(em4x70_debug_options_t *etd, bool ledcontrol) {
+    reply_ng(CMD_LF_EM4X70_DEBUG_LEVEL, PM3_ENOTIMPL, NULL, 0);
+    return;
+}

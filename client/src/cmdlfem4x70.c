@@ -48,6 +48,7 @@ static command_t CommandTable[] = {
     {"authvars",   CmdEM4x70AuthVars,   IfPm3EM4x70,     "Show trivial variations from known-good {k, rnd, frn} set"},
     {"writepin",   CmdEM4x70WritePIN,   IfPm3EM4x70,     "Write PIN"},
     {"writekey",   CmdEM4x70WriteKey,   IfPm3EM4x70,     "Write Crypt Key"},
+    {"debug",      CmdEM4x70DebugLevel, IfPm3EM4x70,     "Set EM4x70 specific debug options"},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -281,7 +282,7 @@ int CmdEM4x70Write(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    PrintAndLogEx(FAILED, "Writing " _RED_("Failed"));
+    PrintAndLogEx(FAILED, "Writing " _RED_("Failed") " status %" PRId16 "\n", resp.status);
     return PM3_ESOFT;
 }
 
@@ -1069,7 +1070,7 @@ static int16_t get_variations_and_dump_output(const em4x70_authbranch_t *data) {
                   "{ \"N\": \"%014" PRIX64 "\","
                   " \"K\": \"%016"  PRIX64 "%08" PRIX32 "\","
                   " \"Ac\": \"%08"  PRIX32 "\","
-                  " \"Ats\": ["
+                  " \"At\": ["
                   " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
                   " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
                   " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
@@ -1077,7 +1078,7 @@ static int16_t get_variations_and_dump_output(const em4x70_authbranch_t *data) {
                   " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
                   " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
                   " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
-                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\"] },",
+                  " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\"] }",
                   rnd, k_high64, k_low32, frn,
                   x.native_ac[ 0], x.native_ac[ 1], x.native_ac[ 2], x.native_ac[ 3],
                   x.native_ac[ 4], x.native_ac[ 5], x.native_ac[ 6], x.native_ac[ 7],
@@ -1577,7 +1578,7 @@ int CmdEM4x70AuthVars(const char *Cmd) {
                   "{ \"N\": \"%014" PRIX64 "\","
                   " \"K\": \"%016"  PRIX64 "%08" PRIX32 "\","
                   " \"Ac\": \"%08"  PRIX32 "\","
-                  " \"Ats\": ["
+                  " \"At\": ["
                   " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
                   " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
                   " \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", \"%06" PRIX32 "\", "
@@ -1635,4 +1636,142 @@ int CmdEM4x70AuthVars(const char *Cmd) {
 //     return status;
 // }
 
+static bool Parse_CmdEM4x70DebugLevel(const char *Cmd, em4x70_debug_options_t *debug_options) {
+    bool failedArgsParsing = false;
+    memset(debug_options, 0, sizeof(em4x70_debug_options_t));
 
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x70 debug",
+                  "Sets em4x70 specific debug options.\n"
+                  "NOTE: Command 0x0263 == CMD_LF_EM4X70_AUTH\n"
+                  "NOTE: Flags 0x8000 == Function Entry / Function Exit\n"
+                  "\n",
+                  "lf em 4x70 debug -l 0 -f 0\n"
+                  "lf em 4x70 debug -l 5 -c 0263\n"
+                  "lf em 4x70 debug --level 5 --command 0263\n"
+                  "lf em 4x70 debug --level 3 --flags 8000\n"
+                  "lf em 4x70 debug --level 2 --flags 8000 --command 0263\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("l", "level",        "<hex>",       "Set debug level (hex value)"),             // 1
+        arg_str1("f", "flags",        "<hex>",       "Set flags (e.g., which parts to debug)"),  // 2
+        arg_str1("c", "command",      "<hex>",       "Use settings only for specified command"), // 3
+        arg_lit0("t", "timings",                     "Dump recent timings"),                     // 4
+        arg_param_end
+    };
+
+    if (CLIParserParseString(ctx, Cmd, argtable, arg_getsize(argtable), true)) {
+        failedArgsParsing = true;
+    } else {
+        bool at_least_one_option_exists = false;
+        if (true) { // level   -- Essentially CLIParamHexToBuf_BigEndian, allowing variable-length hex from client
+            enum {
+                option_index = 1,  // where is "level" in the argtable?
+                max_length = 4,    // how many bytes for this buffer?
+            };
+            int parameter_bytes = 0;  // how many bytes converted from hex?
+            uint8_t* buffer = &(debug_options->be_level[0]);
+
+            // since it's a string argument type, length == 0 means caller did not provide the value
+            if (CLIParamHexToBuf(arg_get_str(ctx, option_index), buffer, max_length, &parameter_bytes)) {
+                // parse failed (different than non-existent parameter)
+                failedArgsParsing = true;
+            } else if (parameter_bytes == 0) {
+                // optional parameter was *not* provided
+            } else if (parameter_bytes > max_length) {
+                failedArgsParsing = true; // should never occur
+            } else {
+                // some hex bytes provided ... shift the result and zero-fill so it's a single big-endian value
+                // first, copy/align existing bytes to end of buffer
+                // memmove() handles potentially overlapping buffers (and equal pointers too)
+                memmove(&(buffer[max_length-parameter_bytes]), &(buffer[0]), parameter_bytes);
+                // then, zero-fill the starting bytes (memset() can be called with size of zero)
+                memset(&(buffer[0]), 0, max_length - parameter_bytes);
+
+                debug_options->is_setting_level = 1;
+                at_least_one_option_exists = true;
+            }
+        }
+        if (true) { // flags   -- Essentially CLIParamHexToBuf_BigEndian, allowing variable-length hex from client
+            enum {
+                option_index = 2,  // where is "flags" in the argtable?
+                max_length = 4,    // how many bytes for this buffer?
+            };
+            int parameter_bytes = 0;  // how many bytes converted from hex?
+            uint8_t* buffer = &(debug_options->be_flags[0]);
+
+            // since it's a string argument type, length == 0 means caller did not provide the value
+            if (CLIParamHexToBuf(arg_get_str(ctx, option_index), buffer, max_length, &parameter_bytes)) {
+                // parse failed (different than non-existent parameter)
+                failedArgsParsing = true;
+            } else if (parameter_bytes == 0) {
+                // optional parameter was *not* provided
+            } else if (parameter_bytes > max_length) {
+                failedArgsParsing = true; // should never occur
+            } else {
+                // some hex bytes provided ... shift the result and zero-fill so it's a single big-endian value
+                // first, copy/align existing bytes to end of buffer
+                // memmove() handles potentially overlapping buffers (and equal pointers too)
+                memmove(&(buffer[max_length-parameter_bytes]), &(buffer[0]), parameter_bytes);
+                // then, zero-fill the starting bytes (memset() can be called with size of zero)
+                memset(&(buffer[0]), 0, max_length - parameter_bytes);
+
+                debug_options->is_setting_flags = 1;
+                at_least_one_option_exists = true;
+            }
+        }
+        if (true) { // command -- Essentially CLIParamHexToBuf_BigEndian, allowing variable-length hex from client
+            enum {
+                option_index = 1,  // where is "level" in the argtable?
+                max_length = 2,    // how many bytes for this buffer?
+            };
+            int parameter_bytes = 0;  // how many bytes converted from hex?
+            uint8_t* buffer = &(debug_options->be_single_command_code[0]);
+
+            // since it's a string argument type, length == 0 means caller did not provide the value
+            if (CLIParamHexToBuf(arg_get_str(ctx, option_index), buffer, max_length, &parameter_bytes)) {
+                // parse failed (different than non-existent parameter)
+                failedArgsParsing = true;
+            } else if (parameter_bytes == 0) {
+                // optional parameter was *not* provided
+            } else if (parameter_bytes > max_length) {
+                failedArgsParsing = true; // should never occur
+            } else {
+                // some hex bytes provided ... shift the result and zero-fill so it's a single big-endian value
+                // first, copy/align existing bytes to end of buffer
+                // memmove() handles potentially overlapping buffers (and equal pointers too)
+                memmove(&(buffer[max_length-parameter_bytes]), &(buffer[0]), parameter_bytes);
+                // then, zero-fill the starting bytes (memset() can be called with size of zero)
+                memset(&(buffer[0]), 0, max_length - parameter_bytes);
+
+                debug_options->is_only_for_single_command_code = 1;
+                at_least_one_option_exists = true;
+            }
+        }
+        if (true) { // timings -- Essentially just checks if arg was provided
+            int count = arg_get_lit(ctx, 4);
+            if (count != 0) {
+                debug_options->is_request_to_dump_recent_timings = 1;
+                at_least_one_option_exists = true;
+            }
+        }
+        if (!at_least_one_option_exists) {
+            failedArgsParsing = true;
+        }
+    }
+    // always need to free the ctx
+    CLIParserFree(ctx);
+    
+    return failedArgsParsing ? false : true;
+}
+
+int CmdEM4x70DebugLevel(const char *Cmd) {
+    em4x70_debug_options_t debug_options;
+    if (!Parse_CmdEM4x70DebugLevel(Cmd, &debug_options)) {
+        return PM3_EINVARG;
+    }
+    // TODO: send to ProxMark3 device
+    return PM3_ENOTIMPL;
+}

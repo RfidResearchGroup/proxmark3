@@ -33,6 +33,7 @@ int CmdEM4x70AuthBranch(const char *Cmd);
 int CmdEM4x70AuthVars(const char *Cmd);
 int CmdEM4x70WritePIN(const char *Cmd);
 int CmdEM4x70WriteKey(const char *Cmd);
+int CmdEM4x70DebugLevel(const char *Cmd);
 
 int em4x70_info(void);
 bool detect_4x70_block(void);

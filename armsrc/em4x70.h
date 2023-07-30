@@ -38,5 +38,6 @@ void em4x70_auth(em4x70_data_t *etd, bool ledcontrol);
 void em4x70_write_pin(em4x70_data_t *etd, bool ledcontrol);
 void em4x70_write_key(em4x70_data_t *etd, bool ledcontrol);
 void em4x70_authbranch(em4x70_authbranch_t *etd, bool ledcontrol);
+void em4x70_debug_level(em4x70_debug_options_t *etd, bool ledcontrol);
 
 #endif /* EM4x70_H */

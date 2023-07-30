@@ -493,6 +493,7 @@ typedef struct {
 #define CMD_LF_EM4X70_BRUTE                                               0x0266
 #define CMD_LF_EM4X70_AUTHBRANCH                                          0x0267
 #define CMD_LF_EM4X70_AUTHEXPAND32                                        0x0268
+#define CMD_LF_EM4X70_DEBUG_LEVEL                                         0x0269
 
 // ZX8211
 #define CMD_LF_ZX_READ                                                    0x0270

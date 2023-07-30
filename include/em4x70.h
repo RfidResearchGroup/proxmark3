@@ -25,6 +25,17 @@
 #define EM4X70_PIN_WORD_LOWER 10
 #define EM4X70_PIN_WORD_UPPER 11
 
+/// @brief Enable advanced debugging options for em4x70 commands
+typedef struct {
+    uint8_t be_level[4];                       // uint32_t native -- use MemBeToUint4byte()
+    uint8_t be_flags[4];                       // uint32_t native -- use MemBeToUint4byte()
+    uint8_t be_single_command_code[2];         // uint16_t native -- use MemBeToUint2byte()
+    uint8_t is_setting_level;                  // bool     native
+    uint8_t is_setting_flags;                  // bool     native
+    uint8_t is_only_for_single_command_code;   // bool     native
+    uint8_t is_request_to_dump_recent_timings; // bool     native
+} em4x70_debug_options_t;
+
 typedef struct {
     bool parity;
 
@@ -113,8 +124,8 @@ enum { EM4X70_MAXIMUM_KEY_DIVERGENCE_BITS = 31 };
 
 // ALL VALUES IN THIS STRUCTURE ARE STORED INTERNALLY AS BIG-ENDIAN VALUES (for consistency)
 // This structures uses only `uint8_t`, to ensure size does not vary across client/compilation.
-//     e.g., sizeof(enum) is implementation dependent, and actually causes problems today
 //     e.g., sizeof(bool) is implementation dependent
+//     e.g., sizeof(enum) is implementation dependent, and would cause issues today (x64 vs. ARM)
 //
 // Users must convert any multi-byte values to/from native form.
 // See, for example, the following functions:

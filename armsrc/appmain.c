@@ -1246,6 +1246,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x70_authbranch((em4x70_authbranch_t *)packet->data.asBytes, true);
             break;
         }
+        case CMD_LF_EM4X70_DEBUG_LEVEL: {
+            em4x70_debug_level((em4x70_debug_options_t *)packet->data.asBytes, true);
+            break;
+        }
 #endif
 
 #ifdef WITH_ZX8211
