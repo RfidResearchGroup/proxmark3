@@ -1051,7 +1051,7 @@ static int16_t get_variations_and_dump_output(const em4x70_authbranch_t *data) {
 
     uint64_t rnd      = MemBeToUint7byte(&(data->phase1_input.be_rnd[0]));
     uint64_t k_high64 = MemBeToUint8byte(&(data->phase2_output.be_key[0]));
-    uint64_t k_low32  = MemBeToUint4byte(&(data->phase2_output.be_key[8]));
+    uint32_t k_low32  = MemBeToUint4byte(&(data->phase2_output.be_key[8]));
     uint32_t frn      = MemBeToUint4byte(&(data->phase3_output.be_successful_frn[0]));
 
     Uint7byteToMemBe(&(etd.rnd[0]), rnd);
