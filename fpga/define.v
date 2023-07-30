@@ -22,8 +22,8 @@
 //-----------------------------------------------------------------------------
 
 /*
- Communication between ARM / FPGA is done inside armsrc/fpgaloader.c see: function FpgaSendCommand()
- Send 16 bit command / data pair to FPGA with the bit format:
+  Communication between ARM / FPGA is done inside armsrc/fpgaloader.c see: function FpgaSendCommand()
+  Send 16 bit command / data pair to FPGA with the bit format:
 
 +------ frame layout circa 2020 ------------------+
 | 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0 |
@@ -44,7 +44,9 @@
 +-------------------------------------------------+
 
   shift_reg receive this 16bit frame
+*/
 
+/* LF bitstream
   LF command
   ----------
   shift_reg[15:12] == 4bit command
@@ -56,12 +58,12 @@
   shift_reg[11:0] == 12bit data
   lf data is divided into MAJOR MODES and configuration values.
 
-  The major modes uses 3bits (0,1,2,3,7 | 000, 001, 010, 011, 111)
+  The LF major modes uses 3bits (0,1,2,3,7 | 000, 001, 010, 011, 111)
     000 FPGA_MAJOR_MODE_LF_READER        = Act as LF reader (modulate)
     001 FPGA_MAJOR_MODE_LF_EDGE_DETECT   = Simulate LF
     010 FPGA_MAJOR_MODE_LF_PASSTHRU      = Passthrough mode, CROSS_LO line connected to SSP_DIN. SSP_DOUT logic level controls if we modulate / listening
     011 FPGA_MAJOR_MODE_LF_ADC           = refactor hitag2, clear ADC sampling
-    111 FPGA_MAJOR_MODE_OFF              = turn off sampling.
+    111 FPGA_MAJOR_MODE_OFF              = [common] turn off sampling.
 
   Each one of this major modes can have options. Currently these two major modes uses options.
    - FPGA_MAJOR_MODE_LF_READER
@@ -99,11 +101,13 @@
 `define FPGA_CMD_SET_EDGE_DETECT_THRESHOLD          3
 `define FPGA_CMD_TRACE_ENABLE                       2
 
-// Major modes
+// Major modes - LF
 `define FPGA_MAJOR_MODE_LF_READER                   0
 `define FPGA_MAJOR_MODE_LF_EDGE_DETECT              1
 `define FPGA_MAJOR_MODE_LF_PASSTHRU                 2
 `define FPGA_MAJOR_MODE_LF_ADC                      3
+
+// Major Modes - HF and HF15
 `define FPGA_MAJOR_MODE_HF_READER                   0
 `define FPGA_MAJOR_MODE_HF_SIMULATOR                1
 `define FPGA_MAJOR_MODE_HF_ISO14443A                2
@@ -119,7 +123,8 @@
 `define FPGA_LF_EDGE_DETECT_READER_FIELD            1
 `define FPGA_LF_EDGE_DETECT_TOGGLE_MODE             2
 
-// Options for the generic HF reader
+
+// Options for the generic HF / HF15 reader
 `define FPGA_HF_READER_MODE_RECEIVE_IQ              0
 `define FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE       1
 `define FPGA_HF_READER_MODE_RECEIVE_PHASE           2
@@ -135,14 +140,14 @@
 `define FPGA_HF_READER_SUBCARRIER_212_KHZ           2
 `define FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ     3
 
-// Options for the HF simulated tag, how to modulate
+// Options for the HF/HF15 simulated tag, how to modulate
 `define FPGA_HF_SIMULATOR_NO_MODULATION             0
 `define FPGA_HF_SIMULATOR_MODULATE_BPSK             1
 `define FPGA_HF_SIMULATOR_MODULATE_212K             2
 `define FPGA_HF_SIMULATOR_MODULATE_424K             4
 `define FPGA_HF_SIMULATOR_MODULATE_424K_8BIT        5
 
-// Options for ISO14443A
+// Options for HF ISO14443A
 `define FPGA_HF_ISO14443A_SNIFFER                   0
 `define FPGA_HF_ISO14443A_TAGSIM_LISTEN             1
 `define FPGA_HF_ISO14443A_TAGSIM_MOD                2
