@@ -526,7 +526,7 @@ int infoLTO(bool verbose) {
 }
 
 static int CmdHfLTOList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf lto", "lto");
+    return CmdTraceListAlias(Cmd, "hf lto", "lto -c");
 }
 
 int rdblLTO(uint8_t st_blk, uint8_t end_blk, bool verbose) {

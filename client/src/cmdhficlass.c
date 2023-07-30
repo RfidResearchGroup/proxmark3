@@ -645,7 +645,7 @@ void print_picopass_header(const picopass_hdr_t *hdr) {
 }
 
 static int CmdHFiClassList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf iclass", "iclass");
+    return CmdTraceListAlias(Cmd, "hf iclass", "iclass -c");
 }
 
 static int CmdHFiClassSniff(const char *Cmd) {

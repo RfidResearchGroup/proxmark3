@@ -1810,7 +1810,7 @@ static int CmdHFMFPNDEFWrite(const char *Cmd) {
 }
 
 static int CmdHFMFPList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf mfp", "mfp");
+    return CmdTraceListAlias(Cmd, "hf mfp", "mfp -c");
 }
 
 static command_t CommandTable[] = {
