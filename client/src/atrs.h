@@ -2328,6 +2328,7 @@ const static atr_t AtrTable[] = {
     { "3B959640F001130A0A1D", "xcrypt (Pay TV)" },
     { "3B959640F00F100A096A", "Zain Usim Card (Telecommunication)\nwww.qariya.com" },
     { "3B959680B1FE551FC7477261636513", "IClass SE Processor (Other)\nhttps://www.hidglobal.com/products/embedded-modules/iclass-se/sio-processor" },
+    { "3B90969181B1FE551FC7D4", "IClass SE Processor (Other)\nhttps://www.hidglobal.com/products/embedded-modules/iclass-se/sio-processor"},
     { "3B9596C0F01FC20F100A0A16", "viettel (Telecommunication)" },
     { "3B959740F01A160A1941", "SG50 (Samsung Chip) (Telecommunication)" },
     { "3B96004121920000622433339000", "Ukrainian Telecommunications Operator Kyivstar (old simcard) (Telecommunication)\nhttps://kyivstar.ua/uk/mm" },
