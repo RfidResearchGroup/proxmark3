@@ -31,6 +31,8 @@ static em4x70_tag_t tag = { 0 };
 
 // EM4170 requires a parity bit on commands, other variants do not.
 static bool command_parity = true;
+#define USE_WAIT_FOR_ACK_OR_NAK false
+
 
 // Conversion from Ticks to RF periods
 // 1 us = 1.5 ticks
@@ -326,6 +328,16 @@ static void em4x70_send_word(const uint16_t word) {
 }
 
 static bool check_ack(void) {
+    // TODO -- REMOVE THIS FUNCTION.
+    // This function is called from send_pin() and write().
+    // In each case, the function is called after a hard-coded delay.
+    // However, the tag may return an ACK or NAK before the delay is complete.
+    // In that case, the ACK/NAK will be missed.
+    // 
+    // The combination of delay + waiting for ACK/NAK should occur
+    // as a single operation ... see wait_for_ack_or_nak() below.
+
+
     // returns true if signal structue corresponds to ACK, anything else is
     // counted as NAK (-> false)
     // ACK 64 + 64
@@ -341,12 +353,16 @@ static bool check_ack(void) {
 }
 
 static bool wait_for_ack_or_nak(uint32_t maximum_wait_ticks) {
-    uint32_t start_ticks = GetTicks();
-    uint32_t pulse_lengths[2] = {0,0};
-    //
-    // repeatedly get pulse lengths...
-    // ACK is returned when device is acknowledging receipt of data
-    // NAK is __optionally__ returned if device detected corrupt request
+    // This allows caller to specify delay until the ACK is expected, which makes more sense.
+    uint32_t actual_max_ticks = maximum_wait_ticks + (4 * EM4X70_T_TAG_FULL_PERIOD);
+
+    // If an ACK is detected within actual max ticks, returns TRUE.
+    // If a  NAK is detected within actual max ticks, returns FALSE.
+    // If the actual max ticks is exceeded, returns FALSE.
+
+    // Need to update TWO locations to use this code:
+    // * write()    - 2x ... after write command, and after TEE delay
+    // * send_pin() - after sending the whole pin
     //
     // When is find_listen_window() called?
     // * authenticate() - before sending EM4X70_COMMAND_AUTH  and related data
@@ -356,10 +372,17 @@ static bool wait_for_ack_or_nak(uint32_t maximum_wait_ticks) {
     // * send_command_and_read(), before 
     //
 
+    uint32_t start_ticks = GetTicks();
+
+    //
+    // repeatedly get pulse lengths...
+    // ACK is returned  when tag is acknowledging receipt of data
+    // NAK is __optionally__ returned by tag if it detected corrupt request
+    //
 
     uint32_t pl_prior   = 0;
     uint32_t pl_current = 0;
-    for (uint32_t current_tick = GetTicks(); current_tick - start_ticks < maximum_wait_ticks; current_tick = GetTicks()) {
+    for (uint32_t current_tick = GetTicks(); current_tick - start_ticks < actual_max_ticks; current_tick = GetTicks()) {
 
         // returns true if signal structue corresponds to ACK, anything else is
         // counted as NAK (-> false)
@@ -382,11 +405,11 @@ static bool wait_for_ack_or_nak(uint32_t maximum_wait_ticks) {
             continue; // next loop iteration
         }
         // continue if current pulse length doesn't indicate ACK or NAK
-        if        (pl_current >  (EM4X70_T_TAG_FULL_PERIOD + EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_TOLERANCE) { // >  64 --> continue searching
+        if        (pl_current >  (EM4X70_T_TAG_FULL_PERIOD + EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_TOLERANCE) { // >   72 --> continue searching
             continue;
-        } else if (pl_current >= (EM4X70_T_TAG_FULL_PERIOD + EM4X70_T_TAG_FULL_PERIOD) - EM4X70_T_TAG_TOLERANCE) { // >= 56 --> ACK
+        } else if (pl_current >= (EM4X70_T_TAG_FULL_PERIOD + EM4X70_T_TAG_FULL_PERIOD) - EM4X70_T_TAG_TOLERANCE) { // 56..71 --> ACK
             return true;  // explicit ACK received
-        } else if (pl_current >= (EM4X70_T_TAG_FULL_PERIOD + EM4X70_T_TAG_HALF_PERIOD) - EM4X70_T_TAG_TOLERANCE) { // >= 48 --> NAK
+        } else if (pl_current >= (EM4X70_T_TAG_FULL_PERIOD + EM4X70_T_TAG_HALF_PERIOD) - EM4X70_T_TAG_TOLERANCE) { // 40..55 --> NAK
             return false; // explicit NAK received
         } else {
             continue;
@@ -528,30 +551,42 @@ static int send_pin(const uint32_t pin) {
             em4x70_send_byte((pin >> (i * 8)) & 0xff);
         }
 
-        // Wait TWALB (write access lock bits)
-        WaitTicks(EM4X70_T_TAG_TWALB);
-
-        // <-- Receive ACK
-        if (check_ack()) {
-
-            // <w> Writes Lock Bits
-            WaitTicks(EM4X70_T_TAG_WEE);
-            // <-- Receive header + ID
-            uint8_t tag_id[EM4X70_MAX_RECEIVE_LENGTH];
-            int num  = em4x70_receive(tag_id, 32);
-            if (num < 32) {
-                Dbprintf("Invalid ID Received");
-                return PM3_ESOFT;
+        if (USE_WAIT_FOR_ACK_OR_NAK) {
+            if (!wait_for_ack_or_nak(2*EM4X70_T_TAG_TWALB)) {
+                Dbprintf("em4x70::send_pin() - failed to get 1st ACK sequence @ line %d\n", __LINE__);
+            } else if (!wait_for_ack_or_nak(EM4X70_T_TAG_WEE)) {
+                Dbprintf("em4x70::send_pin() - failed to get 2nd ACK sequence @ line %d\n", __LINE__);
+            } else {
+                return PM3_SUCCESS;
             }
-            bits2bytes(tag_id, num, &tag.data[4]);
-            return PM3_SUCCESS;
+        } else {
+            // Wait TWALB (write access lock bits)
+            WaitTicks(EM4X70_T_TAG_TWALB);
+
+            // <-- Receive ACK
+            if (check_ack()) {
+
+                // <w> Writes Lock Bits
+                WaitTicks(EM4X70_T_TAG_WEE);
+                // <-- Receive header + ID
+                uint8_t tag_id[EM4X70_MAX_RECEIVE_LENGTH];
+                int num  = em4x70_receive(tag_id, 32);
+                if (num < 32) {
+                    Dbprintf("Invalid ID Received");
+                    return PM3_ESOFT;
+                }
+                bits2bytes(tag_id, num, &tag.data[4]);
+                return PM3_SUCCESS;
+            }
         }
+
     }
 
     return PM3_ESOFT;
 }
 
 static int write(const uint16_t word, const uint8_t address) {
+
     // writes <word> to specified <address>
     if (find_listen_window(true)) {
 
@@ -567,24 +602,30 @@ static int write(const uint16_t word, const uint8_t address) {
         WDT_HIT();
 
         // Wait TWA
-        WaitTicks(EM4X70_T_TAG_TWA);
-        // TODO - use WaitForAckOrNak(2*EM4X70_T_TAG_TWA + 2*EM4x70_T_TAG_FULL_CYCLE)
-        // instead of a hard-coded wait time where signal is ignored?
-
-        // look for ACK sequence
-        if (check_ack()) {
-
-            // now EM4x70 needs EM4X70_T_TAG_TWEE (EEPROM write time)
-            // for saving data and should return with ACK
-            WaitTicks(EM4X70_T_TAG_WEE);
-            if (check_ack()) {
-                return PM3_SUCCESS;
-            } else {
+        if (USE_WAIT_FOR_ACK_OR_NAK) {
+            if (!wait_for_ack_or_nak(2*EM4X70_T_TAG_TWA)) {
+                Dbprintf("em4x70::write() - failed to get 1st ACK sequence @ line %d\n", __LINE__);
+            } else if (!wait_for_ack_or_nak(EM4X70_T_TAG_WEE)) {
                 Dbprintf("em4x70::write() - failed to get 2nd ACK sequence @ line %d\n", __LINE__);
+            } else {
+                return PM3_SUCCESS;
             }
         } else {
-            Dbprintf("em4x70::write() - failed to get 1st ACK sequence @ line %d\n", __LINE__);
-        } 
+            WaitTicks(EM4X70_T_TAG_TWA);
+            // look for ACK sequence
+            if (check_ack()) {
+                // now EM4x70 needs EM4X70_T_TAG_TWEE (EEPROM write time)
+                // for saving data and should return with ACK
+                WaitTicks(EM4X70_T_TAG_WEE);
+                if (check_ack()) {
+                    return PM3_SUCCESS;
+                } else {
+                    Dbprintf("em4x70::write() - failed to get 2nd ACK sequence @ line %d\n", __LINE__);
+                }
+            } else {
+                Dbprintf("em4x70::write() - failed to get 1st ACK sequence @ line %d\n", __LINE__);
+            } 
+        }
     } else {
         Dbprintf("em4x70::write() - failed to find listen window @ line %d\n", __LINE__);
     }
