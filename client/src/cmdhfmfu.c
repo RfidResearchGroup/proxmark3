@@ -4673,7 +4673,7 @@ static int CmdHF14AMfuView(const char *Cmd) {
 }
 
 static int CmdHF14AMfuList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf 14a", "14a");
+    return CmdTraceListAlias(Cmd, "hf 14a", "14a -c");
 }
 
 

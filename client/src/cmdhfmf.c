@@ -6736,7 +6736,7 @@ static int CmdHFMFPersonalize(const char *Cmd) {
 }
 
 static int CmdHF14AMfList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf mf", "mf");
+    return CmdTraceListAlias(Cmd, "hf mf", "mf -c");
 }
 
 static int CmdHf14AGen3UID(const char *Cmd) {

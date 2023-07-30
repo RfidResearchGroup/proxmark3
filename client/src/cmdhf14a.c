@@ -232,7 +232,7 @@ static uint8_t gs_frames_num = 0;
 static uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
 static int CmdHF14AList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf 14a", "14a");
+    return CmdTraceListAlias(Cmd, "hf 14a", "14a -c");
 }
 
 int hf14a_getconfig(hf14a_config *config) {

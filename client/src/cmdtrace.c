@@ -1176,7 +1176,7 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
     CLIParserFree(ctx);
 
     char args[128] = {0};
-    snprintf(args, sizeof(args), "-c -t %s ", protocol);
+    snprintf(args, sizeof(args), "-t %s ", protocol);
     strncat(args, Cmd, sizeof(args) - strlen(args) - 1);
     return CmdTraceList(args);
 }
