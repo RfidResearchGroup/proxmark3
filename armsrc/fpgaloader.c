@@ -621,6 +621,7 @@ void switch_off(void) {
     }
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    // NOTE: FPGA_BITSTREAM_HF_FELICA does not appear to setup SSC DMA, even though it's also HF
     if (downloaded_bitstream == FPGA_BITSTREAM_HF || downloaded_bitstream == FPGA_BITSTREAM_HF_15) {
         FpgaDisableSscDma();
     }
