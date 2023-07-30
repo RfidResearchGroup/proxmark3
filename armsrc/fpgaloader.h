@@ -50,6 +50,8 @@
 #define FPGA_BITSTREAM_HF 2
 #define FPGA_BITSTREAM_HF_FELICA 3
 #define FPGA_BITSTREAM_HF_15 4
+#define FPGA_BITSTREAM_MIN_VALID 1
+#define FPGA_BITSTREAM_MAX_VALID 4
 
 // Definitions for the FPGA commands.
 

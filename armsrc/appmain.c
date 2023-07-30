@@ -786,7 +786,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_SET_FPGAMODE: {
             uint8_t mode = packet->data.asBytes[0];
-            if (mode >= FPGA_BITSTREAM_LF && mode <= FPGA_BITSTREAM_HF_15) {
+            if (mode >= FPGA_BITSTREAM_MIN_VALID && mode <= FPGA_BITSTREAM_MAX_VALID) {
                 FpgaDownloadAndGo(mode);
                 reply_ng(CMD_SET_FPGAMODE, PM3_SUCCESS, NULL, 0);
             }
