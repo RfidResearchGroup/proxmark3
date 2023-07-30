@@ -2,7 +2,7 @@
 <a id="top"></a>
 
 # Table of Contents
-- [Notes on ARM & FPGA communications](#notes-on-arm--fpga-communications)
+- [Notes on ARM \& FPGA communications](#notes-on-arm--fpga-communications)
 - [Table of Contents](#table-of-contents)
 - [INTERFACE FROM THE ARM TO THE FPGA](#interface-from-the-arm-to-the-fpga)
   - [FPGA](#fpga)
@@ -110,7 +110,13 @@ ARM, send a 16bit configuration with fits the select major mode.
 
     // 8, 16 or 32 bits per transfer, no loopback, MSB first, 1 transfer per sync
     // pulse, no output sync
-    if ((FPGA_mode & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_READER && FpgaGetCurrent() == FPGA_BITSTREAM_HF) {
+    if (((fpga_mode & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_READER ||
+         (fpga_mode & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_FSK_READER
+        ) &&
+        (FpgaGetCurrent() == FPGA_BITSTREAM_HF ||
+         FpgaGetCurrent() == FPGA_BITSTREAM_HF_15
+        )
+       ) {
         AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
     } else {
         AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
