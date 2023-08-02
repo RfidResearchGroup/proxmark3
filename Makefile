@@ -39,7 +39,7 @@ INSTALLSCRIPTS=pm3 pm3-flash pm3-flash-all pm3-flash-bootrom pm3-flash-fullimage
 INSTALLSHARES=tools/jtag_openocd traces
 INSTALLDOCS=doc/*.md doc/md
 
-install: all common/install
+install: common/install
 
 common/install:
 	$(info [@] Installing common resources to $(MYDESTDIR)$(PREFIX)...)
@@ -170,7 +170,7 @@ client/%: FORCE cleanifplatformchanged
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C client $(patsubst client/%,%,$@) DESTDIR=$(MYDESTDIR)
 recovery/all: bootrom/all armsrc/all
-recovery/install: bootrom/all armsrc/all
+recovery/install: bootrom/install armsrc/install
 recovery/%: FORCE cleanifplatformchanged
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C recovery $(patsubst recovery/%,%,$@) DESTDIR=$(MYDESTDIR)
