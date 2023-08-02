@@ -820,7 +820,6 @@ bool WaitForResponse(uint32_t cmd, PacketResponseNG *response) {
 bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
 
     if (dest == NULL) return false;
-    if (bytes == 0) return true;
 
     PacketResponseNG resp;
     if (response == NULL) {
@@ -838,6 +837,9 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
     resp.oldarg[1] = 0;
     resp.oldarg[2] = 0;
     memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
+
+    if (bytes == 0) return true;
+
 
     // clear
     clearCommandBuffer();
