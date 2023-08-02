@@ -65,13 +65,17 @@ typedef struct {
 } PACKED iso14b_raw_cmd_t;
 
 
-#define US_TO_SSP(x)   ( (uint32_t)((x) * 3.39) )
-#define SSP_TO_US(x)   ( (uint32_t)((x) / 3.39) )
+#define US_TO_SSP(x)   ( (int32_t)((x) * 3.39) )
+#define SSP_TO_US(x)   ( (int32_t)((x) / 3.39) )
 
-#define ETU_TO_SSP(x)  ((uint32_t)((x) * 32))
-#define SSP_TO_ETU(x)  ((uint32_t)((x) / 32))
+#define ETU_TO_SSP(x)  ( (int32_t)((x) * 32) )
+#define SSP_TO_ETU(x)  ( (int32_t)((x) / 32) )
 
-#define ETU_TO_US(x)   ((uint32_t)((((x) * 9440000) / 1000000) + 0.5))
-#define US_TO_ETU(x)   ((uint32_t)(((x) * 1000000 / 9440000) + 0.5))
+#define ONE_ETU_IN_US  (12800000.0 / 1356000.0)
+#define ETU_TO_US(x)   (float)(ONE_ETU_IN_US * (x))
+
+// #define ETU_TO_US(x)   ( (int32_t)( ((x) * 9440000) / 1000000) )
+#define US_TO_ETU(x)   ( (int32_t)( ((x) * 1000000) / 9440000) )
 
 #endif // _ISO14B_H_
+
