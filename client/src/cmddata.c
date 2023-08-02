@@ -1759,7 +1759,7 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
         PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") " bytes from device memory", n);
 
     PacketResponseNG resp;
-    if (!GetFromDevice(BIG_BUF, got, n, start, NULL, 0, &resp, 10000, true)) {
+    if (GetFromDevice(BIG_BUF, got, n, start, NULL, 0, &resp, 10000, true) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }

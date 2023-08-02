@@ -549,7 +549,7 @@ int mfdes_kdf_input_gallagher(uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint3
 
 int mfc_generate4b_nuid(uint8_t *uid, uint8_t *nuid) {
     uint16_t crc;
-    uint8_t b1, b2;
+    uint8_t b1 = 0, b2 = 0;
 
     compute_crc(CRC_14443_A, uid, 3, &b1, &b2);
     nuid[0] = (b2 & 0xE0) | 0xF;
