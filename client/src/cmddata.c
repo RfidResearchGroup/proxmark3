@@ -38,6 +38,7 @@
 #include "mbedtls/bignum.h"      // big num
 #include "mbedtls/entropy.h"     //
 #include "mbedtls/ctr_drbg.h"    // random generator
+#include "atrs.h"                // ATR lookup
 
 uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN];
 size_t g_DemodBufferLen = 0;
@@ -3411,6 +3412,51 @@ static int CmdEnvelope(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdAtrLookup(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data atr",
+                  "look up ATR record from bytearray\n"
+                  "",
+                  "data atr -d 3B6B00000031C064BE1B0100079000\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("d", NULL, "<hex>", "ASN1 encoded byte array"),
+        arg_lit0("t", "test", "perform selftest"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int dlen = 64;
+    uint8_t data[64];
+    CLIGetHexWithReturn(ctx, 1, data, &dlen);
+//    bool selftest = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+//    if (selftest) {
+//        return atr_selftest();
+//    }
+    // convert bytes to str.
+    char *hexstr = calloc((dlen << 1) + 1, sizeof(uint8_t));
+    if (hexstr == NULL) {
+        PrintAndLogEx(WARNING, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    hex_to_buffer((uint8_t *)hexstr, data, dlen, (dlen << 1), 0, 0, true);
+
+    PrintAndLogEx(INFO, "ISO7816-3 ATR... " _YELLOW_("%s"), sprint_hex(data, dlen));
+    PrintAndLogEx(INFO, "Fingerprint...");
+
+    char *copy = str_dup(getAtrInfo(hexstr));
+
+    char * token = strtok(copy, "\n");
+    while ( token != NULL ) {
+        PrintAndLogEx(INFO, "    %s", token);
+        token = strtok(NULL, "\n");
+    }
+    free(copy);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable,  "This help"},
 
@@ -3449,11 +3495,12 @@ static command_t CommandTable[] = {
     {"getbitstream",    CmdGetBitStream,         AlwaysAvailable,  "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
 
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
-    {"asn1",            CmdAsn1Decoder,          AlwaysAvailable,  "asn1 decoder"},
+    {"asn1",            CmdAsn1Decoder,          AlwaysAvailable,  "ASN1 decoder"},
+    {"atr",             CmdAtrLookup,            AlwaysAvailable,  "ATR lookup"},
     {"bin2hex",         Cmdbin2hex,              AlwaysAvailable,  "Converts binary to hexadecimal"},
     {"bitsamples",      CmdBitsamples,           IfPm3Present,     "Get raw samples as bitstring"},
     {"clear",           CmdBuffClear,            AlwaysAvailable,  "Clears bigbuf on deviceside and graph window"},
-    {"diff",            CmdDiff,                 AlwaysAvailable,  "diff of input files"},
+    {"diff",            CmdDiff,                 AlwaysAvailable,  "Diff of input files"},
     {"hexsamples",      CmdHexsamples,           IfPm3Present,     "Dump big buffer as hex bytes"},
     {"hex2bin",         Cmdhex2bin,              AlwaysAvailable,  "Converts hexadecimal to binary"},
     {"load",            CmdLoad,                 AlwaysAvailable,  "Load contents of file into graph window"},
