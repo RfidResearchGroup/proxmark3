@@ -787,7 +787,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         p_keyblock = mem;
     }
 
-    uint8_t fn[26] = "static_nested_000.bin";
+    uint8_t fn[32] = "static_nested_000.bin";
 
     uint64_t start_time = msclock();
     for (uint32_t i = 0; i < keycnt; i += max_keys_chunk) {
