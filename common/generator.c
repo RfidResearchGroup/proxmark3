@@ -173,7 +173,7 @@ uint32_t ul_ev1_pwdgenD(const uint8_t *uid) {
 
 // AIR purifier Xiaomi
 uint32_t ul_ev1_pwdgenE(const uint8_t *uid) {
-    uint8_t hash[20];
+    uint8_t hash[20] = {0};
     mbedtls_sha1(uid, 7, hash);
     uint32_t pwd = 0;
     pwd |= (hash[ hash[0] % 20 ]) << 24 ;
@@ -185,7 +185,7 @@ uint32_t ul_ev1_pwdgenE(const uint8_t *uid) {
 
 // NDEF tools format password generator
 uint32_t ul_ev1_pwdgenF(const uint8_t *uid) {
-    uint8_t hash[16];
+    uint8_t hash[16] = {0};;
     mbedtls_md5(uid, 7, hash);
     uint32_t pwd = 0;
     pwd |= hash[0] << 24;
