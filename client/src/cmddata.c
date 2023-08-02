@@ -3427,26 +3427,19 @@ static int CmdAtrLookup(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int dlen = 64;
-    uint8_t data[64];
-    CLIGetHexWithReturn(ctx, 1, data, &dlen);
+    int dlen = 128;
+    uint8_t data[128 + 1];
+    CLIGetStrWithReturn(ctx, 1, data, &dlen);
+
 //    bool selftest = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 //    if (selftest) {
 //        return atr_selftest();
 //    }
-    // convert bytes to str.
-    char *hexstr = calloc((dlen << 1) + 1, sizeof(uint8_t));
-    if (hexstr == NULL) {
-        PrintAndLogEx(WARNING, "failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-    hex_to_buffer((uint8_t *)hexstr, data, dlen, (dlen << 1), 0, 0, true);
-
-    PrintAndLogEx(INFO, "ISO7816-3 ATR... " _YELLOW_("%s"), sprint_hex(data, dlen));
+    PrintAndLogEx(INFO, "ISO7816-3 ATR... " _YELLOW_("%s"), data);
     PrintAndLogEx(INFO, "Fingerprint...");
 
-    char *copy = str_dup(getAtrInfo(hexstr));
+    char *copy = str_dup(getAtrInfo((char*)data));
 
     char * token = strtok(copy, "\n");
     while ( token != NULL ) {
