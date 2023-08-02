@@ -1023,6 +1023,9 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                             snprintf(exp, size, "CLEAR RECORD FILE");
                         }
                         break;
+                    case MFDES_NOTIFY_TRANSACTION_SUCCESS:
+                        snprintf(exp, size, "NOTIFY TRANSACTION SUCCESS (ECP)");
+                        break;
                     case MFDES_COMMIT_TRANSACTION:
                         snprintf(exp, size, "COMMIT TRANSACTION");
                         break;
