@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `mkversion.sh` - now regenerates version_pm3.c (and consequently the binaries) only when needed (@doegox)
  - Updated ATR list (@iceman1001)
  - Changed `mem load -m` - now correctly erase all allocated flash memory (@iceman1001)
  - Fixed emulator quick dump to handle MFC Ev1 extra sectors (@iceman100)
