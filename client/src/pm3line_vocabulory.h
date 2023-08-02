@@ -102,6 +102,7 @@ const static vocabulory_t vocabulory[] = {
     { 1, "data convertbitstream" }, 
     { 1, "data getbitstream" }, 
     { 1, "data asn1" }, 
+    { 1, "data atr" }, 
     { 1, "data bin2hex" }, 
     { 0, "data bitsamples" }, 
     { 1, "data clear" }, 

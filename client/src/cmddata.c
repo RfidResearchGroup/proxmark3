@@ -3439,10 +3439,10 @@ static int CmdAtrLookup(const char *Cmd) {
     PrintAndLogEx(INFO, "ISO7816-3 ATR... " _YELLOW_("%s"), data);
     PrintAndLogEx(INFO, "Fingerprint...");
 
-    char *copy = str_dup(getAtrInfo((char*)data));
+    char *copy = str_dup(getAtrInfo((char *)data));
 
-    char * token = strtok(copy, "\n");
-    while ( token != NULL ) {
+    char *token = strtok(copy, "\n");
+    while (token != NULL) {
         PrintAndLogEx(INFO, "    %s", token);
         token = strtok(NULL, "\n");
     }

@@ -120,11 +120,12 @@ Check column "offline" for their availability.
 |`data zerocrossings     `|Y       |`Count time between zero-crossings`
 |`data convertbitstream  `|Y       |`Convert GraphBuffer's 0/1 values to 127 / -127`
 |`data getbitstream      `|Y       |`Convert GraphBuffer's >=1 values to 1 and <1 to 0`
-|`data asn1              `|Y       |`asn1 decoder`
+|`data asn1              `|Y       |`ASN1 decoder`
+|`data atr               `|Y       |`ATR lookup`
 |`data bin2hex           `|Y       |`Converts binary to hexadecimal`
 |`data bitsamples        `|N       |`Get raw samples as bitstring`
 |`data clear             `|Y       |`Clears bigbuf on deviceside and graph window`
-|`data diff              `|Y       |`diff of input files`
+|`data diff              `|Y       |`Diff of input files`
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`
 |`data hex2bin           `|Y       |`Converts hexadecimal to binary`
 |`data load              `|Y       |`Load contents of file into graph window`
