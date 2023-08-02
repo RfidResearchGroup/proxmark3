@@ -781,6 +781,8 @@ proxmark3: $(OBJS) $(STATICLIBS) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lu
 
 src/proxgui.cpp: src/ui/ui_overlays.h src/ui/ui_image.h
 
+src/proxguiqt.cpp: src/ui/ui_overlays.h
+
 src/proxguiqt.moc.cpp: src/proxguiqt.h
 	$(info [-] MOC $@)
 	$(Q)$(MOC) -o$@ $^
