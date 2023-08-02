@@ -1156,7 +1156,7 @@ static int CmdAnalyseUnits(const char *Cmd) {
         PrintAndLogEx(INFO, "  32 SSP = %i ETU (expect 1) " _GREEN_("ok"), SSP_TO_ETU(32));
     } else if (etu) {
 
-        PrintAndLogEx(INFO, " %i ETU = %u us ", ETU_TO_US(etu), 0);
+        PrintAndLogEx(INFO, " %3.2f ETU = %u us ", ETU_TO_US(etu), 0);
         PrintAndLogEx(INFO, " %i ETU = %u SSP ", ETU_TO_SSP(etu), 0);
     } else if (us) {
         PrintAndLogEx(INFO, " %i us = %u ETU ", US_TO_ETU(us), 0);
