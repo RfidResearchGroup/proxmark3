@@ -127,7 +127,7 @@ THUMBSRC = start.c \
     $(SRC_SMARTCARD) \
     $(SRC_FPC) \
     $(SRC_HITAG) \
-	$(SRC_EM4x50) \
+    $(SRC_EM4x50) \
     $(SRC_EM4x70) \
     $(SRC_SPIFFS) \
     $(SRC_HF) \
