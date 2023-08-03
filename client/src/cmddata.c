@@ -3423,7 +3423,7 @@ static int CmdAtrLookup(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("d", NULL, "<hex>", "ASN1 encoded byte array"),
-        arg_lit0("t", "test", "perform selftest"),
+//        arg_lit0("t", "test", "perform selftest"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
