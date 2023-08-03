@@ -742,10 +742,6 @@ static size_t communication_delay(void) {
 bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
 
     PacketResponseNG resp;
-    if (response == NULL) {
-        response = &resp;
-    }
-
     // init to ZERO
     resp.cmd = 0,
     resp.length = 0,
@@ -757,6 +753,10 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
     resp.oldarg[1] = 0;
     resp.oldarg[2] = 0;
     memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
+
+    if (response == NULL) {
+        response = &resp;
+    }
 
     // Add delay depending on the communication channel & speed
     if (ms_timeout != (size_t) - 1)

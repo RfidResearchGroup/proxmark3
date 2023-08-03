@@ -96,7 +96,7 @@ static uint32_t keys_found = 0;
 static uint64_t num_keys_tested;
 static uint64_t found_bs_key = 0;
 
-inline uint8_t trailing_zeros(uint8_t byte) {
+uint8_t trailing_zeros(uint8_t byte) {
     static const uint8_t trailing_zeros_LUT[256] = {
         8, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0,
         4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0,
