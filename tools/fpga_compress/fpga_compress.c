@@ -235,7 +235,7 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
         fseek(infile, 0L, SEEK_SET);
         return EXIT_SUCCESS;
     } else {
-        fclose(infile);
+
         // seeking for trailing zeroes
         long offset = 0;
         long outfilesizes[10] = {0};
@@ -474,7 +474,6 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Error. Cannot open input file %s\n\n", argv[2]);
 
             // close file handlers
-            fclose(infile);
             for (uint16_t j = 0; j < num_output_files; j++) {
                 fclose(outfiles[j]);
             }
