@@ -160,32 +160,32 @@ uint64_t bytes_to_num(uint8_t *src, size_t len) {
     return num;
 }
 
-inline uint16_t MemLeToUint2byte(const uint8_t *data) {
-    return (uint16_t)(
+uint16_t MemLeToUint2byte(const uint8_t *data) {
+    return (uint16_t)((uint16_t)
                (data[1] << 8) + data[0]
            );
 }
 
-inline uint32_t MemLeToUint3byte(const uint8_t *data) {
-    return (uint32_t)(
+uint32_t MemLeToUint3byte(const uint8_t *data) {
+    return (uint32_t)((uint32_t)
                (data[2] << 16) + (data[1] << 8) + data[0]
            );
 }
 
-inline uint32_t MemLeToUint4byte(const uint8_t *data) {
-    return (uint32_t)(
+uint32_t MemLeToUint4byte(const uint8_t *data) {
+    return (uint32_t)((uint32_t)
                (data[3] << 24) + (data[2] << 16) + (data[1] << 8) + data[0]
            );
 }
 
-inline uint16_t MemBeToUint2byte(const uint8_t *data) {
-    return (uint16_t)(
+uint16_t MemBeToUint2byte(const uint8_t *data) {
+    return (uint16_t)((uint16_t)
                (data[0] << 8) + data[1]
            );
 }
 
-inline uint32_t MemBeToUint3byte(const uint8_t *data) {
-    return (uint32_t)(
+uint32_t MemBeToUint3byte(const uint8_t *data) {
+    return (uint32_t)((uint32_t)
                (data[0] << 16) + (data[1] << 8) + data[2]
            );
 }
