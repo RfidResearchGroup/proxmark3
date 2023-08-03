@@ -21,6 +21,10 @@
 #include "fpga.h"
 #include "lz4hc.h"
 
+#ifndef MIN
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
 static void usage(void) {
     fprintf(stdout, "Usage: fpga_compress <infile1> <infile2> ... <infile_n> <outfile>\n");
     fprintf(stdout, "          Combine n FPGA bitstream files and compress them into one.\n\n");
@@ -57,10 +61,6 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
                     , num_infiles * FPGA_CONFIG_SIZE
                    );
 
-            for (uint16_t j = 0; j < num_infiles; j++) {
-                fclose(infile[j]);
-            }
-
             free(fpga_config);
             return (EXIT_FAILURE);
         }
@@ -77,59 +77,75 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
             }
         }
 
-    } while (!all_feof(infile, num_infiles));
+    } while (all_feof(infile, num_infiles) == false);
 
     uint32_t buffer_size = FPGA_RING_BUFFER_BYTES;
 
-    if (num_infiles == 1)
-        buffer_size = 1024 * 1024; //1M for now
+    if (num_infiles == 1) {
+        // 1M bytes for now
+        buffer_size = 1024 * 1024; 
+    }
 
     uint32_t outsize_max = LZ4_compressBound(buffer_size);
 
     char *outbuf = calloc(outsize_max, sizeof(char));
+    if (outbuf == NULL) {
+        fprintf(stderr, "failed to allocate memory");
+        free(fpga_config);
+        return (EXIT_FAILURE);        
+    }
+
+    char *ring_buffer = calloc(buffer_size, sizeof(char));
+    if (ring_buffer == NULL) {
+        fprintf(stderr, "failed to allocate memory");
+        free(outbuf);
+        free(fpga_config);
+        return (EXIT_FAILURE);        
+    }
 
     LZ4_streamHC_t *lz4_streamhc = LZ4_createStreamHC();
     LZ4_resetStreamHC_fast(lz4_streamhc, LZ4HC_CLEVEL_MAX);
 
     int current_in = 0;
     int current_out = 0;
-    char *ring_buffer = calloc(buffer_size, sizeof(char));
+   
     while (current_in < total_size) {
-        int bytes_to_copy = FPGA_RING_BUFFER_BYTES;
-        if (total_size - current_in < FPGA_RING_BUFFER_BYTES)
-            bytes_to_copy = total_size - current_in;
+
+        int bytes_to_copy = MIN(FPGA_RING_BUFFER_BYTES, (total_size - current_in));
 
         memcpy(ring_buffer, fpga_config + current_in, bytes_to_copy);
+
         int cmp_bytes = LZ4_compress_HC_continue(lz4_streamhc, ring_buffer, outbuf, bytes_to_copy, outsize_max);
         if (cmp_bytes < 0) {
-            fprintf(stderr, "(lz4 - zlib_compress) error,  got negative number of bytes from LZ4_compress_HC_continue call. got %d ", cmp_bytes);
+            fprintf(stderr, "(lz4 - zlib_compress) error,  got negative number of bytes from LZ4_compress_HC_continue call. got %d", cmp_bytes);
             free(ring_buffer);
             free(outbuf);
             free(fpga_config);
+            LZ4_freeStreamHC(lz4_streamhc);
             return (EXIT_FAILURE);
         }
+
+        // write size
         fwrite(&cmp_bytes, sizeof(int), 1, outfile);
+
+        // write compressed data
         fwrite(outbuf, sizeof(char), cmp_bytes, outfile);
 
         current_in += bytes_to_copy;
         current_out += cmp_bytes;
     }
 
+    // free allocated buffers
     free(ring_buffer);
     free(outbuf);
     free(fpga_config);
-
-    fclose(outfile);
-    for (uint16_t j = 0; j < num_infiles; j++) {
-        fclose(infile[j]);
-    }
     LZ4_freeStreamHC(lz4_streamhc);
-
-    fprintf(stdout, "compressed %u input bytes to %d output bytes\n", total_size, current_out);
 
     if (current_out == 0) {
         fprintf(stderr, "error in lz4");
         return (EXIT_FAILURE);
+    } else {
+        fprintf(stdout, "compressed %u input bytes to %d output bytes\n", total_size, current_out);
     }
     return (EXIT_SUCCESS);
 }
@@ -159,12 +175,6 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
 
     if (infile_size <= 0) {
         printf("error, when getting filesize");
-        if (*outsize >  0) {
-            fclose(infile);
-            for (uint16_t j = 0; j < num_outfiles; j++) {
-                fclose(outfiles[j]);
-            }
-        }
         return (EXIT_FAILURE);
     }
 
@@ -187,14 +197,6 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
     size_t num_read = fread(inbuf, sizeof(char), infile_size, infile);
 
     if (num_read != infile_size) {
-
-        if (*outsize >  0) {
-            fclose(infile);
-            for (uint16_t j = 0; j < num_outfiles; j++) {
-                fclose(outfiles[j]);
-            }
-        }
-
         if (outbufall) {
             free(outbufall);
         }
@@ -214,16 +216,20 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
         memcpy(&cmp_bytes, compressed_fpga_stream.next_in, sizeof(int));
         compressed_fpga_stream.next_in += 4;
         compressed_fpga_stream.avail_in -= cmp_bytes + 4;
+
         const int decBytes = LZ4_decompress_safe_continue(compressed_fpga_stream.lz4StreamDecode, compressed_fpga_stream.next_in, outbuf, cmp_bytes, FPGA_RING_BUFFER_BYTES);
         if (decBytes <= 0) {
             break;
         }
+
         if (outbufall != NULL) {
             memcpy(outbufall + total_size, outbuf, decBytes);
         }
+
         total_size += decBytes;
         compressed_fpga_stream.next_in += cmp_bytes;
     }
+
     if (outbufall == NULL) {
         *outsize = total_size;
         fseek(infile, 0L, SEEK_SET);
@@ -243,17 +249,21 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
                 offset += FPGA_INTERLEAVE_SIZE;
             }
         }
+
         total_size = 0;
         // FPGA bit file ends with 16 zeroes
         for (uint16_t j = 0; j < num_outfiles; j++) {
             outfilesizes[j] += 16;
             total_size += outfilesizes[j];
         }
+
         offset = 0;
         for (long k = 0; k < *outsize / (FPGA_INTERLEAVE_SIZE * num_outfiles); k++) {
             for (uint16_t j = 0; j < num_outfiles; j++) {
                 if (k * FPGA_INTERLEAVE_SIZE < outfilesizes[j]) {
-                    uint16_t chunk = outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) < FPGA_INTERLEAVE_SIZE ? outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) : FPGA_INTERLEAVE_SIZE;
+                    uint16_t chunk = (outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) < FPGA_INTERLEAVE_SIZE) ? 
+                                            outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) : FPGA_INTERLEAVE_SIZE;
+
                     fwrite(outbufall + offset, chunk, sizeof(char), outfiles[j]);
                 }
                 offset += FPGA_INTERLEAVE_SIZE;
@@ -261,13 +271,9 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
         }
         printf("uncompressed %li input bytes to %li output bytes\n", infile_size, total_size);
     }
-    if (*outsize >  0) {
-        for (uint16_t j = 0; j < num_outfiles; j++) {
-            fclose(outfiles[j]);
-        }
-    }
 
     free(outbufall);
+    free(inbuf);
     return (EXIT_SUCCESS);
 }
 
@@ -433,7 +439,7 @@ static int generate_fpga_version_info(FILE *infile[], char *infile_names[], int 
         fprintf(outfile, "\n");
     }
     fprintf(outfile, "};\n");
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int main(int argc, char **argv) {
@@ -448,6 +454,7 @@ int main(int argc, char **argv) {
             usage();
             return (EXIT_FAILURE);
         }
+
         uint8_t num_output_files = argc - 3;
         FILE **outfiles = calloc(num_output_files, sizeof(FILE *));
         char **outfile_names = calloc(num_output_files, sizeof(char *));
@@ -461,9 +468,17 @@ int main(int argc, char **argv) {
                 return (EXIT_FAILURE);
             }
         }
+
         FILE *infile = fopen(argv[2], "rb");
         if (infile == NULL) {
             fprintf(stderr, "Error. Cannot open input file %s\n\n", argv[2]);
+
+            // close file handlers
+            fclose(infile);
+            for (uint16_t j = 0; j < num_output_files; j++) {
+                fclose(outfiles[j]);
+            }
+
             free(outfile_names);
             free(outfiles);
             return (EXIT_FAILURE);
@@ -477,9 +492,17 @@ int main(int argc, char **argv) {
             // Second call to create files
             ret = zlib_decompress(infile, outfiles, num_output_files, &outsize);
         }
+
+        // close file handlers
+        fclose(infile);
+        for (uint16_t j = 0; j < num_output_files; j++) {
+            fclose(outfiles[j]);
+        }
+
         free(outfile_names);
         free(outfiles);
         return (ret);
+
     } else { // Compress or generate version info
 
         bool generate_version_file = false;
@@ -503,23 +526,37 @@ int main(int argc, char **argv) {
                 return (EXIT_FAILURE);
             }
         }
+
         FILE *outfile = fopen(argv[argc - 1], "wb");
         if (outfile == NULL) {
             fprintf(stderr, "Error. Cannot open output file %s\n\n", argv[argc - 1]);
+
+            // close file handlers
+            for (uint16_t j = 0; j < num_input_files; j++) {
+                fclose(infiles[j]);
+            }
+            
             free(infile_names);
             free(infiles);
             return (EXIT_FAILURE);
         }
+
+        int ret = 0;
         if (generate_version_file) {
-            int ret = generate_fpga_version_info(infiles, infile_names, num_input_files, outfile);
-            free(infile_names);
-            free(infiles);
-            return (ret);
+            ret = generate_fpga_version_info(infiles, infile_names, num_input_files, outfile);
         } else {
-            int ret = zlib_compress(infiles, num_input_files, outfile);
-            free(infile_names);
-            free(infiles);
-            return (ret);
+            ret = zlib_compress(infiles, num_input_files, outfile);
         }
+        
+        // close file handlers
+        fclose(outfile);
+        for (uint16_t j = 0; j < num_input_files; j++) {
+            fclose(infiles[j]);
+        }
+
+        // free file name allocs
+        free(infile_names);
+        free(infiles);
+        return (ret);
     }
 }

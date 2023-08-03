@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `fpga_compress` - better deallocation of memory and closing of file handles (@iceman1001)
+ - Changed `hf search` - less swaps of fpga images on device side (@iceman1001)
  - Changed `mkversion.sh` - now regenerates version_pm3.c (and consequently the binaries) only when needed (@doegox)
  - Added `data atr` - a command to lookup ATR (@iceman1001)
  - Fixed bug in ATR lookup fct, thanks @DidierA  (@iceman1001)
