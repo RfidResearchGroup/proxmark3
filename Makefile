@@ -370,10 +370,10 @@ release:
 	# - Tagging temporarily...
 	@git tag -a -m "Release $(VERSION) - $(RELEASE_NAME)" $(VERSION)
 	# - Changing default version information based on new tag
-	@$(SH) tools/mkversion.sh > common/default_version_pm3.c.tmp && $(MV) common/default_version_pm3.c.tmp common/default_version_pm3.c
+	@$(SH) tools/mkversion.sh --force common/default_version_pm3.c
 	# - Removing mkversion calls
 	@sed -i 's#^.*\.\./tools/mkversion.sh.*|| #\t$$(Q)#' client/Makefile bootrom/Makefile armsrc/Makefile
-	@sed -i '/COMMAND/s/sh .*|| //' client/CMakeLists.txt
+	@sed -i '/COMMAND/s/sh .*|| //' client/CMakeLists.txt client/experimental_lib/CMakeLists.txt
 	# - Deleting tag...
 	@git tag -d $(VERSION)
 	# - Amending commit...

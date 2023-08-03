@@ -140,15 +140,17 @@
             "command": "analyse units",
             "description": "experiments of unit conversions found in HF. ETU (1/13.56mhz), US or SSP_CLK (1/3.39MHz)",
             "notes": [
-                "analyse uints --etu 10analyse uints --us 100"
+                "analyse uints --etu 10",
+                "analyse uints --us 100"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "--etu <dec> number in ETU",
-                "--us <dec> number in micro seconds (us)"
+                "--us <dec> number in micro seconds (us)",
+                "-t, --selftest self tests"
             ],
-            "usage": "analyse units [-h] [--etu <dec>] [--us <dec>]"
+            "usage": "analyse units [-ht] [--etu <dec>] [--us <dec>]"
         },
         "auto": {
             "command": "auto",
@@ -203,6 +205,20 @@
                 "-t, --test perform selftest"
             ],
             "usage": "data asn1 [-ht] [-d <hex>]"
+        },
+        "data atr": {
+            "command": "data atr",
+            "description": "look up ATR record from bytearray",
+            "notes": [
+                "data atr -d 3B6B00000031C064BE1B0100079000"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-d <hex> ASN1 encoded byte array",
+                "-t, --test perform selftest"
+            ],
+            "usage": "data atr [-ht] [-d <hex>]"
         },
         "data autocorr": {
             "command": "data autocorr",
@@ -1170,7 +1186,7 @@
         },
         "hf 14a list": {
             "command": "hf 14a list",
-            "description": "Alias of `trace list -t 14a` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t 14a -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 14a list --frame -> show frame delay times",
                 "hf 14a list -1 -> use trace buffer"
@@ -3166,7 +3182,7 @@
         },
         "hf iclass list": {
             "command": "hf iclass list",
-            "description": "Alias of `trace list -t iclass` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t iclass -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf iclass list --frame -> show frame delay times",
                 "hf iclass list -1 -> use trace buffer"
@@ -3836,7 +3852,7 @@
         },
         "hf lto list": {
             "command": "hf lto list",
-            "description": "Alias of `trace list -t lto` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t lto -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf lto list --frame -> show frame delay times",
                 "hf lto list -1 -> use trace buffer"
@@ -4591,7 +4607,7 @@
         },
         "hf mf list": {
             "command": "hf mf list",
-            "description": "Alias of `trace list -t mf` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mf list --frame -> show frame delay times",
                 "hf mf list -1 -> use trace buffer"
@@ -5803,7 +5819,7 @@
         },
         "hf mfdes list": {
             "command": "hf mfdes list",
-            "description": "Alias of `trace list -t des` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t des -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mfdes list --frame -> show frame delay times",
                 "hf mfdes list -1 -> use trace buffer"
@@ -6216,7 +6232,7 @@
         },
         "hf mfp list": {
             "command": "hf mfp list",
-            "description": "Alias of `trace list -t mfp` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t mfp -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mfp list --frame -> show frame delay times",
                 "hf mfp list -1 -> use trace buffer"
@@ -6494,7 +6510,7 @@
         },
         "hf mfu list": {
             "command": "hf mfu list",
-            "description": "Alias of `trace list -t 14a` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t 14a -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 14a list --frame -> show frame delay times",
                 "hf 14a list -1 -> use trace buffer"
@@ -7064,7 +7080,7 @@
         },
         "hf topaz list": {
             "command": "hf topaz list",
-            "description": "Alias of `trace list -t topaz` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t topaz -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf topaz list --frame -> show frame delay times",
                 "hf topaz list -1 -> use trace buffer"
@@ -11803,8 +11819,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 684,
+        "commands_extracted": 685,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-07-27T21:41:37"
+        "extracted_on": "2023-08-02T20:39:48"
     }
 }
