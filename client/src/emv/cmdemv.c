@@ -233,6 +233,11 @@ static int emv_parse_log(struct tlvdb *ttdb, const uint8_t *d, size_t n) {
                     PrintAndLogEx(INFO, "%-30s... " _YELLOW_("20%02x-%02x-%02x"), s, d[pos], d[pos + 1], d[pos + 2]);
                 }
                 break;
+            case 0x9F21:
+                if (tpitem->len == 3) {
+                    PrintAndLogEx(INFO, "%-30s... " _YELLOW_("%02x:%02x:%02x"), s, d[pos], d[pos + 1], d[pos + 2]);
+                }
+                break;
             default:
                 PrintAndLogEx(INFO, "%-30s... " _YELLOW_("%s"), s, sprint_hex_inrow(d + pos, tpitem->len));
                 break;
