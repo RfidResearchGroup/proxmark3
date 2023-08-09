@@ -22,26 +22,8 @@
 #include "common.h"
 #include "pm3_cmd.h"
 
-// this struct is used by EPA_Parse_CardAccess and contains info about the
-// PACE protocol supported by the chip
-typedef struct {
-    uint8_t oid[10];
-    uint8_t version;
-    uint8_t parameter_id;
-} pace_version_info_t;
-
-// general functions
-void EPA_Finish(void);
-size_t EPA_Parse_CardAccess(uint8_t *data, size_t length, pace_version_info_t *pace_info);
-int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length);
-int EPA_Setup(void);
-
-// PACE related functions
-int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password);
-int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce);
-
-void EPA_PACE_Collect_Nonce(PacketCommandNG *c);
-void EPA_PACE_Replay(PacketCommandNG *c);
-void EPA_PACE_Simulate(PacketCommandNG *c);
+void EPA_PACE_Collect_Nonce(const PacketCommandNG *c);
+void EPA_PACE_Replay(const PacketCommandNG *c);
+void EPA_PACE_Simulate(const PacketCommandNG *c);
 
 #endif /* __EPA_H */
