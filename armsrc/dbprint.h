@@ -26,8 +26,8 @@ void DbpString(const char *str);
 void DbpStringEx(uint32_t flags, const char *src, size_t srclen);
 void Dbprintf(const char *fmt, ...);
 void DbprintfEx(uint32_t flags, const char *fmt, ...);
-void Dbhexdump(int len, uint8_t *d, bool bAsci);
-void print_result(const char *name, uint8_t *buf, size_t len);
+void Dbhexdump(int len, const uint8_t *d, bool bAsci);
+void print_result(const char *name, const uint8_t *buf, size_t len);
 //void PrintToSendBuffer(void);
 
 #endif
