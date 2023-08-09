@@ -1230,9 +1230,9 @@ int CmdEM4x50Sim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&password, sizeof(password));
-    
+
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
-    
+
     PacketResponseNG resp;
     // init to ZERO
     resp.cmd = 0,
@@ -1245,7 +1245,7 @@ int CmdEM4x50Sim(const char *Cmd) {
     resp.oldarg[1] = 0;
     resp.oldarg[2] = 0;
     memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
-    
+
     bool keypress;
     do {
         keypress = kbd_enter_pressed();
