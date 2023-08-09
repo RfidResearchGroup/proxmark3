@@ -289,6 +289,18 @@ To enable an option, set it to 5A.
 ** Do not change the real ACL! Backdoor commands only acknowledge FF0780. To recover, disable this byte and issue regular write to sector trailer.
 *** If perso byte is enabled, this SAK is ignored, and hidden SAK is used instead.
 ```
+* Gen1a mode:                            Allow using custom wakeup commands, like real gen1a chip, to run backdoor commands, as well as some extras.
+* Magic wakeup command:                  Use different wakeup commands for entering Gen1a mode. A) 00 - 40(7), 43; B) 85 - 20(7), 23.
+* Block use of Key B if readable by ACL: Per the MF1ICS50 datasheet, if Key B is readable by the ACL, using it shall give a Cmd Error 04. This option controls whether it happens or not.
+* CUID mode:                             Allow direct write to block 0, instead of giving Cmd Error 04.
+* MFC EV1 CL2 Perso config:              When configured, the tag behaves like a real Mifare Classic EV1 7B UID tag, and reads UID from backdoor blocks. Otherwise, the tag acts like a 4 byte tag.
+* Shadow mode:                           Writes to memory persisting in tag RAM. As soon as no power is left, the contents are restored to saved data.
+* Magic Auth Command:                    Acknowledge command `8000` after selection, and call for Crypto1 auth with key `000000000000`.
+* Static encrypted nonce mode:           Use static encrypted nonces for authentication, making key recovery impossible.
+* Signature sector:                      Acknowledge auth commands to sector 17, which is stored in backdoor sector 1.
+* SAK:                                   If perso byte is not set, after UID select, send this value.
+
+
 2. Backdoor blocks
 ```
 
