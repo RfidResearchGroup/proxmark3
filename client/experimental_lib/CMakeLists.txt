@@ -379,7 +379,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/fileutils.c
         ${PM3_ROOT}/client/src/flash.c
         ${PM3_ROOT}/client/src/graph.c
-		${PM3_ROOT}/client/src/iso4217.c
+        ${PM3_ROOT}/client/src/iso4217.c
         ${PM3_ROOT}/client/src/jansson_path.c
         ${PM3_ROOT}/client/src/preferences.c
         ${PM3_ROOT}/client/src/pm3.c
@@ -632,7 +632,7 @@ add_library(pm3rrg_rdv4 SHARED
 )
 
 target_compile_definitions(pm3rrg_rdv4 PRIVATE LIBPM3)
- 
+
 target_compile_options(pm3rrg_rdv4 PUBLIC -Wall -Werror -O3)
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
@@ -656,14 +656,14 @@ if (MINGW)
     set(CMAKE_C_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_CXX_FLAGS}")
 
-    # GCC 10 has issues with false positives on stringop-overflow, 
+    # GCC 10 has issues with false positives on stringop-overflow,
     # let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
     # beware these flags didn't exist for GCC < 7
     if(CMAKE_COMPILER_IS_GNUCXX)
         execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
         if (GCC_VERSION VERSION_GREATER 10.0 OR GCC_VERSION VERSION_EQUAL 10.0)
             set(CMAKE_C_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_C_FLAGS}")
-            set(CMAKE_CXX_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_CXX_FLAGS}")   
+            set(CMAKE_CXX_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_CXX_FLAGS}")
         endif()
     endif(CMAKE_COMPILER_IS_GNUCXX)
 

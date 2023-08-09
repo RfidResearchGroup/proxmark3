@@ -42,10 +42,10 @@ expected result:
 261c07a23f2bc8262f69f10a5bdf3764
 
 
-Bruteforce using 8 threads                                        
-Found timestamp........ 1631100305  ( '2021-09-08 13:25:05' )     
-key.................... 261c07a23f2bc8262f69f10a5bdf3764          
-execution time 1.00 sec                                           
+Bruteforce using 8 threads
+Found timestamp........ 1631100305  ( '2021-09-08 13:25:05' )
+key.................... 261c07a23f2bc8262f69f10a5bdf3764
+execution time 1.00 sec
 
 #
 # complex
@@ -55,8 +55,8 @@ expected result:
 e757178e13516a4f3171bc6ea85e165a
 
 
-Bruteforce using 8 threads                                        
-Found timestamp........ 1606834416  ( '2020-12-01 15:53:36' )     
-key.................... e757178e13516a4f3171bc6ea85e165a          
-execution time 18.54 sec                                          
+Bruteforce using 8 threads
+Found timestamp........ 1606834416  ( '2020-12-01 15:53:36' )
+key.................... e757178e13516a4f3171bc6ea85e165a
+execution time 18.54 sec
 

@@ -690,7 +690,7 @@ static int CmdSetDivisor(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (arg < 19) {
-        PrintAndLogEx(ERR, "Divisor must be between" _YELLOW_("19") " and " _YELLOW_("255"));
+        PrintAndLogEx(ERR, "Divisor must be between " _YELLOW_("19") " and " _YELLOW_("255"));
         return PM3_EINVARG;
     }
     // 12 000 000 (12MHz)

@@ -288,7 +288,7 @@ while true; do
       if ! CheckFileExist "mf_nonce_brute exists"          "$MFNONCEBRUTEBIN"; then break; fi
       if ! CheckExecute slow "mf_nonce_brute test 1/2"         "$MFNONCEBRUTEBIN 9c599b32 5a920d85 1011 98d76b77 d6c6e870 0000 ca7e0b63 0111 3e709c8a" "Key found \[.*ffffffffffff.*\]"; then break; fi
       if ! CheckExecute slow "mf_nonce_brute test 2/2"         "$MFNONCEBRUTEBIN 96519578 d7e3c6ac 0011 cd311951 9da49e49 0010 2bb22e00 0100 a4f7f398" "Key found \[.*3b7e4fd575ad.*\]"; then break; fi
-    fi    
+    fi
     if $TESTALL || $TESTMFDAESBRUTE; then
       echo -e "\n${C_BLUE}Testing mfd_aes_brute:${C_NC} ${MFDASEBRUTEBIN:=./tools/mfd_aes_brute/mfd_aes_brute}"
       if ! CheckFileExist "mfd_aes_brute exists"          "$MFDASEBRUTEBIN"; then break; fi

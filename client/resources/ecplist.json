@@ -25,7 +25,6 @@
         "description": "iPhones before IOS17 emit this frame so that other Apple devices don't react to the field during background reading. Also emitted during NFCReaderSession subtypes"
     },
 
-    
     {
         "value": "6a02c801000300000000000000",
         "name": "Transit: Ventra",

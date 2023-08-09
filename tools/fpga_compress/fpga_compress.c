@@ -83,7 +83,7 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
 
     if (num_infiles == 1) {
         // 1M bytes for now
-        buffer_size = 1024 * 1024; 
+        buffer_size = 1024 * 1024;
     }
 
     uint32_t outsize_max = LZ4_compressBound(buffer_size);
@@ -92,7 +92,7 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
     if (outbuf == NULL) {
         fprintf(stderr, "failed to allocate memory");
         free(fpga_config);
-        return (EXIT_FAILURE);        
+        return (EXIT_FAILURE);
     }
 
     char *ring_buffer = calloc(buffer_size, sizeof(char));
@@ -100,7 +100,7 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
         fprintf(stderr, "failed to allocate memory");
         free(outbuf);
         free(fpga_config);
-        return (EXIT_FAILURE);        
+        return (EXIT_FAILURE);
     }
 
     LZ4_streamHC_t *lz4_streamhc = LZ4_createStreamHC();
@@ -108,7 +108,7 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
 
     int current_in = 0;
     int current_out = 0;
-   
+
     while (current_in < total_size) {
 
         int bytes_to_copy = MIN(FPGA_RING_BUFFER_BYTES, (total_size - current_in));
@@ -261,7 +261,7 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
         for (long k = 0; k < *outsize / (FPGA_INTERLEAVE_SIZE * num_outfiles); k++) {
             for (uint16_t j = 0; j < num_outfiles; j++) {
                 if (k * FPGA_INTERLEAVE_SIZE < outfilesizes[j]) {
-                    uint16_t chunk = (outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) < FPGA_INTERLEAVE_SIZE) ? 
+                    uint16_t chunk = (outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) < FPGA_INTERLEAVE_SIZE) ?
                                             outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) : FPGA_INTERLEAVE_SIZE;
 
                     fwrite(outbufall + offset, chunk, sizeof(char), outfiles[j]);
@@ -534,7 +534,7 @@ int main(int argc, char **argv) {
             for (uint16_t j = 0; j < num_input_files; j++) {
                 fclose(infiles[j]);
             }
-            
+
             free(infile_names);
             free(infiles);
             return (EXIT_FAILURE);
@@ -546,7 +546,7 @@ int main(int argc, char **argv) {
         } else {
             ret = zlib_compress(infiles, num_input_files, outfile);
         }
-        
+
         // close file handlers
         fclose(outfile);
         for (uint16_t j = 0; j < num_input_files; j++) {
