@@ -979,7 +979,7 @@ static bool hitag2_read_uid(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
     return true;
 }
 
-void EloadHitag(uint8_t *data, uint16_t len) {
+void EloadHitag(const uint8_t *data, uint16_t len) {
     memcpy(tag.sectors, data, sizeof(tag.sectors));
 }
 
@@ -1532,7 +1532,7 @@ void SimulateHitag2(bool ledcontrol) {
 //    reply_ng(CMD_LF_HITAG_SIMULATE, (checked == -1) ? PM3_EOPABORTED : PM3_SUCCESS, (uint8_t *)tag.sectors, tag_size);
 }
 
-void ReaderHitag(hitag_function htf, hitag_data *htd, bool ledcontrol) {
+void ReaderHitag(hitag_function htf, const hitag_data *htd, bool ledcontrol) {
 
     uint32_t command_start = 0, command_duration = 0;
     uint32_t response_start = 0, response_duration = 0;
@@ -1928,7 +1928,7 @@ out:
         reply_mix(CMD_ACK, bSuccessful, 0, 0, 0, 0);
 }
 
-void WriterHitag(hitag_function htf, hitag_data *htd, int page, bool ledcontrol) {
+void WriterHitag(hitag_function htf, const hitag_data *htd, int page, bool ledcontrol) {
 
     uint32_t command_start = 0;
     uint32_t command_duration = 0;
