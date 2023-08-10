@@ -7040,10 +7040,40 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     }
 
     // Super card generation 2
-    if (i == SUPER_MAX_TRACES) {
+    if (i == SUPER_MAX_TRACES) 
+    {
+        if (uidlen)
+        {
+            uint8_t data[] = { 0xcf, 0x00, 0x00, 0x00, 0x00, 0xcd, 0x00, 0xff, 0xff, 0xff, 0xff};
+            memcpy(data + 7, uid, uidlen);
+
+            uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
+            clearCommandBuffer();
+            SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(data), 0, data, sizeof(data));
+            if (WaitForResponseTimeout(CMD_ACK, NULL, 1500) == false) {
+                return PM3_EFAILED;
+            }
+
+            PacketResponseNG resp;
+            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+                return PM3_EFAILED;
+            }
+
+            uint16_t len = resp.oldarg[0] & 0xFFFF;
+            if (len == 4) 
+            {
+                PrintAndLogEx(SUCCESS, "UID changed successfully!");
+            }
+            else
+            {
+                PrintAndLogEx(FAILED, "Error during changing UID!");
+            }
+
+            return PM3_SUCCESS;
+        } 
 
         // no reset on super card generation 2.
-        if (uidlen || reset_card) {
+        if (reset_card) {
             PrintAndLogEx(FAILED, "Not supported on this card");
             return PM3_SUCCESS;
         }
