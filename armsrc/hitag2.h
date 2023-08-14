@@ -24,7 +24,7 @@
 
 void SniffHitag2(bool ledcontrol);
 void SimulateHitag2(bool ledcontrol);
-void ReaderHitag(hitag_function htf, hitag_data *htd, bool ledcontrol);
-void WriterHitag(hitag_function htf, hitag_data *htd, int page, bool ledcontrol);
-void EloadHitag(uint8_t *data, uint16_t len);
+void ReaderHitag(hitag_function htf, const hitag_data *htd, bool ledcontrol);
+void WriterHitag(hitag_function htf, const hitag_data *htd, int page, bool ledcontrol);
+void EloadHitag(const uint8_t *data, uint16_t len);
 #endif

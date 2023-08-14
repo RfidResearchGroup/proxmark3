@@ -34,6 +34,9 @@
 /*
   Communication between ARM / FPGA is done inside armsrc/fpgaloader.c (function FpgaSendCommand)
   Send 16 bit command / data pair to FPGA
+
+  BUGBUG -- Conflicts with information in ../fpga/define.v
+
   The bit format is: C3 C2 C1 C0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0
   where
     C is 4bit command
