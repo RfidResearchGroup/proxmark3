@@ -110,7 +110,7 @@ void LFSetupFPGAForADC(int divisor, bool reader_field);
  * @brief setSamplingConfig
  * @param sc
  */
-void setSamplingConfig(sample_config *sc);
+void setSamplingConfig(const sample_config *sc);
 void setDefaultSamplingConfig(void);
 sample_config *getSamplingConfig(void);
 
