@@ -407,7 +407,7 @@ bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
 
 //Sends array of data (Array, length, command to be written , SlaveDevice address  ).
 // len = uint16 because we need to write up to 256 bytes
-bool I2C_BufferWrite(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
+bool I2C_BufferWrite(const uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
     bool bBreak = true;
     do {
         if (!I2C_Start())
@@ -602,7 +602,7 @@ int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t
     return readcount;
 }
 
-bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
+bool I2C_WriteFW(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
     //START, 0xB0, 0x00, 0x00, xx, yy, zz, ......, STOP
     bool bBreak = true;
 
@@ -772,7 +772,7 @@ void SmartCardAtr(void) {
 //    StopTicks();
 }
 
-void SmartCardRaw(smart_card_raw_t *p) {
+void SmartCardRaw(const smart_card_raw_t *p) {
     LED_D_ON();
 
     uint16_t len = 0;
