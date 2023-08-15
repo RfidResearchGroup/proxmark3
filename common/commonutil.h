@@ -65,15 +65,34 @@ uint64_t bytes_to_num(uint8_t *src, size_t len);
 uint16_t MemLeToUint2byte(const uint8_t *data);
 uint32_t MemLeToUint3byte(const uint8_t *data);
 uint32_t MemLeToUint4byte(const uint8_t *data);
+uint64_t MemLeToUint5byte(const uint8_t *data);
+uint64_t MemLeToUint6byte(const uint8_t *data);
+uint64_t MemLeToUint7byte(const uint8_t *data);
+uint64_t MemLeToUint8byte(const uint8_t *data);
+
 uint16_t MemBeToUint2byte(const uint8_t *data);
 uint32_t MemBeToUint3byte(const uint8_t *data);
 uint32_t MemBeToUint4byte(const uint8_t *data);
+uint64_t MemBeToUint5byte(const uint8_t *data);
+uint64_t MemBeToUint6byte(const uint8_t *data);
+uint64_t MemBeToUint7byte(const uint8_t *data);
+uint64_t MemBeToUint8byte(const uint8_t *data);
+
 void Uint2byteToMemLe(uint8_t *data, uint16_t value);
 void Uint3byteToMemLe(uint8_t *data, uint32_t value);
 void Uint4byteToMemLe(uint8_t *data, uint32_t value);
+void Uint5byteToMemLe(uint8_t *data, uint64_t value);
+void Uint6byteToMemLe(uint8_t *data, uint64_t value);
+void Uint7byteToMemLe(uint8_t *data, uint64_t value);
+void Uint8byteToMemLe(uint8_t *data, uint64_t value);
+
 void Uint2byteToMemBe(uint8_t *data, uint16_t value);
 void Uint3byteToMemBe(uint8_t *data, uint32_t value);
 void Uint4byteToMemBe(uint8_t *data, uint32_t value);
+void Uint5byteToMemBe(uint8_t *data, uint64_t value);
+void Uint6byteToMemBe(uint8_t *data, uint64_t value);
+void Uint7byteToMemBe(uint8_t *data, uint64_t value);
+void Uint8byteToMemBe(uint8_t *data, uint64_t value);
 
 // rotate left byte array
 void rol(uint8_t *data, const size_t len);
