@@ -701,7 +701,7 @@ static void TransmitFor14443b_AsTag(const uint8_t *response, uint16_t len) {
 // Main loop of simulated tag: receive commands from reader, decide what
 // response to send, and send it.
 //-----------------------------------------------------------------------------
-void SimulateIso14443bTag(uint8_t *pupi) {
+void SimulateIso14443bTag(const uint8_t *pupi) {
 
     LED_A_ON();
     // the only commands we understand is WUPB, AFI=0, Select All, N=1:

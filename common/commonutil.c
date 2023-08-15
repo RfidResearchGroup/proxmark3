@@ -23,8 +23,8 @@
  * verifies the magic properties, then stores a formatted string, prefixed by
  * prefix in dst.
  */
-void FormatVersionInformation(char *dst, int len, const char *prefix, void *version_info) {
-    struct version_information_t *v = (struct version_information_t *)version_info;
+void FormatVersionInformation(char *dst, int len, const char *prefix, const void *version_info) {
+    const struct version_information_t *v = (const struct version_information_t *)version_info;
     dst[0] = 0;
     strncat(dst, prefix, len - 1);
     if (v->magic != VERSION_INFORMATION_MAGIC) {
@@ -53,8 +53,8 @@ void FormatVersionInformation(char *dst, int len, const char *prefix, void *vers
     strncat(dst, v->armsrc, len - strlen(dst) - 1);
 }
 
-void format_version_information_short(char *dst, int len, void *version_info) {
-    struct version_information_t *v = (struct version_information_t *)version_info;
+void format_version_information_short(char *dst, int len, const void *version_info) {
+    const struct version_information_t *v = (const struct version_information_t *)version_info;
     dst[0] = 0;
     if (v->magic != VERSION_INFORMATION_MAGIC) {
         strncat(dst, "Missing/Invalid version information", len - strlen(dst) - 1);
@@ -151,7 +151,7 @@ void num_to_bytes(uint64_t n, size_t len, uint8_t *dest) {
     }
 }
 
-uint64_t bytes_to_num(uint8_t *src, size_t len) {
+uint64_t bytes_to_num(const uint8_t *src, size_t len) {
     uint64_t num = 0;
     while (len--) {
         num = (num << 8) | (*src);

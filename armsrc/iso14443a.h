@@ -121,7 +121,7 @@ typedef enum {
 #endif
 
 void printHf14aConfig(void);
-void setHf14aConfig(hf14a_config *hc);
+void setHf14aConfig(const hf14a_config *hc);
 hf14a_config *getHf14aConfig(void);
 void iso14a_set_timeout(uint32_t timeout);
 uint32_t iso14a_get_timeout(void);

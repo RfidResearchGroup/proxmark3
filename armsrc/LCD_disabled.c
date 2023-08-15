@@ -53,7 +53,7 @@ void LCDFill(unsigned char xs, unsigned char ys, unsigned char width, unsigned c
     }
 }
 
-void LCDString(char *lcd_string, const char *font_style, unsigned char x, unsigned char y, unsigned char fcolor, unsigned char bcolor) {
+void LCDString(const char *lcd_string, const char *font_style, unsigned char x, unsigned char y, unsigned char fcolor, unsigned char bcolor) {
     unsigned int  i;
     unsigned char mask = 0, px, py, xme, yme, offset;
     const char *data;

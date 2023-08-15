@@ -528,7 +528,7 @@ OUT:
     StopTicks();
 }
 
-void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, uint8_t *data) {
+void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, const uint8_t *data) {
     // configure ARM and FPGA
     init_reader();
 
