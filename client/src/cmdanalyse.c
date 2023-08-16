@@ -1117,7 +1117,7 @@ static int CmdAnalyseUnits(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
 
         PrintAndLogEx(INFO, "ETU to US conversions");
-        float test_us = ETU_TO_US(1);
+        double test_us = ETU_TO_US(1);
         PrintAndLogEx(INFO, "   1 ETU = %3.2f US (expect 9.44) %s", test_us, (test_us == 9.44) ? _GREEN_("ok") : _RED_("fail"));
         test_us = ETU_TO_US(10);
         PrintAndLogEx(INFO, "  10 ETU = %4.2f US (expect 94.40) %s", test_us, (test_us == 94.40) ? _GREEN_("ok") : _RED_("fail"));
