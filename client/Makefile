@@ -40,7 +40,7 @@ ifeq ($(USE_BREW),1)
 	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/lib/pkgconfig:$(BREW_PREFIX)/opt/qt/lib/pkgconfig:$(BREW_PREFIX)/opt/qt5/lib/pkgconfig
 endif
 
-ifdef ($(USE_MACPORTS),1)
+ifeq ($(USE_MACPORTS),1)
 	INCLUDES += -I$(MACPORTS_PREFIX)/include
 	LDLIBS += -L$(MACPORTS_PREFIX)/lib
 	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(MACPORTS_PREFIX)/lib/pkgconfig
