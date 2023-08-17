@@ -40,6 +40,8 @@ uint8_t g_debugMode = 0;
 uint8_t g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 // global client tell if a pending prompt is present
 bool g_pendingPrompt = false;
+// global CPU core count override
+int g_numCPUs = 0;
 
 #ifdef _WIN32
 #include <windows.h>
@@ -1079,6 +1081,10 @@ uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor) {
 
 // determine number of logical CPU cores (use for multithreaded functions)
 int num_CPUs(void) {
+    if (g_numCPUs > 0) {
+        return g_numCPUs;
+    }
+
 #if defined(_WIN32)
 #include <sysinfoapi.h>
     SYSTEM_INFO sysinfo;
