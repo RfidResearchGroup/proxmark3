@@ -35,6 +35,10 @@
 #include "cryptolib.h"
 #include "util.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 using namespace std;
 
 #ifdef _MSC_VER
@@ -1136,3 +1140,7 @@ int main(int argc, const char *argv[]) {
     }
     return 0;
 }
+
+#if defined(__cplusplus)
+}
+#endif
