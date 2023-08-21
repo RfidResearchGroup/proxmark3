@@ -850,10 +850,10 @@ static int CmdHFTexkomSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf texkom sim",
                   "Simulate a texkom tag",
-                  "hf texkom sim \r\n"
-                  "hf texkom sim --raw FFFF638C7DC45553 -> simulate TK13 tag with id 8C7DC455\r\n"
-                  "hf texkom sim --tk17 --raw FFFFCA17F31EC512 -> simulate TK17 tag with id 17F31EC5\r\n"
-                  "hf texkom sim --id 8C7DC455 -> simulate TK13 tag with id 8C7DC455\r\n"
+                  "hf texkom sim \n"
+                  "hf texkom sim --raw FFFF638C7DC45553 -> simulate TK13 tag with id 8C7DC455\n"
+                  "hf texkom sim --tk17 --raw FFFFCA17F31EC512 -> simulate TK17 tag with id 17F31EC5\n"
+                  "hf texkom sim --id 8C7DC455 -> simulate TK13 tag with id 8C7DC455\n"
                   "hf texkom sim --id 8C7DC455 --tk17 -> simulate TK17 tag with id 17F31EC5");
 
     void *argtable[] = {

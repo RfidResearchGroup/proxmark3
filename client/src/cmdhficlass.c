@@ -129,7 +129,7 @@ static inline uint32_t leadingzeros(uint64_t a) {
 #endif
 }
 
-static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t *bytes_sent) {
+static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t offset, uint16_t *bytes_sent) {
 
     struct p {
         uint16_t offset;
@@ -155,7 +155,7 @@ static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t *bytes_sent) {
         }
 
         struct p *payload = calloc(4 + bytes_in_packet, sizeof(uint8_t));
-        payload->offset = *bytes_sent;
+        payload->offset = offset + *bytes_sent;
         payload->len = bytes_in_packet;
         memcpy(payload->data, d + *bytes_sent, bytes_in_packet);
 
@@ -424,7 +424,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     //Send to device
     PrintAndLogEx(INFO, "Uploading to device... ");
     uint16_t bytes_sent = 0;
-    iclass_upload_emul(data, tot_bytes, &bytes_sent);
+    iclass_upload_emul(data, tot_bytes, 0, &bytes_sent);
     free(data);
 
     PrintAndLogEx(NORMAL, "");
@@ -1092,7 +1092,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     //Send to device
     uint16_t bytes_sent = 0;
-    iclass_upload_emul(dump, bytes_read, &bytes_sent);
+    iclass_upload_emul(dump, bytes_read, 0, &bytes_sent);
     free(dump);
     PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", bytes_sent);
     PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf iclass sim -h`"));
@@ -1219,6 +1219,52 @@ static int CmdHFiClassEView(const char *Cmd) {
     }
 
     free(dump);
+    return PM3_SUCCESS;
+}
+
+static int CmdHFiClassESetBlk(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass esetblk",
+                  "Display emulator memory.\n"
+                  "Number of bytes to download defaults to 256. Other value is 2048.",
+                  "hf iclass eview\n"
+                  "hf iclass eview -s 2048\n"
+                  "hf iclass eview -s 2048 -v");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b", "blk", "<dec>", "block number"),
+        arg_str0("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int blk = arg_get_int_def(ctx, 1, 0);
+
+    if (blk > 255) {
+        PrintAndLogEx(WARNING, "block number must be between 0 and 255. Got %i", blk);
+        return PM3_EINVARG;
+    }
+
+    uint8_t data[PICOPASS_BLOCK_SIZE] = {0x00};
+    int datalen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &datalen);
+    CLIParserFree(ctx);
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+
+    if (datalen != sizeof(data)) {
+        PrintAndLogEx(WARNING, "block data must include 8 HEX bytes. Got %i", datalen);
+        return PM3_EINVARG;
+    }
+
+    CLIParserFree(ctx);
+
+    uint16_t bytes_sent = 0;
+    iclass_upload_emul(data, sizeof(data), blk * PICOPASS_BLOCK_SIZE, &bytes_sent);
+
     return PM3_SUCCESS;
 }
 
@@ -4226,6 +4272,7 @@ static command_t CommandTable[] = {
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Load Picopass / iCLASS dump file into emulator memory"},
     {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "Save emulator memory to file"},
+    {"esetblk",     CmdHFiClassESetBlk,         IfPm3Iclass,     "Set emulator memory block data"},
     {"eview",       CmdHFiClassEView,           IfPm3Iclass,     "View emulator memory"},
     {"-----------", CmdHelp,                    AlwaysAvailable, "---------------------- " _CYAN_("utils") " ----------------------"},
     {"configcard",  CmdHFiClassConfigCard,      AlwaysAvailable, "Reader configuration card"},
