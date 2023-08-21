@@ -159,6 +159,10 @@ void print_cs(const char *text, pcs s) {
 }
 
 static inline uint8_t mod(uint8_t a, uint8_t m) {
+    if (m == 0) {
+        return 0; // Actually, divide by zero error
+    }
+
     // Just return the input when this is less or equal than the modular value
     if (a < m) return a;
 
@@ -754,7 +758,7 @@ int main(int argc, const char *argv[]) {
             Q[pos] = rand();
         }
         sm_auth(Gc, Ci, Q, Ch, Ci_1, &ostate);
-        printf("  Gc: ");
+        printf("  Gc... ");
         print_bytes(Gc, 8);
     } else {
         sscanf(argv[1], "%016" SCNx64, &nCi);
@@ -765,7 +769,7 @@ int main(int argc, const char *argv[]) {
         num_to_bytes(nCh, 8, Ch);
         sscanf(argv[4], "%016" SCNx64, &nCi_1);
         num_to_bytes(nCi_1, 8, Ci_1);
-        printf("  Gc: unknown\n");
+        printf("  Gc... unknown\n");
     }
 
     for (pos = 0; pos < 8; pos++) {
@@ -773,16 +777,16 @@ int main(int argc, const char *argv[]) {
         ks[(2 * pos) + 1] = Ch[pos];
     }
 
-    printf("  Ci: ");
+    printf("  Ci... ");
     print_bytes(Ci, 8);
-    printf("   Q: ");
+    printf("   Q... ");
     print_bytes(Q, 8);
-    printf("  Ch: ");
+    printf("  Ch... ");
     print_bytes(Ch, 8);
-    printf("Ci+1: ");
+    printf("Ci+1... ");
     print_bytes(Ci_1, 8);
     printf("\n");
-    printf("  Ks: ");
+    printf("  Ks... ");
     print_bytes(ks, 16);
     printf("\n");
 
