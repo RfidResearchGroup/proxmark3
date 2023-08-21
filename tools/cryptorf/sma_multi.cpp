@@ -1128,7 +1128,7 @@ int main(int argc, const char *argv[]) {
         }
 
         if (key_found) {
-            printf("\nFound valid key: " _GREEN_("%016lX")"\n\n", key.load());
+            printf("\nValid key found [ " _GREEN_("%016" PRIx64)" ]\n\n", key.load());
             break;
         }
 

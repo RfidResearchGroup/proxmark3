@@ -14,6 +14,7 @@ TESTNONCE2KEY=false
 TESTMFNONCEBRUTE=false
 TESTMFDAESBRUTE=false
 TESTHITAG2CRACK=false
+TESTCRYPTORF=false
 TESTFPGACOMPRESS=false
 TESTBOOTROM=false
 TESTARMSRC=false
@@ -27,7 +28,7 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|mfd_aes_brute|fpga_compress|bootrom|armsrc|client|recovery|common]
+Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|mfd_aes_brute|cryptorf|fpga_compress|bootrom|armsrc|client|recovery|common]
     --long:          Enable slow tests
     --opencl:        Enable tests requiring OpenCL (preferably a Nvidia GPU)
     --clientbin ...: Specify path to proxmark3 binary to test
@@ -51,6 +52,11 @@ Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|
         echo "Error: Argument for $1 is missing" >&2
         exit 1
       fi
+      ;;
+    cryptorf)
+      TESTALL=false
+      TESTCRYPTORF=true
+      shift
       ;;
     mfkey)
       TESTALL=false
@@ -294,6 +300,14 @@ while true; do
       if ! CheckFileExist "mfd_aes_brute exists"          "$MFDASEBRUTEBIN"; then break; fi
       if ! CheckExecute      "mfd_aes_brute test 1/2"         "$MFDASEBRUTEBIN 1605394800 bb6aea729414a5b1eff7b16328ce37fd 82f5f498dbc29f7570102397a2e5ef2b6dc14a864f665b3c54d11765af81e95c" "key.................... .*261C07A23F2BC8262F69F10A5BDF3764"; then break; fi
       if ! CheckExecute slow "mfd_aes_brute test 2/2"         "$MFDASEBRUTEBIN 1546300800 3fda933e2953ca5e6cfbbf95d1b51ddf 97fe4b5de24188458d102959b888938c988e96fb98469ce7426f50f108eaa583" "key.................... .*E757178E13516A4F3171BC6EA85E165A"; then break; fi
+    fi
+
+    if $TESTALL || $TESTCRYPTORF; then
+      echo -e "\n${C_BLUE}Testing CryptoRF sma:${C_NC} ${CRYPTRFBRUTEBIN:=./tools/cryptorf/sma} ${CRYPTRF_MULTI_BRUTEBIN:=./tools/cryptorf/sma_multi}"
+      if ! CheckFileExist "sma exists"               "$CRYPTRFBRUTEBIN"; then break; fi
+      if ! CheckFileExist "sma_multi exists"         "$CRYPTRF_MULTI_BRUTEBIN"; then break; fi
+      if ! CheckExecute slow  "sma test"             "$CRYPTRFBRUTEBIN ffffffffffffffff 1234567812345678 88c9d4466a501a87 dec2ee1b1c9276e9" "key found \[.*4f794a463ff81d81.*\]"; then break; fi
+      if ! CheckExecute slow  "sma_multi test"       "$CRYPTRF_MULTI_BRUTEBIN ffffffffffffffff 1234567812345678 88c9d4466a501a87 dec2ee1b1c9276e9" "key found \[.*4f794a463ff81d81.*\]"; then break; fi
     fi
     # hitag2crack not yet part of "all"
     # if $TESTALL || $TESTHITAG2CRACK; then

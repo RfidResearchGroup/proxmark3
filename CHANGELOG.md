@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added cryptorf regressiontests (@iceman1001)
  - Fixed `cryptorf/sma_multi` - local state used in multithread (@iceman1001)
  - Changed `fpga_compress` - better deallocation of memory and closing of file handles (@iceman1001)
  - Changed `hf search` - less swaps of fpga images on device side (@iceman1001)

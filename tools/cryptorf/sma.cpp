@@ -844,7 +844,7 @@ int main(int argc, const char *argv[]) {
             num_to_bytes(*itgc, 8, Gc_chk);
             sm_auth(Gc_chk, Ci, Q, Ch_chk, Ci_1_chk, &ostate);
             if ((memcmp(Ch_chk, Ch, 8) == 0) && (memcmp(Ci_1_chk, Ci_1, 8) == 0)) {
-                printf("\nFound valid key: " _GREEN_("%016" PRIx64)"\n\n", *itgc);
+                printf("\nValid key found [ " _GREEN_("%016" PRIx64)" ]\n\n", *itgc);
                 return 0;
             }
         }
