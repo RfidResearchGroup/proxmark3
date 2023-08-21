@@ -1079,12 +1079,16 @@ uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor) {
     return result;
 }
 
-// determine number of logical CPU cores (use for multithreaded functions)
 int num_CPUs(void) {
     if (g_numCPUs > 0) {
         return g_numCPUs;
     }
 
+    return detect_num_CPUs();
+}
+
+// determine number of logical CPU cores (use for multithreaded functions)
+int detect_num_CPUs(void) {
 #if defined(_WIN32)
 #include <sysinfoapi.h>
     SYSTEM_INFO sysinfo;

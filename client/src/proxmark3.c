@@ -1004,8 +1004,9 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             long int ncpus = strtol(argv[i + 1], NULL, 10);
-            if (ncpus < 0 || ncpus >= INT_MAX) {
-                PrintAndLogEx(ERR, _RED_("ERROR:") " invalid number of CPU cores: --ncpu " _YELLOW_("%s") "\n", argv[i + 1]);
+            const int detected_cpus = detect_num_CPUs();
+            if (ncpus < 0 || ncpus >= detected_cpus) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") " invalid number of CPU cores: --ncpu " _YELLOW_("%s") " (available: %d)\n", argv[i + 1], detected_cpus);
                 return 1;
             }
             g_numCPUs = ncpus;
