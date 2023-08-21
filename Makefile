@@ -29,7 +29,7 @@ ifneq (,$(DESTDIR))
     endif
 endif
 
-all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% mf_nonce_brute/% mfd_aes_brute/% fpga_compress/%
+all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% mf_nonce_brute/% mfd_aes_brute/% fpga_compress/% cryptorf/%
 # hitag2crack toolsuite is not yet integrated in "all", it must be called explicitly: "make hitag2crack"
 #all clean install uninstall check: %: hitag2crack/%
 
@@ -109,6 +109,9 @@ endif
 	$(Q)-$(INSTALLSUDO) $(RMDIR_SOFT) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)
 
 # tests
+cryptorf/check: FORCE
+	$(info [*] CHECK $(patsubst %/check,%,$@))
+	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
 mfkey/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
@@ -145,6 +148,9 @@ common/check: FORCE
 check: common/check
 	$(info [*] ALL CHECKS DONE)
 
+cryptorf/%: FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C tools/cryptorf $(patsubst cryptorf/%,%,$@) DESTDIR=$(MYDESTDIR)
 mfkey/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/mfkey $(patsubst mfkey/%,%,$@) DESTDIR=$(MYDESTDIR)
@@ -196,6 +202,7 @@ help:
 	@echo "+ recovery        - Make bootrom and fullimage files for JTAG flashing"
 	@echo
 	@echo "+ client          - Make only the OS-specific host client"
+	@echo "+ cryptorf        - Make tools/cryptorf"
 	@echo "+ mfkey           - Make tools/mfkey"
 	@echo "+ nonce2key       - Make tools/nonce2key"
 	@echo "+ mf_nonce_brute  - Make tools/mf_nonce_brute"
@@ -231,6 +238,8 @@ fullimage/install: armsrc/install
 fullimage/uninstall: armsrc/uninstall
 
 recovery: recovery/all
+
+cryptorf: cryptorf/all
 
 mfkey: mfkey/all
 
