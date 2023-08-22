@@ -1225,16 +1225,13 @@ static int CmdHFiClassEView(const char *Cmd) {
 static int CmdHFiClassESetBlk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass esetblk",
-                  "Display emulator memory.\n"
-                  "Number of bytes to download defaults to 256. Other value is 2048.",
-                  "hf iclass eview\n"
-                  "hf iclass eview -s 2048\n"
-                  "hf iclass eview -s 2048 -v");
+                  "Sets an individual block in emulator memory.",
+                  "hf iclass esetblk -b 7 -d 0000000000000000");
 
     void *argtable[] = {
         arg_param_begin,
         arg_int1("b", "blk", "<dec>", "block number"),
-        arg_str0("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
+        arg_str0("d", "data", "<hex>", "bytes to write, 8 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
