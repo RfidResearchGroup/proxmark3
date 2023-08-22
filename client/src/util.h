@@ -32,6 +32,7 @@
 extern uint8_t g_debugMode;
 extern uint8_t g_printAndLog;
 extern bool g_pendingPrompt;
+extern int g_numCPUs;
 
 #define PRINTANDLOG_PRINT 1
 #define PRINTANDLOG_LOG   2
@@ -130,7 +131,8 @@ void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length
 uint32_t PackBits(uint8_t start, uint8_t len, const uint8_t *bits);
 uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
 
-int num_CPUs(void); // number of logical CPUs
+int num_CPUs(void);
+int detect_num_CPUs(void); // number of logical CPUs
 
 void str_lower(char *s); // converts string to lower case
 void str_upper(char *s); // converts string to UPPER case

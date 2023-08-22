@@ -581,6 +581,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      --unlock-bootloader                 Enable flashing of bootloader area *DANGEROUS* (need --flash)");
         PrintAndLogEx(NORMAL, "      --force                             Enable flashing even if firmware seems to not match client version");
         PrintAndLogEx(NORMAL, "      --image <imagefile>                 image to flash. Can be specified several times.");
+        PrintAndLogEx(NORMAL, "      --ncpu <num_cores>                  override number of CPU cores");
         PrintAndLogEx(NORMAL, "\nExamples:");
         PrintAndLogEx(NORMAL, "\n  to run Proxmark3 client:\n");
         PrintAndLogEx(NORMAL, "      %s "SERIAL_PORT_EXAMPLE_H"                       -- runs the pm3 client", exec_name);
@@ -993,6 +994,23 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             flash_filenames[flash_num_files++] = argv[++i];
+            continue;
+        }
+
+        if (strcmp(argv[i], "--ncpu") == 0) {
+            if (i + 1 == argc) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") " missing CPU number specification after --ncpu\n");
+                show_help(false, exec_name);
+                return 1;
+            }
+            long int ncpus = strtol(argv[i + 1], NULL, 10);
+            const int detected_cpus = detect_num_CPUs();
+            if (ncpus < 0 || ncpus >= detected_cpus) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") " invalid number of CPU cores: --ncpu " _YELLOW_("%s") " (available: %d)\n", argv[i + 1], detected_cpus);
+                return 1;
+            }
+            g_numCPUs = ncpus;
+            i++;
             continue;
         }
 
