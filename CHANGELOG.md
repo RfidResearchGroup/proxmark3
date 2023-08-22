@@ -44,6 +44,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf_mf_luxeo_dump.lua` - now have list of keys to iterate (@iceman1001)
  - Fixed the timeout of TCP connections (@wh201906)
  - Changed the connection timeout configurable (@wh201906)
+ - Add hf_cardhopper standalone mode for long-distance relay attacks (@startrekdude)
 
 ## [Seven.4.16717][2023-06-25]
  - Change `hf 14a info` - now identifes QL88 tags (@iceman1001)
