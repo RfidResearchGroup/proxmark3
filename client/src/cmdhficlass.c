@@ -1266,6 +1266,11 @@ static int CmdHFiClassESetBlk(const char *Cmd) {
 }
 
 static void iclass_decode_credentials(uint8_t *data) {
+    if (memcmp(data + (5 * PICOPASS_BLOCK_SIZE), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
+        // Not a Legacy or SR card, nothing to do here.
+        return;
+    }
+
     BLOCK79ENCRYPTION encryption = (data[(6 * 8) + 7] & 0x03);
     bool has_values = (memcmp(data + (8 * 7), empty, 8) != 0) && (memcmp(data + (8 * 7), zeros, 8) != 0);
     if (has_values && encryption == None) {
@@ -1290,7 +1295,7 @@ static void iclass_decode_credentials(uint8_t *data) {
         wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
         HIDTryUnpack(&packed);
     } else {
-        PrintAndLogEx(INFO, "No credential found");
+        PrintAndLogEx(INFO, "No unencrypted legacy credential found");
     }
 }
 
@@ -1515,23 +1520,19 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         // decode block 9
         has_values = (memcmp(decrypted + (8 * 9), empty, 8) != 0) && (memcmp(decrypted + (8 * 9), zeros, 8) != 0);
-        if (has_values) {
-
+        if (has_values && use_sc) {
             uint8_t usr_blk_len = GetNumberBlocksForUserId(decrypted + (8 * 6));
             if (usr_blk_len < 3) {
-                if (use_sc) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(INFO, "Block 9 decoder");
 
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(INFO, "Block 9 decoder");
+                uint8_t pinsize = GetPinSize(decrypted + (8 * 6));
+                if (pinsize > 0) {
 
-                    uint8_t pinsize = GetPinSize(decrypted + (8 * 6));
-                    if (pinsize > 0) {
-
-                        uint64_t pin = bytes_to_num(decrypted + (8 * 9), 5);
-                        char tmp[17] = {0};
-                        snprintf(tmp, sizeof(tmp), "%."PRIu64, BCD2DEC(pin));
-                        PrintAndLogEx(INFO, "PIN........................ " _GREEN_("%.*s"), pinsize, tmp);
-                    }
+                    uint64_t pin = bytes_to_num(decrypted + (8 * 9), 5);
+                    char tmp[17] = {0};
+                    snprintf(tmp, sizeof(tmp), "%."PRIu64, BCD2DEC(pin));
+                    PrintAndLogEx(INFO, "PIN........................ " _GREEN_("%.*s"), pinsize, tmp);
                 }
             }
         }
@@ -2628,49 +2629,59 @@ static int CmdHFiClass_loclass(const char *Cmd) {
 }
 
 static void detect_credential(uint8_t *data, bool *legacy, bool *se, bool *sr) {
-    bool r1 = !memcmp(data + (5 * 8), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
+    *legacy = false;
+    *sr = false;
+    *se = false;
 
-    uint8_t pattern_se[] = {0x05, 0x00};
-    bool r2 = byte_strstr(data + (6 * 8), 6 * 8, pattern_se, sizeof(pattern_se)) != -1;
+    // Legacy AIA
+    if (!memcmp(data + (5 * PICOPASS_BLOCK_SIZE), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
+        *legacy = true;
 
-    uint8_t pattern_sr[] = {0x05, 0x00, 0x05, 0x00};
-    bool r3 = byte_strstr(data + (11 * 8), 6 * 8, pattern_sr, sizeof(pattern_sr)) != -1;
+        // SR bit set in legacy config block
+        if ((data[6 * PICOPASS_BLOCK_SIZE] & 0xA0) == 0xA0) {
+            // If the card is blank (all FF's) then we'll reach here too, so check for an empty block 10
+            // to avoid false positivies
+            if (memcmp(data + (10 * PICOPASS_BLOCK_SIZE), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
+                *sr = true;
+            }
+        }
 
-    *legacy = (r1) && (data[6 * 8] != 0x30);
-    *se = (r2) && (data[6 * 8] == 0x30);
-    *sr = (r3) && (data[10 * 8] == 0x30);
-    r1 = NULL, r2 = NULL, r3 = NULL;
+        return;
+    }
+
+    // SE AIA
+    if (!memcmp(data + (5 * PICOPASS_BLOCK_SIZE), "\xFF\xFF\xFF\x00\x06\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
+        *se = true;
+        return;
+    }
 }
 
 // print ASN1 decoded array in TLV view
 static void printIclassSIO(uint8_t *iclass_dump) {
-
     bool isLegacy, isSE, isSR;
     detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
 
-    int dlen = 0;
     uint8_t *sio_start;
     if (isSE) {
-
-        sio_start = iclass_dump + (6 * 8);
-        uint8_t pattern_se[] = {0x05, 0x00};
-        dlen = byte_strstr(sio_start, 8 * 8, pattern_se, sizeof(pattern_se));
-        if (dlen == -1) {
-            return;
-        }
-        dlen += sizeof(pattern_se);
+        // SE SIO starts at block 6
+        sio_start = iclass_dump + (6 * PICOPASS_BLOCK_SIZE);
     } else if (isSR) {
-
-        sio_start = iclass_dump + (10 * 8);
-        uint8_t pattern_sr[] = {0x05, 0x00, 0x05, 0x00};
-        dlen = byte_strstr(sio_start, 8 * 8, pattern_sr, sizeof(pattern_sr));
-        if (dlen == -1) {
-            return;
-        }
-        dlen += sizeof(pattern_sr);
+        // SR SIO starts at block 10
+        sio_start = iclass_dump + (10 * PICOPASS_BLOCK_SIZE);
     } else {
+        // No SIO on Legacy credentials
         return;
     }
+
+    // Readers assume the SIO always fits within 7 blocks (they don't read any further blocks)
+    // Search backwards to find the last 0x05 0x00 seen at the end of the SIO
+    const uint8_t pattern_sio_end[] = {0x05, 0x00};
+    int dlen = byte_strrstr(sio_start, 7 * PICOPASS_BLOCK_SIZE, pattern_sio_end, 2);
+    if (dlen == -1) {
+        return;
+    }
+
+    dlen += sizeof(pattern_sio_end);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
@@ -2702,8 +2713,15 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     else
         maxmemcount = 31;
 
-    if (startblock == 0)
-        startblock = 6;
+    uint8_t pagemap = get_pagemap(hdr);
+
+    if (startblock == 0) {
+        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+            startblock = 3;
+        } else {
+            startblock = 6;
+        }
+    }
 
     if ((endblock > maxmemcount) || (endblock == 0))
         endblock = maxmemcount;
@@ -2721,7 +2739,6 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
         , filemaxblock
     );
     */
-    uint8_t pagemap = get_pagemap(hdr);
 
     bool isLegacy = false, isSE = false, isSR = false;
     if (filemaxblock >= 17) {
@@ -2886,7 +2903,7 @@ static int CmdHFiClassView(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>",  "filename of dump (bin/eml/json)"),
-        arg_int0(NULL, "first", "<dec>", "Begin printing from this block (default block 6)"),
+        arg_int0(NULL, "first", "<dec>", "Begin printing from this block (default first user block - 6 or 3 on non secured chips)"),
         arg_int0(NULL, "last", "<dec>", "End printing at this block (default 0, ALL)"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("z", "dense", "dense dump output style"),

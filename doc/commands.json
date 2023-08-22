@@ -3403,7 +3403,7 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> filename of dump (bin/eml/json)",
-                "--first <dec> Begin printing from this block (default block 6)",
+                "--first <dec> Begin printing from this block (default first user block - 6 or 3 on non secured chips)",
                 "--last <dec> End printing at this block (default 0, ALL)",
                 "-v, --verbose verbose output",
                 "-z, --dense dense dump output style"
@@ -11834,6 +11834,6 @@
     "metadata": {
         "commands_extracted": 686,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-08-22T17:13:49"
+        "extracted_on": "2023-08-22T23:15:58"
     }
 }
