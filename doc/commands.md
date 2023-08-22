@@ -421,6 +421,7 @@ Check column "offline" for their availability.
 |`hf iclass sim          `|N       |`Simulate iCLASS tag`
 |`hf iclass eload        `|N       |`Load Picopass / iCLASS dump file into emulator memory`
 |`hf iclass esave        `|N       |`Save emulator memory to file`
+|`hf iclass esetblk      `|N       |`Set emulator memory block data`
 |`hf iclass eview        `|N       |`View emulator memory`
 |`hf iclass configcard   `|Y       |`Reader configuration card`
 |`hf iclass calcnewkey   `|Y       |`Calc diversified keys (blocks 3 & 4) to write new keys`

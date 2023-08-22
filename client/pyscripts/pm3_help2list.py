@@ -88,7 +88,7 @@ const static vocabulary_t vocabulary[] = {\n""")
 
         cmd = values['command']
 
-        args.output_file.write('    {{ {}, "{}" }}, \n'.format(offline, cmd))
+        args.output_file.write('    {{ {}, "{}" }},\n'.format(offline, cmd))
 
     args.output_file.write("""    {0, NULL}\n};
 
