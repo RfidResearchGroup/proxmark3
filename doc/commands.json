@@ -3151,17 +3151,15 @@
         },
         "hf iclass esetblk": {
             "command": "hf iclass esetblk",
-            "description": "Display emulator memory. Number of bytes to download defaults to 256. Other value is 2048.",
+            "description": "Sets an individual block in emulator memory.",
             "notes": [
-                "hf iclass eview",
-                "hf iclass eview -s 2048",
-                "hf iclass eview -s 2048 -v"
+                "hf iclass esetblk -b 7 -d 0000000000000000"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-b, --blk <dec> block number",
-                "-d, --data <hex> bytes to write, 16 hex bytes"
+                "-d, --data <hex> bytes to write, 8 hex bytes"
             ],
             "usage": "hf iclass esetblk [-h] -b <dec> [-d <hex>]"
         },
@@ -7001,7 +6999,6 @@
             "description": "Simulate a texkom tag",
             "notes": [
                 "hf texkom sim",
-                "",
                 "hf texkom sim --raw FFFF638C7DC45553 -> simulate TK13 tag with id 8C7DC455",
                 "hf texkom sim --tk17 --raw FFFFCA17F31EC512 -> simulate TK17 tag with id 17F31EC5",
                 "hf texkom sim --id 8C7DC455 -> simulate TK13 tag with id 8C7DC455",
@@ -11837,6 +11834,6 @@
     "metadata": {
         "commands_extracted": 686,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-08-21T21:25:03"
+        "extracted_on": "2023-08-22T17:13:49"
     }
 }
