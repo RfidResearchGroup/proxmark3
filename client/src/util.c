@@ -1289,6 +1289,25 @@ int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_
     return -1;
 }
 
+int byte_strrstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen) {
+    for (int i = srclen - plen; i >= 0; i--) {
+        // compare only first byte
+        if (src[i] != pattern[0])
+            continue;
+
+        // try to match rest of the pattern
+        for (int j = plen - 1; j >= 1; j--) {
+
+            if (src[i + j] != pattern[j])
+                break;
+
+            if (j == 1)
+                return i;
+        }
+    }
+    return -1;
+}
+
 void sb_append_char(smartbuf *sb, unsigned char c) {
     if (sb->idx >= sb->size) {
         sb->size *= 2;
