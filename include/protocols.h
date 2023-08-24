@@ -178,6 +178,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443A_CMD_RATS          0xE0
 #define ISO14443A_CMD_PPS           0xD0
 #define ISO14443A_CMD_NXP_DESELECT  0xC2
+#define ISO14443A_CMD_WTX           0xF2
 
 #define MIFARE_SELECT_CT            0x88
 #define MIFARE_AUTH_KEYA            0x60
