@@ -73,11 +73,7 @@ multiple outputs connected together therefore leading to a failed compilation
 //`ifdef WITH_LF2 `include "lo_passthru.v"    `endif
 //`ifdef WITH_LF3 `include "lo_adc.v"         `endif
 //
-//`ifdef WITH_HF_15
-//`ifdef WITH_HF0 `include "hi_reader_15.v"   `endif
-//`else
 //`ifdef WITH_HF0 `include "hi_reader.v"      `endif
-//`endif
 //`ifdef WITH_HF1 `include "hi_simulate.v"    `endif
 //`ifdef WITH_HF2 `include "hi_iso14443a.v"   `endif
 //`ifdef WITH_HF3 `include "hi_sniffer.v"     `endif
@@ -277,11 +273,7 @@ assign mux6_pwr_lo = 1'b1;
 
 //   HF reader
 `ifdef WITH_HF0
-`ifdef WITH_HF_15
-hi_reader_15 hr(
-`else
 hi_reader hr(
-`endif
     .ck_1356meg (ck_1356megb),
     .adc_d      (adc_d),
     .subcarrier_frequency (conf_word[5:4]),
