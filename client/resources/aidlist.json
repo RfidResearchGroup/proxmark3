@@ -2406,5 +2406,21 @@
         "Name": "AirDrop connection negotiation",
         "Description": "Used by NFC-based AirDrop negotiation added in IOS17",
         "Type": ""
+    },
+    {
+        "AID": "a0000004400001010001",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "SEOS",
+        "Description": "Used by both by physical cards and mobile implementations",
+        "Type": "access"
+    },
+    {
+        "AID": "A00000054000060100010000FF",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "SEOS Mobile",
+        "Description": "Declared by some SEOS-compatible applications for HCE",
+        "Type": "access"
     }
 ]
