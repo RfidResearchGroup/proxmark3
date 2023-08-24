@@ -105,12 +105,11 @@ begin
         write_enable1 <= 1'b0;
         write_enable2 <= 1'b0;
         if (previous_major_mode != `FPGA_MAJOR_MODE_OFF && previous_major_mode != `FPGA_MAJOR_MODE_HF_GET_TRACE) // just switched off
-                begin
+        begin
             start_addr <= addr;
-                end
+        end
     end
 end
-
 
 // (2+1)k RAM
 reg [7:0] D_out1, D_out2;
@@ -127,14 +126,13 @@ begin
     else
         D_out1 <= ram1[addr[10:0]];
     if (write_enable2)
-begin
+    begin
         ram2[addr[9:0]] <= adc_d;
         D_out2 <= adc_d;
     end
     else
         D_out2 <= ram2[addr[9:0]];
 end
-
 
 reg [7:0] shift_out;
 
@@ -150,10 +148,10 @@ begin
                 shift_out <= D_out2;
         end
         else
-            begin
-                // or shift left
-                shift_out[7:1] <= shift_out[6:0];
-            end
+        begin
+            // or shift left
+            shift_out[7:1] <= shift_out[6:0];
+        end
     end
 
     ssp_clk <= ~clock_cnt[3];       // ssp_clk frequency = 13,56MHz / 16 = 847,5 kHz

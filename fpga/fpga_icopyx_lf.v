@@ -71,7 +71,13 @@ reg [7:0] lf_ed_threshold;
 wire [7:0] pck_cnt;
 wire pck_divclk;
 reg [7:0] divisor;
-clk_divider div_clk(pck0, divisor, pck_cnt, pck_divclk);
+
+clk_divider div_clk(
+    .clk     (pck0),
+    .divisor (divisor),
+    .div_cnt (pck_cnt),
+    .div_clk (pck_divclk)
+);
 
 // We switch modes between transmitting to the 13.56 MHz tag and receiving
 // from it, which means that we must make sure that we can do so without
