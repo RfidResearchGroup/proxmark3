@@ -3397,13 +3397,16 @@
             "description": "Print a iCLASS tag dump file (bin/eml/json)",
             "notes": [
                 "hf iclass view -f hf-iclass-AA162D30F8FF12F1-dump.bin",
-                "hf iclass view --first 1 -f hf-iclass-AA162D30F8FF12F1-dump.bin"
+                "hf iclass view --first 1 -f hf-iclass-AA162D30F8FF12F1-dump.bin",
+                "",
+                "If --first is not specified it will default to the first user block",
+                "which is block 6 for secured chips or block 3 for non-secured chips"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> filename of dump (bin/eml/json)",
-                "--first <dec> Begin printing from this block (default first user block - 6 or 3 on non secured chips)",
+                "--first <dec> Begin printing from this block (default first user block)",
                 "--last <dec> End printing at this block (default 0, ALL)",
                 "-v, --verbose verbose output",
                 "-z, --dense dense dump output style"
@@ -11834,6 +11837,6 @@
     "metadata": {
         "commands_extracted": 686,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-08-22T23:15:58"
+        "extracted_on": "2023-08-24T05:14:06"
     }
 }

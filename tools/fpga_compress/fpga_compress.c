@@ -262,7 +262,7 @@ static int zlib_decompress(FILE *infile, FILE *outfiles[], uint8_t num_outfiles,
             for (uint16_t j = 0; j < num_outfiles; j++) {
                 if (k * FPGA_INTERLEAVE_SIZE < outfilesizes[j]) {
                     uint16_t chunk = (outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) < FPGA_INTERLEAVE_SIZE) ?
-                                            outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) : FPGA_INTERLEAVE_SIZE;
+                                     outfilesizes[j] - (k * FPGA_INTERLEAVE_SIZE) : FPGA_INTERLEAVE_SIZE;
 
                     fwrite(outbufall + offset, chunk, sizeof(char), outfiles[j]);
                 }

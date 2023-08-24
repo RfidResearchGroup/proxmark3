@@ -854,7 +854,7 @@ void Plot::Zoom(double factor, uint32_t refX) {
             }
         }
     } else {          // Zoom out
-        if (g_GraphPixelsPerPointNew >= (1.0 / ZOOM_LIMIT) ) {
+        if (g_GraphPixelsPerPointNew >= (1.0 / ZOOM_LIMIT)) {
             g_GraphPixelsPerPoint = g_GraphPixelsPerPointNew;
             // shift graph towards refX when zooming out
             if (refX > g_GraphStart) {
@@ -951,7 +951,7 @@ void Plot::wheelEvent(QWheelEvent *event) {
             Zoom(1.0 / ZOOM_STEP, x);
         }
     } else {
-        Move(PageWidth * delta * move_offset / 120 );
+        Move(PageWidth * delta * move_offset / 120);
     }
     this->update();
 }
@@ -981,7 +981,7 @@ void Plot::keyPressEvent(QKeyEvent *event) {
         if (event->modifiers() & Qt::ControlModifier)
             offset = 1;
         else
-            offset = int(ZOOM_LIMIT/g_GraphPixelsPerPoint);
+            offset = int(ZOOM_LIMIT / g_GraphPixelsPerPoint);
     }
 
     switch (event->key()) {
@@ -990,13 +990,13 @@ void Plot::keyPressEvent(QKeyEvent *event) {
                 if (event->modifiers() & Qt::ControlModifier) {
                     Zoom(ZOOM_STEP, CursorBPos);
                 } else {
-                    Zoom(ZOOM_STEP*2, CursorBPos);
+                    Zoom(ZOOM_STEP * 2, CursorBPos);
                 }
             } else {
                 if (event->modifiers() & Qt::ControlModifier) {
                     Zoom(ZOOM_STEP, CursorAPos);
                 } else {
-                    Zoom(ZOOM_STEP*2, CursorAPos);
+                    Zoom(ZOOM_STEP * 2, CursorAPos);
                 }
             }
             break;
@@ -1006,13 +1006,13 @@ void Plot::keyPressEvent(QKeyEvent *event) {
                 if (event->modifiers() & Qt::ControlModifier) {
                     Zoom(1.0 / ZOOM_STEP, CursorBPos);
                 } else {
-                    Zoom(1.0 / (ZOOM_STEP*2), CursorBPos);
+                    Zoom(1.0 / (ZOOM_STEP * 2), CursorBPos);
                 }
             } else {
                 if (event->modifiers() & Qt::ControlModifier) {
                     Zoom(1.0 / ZOOM_STEP, CursorAPos);
                 } else {
-                    Zoom(1.0 / (ZOOM_STEP*2), CursorAPos);
+                    Zoom(1.0 / (ZOOM_STEP * 2), CursorAPos);
                 }
             }
             break;

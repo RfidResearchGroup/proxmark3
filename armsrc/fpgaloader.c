@@ -111,27 +111,27 @@ void SetupSpi(int mode) {
                 AT91C_SPI_NCPHA    |  // Clock Phase data captured on leading edge, changes on following edge
                 (0 << 0);             // Clock Polarity inactive state is logic 0
             break;
-/*
-            case SPI_LCD_MODE:
-            AT91C_BASE_SPI->SPI_MR =
-                ( 0 << 24)         |  // Delay between chip selects (take default: 6 MCK periods)
-                (0xB << 16)        |  // Peripheral Chip Select (selects LCD SPI_NCS2 or PA10)
-                ( 0 << 7)          |  // Local Loopback Disabled
-                ( 1 << 4)          |  // Mode Fault Detection disabled
-                ( 0 << 2)          |  // Chip selects connected directly to peripheral
-                ( 0 << 1)          |  // Fixed Peripheral Select
-                ( 1 << 0);            // Master Mode
+        /*
+                    case SPI_LCD_MODE:
+                    AT91C_BASE_SPI->SPI_MR =
+                        ( 0 << 24)         |  // Delay between chip selects (take default: 6 MCK periods)
+                        (0xB << 16)        |  // Peripheral Chip Select (selects LCD SPI_NCS2 or PA10)
+                        ( 0 << 7)          |  // Local Loopback Disabled
+                        ( 1 << 4)          |  // Mode Fault Detection disabled
+                        ( 0 << 2)          |  // Chip selects connected directly to peripheral
+                        ( 0 << 1)          |  // Fixed Peripheral Select
+                        ( 1 << 0);            // Master Mode
 
-            AT91C_BASE_SPI->SPI_CSR[2] =
-                ( 1 << 24)         |  // Delay between Consecutive Transfers (32 MCK periods)
-                ( 1 << 16)         |  // Delay Before SPCK (1 MCK period)
-                ( 6 << 8)          |  // Serial Clock Baud Rate (baudrate = MCK/6 = 24MHz/6 = 4M baud
-                AT91C_SPI_BITS_9   |  // Bits per Transfer (9 bits)
-                ( 0 << 3)          |  // Chip Select inactive after transfer
-                ( 1 << 1)          |  // Clock Phase data captured on leading edge, changes on following edge
-                ( 0 << 0);            // Clock Polarity inactive state is logic 0
-            break;
-*/
+                    AT91C_BASE_SPI->SPI_CSR[2] =
+                        ( 1 << 24)         |  // Delay between Consecutive Transfers (32 MCK periods)
+                        ( 1 << 16)         |  // Delay Before SPCK (1 MCK period)
+                        ( 6 << 8)          |  // Serial Clock Baud Rate (baudrate = MCK/6 = 24MHz/6 = 4M baud
+                        AT91C_SPI_BITS_9   |  // Bits per Transfer (9 bits)
+                        ( 0 << 3)          |  // Chip Select inactive after transfer
+                        ( 1 << 1)          |  // Clock Phase data captured on leading edge, changes on following edge
+                        ( 0 << 0);            // Clock Polarity inactive state is logic 0
+                    break;
+        */
         default:
             DisableSpi();
             break;

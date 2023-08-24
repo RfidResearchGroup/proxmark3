@@ -199,7 +199,7 @@ int rdv40_spiffs_check(void) {
 void write_to_spiffs(const char *filename, const uint8_t *src, uint32_t size) {
     spiffs_file fd = SPIFFS_open(&fs, filename, SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR, 0);
     // Note: SPIFFS_write() doesn't declare third parameter as const (but should)
-    if (SPIFFS_write(&fs, fd, (void*)src, size) < 0) {
+    if (SPIFFS_write(&fs, fd, (void *)src, size) < 0) {
         Dbprintf("wr errno %i\n", SPIFFS_errno(&fs));
     }
     SPIFFS_close(&fs, fd);
@@ -208,7 +208,7 @@ void write_to_spiffs(const char *filename, const uint8_t *src, uint32_t size) {
 void append_to_spiffs(const char *filename, const uint8_t *src, uint32_t size) {
     spiffs_file fd = SPIFFS_open(&fs, filename, SPIFFS_APPEND | SPIFFS_RDWR, 0);
     // Note: SPIFFS_write() doesn't declare third parameter as const (but should)
-    if (SPIFFS_write(&fs, fd, (void*)src, size) < 0) {
+    if (SPIFFS_write(&fs, fd, (void *)src, size) < 0) {
         Dbprintf("errno %i\n", SPIFFS_errno(&fs));
     }
     SPIFFS_close(&fs, fd);
