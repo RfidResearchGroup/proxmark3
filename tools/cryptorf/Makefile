@@ -8,6 +8,12 @@ MYLDLIBS = -lpthread
 BINS = cm sm sma sma_multi
 INSTALLTOOLS = $(BINS)
 
+platform = $(shell uname)
+
+ifeq ($(platform),Darwin)
+CXXFLAGS = -std=c++14
+endif
+
 include ../../Makefile.host
 
 # checking platform can be done only after Makefile.host
