@@ -624,57 +624,6 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_E_FILE_NOT_FOUND           0xF0
 #define MFDES_E_FILE_INTEGRITY           0xF1
 
-// MIFARE PLus EV2 Command set
-// source: https://www.nxp.com/docs/en/data-sheet/MF1P(H)x2.pdf in Look-Up Tables
-
-#define MFP_READ_SIG                    0x3C // same as DESFIRE
-#define MFP_WRITEPERSO                  0xA8
-#define MFP_COMMITPERSO                 0xAA
-
-#define MFP_AUTHENTICATEFIRST           0x70
-#define MFP_AUTHENTICATEFIRST_VARIANT   0x73
-#define MFP_AUTHENTICATENONFIRST        0x76
-#define MFP_AUTHENTICATECONTINUE        0x72
-#define MFP_AUTHENTICATESECTORSWITCH    0x7A
-#define MFP_RESETAUTH                   0x78
-
-#define MFP_VCSUPPORTLASTISOL3          0x4B
-#define MFP_ISOSELECT                   0xA4
-
-#define MFP_GETVERSION                  0x60 // same as DESFIRE
-#define MFP_ADDITIONALFRAME             0xAF
-#define MFP_SETCONFIGSL1                0x44
-#define MFP_MF_PERSONALIZEUIDUSAGE      0x40
-
-// read commands
-#define MFP_READENCRYPTEDNOMAC_MACED    0X30
-#define MFP_READENCRYPTEDMAC_MACED      0x31
-#define MFP_READPLAINNOMAC_MACED        0x32
-#define MFP_READPLAINMAC_MACED          0x33
-#define MFP_READENCRYPTEDNOMAC_UNMACED  0x34
-#define MFP_READENCRYPTEDMAC_UNMACED    0X35
-#define MFP_READPLAINNOMAC_UNMACED      0x36
-#define MFP_READPLAINMAC_UNMACED        0x37
-
-// write commands
-#define MFP_WRITEENCRYPTEDNOMAC         0xA0
-#define MFP_WRITEENCRYPTEDMAC           0xA1
-#define MFP_WRITEPLAINNOMAC             0xA2
-#define MFP_WRITEPLAINMAC               0xA3
-
-// value commands
-#define MFP_INCREMENTNOMAC              0xB0
-#define MFP_INCREMENTMAC                0xB1
-#define MFP_DECREMENTNOMAC              0xB2
-#define MFP_DECREMENTMAC                0xB3
-#define MFP_TRANSFERNOMAC               0xB4
-#define MFP_TRANSFERMAC                 0xB5
-#define MFP_INCREMENTTRANSFERNOMAC      0xB6
-#define MFP_INCREMENTTRANSFERMAC        0xB7
-#define MFP_DECREMENTTRANSFERNOMAC      0xB8
-#define MFP_DECREMENTTRANSFERMAC        0xB9
-#define MFP_RESTORENOMAC                0xC2
-#define MFP_RESTOREMAC                  0xC3
 
 // MIFARE PLus EV2 Command set
 // source: https://www.nxp.com/docs/en/data-sheet/MF1P(H)x2.pdf in Look-Up Tables
