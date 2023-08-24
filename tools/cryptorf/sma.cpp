@@ -671,13 +671,12 @@ static inline void search_gc_candidates_left(const uint64_t lstate_before_gc, co
 
 void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcstates, vector<uint64_t> *pgc_candidates) {
     vector<cs_t>::iterator itl, itr;
-    size_t pos, count;
+    size_t pos;
     uint64_t gc;
     bool valid;
 
     // Clean up the candidate list
     pgc_candidates->clear();
-    count = 0;
     for (itl = plcstates->begin(); itl != plcstates->end(); ++itl) {
         for (itr = prcstates->begin(); itr != prcstates->end(); ++itr) {
             valid = true;
@@ -700,7 +699,6 @@ void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcs
 //        printf("%09llx - ",itl->l);
 //        printf("%07llx\n",itr->r);
             }
-            count++;
         }
     }
     printf("Found a total of " _YELLOW_("%llu")" combinations, ", ((unsigned long long)plcstates->size()) * prcstates->size());
