@@ -13,9 +13,6 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-//
-// General-purpose miscellany.
-//
 
 // 8 inputs to 1 output multiplexer
 module mux8(

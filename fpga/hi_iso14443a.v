@@ -14,7 +14,6 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // ISO14443-A support for the Proxmark III
-//`include "define.v"
 
 module hi_iso14443a(
     input ck_1356meg,

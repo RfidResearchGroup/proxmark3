@@ -13,7 +13,6 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-//`include "define.v"
 
 module hi_get_trace(
     input ck_1356megb,

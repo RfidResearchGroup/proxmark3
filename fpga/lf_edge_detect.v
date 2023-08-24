@@ -15,9 +15,6 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 
-// input clk is 24MHz
-//`include "min_max_tracker.v"
-
 module lf_edge_detect(
     input clk,
     input [7:0] adc_d,

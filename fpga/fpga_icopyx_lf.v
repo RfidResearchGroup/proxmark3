@@ -20,13 +20,6 @@
 // frequency modes, the FPGA might perform some demodulation first, to
 // reduce the amount of data that we must send to the ARM.
 //-----------------------------------------------------------------------------
-//`include "define.v"
-
-//`include "lo_read.v"
-//`include "lo_passthru.v"
-//`include "lo_edge_detect.v"
-//`include "lo_adc.v"
-//`include "clk_divider.v"
 
 module fpga_lf(
     input spck,

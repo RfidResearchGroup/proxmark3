@@ -30,7 +30,6 @@
 //
 // Jonathan Westhues, October 2006
 //-----------------------------------------------------------------------------
-//`include "define.v"
 
 module hi_simulate(
     input ck_1356meg,

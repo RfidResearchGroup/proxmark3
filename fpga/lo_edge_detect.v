@@ -25,9 +25,6 @@
 // - ssp_frame (wired to TIOA1 on the arm) for the edge detection/state
 // - ssp_clk: cross_lo
 
-//`include "lp20khz_1MSa_iir_filter.v"
-//`include "lf_edge_detect.v"
-
 module lo_edge_detect(
     input pck0,
     input pck_divclk,
