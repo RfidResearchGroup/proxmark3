@@ -42,8 +42,10 @@
 
 #define PICOPASS_BLOCK_SIZE    8
 #define NUM_CSNS               9
+#define MAC_ITEM_SIZE          24 // csn(8) + epurse(8) + nr(4) + mac(4) = 24 bytes
 #define ICLASS_KEYS_MAX        8
 #define ICLASS_AUTH_RETRY      10
+#define ICLASS_CFG_BLK_SR_BIT  0xA0 // indicates SIO present when set in block6[0] (legacy tags)
 #define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
 
 static void print_picopass_info(const picopass_hdr_t *hdr);
@@ -54,13 +56,13 @@ static void iclass_set_last_known_card(picopass_hdr_t *card) {
     memcpy(&iclass_last_known_card, card, sizeof(picopass_hdr_t));
 }
 
-static uint8_t empty[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-static uint8_t zeros[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+static uint8_t empty[PICOPASS_BLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+static uint8_t zeros[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static int CmdHelp(const char *Cmd);
 static void printIclassSIO(uint8_t *iclass_dump);
 
-static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][8] = {
+static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][PICOPASS_BLOCK_SIZE] = {
     { 0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78 },
     { 0xFD, 0xCB, 0x5A, 0x52, 0xEA, 0x8F, 0x30, 0x90 },
     { 0xF0, 0xE1, 0xD2, 0xC3, 0xB4, 0xA5, 0x96, 0x87 },
@@ -747,7 +749,7 @@ static int CmdHFiClassSim(const char *Cmd) {
     // remember to change the define NUM_CSNS to match.
 
     // pre-defined 9 CSN by iceman
-    uint8_t csns[8 * NUM_CSNS] = {
+    uint8_t csns[NUM_CSNS * PICOPASS_BLOCK_SIZE] = {
         0x01, 0x0A, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
         0x0C, 0x06, 0x0C, 0xFE, 0xF7, 0xFF, 0x12, 0xE0,
         0x10, 0x97, 0x83, 0x7B, 0xF7, 0xFF, 0x12, 0xE0,
@@ -779,7 +781,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 1, csns, 8 * NUM_CSNS);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 1, csns, NUM_CSNS * PICOPASS_BLOCK_SIZE);
 
             while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
                 tries++;
@@ -799,7 +801,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             if (num_mac == 0)
                 break;
 
-            size_t datalen = NUM_CSNS * 24;
+            size_t datalen = NUM_CSNS * MAC_ITEM_SIZE;
             uint8_t *dump = calloc(datalen, sizeof(uint8_t));
             if (!dump) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
@@ -811,11 +813,11 @@ static int CmdHFiClassSim(const char *Cmd) {
             uint8_t i = 0;
             for (i = 0 ; i < NUM_CSNS ; i++) {
                 //copy CSN
-                memcpy(dump + i * 24, csns + i * 8, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE), csns + i * 8, 8);
                 //copy epurse
-                memcpy(dump + i * 24 + 8, resp.data.asBytes + i * 16, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE) + 8, resp.data.asBytes + i * 16, 8);
                 // NR_MAC (eight bytes from the response)  ( 8b csn + 8b epurse == 16)
-                memcpy(dump + i * 24 + 16, resp.data.asBytes + i * 16 + 8, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE) + 16, resp.data.asBytes + i * 16 + 8, 8);
             }
             /** Now, save to dumpfile **/
             saveFile("iclass_mac_attack", ".bin", dump, datalen);
@@ -830,7 +832,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             PrintAndLogEx(INFO, "press Enter to cancel");
             PacketResponseNG resp;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 1, csns, 8 * NUM_CSNS);
+            SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 1, csns, NUM_CSNS * PICOPASS_BLOCK_SIZE);
 
             while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
                 tries++;
@@ -850,25 +852,23 @@ static int CmdHFiClassSim(const char *Cmd) {
             if (num_mac == 0)
                 break;
 
-            size_t datalen = NUM_CSNS * 24;
+            size_t datalen = NUM_CSNS * MAC_ITEM_SIZE;
             uint8_t *dump = calloc(datalen, sizeof(uint8_t));
             if (!dump) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return PM3_EMALLOC;
             }
 
-#define MAC_ITEM_SIZE 24
-
             //KEYROLL 1
             //Need zeroes for the CC-field
             memset(dump, 0, datalen);
             for (uint8_t i = 0; i < NUM_CSNS ; i++) {
                 // copy CSN
-                memcpy(dump + i * MAC_ITEM_SIZE, csns + i * 8, 8); //CSN
+                memcpy(dump + (i * MAC_ITEM_SIZE), csns + i * 8, 8); //CSN
                 // copy EPURSE
-                memcpy(dump + i * MAC_ITEM_SIZE + 8, resp.data.asBytes + i * 16, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE) + 8, resp.data.asBytes + i * 16, 8);
                 // copy NR_MAC (eight bytes from the response)  ( 8b csn + 8b epurse == 16)
-                memcpy(dump + i * MAC_ITEM_SIZE + 16, resp.data.asBytes + i * 16 + 8, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE) + 16, resp.data.asBytes + i * 16 + 8, 8);
             }
             saveFile("iclass_mac_attack_keyroll_A", ".bin", dump, datalen);
 
@@ -877,11 +877,11 @@ static int CmdHFiClassSim(const char *Cmd) {
             for (uint8_t i = 0; i < NUM_CSNS; i++) {
                 uint8_t resp_index = (i + NUM_CSNS) * 16;
                 // Copy CSN
-                memcpy(dump + i * MAC_ITEM_SIZE, csns + i * 8, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE), csns + i * 8, 8);
                 // copy EPURSE
-                memcpy(dump + i * MAC_ITEM_SIZE + 8, resp.data.asBytes + resp_index, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE) + 8, resp.data.asBytes + resp_index, 8);
                 // copy NR_MAC (eight bytes from the response)  ( 8b csn + 8 epurse == 16)
-                memcpy(dump + i * MAC_ITEM_SIZE + 16, resp.data.asBytes + resp_index + 8, 8);
+                memcpy(dump + (i * MAC_ITEM_SIZE) + 16, resp.data.asBytes + resp_index + 8, 8);
                 resp_index++;
             }
             saveFile("iclass_mac_attack_keyroll_B", ".bin", dump, datalen);
@@ -2638,7 +2638,7 @@ static void detect_credential(uint8_t *data, bool *legacy, bool *se, bool *sr) {
         *legacy = true;
 
         // SR bit set in legacy config block
-        if ((data[6 * PICOPASS_BLOCK_SIZE] & 0xA0) == 0xA0) {
+        if ((data[6 * PICOPASS_BLOCK_SIZE] & ICLASS_CFG_BLK_SR_BIT) == ICLASS_CFG_BLK_SR_BIT) {
             // If the card is blank (all FF's) then we'll reach here too, so check for an empty block 10
             // to avoid false positivies
             if (memcmp(data + (10 * PICOPASS_BLOCK_SIZE), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
@@ -2898,12 +2898,14 @@ static int CmdHFiClassView(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass view",
                   "Print a iCLASS tag dump file (bin/eml/json)",
                   "hf iclass view -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
-                  "hf iclass view --first 1 -f hf-iclass-AA162D30F8FF12F1-dump.bin\n");
+                  "hf iclass view --first 1 -f hf-iclass-AA162D30F8FF12F1-dump.bin\n\n"
+                  "If --first is not specified it will default to the first user block\n"
+                  "which is block 6 for secured chips or block 3 for non-secured chips");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>",  "filename of dump (bin/eml/json)"),
-        arg_int0(NULL, "first", "<dec>", "Begin printing from this block (default first user block - 6 or 3 on non secured chips)"),
+        arg_int0(NULL, "first", "<dec>", "Begin printing from this block (default first user block)"),
         arg_int0(NULL, "last", "<dec>", "End printing at this block (default 0, ALL)"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("z", "dense", "dense dump output style"),
