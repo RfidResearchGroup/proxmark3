@@ -27,6 +27,7 @@
 #include "comms.h"
 #include "usart_defs.h"
 #include "ui.h"
+#include "fpga.h"
 #include "cmdhw.h"
 #include "cmddata.h"
 #include "commonutil.h"
@@ -1392,7 +1393,7 @@ void pm3_version(bool verbose, bool oneliner) {
                 }
             }
             PrintAndLogEx(NORMAL,  payload->versionstr);
-            if (strstr(payload->versionstr, "2s30vq100") == NULL) {
+            if (strstr(payload->versionstr, FPGA_TYPE) == NULL) {
                 PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
             }
 

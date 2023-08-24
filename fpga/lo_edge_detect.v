@@ -25,9 +25,6 @@
 // - ssp_frame (wired to TIOA1 on the arm) for the edge detection/state
 // - ssp_clk: cross_lo
 
-//`include "lp20khz_1MSa_iir_filter.v"
-//`include "lf_edge_detect.v"
-
 module lo_edge_detect(
     input pck0,
     input pck_divclk,
@@ -54,8 +51,8 @@ wire tag_modulation = ssp_dout & !lf_field;
 wire reader_modulation = !ssp_dout & lf_field & pck_divclk;
 
 // No logic, straight through.
-assign pwr_oe1 = 1'b0;                      // not used in LF mode
-assign pwr_oe3 = 1'b0;                      // base antenna load = 33 Ohms
+assign pwr_oe1 = 1'b0; // not used in LF mode
+assign pwr_oe3 = 1'b0; // base antenna load = 33 Ohms
 // when modulating, add another 33 Ohms and 10k Ohms in parallel:
 assign pwr_oe2 = tag_modulation;
 assign pwr_oe4 = tag_modulation;

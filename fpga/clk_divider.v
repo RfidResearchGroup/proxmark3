@@ -22,7 +22,7 @@ module clk_divider(
 );
 
     reg [7:0] div_cnt_ = 0;
-    reg div_clk_;
+    reg div_clk_ = 0;
     assign div_cnt = div_cnt_;
     assign div_clk = div_clk_;
 

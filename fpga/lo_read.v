@@ -51,7 +51,7 @@ reg [7:0] to_arm_shiftreg;
 // we read the ADC value when pck_cnt=7 and shift it out on counts 8..15
 always @(posedge pck0)
 begin
-    if((pck_cnt == 8'd7) && !pck_divclk)
+    if ((pck_cnt == 8'd7) && !pck_divclk)
         to_arm_shiftreg <= adc_d;
     else
     begin
@@ -73,14 +73,15 @@ end
 //         _   _   _   _   _   _   _   _   _   _
 // ssp_clk  |_| |_| |_| |_| |_| |_| |_| |_| |_| |_
 
-// serialized SSP data is gated by ant_lo to suppress unwanted signal
+// serialized SSP data is gated by pck_divclk to suppress unwanted signal
 assign ssp_din = to_arm_shiftreg[7] && !pck_divclk;
 // SSP clock always runs at 24MHz
 assign ssp_clk = pck0;
-// SSP frame is gated by ant_lo and goes high when pck_divider=8..15
+// SSP frame is gated by pck_divclk and goes high when pck_cnt=8..15
 assign ssp_frame = (pck_cnt[7:3] == 5'd1) && !pck_divclk;
 // unused signals tied low
 assign pwr_hi  = 1'b0;
+// always on outputs, unused
 assign pwr_oe1 = 1'b0;
 assign pwr_oe2 = 1'b0;
 assign pwr_oe3 = 1'b0;

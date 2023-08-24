@@ -30,7 +30,6 @@
 //
 // Jonathan Westhues, October 2006
 //-----------------------------------------------------------------------------
-//`include "define.v"
 
 module hi_simulate(
     input ck_1356meg,
@@ -89,7 +88,6 @@ begin
     end
 end
 
-
 // Divide 13.56 MHz to produce various frequencies for SSP_CLK
 // and modulation.
 reg [8:0] ssp_clk_divider;
@@ -100,16 +98,15 @@ always @(negedge adc_clk)
 always @(negedge adc_clk)
 begin
     if (mod_type == `FPGA_HF_SIMULATOR_MODULATE_424K_8BIT)
-      // Get bit every at 53KHz (every 8th carrier bit of 424kHz)
-      ssp_clk <= ~ssp_clk_divider[7];
+        // Get bit every at 53KHz (every 8th carrier bit of 424kHz)
+        ssp_clk <= ~ssp_clk_divider[7];
     else if (mod_type == `FPGA_HF_SIMULATOR_MODULATE_212K)
-      // Get next bit at 212kHz
-      ssp_clk <= ~ssp_clk_divider[5];
+        // Get next bit at 212kHz
+        ssp_clk <= ~ssp_clk_divider[5];
     else
-      // Get next bit at 424kHz
-      ssp_clk <= ~ssp_clk_divider[4];
+        // Get next bit at 424kHz
+        ssp_clk <= ~ssp_clk_divider[4];
 end
-
 
 // Produce the byte framing signal; the phase of this signal
 // is arbitrary, because it's just a bit stream in this module.
@@ -131,7 +128,6 @@ begin
     end
 end
 
-
 // Synchronize up the after-hysteresis signal, to produce DIN.
 always @(posedge ssp_clk)
     ssp_din = after_hysteresis;
@@ -148,9 +144,7 @@ always @(*)
     else if(mod_type == `FPGA_HF_SIMULATOR_MODULATE_424K || mod_type == `FPGA_HF_SIMULATOR_MODULATE_424K_8BIT)
         modulating_carrier <= ssp_dout & ssp_clk_divider[4]; // switch 424kHz modulation on/off
     else
-        modulating_carrier <= 1'b0;                           // yet unused
-
-
+        modulating_carrier <= 1'b0;                          // yet unused
 
 // Load modulation. Toggle only one of these, since we are already producing much deeper
 // modulation than a real tag would.

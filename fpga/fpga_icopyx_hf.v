@@ -20,14 +20,6 @@
 // frequency modes, the FPGA might perform some demodulation first, to
 // reduce the amount of data that we must send to the ARM.
 //-----------------------------------------------------------------------------
-//`include "define.v"
-
-//`include "hi_reader.v"
-//`include "hi_simulate.v"
-//`include "hi_iso14443a.v"
-//`include "hi_flite.v"
-//`include "hi_sniffer.v"
-//`include "hi_get_trace.v"
 
 module fpga_hf(
     input spck,
