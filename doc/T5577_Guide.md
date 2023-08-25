@@ -142,7 +142,7 @@ developers have done a great job and gave us commands. What we need to
 know is that with the T5577, data is read/written one complete block at a
 time. Each block holds 32 bits of data (hence the binary output shown)  
   
-Since we know that the card has data and configuration blocks, lets say
+Since we know that the card has data and configuration blocks, lets stay
 away from those while we learn how to read and write. I suggest you
 follow along and perform each command and check the results as we go.
 
