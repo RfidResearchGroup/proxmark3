@@ -1,9 +1,9 @@
 <a id="Top"></a>
 
-# Mac OS X - Compilation from source instructions
+# macOS - Compilation from source instructions
 
 # Table of Contents
-- [Mac OS X - Compilation from source instructions](x#mac-os-x---compilation-from-source-instructions)
+- [macOS - Compilation from source instructions](#macos---compilation-from-source-instructions)
 - [Table of Contents](#table-of-contents)
   - [Follow Homebrew developer instructions](#follow-homebrew-developer-instructions)
   - [(optional) Running without sudo](#optional-running-without-sudo)
@@ -12,7 +12,7 @@
 ## Follow Homebrew developer instructions
 ^[Top](#top)
 
-Follow the instructions here [developer instructions](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md#homebrew-mac-os-x-developer-installation) and you are done. 
+Follow the instructions here [developer instructions](/doc/md/Installation_Instructions/macOS-Homebrew-Installation-Instructions.md#homebrew-macos-developer-installation) and you are done. 
 
 ## (optional) Running without sudo
 ^[Top](#top)

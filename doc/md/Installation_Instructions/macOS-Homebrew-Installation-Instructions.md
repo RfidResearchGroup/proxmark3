@@ -1,11 +1,11 @@
 
 <a id="Top"></a>
 
-# Mac OS X - Homebrew automatic installation
+# macOS - Homebrew automatic installation
 
 
 # Table of Contents
-- [Mac OS X - Homebrew automatic installation](#mac-os-x---homebrew-automatic-installation)
+- [macOS - Homebrew automatic installation](#macos---homebrew-automatic-installation)
 - [Table of Contents](#table-of-contents)
   - [macOS Ventura Beta users](#macos-ventura-beta-users)
   - [Apple Silicon (M1) Notes](#apple-silicon-m1-notes)
@@ -14,7 +14,7 @@
   - [Flash the BOOTROM & FULLIMAGE](#flash-the-bootrom--fullimage)
   - [Run the client](#run-the-client)
   - [Next steps](#next-steps)
-- [Homebrew (Mac OS X), developer installation](#homebrew-mac-os-x-developer-installation)
+- [Homebrew (macOS), developer installation](#homebrew-macos-developer-installation)
 - [Clone the Iceman repository](#clone-the-iceman-repository)
   - [Compile the project](#compile-the-project)
     - [the button trick](#the-button-trick)
@@ -151,7 +151,7 @@ For the next steps, please read the following pages:
 
 
 
-# Homebrew (Mac OS X), developer installation
+# Homebrew (macOS), developer installation
 ^[Top](#top)
 
 These instructions will show how to setup the environment on OSX to the point where you'll be able to clone and compile the repo by yourself, as on Linux, Windows, etc.
