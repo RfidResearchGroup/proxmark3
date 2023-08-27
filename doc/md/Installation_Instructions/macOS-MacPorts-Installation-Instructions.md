@@ -1,10 +1,10 @@
 
 <a id="Top"></a>
 
-# Mac OS X - MacPorts automatic installation
+# macOS - MacPorts automatic installation
 
 # Table of Contents
-- [Mac OS X - MacPorts automatic installation](#mac-os-x---macports-automatic-installation)
+- [macOS - MacPorts automatic installation](#macOS---macports-automatic-installation)
 - [Table of Contents](#table-of-contents)
   - [Main prerequisite](#main-prerequisite)
   - [Installing latest releases](#installing-latest-releases)
