@@ -407,6 +407,9 @@ end
 
 always @(*)
 begin
+    pwr_oe1 = 1'b0;
+    pwr_oe4 = 1'b0;
+
     if (minor_mode == `FPGA_HF_READER_MODE_SEND_SHALLOW_MOD)
     begin
         pwr_hi  = ck_1356meg;
@@ -441,13 +444,10 @@ begin
     end
 end
 
-// always on
-// assign pwr_oe1 = 1'b0;
-assign pwr_oe3 = 1'b0;
-
-// Unused.
-assign pwr_lo  = 1'b0;
+// unused
 assign pwr_oe2 = 1'b0;
+assign pwr_oe3 = 1'b0;
+assign pwr_lo  = 1'b0;
 
 // Debug Output
 assign debug = corr_i_cnt[3];
