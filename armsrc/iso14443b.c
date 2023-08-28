@@ -2093,7 +2093,6 @@ void iso14443b_setup(void) {
 
     // allocate command receive buffer
     BigBuf_free();
-    BigBuf_Clear_ext(false);
 
     // Initialize Demod and Uart structs
     Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
@@ -2417,6 +2416,7 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
 
     if ((p->flags & ISO14B_CLEARTRACE) == ISO14B_CLEARTRACE) {
         clear_trace();
+        BigBuf_Clear_ext(false);
     }
     set_tracing(true);
 
