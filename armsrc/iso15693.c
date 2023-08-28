@@ -294,7 +294,12 @@ void CodeIso15693AsTag(const uint8_t *cmd, size_t len) {
 // Transmit the command (to the tag) that was placed in cmd[].
 void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time, bool shallow_mod) {
 
+#ifdef RDV4
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | (shallow_mod ? FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4 : FPGA_HF_READER_MODE_SEND_FULL_MOD));
+#else 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | (shallow_mod ? FPGA_HF_READER_MODE_SEND_SHALLOW_MOD : FPGA_HF_READER_MODE_SEND_FULL_MOD));
+#endif    
+
 
     if (*start_time < DELAY_ARM_TO_TAG) {
         *start_time = DELAY_ARM_TO_TAG;

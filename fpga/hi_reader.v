@@ -28,7 +28,7 @@ module hi_reader(
     output adc_clk,
     output pwr_lo,
     output reg pwr_hi,
-    output pwr_oe1,
+    output reg pwr_oe1,
     output pwr_oe2,
     output pwr_oe3,
     output reg pwr_oe4,
@@ -412,6 +412,11 @@ begin
         pwr_hi  = ck_1356meg;
         pwr_oe4 = ssp_dout;
     end
+    else if (minor_mode == `FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4)
+    begin
+        pwr_hi  = ck_1356meg;
+        pwr_oe1 = ssp_dout;
+    end
     else if (minor_mode == `FPGA_HF_READER_MODE_SEND_FULL_MOD)
     begin
         pwr_hi  = ck_1356meg & ~ssp_dout;
@@ -437,7 +442,7 @@ begin
 end
 
 // always on
-assign pwr_oe1 = 1'b0;
+// assign pwr_oe1 = 1'b0;
 assign pwr_oe3 = 1'b0;
 
 // Unused.

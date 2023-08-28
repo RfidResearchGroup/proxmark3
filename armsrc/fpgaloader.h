@@ -105,6 +105,7 @@ thres|                          x x x x x x x x
 #define FPGA_HF_READER_MODE_SNIFF_AMPLITUDE         (6<<0)
 #define FPGA_HF_READER_MODE_SNIFF_PHASE             (7<<0)
 #define FPGA_HF_READER_MODE_SEND_JAM                (8<<0)
+#define FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4   (9<<0)
 
 #define FPGA_HF_READER_SUBCARRIER_848_KHZ           (0<<4)
 #define FPGA_HF_READER_SUBCARRIER_424_KHZ           (1<<4)
