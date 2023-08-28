@@ -1294,7 +1294,7 @@ void pm3_version(bool verbose, bool oneliner) {
         return;
 
     PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Proxmark3 RFID instrument") " ]");
-    PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("CLIENT") " ]");
+    PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Client") " ]");
     FormatVersionInformation(temp, sizeof(temp), "  ", &g_version_information);
     PrintAndLogEx(NORMAL, "%s", temp);
     PrintAndLogEx(NORMAL, "  compiled with............. " PM3CLIENTCOMPILER __VERSION__);
@@ -1333,7 +1333,7 @@ void pm3_version(bool verbose, bool oneliner) {
 #endif
 
     if (g_session.pm3_present) {
-        PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
+        PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Proxmark3") " ]");
 
         PacketResponseNG resp;
         clearCommandBuffer();
