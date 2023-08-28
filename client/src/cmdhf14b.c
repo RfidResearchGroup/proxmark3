@@ -440,8 +440,13 @@ static bool get_14b_UID(uint8_t *d, iso14b_type_t *found_type) {
 
         if (resp.oldarg[0] == 0) {
             memcpy(d, resp.data.asBytes, sizeof(iso14b_card_select_t));
-            *found_type = ISO14B_SR;
-            return true;
+
+            iso14b_card_select_t *card = (iso14b_card_select_t*)d;
+            uint8_t empty[] = "\x00\0x00\x00\0x00\x00\0x00\x00\0x00";
+            if (memcmp(card->uid, empty, card->uidlen)) {
+                *found_type = ISO14B_SR;
+                return true;
+            }
         }
     }
 
@@ -964,9 +969,13 @@ static bool HF14B_st_reader(bool verbose) {
     iso14b_card_select_t card;
     memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
 
+    uint8_t empty[] = "\x00\0x00\x00\0x00\x00\0x00\x00\0x00";
     int status = resp.oldarg[0];
     switch (status) {
         case 0:
+            if (memcmp(card.uid, empty, card.uidlen) == 0) {
+                return false;
+            }
             print_st_general_info(card.uid, card.uidlen);
             return true;
         case -1:
@@ -1398,7 +1407,6 @@ static int CmdHF14BDump(const char *Cmd) {
         // print_std_blocks(data, cardsize);
         return switch_off_field_14b();
     }
-
 
     if (select_cardtype == ISO14B_SR) {
         iso14b_card_select_t card;
