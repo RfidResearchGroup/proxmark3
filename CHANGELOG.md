@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Swapped to OE1 for Shallow modulation on RDV4. Thanks to @gentlekiwi for testing (@d18c7db)
+ - Swapped to OE1 for Shallow modulation on RDV4. Thanks to @gentilkiwi for testing (@d18c7db)
  - Changed iClass SIO and Legacy credential detection to be more reliable (@nvx)
  - Added `hf iclass esetblk` - set iClass emulator memory block data (@nvx)
  - Added cryptorf regressiontests (@iceman1001)
