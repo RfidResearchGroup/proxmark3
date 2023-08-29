@@ -1238,8 +1238,9 @@ static int CmdHFiClassESetBlk(const char *Cmd) {
 
     int blk = arg_get_int_def(ctx, 1, 0);
 
-    if (blk > 255) {
-        PrintAndLogEx(WARNING, "block number must be between 0 and 255. Got %i", blk);
+    if (blk > 255 || blk < 0) {
+        PrintAndLogEx(WARNING, "block number must be between 0 and 255. Got " _RED_("%i"), blk);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -1247,17 +1248,16 @@ static int CmdHFiClassESetBlk(const char *Cmd) {
     int datalen = 0;
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &datalen);
     CLIParserFree(ctx);
+
     if (res) {
         PrintAndLogEx(FAILED, "Error parsing bytes");
         return PM3_EINVARG;
     }
 
-    if (datalen != sizeof(data)) {
-        PrintAndLogEx(WARNING, "block data must include 8 HEX bytes. Got %i", datalen);
+    if (datalen != PICOPASS_BLOCK_SIZE) {
+        PrintAndLogEx(WARNING, "block data must include 8 HEX bytes. Got " _RED_("%i"), datalen);
         return PM3_EINVARG;
     }
-
-    CLIParserFree(ctx);
 
     uint16_t bytes_sent = 0;
     iclass_upload_emul(data, sizeof(data), blk * PICOPASS_BLOCK_SIZE, &bytes_sent);
@@ -1804,7 +1804,6 @@ static int CmdHFiClassDump(const char *Cmd) {
     //get CSN and config
     uint8_t tag_data[0x100 * 8];
     memset(tag_data, 0xFF, sizeof(tag_data));
-
 
     iclass_card_select_t payload_rdr = {
         .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
