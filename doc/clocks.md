@@ -49,7 +49,7 @@ Basic units of time you will run into in the RFID world.
 125 kHz   = 1/ 125 000     = 8 micro seconds
 ```
 
-Given these units the following clocks used by Proxmark3 wil make more sense.
+Given these units the following clocks used by Proxmark3 will make more sense.
 
 Like the SSP Clock running at 3.39 MHz. 
 3.39 MHz = 1 / 3 390 000 = 294,98 nano seconds   = 0,2949 micro seconds
