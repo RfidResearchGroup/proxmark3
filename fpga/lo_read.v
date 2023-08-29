@@ -54,10 +54,7 @@ begin
     if ((pck_cnt == 8'd7) && !pck_divclk)
         to_arm_shiftreg <= adc_d;
     else
-    begin
-        to_arm_shiftreg[7:1] <= to_arm_shiftreg[6:0];
-        to_arm_shiftreg[0] <= 1'b0;
-    end
+        to_arm_shiftreg <= {to_arm_shiftreg[6:0], 1'b0};
 end
 
 // ADC samples on falling edge of adc_clk, data available on the rising edge
