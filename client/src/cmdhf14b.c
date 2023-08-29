@@ -443,7 +443,7 @@ static bool get_14b_UID(uint8_t *d, iso14b_type_t *found_type) {
 
             iso14b_card_select_t *card = (iso14b_card_select_t*)d;
             uint8_t empty[] =  {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-            if (memcmp(card->uid, empty, card->uidlen)) {
+            if (memcmp(card->uid, empty, card->uidlen) == 0) {
                 return false;
             }
             *found_type = ISO14B_SR;
