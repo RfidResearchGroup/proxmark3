@@ -1284,8 +1284,16 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
         if (memcmp(pwd, gen_pwd, sizeof(pwd)) == 0) {
             rPACK[0] = 0x80;
             rPACK[1] = 0x80;
+        } else {
+            uint16_t start = (*pages) * 4 + MFU_DUMP_PREFIX_LENGTH;
+            emlGetMemBt(rPACK, start, sizeof(rPACK));
+            if (g_dbglevel >= DBG_DEBUG) {
+                Dbprintf("PACK loaded from memory: ");
+                Dbhexdump(4, rPACK, 0);
+            }
         }
     }
+
     AddCrc14A(rPACK, sizeof(rPACK) - 2);
 
     static tag_response_info_t responses_init[] = {
@@ -1703,33 +1711,29 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
         } else if (receivedCmd[0] == MIFARE_ULC_AUTH_1) {  // ULC authentication, or Desfire Authentication
             LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
             p_response = NULL;
-        } else if (receivedCmd[0] == MIFARE_ULEV1_AUTH && len == 7 && tagType == 7) { // NTAG / EV-1 authentication
-
-            /*
-            // PWD stored in dump now
+        } else if (receivedCmd[0] == MIFARE_ULEV1_AUTH && len == 7 && tagType == 7) { // NTAG / EV-1
             uint8_t pwd[4];
             emlGetMemBt(pwd, (pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
+            if (g_dbglevel >= DBG_DEBUG) {
+                Dbprintf("Reader sent password: ");
+                Dbhexdump(4, receivedCmd + 1, 0);
+                Dbprintf("Loaded password from memory: ");
+                Dbhexdump(4, pwd, 0);
+            }
+
             if (memcmp(pwd, "\x00\x00\x00\x00", 4) == 0) {
                 Uint4byteToMemLe(pwd, ul_ev1_pwdgenB(data));
-                Dbprintf("Calc pwd... %02X %02X %02X %02X", pwd[0], pwd[1], pwd[2], pwd[3]);
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Calc pwd... %02X %02X %02X %02X", pwd[0], pwd[1], pwd[2], pwd[3]);
             }
 
             if (memcmp(receivedCmd + 1, pwd, 4) == 0) {
-
-                uint8_t pack[4];
-                emlGetMemBt(pack, pages * 4 + MFU_DUMP_PREFIX_LENGTH, 2);
-                if (memcmp(pack, "\x00\x00\x00\x00", 4) == 0) {
-                    pack[0] = 0x80;
-                    pack[1] = 0x80;
-                }
-                AddCrc14A(pack, sizeof(pack) - 2);
-                EmSendCmd(pack, sizeof(pack));
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Password match, responding with PACK.");
+                p_response = &responses[RESP_INDEX_PACK];
             } else {
-                EmSend4bit(CARD_NACK_NA);
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Auth attempt: %08x", bytes_to_num(receivedCmd + 1, 4));
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Password did not match, NACK_IV.");
+                p_response = NULL;
+                EmSend4bit(CARD_NACK_IV);
             }
-            p_response = NULL;
-            */
             p_response = &responses[RESP_INDEX_PACK];
         } else if (receivedCmd[0] == MIFARE_ULEV1_VCSL && len == 23 && tagType == 7) {
             uint8_t cmd[3];
