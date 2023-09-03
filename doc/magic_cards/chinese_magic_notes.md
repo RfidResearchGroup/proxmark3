@@ -13,6 +13,7 @@
     - [ID8265](#id8265)
     - [ID8268/8278/8310](#id826882788310)
   * [K8678](#k8678)
+  * [Detection tips](#detection-tips)
 - [High Frequency](#high-frequency)
   * [MIFARE Classic UID](#mifare-classic-uid)
   * [MIFARE Classic CUID](#mifare-classic-cuid)
@@ -65,7 +66,7 @@ These chips are designed to clone EM410x IDs.
   * H-125
 - Identification:
     1. Engravings ("H-[freq., kHz]", "8210-[freq., kHz]")
-- No info.
+- Seemingly ID8265. To be confirmed.
 
 #### ID8211
 ^[Top](#top)
@@ -103,7 +104,6 @@ ID8268 is claimed to be better than ID8278.
 - Chip used: HITAG 1
 - Idenification:
     1. Engravings (N/A; "F8268-[freq., kHz]K"; 3. "F8310-[freq., kHz]K"; 4. "F8278-[freq., kHz]K")
-- ~~No known way to detect.~~
 - Like ID8265, pending support. More info will be added when support is added.
 
 ### K8678
@@ -115,10 +115,29 @@ Made by Hyctec for CopyKey devices (X100, X3, X5).
 ^[Top](#top)
 
 - Very new
-- Chip used: HITAG S
+- Chip used: HITAG S256 (plain mode)
 - Sold in 125, 175, 250, 375 and 500 kHz variants
 - Identification:
     1. Engravings ("K8678-[freq., kHz]K")
+
+#### Magic commands
+^[Top](#top)
+
+* Okay, it's not necessarily magic commands.. it's regular writes.
+```
+  >>> 18(5)                   // Get UID
+  <<< [ tag replies with UID ]
+  >>> 00(5) [UID] [CRC]       // Selection
+  <<< [ tag replies with con0-2 ]
+  >>> 08(4) 04 [CRC]          // Writeblock 4
+  <<< 01(2)                   // ACK
+  >>> [EM410x raw data 0-3] [CRC]
+  <<< 01(2)                   // ACK
+  >>> 08(4) 05 [CRC]          // Writeblock 5
+  <<< 01(2)                   // ACK
+  >>> [EM410x raw data 4-7] [CRC]
+  >>> 01(2)                   // ACK
+```
 
 ## High Frequency
 
