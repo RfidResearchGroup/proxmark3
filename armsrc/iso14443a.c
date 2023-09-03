@@ -1276,21 +1276,15 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
 
     // EV1/NTAG,  set PWD w AMIIBO algo if all zero.
     if (tagType == 7) {
-        uint8_t pwd[4];
-        uint8_t gen_pwd[4];
-        uint16_t start = (*pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH;
-        emlGetMemBt(pwd, start, sizeof(pwd));
+        uint8_t pwd[4] = {0,0,0,0};
+        uint8_t gen_pwd[4] = {0,0,0,0};
+        emlGetMemBt(pwd, (*pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
+        emlGetMemBt(rPACK, (*pages) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(rPACK));
+
         Uint4byteToMemBe(gen_pwd, ul_ev1_pwdgenB(data));
         if (memcmp(pwd, gen_pwd, sizeof(pwd)) == 0) {
             rPACK[0] = 0x80;
             rPACK[1] = 0x80;
-        } else {
-            uint16_t start = (*pages) * 4 + MFU_DUMP_PREFIX_LENGTH;
-            emlGetMemBt(rPACK, start, sizeof(rPACK));
-            if (g_dbglevel >= DBG_DEBUG) {
-                Dbprintf("PACK loaded from memory: ");
-                Dbhexdump(4, rPACK, 0);
-            }
         }
     }
 
