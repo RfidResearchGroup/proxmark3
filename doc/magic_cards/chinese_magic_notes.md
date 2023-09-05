@@ -15,13 +15,18 @@
   * [K8678](#k8678)
   * [Detection tips](#detection-tips)
 - [High Frequency](#high-frequency)
-  * [MIFARE Classic UID](#mifare-classic-uid)
-  * [MIFARE Classic CUID](#mifare-classic-cuid)
-  * [MIFARE Classic FUID](#mifare-classic-fuid)
-  * [Magic "85" cards](#magic-85-cards)
-  * [MIFARE Classic, QL88](#mifare-classic-ql88)
-  * [MIFARE Classic, FURUi detection (super) card](#mifare-classic-furui-detection-super-card)
-  * [MIFARE Classic, other chips](#mifare-classic-other-chips)
+  - [MIFARE Classic](#mifare-classic)
+    * [MIFARE Classic UID](#mifare-classic-uid)
+    * [MIFARE Classic CUID](#mifare-classic-cuid)
+    * [MIFARE Classic FUID](#mifare-classic-fuid)
+    * [Magic "85" cards](#magic-85-cards)
+    * [MIFARE Classic, QL88](#mifare-classic-ql88)
+    * [MIFARE Classic, FURUi detection (super) card](#mifare-classic-furui-detection-super-card)
+    * [MIFARE Classic, other chips](#mifare-classic-other-chips)
+  - [MIFARE Ultralight](#mifare-ultralight)
+    * [MIFARE Ultralight, Copykey](#mifare-ultralight-copykey)
+  - [Other chips](#other-chips)
+    * [NSCK-II](#nsck-ii)
   
 
 ## Low Frequency
@@ -35,7 +40,7 @@ This is an ATA5577C-compatible tag.
 #### Characteristics
 ^[Top](#top)
 
-- Regular Atmel ATA5577C clone (supports all functions, but traceability is unlocked, and chipset is not detected).
+- Regular Atmel ATA5577C ~~clone (supports all functions, but traceability is unlocked, and chipset is not detected)~~ __Some__ vendors seem to sell clones. To be confirmed.
 - Default data: `EM410x: 0000 0015C9` (CN: 5577)
 - Configurable as any tag that requires to send no more than 24(28) bytes of data (without password).
 - Well documented
@@ -43,12 +48,16 @@ This is an ATA5577C-compatible tag.
 ### 5200
 ^[Top](#top)
 
-No information.
+After checking, this appears to be a regular T55x7 clone.
 
 #### Characteristics
 ^[Top](#top)
 
 - Advertised as PM3, T5577 compatible.
+  - All pages are writable (including traceability).
+  - Traceability data begins with `E039`.
+  - Analog front-end is ignored.
+  - Test mode is ignored.
 - Other names: "ZX-58U"
 
 ### ID82xx series
@@ -139,7 +148,19 @@ Made by Hyctec for CopyKey devices (X100, X3, X5).
   >>> 01(2)                   // ACK
 ```
 
+### Detection tips
+
+- To check if you have chip A/B/C/..., run this:
+  1. `data plot`
+  2. Chip-specific info below:
+     - ID8265: `lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00011 -s 3000`;
+     - F8268: `lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110 -s 3000`;
+     - K8678: `lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110 -s 3000`.
+  3. Look at the plot window. The green line must be 0 (no big waves) at the end.
+
 ## High Frequency
+
+### MIFARE Classic
 
 ### MIFARE Classic UID
 ^[Top](#top)
@@ -218,6 +239,9 @@ Variations of CUID cards are explained in `magic_cards_notes.md`.
 
 - KUID seems to have similar behavior to CUID (allows block 0 direct write).
     * That being said, we do not know its' purpose. Please use CUID.
+- HUID is a CUID chip, but protected with a KDF key.
+    * When key is recovered using Copykey (auth attempt 23), the tag appears to be a regular CUID chip rev.5.
+    * When writing, Copykey detects the custom key and locks the ACL to `block 0: read AB; ACL: read AB write --`
 
 ### MIFARE Classic FUID
 ^[Top](#top)
@@ -238,16 +262,13 @@ hf 14a info
 [+] Magic capabilities : Write Once / FUID
 ```
 
-#### Alternatives to FUID
-^[Top](#top)
-
-- HUID is sold as a cheaper alternative to FUID. However, it is protected with a KDF key in all sectors. *Copykey supports this chip.*
-
 ### "Magic 85" cards
 ^[Top](#top)
 
 TLDR: These magic cards have a 16 byte long configuration page, which usually starts with 0x85. Another name is "USCUID".
 All of the known tags using this, except for Ultralight tags, are listed here.
+
+You cannot turn a Classic tag into an Ultralight and vice-versa!
 
 #### Characteristics
 ^[Top](#top)
@@ -283,7 +304,7 @@ All of the known tags using this, except for Ultralight tags, are listed here.
   - Set main memory and config to 55 (no 0A response) `F600+crc`
   - Set backdoor memory to 00 `F800+crc`
   - Set backdoor memory to FF `F900+crc`
-  - Set backdoor memory to 55 `FE00+crc`
+  - Set backdoor memory to 55 (no 0A response) `FE00+crc`
  
 #### Magic85 configuration guide
 ^[Top](#top)
@@ -356,7 +377,7 @@ Sectors 2-15
 | 7AFF000000000000BAFA358500000008 | PFUID |
 | 7AFF000000000000BAFA000000000008 | UFUID |
 
-*Not all tags are the same!* UFUID and PFUID* are not full implementations of Magic85 - they only acknowledge the first 2 and last config byte(s).
+*Not all tags are the same!* UFUID and PFUID* are not full implementations of Magic85 - they only acknowledge the first 8 (except wakeup command) and last config byte(s).
 
 *Read and write config commands are flipped
 
@@ -397,11 +418,16 @@ The differences are presence of sector 17 and having SAK 88.
 [+] Magic capabilities: QL88
 ```
 
-Sector 17 can be accessed using Key B: `707B11FC1481`. Using it, other keys can be recovered.
+Oops, the above is flawed. Some other "SAK88-IC" tags get detected as QL88.
+
+Sector 17 can be accessed using Key B: `707B11FC1481`. ~~Using it, other keys can be recovered.~~ Do not recover keys using this or run `hf 14a info` at all! 
+
+For an unknown reason if you try to get any read access block 0 write protects itself. Without methods of recovery. *To be confirmed*
 
 #### Magic commands
 
-**TODO** Need more info about this tag and original, non-magic IC.
+- Block 0 can be written using direct write
+- No signature sector backdoor
 
 ### MIFARE Classic, FURUi detection (super) card
 ^[Top](#top)
@@ -451,12 +477,55 @@ Parsing traces:
 
 **TODO**
 
-* ZXUID, EUID, ICUID, M1-5A, M1-7B; NSCK-II; TID, BOMB?
+* ZXUID, EUID, ICUID, M1-5A, SUID; TID, BOMB, SID?
 * ~~Some cards exhibit a specific SAK=28?~~ Some chips have unusual properties, like SAK 28 (BOMB) or SAK 5A (M1-5A). We are yet to find out the special functions.
 
 * What we know:
-  - ZXUID, EUID, ICUID: [ N/A ]
+  - ZXUID, EUID, ICUID, SUID: [ N/A ]
   - M1-5A: tag for CopyKey device to clone Mifare Classic 1K with SAK `5A`.
-  - NSCK-II: tag for CopyKey device to clone "N•S•C"/"BS-CPU" chips. *ISO14443A (ATQA: 0044, SAK: 20) with FSK modulation and some UID conversion?*
   - TID: tag for cloning FM1208-9 "CPU" card. It is unknown how to write it, and it is very expensive.
   - BOMB: tag for cloning FM1208-xx "CPU" card, however properties do not match original chips (ATS is 18 bytes, not 16). *Exclsuive to "qinglong" software, but it costs way too much to be reasonable.*
+  - SID: cheaper CPU cloning tag. No info right now, to be added. A bit cheaper than TID/BOMB.
+      - *do you know why do the reviews of SID tag have image of "proxmark3 pro"?*
+
+
+### MIFARE Ultralight
+
+### MIFARE Ultralight, Copykey
+^[Top](#top)
+
+- Tags covered: UL11, UL21, N213, N215, N216
+
+#### Characteristics 
+^[Top](#top)
+
+- Regular Ultralight DirectWrite (use `hf mfu setuid`) 
+- Password protected: `B6AA558D` (static)
+    - PACK seems to be ignored.
+
+### Other chips
+
+### NSCK-II
+^[Top](#top)
+
+- Magic tag for "NSC/BS-CPU"
+
+#### Characteristics
+^[Top](#top)
+- Programming is done via ISO14443-A (but not sure how to modulate). Original tag is working somewhere hidden from proxmark.
+- ATQA-SAK: `0044`-`20`
+- ATS: `05 72 F7 60 02`
+- Communications encrypted(?)
+   - When writing with copykey, after RATS, this communication takes place (NSC ID programmed: `5800000000`, tag UID: `1D94CE25840000`):
+     ```
+     >>> 54 03 8A BC DF C1 [CRC]
+     <<< A2 [CRC]
+     >>> 54 04 57 AA 84 DD [CRC]
+     <<< A2 [CRC]
+     ```
+
+#### Magic commands
+^[Top](#top)
+
+- Write NSC UID: `54 [part 1b] [data 4b enc] [CRC]`
+    - Tag replies: `A2 [CRC]`
