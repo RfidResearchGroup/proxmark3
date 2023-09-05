@@ -655,11 +655,12 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             if (crcStatus == 0 || crcStatus == 1) {
 
                 char *pos1 = line[(data_len - 2) / TRACE_MAX_HEX_BYTES];
-                pos1 += (((data_len - 2) % TRACE_MAX_HEX_BYTES) * 4) - 1;
+                int delta = (data_len - 2) % TRACE_MAX_HEX_BYTES ? 1 : 0;
+                pos1 += (((data_len - 2) % TRACE_MAX_HEX_BYTES) * 4) - delta;
 
-                (*(pos1 + 6 + 1)) = '\0';
+                (*(pos1 + 6 + delta)) = '\0';
 
-                char *cb_str = str_dup(pos1 + 1);
+                char *cb_str = str_dup(pos1 + delta);
 
                 if (g_session.supports_colors) {
                     if (crcStatus == 0) {
