@@ -215,7 +215,6 @@ static void tx_ack(void) {
 //  - receive the frame
 //  - detect end of frame (last pause)
 static int32_t rx_frame(uint8_t *len) {
-    int32_t frame = 0;
 
     // add 2 SSP clock cycles (1 for tx and 1 for rx pipeline delay)
     // those will be subtracted at the end of the rx phase
@@ -241,6 +240,7 @@ static int32_t rx_frame(uint8_t *len) {
 
     // backup ts for trace log
     uint32_t last_frame_start = last_frame_end;
+    int32_t frame = 0;
 
     // receive frame
     for (*len = 0; true; ++(*len)) {
@@ -353,7 +353,7 @@ static int32_t setup_phase(legic_card_select_t *p_card) {
     // wait for iv
     int32_t iv = rx_frame(&len);
     if ((len != 7) || (iv < 0)) {
-        return PM3_ERFTRANS;
+        return PM3_ETIMEOUT;
     }
 
     // configure prng
@@ -375,7 +375,7 @@ static int32_t setup_phase(legic_card_select_t *p_card) {
     // wait for ack
     int32_t ack = rx_frame(&len);
     if ((len != 6) || (ack < 0)) {
-        return PM3_ERFTRANS;
+        return PM3_ETIMEOUT;
     }
 
     // validate data
@@ -464,24 +464,23 @@ void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
     // configure ARM and FPGA
     init_tag();
 
-    int res = PM3_SUCCESS;
+    int res = init_card(tagtype, &card);
     // verify command line input
-    if (init_card(tagtype, &card) != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS) {
         DbpString("Unknown tagtype to simulate");
-        res = PM3_ESOFT;
         goto OUT;
     }
 
     LED_A_ON();
 
-    Dbprintf("Legic Prime, simulating uid... " _YELLOW_("%02X%02X%02X%02X"), legic_mem[0], legic_mem[1], legic_mem[2], legic_mem[3]);
+    Dbprintf("Legic Prime, simulating MCD... " _YELLOW_("%02X") " MSN... " _YELLOW_("%02X%02X%02X"), legic_mem[0], legic_mem[1], legic_mem[2], legic_mem[3]);
 
     uint16_t counter = 0;
     while (BUTTON_PRESS() == false) {
 
         WDT_HIT();
 
-        if (counter >= 1000) {
+        if (counter >= 2000) {
             if (data_available()) {
                 res = PM3_EOPABORTED;
                 goto OUT;
@@ -501,7 +500,7 @@ void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
         }
 
         // connection is established, process commands until one fails
-        while (connected_phase(&card) != PM3_SUCCESS) {
+        while (connected_phase(&card) == PM3_SUCCESS) {
             WDT_HIT();
         }
     }
@@ -512,14 +511,16 @@ OUT:
         Dbprintf("Emulator stopped. Trace length... " _YELLOW_("%d"), BigBuf_get_traceLen());
     }
 
-    if (res == PM3_EOPABORTED)
+    if (res == PM3_EOPABORTED) {
         DbpString("Aborted by user");
+    }
 
     switch_off();
     StopTicks();
 
-    if (send_reply)
+    if (send_reply) {
         reply_ng(CMD_HF_LEGIC_SIMULATE, res, NULL, 0);
+    }
 
     BigBuf_free_keep_EM();
 }
