@@ -8786,7 +8786,7 @@
                 "-1, --ht1 Card type Hitag 1",
                 "-2, --ht2 Card type Hitag 2",
                 "-s, --hts Card type Hitag S",
-                "-m, --htm Card type Hitag \u00ce\u00bc"
+                "-m, --htm Card type Hitag \u03bc"
             ],
             "usage": "lf hitag eload [-h12sm] -f <fn>"
         },
@@ -11837,6 +11837,6 @@
     "metadata": {
         "commands_extracted": 686,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-08-24T05:14:06"
+        "extracted_on": "2023-09-07T18:12:46"
     }
 }

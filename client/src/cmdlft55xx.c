@@ -4158,7 +4158,7 @@ static int CmdT55xxSniff(const char *Cmd) {
                             usedPassword <<= 1;
                             if (data[i] == '1') {
                                 usedPassword |= 1;
-                        }
+                            }
                         }
 
                         // Lock bit 34
@@ -4167,7 +4167,7 @@ static int CmdT55xxSniff(const char *Cmd) {
                             blockData <<= 1;
                             if (data[i] == '1') {
                                 blockData |= 1;
-                        }
+                            }
                         }
 
                         blockAddr = 0;
@@ -4198,7 +4198,7 @@ static int CmdT55xxSniff(const char *Cmd) {
                             blockData <<= 1;
                             if (data[i] == '1') {
                                 blockData |= 1;
-                        }
+                            }
                         }
 
                         for (uint8_t i = 2; i <= 33; i++) {
@@ -4239,7 +4239,7 @@ static int CmdT55xxSniff(const char *Cmd) {
                             usedPassword <<= 1;
                             if (data[i] == '1') {
                                 usedPassword |= 1;
-                        }
+                            }
                         }
 
                         blockData = 0;
@@ -4247,7 +4247,7 @@ static int CmdT55xxSniff(const char *Cmd) {
                             blockData <<= 1;
                             if (data[i] == '1') {
                                 blockData |= 1;
-                        }
+                            }
                         }
 
                         blockAddr = 0;
@@ -4255,7 +4255,7 @@ static int CmdT55xxSniff(const char *Cmd) {
                             blockAddr <<= 1;
                             if (data[i] == '1') {
                                 blockAddr |= 1;
-                        }
+                            }
                         }
 
                         have_data = true;
@@ -4271,26 +4271,26 @@ static int CmdT55xxSniff(const char *Cmd) {
         if (have_data) {
             if (blockAddr == 7) {
                 PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_YELLOW_("%8s")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s"
-                    , modeText
-                    , pwdText
-                    , dataText
-                    , blockAddr
-                    , page
-                    , minWidth
-                    , maxWidth
-                    , data
-                );
+                              , modeText
+                              , pwdText
+                              , dataText
+                              , blockAddr
+                              , page
+                              , minWidth
+                              , maxWidth
+                              , data
+                             );
             } else {
                 PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_GREEN_("%8s")" |  "_GREEN_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s"
-                    , modeText
-                    , pwdText
-                    , dataText
-                    , blockAddr
-                    , page
-                    , minWidth
-                    , maxWidth
-                    , data
-                );
+                              , modeText
+                              , pwdText
+                              , dataText
+                              , blockAddr
+                              , page
+                              , minWidth
+                              , maxWidth
+                              , data
+                             );
             }
         }
     }

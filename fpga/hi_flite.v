@@ -296,7 +296,7 @@ begin
                 mid <= 8'd129;
             else if (adc_d < curminthres)
                 mid <= 8'd127;
-            else 
+            else
             begin
                 if (after_hysteresis)
                 begin

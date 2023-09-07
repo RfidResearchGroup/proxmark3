@@ -69,7 +69,7 @@ typedef struct {
 #define SSP_TO_US(x)   ( (int32_t)((x) / 3.39) )
 
 #define HF14_ETU_TO_SSP(x)  ((x) << 5) // 1 ETU = 32 SSP
-#define HF14_SSP_TO_ETU(x)  ((x) >> 5) // 
+#define HF14_SSP_TO_ETU(x)  ((x) >> 5) //
 
 #define HF14_ETU_TO_US(x)    ( (float)((x) * 9.4396) )
 #define HF14_ETU_TO_US_2(x)  ( (int32_t)( ((x) * 9439600) / 1000000) )

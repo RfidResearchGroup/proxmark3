@@ -441,7 +441,7 @@ static bool get_14b_UID(uint8_t *d, iso14b_type_t *found_type) {
         if (resp.oldarg[0] == 0) {
             memcpy(d, resp.data.asBytes, sizeof(iso14b_card_select_t));
 
-            iso14b_card_select_t *card = (iso14b_card_select_t*)d;
+            iso14b_card_select_t *card = (iso14b_card_select_t *)d;
             uint8_t empty[] =  {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
             if (memcmp(card->uid, empty, card->uidlen) == 0) {
                 return false;

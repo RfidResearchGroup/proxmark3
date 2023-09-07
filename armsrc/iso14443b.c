@@ -45,7 +45,7 @@
 *    1 / 3 390 000 = 294.98 nano seconds  ( 0.2949 µs )
 *
 * 1 ETU = 9.4395 µs = 32 SSP_CLK = 128 FC
-* 1 SSP_CLK = 4 FC 
+* 1 SSP_CLK = 4 FC
 * 1 µs  3 SSP_CLK about 14 FC
 * PROBLEM 1.
 * ----------
@@ -1409,9 +1409,9 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
 
 #ifdef RDV4
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4);
-#else 
+#else
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
-#endif    
+#endif
 
     // TR2 minimum 14 ETUs
     if (*start_time < ISO14B_TR0) {
@@ -1596,7 +1596,7 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
 // SSP_CLK =  4833 µS * 3.39 = 16384
 
 
-    int len = Get14443bAnswerFromTag(rxdata, rxmaxlen, iso14b_timeout , &eof_time);
+    int len = Get14443bAnswerFromTag(rxdata, rxmaxlen, iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
     uint8_t *data_bytes = (uint8_t *) rxdata;
@@ -2107,9 +2107,9 @@ void iso14443b_setup(void) {
     // Signal field is on with the appropriate LED
 #ifdef RDV4
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4);
-#else 
+#else
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
-#endif    
+#endif
 
     SpinDelay(100);
 
