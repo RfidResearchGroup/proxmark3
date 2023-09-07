@@ -386,13 +386,14 @@ int main(int argc, char *argv[]) {
         // debug mode only runs one thread from klowerstart
         tdata[0].klowerstart = klowerstart;
         crack(tdata);
-    } else {
-        // run full threaded mode
-        for (i = 0; i < NUM_THREADS; i++) {
-            if (pthread_create(&(threads[i]), NULL, crack, (void *)(tdata + i))) {
-                printf("cannot start thread %d\n", i);
-                exit(1);
-            }
+        return 0;
+    }
+
+    // run full threaded mode
+    for (i = 0; i < NUM_THREADS; i++) {
+        if (pthread_create(&(threads[i]), NULL, crack, (void *)(tdata + i))) {
+            printf("cannot start thread %d\n", i);
+            exit(1);
         }
     }
 

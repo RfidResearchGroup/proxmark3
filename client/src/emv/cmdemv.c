@@ -2646,7 +2646,7 @@ static int CmdEMVReader(const char *Cmd) {
         res = EMVSelectPSE(channel, true, true, 2, buf, sizeof(buf), &len, &sw);
 
         // search PSE / PPSE
-        res = EMVSearchPSE(channel, false, true, psenum, false, tlvSelect);
+        res |= EMVSearchPSE(channel, false, true, psenum, false, tlvSelect);
         if (res) {
             // EMV SEARCH with AID list
             DropFieldEx(channel);

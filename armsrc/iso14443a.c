@@ -2529,7 +2529,7 @@ static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters_t
 
     bool first_try = true;
     uint32_t retry_timeout = WUPA_RETRY_TIMEOUT * polling_parameters->frame_count + polling_parameters->extra_timeout;
-    uint32_t start_time;
+    uint32_t start_time = 0;
     int len;
 
     uint8_t current_frame = 0;
@@ -2584,7 +2584,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
     uint8_t resp[MAX_FRAME_SIZE] = {0}; // theoretically. A usual RATS will be much smaller
     uint8_t resp_par[MAX_PARITY_SIZE] = {0};
 
-    uint8_t sak; // cascade uid
+    uint8_t sak = 0; // cascade uid
     bool do_cascade = 1;
     int cascade_level = 0;
 

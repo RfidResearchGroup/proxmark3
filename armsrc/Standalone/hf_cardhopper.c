@@ -275,16 +275,16 @@ static void cook_ats(packet_t *ats, uint8_t fwi, uint8_t sfgi) {
         ats->dat[0] = 0x04;
         ats->dat[1] = 0x78;
         ats->dat[2] = 0x77;
-        ats->dat[3] = 0x80;
+        // ats->dat[3] = 0x80;
     } else if (ats->len == 2) {
         ats->len = 4;
         ats->dat[0] = 0x04;
         ats->dat[2] = 0x77;
-        ats->dat[3] = 0x80;
+        // ats->dat[3] = 0x80;
     } else if (ats->len == 3) {
         ats->len = 4;
         ats->dat[0] = 0x04;
-        ats->dat[3] = 0x80;
+        // ats->dat[3] = 0x80;
     }
 
     // Set the SFGI as well as the FWI - needed for some older readers (firmware revs?)
@@ -293,7 +293,7 @@ static void cook_ats(packet_t *ats, uint8_t fwi, uint8_t sfgi) {
 }
 
 
-static bool try_use_canned_response(uint8_t *dat, int len, tag_response_info_t *canned) {
+static bool try_use_canned_response(const uint8_t *dat, int len, tag_response_info_t *canned) {
     if ((dat[0] == ISO14443A_CMD_REQA || dat[0] == ISO14443A_CMD_WUPA) && len == 1) {
         EmSendPrecompiledCmd(canned + RESP_INDEX_ATQA);
         return true;

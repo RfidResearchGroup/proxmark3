@@ -2224,7 +2224,7 @@ int CmdNorm(const char *Cmd) {
         if (g_GraphBuffer[i] < min) min = g_GraphBuffer[i];
     }
 
-    if (max != min) {
+    if ((g_GraphTraceLen > 10) && (max != min)) {
         for (uint32_t i = 0; i < g_GraphTraceLen; ++i) {
             g_GraphBuffer[i] = ((long)(g_GraphBuffer[i] - ((max + min) / 2)) * 256) / (max - min);
             //marshmelow: adjusted *1000 to *256 to make +/- 128 so demod commands still work
@@ -3218,12 +3218,12 @@ static int CmdNumCon(const char *Cmd) {
     int hlen = 256;
     char hex[256];
     memset(hex, 0, sizeof(hex));
-    res = CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)hex, sizeof(hex), &hlen);
+    res |= CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)hex, sizeof(hex), &hlen);
 
     int blen = 256;
     char bin[256];
     memset(bin, 0, sizeof(bin));
-    res = CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)bin, sizeof(bin), &blen);
+    res |= CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)bin, sizeof(bin), &blen);
 
     bool shall_invert = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
@@ -3236,6 +3236,7 @@ static int CmdNumCon(const char *Cmd) {
 
     // results for MPI actions
     bool ret = false;
+    (void) ret;
 
     // container of big number
     mbedtls_mpi N;

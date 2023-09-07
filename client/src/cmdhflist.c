@@ -1362,8 +1362,8 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                     if (data_size > 2) {
                         uint16_t uBlockNum = MemLeToUint2byte(data) ;
                         uint8_t uQty = data[2] ;
-                        if (uQty != 1) {
-                            snprintf(exp, size, "READ %s(%u-%u) %s_%s", encrypted, uBlockNum, uBlockNum + uQty - 1, responseMaced, commandMaced);
+                        if (uQty > 1) {
+                            snprintf(exp, size, "READ %s(%u-%i) %s_%s", encrypted, uBlockNum, uBlockNum + uQty - 1, responseMaced, commandMaced);
                         } else {
                             snprintf(exp, size, "READ %s(%u) %s_%s", encrypted, uBlockNum, responseMaced, commandMaced);
                         }

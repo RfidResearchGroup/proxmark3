@@ -523,7 +523,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     uint8_t rAUTH_NT_keystream[4];
     uint32_t nonce = 0;
 
-    tUart14a *uart = GetUart14a();
+    const tUart14a *uart = GetUart14a();
 
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();

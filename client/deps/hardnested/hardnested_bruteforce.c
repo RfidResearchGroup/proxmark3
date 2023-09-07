@@ -304,12 +304,13 @@ static bool ensure_buckets_alloc(size_t need_buckets) {
         while (need_buckets > alloc_sz) {
             alloc_sz *= 2;
         }
-
-        buckets = realloc(buckets, sizeof(statelist_t *) * alloc_sz);
-        if (buckets == NULL) {
+        statelist_t **new_buckets = realloc(buckets, sizeof(statelist_t *) * alloc_sz);
+        if (new_buckets == NULL) {
+            free(buckets);
             buckets_allocated = 0;
             return false;
         }
+        buckets = new_buckets;
         memset(buckets + buckets_allocated, 0, (alloc_sz - buckets_allocated) * sizeof(statelist_t *));
         buckets_allocated = alloc_sz;
     }

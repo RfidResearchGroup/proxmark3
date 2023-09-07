@@ -1025,7 +1025,7 @@ int DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx)
     }
 
     uint8_t best = 0;
-    for (int m = ARRAYLEN(peaksdet); m > 0; m--) {
+    for (int m = ARRAYLEN(peaksdet) - 1; m >= 0; m--) {
         if ((peaksdet[m] >= (peaksdet[best] - 1)) && (peaksdet[m] <= peaksdet[best] + 1) && lowestTransition) {
             if (clk[m] > (lowestTransition - (clk[m] / 8)) && clk[m] < (lowestTransition + (clk[m] / 8))) {
                 best = m;
