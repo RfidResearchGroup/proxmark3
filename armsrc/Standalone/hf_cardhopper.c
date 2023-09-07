@@ -54,7 +54,7 @@ static void select_card(void);
 static void become_card(void);
 static void prepare_emulation(uint8_t *, uint16_t *, uint8_t *, packet_t *);
 static void cook_ats(packet_t *, uint8_t, uint8_t);
-static bool try_use_canned_response(uint8_t *, int, tag_response_info_t *);
+static bool try_use_canned_response(const uint8_t *, int, tag_response_info_t *);
 static void reply_with_packet(packet_t *);
 
 static void read_packet(packet_t *);
