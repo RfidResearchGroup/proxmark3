@@ -406,7 +406,8 @@ static void init_bitflip_bitarrays(void) {
                     exit(5);
                 }
 
-                uint32_t count = ((uint32_t *)uncompressed_data)[0];
+                uint32_t count;
+                memcpy(&count, uncompressed_data, sizeof(uint32_t));
 
                 if ((float)count / (1 << 24) < IGNORE_BITFLIP_THRESHOLD) {
                     uint32_t *bitset = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
