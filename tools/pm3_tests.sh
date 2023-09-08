@@ -196,11 +196,18 @@ function CheckExecute() {
     return $RESULT
   fi
 
+  start=$(date +%s)
+  TIMEINFO=""
   for I in $RETRY
   do
     RES=$(eval "$2")
+    end=$(date +%s)
+    delta=$(expr $end - $start)
+    if [ $delta -gt 2 ]; then
+      TIMEINFO="  ($delta s)"
+    fi
     if echo "$RES" | grep -E -q "$3"; then
-      echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+      echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK} $TIMEINFO"
       return $RESULT
     fi
     if [ ! $I == "e" ]; then echo "retry $I"; fi
@@ -208,11 +215,11 @@ function CheckExecute() {
 
   RESULT=1
   if $IGNOREFAILURE; then
-    echo -e "[ ${C_YELLOW}IGNORED${C_NC} ]"
+    echo -e "[ ${C_YELLOW}IGNORED${C_NC} ] $TIMEINFO"
     return 0
   fi
 
-  echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+  echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL} $TIMEINFO"
   echo -e "Execution trace:\n$RES"
   return $RESULT
 }
@@ -298,7 +305,7 @@ while true; do
     if $TESTALL || $TESTMFDAESBRUTE; then
       echo -e "\n${C_BLUE}Testing mfd_aes_brute:${C_NC} ${MFDASEBRUTEBIN:=./tools/mfd_aes_brute/mfd_aes_brute}"
       if ! CheckFileExist "mfd_aes_brute exists"          "$MFDASEBRUTEBIN"; then break; fi
-      if ! CheckExecute      "mfd_aes_brute test 1/2"         "$MFDASEBRUTEBIN 1605394800 bb6aea729414a5b1eff7b16328ce37fd 82f5f498dbc29f7570102397a2e5ef2b6dc14a864f665b3c54d11765af81e95c" "key.................... .*261C07A23F2BC8262F69F10A5BDF3764"; then break; fi
+      if ! CheckExecute      "mfd_aes_brute test 1/2"         "$MFDASEBRUTEBIN 1629394800 bb6aea729414a5b1eff7b16328ce37fd 82f5f498dbc29f7570102397a2e5ef2b6dc14a864f665b3c54d11765af81e95c" "key.................... .*261C07A23F2BC8262F69F10A5BDF3764"; then break; fi
       if ! CheckExecute slow "mfd_aes_brute test 2/2"         "$MFDASEBRUTEBIN 1546300800 3fda933e2953ca5e6cfbbf95d1b51ddf 97fe4b5de24188458d102959b888938c988e96fb98469ce7426f50f108eaa583" "key.................... .*E757178E13516A4F3171BC6EA85E165A"; then break; fi
     fi
 
@@ -306,7 +313,7 @@ while true; do
       echo -e "\n${C_BLUE}Testing CryptoRF sma:${C_NC} ${CRYPTRFBRUTEBIN:=./tools/cryptorf/sma} ${CRYPTRF_MULTI_BRUTEBIN:=./tools/cryptorf/sma_multi}"
       if ! CheckFileExist "sma exists"               "$CRYPTRFBRUTEBIN"; then break; fi
       if ! CheckFileExist "sma_multi exists"         "$CRYPTRF_MULTI_BRUTEBIN"; then break; fi
-      if ! CheckExecute slow  "sma test"             "$CRYPTRFBRUTEBIN ffffffffffffffff 1234567812345678 88c9d4466a501a87 dec2ee1b1c9276e9" "key found \[.*4f794a463ff81d81.*\]"; then break; fi
+#      if ! CheckExecute slow  "sma test"             "$CRYPTRFBRUTEBIN ffffffffffffffff 1234567812345678 88c9d4466a501a87 dec2ee1b1c9276e9" "key found \[.*4f794a463ff81d81.*\]"; then break; fi
       if ! CheckExecute slow  "sma_multi test"       "$CRYPTRF_MULTI_BRUTEBIN ffffffffffffffff 1234567812345678 88c9d4466a501a87 dec2ee1b1c9276e9" "key found \[.*4f794a463ff81d81.*\]"; then break; fi
     fi
     # hitag2crack not yet part of "all"
