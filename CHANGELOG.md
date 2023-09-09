@@ -3,8 +3,18 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+
+## [Raccoon][2003-09-09]
+ - Changed text and adjust pm3_test case for mf_aes_brute (@doegox)
+ - Fix CPPChecker warnings (@doegox)
+ - Fix TubmleWeed docker setup (@doegox)
+ - Added default keys (@ernestask) (@craftbyte)
+ - Fixed MFU authentication to send PACK correctly (@shallax)
+ - Fixed list output when line has 16 bytes (@piru)
+ - Changed AIDlist w new entries (@kormax)
  - Swapped to OE1 for Shallow modulation on RDV4. Thanks to @gentilkiwi for testing (@d18c7db)
  - Changed iClass SIO and Legacy credential detection to be more reliable (@nvx)
+ - Add hf_cardhopper standalone mode for long-distance relay attacks (@startrekdude)
  - Added `hf iclass esetblk` - set iClass emulator memory block data (@nvx)
  - Added cryptorf regressiontests (@iceman1001)
  - Fixed `cryptorf/sma_multi` - local state used in multithread (@iceman1001)
@@ -47,8 +57,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf_mf_luxeo_dump.lua` - now have list of keys to iterate (@iceman1001)
  - Fixed the timeout of TCP connections (@wh201906)
  - Changed the connection timeout configurable (@wh201906)
- - Add hf_cardhopper standalone mode for long-distance relay attacks (@startrekdude)
- - Fix MFU authentication to send PACK correctly (@shallax)
 
 ## [Seven.4.16717][2023-06-25]
  - Change `hf 14a info` - now identifes QL88 tags (@iceman1001)
