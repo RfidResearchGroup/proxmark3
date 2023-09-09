@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
-## [Raccoon.4.17140][2003-09-09]
+## [Raccoon.4.17140][2023-09-09]
  - Changed text and adjust pm3_test case for mf_aes_brute (@doegox)
  - Fix CPPChecker warnings (@doegox)
  - Fix TubmleWeed docker setup (@doegox)
