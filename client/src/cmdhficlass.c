@@ -2202,6 +2202,129 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     return isok;
 }
 
+static int CmdHFiClassCreditEpurse(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass creditepurse",
+                  "Credit the epurse on an iCLASS tag. The provided key must be the credit key.\n"
+                  "The first two bytes of the epurse are the debit value (big endian) and may be any value except FFFF.\n"
+                  "The remaining two bytes of the epurse are the credit value and must be smaller than the previous value.",
+                  "hf iclass creditepurse -d FEFFFFFF -k 001122334455667B\n"
+                  "hf iclass creditepurse -d FEFFFFFF --ki 0");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "key", "<hex>", "Credit  key as 8 hex bytes"),
+        arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_str1("d", "data", "<hex>", "data to write as 8 hex bytes"),
+        arg_lit0(NULL, "elite", "elite computations applied to key"),
+        arg_lit0(NULL, "raw", "no computations applied to key"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int key_len = 0;
+    uint8_t key[8] = {0};
+
+    CLIGetHexWithReturn(ctx, 1, key, &key_len);
+
+    int key_nr = arg_get_int_def(ctx, 2, -1);
+
+    if (key_len > 0 && key_nr >= 0) {
+        PrintAndLogEx(ERR, "Please specify key or index, not both");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    if (key_len > 0) {
+        if (key_len != 8) {
+            PrintAndLogEx(ERR, "Key is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    } else if (key_nr >= 0) {
+        if (key_nr < ICLASS_KEYS_MAX) {
+            memcpy(key, iClass_Key_Table[key_nr], 8);
+            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
+        } else {
+            PrintAndLogEx(ERR, "Key number is invalid");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    } else {
+        PrintAndLogEx(ERR, "Key or key number must be provided");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int blockno = 2;
+
+    int data_len = 0;
+    uint8_t data[4] = {0};
+    CLIGetHexWithReturn(ctx, 3, data, &data_len);
+
+    if (data_len != 4) {
+        PrintAndLogEx(ERR, "Data must be 4 hex bytes (8 hex symbols)");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool elite = arg_get_lit(ctx, 4);
+    bool rawkey = arg_get_lit(ctx, 5);
+    bool verbose = arg_get_lit(ctx, 6);
+    bool shallow_mod = arg_get_lit(ctx, 7);
+
+    CLIParserFree(ctx);
+
+    if ((rawkey + elite) > 1) {
+        PrintAndLogEx(ERR, "Can not use a combo of 'elite', 'raw'");
+        return PM3_EINVARG;
+    }
+
+    iclass_credit_epurse_t payload = {
+        .req.use_raw = rawkey,
+        .req.use_elite = elite,
+        .req.use_credit_key = true,
+        .req.use_replay = false,
+        .req.blockno = blockno,
+        .req.send_reply = true,
+        .req.do_auth = true,
+        .req.shallow_mod = shallow_mod,
+    };
+    memcpy(payload.req.key, key, 8);
+    memcpy(payload.epurse, data, sizeof(payload.epurse));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ICLASS_CREDIT_EPURSE, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+
+    int isok;
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_CREDIT_EPURSE, &resp, 2000) == 0) {
+        if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
+        isok = PM3_ETIMEOUT;
+    } else if (resp.status != PM3_SUCCESS) {
+        if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
+        isok = resp.status;
+    } else {
+        isok = (resp.data.asBytes[0] == 1) ? PM3_SUCCESS : PM3_ESOFT;
+    }
+
+    switch (isok) {
+        case PM3_SUCCESS:
+            PrintAndLogEx(SUCCESS, "Credited epurse successfully");
+            break;
+        case PM3_ETEAROFF:
+            if (verbose)
+                PrintAndLogEx(INFO, "Writing tear off triggered");
+            break;
+        default:
+            PrintAndLogEx(FAILED, "Writing failed");
+            break;
+    }
+    return isok;
+}
+
 static int CmdHFiClassRestore(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass restore",
@@ -4278,6 +4401,7 @@ static command_t CommandTable[] = {
     {"sniff",       CmdHFiClassSniff,           IfPm3Iclass,     "Eavesdrop Picopass / iCLASS communication"},
     {"view",        CmdHFiClassView,            AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "Write Picopass / iCLASS block"},
+    {"creditepurse", CmdHFiClassCreditEpurse,    IfPm3Iclass,     "Credit epurse value"},
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("recovery") " --------------------"},
 //    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "Automatic key recovery tool for iCLASS"},
     {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "Check keys"},

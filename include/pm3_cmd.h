@@ -565,7 +565,7 @@ typedef struct {
 
 #define CMD_HF_EPA_COLLECT_NONCE                                          0x038A
 #define CMD_HF_EPA_REPLAY                                                 0x038B
-#define CMD_HF_EPA_PACE_SIMULATE                                          0x039C
+#define CMD_HF_EPA_PACE_SIMULATE                                          0x038C
 
 #define CMD_HF_LEGIC_INFO                                                 0x03BC
 #define CMD_HF_LEGIC_ESET                                                 0x03BD
@@ -581,6 +581,7 @@ typedef struct {
 #define CMD_HF_ICLASS_EML_MEMSET                                          0x0398
 #define CMD_HF_ICLASS_CHKKEYS                                             0x039A
 #define CMD_HF_ICLASS_RESTORE                                             0x039B
+#define CMD_HF_ICLASS_CREDIT_EPURSE                                       0x039C
 
 // For ISO1092 / FeliCa
 #define CMD_HF_FELICA_SIMULATE                                            0x03A0
