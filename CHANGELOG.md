@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `utils.lua` library function "convertdectohex" wasn't working (@iceman1001)
 
 ## [Raccoon.4.17140][2023-09-09]
  - Changed text and adjust pm3_test case for mf_aes_brute (@doegox)
