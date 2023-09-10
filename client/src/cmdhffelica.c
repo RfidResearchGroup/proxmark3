@@ -702,7 +702,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     PrintAndLogEx(INFO, "Reader challenge (unencrypted): %s", sprint_hex(nonce, 8));
 
     // Create M1c Challenge with 3DES (3 Keys = 24, 2 Keys = 16)
-    uint8_t master_key[24];
+    uint8_t master_key[24] = {0};
     mbedtls_des3_context des3_ctx;
     mbedtls_des3_init(&des3_ctx);
 

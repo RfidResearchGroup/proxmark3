@@ -68,11 +68,12 @@ function get_pm3_list_Linux {
             fi
         fi
         # WSL2 with usbipd detection - doesn't report same things as WSL1
-
         if grep -q "proxmark.org" "/sys/class/tty/${DEV#/dev/}/../../../manufacturer" 2>/dev/null; then
-            PM3LIST+=("$DEV")
-            if [ ${#PM3LIST[*]} -ge "$N" ]; then
-                return
+            if echo "${PM3LIST[*]}" | grep -qv "${DEV}"; then
+                PM3LIST+=("$DEV")
+                if [ ${#PM3LIST[*]} -ge "$N" ]; then
+                    return
+                fi
             fi
         fi
     done
@@ -114,7 +115,7 @@ function get_pm3_list_Linux {
     if $FINDBTDIRECT; then
         # check if the MAC of a Proxmark3 was registered in the known devices
         for MAC in $(dbus-send --system --print-reply --type=method_call --dest='org.bluez' '/' org.freedesktop.DBus.ObjectManager.GetManagedObjects 2>/dev/null|\
-                         awk '/"Address"/{getline;gsub(/"/,"",$3);a=$3}/Name/{getline;if (/PM3_RDV4/) print a}'); do
+                         awk '/"Address"/{getline;gsub(/"/,"",$3);a=$3}/Name/{getline;if (/PM3_RDV4/ || /Proxmark3 SE/) print a}'); do
             PM3LIST+=("bt:$MAC")
         done
         # we don't probe the device so there is no guarantee the device is actually present
@@ -143,7 +144,8 @@ function get_pm3_list_Windows {
         DEV=${DEV/ */}
         #prevent soft bricking when using pm3-flash-all on an outdated bootloader
         if [ $(basename -- "$0") = "pm3-flash-all" ]; then
-            if [ ! $(wmic /locale:ms_409 path Win32_SerialPort Where "DeviceID='$DEV'" Get PNPDeviceID 2>/dev/null | awk -b '/^USB/{print $1}') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
+            line=$(wmic /locale:ms_409 path Win32_SerialPort Where "DeviceID='$DEV'" Get PNPDeviceID 2>/dev/null | awk -b '/^USB/{print $1}');
+            if [[ ! $line =~ ^"USB\VID_9AC4&PID_4B8F\ICEMAN" ]]; then
                 echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
                 exit 1
             fi
@@ -182,14 +184,17 @@ function get_pm3_list_WSL {
     PM3LIST=()
 
     # Normal SERIAL PORTS (COM)
-    for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.PNPDeviceID -like '*VID_9AC4&PID_4B8F*' -or \$_.PNPDeviceID -like '*VID_2D2D&PID_504D*'} | Select -expandproperty DeviceID" 2>/dev/null | tr -dc '[:print:]'); do
+    for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.PNPDeviceID -like '*VID_9AC4&PID_4B8F*' -or \$_.PNPDeviceID -like '*VID_2D2D&PID_504D*'} | Select -expandproperty DeviceID" 2>/dev/null); do
+        DEV=$(echo $DEV | tr -dc '[:print:]')
         _comport=$DEV
         DEV=$(echo $DEV | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p')
         # ttyS counterpart takes some more time to appear
         if [ -e "$DEV" ]; then
+
             #prevent soft bricking when using pm3-flash-all on an outdated bootloader
             if [ $(basename -- "$0") = "pm3-flash-all" ]; then
-                if [ ! $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null | tr -dc '[:print:]') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
+                line=$($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null | tr -dc '[:print:]');
+                if [[ ! $line =~ ^"USB\VID_9AC4&PID_4B8F\ICEMAN" ]]; then
                     echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
                     exit 1
                 fi
@@ -254,7 +259,7 @@ Quick helper script for proxmark3 client when working with a Proxmark3 device
 Description:
     The usage is the same as for the proxmark3 client, with the following differences:
      * the correct port name will be automatically guessed;
-     * the script will wait for a Proxmark to be connected (same as option -w of the client).
+     * the script will wait for a Proxmark3 to be connected (same as option -w of the client).
     You can also specify a first option -n N to access the Nth Proxmark3 connected.
     To see a list of available ports, use --list.
 
@@ -301,7 +306,7 @@ elif [ "$SCRIPT" = "pm3-flash" ]; then
   }
   HELP() {
       cat << EOF
-Quick helper script for flashing a Proxmark device via USB
+Quick helper script for flashing a Proxmark3 device via USB
 
 Description:
     The usage is similar to the old proxmark3-flasher binary, except that the correct port name will be automatically guessed.
@@ -339,7 +344,7 @@ elif [ "$SCRIPT" = "pm3-flash-all" ]; then
   }
   HELP() {
       cat << EOF
-Quick helper script for flashing a Proxmark device via USB
+Quick helper script for flashing a Proxmark3 device via USB
 
 Description:
     The correct port name will be automatically guessed and the stock bootloader and firmware image will be flashed.
@@ -369,7 +374,7 @@ elif [ "$SCRIPT" = "pm3-flash-fullimage" ]; then
   }
   HELP() {
       cat << EOF
-Quick helper script for flashing a Proxmark device via USB
+Quick helper script for flashing a Proxmark3 device via USB
 
 Description:
     The correct port name will be automatically guessed and the stock firmware image will be flashed.
@@ -399,7 +404,7 @@ elif [ "$SCRIPT" = "pm3-flash-bootrom" ]; then
   }
   HELP() {
       cat << EOF
-Quick helper script for flashing a Proxmark device via USB
+Quick helper script for flashing a Proxmark3 device via USB
 
 Description:
     The correct port name will be automatically guessed and the stock bootloader will be flashed.
@@ -441,10 +446,12 @@ done
 
 # if a port is already provided, let's just run the command as such
 for ARG; do
+    shift
     if [ "$ARG" == "-p" ]; then
         CMD "$@"
         exit $?
     fi
+    set -- "$@" "$ARG"
 done
 
 if [ "$1" == "--list" ]; then
@@ -456,7 +463,7 @@ if [ "$1" == "--list" ]; then
     SHOWLIST=true
 fi
 
-# Number of the proxmark3 we're interested in
+# Number of the Proxmark3 we're interested in
 N=1
 if [ "$1" == "-n" ]; then
     shift
@@ -471,7 +478,8 @@ fi
 
 HOSTOS=$(uname | awk '{print toupper($0)}')
 if [ "$HOSTOS" = "LINUX" ]; then
-    if uname -a|grep -q Microsoft; then
+    # Detect when running under WSL1 (but exclude WSL2)
+    if uname -a | grep -qi Microsoft && uname -a | grep -qvi WSL2; then
         # First try finding it using the PATH environment variable
         PSHEXE=$(command -v powershell.exe 2>/dev/null)
 
@@ -515,7 +523,7 @@ if $SHOWLIST; then
     exit 0
 fi
 
-# Wait till we get at least N proxmark3 devices
+# Wait till we get at least N Proxmark3 devices
 $GETPM3LIST "$N"
 if [ ${#PM3LIST} -lt "$N" ]; then
     echo >&2 "[=] Waiting for Proxmark3 to appear..."

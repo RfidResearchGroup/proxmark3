@@ -52,5 +52,10 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card);
 int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool silentMode);
 
+iso14a_polling_parameters_t iso14a_get_polling_parameters(bool use_ecp, bool use_magsafe);
 int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card);
+int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card_select_t *card, iso14a_polling_parameters_t *polling_parameters);
+
+bool Get_apdu_in_framing(void);
+void Set_apdu_in_framing(bool v);
 #endif

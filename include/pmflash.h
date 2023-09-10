@@ -91,9 +91,9 @@ typedef struct {
     uint8_t signature[FLASH_MEM_SIGNATURE_LEN];
 } PACKED rdv40_validation_t;
 
-// SPIFFS current allocates 128kb of the 256kb available.
+// SPIFFS current allocates 192KB of the 256KB available.
 #ifndef FLASH_SPIFFS_ALLOCATED_SIZE
-# define FLASH_SPIFFS_ALLOCATED_SIZE (1024 * 128)
+# define FLASH_SPIFFS_ALLOCATED_SIZE (1024 * 192)
 #endif
 
 #endif // __PMFLASH_H

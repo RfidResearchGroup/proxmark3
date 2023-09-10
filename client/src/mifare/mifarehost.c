@@ -195,15 +195,22 @@ int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keyc
     SendCommandNG(CMD_HF_MIFARE_CHKKEYS, data, (5 + 6 * keycnt));
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_HF_MIFARE_CHKKEYS, &resp, 2500)) return PM3_ETIMEOUT;
-    if (resp.status != PM3_SUCCESS) return resp.status;
+    if (!WaitForResponseTimeout(CMD_HF_MIFARE_CHKKEYS, &resp, 2500)) {
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        return resp.status;
+    }
 
     struct kr {
         uint8_t key[6];
         bool found;
     } PACKED;
     struct kr *keyresult = (struct kr *)&resp.data.asBytes;
-    if (!keyresult->found) return PM3_ESOFT;
+    if (!keyresult->found) {
+        return PM3_ESOFT;
+    }
+
     *key = bytes_to_num(keyresult->key, sizeof(keyresult->key));
     return PM3_SUCCESS;
 }
@@ -585,7 +592,6 @@ out:
     return PM3_ESOFT;
 }
 
-
 int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey) {
 
     uint32_t uid;
@@ -781,7 +787,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
         p_keyblock = mem;
     }
 
-    uint8_t fn[26] = "static_nested_000.bin";
+    uint8_t fn[32] = "static_nested_000.bin";
 
     uint64_t start_time = msclock();
     for (uint32_t i = 0; i < keycnt; i += max_keys_chunk) {
@@ -867,13 +873,13 @@ out:
 int mfReadSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *data) {
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, (uint8_t *)key, 6);
+    SendCommandMIX(CMD_HF_MIFARE_READSC, sectorNo, keyType, 0, (uint8_t *)key, MIFARE_KEY_SIZE);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.oldarg[0] & 0xff;
+        uint8_t isOK  = resp.oldarg[0] & 0xFF;
 
         if (isOK) {
-            memcpy(data, resp.data.asBytes, mfNumBlocksPerSector(sectorNo) * 16);
+            memcpy(data, resp.data.asBytes, mfNumBlocksPerSector(sectorNo) * MFBLOCK_SIZE);
             return PM3_SUCCESS;
         } else {
             return PM3_EUNDEF;
@@ -896,7 +902,7 @@ int mfReadBlock(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *d
     SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) {
-        memcpy(data, resp.data.asBytes, 16);
+        memcpy(data, resp.data.asBytes, MFBLOCK_SIZE);
 
         if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(DEBUG, "failed reading block");
@@ -912,7 +918,7 @@ int mfReadBlock(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *d
 // EMULATOR
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 
-    size_t size = blocksCount * 16;
+    size_t size = blocksCount * MFBLOCK_SIZE;
     if (size > PM3_CMD_DATA_SIZE) {
         return PM3_ESOFT;
     }
@@ -941,7 +947,7 @@ int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 }
 
 int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount) {
-    return mfEmlSetMem_xt(data, blockNum, blocksCount, 16);
+    return mfEmlSetMem_xt(data, blockNum, blocksCount, MFBLOCK_SIZE);
 }
 
 int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
@@ -955,7 +961,7 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
 
     size_t size = ((size_t) blocksCount) * blockBtWidth;
     if (size > (PM3_CMD_DATA_SIZE - sizeof(struct p))) {
-        return PM3_ESOFT;
+        return PM3_EINVARG;
     }
 
     size_t paylen = sizeof(struct p) + size;
@@ -976,7 +982,7 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
 int mfCSetUID(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const uint8_t *sak, uint8_t *old_uid, uint8_t *verifed_uid, uint8_t wipecard) {
 
     uint8_t params = MAGIC_SINGLE;
-    uint8_t block0[16];
+    uint8_t block0[MFBLOCK_SIZE];
     memset(block0, 0x00, sizeof(block0));
 
     int res = mfCGetBlock(0, block0, params);
@@ -1039,10 +1045,11 @@ int mfCSetUID(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const uint8_t *
 }
 
 int mfCWipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak) {
-    uint8_t block0[16] = {0x00, 0x56, 0x78, 0xBB, 0x95, 0x08, 0x04, 0x00, 0x02, 0xB2, 0x1E, 0x24, 0x23, 0x27, 0x1E, 0x1D};
-    // uint8_t block0[16] = {0x04, 0x03, 0x02, 0x01, 0x04, 0x08, 0x04, 0x00, 0x64, 0xB9, 0x95, 0x11, 0x4D, 0x20, 0x42, 0x09};
-    uint8_t blockD[16] = {0x00};
-    uint8_t blockK[16] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x08, 0x77, 0x8F, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t block0[MFBLOCK_SIZE] = {0x00, 0x56, 0x78, 0xBB, 0x95, 0x08, 0x04, 0x00, 0x02, 0xB2, 0x1E, 0x24, 0x23, 0x27, 0x1E, 0x1D};
+    // uint8_t block0[MFBLOCK_SIZE] = {0x04, 0x03, 0x02, 0x01, 0x04, 0x08, 0x04, 0x00, 0x64, 0xB9, 0x95, 0x11, 0x4D, 0x20, 0x42, 0x09};
+    uint8_t blockD[MFBLOCK_SIZE] = {0x00};
+    // default transport ACL
+    uint8_t blockK[MFBLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07, 0x80, 0x69, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t params = MAGIC_SINGLE;
 
     if (uid != NULL) {
@@ -1088,16 +1095,18 @@ int mfCWipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak) {
 }
 
 int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
-
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_CSETBL, params, blockNo, 0, data, 16);
+    SendCommandMIX(CMD_HF_MIFARE_CSETBL, params, blockNo, 0, data, MFBLOCK_SIZE);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 3500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
-        if (uid != NULL)
+        if (uid != NULL) {
             memcpy(uid, resp.data.asBytes, 4);
-        if (!isOK)
+        }
+
+        if (!isOK) {
             return PM3_EUNDEF;
+        }
     } else {
         PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
@@ -1111,9 +1120,10 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
-        if (!isOK)
+        if (!isOK) {
             return PM3_EUNDEF;
-        memcpy(data, resp.data.asBytes, 16);
+        }
+        memcpy(data, resp.data.asBytes, MFBLOCK_SIZE);
     } else {
         PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
@@ -1138,11 +1148,11 @@ int mfGen3UID(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid) {
 
 int mfGen3Block(uint8_t *block, int blockLen, uint8_t *newBlock) {
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_GEN3BLK, blockLen, 0, 0, block, 16);
+    SendCommandMIX(CMD_HF_MIFARE_GEN3BLK, blockLen, 0, 0, block, MFBLOCK_SIZE);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3BLK, &resp, 3500)) {
         if (resp.status == PM3_SUCCESS && newBlock) {
-            memcpy(newBlock, resp.data.asBytes, 16);
+            memcpy(newBlock, resp.data.asBytes, MFBLOCK_SIZE);
         }
         return resp.status;
     } else {
@@ -1180,7 +1190,7 @@ int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags
         if (resp.status != PM3_SUCCESS) {
             return PM3_EUNDEF;
         }
-        memcpy(data, resp.data.asBytes, 16);
+        memcpy(data, resp.data.asBytes, MFBLOCK_SIZE);
     } else {
         PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
@@ -1192,7 +1202,7 @@ int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags
     struct p {
         uint8_t blockno;
         uint8_t pwd[4];
-        uint8_t data[16];
+        uint8_t data[MFBLOCK_SIZE];
         uint8_t workFlags;
     } PACKED payload;
     payload.blockno = blockno;
@@ -1213,6 +1223,7 @@ int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags
     }
     return PM3_SUCCESS;
 }
+
 
 // variables
 uint32_t cuid = 0;    // uid part used for crypto1.
@@ -1260,7 +1271,7 @@ int detect_classic_prng(void) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(cmd), 0, cmd, sizeof(cmd));
 
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "PRNG UID: Reply timeout.");
         return PM3_ETIMEOUT;
     }
@@ -1270,7 +1281,7 @@ int detect_classic_prng(void) {
         PrintAndLogEx(ERR, "error:  selecting tag failed,  can't detect prng\n");
         return PM3_ERFTRANS;
     }
-    if (!WaitForResponseTimeout(CMD_ACK, &respA, 2500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &respA, 2500) == false) {
         PrintAndLogEx(WARNING, "PRNG data: Reply timeout.");
         return PM3_ETIMEOUT;
     }
@@ -1414,15 +1425,23 @@ int detect_mf_magic(bool is_mfc) {
         case MAGIC_GEN_4GTU:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GTU"));
             break;
+        case MAGIC_GEN_4GDM:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GDM"));
+            break;
         case MAGIC_GEN_UNFUSED:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));
             break;
-        case MAGIC_SUPER:
-            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("super card"));
+        case MAGIC_SUPER_GEN1:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Super card (") _CYAN_("Gen 1") _GREEN_(")"));
+            break;
+        case MAGIC_SUPER_GEN2:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Super card (") _CYAN_("Gen 2") _GREEN_(")"));
             break;
         case MAGIC_NTAG21X:
             PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("NTAG21x"));
             break;
+        case MAGIC_QL88:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("QL88"));
         default:
             break;
     }
@@ -1459,14 +1478,14 @@ int convert_mfc_2_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen) 
 
         if (mfIsSectorTrailer(blockno) == false) {
             memcpy(out, in, MFBLOCK_SIZE);
+            out += MFBLOCK_SIZE;
+            *olen += MFBLOCK_SIZE;
         }
         blockno++;
-        out += MFBLOCK_SIZE;
         in += MFBLOCK_SIZE;
         ilen -= MFBLOCK_SIZE;
-        *olen += MFBLOCK_SIZE;
     }
-    return PM3_SUCCESS;    
+    return PM3_SUCCESS;
 }
 
 static const vigik_pk_t vigik_rsa_pk[] = {
@@ -1493,30 +1512,36 @@ const char *vigik_get_service(uint16_t service_code) {
     return vigik_rsa_pk[ARRAYLEN(vigik_rsa_pk) - 1].desc;
 }
 
-static void reverse_array(const uint8_t *src, int src_len, uint8_t *dest) {
-    for (int i = 0; i < src_len; i++) {
-        dest[i] = src[(src_len - 1) - i];
-    }
-};
 
-int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
+int vigik_verify(mfc_vigik_t *d) {
+#define PUBLIC_VIGIK_KEYLEN 128
 
     // iso9796
-    // Exponent V = 2  
+    // Exponent V = 2
     // n = The public modulus n is the product of the secret prime factors p and q. Its length is 1024 bits.
 
     if (g_debugMode == DEBUG) {
         PrintAndLogEx(INFO, "Raw");
-        print_hex_noascii_break(uid, uidlen, MFBLOCK_SIZE * 2);
+        print_hex_noascii_break((uint8_t *)d, sizeof(*d) - sizeof(d->rsa_signature), MFBLOCK_SIZE * 2);
 
         PrintAndLogEx(INFO, "Raw signature");
-        print_hex_noascii_break(signature, signature_len, MFBLOCK_SIZE * 2);
+        print_hex_noascii_break(d->rsa_signature, sizeof(d->rsa_signature), MFBLOCK_SIZE * 2);
     }
+
+    /*
+        int dl = 0;
+
+            param_gethex_to_eol("1C07D46DA3849326D24B3468BD76673F4F3C41827DC413E81E4F3C7804FAC727213059B21D047510D6432448643A92EBFC67FBEDDAB468D13D948B172F5EBC79A0E3FEFDFAF4E81FC7108E070F1E3CD0", 0, signature, PUBLIC_VIGIK_KEYLEN, &dl);
+
+        param_gethex_to_eol("1AB86FE0C17FFFFE4379D5E15A4B2FAFFEFCFA0F1F3F7FA03E7DDDF1E3C78FFFB1F0E23F7FFF51584771C5C18307FEA36CA74E60AA6B0409ACA66A9EC155F4E9112345708A2B8457E722608EE1157408", 0, signature, PUBLIC_VIGIK_KEYLEN, &dl);
+        signature_len = dl;
+        */
+
     uint8_t rev_sig[128];
-    reverse_array(signature, signature_len, rev_sig);
+    reverse_array_copy(d->rsa_signature, sizeof(d->rsa_signature), rev_sig);
 
     PrintAndLogEx(INFO, "Raw signature reverse");
-    print_hex_noascii_break(rev_sig, signature_len, MFBLOCK_SIZE * 2);
+    print_hex_noascii_break(rev_sig, sizeof(d->rsa_signature), MFBLOCK_SIZE * 2);
 
     // t = 0xBC  = Implicitly known
     // t = 0xCC  = look at byte before to determine hash function
@@ -1527,14 +1552,10 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
 
     // signature = h( C || M1 || h(M2) )
     // 1024 - 786 - 160 - 16 -1
-    // salt C 
+    // salt C
     // message M = 96 bytes,  768 bits
     // sha1 hash H = 20 bytes, 160 bits
     // padding = 20 bytes, 96 bits
-
-
-// ref:  MIFARE Classic EV1 Originality Signature Validation
-#define PUBLIC_VIGIK_KEYLEN 128
 
     uint8_t i;
     bool is_valid = false;
@@ -1563,18 +1584,18 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
         mbedtls_mpi_init(&sqr);
         mbedtls_mpi_init(&res);
 
-        mbedtls_mpi_read_binary(&N, (const unsigned char*)n, PUBLIC_VIGIK_KEYLEN);
+        mbedtls_mpi_read_binary(&N, (const unsigned char *)n, PUBLIC_VIGIK_KEYLEN);
 
         //mbedtls_mpi_read_binary(&s, (const unsigned char*)signature, signature_len);
-        mbedtls_mpi_read_binary(&s, (const unsigned char*)rev_sig, signature_len);
+        mbedtls_mpi_read_binary(&s, (const unsigned char *)rev_sig, sizeof(d->rsa_signature));
 
         // check is sign < (N/2)
-        
+
         mbedtls_mpi n_2;
         mbedtls_mpi_init(&n_2);
         mbedtls_mpi_copy(&n_2, &N);
         mbedtls_mpi_shift_r(&n_2, 1);
-        bool is_less =  (mbedtls_mpi_cmp_mpi(&s, &n_2) > 0) ? false : true;
+        bool is_less = (mbedtls_mpi_cmp_mpi(&s, &n_2) > 0) ? false : true;
         PrintAndLogEx(DEBUG, "z < (N/2) ..... %s", (is_less) ? _GREEN_("YES") : _RED_("NO"));
         mbedtls_mpi_free(&n_2);
 
@@ -1644,10 +1665,10 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
 
         PrintAndLogEx(DEBUG, "LSB............ " _GREEN_("%u"), lsb);
         if (g_debugMode == DEBUG) {
-            mbedtls_mpi_write_file( "[=] N.............. ", &N, 16, NULL );
-            mbedtls_mpi_write_file( "[=] signature...... ", &s, 16, NULL );        
-            mbedtls_mpi_write_file( "[=] square mod n... ", &sqr, 16, NULL );
-            mbedtls_mpi_write_file( "[=] n-fs........... ", &res, 16, NULL );
+            mbedtls_mpi_write_file("[=] N.............. ", &N, 16, NULL);
+            mbedtls_mpi_write_file("[=] signature...... ", &s, 16, NULL);
+            mbedtls_mpi_write_file("[=] square mod n... ", &sqr, 16, NULL);
+            mbedtls_mpi_write_file("[=] n-fs........... ", &res, 16, NULL);
         }
 
 
@@ -1656,9 +1677,9 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
 
         // xor 0xDC01
         int count_zero = 0;
-        for (int x = 0; x < sizeof(nfs); x +=2) {
+        for (int x = 0; x < sizeof(nfs); x += 2) {
             nfs[x] ^= 0xDC;
-            nfs[x+1] ^= 0x01;
+            nfs[x + 1] ^= 0x01;
 
             if (nfs[x] == 0x00)
                 count_zero++;
@@ -1689,10 +1710,10 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
                 PrintAndLogEx(INFO, "Hash byte... 0x%02X", ts.hash);
                 switch(ts.rsa[126]) {
                     case 0x11:
-                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - SHA1");                    
+                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - SHA1");
                         break;
                     case 0x22:
-                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - RIPEMD");       
+                        PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - RIPEMD");
                         break;
                     case 0x33:
                         PrintAndLogEx(INFO, "Hash algo ( 0x%02X ) - SHA1");
@@ -1711,7 +1732,7 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
             print_hex_noascii_break(ts.rsa, sizeof(ts.rsa) - 20, 32);
         }
         */
-    
+
         mbedtls_mpi_free(&N);
         mbedtls_mpi_free(&s);
         mbedtls_mpi_free(&res);
@@ -1722,10 +1743,10 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     PrintAndLogEx(INFO, "RSA: 1024bit");
-    
+
     if (is_valid == false || i == ARRAYLEN(vigik_rsa_pk)) {
         PrintAndLogEx(INFO, "Signature:");
-        print_hex_noascii_break(signature, signature_len,  MFBLOCK_SIZE * 2);
+        print_hex_noascii_break(d->rsa_signature, sizeof(d->rsa_signature),  MFBLOCK_SIZE * 2);
         PrintAndLogEx(SUCCESS, "Signature verification: " _RED_("failed"));
         return PM3_ESOFT;
     }
@@ -1736,39 +1757,37 @@ int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature
     PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 64);
     PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 128);
     PrintAndLogEx(INFO, "%.64s", vigik_rsa_pk[i].n + 192);
-    
+
     PrintAndLogEx(INFO, "Signature:");
-    print_hex_noascii_break(signature, signature_len,  MFBLOCK_SIZE * 2);
+    print_hex_noascii_break(d->rsa_signature, sizeof(d->rsa_signature),  MFBLOCK_SIZE * 2);
 
     PrintAndLogEx(SUCCESS, "Signature verification: " _GREEN_("successful"));
 
     return PM3_SUCCESS;
 }
 
-int vigik_annotate(uint8_t *d) {
+int vigik_annotate(mfc_vigik_t *d) {
     if (d == NULL)
         return PM3_EINVARG;
 
-    mfc_vigik_t *foo = (mfc_vigik_t*)d;
-
-    PrintAndLogEx(INFO, "Manufacture......... %s", sprint_hex(foo->b0, sizeof(foo->b0)));
-    PrintAndLogEx(INFO, "MAD................. %s", sprint_hex(foo->mad, sizeof(foo->mad)));
-    PrintAndLogEx(INFO, "Counters............ %u", foo->counters);
-    PrintAndLogEx(INFO, "rtf................. %s", sprint_hex(foo->rtf, sizeof(foo->rtf)));
-    PrintAndLogEx(INFO, "Service code........ 0x%08x / %u  - " _YELLOW_("%s"), foo->service_code, foo->service_code, vigik_get_service(foo->service_code));
-    PrintAndLogEx(INFO, "Info flag........... %u -", foo->info_flag); // ,  sprint_bin(foo->info_flag, 1));
-    PrintAndLogEx(INFO, "Key version......... %u", foo->key_version);
-    PrintAndLogEx(INFO, "PTR Counter......... %u", foo->ptr_counter);
-    PrintAndLogEx(INFO, "Counter num......... %u", foo->counter_num);
-    PrintAndLogEx(INFO, "Slot access date.... %s", sprint_hex(foo->slot_access_date, sizeof(foo->slot_access_date)));
-    PrintAndLogEx(INFO, "Slot dst duration... %u", foo->slot_dst_duration);
-    PrintAndLogEx(INFO, "Other Slots......... %s", sprint_hex(foo->other_slots, sizeof(foo->other_slots)));
-    PrintAndLogEx(INFO, "Services counter.... %u", foo->services_counter);
-    PrintAndLogEx(INFO, "Loading date........ %s", sprint_hex(foo->loading_date, sizeof(foo->loading_date)));
-    PrintAndLogEx(INFO, "Reserved null....... %u", foo->reserved_null);
+    PrintAndLogEx(INFO, "Manufacture......... %s", sprint_hex(d->b0, sizeof(d->b0)));
+    PrintAndLogEx(INFO, "MAD................. %s", sprint_hex(d->mad, sizeof(d->mad)));
+    PrintAndLogEx(INFO, "Counters............ %u", d->counters);
+    PrintAndLogEx(INFO, "rtf................. %s", sprint_hex(d->rtf, sizeof(d->rtf)));
+    PrintAndLogEx(INFO, "Service code........ 0x%08x / %u  - " _YELLOW_("%s"), d->service_code, d->service_code, vigik_get_service(d->service_code));
+    PrintAndLogEx(INFO, "Info flag........... %u -", d->info_flag); // ,  sprint_bin(d->info_flag, 1));
+    PrintAndLogEx(INFO, "Key version......... %u", d->key_version);
+    PrintAndLogEx(INFO, "PTR Counter......... %u", d->ptr_counter);
+    PrintAndLogEx(INFO, "Counter num......... %u", d->counter_num);
+    PrintAndLogEx(INFO, "Slot access date.... %s", sprint_hex(d->slot_access_date, sizeof(d->slot_access_date)));
+    PrintAndLogEx(INFO, "Slot dst duration... %u", d->slot_dst_duration);
+    PrintAndLogEx(INFO, "Other Slots......... %s", sprint_hex(d->other_slots, sizeof(d->other_slots)));
+    PrintAndLogEx(INFO, "Services counter.... %u", d->services_counter);
+    PrintAndLogEx(INFO, "Loading date........ %s", sprint_hex(d->loading_date, sizeof(d->loading_date)));
+    PrintAndLogEx(INFO, "Reserved null....... %u", d->reserved_null);
     PrintAndLogEx(INFO, "----------------------------------------------------------------");
     PrintAndLogEx(INFO, "");
-    vigik_verify(d, 96, foo->rsa_signature, sizeof(foo->rsa_signature));
+    vigik_verify(d);
     PrintAndLogEx(INFO, "----------------------------------------------------------------");
     PrintAndLogEx(INFO, "");
     return PM3_SUCCESS;

@@ -75,8 +75,26 @@ typedef enum ISO14A_COMMAND {
     ISO14A_NO_RATS = (1 << 9),
     ISO14A_SEND_CHAINING = (1 << 10),
     ISO14A_USE_ECP = (1 << 11),
-    ISO14A_USE_MAGSAFE = (1 << 12)
+    ISO14A_USE_MAGSAFE = (1 << 12),
+    ISO14A_USE_CUSTOM_POLLING = (1 << 13)
 } iso14a_command_t;
+
+// Defines a frame that will be used in a polling sequence
+// ECP Frames are up to (7 + 16) bytes long, 24 bytes should cover future and other cases
+typedef struct {
+    uint8_t frame[24];
+    uint8_t frame_length;
+    uint8_t last_byte_bits;
+    uint16_t extra_delay;
+} PACKED iso14a_polling_frame_t;
+
+// Defines polling sequence configuration
+// 6 would be enough for 4 magsafe, 1 wupa, 1 ecp,
+typedef struct {
+    iso14a_polling_frame_t frames[6];
+    uint8_t frame_count;
+    uint16_t extra_timeout;
+} PACKED iso14a_polling_parameters_t;
 
 typedef struct {
     uint8_t *response;
@@ -136,6 +154,5 @@ typedef struct {
         SECOND,
     } state;
 } PACKED nonces_t;
-
 
 #endif // _MIFARE_H_

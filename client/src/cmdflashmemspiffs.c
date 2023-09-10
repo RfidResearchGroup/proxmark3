@@ -531,7 +531,7 @@ static int CmdFlashMemSpiFFSView(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "SPIFFS file to view"),
-        arg_int0("c", "cols", "<dec>", "column breaks (def 32)"),
+        arg_int0("c", "cols", "<dec>", "column breaks (def 16)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -540,7 +540,7 @@ static int CmdFlashMemSpiFFSView(const char *Cmd) {
     char fn[32] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)fn, 32, &fnlen);
 
-    int breaks = arg_get_int_def(ctx, 2, 32);
+    int breaks = arg_get_int_def(ctx, 2, 16);
     CLIParserFree(ctx);
 
     uint8_t *dump = NULL;

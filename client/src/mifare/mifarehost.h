@@ -23,6 +23,7 @@
 #include "common.h"
 
 #include "util.h"       // FILE_PATH_SIZE
+#include "protocol_vigik.h"
 
 #define MIFARE_SECTOR_RETRY     10
 
@@ -113,6 +114,6 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
 // remove all sector trailers in a MFC dump
 int convert_mfc_2_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen);
 const char *vigik_get_service(uint16_t service_code);
-int vigik_verify(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len);
-int vigik_annotate(uint8_t *d);
+int vigik_verify(mfc_vigik_t *d);
+int vigik_annotate(mfc_vigik_t *d);
 #endif

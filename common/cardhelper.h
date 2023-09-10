@@ -22,6 +22,7 @@
 #include <ctype.h>
 #include "common.h"
 
+bool IsHIDSamPresent(bool verbose);
 bool IsCardHelperPresent(bool verbose);
 bool Encrypt(uint8_t *src, uint8_t *dest);
 bool Decrypt(uint8_t *src, uint8_t *dest);

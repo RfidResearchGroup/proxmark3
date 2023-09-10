@@ -262,14 +262,19 @@ local Utils =
 
     --
     -- Converts DECIMAL to HEX
-    ConvertDecToHex = function(IN)
-        local B,K,OUT,I,D = 16, "0123456789ABCDEF", "", 0
-        while IN > 0 do
-            I = I+1
-            IN, D = math.floor(IN/B), math.modf(IN, B) + 1
-            OUT = string.sub(K, D, D)..OUT
+    ConvertDecToHex = function(decimal)
+        if decimal == 0 then
+            return "0"
         end
-        return OUT
+
+        local B,DIGITS,hex = 16, "0123456789ABCDEF", ""
+
+        while decimal > 0 do
+            local remainder = math.fmod(decimal, B)
+            hex = string.sub(DIGITS, remainder + 1, remainder + 1) .. hex
+            decimal = math.floor(decimal / B)
+        end
+        return hex
     end,
     ---
     -- Convert Byte array to string of hex

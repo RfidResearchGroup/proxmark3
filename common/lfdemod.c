@@ -268,12 +268,20 @@ static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, bool isLong, bo
     *validLong = false;
     uint8_t bLen = isLong ? 110 : 55;
     uint16_t parityCol[4] = { 0, 0, 0, 0 };
+
     for (int word = 0; word < bLen; word += 5) {
         for (int bit = 0; bit < 5; bit++) {
-            if (word + bit >= bLen) break;
+
+            if (word + bit >= bLen) {
+                break;
+            }
+
             parityWd = (parityWd << 1) | bits[startIdx + word + bit];
-            if ((word <= 50) && (bit < 4))
+
+            if ((word <= 50) && (bit < 4)) {
                 parityCol[bit] = (parityCol[bit] << 1) | bits[startIdx + word + bit];
+            }
+
             bits[bitCnt++] = (bits[startIdx + word + bit]);
         }
         if (word + 5 > bLen) break;
@@ -293,12 +301,15 @@ static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, bool isLong, bo
     if (!isLong && validRowParitySkipColP && validColParity) {
         *validShort = true;
     }
+
     if (isLong && validRowParity) {
         *validLong = true;
     }
+
     if (isLong && validRowParitySkipColP && validColParity) {
         *validShortExtended = true;
     }
+
     if (*validShort || *validShortExtended || *validLong) {
         return bitCnt;
     } else {
@@ -425,10 +436,10 @@ static size_t findModStart(const uint8_t *src, size_t size, uint8_t expWaveSize)
 }
 
 static int getClosestClock(int testclk) {
-    const uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 100, 128, 256, 384};
-    const uint8_t limit[]  = {1,  2,  4,  4,  5,  8,   8,   8,   8,   8};
+    const uint16_t clocks[] = {8, 16, 32, 40, 50, 64, 100, 128, 256, 272, 384};
+    const uint8_t limit[]  =  {1,  2,  4,  4,  5,  8,   8,   8,   8,   24,   24};
 
-    for (uint8_t i = 0; i < 10; i++) {
+    for (uint8_t i = 0; i < ARRAYLEN(clocks); i++) {
         if (testclk >= clocks[i] - limit[i] && testclk <= clocks[i] + limit[i])
             return clocks[i];
     }
@@ -602,7 +613,7 @@ bool DetectCleanAskWave(const uint8_t *dest, size_t size, uint8_t high, uint8_t 
 // based on count of low to low
 int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clock) {
     size_t i = 100;
-    size_t minClk = 512;
+    size_t minClk = 768;
     uint16_t shortestWaveIdx = 0;
 
     // get to first full low to prime loop and skip incomplete first pulse
@@ -611,11 +622,11 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
     if (i == size)
         return -1;
-    if (size < 512)
+    if (size < 768)
         return -2;
 
     // clock, numoftimes, first idx
-    uint16_t tmpclk[10][3] = {
+    uint16_t tmpclk[11][3] = {
         {8,   0, 0},
         {16,  0, 0},
         {32,  0, 0},
@@ -625,11 +636,12 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
         {100, 0, 0},
         {128, 0, 0},
         {256, 0, 0},
+        {272, 0, 0},
         {384, 0, 0},
     };
 
     // loop through all samples (well, we don't want to go out-of-bounds)
-    while (i < (size - 512)) {
+    while (i < (size - 768)) {
         // measure from low to low
         size_t startwave = i;
 
@@ -644,7 +656,7 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
 
         int foo = getClosestClock(minClk);
         if (foo > 0) {
-            for (uint8_t j = 0; j < 10; j++) {
+            for (uint8_t j = 0; j < 11; j++) {
                 if (tmpclk[j][0] == foo) {
                     tmpclk[j][1]++;
 
@@ -658,8 +670,17 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
     }
 
     // find the clock with most hits and it the first index it was encountered.
+    int possible_clks = 0;
+    for (uint8_t j = 0; j < 11; j++) {
+        if (tmpclk[j][1] > 0) {
+            possible_clks++;
+        }
+    }
+
+    uint16_t second_shortest = 0;
+    int second = 0;
     int max = 0;
-    for (uint8_t j = 0; j < 10; j++) {
+    for (int j = 10; j > -1; j--) {
         if (g_debugMode == 2) {
             prnt("DEBUG, ASK,  clocks %u | hits %u | idx %u"
                  , tmpclk[j][0]
@@ -667,11 +688,21 @@ int DetectStrongAskClock(uint8_t *dest, size_t size, int high, int low, int *clo
                  , tmpclk[j][2]
                 );
         }
+
         if (max < tmpclk[j][1]) {
+            second = *clock;
+            second_shortest = shortestWaveIdx;
+
             *clock = tmpclk[j][0];
             shortestWaveIdx = tmpclk[j][2];
             max = tmpclk[j][1];
         }
+    }
+
+    // ASK clock 8 is very rare and usually gives us false positives
+    if (possible_clks > 1 && *clock == 8) {
+        *clock = second;
+        shortestWaveIdx = second_shortest;
     }
 
     if (*clock == 0)
@@ -701,9 +732,9 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
     }
 
     size_t i = 1;
-    uint8_t num_clks = 9;
+    uint8_t num_clks = 10;
     // first 255 value pos0 is placeholder for user inputed clock.
-    uint16_t clk[] = {255, 8, 16, 32, 40, 50, 64, 100, 128, 255};
+    uint16_t clk[] = {255, 8, 16, 32, 40, 50, 64, 100, 128, 255, 272};
 
     // sometimes there is a strange end wave - filter out this
     size -= 60;
@@ -744,8 +775,8 @@ int DetectASKClock(uint8_t *dest, size_t size, int *clock, int maxErr) {
 
     uint8_t clkCnt, tol;
     size_t j = 0;
-    uint16_t bestErr[] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
-    uint8_t bestStart[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint16_t bestErr[] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
+    uint8_t bestStart[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     size_t errCnt, arrLoc, loopEnd;
 
     if (found_clk) {
@@ -884,11 +915,11 @@ int DetectStrongNRZClk(const uint8_t *dest, size_t size, int peak, int low, bool
 // detect nrz clock by reading #peaks vs no peaks(or errors)
 int DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx) {
     size_t i = 0;
-    uint8_t clk[] = {8, 16, 32, 40, 50, 64, 100, 128, 255};
+    uint16_t clk[] = {8, 16, 32, 40, 50, 64, 100, 128, 255, 272, 384};
     size_t loopCnt = 4096;  //don't need to loop through entire array...
 
     //if we already have a valid clock quit
-    for (; i < 8; ++i)
+    for (; i < ARRAYLEN(clk); ++i)
         if (clk[i] == clock) return clock;
 
     if (size < 20) return 0;
@@ -915,7 +946,7 @@ int DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx)
     uint8_t tol = 0;
     uint16_t smplCnt = 0;
     int16_t peakcnt = 0;
-    int16_t peaksdet[] = {0, 0, 0, 0, 0, 0, 0, 0};
+    int16_t peaksdet[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint16_t minPeak = 255;
     bool firstpeak = true;
     //test for large clipped waves - ignore first peak
@@ -938,10 +969,10 @@ int DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx)
     bool errBitHigh = 0, bitHigh = 0, lastPeakHigh = 0;
     uint8_t ignoreCnt = 0, ignoreWindow = 4;
     int lastBit = 0;
-    size_t bestStart[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    size_t bestStart[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     peakcnt = 0;
     //test each valid clock from smallest to greatest to see which lines up
-    for (clkCnt = 0; clkCnt < 8; ++clkCnt) {
+    for (clkCnt = 0; clkCnt < ARRAYLEN(bestStart); ++clkCnt) {
         //ignore clocks smaller than smallest peak
         if (clk[clkCnt] < minPeak - (clk[clkCnt] / 4)) continue;
         //try lining up the peaks by moving starting point (try first 256)
@@ -994,7 +1025,7 @@ int DetectNRZClock(uint8_t *dest, size_t size, int clock, size_t *clockStartIdx)
     }
 
     uint8_t best = 0;
-    for (int m = 7; m > 0; m--) {
+    for (int m = ARRAYLEN(peaksdet) - 1; m >= 0; m--) {
         if ((peaksdet[m] >= (peaksdet[best] - 1)) && (peaksdet[m] <= peaksdet[best] + 1) && lowestTransition) {
             if (clk[m] > (lowestTransition - (clk[m] / 8)) && clk[m] < (lowestTransition + (clk[m] / 8))) {
                 best = m;
@@ -1087,10 +1118,12 @@ uint16_t countFC(const uint8_t *bits, size_t size, bool fskAdj) {
         fcH = fcLens[best2];
         fcL = fcLens[best1];
     }
+    /*
     if ((size - 180) / fcH / 3 > fcCnts[best1] + fcCnts[best2]) {
         if (g_debugMode == 2) prnt("DEBUG countfc: fc is too large: %zu > %u. Not psk or fsk", (size - 180) / fcH / 3, fcCnts[best1] + fcCnts[best2]);
         return 0; //lots of waves not psk or fsk
     }
+    */
     // TODO: take top 3 answers and compare to known Field clocks to get top 2
 
     uint16_t fcs = (((uint16_t)fcH) << 8) | fcL;
@@ -1101,8 +1134,8 @@ uint16_t countFC(const uint8_t *bits, size_t size, bool fskAdj) {
 // detect psk clock by reading each phase shift
 // a phase shift is determined by measuring the sample length of each wave
 int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShift, uint8_t *curPhase, uint8_t *fc) {
-    uint8_t clk[] = {255, 16, 32, 40, 50, 64, 100, 128, 255}; //255 is not a valid clock
-    uint16_t loopCnt = 4096;  //don't need to loop through entire array...
+    uint16_t clk[] = {255, 16, 32, 40, 50, 64, 100, 128, 256, 272, 384}; // 255 is not a valid clock
+    uint16_t loopCnt = 4096;  // don't need to loop through entire array...
 
     if (size < 160 + 20) return 0;
     // size must be larger than 20 here, and 160 later on.
@@ -1123,8 +1156,8 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
 
     uint8_t clkCnt;
     uint16_t waveLenCnt, fullWaveLen = 0;
-    uint16_t bestErr[] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
-    uint16_t peaksdet[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint16_t bestErr[] = {1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000};
+    uint16_t peaksdet[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     //find start of modulating data in trace
     size_t i = findModStart(dest, size, *fc);
@@ -1146,7 +1179,7 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
     }
 
     //test each valid clock from greatest to smallest to see which lines up
-    for (clkCnt = 7; clkCnt >= 1 ; clkCnt--) {
+    for (clkCnt = 9; clkCnt >= 1 ; clkCnt--) {
         uint8_t tol = *fc / 2;
         size_t lastClkBit = firstFullWave; //set end of wave as clock align
         size_t waveStart = 0;
@@ -1186,8 +1219,8 @@ int DetectPSKClock(uint8_t *dest, size_t size, int clock, size_t *firstPhaseShif
     }
     //all tested with errors
     //return the highest clk with the most peaks found
-    uint8_t best = 7;
-    for (i = 7; i >= 1; i--) {
+    uint8_t best = 9;
+    for (i = 9; i >= 1; i--) {
         if (peaksdet[i] > peaksdet[best])
             best = i;
 

@@ -120,7 +120,7 @@ static void decodeHeden2L(uint8_t *bits) {
     if (bits[offset +  7]) cardnumber += 16384;
     if (bits[offset + 23]) cardnumber += 32768;
 
-    PrintAndLogEx(SUCCESS, "    Heden-2L    | %u", cardnumber);
+    PrintAndLogEx(SUCCESS, "  Heden-2L...... %u", cardnumber);
 }
 
 // sending three times.  Didn't seem to break the previous sim?
@@ -301,10 +301,11 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
                      );
         PrintAndLogEx(DEBUG, "two bit checksum... " _GREEN_("%1d%1d"), checksum >> 1 & 0x01, checksum & 0x01);
 
+        PrintAndLogEx(INFO, "");
         PrintAndLogEx(SUCCESS, "Possible de-scramble patterns");
         // This doesn't seem to line up with the hot-stamp numbers on any HID cards I have seen, but, leaving it alone since I do not know how those work. -MS
-        PrintAndLogEx(SUCCESS, "    Printed     | __%04d__ [0x%X]", p1, p1);
-        PrintAndLogEx(SUCCESS, "    Internal ID | %" PRIu64, foo);
+        PrintAndLogEx(SUCCESS, "  Printed....... __%04d__  ( 0x%X )", p1, p1);
+        PrintAndLogEx(SUCCESS, "  Internal ID... %" PRIu64, foo);
         decodeHeden2L(g_DemodBuffer);
 
     } else {
@@ -336,6 +337,7 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
         PrintAndLogEx(DEBUG, "DEBUG: Indala - printing DemodBuffer");
         printDemodBuff(0, false, false, false);
     }
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -404,7 +406,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
     uint8_t data[MAX_GRAPH_TRACE_LEN] = {0};
     size_t datasize = getFromGraphBuf(data);
 
-    uint8_t rawbits[4096];
+    uint8_t rawbits[4096] = {0};
     int rawbit = 0;
     int worst = 0, worstPos = 0;
 
@@ -503,7 +505,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
             showbits[bit] = '.' + bits[bit];
         }
         showbits[bit + 1] = '\0';
-        PrintAndLogEx(SUCCESS, "Partial UID | %s", showbits);
+        PrintAndLogEx(SUCCESS, "Partial UID... %s", showbits);
         return PM3_SUCCESS;
     } else {
         for (bit = 0; bit < uidlen; bit++) {
@@ -528,7 +530,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
                 uid2 = (uid2 << 1) | 1;
             }
         }
-        PrintAndLogEx(SUCCESS, "UID | %s (%x%08x)", showbits, uid1, uid2);
+        PrintAndLogEx(SUCCESS, "UID... %s ( %x%08x )", showbits, uid1, uid2);
     } else {
         uint32_t uid3 = 0;
         uint32_t uid4 = 0;
@@ -549,7 +551,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
             else
                 uid7 = (uid7 << 1) | 1;
         }
-        PrintAndLogEx(SUCCESS, "UID | %s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
+        PrintAndLogEx(SUCCESS, "UID... %s (%x%08x%08x%08x%08x%08x%08x)", showbits, uid1, uid2, uid3, uid4, uid5, uid6, uid7);
     }
 
     // Checking UID against next occurrences
@@ -661,7 +663,7 @@ static int CmdIndalaSim(const char *Cmd) {
     bool fmt4041x = arg_get_lit(ctx, 5);
 
 
-    int32_t cardnumber;
+    int32_t cardnumber = 0;
     uint8_t fc = 0;
     uint16_t cn = 0;
     bool got_cn = false, got_26 = false;

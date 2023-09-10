@@ -331,6 +331,8 @@ static bool checkValidCmd(uint32_t decrypted) {
 static bool checkValidCmdByte(uint8_t *cmd, uint16_t n) {
 
     bool ok = false;
+    if (cmd == NULL)
+        return false;
     for (int i = 0; i < 8; ++i) {
         if (cmd[0] == cmds[i][0]) {
 
@@ -531,7 +533,7 @@ static int usage(void) {
     return 1;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
     printf("\nMifare classic nested auth key recovery\n\n");
 
     if (argc < 9) return usage();

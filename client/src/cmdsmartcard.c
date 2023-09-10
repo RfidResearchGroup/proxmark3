@@ -522,7 +522,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart upgrade",
                   "Upgrade RDV4 sim module firmware",
-                  "smart upgrade -f sim012.bin"
+                  "smart upgrade -f sim013.bin"
                  );
 
     void *argtable[] = {
@@ -719,7 +719,7 @@ static int CmdSmartInfo(const char *Cmd) {
 
     // print header
     PrintAndLogEx(INFO, "--- " _CYAN_("Smartcard Information") " ---------");
-    PrintAndLogEx(INFO, "ISO7618-3 ATR... %s", sprint_hex(card.atr, card.atr_len));
+    PrintAndLogEx(INFO, "ISO7816-3 ATR... %s", sprint_hex(card.atr, card.atr_len));
     // convert bytes to str.
     char *hexstr = calloc((card.atr_len << 1) + 1, sizeof(uint8_t));
     if (hexstr == NULL) {

@@ -205,6 +205,7 @@ typedef struct {
     // rdv4
     bool hw_available_flash            : 1;
     bool hw_available_smartcard        : 1;
+    bool is_rdv4                       : 1;
 } PACKED capabilities_t;
 #define CAPABILITIES_VERSION 6
 extern capabilities_t g_pm3_capabilities;
@@ -270,7 +271,7 @@ typedef struct {
 typedef struct {
     uint8_t type;
     uint16_t len;
-    uint8_t *data;
+    uint8_t data[];
 } PACKED lf_hitag_t;
 
 typedef struct {
@@ -415,6 +416,8 @@ typedef struct {
 
 #define CMD_SPIFFS_WIPE                                                   0x013A
 
+#define CMD_SET_FPGAMODE                                                  0x013F
+
 // This take a +0x2000 as they are high level helper and special functions
 // As the others, they may have safety level argument if it makes sense
 #define CMD_SPIFFS_PRINT_TREE                                             0x2130
@@ -484,6 +487,7 @@ typedef struct {
 #define CMD_LF_EM4X70_AUTH                                                0x0263
 #define CMD_LF_EM4X70_WRITEPIN                                            0x0264
 #define CMD_LF_EM4X70_WRITEKEY                                            0x0265
+#define CMD_LF_EM4X70_BRUTE                                               0x0266
 // Sampling configuration for LF reader/sniffer
 #define CMD_LF_SAMPLING_SET_CONFIG                                        0x021D
 #define CMD_LF_FSK_SIMULATE                                               0x021E
@@ -519,8 +523,14 @@ typedef struct {
 #define CMD_HF_ISO15693_COMMAND                                           0x0313
 #define CMD_HF_ISO15693_FINDAFI                                           0x0315
 #define CMD_HF_ISO15693_CSETUID                                           0x0316
-#define CMD_HF_ISO15693_SLIX_L_DISABLE_PRIVACY                            0x0317
-#define CMD_HF_ISO15693_SLIX_L_DISABLE_AESAFI                             0x0318
+#define CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY                               0x0867
+#define CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY                              0x0317
+#define CMD_HF_ISO15693_SLIX_DISABLE_EAS                                  0x0318
+#define CMD_HF_ISO15693_SLIX_ENABLE_EAS                                   0x0862
+#define CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI                             0x0863
+#define CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS                             0x0864
+#define CMD_HF_ISO15693_SLIX_WRITE_PWD                                    0x0865
+#define CMD_HF_ISO15693_WRITE_AFI                                         0x0866
 #define CMD_HF_TEXKOM_SIMULATE                                            0x0320
 #define CMD_HF_ISO15693_EML_CLEAR                                         0x0330
 #define CMD_HF_ISO15693_EML_SETMEM                                        0x0331
@@ -613,6 +623,7 @@ typedef struct {
 #define CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES                                0x0613
 #define CMD_HF_MIFARE_ACQ_NONCES                                          0x0614
 #define CMD_HF_MIFARE_STATIC_NESTED                                       0x0615
+#define CMD_HF_MIFARE_STATIC_ENC                                          0x0616
 
 #define CMD_HF_MIFARE_READBL                                              0x0620
 #define CMD_HF_MIFAREU_READBL                                             0x0720
@@ -677,6 +688,12 @@ typedef struct {
 // Gen 4 GTU magic cards
 #define CMD_HF_MIFARE_G4_RDBL                                             0x0860
 #define CMD_HF_MIFARE_G4_WRBL                                             0x0861
+
+// Gen 4 GDM magic cards
+#define CMD_HF_MIFARE_G4_GDM_RDBL                                         0x0870
+#define CMD_HF_MIFARE_G4_GDM_WRBL                                         0x0871
+#define CMD_HF_MIFARE_G4_GDM_CONFIG                                       0x0872
+#define CMD_HF_MIFARE_G4_GDM_WRCFG                                        0x0873
 
 #define CMD_UNKNOWN                                                       0xFFFF
 

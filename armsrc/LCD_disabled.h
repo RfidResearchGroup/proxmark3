@@ -130,7 +130,7 @@ void LCDInit(void);
 void LCDReset(void);
 void LCDSetXY(unsigned char x, unsigned char y);
 void LCDSetPixel(unsigned char x, unsigned char y, unsigned char color);
-void LCDString(char *lcd_string, const char *font_style, unsigned char x, unsigned char y, unsigned char fcolor, unsigned char bcolor);
+void LCDString(const char *lcd_string, const char *font_style, unsigned char x, unsigned char y, unsigned char fcolor, unsigned char bcolor);
 void LCDFill(unsigned char xs, unsigned char ys, unsigned char width, unsigned char height, unsigned char color);
 
 #endif

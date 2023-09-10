@@ -43,7 +43,6 @@ The following definition has be crystallized out from these experiments.  Its no
 ```
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
 ```
 For more examples, see also all **-h**  helptext now in the LUA scripts.
 For the command help texts using _YELLOW_ for the example makes it very easy to see what is the command vs the description.

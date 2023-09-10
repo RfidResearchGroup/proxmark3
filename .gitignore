@@ -80,17 +80,7 @@ tools/mfd_aes_brute/mfd_aes_brute
 tools/mfd_aes_brute/mfd_multi_brute
 tools/mfd_aes_brute/brute_key
 
-fpga/*
-!fpga/tests
-!fpga/fpga_lf.bit
-!fpga/fpga_hf.bit
-!fpga/*.v
-!fpga/Makefile
-!fpga/fpga.ucf
-!fpga/xst_lf.scr
-!fpga/xst_hf.scr
-!fpga/go.bat
-!fpga/sim.tcl
+fpga/__build*
 
 # offcial dumps folder
 dumps/*

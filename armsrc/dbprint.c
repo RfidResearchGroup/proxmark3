@@ -74,7 +74,7 @@ void Dbprintf(const char *fmt, ...) {
 }
 
 // prints HEX & ASCII
-void Dbhexdump(int len, uint8_t *d, bool bAsci) {
+void Dbhexdump(int len, const uint8_t *d, bool bAsci) {
 #if DEBUG
     char ascii[9];
 
@@ -103,9 +103,9 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
 #endif
 }
 
-void print_result(const char *name, uint8_t *buf, size_t len) {
+void print_result(const char *name, const uint8_t *buf, size_t len) {
 
-    uint8_t *p = buf;
+    const uint8_t *p = buf;
     uint16_t tmp = len & 0xFFF0;
 
     for (; p - buf < tmp; p += 16) {

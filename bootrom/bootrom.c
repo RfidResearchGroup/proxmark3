@@ -20,6 +20,10 @@
 #include "clocks.h"
 #include "usb_cdc.h"
 
+#ifdef WITH_FLASH
+#include "flashmem.h"
+#endif
+
 #include "proxmark3_arm.h"
 #define DEBUG 0
 
@@ -214,8 +218,18 @@ static void flash_mode(void) {
     bootrom_unlocked = false;
     uint8_t rx[sizeof(PacketCommandOLD)];
     g_common_area.command = COMMON_AREA_COMMAND_NONE;
-    if (!g_common_area.flags.button_pressed && BUTTON_PRESS())
+    if (!g_common_area.flags.button_pressed && BUTTON_PRESS()) {
         g_common_area.flags.button_pressed = 1;
+    }
+
+#ifdef WITH_FLASH
+    if (FlashInit()) { // checks for existence of flash also ... OK because bootrom was built for devices with flash
+        uint64_t flash_uniqueID = 0;
+        Flash_UniqueID((uint8_t *)&flash_uniqueID);
+        FlashStop();
+        usb_update_serial(flash_uniqueID);
+    }
+#endif
 
     usb_enable();
 
@@ -296,10 +310,10 @@ void BootROM(void) {
     LED_B_OFF();
     LED_A_OFF();
 
-    // Set the first 256kb memory flashspeed
+    // Set the first 256KB memory flashspeed
     AT91C_BASE_EFC0->EFC_FMR = AT91C_MC_FWS_1FWS | MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);
 
-    // 9 = 256, 10+ is 512kb
+    // 9 = 256, 10+ is 512KB
     uint8_t id = (*(AT91C_DBGU_CIDR) & 0xF00) >> 8;
     if (id > 9)
         AT91C_BASE_EFC1->EFC_FMR = AT91C_MC_FWS_1FWS | MC_FLASH_MODE_MASTER_CLK_IN_MHZ(48);

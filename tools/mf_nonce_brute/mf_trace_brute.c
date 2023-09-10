@@ -174,6 +174,8 @@ static char *sprint_hex_inrow_ex(const uint8_t *data, const size_t len, const si
 static bool checkValidCmdByte(uint8_t *cmd, uint16_t n) {
 
     bool ok = false;
+    if (cmd == NULL)
+        return false;
     for (int i = 0; i < 8; ++i) {
         if (cmd[0] == cmds[i][0]) {
 
@@ -245,7 +247,7 @@ static int usage(void) {
     return 1;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
     printf("Mifare classic nested auth key recovery Phase 2\n");
     if (argc < 3) return usage();
 

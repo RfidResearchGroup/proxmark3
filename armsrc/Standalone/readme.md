@@ -100,6 +100,8 @@ STANDALONE_MODES_REQ_FLASH :=
 STANDALONE_MODES_REQ_BT :=
 ```
 
+Please respect alphabetic order!
+
 ## Update MAKEFILE.INC
 ^[Top](#top)
 
@@ -116,6 +118,8 @@ ifneq (,$(findstring WITH_STANDALONE_LF_FOO,$(APP_CFLAGS)))
     SRC_STANDALONE = lf_foo.c
 endif
 ```
+
+Please respect alphabetic order!
 
 ## Adding identification string of your mode
 ^[Top](#top)
@@ -174,9 +178,11 @@ Once you're ready to share your mode, please
 
 * add a line in CHANGELOG.md
 * add your mode in the modes table in `doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md`
-* add your mode in `tools/build_all_firmwares.sh`
+* add your mode in `tools/build_all_firmwares.sh` such that it reflects `armsrc/Standalone/Makefile.hal` list of firmwares to build.
 
-and submit your PR.
+Please respect alphabetic order of standalone modes everywhere!
+
+Then submit your PR.
 
 Once approved, add also your mode in https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode
 

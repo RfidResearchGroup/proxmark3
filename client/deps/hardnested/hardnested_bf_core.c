@@ -371,7 +371,7 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
             for (uint32_t tests = 0; tests < nonces_to_bruteforce; ++tests) {
                 // common bits with preceding test nonce
                 uint32_t common_bits = next_common_bits; //tests ? trailing_zeros(bf_test_nonce_2nd_byte[tests] ^ bf_test_nonce_2nd_byte[tests-1]) : 0;
-                next_common_bits = tests < nonces_to_bruteforce - 1 ? trailing_zeros(bf_test_nonce_2nd_byte[tests] ^ bf_test_nonce_2nd_byte[tests + 1]) : 0;
+                next_common_bits = (tests < nonces_to_bruteforce - 1) ? trailing_zeros(bf_test_nonce_2nd_byte[tests] ^ bf_test_nonce_2nd_byte[tests + 1]) : 0;
                 uint32_t parity_bit_idx = 1;                        // start checking with the parity of second nonce byte
                 bitslice_value_t fb_bits = fbb[common_bits];        // start with precomputed feedback bits from previous nonce
                 bitslice_value_t ks_bits = ksb[common_bits];        // dito for first keystream bits
@@ -530,7 +530,6 @@ stop_tests:
             bucket_states_tested += bucket_size[block_idx];
             // prepare to set new states
             state_p = &states[KEYSTREAM_SIZE];
-            continue;
         }
     }
 out:

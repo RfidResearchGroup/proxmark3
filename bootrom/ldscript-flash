@@ -53,6 +53,7 @@ SECTIONS
         *(.rodata.*)
         *(.data)
         *(.data.*)
+        *(.ramfunc)
         . = ALIGN(4);
     } >ram AT>bootphase2 :phase2
 

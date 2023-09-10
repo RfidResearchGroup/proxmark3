@@ -5,7 +5,22 @@ PLATFORM=PM3RDV4
 #PLATFORM=PM3GENERIC
 # If you want more than one PLATFORM_EXTRAS option, separate them by spaces:
 #PLATFORM_EXTRAS=BTADDON
+#PLATFORM_EXTRAS=FLASH
+#PLATFORM_EXTRAS=BTADDON FLASH
 #STANDALONE=LF_SAMYRUN
+
+# Uncomment the lines below in order to make a 256KB image
+# and comment out the lines above
+
+#PLATFORM=PM3GENERIC
+#PLATFORM_SIZE=256
+#STANDALONE=
+#SKIP_HITAG=1
+#SKIP_FELICA=1
+#SKIP_HFPLOT=1
+#SKIP_NFCBARCODE=1
+#SKIP_ZX8211=1
+#SKIP_LF=1
 
 # To accelerate repetitive compilations:
 # Install package "ccache" -> Debian/Ubuntu: /usr/lib/ccache, Fedora/CentOS/RHEL: /usr/lib64/ccache

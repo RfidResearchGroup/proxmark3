@@ -229,6 +229,8 @@ void printEM410x(uint32_t hi, uint64_t id, bool verbose, int type) {
         uint8_t  sebury2 = (id >> 16) & 0x7F;
         uint32_t sebury3 = id & 0x7FFFFF;
         PrintAndLogEx(SUCCESS, "Pattern Sebury     : %d %d %d  [0x%X 0x%X 0x%X]", sebury1, sebury2, sebury3, sebury1, sebury2, sebury3);
+        PrintAndLogEx(SUCCESS, "VD / ID            : %03" PRIu64 " / %010" PRIu64, (id >> 32LL) & 0xFFFF, (id & 0xFFFFFFFF));
+
         PrintAndLogEx(INFO, "------------------------------------------------");
     }
 }
@@ -670,11 +672,6 @@ static int CmdEM410xClone(const char *Cmd) {
     if ((clk != 16) && (clk != 32) && (clk != 64) && (clk != 40)) {
         PrintAndLogEx(FAILED, "supported clock rates are " _YELLOW_("16, 32, 40, 64") "  got " _RED_("%d") "\n", clk);
         return PM3_EINVARG;
-    }
-
-    char cardtype[16] = {"T55x7"};
-    if (q5) {
-        snprintf(cardtype, sizeof(cardtype), "Q5/T5555");
     }
 
     PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with EM Tag ID " _GREEN_("%010" PRIX64) " (RF/%d)", q5 ? "Q5/T5555" : (em ? "EM4305/4469" : "T55x7"), id, clk);

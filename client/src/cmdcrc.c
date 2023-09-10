@@ -424,8 +424,8 @@ static int CmdrevengSearch(const char *Cmd) {
     uint8_t width[NMODELS] = {0};
     int count = 0;
 
-    char result[30];
-    char revResult[30];
+    char result[50 + 1] = {0};
+    char revResult[50 + 1] = {0};
     int ans = GetModels(Models, &count, width);
     bool found = false;
     if (!ans) {
@@ -461,7 +461,7 @@ static int CmdrevengSearch(const char *Cmd) {
             continue;
         }
 
-        memset(result, 0, 30);
+        memset(result, 0, sizeof(result));
         char *inCRC = calloc(crcChars + 1, sizeof(char));
         if (inCRC == NULL) {
             return 0;

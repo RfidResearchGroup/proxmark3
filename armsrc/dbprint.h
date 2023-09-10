@@ -22,40 +22,12 @@
 #include "common.h"
 #include "ansi.h"
 
-#define Dbprintf_usb(...) {\
-        bool tmpfpc = g_reply_via_fpc;\
-        bool tmpusb = g_reply_via_usb;\
-        g_reply_via_fpc = false;\
-        g_reply_via_usb = true;\
-        Dbprintf(__VA_ARGS__);\
-        g_reply_via_fpc = tmpfpc;\
-        g_reply_via_usb = tmpusb;}
-
-#define Dbprintf_fpc(...) {\
-        bool tmpfpc = g_reply_via_fpc;\
-        bool tmpusb = g_reply_via_usb;\
-        g_reply_via_fpc = true;\
-        g_reply_via_usb = false;\
-        Dbprintf(__VA_ARGS__);\
-        g_reply_via_fpc = tmpfpc;\
-        g_reply_via_usb = tmpusb;}
-
-#define Dbprintf_all(...) {\
-        bool tmpfpc = g_reply_via_fpc;\
-        bool tmpusb = g_reply_via_usb;\
-        g_reply_via_fpc = true;\
-        g_reply_via_usb = true;\
-        Dbprintf(__VA_ARGS__);\
-        g_reply_via_fpc = tmpfpc;\
-        g_reply_via_usb = tmpusb;}
-
-
 void DbpString(const char *str);
 void DbpStringEx(uint32_t flags, const char *src, size_t srclen);
 void Dbprintf(const char *fmt, ...);
 void DbprintfEx(uint32_t flags, const char *fmt, ...);
-void Dbhexdump(int len, uint8_t *d, bool bAsci);
-void print_result(const char *name, uint8_t *buf, size_t len);
+void Dbhexdump(int len, const uint8_t *d, bool bAsci);
+void print_result(const char *name, const uint8_t *buf, size_t len);
 //void PrintToSendBuffer(void);
 
 #endif

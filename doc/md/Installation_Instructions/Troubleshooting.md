@@ -38,7 +38,7 @@ client/proxmark3 <YOUR_PORT_HERE> ...
 Refer to the installation guide specific to your OS for details about ports.
 
 * [Linux](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md)
-* [Mac OSX](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md)
+* [macOS](/doc/md/Installation_Instructions/macOS-Homebrew-Installation-Instructions.md)
 * [Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)
 
 Note that with the Bluetooth adapter, you *have to* use directly the client, and flasher over Bluetooth is not possible.
@@ -135,6 +135,8 @@ See [details here](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md)
 
 (RDV4 only) Make sure you've the latest SIM firmware according to the [configuration documentation](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md#verify-sim-module-firmware-version).
 
+Check that the SIM daughterboard is properly seated onto the mainboard.  Pressure on the edges of the daughterboard could cause the connector to partially disconnect (especially good to check if problems began after installation of the bluetooth module, for example).
+
 ## Troubles with t5577 commands or MFC/iClass/T55x7 dictionaries
 ^[Top](#top)
 
@@ -161,12 +163,12 @@ proxmark3 <YOUR_PORT_HERE> --flash --image /usr/local/share/proxmark3/firmware/f
 proxmark3 <YOUR_PORT_HERE> --flash --image /usr/share/proxmark3/firmware/fullimage.elf
 
 using the script:
-pm3 --> smart upgrade -f /usr/local/share/proxmark3/firmware/sim012.bin
+pm3 --> smart upgrade -f /usr/local/share/proxmark3/firmware/sim013.bin
 <>
-pm3 --> smart upgrade -f /usr/share/proxmark3/firmware/sim012.bin
+pm3 --> smart upgrade -f /usr/share/proxmark3/firmware/sim013.bin
 ```
 
-If you didn't install the PRoxmark but you're working from the sources directory and depending how you launch the client, your working directory might be the root of the repository:
+If you didn't install the Proxmark but you're working from the sources directory and depending how you launch the client, your working directory might be the root of the repository:
 
 ```
 ./pm3 ...
@@ -186,7 +188,7 @@ client/proxmark3 <YOUR_PORT_HERE> --flash --image armsrc/obj/fullimage.elf
 <>
 ./proxmark3 <YOUR_PORT_HERE> --flash --image ../armsrc/obj/fullimage.elf
 
-pm3 --> smart upgrade -f sim012.bin
+pm3 --> smart upgrade -f sim013.bin
 ```
 
 etc.
@@ -222,7 +224,7 @@ Try running it with
 ## libQt5Core.so.5 not found
 ^[Top](#top)
 
-On WSL1 / updated to Ubuntu 20.04,  there is a slight chance you experience problems when compiling the repo with QT5.
+On WSL1 / updated to Ubuntu 20.04 and 22.04,  there is a slight chance you experience problems when compiling the repo with QT5.
 The following steps is needed to make the development environment happy again.   
 ```
 sudo apt reinstall qtbase5-dev

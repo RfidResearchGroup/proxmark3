@@ -111,7 +111,8 @@ int main(int argc, char *argv[]) {
     uint8_t tag_challenge[16]  = {0x00};
     uint8_t lock_challenge[32] = {0x00};
 
-    uint64_t timestamp = atoi(argv[1]);
+    uint64_t timestamp = 0;
+    sscanf(argv[1], "%"PRIu64, &timestamp);
 
     if (argc != 4) {
         printf("\nusage: %s <unix timestamp> <16 byte tag challenge> <32 byte lock challenge>\n\n", argv[0]);
@@ -124,8 +125,10 @@ int main(int argc, char *argv[]) {
     if (hexstr_to_byte_array(argv[3], lock_challenge, sizeof(lock_challenge)))
         return 3;
 
+    // current time
     uint64_t start_time = time(NULL);
 
+    // from a time before up until current time.
     for (; timestamp < start_time; timestamp++) {
 
         make_key(timestamp, key);

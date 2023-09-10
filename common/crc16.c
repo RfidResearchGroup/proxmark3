@@ -42,10 +42,14 @@ void init_table(CrcType_t crctype) {
         case CRC_15693:
         case CRC_ICLASS:
         case CRC_CRYPTORF:
+        case CRC_KERMIT:
             generate_table(CRC16_POLY_CCITT, true);
             break;
         case CRC_FELICA:
         case CRC_XMODEM:
+        case CRC_CCITT:
+        case CRC_11784:
+        case CRC_PHILIPS:
             generate_table(CRC16_POLY_CCITT, false);
             break;
         case CRC_LEGIC:
@@ -53,15 +57,6 @@ void init_table(CrcType_t crctype) {
             break;
         case CRC_LEGIC_16:
             generate_table(CRC16_POLY_LEGIC_16, true);
-            break;
-        case CRC_CCITT:
-            generate_table(CRC16_POLY_CCITT, false);
-            break;
-        case CRC_KERMIT:
-            generate_table(CRC16_POLY_CCITT, true);
-            break;
-        case CRC_11784:
-            generate_table(CRC16_POLY_CCITT, false);
             break;
         case CRC_NONE:
             crc_table_init = false;
@@ -210,6 +205,9 @@ void compute_crc(CrcType_t ct, const uint8_t *d, size_t n, uint8_t *first, uint8
         case CRC_LEGIC_16:
             // TODO
             return;
+        case CRC_PHILIPS:
+            crc = crc16_philips(d, n);
+            break;
         case CRC_NONE:
             return;
     }
@@ -244,6 +242,8 @@ uint16_t Crc16ex(CrcType_t ct, const uint8_t *d, size_t n) {
         case CRC_LEGIC_16:
             // TODO
             return 0;
+        case CRC_PHILIPS:
+            return crc16_philips(d, n);
         case CRC_NONE:
         default:
             break;
@@ -290,6 +290,8 @@ bool check_crc(CrcType_t ct, const uint8_t *d, size_t n) {
         case CRC_LEGIC_16:
             // TODO
             return false;
+        case CRC_PHILIPS:
+            return (crc16_philips(d, n) == 0);
         case CRC_NONE:
         default:
             break;
@@ -350,3 +352,6 @@ uint16_t crc16_legic(uint8_t const *d, size_t n, uint8_t uidcrc) {
     return crc16_fast(d, n, initial, true, false);
 }
 
+uint16_t crc16_philips(uint8_t const *d, size_t n) {
+    return crc16_fast(d, n, 0x49A3, false, false);
+}

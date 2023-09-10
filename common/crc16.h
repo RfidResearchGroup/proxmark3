@@ -42,6 +42,7 @@ typedef enum {
     CRC_KERMIT,
     CRC_XMODEM,
     CRC_CRYPTORF,
+    CRC_PHILIPS,
 } CrcType_t;
 
 uint16_t update_crc16_ex(uint16_t crc, uint8_t c, uint16_t polynomial);
@@ -77,6 +78,9 @@ uint16_t crc16_iclass(uint8_t const *d, size_t n);
 // the initial_value is based on the previous legic_Crc8 of the UID.
 // ie:  uidcrc = 0x78  then initial_value == 0x7878
 uint16_t crc16_legic(uint8_t const *d, size_t n, uint8_t uidcrc);
+
+// Calculate CRC-16/ Philips.
+uint16_t crc16_philips(uint8_t const *d, size_t n);
 
 // table implementation
 void init_table(CrcType_t crctype);

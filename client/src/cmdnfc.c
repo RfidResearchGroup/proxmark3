@@ -30,6 +30,8 @@
 #include "cmdhftopaz.h"
 #include "cmdnfc.h"
 #include "fileutils.h"
+#include "mifare/mifaredefault.h"
+#include "mifare/mad.h"
 
 void print_type4_cc_info(uint8_t *d, uint8_t n) {
     if (n < 0x0F) {
@@ -107,8 +109,24 @@ static int CmdNfcDecode(const char *Cmd) {
         uint8_t *dump = NULL;
         size_t bytes_read = 4096;
         res = pm3_load_dump(filename, (void **)&dump, &bytes_read, 4096);
-        if (res != PM3_SUCCESS || dump == NULL) {
+        if (res != PM3_SUCCESS || dump == NULL || bytes_read > 4096) {
             return res;
+        }
+
+        // convert from MFC dump file to a pure NDEF byte array
+        if (HasMADKey(dump)) {
+            PrintAndLogEx(SUCCESS, "MFC dump file detected. Converting...");
+            uint8_t ndef[4096] = {0};
+            uint16_t ndeflen = 0;
+
+            if (convert_mad_to_arr(dump, bytes_read, ndef, &ndeflen) != PM3_SUCCESS) {
+                PrintAndLogEx(FAILED, "Failed converting, aborting...");
+                free(dump);
+                return PM3_ESOFT;
+            }
+
+            memcpy(dump, ndef, ndeflen);
+            bytes_read = ndeflen;
         }
 
         res = NDEFDecodeAndPrint(dump, bytes_read, verbose);

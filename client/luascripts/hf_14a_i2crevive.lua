@@ -62,7 +62,7 @@ function main(args)
 
     local i
     local cmds = {}
-	--check for params
+    --check for params
     for o, a in getopt.getopt(args, 'h') do
         if o == 'h' then return help() end
     end

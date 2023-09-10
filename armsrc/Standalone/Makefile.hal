@@ -50,11 +50,20 @@ define KNOWN_STANDALONE_DEFINITIONS
 | LF_ICEHID       | LF HID collector to flashmem           |
 | (RDV4 only)     |                                        |
 +----------------------------------------------------------+
+| LF_MULTIHID     | LF HID 26 Bit (H1031) multi simulator  |
+|                 | - Shain Lakin                          |
++----------------------------------------------------------+
+| LF_NEDAP_SIM    | LF Nedap ID simple simulator           |
+|                 |                                        |
++----------------------------------------------------------+
 | LF_NEXID        | LF Nexwatch collector to flashmem      |
 | (RDV4 only)     |                                        |
 +----------------------------------------------------------+
 | LF_PROXBRUTE    | HID ProxII bruteforce                  |
 |                 | - Brad Antoniewicz                     |
++----------------------------------------------------------+
+| LF_PROX2BRUTE   | HID ProxII bruteforce v2               |
+|                 |                                        |
 +----------------------------------------------------------+
 | LF_SAMYRUN      | HID26 read/clone/sim                   |
 | (default)       | - Samy Kamkar                          |
@@ -76,6 +85,9 @@ define KNOWN_STANDALONE_DEFINITIONS
 +----------------------------------------------------------+
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth     |
 | (RDV4 only)     | storing in flashmem - Bogito           |
++----------------------------------------------------------+
+| HF_CARDHOPPER   | Relay 14a protocols over long distances|
+| (RDV4 only)     | (w/ IP backbone) - Sam Haskins         |
 +----------------------------------------------------------+
 | HF_COLIN        | Mifare ultra fast sniff/sim/clone      |
 | (RDV4 only)     | - Colin Brigato                        |
@@ -118,11 +130,14 @@ define KNOWN_STANDALONE_DEFINITIONS
 +----------------------------------------------------------+
 endef
 
-STANDALONE_MODES := LF_SKELETON LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RSWW LF_EM4100RWC LF_HIDBRUTE LF_HIDFCBRUTE LF_ICEHID LF_PROXBRUTE LF_SAMYRUN LF_THAREXDE LF_NEXID
-STANDALONE_MODES += HF_14ASNIFF HF_14BSNIFF HF_15SNIFF HF_AVEFUL HF_BOG HF_COLIN HF_CRAFTBYTE HF_ICECLASS HF_LEGIC HF_LEGICSIM HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_TCPRST HF_TMUDFORD HF_YOUNG HF_REBLAY DANKARMULTI
-STANDALONE_MODES_REQ_BT := HF_REBLAY
+
+STANDALONE_MODES := LF_SKELETON
+STANDALONE_MODES += LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RSWW LF_EM4100RWC LF_HIDBRUTE LF_HIDFCBRUTE LF_ICEHID LF_MULTIHID LF_NEDAP_SIM LF_NEXID LF_PROXBRUTE LF_PROX2BRUTE LF_SAMYRUN LF_THAREXDE
+STANDALONE_MODES += HF_14ASNIFF HF_14BSNIFF HF_15SNIFF HF_AVEFUL HF_BOG HF_CARDHOPPER HF_COLIN HF_CRAFTBYTE HF_ICECLASS HF_LEGIC HF_LEGICSIM HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_REBLAY HF_TCPRST HF_TMUDFORD HF_YOUNG
+STANDALONE_MODES += DANKARMULTI
+STANDALONE_MODES_REQ_BT := HF_CARDHOPPER HF_REBLAY
 STANDALONE_MODES_REQ_SMARTCARD :=
-STANDALONE_MODES_REQ_FLASH := LF_HIDFCBRUTE LF_ICEHID LF_NEXID LF_THAREXDE HF_BOG HF_COLIN HF_ICECLASS HF_MFCSIM HF_LEGICSIM
+STANDALONE_MODES_REQ_FLASH := LF_HIDFCBRUTE LF_ICEHID LF_NEXID LF_THAREXDE HF_BOG HF_COLIN HF_ICECLASS HF_LEGICSIM HF_MFCSIM
 ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES)),)
     STANDALONE_PLATFORM_DEFS += -DWITH_STANDALONE_$(STANDALONE)
     ifneq ($(filter $(STANDALONE),$(STANDALONE_MODES_REQ_SMARTCARD)),)

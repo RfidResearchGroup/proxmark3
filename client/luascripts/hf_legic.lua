@@ -96,78 +96,6 @@ Known issues; needs to be fixed:
 * last byte in last segment is handled incorrectly when it is the last bytes on the card itself (MIM256: => byte 256)
 --]]
 
-example = "script run hf_legic"
-author  = "Mosci, uhei"
-version = "1.0.4"
-
-desc =
-[[
-
-This script helps you to read, create and modify Legic Prime Tags (MIM22, MIM256, MIM1024)
-The virtual tag (and therefore the file to be saved) is always a MIM1024 tag.
-it's kinda interactive with following commands in three categories:
-
-    Data I/O                    Segment Manipulation                   Token-Data
-  -----------------             --------------------                -----------------
-  rt => read    Tag             as => add    Segment                mt => make Token
-  wt => write   Tag             es => edit   Segment Header         et => edit Token data
-                                ed => edit   Segment Data           tk => toggle KGH-Flag
-      File I/O                  rs => remove Segment
-  -----------------             cc => check  Segment-CRC
-  lf => load bin File           ck => check  KGH
-  sf => save eml/bin File       ds => dump   Segments
-  xf => xor to File
-
-
- (partially) known Segments              Virtual Tags                     Script Output
- ---------------------------    -------------------------------     ------------------------
- dlc => dump  Legic-Cash        ct => copy  mainTag to backupTag    tac => toggle ansicolors
- elc => edit  Legic-Cash        tc => copy  backupTag to mainTag
- d3p => dump  3rd-Party-Cash    tt => switch mainTag & backupTag
- e3p => edit  3rd-Party-Cash    di => dump  mainTag
-                                do => dump  backupTag
-
-
-
- rt: 'read tag'         - reads a tag placed near to the PM3
- wt: 'write tag'        - writes the content of the 'virtual inTag' to a tag placed near to th PM3
-                          without the need of changing anything - MCD,MSN,MCC will be read from the tag
-                          before and applied to the output.
-
- lf: 'load file'        - load a (xored) binary file (*.bin) from the local Filesystem into the 'virtual inTag'
- sf: 'save file'        - saves the 'virtual inTag' to the local Filesystem as eml and bin (xored with Tag-MCC)
- xf: 'xor file'         - saves the 'virtual inTag' to the local Filesystem (xored with chosen MCC - use '00' for plain values)
-
- ct: 'copy tag'         - copy the 'virtual Tag' to a second 'virtual TAG' - not useful yet, but inernally needed
- tc: 'copy tag'         - copy the 'second virtual Tag' to 'virtual TAG' - not useful yet, but inernally needed
- tt: 'toggle tag'       - copy mainTag to BackupTag and backupTag to mainTag
-
- di: 'dump mainTag'     - shows the current content of the 'virtual Tag'
- do: 'dump backupTag'   - shows the current content of the 'virtual outTag'
- ds: 'dump Segments'    - will show the content of a selected Segment
- as: 'add Segment'      - will add a 'empty' Segment to the inTag
- es: 'edit Segment'     - edit the Segment-Header of a selected Segment (len, WRP, WRC, RD, valid)
-                          all other Segment-Header-Values are either calculated or not needed to edit (yet)
- ed: 'edit data'        - edit the Data of a Segment (ADF-Aera / Stamp & Payload specific Data)
- et: 'edit Token'       - edit Data of a Token (CDF-Area / SAM, SAM64, SAM63, IAM, GAM specific Data)
- mt: 'make Token'       - create a Token 'from scratch' (guided)
- rs: 'remove segment'   - removes a Segment (except Segment 00, but this can be set to valid=0 for Master-Token)
- cc: 'check Segment-CRC'- checks & calculates (if check failed) the Segment-CRC of all Segments
- ck: 'check KGH-CRC'    - checks the and calculates a 'Kaba Group Header' if one was detected
-                          'Kaba Group Header CRC calculation'
- tk: 'toggle KGH'       - toggle the (script-internal) flag for kgh-calculation for a segment
- xc: 'etra c'           - show string that was used to calculate the kgh-crc of a segment
-
-dlc: 'dump Legic-Cash'  - show balance and checksums of a Legic-Cash Segment
-elc: 'edit Legic-Cash'  - edit values of a Legic-Cash Segment
-
-d3p: 'dump 3rd Party'   - show balance, history and checksums of a (yet) unknown 3rd-Party Cash Segment
-e3p: 'edit 3rd Party'   - edit Data in 3rd-Party Cash Segment
-
-tac: 'toggle ansicolors'- switch on and off the colored text-output of this script
-                          default can be changed by setting the variable 'colored_output' to false
-]]
-currentTag="inTAG"
 
 ---
 -- requirements
@@ -193,6 +121,10 @@ local acyellow = ""
 local acblue = ""
 local acmagenta = ""
 
+local acy = ansicolors.yellow
+local acc = ansicolors.cyan
+local acr = ansicolors.reset
+
 --- Helper ---
 ---
 -- default colors (change to whatever you want)
@@ -206,6 +138,10 @@ function load_colors(onoff)
     acblue  = ansicolors.blue
     acmagenta= ansicolors.magenta
     acoff   = ansicolors.reset
+
+    acy = ansicolors.yellow
+    acc = ansicolors.cyan
+    acr = ansicolors.reset
   else
     -- 'no color'
     acgreen = ""
@@ -215,13 +151,88 @@ function load_colors(onoff)
     acblue  = ""
     acmagenta= ""
     acoff   = ""
+
+    acy = ""
+    acc = ""
+    acr = ""
   end
 end
+
+
+example = "script run hf_legic"
+author  = "Mosci, uhei"
+version = "1.0.5"
+desc =
+[[
+
+This script helps you to read, create and modify Legic Prime Tags ( MIM22, MIM256, MIM1024 )
+The virtual tag (and therefore the file to be saved) is always a MIM1024 tag.
+it's kinda interactive with following commands in three categories:
+
+    Data I/O                    Segment Manipulation                   Token-Data
+  -----------------             --------------------                -----------------
+  ]]..acy..[[rt]]..acr..[[ -> read Tag                ]]..acy..[[as]]..acr..[[ -> add Segment                   ]]..acy..[[mt]]..acr..[[ -> make Token
+  ]]..acy..[[wt]]..acr..[[ -> write Tag               ]]..acy..[[es]]..acr..[[ -> edit Segment Header           ]]..acy..[[et]]..acr..[[ -> edit Token data
+                                ]]..acy..[[ed]]..acr..[[ => edit Segment Data             ]]..acy..[[tk]]..acr..[[ => toggle KGH-Flag
+      File I/O                  ]]..acy..[[rs]]..acr..[[ => remove Segment
+  -----------------             ]]..acy..[[cc]]..acr..[[ -> check Segment-CRC
+  ]]..acy..[[lf]]..acr..[[ -> load bin File           ]]..acy..[[ck]]..acr..[[ -> check KGH
+  ]]..acy..[[sf]]..acr..[[ -> save eml/bin File       ]]..acy..[[ds]]..acr..[[ -> dump Segments
+  ]]..acy..[[xf]]..acr..[[ -> xor to File
+
+
+ (partially) known Segments              Virtual Tags                     Script Output
+ ---------------------------    -------------------------------     ------------------------
+ ]]..acy..[[dlc]]..acr..[[ -> dump Legic-Cash         ]]..acy..[[ct]]..acr..[[ -> copy mainTag to backupTag     ]]..acy..[[tac]]..acr..[[ -> toggle ansicolors
+ ]]..acy..[[elc]]..acr..[[ -> edit Legic-Cash         ]]..acy..[[tc]]..acr..[[ -> copy backupTag to mainTag
+ ]]..acy..[[d3p]]..acr..[[ -> dump 3rd-Party-Cash     ]]..acy..[[tt]]..acr..[[ -> switch mainTag & backupTag
+ ]]..acy..[[e3p]]..acr..[[ -> edit 3rd-Party-Cash     ]]..acy..[[di]]..acr..[[ -> dump mainTag
+                                ]]..acy..[[do]]..acr..[[ => dump backupTag
+
+ rt: 'read tag'          - reads a tag placed near to the PM3
+ wt: 'write tag'         - writes the content of the 'virtual inTag' to a tag placed near to th PM3
+                          without the need of changing anything - MCD,MSN,MCC will be read from the tag
+                          before and applied to the output.
+
+ lf: 'load file'         - load a (xored) binary file (*.bin) from the local Filesystem into the 'virtual inTag'
+ sf: 'save file'         - saves the 'virtual inTag' to the local Filesystem as eml and bin (xored with Tag-MCC)
+ xf: 'xor file'          - saves the 'virtual inTag' to the local Filesystem (xored with chosen MCC - use '00' for plain values)
+
+ ct: 'copy tag'          - copy the 'virtual Tag' to a second 'virtual TAG' - not useful yet, but inernally needed
+ tc: 'copy tag'          - copy the 'second virtual Tag' to 'virtual TAG' - not useful yet, but inernally needed
+ tt: 'toggle tag'        - copy mainTag to BackupTag and backupTag to mainTag
+
+ di: 'dump mainTag'      - shows the current content of the 'virtual Tag'
+ do: 'dump backupTag'    - shows the current content of the 'virtual outTag'
+ ds: 'dump Segments'     - will show the content of a selected Segment
+ as: 'add Segment'       - will add a 'empty' Segment to the inTag
+ es: 'edit Segment'      - edit the Segment-Header of a selected Segment (len, WRP, WRC, RD, valid)
+                          all other Segment-Header-Values are either calculated or not needed to edit (yet)
+ ed: 'edit data'         - edit the Data of a Segment (ADF-Aera / Stamp & Payload specific Data)
+ et: 'edit Token'        - edit Data of a Token (CDF-Area / SAM, SAM64, SAM63, IAM, GAM specific Data)
+ mt: 'make Token'        - create a Token 'from scratch' (guided)
+ rs: 'remove segment'    - removes a Segment (except Segment 00, but this can be set to valid=0 for Master-Token)
+ cc: 'check Segment-CRC' - checks & calculates (if check failed) the Segment-CRC of all Segments
+ ck: 'check KGH-CRC'     - checks the and calculates a 'Kaba Group Header' if one was detected
+                          'Kaba Group Header CRC calculation'
+ tk: 'toggle KGH'        - toggle the (script-internal) flag for kgh-calculation for a segment
+ xc: 'etra c'            - show string that was used to calculate the kgh-crc of a segment
+
+dlc: 'dump Legic-Cash'   - show balance and checksums of a Legic-Cash Segment
+elc: 'edit Legic-Cash'   - edit values of a Legic-Cash Segment
+
+d3p: 'dump 3rd Party'    - show balance, history and checksums of a (yet) unknown 3rd-Party Cash Segment
+e3p: 'edit 3rd Party'    - edit Data in 3rd-Party Cash Segment
+
+tac: 'toggle ansicolors' - switch on and off the colored text-output of this script
+                          default can be changed by setting the variable 'colored_output' to false
+]]
+currentTag="inTAG"
 
 ---
 -- curency-codes for Legic-Cash-Segments (ISO 4217)
 local currency = {
-  ["03d2"]="EUR",
+  ["03D2"]="EUR",
   ["0348"]="USD",
   ["033A"]="GBP",
   ["02F4"]="CHF"
@@ -237,7 +248,11 @@ end
 ---
 -- Usage help
 function help()
-    print(desc)
+    -- the proxmark3 client can't handle such long strings
+    -- by breaking up at specific points it still looks good.
+    print(string.sub(desc, 0, 1961))
+    print(string.sub(desc, 1962, 3925))
+    print(string.sub(desc, 3926, #desc))
     print("Version: "..version)
     print("Example usage: "..example)
 end
@@ -254,7 +269,6 @@ local function padString(str)
   if (#str == 1) then
     return '0'..str
   end
-
   return str
 end
 
@@ -306,18 +320,6 @@ function xorBytes(inBytes, crc)
 end
 
 ---
--- check availability of file
-function file_check(file_name)
-    local file_found = io.open(file_name, "r")
-    if file_found == nil then
-        return false
-    else
-        file_found:close()
-        return true
-    end
-end
-
----
 -- split csv-string into table
 local function split(str, sep)
     local sep = sep or ','
@@ -328,6 +330,24 @@ local function split(str, sep)
         table.insert(fields, str)
     end
     return fields
+end
+
+---
+-- check availability of file
+function file_check(file_name)
+  if not file_name then return false, "" end
+
+  local arr = split(file_name, ".")
+  local path = core.search_file(arr[1], "."..arr[2])
+  if (path == nil) then return false end
+
+  local file_found = io.open(path, "r")
+  if file_found == nil then
+      return false, ""
+  else
+      file_found:close()
+      return true, path
+  end
 end
 
 ---
@@ -348,7 +368,7 @@ end
 function bytesToTable(bytes, bstart, bend)
     local t={}
     for i=0, (bend-bstart) do
-        t[i]=bytes[bstart+i]
+        t[i]=padString(bytes[bstart+i])
     end
     return t
 end
@@ -358,8 +378,13 @@ end
 function getInputBytes(infile)
     local line
     local bytes = {}
-    local fhi,err = io.open(infile,"rb")
-    if err then oops("failed to read from file ".. infile); return false; end
+
+    local arr = split(infile, ".")
+    local path = core.search_file(arr[1], "."..arr[2])
+    if (path == nil) then oops("failed to read from file ".. infile); return false; end
+
+    local fhi,err = io.open(path,"rb")
+    if err then oops("failed to read from file ".. path); return false; end
 
     file_data = fhi:read("*a");
     for i = 1, #file_data do
@@ -367,7 +392,7 @@ function getInputBytes(infile)
     end
     fhi:close()
     if (bytes[7]=='00') then return false end
-    print(#bytes .. " bytes from "..infile.." loaded")
+    print(#bytes .. " bytes from "..path.." loaded")
     return bytes
 end
 
@@ -613,12 +638,13 @@ local function readFile(filename)
     print(accyan)
     local bytes = {}
     local tag = {}
-    if  file_check(filename) == false then
+
+    local res, path = file_check(filename)
+    if not res then
         return oops("input file: "..acyellow..filename..acoff.." not found")
     end
 
-    bytes = getInputBytes(filename)
-
+    bytes = getInputBytes(path)
     if bytes == false then return oops('couldnt get input bytes') end
 
     -- make plain bytes
@@ -640,12 +666,14 @@ local function save_BIN(data, filename)
     local fn = filename..ext
 
     -- Make sure we don't overwrite a file
-    while file_check(fn) do
+    local res, path = file_check(fn)
+    while res == false do
         fn = filename..ext:gsub(ext, "-"..tostring(counter)..ext)
         counter = counter + 1
+        res, path = file_check(fn)
     end
 
-    outfile = io.open(fn, 'wb')
+    outfile = io.open(path, 'wb')
 
     local i = 1
     while data[i] do
@@ -660,17 +688,19 @@ end
 -- write bytes to file
 function writeFile(bytes, filename)
     local emlext = ".eml"
+    local res, path
     if (filename ~= 'MyLegicClone') then
-        if (file_check(filename..emlext)) then
-            local answer = confirm("\nthe output-file "..filename..emlext.." already exists!\nthis will delete the previous content!\ncontinue?")
+        res, path = file_check(filename..emlext)
+        if res then
+            local answer = confirm("\nthe output-file "..path.." already exists!\nthis will delete the previous content!\ncontinue?")
             if not answer then return print("user abort") end
         end
     end
     local line
     local bcnt = 0
-    local fho, err = io.open(filename..emlext, "w")
+    local fho, err = io.open(path, "w")
     if err then
-        return oops("OOps ... failed to open output-file ".. filename..emlext)
+        return oops("OOps ... failed to open output-file ".. path)
     end
 
     bytes = xorBytes(bytes, bytes[5])
@@ -692,11 +722,10 @@ function writeFile(bytes, filename)
     end
     fho:close()
 
-    -- save binary
-    local fn_bin, fn_bin_num = save_BIN(bytes, filename)
-
     print("\nwrote "..acyellow..(#bytes * 3)..acoff.." bytes to " ..acyellow..filename..emlext..acoff)
 
+    -- save binary
+    local fn_bin, fn_bin_num = save_BIN(bytes, filename)
     if fn_bin and fn_bin_num then
         print("\nwrote "..acyellow..fn_bin_num..acoff.." bytes to BINARY file "..acyellow..fn_bin..acoff)
     end
@@ -731,10 +760,16 @@ function readFromPM3()
     infile=getRandomTempName()
     core.console("hf legic dump -f "..infile)
     tag=readFile(infile..".bin")
-    os.remove(infile)
-    os.remove(infile..".bin")
-    os.remove(infile..".eml")
-    os.remove(infile..".json")
+
+    res, path = file_check(infile..".bin")
+    if not res then return nil end
+    os.remove(path)
+
+    res, path = file_check(infile..".eml")
+    os.remove(path)
+
+    res, path = file_check(infile..".json")
+    os.remove(path)
     return tag
 end
 
@@ -758,16 +793,20 @@ end
 ---
 -- save mapping to file
 local function saveTagMap(map, filename)
+
+    local res, path
+
     if #filename > 0 then
-        if file_check(filename) then
-            local answer = confirm("\nthe output-file "..acyellow..filename..acoff.." alredy exists!\nthis will delete the previous content!\ncontinue?")
+       res, path = file_check(filename)
+        if res then
+            local answer = confirm("\nthe output-file "..acyellow..path..acoff.." alredy exists!\nthis will delete the previous content!\ncontinue?")
             if not answer then return print("user abort") end
         end
     end
 
     local line
-    local fho,err = io.open(filename, "w")
-    if err then oops("OOps ... failed to open output-file "..acyellow..filename..acoff) end
+    local fho,err = io.open(path, "w")
+    if err then oops("OOps ... failed to open output-file "..acyellow..path..acoff) end
 
     -- write line to new file
     for k, v in pairs(map) do
@@ -842,10 +881,13 @@ function loadTagMap(filename)
   local line, fields
   local temp={}
   local offset=0
-    if not file_check(filename) then
-        return oops("input file: "..acyellow..filename..acoff.." not found")
-    else
-        local fhi,err = io.open(filename)
+
+  local res, path = file_check(filename)
+  if not res then
+      return oops("input file: "..acyellow..filename..acoff.." not found")
+  else
+
+    local fhi,err = io.open(path)
     while true do
         line = fhi:read()
         if line == nil then
@@ -907,20 +949,21 @@ function dumpTagMap(tag, tagMap)
       end
       if (isPosCrc8(tagMap, v['start'])>0) then
         if ( checkMapCrc8(tagMap, bytes, isPosCrc8(tagMap, v['start']) ) ) then
-          io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..acgreen..v['name']..acoff..":")
+          io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..acgreen..v['name']..acoff)
         else
-          io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..acred..v['name']..acoff..":")
+          io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..acred..v['name']..acoff)
         end
       else
-        io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..((v['highlight']) and acmagenta or acyellow)..v['name']..acoff..":")
+        io.write("("..("%04d"):format(v['start']).."-"..("%04d"):format(v['end'])..") "..((v['highlight']) and acmagenta or acyellow)..v['name']..acoff)
       end
-      temp=""
-      for i=((string.len(v['name']))/10), 2 do
-        temp=temp.."\t"
-      end
+
+      temp = ""
+      while (#v['name'] + temp:len()) < 20 do temp = temp.." " end
+
       for i=v['start'], v['end'] do
         temp=temp..bytes[i].." "
       end
+
       print(temp)
       lastend=v['end']
     end
@@ -966,11 +1009,23 @@ end
 -- edit existing Map
 function editTagMap(tag, tagMap)
   local t = [[
-    Data:  dm = show         dr = dump raw
-Mappings:  im = insert       am = add       rm = remove
-    CRC8: ac8 = add         sc8 = show     rc8 = remove
-        :   q = exit          h = Help
+]]..acc..[[Data]]..acr..[[
+
+    ]]..acy..[[dm]]..acr..[[  - show         ]]..acy..[[dr]]..acr..[[  - dump raw
+
+]]..acc..[[Mappings]]..acr..[[
+
+    ]]..acy..[[im]]..acr..[[  - insert       ]]..acy..[[am]]..acr..[[  - add
+    ]]..acy..[[rm]]..acr..[[  - remove       ]]..acy..[[mas]]..acr..[[ - map all segments
+
+]]..acc..[[CRC8]]..acr..[[
+
+    ]]..acy..[[ac8]]..acr..[[ - add          ]]..acy..[[sc8]]..acr..[[ - show
+    ]]..acy..[[rc8]]..acr..[[ - remove
+
+    ]]..acy..[[q]]..acr..[[   - exit         ]]..acy..[[h]]..acr..[[   - Help
   ]]
+
   --if(#tagMap.mappings==0) then oops("no mappings in tagMap"); return tagMap end
   print("tagMap edit-mode submenu")
   repeat
@@ -1447,7 +1502,10 @@ function dumpLegicCash(tag, x)
      print("--------------------------------\n\tLegic-Cash Values\n--------------------------------")
      local limit, curr, balance, rid, tcv
      -- currency of balance & limit
-     curr=currency[tag.SEG[x].data[8]..tag.SEG[x].data[9]]
+     curr=string.upper(tag.SEG[x].data[8]..tag.SEG[x].data[9])
+     if currency[curr] ~= nil then
+       curr = currency[curr]
+     end
      -- maximum balance
      limit=string.format("%4.2f", tonumber(tag.SEG[x].data[10]..tag.SEG[x].data[11]..tag.SEG[x].data[12], 16)/100)
      -- current balance
@@ -1784,17 +1842,17 @@ end
 
 ---
 -- edit Segment Data
-function editSegmentData(data)
+function editSegmentData(data, uid)
     io.write("\n")
     if istable(data) == false then print("no Segment-Data found") end
 
-    local lc = check4LegicCash(data)
+    local lc = check4LegicCash(data, uid)
 
     for i=0, #data-1 do
         data[i]=input(accyan.."Data"..i..acoff..": ", data[i])
     end
     if (lc) then
-        data = fixLegicCash(data)
+        data = fixLegicCash(data, uid)
     end
     return data
 end
@@ -1917,7 +1975,7 @@ function autoSelectSegment(tag, s)
     repeat
       io.write(". ")
       x=x-1
-      res=check4LegicCash(tag.SEG[x].data)
+      res=check4LegicCash(tag.SEG[x].data, uid)
     until ( res or x==0 )
    end
    ---
@@ -2011,7 +2069,7 @@ end
 
 ---
 -- edit Legic Cash
-function editLegicCash(data)
+function editLegicCash(data, uid)
   local limit, curr, balance, rid, tcv
   -- currency of balance & limit
   curr=currency[data[8]..data[9]]
@@ -2064,12 +2122,12 @@ function editLegicCash(data)
     data[20]=string.sub(rid, 5, 6)
   end
 
-  return fixLegicCash(data)
+  return fixLegicCash(data, uid)
 end
 
 ---
 -- chack for signature of a 'Legic-Cash-Segment'
-function check4LegicCash(data)
+function check4LegicCash(data, uid)
   if(#data==32) then
     local stamp_len=(#data-25)
     local stamp=""
@@ -2077,9 +2135,9 @@ function check4LegicCash(data)
       stamp=stamp..data[i].." "
     end
     if (data[7]=="01") then
-      if (("%04x"):format(utils.Crc16(dumpTable(data, "", 0, 12))) == data[13]..data[14]) then
-        if (("%04x"):format(utils.Crc16(dumpTable(data, "", 15, 20))) == data[21]..data[22]) then
-          if (("%04x"):format(utils.Crc16(dumpTable(data, "", 23, 29))) == data[30]..data[31]) then
+      if (("%04x"):format(utils.Crc16Legic(dumpTable(data, "", 0, 12), uid)) == data[13]..data[14]) then
+        if (("%04x"):format(utils.Crc16Legic(dumpTable(data, "", 15, 20), uid)) == data[21]..data[22]) then
+          if (("%04x"):format(utils.Crc16Legic(dumpTable(data, "", 23, 29), uid)) == data[30]..data[31]) then
             io.write(accyan.."Legic-Cash Segment detected "..acoff)
             return true
           end
@@ -2156,7 +2214,7 @@ end
 
 ---
 -- repair / fix crc's of a 'Legic-Cash-Segment'
-function fixLegicCash(data)
+function fixLegicCash(data, uid)
   if(#data==32 and data[7]=="01") then
     local crc1, crc2, crc3
     -- set shadow-balance equal to balance
@@ -2168,9 +2226,9 @@ function fixLegicCash(data)
     data[27]=data[19]
     data[28]=data[20]
     -- calculate all crc's
-    crc1=("%04x"):format(utils.Crc16(dumpTable(data, "", 0, 12)))
-    crc2=("%04x"):format(utils.Crc16(dumpTable(data, "", 15, 20)))
-    crc3=("%04x"):format(utils.Crc16(dumpTable(data, "", 23, 29)))
+    crc1=("%04x"):format(utils.Crc16Legic(dumpTable(data, "", 0, 12), uid))
+    crc2=("%04x"):format(utils.Crc16Legic(dumpTable(data, "", 15, 20), uid))
+    crc3=("%04x"):format(utils.Crc16Legic(dumpTable(data, "", 23, 29), uid))
     -- set crc's
     data[13]=string.sub(crc1, 1, 2)
     data[14]=string.sub(crc1, 3, 4)
@@ -2290,25 +2348,25 @@ function modifyHelp()
 
          Data I/O                    Segment Manipulation                Token-Data
      -----------------               --------------------           ---------------------
-     rt => read    Tag               as => add    Segment           mt => make Token
-     wt => write   Tag               es => edit   Segment Header    et => edit Token data
-                                     ed => edit   Segment Data      tk => toggle KGH-Flag
-         File I/O                    rs => remove Segment
-     -----------------               cc => check  Segment-CRC
-     lf => load bin File             ck => check  KGH
-     sf => save eml/bin File         ds => dump   Segments
-     xf => xor to File
+     ]]..acy..[[rt]]..acr..[[ => read Tag                  ]]..acy..[[as]]..acr..[[ => add Segment              ]]..acy..[[mt]]..acr..[[ => make Token
+     ]]..acy..[[wt]]..acr..[[ => write Tag                 ]]..acy..[[es]]..acr..[[ => edit Segment Header      ]]..acy..[[et]]..acr..[[ => edit Token data
+                                     ]]..acy..[[ed]]..acr..[[ => edit Segment Data        ]]..acy..[[tk]]..acr..[[ => toggle KGH-Flag
+         File I/O                    ]]..acy..[[rs]]..acr..[[ => remove Segment
+     -----------------               ]]..acy..[[cc]]..acr..[[ => check Segment-CRC
+     ]]..acy..[[lf]]..acr..[[ => load bin File             ]]..acy..[[ck]]..acr..[[ => check KGH
+     ]]..acy..[[sf]]..acr..[[ => save eml/bin File         ]]..acy..[[ds]]..acr..[[ => dump Segments
+     ]]..acy..[[xf]]..acr..[[ => xor to File
 
 
          Virtual Tags                       tagMap                   (partial) known Segments
  --------------------------------    ---------------------          ---------------------------
- ct => copy  mainTag to backupTag    mm => make (new) Map           dlc => dump  Legic-Cash
- tc => copy  backupTag to mainTag    em => edit Map submenu         elc => edit  Legic-Cash
- tt => switch mainTag & backupTag    lm => load map from file       d3p => dump  3rd-Party-Cash
- di => dump  mainTag                 sm => save map to file         e3p => edit  3rd-Party-Cash
- do => dump  backupTag
+ ]]..acy..[[ct]]..acr..[[ => copy mainTag to backupTag     ]]..acy..[[mm]]..acr..[[ => make (new) Map           ]]..acy..[[dlc]]..acr..[[ => dump Legic-Cash
+ ]]..acy..[[tc]]..acr..[[ => copy backupTag to mainTag     ]]..acy..[[em]]..acr..[[ => edit Map submenu         ]]..acy..[[elc]]..acr..[[ => edit Legic-Cash
+ ]]..acy..[[tt]]..acr..[[ => switch mainTag & backupTag    ]]..acy..[[lm]]..acr..[[ => load map from file       ]]..acy..[[d3p]]..acr..[[ => dump 3rd-Party-Cash
+ ]]..acy..[[di]]..acr..[[ => dump mainTag                  ]]..acy..[[sm]]..acr..[[ => save map to file         ]]..acy..[[e3p]]..acr..[[ => edit 3rd-Party-Cash
+ ]]..acy..[[do]]..acr..[[ => dump backupTag
 
-                            h => this help                q => quit
+                            ]]..acy..[[h]]..acr..[[ => this help                ]]..acy..[[q]]..acr..[[ => quit
   ]]
   return t
 end
@@ -2322,8 +2380,10 @@ function modifyMode()
     ---
     -- helptext
      ["h"] = function(x)
-              print("  Version: "..version);
-              print(modifyHelp().."\n".."tags im Memory: "..(istable(inTAG) and ((currentTag=='inTAG') and acgreen.."*mainTAG"..acoff or "mainTAG") or "").."  "..(istable(backupTAG) and ((currentTag=='backupTAG') and acgreen.."*backupTAG"..acoff or "backupTAG") or ""))
+              print("  Version: "..acgreen..version..acr);
+              print(modifyHelp())
+              print("\n".."tags im Memory: "..(istable(inTAG) and ((currentTag=='inTAG') and acgreen.."*mainTAG"..acoff or "mainTAG") or "").."  "..(istable(backupTAG) and ((currentTag=='backupTAG') and acgreen.."*backupTAG"..acoff or "backupTAG") or ""))
+              print("")
             end,
     ---
     -- read real Tag with PM3 into virtual 'mainTAG'
@@ -2364,16 +2424,16 @@ function modifyMode()
     ---
     -- load file into mainTAG
     ["lf"] = function(x)
-
-              if (type(x)=='string' and file_check(x)) then
+              if (x and not x=="" and type(x)=='string' and file_check(x)) then
                 filename = x
               else
                 filename = input("enter filename: ", "legic.temp")
               end
               inTAG=readFile(filename)
               -- check for existing tagMap
-              if (file_check(filename..".map")) then
-                if(confirm(accyan.."Mapping-File for "..acoff..filename..accyan.." found - load it also?"..acoff)) then
+              local res, path = file_check(filename..".map")
+              if res then
+                if(confirm(accyan.."Mapping-File for "..acoff..path..accyan.." found - load it also?"..acoff)) then
                   tagMap=loadTagMap(filename..".map")
                 end
               end
@@ -2413,7 +2473,7 @@ function modifyMode()
                     for i=0, #inTAG.SEG do
                       if(check43rdPartyCash1(uid, inTAG.SEG[i].data)) then
                         io.write(accyan.."in Segment index: "..inTAG.SEG[i].index ..acoff.. "\n")
-                      elseif(check4LegicCash(inTAG.SEG[i].data)) then
+                      elseif(check4LegicCash(inTAG.SEG[i].data, uid)) then
                         io.write(accyan.."in Segment index: "..inTAG.SEG[i].index..acoff.."\n")
                         lc=true;
                         lci=inTAG.SEG[i].index;
@@ -2517,10 +2577,11 @@ function modifyMode()
     ---
     -- edit data-portion of single segment
     ["ed"] = function(x)
-              if (type(x)=="string" and string.len(x)>0) then sel=tonumber(x,10)
-              else sel=selectSegment(inTAG) end
+              if (type(x) == "string" and string.len(x)>0) then sel=tonumber(x,10)
+              else sel = selectSegment(inTAG) end
               if (istable(inTAG.SEG[sel])) then
-                inTAG.SEG[sel].data=editSegmentData(inTAG.SEG[sel].data)
+                local uid = inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
+                inTAG.SEG[sel].data = editSegmentData(inTAG.SEG[sel].data, uid)
               end
             end,
     ---
@@ -2587,13 +2648,15 @@ function modifyMode()
                 else
                     x = selectSegment(inTAG)
                 end
-                inTAG.SEG[x].data=fixLegicCash(inTAG.SEG[x].data)
+                local uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
+                inTAG.SEG[x].data=fixLegicCash(inTAG.SEG[x].data, uid)
               end,
     ---
-    -- edit legic-cash values fixLegicCash(data)
+    -- edit legic-cash values fixLegicCash(data, uid)
     ["elc"] = function(x)
                 x=autoSelectSegment(inTAG, "legiccash")
-                inTAG.SEG[x].data=editLegicCash(inTAG.SEG[x].data)
+                local uid=inTAG.MCD..inTAG.MSN0..inTAG.MSN1..inTAG.MSN2
+                inTAG.SEG[x].data=editLegicCash(inTAG.SEG[x].data, uid)
               end,
     ---
     -- dump legic-cash human-readable
@@ -2718,7 +2781,7 @@ function modifyMode()
   }
   repeat
     -- default message / prompt
-    ic=input("Legic command? ('h' for help - 'q' for quit)", "h")
+    ic=input("Legic command? ('"..acy.."h"..acr.."' for help - '"..acy.."q"..acr.."' for quit)", acy.."h"..acr)
     -- command actions decisions (first match, longer commands before shorter)
     if (type(actions[string.lower(string.sub(ic,0,3))])=='function') then
       actions[string.lower(string.sub(ic,0,3))](string.sub(ic,5))
@@ -2737,10 +2800,13 @@ end
 function main(args)
   -- set init colors/switch (can be toggled with 'tac' => 'toggle ansicolors')
   load_colors(colored_output)
-    if (#args == 0 ) then modifyMode() end
+  if (#args == 0 ) then modifyMode() end
   --- variables
-  local inTAG, backupTAG, outTAG, outfile, interactive, crc, ofs, cfs, dfs
-    -- just a spacer for better readability
+  local inTAG, backupTAG, outTAG, outfile, interactive, crc
+  local ofs=false
+  local cfs=false
+  local dfs=false
+  -- just a spacer for better readability
   print()
   --- parse arguments
     for o, a in getopt.getopt(args, 'hrmi:do:c:') do
@@ -2749,7 +2815,7 @@ function main(args)
     -- read tag from PM3
     if o == "r" then inTAG=readFromPM3() end
     -- input file
-        if o == "i" then inTAG=readFile(a) end
+    if o == "i" then inTAG=readFile(a) end
     -- dump virtual-Tag
     if o == "d" then dfs=true end
     -- interacive modifying
@@ -2787,7 +2853,10 @@ function main(args)
 
     -- write to outfile
     if (bytes) then
-      writeFile(bytes, outfile)
+
+      if (outfile) then
+        writeFile(bytes, outfile)
+      end
       --- read real tag into virtual tag
       -- inTAG=readFromPM3() end
       --- or simply use the bytes that where wriiten

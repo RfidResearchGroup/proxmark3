@@ -40,7 +40,7 @@ ifeq ($(USE_BREW),1)
 	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/lib/pkgconfig:$(BREW_PREFIX)/opt/qt/lib/pkgconfig:$(BREW_PREFIX)/opt/qt5/lib/pkgconfig
 endif
 
-ifdef ($(USE_MACPORTS),1)
+ifeq ($(USE_MACPORTS),1)
 	INCLUDES += -I$(MACPORTS_PREFIX)/include
 	LDLIBS += -L$(MACPORTS_PREFIX)/lib
 	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(MACPORTS_PREFIX)/lib/pkgconfig
@@ -93,7 +93,6 @@ LUALIBLD =
 LUAPLATFORM = generic
 ifneq (,$(findstring MINGW,$(platform)))
     LUAPLATFORM = mingw
-	LDLIBS += -lws2_32
 else
     ifeq ($(platform),Darwin)
         LUAPLATFORM = macosx
@@ -101,6 +100,11 @@ else
         LUALIBLD +=  -ldl
         LUAPLATFORM = linux
     endif
+endif
+
+## Winsock2
+ifneq (,$(findstring MINGW,$(platform)))
+	LDLIBS += -lws2_32
 endif
 
 ## Reveng
@@ -237,6 +241,9 @@ endif
 
 ## BZIP2
 LDLIBS += -lbz2
+
+## LZ4
+LDLIBS += -llz4
 
 ## Bluez (optional)
 ifneq ($(SKIPBT),1)
@@ -430,7 +437,13 @@ LDFLAGS += $(MYLDFLAGS)
 
 PM3LDFLAGS = $(LDFLAGS)
 ifeq ($(platform),Darwin)
-    PM3LDFLAGS += -framework Foundation -framework AppKit
+    ifeq ($(shell uname -p),arm64)
+        # The platform is iOS
+        PM3LDFLAGS += -framework Foundation -framework UIKit
+    else
+        # M* macOS devices return arm
+        PM3LDFLAGS += -framework Foundation -framework AppKit
+    endif
 endif
 
 ###################
@@ -583,9 +596,11 @@ SRCS =  mifare/aiddesfire.c \
 		cmdhfseos.c \
 		cmdhfst.c \
 		cmdhfst25ta.c \
+		cmdhftesla.c \
 		cmdhfthinfilm.c \
 		cmdhftopaz.c \
 		cmdhftexkom.c \
+		cmdhfvas.c \
 		cmdhfwaveshare.c \
 		cmdhfxerox.c \
 		cmdhw.c \
@@ -626,6 +641,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdmain.c \
 		cmdnfc.c \
 		cmdparser.c \
+		cmdpiv.c \
 		cmdscript.c \
 		cmdsmartcard.c \
 		cmdtrace.c \
@@ -665,6 +681,7 @@ SRCS =  mifare/aiddesfire.c \
 		generator.c \
 		graph.c \
 		jansson_path.c \
+		iso4217.c \
 		iso7816/apduinfo.c \
 		iso7816/iso7816core.c \
 		loclass/cipher.c \
@@ -764,9 +781,13 @@ proxmark3: $(OBJS) $(STATICLIBS) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lu
 
 src/proxgui.cpp: src/ui/ui_overlays.h src/ui/ui_image.h
 
+src/proxguiqt.cpp: src/proxguiqt.h
+
 src/proxguiqt.moc.cpp: src/proxguiqt.h
 	$(info [-] MOC $@)
 	$(Q)$(MOC) -o$@ $^
+
+src/proxguiqt.h: src/ui/ui_overlays.h src/ui/ui_image.h
 
 src/ui/ui_overlays.h: src/ui/overlays.ui
 	$(info [-] UIC $@)
@@ -897,10 +918,10 @@ src/pm3_pywrap.c: pm3.i
 
 .PHONY: all clean install uninstall tarbin .FORCE
 
-# version_pm3.c should be remade on every compilation
+# version_pm3.c should be checked on every compilation
 src/version_pm3.c: default_version_pm3.c .FORCE
-	$(info [=] GEN $@)
-	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(CP) $< $@
+	$(info [=] CHECK $@)
+	$(Q)$(SH) ../tools/mkversion.sh $@ || $(CP) $< $@
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)

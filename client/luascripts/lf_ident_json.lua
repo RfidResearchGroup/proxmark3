@@ -6,7 +6,7 @@ local ac = require('ansicolors')
 
 copyright = ''
 author = "Christian Herrmann"
-version = 'v1.0.0'
+version = 'v1.0.1'
 desc = [[
 This script loads a json format file,  with the field "data" and a hexbyte array of data. Ie t55x7 dump,
 it tries to identify which system based on block1,  and detect block0 settings.
@@ -16,7 +16,7 @@ example = [[
     script run lf_ident_json -i lf_t55xx.json
 ]]
 usage = [[
-script run lf_en4100_bulk.lua [-h] [-c] [-p password] [-s <start cn>] [-v]
+script run lf_ident_json.lua [-h] [-c] [-p password] [-s <start cn>] [-v]
 ]]
 arguments = [[
     -h      : this help
@@ -113,7 +113,7 @@ local function getDefault(block0)
 
     block0 = block0:upper()
 
-    local  T55X7_DEFAULT_CONFIG_BLOCK   =   '000880E8' --// compat mode, RF/32, manchester, STT, 7 data blocks
+    local T55X7_DEFAULT_CONFIG_BLOCK    =   '000880E8' --// compat mode, RF/32, manchester, STT, 7 data blocks
     local T55X7_RAW_CONFIG_BLOCK        =   '000880E0' --// compat mode, RF/32, manchester, 7 data blocks
     local T55X7_EM_UNIQUE_CONFIG_BLOCK  =   '00148040' --// emulate em4x02/unique - compat mode, manchester, RF/64, 2 data blocks
     -- FDXB requires data inversion and BiPhase 57 is simply BipHase 50 inverted, so we can either do it using the modulation scheme or the inversion flag

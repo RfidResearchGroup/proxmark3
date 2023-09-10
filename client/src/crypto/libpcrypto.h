@@ -64,4 +64,7 @@ size_t FindISO9797M2PaddingDataLen(const uint8_t *data, size_t datalen);
 // BLOWFISH
 int blowfish_decrypt(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length);
 
+// KDF
+int ansi_x963_sha256(uint8_t *sharedSecret, size_t sharedSecretLen, uint8_t *sharedInfo, size_t sharedInfoLen, size_t keyDataLen, uint8_t *keyData);
+
 #endif /* libpcrypto.h */

@@ -38,6 +38,7 @@
 #include "cmdhftopaz.h"     // TOPAZ
 #include "cmdhffelica.h"    // ISO18092 / FeliCa
 #include "cmdhffido.h"      // FIDO authenticators
+#include "cmdhffudan.h"     // Fudan cards
 #include "cmdhfgallagher.h" // Gallagher DESFire cards
 #include "cmdhfksx6924.h"   // KS X 6924
 #include "cmdhfcipurse.h"   // CIPURSE transport cards
@@ -46,10 +47,11 @@
 #include "cmdhfcryptorf.h"  // CryptoRF
 #include "cmdhfseos.h"      // SEOS
 #include "cmdhfst25ta.h"    // ST25TA
-#include "cmdhfwaveshare.h" // Waveshare
+#include "cmdhftesla.h"     // Tesla
 #include "cmdhftexkom.h"    // Texkom
+#include "cmdhfvas.h"       // Value added services
+#include "cmdhfwaveshare.h" // Waveshare
 #include "cmdhfxerox.h"     // Xerox
-#include "cmdhffudan.h"     // Fudan cards
 #include "cmdtrace.h"       // trace list
 #include "ui.h"
 #include "proxgui.h"
@@ -112,24 +114,6 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for ISO15693 tag...");
-    if (IfPm3Iso15693()) {
-        if (readHF15Uid(false, false)) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 15693 tag") " found\n");
-            res = PM3_SUCCESS;
-        }
-    }
-
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for iCLASS / PicoPass tag...");
-    if (IfPm3Iclass()) {
-        if (read_iclass_csn(false, false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iCLASS tag / PicoPass tag") " found\n");
-            res = PM3_SUCCESS;
-        }
-    }
-
-    PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for LEGIC tag...");
     if (IfPm3Legicrf()) {
         if (readLegicUid(false, false) == PM3_SUCCESS) {
@@ -143,25 +127,6 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443a()) {
         if (readTopazUid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
-            res = PM3_SUCCESS;
-        }
-    }
-
-    // 14b is the longest test
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
-    if (IfPm3Iso14443b()) {
-        if (readHF14B(false, false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-B tag") " found\n");
-            res = PM3_SUCCESS;
-        }
-    }
-
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
-    if (IfPm3Felica()) {
-        if (read_felica_uid(false, false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 18092 / FeliCa tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -180,6 +145,47 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443b()) {
         if (read_xerox_uid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fuji/Xerox tag") " found\n");
+            res = PM3_SUCCESS;
+        }
+    }
+
+    // 14b is the longest test
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
+    if (IfPm3Iso14443b()) {
+        if (readHF14B(false, false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-B tag") " found\n");
+            res = PM3_SUCCESS;
+        }
+    }
+
+    // OBS!  This triggers a swap to FPGA_BITSTREAM_HF_15 == 1.5sec delay
+
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for ISO15693 tag...");
+    if (IfPm3Iso15693()) {
+        if (readHF15Uid(false, false)) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 15693 tag") " found\n");
+            res = PM3_SUCCESS;
+        }
+    }
+
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for iCLASS / PicoPass tag...");
+    if (IfPm3Iclass()) {
+        if (read_iclass_csn(false, false, false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iCLASS tag / PicoPass tag") " found\n");
+            res = PM3_SUCCESS;
+        }
+    }
+
+    // OBS!  This triggers a swap to FPGA_BITSTREAM_HF_FELICA == 1.5sec delay
+
+    PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
+    if (IfPm3Felica()) {
+        if (read_felica_uid(false, false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 18092 / FeliCa tag") " found\n");
             res = PM3_SUCCESS;
         }
     }
@@ -424,8 +430,8 @@ int handle_hf_plot(void) {
 
     uint8_t buf[FPGA_TRACE_SIZE] = {0};
 
-    PacketResponseNG response;
-    if (GetFromDevice(FPGA_MEM, buf, FPGA_TRACE_SIZE, 0, NULL, 0, &response, 4000, true) == false) {
+    PacketResponseNG resp;
+    if (GetFromDevice(FPGA_MEM, buf, FPGA_TRACE_SIZE, 0, NULL, 0, &resp, 4000, true) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
@@ -493,11 +499,13 @@ static command_t CommandTable[] = {
     {"ntag424",     CmdHF_ntag424,    AlwaysAvailable, "{ NXP NTAG 4242 DNA RFIDs...          }"},
     {"seos",        CmdHFSeos,        AlwaysAvailable, "{ SEOS RFIDs...                       }"},
     {"st25ta",      CmdHFST25TA,      AlwaysAvailable, "{ ST25TA RFIDs...                     }"},
+    {"tesla",       CmdHFTESLA,       AlwaysAvailable, "{ TESLA Cards...                      }"},
+    {"texkom",      CmdHFTexkom,      AlwaysAvailable, "{ Texkom RFIDs...                     }"},
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                   }"},
     {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...         }"},
-    {"texkom",      CmdHFTexkom,      AlwaysAvailable, "{ Texkom RFIDs...                     }"},
-    {"xerox",       CmdHFXerox,       AlwaysAvailable, "{ Fuji/Xerox cartridge RFIDs...       }"},
+    {"vas",         CmdHFVAS,         AlwaysAvailable, "{ Apple Value Added Service           }"},
     {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...             }"},
+    {"xerox",       CmdHFXerox,       AlwaysAvailable, "{ Fuji/Xerox cartridge RFIDs...       }"},
     {"-----------", CmdHelp,          AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
     {"list",        CmdHFList,        AlwaysAvailable, "List protocol data in trace buffer"},

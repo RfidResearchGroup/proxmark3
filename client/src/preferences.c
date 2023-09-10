@@ -122,17 +122,18 @@ int preferences_save(void) {
     PrintAndLogEx(INFO, "Saving preferences...");
 
     char *fn = prefGetFilename();
-    int fnLen = strlen(fn) + 5; // .bak\0
+    int fn_len = strlen(fn) + 5; // .bak\0
 
     // [FILENAME_MAX+sizeof(preferencesFilename)+10]
-    char *backupFilename = (char *)calloc(fnLen, sizeof(uint8_t));
+    char *backupFilename = (char *)calloc(fn_len, sizeof(uint8_t));
     if (backupFilename == NULL) {
         PrintAndLogEx(ERR, "failed to allocate memory");
         free(fn);
         return PM3_EMALLOC;
     }
-    snprintf(backupFilename, fnLen, "%s.bak", fn);
+    snprintf(backupFilename, fn_len, "%s.bak", fn);
 
+    // remove old backup file
     if (fileExists(backupFilename)) {
         if (remove(backupFilename) != 0) {
             PrintAndLogEx(FAILED, "Error - could not delete old settings backup file \"%s\"", backupFilename);
@@ -142,6 +143,7 @@ int preferences_save(void) {
         }
     }
 
+    // rename file to backup file
     if (fileExists(fn)) {
         if (rename(fn, backupFilename) != 0) {
             PrintAndLogEx(FAILED, "Error - could not backup settings file \"%s\" to \"%s\"", fn, backupFilename);
@@ -152,10 +154,11 @@ int preferences_save(void) {
     }
 
     uint8_t dummyData = 0x00;
-    size_t dummyDL = 0x00;
+    size_t dummyDL = 0x01;
 
-    if (saveFileJSON(fn, jsfCustom, &dummyData, dummyDL, &preferences_save_callback) != PM3_SUCCESS)
+    if (saveFileJSONex(fn, jsfCustom, &dummyData, dummyDL, true, &preferences_save_callback, spItemCount) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error saving preferences to \"%s\"", fn);
+    }
 
     free(fn);
     free(backupFilename);

@@ -91,7 +91,7 @@ void I2C_recovery(void) {
         DbpString("I2C bus recovery complete");
 }
 
-void I2C_init(void) {
+void I2C_init(bool has_ticks) {
     // Configure reset pin, close up pull up, push-pull output, default high
     AT91C_BASE_PIOA->PIO_PPUDR = GPIO_RST;
     AT91C_BASE_PIOA->PIO_MDDR = GPIO_RST;
@@ -105,6 +105,10 @@ void I2C_init(void) {
 
     AT91C_BASE_PIOA->PIO_OER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
     AT91C_BASE_PIOA->PIO_PER |= (GPIO_SCL | GPIO_SDA | GPIO_RST);
+
+    if (has_ticks) {
+        WaitMS(2);
+    }
 
     bool isok = (SCL_read && SDA_read);
     if (isok == false)
@@ -133,7 +137,7 @@ void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
 // Note: the SIM_Adapter will not enter the main program after power up. Please run this function before use SIM_Adapter.
 void I2C_Reset_EnterMainProgram(void) {
     StartTicks();
-    I2C_init();
+    I2C_init(true);
     I2C_SetResetStatus(0, 0, 0);
     WaitMS(30);
     I2C_SetResetStatus(1, 0, 0);
@@ -146,7 +150,7 @@ void I2C_Reset_EnterMainProgram(void) {
 // Reserve for firmware update.
 void I2C_Reset_EnterBootloader(void) {
     StartTicks();
-    I2C_init();
+    I2C_init(true);
     I2C_SetResetStatus(0, 1, 1);
     WaitMS(100);
     I2C_SetResetStatus(1, 1, 1);
@@ -167,7 +171,7 @@ static bool WaitSCL_H_delay(uint32_t delay) {
 // 5000 * 3.07us = 15350us. 15.35ms
 // 15000 * 3.07us = 46050us. 46.05ms
 static bool WaitSCL_H(void) {
-    return WaitSCL_H_delay(15000);
+    return WaitSCL_H_delay(5000);
 }
 
 static bool WaitSCL_L_delay(uint32_t delay) {
@@ -179,19 +183,21 @@ static bool WaitSCL_L_delay(uint32_t delay) {
     }
     return false;
 }
+
 // 5000 * 3.07us = 15350us. 15.35ms
+// 15000 * 3.07us = 46050us. 46.05ms
 static bool WaitSCL_L(void) {
-    return WaitSCL_L_delay(15000);
+    return WaitSCL_L_delay(5000);
 }
 
 // Wait max 1800ms or until SCL goes LOW.
 // It timeout reading response from card
 // Which ever comes first
 static bool WaitSCL_L_timeout(void) {
-    volatile uint32_t delay = 1700;
+    volatile uint32_t delay = 200;
     while (delay--) {
         // exit on SCL LOW
-        if (!SCL_read)
+        if (SCL_read == false)
             return true;
 
         WaitMS(1);
@@ -206,12 +212,15 @@ static bool I2C_Start(void) {
     SDA_H;
     I2C_DELAY_1CLK;
     SCL_H;
-    if (!WaitSCL_H()) return false;
+    if (!WaitSCL_H())
+        return false;
 
     I2C_DELAY_2CLK;
 
-    if (!SCL_read) return false;
-    if (!SDA_read) return false;
+    if (!SCL_read)
+        return false;
+    if (!SDA_read)
+        return false;
 
     SDA_L;
     I2C_DELAY_2CLK;
@@ -226,8 +235,9 @@ static bool I2C_WaitForSim(void) {
 
     // 8051 speaks with smart card.
     // 1000*50*3.07 = 153.5ms
-    // 1byte transfer == 1ms  with max frame being 256bytes
-    return WaitSCL_H_delay(1000 * 300);
+    // 1000*110*3.07 = 337.7ms
+    // 1byte transfer == 1ms with max frame being 256bytes
+    return WaitSCL_H_delay(1000 * 110);
 }
 
 // send i2c STOP
@@ -397,7 +407,7 @@ bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
 
 //Sends array of data (Array, length, command to be written , SlaveDevice address  ).
 // len = uint16 because we need to write up to 256 bytes
-bool I2C_BufferWrite(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
+bool I2C_BufferWrite(const uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
     bool bBreak = true;
     do {
         if (!I2C_Start())
@@ -592,7 +602,7 @@ int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t
     return readcount;
 }
 
-bool I2C_WriteFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
+bool I2C_WriteFW(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
     //START, 0xB0, 0x00, 0x00, xx, yy, zz, ......, STOP
     bool bBreak = true;
 
@@ -708,11 +718,12 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
 
     // read bytes from module
     uint16_t len = sizeof(card_ptr->atr);
+    if (sc_rx_bytes(card_ptr->atr, &len) == false)
+        return false;
+
     if (len > sizeof(card_ptr->atr)) {
         len = sizeof(card_ptr->atr);
     }
-    if (sc_rx_bytes(card_ptr->atr, &len) == false)
-        return false;
 
     uint8_t pos_td = 1;
     if ((card_ptr->atr[1] & 0x10) == 0x10) pos_td++;
@@ -738,7 +749,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
         }
     }
 
-    card_ptr->atr_len = (uint8_t) (len & 0xff);
+    card_ptr->atr_len = (uint8_t)(len & 0xff);
     if (verbose) {
         LogTrace(card_ptr->atr, card_ptr->atr_len, 0, 0, NULL, false);
     }
@@ -761,7 +772,7 @@ void SmartCardAtr(void) {
 //    StopTicks();
 }
 
-void SmartCardRaw(smart_card_raw_t *p) {
+void SmartCardRaw(const smart_card_raw_t *p) {
     LED_D_ON();
 
     uint16_t len = 0;

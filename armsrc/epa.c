@@ -37,6 +37,24 @@
 static const uint8_t pps[] = {0xD0, 0x11, 0x00, 0x52, 0xA6};
 #endif
 
+// this struct is used by EPA_Parse_CardAccess and contains info about the
+// PACE protocol supported by the chip
+typedef struct {
+    uint8_t oid[10];
+    uint8_t version;
+    uint8_t parameter_id;
+} pace_version_info_t;
+
+// general functions
+static void EPA_Finish(void);
+static size_t EPA_Parse_CardAccess(const uint8_t *data, size_t length, pace_version_info_t *pace_info);
+static int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length);
+static int EPA_Setup(void);
+
+// PACE related functions
+static int EPA_PACE_MSE_Set_AT(const pace_version_info_t pace_version_info, uint8_t password);
+static int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce);
+
 // APDUs for communication with German Identification Card
 
 // General Authenticate (request encrypted nonce) WITHOUT the Le at the end
@@ -153,7 +171,7 @@ static int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response, uint16_t re
 //-----------------------------------------------------------------------------
 // Closes the communication channel and turns off the field
 //-----------------------------------------------------------------------------
-void EPA_Finish(void) {
+static void EPA_Finish(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     iso_type = 0;
@@ -172,7 +190,7 @@ void EPA_Finish(void) {
 // TODO: Support elements with long tags (tag is longer than 1 byte)
 // TODO: Support proprietary PACE domain parameters
 //-----------------------------------------------------------------------------
-size_t EPA_Parse_CardAccess(uint8_t *data, size_t length, pace_version_info_t *pace_info) {
+static size_t EPA_Parse_CardAccess(const uint8_t *data, size_t length, pace_version_info_t *pace_info) {
 
     size_t index = 0;
 
@@ -243,7 +261,7 @@ size_t EPA_Parse_CardAccess(uint8_t *data, size_t length, pace_version_info_t *p
 // Returns -1 on failure or the length of the data on success
 // TODO: for the moment this sends only 1 APDU regardless of the requested length
 //-----------------------------------------------------------------------------
-int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
+static int EPA_Read_CardAccess(uint8_t *buffer, size_t max_length) {
     // the response APDU of the card
     // since the card doesn't always care for the expected length we send it,
     // we reserve 262 bytes here just to be safe (256-byte APDU + SW + ISO frame)
@@ -300,7 +318,7 @@ static void EPA_PACE_Collect_Nonce_Abort(uint32_t cmd, uint8_t step, int func_re
 //-----------------------------------------------------------------------------
 // Acquire one encrypted PACE nonce
 //-----------------------------------------------------------------------------
-void EPA_PACE_Collect_Nonce(PacketCommandNG *c) {
+void EPA_PACE_Collect_Nonce(const PacketCommandNG *c) {
     /*
      * ack layout:
      *   arg:
@@ -354,7 +372,7 @@ void EPA_PACE_Collect_Nonce(PacketCommandNG *c) {
     struct p {
         uint32_t m;
     } PACKED;
-    struct p *packet = (struct p *)c->data.asBytes;
+    const struct p *packet = (const struct p *)c->data.asBytes;
 
     func_return = EPA_PACE_Get_Nonce(packet->m, nonce);
     // check if the command succeeded
@@ -377,7 +395,7 @@ void EPA_PACE_Collect_Nonce(PacketCommandNG *c) {
 // Returns the actual size of the nonce on success or a less-than-zero error
 // code on failure.
 //-----------------------------------------------------------------------------
-int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce) {
+static int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce) {
 
     // build the APDU
     uint8_t apdu[sizeof(apdu_general_authenticate_pace_get_nonce) + 1];
@@ -416,7 +434,7 @@ int EPA_PACE_Get_Nonce(uint8_t requested_length, uint8_t *nonce) {
 // Initializes the PACE protocol by performing the "MSE: Set AT" step
 // Returns 0 on success or a non-zero error code on failure
 //-----------------------------------------------------------------------------
-int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password) {
+static int EPA_PACE_MSE_Set_AT(const pace_version_info_t pace_version_info, uint8_t password) {
     // create the MSE: Set AT APDU
     uint8_t apdu[23];
 
@@ -479,7 +497,7 @@ int EPA_PACE_MSE_Set_AT(pace_version_info_t pace_version_info, uint8_t password)
 //-----------------------------------------------------------------------------
 // Perform the PACE protocol by replaying given APDUs
 //-----------------------------------------------------------------------------
-void EPA_PACE_Replay(PacketCommandNG *c) {
+void EPA_PACE_Replay(const PacketCommandNG *c) {
 
     uint32_t timings[ARRAYLEN(apdu_lengths_replay)] = {0};
 
@@ -547,7 +565,7 @@ void EPA_PACE_Replay(PacketCommandNG *c) {
 // Set up a communication channel (Card Select, PPS)
 // Returns 0 on success or a non-zero error code on failure
 //-----------------------------------------------------------------------------
-int EPA_Setup(void) {
+static int EPA_Setup(void) {
 
 #ifdef WITH_ISO14443a
     {
@@ -593,7 +611,7 @@ int EPA_Setup(void) {
     return 1;
 }
 
-void EPA_PACE_Simulate(PacketCommandNG *c) {
+void EPA_PACE_Simulate(const PacketCommandNG *c) {
 
     //---------Initializing---------
 

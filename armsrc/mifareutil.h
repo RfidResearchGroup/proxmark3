@@ -72,11 +72,15 @@ uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t
 // mifare classic
 int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested);
 int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing);
-int mifare_classic_readblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData);
-int mifare_classic_halt(struct Crypto1State *pcs, uint32_t uid);
-int mifare_classic_halt_ex(struct Crypto1State *pcs);
-int mifare_classic_writeblock(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData);
-int mifare_classic_value(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t *blockData, uint8_t action);
+int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t cmd, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing);
+
+int mifare_classic_readblock(struct Crypto1State *pcs, uint8_t blockNo, uint8_t *blockData);
+int mifare_classic_readblock_ex(struct Crypto1State *pcs, uint8_t blockNo, uint8_t *blockData, uint8_t iso_byte);
+
+int mifare_classic_halt(struct Crypto1State *pcs);
+int mifare_classic_writeblock(struct Crypto1State *pcs, uint8_t blockNo, uint8_t *blockData);
+int mifare_classic_writeblock_ex(struct Crypto1State *pcs, uint8_t blockNo, uint8_t *blockData, uint8_t cmd);
+int mifare_classic_value(struct Crypto1State *pcs, uint8_t blockNo, uint8_t *blockData, uint8_t action);
 
 // Ultralight/NTAG...
 int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack);
@@ -109,8 +113,7 @@ uint8_t SectorTrailer(uint8_t blockNo);
 
 // emulator functions
 void emlClearMem(void);
-void emlSetMem(uint8_t *data, int blockNum, int blocksCount);
-void emlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth);
+void emlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int block_width);
 void emlGetMem(uint8_t *data, int blockNum, int blocksCount);
 void emlGetMemBt(uint8_t *data, int offset, int byteCount);
 uint64_t emlGetKey(int sectorNum, int keyType);

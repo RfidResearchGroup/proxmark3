@@ -11,10 +11,10 @@
 #include "cliparser.h"
 #include <string.h>
 #include <stdlib.h>
-#include <util.h>   // Get color constants
-#include <ui.h>     // get PrintAndLogEx
-#include <ctype.h>  // tolower
-#include <inttypes.h> // PRIu64
+#include <util.h>       // color constants
+#include <ui.h>         // PrintAndLogEx
+#include <ctype.h>      // tolower
+#include <inttypes.h>   // PRIu64
 
 #ifndef ARRAYLEN
 # define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
@@ -22,10 +22,10 @@
 
 // Custom Colors
 // To default the color return s
-#define _SectionTagColor_(s) _GREEN_(s)
-#define _ExampleColor_(s) _YELLOW_(s)
-#define _CommandColor_(s) _RED_(s)
-#define _DescriptionColor_(s) _CYAN_(s)
+#define _SectionTagColor_(s)    _GREEN_(s)
+#define _ExampleColor_(s)       _YELLOW_(s)
+#define _CommandColor_(s)       _RED_(s)
+#define _DescriptionColor_(s)   _CYAN_(s)
 #define _ArgColor_(s) s
 #define _ArgHelpColor_(s) s
 // End Custom Colors
@@ -34,65 +34,78 @@
 
 int CLIParserInit(CLIParserContext **ctx, const char *vprogramName, const char *vprogramHint, const char *vprogramHelp) {
     *ctx = calloc(sizeof(CLIParserContext), sizeof(uint8_t));
-    if (!*ctx) {
+    if (*ctx == NULL) {
         PrintAndLogEx(ERR, "ERROR: Insufficient memory\n");
         return 2;
     }
+
     (*ctx)->argtable = NULL;
     (*ctx)->argtableLen = 0;
     (*ctx)->programName = vprogramName;
     (*ctx)->programHint = vprogramHint;
     (*ctx)->programHelp = vprogramHelp;
     memset((*ctx)->buf, 0x00, sizeof((*ctx)->buf));
-    return 0;
+
+    return PM3_SUCCESS;
 }
 
 void CLIParserPrintHelp(CLIParserContext *ctx) {
-    if (ctx->programHint)
+    if (ctx->programHint) {
         PrintAndLogEx(NORMAL, "\n"_DescriptionColor_("%s"), ctx->programHint);
+    }
 
     PrintAndLogEx(NORMAL, "\n"_SectionTagColor_("usage:"));
     PrintAndLogEx(NORMAL, "    "_CommandColor_("%s")NOLF, ctx->programName);
     arg_print_syntax(stdout, ctx->argtable, "\n\n");
 
     PrintAndLogEx(NORMAL, _SectionTagColor_("options:"));
-
     arg_print_glossary(stdout, ctx->argtable, "    "_ArgColor_("%-30s")" "_ArgHelpColor_("%s")"\n");
-
     PrintAndLogEx(NORMAL, "");
-    if (ctx->programHelp) {
-        PrintAndLogEx(NORMAL, _SectionTagColor_("examples/notes:"));
-        char *buf = NULL;
-        int idx = 0;
-        buf = realloc(buf, strlen(ctx->programHelp) + 1); // more then enough as we are splitting
 
-        char *p2; // pointer to split example from comment.
+    if (ctx->programHelp) {
+
+        // allocate more then enough memory as we are splitting
+        char *s = calloc(strlen(ctx->programHelp) + 1, sizeof(uint8_t));
+        if (s == NULL) {
+            PrintAndLogEx(FAILED, "cannot allocate memory");
+            return;
+        }
+
+        PrintAndLogEx(NORMAL, _SectionTagColor_("examples/notes:"));
+
+        // pointer to split example from comment.
+        char *p2;
+
+        int idx = 0;
         int egWidth = 30;
         for (int i = 0; i <= strlen(ctx->programHelp); i++) {  // <= so to get string terminator.
-            buf[idx++] = ctx->programHelp[i];
+
+            s[idx++] = ctx->programHelp[i];
+
             if ((ctx->programHelp[i] == '\n') || (ctx->programHelp[i] == 0x00)) {
-                buf[idx - 1] = 0x00;
-                p2 = strstr(buf, "->"); // See if the example has a comment.
+
+                s[idx - 1] = 0x00;
+                p2 = strstr(s, "->"); // See if the example has a comment.
+
                 if (p2 != NULL) {
                     *(p2 - 1) = 0x00;
 
-                    if (strlen(buf) > 28)
-                        egWidth = strlen(buf) + 5;
+                    if (strlen(s) > 28)
+                        egWidth = strlen(s) + 5;
                     else
                         egWidth = 30;
 
-                    PrintAndLogEx(NORMAL, "    "_ExampleColor_("%-*s")" %s", egWidth, buf, p2);
+                    PrintAndLogEx(NORMAL, "    "_ExampleColor_("%-*s")" %s", egWidth, s, p2);
                 } else {
-                    PrintAndLogEx(NORMAL, "    "_ExampleColor_("%-*s"), egWidth, buf);
+                    PrintAndLogEx(NORMAL, "    "_ExampleColor_("%-*s"), egWidth, s);
                 }
+
                 idx = 0;
             }
         }
-
+        free(s);
         PrintAndLogEx(NORMAL, "");
-        free(buf);
     }
-
     fflush(stdout);
 }
 
@@ -127,7 +140,7 @@ int CLIParserParseArg(CLIParserContext *ctx, int argc, char **argv, void *vargta
         return 3;
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 enum ParserState {
@@ -144,21 +157,25 @@ int CLIParserParseString(CLIParserContext *ctx, const char *str, void *vargtable
 
 int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtable[], size_t vargtableLen, bool allowEmptyExec, bool clueData) {
     int argc = 0;
-    char *argv[200] = {NULL};
+    char *argv[MAX_INPUT_ARG_LENGTH] = {NULL};
 
     int len = strlen(str);
+
     memset(ctx->buf, 0x00, ARRAYLEN(ctx->buf));
+
     char *bufptr = ctx->buf;
     char *bufptrend = ctx->buf + ARRAYLEN(ctx->buf) - 1;
     char *spaceptr = NULL;
     enum ParserState state = PS_FIRST;
 
     argv[argc++] = bufptr;
-    // param0 = program name
-    memcpy(ctx->buf, ctx->programName, strlen(ctx->programName) + 1); // with 0x00
+    // param0 = program name + with 0x00
+    memcpy(ctx->buf, ctx->programName, strlen(ctx->programName) + 1);
+
     bufptr += strlen(ctx->programName) + 1;
-    if (len)
+    if (len) {
         argv[argc++] = bufptr;
+    }
 
     // parse params
     for (int i = 0; i < len; i++) {
@@ -214,10 +231,9 @@ int CLIParamHexToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     *datalen = 0;
 
     int tmplen = 0;
-    uint8_t tmpstr[(256 * 2) + 1] = {0};
+    uint8_t tmpstr[MAX_INPUT_ARG_LENGTH + 1] = {0};
 
     // concat all strings in argstr into tmpstr[]
-    //
     int res = CLIParamStrToBuf(argstr, tmpstr, sizeof(tmpstr), &tmplen);
     if (res || (tmplen == 0)) {
         return res;
@@ -242,7 +258,7 @@ int CLIParamBinToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     *datalen = 0;
 
     int tmplen = 0;
-    uint8_t tmpstr[(256 * 2) + 1] = {0};
+    uint8_t tmpstr[MAX_INPUT_ARG_LENGTH + 1] = {0};
 
     // concat all strings in argstr into tmpstr[]
     //
@@ -268,7 +284,7 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     if (!argstr->count)
         return 0;
 
-    uint8_t tmpstr[(512 * 2) + 1] = {0};
+    uint8_t tmpstr[MAX_INPUT_ARG_LENGTH + 1] = {0};
     int ibuf = 0;
 
     for (int i = 0; i < argstr->count; i++) {
@@ -303,7 +319,7 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
 
 int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array, int *value) {
     char data[200] = {0};
-    int datalen = 0;
+    int datalen = 200;
     int res = CLIParamStrToBuf(argstr, (uint8_t *)data, sizeof(data), &datalen);
     if (res)
         return res;
@@ -316,7 +332,7 @@ int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array
 
     int val = -1;
     int cntr = 0;
-    for (int i = 0; i < CLI_MAX_OPTLIST_LEN && option_array[i].text != NULL; i++) {
+    for (int i = 0; (i < CLI_MAX_OPTLIST_LEN) && (option_array[i].text != NULL); i++) {
         // exact match
         if (strcmp(option_array[i].text, data) == 0) {
             *value = option_array[i].code;
@@ -346,9 +362,10 @@ int CLIGetOptionList(struct arg_str *argstr, const CLIParserOption *option_array
 const char *CLIGetOptionListStr(const CLIParserOption *option_array, int value) {
     static const char *errmsg = "n/a";
 
-    for (int i = 0; i < CLI_MAX_OPTLIST_LEN && option_array[i].text != NULL; i++) {
-        if (option_array[i].code == value)
+    for (int i = 0; (i < CLI_MAX_OPTLIST_LEN) && (option_array[i].text != NULL); i++) {
+        if (option_array[i].code == value) {
             return option_array[i].text;
+        }
     }
     return errmsg;
 }

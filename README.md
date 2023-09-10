@@ -1,4 +1,4 @@
-# Iceman Fork - Proxmark3 a RFID / NFC project.
+# Iceman Fork - Proxmark3
 
 The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the vast majority of RFID tags on a global scale. Originally built by Jonathan Westhues, the device is now the goto tool for RFID Analysis for the enthusiast. Iceman repository is considered to be the pinnacle of features and functionality, enabling a huge range of extremely useful and convenient commands and LUA scripts to automate chip identification, penetration testing, and programming
 
@@ -35,9 +35,9 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 | :------------------: | :------------------: |
 | [Linux - Setup and Build](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) | [Compilation Instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md)|
 | [Linux - Important notes on ModemManager](/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md) | [Validating Proxmark3 Client Functionality](/doc/md/Use_of_Proxmark/1_Validation.md)|
-| [Mac OS X - Homebrew & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
-| [Mac OS X - MacPorts](/doc/md/Installation_Instructions/Mac-OS-X-MacPorts-Installation-Instructions.md) | [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
-| [Mac OS X - Setup and Build](/doc/md/Installation_Instructions/Mac-OS-X-Compile-From-Source-Instructions.md) ||
+| [macOS - Homebrew & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/macOS-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
+| [macOS - MacPorts](/doc/md/Installation_Instructions/macOS-MacPorts-Installation-Instructions.md) | [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
+| [macOS - Setup and Build](/doc/md/Installation_Instructions/macOS-Compile-From-Source-Instructions.md) ||
 | [Windows - Setup and Build](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md) ||
 | [Termux / Android - Setup and Build](/doc/termux_notes.md) ||
 | [Blue Shark Manual](/doc/bt_manual_v10.md) | [Command Cheat Sheet](/doc/cheatsheet.md)|
@@ -83,7 +83,7 @@ We define generic Proxmark3 platforms as following devices.
    - **Note**: unknown pin assignments.
  - ⚠  Ryscorp Proxmark3 Pro 
    - **Note**: device has different fpga and unknown pin assignments.
-   - **Note**: Company have dissappared, leaving their customers in the dark.
+   - **Note**: Company have disappeared, leaving their customers in the dark.
  - ⚠  iCopy-X
    - **Note**: experimental support, currently incompatible with iCopy-X GUI as Proxmark client commands are now using cliparser.
    - **Note**: see also [icopyx-community repos](https://github.com/iCopy-X-Community/) for upstream sources, reversed hw etc.
@@ -93,24 +93,30 @@ We define generic Proxmark3 platforms as following devices.
  - ⚠  VX
    - **Note**: unknown device hw
 -  ⚠ Proxmark3 X 
-   - **Note**: unknown device hw.  
+   - **Note**: unknown device hw
+-  ⚠ Proxmark3 Ultimate
+   - **Note**: unknown device hw
+-  ⚠ Proxmark3 SE
+   - **Note**: unknown device hw
+
+When it comes to these new unknown models we are depending on the community to report in if this repo works and what they did to make it work.
 
 
-**256kb flash memory size of generic Proxmark3 platforms**
+**256KB flash memory size of generic Proxmark3 platforms**
 
 > ⚠ **Note**: 
 > You need to keep a eye on how large your ARM chip built-in flash memory is. 
-> With 512kb you are fine but if its 256kb you need to compile this repo with even less functionality.
+> With 512KB you are fine but if its 256KB you need to compile this repo with even less functionality.
 > When running the `./pm3-flash-all` you can see which size your device have if you have the bootloader from this repo installed. 
 > Otherwise you will find the size reported in the start message when running the Proxmark3 client `./pm3`.
 >
-> [OBS! Read the 256kb flash memory advisory](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#256kb-versions)
+> [OBS! Read the 256KB flash memory advisory](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#256KB-versions)
 
 
 # What has changed?
 
 Proxmark3 RDV4 hardware modifications:
-  * added flash memory 256kb
+  * added flash memory 256KB
   * added smart card module
   * added FPC connector for peripherals such as Bluetooth+battery addon
   * improved antennas
@@ -178,7 +184,7 @@ This repo compiles nicely on
    - Windows/MinGW environment
    - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, NetHunter, Arch Linux, Fedora, Debian, Raspbian
    - Android / Termux
-   - Mac OS X / Homebrew (or MacPorts, experimental) / Apple Silicon M1
+   - macOS / Homebrew (or MacPorts, experimental) / Apple Silicon M1
    - Docker container
       - [ Iceman repo based ubuntu 18.04 container ](https://hub.docker.com/r/secopsconsult/proxmark3)
       - [ Iceman fork based container v1.7 ](https://hub.docker.com/r/iceman1001/proxmark3/)

@@ -603,7 +603,7 @@ void find_state(const uint candidate_index_base,
 
 								const bitslice_t filter9_3 = f_b_bs(state[-2 + 37], state[-2 + 38], state[-2 + 40], state[-2 + 42]);
 								const bitslice_t filter9 = f_c_bs(filter9_0, filter9_1, filter9_2, filter9_3, filter9_4);
-                                
+
 								results8 &= (filter9 ^ keystream[9]);
 								if (!results8) continue;
 

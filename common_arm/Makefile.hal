@@ -48,7 +48,9 @@ Known definitions:
 endef
 
 define HELP_DEFINITIONS
+
 Options to define platform, platform extras and/or standalone mode:
+
 (1) Run make with your PLATFORM, PLATFORM_EXTRAS and/or STANDALONE choices as follows:
 make PLATFORM=PM3GENERIC STANDALONE=$(HELP_EXAMPLE_STANDALONE)
 
@@ -65,6 +67,7 @@ STANDALONE=
 
 For Proxmarks with only 256k, you can define
 PLATFORM_SIZE=256
+
 to be warned if the image is too big for your device
 and you can specify which parts to skip in order to reduce the size:
 SKIP_LF=1
@@ -80,6 +83,7 @@ SKIP_NFCBARCODE=1
 SKIP_HFSNIFF=1
 SKIP_HFPLOT=1
 SKIP_ZX8211=1
+
 endef
 
 define KNOWN_DEFINITIONS
@@ -92,17 +96,26 @@ PLTNAME = Unknown Platform
 PLATFORM_FPGA = fpga-undefined
 
 ifeq ($(PLATFORM),PM3RDV4)
+    # FPGA bitstream files, the order matters!
+    FPGA_BITSTREAMS = fpga_pm3_lf.bit fpga_pm3_hf.bit fpga_pm3_felica.bit fpga_pm3_hf_15.bit
     PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH -DRDV4
     PLTNAME = Proxmark3 RDV4
     PLATFORM_FPGA = xc2s30
+    RDV4 = yes
 else ifeq ($(PLATFORM),PM3OTHER)
     $(warning PLATFORM=PM3OTHER is deprecated, please use PLATFORM=PM3GENERIC)
+    # FPGA bitstream files, the order matters!
+    FPGA_BITSTREAMS = fpga_pm3_lf.bit fpga_pm3_hf.bit fpga_pm3_felica.bit fpga_pm3_hf_15.bit
     PLTNAME = Proxmark3 generic target
     PLATFORM_FPGA = xc2s30
 else ifeq ($(PLATFORM),PM3GENERIC)
+    # FPGA bitstream files, the order matters!
+    FPGA_BITSTREAMS = fpga_pm3_lf.bit fpga_pm3_hf.bit fpga_pm3_felica.bit fpga_pm3_hf_15.bit
     PLTNAME = Proxmark3 generic target
     PLATFORM_FPGA = xc2s30
 else ifeq ($(PLATFORM),PM3ICOPYX)
+    # FPGA bitstream files, the order matters - only hf has a bitstream, the other 3 files are 0 bytes
+    FPGA_BITSTREAMS = fpga_icopyx_lf.bit fpga_icopyx_hf.bit fpga_icopyx_felica.bit fpga_icopyx_hf_15.bit
     PLATFORM_DEFS = -DWITH_FLASH -DICOPYX -DXC3
     PLTNAME = iCopy-X with XC3S100E
     PLATFORM_FPGA = xc3s100e
@@ -113,6 +126,10 @@ endif
 
 # parsing additional PLATFORM_EXTRAS tokens
 PLATFORM_EXTRAS_TMP:=$(PLATFORM_EXTRAS)
+ifneq (,$(findstring FLASH,$(PLATFORM_EXTRAS_TMP)))
+    PLATFORM_DEFS += -DWITH_FLASH
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out FLASH,$(PLATFORM_EXTRAS_TMP)))
+endif
 ifneq (,$(findstring BTADDON,$(PLATFORM_EXTRAS_TMP)))
     PLATFORM_DEFS += -DWITH_FPC_USART_HOST
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out BTADDON,$(PLATFORM_EXTRAS_TMP)))
@@ -241,6 +258,7 @@ export PLATFORM_DEFS
 export PLATFORM_DEFS_INFO
 export PLATFORM_DEFS_INFO_STANDALONE
 export PLATFORM_CHANGED
+export FPGA_BITSTREAMS
 
 $(info ===================================================================)
 $(info Version info:      $(shell tools/mkversion.sh --short 2>/dev/null || ../tools/mkversion.sh --short 2>/dev/null))

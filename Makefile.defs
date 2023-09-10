@@ -29,8 +29,8 @@ GZIP = gzip
 MKDIR = mkdir -p
 RM = rm -f
 RMDIR = rm -rf
-# rmdir only if dir is empty, tolerate failure
-RMDIR_SOFT = -rmdir
+# rmdir only if dir is empty, you must add "-" when using it to tolerate failure
+RMDIR_SOFT = rmdir
 MV = mv
 TOUCH = touch
 FALSE = false
@@ -75,7 +75,15 @@ else
 endif
 
 ifeq ($(platform),Darwin)
-  USE_BREW ?= 1
+    ifeq ($(shell uname -p),arm64)
+        # The platform is iOS
+        USE_BREW ?= 0
+        # iOS refuses to compile unless this is set
+        export IPHONEOS_DEPLOYMENT_TARGET=11.0
+    else
+        # M* macOS devices return arm
+        USE_BREW ?= 1
+    endif
   USE_MACPORTS ?= 0
   AR= /usr/bin/ar rcs
   RANLIB= /usr/bin/ranlib
@@ -132,6 +140,10 @@ ifeq ($(shell expr $(CC_VERSION) \>= 10), 1)
   endif
 endif
 ifeq ($(platform),Darwin)
+  ifeq ($(shell uname -p),arm64)
+    # iOS will refuse to compile without the minimum target of iOS 11.0
+    DEFCFLAGS += -mios-version-min=11.0
+  endif
   # their readline has strict-prototype issues
   DEFCFLAGS += -Wno-strict-prototypes
   # some warnings about braced initializers on structs we want to ignore

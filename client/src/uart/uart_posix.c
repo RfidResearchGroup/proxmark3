@@ -69,6 +69,10 @@ int uart_reconfigure_timeouts(uint32_t value) {
     return PM3_SUCCESS;
 }
 
+uint32_t uart_get_timeouts(void) {
+    return newtimeout_value;
+}
+
 serial_port uart_open(const char *pcPortName, uint32_t speed) {
     serial_port_unix_t_t *sp = calloc(sizeof(serial_port_unix_t_t), sizeof(uint8_t));
 
@@ -189,6 +193,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             free(sp);
             return INVALID_SERIAL_PORT;
         }
+
         int sfd = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
         if (sfd == -1) {
             PrintAndLogEx(ERR, "Error opening Bluetooth socket");
@@ -196,6 +201,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             free(sp);
             return INVALID_SERIAL_PORT;
         }
+
         if (connect(sfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
             PrintAndLogEx(ERR, "Error: cannot connect device " _YELLOW_("%s") " over Bluetooth", addrstr);
             close(sfd);
@@ -285,6 +291,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
     // Try to retrieve the old (current) terminal info struct
     if (tcgetattr(sp->fd, &sp->tiOld) == -1) {
+        PrintAndLogEx(ERR, "error: UART get terminal info attribute");
         uart_close(sp);
         return INVALID_SERIAL_PORT;
     }
@@ -305,6 +312,8 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
     // Try to set the new terminal info struct
     if (tcsetattr(sp->fd, TCSANOW, &sp->tiNew) == -1) {
+        PrintAndLogEx(ERR, "error: UART set terminal info attribute");
+        perror("tcsetattr() error");
         uart_close(sp);
         return INVALID_SERIAL_PORT;
     }

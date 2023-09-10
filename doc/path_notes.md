@@ -64,7 +64,7 @@ The recovery / firmware files will be copied to
 ```
 
 * Proxmark3 firmware: `bootrom.elf`, `fullimage.elf`, `proxmark3_recovery.bin` (used for JTAG)
-* SIM firmware: `sim012.bin`, `sim012.sha512.txt`
+* SIM firmware: `sim013.bin`, `sim013.sha512.txt`
 
 
 ## Traces

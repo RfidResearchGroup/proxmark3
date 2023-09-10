@@ -30,7 +30,7 @@ extern "C" void ShowGraphWindow(void) {
 extern "C" void HideGraphWindow(void) {}
 extern "C" void RepaintGraphWindow(void) {}
 
-extern "C" void ShowPictureWindow(char *fn) {
+extern "C" void ShowPictureWindow(char *fn, int len) {
     static int warned = 0;
 
     if (!warned) {

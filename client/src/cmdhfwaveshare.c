@@ -660,7 +660,6 @@ static int start_drawing_1in54B(uint8_t model_nr, uint8_t *black, uint8_t *red) 
 }
 
 static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
-    uint8_t progress;
     uint8_t step0[2] = {0xcd, 0x0d};
     uint8_t step1[3] = {0xcd, 0x00, 10};  // select e-paper type and reset e-paper
     //  4 :2.13inch e-Paper
@@ -687,7 +686,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
 // uint8_t step13[2]={0xcd,0x0b};     // Judge whether the power supply is turned off successfully
 // uint8_t step14[2]={0xcd,0x0c};     // The end of the transmission
     uint8_t rx[20];
-    uint16_t actrxlen[20], i;
+    uint16_t actrxlen[20];
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
@@ -713,17 +712,17 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
         return PM3_ESOFT;
     }
 
-    if ((card.uidlen != 7) || ((memcmp(card.uid, "FSTN10m", 7) != 0) && (memcmp(card.uid, "WSDZ10m", 7) != 0))) {
+    if ((card.uidlen != 7) || ((memcmp(card.uid, "FSTN10m", 7) != 0) && (memcmp(card.uid, "FSTN11m", 7) != 0) && (memcmp(card.uid, "WSDZ10m", 7) != 0))) {
         PrintAndLogEx(WARNING, "Card doesn't look like Waveshare tag");
         DropField();
         return PM3_ESOFT;
     }
-    if (((model_nr != M1in54B) && (memcmp(card.uid, "FSTN10m", 7) == 0))) {
+    if (((model_nr != M1in54B) && ((memcmp(card.uid, "FSTN10m", 7) == 0) || (memcmp(card.uid, "FSTN11m", 7) == 0)))) {
         PrintAndLogEx(WARNING, "Card is a Waveshare tag 1.54\", not %s", models[model_nr].desc);
         DropField();
         return PM3_ESOFT;
     }
-    if (((model_nr == M1in54B) && (memcmp(card.uid, "FSTN10m", 7) != 0))) {
+    if (((model_nr == M1in54B) && (memcmp(card.uid, "FSTN10m", 7) != 0) && (memcmp(card.uid, "FSTN11m", 7) != 0))) {
         PrintAndLogEx(WARNING, "Card is not a Waveshare tag 1.54\", check your model number");
         DropField();
         return PM3_ESOFT;
@@ -812,6 +811,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
         }
         // 1.54B Data transfer is complete and wait for refresh
     } else {
+        uint8_t progress;
         PrintAndLogEx(DEBUG, "Step5: e-paper config2");
         ret = transceive_blocking(step5, 2, rx, 20, actrxlen, true); // cd 05
         if (ret != PM3_SUCCESS) {
@@ -831,7 +831,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
         }
         PrintAndLogEx(DEBUG, "Step8: Start data transfer");
         if (model_nr == M2in13) {      // 2.13inch
-            for (i = 0; i < 250; i++) {
+            for (uint16_t i = 0; i < 250; i++) {
                 read_black(i, step8, model_nr, black);
                 ret = transceive_blocking(step8, 19, rx, 20, actrxlen, true); // cd 08
                 if (ret != PM3_SUCCESS) {
@@ -841,7 +841,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
                 PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
             }
         } else if (model_nr == M2in9) {
-            for (i = 0; i < 296; i++) {
+            for (uint16_t i = 0; i < 296; i++) {
                 read_black(i, step8, model_nr, black);
                 ret = transceive_blocking(step8, 19, rx, 20, actrxlen, true); // cd 08
                 if (ret != PM3_SUCCESS) {
@@ -851,7 +851,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
                 PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
             }
         } else if (model_nr == M4in2) {    //4.2inch
-            for (i = 0; i < 150; i++) {
+            for (uint16_t i = 0; i < 150; i++) {
                 read_black(i, step8, model_nr, black);
                 ret = transceive_blocking(step8, 103, rx, 20, actrxlen, true); // cd 08
                 if (ret != PM3_SUCCESS) {
@@ -861,7 +861,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
                 PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
             }
         } else if (model_nr == M7in5) {  //7.5inch
-            for (i = 0; i < 400; i++) {
+            for (uint16_t i = 0; i < 400; i++) {
                 read_black(i, step8, model_nr, black);
                 ret = transceive_blocking(step8, 123, rx, 20, actrxlen, true); // cd 08
                 if (ret != PM3_SUCCESS) {
@@ -872,7 +872,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
                 msleep(6);
             }
         } else if (model_nr == M2in13B) {  //2.13inch B
-            for (i = 0; i < 26; i++) {
+            for (uint16_t i = 0; i < 26; i++) {
                 read_black(i, step8, model_nr, black);
                 ret = transceive_blocking(step8, 109, rx, 20, actrxlen, false); // cd 08
                 if (ret != PM3_SUCCESS) {
@@ -883,7 +883,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
             }
         } else if (model_nr == M7in5HD) {  //7.5HD
 
-            for (i = 0; i < 484; i++) {
+            for (uint16_t i = 0; i < 484; i++) {
                 read_black(i, step8, model_nr, black);
                 //memset(&step8[3], 0xf0, 120);
                 ret = transceive_blocking(step8, 123, rx, 20, actrxlen, true); // cd 08
@@ -899,7 +899,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
                 return ret;
             }
         } else if (model_nr == M2in7) {   //2.7inch
-            for (i = 0; i < 48; i++) {
+            for (uint16_t i = 0; i < 48; i++) {
                 //read_black(i,step8, model_nr, black);
                 memset(&step8[3], 0xFF, sizeof(step8) - 3);
                 ret = transceive_blocking(step8, 124, rx, 20, actrxlen, true); // cd 08
@@ -925,7 +925,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
             }
             PrintAndLogEx(DEBUG, "Step9b");
             if (model_nr == M2in7) {
-                for (i = 0; i < 48; i++) {
+                for (uint16_t i = 0; i < 48; i++) {
                     read_black(i, step13, model_nr, black);
                     ret = transceive_blocking(step13, 124, rx, 20, actrxlen, true); //CD 19
                     if (ret != PM3_SUCCESS) {
@@ -935,7 +935,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
                     PrintAndLogEx(INPLACE, "Progress: %d %%", progress);
                 }
             } else if (model_nr == M2in13B) {
-                for (i = 0; i < 26; i++) {
+                for (uint16_t i = 0; i < 26; i++) {
                     read_red(i, step13, model_nr, red);
                     //memset(&step13[3], 0xfE, 106);
                     ret = transceive_blocking(step13, 109, rx, 20, actrxlen, false);
@@ -1064,7 +1064,14 @@ static int CmdHF14AWSLoadBmp(const char *Cmd) {
     size_t bytes_read = 0;
     if (loadFile_safe(filename, ".bmp", (void **)&bmp, &bytes_read) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
-        return PM3_EIO;
+        return PM3_EFILE;
+    }
+    if (bmp == NULL) {
+        return PM3_EMALLOC;
+    }
+    if (bytes_read < sizeof(bmp_header_t)) {
+        free(bmp);
+        return PM3_ESOFT;
     }
 
     int depth = picture_bit_depth(bmp, bytes_read, model_nr);

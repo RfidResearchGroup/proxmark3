@@ -190,7 +190,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
 
     uint8_t GPB = sector0[(3 * 16) + 9];
     if (verbose)
-        PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x"), "GPB", GPB);
+        PrintAndLogEx(SUCCESS, "GPB....... " _GREEN_("0x%02X"), GPB);
 
     // DA (MAD available)
     if (!(GPB & 0x80)) {
@@ -200,21 +200,22 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
 
     uint8_t mad_ver = GPB & 0x03;
     if (verbose)
-        PrintAndLogEx(SUCCESS, "%14s " _GREEN_("%d"), "MAD version", mad_ver);
+        PrintAndLogEx(SUCCESS, "Version... " _GREEN_("%d"), mad_ver);
 
     //  MAD version
     if ((mad_ver != 0x01) && (mad_ver != 0x02)) {
-        PrintAndLogEx(ERR, "Wrong MAD version " _RED_("0x%02x"), mad_ver);
+        PrintAndLogEx(ERR, "Wrong MAD version " _RED_("0x%02X"), mad_ver);
         return PM3_ESOFT;
     };
 
-    if (haveMAD2)
+    if (haveMAD2) {
         *haveMAD2 = (mad_ver == 2);
+    }
 
     int res = madCRCCheck(sector0, true, 1);
-
-    if (verbose && res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x") " ( %s )", "CRC8", sector0[16], _GREEN_("ok"));
+    if (verbose && res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( %s )", sector0[16], _GREEN_("ok"));
+    }
 
     if (mad_ver == 2 && sector10) {
         int res2 = madCRCCheck(sector10, true, 2);
@@ -222,7 +223,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
             res = res2;
 
         if (verbose && !res2)
-            PrintAndLogEx(SUCCESS, "%14s " _GREEN_("0x%02x") " ( %s )", "CRC8", sector10[0], _GREEN_("ok"));
+            PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( %s )", sector10[0], _GREEN_("ok"));
     }
 
     // MA (multi-application card)
@@ -284,9 +285,10 @@ static int MADInfoByteDecode(const uint8_t *sector, bool swapmad, int mad_ver, b
         info = sector[16 + 1] & 0x3f;
         if (info >= 0xF) {
             PrintAndLogEx(WARNING, "Invalid Info byte (MAD1) value " _YELLOW_("0x%02x"), info);
-            if (verbose)
+            if (verbose) {
                 // I understand the spec in a way that MAD1 InfoByte should not point into MAD2 sectors, @lukaskuzmiak
                 PrintAndLogEx(WARNING, "MAD1 Info byte points outside of MAD1 sector space (0x%02x), report a bug?", info);
+            }
             return PM3_ESOFT;
         }
     } else {
@@ -318,7 +320,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
     int ibs = MADInfoByteDecode(sector, swapmad, 1, verbose);
 
     if (ibs > 0) {
-        PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02x"), ibs);
+        PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02X"), ibs);
     } else {
         PrintAndLogEx(WARNING, "Card publisher " _RED_("not") " present " _YELLOW_("0x%02x"), ibs);
     }
@@ -331,12 +333,22 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
     for (int i = 1; i < 16; i++) {
         uint16_t aid = madGetAID(sector, swapmad, 1, i);
         if (aid < 6) {
-            PrintAndLogEx(INFO, (ibs == i) ? _MAGENTA_(" %02d [%04X] (%s)") : " %02d [%04X] (%s)", i, aid, aid_admin[aid]);
+            PrintAndLogEx(INFO,
+                          (ibs == i) ? _MAGENTA_(" %02d [%04X] %s") : " %02d [" _GREEN_("%04X") "] %s",
+                          i,
+                          aid,
+                          aid_admin[aid]
+                         );
+
         } else if (prev_aid == aid) {
-            PrintAndLogEx(INFO, (ibs == i) ? _MAGENTA_(" %02d [%04X] (continuation)") : " %02d [%04X] (continuation)", i, aid);
+            PrintAndLogEx(INFO,
+                          (ibs == i) ? _MAGENTA_(" %02d [%04X] continuation") : " %02d [" _YELLOW_("%04X") "] continuation",
+                          i,
+                          aid
+                         );
         } else {
-            char fmt[30];
-            snprintf(fmt, sizeof(fmt), (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i, aid, "%s");
+            char fmt[60];
+            snprintf(fmt, sizeof(fmt), (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [" _GREEN_("%04X") "]%s", i, aid, "%s");
             print_aid_description(mad_known_aids, aid, fmt, verbose);
             prev_aid = aid;
         }
@@ -346,7 +358,7 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
 }
 
 int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
-    open_mad_file(&mad_known_aids, verbose);
+    open_mad_file(&mad_known_aids, false);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------------ " _CYAN_("MAD v2 details") " -------------");
@@ -354,14 +366,14 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
     int res = madCRCCheck(sector, true, 2);
     if (verbose) {
         if (res == PM3_SUCCESS)
-            PrintAndLogEx(SUCCESS, "CRC8 ( %s )", _GREEN_("ok"));
+            PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( " _GREEN_("%s") " )", sector[0], "ok");
         else
-            PrintAndLogEx(WARNING, "CRC8 ( %s )", _RED_("fail"));
+            PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( " _RED_("%s") " )", sector[0], "fail");
     }
 
     int ibs = MADInfoByteDecode(sector, swapmad, 2, verbose);
     if (ibs > 0) {
-        PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02x"), ibs);
+        PrintAndLogEx(SUCCESS, "Card publisher sector " _MAGENTA_("0x%02X"), ibs);
     } else {
         PrintAndLogEx(WARNING, "Card publisher " _RED_("not") " present " _YELLOW_("0x%02x"), ibs);
     }
@@ -375,12 +387,21 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
     for (int i = 1; i < 8 + 8 + 7 + 1; i++) {
         uint16_t aid = madGetAID(sector, swapmad, 2, i);
         if (aid < 6) {
-            PrintAndLogEx(INFO, (ibs == i) ? _MAGENTA_(" %02d [%04X] (%s)") : " %02d [%04X] (%s)", i + 16, aid, aid_admin[aid]);
+            PrintAndLogEx(INFO,
+                          (ibs == i) ? _MAGENTA_(" %02d [%04X] %s") : " %02d [" _GREEN_("%04X") "] %s",
+                          i + 16,
+                          aid,
+                          aid_admin[aid]
+                         );
         } else if (prev_aid == aid) {
-            PrintAndLogEx(INFO, (ibs == i) ? _MAGENTA_(" %02d [%04X] (continuation)") : " %02d [%04X] (continuation)", i + 16, aid);
+            PrintAndLogEx(INFO,
+                          (ibs == i) ? _MAGENTA_(" %02d [%04X] continuation") : " %02d [" _YELLOW_("%04X") "] continuation",
+                          i + 16,
+                          aid
+                         );
         } else {
-            char fmt[30];
-            snprintf(fmt, sizeof(fmt), (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [%04X]%s", i + 16, aid, "%s");
+            char fmt[60];
+            snprintf(fmt, sizeof(fmt), (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [" _GREEN_("%04X") "]%s", i + 16, aid, "%s");
             print_aid_description(mad_known_aids, aid, fmt, verbose);
             prev_aid = aid;
         }
@@ -420,4 +441,52 @@ int DetectHID(uint8_t *d, uint16_t manufacture) {
     }
 
     return -1;
+}
+
+int convert_mad_to_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen) {
+
+    if (in == NULL || out == NULL || ilen == 0) {
+        return PM3_EINVARG;
+    }
+
+    // MAD detection
+    if (HasMADKey(in) == false) {
+        PrintAndLogEx(FAILED, "No MAD key was detected in the dump file");
+        return PM3_ESOFT;
+    }
+
+    uint8_t sector0[MFBLOCK_SIZE * 4] = {0};
+    uint8_t sector10[MFBLOCK_SIZE * 4] = {0};
+
+    memcpy(sector0, in, sizeof(sector0));
+    if (ilen == MIFARE_4K_MAX_BYTES) {
+        memcpy(sector10, in + (MF_MAD2_SECTOR * 4 * MFBLOCK_SIZE), sizeof(sector10));
+    }
+
+    uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
+    size_t madlen = 0;
+    if (MADDecode(sector0, sector10, mad, &madlen, false)) {
+        PrintAndLogEx(ERR, "can't decode MAD");
+        return PM3_ESOFT;
+    }
+
+    uint16_t ndef_aid = 0xE103;
+    for (int i = 0; i < madlen; i++) {
+        if (ndef_aid == mad[i]) {
+            uint8_t tmp[MFBLOCK_SIZE * 4] = {0};
+            memset(tmp, 0x00, sizeof(tmp));
+
+            // sector i dump (skip first sector +1)
+            memcpy(tmp, in + (i + 1) * sizeof(tmp), sizeof(tmp));
+
+            // debug print
+            // print_hex_noascii_break(tmp, sizeof(tmp) - MFBLOCK_SIZE, MFBLOCK_SIZE);
+
+            // copy to out (skip ST)
+            memcpy(out, tmp, sizeof(tmp) - MFBLOCK_SIZE);
+            out += sizeof(tmp) - MFBLOCK_SIZE;
+            *olen += sizeof(tmp) - MFBLOCK_SIZE;
+        }
+    }
+    return PM3_SUCCESS;
 }

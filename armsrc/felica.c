@@ -49,7 +49,7 @@ static uint32_t felica_lasttime_prox2air_start;
 
 static void iso18092_setup(uint8_t fpga_minor_mode);
 static uint8_t felica_select_card(felica_card_select_t *card);
-static void TransmitFor18092_AsReader(uint8_t *frame, uint16_t len, uint32_t *timing, uint8_t power, uint8_t highspeed);
+static void TransmitFor18092_AsReader(const uint8_t *frame, uint16_t len, const uint32_t *NYI_timing_NYI, uint8_t power, uint8_t highspeed);
 static bool WaitForFelicaReply(uint16_t maxbytes);
 
 static void iso18092_set_timeout(uint32_t timeout) {
@@ -269,13 +269,13 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
     // copy UID
     // idm 8
     if (card) {
-        memcpy(card->IDm, FelicaFrame.framebytes + 4, 8);
+        memcpy(card->IDm, FelicaFrame.framebytes + 4,     8);
         memcpy(card->PMm, FelicaFrame.framebytes + 4 + 8, 8);
         //memcpy(card->servicecode, FelicaFrame.framebytes + 4 + 8 + 8, 2);
-        memcpy(card->code, card->IDm, 2);
-        memcpy(card->uid, card->IDm + 2, 6);
-        memcpy(card->iccode, card->PMm, 2);
-        memcpy(card->mrt, card->PMm + 2, 6);
+        memcpy(card->code,   card->IDm,     2);
+        memcpy(card->uid,    card->IDm + 2, 6);
+        memcpy(card->iccode, card->PMm,     2);
+        memcpy(card->mrt,    card->PMm + 2, 6);
         if (g_dbglevel >= DBG_DEBUG) {
             Dbprintf("Received Frame: ");
             Dbhexdump(FelicaFrame.len, FelicaFrame.framebytes, 0);
@@ -298,7 +298,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
 // 8-byte IDm, number of blocks, blocks numbers
 // number of blocks limited to 4 for FelicaLite(S)
 static void BuildFliteRdblk(const uint8_t *idm, uint8_t blocknum, const uint16_t *blocks) {
-    if (blocknum > 4 || blocknum <= 0)
+    if (blocknum > 4 || blocknum == 0)
         Dbprintf("Invalid number of blocks, %d != 4", blocknum);
 
     uint8_t c = 0, i = 0;
@@ -350,7 +350,12 @@ static void BuildFliteRdblk(const uint8_t *idm, uint8_t blocknum, const uint16_t
     AddCrc(frameSpace + 2, c - 2);
 }
 
-static void TransmitFor18092_AsReader(uint8_t *frame, uint16_t len, uint32_t *timing, uint8_t power, uint8_t highspeed) {
+static void TransmitFor18092_AsReader(const uint8_t *frame, uint16_t len, const uint32_t *NYI_timing_NYI, uint8_t power, uint8_t highspeed) {
+    if (NYI_timing_NYI != NULL) {
+        Dbprintf("Error: TransmitFor18092_AsReader does not check or set parameter NYI_timing_NYI");
+        return;
+    }
+
     uint16_t flags = FPGA_MAJOR_MODE_HF_ISO18092;
     if (power)
         flags |= FPGA_HF_ISO18092_FLAG_READER;
@@ -512,12 +517,12 @@ static void felica_reset_frame_mode(void) {
 // arg0 FeliCa flags
 // arg1 len of commandbytes
 // d.asBytes command bytes to send
-void felica_sendraw(PacketCommandNG *c) {
+void felica_sendraw(const PacketCommandNG *c) {
     if (g_dbglevel >= DBG_DEBUG) Dbprintf("FeliCa_sendraw Enter");
 
     felica_command_t param = c->oldarg[0];
     size_t len = c->oldarg[1] & 0xffff;
-    uint8_t *cmd = c->data.asBytes;
+    const uint8_t *cmd = c->data.asBytes;
     uint32_t arg0;
 
     felica_card_select_t card;
@@ -675,7 +680,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
 #define R_READBLK_LEN  0x21
 //simulate NFC Tag3 card - for now only poll response works
 // second half (4 bytes)  of NDEF2 goes into nfcid2_0, first into nfcid2_1
-void felica_sim_lite(uint8_t *uid) {
+void felica_sim_lite(const uint8_t *uid) {
 
     // prepare our 3 responses...
     uint8_t resp_poll0[R_POLL0_LEN] = { 0xb2, 0x4d, 0x12, FELICA_POLL_ACK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf1, 0x00, 0x00, 0x00, 0x01, 0x43, 0x00, 0xb3, 0x7f};

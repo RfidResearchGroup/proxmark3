@@ -21,6 +21,6 @@ make -j fpga_compress
 cd client
 mkdir build
 cd build
-cmake -DEMBED_BZIP2=1 ..
+cmake -DEMBED_BZIP2=1 -DEMBED_LZ4=1 ..
 make -j
 ```

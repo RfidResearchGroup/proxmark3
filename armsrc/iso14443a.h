@@ -104,7 +104,8 @@ typedef enum {
     RESP_INDEX_RATS,
     RESP_INDEX_VERSION,
     RESP_INDEX_SIGNATURE,
-    RESP_INDEX_PPS
+    RESP_INDEX_PPS,
+    RESP_INDEX_PACK,
 } resp_index_t;
 
 #ifndef AddCrc14A
@@ -120,7 +121,7 @@ typedef enum {
 #endif
 
 void printHf14aConfig(void);
-void setHf14aConfig(hf14a_config *hc);
+void setHf14aConfig(const hf14a_config *hc);
 hf14a_config *getHf14aConfig(void);
 void iso14a_set_timeout(uint32_t timeout);
 uint32_t iso14a_get_timeout(void);
@@ -150,7 +151,7 @@ uint16_t ReaderReceive(uint8_t *receivedAnswer, uint8_t *par);
 void iso14443a_setup(uint8_t fpga_minor_mode);
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint8_t *res);
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats);
-int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats, bool use_ecp, bool use_magsafe);
+int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats, iso14a_polling_parameters_t *polling_parameters);
 int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades);
 void iso14a_set_trigger(bool enable);
 

@@ -128,7 +128,7 @@ int demodMotorola(bool verbose) {
 static int CmdMotorolaDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf motorola demod",
-                  "Try to find Motorola preamble, if found decode / descramble data",
+                  "Try to find Motorola Flexpass preamble, if found decode / descramble data",
                   "lf motorola demod"
                  );
 
@@ -144,7 +144,7 @@ static int CmdMotorolaDemod(const char *Cmd) {
 static int CmdMotorolaReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf motorola reader",
-                  "read a Motorola tag",
+                  "read a Motorola Flexpass tag",
                   "lf motorola reader -@   -> continuous reader mode"
                  );
 

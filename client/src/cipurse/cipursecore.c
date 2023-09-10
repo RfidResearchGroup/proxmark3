@@ -17,17 +17,17 @@
 //-----------------------------------------------------------------------------
 
 #include "cipursecore.h"
-#include <string.h>      // memcpy memset
-
-#include "commonutil.h"  // ARRAYLEN
-#include "comms.h"       // DropField
-#include "util_posix.h"  // msleep
+#include <string.h>                 // memcpy memset
+#include "commonutil.h"             // ARRAYLEN
+#include "comms.h"                  // DropField
+#include "util_posix.h"             // msleep
 #include "cmdhf14a.h"
 #include "../emv/emvcore.h"
 #include "../emv/emvjson.h"
-#include "../iso7816/apduinfo.h"       // sAPDU_t
+#include "../iso7816/apduinfo.h"    // sAPDU_t
 #include "ui.h"
 #include "util.h"
+#include "protocols.h"              // ISO7816 APDU return codes
 
 // context for secure channel
 CipurseContext_t cipurseContext;
@@ -112,7 +112,7 @@ static int CIPURSEExchangeEx(bool activate_field, bool leave_field_on, sAPDU_t a
         *sw = isw;
     }
 
-    if (isw != 0x9000) {
+    if (isw != ISO7816_OK) {
         if (GetAPDULogging()) {
             if (*sw >> 8 == 0x61) {
                 PrintAndLogEx(ERR, "APDU chaining len:%02x -->", *sw & 0xff);
@@ -255,7 +255,7 @@ bool CIPURSEChannelAuthenticate(uint8_t keyindex, uint8_t *key, bool verbose) {
 
     // authenticate
     res = CIPURSEMutualAuthenticate(keyindex, authparams, sizeof(authparams), buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != 0x9000 || len != 16) {
+    if (res != 0 || sw != ISO7816_OK || len != 16) {
         if (sw == 0x6988) {
             if (verbose) {
                 PrintAndLogEx(WARNING, "Authentication ( " _RED_("fail") " ). Wrong key");

@@ -26,7 +26,7 @@ bool g_reply_with_crc_on_fpc = true;
 bool g_reply_via_fpc = false;
 bool g_reply_via_usb = false;
 
-int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
     PacketResponseOLD txcmd = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
 
 //    for (size_t i = 0; i < sizeof(PacketResponseOLD); i++)
@@ -42,7 +42,7 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *d
     if (data && len) {
         len = MIN(len, PM3_CMD_DATA_SIZE);
         for (size_t i = 0; i < len; i++) {
-            txcmd.d.asBytes[i] = ((uint8_t *)data)[i];
+            txcmd.d.asBytes[i] = ((const uint8_t *)data)[i];
         }
     }
 
@@ -131,11 +131,11 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, const uint8_t *data, 
     return PM3_SUCCESS;
 }
 
-int reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len) {
+int reply_ng(uint16_t cmd, int16_t status, const uint8_t *data, size_t len) {
     return reply_ng_internal(cmd, status, data, len, true);
 }
 
-int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
     int16_t status = PM3_SUCCESS;
     uint64_t arg[3] = {arg0, arg1, arg2};
     if (len > PM3_CMD_DATA_SIZE - sizeof(arg)) {

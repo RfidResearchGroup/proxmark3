@@ -42,14 +42,14 @@
 
 typedef struct {
     uint8_t *buffer;
-    uint8_t numbits;
-    uint8_t position;
+    uint32_t numbits;
+    uint32_t position;
 } BitstreamIn_t;
 
 typedef struct {
     uint8_t *buffer;
-    uint8_t numbits;
-    uint8_t position;
+    uint32_t numbits;
+    uint32_t position;
 } BitstreamOut_t;
 
 bool headBit(BitstreamIn_t *stream);

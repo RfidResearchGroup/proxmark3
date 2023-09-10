@@ -1248,6 +1248,14 @@
         "Type": ""
     },
     {
+        "AID": "A000000308000010000100",
+        "Vendor": "National Institute of Standards and Technology",
+        "Country": "United States",
+        "Name": "Personal Identity Verification (PIV) / ID-ONE PIV BIO",
+        "Description": "PIV End Point Applet. Last 2 bytes designate version",
+        "Type": ""
+    },
+    {
         "AID": "A00000031510100528",
         "Vendor": "Currence Holding/PIN BV",
         "Country": "The Netherlands",
@@ -2235,8 +2243,8 @@
         "AID": "A0000002480400",
         "Vendor": "ISO/IEC JTC1/SC17",
         "Country": "",
-        "Name": "Personal identification (mDL)",
-        "Description": "ISO/IEC 18013-5:2021 compliant Mobile driving licence (mDL) application.",
+        "Name": "Personal identification (mDL) data transfer",
+        "Description": "ISO/IEC 18013-5:2021 compliant Mobile driving licence (mDL) application data transfer.",
         "Type": "identity"
     },
     {
@@ -2248,7 +2256,23 @@
         "Type": "identity"
     },
     {
+        "AID": "D2760000254D010200",
+        "Vendor": "Zentraler Kreditausschuss (ZKA)",
+        "Country": "Germany",
+        "Name": "Girocard Jugendschutz",
+        "Description": "Age verification",
+        "Type": "identity"
+    },
+    {
         "AID": "A000000809434343444B467631",
+        "Vendor": "Car Connectivity Consortium (CCC)",
+        "Country": "",
+        "Name": "Digital Car Key Framework",
+        "Description": "Used during key provisioning and configuration",
+        "Type": ""
+    },
+    {
+        "AID": "A000000809434343444B417631",
         "Vendor": "Car Connectivity Consortium (CCC)",
         "Country": "",
         "Name": "Digital Car Key",
@@ -2256,11 +2280,147 @@
         "Type": "access"
     },
     {
+        "AID": "A0000008580102",
+        "Vendor": "Apple",
+        "Country": "",
+        "Name": "Apple Home Key Framework",
+        "Description": "Home Key configuration applet. Selected after a first transaction on a newely-invited device (allegedly for mailbox sync/attestation exchange)",
+        "Type": ""
+    },
+    {
         "AID": "A0000008580101",
         "Vendor": "Apple",
         "Country": "",
         "Name": "Apple Home Key",
         "Description": "NFC Home Key for select HomeKit-compatible locks",
+        "Type": "access"
+    },
+    {
+        "AID": "A000000396564341",
+        "Vendor": "NXP",
+        "Country": "",
+        "Name": "MIFARE 2GO",
+        "Description": "AID prefix used by MIFARE 2GO-based cards",
+        "Type": ""
+    },
+    {
+        "AID": "A00000039656434103F1216000000000",
+        "Vendor": "LV Monorail",
+        "Country": "United States",
+        "Name": "Las Vegas Monorail",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "A00000039656434103F8852200000000",
+        "Vendor": "Ubian",
+        "Country": "Slovakia",
+        "Name": "Ubian digital transit card",
+        "Description": "DESFire-based virtual transit card",
+        "Type": "transport"
+    },
+    {
+        "AID": "DE5C0D1F1CADA5",
+        "Vendor": "CRTM",
+        "Country": "Spain",
+        "Name": "Madrid transit card",
+        "Description": "DESFire-based transit card",
+        "Type": "transport"
+    },
+    {
+        "AID": "A00000F21100",
+        "Vendor": "PTV",
+        "Country": "Australia",
+        "Name": "Myki transit card",
+        "Description": "DESFire-based transit card",
+        "Type": "transport"
+    },
+    {
+        "AID": "637001ff4c41",
+        "Vendor": "Cubic",
+        "Country": "United States",
+        "Name": "LA Tap",
+        "Description": "DESFire-based transit card (ASCII cp\\x01\\xffLA)",
+        "Type": "transport"
+    },
+    {
+        "AID": "637001ff574d415441",
+        "Vendor": "Cubic",
+        "Country": "United States",
+        "Name": "Smart Trip",
+        "Description": "DESFire-based transit card (ASCII cp\\x01\\xffWMATA)",
+        "Type": "transport"
+    },
+    {
+        "AID": "637001ff434c4950504552",
+        "Vendor": "Cubic",
+        "Country": "United States",
+        "Name": "Clipper",
+        "Description": "DESFire-based transit card (ASCII cp\\x01\\xffCLIPPER)",
+        "Type": "transport"
+    },
+    {
+        "AID": "A0000002164954534F2D31",
+        "Vendor": "ITSO",
+        "Country": "United Kingdom",
+        "Name": "ITSO CMD2",
+        "Description": "AID used by ITSO for smartcard/phone-based transit cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "A000000632010105",
+        "Vendor": "CTTIC",
+        "Country": "China",
+        "Name": "China T-Union",
+        "Description": "Universal transit card used by many big public transit operators",
+        "Type": "transport"
+    },
+    {
+        "AID": "A00000000491",
+        "Vendor": "MasterCard International",
+        "Country": "",
+        "Name": "Mastercard Private Label Transit",
+        "Description": "AID prefix used by transit cards that use private label mastercard",
+        "Type": "transport"
+    },
+    {
+        "AID": "A0000000049100",
+        "Vendor": "MasterCard International",
+        "Country": "United States",
+        "Name": "HOP Fastpass",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "A0000000049101",
+        "Vendor": "MasterCard International",
+        "Country": "United States",
+        "Name": "Ventra",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "A000000858044F53452E4348",
+        "Vendor": "Apple",
+        "Country": "",
+        "Name": "AirDrop connection negotiation",
+        "Description": "Used by NFC-based AirDrop negotiation added in IOS17",
+        "Type": ""
+    },
+    {
+        "AID": "a0000004400001010001",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "SEOS",
+        "Description": "Used by both by physical cards and mobile implementations",
+        "Type": "access"
+    },
+    {
+        "AID": "A00000054000060100010000FF",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "SEOS Mobile",
+        "Description": "Declared by some SEOS-compatible applications for HCE",
         "Type": "access"
     }
 ]

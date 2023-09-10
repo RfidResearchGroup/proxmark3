@@ -275,7 +275,8 @@ static int CmdFlashMemLoad(const char *Cmd) {
             }
             break;
     }
-// not needed when we transite to loadxxxx_safe methods.(iceman)
+
+    // ICEMAN: not needed when we transite to loadxxxx_safe methods
     uint8_t *newdata = realloc(data, datalen);
     if (newdata == NULL) {
         free(data);
@@ -640,6 +641,11 @@ static int CmdFlashMemInfo(const char *Cmd) {
 
     // Verify (public key)
     bool is_verified = (mbedtls_rsa_pkcs1_verify(rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA1, 20, sha_hash, from_device) == 0);
+
+    if (got_private == false) {
+        mbedtls_rsa_free(rsa);
+        free(rsa);
+    }
 
     mbedtls_pk_free(&pkctx);
 

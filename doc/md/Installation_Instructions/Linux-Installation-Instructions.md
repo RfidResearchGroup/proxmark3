@@ -50,7 +50,7 @@ Install the requirements
 
 ```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libbz2-dev libbluetooth-dev libpython3-dev libssl-dev
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev
 ```
 
 If you don't need the native Bluetooth support in the client, you can skip the installation of `libbluetooth-dev`.
@@ -65,7 +65,7 @@ If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to 
 ^[Top](#top)
 
 ```sh
-sudo pacman -Syu git base-devel readline bzip2 arm-none-eabi-gcc arm-none-eabi-newlib qt5-base bluez python --needed
+sudo pacman -Syu git base-devel readline bzip2 lz4 arm-none-eabi-gcc arm-none-eabi-newlib qt5-base bluez python --needed
 ```
 
 If you don't need the native Bluetooth support in the client, you can skip the installation of `bluez`.
@@ -78,7 +78,7 @@ If you don't need support for Python3 scripts in the Proxmark3 client, you can s
 ^[Top](#top)
 
 ```sh
-sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel qt5-qtbase-devel bluez-libs-devel python3-devel libatomic openssl-devel
+sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel lz4-devel qt5-qtbase-devel bluez-libs-devel python3-devel libatomic openssl-devel
 ```
 
 If you don't need the native Bluetooth support in the client, you can skip the installation of `bluez-libs-devel`.
@@ -91,7 +91,7 @@ If you don't need support for Python3 scripts in the Proxmark3 client, you can s
 ^[Top](#top)
 
 ```sh
-sudo zypper install git patterns-devel-base-devel_basis gcc-c++ readline-devel libbz2-devel cross-arm-none-gcc9 cross-arm-none-newlib-devel python3-devel libqt5-qtbase-devel libopenssl-devel
+sudo zypper install git patterns-devel-base-devel_basis gcc-c++ readline-devel libbz2-devel liblz4-devel cross-arm-none-gcc9 cross-arm-none-newlib-devel python3-devel libqt5-qtbase-devel libopenssl-devel
 ```
 
 Note that Bluez is not available on openSUSE so the native Bluetooth support won't be available in the client.

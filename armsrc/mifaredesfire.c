@@ -139,6 +139,7 @@ void MifareDesfireGetInformation(void) {
         uint8_t details[14];
     } PACKED payload;
 
+    memset(&payload, 0x00, sizeof(payload));
     /*
         1 = PCB                 1
         2 = cid                 2
@@ -181,6 +182,12 @@ void MifareDesfireGetInformation(void) {
         return;
     }
 
+    if (len < sizeof(payload.versionHW) + 1) {
+        Dbprintf("Tag answer to MFDES_GET_VERSION was too short: data in Hardware Information is probably invalid.");
+        print_result("Answer", resp, len);
+        memset(resp + len, 0xFF, sizeof(payload.versionHW) + 1 - len); // clear remaining bytes
+    }
+
     memcpy(payload.versionHW, resp + 1, sizeof(payload.versionHW));
 
     // ADDITION_FRAME 1
@@ -193,6 +200,13 @@ void MifareDesfireGetInformation(void) {
         switch_off();
         return;
     }
+
+    if (len < sizeof(payload.versionSW) + 1) {
+        Dbprintf("Tag answer to MFDES_ADDITIONAL_FRAME 1 was too short: data in Software Information is probably invalid.");
+        print_result("Answer", resp, len);
+        memset(resp + len, 0xFF, sizeof(payload.versionSW) + 1 - len); // clear remaining bytes
+    }
+
     memcpy(payload.versionSW, resp + 1,  sizeof(payload.versionSW));
 
     // ADDITION_FRAME 2
@@ -203,6 +217,12 @@ void MifareDesfireGetInformation(void) {
         reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
         switch_off();
         return;
+    }
+
+    if (len < sizeof(payload.details) + 1) {
+        Dbprintf("Tag answer to MFDES_ADDITIONAL_FRAME 2 was too short: data in Batch number and Production date is probably invalid");
+        print_result("Answer", resp, len);
+        memset(resp + len, 0xFF, sizeof(payload.details) + 1 - len); // clear remaining bytes
     }
 
     memcpy(payload.details, resp + 1,  sizeof(payload.details));

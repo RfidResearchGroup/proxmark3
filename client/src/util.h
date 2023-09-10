@@ -32,6 +32,7 @@
 extern uint8_t g_debugMode;
 extern uint8_t g_printAndLog;
 extern bool g_pendingPrompt;
+extern int g_numCPUs;
 
 #define PRINTANDLOG_PRINT 1
 #define PRINTANDLOG_LOG   2
@@ -112,7 +113,11 @@ int param_getbin_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
 int param_getstr(const char *line, int paramnum, char *str, size_t buffersize);
 
 int hextobinarray(char *target, char *source);
+int hextobinarray_n(char *target, char *source, int sourcelen);
+
 int hextobinstring(char *target, char *source);
+int hextobinstring_n(char *target, char *source, int sourcelen);
+
 int binarraytohex(char *target, const size_t targetlen, const char *source, size_t srclen);
 void binarraytobinstring(char *target,  char *source, int length);
 int binstring2binarray(uint8_t *target, char *source, int length);
@@ -126,9 +131,13 @@ void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length
 uint32_t PackBits(uint8_t start, uint8_t len, const uint8_t *bits);
 uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
 
-int num_CPUs(void); // number of logical CPUs
+int num_CPUs(void);
+int detect_num_CPUs(void); // number of logical CPUs
 
 void str_lower(char *s); // converts string to lower case
+void str_upper(char *s); // converts string to UPPER case
+void strn_upper(char *s, size_t n);
+
 bool str_startswith(const char *s,  const char *pre);  // check for prefix in string
 bool str_endswith(const char *s,  const char *suffix);    // check for suffix in string
 void clean_ascii(unsigned char *buf, size_t len);
@@ -145,5 +154,13 @@ uint64_t bitcount64(uint64_t a);
 uint32_t leadingzeros32(uint32_t a);
 uint64_t leadingzeros64(uint64_t a);
 
-int byte_strstr(uint8_t *src, size_t srclen, uint8_t *pattern, size_t plen);
+int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen);
+int byte_strrstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen);
+
+struct smartbuf {
+    char *ptr;
+    size_t size;
+    size_t idx;
+} typedef smartbuf;
+void sb_append_char(smartbuf *sb, unsigned char c);
 #endif

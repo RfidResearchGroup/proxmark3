@@ -253,7 +253,7 @@ static bool TexcomTK13Decode(uint32_t *implengths, uint32_t implengthslen, char 
         return false;
 
     if (verbose)
-        PrintAndLogEx(INFO, "raw bit string [%zu]: %s", strlen(bitstring), bitstring);
+        PrintAndLogEx(INFO, "raw bit string [%3zu]... %s", strlen(bitstring), bitstring);
 
     // add trailing impulse (some tags just ignore it)
     if (strlen(bitstring) % 2 != 0) {
@@ -280,7 +280,7 @@ static bool TexcomTK13Decode(uint32_t *implengths, uint32_t implengthslen, char 
         return false;
 
     if (verbose)
-        PrintAndLogEx(INFO, "bit string [%zu]: %s", strlen(cbitstring), cbitstring);
+        PrintAndLogEx(INFO, "bit string [%3zu].... %s", strlen(cbitstring), cbitstring);
 
     return ((strlen(cbitstring) == 64) && (strncmp(cbitstring, "1111111111111111", 16) == 0));
 }
@@ -311,7 +311,7 @@ static bool TexcomTK15Decode(uint32_t *implengths, uint32_t implengthslen, char 
         bool prevbit = (implengths[implengthslen - 3] > implengths[implengthslen - 2]);
         bool thesamebit = (abs(lastimplen - (int)implengths[implengthslen - 3]) < abs(lastimplen - (int)implengths[implengthslen - 2]));
 
-        if (prevbit ^ !thesamebit) {
+        if (prevbit ^ (!thesamebit)) {
             strcat(bitstring, "10");
             strcat(cbitstring, "1");
         } else {
@@ -324,8 +324,8 @@ static bool TexcomTK15Decode(uint32_t *implengths, uint32_t implengthslen, char 
         return false;
 
     if (verbose) {
-        PrintAndLogEx(INFO, "raw bit string [%zu]: %s", strlen(bitstring), bitstring);
-        PrintAndLogEx(INFO, "bit string [%zu]: %s", strlen(cbitstring), cbitstring);
+        PrintAndLogEx(INFO, "raw bit string [%3zu]... %s", strlen(bitstring), bitstring);
+        PrintAndLogEx(INFO, "bit string [%3zu]....... %s", strlen(cbitstring), cbitstring);
     }
 
     return ((strlen(cbitstring) == 64) && (strncmp(cbitstring, "1111111111111111", 16) == 0));
@@ -420,7 +420,7 @@ static bool TexcomGeneralDecode(uint32_t *implengths, uint32_t implengthslen, ch
         }
     }
     if (verbose)
-        PrintAndLogEx(INFO, "General raw bit string [%zu]: %s", strlen(bitstring), bitstring);
+        PrintAndLogEx(INFO, "General raw bit string [%zu]... %s", strlen(bitstring), bitstring);
 
     return (!biterror && strlen(bitstring) > 0);
 }
@@ -588,30 +588,38 @@ int read_texkom_uid(bool loop, bool verbose) {
             }
 
             bool crc = (TexcomTK13CRC(&card.tcode[3]) == card.tcode[7]);
+            bool printed = false;
 
             if (card.tcode[2] == 0x63) {
-                PrintAndLogEx(INFO, "TYPE..... TK13");
+                PrintAndLogEx(INFO, "TYPE..... " _YELLOW_("TK13"));
                 PrintAndLogEx(INFO, "UID...... " _GREEN_("%s"), sprint_hex(&card.tcode[3], 4));
                 if (verbose) {
                     PrintAndLogEx(INFO, "CRC...... %s", (crc) ?  _GREEN_("ok") : _RED_("fail"));
                 }
+                printed = true;
             } else if (card.tcode[2] == 0xCA) {
-                PrintAndLogEx(INFO, "TYPE..... TK17");
+                PrintAndLogEx(INFO, "TYPE..... " _YELLOW_("TK17"));
                 PrintAndLogEx(INFO, "UID...... " _GREEN_("%s"), sprint_hex(&card.tcode[3], 4));
                 if (verbose) {
                     PrintAndLogEx(INFO, "CRC...... %s", (crc) ?  _GREEN_("ok") : _RED_("fail"));
                 }
+                printed = true;
             } else if (card.tcode[2] == 0xFF && card.tcode[3] == 0xFF) {
-                PrintAndLogEx(INFO, "TYPE..... MMBIT");
+                PrintAndLogEx(INFO, "TYPE..... " _YELLOW_("MMBIT"));
                 PrintAndLogEx(INFO, "UID...... " _GREEN_("%s"), sprint_hex(&card.tcode[4], 3));
-                crc = (MMBITCRC(&card.tcode[4]) == card.tcode[7] >> 4);
                 if (verbose) {
+                    crc = (MMBITCRC(&card.tcode[4]) == card.tcode[7] >> 4);
                     PrintAndLogEx(INFO, "CRC...... %s", (crc) ?  _GREEN_("ok") : _RED_("fail"));
                 }
+                printed = true;
             }
+
             if (verbose) {
-                PrintAndLogEx(INFO, "Raw... %s", sprint_hex(card.tcode, 8));
-                PrintAndLogEx(INFO, "Raw Reversed... %s", sprint_hex(card.rtcode, 8));
+                PrintAndLogEx(INFO, "Raw....... " _YELLOW_("%s"), sprint_hex(card.tcode, 8));
+                PrintAndLogEx(INFO, "Raw rev... " _YELLOW_("%s"), sprint_hex(card.rtcode, 8));
+            }
+            if (printed && loop) {
+                PrintAndLogEx(NORMAL, "");
             }
         }
 
@@ -753,82 +761,84 @@ static int CmdHFTexkomReader(const char *Cmd) {
         TexcomReverseCode(tcode, 8, rtcode);
 
         if (verbose) {
-            PrintAndLogEx(INFO, "Hex code: %s", sprint_hex(tcode, 8));
-            PrintAndLogEx(INFO, "Hex code reversed: %s", sprint_hex(rtcode, 8));
+            PrintAndLogEx(INFO, "Hex code............ %s", sprint_hex(tcode, 8));
+            PrintAndLogEx(INFO, "Hex code rev........ %s", sprint_hex(rtcode, 8));
         }
 
         if (tcode[0] == 0xff && tcode[1] == 0xff) {
             // decoding code
 
             if (verbose == false) {
-                PrintAndLogEx(INFO, "Texkom: %s", sprint_hex(tcode, 8));
-                PrintAndLogEx(INFO, "Texkom duplicator: %s", sprint_hex(rtcode, 8));
+                PrintAndLogEx(SUCCESS, "Texkom.............. %s", sprint_hex(tcode, 8));
+                PrintAndLogEx(SUCCESS, "Texkom duplicator... %s", sprint_hex(rtcode, 8));
             }
 
             if (codefound == TexkomModTK13)
-                PrintAndLogEx(INFO, "modulation: TK13");
+                PrintAndLogEx(SUCCESS, "Modulation.......... " _YELLOW_("TK13"));
             else if (codefound == TexkomModTK15)
-                PrintAndLogEx(INFO, "modulation: TK15");
+                PrintAndLogEx(SUCCESS, "Modulation.......... " _YELLOW_("TK15"));
             else if (codefound == TexkomModTK17)
-                PrintAndLogEx(INFO, "modulation: TK17");
+                PrintAndLogEx(SUCCESS, "Modulation.......... " _YELLOW_("TK17"));
             else
-                PrintAndLogEx(INFO, "modulation: unknown");
+                PrintAndLogEx(INFO, "Modulation.......... " _YELLOW_("unknown"));
 
             if (tcode[2] == 0x63) {
                 // TK13 and TK15. differs only by timings. TK15 has impulse 0 and 1 lengths very close to each other.
                 if (codefound == TexkomModTK13)
-                    PrintAndLogEx(INFO, "type      : TK13");
+                    PrintAndLogEx(SUCCESS, "Type................ " _YELLOW_("TK13"));
                 else if (codefound == TexkomModTK15)
-                    PrintAndLogEx(INFO, "type      : TK15");
+                    PrintAndLogEx(SUCCESS, "Type................ " _YELLOW_("TK15"));
                 else
-                    PrintAndLogEx(WARNING, "  mod type: WRONG");
+                    PrintAndLogEx(WARNING, "Type................ " _RED_("fail"));
 
-                PrintAndLogEx(INFO, "uid       : %s", sprint_hex(&tcode[3], 4));
-
+                PrintAndLogEx(SUCCESS, "UID................. " _YELLOW_("%s"), sprint_hex(&tcode[3], 4));
+                PrintAndLogEx(INFO, "CRC................ " NOLF);
                 if (TexcomTK13CRC(&tcode[3]) == tcode[7])
-                    PrintAndLogEx(INFO, "crc       : OK");
+                    PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
                 else
-                    PrintAndLogEx(WARNING, "crc       : WRONG");
+                    PrintAndLogEx(NORMAL, "( " _RED_("fail") " )");
 
             } else if (tcode[2] == 0xFF && tcode[3] == 0xFF) {
                 // MMBIT
                 if (codefound != TexkomModTK13 && codefound != TexkomModTK15) {
-                    PrintAndLogEx(WARNING, "  mod type: WRONG");
+                    PrintAndLogEx(WARNING, "Mod type............ " _RED_("fail"));
                 }
-                PrintAndLogEx(INFO, "type      : MMBIT");
-                PrintAndLogEx(INFO, "uid       : %s", sprint_hex(&tcode[4], 3));
-
+                PrintAndLogEx(SUCCESS, "Type................ " _YELLOW_("MMBIT"));
+                PrintAndLogEx(SUCCESS, "UID................. " _YELLOW_("%s"), sprint_hex(&tcode[4], 3));
+                PrintAndLogEx(INFO, "CRC................ " NOLF);
                 if (MMBITCRC(&tcode[4]) == tcode[7] >> 4)
-                    PrintAndLogEx(INFO, "crc       : OK");
+                    PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
                 else
-                    PrintAndLogEx(WARNING, "crc       : WRONG");
+                    PrintAndLogEx(NORMAL, "( " _RED_("fail") " )");
+
+
             } else if (tcode[2] == 0xCA) {
                 // TK17
                 if (codefound != TexkomModTK17) {
-                    PrintAndLogEx(WARNING, "  mod type: WRONG");
+                    PrintAndLogEx(WARNING, "Mod type............ " _RED_("fail"));
                 }
-                PrintAndLogEx(INFO, "type      : TK17");
-                PrintAndLogEx(INFO, "uid       : %s", sprint_hex(&tcode[3], 4));
-
+                PrintAndLogEx(SUCCESS, "Type............... " _YELLOW_("TK17"));
+                PrintAndLogEx(SUCCESS, "UID................ " _YELLOW_("%s"), sprint_hex(&tcode[3], 4));
+                PrintAndLogEx(INFO, "CRC................ " NOLF);
                 if (TexcomTK17CRC(&tcode[3]) == tcode[7])
-                    PrintAndLogEx(INFO, "crc       : OK");
+                    PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
                 else
-                    PrintAndLogEx(WARNING, "crc       : WRONG");
+                    PrintAndLogEx(NORMAL, "( " _RED_("fail") " )");
 
             } else {
-                PrintAndLogEx(INFO, "type      : unknown");
-                PrintAndLogEx(INFO, "uid       : %s (maybe)", sprint_hex(&tcode[3], 4));
+                PrintAndLogEx(INFO, "Type............... unknown");
+                PrintAndLogEx(INFO, "UID................ %s (maybe)", sprint_hex(&tcode[3], 4));
             }
         } else {
-            PrintAndLogEx(ERR, "Code have no preamble FFFF: %s", sprint_hex(tcode, 8));
+            PrintAndLogEx(ERR, "Code have no preamble FFFF... %s", sprint_hex(tcode, 8));
         }
     } else {
         if (strlen(genbitstring) > 0)
-            PrintAndLogEx(INFO, "General decoding bitstring: %s", genbitstring);
+            PrintAndLogEx(INFO, "General decoding bitstring... %s", genbitstring);
         if (strlen(bitstring) > 0)
-            PrintAndLogEx(INFO, "last raw bit string [%zu]: %s", strlen(bitstring), bitstring);
+            PrintAndLogEx(INFO, "last raw bit string [%zu].... %s", strlen(bitstring), bitstring);
         if (strlen(cbitstring) > 0)
-            PrintAndLogEx(INFO, "last bit string [%zu]: %s", strlen(cbitstring), cbitstring);
+            PrintAndLogEx(INFO, "last bit string [%zu]........ %s", strlen(cbitstring), cbitstring);
 
         PrintAndLogEx(ERR, "Texkom card is not found");
     }
@@ -840,10 +850,10 @@ static int CmdHFTexkomSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf texkom sim",
                   "Simulate a texkom tag",
-                  "hf texkom sim \r\n"
-                  "hf texkom sim --raw FFFF638C7DC45553 -> simulate TK13 tag with id 8C7DC455\r\n"
-                  "hf texkom sim --tk17 --raw FFFFCA17F31EC512 -> simulate TK17 tag with id 17F31EC5\r\n"
-                  "hf texkom sim --id 8C7DC455 -> simulate TK13 tag with id 8C7DC455\r\n"
+                  "hf texkom sim \n"
+                  "hf texkom sim --raw FFFF638C7DC45553 -> simulate TK13 tag with id 8C7DC455\n"
+                  "hf texkom sim --tk17 --raw FFFFCA17F31EC512 -> simulate TK17 tag with id 17F31EC5\n"
+                  "hf texkom sim --id 8C7DC455 -> simulate TK13 tag with id 8C7DC455\n"
                   "hf texkom sim --id 8C7DC455 --tk17 -> simulate TK17 tag with id 17F31EC5");
 
     void *argtable[] = {

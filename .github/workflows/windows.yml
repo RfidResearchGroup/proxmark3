@@ -98,9 +98,9 @@ jobs:
 
     steps:
       - name: WSL setup
-        uses: Vampire/setup-wsl@v1
+        uses: Vampire/setup-wsl@v2
         with:
-          distribution: Ubuntu-20.04
+          distribution: Ubuntu-22.04
           update: "true"
           additional-packages: git
             ca-certificates
@@ -110,6 +110,7 @@ jobs:
             gcc-arm-none-eabi
             libnewlib-dev
             libbz2-dev
+            liblz4-dev
             qtbase5-dev
             cmake
             libpython3-dev

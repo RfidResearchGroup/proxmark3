@@ -3,10 +3,10 @@ CRAPTO1
    Provides a set of library functions which aid the verification
    of crypto1 weaknesses.
 
-   In short a partial implementation of: 
+   In short a partial implementation of:
       Dismantling MIFARE Classic
       URL: http://www.sos.cs.ru.nl/applications/rfid/2008-esorics.pdf
-      Flavio D. Garcia, Gerhard de Koning Gans, Ruben Muijrers, 
+      Flavio D. Garcia, Gerhard de Koning Gans, Ruben Muijrers,
       Peter van Rossum, Roel Verdult, Ronny Wichers Schreur, Bart Jacobs
       Institute for Computing and Information Sciences,
       Radboud University Nijmegen, The Netherlands

@@ -142,7 +142,7 @@ developers have done a great job and gave us commands. What we need to
 know is that with the T5577, data is read/written one complete block at a
 time. Each block holds 32 bits of data (hence the binary output shown)  
   
-Since we know that the card has data and configuration blocks, lets say
+Since we know that the card has data and configuration blocks, lets stay
 away from those while we learn how to read and write. I suggest you
 follow along and perform each command and check the results as we go.
 
@@ -393,8 +393,8 @@ required, please do not proceed.
     
     | Hex Data | Binary Data                            |
     |:--------:|:---------------------------------------|
-    | 00088040 | 000000000000100010000000111***0***0000 |
-    | 00088050 | 000000000000100010000000111***1***0000 |
+    | 000880E0 | 000000000000100010000000111***0***0000 |
+    | 000880F0 | 000000000000100010000000111***1***0000 |
     
     See how in the above we changed the bit in location 28 from a 0 to 1  
     0 = No Password, 1 = Use Password
@@ -533,7 +533,7 @@ required, please do not proceed.
     [=]  Downlink mode..... default/fixed bit length 
     [=]  Password set...... No                       
     ```
-    Yes we can!  We can see Block 0 is the correct config 00088040
+    Yes we can!  We can see Block 0 is the correct config 000880E0
 
 # Part 2 – Configuration Blocks
 ^[Top](#top)

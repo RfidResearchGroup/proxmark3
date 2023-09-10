@@ -126,8 +126,8 @@ static void hf14b_aid_search(bool verbose) {
             }
         }
 
-        if (sw == 0x9000 || sw == 0x6283 || sw == 0x6285) {
-            if (sw == 0x9000) {
+        if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
+            if (sw == ISO7816_OK) {
                 if (verbose) PrintAndLogEx(SUCCESS, "Application ( " _GREEN_("ok") " )");
             } else {
                 if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
@@ -440,6 +440,12 @@ static bool get_14b_UID(uint8_t *d, iso14b_type_t *found_type) {
 
         if (resp.oldarg[0] == 0) {
             memcpy(d, resp.data.asBytes, sizeof(iso14b_card_select_t));
+
+            iso14b_card_select_t *card = (iso14b_card_select_t *)d;
+            uint8_t empty[] =  {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+            if (memcmp(card->uid, empty, card->uidlen) == 0) {
+                return false;
+            }
             *found_type = ISO14B_SR;
             return true;
         }
@@ -861,7 +867,7 @@ static bool HF14B_Std_Info(bool verbose, bool do_aid_search) {
     switch (status) {
         case 0: {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "-------------------- " _CYAN_("Tag information") " --------------------");
+            PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
             PrintAndLogEx(SUCCESS, " UID    : " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
             PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
             PrintAndLogEx(SUCCESS, " CHIPID : %02X", card.chipid);
@@ -912,6 +918,11 @@ static bool HF14B_ST_Info(bool verbose, bool do_aid_search) {
     int status = resp.oldarg[0];
     if (status < 0)
         return false;
+
+    uint8_t empty[] =  {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    if ((card.uidlen < 8) || (memcmp(card.uid, empty, card.uidlen) == 0)) {
+        return false;
+    }
 
     print_st_general_info(card.uid, card.uidlen);
 
@@ -964,6 +975,11 @@ static bool HF14B_st_reader(bool verbose) {
     iso14b_card_select_t card;
     memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
 
+    uint8_t empty[] =  {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    if ((card.uidlen < 8) || (memcmp(card.uid, empty, card.uidlen) == 0)) {
+        return false;
+    }
+
     int status = resp.oldarg[0];
     switch (status) {
         case 0:
@@ -1002,12 +1018,18 @@ static bool HF14B_std_reader(bool verbose) {
         }
         return false;
     }
-
     int status = resp.oldarg[0];
+
+    iso14b_card_select_t card;
+    memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
+
+    uint8_t empty[] =  {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    if (memcmp(card.uid, empty, card.uidlen) == 0) {
+        return false;
+    }
+
     switch (status) {
         case 0: {
-            iso14b_card_select_t card;
-            memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, " UID    : " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
             PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
@@ -1102,13 +1124,13 @@ static bool HF14B_other_reader(bool verbose) {
 
     if (status == 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x000b3f80 command ans:");
+        PrintAndLogEx(SUCCESS, "unknown tag type answered to a " _YELLOW_("0x000b3f80") " command ans:");
         switch_off_field_14b();
         free(packet);
         return true;
     } else if (status > 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x000b3f80 command ans:");
+        PrintAndLogEx(SUCCESS, "unknown tag type answered to a " _YELLOW_("0x000b3f80") " command ans:");
         PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, status));
         switch_off_field_14b();
         free(packet);
@@ -1132,13 +1154,13 @@ static bool HF14B_other_reader(bool verbose) {
 
     if (status == 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0A command ans:");
+        PrintAndLogEx(SUCCESS, "Unknown tag type answered to a " _YELLOW_("0x0A") " command ans:");
         switch_off_field_14b();
         free(packet);
         return true;
     } else if (status > 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x0A command ans:");
+        PrintAndLogEx(SUCCESS, "unknown tag type answered to a " _YELLOW_("0x0A") " command ans:");
         PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, status));
         switch_off_field_14b();
         free(packet);
@@ -1161,12 +1183,12 @@ static bool HF14B_other_reader(bool verbose) {
 
     if (status == 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0C command ans:");
+        PrintAndLogEx(SUCCESS, "Unknown tag type answered to a " _YELLOW_("0x0C") " command ans:");
         switch_off_field_14b();
         return true;
     } else if (status > 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x0C command ans:");
+        PrintAndLogEx(SUCCESS, "unknown tag type answered to a " _YELLOW_("0x0C") " command ans:");
         PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, status));
         switch_off_field_14b();
         return true;
@@ -1359,6 +1381,7 @@ static int CmdHF14BDump(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "(optional) filename,  if no <name> UID will be used as filename"),
+        arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1366,6 +1389,7 @@ static int CmdHF14BDump(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool nosave = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
 
@@ -1396,7 +1420,6 @@ static int CmdHF14BDump(const char *Cmd) {
         // print_std_blocks(data, cardsize);
         return switch_off_field_14b();
     }
-
 
     if (select_cardtype == ISO14B_SR) {
         iso14b_card_select_t card;
@@ -1514,15 +1537,17 @@ static int CmdHF14BDump(const char *Cmd) {
 
         print_sr_blocks(data, cardsize, card.uid);
 
-        // save to file
-        if (fnlen < 1) {
-            PrintAndLogEx(INFO, "using UID as filename");
-            char *fptr = filename + snprintf(filename, sizeof(filename), "hf-14b-");
-            FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
-        }
+        if (nosave == false) {
+            // save to file
+            if (fnlen < 1) {
+                PrintAndLogEx(INFO, "using UID as filename");
+                char *fptr = filename + snprintf(filename, sizeof(filename), "hf-14b-");
+                FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
+            }
 
-        size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
-        pm3_save_dump(filename, data, datalen, jsf14b, ST25TB_SR_BLOCK_SIZE);
+            size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
+            pm3_save_dump(filename, data, datalen, jsf14b, ST25TB_SR_BLOCK_SIZE);
+        }
     }
 
     return switch_off_field_14b();
@@ -2035,7 +2060,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
     uint16_t sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
         goto out;
@@ -2055,7 +2080,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
         goto out;
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
         goto out;
@@ -2071,7 +2096,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
         goto out;
@@ -2090,7 +2115,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
     sw = get_sw(response, resplen);
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
         goto out;
@@ -2225,33 +2250,35 @@ int infoHF14B(bool verbose, bool do_aid_search) {
 
 // get and print general info about all known 14b chips
 int readHF14B(bool loop, bool verbose) {
+    bool found = false;
     do {
+        found = false;
+
         // try std 14b (atqb)
-        if (HF14B_std_reader(verbose))
-            if (loop)
-                continue;
+        found |= HF14B_std_reader(verbose);
+        if (found && loop)
+            continue;
 
         // try ST Microelectronics 14b
-        if (HF14B_st_reader(verbose))
-            if (loop)
-                continue;
+        found |= HF14B_st_reader(verbose);
+        if (found && loop)
+            continue;
 
         // try ASK CT 14b
-        if (HF14B_ask_ct_reader(verbose))
-            if (loop)
-                continue;
+        found |= HF14B_ask_ct_reader(verbose);
+        if (found && loop)
+            continue;
 
         // try unknown 14b read commands (to be identified later)
         // could be read of calypso, CEPAS, moneo, or pico pass.
-        if (HF14B_other_reader(verbose))
-            if (loop)
-                continue;
-
+        found |= HF14B_other_reader(verbose);
+        if (found && loop)
+            continue;
 
     } while (loop && kbd_enter_pressed() == false);
 
-    if (verbose) {
+    if (verbose && found == false) {
         PrintAndLogEx(FAILED, "no ISO 14443-B tag found");
     }
-    return PM3_EOPABORTED;
+    return (found) ? PM3_SUCCESS : PM3_EOPABORTED;
 }

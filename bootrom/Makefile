@@ -34,10 +34,16 @@ VERSIONSRC = version_pm3.c
 # THUMBSRC :=
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant
-APP_CFLAGS = -I. -ffunction-sections -fdata-sections
+APP_CFLAGS = -I. -ffunction-sections -fdata-sections -DAS_BOOTROM
 
 # stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc,  no-common makes sure uninitialized vars don't end up in COMMON area
 APP_CFLAGS += -fno-stack-protector -fno-pie -fno-common
+
+ifneq (,$(findstring WITH_FLASH,$(PLATFORM_DEFS)))
+	APP_CFLAGS += -DWITH_FLASH
+	APP_CFLAGS += -I../common_arm
+    THUMBSRC += flashmem.c ticks.c
+endif
 
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
@@ -47,10 +53,10 @@ INSTALLFW = $(OBJDIR)/bootrom.elf
 
 OBJS = $(OBJDIR)/bootrom.s19
 
-# version_pm3.c should be remade on every compilation
-version_pm3.c: default_version_pm3.c
-	$(info [=] GEN $@)
-	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(PERL) ../tools/mkversion.pl > $@ || $(CP) $< $@
+# version_pm3.c should be checked on every compilation
+version_pm3.c: default_version_pm3.c .FORCE
+	$(info [=] CHECK $@)
+	$(Q)$(SH) ../tools/mkversion.sh $@ || $(CP) $< $@
 
 all: showinfo $(OBJS)
 
@@ -82,7 +88,7 @@ uninstall:
 	$(info [@] Uninstalling bootrom from $(DESTDIR)$(PREFIX)...)
 	$(Q)$(INSTALLSUDO) $(RM) $(foreach fw,$(INSTALLFW),$(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(notdir $(fw)))
 
-.PHONY: all clean help install showinfo
+.PHONY: all clean help install showinfo .FORCE
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:

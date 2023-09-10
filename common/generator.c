@@ -173,7 +173,7 @@ uint32_t ul_ev1_pwdgenD(const uint8_t *uid) {
 
 // AIR purifier Xiaomi
 uint32_t ul_ev1_pwdgenE(const uint8_t *uid) {
-    uint8_t hash[20];
+    uint8_t hash[20] = {0};
     mbedtls_sha1(uid, 7, hash);
     uint32_t pwd = 0;
     pwd |= (hash[ hash[0] % 20 ]) << 24 ;
@@ -185,7 +185,7 @@ uint32_t ul_ev1_pwdgenE(const uint8_t *uid) {
 
 // NDEF tools format password generator
 uint32_t ul_ev1_pwdgenF(const uint8_t *uid) {
-    uint8_t hash[16];
+    uint8_t hash[16] = {0};;
     mbedtls_md5(uid, 7, hash);
     uint32_t pwd = 0;
     pwd |= hash[0] << 24;
@@ -193,6 +193,20 @@ uint32_t ul_ev1_pwdgenF(const uint8_t *uid) {
     pwd |= hash[2] << 8;
     pwd |= hash[3];
     return pwd;
+}
+
+// Solution from @atc1441
+// https://gist.github.com/atc1441/41af75048e4c22af1f5f0d4c1d94bb56
+// Philips Sonicare toothbrush NFC head
+uint32_t ul_ev1_pwdgenG(const uint8_t *uid, const uint8_t *mfg) {
+
+    init_table(CRC_PHILIPS);
+    // UID
+    uint32_t crc1 = crc16_philips(uid, 7);
+    // MFG string
+    uint32_t crc2 = crc16_fast(mfg, 10, crc1, false, false);
+
+    return (BSWAP_16(crc2) << 16 | BSWAP_16(crc1));
 }
 
 // pack generation for algo 1-3
@@ -224,11 +238,24 @@ uint16_t ul_ev1_packgenD(const uint8_t *uid) {
     p ^= 0x5555;
     return BSWAP_16(p & 0xFFFF);
 }
-
 uint16_t ul_ev1_packgenE(const uint8_t *uid) {
 
     uint32_t pwd = ul_ev1_pwdgenE(uid);
     return (0xAD << 8 | ((pwd >> 24) & 0xFF));
+}
+
+uint16_t ul_ev1_packgenG(const uint8_t *uid, const uint8_t *mfg) {
+    init_table(CRC_PHILIPS);
+    // UID
+    uint32_t crc1 = crc16_philips(uid, 7);
+    // MFG string
+    uint32_t crc2 = crc16_fast(mfg, 10, crc1, false, false);
+    // PWD
+    uint32_t pwd = (BSWAP_16(crc2) << 16 | BSWAP_16(crc1));
+
+    uint8_t pb[4];
+    num_to_bytes(pwd, 4, pb);
+    return BSWAP_16(crc16_fast(pb, 4, crc2, false, false));
 }
 
 
@@ -239,6 +266,12 @@ uint32_t ul_ev1_pwdgen_def(const uint8_t *uid) {
 uint16_t ul_ev1_packgen_def(const uint8_t *uid) {
     return 0x0000;
 }
+
+// MIFARE ULTRALIGHT OTP generators
+uint32_t ul_c_otpgenA(const uint8_t *uid) {
+    return 0x534C544F;
+}
+
 
 //------------------------------------
 // MFC key generation stuff
@@ -516,7 +549,7 @@ int mfdes_kdf_input_gallagher(uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint3
 
 int mfc_generate4b_nuid(uint8_t *uid, uint8_t *nuid) {
     uint16_t crc;
-    uint8_t b1, b2;
+    uint8_t b1 = 0, b2 = 0;
 
     compute_crc(CRC_14443_A, uid, 3, &b1, &b2);
     nuid[0] = (b2 & 0xE0) | 0xF;
@@ -550,7 +583,7 @@ int mfc_algo_touch_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *
 
 int generator_selftest(void) {
 #ifndef ON_DEVICE
-#define NUM_OF_TEST     8
+#define NUM_OF_TEST     9
 
     PrintAndLogEx(INFO, "PWD / KEY generator selftest");
     PrintAndLogEx(INFO, "----------------------------");
@@ -600,18 +633,27 @@ int generator_selftest(void) {
         testresult++;
     PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid6, 7), pwd6, success ? "OK" : "->A9C4C3C0<--");
 
+    uint8_t uid7[] = {0x04, 0x0D, 0x4B, 0x5A, 0xC5, 0x71, 0x81};
+    uint8_t mfg[] = {0x32, 0x31, 0x30, 0x36, 0x32, 0x38, 0x20, 0x35, 0x32, 0x4D};
+    uint32_t pwd7 = ul_ev1_pwdgenG(uid7, mfg);
+    success = (pwd7 == 0xFBCFACC1);
+    if (success)
+        testresult++;
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid7, 7), pwd7, success ? "OK" : "->FBCFACC1<--");
+
+
 //    uint8_t uid5[] = {0x11, 0x22, 0x33, 0x44};
 //    uint64_t key1 = mfc_algo_a(uid5);
 //    success = (key1 == 0xD1E2AA68E39A);
 //    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %"PRIx64" - %s", sprint_hex(uid5, 4), key1, success ? "OK" : "->D1E2AA68E39A<--");
 
-    uint8_t uid7[] = {0x74, 0x57, 0xCA, 0xA9};
-    uint64_t key7 = 0;
-    mfc_algo_sky_one(uid7, 15, 0, &key7);
-    success = (key7 == 0x82c7e64bc565);
+    uint8_t uid8[] = {0x74, 0x57, 0xCA, 0xA9};
+    uint64_t key8 = 0;
+    mfc_algo_sky_one(uid8, 15, 0, &key8);
+    success = (key8 == 0x82c7e64bc565);
     if (success)
         testresult++;
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s          | %"PRIx64" - %s", sprint_hex(uid7, 4), key7, success ? "OK" : "->82C7E64BC565<--");
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s          | %"PRIx64" - %s", sprint_hex(uid8, 4), key8, success ? "OK" : "->82C7E64BC565<--");
 
 
     uint32_t lf_id = lf_t55xx_white_pwdgen(0x00000080);

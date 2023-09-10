@@ -41,6 +41,7 @@
 #include "generator.h"
 #include "cliparser.h"
 #include "cmdhw.h"
+#include "util.h"
 
 //////////////// 4205 / 4305 commands
 
@@ -1264,7 +1265,8 @@ int CmdEM4x05Info(const char *Cmd) {
 
     // read word 1 (serial #) doesn't need pwd
     // continue if failed, .. non blocking fail.
-    em4x05_read_word_ext(EM_SERIAL_BLOCK, 0, false, &serial);
+    int res = em4x05_read_word_ext(EM_SERIAL_BLOCK, 0, false, &serial);
+    (void)res;
 
     printEM4x05info(block0, serial);
 
@@ -1996,8 +1998,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
     const char *cmdText;
     char dataText[100];
     char blkAddr[4];
-    char bits[80];
-    int i, bitidx;
+    int i;
     int ZeroWidth;    // 32-42 "1" is 32
     int CycleWidth;
     size_t pulseSamples;
@@ -2018,13 +2019,15 @@ int CmdEM4x05Sniff(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "offset | Command     |   Data   | blk | raw");
     PrintAndLogEx(SUCCESS, "-------+-------------+----------+-----+------------------------------------------------------------");
 
+    smartbuf bits = { 0 };
+    bits.ptr = malloc(EM4X05_BITS_BUFSIZE);
+    bits.size = EM4X05_BITS_BUFSIZE;
+    bits.idx = 0;
     size_t idx = 0;
     // loop though sample buffer
     while (idx < g_GraphTraceLen) {
-        bool eop = false;
         bool haveData = false;
         bool pwd = false;
-        uint32_t tmpValue;
 
         idx = em4x05_Sniff_GetNextBitStart(idx, g_GraphTraceLen, g_GraphBuffer, &pulseSamples);
         size_t pktOffset = idx;
@@ -2037,9 +2040,10 @@ int CmdEM4x05Sniff(const char *Cmd) {
 
             if (ZeroWidth <= 50) {
                 pktOffset -= ZeroWidth;
-                memset(bits, 0x00, sizeof(bits));
-                bitidx = 0;
+                memset(bits.ptr, 0, bits.size);
+                bits.idx = 0;
 
+                bool eop = false;
                 while ((idx < g_GraphTraceLen) && !eop) {
                     CycleWidth = idx;
                     idx = em4x05_Sniff_GetNextBitStart(idx, g_GraphTraceLen, g_GraphBuffer, &pulseSamples);
@@ -2047,7 +2051,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
                     CycleWidth = idx - CycleWidth;
                     if ((CycleWidth > 300) || (CycleWidth < (ZeroWidth - 5))) { // to long or too short
                         eop = true;
-                        bits[bitidx++] = '0';   // Append last zero from the last bit find
+                        sb_append_char(&bits, '0');   // Append last zero from the last bit find
                         cmdText = "";
 
                         // EM4305 command lengths
@@ -2059,76 +2063,77 @@ int CmdEM4x05Sniff(const char *Cmd) {
                         // -> disable 1010 11111111 0 11111111 0 11111111 0 11111111 0 00000000 0
 
                         // Check to see if we got the leading 0
-                        if (((strncmp(bits, "00011", 5) == 0) && (bitidx == 50)) ||
-                                ((strncmp(bits, "00101", 5) == 0) && (bitidx == 57)) ||
-                                ((strncmp(bits, "01001", 5) == 0) && (bitidx == 12)) ||
-                                ((strncmp(bits, "01100", 5) == 0) && (bitidx == 50)) ||
-                                ((strncmp(bits, "01010", 5) == 0) && (bitidx == 50))) {
-                            memmove(bits, &bits[1], bitidx - 1);
-                            bitidx--;
+                        if (((strncmp(bits.ptr, "00011", 5) == 0) && (bits.idx == 50)) ||
+                                ((strncmp(bits.ptr, "00101", 5) == 0) && (bits.idx == 57)) ||
+                                ((strncmp(bits.ptr, "01001", 5) == 0) && (bits.idx == 12)) ||
+                                ((strncmp(bits.ptr, "01100", 5) == 0) && (bits.idx == 50)) ||
+                                ((strncmp(bits.ptr, "01010", 5) == 0) && (bits.idx == 50))) {
+                            memmove(bits.ptr, &bits.ptr[1], bits.idx - 1);
+                            bits.idx--;
                             PrintAndLogEx(INFO, "Trim leading 0");
                         }
-                        bits[bitidx] = 0;
+                        sb_append_char(&bits, 0);
+                        bits.idx--;
 
                         // logon
-                        if ((strncmp(bits, "0011", 4) == 0) && (bitidx == 49)) {
+                        if ((strncmp(bits.ptr, "0011", 4) == 0) && (bits.idx == 49)) {
                             haveData = true;
                             pwd = true;
                             cmdText = "Logon";
                             strncpy(blkAddr, "   ",  sizeof(blkAddr));
-                            tmpValue = em4x05_Sniff_GetBlock(&bits[4], fwd);
+                            uint32_t tmpValue = em4x05_Sniff_GetBlock(&bits.ptr[4], fwd);
                             snprintf(dataText, sizeof(dataText), "%08X", tmpValue);
                         }
 
                         // write
-                        if ((strncmp(bits, "0101", 4) == 0) && (bitidx == 56)) {
+                        if ((strncmp(bits.ptr, "0101", 4) == 0) && (bits.idx == 56)) {
                             haveData = true;
                             cmdText = "Write";
-                            tmpValue = (bits[4] - '0') + ((bits[5] - '0') << 1) + ((bits[6] - '0') << 2)  + ((bits[7] - '0') << 3);
+                            uint32_t tmpValue = (bits.ptr[4] - '0') + ((bits.ptr[5] - '0') << 1) + ((bits.ptr[6] - '0') << 2)  + ((bits.ptr[7] - '0') << 3);
                             snprintf(blkAddr, sizeof(blkAddr), "%u", tmpValue);
                             if (tmpValue == 2) {
                                 pwd = true;
                             }
-                            tmpValue = em4x05_Sniff_GetBlock(&bits[11], fwd);
+                            tmpValue = em4x05_Sniff_GetBlock(&bits.ptr[11], fwd);
                             snprintf(dataText, sizeof(dataText), "%08X", tmpValue);
                         }
 
                         // read
-                        if ((strncmp(bits, "1001", 4) == 0) && (bitidx == 11)) {
+                        if ((strncmp(bits.ptr, "1001", 4) == 0) && (bits.idx == 11)) {
                             haveData = true;
                             pwd = false;
                             cmdText = "Read";
-                            tmpValue = (bits[4] - '0') + ((bits[5] - '0') << 1) + ((bits[6] - '0') << 2)  + ((bits[7] - '0') << 3);
+                            uint32_t tmpValue = (bits.ptr[4] - '0') + ((bits.ptr[5] - '0') << 1) + ((bits.ptr[6] - '0') << 2)  + ((bits.ptr[7] - '0') << 3);
                             snprintf(blkAddr, sizeof(blkAddr), "%u", tmpValue);
                             strncpy(dataText, " ", sizeof(dataText));
                         }
 
                         // protect
-                        if ((strncmp(bits, "1100", 4) == 0) && (bitidx == 49)) {
+                        if ((strncmp(bits.ptr, "1100", 4) == 0) && (bits.idx == 49)) {
                             haveData = true;
                             pwd = false;
                             cmdText = "Protect";
                             strncpy(blkAddr, " ",  sizeof(blkAddr));
-                            tmpValue = em4x05_Sniff_GetBlock(&bits[11], fwd);
+                            uint32_t tmpValue = em4x05_Sniff_GetBlock(&bits.ptr[11], fwd);
                             snprintf(dataText, sizeof(dataText), "%08X", tmpValue);
                         }
 
                         // disable
-                        if ((strncmp(bits, "1010", 4) == 0) && (bitidx == 49)) {
+                        if ((strncmp(bits.ptr, "1010", 4) == 0) && (bits.idx == 49)) {
                             haveData = true;
                             pwd = false;
                             cmdText = "Disable";
                             strncpy(blkAddr, " ",  sizeof(blkAddr));
-                            tmpValue = em4x05_Sniff_GetBlock(&bits[11], fwd);
+                            uint32_t tmpValue = em4x05_Sniff_GetBlock(&bits.ptr[11], fwd);
                             snprintf(dataText, sizeof(dataText), "%08X", tmpValue);
                         }
 
                         //  bits[bitidx] = 0;
                     } else {
                         i = (CycleWidth - ZeroWidth) / 28;
-                        bits[bitidx++] = '0';
+                        sb_append_char(&bits, '0');
                         for (int ii = 0; ii < i; ii++) {
-                            bits[bitidx++] = '1';
+                            sb_append_char(&bits, '1');
                         }
                     }
                 }
@@ -2139,11 +2144,13 @@ int CmdEM4x05Sniff(const char *Cmd) {
         // Print results
         if (haveData) { //&& (minWidth > 1) && (maxWidth > minWidth)){
             if (pwd)
-                PrintAndLogEx(SUCCESS, "%6zu | %-10s  | " _YELLOW_("%8s")" | " _YELLOW_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
+                PrintAndLogEx(SUCCESS, "%6zu | %-10s  | " _YELLOW_("%8s")" | " _YELLOW_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits.ptr);
             else
-                PrintAndLogEx(SUCCESS, "%6zu | %-10s  | " _GREEN_("%8s")" | " _GREEN_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits);
+                PrintAndLogEx(SUCCESS, "%6zu | %-10s  | " _GREEN_("%8s")" | " _GREEN_("%3s")" | %s", pktOffset, cmdText, dataText, blkAddr, bits.ptr);
         }
     }
+    free(bits.ptr);
+    bits.ptr = NULL;
 
     // footer
     PrintAndLogEx(SUCCESS, "---------------------------------------------------------------------------------------------------");
@@ -2155,14 +2162,14 @@ static command_t CommandTable[] = {
     {"help",   CmdHelp,              AlwaysAvailable, "This help"},
     {"brute",  CmdEM4x05Brute,       IfPm3Lf,         "Bruteforce password"},
     {"chk",    CmdEM4x05Chk,         IfPm3Lf,         "Check passwords from dictionary"},
-    {"demod",  CmdEM4x05Demod,       AlwaysAvailable, "demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
-    {"dump",   CmdEM4x05Dump,        IfPm3Lf,         "dump EM4x05/EM4x69 tag"},
-    {"info",   CmdEM4x05Info,        IfPm3Lf,         "tag information EM4x05/EM4x69"},
-    {"read",   CmdEM4x05Read,        IfPm3Lf,         "read word data from EM4x05/EM4x69"},
+    {"demod",  CmdEM4x05Demod,       AlwaysAvailable, "Demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
+    {"dump",   CmdEM4x05Dump,        IfPm3Lf,         "Dump EM4x05/EM4x69 tag"},
+    {"info",   CmdEM4x05Info,        IfPm3Lf,         "Tag information"},
+    {"read",   CmdEM4x05Read,        IfPm3Lf,         "Read word data from EM4x05/EM4x69"},
     {"sniff",  CmdEM4x05Sniff,       AlwaysAvailable, "Attempt to recover em4x05 commands from sample buffer"},
-    {"unlock", CmdEM4x05Unlock,      IfPm3Lf,         "execute tear off against EM4x05/EM4x69"},
-    {"wipe",   CmdEM4x05Wipe,        IfPm3Lf,         "wipe EM4x05/EM4x69 tag"},
-    {"write",  CmdEM4x05Write,       IfPm3Lf,         "write word data to EM4x05/EM4x69"},
+    {"unlock", CmdEM4x05Unlock,      IfPm3Lf,         "Execute tear off against EM4x05/EM4x69"},
+    {"wipe",   CmdEM4x05Wipe,        IfPm3Lf,         "Wipe EM4x05/EM4x69 tag"},
+    {"write",  CmdEM4x05Write,       IfPm3Lf,         "Write word data to EM4x05/EM4x69"},
     {NULL, NULL, NULL, NULL}
 };
 

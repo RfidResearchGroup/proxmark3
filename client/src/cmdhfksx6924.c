@@ -46,6 +46,7 @@
 #include "emv/tlv.h"
 #include "iso7816/apduinfo.h"
 #include "cmdhf14a.h"
+#include "protocols.h"   // ISO7816 APDU return codes
 
 static int CmdHelp(const char *Cmd);
 
@@ -126,7 +127,7 @@ static int CmdHFKSX6924Info(const char *Cmd) {
         return res;
     }
 
-    if (sw != 0x9000) {
+    if (sw != ISO7816_OK) {
         if (sw) {
             PrintAndLogEx(INFO, "Not a KS X 6924 card! APDU response: %04x - %s",
                           sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));

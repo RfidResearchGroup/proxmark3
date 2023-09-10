@@ -40,12 +40,14 @@ uint8_t g_debugMode = 0;
 uint8_t g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 // global client tell if a pending prompt is present
 bool g_pendingPrompt = false;
+// global CPU core count override
+int g_numCPUs = 0;
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
-#define MAX_BIN_BREAK_LENGTH   (3072+384+1)
+#define MAX_BIN_BREAK_LENGTH   (3072 + 384 + 1)
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -266,7 +268,7 @@ void print_hex_break(const uint8_t *data, const size_t len, uint8_t breaks) {
     uint8_t mod = len % breaks;
 
     if (mod) {
-        char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
+        char buf[UTIL_BUFFER_SIZE_SPRINT + 3] = {0};
         hex_to_buffer((uint8_t *)buf, data + i, mod, (sizeof(buf) - 1), 0, 1, true);
 
         // add the spaces...
@@ -291,7 +293,7 @@ void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t brea
     uint8_t mod = len % breaks;
 
     if (mod) {
-        char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
+        char buf[UTIL_BUFFER_SIZE_SPRINT + 3] = {0};
         hex_to_buffer((uint8_t *)buf, data + i, mod, (sizeof(buf) - 1), 0, 0, true);
 
         // add the spaces...
@@ -300,13 +302,13 @@ void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t brea
     }
 }
 
-
 static void print_buffer_ex(const uint8_t *data, const size_t len, int level, uint8_t breaks) {
 
-    if (len < 1)
+    // sanity checks
+    if ((data == NULL) || (len < 1))
         return;
 
-    char buf[UTIL_BUFFER_SIZE_SPRINT + 3];
+    char buf[UTIL_BUFFER_SIZE_SPRINT + 3] = {0};
     int i;
     for (i = 0; i < len; i += breaks) {
 
@@ -613,7 +615,7 @@ void bytes_to_bytebits(const void *src, const size_t srclen, void *dest) {
 // hh,gg,ff,ee,dd,cc,bb,aa, pp,oo,nn,mm,ll,kk,jj,ii
 // up to 64 bytes or 512 bits
 uint8_t *SwapEndian64(const uint8_t *src, const size_t len, const uint8_t blockSize) {
-    static uint8_t buf[64];
+    static uint8_t buf[64] = {0};
     memset(buf, 0x00, 64);
     uint8_t *tmp = buf;
     for (uint8_t block = 0; block < (uint8_t)(len / blockSize); block++) {
@@ -911,27 +913,32 @@ https://github.com/ApertureLabsLtd/RFIDler/blob/master/firmware/Pic32/RFIDler.X/
 // convert hex to sequence of 0/1 bit values
 // returns number of bits converted
 int hextobinarray(char *target, char *source) {
-    int length, i, count = 0;
+    return hextobinarray_n(target, source, strlen(source));
+}
+
+int hextobinarray_n(char *target, char *source, int sourcelen) {
+    int i, count = 0;
     char *start = source;
-    length = strlen(source);
     // process 4 bits (1 hex digit) at a time
-    while (length--) {
+    while (sourcelen--) {
         char x = *(source++);
         // capitalize
-        if (x >= 'a' && x <= 'f')
+        if (x >= 'a' && x <= 'f') {
             x -= 32;
+        }
         // convert to numeric value
-        if (x >= '0' && x <= '9')
+        if (x >= '0' && x <= '9') {
             x -= '0';
-        else if (x >= 'A' && x <= 'F')
+        } else if (x >= 'A' && x <= 'F') {
             x -= 'A' - 10;
-        else {
+        } else {
             PrintAndLogEx(INFO, "(hextobinarray) discovered unknown character %c %d at idx %d of %s", x, x, (int16_t)(source - start), start);
             return 0;
         }
         // output
-        for (i = 0 ; i < 4 ; ++i, ++count)
+        for (i = 0 ; i < 4 ; ++i, ++count) {
             *(target++) = (x >> (3 - i)) & 1;
+        }
     }
 
     return count;
@@ -939,9 +946,14 @@ int hextobinarray(char *target, char *source) {
 
 // convert hex to human readable binary string
 int hextobinstring(char *target, char *source) {
-    int length = hextobinarray(target, source);
-    if (length == 0)
+    return hextobinstring_n(target, source, strlen(source));
+}
+
+int hextobinstring_n(char *target, char *source, int sourcelen) {
+    int length = hextobinarray_n(target, source, sourcelen);
+    if (length == 0) {
         return 0;
+    }
     binarraytobinstring(target, target, length);
     return length;
 }
@@ -1067,8 +1079,16 @@ uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor) {
     return result;
 }
 
-// determine number of logical CPU cores (use for multithreaded functions)
 int num_CPUs(void) {
+    if (g_numCPUs > 0) {
+        return g_numCPUs;
+    }
+
+    return detect_num_CPUs();
+}
+
+// determine number of logical CPU cores (use for multithreaded functions)
+int detect_num_CPUs(void) {
 #if defined(_WIN32)
 #include <sysinfoapi.h>
     SYSTEM_INFO sysinfo;
@@ -1087,6 +1107,14 @@ void str_lower(char *s) {
         s[i] = tolower(s[i]);
 }
 
+void str_upper(char *s) {
+    strn_upper(s, strlen(s));
+}
+
+void strn_upper(char *s, size_t n) {
+    for (size_t i = 0; i < n; i++)
+        s[i] = toupper(s[i]);
+}
 // check for prefix in string
 bool str_startswith(const char *s,  const char *pre) {
     return strncmp(pre, s, strlen(pre)) == 0;
@@ -1221,7 +1249,7 @@ inline uint64_t bitcount64(uint64_t a) {
 
 inline uint32_t leadingzeros32(uint32_t a) {
 #if defined __GNUC__
-    return __builtin_clzl(a);
+    return __builtin_clz(a);
 #else
     PrintAndLogEx(FAILED, "Was not compiled with fct bitcount64");
     return 0;
@@ -1238,7 +1266,9 @@ inline uint64_t leadingzeros64(uint64_t a) {
 }
 
 
-int byte_strstr(uint8_t *src, size_t srclen, uint8_t *pattern, size_t plen) {
+// byte_strstr searches for the first occurrence of pattern in src
+// returns the byte offset the pattern is found at, or -1 if not found
+int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen) {
 
     size_t max = srclen - plen + 1;
 
@@ -1259,4 +1289,35 @@ int byte_strstr(uint8_t *src, size_t srclen, uint8_t *pattern, size_t plen) {
         }
     }
     return -1;
+}
+
+// byte_strrstr is like byte_strstr except searches in reverse
+// ie it returns the last occurrence of the pattern in src instead of the first
+// returns the byte offset the pattern is found at, or -1 if not found
+int byte_strrstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen) {
+    for (int i = srclen - plen; i >= 0; i--) {
+        // compare only first byte
+        if (src[i] != pattern[0])
+            continue;
+
+        // try to match rest of the pattern
+        for (int j = plen - 1; j >= 1; j--) {
+
+            if (src[i + j] != pattern[j])
+                break;
+
+            if (j == 1)
+                return i;
+        }
+    }
+    return -1;
+}
+
+void sb_append_char(smartbuf *sb, unsigned char c) {
+    if (sb->idx >= sb->size) {
+        sb->size *= 2;
+        sb->ptr = realloc(sb->ptr, sb->size);
+    }
+    sb->ptr[sb->idx] = c;
+    sb->idx++;
 }

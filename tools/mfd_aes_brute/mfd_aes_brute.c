@@ -33,6 +33,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include "util_posix.h"
 
 #define AEND  "\x1b[0m"
@@ -139,10 +140,13 @@ static void print_time(uint64_t at) {
     (void)localtime_r(&t, &lt);
 #endif
 
-    char res[32];
-    strftime(res, sizeof(res), "%Y-%m-%d %H:%M:%S", &lt);
-
-    printf("%u  ( '%s' )\n", (unsigned)t, res);
+    char res[70];
+#if defined(__MINGW32__) || defined(__MINGW64__)
+    strftime(res, sizeof(res), "('%Y-%m-%d %H:%M:%S')", &lt);
+#else
+    strftime(res, sizeof(res), "%s ('%Y-%m-%d %H:%M:%S')", &lt);
+#endif
+    printf("%s\n", res);
 }
 
 static void *brute_thread(void *arguments) {
@@ -233,7 +237,8 @@ int main(int argc, char *argv[]) {
 
     if (argc != 4) return usage(argv[0]);
 
-    uint64_t start_time = atoi(argv[1]);
+    uint64_t start_time = 0;
+    sscanf(argv[1], "%"PRIu64, &start_time);
 
     uint8_t tag_challenge[16] = {0x00};
     if (hexstr_to_byte_array(argv[2], tag_challenge, sizeof(tag_challenge)))

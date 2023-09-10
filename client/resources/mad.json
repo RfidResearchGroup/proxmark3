@@ -4074,6 +4074,20 @@
         "system_integrator": "HID Corporation"
     },
     {
+        "application": "City transport, prepaid ticket, cardholder, servicespass",
+        "company": "Ridango AS",
+        "mad": "0x3C56",
+        "service_provider": "Pilet.ee ekaart",
+        "system_integrator": "Pilet.ee ekaart"
+    },
+    {
+        "application": "City transport, prepaid ticket, cardholder, servicespass",
+        "company": "Ridango AS",
+        "mad": "0x3D56",
+        "service_provider": "Pilet.ee ekaart",
+        "system_integrator": "Pilet.ee ekaart"
+    },
+    {
         "application": "City transport bus, ferry, administration",
         "company": "VFJ Technology Pty Ltd",
         "mad": "0x4001",

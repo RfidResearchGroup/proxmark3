@@ -236,11 +236,15 @@ static int check_segs(flash_file_t *ctx, int can_write_bl, uint32_t flash_size) 
 }
 
 static int print_and_validate_version(struct version_information_t *vi) {
-    if (vi->magic != VERSION_INFORMATION_MAGIC)
+    if (vi->magic != VERSION_INFORMATION_MAGIC) {
         return PM3_EFILE;
-    char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+    }
+
+    // same limit as for ARM image
+    char temp[PM3_CMD_DATA_SIZE - 12] = {0};
     FormatVersionInformation(temp, sizeof(temp), "", vi);
     PrintAndLogEx(SUCCESS, _CYAN_("ELF file version") _YELLOW_(" %s"), temp);
+
     if (strlen(g_version_information.armsrc) == 9) {
         if (strncmp(vi->armsrc, g_version_information.armsrc, 9) != 0) {
             PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));
@@ -282,7 +286,7 @@ int flash_load(flash_file_t *ctx, bool force) {
         goto fail;
     }
 
-    ctx->elf = calloc(fsize, sizeof(uint8_t));
+    ctx->elf = calloc(fsize + 1, sizeof(uint8_t));
     if (!ctx->elf) {
         PrintAndLogEx(ERR, "Error, cannot allocate memory");
         res = PM3_EMALLOC;
@@ -346,7 +350,8 @@ int flash_load(flash_file_t *ctx, bool force) {
         }
 
         if (strcmp(((char *)shstr) + shdrs[i].sh_name, ".bootphase1") == 0) {
-            uint32_t offset = *(uint32_t *)(ctx->elf + le32(shdrs[i].sh_offset) + le32(shdrs[i].sh_size) - 4);
+            uint32_t offset;
+            memcpy(&offset, ctx->elf + le32(shdrs[i].sh_offset) + le32(shdrs[i].sh_size) - 4, sizeof(uint32_t));
             if (offset >= le32(shdrs[i].sh_addr)) {
                 offset -= le32(shdrs[i].sh_addr);
                 if (offset < le32(shdrs[i].sh_size)) {
@@ -489,7 +494,7 @@ static void flash_suggest_update_bootloader(void) {
     PrintAndLogEx(ERR, "------------- " _CYAN_("Follow these steps") " -------------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(ERR, " 1)   ./pm3-flash-bootrom");
-    PrintAndLogEx(ERR, " 2)   ./pm3-flash-all");
+    PrintAndLogEx(ERR, " 2)   ./pm3-flash-fullimage");
     PrintAndLogEx(ERR, " 3)   ./pm3");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------------------------------------------------");

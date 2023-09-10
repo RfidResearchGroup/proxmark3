@@ -30,11 +30,12 @@ typedef enum {
     FALLING_EDGE
 } edge_detection_t;
 
-void em4x70_info(em4x70_data_t *etd, bool ledcontrol);
-void em4x70_write(em4x70_data_t *etd, bool ledcontrol);
-void em4x70_unlock(em4x70_data_t *etd, bool ledcontrol);
-void em4x70_auth(em4x70_data_t *etd, bool ledcontrol);
-void em4x70_write_pin(em4x70_data_t *etd, bool ledcontrol);
-void em4x70_write_key(em4x70_data_t *etd, bool ledcontrol);
+void em4x70_info(const em4x70_data_t *etd, bool ledcontrol);
+void em4x70_write(const em4x70_data_t *etd, bool ledcontrol);
+void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol);
+void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol);
+void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol);
+void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol);
+void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol);
 
 #endif /* EM4x70_H */

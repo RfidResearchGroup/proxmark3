@@ -274,7 +274,8 @@ int demodAWID(bool verbose) {
     }
     free(bits);
 
-    PrintAndLogEx(DEBUG, "DEBUG: AWID idx: %d, Len: %zu Printing DemodBuffer:", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: AWID idx: %d, Len: %zu", idx, size);
+    PrintAndLogEx(DEBUG, "DEBUG: Printing DemodBuffer:");
     if (g_debugMode) {
         printDemodBuff(0, false, false, true);
         printDemodBuff(0, false, false, false);

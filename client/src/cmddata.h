@@ -89,6 +89,7 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
 
 void setClockGrid(uint32_t clk, int offset);
 int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down);
+int centerThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down);
 int AskEdgeDetect(const int *in, int *out, int len, int threshold);
 
 #define MAX_DEMOD_BUF_LEN (1024*128)

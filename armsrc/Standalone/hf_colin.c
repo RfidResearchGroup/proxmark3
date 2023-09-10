@@ -293,7 +293,7 @@ static void ReadLastTagFromFlash(void) {
     rdv40_spiffs_read_as_filetype((char *)HFCOLIN_LASTTAG_SYMLINK, (uint8_t *)mem, len, RDV40_SPIFFS_SAFETY_SAFE);
 
     // copy 64blocks (16bytes) starting w block0, to emulator mem.
-    emlSetMem(mem, 0, 64);
+    emlSetMem_xt(mem, 0, 64, 16);
 
     DbprintfEx(FLAG_NEWLINE, "[OK] Last tag recovered from FLASHMEM set to emulator");
     cjSetCursLeft();
@@ -650,7 +650,7 @@ failtag:
         for (uint8_t t = 0; t < 2; t++) {
             memcpy(mblock + t * 10, foundKey[t][sectorNo], 6);
         }
-        emlSetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
+        emlSetMem_xt(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1, 16);
     }
     cjSetCursLeft();
 
@@ -821,24 +821,24 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
         }
 
         for (uint8_t blockNo = 0; isOK && blockNo < NumBlocksPerSector(s); blockNo++) {
-            if (isOK && mifare_classic_readblock(pcs, colin_cjcuid, FirstBlockOfSector(s) + blockNo, dataoutbuf)) {
+            if (isOK && mifare_classic_readblock(pcs, FirstBlockOfSector(s) + blockNo, dataoutbuf)) {
                 isOK = false;
                 break;
             };
             if (isOK) {
                 if (blockNo < NumBlocksPerSector(s) - 1) {
-                    emlSetMem(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1);
+                    emlSetMem_xt(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1, 16);
                 } else {
                     // sector trailer, keep the keys, set only the AC
                     emlGetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
                     memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
-                    emlSetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
+                    emlSetMem_xt(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1, 16);
                 }
             }
         }
     }
 
-    int res = mifare_classic_halt(pcs, colin_cjcuid);
+    int res = mifare_classic_halt(pcs);
     (void)res;
 
     crypto1_deinit(pcs);
@@ -986,7 +986,7 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
                 break;
             };
 
-            if (mifare_classic_halt(NULL, colin_cjcuid)) {
+            if (mifare_classic_halt(NULL)) {
                 DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
@@ -1006,7 +1006,7 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
                 break;
             };
 
-            if (mifare_classic_halt(NULL, colin_cjcuid)) {
+            if (mifare_classic_halt(NULL)) {
                 DbprintfEx(FLAG_NEWLINE, "Halt error");
                 break;
             };
@@ -1043,7 +1043,7 @@ int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *data
         };
 
         if (workFlags & 0x04) {
-            if (mifare_classic_halt(NULL, colin_cjcuid)) {
+            if (mifare_classic_halt(NULL)) {
                 cjSetCursFRight();
 
                 DbprintfEx(FLAG_NEWLINE, "Halt error");

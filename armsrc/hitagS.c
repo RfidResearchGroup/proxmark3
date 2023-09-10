@@ -635,7 +635,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
 /*
  * Emulates a Hitag S Tag with the given data from the .hts file
  */
-void SimulateHitagSTag(bool tag_mem_supplied, uint8_t *data, bool ledcontrol) {
+void SimulateHitagSTag(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
 
     StopTicks();
 
@@ -1052,7 +1052,7 @@ static size_t concatbits(uint8_t *dstbuf, size_t dstbufskip, const uint8_t *srcb
     return dstbufskip + srcbuflen;
 }
 
-static int selectHitagS(hitag_function htf, hitag_data *htd, uint8_t *tx, size_t sizeoftx, uint8_t *rx, size_t sizeofrx, int t_wait, bool ledcontrol) {
+static int selectHitagS(hitag_function htf, const hitag_data *htd, uint8_t *tx, size_t sizeoftx, uint8_t *rx, size_t sizeofrx, int t_wait, bool ledcontrol) {
     StopTicks();
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -1263,12 +1263,11 @@ static int selectHitagS(hitag_function htf, hitag_data *htd, uint8_t *tx, size_t
  * If the key was given the password will be decrypted.
  * Reads every page of a hitag S transpoder.
  */
-void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
+void ReadHitagS(hitag_function htf, const hitag_data *htd, bool ledcontrol) {
 
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN];
-    size_t txlen;
     int t_wait = HITAG_T_WAIT_MAX;
 
 
@@ -1284,7 +1283,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
         WDT_HIT();
 
         //send read request
-        txlen = 0;
+        size_t txlen = 0;
         uint8_t cmd = 0x0c;
         txlen = concatbits(tx, txlen, &cmd, 8 - 4, 4);
         uint8_t addr = pageNum;
@@ -1357,7 +1356,7 @@ void ReadHitagS(hitag_function htf, hitag_data *htd, bool ledcontrol) {
  * Authenticates to the Tag with the given Key or Challenge.
  * Writes the given 32Bit data into page_
  */
-void WritePageHitagS(hitag_function htf, hitag_data *htd, int page, bool ledcontrol) {
+void WritePageHitagS(hitag_function htf, const hitag_data *htd, int page, bool ledcontrol) {
 
     bool bSuccessful = false;
     //check for valid input
@@ -1444,7 +1443,7 @@ write_end:
  * is not received correctly due to Antenna problems. This function
  * detects these challenges.
  */
-void Hitag_check_challenges(uint8_t *data, uint32_t datalen, bool ledcontrol) {
+void Hitag_check_challenges(const uint8_t *data, uint32_t datalen, bool ledcontrol) {
     //check for valid input
     if (datalen < 8) {
         Dbprintf("Error, need chals");

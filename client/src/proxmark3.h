@@ -36,7 +36,7 @@
 #define PROXPROMPT_DEV_OFFLINE _RL_BOLD_RED_("offline")
 
 #define PROXHISTORY "history.txt"
-#define PROXLOG "log_%Y%m%d.txt"
+#define PROXLOG "log_%Y%m%d%H%M%S.txt"
 #define MAX_NESTED_CMDSCRIPT 10
 #define MAX_NESTED_LUASCRIPT 10
 

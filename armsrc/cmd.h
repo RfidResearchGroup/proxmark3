@@ -27,9 +27,9 @@ extern bool g_reply_with_crc_on_fpc;
 extern bool g_reply_via_fpc;
 extern bool g_reply_via_usb;
 
-int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
-int reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len);
-int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
+int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len);
+int reply_ng(uint16_t cmd, int16_t status, const uint8_t *data, size_t len);
+int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len);
 int receive_ng(PacketCommandNG *rx);
 
 #endif // _PROXMARK_CMD_H_

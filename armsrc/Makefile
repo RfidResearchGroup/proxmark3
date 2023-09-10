@@ -77,7 +77,7 @@ else
 endif
 
 ifneq (,$(findstring WITH_EM4x50,$(APP_CFLAGS)))
-	SRC_EM4x50 = em4x50.c
+	SRC_EM4x50 = em4x50.c bruteforce.c
 else
 	SRC_EM4x50 =
 endif
@@ -103,9 +103,6 @@ endif
 # Generic standalone Mode injection of source code
 include Standalone/Makefile.inc
 
-#the FPGA bitstream files. Note: order matters!
-FPGA_BITSTREAMS = fpga_lf.bit fpga_hf.bit fpga_felica.bit fpga_hf_15.bit
-
 #the lz4 source files required for decompressing the fpga config at run time
 SRC_LZ4 = lz4.c
 #additional defines required to compile lz4
@@ -130,7 +127,7 @@ THUMBSRC = start.c \
     $(SRC_SMARTCARD) \
     $(SRC_FPC) \
     $(SRC_HITAG) \
-	$(SRC_EM4x50) \
+    $(SRC_EM4x50) \
     $(SRC_EM4x70) \
     $(SRC_SPIFFS) \
     $(SRC_HF) \
@@ -184,10 +181,10 @@ showinfo:
 
 .DELETE_ON_ERROR:
 
-# version_pm3.c should be remade on every time fullimage.stage1.elf should be remade
-version_pm3.c: default_version_pm3.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ)
-	$(info [-] GEN $@)
-	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(CP) $< $@
+# version_pm3.c should be checked on every time fullimage.stage1.elf should be remade
+version_pm3.c: default_version_pm3.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ) .FORCE
+	$(info [-] CHECK $@)
+	$(Q)$(SH) ../tools/mkversion.sh $@ || $(CP) $< $@
 
 fpga_version_info.c: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
@@ -257,7 +254,7 @@ uninstall:
 	$(info [@] Uninstalling fullimage from $(DESTDIR)$(PREFIX)...)
 	$(Q)$(INSTALLSUDO) $(RM) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLFWRELPATH)$(PATHSEP)$(INSTALLFWTAG)
 
-.PHONY: all clean help install uninstall
+.PHONY: all clean help install uninstall .FORCE
 help:
 	@echo Multi-OS Makefile, you are running on $(DETECTED_OS)
 	@echo Possible targets:

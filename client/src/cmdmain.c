@@ -39,6 +39,7 @@
 #include "cmdanalyse.h"
 #include "emv/cmdemv.h"   // EMV
 #include "cmdflashmem.h"  // rdv40 flashmem commands
+#include "cmdpiv.h"
 #include "cmdsmartcard.h" // rdv40 smart card ISO7816 commands
 #include "cmdusart.h"     // rdv40 FPC USART commands
 #include "cmdwiegand.h"   // wiegand commands
@@ -249,7 +250,7 @@ static int CmdMsleep(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "msleep",
                   "Sleep for given amount of milliseconds",
-                  "msleep 100"
+                  "msleep -t 100"
                  );
 
     void *argtable[] = {
@@ -299,15 +300,23 @@ static int CmdClear(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "clear",
                   "Clear the Proxmark3 client terminal screen",
-                  "clear"
+                  "clear      -> clear the terminal screen\n"
+                  "clear -b   -> clear the terminal screen and the scrollback buffer"
                  );
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("b", "back", "also clear the scrollback buffer"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool scrollback = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
-    PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
+
+    if (!scrollback)
+        PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
+    else
+        PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ _CLEAR_SCROLLBACK_ "");
+
     return PM3_SUCCESS;
 }
 
@@ -324,6 +333,7 @@ static command_t CommandTable[] = {
     {"lf",           CmdLF,        AlwaysAvailable,         "{ Low frequency commands... }"},
     {"mem",          CmdFlashMem,  IfPm3Flash,              "{ Flash memory manipulation... }"},
     {"nfc",          CmdNFC,       AlwaysAvailable,         "{ NFC commands... }"},
+    {"piv",          CmdPIV,       AlwaysAvailable,         "{ PIV commands... }"},
     {"reveng",       CmdRev,       AlwaysAvailable,         "{ CRC calculations from RevEng software... }"},
     {"smart",        CmdSmartcard, AlwaysAvailable,         "{ Smart card ISO-7816 commands... }"},
     {"script",       CmdScript,    AlwaysAvailable,         "{ Scripting commands... }"},
