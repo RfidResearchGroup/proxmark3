@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Fixed `utils.lua` library function "convertdectohex" wasn't working (@iceman1001)
+ - Added `hf iclass creditepurse` command to allow crediting the epurse debit value (@nvx)
 
 ## [Raccoon.4.17140][2023-09-09]
  - Changed text and adjust pm3_test case for mf_aes_brute (@doegox)

@@ -3029,6 +3029,26 @@
             ],
             "usage": "hf iclass configcard [-hglp] [--ci <dec>] [--ki <dec>]"
         },
+        "hf iclass creditepurse": {
+            "command": "hf iclass creditepurse",
+            "description": "Credit the epurse on an iCLASS tag. The provided key must be the credit key. The first two bytes of the epurse are the debit value (big endian) and may be any value except FFFF. The remaining two bytes of the epurse are the credit value and must be smaller than the previous value.",
+            "notes": [
+                "hf iclass creditepurse -d FEFFFFFF -k 001122334455667B",
+                "hf iclass creditepurse -d FEFFFFFF --ki 0"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <hex> Credit key as 8 hex bytes",
+                "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
+                "-d, --data <hex> data to write as 8 hex bytes",
+                "--elite elite computations applied to key",
+                "--raw no computations applied to key",
+                "-v, --verbose verbose output",
+                "--shallow use shallow (ASK) reader modulation instead of OOK"
+            ],
+            "usage": "hf iclass creditepurse [-hv] [-k <hex>] [--ki <dec>] -d <hex> [--elite] [--raw] [--shallow]"
+        },
         "hf iclass decrypt": {
             "command": "hf iclass decrypt",
             "description": "3DES decrypt data This is a naive implementation, it tries to decrypt every block after block 6. Correct behaviour would be to decrypt only the application areas where the key is valid, which is defined by the configuration block. OBS! In order to use this function, the file `iclass_decryptionkey.bin` must reside in the resources directory. The file should be 16 bytes binary data or... make sure your cardhelper is placed in the sim module",
@@ -8786,7 +8806,7 @@
                 "-1, --ht1 Card type Hitag 1",
                 "-2, --ht2 Card type Hitag 2",
                 "-s, --hts Card type Hitag S",
-                "-m, --htm Card type Hitag \u03bc"
+                "-m, --htm Card type Hitag \u00ce\u00bc"
             ],
             "usage": "lf hitag eload [-h12sm] -f <fn>"
         },
@@ -11835,8 +11855,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 686,
+        "commands_extracted": 687,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-09-07T18:12:46"
+        "extracted_on": "2023-09-10T12:59:25"
     }
 }
