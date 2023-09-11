@@ -2508,7 +2508,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     uint64_t select_status = resp.oldarg[0];
     if (select_status == 0) {
-        PrintAndLogEx(ERR, "iso14443a card select failed (Hint: check card possition)");
+        PrintAndLogEx(ERR, "iso14443a card select failed (Hint: check card position)");
         return PM3_ECARDEXCHANGE;
     }
 
