@@ -2508,8 +2508,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     uint64_t select_status = resp.oldarg[0];
     if (select_status == 0) {
-        PrintAndLogEx(DEBUG, "iso14443a card select failed");
+        // iso14443a card select failed
         PrintAndLogEx(FAILED, "No tag detected or other tag communication error");
+        PrintAndLogEx(HINT, "Hint: Try some distance or position of the card");
         return PM3_ECARDEXCHANGE;
     }
 
