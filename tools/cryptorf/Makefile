@@ -3,7 +3,7 @@ MYSRCS = cryptolib.c util.c
 MYINCLUDES = -I../../common/cryptorf
 MYCFLAGS =
 MYDEFS =
-MYLDLIBS = -lpthread
+MYLDLIBS = -lpthread -latomic
 
 BINS = cm sm sma sma_multi
 INSTALLTOOLS = $(BINS)
