@@ -4,21 +4,21 @@ MYINCLUDES = -I../../common/cryptorf
 MYCFLAGS =
 MYDEFS =
 
+platform = $(shell uname)
+
 # Atomic
 # RPi Zero gcc requires -latomic
 # but MacOSX /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
 # doesn't recognize option --as-needed
 ifneq ($(platform),Darwin)
-    MYLDLIBS += -lpthread -Wl,--as-needed -latomic -Wl,--no-as-needed
+    LDLIBS += -lpthread -Wl,--as-needed -latomic -Wl,--no-as-needed
 endif
 
 BINS = cm sm sma sma_multi
 INSTALLTOOLS = $(BINS)
 
-platform = $(shell uname)
-
 ifeq ($(platform),Darwin)
-CXXFLAGS = -std=c++14
+    CXXFLAGS = -std=c++14
 endif
 
 include ../../Makefile.host
