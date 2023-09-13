@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `lf t55 detectp1` - now also accepts 0xE039 Silicon Craft Tech as valid card (@iceman1001)
  - Fixed `utils.lua` library function "convertdectohex" wasn't working (@iceman1001)
  - Added `hf iclass creditepurse` command to allow crediting the epurse debit value (@nvx)
 
