@@ -38,9 +38,9 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
 void CmdHIDsimTAG(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool ledcontrol);
 
 void CmdFSKsimTAGEx(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen,
-                    uint8_t *bits, bool ledcontrol, int numcycles);
+                    const uint8_t *bits, bool ledcontrol, int numcycles);
 void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen,
-                  uint8_t *bits, bool ledcontrol);
+                  const uint8_t *bits, bool ledcontrol);
 void CmdASKsimTAG(uint8_t encoding, uint8_t invert, uint8_t separator, uint8_t clk, uint16_t size,
                   const uint8_t *bits, bool ledcontrol);
 void CmdPSKsimTAG(uint8_t carrier, uint8_t invert, uint8_t clk, uint16_t size,
@@ -54,7 +54,7 @@ int lf_em410x_watch(int findone, uint32_t *high, uint64_t *low, bool ledcontrol)
 int lf_io_watch(int findone, uint32_t *high, uint32_t *low, bool ledcontrol);
 
 void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool q5, bool em, bool ledcontrol); // Clone an HID card to T5557/T5567
-void CopyVikingtoT55xx(uint8_t *blocks, bool q5, bool em, bool ledcontrol);
+void CopyVikingtoT55xx(const uint8_t *blocks, bool q5, bool em, bool ledcontrol);
 
 int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t id_lo, bool ledcontrol);
 
@@ -66,7 +66,7 @@ void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, 
                     uint8_t downlink_mode, bool ledcontrol);
 void T55xxWakeUp(uint32_t pwd, uint8_t flags, bool ledcontrol);
 void T55xx_ChkPwds(uint8_t flags, bool ledcontrol);
-void T55xxDangerousRawTest(uint8_t *data, bool ledcontrol);
+void T55xxDangerousRawTest(const uint8_t *data, bool ledcontrol);
 
 void turn_read_lf_on(uint32_t delay);
 void turn_read_lf_off(uint32_t delay);
@@ -78,7 +78,7 @@ void EM4xWriteWord(uint8_t addr, uint32_t data, uint32_t pwd, uint8_t usepwd, bo
 void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd, bool ledcontrol);
 
 void Cotag(uint32_t arg0, bool ledcontrol);
-void setT55xxConfig(uint8_t arg0, t55xx_configurations_t *c);
+void setT55xxConfig(uint8_t arg0, const t55xx_configurations_t *c);
 t55xx_configurations_t *getT55xxConfig(void);
 void printT55xxConfig(void);
 void loadT55xxConfig(void);

@@ -47,8 +47,6 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 void AcquireRawAdcSamplesIso15693(void);
 void ReaderIso15693(iso15_card_select_t *p_card); // ISO15693 reader
 void EmlClearIso15693(void);
-void EmlSetMemIso15693(uint8_t count, uint8_t *data, uint32_t offset);
-void EmlGetMemIso15693(uint8_t count, uint8_t *output, uint32_t offset);
 void SimTagIso15693(uint8_t *uid, uint8_t block_size); // simulate an ISO15693 tag
 void BruteforceIso15693Afi(uint32_t speed); // find an AFI of a tag
 void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data); // send arbitrary commands from CLI
@@ -62,12 +60,12 @@ int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, ui
 
 void SetTag15693Uid(const uint8_t *uid);
 
-void WritePasswordSlixIso15693(uint8_t *old_password, uint8_t *new_password, uint8_t pwd_id);
-void DisablePrivacySlixIso15693(uint8_t *password);
-void EnablePrivacySlixIso15693(uint8_t *password);
-void DisableEAS_AFISlixIso15693(uint8_t *password, bool usepwd);
-void EnableEAS_AFISlixIso15693(uint8_t *password, bool usepwd);
-void PassProtextEASSlixIso15693(uint8_t *password);
-void PassProtectAFISlixIso15693(uint8_t *password);
-void WriteAFIIso15693(uint8_t *password, bool usepwd, uint8_t *uid, bool use_uid, uint8_t afi);
+void WritePasswordSlixIso15693(const uint8_t *old_password, const uint8_t *new_password, uint8_t pwd_id);
+void DisablePrivacySlixIso15693(const uint8_t *password);
+void EnablePrivacySlixIso15693(const uint8_t *password);
+void DisableEAS_AFISlixIso15693(const uint8_t *password, bool usepwd);
+void EnableEAS_AFISlixIso15693(const uint8_t *password, bool usepwd);
+void PassProtextEASSlixIso15693(const uint8_t *password);
+void PassProtectAFISlixIso15693(const uint8_t *password);
+void WriteAFIIso15693(const uint8_t *password, bool usepwd, uint8_t *uid, bool use_uid, uint8_t afi);
 #endif

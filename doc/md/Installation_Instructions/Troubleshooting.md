@@ -38,7 +38,7 @@ client/proxmark3 <YOUR_PORT_HERE> ...
 Refer to the installation guide specific to your OS for details about ports.
 
 * [Linux](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md)
-* [Mac OSX](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md)
+* [macOS](/doc/md/Installation_Instructions/macOS-Homebrew-Installation-Instructions.md)
 * [Windows](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md)
 
 Note that with the Bluetooth adapter, you *have to* use directly the client, and flasher over Bluetooth is not possible.

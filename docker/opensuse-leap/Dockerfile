@@ -2,7 +2,7 @@ FROM opensuse/leap
 
 ENV LANG C
 # libqt5-qtbase-devel skipped
-RUN zypper --non-interactive install --no-recommends shadow sudo git patterns-devel-base-devel_basis gcc-c++ readline-devel libbz2-devel bluez-devel python3-devel libopenssl-devel
+RUN zypper --non-interactive install --no-recommends shadow sudo git patterns-devel-base-devel_basis gcc-c++ readline-devel libbz2-devel liblz4-devel bluez-devel python3-devel libopenssl-devel
 
 RUN zypper addrepo https://download.opensuse.org/repositories/home:wkazubski/15.4/home:wkazubski.repo && \
     zypper --gpg-auto-import-keys refresh && \

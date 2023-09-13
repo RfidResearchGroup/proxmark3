@@ -97,11 +97,12 @@ if (CMAKE_TOOLCHAIN_FILE)
     endif (ANDROID)
     set(EMBED_READLINE ON)
     set(EMBED_BZIP2 ON)
+    set(EMBED_LZ4 ON)
 endif (CMAKE_TOOLCHAIN_FILE)
 
-if (EMBED_READLINE OR EMBED_BZIP2)
+if (EMBED_READLINE OR EMBED_BZIP2 OR EMBED_LZ4)
     include(ExternalProject)
-endif (EMBED_READLINE OR EMBED_BZIP2)
+endif (EMBED_READLINE OR EMBED_BZIP2 OR EMBED_LZ4)
 
 if (NOT SKIPREADLINE EQUAL 1)
     if (APPLE)
@@ -163,6 +164,7 @@ if (NOT SKIPJANSSONSYSTEM EQUAL 1)
 endif (NOT SKIPJANSSONSYSTEM EQUAL 1)
 
 if(EMBED_BZIP2)
+    cmake_policy(SET CMP0114 NEW)
     set(BZIP2_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/bzip2/src/bzip2)
     ExternalProject_Add(bzip2
         GIT_REPOSITORY        https://android.googlesource.com/platform/external/bzip2
@@ -182,6 +184,34 @@ if(EMBED_BZIP2)
 else(EMBED_BZIP2)
     find_package (BZip2 REQUIRED)
 endif(EMBED_BZIP2)
+
+if(EMBED_LZ4)
+    cmake_policy(SET CMP0114 NEW)
+    set(LZ4_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/lz4/src/lz4)
+    # Specify SOURCE_DIR will cause some errors
+    ExternalProject_Add(lz4
+        GIT_REPOSITORY        https://android.googlesource.com/platform/external/lz4
+        GIT_TAG               platform-tools-30.0.2
+        PREFIX                deps/lz4
+        # SOURCE_DIR            ${CMAKE_CURRENT_SOURCE_DIR}/deps/lz4
+        CONFIGURE_COMMAND     mkdir -p ${LZ4_BUILD_DIR} && git archive --format tar HEAD | tar -C ${LZ4_BUILD_DIR} -x
+        BUILD_IN_SOURCE       ON
+        BUILD_COMMAND         make -C ${LZ4_BUILD_DIR}/lib -j4 CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB} liblz4.a
+        INSTALL_COMMAND       ""
+        LOG_DOWNLOAD          ON
+    )
+    ExternalProject_Add_StepTargets(lz4 configure build install)
+    set(LZ4_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/deps/lz4/src/lz4/lib)
+    set(LZ4_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/deps/lz4/src/lz4/lib/liblz4.a)
+    set(LZ4_FOUND ON)
+else(EMBED_LZ4)
+    find_path(LZ4_INCLUDE_DIRS lz4frame.h)
+    find_library(LZ4_LIBRARIES lz4)
+endif(EMBED_LZ4)
+
+if (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
+    set(LZ4_FOUND ON)
+endif (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
 
 if (NOT SKIPWHEREAMISYSTEM EQUAL 1)
     find_path(WHEREAMI_INCLUDE_DIRS whereami.h)
@@ -349,6 +379,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/fileutils.c
         ${PM3_ROOT}/client/src/flash.c
         ${PM3_ROOT}/client/src/graph.c
+        ${PM3_ROOT}/client/src/iso4217.c
         ${PM3_ROOT}/client/src/jansson_path.c
         ${PM3_ROOT}/client/src/preferences.c
         ${PM3_ROOT}/client/src/pm3.c
@@ -366,7 +397,7 @@ set (TARGET_SOURCES
 
 add_custom_command(
     OUTPUT  ${CMAKE_BINARY_DIR}/version_pm3.c
-    COMMAND sh ${PM3_ROOT}/tools/mkversion.sh > ${CMAKE_BINARY_DIR}/version_pm3.c || ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
+    COMMAND sh ${PM3_ROOT}/tools/mkversion.sh ${CMAKE_BINARY_DIR}/version_pm3.c || ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
     DEPENDS ${PM3_ROOT}/common/default_version_pm3.c
 )
 
@@ -456,6 +487,11 @@ if (BZIP2_FOUND)
     set(ADDITIONAL_LNK ${BZIP2_LIBRARIES} ${ADDITIONAL_LNK})
 endif (BZIP2_FOUND)
 
+if (LZ4_FOUND)
+    set(ADDITIONAL_DIRS ${LZ4_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${LZ4_LIBRARIES} ${ADDITIONAL_LNK})
+endif (LZ4_FOUND)
+
 if (WHEREAMI_FOUND)
     set(ADDITIONAL_DIRS ${WHEREAMI_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${WHEREAMI_LIBRARIES} ${ADDITIONAL_LNK})
@@ -488,11 +524,25 @@ else (SKIPBT EQUAL 1)
     endif (BLUEZ_FOUND)
 endif(SKIPBT EQUAL 1)
 
-if (EMBED_BZIP2)
-    message(STATUS "Bzip2 library:     embedded")
-else (EMBED_BZIP2)
-    message(STATUS "Bzip2 library:     system library found")
-endif (EMBED_BZIP2)
+if (BZIP2_FOUND)
+    if (EMBED_BZIP2)
+        message(STATUS "Bzip2 library:     embedded")
+    else (EMBED_BZIP2)
+        message(STATUS "Bzip2 library:     system library found")
+    endif (EMBED_BZIP2)
+else (BZIP2_FOUND)
+    message(SEND_ERROR "Bzip2 library:     Bzip2 not found")
+endif (BZIP2_FOUND)
+
+if (LZ4_FOUND)
+    if (EMBED_LZ4)
+        message(STATUS "LZ4 library:       embedded")
+    else (EMBED_LZ4)
+        message(STATUS "LZ4 library:       system library found")
+    endif (EMBED_LZ4)
+else (LZ4_FOUND)
+    message(SEND_ERROR "LZ4 library:       LZ4 not found")
+endif (LZ4_FOUND)
 
 if (SKIPJANSSONSYSTEM EQUAL 1)
     message(STATUS "Jansson library:   local library forced")
@@ -582,7 +632,7 @@ add_library(pm3rrg_rdv4 SHARED
 )
 
 target_compile_definitions(pm3rrg_rdv4 PRIVATE LIBPM3)
- 
+
 target_compile_options(pm3rrg_rdv4 PUBLIC -Wall -Werror -O3)
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
@@ -592,6 +642,9 @@ endif (EMBED_READLINE)
 if (EMBED_BZIP2)
     add_dependencies(pm3rrg_rdv4 bzip2)
 endif (EMBED_BZIP2)
+if (EMBED_LZ4)
+    add_dependencies(pm3rrg_rdv4 lz4)
+endif (EMBED_LZ4)
 
 if (MINGW)
     # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)
@@ -603,18 +656,18 @@ if (MINGW)
     set(CMAKE_C_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_CXX_FLAGS}")
 
-    # GCC 10 has issues with false positives on stringop-overflow, 
-    # let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
-    # beware these flags didn't exist for GCC < 7
-    if(CMAKE_COMPILER_IS_GNUCXX)
-        execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-        if (GCC_VERSION VERSION_GREATER 10.0 OR GCC_VERSION VERSION_EQUAL 10.0)
-            set(CMAKE_C_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_C_FLAGS}")
-            set(CMAKE_CXX_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_CXX_FLAGS}")   
-        endif()
-    endif(CMAKE_COMPILER_IS_GNUCXX)
-
 endif (MINGW)
+
+# GCC 10 has issues with false positives on stringop-overflow,
+# let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
+# beware these flags didn't exist for GCC < 7
+if(CMAKE_COMPILER_IS_GNUCXX)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+    if (GCC_VERSION VERSION_GREATER 10.0 OR GCC_VERSION VERSION_EQUAL 10.0)
+        set(CMAKE_C_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_C_FLAGS}")
+        set(CMAKE_CXX_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_CXX_FLAGS}")
+    endif()
+endif(CMAKE_COMPILER_IS_GNUCXX)
 
 target_include_directories(pm3rrg_rdv4 PRIVATE
         ${PM3_ROOT}/common

@@ -373,6 +373,7 @@ static const struct emv_tag emv_tags[] = {
     { 0xa5,     "File Control Information (FCI) Proprietary Template",         EMV_TAG_GENERIC,  NULL },
     { 0xbf0c,   "File Control Information (FCI) Issuer Discretionary Data",    EMV_TAG_GENERIC,  NULL },
     { 0xdf20,   "Issuer Proprietary Bitmap (IPB)",                             EMV_TAG_GENERIC,  NULL },
+    { 0xdf3e,   "?",                                                           EMV_TAG_BITMASK,  NULL },
     { 0xdf4b,   "POS Cardholder Interaction Information",                      EMV_TAG_GENERIC,  NULL },
     { 0xdf60,   "VISA Log Entry",                                              EMV_TAG_GENERIC,  NULL },
     { 0xdf61,   "DS Digest H",                                                 EMV_TAG_GENERIC,  NULL },

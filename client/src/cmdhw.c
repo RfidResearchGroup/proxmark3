@@ -27,6 +27,7 @@
 #include "comms.h"
 #include "usart_defs.h"
 #include "ui.h"
+#include "fpga.h"
 #include "cmdhw.h"
 #include "cmddata.h"
 #include "commonutil.h"
@@ -690,7 +691,7 @@ static int CmdSetDivisor(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (arg < 19) {
-        PrintAndLogEx(ERR, "Divisor must be between" _YELLOW_("19") " and " _YELLOW_("255"));
+        PrintAndLogEx(ERR, "Divisor must be between " _YELLOW_("19") " and " _YELLOW_("255"));
         return PM3_EINVARG;
     }
     // 12 000 000 (12MHz)
@@ -1083,6 +1084,23 @@ static int CmdBreak(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int set_fpga_mode(uint8_t mode) {
+    if (mode < 1 || mode > 4) {
+        return PM3_EINVARG;
+    }
+    uint8_t d[] = {mode};
+    clearCommandBuffer();
+    SendCommandNG(CMD_SET_FPGAMODE, d, sizeof(d));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_SET_FPGAMODE, &resp, 1000) == false) {
+        PrintAndLogEx(WARNING, "command execution timeout");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to set FPGA mode");
+    }
+    return resp.status;
+}
 
 static command_t CommandTable[] = {
     {"-------------", CmdHelp,         AlwaysAvailable, "----------------------- " _CYAN_("Hardware") " -----------------------"},
@@ -1276,7 +1294,7 @@ void pm3_version(bool verbose, bool oneliner) {
         return;
 
     PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Proxmark3 RFID instrument") " ]");
-    PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("CLIENT") " ]");
+    PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Client") " ]");
     FormatVersionInformation(temp, sizeof(temp), "  ", &g_version_information);
     PrintAndLogEx(NORMAL, "%s", temp);
     PrintAndLogEx(NORMAL, "  compiled with............. " PM3CLIENTCOMPILER __VERSION__);
@@ -1315,7 +1333,7 @@ void pm3_version(bool verbose, bool oneliner) {
 #endif
 
     if (g_session.pm3_present) {
-        PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("PROXMARK3") " ]");
+        PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Proxmark3") " ]");
 
         PacketResponseNG resp;
         clearCommandBuffer();
@@ -1375,7 +1393,7 @@ void pm3_version(bool verbose, bool oneliner) {
                 }
             }
             PrintAndLogEx(NORMAL,  payload->versionstr);
-            if (strstr(payload->versionstr, "2s30vq100") == NULL) {
+            if (strstr(payload->versionstr, FPGA_TYPE) == NULL) {
                 PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
             }
 

@@ -35,6 +35,10 @@
 #include "cryptolib.h"
 #include "util.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 using namespace std;
 
 #ifdef _MSC_VER
@@ -168,6 +172,7 @@ static inline uint8_t mod(uint8_t a, uint8_t m) {
     if (m == 0) {
         return 0; // Actually, divide by zero error
     }
+
     // Just return the input when this is less or equal than the modular value
     if (a < m) return a;
 
@@ -935,9 +940,19 @@ static void ice_compare(
     uint8_t *Ch,
     uint8_t *Ci_1
 ) {
-    uint8_t Gc_chk[8];
-    uint8_t Ch_chk[ 8];
-    uint8_t Ci_1_chk[ 8];
+    uint8_t Gc_chk[8] = {0};
+    uint8_t Ch_chk[8] = {0};
+    uint8_t Ci_1_chk[8] = {0};
+
+    crypto_state_t ls;
+    ls.b0 = ostate->b0;
+    ls.b1 = ostate->b1;
+    ls.b1l = ostate->b1l;
+    ls.b1r = ostate->b1r;
+    ls.b1s = ostate->b1s;
+    ls.l = ostate->l;
+    ls.m = ostate->m;
+    ls.r = ostate->r;
 
     for (std::size_t i = offset; i < candidates->size(); i += skips) {
         if (key_found.load(std::memory_order_relaxed))
@@ -946,7 +961,7 @@ static void ice_compare(
         uint64_t tkey = candidates->at(i);
         num_to_bytes(tkey, 8, Gc_chk);
 
-        sm_auth(Gc_chk, Ci, Q, Ch_chk, Ci_1_chk, ostate);
+        sm_auth(Gc_chk, Ci, Q, Ch_chk, Ci_1_chk, &ls);
         if ((memcmp(Ch_chk, Ch, 8) == 0) && (memcmp(Ci_1_chk, Ci_1, 8) == 0)) {
             g_ice_mtx.lock();
             key_found = true;
@@ -1008,7 +1023,7 @@ int main(int argc, const char *argv[]) {
             Q[pos] = rand();
         }
         sm_auth(Gc, Ci, Q, Ch, Ci_1, &ostate);
-        printf("  Gc: ");
+        printf("  Gc... ");
         print_bytes(Gc, 8);
     } else {
         sscanf(argv[1], "%016" SCNx64, &nCi);
@@ -1019,7 +1034,7 @@ int main(int argc, const char *argv[]) {
         num_to_bytes(nCh, 8, Ch);
         sscanf(argv[4], "%016" SCNx64, &nCi_1);
         num_to_bytes(nCi_1, 8, Ci_1);
-        printf("  Gc: unknown\n");
+        printf("  Gc... unknown\n");
     }
 
     for (pos = 0; pos < 8; pos++) {
@@ -1027,16 +1042,16 @@ int main(int argc, const char *argv[]) {
         ks[(2 * pos) + 1] = Ch[pos];
     }
 
-    printf("  Ci: ");
+    printf("  Ci... ");
     print_bytes(Ci, 8);
-    printf("   Q: ");
+    printf("   Q... ");
     print_bytes(Q, 8);
-    printf("  Ch: ");
+    printf("  Ch... ");
     print_bytes(Ch, 8);
-    printf("Ci+1: ");
+    printf("Ci+1... ");
     print_bytes(Ci_1, 8);
     printf("\n");
-    printf("  Ks: ");
+    printf("  Ks... ");
     print_bytes(ks, 16);
     printf("\n");
 
@@ -1117,7 +1132,7 @@ int main(int argc, const char *argv[]) {
         }
 
         if (key_found) {
-            printf("\nFound valid key: " _GREEN_("%016lX")"\n\n", key.load());
+            printf("\nValid key found [ " _GREEN_("%016" PRIx64)" ]\n\n", key.load());
             break;
         }
 
@@ -1125,3 +1140,7 @@ int main(int argc, const char *argv[]) {
     }
     return 0;
 }
+
+#if defined(__cplusplus)
+}
+#endif

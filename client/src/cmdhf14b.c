@@ -440,6 +440,12 @@ static bool get_14b_UID(uint8_t *d, iso14b_type_t *found_type) {
 
         if (resp.oldarg[0] == 0) {
             memcpy(d, resp.data.asBytes, sizeof(iso14b_card_select_t));
+
+            iso14b_card_select_t *card = (iso14b_card_select_t *)d;
+            uint8_t empty[] =  {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+            if (memcmp(card->uid, empty, card->uidlen) == 0) {
+                return false;
+            }
             *found_type = ISO14B_SR;
             return true;
         }
@@ -861,7 +867,7 @@ static bool HF14B_Std_Info(bool verbose, bool do_aid_search) {
     switch (status) {
         case 0: {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "-------------------- " _CYAN_("Tag information") " --------------------");
+            PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
             PrintAndLogEx(SUCCESS, " UID    : " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
             PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
             PrintAndLogEx(SUCCESS, " CHIPID : %02X", card.chipid);
@@ -912,6 +918,11 @@ static bool HF14B_ST_Info(bool verbose, bool do_aid_search) {
     int status = resp.oldarg[0];
     if (status < 0)
         return false;
+
+    uint8_t empty[] =  {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    if ((card.uidlen < 8) || (memcmp(card.uid, empty, card.uidlen) == 0)) {
+        return false;
+    }
 
     print_st_general_info(card.uid, card.uidlen);
 
@@ -964,6 +975,11 @@ static bool HF14B_st_reader(bool verbose) {
     iso14b_card_select_t card;
     memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
 
+    uint8_t empty[] =  {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    if ((card.uidlen < 8) || (memcmp(card.uid, empty, card.uidlen) == 0)) {
+        return false;
+    }
+
     int status = resp.oldarg[0];
     switch (status) {
         case 0:
@@ -1002,12 +1018,18 @@ static bool HF14B_std_reader(bool verbose) {
         }
         return false;
     }
-
     int status = resp.oldarg[0];
+
+    iso14b_card_select_t card;
+    memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
+
+    uint8_t empty[] =  {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    if (memcmp(card.uid, empty, card.uidlen) == 0) {
+        return false;
+    }
+
     switch (status) {
         case 0: {
-            iso14b_card_select_t card;
-            memcpy(&card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, " UID    : " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
             PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
@@ -1102,13 +1124,13 @@ static bool HF14B_other_reader(bool verbose) {
 
     if (status == 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x000b3f80 command ans:");
+        PrintAndLogEx(SUCCESS, "unknown tag type answered to a " _YELLOW_("0x000b3f80") " command ans:");
         switch_off_field_14b();
         free(packet);
         return true;
     } else if (status > 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x000b3f80 command ans:");
+        PrintAndLogEx(SUCCESS, "unknown tag type answered to a " _YELLOW_("0x000b3f80") " command ans:");
         PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, status));
         switch_off_field_14b();
         free(packet);
@@ -1132,13 +1154,13 @@ static bool HF14B_other_reader(bool verbose) {
 
     if (status == 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0A command ans:");
+        PrintAndLogEx(SUCCESS, "Unknown tag type answered to a " _YELLOW_("0x0A") " command ans:");
         switch_off_field_14b();
         free(packet);
         return true;
     } else if (status > 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x0A command ans:");
+        PrintAndLogEx(SUCCESS, "unknown tag type answered to a " _YELLOW_("0x0A") " command ans:");
         PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, status));
         switch_off_field_14b();
         free(packet);
@@ -1161,12 +1183,12 @@ static bool HF14B_other_reader(bool verbose) {
 
     if (status == 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "Unknown tag type answered to a 0x0C command ans:");
+        PrintAndLogEx(SUCCESS, "Unknown tag type answered to a " _YELLOW_("0x0C") " command ans:");
         switch_off_field_14b();
         return true;
     } else if (status > 0) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
-        PrintAndLogEx(SUCCESS, "unknown tag type answered to a 0x0C command ans:");
+        PrintAndLogEx(SUCCESS, "unknown tag type answered to a " _YELLOW_("0x0C") " command ans:");
         PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, status));
         switch_off_field_14b();
         return true;
@@ -1398,7 +1420,6 @@ static int CmdHF14BDump(const char *Cmd) {
         // print_std_blocks(data, cardsize);
         return switch_off_field_14b();
     }
-
 
     if (select_cardtype == ISO14B_SR) {
         iso14b_card_select_t card;

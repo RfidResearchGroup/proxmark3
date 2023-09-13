@@ -40,6 +40,8 @@ uint8_t g_debugMode = 0;
 uint8_t g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 // global client tell if a pending prompt is present
 bool g_pendingPrompt = false;
+// global CPU core count override
+int g_numCPUs = 0;
 
 #ifdef _WIN32
 #include <windows.h>
@@ -1077,8 +1079,16 @@ uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor) {
     return result;
 }
 
-// determine number of logical CPU cores (use for multithreaded functions)
 int num_CPUs(void) {
+    if (g_numCPUs > 0) {
+        return g_numCPUs;
+    }
+
+    return detect_num_CPUs();
+}
+
+// determine number of logical CPU cores (use for multithreaded functions)
+int detect_num_CPUs(void) {
 #if defined(_WIN32)
 #include <sysinfoapi.h>
     SYSTEM_INFO sysinfo;
@@ -1256,12 +1266,36 @@ inline uint64_t leadingzeros64(uint64_t a) {
 }
 
 
+// byte_strstr searches for the first occurrence of pattern in src
+// returns the byte offset the pattern is found at, or -1 if not found
 int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen) {
 
     size_t max = srclen - plen + 1;
 
     for (size_t i = 0; i < max; i++) {
 
+        // compare only first byte
+        if (src[i] != pattern[0])
+            continue;
+
+        // try to match rest of the pattern
+        for (int j = plen - 1; j >= 1; j--) {
+
+            if (src[i + j] != pattern[j])
+                break;
+
+            if (j == 1)
+                return i;
+        }
+    }
+    return -1;
+}
+
+// byte_strrstr is like byte_strstr except searches in reverse
+// ie it returns the last occurrence of the pattern in src instead of the first
+// returns the byte offset the pattern is found at, or -1 if not found
+int byte_strrstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen) {
+    for (int i = srclen - plen; i >= 0; i--) {
         // compare only first byte
         if (src[i] != pattern[0])
             continue;

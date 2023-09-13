@@ -812,7 +812,7 @@ static int CmdHFTopazRaw(const char *Cmd) {
 }
 
 static int CmdHFTopazList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf topaz", "topaz");
+    return CmdTraceListAlias(Cmd, "hf topaz", "topaz -c");
 }
 
 static int CmdHFTopazSniff(const char *Cmd) {

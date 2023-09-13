@@ -110,6 +110,7 @@ jobs:
             gcc-arm-none-eabi
             libnewlib-dev
             libbz2-dev
+            liblz4-dev
             qtbase5-dev
             cmake
             libpython3-dev

@@ -178,6 +178,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443A_CMD_RATS          0xE0
 #define ISO14443A_CMD_PPS           0xD0
 #define ISO14443A_CMD_NXP_DESELECT  0xC2
+#define ISO14443A_CMD_WTX           0xF2
 
 #define MIFARE_SELECT_CT            0x88
 #define MIFARE_AUTH_KEYA            0x60
@@ -428,6 +429,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PROTO_HITAGS    14
 #define PROTO_CRYPTORF  15
 #define SEOS            16
+#define PROTO_MFPLUS    17
 
 // Picopass fuses
 #define FUSE_FPERS   0x80
@@ -530,95 +532,150 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 
 // MIFARE DESFire command set:
-#define MFDES_AUTHENTICATE              0x0A  // AUTHENTICATE_NATIVE
-#define MFDES_AUTHENTICATE_ISO          0x1A  // AUTHENTICATE_STANDARD
-#define MFDES_AUTHENTICATE_AES          0xAA
+#define MFDES_AUTHENTICATE               0x0A  // AUTHENTICATE_NATIVE
+#define MFDES_AUTHENTICATE_ISO           0x1A  // AUTHENTICATE_STANDARD
+#define MFDES_AUTHENTICATE_AES           0xAA
 
 //  Leakage Resilient Primitive (LRP)
-#define MFDES_AUTHENTICATE_EV2F         0x71  // LRP, AuthenticateLRPFirst
-#define MFDES_AUTHENTICATE_EV2NF        0x77  // LRP, AuthenticateLRPNonFirst
+#define MFDES_AUTHENTICATE_EV2F          0x71  // LRP, AuthenticateLRPFirst
+#define MFDES_AUTHENTICATE_EV2NF         0x77  // LRP, AuthenticateLRPNonFirst
 
-#define MFDES_CREDIT                    0x0C
-#define MFDES_LIMITED_CREDIT            0x1C
-#define MFDES_WRITE_RECORD              0x3B
-#define MFDES_READSIG                   0x3C
-#define MFDES_WRITE_DATA                0x3D
-#define MFDES_GET_KEY_SETTINGS          0x45
-#define MFDES_GET_UID                   0x51
-#define MFDES_CHANGE_KEY_SETTINGS       0x54
-#define MFDES_ROLL_KEY_SETTINGS         0x55
-#define MFDES_INIT_KEY_SETTINGS         0x56
-#define MFDES_FINALIZE_KEY_SETTINGS     0x57
-#define MFDES_SELECT_APPLICATION        0x5A
-#define MFDES_CHANGE_CONFIGURATION      0x5C
-#define MFDES_CHANGE_FILE_SETTINGS      0x5F
-#define MFDES_GET_VERSION               0x60
-#define MFDES_GET_ISOFILE_IDS           0x61
-#define MFDES_GET_KEY_VERSION           0x64
-#define MFDES_GET_DELEGATE_INFO         0x69
-#define MFDES_GET_APPLICATION_IDS       0x6A
-#define MFDES_GET_VALUE                 0x6C
-#define MFDES_GET_FREE_MEMORY           0x6E
-#define MFDES_GET_DF_NAMES              0x6D
-#define MFDES_GET_FILE_IDS              0x6F
-#define MFDES_WRITE_RECORD2             0x8B
-#define MFDES_WRITE_DATA2               0x8D
-#define MFDES_ABORT_TRANSACTION         0xA7
-#define MFDES_READ_RECORDS2             0xAB
-#define MFDES_READ_DATA2                0xAD
-#define MFDES_ADDITIONAL_FRAME          0xAF
-#define MFDES_UPDATE_RECORD2            0xBA
-#define MFDES_READ_RECORDS              0xBB
-#define MFDES_READ_DATA                 0xBD
-#define MFDES_CREATE_CYCLIC_RECORD_FILE 0xC0
-#define MFDES_CREATE_LINEAR_RECORD_FILE 0xC1
-#define MFDES_CHANGE_KEY                0xC4
-#define MFDES_CHANGE_KEY_EV2            0xC6
-#define MFDES_COMMIT_TRANSACTION        0xC7
-#define MFDES_COMMIT_READER_ID          0xC8
-#define MFDES_CREATE_DELEGATE_APP       0xC9
-#define MFDES_CREATE_APPLICATION        0xCA
-#define MFDES_CREATE_BACKUP_DATA_FILE   0xCB
-#define MFDES_CREATE_VALUE_FILE         0xCC
-#define MFDES_CREATE_STD_DATA_FILE      0xCD
-#define MFDES_CREATE_TRANS_MAC_FILE     0xCE
-#define MFDES_DELETE_APPLICATION        0xDA
-#define MFDES_UPDATE_RECORD             0xDB
-#define MFDES_DEBIT                     0xDC
-#define MFDES_DELETE_FILE               0xDF
-#define MFDES_CLEAR_RECORD_FILE         0xEB
-#define MFDES_PREPARE_PC                0xF0
-#define MFDES_PROXIMITY_CHECK           0xF2
-#define MFDES_GET_FILE_SETTINGS         0xF5
-#define MFDES_FORMAT_PICC               0xFC
-#define MFDES_VERIFY_PC                 0xFD
-#define MFDES_NATIVE_ISO7816_WRAP_CLA   0x90
+#define MFDES_CREDIT                     0x0C
+#define MFDES_LIMITED_CREDIT             0x1C
+#define MFDES_WRITE_RECORD               0x3B
+#define MFDES_READSIG                    0x3C
+#define MFDES_WRITE_DATA                 0x3D
+#define MFDES_GET_KEY_SETTINGS           0x45
+#define MFDES_GET_UID                    0x51
+#define MFDES_CHANGE_KEY_SETTINGS        0x54
+#define MFDES_ROLL_KEY_SETTINGS          0x55
+#define MFDES_INIT_KEY_SETTINGS          0x56
+#define MFDES_FINALIZE_KEY_SETTINGS      0x57
+#define MFDES_SELECT_APPLICATION         0x5A
+#define MFDES_CHANGE_CONFIGURATION       0x5C
+#define MFDES_CHANGE_FILE_SETTINGS       0x5F
+#define MFDES_GET_VERSION                0x60
+#define MFDES_GET_ISOFILE_IDS            0x61
+#define MFDES_GET_KEY_VERSION            0x64
+#define MFDES_GET_DELEGATE_INFO          0x69
+#define MFDES_GET_APPLICATION_IDS        0x6A
+#define MFDES_GET_VALUE                  0x6C
+#define MFDES_GET_FREE_MEMORY            0x6E
+#define MFDES_GET_DF_NAMES               0x6D
+#define MFDES_GET_FILE_IDS               0x6F
+#define MFDES_WRITE_RECORD2              0x8B
+#define MFDES_WRITE_DATA2                0x8D
+#define MFDES_ABORT_TRANSACTION          0xA7
+#define MFDES_READ_RECORDS2              0xAB
+#define MFDES_READ_DATA2                 0xAD
+#define MFDES_ADDITIONAL_FRAME           0xAF
+#define MFDES_UPDATE_RECORD2             0xBA
+#define MFDES_READ_RECORDS               0xBB
+#define MFDES_READ_DATA                  0xBD
+#define MFDES_CREATE_CYCLIC_RECORD_FILE  0xC0
+#define MFDES_CREATE_LINEAR_RECORD_FILE  0xC1
+#define MFDES_CHANGE_KEY                 0xC4
+#define MFDES_CHANGE_KEY_EV2             0xC6
+#define MFDES_COMMIT_TRANSACTION         0xC7
+#define MFDES_COMMIT_READER_ID           0xC8
+#define MFDES_CREATE_DELEGATE_APP        0xC9
+#define MFDES_CREATE_APPLICATION         0xCA
+#define MFDES_CREATE_BACKUP_DATA_FILE    0xCB
+#define MFDES_CREATE_VALUE_FILE          0xCC
+#define MFDES_CREATE_STD_DATA_FILE       0xCD
+#define MFDES_CREATE_TRANS_MAC_FILE      0xCE
+#define MFDES_DELETE_APPLICATION         0xDA
+#define MFDES_UPDATE_RECORD              0xDB
+#define MFDES_DEBIT                      0xDC
+#define MFDES_DELETE_FILE                0xDF
+#define MFDES_CLEAR_RECORD_FILE          0xEB
+#define MFDES_NOTIFY_TRANSACTION_SUCCESS 0xEE  // New command. Used by Apple-ECP-compliant DESFire readers to signify successful transaction
+#define MFDES_PREPARE_PC                 0xF0
+#define MFDES_PROXIMITY_CHECK            0xF2
+#define MFDES_GET_FILE_SETTINGS          0xF5
+#define MFDES_FORMAT_PICC                0xFC
+#define MFDES_VERIFY_PC                  0xFD
+#define MFDES_NATIVE_ISO7816_WRAP_CLA    0x90
+
 
 // MIFARE DESFire status & error codes:
-#define MFDES_S_OPERATION_OK            0x00
-#define MFDES_S_NO_CHANGES              0x0C
-#define MFDES_S_SIGNATURE               0x90
-#define MFDES_S_ADDITIONAL_FRAME        0xAF
+#define MFDES_S_OPERATION_OK             0x00
+#define MFDES_S_NO_CHANGES               0x0C
+#define MFDES_S_SIGNATURE                0x90
+#define MFDES_S_ADDITIONAL_FRAME         0xAF
 
-#define MFDES_E_OUT_OF_EEPROM           0x0E
-#define MFDES_E_ILLEGAL_COMMAND_CODE    0x1C
-#define MFDES_E_INTEGRITY_ERROR         0x1E
-#define MFDES_E_NO_SUCH_KEY             0x40
-#define MFDES_E_LENGTH                  0x7E
-#define MFDES_E_PERMISSION_DENIED       0x9D
-#define MFDES_E_PARAMETER_ERROR         0x9E
-#define MFDES_E_APPLICATION_NOT_FOUND   0xA0
-#define MFDES_E_APPL_INTEGRITY          0xA1
-#define MFDES_E_AUTHENTICATION_ERROR  0xAE
-#define MFDES_E_BOUNDARY                0xBE
-#define MFDES_E_PICC_INTEGRITY          0xC1
-#define MFDES_E_COMMAND_ABORTED         0xCA
-#define MFDES_E_PICC_DISABLED           0xCD
-#define MFDES_E_COUNT                   0xCE
-#define MFDES_E_DUPLICATE               0xDE
-#define MFDES_E_EEPROM                  0xEE
-#define MFDES_E_FILE_NOT_FOUND          0xF0
-#define MFDES_E_FILE_INTEGRITY          0xF1
+#define MFDES_E_OUT_OF_EEPROM            0x0E
+#define MFDES_E_ILLEGAL_COMMAND_CODE     0x1C
+#define MFDES_E_INTEGRITY_ERROR          0x1E
+#define MFDES_E_NO_SUCH_KEY              0x40
+#define MFDES_E_LENGTH                   0x7E
+#define MFDES_E_PERMISSION_DENIED        0x9D
+#define MFDES_E_PARAMETER_ERROR          0x9E
+#define MFDES_E_APPLICATION_NOT_FOUND    0xA0
+#define MFDES_E_APPL_INTEGRITY           0xA1
+#define MFDES_E_AUTHENTICATION_ERROR     0xAE
+#define MFDES_E_BOUNDARY                 0xBE
+#define MFDES_E_PICC_INTEGRITY           0xC1
+#define MFDES_E_COMMAND_ABORTED          0xCA
+#define MFDES_E_PICC_DISABLED            0xCD
+#define MFDES_E_COUNT                    0xCE
+#define MFDES_E_DUPLICATE                0xDE
+#define MFDES_E_EEPROM                   0xEE
+#define MFDES_E_FILE_NOT_FOUND           0xF0
+#define MFDES_E_FILE_INTEGRITY           0xF1
+
+
+// MIFARE PLus EV2 Command set
+// source: https://www.nxp.com/docs/en/data-sheet/MF1P(H)x2.pdf in Look-Up Tables
+
+#define MFP_READ_SIG                    0x3C // same as DESFIRE
+#define MFP_WRITEPERSO                  0xA8
+#define MFP_COMMITPERSO                 0xAA
+
+#define MFP_AUTHENTICATEFIRST           0x70
+#define MFP_AUTHENTICATEFIRST_VARIANT   0x73
+#define MFP_AUTHENTICATENONFIRST        0x76
+#define MFP_AUTHENTICATECONTINUE        0x72
+#define MFP_AUTHENTICATESECTORSWITCH    0x7A
+#define MFP_RESETAUTH                   0x78
+
+#define MFP_VCSUPPORTLASTISOL3          0x4B
+#define MFP_ISOSELECT                   0xA4
+
+#define MFP_GETVERSION                  0x60 // same as DESFIRE
+#define MFP_ADDITIONALFRAME             0xAF
+#define MFP_SETCONFIGSL1                0x44
+#define MFP_MF_PERSONALIZEUIDUSAGE      0x40
+
+// read commands
+#define MFP_READENCRYPTEDNOMAC_MACED    0X30
+#define MFP_READENCRYPTEDMAC_MACED      0x31
+#define MFP_READPLAINNOMAC_MACED        0x32
+#define MFP_READPLAINMAC_MACED          0x33
+#define MFP_READENCRYPTEDNOMAC_UNMACED  0x34
+#define MFP_READENCRYPTEDMAC_UNMACED    0X35
+#define MFP_READPLAINNOMAC_UNMACED      0x36
+#define MFP_READPLAINMAC_UNMACED        0x37
+
+// write commands
+#define MFP_WRITEENCRYPTEDNOMAC         0xA0
+#define MFP_WRITEENCRYPTEDMAC           0xA1
+#define MFP_WRITEPLAINNOMAC             0xA2
+#define MFP_WRITEPLAINMAC               0xA3
+
+// value commands
+#define MFP_INCREMENTNOMAC              0xB0
+#define MFP_INCREMENTMAC                0xB1
+#define MFP_DECREMENTNOMAC              0xB2
+#define MFP_DECREMENTMAC                0xB3
+#define MFP_TRANSFERNOMAC               0xB4
+#define MFP_TRANSFERMAC                 0xB5
+#define MFP_INCREMENTTRANSFERNOMAC      0xB6
+#define MFP_INCREMENTTRANSFERMAC        0xB7
+#define MFP_DECREMENTTRANSFERNOMAC      0xB8
+#define MFP_DECREMENTTRANSFERMAC        0xB9
+#define MFP_RESTORENOMAC                0xC2
+#define MFP_RESTOREMAC                  0xC3
 
 
 // LEGIC Commands

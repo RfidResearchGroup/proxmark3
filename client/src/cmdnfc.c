@@ -109,7 +109,7 @@ static int CmdNfcDecode(const char *Cmd) {
         uint8_t *dump = NULL;
         size_t bytes_read = 4096;
         res = pm3_load_dump(filename, (void **)&dump, &bytes_read, 4096);
-        if (res != PM3_SUCCESS || dump == NULL) {
+        if (res != PM3_SUCCESS || dump == NULL || bytes_read > 4096) {
             return res;
         }
 

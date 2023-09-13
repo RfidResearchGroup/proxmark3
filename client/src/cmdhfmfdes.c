@@ -1411,7 +1411,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 }
 
 static int CmdHF14ADesList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf mfdes", "des");
+    return CmdTraceListAlias(Cmd, "hf mfdes", "des -c");
 }
 
 static int DesfireAuthCheck(DesfireContext_t *dctx, DesfireISOSelectWay way, uint32_t appID, DesfireSecureChannel secureChannel, uint8_t *key) {

@@ -30,9 +30,10 @@
 #include "nfc/ndef.h"
 #include "cliparser.h"
 #include "cmdmain.h"
-#include "amiibo.h"     // amiiboo fcts
+#include "amiibo.h"         // amiiboo fcts
 #include "base64.h"
-#include "fileutils.h"     // saveFile
+#include "fileutils.h"      // saveFile
+#include "cmdtrace.h"       // trace list
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2F
@@ -190,7 +191,7 @@ int ul_read_uid(uint8_t *uid) {
     // 2: OK, no ATS
     // 3: proprietary Anticollision
     if (select_status == 0) {
-        PrintAndLogEx(WARNING, "iso14443a card select failed");
+        PrintAndLogEx(DEBUG, "iso14443a card select failed");
         return PM3_ESOFT;
     }
     if (card.uidlen != 7) {
@@ -224,14 +225,14 @@ static bool ul_select(iso14a_card_select_t *card) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return false;
     } else {
 
         uint16_t len = (resp.oldarg[1] & 0xFFFF);
         if (len == 0) {
-            PrintAndLogEx(WARNING, "iso14443a card select failed");
+            PrintAndLogEx(DEBUG, "iso14443a card select failed");
             DropField();
             return false;
         }
@@ -1097,7 +1098,7 @@ static int ulev1_print_signature(TagTypeUL_t tagtype, uint8_t *uid, uint8_t *sig
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, " IC signature public key name: %s", nxp_mfu_public_keys[i].desc);
+    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfu_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
@@ -1351,7 +1352,7 @@ static mfu_identify_t mfu_ident_table[] = {
         "Jooki", "0004040201000F03",
         12, 32, "E11012000103A00C340329D101255504732E6A6F6F6B692E726F636B732F732F",
         ul_ev1_pwdgen_def, ul_ev1_packgen_def,
-        "hf jooki decode -r"
+        "hf mfu ndefread"
     },
     {
         "Lego Dimensions", "0004040201000F03",
@@ -1785,7 +1786,6 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " --------------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
     ul_print_type(tagtype, 6);
 
     // Swap endianness
@@ -3067,6 +3067,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Filename of dump"),
         arg_int0("q", "qty", "<dec>", "Number of blocks to load from eml file"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3083,6 +3084,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
     free(nc);
 
     PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfu sim -t 7`") " to simulate an Amiibo.");
+    PrintAndLogEx(INFO, "Done!");
     return res;
 }
 
@@ -3104,7 +3106,7 @@ static int CmdHF14AMfUSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("t", "type", "<1..10> ", "Simulation type to use"),
+        arg_int1("t", "type", "<1..12> ", "Simulation type to use"),
         arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
         arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks. 0 = infinite"),
         arg_lit0("v", "verbose", "Verbose output"),
@@ -4670,6 +4672,10 @@ static int CmdHF14AMfuView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfuList(const char *Cmd) {
+    return CmdTraceListAlias(Cmd, "hf 14a", "14a -c");
+}
+
 
 /*
 static int CmdHF14AMfUCDecryptAmiibo(const char *Cmd){
@@ -4716,6 +4722,7 @@ static int CmdHF14AMfUCDecryptAmiibo(const char *Cmd){
 //------------------------------------
 static command_t CommandTable[] = {
     {"help",     CmdHelp,                   AlwaysAvailable, "This help"},
+    {"list",     CmdHF14AMfuList,           AlwaysAvailable, "List MIFARE Ultralight / NTAG history"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("recovery") " -------------------------"},
     {"keygen",   CmdHF14AMfUGenDiverseKeys, AlwaysAvailable, "Generate 3DES MIFARE diversified keys"},
     {"pwdgen",   CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},

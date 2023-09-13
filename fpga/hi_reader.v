@@ -13,7 +13,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-//`include "define.v"
+// with optional support for iso15 2sc mode slected with compiler define WITH_HF_15
 
 module hi_reader(
     input ck_1356meg,
@@ -28,7 +28,7 @@ module hi_reader(
     output adc_clk,
     output pwr_lo,
     output reg pwr_hi,
-    output pwr_oe1,
+    output reg pwr_oe1,
     output pwr_oe2,
     output pwr_oe3,
     output reg pwr_oe4,
@@ -63,7 +63,6 @@ begin
     end
 end
 
-
 // Let us report a correlation every 64 samples. I.e.
 // one Q/I pair after 4 subcarrier cycles for the 848kHz subcarrier,
 // one Q/I pair after 2 subcarrier cycles for the 424kHz subcarriers,
@@ -71,10 +70,105 @@ end
 // We need a 6-bit counter for the timing.
 reg [5:0] corr_i_cnt;
 always @(negedge adc_clk)
-begin
     corr_i_cnt <= corr_i_cnt + 1;
-end
 
+`ifdef WITH_HF_15
+reg [1:0] fskout = 2'd0;
+reg last0 = 1'b0;
+
+reg [7:0] avg = 8'd0;
+reg [127:0] avg128 = 128'd0;
+reg [7:0] diff16 = 8'd0;
+reg [7:0] diff28 = 8'd0;
+reg [7:0] diff32 = 8'd0;
+
+reg [11:0] match16 = 12'd0;
+reg [11:0] match32 = 12'd0;
+reg [11:0] match28 = 12'd0;
+
+always @(negedge adc_clk)
+begin
+    if (corr_i_cnt[0] == 1'b0) // every 2 clock
+        avg = adc_d[7:1];
+    else
+    begin
+        avg = avg + adc_d[7:1];
+        if (corr_i_cnt[0] == 1'b1)  // every 2 clock
+        begin
+            if (avg > avg128[63:56])
+                diff16 = avg - avg128[63:56];
+            else
+                diff16 = avg128[63:56] - avg;
+
+            if (avg > avg128[111:104])
+                diff28 = avg - avg128[111:104];
+            else
+                diff28 = avg128[111:104] - avg;
+
+            if (avg > avg128[127:120])
+                diff32 = avg - avg128[127:120];
+            else
+                diff32 = avg128[127:120] - avg;
+
+            avg128[127:8] = avg128[119:0];
+            avg128[7:0] = avg;
+
+            if (corr_i_cnt[4:1] == 4'b0000) // every 32 clock (8*4)
+            begin
+                match16 = diff16;
+                match28 = diff28;
+                match32 = diff32;
+            end
+            else
+            begin
+                match16 = match16 + diff16;
+                match28 = match28 + diff28;
+                match32 = match32 + diff32;
+
+                if (corr_i_cnt[4:1] == 4'b1111) // every 32 clock (8*4)
+                begin
+                    last0 = (fskout == 2'b0);
+                    if (match16 < 12'd64 && last0)
+                        fskout = 2'b00; // not yet started
+                    else if  ((match16 | match28 | match32) == 12'b0)
+                        fskout = 2'b00; // signal likely ended
+                    else if (((match16 <= match28 + 12'd16) && (match16 <= match32+ 12'd16)) ||
+                            (match28 <= 12'd16 && match32 <= 12'd16))
+                    begin
+                        if (!last0)
+                            fskout = 2'b11; // 16 match better than 28 or 32 but already started
+                    end
+                    else
+                    begin
+                        if (match28 < match32)
+                        begin
+                            diff28 = match32 - match28;
+                            diff16 = match16 - match28;
+                            if (diff28*2 > diff16)
+                                fskout = 2'b01;
+                            else if (!last0)
+                            begin
+                                fskout = 2'b01;
+                            end
+                        end
+                        else //if (match32 <= match28)
+                        begin
+                            diff32 = match28 - match32;
+                            diff16 = match16 - match32;
+                            if (diff32*2 > diff16)
+                                fskout = 2'b10;
+                            else if (!last0)
+                            begin
+                                fskout = 2'b10;
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+`endif
 
 // A couple of registers in which to accumulate the correlations. From the 64 samples
 // we would add at most 32 times the difference between unmodulated and modulated signal. It should
@@ -88,7 +182,6 @@ reg signed [13:0] corr_q_accum;
 // we will report maximum 8 significant bits
 reg signed [7:0] corr_i_out;
 reg signed [7:0] corr_q_out;
-
 
 // the amplitude of the subcarrier is sqrt(ci^2 + cq^2).
 // approximate by amplitude = max(|ci|,|cq|) + 1/2*min(|ci|,|cq|)
@@ -122,7 +215,6 @@ begin
 
 end
 
-
 // The subcarrier reference signals
 reg subcarrier_I;
 reg subcarrier_Q;
@@ -130,22 +222,21 @@ reg subcarrier_Q;
 always @(*)
 begin
     if (subcarrier_frequency == `FPGA_HF_READER_SUBCARRIER_848_KHZ)
-        begin
-            subcarrier_I = ~corr_i_cnt[3];
-            subcarrier_Q = ~(corr_i_cnt[3] ^ corr_i_cnt[2]);
-        end
+    begin
+        subcarrier_I = ~corr_i_cnt[3];
+        subcarrier_Q = ~(corr_i_cnt[3] ^ corr_i_cnt[2]);
+    end
     else if (subcarrier_frequency == `FPGA_HF_READER_SUBCARRIER_212_KHZ)
-        begin
-            subcarrier_I = ~corr_i_cnt[5];
-            subcarrier_Q = ~(corr_i_cnt[5] ^ corr_i_cnt[4]);
-        end
+    begin
+        subcarrier_I = ~corr_i_cnt[5];
+        subcarrier_Q = ~(corr_i_cnt[5] ^ corr_i_cnt[4]);
+    end
     else
-        begin                                           // 424 kHz
-            subcarrier_I = ~corr_i_cnt[4];
-            subcarrier_Q = ~(corr_i_cnt[4] ^ corr_i_cnt[3]);
-        end
+    begin // 424 kHz
+        subcarrier_I = ~corr_i_cnt[4];
+        subcarrier_Q = ~(corr_i_cnt[4] ^ corr_i_cnt[3]);
+    end
 end
-
 
 // ADC data appears on the rising edge, so sample it on the falling edge
 always @(negedge adc_clk)
@@ -157,9 +248,20 @@ begin
     begin
         if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_AMPLITUDE)
         begin
-            // send amplitude plus 2 bits reader signal
-            corr_i_out <= corr_amplitude[13:6];
-            corr_q_out <= {corr_amplitude[5:0], after_hysteresis_prev_prev, after_hysteresis_prev};
+`ifdef WITH_HF_15
+            if (subcarrier_frequency == `FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ)
+            begin
+                // send amplitude + 2 bits fsk (2sc) signal + 2 bits reader signal
+                corr_i_out <= corr_amplitude[13:6];
+                corr_q_out <= {corr_amplitude[5:2], fskout, after_hysteresis_prev_prev, after_hysteresis_prev};
+            end
+            else
+`endif
+            begin
+                // send amplitude plus 2 bits reader signal
+                corr_i_out <= corr_amplitude[13:6];
+                corr_q_out <= {corr_amplitude[5:0], after_hysteresis_prev_prev, after_hysteresis_prev};
+            end
         end
         else if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_IQ)
         begin
@@ -183,13 +285,23 @@ begin
         end
         else if (minor_mode == `FPGA_HF_READER_MODE_RECEIVE_AMPLITUDE)
         begin
-            // send amplitude
-            corr_i_out <= {2'b00, corr_amplitude[13:8]};
-            corr_q_out <= corr_amplitude[7:0];
+`ifdef WITH_HF_15
+            if (subcarrier_frequency == `FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ)
+            begin
+                // send 2 bits fsk (2sc) signal + amplitude
+                corr_i_out <= {fskout, corr_amplitude[13:8]};
+                corr_q_out <= corr_amplitude[7:0];
+            end
+            else
+`endif
+            begin
+                // send amplitude
+                corr_i_out <= {2'b00, corr_amplitude[13:8]};
+                corr_q_out <= corr_amplitude[7:0];
+            end
         end
         else if (minor_mode == `FPGA_HF_READER_MODE_RECEIVE_IQ)
         begin
-
             // Send 8 bits of in phase tag signal
             if (corr_i_accum[13:11] == 3'b000 || corr_i_accum[13:11] == 3'b111)
                 corr_i_out <= corr_i_accum[11:4];
@@ -251,7 +363,6 @@ begin
 
 end
 
-
 // ssp clock and frame signal for communication to and from ARM
 //                _____       _____       _____       _
 // ssp_clk       |     |_____|     |_____|     |_____|
@@ -262,7 +373,6 @@ end
 //
 // corr_i_cnt    0  1  2  3  4  5  6  7  8  9 10 11 12 ...
 //
-
 always @(negedge adc_clk)
 begin
     if (corr_i_cnt[1:0] == 2'b00)
@@ -280,9 +390,7 @@ begin
         ssp_frame <= 1'b0;
 end
 
-
 assign ssp_din = corr_i_out[7];
-
 
 // a jamming signal
 reg jam_signal;
@@ -299,10 +407,18 @@ end
 
 always @(*)
 begin
+    pwr_oe1 = 1'b0;
+    pwr_oe4 = 1'b0;
+
     if (minor_mode == `FPGA_HF_READER_MODE_SEND_SHALLOW_MOD)
     begin
         pwr_hi  = ck_1356meg;
         pwr_oe4 = ssp_dout;
+    end
+    else if (minor_mode == `FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4)
+    begin
+        pwr_hi  = ck_1356meg;
+        pwr_oe1 = ssp_dout;
     end
     else if (minor_mode == `FPGA_HF_READER_MODE_SEND_FULL_MOD)
     begin
@@ -328,13 +444,10 @@ begin
     end
 end
 
-// always on
-assign pwr_oe1 = 1'b0;
-assign pwr_oe3 = 1'b0;
-
-// Unused.
-assign pwr_lo = 1'b0;
+// unused
 assign pwr_oe2 = 1'b0;
+assign pwr_oe3 = 1'b0;
+assign pwr_lo  = 1'b0;
 
 // Debug Output
 assign debug = corr_i_cnt[3];

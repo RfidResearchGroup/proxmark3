@@ -283,7 +283,6 @@ static int CmdHFMFPInfo(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
     // Mifare Plus info
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
@@ -1811,7 +1810,7 @@ static int CmdHFMFPNDEFWrite(const char *Cmd) {
 }
 
 static int CmdHFMFPList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf mf", "mf");
+    return CmdTraceListAlias(Cmd, "hf mfp", "mfp -c");
 }
 
 static command_t CommandTable[] = {

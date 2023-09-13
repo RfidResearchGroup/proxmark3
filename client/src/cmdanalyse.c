@@ -311,7 +311,7 @@ static int CmdAnalyseCRC(const char *Cmd) {
     PrintAndLogEx(INFO, "       reflect8(0x80) is %02X == 0x01", reflect8(0x80));
     PrintAndLogEx(INFO, "    reflect16(0x8000) is %04X == 0x0001", reflect16(0xc6c6));
 
-    uint8_t b1, b2;
+    uint8_t b1 = 0, b2 = 0;
     // ISO14443 crc B
     compute_crc(CRC_14443_B, data, (size_t)dlen, &b1, &b2);
     uint16_t crcBB_1 = (uint16_t)(b1 << 8 | b2);
@@ -1079,71 +1079,86 @@ static int CmdAnalyseUnits(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "analyse units",
                   "experiments of unit conversions found in HF. ETU (1/13.56mhz), US or SSP_CLK (1/3.39MHz)",
-                  "analyse uints --etu 10"
-                  "analyse uints --us 100"
+                  "analyse uints --etu 10\n"
+                  "analyse uints --us 100\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_int0(NULL, "etu", "<dec>", "number in ETU"),
         arg_int0(NULL, "us", "<dec>", "number in micro seconds (us)"),
+        arg_lit0("t", "selftest", "self tests"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int etu = arg_get_int_def(ctx, 1, -1);
     int us = arg_get_int_def(ctx, 2, -1);
+    bool selftest = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    if (etu == -1 && us == -1) {
+    if (selftest) {
         PrintAndLogEx(INFO, "US to ETU conversions");
-        PrintAndLogEx(INFO, "  9 US = %u ETU (expect 1) " _GREEN_("ok"), US_TO_ETU(9));
-        PrintAndLogEx(INFO, "  10 US = %u ETU (expect 1) " _GREEN_("ok"), US_TO_ETU(10));
-        PrintAndLogEx(INFO, "  94 US = %u ETU (expect 10) " _GREEN_("ok"), US_TO_ETU(94));
-        PrintAndLogEx(INFO, "  95 US = %u ETU (expect 10) " _GREEN_("ok"), US_TO_ETU(95));
-        PrintAndLogEx(INFO, "  302 US = %u ETU (expect 32) " _GREEN_("ok"), US_TO_ETU(302));
+
+        int32_t test = US_TO_ETU(9);
+        PrintAndLogEx(INFO, "  9 US = %i ETU (expect 1) %s", test, (test == 1) ? _GREEN_("ok") : _RED_("fail"));
+
+        test = US_TO_ETU(10);
+        PrintAndLogEx(INFO, "  10 US = %i ETU (expect 1) %s", test, (test == 1) ? _GREEN_("ok") : _RED_("fail"));
+
+        test = US_TO_ETU(94);
+        PrintAndLogEx(INFO, "  94 US = %i ETU (expect 10) %s", test, (test == 10) ? _GREEN_("ok") : _RED_("fail"));
+
+        test = US_TO_ETU(95);
+        PrintAndLogEx(INFO, "  95 US = %i ETU (expect 10) %s", test, (test == 10) ? _GREEN_("ok") : _RED_("fail"));
+
+        test = US_TO_ETU(302);
+        PrintAndLogEx(INFO, "  302 US = %i ETU (expect 32) %s", test, (test == 10) ? _GREEN_("ok") : _RED_("fail"));
         PrintAndLogEx(NORMAL, "");
 
-        PrintAndLogEx(INFO, "ETU to US conversions");
-        PrintAndLogEx(INFO, "   1 ETU = %u US (expect 9.43) " _GREEN_("ok"), ETU_TO_US(1));
-        PrintAndLogEx(INFO, "  10 ETU = %u US (expect 94.39) " _GREEN_("ok"), ETU_TO_US(10));
-        PrintAndLogEx(INFO, "  32 ETU = %u US (expect 302) " _GREEN_("ok"), ETU_TO_US(32));
+        PrintAndLogEx(INFO, "ETU to Micro seconds (µS) conversions");
+        double test_us = HF14_ETU_TO_US(1);
+        PrintAndLogEx(INFO, "   1 ETU = %3.2f US (expect 9.44) %s", test_us, (test_us == 9.44) ? _GREEN_("ok") : _RED_("fail"));
+        test_us = HF14_ETU_TO_US(10);
+        PrintAndLogEx(INFO, "  10 ETU = %4.2f US (expect 94.40) %s", test_us, (test_us == 94.40) ? _GREEN_("ok") : _RED_("fail"));
+        test_us = HF14_ETU_TO_US(32);
+        PrintAndLogEx(INFO, "  32 ETU = %5.2f US (expect 302.06) %s", test_us, (test_us == 320.06) ? _GREEN_("ok") : _RED_("fail"));
+
         PrintAndLogEx(NORMAL, "");
 
-        PrintAndLogEx(INFO, "US to SSP CLK 3.39MHz conversions");
-        PrintAndLogEx(INFO, "   9 US = %u SSP (expect 32) ", US_TO_SSP(9));
-        PrintAndLogEx(INFO, "  10 US = %u SSP (expect 32 or 48) ", US_TO_SSP(10));
-        PrintAndLogEx(INFO, "  94 US = %u SSP (expect 320) ", US_TO_SSP(94));
-        PrintAndLogEx(INFO, "  95 US = %u SSP (expect 320 or 336) ", US_TO_SSP(95));
-        PrintAndLogEx(INFO, "  302 US = %u SSP (expect 1024) ", US_TO_SSP(302));
+        PrintAndLogEx(INFO, "Microseconds (µS) to SSP CLK 3.39MHz conversions");
+        PrintAndLogEx(INFO, "   9 µS = %i SSP (expect 32) ", US_TO_SSP(9));
+        PrintAndLogEx(INFO, "  10 µS = %i SSP (expect 32 or 48) ", US_TO_SSP(10));
+        PrintAndLogEx(INFO, "  94 µS = %i SSP (expect 320) ", US_TO_SSP(94));
+        PrintAndLogEx(INFO, "  95 µS = %i SSP (expect 320 or 336) ", US_TO_SSP(95));
+        PrintAndLogEx(INFO, "  302 µS = %i SSP (expect 1024) ", US_TO_SSP(302));
 
-        PrintAndLogEx(INFO, "  4949000 US = %u SSP ", US_TO_SSP(4949000));
+        PrintAndLogEx(INFO, "  4949000 µS = %i SSP ", US_TO_SSP(4949000));
 
         PrintAndLogEx(NORMAL, "");
 
         PrintAndLogEx(INFO, "SSP CLK 3.39MHz to US conversions");
-        PrintAndLogEx(INFO, "  32 SSP = %u US (expect 9 or 10) " _GREEN_("ok"), SSP_TO_US(32));
-        PrintAndLogEx(INFO, " 320 SSP = %u US (expect 94 or 95) " _GREEN_("ok"), SSP_TO_US(320));
-        PrintAndLogEx(INFO, "1024 SSP = %u US (expect 302) " _GREEN_("ok"), SSP_TO_US(1024));
+        PrintAndLogEx(INFO, "  32 SSP = %i US (expect 9 or 10) " _GREEN_("ok"), SSP_TO_US(32));
+        PrintAndLogEx(INFO, " 320 SSP = %i US (expect 94 or 95) " _GREEN_("ok"), SSP_TO_US(320));
+        PrintAndLogEx(INFO, "1024 SSP = %i US (expect 302) " _GREEN_("ok"), SSP_TO_US(1024));
         PrintAndLogEx(NORMAL, "");
 
         PrintAndLogEx(INFO, "ETU to SSP CLK 3.39MHz conversions");
-        PrintAndLogEx(INFO, "   1 ETU = %u SSP (expect 32) " _GREEN_("ok"), ETU_TO_SSP(1));
-        PrintAndLogEx(INFO, "  10 ETU = %u SSP (expect 320) " _GREEN_("ok"), ETU_TO_SSP(10));
-        PrintAndLogEx(INFO, "  32 ETU = %u SSP (expect 1024) " _GREEN_("ok"), ETU_TO_SSP(32));
+        PrintAndLogEx(INFO, "   1 ETU = %i SSP (expect 32) " _GREEN_("ok"), HF14_ETU_TO_SSP(1));
+        PrintAndLogEx(INFO, "  10 ETU = %i SSP (expect 320) " _GREEN_("ok"), HF14_ETU_TO_SSP(10));
+        PrintAndLogEx(INFO, "  32 ETU = %i SSP (expect 1024) " _GREEN_("ok"), HF14_ETU_TO_SSP(32));
         PrintAndLogEx(NORMAL, "");
 
         PrintAndLogEx(INFO, "SSP CLK 3.39MHz to ETU conversions");
-        PrintAndLogEx(INFO, "1024 SSP = %u ETU (expect 32) " _GREEN_("ok"), SSP_TO_ETU(1024));
-        PrintAndLogEx(INFO, " 320 SSP = %u ETU (expect 10) " _GREEN_("ok"), SSP_TO_ETU(320));
-        PrintAndLogEx(INFO, "  32 SSP = %u ETU (expect 1) " _GREEN_("ok"), SSP_TO_ETU(32));
-    } else if (etu) {
+        PrintAndLogEx(INFO, "1024 SSP = %i ETU (expect 32) " _GREEN_("ok"), HF14_SSP_TO_ETU(1024));
+        PrintAndLogEx(INFO, " 320 SSP = %i ETU (expect 10) " _GREEN_("ok"), HF14_SSP_TO_ETU(320));
+        PrintAndLogEx(INFO, "  32 SSP = %i ETU (expect 1) " _GREEN_("ok"), HF14_SSP_TO_ETU(32));
+    } else if (etu > -1) {
 
-        PrintAndLogEx(INFO, " %d ETU = %u us ", ETU_TO_US(etu), 0);
-        PrintAndLogEx(INFO, " %d ETU = %u SSP ", ETU_TO_SSP(etu), 0);
-    } else if (us) {
-        PrintAndLogEx(INFO, " %d us = %u ETU ", US_TO_ETU(us), 0);
-        PrintAndLogEx(INFO, " %d us = %u SSP ", US_TO_SSP(us), 0);
+        PrintAndLogEx(INFO, " %i ETU = %3.2f µS", etu, HF14_ETU_TO_US(etu));
+        PrintAndLogEx(INFO, " %i ETU = %i SSP", etu, HF14_ETU_TO_SSP(etu));
+    } else if (us > -1) {
+        PrintAndLogEx(INFO, " %i µS = %3.2f ETU = %u SSP", us, US_TO_ETU(us), US_TO_SSP(us));
     }
 
     return PM3_SUCCESS;

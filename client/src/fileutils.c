@@ -175,7 +175,7 @@ static char *filenamemcopy(const char *preferredName, const char *suffix) {
 }
 
 static size_t path_size(savePaths_t a) {
-    if (a == spItemCount) {
+    if (a >= spItemCount) {
         return 0;
     }
     return strlen(g_session.defaultPaths[a]);
@@ -194,7 +194,7 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     // 16: room for filenum to ensure new filename
     // save_path_len + strlen(PATHSEP):  the user preference save paths
     //const size_t len = p_namelen + strlen(suffix) + 1 + 16 + save_path_len + strlen(PATHSEP);
-    const size_t len = FILE_PATH_SIZE;
+    size_t len = FILE_PATH_SIZE;
 
     char *fileName = (char *) calloc(len, sizeof(uint8_t));
     if (fileName == NULL) {
@@ -204,24 +204,33 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     char *pfn = fileName;
 
     // user preference save paths
-    int save_path_len = path_size(e_save_path);
-    if (save_path_len) {
+    size_t save_path_len = path_size(e_save_path);
+    if (save_path_len && save_path_len < (FILE_PATH_SIZE - strlen(PATHSEP))) {
         snprintf(pfn, len, "%s%s", g_session.defaultPaths[e_save_path], PATHSEP);
         pfn += save_path_len + strlen(PATHSEP);
+        len -= save_path_len + strlen(PATHSEP);
     }
 
-    uint16_t p_namelen = strlen(preferredName);
+    // remove file extension if exist in name
+    size_t p_namelen = strlen(preferredName);
     if (str_endswith(preferredName, suffix)) {
         p_namelen -= strlen(suffix);
     }
-    // modify filename
-    snprintf(pfn, len, "%.*s%s", p_namelen, preferredName, suffix);
 
-    // check complete path/filename if exists
+    len -= strlen(suffix) + 1;
+    len -= p_namelen;
+
+    // modify filename
+    snprintf(pfn, len, "%.*s%s", (int)p_namelen, preferredName, suffix);
+
+    // "-001"
+    len -= 4;
+
     int num = 1;
+    // check complete path/filename if exists
     while (fileExists(fileName)) {
         // modify filename
-        snprintf(pfn, len, "%.*s-%03d%s", p_namelen, preferredName, num, suffix);
+        snprintf(pfn, len, "%.*s-%03d%s", (int)p_namelen, preferredName, num, suffix);
         num++;
     }
 
@@ -805,7 +814,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
     fflush(f);
     fclose(f);
     PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s"), fileName);
-    PrintAndLogEx(INFO, "FYI! --> " _YELLOW_("0xFFFFFFFFFFFF") " <-- has been inserted for unknown keys where " _YELLOW_("res") " is " _RED_("0"));
+    PrintAndLogEx(INFO, "--[ " _YELLOW_("FFFFFFFFFFFF") " ]-- has been inserted for unknown keys where " _YELLOW_("res") " is " _RED_("0"));
     free(fileName);
     return PM3_SUCCESS;
 }
@@ -861,7 +870,7 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
     *datalen = bytes_read;
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file " _YELLOW_("%s"), bytes_read, preferredName);
+        PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file `" _YELLOW_("%s") "`", bytes_read, preferredName);
     }
     return PM3_SUCCESS;
 }
@@ -935,7 +944,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from text file " _YELLOW_("%s"), counter, preferredName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from text file `" _YELLOW_("%s") "`", counter, preferredName);
 
 
     uint8_t *newdump = realloc(*pdata, counter);
@@ -1022,7 +1031,7 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from MCT file " _YELLOW_("%s"), counter, preferredName);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from MCT file `" _YELLOW_("%s") "`", counter, preferredName);
 
 
     uint8_t *newdump = realloc(*pdata, counter);
@@ -1058,7 +1067,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     json_error_t error;
     json_t *root = json_load_file(path, 0, &error);
     if (verbose)
-        PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), path);
+        PrintAndLogEx(SUCCESS, "loaded from JSON file `" _YELLOW_("%s") "`", path);
 
     free(path);
 
@@ -1466,7 +1475,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     }
     fclose(f);
     if (verbose)
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file " _YELLOW_("%s"), vkeycnt, path);
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", vkeycnt, path);
 
     if (datalen)
         *datalen = counter;
@@ -1609,6 +1618,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     if (*keyb == NULL) {
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
         fclose(f);
+        free(*keya);
         return PM3_EMALLOC;
     }
 
@@ -2081,6 +2091,9 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
         }
         case EML: {
             res = loadFileEML_safe(fn, pdump, dumplen);
+            if (res == PM3_ESOFT) {
+                PrintAndLogEx(WARNING, "file IO failed");
+            }
             break;
         }
         case JSON: {
@@ -2090,8 +2103,15 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
                 return PM3_EMALLOC;
             }
             res = loadFileJSON(fn, *pdump, maxdumplen, dumplen, NULL);
-            if (res != PM3_SUCCESS) {
-                free(*pdump);
+            if (res == PM3_SUCCESS)
+                return res;
+
+            free(*pdump);
+
+            if (res == PM3_ESOFT) {
+                PrintAndLogEx(WARNING, "JSON objects failed to load");
+            } else if (res == PM3_EMALLOC) {
+                PrintAndLogEx(WARNING, "Wrong size of allocated memory. Check your parameters");
             }
             break;
         }
@@ -2103,11 +2123,6 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             res = loadFileMCT_safe(fn, pdump, dumplen);
             break;
         }
-    }
-
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fn);
-        return PM3_EFILE;
     }
 
     return res;

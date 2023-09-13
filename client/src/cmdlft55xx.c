@@ -4139,8 +4139,9 @@ static int CmdT55xxSniff(const char *Cmd) {
                         blockAddr = 0;
                         for (uint8_t i = 3; i < 6; i++) {
                             blockAddr <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockAddr |= 1;
+                            }
                         }
                         blockData = 0;
                         have_data = true;
@@ -4155,21 +4156,26 @@ static int CmdT55xxSniff(const char *Cmd) {
                         usedPassword = 0;
                         for (uint8_t i = 2; i <= 33; i++) {
                             usedPassword <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 usedPassword |= 1;
+                            }
                         }
+
                         // Lock bit 34
                         blockData = 0;
                         for (uint8_t i = 35; i <= 66; i++) {
                             blockData <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockData |= 1;
+                            }
                         }
+
                         blockAddr = 0;
                         for (uint8_t i = 67; i <= 69; i++) {
                             blockAddr <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockAddr |= 1;
+                            }
                         }
                         have_data = true;
                         modeText = "Default pwd write";
@@ -4190,20 +4196,24 @@ static int CmdT55xxSniff(const char *Cmd) {
                         blockData = 0;
                         for (uint8_t i = 3; i <= 34; i++) {
                             blockData <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockData |= 1;
+                            }
                         }
+
                         for (uint8_t i = 2; i <= 33; i++) {
                             usedPassword <<= 1;
                             if (data[i] == '1') {
                                 usedPassword |= 1;
                             }
                         }
+
                         blockAddr = 0;
                         for (uint8_t i = 35; i <= 37; i++) {
                             blockAddr <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockAddr |= 1;
+                            }
                         }
                         have_data = true;
                         modeText = "Default write/pwd read";
@@ -4227,21 +4237,27 @@ static int CmdT55xxSniff(const char *Cmd) {
                         usedPassword = 0;
                         for (uint8_t i = 5; i <= 36; i++) {
                             usedPassword <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 usedPassword |= 1;
+                            }
                         }
+
                         blockData = 0;
                         for (uint8_t i = 38; i <= 69; i++) {
                             blockData <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockData |= 1;
+                            }
                         }
+
                         blockAddr = 0;
                         for (uint8_t i = 70; i <= 72; i++) {
                             blockAddr <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockAddr |= 1;
+                            }
                         }
+
                         have_data = true;
                         modeText = "Leading 0 pwd write";
                         snprintf(pwdText, sizeof(pwdText), " %08X", usedPassword);
@@ -4253,10 +4269,29 @@ static int CmdT55xxSniff(const char *Cmd) {
 
         // Print results
         if (have_data) {
-            if (blockAddr == 7)
-                PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_YELLOW_("%8s")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
-            else
-                PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_GREEN_("%8s")" |  "_GREEN_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
+            if (blockAddr == 7) {
+                PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_YELLOW_("%8s")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s"
+                              , modeText
+                              , pwdText
+                              , dataText
+                              , blockAddr
+                              , page
+                              , minWidth
+                              , maxWidth
+                              , data
+                             );
+            } else {
+                PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_GREEN_("%8s")" |  "_GREEN_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s"
+                              , modeText
+                              , pwdText
+                              , dataText
+                              , blockAddr
+                              , page
+                              , minWidth
+                              , maxWidth
+                              , data
+                             );
+            }
         }
     }
 

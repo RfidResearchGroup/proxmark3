@@ -121,7 +121,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose);
 static uint16_t ndefTLVGetLength(const uint8_t *data, size_t *indx) {
     uint16_t len = 0;
     if (data[0] == 0xFF) {
-        len = (data[1] << 8) + data[2];
+        len = MemBeToUint2byte(data + 1);
         *indx += 3;
     } else {
         len = data[0];
@@ -274,7 +274,7 @@ static int ndef_print_signature(uint8_t *data, uint8_t data_len, uint8_t *signat
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, " IC signature public key name: %s", ndef_public_keys[i].desc);
+    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), ndef_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %s", ndef_public_keys[i].value);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: %s", get_curve_name(ndef_public_keys[i].grp_id));
     PrintAndLogEx(INFO, "               NDEF Signature: %s", sprint_hex_inrow(signature, 32));

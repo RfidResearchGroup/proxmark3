@@ -294,7 +294,12 @@ void CodeIso15693AsTag(const uint8_t *cmd, size_t len) {
 // Transmit the command (to the tag) that was placed in cmd[].
 void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time, bool shallow_mod) {
 
+#ifdef RDV4
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | (shallow_mod ? FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4 : FPGA_HF_READER_MODE_SEND_FULL_MOD));
+#else
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | (shallow_mod ? FPGA_HF_READER_MODE_SEND_SHALLOW_MOD : FPGA_HF_READER_MODE_SEND_FULL_MOD));
+#endif
+
 
     if (*start_time < DELAY_ARM_TO_TAG) {
         *start_time = DELAY_ARM_TO_TAG;
@@ -2119,23 +2124,12 @@ void Iso15693InitTag(void) {
     StartCountSspClk();
 }
 
-
 void EmlClearIso15693(void) {
     // Resetting the bitstream also frees the BigBuf memory, so we do this here to prevent
     // an inconvenient reset in the future by Iso15693InitTag
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
     BigBuf_Clear_EM();
     reply_ng(CMD_HF_ISO15693_EML_CLEAR, PM3_SUCCESS, NULL, 0);
-}
-
-void EmlSetMemIso15693(uint8_t count, uint8_t *data, uint32_t offset) {
-    uint8_t *emCARD = BigBuf_get_EM_addr();
-    memcpy(emCARD + offset, data, count);
-}
-
-void EmlGetMemIso15693(uint8_t count, uint8_t *output, uint32_t offset) {
-    uint8_t *emCARD = BigBuf_get_EM_addr();
-    memcpy(output, emCARD + offset, count);
 }
 
 // Simulate an ISO15693 TAG, perform anti-collision and then print any reader commands
@@ -2296,8 +2290,11 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 }
                 // Block data
                 if (block_size * (block_idx + j + 1) <= CARD_MEMORY_SIZE) {
-                    EmlGetMemIso15693(block_size, resp_readblock + (work_offset + security_offset),
-                                      block_size * (block_idx + j));
+                    emlGet(
+                        resp_readblock + (work_offset + security_offset),
+                        block_size * (block_idx + j),
+                        block_size
+                    );
                 } else {
                     memset(resp_readblock + work_offset + security_offset, 0, block_size);
                 }
@@ -2334,7 +2331,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             uint8_t *data = cmd + 3 + address_offset + multi_offset;
 
             // write data
-            EmlSetMemIso15693(block_count * block_size, data, block_idx * block_size);
+            emlSet(data, (block_idx * block_size), (block_count * block_size));
 
             // Build WRITE_(MULTI_)BLOCK response
             int response_length = 3;
@@ -2664,7 +2661,7 @@ void SetTag15693Uid(const uint8_t *uid) {
     switch_off();
 }
 
-static void init_password_15693_Slix(uint8_t *buffer, uint8_t *pwd, const uint8_t *rnd) {
+static void init_password_15693_Slix(uint8_t *buffer, const uint8_t *pwd, const uint8_t *rnd) {
     memcpy(buffer, pwd, 4);
     if (rnd) {
         buffer[0] ^= rnd[0];
@@ -2692,7 +2689,7 @@ static bool get_rnd_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t 
     return true;
 }
 
-static uint32_t disable_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, uint8_t *password) {
+static uint32_t disable_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, const uint8_t *password) {
 
     uint8_t rnd[2];
     if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
@@ -2714,7 +2711,7 @@ static uint32_t disable_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_ti
     return PM3_SUCCESS;
 }
 
-static uint32_t set_pass_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, uint8_t *password, uint8_t *uid) {
+static uint32_t set_pass_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, const uint8_t *password, uint8_t *uid) {
 
 
     uint8_t rnd[2];
@@ -2741,7 +2738,7 @@ static uint32_t set_pass_15693_Slix(uint32_t start_time, uint32_t *eof_time, uin
     return PM3_SUCCESS;
 }
 
-static uint32_t set_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *password) {
+static uint32_t set_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, const uint8_t *password) {
     uint8_t rnd[2];
     if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
         return PM3_ETIMEOUT;
@@ -2762,7 +2759,7 @@ static uint32_t set_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, 
     return PM3_SUCCESS;
 }
 
-static uint32_t disable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *password, bool usepwd) {
+static uint32_t disable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, const uint8_t *password, bool usepwd) {
 
     uint8_t uid[8];
     get_uid_slix(start_time, eof_time, uid);
@@ -2796,7 +2793,7 @@ static uint32_t disable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, 
 }
 
 
-static uint32_t enable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *password, bool usepwd) {
+static uint32_t enable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, const uint8_t *password, bool usepwd) {
 
     uint8_t uid[8];
     get_uid_slix(start_time, eof_time, uid);
@@ -2828,7 +2825,7 @@ static uint32_t enable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, u
     return PM3_SUCCESS;
 }
 
-static uint32_t write_password_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pwd_id, uint8_t *password, uint8_t *uid) {
+static uint32_t write_password_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pwd_id, const uint8_t *password, uint8_t *uid) {
 
     uint8_t new_pwd_cmd[] = { (ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS), ISO15693_WRITE_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, pwd_id, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
@@ -2849,7 +2846,7 @@ static uint32_t write_password_15693_Slix(uint32_t start_time, uint32_t *eof_tim
     return PM3_SUCCESS;
 }
 
-static uint32_t pass_protect_EASAFI_15693_Slix(uint32_t start_time, uint32_t *eof_time, bool set_option_flag, uint8_t *password) {
+static uint32_t pass_protect_EASAFI_15693_Slix(uint32_t start_time, uint32_t *eof_time, bool set_option_flag, const uint8_t *password) {
 
     uint8_t flags;
 
@@ -2888,7 +2885,7 @@ static uint32_t pass_protect_EASAFI_15693_Slix(uint32_t start_time, uint32_t *eo
     return PM3_SUCCESS;
 }
 
-static uint32_t write_afi_15693(uint32_t start_time, uint32_t *eof_time, uint8_t *password, bool usepwd, uint8_t *uid, bool use_uid, uint8_t afi) {
+static uint32_t write_afi_15693(uint32_t start_time, uint32_t *eof_time, const uint8_t *password, bool usepwd, uint8_t *uid, bool use_uid, uint8_t afi) {
 
     if (!use_uid) {
         int res_getuid = get_uid_slix(start_time, eof_time, uid);
@@ -2925,7 +2922,7 @@ static uint32_t write_afi_15693(uint32_t start_time, uint32_t *eof_time, uint8_t
 }
 
 /*
-static uint32_t enable_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t pass_id, uint8_t *password) {
+static uint32_t enable_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t pass_id, const uint8_t *password) {
     uint8_t rnd[2];
     if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
         return PM3_ETIMEOUT;
@@ -2946,7 +2943,7 @@ static uint32_t enable_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_tim
     return PM3_SUCCESS;
 }
 
-static uint32_t write_password_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t pass_id, uint8_t *password) {
+static uint32_t write_password_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t pass_id, const uint8_t *password) {
     uint8_t rnd[2];
     if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
         return PM3_ETIMEOUT;
@@ -2969,7 +2966,7 @@ static uint32_t write_password_15693_Slix(uint32_t start_time, uint32_t *eof_tim
     return PM3_SUCCESS;
 }
 
-static uint32_t destroy_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, uint8_t *password) {
+static uint32_t destroy_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid, const uint8_t *password) {
 
     uint8_t rnd[2];
     if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
@@ -2993,7 +2990,7 @@ static uint32_t destroy_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint
 
 */
 
-void WritePasswordSlixIso15693(uint8_t *old_password, uint8_t *new_password, uint8_t pwd_id) {
+void WritePasswordSlixIso15693(const uint8_t *old_password, const uint8_t *new_password, uint8_t pwd_id) {
     LED_D_ON();
     Iso15693InitReader();
     StartCountSspClk();
@@ -3018,7 +3015,7 @@ void WritePasswordSlixIso15693(uint8_t *old_password, uint8_t *new_password, uin
 
 }
 
-void DisablePrivacySlixIso15693(uint8_t *password) {
+void DisablePrivacySlixIso15693(const uint8_t *password) {
     LED_D_ON();
     Iso15693InitReader();
     StartCountSspClk();
@@ -3033,7 +3030,7 @@ void DisablePrivacySlixIso15693(uint8_t *password) {
     switch_off();
 }
 
-void EnablePrivacySlixIso15693(uint8_t *password) {
+void EnablePrivacySlixIso15693(const uint8_t *password) {
     LED_D_ON();
     Iso15693InitReader();
     StartCountSspClk();
@@ -3049,7 +3046,7 @@ void EnablePrivacySlixIso15693(uint8_t *password) {
 }
 
 
-void DisableEAS_AFISlixIso15693(uint8_t *password, bool usepwd) {
+void DisableEAS_AFISlixIso15693(const uint8_t *password, bool usepwd) {
     LED_D_ON();
     Iso15693InitReader();
     StartCountSspClk();
@@ -3067,7 +3064,7 @@ void DisableEAS_AFISlixIso15693(uint8_t *password, bool usepwd) {
     switch_off();
 }
 
-void EnableEAS_AFISlixIso15693(uint8_t *password, bool usepwd) {
+void EnableEAS_AFISlixIso15693(const uint8_t *password, bool usepwd) {
     LED_D_ON();
     Iso15693InitReader();
     StartCountSspClk();
@@ -3082,7 +3079,7 @@ void EnableEAS_AFISlixIso15693(uint8_t *password, bool usepwd) {
     switch_off();
 }
 
-void PassProtextEASSlixIso15693(uint8_t *password) {
+void PassProtextEASSlixIso15693(const uint8_t *password) {
     LED_D_ON();
     Iso15693InitReader();
     StartCountSspClk();
@@ -3091,7 +3088,7 @@ void PassProtextEASSlixIso15693(uint8_t *password) {
     reply_ng(CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS, res, NULL, 0);
     switch_off();
 }
-void PassProtectAFISlixIso15693(uint8_t *password) {
+void PassProtectAFISlixIso15693(const uint8_t *password) {
     LED_D_ON();
     Iso15693InitReader();
     StartCountSspClk();
@@ -3101,7 +3098,7 @@ void PassProtectAFISlixIso15693(uint8_t *password) {
     switch_off();
 }
 
-void WriteAFIIso15693(uint8_t *password, bool use_pwd, uint8_t *uid, bool use_uid, uint8_t afi) {
+void WriteAFIIso15693(const uint8_t *password, bool use_pwd, uint8_t *uid, bool use_uid, uint8_t afi) {
     LED_D_ON();
     Iso15693InitReader();
     StartCountSspClk();

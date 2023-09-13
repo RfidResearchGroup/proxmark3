@@ -737,7 +737,7 @@ local function set_type(tagtype)
     write_uid('04112233445566')
         write_otp('00000000')               -- Setting OTP to default 00 00 00 00
         write_version('0004030101000b03')   -- UL-EV1 (48) 00 04 03 01 01 00 0b 03
-    elseif tagtype == 12 then
+    elseif tagtype == 13 then
         print('Setting: Ultimate Magic card to UL-EV1 128')
         connect()
     send("CF".._key.."F001010000000003000978009102DABC19101011121314151644000000")

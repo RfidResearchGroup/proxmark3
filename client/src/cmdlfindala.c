@@ -663,7 +663,7 @@ static int CmdIndalaSim(const char *Cmd) {
     bool fmt4041x = arg_get_lit(ctx, 5);
 
 
-    int32_t cardnumber;
+    int32_t cardnumber = 0;
     uint8_t fc = 0;
     uint16_t cn = 0;
     bool got_cn = false, got_26 = false;

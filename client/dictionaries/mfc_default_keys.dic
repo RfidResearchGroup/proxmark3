@@ -36,6 +36,9 @@ D01AFEEB890A
 2612C6DE84CA
 707B11FC1481
 #
+# QL88 diversifed
+03F9067646AE
+2352C5B56D85
 #
 B0B1B2B3B4B5
 C0C1C2C3C4C5
@@ -68,8 +71,8 @@ B27CCAB30DBD
 D2ECE8B9395E
 # NSCP default key
 1494E81663D7
-# 
-# NFC tools 
+#
+# NFC tools
 7c9fb8474242
 #
 # Kiev keys
@@ -132,6 +135,11 @@ F1D83F964314
 # NSP Global keys A and B (uk housing access control)
 199404281970
 199404281998
+#
+# Data from http://www.proxmark.org/forum/viewtopic.php?pid=25925#p25925
+# Tengo Cards Key A
+FFF011223358
+FF9F11223358
 #
 # more Keys from mfc_default_keys.lua
 000000000001
@@ -296,7 +304,7 @@ AAFB06045877
 25094DF6F148
 #
 #
-# https://mattionline.de/fitnessstudio-armband-reverse-engineering/ 
+# https://mattionline.de/fitnessstudio-armband-reverse-engineering/
 # https://mattionline.de/milazycracker/
 # gym wistband A, same as Fysiken A
 # gym wistband B
@@ -307,7 +315,7 @@ AAFB06045877
 A05DBD98E0FC
 #
 # GoFit
-AA4DDA458EBB 
+AA4DDA458EBB
 EAB8066C7479
 #
 # Nordic Wellness A, same as Fysiken A
@@ -597,6 +605,7 @@ BFB6796A11DB
 # Data from Salto A/B
 6A1987C40A21
 7F33625BC129
+6BE9314930D8
 #
 # Data from forum
 2338B4913111
@@ -868,7 +877,7 @@ AD4FB33388BF
 #
 # HID MIFARE Classic 1k Key
 484944204953
-204752454154 
+204752454154
 # HID MIFARE SO
 3B7E4FD575AD
 11496F97752A
@@ -935,9 +944,9 @@ FBF225DC5D58
 # Data  https://pastebin.com/BEm6bdAE
 # vingcard.txt
 # Note: most likely diversified
+96A301BCE267
 4708111C8604
 3D50D902EA48
-96A301BCE267
 6700F10FEC09
 7A09CC1DB70A
 560F7CFF2D81
@@ -1820,6 +1829,37 @@ E19504C39461
 FA1FBB3F0F1F
 FF16014FEFC7
 #
+#
+# Food GEM
+6686FADE5566
+#
+# Data from Discord, French pool
+9B7C25052FC3
+494446555455
+#
+# Data from Discord, seems to be related to ASSA
+427553754D47
+# Keys found on Edith Cowan University Smart Riders
+9A677289564D
+186C59E6AFC9
+DDDAA35A9749
+9D0D0A829F49
+# Mercator Pika Card, Slovenia
+97D77FAE77D3
+5AF445D2B87A
+#
+# Vilniečio/JUDU kortelė, Lithuania
+# A
+16901CB400BC
+F0FE56621A42
+8C187E78EE9C
+FE2A42E85CA8
+# B
+6A6C80423226
+F4CE4AF888AE
+307448829EBC
+C2A0105EB028
+#
 # Keys from Flipper Zero Community
 # Last update: Aug 13, 2022
 #
@@ -2050,8 +2090,14 @@ D144BD193063
 8627C10A7014
 453857395635
 #
+# Unknown hotel system Sec 0 / A
+353038383134
+#
 # Data from "the more the marriott" mifare project (colonelborkmundus)
 # aka The Horde
+#
+# These keys seem to be from Vingcard / Saflok system which means they are diversified
+# and not static default keys.  To verify this, the UID from such a card is needed.
 #
 # 20230125-01, Elite Member Marriott Rewards
 43012BD9EB87
@@ -2133,7 +2179,6 @@ D23C1CB1216E
 # 20230413-78, Caesars
 A1D92F808CAF
 # 20230413-79, The Cosmopolitan, Vegas
-# 96A301BCE267
 # 20230413-80, Aria
 1153C319B4F8
 # 20230413-81, Aria
@@ -2164,14 +2209,19 @@ D201DBB6AB6E
 09074A146605
 151F3E85EC46
 #
-#
-# Food GEM
-6686FADE5566
-#
-# Data from Discord, French pool
-9B7C25052FC3
-494446555455
-#
-# Data from Discord, seems to be related to ASSA
-427553754D47
-
+# Travelodge by Wyndham Berkeley
+0000FFFFFFFF
+4663ACD2FFFF
+EDC317193709
+# Hotel Santa Cruz
+75FAB77E2E5B
+# saflok brand HOTEL key
+32F093536677
+# A WaterFront Hotel in  Oakland
+3351916B5A77
+# Ballys (2018)
+336E34CC2177
+# Random Hawaiian Hotel
+A1670589B2AF
+# SF Hotel (SoMa area)
+2E0F00700000

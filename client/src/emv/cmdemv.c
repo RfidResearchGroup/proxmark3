@@ -35,6 +35,10 @@
 #include "fileutils.h"
 #include "protocols.h"      // ISO7816 APDU return codes
 #include "commonutil.h"     // MemBeToUint2byte
+#include <mbedtls/des.h>    // DES
+#include "crypto/libpcrypto.h"
+#include "iso4217.h"        // currency lookup
+
 
 static int CmdHelp(const char *Cmd);
 
@@ -75,6 +79,201 @@ static void PrintChannel(Iso7816CommandChannel channel) {
     }
 }
 
+/*
+static int emv_calc_cvv(const uint8_t *pan, size_t panlen, const uint8_t *expiry, const uint8_t *servicecode, const uint8_t *atc) {
+
+    uint8_t key[16] = {0};
+    memset(key, 0x30, sizeof(key));
+
+    uint8_t d[32] = {0};
+    uint8_t *pd = d;
+
+    memcpy(pd, pan, panlen);
+    pd += panlen;
+    memcpy(pd, expiry, 4);
+    pd += 4;
+
+    // cvv/cvc
+    memcpy(pd, servicecode, 3);
+    pd += 3;
+
+    // atc
+    memcpy(pd, atc, 4);
+
+    uint8_t encrypted[16] = {0};
+
+    // zero padding?!?
+
+    mbedtls_des_context ctx;
+    mbedtls_des_setkey_enc(&ctx, key);
+    mbedtls_des_crypt_ecb(&ctx, d, encrypted);
+    mbedtls_des_crypt_ecb(&ctx, d + 6, encrypted + 6);
+
+    // xor
+    for (size_t i = 16; i < 32; i++) {
+        d[i] ^= encrypted[i - 16];
+    }
+
+    mbedtls_des_free(&ctx);
+
+    PrintAndLogEx(INFO, "key... %s", sprint_hex_inrow(key, sizeof(key)));
+    PrintAndLogEx(INFO, "d..... %s", sprint_hex_inrow(d, sizeof(d)));
+
+
+    mbedtls_des3_context ctx3;
+    mbedtls_des3_init(&ctx3);
+    mbedtls_des3_set2key_enc(&ctx3, key);
+    mbedtls_des3_set2key_dec(&ctx3, key);
+    mbedtls_des3_crypt_ecb(&ctx3, d, encrypted);
+    mbedtls_des3_free(&ctx3);
+
+    PrintAndLogEx(INFO, "enc... %s", sprint_hex_inrow(encrypted, sizeof(encrypted)));
+
+    memset(encrypted, 0, sizeof(encrypted));
+    des3_encrypt(encrypted, d, key, 2);
+    PrintAndLogEx(INFO, "enc... %s", sprint_hex_inrow(encrypted, sizeof(encrypted)));
+
+    return PM3_SUCCESS;
+}
+*/
+
+
+static size_t logtemplate_calculate_len(const struct tlv *tlv, size_t data_len) {
+    if (!tlv)
+        return 0;
+
+    const unsigned char *buf = tlv->value;
+    size_t left = tlv->len;
+    size_t count = 0;
+
+    while (left) {
+        struct tlv cur_tlv;
+        if (!tlv_parse_tl(&buf, &left, &cur_tlv))
+            return 0;
+
+        count += cur_tlv.len;
+
+        /* Last tag can be of variable length */
+        if (cur_tlv.len == 0 && left == 0)
+            count = data_len;
+    }
+
+    return count;
+}
+
+static struct tlvdb *emv_logtemplate_parse(const struct tlv *tlv, const unsigned char *data, size_t data_len) {
+    if (!tlv)
+        return NULL;
+
+    const unsigned char *buf = tlv->value;
+    size_t left = tlv->len;
+    size_t res_len = logtemplate_calculate_len(tlv, data_len);
+    size_t pos = 0;
+    struct tlvdb *db = NULL;
+
+    while (left) {
+        struct tlv cur_tlv;
+        if (!tlv_parse_tl(&buf, &left, &cur_tlv) || pos + cur_tlv.len > res_len) {
+            tlvdb_free(db);
+            return NULL;
+        }
+
+        /* Last tag can be of variable length */
+        if (cur_tlv.len == 0 && left == 0)
+            cur_tlv.len = res_len - pos;
+
+        struct tlvdb *tag_db = tlvdb_fixed(cur_tlv.tag, cur_tlv.len, data + pos);
+        if (!db)
+            db = tag_db;
+        else
+            tlvdb_add(db, tag_db);
+
+        pos += cur_tlv.len;
+    }
+
+    return db;
+}
+
+static int emv_parse_log(struct tlvdb *ttdb, const uint8_t *d, size_t n) {
+    /*
+        The Log Format (9F4F) is a list in tag and length format (i.e., "TL" instead of TLV) See description in Table 33 on page 141.
+
+        In your example, "9F 27 01 9F 02 06 5F 2A 02 9A 03 9F 36 02 9F 52 06 DF 3E 01 9F 21 03 9F 7C 14" means:
+
+        9F27 01 (Cryptogram Information Data)
+        9F02 06 (Amount, Authorised)
+        5F2A 02 (Transaction Currency Code)
+        9A 03 (Transaction Date)
+        9F36 02 (Application Transaction Counter)
+        9F52 06 (Terminal Compatibility Indicator)
+        DF3E 01
+        9F21 03 (Transaction Time)
+        9F7C 14 (Visa Customer Exclusive Data)
+
+    */
+    int pos = 0;
+    struct tlvdb *tp = ttdb;
+    while (tp) {
+        const struct tlv *tpitem = tlvdb_get_tlv(tp);
+
+        const char *s = emv_get_tag_name(tpitem);
+
+        switch (tpitem->tag) {
+            case 0x5F2A:
+                if (tpitem->len == 2) {
+
+                    char tmp[5] = {0};
+                    snprintf(tmp, sizeof(tmp), "%x%02x", d[pos], d[pos + 1]);
+                    const char *cn = getCurrencyInfo(tmp);
+                    PrintAndLogEx(INFO, "%-30s... " _YELLOW_("%s") " ( %x%02x )", s, cn, d[pos], d[pos + 1]);
+                }
+                break;
+            case 0x9A:
+                if (tpitem->len == 3) {
+                    PrintAndLogEx(INFO, "%-30s... " _YELLOW_("20%02x-%02x-%02x"), s, d[pos], d[pos + 1], d[pos + 2]);
+                }
+                break;
+            case 0x9F21:
+                if (tpitem->len == 3) {
+                    PrintAndLogEx(INFO, "%-30s... " _YELLOW_("%02x:%02x:%02x"), s, d[pos], d[pos + 1], d[pos + 2]);
+                }
+                break;
+            default:
+                PrintAndLogEx(INFO, "%-30s... " _YELLOW_("%s"), s, sprint_hex_inrow(d + pos, tpitem->len));
+                break;
+        }
+
+        pos += tpitem->len;
+
+        tp = tlvdb_elm_get_next(tp);
+    }
+    return PM3_SUCCESS;
+}
+
+static int emv_extract_log_info(uint8_t *response, size_t reslen, uint8_t *lid,  uint8_t *lrecs) {
+
+    struct tlvdb *t = tlvdb_parse_multi(response, reslen);
+    if (t == NULL) {
+        PrintAndLogEx(INFO, "root null");
+        return PM3_EINVARG;
+    }
+
+    int res = PM3_ESOFT;
+    struct tlvdb *logs = tlvdb_find_full(t, 0x9F4D);
+    if (logs != NULL) {
+        const struct tlv *tlv = tlvdb_get_tlv(logs);
+        if (tlv->len == 2) {
+            *lid = tlv->value[0];
+            *lrecs = tlv->value[1];
+            PrintAndLogEx(DEBUG, "Logs EMV...  SFI %u Records # %u", *lid, *lrecs);
+            res = PM3_SUCCESS;
+        }
+    }
+
+    tlvdb_free(t);
+    return res;
+}
+
 static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose) {
     if (d == NULL || n < 10) {
         return PM3_EINVARG;
@@ -96,14 +295,26 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose) {
     while (token != NULL) {
 
         switch (i) {
-            case 0:
-                PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
-                              token[1], token[2], token[3], token[4],
-                              token[5], token[6], token[7], token[8],
-                              token[9], token[10], token[11], token[12],
-                              token[13], token[14], token[15], token[16]
-                             );
+            case 0: {
+                size_t a = strlen(token);
+                if (a == 16) {
+                    PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
+                                  token[1], token[2], token[3], token[4],
+                                  token[5], token[6], token[7], token[8],
+                                  token[9], token[10], token[11], token[12],
+                                  token[13], token[14], token[15], token[16]
+                                 );
+                } else if (a == 19) {
+                    PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c",
+                                  token[1], token[2], token[3], token[4],
+                                  token[5], token[6], token[7], token[8],
+                                  token[9], token[10], token[11], token[12],
+                                  token[13], token[14], token[15], token[16],
+                                  token[17], token[18], token[19]
+                                 );
+                }
                 break;
+            }
             case 1:
                 PrintAndLogEx(INFO, "CardHolder............... %s", token);
                 break;
@@ -228,7 +439,12 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen, bool verbose
         const struct tlv *acc_tlv = tlvdb_get_tlv(acc_full);
         if (acc_tlv->len == 2) {
             uint16_t acc = MemBeToUint2byte((const uint8_t *)acc_tlv->value);
-            PrintAndLogEx(INFO, "Currency Code........ " _YELLOW_("%02X"), acc);
+
+            char tmp[5] = {0};
+            snprintf(tmp, sizeof(tmp), "%x%02x", acc_tlv->value[0], acc_tlv->value[1]);
+            const char *cn = getCurrencyInfo(tmp);
+
+            PrintAndLogEx(INFO, "Currency Code........ " _YELLOW_("%s") " ( %x )", cn, acc);
         }
     }
 
@@ -1139,13 +1355,14 @@ static int CmdEMVExec(const char *Cmd) {
     // https://www.openscdp.org/scripts/tutorial/emv/applicationselection.html
     if (!forceSearch) {
         // PPSE
-        PrintAndLogEx(NORMAL, "\n* PPSE.");
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "* PPSE.");
         SetAPDULogging(showAPDU);
         res = EMVSearchPSE(channel, activateField, true, psenum, decodeTLV, tlvSelect);
 
         // check PPSE instead of PSE and vice versa
         if (res) {
-            PrintAndLogEx(NORMAL, "Check PPSE instead of PSE and vice versa...");
+            PrintAndLogEx(INFO, "Check PPSE instead of PSE and vice versa...");
             res = EMVSearchPSE(channel, false, true, psenum == 1 ? 2 : 1, decodeTLV, tlvSelect);
         }
 
@@ -1158,7 +1375,7 @@ static int CmdEMVExec(const char *Cmd) {
 
     // Search
     if (!AIDlen) {
-        PrintAndLogEx(NORMAL, "\n* Search AID in list.");
+        PrintAndLogEx(INFO, "\n* Search AID in list.");
         SetAPDULogging(false);
         if (EMVSearch(channel, activateField, true, decodeTLV, tlvSelect, false)) {
             dreturn(PM3_ERFTRANS);
@@ -1180,7 +1397,7 @@ static int CmdEMVExec(const char *Cmd) {
     }
 
     // Select
-    PrintAndLogEx(NORMAL, "\n* Selecting AID:%s", sprint_hex_inrow(AID, AIDlen));
+    PrintAndLogEx(INFO, "\n* Selecting AID:%s", sprint_hex_inrow(AID, AIDlen));
     SetAPDULogging(showAPDU);
     res = EMVSelect(channel, false, true, AID, AIDlen, buf, sizeof(buf), &len, &sw, tlvRoot);
 
@@ -1191,13 +1408,13 @@ static int CmdEMVExec(const char *Cmd) {
 
     if (decodeTLV)
         TLVPrintFromBuffer(buf, len);
-    PrintAndLogEx(NORMAL, "* Selected.");
+    PrintAndLogEx(INFO, "* Selected.");
 
-    PrintAndLogEx(NORMAL, "\n* Init transaction parameters.");
+    PrintAndLogEx(INFO, "\n* Init transaction parameters.");
     InitTransactionParameters(tlvRoot, paramLoadJSON, TrType, GenACGPO);
     TLVPrintFromTLV(tlvRoot); // TODO delete!!!
 
-    PrintAndLogEx(NORMAL, "\n* Calc PDOL.");
+    PrintAndLogEx(INFO, "\n* Calc PDOL.");
     pdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x9f38, NULL), tlvRoot, 0x83);
     if (!pdol_data_tlv) {
         PrintAndLogEx(ERR, "Error: can't create PDOL TLV.");
@@ -1210,9 +1427,9 @@ static int CmdEMVExec(const char *Cmd) {
         PrintAndLogEx(ERR, "Error: can't create PDOL data.");
         dreturn(PM3_ESOFT);
     }
-    PrintAndLogEx(NORMAL, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
+    PrintAndLogEx(INFO, "PDOL data[%zu]: %s", pdol_data_tlv_data_len, sprint_hex(pdol_data_tlv_data, pdol_data_tlv_data_len));
 
-    PrintAndLogEx(NORMAL, "\n* GPO.");
+    PrintAndLogEx(INFO, "\n* GPO.");
     res = EMVGPO(channel, true, pdol_data_tlv_data, pdol_data_tlv_data_len, buf, sizeof(buf), &len, &sw, tlvRoot);
 
     free(pdol_data_tlv_data);
@@ -1235,14 +1452,14 @@ static int CmdEMVExec(const char *Cmd) {
                 tlvdb_add(tlvRoot, pan);
 
                 const struct tlv *pantlv = tlvdb_get(tlvRoot, 0x5a, NULL);
-                PrintAndLogEx(NORMAL, "\n* * Extracted PAN from track2: %s", sprint_hex(pantlv->value, pantlv->len));
+                PrintAndLogEx(INFO, "\n* * Extracted PAN from track2: %s", sprint_hex(pantlv->value, pantlv->len));
             } else {
                 PrintAndLogEx(WARNING, "\n* * WARNING: Can't extract PAN from track2.");
             }
         }
     }
 
-    PrintAndLogEx(NORMAL, "\n* Read records from AFL.");
+    PrintAndLogEx(INFO, "\n* Read records from AFL.");
     const struct tlv *AFL = tlvdb_get(tlvRoot, 0x94, NULL);
 
     if (!AFL || !AFL->len)
@@ -1260,14 +1477,14 @@ static int CmdEMVExec(const char *Cmd) {
             uint8_t SFIend = AFL->value[i * 4 + 2];
             uint8_t SFIoffline = AFL->value[i * 4 + 3];
 
-            PrintAndLogEx(NORMAL, "* * SFI[%02x] start:%02x end:%02x offline count:%02x", SFI, SFIstart, SFIend, SFIoffline);
+            PrintAndLogEx(INFO, "* * SFI[%02x] start:%02x end:%02x offline count:%02x", SFI, SFIstart, SFIend, SFIoffline);
             if (SFI == 0 || SFI == 31 || SFIstart == 0 || SFIstart > SFIend) {
-                PrintAndLogEx(NORMAL, "SFI ERROR! Skipped...");
+                PrintAndLogEx(WARNING, "SFI ERROR! Skipped...");
                 continue;
             }
 
             for (int n = SFIstart; n <= SFIend; n++) {
-                PrintAndLogEx(NORMAL, "* * * SFI[%02x] %d", SFI, n);
+                PrintAndLogEx(INFO, "* * * SFI[%02x] %d", SFI, n);
 
                 res = EMVReadRecord(channel, true, SFI, n, buf, sizeof(buf), &len, &sw, tlvRoot);
                 if (res) {
@@ -1310,7 +1527,7 @@ static int CmdEMVExec(const char *Cmd) {
     if (ODAiListLen) {
         struct tlvdb *oda = tlvdb_fixed(0x21, ODAiListLen, ODAiList); // not a standard tag
         tlvdb_add(tlvRoot, oda);
-        PrintAndLogEx(NORMAL, "* Input list for Offline Data Authentication added to TLV. len=%zu \n", ODAiListLen);
+        PrintAndLogEx(INFO, "* Input list for Offline Data Authentication added to TLV. len=%zu \n", ODAiListLen);
     }
 
     // get AIP
@@ -1318,20 +1535,20 @@ static int CmdEMVExec(const char *Cmd) {
     const struct tlv *AIPtlv = tlvdb_get(tlvRoot, 0x82, NULL);
     if (AIPtlv) {
         AIP = AIPtlv->value[0] + AIPtlv->value[1] * 0x100;
-        PrintAndLogEx(NORMAL, "* * AIP=%04x", AIP);
+        PrintAndLogEx(INFO, "* * AIP=%04x", AIP);
     } else {
         PrintAndLogEx(ERR, "Can't find AIP.");
     }
 
     // SDA
     if (AIP & 0x0040) {
-        PrintAndLogEx(NORMAL, "\n* SDA");
+        PrintAndLogEx(INFO, "\n* SDA");
         trSDA(tlvRoot);
     }
 
     // DDA
     if (AIP & 0x0020) {
-        PrintAndLogEx(NORMAL, "\n* DDA");
+        PrintAndLogEx(INFO, "\n* DDA");
         trDDA(channel, decodeTLV, tlvRoot);
     }
 
@@ -1342,8 +1559,8 @@ static int CmdEMVExec(const char *Cmd) {
         // 9F26: Application Cryptogram
         const struct tlv *AC = tlvdb_get(tlvRoot, 0x9F26, NULL);
         if (AC) {
-            PrintAndLogEx(NORMAL, "\n--> qVSDC transaction.");
-            PrintAndLogEx(NORMAL, "* AC path");
+            PrintAndLogEx(INFO, "\n--> qVSDC transaction.");
+            PrintAndLogEx(INFO, "* AC path");
 
             // 9F36: Application Transaction Counter (ATC)
             const struct tlv *ATC = tlvdb_get(tlvRoot, 0x9F36, NULL);
@@ -1353,24 +1570,24 @@ static int CmdEMVExec(const char *Cmd) {
                 const struct tlv *IAD = tlvdb_get(tlvRoot, 0x9F10, NULL);
 
                 // print AC data
-                PrintAndLogEx(NORMAL, "ATC: %s", sprint_hex(ATC->value, ATC->len));
-                PrintAndLogEx(NORMAL, "AC: %s", sprint_hex(AC->value, AC->len));
+                PrintAndLogEx(INFO, "ATC: %s", sprint_hex(ATC->value, ATC->len));
+                PrintAndLogEx(INFO, "AC: %s", sprint_hex(AC->value, AC->len));
                 if (IAD) {
-                    PrintAndLogEx(NORMAL, "IAD: %s", sprint_hex(IAD->value, IAD->len));
+                    PrintAndLogEx(INFO, "IAD: %s", sprint_hex(IAD->value, IAD->len));
 
                     // https://mst-company.ru/blog/ekvajring-emv-tranzaktsiya-emv-transaction-flow-chast-4-pdol-i-beskontaktnye-karty-osobennosti-qvsdc-i-quics
                     if (IAD->value[0] == 0x1f) {
-                        PrintAndLogEx(NORMAL, "    Key index:  0x%02x", IAD->value[2]);
-                        PrintAndLogEx(NORMAL, "    Crypto ver: 0x%02x(%03d)", IAD->value[1], IAD->value[1]);
-                        PrintAndLogEx(NORMAL, "    CVR: %s", sprint_hex(&IAD->value[3], 5));
+                        PrintAndLogEx(INFO, "    Key index:  0x%02x", IAD->value[2]);
+                        PrintAndLogEx(INFO, "    Crypto ver: 0x%02x(%03d)", IAD->value[1], IAD->value[1]);
+                        PrintAndLogEx(INFO, "    CVR: %s", sprint_hex(&IAD->value[3], 5));
                         struct tlvdb *cvr = tlvdb_fixed(0x20, 5, &IAD->value[3]);
                         TLVPrintFromTLVLev(cvr, 1);
-                        PrintAndLogEx(NORMAL, "    IDD option id: 0x%02x", IAD->value[8]);
-                        PrintAndLogEx(NORMAL, "    IDD: %s", sprint_hex(&IAD->value[9], 23));
+                        PrintAndLogEx(INFO, "    IDD option id: 0x%02x", IAD->value[8]);
+                        PrintAndLogEx(INFO, "    IDD: %s", sprint_hex(&IAD->value[9], 23));
                     } else if (IAD->len >= IAD->value[0] + 1) {
-                        PrintAndLogEx(NORMAL, "    Key index:  0x%02x", IAD->value[1]);
-                        PrintAndLogEx(NORMAL, "    Crypto ver: 0x%02x(%03d)", IAD->value[2], IAD->value[2]);
-                        PrintAndLogEx(NORMAL, "    CVR: %s", sprint_hex(&IAD->value[3], IAD->value[0] - 2));
+                        PrintAndLogEx(INFO, "    Key index:  0x%02x", IAD->value[1]);
+                        PrintAndLogEx(INFO, "    Crypto ver: 0x%02x(%03d)", IAD->value[2], IAD->value[2]);
+                        PrintAndLogEx(INFO, "    CVR: %s", sprint_hex(&IAD->value[3], IAD->value[0] - 2));
                         struct tlvdb *cvr = tlvdb_fixed(0x20, IAD->value[0] - 2, &IAD->value[3]);
                         TLVPrintFromTLVLev(cvr, 1);
                         if (IAD->len >= 8) {
@@ -1396,9 +1613,9 @@ static int CmdEMVExec(const char *Cmd) {
     if (GetCardPSVendor(AID, AIDlen) == CV_MASTERCARD && (TrType == TT_QVSDCMCHIP || TrType == TT_CDA)) {
         const struct tlv *CDOL1 = tlvdb_get(tlvRoot, 0x8c, NULL);
         if (CDOL1 && GetCardPSVendor(AID, AIDlen) == CV_MASTERCARD) { // and m/chip transaction flag
-            PrintAndLogEx(NORMAL, "\n--> Mastercard M/Chip transaction.");
+            PrintAndLogEx(INFO, "\n--> Mastercard M/Chip transaction.");
 
-            PrintAndLogEx(NORMAL, "* * Generate challenge");
+            PrintAndLogEx(INFO, "* * Generate challenge");
             res = EMVGenerateChallenge(channel, true, buf, sizeof(buf), &len, &sw, tlvRoot);
             if (res) {
                 PrintAndLogEx(ERR, "Error GetChallenge. APDU error %4x", sw);
@@ -1413,23 +1630,22 @@ static int CmdEMVExec(const char *Cmd) {
             struct tlvdb *ICCDynN = tlvdb_fixed(0x9f4c, len, buf);
             tlvdb_add(tlvRoot, ICCDynN);
             if (decodeTLV) {
-                PrintAndLogEx(NORMAL, "\n* * ICC Dynamic Number:");
+                PrintAndLogEx(INFO, "\n* * ICC Dynamic Number:");
                 TLVPrintFromTLV(ICCDynN);
             }
 
-            PrintAndLogEx(NORMAL, "* * Calc CDOL1");
+            PrintAndLogEx(INFO, "* * Calc CDOL1");
             struct tlv *cdol_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8c, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
             if (!cdol_data_tlv) {
                 PrintAndLogEx(ERR, "Error: can't create CDOL1 TLV.");
                 dreturn(PM3_ESOFT);
             }
 
-            PrintAndLogEx(NORMAL, "CDOL1 data[%zu]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
+            PrintAndLogEx(INFO, "CDOL1 data[%zu]: %s", cdol_data_tlv->len, sprint_hex(cdol_data_tlv->value, cdol_data_tlv->len));
 
-            PrintAndLogEx(NORMAL, "* * AC1");
+            PrintAndLogEx(INFO, "* * AC1");
             // EMVAC_TC + EMVAC_CDAREQ --- to get SDAD
             res = EMVAC(channel, true, (TrType == TT_CDA) ? EMVAC_TC + EMVAC_CDAREQ : EMVAC_TC, (uint8_t *)cdol_data_tlv->value, cdol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
-
             if (res) {
                 PrintAndLogEx(ERR, "AC1 error(%d): %4x. Exit...", res, sw);
                 dreturn(PM3_ERFTRANS);
@@ -1439,36 +1655,36 @@ static int CmdEMVExec(const char *Cmd) {
                 TLVPrintFromBuffer(buf, len);
 
             // CDA
-            PrintAndLogEx(NORMAL, "\n* CDA:");
+            PrintAndLogEx(INFO, "\n* CDA:");
             struct tlvdb *ac_tlv = tlvdb_parse_multi(buf, len);
             if (tlvdb_get(ac_tlv, 0x9f4b, NULL)) {
                 res = trCDA(tlvRoot, ac_tlv, pdol_data_tlv, cdol_data_tlv);
                 if (res) {
-                    PrintAndLogEx(NORMAL, "CDA error (%d)", res);
+                    PrintAndLogEx(WARNING, "CDA error (%d)", res);
                 }
             } else {
-                PrintAndLogEx(NORMAL, "\n* Signed Dynamic Application Data (0x9f4b) not present");
+                PrintAndLogEx(INFO, "\n* Signed Dynamic Application Data (0x9f4b) not present");
             }
 
             free(ac_tlv);
             free(cdol_data_tlv);
 
-            PrintAndLogEx(NORMAL, "\n* M/Chip transaction result:");
+            PrintAndLogEx(INFO, "\n* M/Chip transaction result:");
             // 9F27: Cryptogram Information Data (CID)
             const struct tlv *CID = tlvdb_get(tlvRoot, 0x9F27, NULL);
             if (CID) {
                 emv_tag_dump(CID, 1);
-                PrintAndLogEx(NORMAL, "------------------------------");
+                PrintAndLogEx(INFO, "------------------------------");
                 if (CID->len > 0) {
                     switch (CID->value[0] & EMVAC_AC_MASK) {
                         case EMVAC_AAC:
-                            PrintAndLogEx(NORMAL, "Transaction DECLINED.");
+                            PrintAndLogEx(INFO, "Transaction DECLINED.");
                             break;
                         case EMVAC_TC:
-                            PrintAndLogEx(NORMAL, "Transaction approved OFFLINE.");
+                            PrintAndLogEx(INFO, "Transaction approved OFFLINE.");
                             break;
                         case EMVAC_ARQC:
-                            PrintAndLogEx(NORMAL, "Transaction approved ONLINE.");
+                            PrintAndLogEx(INFO, "Transaction approved ONLINE.");
                             break;
                         default:
                             PrintAndLogEx(WARNING, "Warning: CID transaction code error %2x", CID->value[0] & EMVAC_AC_MASK);
@@ -1486,20 +1702,20 @@ static int CmdEMVExec(const char *Cmd) {
 
     // MSD
     if (AIP & 0x8000 && TrType == TT_MSD) {
-        PrintAndLogEx(NORMAL, "\n--> MSD transaction.");
+        PrintAndLogEx(INFO, "\n--> MSD transaction.");
 
-        PrintAndLogEx(NORMAL, "* MSD dCVV path. Check dCVV");
+        PrintAndLogEx(INFO, "* MSD dCVV path. Check dCVV");
 
         const struct tlv *track2 = tlvdb_get(tlvRoot, 0x57, NULL);
         if (track2) {
-            PrintAndLogEx(NORMAL, "Track2: %s", sprint_hex(track2->value, track2->len));
+            PrintAndLogEx(INFO, "Track2: %s", sprint_hex(track2->value, track2->len));
 
             struct tlvdb *dCVV = GetdCVVRawFromTrack2(track2);
-            PrintAndLogEx(NORMAL, "dCVV raw data:");
+            PrintAndLogEx(INFO, "dCVV raw data:");
             TLVPrintFromTLV(dCVV);
 
             if (GetCardPSVendor(AID, AIDlen) == CV_MASTERCARD) {
-                PrintAndLogEx(NORMAL, "\n* Mastercard calculate UDOL");
+                PrintAndLogEx(INFO, "\n* Mastercard calculate UDOL");
 
                 // UDOL (9F69)
                 const struct tlv *UDOL = tlvdb_get(tlvRoot, 0x9F69, NULL);
@@ -1510,7 +1726,7 @@ static int CmdEMVExec(const char *Cmd) {
                     .value = (uint8_t *)"\x9f\x6a\x04",
                 };
                 if (!UDOL)
-                    PrintAndLogEx(NORMAL, "Use default UDOL.");
+                    PrintAndLogEx(INFO, "Use default UDOL.");
 
                 struct tlv *udol_data_tlv = dol_process(UDOL ? UDOL : &defUDOL, tlvRoot, 0x01); // 0x01 - dummy tag
                 if (!udol_data_tlv) {
@@ -1518,9 +1734,9 @@ static int CmdEMVExec(const char *Cmd) {
                     dreturn(PM3_ESOFT);
                 }
 
-                PrintAndLogEx(NORMAL, "UDOL data[%zu]: %s", udol_data_tlv->len, sprint_hex(udol_data_tlv->value, udol_data_tlv->len));
+                PrintAndLogEx(INFO, "UDOL data[%zu]: %s", udol_data_tlv->len, sprint_hex(udol_data_tlv->value, udol_data_tlv->len));
 
-                PrintAndLogEx(NORMAL, "\n* Mastercard compute cryptographic checksum(UDOL)");
+                PrintAndLogEx(INFO, "\n* Mastercard compute cryptographic checksum(UDOL)");
 
                 res = MSCComputeCryptoChecksum(channel, true, (uint8_t *)udol_data_tlv->value, udol_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
                 if (res) {
@@ -1543,18 +1759,18 @@ static int CmdEMVExec(const char *Cmd) {
 
     // VSDC
     if (GetCardPSVendor(AID, AIDlen) == CV_VISA && (TrType == TT_VSDC || TrType == TT_CDA)) {
-        PrintAndLogEx(NORMAL, "\n--> VSDC transaction.");
+        PrintAndLogEx(INFO, "\n--> VSDC transaction.");
 
-        PrintAndLogEx(NORMAL, "* * Calc CDOL1");
+        PrintAndLogEx(INFO, "* * Calc CDOL1");
         struct tlv *cdol1_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8c, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
         if (!cdol1_data_tlv) {
             PrintAndLogEx(ERR, "Error: can't create CDOL1 TLV.");
             dreturn(PM3_ESOFT);
         }
 
-        PrintAndLogEx(NORMAL, "CDOL1 data[%zu]: %s", cdol1_data_tlv->len, sprint_hex(cdol1_data_tlv->value, cdol1_data_tlv->len));
+        PrintAndLogEx(INFO, "CDOL1 data[%zu]: %s", cdol1_data_tlv->len, sprint_hex(cdol1_data_tlv->value, cdol1_data_tlv->len));
 
-        PrintAndLogEx(NORMAL, "* * AC1");
+        PrintAndLogEx(INFO, "* * AC1");
         // EMVAC_TC + EMVAC_CDAREQ --- to get SDAD
         res = EMVAC(channel, true, (TrType == TT_CDA) ? EMVAC_TC + EMVAC_CDAREQ : EMVAC_TC, (uint8_t *)cdol1_data_tlv->value, cdol1_data_tlv->len, buf, sizeof(buf), &len, &sw, tlvRoot);
         if (res) {
@@ -1580,56 +1796,56 @@ static int CmdEMVExec(const char *Cmd) {
         uint8_t CryptoVersion = 0;
         const struct tlv *IAD = tlvdb_get(tlvRoot, 0x9f10, NULL);
         if (IAD && (IAD->len > 1)) {
-            PrintAndLogEx(NORMAL, "\n* * Issuer Application Data (IAD):");
+            PrintAndLogEx(INFO, "\n* * Issuer Application Data (IAD):");
             uint8_t VDDlen = IAD->value[0]; // Visa discretionary data length
             uint8_t IDDlen = 0;             // Issuer discretionary data length
-            PrintAndLogEx(NORMAL, "IAD length: %zu", IAD->len);
-            PrintAndLogEx(NORMAL, "VDDlen: %d", VDDlen);
+            PrintAndLogEx(INFO, "IAD length: %zu", IAD->len);
+            PrintAndLogEx(INFO, "VDDlen: %d", VDDlen);
             if (VDDlen < IAD->len - 1) {
                 IDDlen = IAD->value[VDDlen + 1];
             }
-            PrintAndLogEx(NORMAL, "IDDlen: %d", IDDlen);
+            PrintAndLogEx(INFO, "IDDlen: %d", IDDlen);
 
             uint8_t DerivKeyIndex = IAD->value[1];
             CryptoVersion = IAD->value[2];
 
-            PrintAndLogEx(NORMAL, "CryptoVersion: %d", CryptoVersion);
-            PrintAndLogEx(NORMAL, "DerivKeyIndex: %d", DerivKeyIndex);
+            PrintAndLogEx(INFO, "CryptoVersion: %d", CryptoVersion);
+            PrintAndLogEx(INFO, "DerivKeyIndex: %d", DerivKeyIndex);
 
             // Card Verification Results (CVR) decode
             if ((VDDlen - 2) > 0) {
                 uint8_t CVRlen = IAD->value[3];
                 if (CVRlen == (VDDlen - 2 - 1)) {
-                    PrintAndLogEx(NORMAL, "CVR length: %d", CVRlen);
-                    PrintAndLogEx(NORMAL, "CVR: %s", sprint_hex(&IAD->value[4], CVRlen));
+                    PrintAndLogEx(INFO, "CVR length: %d", CVRlen);
+                    PrintAndLogEx(INFO, "CVR: %s", sprint_hex(&IAD->value[4], CVRlen));
                 } else {
                     PrintAndLogEx(WARNING, "Wrong CVR length! CVR: %s", sprint_hex(&IAD->value[3], VDDlen - 2));
                 }
             }
             if (IDDlen) {
-                PrintAndLogEx(NORMAL, "IDD: %s", sprint_hex(&IAD->value[VDDlen + 1], IDDlen));
+                PrintAndLogEx(INFO, "IDD: %s", sprint_hex(&IAD->value[VDDlen + 1], IDDlen));
             }
         } else {
             PrintAndLogEx(WARNING, "Issuer Application Data (IAD) not found.");
         }
 
-        PrintAndLogEx(NORMAL, "\n* * Processing online request");
+        PrintAndLogEx(INFO, "\n* * Processing online request");
 
         // authorization response code from acquirer
         const char HostResponse[] = "00"; // 0x3030
         size_t HostResponseLen = sizeof(HostResponse) - 1;
 
-        PrintAndLogEx(NORMAL, "Host Response: `%s`", HostResponse);
+        PrintAndLogEx(INFO, "Host Response: `%s`", HostResponse);
 
         tlvdb_change_or_add_node(tlvRoot, 0x8a, HostResponseLen, (const unsigned char *)HostResponse);
 
         if (CryptoVersion == 10) {
-            PrintAndLogEx(NORMAL, "\n* * Generate ARPC");
+            PrintAndLogEx(INFO, "\n* * Generate ARPC");
 
             // Application Cryptogram (AC)
             const struct tlv *AC = tlvdb_get(tlvRoot, 0x9f26, NULL);
             if (AC && (AC->len > 0)) {
-                PrintAndLogEx(NORMAL, "AC: %s", sprint_hex(AC->value, AC->len));
+                PrintAndLogEx(INFO, "AC: %s", sprint_hex(AC->value, AC->len));
 
                 size_t rawARPClen = AC->len;
                 uint8_t rawARPC[rawARPClen];
@@ -1637,10 +1853,10 @@ static int CmdEMVExec(const char *Cmd) {
                 for (int i = 0; (i < HostResponseLen) && (i < rawARPClen); i++) {
                     rawARPC[i] ^= HostResponse[i];
                 }
-                PrintAndLogEx(NORMAL, "raw ARPC: %s", sprint_hex(rawARPC, rawARPClen));
+                PrintAndLogEx(INFO, "raw ARPC: %s", sprint_hex(rawARPC, rawARPClen));
 
                 // here must be calculation of ARPC, but we don't know a bank keys.
-                PrintAndLogEx(NORMAL, "ARPC: n/a");
+                PrintAndLogEx(INFO, "ARPC: n/a");
 
             } else {
                 PrintAndLogEx(WARNING, "Application Cryptogram (AC) not found.");
@@ -1650,7 +1866,7 @@ static int CmdEMVExec(const char *Cmd) {
 
         // needs to send AC2 command (res == ARQC)
         if ((CID & EMVAC_AC_MASK) == EMVAC_ARQC) {
-            PrintAndLogEx(NORMAL, "\n* * Calc CDOL2");
+            PrintAndLogEx(INFO, "\n* * Calc CDOL2");
             struct tlv *cdol2_data_tlv = dol_process(tlvdb_get(tlvRoot, 0x8d, NULL), tlvRoot, 0x01); // 0x01 - dummy tag
             if (!cdol2_data_tlv) {
                 PrintAndLogEx(ERR, "Error: can't create CDOL2 TLV.");
@@ -1658,15 +1874,15 @@ static int CmdEMVExec(const char *Cmd) {
                 dreturn(PM3_ESOFT);
             }
 
-            PrintAndLogEx(NORMAL, "CDOL2 data[%zu]: %s", cdol2_data_tlv->len, sprint_hex(cdol2_data_tlv->value, cdol2_data_tlv->len));
-            //PrintAndLogEx(NORMAL, "* * AC2");
+            PrintAndLogEx(INFO, "CDOL2 data[%zu]: %s", cdol2_data_tlv->len, sprint_hex(cdol2_data_tlv->value, cdol2_data_tlv->len));
+            //PrintAndLogEx(INFO, "* * AC2");
             // here must be AC2, but we don't make external authenticate (
             /*          // AC2
                         PRINT_INDENT(level);
-                        if ((CID & EMVAC_AC2_MASK) == EMVAC_AAC2)     PrintAndLogEx(NORMAL, "\tAC2: AAC (Transaction declined)");
-                        if ((CID & EMVAC_AC2_MASK) == EMVAC_TC2)      PrintAndLogEx(NORMAL, "\tAC2: TC (Transaction approved)");
-                        if ((CID & EMVAC_AC2_MASK) == EMVAC_ARQC2)    PrintAndLogEx(NORMAL, "\tAC2: not requested (ARQC)");
-                        if ((CID & EMVAC_AC2_MASK) == EMVAC_AC2_MASK) PrintAndLogEx(NORMAL, "\tAC2: RFU");
+                        if ((CID & EMVAC_AC2_MASK) == EMVAC_AAC2)     PrintAndLogEx(INFO, "\tAC2: AAC (Transaction declined)");
+                        if ((CID & EMVAC_AC2_MASK) == EMVAC_TC2)      PrintAndLogEx(INFO, "\tAC2: TC (Transaction approved)");
+                        if ((CID & EMVAC_AC2_MASK) == EMVAC_ARQC2)    PrintAndLogEx(INFO, "\tAC2: not requested (ARQC)");
+                        if ((CID & EMVAC_AC2_MASK) == EMVAC_AC2_MASK) PrintAndLogEx(INFO, "\tAC2: RFU");
             */
             free(cdol2_data_tlv);
         }
@@ -1681,7 +1897,7 @@ static int CmdEMVExec(const char *Cmd) {
     tlvdb_free(tlvSelect);
     tlvdb_free(tlvRoot);
 
-    PrintAndLogEx(NORMAL, "\n* Transaction completed.");
+    PrintAndLogEx(SUCCESS, "\n* Transaction completed.");
     return PM3_SUCCESS;
 }
 
@@ -2382,8 +2598,10 @@ out:
 static int CmdEMVReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "emv reader",
-                  "Act as a EMV reader to identify tag. Look for EMV tags until Enter or the pm3 button is pressed",
+                  "Act as a EMV reader to identify tag. Look for EMV tags until Enter or the pm3 button is pressed\n"
+                  "In `verbose` mode it will also try to extract and decode the transaction logs stored on card in either channel.\n",
                   "emv reader\n"
+                  "emv reader -v\n"
                   "emv reader -@     -> Continuous mode\n"
                  );
     void *argtable[] = {
@@ -2428,7 +2646,7 @@ static int CmdEMVReader(const char *Cmd) {
         res = EMVSelectPSE(channel, true, true, 2, buf, sizeof(buf), &len, &sw);
 
         // search PSE / PPSE
-        res = EMVSearchPSE(channel, false, true, psenum, false, tlvSelect);
+        res |= EMVSearchPSE(channel, false, true, psenum, false, tlvSelect);
         if (res) {
             // EMV SEARCH with AID list
             DropFieldEx(channel);
@@ -2461,6 +2679,33 @@ static int CmdEMVReader(const char *Cmd) {
 
         // decode application parts
         emv_parse_card_details(buf, len, verbose);
+
+        // transaction log information
+        uint8_t log_file_id = 0x0B;
+        uint8_t log_file_records = 31;
+        struct tlvdb *tlogDB = NULL;
+
+
+        // try getting the LOG TEMPLATE.
+        bool log_found = false;
+        bool log_template_found = false;
+        if (emv_extract_log_info(buf, len, &log_file_id, &log_file_records) == PM3_SUCCESS) {
+            log_found = true;
+        }
+
+        uint16_t extra_data[] = { 0x9F36, 0x9F13, 0x9F17, 0x9F4D, 0x9F4F };
+        for (int i = 0; i < ARRAYLEN(extra_data); i++) {
+            if (EMVGetData(channel, true, extra_data[i], buf, sizeof(buf), &len, &sw, tlvRoot)) {
+                continue;
+            }
+            // Log template tag
+            if (extra_data[i] == 0x9F4F)  {
+                struct tlvdb *ttdb = tlvdb_find_full(tlvRoot, extra_data[i]);
+                const struct tlv *ttag = tlvdb_get_tlv(ttdb);
+                tlogDB = emv_logtemplate_parse(ttag, buf, len);
+                log_template_found = true;
+            }
+        }
 
         for (TransactionType_t tt = TT_MSD; tt < TT_END; tt++) {
 
@@ -2498,7 +2743,6 @@ static int CmdEMVReader(const char *Cmd) {
         }
 
         const struct tlv *AFL = tlvdb_get(tlvRoot, 0x94, NULL);
-
         if (AFL && AFL->len) {
 
             if (AFL->len % 4) {
@@ -2524,8 +2768,33 @@ static int CmdEMVReader(const char *Cmd) {
             }
         }
 
+        // only check for logs file if we found 0x9F4D
+        if (verbose && log_found  && log_template_found) {
+
+            for (int i = 1; i <= log_file_records; i++) {
+                res = EMVReadRecord(channel, true, log_file_id, i, buf, sizeof(buf), &len, &sw, tlvRoot);
+                if (res) {
+                    continue;
+                }
+
+                if (sw == 0x6A83)
+                    break;
+
+                PrintAndLogEx(INFO, "");
+                PrintAndLogEx(INFO, "Transaction log # " _YELLOW_("%u"), i);
+                PrintAndLogEx(INFO, "---------------------");
+                emv_parse_log(tlogDB, buf, len);
+                PrintAndLogEx(INFO, "");
+            }
+            tlvdb_free(tlogDB);
+        }
+
+        // free tlv object
+        tlvdb_free(tlvRoot);
+        PrintAndLogEx(INFO, "");
     } while (continuous);
 
+    DropFieldEx(channel);
     return PM3_SUCCESS;
 }
 

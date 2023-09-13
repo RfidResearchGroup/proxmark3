@@ -39,9 +39,14 @@
 * Current timing issues with ISO14443-b implementation
 * Proxmark3
 * Carrier Frequency 13.56MHz
+*    1 / 13 560 000 = 73.74 nano seconds  ( 0.07374 µs )
+
 * SSP_CLK runs at 13.56MHz / 4 = 3,39MHz
+*    1 / 3 390 000 = 294.98 nano seconds  ( 0.2949 µs )
 *
-*
+* 1 ETU = 9.4395 µs = 32 SSP_CLK = 128 FC
+* 1 SSP_CLK = 4 FC
+* 1 µs  3 SSP_CLK about 14 FC
 * PROBLEM 1.
 * ----------
 * one way of calculating time, that relates both to PM3 ssp_clk 3.39MHz, ISO freq of 13.56Mhz and ETUs
@@ -106,6 +111,9 @@
 *
 */
 
+
+
+
 #ifndef MAX_14B_TIMEOUT
 // FWT(max) = 4949 ms or 4.95 seconds.
 // SSP_CLK = 4949000 * 3.39 = 16777120
@@ -122,8 +130,8 @@
 
 // ETU 14 * 9.4395 µS = 132 µS == 0.132ms
 // TR2,  counting from start of PICC EOF 14 ETU.
-#define DELAY_ISO14443B_PICC_TO_PCD_READER  ETU_TO_SSP(14)
-#define DELAY_ISO14443B_PCD_TO_PICC_READER  ETU_TO_SSP(15)
+#define DELAY_ISO14443B_PICC_TO_PCD_READER  HF14_ETU_TO_SSP(14)
+#define DELAY_ISO14443B_PCD_TO_PICC_READER  HF14_ETU_TO_SSP(15)
 
 /* Guard Time (per 14443-2) in ETU
 *
@@ -138,41 +146,41 @@
 *  TR0
 */
 #ifndef ISO14B_TR0
-# define ISO14B_TR0  ETU_TO_SSP(32)
+# define ISO14B_TR0  HF14_ETU_TO_SSP(16)
 #endif
 
 #ifndef ISO14B_TR0_MAX
-# define ISO14B_TR0_MAX ETU_TO_SSP(32)
+# define ISO14B_TR0_MAX HF14_ETU_TO_SSP(32)
 // *   TR0 - 32 ETU's maximum for ATQB only
 // *   TR0 - FWT for all other commands
 
-// TR0 max is 151/fsc = 151/848kHz = 302us or 64 samples from FPGA
-// 32 ETU * 9.4395 µS == 302 µS
-// 32 * 8 = 256 sub carrier cycles,
-// 256 / 4 = 64 I/Q pairs.
+// TR0 max is 159 µS or 32 samples from FPGA
+// 16 ETU * 9.4395 µS == 151 µS
+// 16 * 8 = 128 sub carrier cycles,
+// 128 / 4 = 32 I/Q pairs.
 // since 1 I/Q pair after 4 subcarrier cycles at 848kHz subcarrier
 #endif
 
 // 8 ETU = 75 µS == 256 SSP_CLK
 #ifndef ISO14B_TR0_MIN
-# define ISO14B_TR0_MIN ETU_TO_SSP(8)
+# define ISO14B_TR0_MIN HF14_ETU_TO_SSP(8)
 #endif
 
 // Synchronization time (per 14443-2) in ETU
-// 10 ETU = 94,39 µS == 320 SSP_CLK
+// 16 ETU = 151 µS == 512 SSP_CLK
 #ifndef ISO14B_TR1_MIN
-# define ISO14B_TR1_MIN ETU_TO_SSP(10)
+# define ISO14B_TR1_MIN HF14_ETU_TO_SSP(16)
 #endif
 // Synchronization time (per 14443-2) in ETU
 // 25 ETU == 236 µS == 800 SSP_CLK
 #ifndef ISO14B_TR1_MAX
-# define ISO14B_TR1 ETU_TO_SSP(25)
+# define ISO14B_TR1 HF14_ETU_TO_SSP(25)
 #endif
 
 // Frame Delay Time PICC to PCD  (per 14443-3 Amendment 1) in ETU
 // 14 ETU == 132 µS == 448 SSP_CLK
 #ifndef ISO14B_TR2
-# define ISO14B_TR2 ETU_TO_SSP(14)
+# define ISO14B_TR2 HF14_ETU_TO_SSP(14)
 #endif
 
 // 4sample
@@ -440,7 +448,7 @@ static void Uart14bInit(uint8_t *data) {
 // param timeout accepts ETU
 static void iso14b_set_timeout(uint32_t timeout_etu) {
 
-    uint32_t ssp = ETU_TO_SSP(timeout_etu);
+    uint32_t ssp = HF14_ETU_TO_SSP(timeout_etu);
 
     if (ssp > MAX_14B_TIMEOUT)
         ssp = MAX_14B_TIMEOUT;
@@ -701,7 +709,7 @@ static void TransmitFor14443b_AsTag(const uint8_t *response, uint16_t len) {
 // Main loop of simulated tag: receive commands from reader, decide what
 // response to send, and send it.
 //-----------------------------------------------------------------------------
-void SimulateIso14443bTag(uint8_t *pupi) {
+void SimulateIso14443bTag(const uint8_t *pupi) {
 
     LED_A_ON();
     // the only commands we understand is WUPB, AFI=0, Select All, N=1:
@@ -1381,7 +1389,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
     }
 
     if (Demod.len > 0) {
-        uint32_t sof_time = *eof_time - ETU_TO_SSP(
+        uint32_t sof_time = *eof_time - HF14_ETU_TO_SSP(
                                 (Demod.len * (8 + 2)) // time for byte transfers
 //                                              + (10)      // time for TR1
                                 + (10 + 2)  // time for SOF transfer
@@ -1399,8 +1407,11 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
 
     tosend_t *ts = get_tosend();
 
+#ifdef RDV4
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4);
+#else
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
-
+#endif
 
     // TR2 minimum 14 ETUs
     if (*start_time < ISO14B_TR0) {
@@ -1544,7 +1555,7 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t 
 // eof_time in ssp clocks, but bits was added here!
 //    *eof_time = *start_time + (10 * ts->max) + 10 + 2 + 10;
 
-    *eof_time = *start_time + ETU_TO_SSP(8 * ts->max);
+    *eof_time = *start_time + HF14_ETU_TO_SSP(8 * ts->max);
 
     LogTrace(cmd, len, *start_time, *eof_time, NULL, true);
 }
@@ -1579,6 +1590,12 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
     CodeAndTransmit14443bAsReader(real_cmd, msg_len + 3, &start_time, &eof_time, true);
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+
+// Activation frame waiting time
+// 65536/fc == 4833 µS
+// SSP_CLK =  4833 µS * 3.39 = 16384
+
+
     int len = Get14443bAnswerFromTag(rxdata, rxmaxlen, iso14b_timeout, &eof_time);
     FpgaDisableTracing();
 
@@ -1836,7 +1853,7 @@ int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
         int slot;
 
         for (slot = 0; slot < 4; slot++) {
-            start_time = eof_time + ETU_TO_SSP(30); //(24); // next slot after 24 ETU
+            start_time = eof_time + HF14_ETU_TO_SSP(30); //(24); // next slot after 24 ETU
 
             retlen = Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), iso14b_timeout, &eof_time);
 
@@ -2076,7 +2093,6 @@ void iso14443b_setup(void) {
 
     // allocate command receive buffer
     BigBuf_free();
-    BigBuf_Clear_ext(false);
 
     // Initialize Demod and Uart structs
     Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
@@ -2089,7 +2105,12 @@ void iso14443b_setup(void) {
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     // Signal field is on with the appropriate LED
+#ifdef RDV4
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4);
+#else
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
+#endif
+
     SpinDelay(100);
 
     // Start the timer
@@ -2395,6 +2416,7 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
 
     if ((p->flags & ISO14B_CLEARTRACE) == ISO14B_CLEARTRACE) {
         clear_trace();
+        BigBuf_Clear_ext(false);
     }
     set_tracing(true);
 

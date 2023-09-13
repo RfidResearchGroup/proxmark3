@@ -97,6 +97,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_BOG,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_bog.c
 endif
+# WITH_STANDALONE_HF_CARDHOPPER
+ifneq (,$(findstring WITH_STANDALONE_HF_CARDHOPPER,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_cardhopper.c
+endif
 # WITH_STANDALONE_HF_COLIN
 ifneq (,$(findstring WITH_STANDALONE_HF_COLIN,$(APP_CFLAGS)))
     SRC_STANDALONE = vtsend.c hf_colin.c frozen.c nprintf.c

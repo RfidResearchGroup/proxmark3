@@ -28,8 +28,8 @@
 #include "util.h"
 #include "util_posix.h"
 #include "iso7816/iso7816core.h"
-#include "stddef.h"
-#include "stdbool.h"
+#include <stddef.h>
+#include <stdbool.h>
 #include "mifare.h"
 #include <stdlib.h>
 #include <string.h>
@@ -41,15 +41,28 @@
 #include "mbedtls/ecc_point_compression.h"
 #include "mbedtls/gcm.h"
 
-uint8_t ecpData[] = { 0x6a, 0x01, 0x00, 0x00, 0x04 };
+static const iso14a_polling_frame_t WUPA_FRAME = {
+    .frame = { 0x52 },
+    .frame_length = 1,
+    .last_byte_bits = 7,
+    .extra_delay = 0,
+};
+
+static const iso14a_polling_frame_t ECP_VAS_ONLY_FRAME = {
+    .frame = {0x6a, 0x01, 0x00, 0x00, 0x02, 0xe4, 0xd2},
+    .frame_length = 7,
+    .last_byte_bits = 8,
+    .extra_delay = 0,
+};
+
 uint8_t aid[] = { 0x4f, 0x53, 0x45, 0x2e, 0x56, 0x41, 0x53, 0x2e, 0x30, 0x31 };
 uint8_t getVasUrlOnlyP2 = 0x00;
 uint8_t getVasFullReqP2 = 0x01;
 
-static int ParseSelectVASResponse(uint8_t *response, size_t resLen, bool verbose) {
+static int ParseSelectVASResponse(const uint8_t *response, size_t resLen, bool verbose) {
     struct tlvdb *tlvRoot = tlvdb_parse_multi(response, resLen);
 
-    struct tlvdb *versionTlv = tlvdb_find_full(tlvRoot, 0x9F21);
+    const struct tlvdb *versionTlv = tlvdb_find_full(tlvRoot, 0x9F21);
     if (versionTlv == NULL) {
         tlvdb_free(tlvRoot);
         return PM3_ECARDEXCHANGE;
@@ -67,7 +80,7 @@ static int ParseSelectVASResponse(uint8_t *response, size_t resLen, bool verbose
         return PM3_ECARDEXCHANGE;
     }
 
-    struct tlvdb *capabilitiesTlv = tlvdb_find_full(tlvRoot, 0x9F23);
+    const struct tlvdb *capabilitiesTlv = tlvdb_find_full(tlvRoot, 0x9F23);
     if (capabilitiesTlv == NULL) {
         tlvdb_free(tlvRoot);
         return PM3_ECARDEXCHANGE;
@@ -86,7 +99,7 @@ static int ParseSelectVASResponse(uint8_t *response, size_t resLen, bool verbose
     return PM3_SUCCESS;
 }
 
-static int CreateGetVASDataCommand(uint8_t *pidHash, const char *url, size_t urlLen, uint8_t *out, int *outLen) {
+static int CreateGetVASDataCommand(const uint8_t *pidHash, const char *url, size_t urlLen, uint8_t *out, int *outLen) {
     if (pidHash == NULL && url == NULL) {
         PrintAndLogEx(FAILED, "Must provide a Pass Type ID or a URL");
         return PM3_EINVARG;
@@ -141,10 +154,10 @@ static int CreateGetVASDataCommand(uint8_t *pidHash, const char *url, size_t url
     return PM3_SUCCESS;
 }
 
-static int ParseGetVASDataResponse(uint8_t *res, size_t resLen, uint8_t *cryptogram, size_t *cryptogramLen) {
+static int ParseGetVASDataResponse(const uint8_t *res, size_t resLen, uint8_t *cryptogram, size_t *cryptogramLen) {
     struct tlvdb *tlvRoot = tlvdb_parse_multi(res, resLen);
 
-    struct tlvdb *cryptogramTlvdb = tlvdb_find_full(tlvRoot, 0x9F27);
+    const struct tlvdb *cryptogramTlvdb = tlvdb_find_full(tlvRoot, 0x9F27);
     if (cryptogramTlvdb == NULL) {
         tlvdb_free(tlvRoot);
         return PM3_ECARDEXCHANGE;
@@ -158,10 +171,10 @@ static int ParseGetVASDataResponse(uint8_t *res, size_t resLen, uint8_t *cryptog
     return PM3_SUCCESS;
 }
 
-static int LoadReaderPrivateKey(uint8_t *buf, size_t bufLen, mbedtls_ecp_keypair *privKey) {
+static int LoadReaderPrivateKey(const uint8_t *buf, size_t bufLen, mbedtls_ecp_keypair *privKey) {
     struct tlvdb *derRoot = tlvdb_parse_multi(buf, bufLen);
 
-    struct tlvdb *privkeyTlvdb = tlvdb_find_full(derRoot, 0x04);
+    const struct tlvdb *privkeyTlvdb = tlvdb_find_full(derRoot, 0x04);
     if (privkeyTlvdb == NULL) {
         tlvdb_free(derRoot);
         return PM3_EINVARG;
@@ -174,7 +187,7 @@ static int LoadReaderPrivateKey(uint8_t *buf, size_t bufLen, mbedtls_ecp_keypair
         return PM3_EINVARG;
     }
 
-    struct tlvdb *pubkeyCoordsTlvdb = tlvdb_find_full(derRoot, 0x03);
+    const struct tlvdb *pubkeyCoordsTlvdb = tlvdb_find_full(derRoot, 0x03);
     if (pubkeyCoordsTlvdb == NULL) {
         tlvdb_free(derRoot);
         PrintAndLogEx(FAILED, "Private key file should include public key component");
@@ -216,7 +229,7 @@ static int GetPrivateKeyHint(mbedtls_ecp_keypair *privKey, uint8_t *keyHint) {
     return PM3_SUCCESS;
 }
 
-static int LoadMobileEphemeralKey(uint8_t *xcoordBuf, mbedtls_ecp_keypair *pubKey) {
+static int LoadMobileEphemeralKey(const uint8_t *xcoordBuf, mbedtls_ecp_keypair *pubKey) {
     uint8_t compressedEcKey[33] = {0};
     compressedEcKey[0] = 0x02;
     memcpy(compressedEcKey + 1, xcoordBuf, 32);
@@ -236,7 +249,7 @@ static int LoadMobileEphemeralKey(uint8_t *xcoordBuf, mbedtls_ecp_keypair *pubKe
 
 static int internalVasDecrypt(uint8_t *cipherText, size_t cipherTextLen, uint8_t *sharedSecret,
                               uint8_t *ansiSharedInfo, size_t ansiSharedInfoLen,
-                              uint8_t *gcmAad, size_t gcmAadLen, uint8_t *out, size_t *outLen) {
+                              const uint8_t *gcmAad, size_t gcmAadLen, uint8_t *out, size_t *outLen) {
     uint8_t key[32] = {0};
     if (ansi_x963_sha256(sharedSecret, 32, ansiSharedInfo, ansiSharedInfoLen, sizeof(key), key)) {
         PrintAndLogEx(FAILED, "ANSI X9.63 key derivation failed");
@@ -336,12 +349,13 @@ static int DecryptVASCryptogram(uint8_t *pidHash, uint8_t *cryptogram, size_t cr
 static int VASReader(uint8_t *pidHash, const char *url, size_t urlLen, uint8_t *cryptogram, size_t *cryptogramLen, bool verbose) {
     clearCommandBuffer();
 
-    uint16_t flags = ISO14A_RAW | ISO14A_CONNECT | ISO14A_NO_SELECT | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT;
-    SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(ecpData), 0, ecpData, sizeof(ecpData));
+    iso14a_polling_parameters_t polling_parameters = {
+        .frames = { WUPA_FRAME, ECP_VAS_ONLY_FRAME },
+        .frame_count = 2,
+        .extra_timeout = 250
+    };
 
-    msleep(160);
-
-    if (SelectCard14443A_4(false, false, NULL) != PM3_SUCCESS) {
+    if (SelectCard14443A_4_WithParameters(false, false, NULL, &polling_parameters) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "No card in field");
         return PM3_ECARDEXCHANGE;
     }
@@ -349,7 +363,7 @@ static int VASReader(uint8_t *pidHash, const char *url, size_t urlLen, uint8_t *
     uint16_t status = 0;
     size_t resLen = 0;
     uint8_t selectResponse[APDU_RES_LEN] = {0};
-    Iso7816Select(CC_CONTACTLESS, true, true, aid, sizeof(aid), selectResponse, APDU_RES_LEN, &resLen, &status);
+    Iso7816Select(CC_CONTACTLESS, false, true, aid, sizeof(aid), selectResponse, APDU_RES_LEN, &resLen, &status);
 
     if (status != 0x9000) {
         PrintAndLogEx(FAILED, "Card doesn't support VAS");

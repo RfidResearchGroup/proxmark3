@@ -43,7 +43,7 @@
  * 1. mem spiffs dump -s hf_15693sniff.trace -d hf_15693sniff.trace
  *    Copies trace data file from flash to your PC.
  *
- * 2. trace load hf_15693sniff.trace
+ * 2. trace load -f hf_15693sniff.trace
  *    Loads trace data from a file into PC-side buffers.
  *
  * 3. For ISO15693: trace list -t 15 -1
@@ -54,6 +54,7 @@
  * the lab connected to PM3 client before taking it into the field.
  *
  * To delete the trace data from flash:
+ *    mem spiffs remove -f hf_15693sniff.trace
  *
  * Caveats / notes:
  * - Trace buffer will be cleared on starting stand-alone mode. Data in flash

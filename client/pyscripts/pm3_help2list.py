@@ -12,7 +12,7 @@ This version
  - Iceman
 
 Note:
-    This script is used as a helper script to generate the pm3line_vocabulory.h file.
+    This script is used as a helper script to generate the pm3line_vocabulary.h file.
     It need a working proxmark3 client to extract the help text.
 
     Ie: this script can't be used inside the normal build sequence.
@@ -65,8 +65,8 @@ def main():
 // readline auto complete utilities
 //-----------------------------------------------------------------------------
 
-#ifndef PM3LINE_VOCABULORY_H__
-#define PM3LINE_VOCABULORY_H__
+#ifndef PM3LINE_VOCABULARY_H__
+#define PM3LINE_VOCABULARY_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,12 +74,12 @@ extern "C" {
 
 #include <stdbool.h>
 
-typedef struct vocabulory_s {
+typedef struct vocabulary_s {
     bool offline;
     const char *name;
-} vocabulory_t;
+} vocabulary_t;
 
-const static vocabulory_t vocabulory[] = {\n""")
+const static vocabulary_t vocabulary[] = {\n""")
 
     for key, values in command_data.items():
         offline = 0
@@ -88,7 +88,7 @@ const static vocabulory_t vocabulory[] = {\n""")
 
         cmd = values['command']
 
-        args.output_file.write('    {{ {}, "{}" }}, \n'.format(offline, cmd))
+        args.output_file.write('    {{ {}, "{}" }},\n'.format(offline, cmd))
 
     args.output_file.write("""    {0, NULL}\n};
 

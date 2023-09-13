@@ -104,7 +104,6 @@ TARGET_COMMON_FILES += hi_flite.v
 TARGET_COMMON_FILES += hi_get_trace.v
 TARGET_COMMON_FILES += hi_iso14443a.v
 TARGET_COMMON_FILES += hi_reader.v
-TARGET_COMMON_FILES += hi_reader_15.v
 TARGET_COMMON_FILES += hi_simulate.v
 TARGET_COMMON_FILES += hi_sniffer.v
 TARGET_COMMON_FILES += lf_edge_detect.v

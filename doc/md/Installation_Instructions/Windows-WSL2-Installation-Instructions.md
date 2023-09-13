@@ -108,7 +108,7 @@ then, install proxmark dependencies:
 sudo apt-get install --no-install-recommends \
   git ca-certificates build-essential pkg-config \
   libreadline-dev gcc-arm-none-eabi libnewlib-dev \
-  libbz2-dev libpython3-dev qtbase5-dev libssl-dev
+  libbz2-dev liblz4-dev libpython3-dev qtbase5-dev libssl-dev
 ```
 
 _note_
@@ -156,27 +156,18 @@ However, it may be necessary to give the `udev` service a kind reminder:
 
 ## Inform udev that it really, really should work
 
-The following workaround appears to work to get udev to apply the permissions
-appropriately.  Note that this may need to be run again, such as when the WSL2
-distributions have been restarted.  I don't know why ... but it's a small hiccup.
+As of August 2023, the following needs to be done anytime the WSL2 subsystem
+has been restarted (e.g., host machine reboot, first WSL2 console window, etc.).
+Otherwise, it appears that `udev` service will not see the arrival of devices,
+and therefore won't modify permissions on `/dev/ttyACM*` devices.
 
-```sh
-sudo udevadm trigger --action=change
-```
-
-General instructions suggested to use `sudo udevadm control --reload-rules`.  However,
-this may simply result in the following cryptic error message:
-
-```sh
-$ sudo udevadm control --reload-rules
-[sudo] password for root:
-Failed to send reload request: No such file or directory
-```
-
-_Note that the following should **NOT** be required:_
+After this is run once, `udev` appears to work correctly (at least until the
+host machine reboots or the last WSL console window is closed for a while).
+One workaround is to simply ensure you keep at least one WSL2 console open.
 
 ```sh
 sudo service udev restart
+sudo udevadm trigger --action=change
 ```
 
 ## Verify Device Exists

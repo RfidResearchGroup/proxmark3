@@ -110,7 +110,7 @@ static int fudan_get_type(iso14a_card_select_t *card, bool verbose) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(DEBUG, "iso14443a card select failed");
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         return PM3_ESOFT;
     }
 

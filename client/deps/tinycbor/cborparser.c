@@ -142,19 +142,19 @@
  * \endif
  */
 
-static inline uint16_t get16(const uint8_t *ptr) {
+static uint16_t get16(const uint8_t *ptr) {
     uint16_t result;
     memcpy(&result, ptr, sizeof(result));
     return cbor_ntohs(result);
 }
 
-static inline uint32_t get32(const uint8_t *ptr) {
+static uint32_t get32(const uint8_t *ptr) {
     uint32_t result;
     memcpy(&result, ptr, sizeof(result));
     return cbor_ntohl(result);
 }
 
-static inline uint64_t get64(const uint8_t *ptr) {
+static uint64_t get64(const uint8_t *ptr) {
     uint64_t result;
     memcpy(&result, ptr, sizeof(result));
     return cbor_ntohll(result);
@@ -949,7 +949,7 @@ CborError cbor_value_calculate_string_length(const CborValue *value, size_t *len
     return _cbor_value_copy_string(value, NULL, len, NULL);
 }
 
-static inline void prepare_string_iteration(CborValue *it) {
+static void prepare_string_iteration(CborValue *it) {
     if (!cbor_value_is_length_known(it)) {
         /* chunked string: we're before the first chunk;
          * advance to the first chunk */

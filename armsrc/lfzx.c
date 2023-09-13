@@ -115,7 +115,7 @@ static void zx8211_setup_read(void) {
     WDT_HIT();
 }
 
-static void zx_send(uint8_t *cmd, uint8_t clen) {
+static void zx_send(const uint8_t *cmd, uint8_t clen) {
 
     if (clen == 0)
         return;

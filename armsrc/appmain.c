@@ -61,6 +61,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "protocols.h"
+#include "mifareutil.h"
 
 
 #ifdef WITH_LCD
@@ -783,6 +784,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             g_reply_via_usb = false;
             break;
         }
+        case CMD_SET_FPGAMODE: {
+            uint8_t mode = packet->data.asBytes[0];
+            if (mode >= FPGA_BITSTREAM_LF && mode <= FPGA_BITSTREAM_HF_15) {
+                FpgaDownloadAndGo(mode);
+                reply_ng(CMD_SET_FPGAMODE, PM3_SUCCESS, NULL, 0);
+            }
+            reply_ng(CMD_SET_FPGAMODE, PM3_EINVARG, NULL, 0);
+            break;
+        }
         // emulator
         case CMD_SET_DBGMODE: {
             g_dbglevel = packet->data.asBytes[0];
@@ -1144,27 +1154,27 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_EM4x50
         case CMD_LF_EM4X50_INFO: {
-            em4x50_info((em4x50_data_t *)packet->data.asBytes, true);
+            em4x50_info((const em4x50_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_WRITE: {
-            em4x50_write((em4x50_data_t *)packet->data.asBytes, true);
+            em4x50_write((const em4x50_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_WRITEPWD: {
-            em4x50_writepwd((em4x50_data_t *)packet->data.asBytes, true);
+            em4x50_writepwd((const em4x50_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_READ: {
-            em4x50_read((em4x50_data_t *)packet->data.asBytes, true);
+            em4x50_read((const em4x50_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_BRUTE: {
-            em4x50_brute((em4x50_data_t *)packet->data.asBytes, true);
+            em4x50_brute((const em4x50_data_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_LOGIN: {
-            em4x50_login((uint32_t *)packet->data.asBytes, true);
+            em4x50_login((const uint32_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_SIM: {
@@ -1174,7 +1184,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // destroy the Emulator Memory.
             //-----------------------------------------------------------------------------
             FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-            em4x50_sim((uint32_t *)packet->data.asBytes, true);
+            em4x50_sim((const uint32_t *)packet->data.asBytes, true);
             break;
         }
         case CMD_LF_EM4X50_READER: {
@@ -1198,7 +1208,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             // destroy the Emulator Memory.
             //-----------------------------------------------------------------------------
             FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-            em4x50_chk((uint8_t *)packet->data.asBytes, true);
+            em4x50_chk((const char *)packet->data.asBytes, true);
             break;
         }
 #endif
@@ -1278,7 +1288,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t data[];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            EmlSetMemIso15693(payload->count, payload->data, payload->offset);
+            emlSet(payload->data, payload->offset, payload->count);
             break;
         }
         case CMD_HF_ISO15693_SIMULATE: {
@@ -1684,7 +1694,14 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t data[];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareEMemSet(payload->blockno, payload->blockcnt, payload->blockwidth, payload->data);
+
+            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+            // backwards compat... default bytewidth
+            if (payload->blockwidth == 0)
+                payload->blockwidth = 16;
+
+            emlSetMem_xt(payload->data, payload->blockno, payload->blockcnt, payload->blockwidth);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMGET: {
@@ -1921,6 +1938,10 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_ICLASS_RESTORE: {
             iClass_Restore((iclass_restore_req_t *)packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_ICLASS_CREDIT_EPURSE: {
+            iclass_credit_epurse((iclass_credit_epurse_t *)packet->data.asBytes);
             break;
         }
 #endif
@@ -2501,6 +2522,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             } else if (payload->startidx ==  DEFAULT_MF_KEYS_OFFSET) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
+                Flash_Erase4k(3, 0x8);
+                Flash_CheckBusy(BUSY_TIMEOUT);
+                Flash_WriteEnable();
                 Flash_Erase4k(3, 0x9);
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
@@ -2703,6 +2727,7 @@ void  __attribute__((noreturn)) AppMain(void) {
     SpinDelay(100);
     BigBuf_initialize();
 
+    // Add stack canary
     for (uint32_t *p = _stack_start; p + 0x200 < _stack_end ; ++p) {
         *p = 0xdeadbeef;
     }

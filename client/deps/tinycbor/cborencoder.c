@@ -232,21 +232,21 @@ static inline void put64(void *where, uint64_t v) {
     memcpy(where, &v, sizeof(v));
 }
 
-static inline bool would_overflow(CborEncoder *encoder, size_t len) {
+static bool would_overflow(CborEncoder *encoder, size_t len) {
     ptrdiff_t remaining = (ptrdiff_t)encoder->end;
     remaining -= remaining ? (ptrdiff_t)encoder->data.ptr : encoder->data.bytes_needed;
     remaining -= (ptrdiff_t)len;
     return unlikely(remaining < 0);
 }
 
-static inline void advance_ptr(CborEncoder *encoder, size_t n) {
+static void advance_ptr(CborEncoder *encoder, size_t n) {
     if (encoder->end)
         encoder->data.ptr += n;
     else
         encoder->data.bytes_needed += n;
 }
 
-static inline CborError append_to_buffer(CborEncoder *encoder, const void *data, size_t len) {
+static CborError append_to_buffer(CborEncoder *encoder, const void *data, size_t len) {
     if (would_overflow(encoder, len)) {
         if (encoder->end != NULL) {
             len -= encoder->end - encoder->data.ptr;
@@ -263,11 +263,11 @@ static inline CborError append_to_buffer(CborEncoder *encoder, const void *data,
     return CborNoError;
 }
 
-static inline CborError append_byte_to_buffer(CborEncoder *encoder, uint8_t byte) {
+static CborError append_byte_to_buffer(CborEncoder *encoder, uint8_t byte) {
     return append_to_buffer(encoder, &byte, 1);
 }
 
-static inline CborError encode_number_no_update(CborEncoder *encoder, uint64_t ui, uint8_t shiftedMajorType) {
+static CborError encode_number_no_update(CborEncoder *encoder, uint64_t ui, uint8_t shiftedMajorType) {
     /* Little-endian would have been so much more convenient here:
      * We could just write at the beginning of buf but append_to_buffer
      * only the necessary bytes.

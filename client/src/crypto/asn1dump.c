@@ -342,7 +342,7 @@ static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag
     if (jsondesc) {
         PrintAndLogEx(NORMAL, " -  %s" NOLF, jsondesc);
     } else {
-        const char *ppstr;
+        const char *ppstr = NULL;
         mbedtls_oid_get_attr_short_name(&asn1_buf, &ppstr);
         if (ppstr && strnlen(ppstr, 1)) {
             PrintAndLogEx(NORMAL, " (%s)", ppstr);

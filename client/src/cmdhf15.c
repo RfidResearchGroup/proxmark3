@@ -335,7 +335,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, " IC signature public key name: %s", nxp_15693_public_keys[i].desc);
+    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_15693_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_15693_public_keys[i].value);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
@@ -671,11 +671,9 @@ static int NxpTestEAS(uint8_t *uid) {
     SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
 
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "iso15693 timeout");
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
     } else {
-        PrintAndLogEx(NORMAL, "");
-
-
+        PrintAndLogEx(INFO, "");
         if (resp.length < 2) {
             PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is not active");
         } else {
@@ -687,7 +685,6 @@ static int NxpTestEAS(uint8_t *uid) {
             }
         }
     }
-
     return PM3_SUCCESS;
 }
 
@@ -712,7 +709,7 @@ static int NxpCheckSig(uint8_t *uid) {
     SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
 
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "iso15693 timeout");
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
         DropField();
         return PM3_ETIMEOUT;
     }
@@ -732,10 +729,9 @@ static int NxpCheckSig(uint8_t *uid) {
     }
 
     uint8_t signature[32] = {0x00};
-    memcpy(signature, recv + 1, 32);
+    memcpy(signature, recv + 1, sizeof(signature));
 
     nxp_15693_print_signature(uid, signature);
-
     return PM3_SUCCESS;
 }
 
@@ -764,7 +760,7 @@ static int NxpSysInfo(uint8_t *uid) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "iso15693 timeout");
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
         DropField();
         return PM3_ETIMEOUT;
     }
@@ -790,21 +786,29 @@ static int NxpSysInfo(uint8_t *uid) {
     bool support_signature = (recv[5] & 0x01);
     bool support_easmode = (recv[4] & 0x04);
 
-    PrintAndLogEx(INFO, "--------- " _CYAN_("NXP Sysinfo") " ---------");
-    PrintAndLogEx(INFO, "  raw : %s", sprint_hex(recv, 8));
-    PrintAndLogEx(INFO, "    Password protection configuration:");
-    PrintAndLogEx(INFO, "      * Page L read%s password protected", ((recv[2] & 0x01) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * Page L write%s password protected", ((recv[2] & 0x02) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * Page H read%s password protected", ((recv[2] & 0x10) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * Page H write%s password protected", ((recv[2] & 0x20) ? "" : " not"));
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("NXP Sysinfo"));
+    PrintAndLogEx(INFO, "  raw... %s", sprint_hex(recv, 8));
+    PrintAndLogEx(INFO, "    " _CYAN_("Password protection configuration:"));
+    PrintAndLogEx(INFO, "      * Page L read%s password protected", ((recv[2] & 0x01) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "      * Page L write%s password protected", ((recv[2] & 0x02) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "      * Page H read%s password protected", ((recv[2] & 0x10) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "      * Page H write%s password protected", ((recv[2] & 0x20) ? "" : _GREEN_(" not")));
 
-    PrintAndLogEx(INFO, "    Lock bits:");
-    PrintAndLogEx(INFO, "      * AFI%s locked", ((recv[3] & 0x01) ? "" : " not")); // AFI lock bit
-    PrintAndLogEx(INFO, "      * EAS%s locked", ((recv[3] & 0x02) ? "" : " not")); // EAS lock bit
-    PrintAndLogEx(INFO, "      * DSFID%s locked", ((recv[3] & 0x03) ? "" : " not")); // DSFID lock bit
-    PrintAndLogEx(INFO, "      * Password protection configuration%s locked", ((recv[3] & 0x04) ? "" : " not")); // Password protection pointer address and access conditions lock bit
+    PrintAndLogEx(INFO, "    " _CYAN_("Lock bits:"));
+    // AFI lock bit
+    PrintAndLogEx(INFO, "      * AFI%s locked", ((recv[3] & 0x01) ? "" : _GREEN_(" not")));
 
-    PrintAndLogEx(INFO, "    Features:");
+    // EAS lock bit
+    PrintAndLogEx(INFO, "      * EAS%s locked", ((recv[3] & 0x02) ? "" : _GREEN_(" not")));
+
+    // DSFID lock bit
+    PrintAndLogEx(INFO, "      * DSFID%s locked", ((recv[3] & 0x03) ? "" : _GREEN_(" not")));
+
+    // Password protection pointer address and access conditions lock bit
+    PrintAndLogEx(INFO, "      * Password protection configuration%s locked", ((recv[3] & 0x04) ? "" : _GREEN_(" not")));
+
+    PrintAndLogEx(INFO, "    " _CYAN_("Features:"));
     PrintAndLogEx(INFO, "      * User memory password protection%s supported", ((recv[4] & 0x01) ? "" : " not"));
     PrintAndLogEx(INFO, "      * Counter feature%s supported", ((recv[4] & 0x02) ? "" : " not"));
     PrintAndLogEx(INFO, "      * EAS ID%s supported by EAS ALARM command", support_easmode ? "" : " not");
@@ -827,6 +831,7 @@ static int NxpSysInfo(uint8_t *uid) {
         NxpCheckSig(uid);
     }
 
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -925,7 +930,6 @@ static int CmdHF15Info(const char *Cmd) {
     memcpy(uid, data + 2, sizeof(uid));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "      TYPE: " _YELLOW_("%s"), getTagInfo_15(data + 2));
     PrintAndLogEx(SUCCESS, "       UID: " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
     PrintAndLogEx(SUCCESS, "   SYSINFO: %s", sprint_hex(data, resp.length - 2));
@@ -1129,6 +1133,7 @@ static int CmdHF15ELoad(const char *Cmd) {
     }
     free(data);
     PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%zu") " bytes to emulator memory", offset);
 
     PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf 15 sim -h`"));
     PrintAndLogEx(INFO, "Done!");
@@ -1284,12 +1289,13 @@ static int CmdHF15Sim(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
-    PrintAndLogEx(INFO, "press " _YELLOW_("`Pm3 button`") " to cancel");
+    PrintAndLogEx(INFO, "Press " _YELLOW_("`pm3-button`") " to abort simulation");
 
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     WaitForResponse(CMD_HF_ISO15693_SIMULATE, &resp);
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -2820,10 +2826,45 @@ static int CmdHF15EASPassProtect(const char *Cmd) {
     return resp.status;
 }
 
+static int CmdHF15View(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 view",
+                  "Print a ISO-15693 tag dump file (bin/eml/json)",
+                  "hf 15 view -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>",  "filename of dump (bin/eml/json)"),
+//        arg_lit0("z", "dense", "dense dump output style"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+//    bool dense_output = g_session.dense_output || arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    // read dump file
+    uint8_t *dump = NULL;
+    size_t bytes_read = CARD_MEMORY_SIZE;
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, CARD_MEMORY_SIZE);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    print_blocks_15693(dump, bytes_read, 4);
+
+    free(dump);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
-    {"-----------",         CmdHF15Help,              AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",                CmdHF15Help,              AlwaysAvailable, "This help"},
     {"list",                CmdHF15List,              AlwaysAvailable, "List ISO-15693 history"},
+    {"-----------",         CmdHF15Help,              AlwaysAvailable, "----------------------- " _CYAN_("general") " -----------------------"},
     {"demod",               CmdHF15Demod,             AlwaysAvailable, "Demodulate ISO-15693 from tag"},
     {"dump",                CmdHF15Dump,              IfPm3Iso15693,   "Read all memory pages of an ISO-15693 tag, save to file"},
     {"info",                CmdHF15Info,              IfPm3Iso15693,   "Tag information"},
@@ -2834,10 +2875,14 @@ static command_t CommandTable[] = {
     {"reader",              CmdHF15Reader,            IfPm3Iso15693,   "Act like an ISO-15693 reader"},
     {"restore",             CmdHF15Restore,           IfPm3Iso15693,   "Restore from file to all memory pages of an ISO-15693 tag"},
     {"samples",             CmdHF15Samples,           IfPm3Iso15693,   "Acquire samples as reader (enables carrier, sends inquiry)"},
+    {"view",                CmdHF15View,              AlwaysAvailable, "Display content from tag dump file"},
+    {"wrbl",                CmdHF15Write,             IfPm3Iso15693,   "Write a block"},
+    {"-----------",         CmdHF15Help,              IfPm3Iso15693,   "--------------------- " _CYAN_("simulation") " ----------------------"},
+    {"sim",                 CmdHF15Sim,               IfPm3Iso15693,   "Fake an ISO-15693 tag"},
     {"eload",               CmdHF15ELoad,             IfPm3Iso15693,   "Load image file into emulator to be used by 'sim' command"},
     {"esave",               CmdHF15ESave,             IfPm3Iso15693,   "Save emulator memory into image file"},
     {"eview",               CmdHF15EView,             IfPm3Iso15693,   "View emulator memory"},
-    {"sim",                 CmdHF15Sim,               IfPm3Iso15693,   "Fake an ISO-15693 tag"},
+    {"-----------",         CmdHF15Help,              IfPm3Iso15693,   "------------------------ " _CYAN_("SLIX") " -------------------------"},
     {"slixwritepwd",        CmdHF15SlixWritePassword, IfPm3Iso15693,   "Writes a password on a SLIX ISO-15693 tag"},
     {"slixeasdisable",      CmdHF15SlixEASDisable,    IfPm3Iso15693,   "Disable EAS mode on SLIX ISO-15693 tag"},
     {"slixeasenable",       CmdHF15SlixEASEnable,     IfPm3Iso15693,   "Enable EAS mode on SLIX ISO-15693 tag"},
@@ -2845,12 +2890,11 @@ static command_t CommandTable[] = {
     {"slixprivacyenable",   CmdHF15SlixEnable,        IfPm3Iso15693,   "Enable privacy mode on SLIX ISO-15693 tag"},
     {"passprotectafi",      CmdHF15AFIPassProtect,    IfPm3Iso15693,   "Password protect AFI - Cannot be undone"},
     {"passprotecteas",      CmdHF15EASPassProtect,    IfPm3Iso15693,   "Password protect EAS - Cannot be undone"},
-    {"wrbl",                CmdHF15Write,             IfPm3Iso15693,   "Write a block"},
-    {"-----------",         CmdHF15Help,              IfPm3Iso15693,  "----------------------- " _CYAN_("afi") " -----------------------"},
+    {"-----------",         CmdHF15Help,              IfPm3Iso15693,  "-------------------------- " _CYAN_("afi") " ------------------------"},
     {"findafi",             CmdHF15FindAfi,           IfPm3Iso15693,   "Brute force AFI of an ISO-15693 tag"},
     {"writeafi",            CmdHF15WriteAfi,          IfPm3Iso15693,   "Writes the AFI on an ISO-15693 tag"},
     {"writedsfid",          CmdHF15WriteDsfid,        IfPm3Iso15693,   "Writes the DSFID on an ISO-15693 tag"},
-    {"-----------",         CmdHF15Help,              IfPm3Iso15693,  "----------------------- " _CYAN_("magic") " -----------------------"},
+    {"-----------",         CmdHF15Help,              IfPm3Iso15693,  "------------------------- " _CYAN_("magic") " -----------------------"},
     {"csetuid",             CmdHF15CSetUID,           IfPm3Iso15693,   "Set UID for magic card"},
     {NULL, NULL, NULL, NULL}
 };

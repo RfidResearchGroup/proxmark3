@@ -94,7 +94,7 @@ void setDefaultSamplingConfig(void) {
  * @brief setSamplingConfig
  * @param sc
  */
-void setSamplingConfig(sample_config *sc) {
+void setSamplingConfig(const sample_config *sc) {
 
     // decimation (1-8) how many bits of adc sample value to save
     if (sc->decimation > 0 && sc->decimation < 9)

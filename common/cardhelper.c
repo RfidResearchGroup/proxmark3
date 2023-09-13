@@ -35,24 +35,66 @@
 // look for CardHelper
 bool IsCardHelperPresent(bool verbose) {
 
-    if (IfPm3Smartcard()) {
-        int resp_len = 0;
-        uint8_t version[] = {0x96, 0x69, 0x00, 0x00, 0x00};
-        uint8_t resp[30] = {0};
-        ExchangeAPDUSC(verbose, version, sizeof(version), true, true, resp, sizeof(resp), &resp_len);
+    if (IfPm3Smartcard() == false) {
+        return false;
+    }
 
-        if (resp_len < 8) {
-            return false;
-        }
+    int resp_len = 0;
+    uint8_t version[] = {0x96, 0x69, 0x00, 0x00, 0x00};
+    uint8_t resp[30] = {0};
+    ExchangeAPDUSC(verbose, version, sizeof(version), true, true, resp, sizeof(resp), &resp_len);
 
-        if (strstr("CryptoHelper", (char *)resp) == 0) {
-            if (verbose) {
-                PrintAndLogEx(INFO, "Found smart card helper");
-            }
-            return true;
+    if (resp_len < 8) {
+        return false;
+    }
+
+    if (strstr("CryptoHelper", (char *)resp) == 0) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "Found smart card helper");
         }
+        return true;
     }
     return false;
+}
+
+bool IsHIDSamPresent(bool verbose) {
+
+    if (IfPm3Smartcard() == false) {
+        return false;
+    }
+
+    // detect SAM
+    smart_card_atr_t card;
+    smart_select(verbose, &card);
+    if (!card.atr_len) {
+        PrintAndLogEx(ERR, "Can't get ATR from a smart card");
+        return false;
+    }
+
+    // SAM identification
+    uint8_t sam_atr[] = {0x3B, 0x95, 0x96, 0x80, 0xB1, 0xFE, 0x55, 0x1F, 0xC7, 0x47, 0x72, 0x61, 0x63, 0x65, 0x13};
+    if (memcmp(card.atr, sam_atr, card.atr_len) < 0) {
+
+        uint8_t sam_atr2[] = {0x3b, 0x90, 0x96, 0x91, 0x81, 0xb1, 0xfe, 0x55, 0x1f, 0xc7, 0xd4};
+        if (memcmp(card.atr, sam_atr2, card.atr_len) < 0) {
+            if (verbose) {
+                PrintAndLogEx(SUCCESS, "Not detecting a SAM");
+            }
+            return false;
+        }
+    }
+
+    // Suspect some SAMs has version name in their ATR
+    uint8_t T0 = card.atr[1];
+    uint8_t K = T0 & 0x0F;
+    if (K > 4 && verbose) {
+        if (byte_strstr(card.atr, card.atr_len, (const uint8_t *)"Grace", 5) > -1) {
+            PrintAndLogEx(SUCCESS, "SAM (Grace) detected");
+        } else if (byte_strstr(card.atr, card.atr_len, (const uint8_t *)"Hopper", 6) > -1) {
+            PrintAndLogEx(SUCCESS, "SAM (Hopper) detected");
+        }
+    }
+    return true;
 }
 
 static bool executeCrypto(uint8_t ins, uint8_t *src, uint8_t *dest) {

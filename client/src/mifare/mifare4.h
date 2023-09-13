@@ -73,6 +73,7 @@ int MFPGetVersion(bool activateField, bool leaveSignalON, uint8_t *dataout, int 
 bool mfValidateAccessConditions(const uint8_t *data);
 bool mfReadOnlyAccessConditions(uint8_t blockn, const uint8_t *data);
 const char *mfGetAccessConditionsDesc(uint8_t blockn, const uint8_t *data);
+uint8_t mf_get_accesscondition(uint8_t blockn, const uint8_t *data);
 
 uint8_t mfNumBlocksPerSector(uint8_t sectorNo);
 uint8_t mfFirstBlockOfSector(uint8_t sectorNo);

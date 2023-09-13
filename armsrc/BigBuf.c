@@ -233,7 +233,7 @@ uint32_t BigBuf_get_traceLen(void) {
   by 'hf list -t raw', alternatively 'hf list -t <proto>' for protocol-specific
   annotation of commands/responses.
 **/
-bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool reader2tag) {
+bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, const uint8_t *parity, bool reader2tag) {
     if (tracing == false) {
         return false;
     }
@@ -290,7 +290,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 }
 
 // specific LogTrace function for ISO15693: the duration needs to be scaled because otherwise it won't fit into a uint16_t
-bool LogTrace_ISO15693(const uint8_t *bytes, uint16_t len, uint32_t ts_start, uint32_t ts_end, uint8_t *parity, bool reader2tag) {
+bool LogTrace_ISO15693(const uint8_t *bytes, uint16_t len, uint32_t ts_start, uint32_t ts_end, const uint8_t *parity, bool reader2tag) {
     uint32_t duration = ts_end - ts_start;
     duration /= 32;
     ts_end = ts_start + duration;
@@ -306,17 +306,24 @@ bool RAMFUNC LogTraceBits(const uint8_t *btBytes, uint16_t bitLen, uint32_t time
 }
 
 // Emulator memory
-uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length) {
+uint8_t emlSet(const uint8_t *data, uint32_t offset, uint32_t length) {
     uint8_t *mem = BigBuf_get_EM_addr();
-    if (offset + length < CARD_MEMORY_SIZE) {
+    if (offset + length <= CARD_MEMORY_SIZE) {
         memcpy(mem + offset, data, length);
         return 0;
     }
-    Dbprintf("Error, trying to set memory outside of bounds! %d  > %d", (offset + length), CARD_MEMORY_SIZE);
+    Dbprintf("Error, trying to set memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
     return 1;
 }
-
-
+uint8_t emlGet(uint8_t *out, uint32_t offset, uint32_t length) {
+    uint8_t *mem = BigBuf_get_EM_addr();
+    if (offset + length <= CARD_MEMORY_SIZE) {
+        memcpy(out, mem + offset, length);
+        return 0;
+    }
+    Dbprintf("Error, trying to read memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
+    return 1;
+}
 
 // get the address of the ToSend buffer. Allocate part of Bigbuf for it, if not yet done
 tosend_t *get_tosend(void) {

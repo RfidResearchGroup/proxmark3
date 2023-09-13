@@ -271,7 +271,7 @@ typedef struct {
 typedef struct {
     uint8_t type;
     uint16_t len;
-    uint8_t *data;
+    uint8_t data[];
 } PACKED lf_hitag_t;
 
 typedef struct {
@@ -415,6 +415,8 @@ typedef struct {
 #define CMD_SPIFFS_FORMAT                                                 CMD_FLASHMEM_WIPE
 
 #define CMD_SPIFFS_WIPE                                                   0x013A
+
+#define CMD_SET_FPGAMODE                                                  0x013F
 
 // This take a +0x2000 as they are high level helper and special functions
 // As the others, they may have safety level argument if it makes sense
@@ -563,7 +565,7 @@ typedef struct {
 
 #define CMD_HF_EPA_COLLECT_NONCE                                          0x038A
 #define CMD_HF_EPA_REPLAY                                                 0x038B
-#define CMD_HF_EPA_PACE_SIMULATE                                          0x039C
+#define CMD_HF_EPA_PACE_SIMULATE                                          0x038C
 
 #define CMD_HF_LEGIC_INFO                                                 0x03BC
 #define CMD_HF_LEGIC_ESET                                                 0x03BD
@@ -579,6 +581,7 @@ typedef struct {
 #define CMD_HF_ICLASS_EML_MEMSET                                          0x0398
 #define CMD_HF_ICLASS_CHKKEYS                                             0x039A
 #define CMD_HF_ICLASS_RESTORE                                             0x039B
+#define CMD_HF_ICLASS_CREDIT_EPURSE                                       0x039C
 
 // For ISO1092 / FeliCa
 #define CMD_HF_FELICA_SIMULATE                                            0x03A0

@@ -402,7 +402,7 @@ void Flashmem_print_info(void) {
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  Mifare.................. "_YELLOW_("%d")" / "_GREEN_("%d")" keys", num, DEFAULT_MF_KEYS_MAX);
+            Dbprintf("  Mifare.................. "_YELLOW_("%u")" / "_GREEN_("%u")" keys", num, DEFAULT_MF_KEYS_MAX);
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
@@ -410,7 +410,7 @@ void Flashmem_print_info(void) {
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  T55x7................... "_YELLOW_("%d")" / "_GREEN_("%d")" keys", num, DEFAULT_T55XX_KEYS_MAX);
+            Dbprintf("  T55x7................... "_YELLOW_("%u")" / "_GREEN_("%u")" keys", num, DEFAULT_T55XX_KEYS_MAX);
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
@@ -418,7 +418,7 @@ void Flashmem_print_info(void) {
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  iClass.................. "_YELLOW_("%d")" / "_GREEN_("%d")" keys", num, DEFAULT_ICLASS_KEYS_MAX);
+            Dbprintf("  iClass.................. "_YELLOW_("%u")" / "_GREEN_("%u")" keys", num, DEFAULT_ICLASS_KEYS_MAX);
     }
 
     FlashStop();
