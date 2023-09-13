@@ -87,9 +87,9 @@ Locking support is unknown.
 #### Identify
 ^[Top](#top)
 
-Tag has completely random EM410x ID from factory.
-
-Engravings on fobs: "H5.5"
+* Tag has completely random EM410x ID from factory.
+* Engravings on fobs: "H5.5"
+* *If you set the EM ID to `3F0096F87E`, it will show up as T55x7 during `lf search`*
 
 ### H7
 ^[Top](#top)
@@ -101,9 +101,9 @@ Locking support cannot be described, as there is conflicting information (see [i
 #### Identify
 ^[Top](#top)
 
-Tag has completely random EM410x ID from factory.
-
-Engravings on fobs: "H7" (stretched)
+* Tag has completely random EM410x ID from factory.
+* Engravings on fobs: "H7" (stretched)
+* *If you set the EM ID to `3F0096F87E`, it will show up as T55x7 during `lf search`*
 
 ### OTP
 ^[Top](#top)
