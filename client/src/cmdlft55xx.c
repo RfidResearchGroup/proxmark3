@@ -3498,12 +3498,12 @@ out:
 // some return all page 1 (64 bits) and others return just that block (32 bits)
 // unfortunately the 64 bits makes this more likely to get a false positive...
 bool tryDetectP1(bool getData) {
-    uint8_t  preamble_atmel[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
-    uint8_t  preamble_silicon[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1};
-    size_t   startIdx   = 0;
-    uint8_t  fc1        = 0, fc2 = 0, ans = 0;
-    int      clk        = 0, firstClockEdge = 0;
-    bool     st         = true;
+    uint8_t preamble_atmel[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
+    uint8_t preamble_silicon[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1};
+    size_t startIdx = 0;
+    uint8_t fc1 = 0, fc2 = 0, ans = 0;
+    int clk = 0, firstClockEdge = 0;
+    bool st = true;
 
     if (getData) {
         if (!AcquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, false, 0, 0))
@@ -3514,16 +3514,26 @@ bool tryDetectP1(bool getData) {
     ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
     if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
 
-        if ((FSKrawDemod(0, 0, 0, 0, false) == PM3_SUCCESS) && (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) ||
-                preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false)) { 
+        if (FSKrawDemod(0, 0, 0, 0, false) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+            
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) { 
                 return true;
             }
         }
 
-        if ((FSKrawDemod(0, 1, 0, 0, false) == PM3_SUCCESS) && (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) ||
-                preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false)) { 
+        if (FSKrawDemod(0, 1, 0, 0, false) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+            
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) { 
                 return true;
             }
         }
@@ -3533,32 +3543,52 @@ bool tryDetectP1(bool getData) {
     // try ask clock detect.  it could be another type even if successful.
     clk = GetAskClock("", false);
     if (clk > 0) {
-        if ((ASKDemod_ext(0, 0, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS) && (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+        if (ASKDemod_ext(0, 0, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS) {
 
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) ||
-                preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false)) { 
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) && 
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+            
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) { 
                 return true;
             }
         }
 
         st = true;
-        if ((ASKDemod_ext(0, 1, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS) && (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) ||
-                preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false)) { 
+        if (ASKDemod_ext(0, 1, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+            
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) { 
                 return true;
             }
         }
 
-        if ((ASKbiphaseDemod(0, 0, 0, 2, false) == PM3_SUCCESS) && (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) ||
-                preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false)) { 
+        if (ASKbiphaseDemod(0, 0, 0, 2, false) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+            
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) { 
                 return true;
             }
         }
 
-        if ((ASKbiphaseDemod(0, 0, 1, 2, false) == PM3_SUCCESS) && (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) ||
-                preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false)) { 
+        if (ASKbiphaseDemod(0, 0, 1, 2, false) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+            
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) { 
                 return true;
             }
         }
@@ -3567,19 +3597,28 @@ bool tryDetectP1(bool getData) {
     // try NRZ clock detect.  it could be another type even if successful.
     clk = GetNrzClock("", false); //has the most false positives :(
     if (clk > 0) {
-        if ((NRZrawDemod(0, 0, 1, false) == PM3_SUCCESS) && (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) ||
-                preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false)) { 
+        if (NRZrawDemod(0, 0, 1, false) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
                 return true;
             }
-
+            
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) { 
+                return true;
+            }
         }
-        if ((NRZrawDemod(0, 1, 1, false) == PM3_SUCCESS)  && (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) ||
-                preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false)) { 
+
+        if (NRZrawDemod(0, 1, 1, false) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
                 return true;
             }
-
+            
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) { 
+                return true;
+            }
         }
     }
 
@@ -3591,18 +3630,28 @@ bool tryDetectP1(bool getData) {
         // save_restoreGB(GRAPH_SAVE);
         // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
         //CmdLtrim("-i 160");
-        if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS) && (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+        if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
             //save_restoreGB(GRAPH_RESTORE);
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) ||
-                preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false)) { 
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+            
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) { 
                 return true;
             }
         }
 
-        if ((PSKDemod(0, 1, 6, false) == PM3_SUCCESS) && (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+        if (PSKDemod(0, 1, 6, false) == PM3_SUCCESS) {
             //save_restoreGB(GRAPH_RESTORE);
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) ||
-                preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false)) { 
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+            
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) { 
                 return true;
             }
         }
@@ -3611,12 +3660,15 @@ bool tryDetectP1(bool getData) {
         if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
             psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
 
-            if (g_DemodBufferLen == 32 || g_DemodBufferLen == 64) {
-                //save_restoreGB(GRAPH_RESTORE);
-                if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) ||
-                    preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false)) { 
-                    return true;
-                }
+            //save_restoreGB(GRAPH_RESTORE);
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+            
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+               (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) { 
+                return true;
             }
         } // inverse waves does not affect PSK2 demod
         //undo trim samples
