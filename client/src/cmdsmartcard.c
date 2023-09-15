@@ -174,7 +174,7 @@ static void PrintATR(uint8_t *atr, size_t atrlen) {
 
     if (T0 & 0x80) {
         uint8_t TD1 = atr[2 + T1len];
-        PrintAndLogEx(INFO, "    - TD1 (First offered transmission protocol, presence of TA2..TD2) [ 0x%02x ] Protocol T%d", TD1, TD1 & 0x0f);
+        PrintAndLogEx(INFO, "    - TD1 (First offered transmission protocol, presence of TA2..TD2) [ 0x%02x ] Protocol " _GREEN_("T%d"), TD1, TD1 & 0x0f);
         protocol_T0_present = false;
         if ((TD1 & 0x0f) == 0) {
             protocol_T0_present = true;
@@ -199,7 +199,7 @@ static void PrintATR(uint8_t *atr, size_t atrlen) {
         }
         if (TD1 & 0x80) {
             uint8_t TDi = atr[2 + T1len + TD1len];
-            PrintAndLogEx(INFO, "    - TD2 (A supported protocol or more global parameters, presence of TA3..TD3) [ 0x%02x ] Protocol T%d", TDi, TDi & 0x0f);
+            PrintAndLogEx(INFO, "    - TD2 (A supported protocol or more global parameters, presence of TA3..TD3) [ 0x%02x ] Protocol " _GREEN_("T%d"), TDi, TDi & 0x0f);
             if ((TDi & 0x0f) == 0) {
                 protocol_T0_present = true;
             }
