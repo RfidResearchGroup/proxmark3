@@ -34,8 +34,7 @@ const char *getAtrInfo(const char *atr_str);
 // atr_t array is expected to be NULL terminated
 const static atr_t AtrTable[] = {
     { "3BDF18FFC080B1FE751F033078464646462026204963656D616E1D", "Cardhelper by 0xFFFF and Iceman" },
-    { "3B90969181B1FE551FC7D4", "IClass SE Processor (Other)
-https://www.hidglobal.com/products/embedded-modules/iclass-se/sio-processor"},
+    { "3B90969181B1FE551FC7D4", "IClass SE Processor (Other) https://www.hidglobal.com/products/embedded-modules/iclass-se/sio-processor"},
     { "3B..............0031B8640000000073......829000", "MultiApp ID IAS ECC 72K CC (with IAS XL / IAS ECC Applet) IAS ECC Type 3" },
     { "3B..............0031B8640000000073......829000..", "MultiApp ID IAS ECC 72K CC (with IAS XL / IAS ECC Applet) IAS ECC Type 4" },
     { "3B........0031B864........73......829000", "IDClassic IAS (old name: IAS TPC) IAS ECC Type 1\nMultiApp ID IAS ECC 72K CC (with IAS XL / IAS ECC Applet) IAS ECC Type 1" },

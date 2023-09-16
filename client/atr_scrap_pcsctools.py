@@ -59,7 +59,7 @@ const char *getAtrInfo(const char *atr_str);
 // atr_t array is expected to be NULL terminated
 const static atr_t AtrTable[] = {
     { "3BDF18FFC080B1FE751F033078464646462026204963656D616E1D", "Cardhelper by 0xFFFF and Iceman" },
-    { "3B90969181B1FE551FC7D4", "IClass SE Processor (Other)\nhttps://www.hidglobal.com/products/embedded-modules/iclass-se/sio-processor"},
+    { "3B90969181B1FE551FC7D4", "IClass SE Processor (Other) https://www.hidglobal.com/products/embedded-modules/iclass-se/sio-processor"},
 """
 
 C_FOOTER="""    {NULL, "N/A"}
