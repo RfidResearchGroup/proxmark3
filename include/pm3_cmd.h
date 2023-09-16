@@ -338,10 +338,12 @@ typedef enum SMARTCARD_COMMAND {
     SC_RAW_T0 = (1 << 4),
     SC_CLEARLOG = (1 << 5),
     SC_LOG = (1 << 6),
+    SC_WAIT = (1 << 7),
 } smartcard_command_t;
 
 typedef struct {
     uint8_t flags;
+    uint32_t wait_delay;
     uint16_t len;
     uint8_t data[];
 } PACKED smart_card_raw_t;

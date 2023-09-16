@@ -416,6 +416,7 @@ static int CmdSmartRaw(const char *Cmd) {
         arg_lit0("s", NULL, "active smartcard with select (get ATR)"),
         arg_lit0("t", "tlv", "executes TLV decoder if it possible"),
         arg_lit0("0", NULL, "use protocol T=0"),
+        arg_int0(NULL, "timeout", "<ms>", "Timeout in MS waiting for SIM to respond. (def 337ms)"),
         arg_str1("d", "data", "<hex>", "bytes to send"),
         arg_param_end
     };
@@ -426,10 +427,11 @@ static int CmdSmartRaw(const char *Cmd) {
     bool active_select = arg_get_lit(ctx, 3);
     bool decode_tlv = arg_get_lit(ctx, 4);
     bool use_t0 = arg_get_lit(ctx, 5);
+    int timeout = arg_get_int_def(ctx, 6, -1);
 
     int dlen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 6), data, sizeof(data), &dlen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 7), data, sizeof(data), &dlen);
     CLIParserFree(ctx);
 
     if (res) {
@@ -452,6 +454,13 @@ static int CmdSmartRaw(const char *Cmd) {
         if (active_select)
             payload->flags |= SC_SELECT;
     }
+    
+    payload->wait_delay = 0;
+    if (timeout > -1) {
+        payload->flags |= SC_WAIT;
+        payload->wait_delay = timeout;
+    }
+    PrintAndLogEx(DEBUG, "SIM Card timeout... %u ms", payload->wait_delay);
 
     if (dlen > 0) {
         if (use_t0)

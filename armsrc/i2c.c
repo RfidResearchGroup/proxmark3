@@ -39,6 +39,11 @@
 
 #define I2C_ERROR  "I2C_WaitAck Error"
 
+// 8051 speaks with smart card.
+// 1000*50*3.07   = 153.5ms
+// 1 byte transfer == 1ms with max frame being 256 bytes
+#define SIM_WAIT_DELAY 109773 // about 337.7ms delay
+
 // Direct use the loop to delay. 6 instructions loop, Masterclock 48MHz,
 // delay=1 is about 200kbps
 // timer.
@@ -168,8 +173,8 @@ static bool WaitSCL_H_delay(uint32_t delay) {
     return false;
 }
 
-// 5000 * 3.07us = 15350us. 15.35ms
-// 15000 * 3.07us = 46050us. 46.05ms
+// 5000 * 3.07us = 15350 us = 15.35 ms
+// 15000 * 3.07us = 46050 us = 46.05 ms
 static bool WaitSCL_H(void) {
     return WaitSCL_H_delay(5000);
 }
@@ -194,7 +199,7 @@ static bool WaitSCL_L(void) {
 // It timeout reading response from card
 // Which ever comes first
 static bool WaitSCL_L_timeout(void) {
-    volatile uint32_t delay = 200;
+    volatile uint32_t delay = 1800;
     while (delay--) {
         // exit on SCL LOW
         if (SCL_read == false)
@@ -227,17 +232,22 @@ static bool I2C_Start(void) {
     return true;
 }
 
-static bool I2C_WaitForSim(void) {
+static bool I2C_WaitForSim(uint32_t wait) {
 
     // wait for data from card
-    if (!WaitSCL_L_timeout())
+    if (WaitSCL_L_timeout() == false) {
         return false;
+    }
 
     // 8051 speaks with smart card.
-    // 1000*50*3.07 = 153.5ms
-    // 1000*110*3.07 = 337.7ms
+    // 1000*50*3.07   = 153.5ms
+    // 1000*110*3.07  = 337.7ms  (337700)
+    // 4 560 000 * 3.07 = 13999,2ms (13999200)
     // 1byte transfer == 1ms with max frame being 256bytes
-    return WaitSCL_H_delay(1000 * 110);
+    
+    // fct WaitSCL_H_delay uses a I2C_DELAY_1CLK in the loop with "wait" as number of iterations.
+    // I2C_DELAY_1CLK == I2CSpinDelayClk(1) = 3.07us
+    return WaitSCL_H_delay(wait);
 }
 
 // send i2c STOP
@@ -670,13 +680,13 @@ int I2C_get_version(uint8_t *maj, uint8_t *min) {
 }
 
 // Will read response from smart card module,  retries 3 times to get the data.
-bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen) {
+bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
 
     uint8_t i = 5;
     int16_t len = 0;
     while (i--) {
 
-        I2C_WaitForSim();
+        I2C_WaitForSim(wait);
 
         len = I2C_BufferRead(dest, *destlen, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 
@@ -703,6 +713,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
 
     if (card_ptr == NULL)
         return false;
+   
 
     card_ptr->atr_len = 0;
     memset(card_ptr->atr, 0, sizeof(card_ptr->atr));
@@ -712,13 +723,13 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
     //wait for sim card to answer.
-    // 1byte = 1ms ,  max frame 256bytes.  Should wait 256ms atleast just in case.
-    if (I2C_WaitForSim() == false)
+    // 1byte = 1ms ,  max frame 256bytes.  Should wait 256ms atleast just in case.  
+    if (I2C_WaitForSim(SIM_WAIT_DELAY) == false)
         return false;
 
     // read bytes from module
     uint16_t len = sizeof(card_ptr->atr);
-    if (sc_rx_bytes(card_ptr->atr, &len) == false)
+    if (sc_rx_bytes(card_ptr->atr, &len, SIM_WAIT_DELAY) == false)
         return false;
 
     if (len > sizeof(card_ptr->atr)) {
@@ -805,6 +816,11 @@ void SmartCardRaw(const smart_card_raw_t *p) {
 
     if ((flags & SC_RAW) || (flags & SC_RAW_T0)) {
 
+        uint32_t wait = SIM_WAIT_DELAY;
+        if ((flags & SC_WAIT) == SC_WAIT) {
+            wait = (uint32_t)((p->wait_delay * 1000) / 3.07);
+        }
+
         LogTrace(p->data, p->len, 0, 0, NULL, true);
 
         bool res = I2C_BufferWrite(
@@ -821,7 +837,7 @@ void SmartCardRaw(const smart_card_raw_t *p) {
 
         // read bytes from module
         len = ISO7816_MAX_FRAME;
-        res = sc_rx_bytes(resp, &len);
+        res = sc_rx_bytes(resp, &len, wait);
         if (res) {
             LogTrace(resp, len, 0, 0, NULL, false);
         } else {

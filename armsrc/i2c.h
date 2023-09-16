@@ -48,7 +48,7 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
 int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
 bool I2C_WriteFW(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
 
-bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen);
+bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait);
 //
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose);
 
