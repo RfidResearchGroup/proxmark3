@@ -12,13 +12,11 @@ INSTALLTOOLS = $(BINS)
 include ../../Makefile.host
 # checking platform can be done only after Makefile.host
 
-# Atomic
+# Atomic / pThread
 # RPi Zero gcc requires -latomic
-MYLDLIBS += -latomic
-
 # macOS might not like pthread?
 ifneq ($(platform),Darwin)
-    MYLDLIBS += -lpthread
+    MYLDLIBS += -lpthread -latomic
 endif
 
 # macOS needs c++14 standard when compiling c++
