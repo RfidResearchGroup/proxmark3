@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+// //-----------------------------------------------------------------------------
 // Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -42,7 +42,7 @@
 // 8051 speaks with smart card.
 // 1000*50*3.07   = 153.5ms
 // 1 byte transfer == 1ms with max frame being 256 bytes
-#define SIM_WAIT_DELAY 109773 // about 337.7ms delay
+#define SIM_WAIT_DELAY  88000 // about 270ms delay // 109773 -- about 337.7ms delay
 
 // Direct use the loop to delay. 6 instructions loop, Masterclock 48MHz,
 // delay=1 is about 200kbps
@@ -199,7 +199,7 @@ static bool WaitSCL_L(void) {
 // It timeout reading response from card
 // Which ever comes first
 static bool WaitSCL_L_timeout(void) {
-    volatile uint32_t delay = 1800;
+    volatile uint32_t delay = 1200;
     while (delay--) {
         // exit on SCL LOW
         if (SCL_read == false)
@@ -596,8 +596,9 @@ int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t
 
     // sending
     do {
-        if (!I2C_Start())
+        if (I2C_Start() == false) {
             return 0;
+        }
 
         // 0xB0 / 0xC0  i2c write
         I2C_SendByte(device_address & 0xFE);
@@ -605,18 +606,21 @@ int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t
             break;
 
         I2C_SendByte(msb);
-        if (!I2C_WaitAck())
+        if (I2C_WaitAck() == false) {
             break;
+        }
 
         I2C_SendByte(lsb);
-        if (!I2C_WaitAck())
+        if (I2C_WaitAck() == false) {
             break;
+        }
 
         // 0xB1 / 0xC1  i2c read
         I2C_Start();
         I2C_SendByte(device_address | 1);
-        if (!I2C_WaitAck())
+        if (I2C_WaitAck() == false) {
             break;
+        }
 
         _break = false;
     } while (false);
@@ -727,7 +731,7 @@ int I2C_get_version(uint8_t *major, uint8_t *minor) {
     return PM3_EDEVNOTSUPP;
 }
 
-// Will read response from smart card module,  retries 3 times to get the data.
+// Will read response from smart card module,  retries 10 times to get the data.
 bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
 
     uint8_t i = 10;
