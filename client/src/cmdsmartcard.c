@@ -355,6 +355,7 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
         payload->flags = SC_RAW | SC_LOG;
         payload->len = sizeof(cmd_getresp);
+        payload->wait_delay = 0;
         memcpy(payload->data, cmd_getresp, sizeof(cmd_getresp));
 
         clearCommandBuffer();
@@ -504,9 +505,9 @@ static int CmdSmartRaw(const char *Cmd) {
         data[4] = 0;
     }
 
-    if (decode_tlv && len > 4)
+    if (decode_tlv && len > 4) {
         TLVPrintFromBuffer(buf, len - 2);
-    else {
+    } else {
         if (len > 2) {
             PrintAndLogEx(INFO, "Response data:");
             PrintAndLogEx(INFO, " # | bytes                                           | ascii");
@@ -907,6 +908,7 @@ static void smart_brute_prim(void) {
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + 5);
         payload->flags = SC_RAW_T0;
         payload->len = 5;
+        payload->wait_delay = 0;
         memcpy(payload->data, get_card_data + i, 5);
 
         clearCommandBuffer();
@@ -950,6 +952,7 @@ static int smart_brute_sfi(bool decodeTLV) {
             smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) +  sizeof(READ_RECORD));
             payload->flags = SC_RAW_T0;
             payload->len = sizeof(READ_RECORD);
+            payload->wait_delay = 0;
             memcpy(payload->data, READ_RECORD, sizeof(READ_RECORD));
 
             clearCommandBuffer();
@@ -1103,7 +1106,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + hexlen);
         payload->flags = SC_RAW_T0;
         payload->len = hexlen;
-
+        payload->wait_delay = 0;
         memcpy(payload->data, cmddata, hexlen);
         clearCommandBuffer();
         SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + hexlen);
@@ -1187,6 +1190,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
         payload->flags |= (SC_SELECT | SC_CONNECT);
     }
     payload->len = datainlen;
+    payload->wait_delay = 0;
     memcpy(payload->data, datain, datainlen);
 
     clearCommandBuffer();
