@@ -199,7 +199,7 @@ static bool WaitSCL_L(void) {
 // It timeout reading response from card
 // Which ever comes first
 static bool WaitSCL_L_timeout(void) {
-    volatile uint32_t delay = 1200;
+    volatile uint32_t delay = 800;
     while (delay--) {
         // exit on SCL LOW
         if (SCL_read == false)
