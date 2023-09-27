@@ -502,13 +502,13 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
         return 0;
     }
 
+//    uint8_t *pd = data;
+
     // extra wait  500us (514us measured)
     // 200us  (xx measured)
     WaitUS(600);
 
     bool _break = true;
-    uint16_t readcount = 0;
-    uint16_t recv_len = 0;
 
     do {
         if (I2C_Start() == false) {
@@ -529,7 +529,6 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
         // 0xB1 / 0xC1 == i2c read
         I2C_Start();
         I2C_SendByte(device_address | 1);
-
         if (I2C_WaitAck() == false) {
             break;
         }
@@ -543,6 +542,9 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
         return 0;
     }
 
+    uint16_t readcount = 0;
+    uint16_t recv_len = 0;
+
     while (len) {
 
         int16_t tmp = I2C_ReadByte();
@@ -555,51 +557,49 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
         len--;
 
         // Starting firmware v4 the length is encoded on the first two bytes.
-        // This only applies if command is I2C_DEVICE_CMD_READ.
-        if (device_cmd == I2C_DEVICE_CMD_READ) {
-            switch (readcount) {
-                case 0:
-                    // Length (MSB)
-                    recv_len = (*data) << 8;
-                    break;
-                case 1:
-                    // Length (LSB)
-                    recv_len += *data;
-                    // Adjust len if needed
-                    if (len > recv_len) {
-                        len = recv_len;
-                    }
-                    break;
-                default:
-                    // Data byte received
-                    data++;
-                    break;
+        switch (readcount) {
+            case 0: {
+                // Length (MSB)
+                recv_len = (*data) << 8;
+                break;
             }
-        } else {
-            // Length is encoded on 1 byte
-            if ((readcount == 0) && (len > *data)) {
-                len = *data;
-            } else {
+            case 1: {
+                // Length (LSB)
+                recv_len += *data;
+                // Adjust len if needed
+                if (len > recv_len) {
+                    len = recv_len;
+                }
+                break;
+            }
+            default: {
+                // Data byte received
                 data++;
+                break;
             }
         }
+
         readcount++;
 
         // acknowledgements. After last byte send NACK.
-        if (len == 0)
+        if (len == 0) {
             I2C_NoAck();
-        else
+        } else {
             I2C_Ack();
+        }
     }
 
     I2C_Stop();
 
-    // return bytecount - bytes encoding length
-    if (device_cmd == I2C_DEVICE_CMD_READ) {
-        return readcount - 2;
-    }
+//    Dbprintf("rec len...  %u  readcount... %u", recv_len, readcount);
+//    Dbhexdump(readcount, pd, false);
 
-    return readcount - 1;
+    if (readcount < 2 ) {
+        return 0;
+    }    
+
+    // return bytecount - bytes encoding length
+    return readcount - 2;
 }
 
 int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
