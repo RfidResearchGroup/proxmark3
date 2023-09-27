@@ -262,7 +262,11 @@ static void I2C_Stop(void) {
     I2C_DELAY_2CLK;
     SCL_H;
     I2C_DELAY_2CLK;
-    if (!WaitSCL_H()) return;
+
+    if (WaitSCL_H() == false) {
+        return;
+    }
+
     SDA_H;
     I2C_DELAY_2CLK;
     I2C_DELAY_2CLK;
@@ -278,7 +282,11 @@ static void I2C_Ack(void) {
     I2C_DELAY_2CLK;
     SCL_H;
     I2C_DELAY_2CLK;
-    if (!WaitSCL_H()) return;
+
+    if (WaitSCL_H() == false) {
+        return;
+    }
+
     SCL_L;
     I2C_DELAY_2CLK;
 }
@@ -291,7 +299,11 @@ static void I2C_NoAck(void) {
     I2C_DELAY_2CLK;
     SCL_H;
     I2C_DELAY_2CLK;
-    if (!WaitSCL_H()) return;
+
+    if (WaitSCL_H() == false) {
+        return;
+    }
+
     SCL_L;
     I2C_DELAY_2CLK;
 }
@@ -302,6 +314,7 @@ static bool I2C_WaitAck(void) {
     SDA_H;
     I2C_DELAY_1CLK;
     SCL_H;
+
     if (WaitSCL_H() == false) {
         return false;
     }
@@ -459,7 +472,7 @@ bool I2C_BufferWrite(const uint8_t *data, uint16_t len, uint8_t device_cmd, uint
         while (len) {
 
             I2C_SendByte(*data);
-            if (!I2C_WaitAck())
+            if (I2C_WaitAck() == false)
                 break;
 
             len--;
@@ -602,7 +615,7 @@ int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t
 
         // 0xB0 / 0xC0  i2c write
         I2C_SendByte(device_address & 0xFE);
-        if (!I2C_WaitAck())
+        if (I2C_WaitAck() == false)
             break;
 
         I2C_SendByte(msb);
@@ -723,7 +736,7 @@ int I2C_get_version(uint8_t *major, uint8_t *minor) {
     uint8_t resp[] = {0, 0, 0, 0};
     I2C_Reset_EnterMainProgram();
     uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
-    if (len > 0) {
+    if (len > 1) {
         *major = resp[0];
         *minor = resp[1];
         return PM3_SUCCESS;
@@ -775,7 +788,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     // start [C0 01] stop start C1 len aa bb cc stop]
     I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
-    //wait for sim card to answer.
+    // wait for sim card to answer.
     // 1byte = 1ms ,  max frame 256bytes.  Should wait 256ms atleast just in case.  
     if (I2C_WaitForSim(SIM_WAIT_DELAY) == false) {
         return false;
@@ -869,7 +882,7 @@ void SmartCardRaw(const smart_card_raw_t *p) {
         }
     }
 
-    if ((flags & SC_RAW) || (flags & SC_RAW_T0)) {
+    if (((flags & SC_RAW) == SC_RAW) || ((flags & SC_RAW_T0) == SC_RAW_T0)) {
 
         uint32_t wait = SIM_WAIT_DELAY;
         if ((flags & SC_WAIT) == SC_WAIT) {
@@ -881,9 +894,10 @@ void SmartCardRaw(const smart_card_raw_t *p) {
         bool res = I2C_BufferWrite(
                        p->data,
                        p->len,
-                       ((flags & SC_RAW_T0) ? I2C_DEVICE_CMD_SEND_T0 : I2C_DEVICE_CMD_SEND),
+                       (((flags & SC_RAW_T0) == SC_RAW_T0) ? I2C_DEVICE_CMD_SEND_T0 : I2C_DEVICE_CMD_SEND),
                        I2C_DEVICE_ADDRESS_MAIN
                    );
+
         if (res == false && g_dbglevel > 3) {
             DbpString(I2C_ERROR);
             reply_ng(CMD_SMART_RAW, PM3_ESOFT, NULL, 0);
