@@ -523,16 +523,16 @@ out:
 }
 
 static int CmdSmartUpgrade(const char *Cmd) {
-    PrintAndLogEx(INFO, "-------------------------------------------------------------------");
+    PrintAndLogEx(INFO, "--------------------------------------------------------------------");
     PrintAndLogEx(WARNING, _RED_("WARNING") " - sim module firmware upgrade");
     PrintAndLogEx(WARNING, _RED_("A dangerous command, do wrong and you could brick the sim module"));
-    PrintAndLogEx(INFO, "-------------------------------------------------------------------");
+    PrintAndLogEx(INFO, "--------------------------------------------------------------------");
     PrintAndLogEx(NORMAL, "");
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart upgrade",
                   "Upgrade RDV4 sim module firmware",
-                  "smart upgrade -f sim013.bin"
+                  "smart upgrade -f sim014.bin"
                  );
 
     void *argtable[] = {
