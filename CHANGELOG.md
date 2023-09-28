@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `sim014.bin` - new sim module firmware v4.42 with improved ISO7816 Protocol T0 support (@gentilkiwi)
  - Added datasheet for sim module (@iceman1001)
  - Changed `smart raw --timeout` - allows for a custom timeout (@iceman1001)
  - Changed `lf t55 detectp1` - now also accepts 0xE039 Silicon Craft Tech as valid card (@iceman1001)
