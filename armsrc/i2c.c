@@ -199,7 +199,7 @@ static bool WaitSCL_L(void) {
 // It timeout reading response from card
 // Which ever comes first
 static bool WaitSCL_L_timeout(void) {
-    volatile uint32_t delay = 800;
+    volatile uint32_t delay = 1200;
     while (delay--) {
         // exit on SCL LOW
         if (SCL_read == false)
@@ -596,7 +596,7 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
 
     if (readcount < 2 ) {
         return 0;
-    }    
+    }
 
     // return bytecount - bytes encoding length
     return readcount - 2;
@@ -744,7 +744,7 @@ int I2C_get_version(uint8_t *major, uint8_t *minor) {
     return PM3_EDEVNOTSUPP;
 }
 
-// Will read response from smart card module,  retries 10 times to get the data.
+// Will read response from smart card module,  retries 3 times to get the data.
 bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
 
     uint8_t i = 10;
