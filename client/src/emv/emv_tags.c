@@ -822,9 +822,11 @@ bool emv_tag_dump(const struct tlv *tlv, int level) {
             emv_tag_dump_string(tlv, tag, level);
             break;
         case EMV_TAG_NUMERIC:
+            PrintAndLogEx(NORMAL, "");
             emv_tag_dump_numeric(tlv, tag, level);
             break;
         case EMV_TAG_YYMMDD:
+            PrintAndLogEx(NORMAL, "");
             emv_tag_dump_yymmdd(tlv, tag, level);
             break;
         case EMV_TAG_CVR:
