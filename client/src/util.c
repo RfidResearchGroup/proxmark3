@@ -944,11 +944,11 @@ int hextobinarray_n(char *target, char *source, int sourcelen) {
     return count;
 }
 
-// convert hex to human readable binary string
+// convert hexstring to human readable binary string
 int hextobinstring(char *target, char *source) {
     return hextobinstring_n(target, source, strlen(source));
 }
-
+// convert hexstring to human readable binary string
 int hextobinstring_n(char *target, char *source, int sourcelen) {
     int length = hextobinarray_n(target, source, sourcelen);
     if (length == 0) {
@@ -956,6 +956,23 @@ int hextobinstring_n(char *target, char *source, int sourcelen) {
     }
     binarraytobinstring(target, target, length);
     return length;
+}
+
+// convert bytes to binary string
+int byte_2_binstr(char *target,  const uint8_t *source, size_t sourcelen) {
+    //uint8_t *p = *source;
+    for (int i = 0 ; i < sourcelen; ++i) {
+        uint8_t b = *(source++);
+        *(target++) = ((b >> 7) & 0x1) + '0';
+        *(target++) = ((b >> 6) & 0x1) + '0';
+        *(target++) = ((b >> 5) & 0x1) + '0';
+        *(target++) = ((b >> 4) & 0x1) + '0';                
+        *(target++) = ((b >> 3) & 0x1) + '0';
+        *(target++) = ((b >> 2) & 0x1) + '0';
+        *(target++) = ((b >> 1) & 0x1) + '0';
+        *(target++) = (b & 0x1) + '0';        
+    }
+    *target = '\0';
 }
 
 // convert binary array of 0x00/0x01 values to hex
@@ -1007,8 +1024,9 @@ int binarraytohex(char *target, const size_t targetlen, const char *source, size
 
 // convert binary array to human readable binary
 void binarraytobinstring(char *target, char *source,  int length) {
-    for (int i = 0 ; i < length; ++i)
+    for (int i = 0 ; i < length; ++i) {
         *(target++) = *(source++) + '0';
+    }
     *target = '\0';
 }
 

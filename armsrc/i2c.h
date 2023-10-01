@@ -30,6 +30,15 @@
 #define I2C_DEVICE_CMD_GETVERSION   0x06
 #define I2C_DEVICE_CMD_SEND_T0      0x07
 
+// The SIM module v4 supports up to 384 bytes for the length.
+#define  ISO7816_MAX_FRAME 270
+
+// 8051 speaks with smart card.
+// 1000*50*3.07   = 153.5ms
+// 1 byte transfer == 1ms with max frame being 256 bytes
+#define SIM_WAIT_DELAY  88000 // about 270ms delay // 109773 -- about 337.7ms delay
+
+
 void I2C_recovery(void);
 void I2C_init(bool has_ticks);
 void I2C_Reset(void);

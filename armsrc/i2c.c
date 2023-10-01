@@ -39,11 +39,6 @@
 
 #define I2C_ERROR  "I2C_WaitAck Error"
 
-// 8051 speaks with smart card.
-// 1000*50*3.07   = 153.5ms
-// 1 byte transfer == 1ms with max frame being 256 bytes
-#define SIM_WAIT_DELAY  88000 // about 270ms delay // 109773 -- about 337.7ms delay
-
 // Direct use the loop to delay. 6 instructions loop, Masterclock 48MHz,
 // delay=1 is about 200kbps
 // timer.
@@ -57,9 +52,6 @@ static void __attribute__((optimize("O0"))) I2CSpinDelayClk(uint16_t delay) {
 #define I2C_DELAY_1CLK    I2CSpinDelayClk(1)
 #define I2C_DELAY_2CLK    I2CSpinDelayClk(2)
 #define I2C_DELAY_XCLK(x) I2CSpinDelayClk((x))
-
-// The SIM module v4 supports up to 384 bytes for the length.
-#define  ISO7816_MAX_FRAME 270
 
 // try i2c bus recovery at 100kHz = 5us high, 5us low
 void I2C_recovery(void) {

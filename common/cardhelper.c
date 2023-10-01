@@ -60,13 +60,14 @@ bool IsCardHelperPresent(bool verbose) {
 bool IsHIDSamPresent(bool verbose) {
 
     if (IfPm3Smartcard() == false) {
+        PrintAndLogEx(WARNING, "Proxmark3 does not have SMARTCARD support enabled, exiting");
         return false;
     }
 
     // detect SAM
     smart_card_atr_t card;
     smart_select(verbose, &card);
-    if (!card.atr_len) {
+    if (card.atr_len == 0) {
         PrintAndLogEx(ERR, "Can't get ATR from a smart card");
         return false;
     }

@@ -328,7 +328,7 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
         needGetData = true;
     }
 
-    if (needGetData == true) {
+    if (needGetData) {
         // Don't discard data we already received except the SW code.
         // If we only received 1 byte, this is the echo of INS, we discard it.
         totallen -= 2;
@@ -1222,8 +1222,9 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
 }
 
 bool smart_select(bool verbose, smart_card_atr_t *atr) {
-    if (atr)
+    if (atr) {
         memset(atr, 0, sizeof(smart_card_atr_t));
+    }
 
     clearCommandBuffer();
     SendCommandNG(CMD_SMART_ATR, NULL, 0);
@@ -1241,8 +1242,9 @@ bool smart_select(bool verbose, smart_card_atr_t *atr) {
     smart_card_atr_t card;
     memcpy(&card, (smart_card_atr_t *)resp.data.asBytes, sizeof(smart_card_atr_t));
 
-    if (atr)
+    if (atr) {
         memcpy(atr, &card, sizeof(smart_card_atr_t));
+    }
 
     if (verbose)
         PrintAndLogEx(INFO, "ISO7816-3 ATR : %s", sprint_hex(card.atr, card.atr_len));

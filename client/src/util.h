@@ -122,6 +122,8 @@ int binarraytohex(char *target, const size_t targetlen, const char *source, size
 void binarraytobinstring(char *target,  char *source, int length);
 int binstring2binarray(uint8_t *target, char *source, int length);
 
+int byte_2_binstr(char *target,  const uint8_t *source, size_t sourcelen);
+
 uint8_t GetParity(const uint8_t *bits, uint8_t type, int length);
 void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
 void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length);

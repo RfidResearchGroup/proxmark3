@@ -585,6 +585,7 @@ typedef struct {
 #define CMD_HF_ICLASS_RESTORE                                             0x039B
 #define CMD_HF_ICLASS_CREDIT_EPURSE                                       0x039C
 
+
 // For ISO1092 / FeliCa
 #define CMD_HF_FELICA_SIMULATE                                            0x03A0
 #define CMD_HF_FELICA_SNIFF                                               0x03A1
@@ -669,6 +670,7 @@ typedef struct {
 #define CMD_HF_MFU_COUNTER_TEAROFF                                        0x0741
 
 
+
 #define CMD_HF_SNIFF                                                      0x0800
 #define CMD_HF_PLOT                                                       0x0801
 
@@ -697,6 +699,11 @@ typedef struct {
 #define CMD_HF_MIFARE_G4_GDM_WRBL                                         0x0871
 #define CMD_HF_MIFARE_G4_GDM_CONFIG                                       0x0872
 #define CMD_HF_MIFARE_G4_GDM_WRCFG                                        0x0873
+
+// HID SAM 
+#define CMD_HF_SAM_PICOPASS                                               0x0900
+#define CMD_HF_SAM_SEOS                                                   0x0901
+#define CMD_HF_SAM_MFC                                                    0x0902
 
 #define CMD_UNKNOWN                                                       0xFFFF
 
