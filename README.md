@@ -12,10 +12,6 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 |:--------------:|:------------------:|:------------------:|
 | ![MacOS Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/MacOS%20Build%20and%20Test/badge.svg?branch=master) | ![Ubuntu Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/Ubuntu%20Build%20and%20Test/badge.svg?branch=master) | [![Windows Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml) |
 
-| Trivia | 
-|:--------------:|
-| ![visitors](https://visitor-badge.laobi.icu/badge?page_id=RfidResearchGroup.proxmark3) |
-
 # Table of Contents
  1. [PROXMARK3 INSTALLATION AND OVERVIEW](#proxmark3-installation-and-overview)
  2. [Notes / helpful documents](#notes--helpful-documents)
