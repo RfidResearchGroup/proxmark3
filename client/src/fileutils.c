@@ -1064,8 +1064,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     json_error_t error;
     json_t *root = json_load_file(path, 0, &error);
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(SUCCESS, "loaded from JSON file `" _YELLOW_("%s") "`", path);
+    }
 
     free(path);
 
@@ -1521,13 +1522,8 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
-    // unidentified file format
-    if (verbose) {
-        PrintAndLogEx(FAILED, "Unidentified file format `" _YELLOW_("%s") "`", path);
-    }
-    retval = PM3_EFILE;
-
 out:
+
 
     if (callback != NULL) {
         (*callback)(root);
@@ -2274,7 +2270,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
     DumpFileType_t dftype = getfiletype(fn);
     switch (dftype) {
         case BIN: {
-            loadFile_safe(fn, ".bin", pdump, dumplen);
+            res = loadFile_safe(fn, ".bin", pdump, dumplen);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "File IO failed");
             }

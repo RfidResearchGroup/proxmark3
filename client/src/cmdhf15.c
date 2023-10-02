@@ -1706,9 +1706,9 @@ static int CmdHF15Dump(const char *Cmd) {
     }
 
     if (blklen == 8) {
-        pm3_save_dump(filename, data, (blocknum * blklen), jsf15_v3);
+        pm3_save_dump(filename, data, (size_t)(blocknum * blklen), jsf15_v3);
     } else {
-        pm3_save_dump(filename, data, (blocknum * blklen), jsf15_v2);
+        pm3_save_dump(filename, data, (size_t)(blocknum * blklen), jsf15_v2);
     }
     return PM3_SUCCESS;
 }
