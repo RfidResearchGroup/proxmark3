@@ -100,19 +100,6 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
  */
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen);
 
-/**
- * @brief Utility function to save data to a textfile (EML). This method takes a preferred name, but if that
- * file already exists, it tries with another name until it finds something suitable.
- * E.g. dumpdata-15.txt
- *
- * @param preferredName
- * @param data The binary data to write to the file
- * @param datalen the length of the data
- * @param blocksize the length of one row
- * @return 0 for ok, 1 for failz
-*/
-int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t blocksize);
-
 /** STUB
  * @brief Utility function to save JSON data to a file. This method takes a preferred name, but if that
  * file already exists, it tries with another name until it finds something suitable.

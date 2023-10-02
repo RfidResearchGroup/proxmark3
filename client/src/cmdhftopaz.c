@@ -838,13 +838,13 @@ static int CmdHFTopazDump(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf topaz dump",
-                  "Dump TOPAZ tag to binary file\n"
+                  "Dump TOPAZ tag to file (bin/json)\n"
                   "If no <name> given, UID will be used as filename",
                   "hf topaz dump\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
     };
@@ -916,7 +916,7 @@ static int CmdHFTopazView(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>",  "filename of dump"),
+        arg_str1("f", "file", "<fn>",  "Specify a filename for dump file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

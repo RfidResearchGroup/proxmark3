@@ -264,57 +264,6 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     return PM3_SUCCESS;
 }
 
-// dump file
-int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t blocksize) {
-
-    if (data == NULL || datalen == 0) {
-        return PM3_EINVARG;
-    }
-
-    char *fileName = newfilenamemcopyEx(preferredName, ".eml", spDump);
-    if (fileName == NULL) {
-        return PM3_EMALLOC;
-    }
-
-    int retval = PM3_SUCCESS;
-    int blocks = datalen / blocksize;
-    uint16_t currblock = 1;
-
-    // We should have a valid filename now, e.g. dumpdata-3.bin
-
-    // Opening file for writing in text mode
-    FILE *f = fopen(fileName, "w+");
-    if (!f) {
-        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
-        retval = PM3_EFILE;
-        goto out;
-    }
-
-    for (size_t i = 0; i < datalen; i++) {
-        fprintf(f, "%02X", data[i]);
-
-        // no extra line in the end
-        if ((i + 1) % blocksize == 0 && currblock != blocks) {
-            fprintf(f, "\n");
-            currblock++;
-        }
-    }
-    // left overs
-    if (datalen % blocksize != 0) {
-        int index = blocks * blocksize;
-        for (size_t j = 0; j < datalen % blocksize; j++) {
-            fprintf(f, "%02X", data[index + j]);
-        }
-    }
-    fflush(f);
-    fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%" PRId32) " blocks to text file " _YELLOW_("%s"), blocks, fileName);
-
-out:
-    free(fileName);
-    return retval;
-}
-
 // dump file (normally,  we also got preference file, etc)
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *)) {
     return saveFileJSONex(preferredName, ftype, data, datalen, true, callback, spDump);
@@ -1543,12 +1492,15 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     if (!strcmp(ctype, "ndef")) {
 
+        /*
+        // when we will read and return extra values from NDEF json
         json_error_t up_error = {0};
         int i1 = 0;
         size_t ndefsize = 0;
         if (json_unpack_ex(root, &up_error, 0, "{s:i}", "Ndef.Size", &i1) == 0) {
             ndefsize = i1;
         }
+        */
 
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 16); i++) {

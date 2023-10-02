@@ -1143,13 +1143,13 @@ static int CmdHF15ELoad(const char *Cmd) {
 static int CmdHF15ESave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 esave",
-                  "Save emulator memory into two files (BIN/JSON) ",
+                  "Save emulator memory into two files (bin/json) ",
                   "hf 15 esave -f hf-15-01020304"
                   "hf 15 esave -b 8 -c 42 -f hf-15-01020304"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_int0(NULL, "bsize", "<dec>", "block size, defaults to 4"),
         arg_int0("c", "count", "<dec>", "number of blocks to export, defaults to all"),
         arg_param_end
@@ -1542,7 +1542,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
 static int CmdHF15Dump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 dump",
-                  "This command dumps the contents of a ISO-15693 tag and save it to file",
+                  "This command dumps the contents of a ISO-15693 tag and save to file (bin/json)",
                   "hf 15 dump\n"
                   "hf 15 dump -*\n"
                   "hf 15 dump -u E011223344556677 -f hf-15-my-dump.bin"
@@ -1550,7 +1550,7 @@ static int CmdHF15Dump(const char *Cmd) {
 
     void *argtable[6 + 2] = {};
     uint8_t arglen = arg_add_default(argtable);
-    argtable[arglen++] = arg_str0("f", "file", "<fn>", "filename of dump"),
+    argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
                          argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2175,7 +2175,7 @@ static int CmdHF15Write(const char *Cmd) {
 static int CmdHF15Restore(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 restore",
-                  "This command restore the contents of a dump file onto a ISO-15693 tag",
+                  "This command restore the contents of a dump file (bin/eml/json) onto a ISO-15693 tag",
                   "hf 15 restore\n"
                   "hf 15 restore -*\n"
                   "hf 15 restore -u E011223344556677 -f hf-15-my-dump.bin"
@@ -2183,10 +2183,10 @@ static int CmdHF15Restore(const char *Cmd) {
 
     void *argtable[6 + 5] = {};
     uint8_t arglen = arg_add_default(argtable);
-    argtable[arglen++] = arg_str0("f", "file", "<fn>", "filename of dump"),
-                         argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)"),
-                                              argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-                                                      argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
+    argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)"),
+    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
@@ -2856,7 +2856,7 @@ static int CmdHF15View(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>",  "filename of dump"),
+        arg_str1("f", "file", "<fn>",  "Specify a filename for dump file"),
 //        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };

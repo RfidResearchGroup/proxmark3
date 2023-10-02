@@ -966,7 +966,7 @@ static int CmdLegicRestore(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Filename to restore"),
+        arg_str1("f", "file", "<fn>", "Specify a filename to restore"),
         arg_lit0(NULL, "ob", "obfuscate dump data (xor with MCC)"),
         arg_param_end
     };
@@ -1406,7 +1406,7 @@ static int CmdLegicView(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };

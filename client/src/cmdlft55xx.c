@@ -2336,7 +2336,7 @@ static int CmdT55xxRestore(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump file"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_str0("p", "pwd", "<hex>", "password if target card has password set (4 hex bytes)"),
         arg_param_end
     };

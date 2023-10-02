@@ -41,7 +41,7 @@ static int CmdHF_ntag424_view(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end
     };

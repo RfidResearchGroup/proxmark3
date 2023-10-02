@@ -194,7 +194,7 @@ int CmdEM4x50ELoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "dump filename"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_param_end
     };
 
@@ -1113,7 +1113,7 @@ int CmdEM4x50Restore(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("u", "uid", "<hex>", "uid, 4 hex bytes, msb"),
-        arg_str0("f", "file", "<fn>", "specify dump filename (bin/eml/json)"),
+        arg_str0("f", "file", "<fn>", "specify a filename for dump file"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
         arg_param_end
     };

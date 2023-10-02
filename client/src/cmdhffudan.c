@@ -235,14 +235,14 @@ static int CmdHFFudanReader(const char *Cmd) {
 static int CmdHFFudanDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fudan dump",
-                  "Dump FUDAN tag to binary file\n"
+                  "Dump FUDAN tag to file (bin/json)\n"
                   "If no <name> given, UID will be used as filename",
                   "hf fudan dump -f mydump        --> dump using filename\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -453,7 +453,7 @@ static int CmdHFFudanView(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

@@ -1009,14 +1009,14 @@ static int CmdHFiClassReader(const char *Cmd) {
 static int CmdHFiClassELoad(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass eload",
-                  "Load emulator memory with data from (bin/eml/json) iCLASS dump file",
-                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.eml\n"
+                  "Load emulator memory with data from (bin/json) iCLASS dump file",
+                  "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.json\n"
                   "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin -m\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("m", "mem",  "use RDV4 spiffs"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -1103,7 +1103,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
 static int CmdHFiClassESave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass esave",
-                  "Save emulator memory to file.\n"
+                  "Save emulator memory to file (bin/json)\n"
                   "if filename is not supplied, CSN will be used.",
                   "hf iclass esave\n"
                   "hf iclass esave -f hf-iclass-dump\n"
@@ -1111,7 +1111,7 @@ static int CmdHFiClassESave(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump file"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_int0("s", "size", "<256|2048>", "number of bytes to save (default 256)"),
         arg_param_end
     };
@@ -1308,7 +1308,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                   "which is defined by the configuration block.\n"
                   "\nOBS!\n"
                   "In order to use this function, the file `iclass_decryptionkey.bin` must reside\n"
-                  "in the resources directory. The file should be 16 bytes binary data\n"
+                  "in the resources directory. The file must be 16 bytes binary data\n"
                   "or...\n"
                   "make sure your cardhelper is placed in the sim module",
                   "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
@@ -1317,7 +1317,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump file (bin/eml/json)"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_str0("d", "data", "<hex>", "3DES encrypted data"),
         arg_str0("k", "key", "<hex>", "3DES transport key"),
         arg_lit0("v", "verbose", "verbose output"),
@@ -2328,7 +2328,7 @@ static int CmdHFiClassCreditEpurse(const char *Cmd) {
 static int CmdHFiClassRestore(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass restore",
-                  "Restore data from dumpfile onto a iCLASS tag",
+                  "Restore data from dumpfile (bin/eml/json) onto a iCLASS tag",
                   "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0\n"
                   "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0 --elite\n"
                   "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 -k 1122334455667788 --elite\n"
@@ -2336,7 +2336,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "specify a filename to restore (bin/eml/json)"),
+        arg_str1("f", "file", "<fn>", "specify a filename to restore"),
         arg_str0("k", "key", "<hex>", "Access key as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
         arg_int1(NULL, "first", "<dec>", "The first block number to restore"),
@@ -3026,7 +3026,7 @@ static int CmdHFiClassView(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>",  "filename of dump"),
+        arg_str1("f", "file", "<fn>",  "Specify a filename for dump file"),
         arg_int0(NULL, "first", "<dec>", "Begin printing from this block (default first user block)"),
         arg_int0(NULL, "last", "<dec>", "End printing at this block (default 0, ALL)"),
         arg_lit0("v", "verbose", "verbose output"),

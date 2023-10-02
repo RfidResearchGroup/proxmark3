@@ -1384,15 +1384,15 @@ static int CmdHFMFPChk(const char *Cmd) {
 static int CmdHFMFPDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp dump",
-                  "Dump MIFARE Plus tag to binary file\n"
+                  "Dump MIFARE Plus tag to file (bin/json)\n"
                   "If no <name> given, UID will be used as filename",
                   "hf mfp dump\n"
                   "hf mfp dump --keys hf-mf-066C8B78-key.bin --> MIFARE Plus with keys from specified file\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f",  "file", "<fn>", "filename of dump"),
-        arg_str0("k",  "keys", "<fn>", "filename of keys"),
+        arg_str0("f",  "file", "<fn>", "Specify a filename for dump file"),
+        arg_str0("k",  "keys", "<fn>", "Specify a filename for keys file"),
         arg_lit0(NULL, "ns", "no save to file"),
         arg_lit0("v",  "verbose",   "Verbose mode"),
         arg_param_end

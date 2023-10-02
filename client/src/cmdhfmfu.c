@@ -2434,7 +2434,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu dump",
-                  "Dump MIFARE Ultralight/NTAG tag to binary/eml/json files.\n"
+                  "Dump MIFARE Ultralight/NTAG tag to files (bin/json)\n"
                   "It autodetects card type."
                   "Supports:\n"
                   "Ultralight, Ultralight-C, Ultralight EV1\n"
@@ -2848,7 +2848,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "specify dump filename"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_lit0("s", NULL, "enable special write UID -MAGIC TAG ONLY-"),
@@ -3065,7 +3065,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_int0("q", "qty", "<dec>", "Number of blocks to load from eml file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -4574,7 +4574,7 @@ static int CmdHF14AMfuESave(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0("e", "end", "<dec>", "index of last block"),
-        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_param_end
     };
 
@@ -4634,7 +4634,7 @@ static int CmdHF14AMfuView(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end
     };

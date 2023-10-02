@@ -1130,7 +1130,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
 static int CmdHF14AMfDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf dump",
-                  "Dump MIFARE Classic tag to binary file\n"
+                  "Dump MIFARE Classic tag to file (bin/json)\n"
                   "If no <name> given, UID will be used as filename",
                   "hf mf dump --mini                        --> MIFARE Mini\n"
                   "hf mf dump --1k                          --> MIFARE Classic 1k\n"
@@ -1140,7 +1140,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_str0("k", "keys", "<fn>", "filename of keys"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
@@ -1264,7 +1264,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_str0("u", "uid",  "<hex>", "uid, (4|7|10 hex bytes)"),
-        arg_str0("f", "file", "<fn>", "specify dump filename (bin/eml/json)"),
+        arg_str0("f", "file", "<fn>", "specify a filename for dump file"),
         arg_str0("k", "kfn",  "<fn>", "key filename"),
         arg_lit0(NULL, "ka",  "use specified keyfile to authenticate"),
         arg_lit0(NULL, "force", "override warnings"),
@@ -4250,7 +4250,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
@@ -4439,14 +4439,14 @@ static int CmdHF14AMfESave(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf esave",
-                  "Save emulator memory into two files (bin//json) ",
+                  "Save emulator memory to file (bin/json) ",
                   "hf mf esave\n"
                   "hf mf esave --4k\n"
                   "hf mf esave --4k -f hf-mf-01020304.eml"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
@@ -4952,7 +4952,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0(NULL, "emu", "from emulator memory"),
         arg_param_end
     };
@@ -5181,14 +5181,14 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
 static int CmdHF14AMfCSave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf csave",
-                  "Save magic gen1a card memory into two files (bin/json)"
+                  "Save magic gen1a card memory to file (bin/json)"
                   "or into emulator memory",
                   "hf mf csave\n"
                   "hf mf csave --4k"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
@@ -7332,7 +7332,7 @@ static int CmdHF14AMfView(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "sk", "Save extracted keys to file"),
         arg_param_end
@@ -7509,7 +7509,7 @@ static int CmdHF14AGen4Load(const char *cmd) {
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_str0("p", "pwd", "<hex>", "password 4bytes"),
         arg_lit0("v", "verbose", "verbose output"),
-        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0(NULL, "emu", "from emulator memory"),
         arg_int0(NULL, "start", "<dec>", "index of block to start writing (default 0)"),
         arg_int0(NULL, "end", "<dec>", "index of block to end writing (default last block)"),
@@ -7855,7 +7855,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gsave",
-                  "Save `magic gen4 gtu` card memory into two files (bin/json)"
+                  "Save `magic gen4 gtu` card memory to file (bin/json)"
                   "or into emulator memory",
                   "hf mf gsave\n"
                   "hf mf gsave --4k\n"
@@ -7868,7 +7868,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_str0("p", "pwd", "<hex>", "password 4 bytes"),
-        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0(NULL, "emu", "to emulator memory"),
         arg_param_end
     };

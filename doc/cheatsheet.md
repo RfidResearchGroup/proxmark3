@@ -140,7 +140,7 @@ Decrypt iCLASS Block / file
 ```
 Options
 ---
--f, --file <filename>          filename of dumpfile
+-f, --file <filename>          Specify a filename for dump file
 -d, --data <hex>               3DES encrypted data
 -k, --key <hex>                3DES transport key
 -v, --verbose                  verbose output
@@ -153,7 +153,7 @@ Load iCLASS dump into memory for simulation
 ```
 Options
 ---
--f, --file <filename>          filename of dump
+-f, --file <filename>          Specify a filename for dump file
     --json                     load JSON type dump
     --eml                      load EML type dump
 
@@ -261,8 +261,8 @@ Dump MIFARE Classic card contents
 ```
 Options:
 ---
--f, --file <filename>          filename of dump
--k, --keys <filename>          filename of keys
+-f, --file <filename>          Specify a filename for dump file
+-k, --keys <filename>          Specify a filename for keys file
     --mini                     MIFARE Classic Mini / S20
     --1k                       MIFARE Classic 1k / S50 (default)
     --2k                       MIFARE Classic/Plus 2k
@@ -335,7 +335,7 @@ Accepts (BIN/EML/JSON)
 ```
 Options
 ---
--f, --file <fn>                filename of dump
+-f, --file <fn>                Specify a filename for dump file
     --mini                     MIFARE Classic Mini / S20
     --1k                       MIFARE Classic 1k / S50 (def)
     --2k                       MIFARE Classic/Plus 2k
