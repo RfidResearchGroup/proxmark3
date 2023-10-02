@@ -21,10 +21,13 @@
 
 #include "common.h"
 
+#define DES_KEY_LEN             8
 #define AES_KEY_LEN             16
+#define T2DES_KEY_LEN           16
+#define T3DES_KEY_LEN           24
+
 #define MAX_AES_KEYS_LIST_LEN   1024
 
-#define MFKEY_SIZE              6
 #define MFBLOCK_SIZE            16
 
 #define MIFARE_4K_MAXBLOCK      256
