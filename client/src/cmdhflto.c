@@ -771,8 +771,7 @@ static int CmdHfLTODump(const char *Cmd) {
         char *fptr = filename + snprintf(filename, sizeof(filename), "hf-lto-");
         FillFileNameByUID(fptr, dump, "-dump", 5);
     }
-    saveFile(filename, ".bin", dump, dump_len);
-    saveFileEML(filename, dump, dump_len, 32);
+    pm3_save_dump(filename, dump, dump_len, jsfLto);
     free(dump);
     return PM3_SUCCESS;
 }

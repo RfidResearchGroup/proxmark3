@@ -194,7 +194,7 @@ int CmdEM4x50ELoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "dump filename (bin/eml/json)"),
+        arg_str1("f", "file", "<fn>", "dump filename"),
         arg_param_end
     };
 
@@ -223,7 +223,7 @@ int CmdEM4x50ELoad(const char *Cmd) {
 int CmdEM4x50ESave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 esave",
-                  "Saves bin/eml/json dump file of emulator memory.",
+                  "Saves bin/json dump file of emulator memory.",
                   "lf em 4x50 esave                    -> use UID as filename\n"
                   "lf em 4x50 esave -f mydump\n"
                  );
@@ -264,7 +264,7 @@ int CmdEM4x50ESave(const char *Cmd) {
         FillFileNameByUID(fptr, (uint8_t *)&data[4 * EM4X50_DEVICE_ID], "-dump", 4);
     }
 
-    pm3_save_dump(filename, data, DUMP_FILESIZE, jsfEM4x50, 4);
+    pm3_save_dump(filename, data, DUMP_FILESIZE, jsfEM4x50);
     return PM3_SUCCESS;
 }
 
@@ -796,7 +796,7 @@ int CmdEM4x50Reader(const char *Cmd) {
 int CmdEM4x50Dump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 dump",
-                  "Reads all blocks/words from EM4x50 tag and saves dump in bin/eml/json format",
+                  "Reads all blocks/words from EM4x50 tag and saves dump in (bin/json) format",
                   "lf em 4x50 dump\n"
                   "lf em 4x50 dump -f mydump\n"
                   "lf em 4x50 dump -p 12345678\n"
@@ -805,7 +805,7 @@ int CmdEM4x50Dump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "specify dump filename (bin/eml/json)"),
+        arg_str0("f", "file", "<fn>", "specify dump filename"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
         arg_param_end
     };
@@ -867,7 +867,7 @@ int CmdEM4x50Dump(const char *Cmd) {
         memcpy(data + (i * 4), words[i].byte, 4);
     }
 
-    pm3_save_dump(filename, data, sizeof(data), jsfEM4x50, 4);
+    pm3_save_dump(filename, data, sizeof(data), jsfEM4x50);
     return PM3_SUCCESS;
 }
 

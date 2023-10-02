@@ -858,7 +858,7 @@ static int CmdLegicReader(const char *Cmd) {
 static int CmdLegicDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic dump",
-                  "Read all memory from LEGIC Prime tags and saves to (bin/eml/json) dump file\n"
+                  "Read all memory from LEGIC Prime tags and saves to (bin/json) dump file\n"
                   "It autodetects card type (MIM22, MIM256, MIM1024)",
                   "hf legic dump             --> use UID as filename\n"
                   "hf legic dump -f myfile \n"
@@ -951,7 +951,7 @@ static int CmdLegicDump(const char *Cmd) {
         FillFileNameByUID(filename, data, "-dump", 4);
     }
 
-    pm3_save_dump(filename, data, readlen, jsfLegic, LEGIC_BLOCK_SIZE);
+    pm3_save_dump(filename, data, readlen, jsfLegic_v2);
     free(data);
     return PM3_SUCCESS;
 }
@@ -1119,7 +1119,7 @@ static int CmdLegicELoad(const char *Cmd) {
 static int CmdLegicESave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic esave",
-                  "Saves a (bin/eml/json) dump file of emulator memory",
+                  "Saves a (bin/json) dump file of emulator memory",
                   "hf legic esave                    --> uses UID as filename\n"
                   "hf legic esave -f myfile --22\n"
                   "hf legic esave -f myfile --22 --de\n"
@@ -1188,7 +1188,7 @@ static int CmdLegicESave(const char *Cmd) {
         legic_xor(data, numofbytes);
     }
 
-    pm3_save_dump(filename, data, numofbytes, jsfLegic, LEGIC_BLOCK_SIZE);
+    pm3_save_dump(filename, data, numofbytes, jsfLegic_v2);
     return PM3_SUCCESS;
 }
 

@@ -29,15 +29,32 @@
 #include "mifare/mifarehost.h"
 #include "cmdhfmfu.h"
 
+#include "protocols.h"    // iclass defines
+#include "cmdhftopaz.h"   // TOPAZ defines
+#include "mifare/mifaredefault.h"     // MFP / AES defines
+
+typedef union {
+    void *v;
+    uint8_t *bytes;
+    mfu_dump_t *mfu;
+    topaz_tag_t *topaz;
+    iso14a_mf_extdump_t *mfc;
+} udata_t;
+
 typedef enum {
     jsfRaw,
     jsfCardMemory,
+    jsfMfc_v2,
     jsfMfuMemory,
     jsfHitag,
     jsfIclass,
     jsf14b,
+    jsf14b_v2,
     jsf15,
+    jsf15_v2,
+    jsf15_v3,
     jsfLegic,
+    jsfLegic_v2,
     jsfT55x7,
     jsfT5555,
     jsfMfPlusKeys,
@@ -49,6 +66,9 @@ typedef enum {
     jsfFido,
     jsfFudan,
     jsfTopaz,
+    jsfLto,
+    jsfCryptorf,
+    jsfNDEF,
 } JSONFileType;
 
 typedef enum {
@@ -276,18 +296,33 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
 
 
 /** STUB
- * @brief Utility function to save data to three file files (BIN/EML/JSON).
+ * @brief Utility function to save data to three file files (BIN/JSON).
  * It also tries to save according to user preferences set dump folder paths.
  * E.g. dumpdata.bin
- * E.g. dumpdata.eml
  * E.g. dumpdata.json
-
+ *
  * @param fn
  * @param d The binary data to write to the file
  * @param n the length of the data
  * @param jsft json format type for the different memory cards (MFC, MFUL, LEGIC, 14B, 15, ICLASS etc)
- * @param blocksize
  * @return PM3_SUCCESS if OK
  */
-int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, size_t blocksize);
+int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
+
+/** STUB
+ * @brief Utility function to save data to three file files (BIN/JSON).
+ * It also tries to save according to user preferences set dump folder paths.
+ * E.g. dumpdata.bin
+ * E.g. dumpdata.json
+ * 
+ * This function is dedicated for MIFARE CLASSIC dumps.  Checking for 4 or 7 byte UID in indata.
+ * Saves the corrected data in the json file
+ * 
+ * @param fn
+ * @param d The binary data to write to the file
+ * @param n the length of the data
+ * @param jsft json format type for the different memory cards (MFC, MFUL, LEGIC, 14B, 15, ICLASS etc)
+ * @return PM3_SUCCESS if OK
+ */
+int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
 #endif // FILEUTILS_H

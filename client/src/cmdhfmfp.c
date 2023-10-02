@@ -1448,14 +1448,7 @@ static int CmdHFMFPDump(const char *Cmd) {
             free(fptr);
         }
 
-        saveFile(data_fn, ".bin", mem, MIFARE_4K_MAX_BYTES);
-        saveFileEML(data_fn, mem, MIFARE_4K_MAX_BYTES, MFBLOCK_SIZE);
-
-        iso14a_mf_extdump_t xdump;
-        xdump.card_info = card;
-        xdump.dump = mem;
-        xdump.dumplen = MIFARE_4K_MAX_BYTES;
-        saveFileJSON(data_fn, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
+        pm3_save_mf_dump(filename, dump, MIFARE_4K_MAX_BYTES, jsfCardMemory);
     */
     free(mem);
     return PM3_SUCCESS;
@@ -1746,15 +1739,18 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
         print_buffer(data, datalen, 1);
     }
 
-    if (fnlen != 0) {
-        saveFile(filename, ".bin", data, datalen);
-    }
-
     res = NDEFDecodeAndPrint(data, datalen, verbose);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
         res = NDEFRecordsDecodeAndPrint(data, datalen, verbose);
     }
+
+    // get total NDEF length before save. If fails, we save it all
+    size_t n = 0;
+    if (NDEFGetTotalLength(data, datalen, &n) != PM3_SUCCESS)
+        n = datalen;
+
+    pm3_save_dump(filename, data, n, jsfNDEF);
 
     if (verbose == false) {
         PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -v`") " for more details");

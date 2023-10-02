@@ -62,7 +62,7 @@
 
 typedef struct {
     uint8_t lock;
-    uint8_t block[4];
+    uint8_t block[8];
 } t15memory_t;
 
 // structure and database for uid -> tagtype lookups
@@ -1143,14 +1143,14 @@ static int CmdHF15ELoad(const char *Cmd) {
 static int CmdHF15ESave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 esave",
-                  "Save emulator memory into three files (BIN/EML/JSON) ",
+                  "Save emulator memory into two files (BIN/JSON) ",
                   "hf 15 esave -f hf-15-01020304"
                   "hf 15 esave -b 8 -c 42 -f hf-15-01020304"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "filename of dump"),
-        arg_int0("b", "blocksize", "<dec>", "block size, defaults to 4"),
+        arg_int0(NULL, "bsize", "<dec>", "block size, defaults to 4"),
         arg_int0("c", "count", "<dec>", "number of blocks to export, defaults to all"),
         arg_param_end
     };
@@ -1176,13 +1176,18 @@ static int CmdHF15ESave(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Downloading %u bytes from emulator memory", bytes);
-    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
         return PM3_ETIMEOUT;
     }
 
-    pm3_save_dump(filename, dump, bytes, jsf15, blocksize);
+    if (blocksize == 8) {
+        pm3_save_dump(filename, dump, bytes, jsf15_v3);
+    } else {
+        pm3_save_dump(filename, dump, bytes, jsf15_v2);
+    }
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -1604,8 +1609,11 @@ static int CmdHF15Dump(const char *Cmd) {
     // memory.
     t15memory_t mem[256];
 
-    uint8_t data[256 * 4] = {0};
+    uint8_t data[256 * 8] = {0};
     memset(data, 0, sizeof(data));
+
+    // keep track of which block length tag returned?
+    uint8_t blklen = 4;
 
     for (int retry = 0; (retry < 5 && blocknum < 0x100); retry++) {
 
@@ -1646,9 +1654,15 @@ static int CmdHF15Dump(const char *Cmd) {
                 break;
             }
 
+            // lock byte value
             mem[blocknum].lock = resp.data.asBytes[0];
-            memcpy(mem[blocknum].block, resp.data.asBytes + 1, 4);
-            memcpy(data + (blocknum * 4), resp.data.asBytes + 1, 4);
+
+            // is tag responding with 4 or 8 bytes?
+            if (resp.length == 11) {
+                blklen = 8;
+            }
+            memcpy(mem[blocknum].block, resp.data.asBytes + 1, blklen);
+            memcpy(data + (blocknum * 4), resp.data.asBytes + 1, blklen);
 
             retry = 0;
             blocknum++;
@@ -1658,6 +1672,10 @@ static int CmdHF15Dump(const char *Cmd) {
     }
 
     DropField();
+
+    if (blklen == 8) {
+        PrintAndLogEx(INFO, "8 byte block length detected");
+    }
 
     PrintAndLogEx(NORMAL, "\n");
     PrintAndLogEx(INFO, "block#   | data         |lck| ascii");
@@ -1672,9 +1690,9 @@ static int CmdHF15Dump(const char *Cmd) {
         PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s"
                       , i
                       , i
-                      , sprint_hex(mem[i].block, 4)
+                      , sprint_hex(mem[i].block, blklen)
                       , lck
-                      , sprint_ascii(mem[i].block, 4)
+                      , sprint_ascii(mem[i].block, blklen)
                      );
     }
     PrintAndLogEx(NORMAL, "");
@@ -1687,8 +1705,11 @@ static int CmdHF15Dump(const char *Cmd) {
         FillFileNameByUID(fptr, SwapEndian64(uid, sizeof(uid), 8), "-dump", sizeof(uid));
     }
 
-    size_t datalen = blocknum * 4;
-    pm3_save_dump(filename, data, datalen, jsf15, 4);
+    if (blklen == 8) {
+        pm3_save_dump(filename, data, (blocknum * blklen), jsf15_v3);
+    } else {
+        pm3_save_dump(filename, data, (blocknum * blklen), jsf15_v2);
+    }
     return PM3_SUCCESS;
 }
 
@@ -2000,15 +2021,16 @@ static int CmdHF15Readblock(const char *Cmd) {
         return PM3_EWRONGANSWER;
     }
 
+
     // print response
     char lck[16] = {0};
     if (data[1]) {
-        snprintf(lck, sizeof(lck), _RED_("%d"), data[1]);
+        snprintf(lck, sizeof(lck), _RED_("%02X"), data[1]);
     } else {
-        snprintf(lck, sizeof(lck), "%d", data[1]);
+        snprintf(lck, sizeof(lck), "%02X", data[1]);
     }
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "      #%3d  |lck| ascii", block);
+    PrintAndLogEx(INFO, "#%3d        |lck| ascii", block);
     PrintAndLogEx(INFO, "------------+---+------");
     PrintAndLogEx(INFO, "%s| %s | %s", sprint_hex(data + 2, resp.length - 4), lck, sprint_ascii(data + 2, resp.length - 4));
     PrintAndLogEx(NORMAL, "");
@@ -2834,7 +2856,7 @@ static int CmdHF15View(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>",  "filename of dump (bin/eml/json)"),
+        arg_str1("f", "file", "<fn>",  "filename of dump"),
 //        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };

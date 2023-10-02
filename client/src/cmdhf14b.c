@@ -1546,7 +1546,7 @@ static int CmdHF14BDump(const char *Cmd) {
             }
 
             size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
-            pm3_save_dump(filename, data, datalen, jsf14b, ST25TB_SR_BLOCK_SIZE);
+            pm3_save_dump(filename, data, datalen, jsf14b_v2);
         }
     }
 
@@ -2121,9 +2121,13 @@ int CmdHF14BNdefRead(const char *Cmd) {
         goto out;
     }
 
-    if (fnlen != 0) {
-        saveFile(filename, ".bin", response + 2, resplen - 4);
-    }
+    // get total NDEF length before save. If fails, we save it all
+    size_t n = 0;
+    if (NDEFGetTotalLength(response + 2, resplen - 4, &n) != PM3_SUCCESS)
+        n = resplen - 4;
+
+    pm3_save_dump(filename, response + 2, n, jsfNDEF);
+
     res = NDEFRecordsDecodeAndPrint(response + 2, resplen - 4, verbose);
 
 out:

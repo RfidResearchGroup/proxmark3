@@ -27,9 +27,7 @@
 #include "proxmark3.h"
 #include "util.h"
 #include "cmdhficlass.h"  // pagemap
-#include "protocols.h"    // iclass defines
-#include "cmdhftopaz.h"   // TOPAZ defines
-#include "mifare/mifaredefault.h"     // MFP / AES defines
+#include "iclass_cmd.h"
 
 #ifdef _WIN32
 #include "scandir.h"
@@ -329,12 +327,8 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
         }
     }
 
-    char *fileName = newfilenamemcopyEx(preferredName, ".json", e_save_path);
-    if (fileName == NULL) {
-        return PM3_EMALLOC;
-    }
-
     int retval = PM3_SUCCESS;
+    char path[PATH_MAX_LENGTH] = {0};
 
     json_t *root = json_object();
     JsonSaveStr(root, "Created", "proxmark3");
@@ -344,26 +338,26 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             JsonSaveBufAsHexCompact(root, "raw", data, datalen);
             break;
         }
-        case jsfCardMemory: {
+        case jsfMfc_v2: {
             iso14a_mf_extdump_t *xdump = (iso14a_mf_extdump_t *)(void *) data;
-            JsonSaveStr(root, "FileType", "mfcard");
+            JsonSaveStr(root, "FileType", "mfc v2");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", xdump->card_info.uid, xdump->card_info.uidlen);
             JsonSaveBufAsHexCompact(root, "$.Card.ATQA", xdump->card_info.atqa, 2);
             JsonSaveBufAsHexCompact(root, "$.Card.SAK", &(xdump->card_info.sak), 1);
-            for (size_t i = 0; i < (xdump->dumplen / 16); i++) {
-                char path[PATH_MAX_LENGTH] = {0};
+            for (size_t i = 0; i < (xdump->dumplen / MFBLOCK_SIZE); i++) {
+
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * 16], 16);
+                JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * MFBLOCK_SIZE], MFBLOCK_SIZE);
                 if (mfIsSectorTrailer(i)) {
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyA", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * 16], 6);
+                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * MFBLOCK_SIZE], 6);
 
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyB", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * 16 + 10], 6);
+                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * MFBLOCK_SIZE + 10], 6);
 
-                    uint8_t *adata = &xdump->dump[i * 16 + 6];
+                    uint8_t *adata = &xdump->dump[i * MFBLOCK_SIZE + 6];
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditions", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * 16 + 6], 4);
+                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * MFBLOCK_SIZE + 6], 4);
 
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 3);
                     JsonSaveStr(root, path, mfGetAccessConditionsDesc(0, adata));
@@ -390,7 +384,7 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             JsonSaveBufAsHexCompact(root, "$.Card.ATQA", xdump->card_info.atqa, 2);
             JsonSaveBufAsHexCompact(root, "$.Card.SAK", &(xdump->card_info.sak), 1);
             for (size_t i = 0; i < (xdump->dumplen / 4); i++) {
-                char path[PATH_MAX_LENGTH] = {0};
+
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * 4], 4);
             }
@@ -405,8 +399,6 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             memcpy(uid, tmp->data, 3);
             memcpy(uid + 3, tmp->data + 4, 4);
 
-            char path[PATH_MAX_LENGTH] = {0};
-
             JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
             JsonSaveBufAsHexCompact(root, "$.Card.Version", tmp->version, sizeof(tmp->version));
             JsonSaveBufAsHexCompact(root, "$.Card.TBO_0", tmp->tbo, sizeof(tmp->tbo));
@@ -420,11 +412,12 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
 
             // size of header 56b
-            size_t len = (datalen - MFU_DUMP_PREFIX_LENGTH) / 4;
+            
+            size_t len = (datalen - MFU_DUMP_PREFIX_LENGTH) / MFU_BLOCK_SIZE;
 
             for (size_t i = 0; i < len; i++) {
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, tmp->data + (i * 4), 4);
+                JsonSaveBufAsHexCompact(root, path, tmp->data + (i * MFU_BLOCK_SIZE), MFU_BLOCK_SIZE);
             }
             break;
         }
@@ -436,7 +429,6 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
 
             for (size_t i = 0; i < (datalen / 4); i++) {
-                char path[PATH_MAX_LENGTH] = {0};
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
             }
@@ -460,10 +452,10 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
                 JsonSaveBufAsHexCompact(root, "$.Card.AIA", hdr->app_issuer_area, sizeof(hdr->app_issuer_area));
             }
 
-            for (size_t i = 0; i < (datalen / 8); i++) {
-                char path[PATH_MAX_LENGTH] = {0};
+            for (size_t i = 0; i < (datalen / PICOPASS_BLOCK_SIZE); i++) {
+
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, data + (i * 8), 8);
+                JsonSaveBufAsHexCompact(root, path, data + (i * PICOPASS_BLOCK_SIZE), PICOPASS_BLOCK_SIZE);
             }
 
             break;
@@ -475,25 +467,49 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             JsonSaveBufAsHexCompact(root, "$.Card.ConfigBlock", conf, sizeof(conf));
 
             for (size_t i = 0; i < (datalen / 4); i++) {
-                char path[PATH_MAX_LENGTH] = {0};
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
             }
             break;
         }
-        case jsf14b: {
-            JsonSaveStr(root, "FileType", "14b");
-            JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+        case jsf14b_v2: {
+            JsonSaveStr(root, "FileType", "14b v2");
+            for (size_t i = 0; i < datalen / 4; i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, &data[i * 4], 4);
+            }            
             break;
         }
-        case jsf15: {
-            JsonSaveStr(root, "FileType", "15693");
-            JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+        // handles ISO15693 w blocksize of 4 bytes
+        case jsf15_v2: {
+            JsonSaveStr(root, "FileType", "15693 v2");
+            for (size_t i = 0; i < datalen / 4; i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, &data[i * 4], 4);
+            }
             break;
         }
-        case jsfLegic: {
-            JsonSaveStr(root, "FileType", "legic");
-            JsonSaveBufAsHexCompact(root, "raw", data, datalen);
+        // handles ISO15693 w blocksize of 8 bytes                
+        case jsf15_v3: {
+            JsonSaveStr(root, "FileType", "15693 v3");
+            for (size_t i = 0; i < datalen / 8; i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, &data[i * 8], 8);
+            }
+            break;
+        }
+        case jsfLegic_v2: {
+            JsonSaveStr(root, "FileType", "legic v2");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", data, 4);
+            size_t i = 0;
+            for (; i < datalen / 16; i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, &data[i * 16], 16);
+            }
+            if (datalen % 16) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, &data[i * 16], (datalen % 16));  
+            } 
             break;
         }
         case jsfT5555: {
@@ -503,7 +519,6 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             JsonSaveBufAsHexCompact(root, "$.Card.ConfigBlock", conf, sizeof(conf));
 
             for (size_t i = 0; i < (datalen / 4); i++) {
-                char path[PATH_MAX_LENGTH] = {0};
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
             }
@@ -517,7 +532,6 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             JsonSaveBufAsHexCompact(root, "$.Card.Protection2", data + (15 * 4), 4);
 
             for (size_t i = 0; i < (datalen / 4); i++) {
-                char path[PATH_MAX_LENGTH] = {0};
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
             }
@@ -530,7 +544,6 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             JsonSaveBufAsHexCompact(root, "$.Card.Config", data + (4 * 4), 4);
 
             for (size_t i = 0; i < (datalen / 4); i++) {
-                char path[PATH_MAX_LENGTH] = {0};
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
             }
@@ -544,7 +557,6 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             JsonSaveBufAsHexCompact(root, "$.Card.UID", data + (33 * 4), 4);
 
             for (size_t i = 0; i < (datalen / 4); i++) {
-                char path[PATH_MAX_LENGTH] = {0};
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
             }
@@ -564,8 +576,6 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             memcpy(vdata, data + (14 + atslen), 2 * 64 * 17);
 
             for (size_t i = 0; i < datalen; i++) {
-                char path[PATH_MAX_LENGTH] = {0};
-
                 if (vdata[0][i][0]) {
                     snprintf(path, sizeof(path), "$.SectorKeys.%zu.KeyA", i);
                     JsonSaveBufAsHexCompact(root, path, &vdata[0][i][1], AES_KEY_LEN);
@@ -591,29 +601,25 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             memcpy(dvdata, &data[14 + datslen], 4 * 0xE * (24 + 1));
 
             for (int i = 0; i < (int)datalen; i++) {
-                char path[PATH_MAX_LENGTH] = {0};
 
                 if (dvdata[0][i][0]) {
                     snprintf(path, sizeof(path), "$.DES.%d.Key", i);
-                    JsonSaveBufAsHexCompact(root, path, &dvdata[0][i][1], 8);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[0][i][1], DES_KEY_LEN);
                 }
 
                 if (dvdata[1][i][0]) {
                     snprintf(path, sizeof(path), "$.3DES.%d.Key", i);
-                    JsonSaveBufAsHexCompact(root, path, &dvdata[1][i][1], 16);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[1][i][1], T2DES_KEY_LEN);
                 }
                 if (dvdata[2][i][0]) {
                     snprintf(path, sizeof(path), "$.AES.%d.Key", i);
-                    JsonSaveBufAsHexCompact(root, path, &dvdata[2][i][1], 16);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[2][i][1], AES_KEY_LEN);
                 }
                 if (dvdata[3][i][0]) {
                     snprintf(path, sizeof(path), "$.K3KDES.%d.Key", i);
-                    JsonSaveBufAsHexCompact(root, path, &dvdata[3][i][1], 24);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[3][i][1], T3DES_KEY_LEN);
                 }
             }
-            break;
-        }
-        case jsfFido: {
             break;
         }
         case jsfCustom: {
@@ -626,8 +632,8 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             JsonSaveBufAsHexCompact(root, "$.Card.UID", tag->uid, sizeof(tag->uid));
             JsonSaveBufAsHexCompact(root, "$.Card.H0R1", tag->HR01, sizeof(tag->HR01));
             JsonSaveBufAsHexCompact(root, "$.Card.Size", (uint8_t *) & (tag->size), 2);
+
             for (size_t i = 0; i < TOPAZ_STATIC_MEMORY / 8; i++) {
-                char path[PATH_MAX_LENGTH] = {0};
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, &tag->data_blocks[i][0], TOPAZ_BLOCK_SIZE);
             }
@@ -638,24 +644,67 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
 
             break;
         }
+        case jsfLto: {
+            JsonSaveStr(root, "FileType", "lto");
+            for (size_t i = 0; i < datalen / 32; i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, &data[i * 32], 32);
+            }
+            break;
+        }
+        case jsfCryptorf: {
+            JsonSaveStr(root, "FileType", "cryptorf");
+            for (size_t i = 0; i < datalen / 8; i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, &data[i * 8], 8);
+            }
+            break;
+        }
+        case jsfNDEF: {
+            JsonSaveStr(root, "FileType", "ndef");            
+            JsonSaveInt(root, "Ndef.Size", datalen);
+            size_t i = 0;
+            for (; i < datalen / 16; i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, &data[i * 16], 16);
+            }
+            if (datalen % 16) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, &data[i * 16], (datalen % 16));  
+            }            
+            break;
+        }
+        // no action
+        case jsfFido: 
+            break;
+        // depricated
+        case jsfCardMemory:                
+        case jsf14b:
+        case jsf15:        
+        case jsfLegic:
         default:
             break;
     }
 
-    int res = json_dump_file(root, fileName, JSON_INDENT(2));
-    if (res) {
-        PrintAndLogEx(FAILED, "error: can't save the file: " _YELLOW_("%s"), fileName);
+    char *fn = newfilenamemcopyEx(preferredName, ".json", e_save_path);
+    if (fn == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    if (json_dump_file(root, fn, JSON_INDENT(2))) {
+        PrintAndLogEx(FAILED, "error: can't save the file: " _YELLOW_("%s"), fn);
         retval = 200;
+        free(fn);
         goto out;
     }
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), fileName);
+        PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), fn);
     }
+    free(fn);
 
 out:
     json_decref(root);
-    free(fileName);
     return retval;
 }
 int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool verbose) {
@@ -1083,56 +1132,56 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
-    typedef union UDATA {
-        void *v;
-        uint8_t *bytes;
-        mfu_dump_t *mfu;
-        topaz_tag_t *topaz;
-    } UDATA;
-    UDATA udata = (UDATA)data;
     char ctype[100] = {0};
     JsonLoadStr(root, "$.FileType", ctype);
 
-    if (!strcmp(ctype, "raw")) {
-        JsonLoadBufAsHex(root, "$.raw", udata.bytes, maxdatalen, datalen);
+    // Proxmark3 settings file.  No
+    if (!strcmp(ctype, "settings")) {
+        goto out;
     }
 
-    if (!strcmp(ctype, "mfcard")) {
+    udata_t udata = (udata_t)data;
+    size_t len = 0;
+    char blocks[PATH_MAX_LENGTH] = {0};
+
+    if (!strcmp(ctype, "raw")) {
+        JsonLoadBufAsHex(root, "$.raw", udata.bytes, maxdatalen, datalen);
+        goto out;
+    }
+
+    // depricated mfcard
+    if (!strcmp(ctype, "mfcard") || !strcmp(ctype, "mfc v2")) {
         size_t sptr = 0;
-        for (int i = 0; i < 256; i++) {
-            char blocks[30] = {0};
-            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+        for (int i = 0; i < maxdatalen; i++) {
 
-            size_t len = 0;
-            uint8_t block[16];
-            JsonLoadBufAsHex(root, blocks, block, 16, &len);
-            if (!len)
-                break;
-
-            if (sptr + 16 > maxdatalen) {
+            if (sptr + MFBLOCK_SIZE > maxdatalen) {
                 retval = PM3_EMALLOC;
                 goto out;
             }
 
-            memcpy(&udata.bytes[sptr], block, 16);
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            uint8_t block[MFBLOCK_SIZE];
+            JsonLoadBufAsHex(root, blocks, block, MFBLOCK_SIZE, &len);
+            if (!len)
+                break;
+
+            memcpy(&udata.bytes[sptr], block, MFBLOCK_SIZE);
             sptr += len;
         }
 
         *datalen = sptr;
+        goto out;
     }
 
     if (!strcmp(ctype, "fudan")) {
         size_t sptr = 0;
-        for (int i = 0; i < 256; i++) {
+        for (int i = 0; i < maxdatalen; i++) {
             if (sptr + 4 > maxdatalen) {
                 retval = PM3_EMALLOC;
                 goto out;
             }
 
-            char blocks[30] = {0};
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
-
-            size_t len = 0;
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (!len)
                 break;
@@ -1141,6 +1190,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         }
 
         *datalen = sptr;
+        goto out;
     }
 
     if (!strcmp(ctype, "mfu")) {
@@ -1164,10 +1214,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            char blocks[30] = {0};
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
-
-            size_t len = 0;
             JsonLoadBufAsHex(root, blocks, &udata.mfu->data[sptr], MFU_BLOCK_SIZE, &len);
             if (!len)
                 break;
@@ -1179,6 +1226,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         --udata.mfu->pages;
 
         *datalen += sptr;
+        goto out;
     }
 
     if (!strcmp(ctype, "hitag")) {
@@ -1189,10 +1237,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            char blocks[30] = {0};
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
-
-            size_t len = 0;
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (!len)
                 break;
@@ -1201,27 +1246,26 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         }
 
         *datalen = sptr;
+        goto out;
     }
 
     if (!strcmp(ctype, "iclass")) {
         size_t sptr = 0;
-        for (size_t i = 0; i < (maxdatalen / 8); i++) {
-            if (sptr + 8 > maxdatalen) {
+        for (size_t i = 0; i < (maxdatalen / PICOPASS_BLOCK_SIZE); i++) {
+            if (sptr + PICOPASS_BLOCK_SIZE > maxdatalen) {
                 retval = PM3_EMALLOC;
                 goto out;
             }
 
-            char blocks[30] = {0};
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
-
-            size_t len = 0;
-            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 8, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], PICOPASS_BLOCK_SIZE, &len);
             if (!len)
                 break;
 
             sptr += len;
         }
         *datalen = sptr;
+        goto out;
     }
 
     if (!strcmp(ctype, "t55x7")) {
@@ -1232,10 +1276,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            char blocks[30] = {0};
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
-
-            size_t len = 0;
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (!len)
                 break;
@@ -1243,6 +1284,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             sptr += len;
         }
         *datalen = sptr;
+        goto out;
     }
 
     if (!strcmp(ctype, "EM4X50")) {
@@ -1253,10 +1295,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            char blocks[30] = {0};
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
-
-            size_t len = 0;
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (!len)
                 break;
@@ -1264,14 +1303,80 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             sptr += len;
         }
         *datalen = sptr;
+        goto out;
     }
 
+    // depricated
     if (!strcmp(ctype, "15693")) {
         JsonLoadBufAsHex(root, "$.raw", udata.bytes, maxdatalen, datalen);
+        goto out;
     }
 
+    // handles ISO15693 w blocksize of 4 bytes.
+    if (!strcmp(ctype, "15693 v2")) {
+       size_t sptr = 0;
+        for (int i = 0; i < (maxdatalen / 4); i++) {
+            if (sptr + 4 > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+        }
+
+        *datalen = sptr;
+        goto out;
+    }
+    // handles ISO15693 w blocksize of 8 bytes.
+    if (!strcmp(ctype, "15693 v3")) {
+       size_t sptr = 0;
+        for (int i = 0; i < (maxdatalen / 8); i++) {
+            if (sptr + 8 > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 8, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+        }
+
+        *datalen = sptr;
+        goto out;
+    }
+
+    if (!strcmp(ctype, "legic v2")) {
+        size_t sptr = 0;
+        for (int i = 0; i < 64; i++) {
+            if (sptr + 16 > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 16, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+        }
+
+        *datalen = sptr;
+        goto out;
+    }
+
+    // depricated
     if (!strcmp(ctype, "legic")) {
         JsonLoadBufAsHex(root, "$.raw", udata.bytes, maxdatalen, datalen);
+        goto out;
     }
 
     if (!strcmp(ctype, "topaz")) {
@@ -1288,22 +1393,19 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            char blocks[30] = {0};
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
-
-            size_t len = 0;
             JsonLoadBufAsHex(root, blocks, &udata.topaz->data_blocks[sptr][0], TOPAZ_BLOCK_SIZE, &len);
             if (!len)
                 break;
 
             sptr += len;
-
             // ICEMAN todo:  add dynamic memory.
             // uint16_z Size
             // uint8_t *dynamic_memory;
         }
 
         *datalen += sptr;
+        goto out;
     }
 
     if (!strcmp(ctype, "mfpkeys")) {
@@ -1327,7 +1429,6 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             size_t offset = (14 + atslen) + (i * 2 * AES_KEY_LEN);
 
-            char blocks[40] = {0};
             snprintf(blocks, sizeof(blocks), "$.SectorKeys.%zu.KeyA", i);
             JsonLoadBufAsHex(root, blocks, udata.bytes + offset, AES_KEY_LEN, datalen);
 
@@ -1337,7 +1438,142 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             sptr += (2 * AES_KEY_LEN);
         }
         *datalen += sptr;
+        goto out;
     }
+
+    if (!strcmp(ctype, "mfdes")) {
+        JsonLoadBufAsHex(root, "$.Card.UID", udata.bytes, 7, datalen);
+        JsonLoadBufAsHex(root, "$.Card.SAK", udata.bytes + 10, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.ATQA", udata.bytes + 11, 2, datalen);
+        uint8_t atslen = udata.bytes[13];
+        if (atslen > 0) {
+            JsonLoadBufAsHex(root, "$.Card.ATS", udata.bytes + 14, atslen, datalen);
+        }
+
+//        size_t sptr = (14 + atslen);
+//         uint8_t dvdata[4][0xE][24 + 1] = {{{0}}};
+
+            /*
+            for (int i = 0; i < (int)datalen; i++) {
+                char path[PATH_MAX_LENGTH] = {0};
+
+                if (dvdata[0][i][0]) {
+                    snprintf(path, sizeof(path), "$.DES.%d.Key", i);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[0][i][1], DES_KEY_LEN);
+                }
+
+                if (dvdata[1][i][0]) {
+                    snprintf(path, sizeof(path), "$.3DES.%d.Key", i);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[1][i][1], T2DES_KEY_LEN);
+                }
+                if (dvdata[2][i][0]) {
+                    snprintf(path, sizeof(path), "$.AES.%d.Key", i);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[2][i][1], AES_KEY_LEN);
+                }
+                if (dvdata[3][i][0]) {
+                    snprintf(path, sizeof(path), "$.K3KDES.%d.Key", i);
+                    JsonSaveBufAsHexCompact(root, path, &dvdata[3][i][1], T3DES_KEY_LEN);
+                }
+            }
+            */
+//        memcpy(&data[14 + atslen], dvdata, 4 * 0xE * (24 + 1));
+
+        goto out;
+    }
+
+    if (!strcmp(ctype, "14b v2")) {
+       size_t sptr = 0;
+        for (int i = 0; i < (maxdatalen / 4); i++) {
+            if (sptr + 4 > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+        }
+
+        *datalen = sptr;
+        goto out;
+    }
+
+    if (!strcmp(ctype, "lto")) {
+       size_t sptr = 0;
+        for (int i = 0; i < (maxdatalen / 32); i++) {
+            if (sptr + 32 > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 32, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+        }
+
+        *datalen = sptr;
+        goto out;
+    }
+
+    if (!strcmp(ctype, "cryptorf")) {
+       size_t sptr = 0;
+        for (int i = 0; i < (maxdatalen / 8); i++) {
+            if (sptr + 8 > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 8, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+        }
+
+        *datalen = sptr;
+        goto out;
+    }
+
+    if (!strcmp(ctype, "ndef")) {
+
+        json_error_t up_error = {0};
+        int i1 = 0;
+        size_t ndefsize = 0;
+        if (json_unpack_ex(root, &up_error, 0, "{s:i}", "Ndef.Size", &i1) == 0) {
+            ndefsize = i1;
+        }
+
+        size_t sptr = 0;
+        for (int i = 0; i < (maxdatalen / 16); i++) {
+            if (sptr + 16 > maxdatalen) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 16, &len);
+            if (!len)
+                break;
+
+            sptr += len;
+        }
+
+        *datalen = sptr;
+        goto out;
+    }
+
+    // unidentified file format
+    if (verbose) {
+        PrintAndLogEx(FAILED, "Unidentified file format `" _YELLOW_("%s") "`", path);
+    }
+    retval = PM3_EFILE;
 
 out:
 
@@ -2082,17 +2318,20 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
 
 int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen) {
 
-    int res = 0;
+    int res = PM3_SUCCESS;
     DumpFileType_t dftype = getfiletype(fn);
     switch (dftype) {
         case BIN: {
-            res = loadFile_safe(fn, ".bin", pdump, dumplen);
+            loadFile_safe(fn, ".bin", pdump, dumplen);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "File IO failed");
+            }
             break;
         }
         case EML: {
             res = loadFileEML_safe(fn, pdump, dumplen);
-            if (res == PM3_ESOFT) {
-                PrintAndLogEx(WARNING, "file IO failed");
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "File IO failed");
             }
             break;
         }
@@ -2103,8 +2342,9 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
                 return PM3_EMALLOC;
             }
             res = loadFileJSON(fn, *pdump, maxdumplen, dumplen, NULL);
-            if (res == PM3_SUCCESS)
+            if (res == PM3_SUCCESS) {
                 return res;
+            }
 
             free(*pdump);
 
@@ -2116,7 +2356,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             break;
         }
         case DICTIONARY: {
-            PrintAndLogEx(ERR, "Error: Only BIN/EML/JSON formats allowed");
+            PrintAndLogEx(ERR, "Only BIN/EML/JSON formats allowed");
             return PM3_EINVARG;
         }
         case MCT: {
@@ -2128,15 +2368,49 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
     return res;
 }
 
-int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, size_t blocksize) {
-
+int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
+    if (fn == NULL || strlen(fn) == 0) {
+        return PM3_EINVARG;       
+    }
     if (d == NULL || n == 0) {
         PrintAndLogEx(INFO, "No data to save, skipping...");
         return PM3_EINVARG;
     }
-
     saveFile(fn, ".bin", d, n);
-    saveFileEML(fn, d, n, blocksize);
     saveFileJSON(fn, jsft, d, n, NULL);
     return PM3_SUCCESS;
 }
+
+int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
+
+    if (fn == NULL || d == NULL || n == 0) {
+        PrintAndLogEx(INFO, "No data to save, skipping...");
+        return PM3_EINVARG;
+    }
+    saveFile(fn, ".bin", d, n);
+
+    iso14a_mf_extdump_t jd = {0};
+    jd.card_info.ats_len = 0;
+
+    // Check for 4 bytes uid: bcc corrected and single size uid bits in ATQA
+    if ((d[0] ^ d[1] ^ d[2] ^ d[3]) == d[4] && (d[6] & 0xC0) == 0) {
+        jd.card_info.uidlen = 4;
+        memcpy(jd.card_info.uid, d, jd.card_info.uidlen);
+        jd.card_info.sak = d[5];
+        memcpy(jd.card_info.atqa, &d[6], sizeof(jd.card_info.atqa));
+    }
+    // Check for 7 bytes UID: double size uid bits in ATQA
+    else if ((d[8] & 0xC0) == 0x40) {
+        jd.card_info.uidlen = 7;
+        memcpy(jd.card_info.uid, d, jd.card_info.uidlen);
+        jd.card_info.sak = d[7];
+        memcpy(jd.card_info.atqa, &d[8], sizeof(jd.card_info.atqa));
+    } else {
+        PrintAndLogEx(WARNING, "Invalid dump. UID/SAK/ATQA not found");
+    }
+    jd.dump = d;
+    jd.dumplen = n;
+    saveFileJSON(fn, jsfMfc_v2, (uint8_t *)&jd, sizeof(jd), NULL);
+    return PM3_SUCCESS;
+}
+

@@ -404,10 +404,15 @@ int CmdHFST25TANdefRead(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    if (fnlen != 0) {
-        saveFile(filename, ".bin", response + 2, resplen - 4);
-    }
     NDEFRecordsDecodeAndPrint(response + 2, resplen - 4, verbose);
+
+    // get total NDEF length before save. If fails, we save it all
+    size_t n = 0;
+    if (NDEFGetTotalLength(response, resplen, &n) != PM3_SUCCESS)
+        n = resplen;
+
+    pm3_save_dump(filename, response + 2, n, jsfNDEF);
+    
     return PM3_SUCCESS;
 }
 

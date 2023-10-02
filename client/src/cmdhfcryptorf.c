@@ -414,9 +414,8 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
         FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
     }
 
-    saveFileEML(filename, data, datalen, 4);
-    saveFile(filename, ".bin", data, datalen);
-    // json?
+    pm3_save_dump(filename, data, datalen, jsfCryptorf);
+
     return switch_off_field_cryptorf();
 }
 
@@ -486,14 +485,14 @@ static int CmdHFCryptoRFESave(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cryptorf esave",
-                  "Save emulator memory to bin/eml/json file\n"
+                  "Save emulator memory to to two files (bin/json)\n"
                   "if filename is not supplied, UID will be used.",
                   "hf cryptorf esave\n"
                   "hf cryptorf esave -f filename"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dumpfile"),
+        arg_str0("f", "file", "<fn>", "filename of dump"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -527,11 +526,7 @@ static int CmdHFCryptoRFESave(const char *Cmd) {
         FillFileNameByUID(fptr, data, "-dump", 4);
     }
 
-    saveFile(filename, ".bin", data, numofbytes);
-    //needs to change
-    saveFileEML(filename, data, numofbytes, 8);
-    //needs to change
-    saveFileJSON(filename, jsfRaw, data, numofbytes, NULL);
+    pm3_save_dump(filename, data, numofbytes, jsfCryptorf);
     free(data);
     return PM3_SUCCESS;
 }

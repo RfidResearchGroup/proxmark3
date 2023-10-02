@@ -339,14 +339,7 @@ static int CmdHFFudanDump(const char *Cmd) {
         free(fptr);
     }
 
-    saveFile(dataFilename, ".bin", (uint8_t *)carddata, sizeof(carddata));
-    saveFileEML(dataFilename, (uint8_t *)carddata, sizeof(carddata), MAX_FUDAN_BLOCK_SIZE);
-
-    iso14a_mf_extdump_t xdump;
-    xdump.card_info = card;
-    xdump.dump = (uint8_t *)carddata;
-    xdump.dumplen = sizeof(carddata);
-    saveFileJSON(dataFilename, jsfFudan, (uint8_t *)&xdump, sizeof(xdump), NULL);
+    pm3_save_dump(dataFilename, (uint8_t *)carddata, sizeof(carddata), jsfFudan);
     return PM3_SUCCESS;
 }
 

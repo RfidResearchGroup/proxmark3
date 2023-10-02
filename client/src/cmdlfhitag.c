@@ -1127,7 +1127,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Dumping tag memory...");
 
-    pm3_save_dump(filename, data, 48, jsfHitag, 4);
+    pm3_save_dump(filename, data, 48, jsfHitag);
     return PM3_SUCCESS;
 }
 

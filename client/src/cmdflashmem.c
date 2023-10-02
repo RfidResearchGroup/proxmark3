@@ -379,8 +379,7 @@ static int CmdFlashMemDump(const char *Cmd) {
     }
 
     if (filename[0] != '\0') {
-        saveFile(filename, ".bin", dump, len);
-        saveFileEML(filename, dump, len, 16);
+        pm3_save_dump(filename, dump, len, jsfRaw);
     }
 
     free(dump);

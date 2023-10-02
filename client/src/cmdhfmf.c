@@ -472,7 +472,7 @@ void mf_print_sector_hdr(uint8_t sector) {
 static bool mf_write_block(const uint8_t *key, uint8_t keytype, uint8_t blockno, uint8_t *block) {
 
     uint8_t data[26];
-    memcpy(data, key, MFKEY_SIZE);
+    memcpy(data, key, MIFARE_KEY_SIZE);
     memcpy(data + 10, block, MFBLOCK_SIZE);
 
     clearCommandBuffer();
@@ -1230,14 +1230,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
         free(fptr);
     }
 
-    saveFile(dataFilename, ".bin", mem, bytes);
-    saveFileEML(dataFilename, mem, bytes, MFBLOCK_SIZE);
-
-    iso14a_mf_extdump_t xdump;
-    xdump.card_info = card;
-    xdump.dump = mem;
-    xdump.dumplen = bytes;
-    saveFileJSON(dataFilename, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
+    pm3_save_mf_dump(dataFilename, mem, bytes, jsfCardMemory);
     free(mem);
     return PM3_SUCCESS;
 }
@@ -3164,13 +3157,7 @@ all_found:
     strncpy(filename, fptr, sizeof(filename) - 1);
     free(fptr);
 
-    saveFile(filename, ".bin", dump, bytes);
-    saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
-    iso14a_mf_extdump_t xdump;
-    xdump.card_info = card;
-    xdump.dump = dump;
-    xdump.dumplen = bytes;
-    saveFileJSON(filename, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
+    pm3_save_mf_dump(filename, dump, bytes, jsfCardMemory);
 
     // Generate and show statistics
     t1 = msclock() - t1;
@@ -4452,7 +4439,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf esave",
-                  "Save emulator memory into three files (BIN/EML/JSON) ",
+                  "Save emulator memory into two files (bin//json) ",
                   "hf mf esave\n"
                   "hf mf esave --4k\n"
                   "hf mf esave --4k -f hf-mf-01020304.eml"
@@ -4522,30 +4509,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
         FillFileNameByUID(fptr, dump, "-dump", 4);
     }
 
-    saveFile(filename, ".bin", dump, bytes);
-    saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
-
-    iso14a_mf_extdump_t xdump = {0};
-    xdump.card_info.ats_len = 0;
-    // Check for 4 bytes uid: bcc corrected and single size uid bits in ATQA
-    if ((dump[0] ^ dump[1] ^ dump[2] ^ dump[3]) == dump[4] && (dump[6] & 0xc0) == 0) {
-        xdump.card_info.uidlen = 4;
-        memcpy(xdump.card_info.uid, dump, xdump.card_info.uidlen);
-        xdump.card_info.sak = dump[5];
-        memcpy(xdump.card_info.atqa, &dump[6], sizeof(xdump.card_info.atqa));
-    }
-    // Check for 7 bytes UID: double size uid bits in ATQA
-    else if ((dump[8] & 0xc0) == 0x40) {
-        xdump.card_info.uidlen = 7;
-        memcpy(xdump.card_info.uid, dump, xdump.card_info.uidlen);
-        xdump.card_info.sak = dump[7];
-        memcpy(xdump.card_info.atqa, &dump[8], sizeof(xdump.card_info.atqa));
-    } else {
-        PrintAndLogEx(WARNING, "Invalid dump. UID/SAK/ATQA not found");
-    }
-    xdump.dump = dump;
-    xdump.dumplen = bytes;
-    saveFileJSON(filename, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
+    pm3_save_mf_dump(filename, dump, bytes, jsfCardMemory);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -5217,7 +5181,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
 static int CmdHF14AMfCSave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf csave",
-                  "Save magic gen1a card memory into three files (BIN/EML/JSON)"
+                  "Save magic gen1a card memory into two files (bin/json)"
                   "or into emulator memory",
                   "hf mf csave\n"
                   "hf mf csave --4k"
@@ -5364,13 +5328,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
         FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
     }
 
-    saveFile(filename, ".bin", dump, bytes);
-    saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
-    iso14a_mf_extdump_t xdump;
-    xdump.card_info = card;
-    xdump.dump = dump;
-    xdump.dumplen = bytes;
-    saveFileJSON(filename, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
+    pm3_save_mf_dump(filename, dump, bytes, jsfCardMemory);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -6176,15 +6134,18 @@ int CmdHFMFNDEFRead(const char *Cmd) {
         print_buffer(data, datalen, 1);
     }
 
-    if (fnlen != 0) {
-        saveFile(filename, ".bin", data, datalen);
-    }
-
     res = NDEFDecodeAndPrint(data, datalen, verbose);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
         res = NDEFRecordsDecodeAndPrint(data, datalen, verbose);
     }
+
+    // get total NDEF length before save. If fails, we save it all
+    size_t n = 0;
+    if (NDEFGetTotalLength(data, datalen, &n) != PM3_SUCCESS)
+        n = datalen;
+
+    pm3_save_dump(filename, data, n, jsfNDEF);
 
     if (verbose == false) {
         PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -v`") " for more details");
@@ -6282,8 +6243,8 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
 
 
     // init keys to default key
-    uint8_t keyA[MIFARE_4K_MAXSECTOR][MFKEY_SIZE];
-    uint8_t keyB[MIFARE_4K_MAXSECTOR][MFKEY_SIZE];
+    uint8_t keyA[MIFARE_4K_MAXSECTOR][MIFARE_KEY_SIZE];
+    uint8_t keyB[MIFARE_4K_MAXSECTOR][MIFARE_KEY_SIZE];
 
     for (uint8_t i = 0; i < MIFARE_4K_MAXSECTOR; i++) {
         memcpy(keyA[i], g_mifare_default_key, sizeof(g_mifare_default_key));
@@ -6313,7 +6274,6 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
         free(fptr);
         DropField();
     }
-
 
     // load key file if exist
     if (strlen(keyFilename)) {
@@ -7402,7 +7362,6 @@ static int CmdHF14AMfView(const char *Cmd) {
         block_cnt = MIFARE_4K_MAXBLOCK;
 
     if (verbose) {
-        PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
     }
 
@@ -7896,7 +7855,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gsave",
-                  "Save `magic gen4 gtu` card memory into three files (BIN/EML/JSON)"
+                  "Save `magic gen4 gtu` card memory into two files (bin/json)"
                   "or into emulator memory",
                   "hf mf gsave\n"
                   "hf mf gsave --4k\n"
@@ -7908,7 +7867,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
-        arg_str0("p", "pwd", "<hex>", "password 4bytes"),
+        arg_str0("p", "pwd", "<hex>", "password 4 bytes"),
         arg_str0("f", "file", "<fn>", "filename of dump"),
         arg_lit0(NULL, "emu", "to emulator memory"),
         arg_param_end
@@ -8079,14 +8038,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
         FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
     }
 
-    saveFile(filename, ".bin", dump, bytes);
-    saveFileEML(filename, dump, bytes, MFBLOCK_SIZE);
-    iso14a_mf_extdump_t xdump;
-    xdump.card_info = card;
-    xdump.dump = dump;
-    xdump.dumplen = bytes;
-    saveFileJSON(filename, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
-
+    pm3_save_mf_dump(filename, dump, bytes, jsfCardMemory);
     free(dump);
     return PM3_SUCCESS;
 }

@@ -2748,6 +2748,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     bool verbose = arg_get_lit(ctx, 2);
+    bool verbose2 = arg_get_lit(ctx, 2) > 1;
     CLIParserFree(ctx);
 
     bool activate_field = true;
@@ -2934,11 +2935,24 @@ int CmdHF14ANdefRead(const char *Cmd) {
         memcpy(ndef_file + (i - offset), response, segment_size);
     }
 
-    if (fnlen != 0) {
-        saveFile(filename, ".bin", ndef_file, ndef_size);
-    }
+    if (verbose2) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("NDEF raw") " ----------------");
+        print_buffer(ndef_file, ndef_size, 1);
+    }    
 
     NDEFRecordsDecodeAndPrint(ndef_file, ndef_size, verbose);
+
+    pm3_save_dump(filename, ndef_file, ndef_size, jsfNDEF);
+
+    if (verbose == false) {
+        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf 14a ndefread -v`") " for more details");
+    } else {
+        if (verbose2 == false) {
+            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf 14a ndefread -vv`") " for more details");
+        }
+    }
+
     free(ndef_file);
     return PM3_SUCCESS;
 }

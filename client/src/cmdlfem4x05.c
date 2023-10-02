@@ -709,9 +709,9 @@ int CmdEM4x05Dump(const char *Cmd) {
         }
         PrintAndLogEx(NORMAL, "");
         if (card_type == EM_4369 || card_type == EM_4469)
-            pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x69, 4);
+            pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x69);
         else
-            pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x05, 4);
+            pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x05);
     }
     PrintAndLogEx(NORMAL, "");
     return success;

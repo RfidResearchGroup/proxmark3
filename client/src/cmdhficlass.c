@@ -19,8 +19,8 @@
 #include "cmdhficlass.h"
 #include <ctype.h>
 #include "cliparser.h"
-#include "cmdparser.h"    // command_t
-#include "commonutil.h"  // ARRAYLEN
+#include "cmdparser.h"              // command_t
+#include "commonutil.h"             // ARRAYLEN
 #include "cmdtrace.h"
 #include "util_posix.h"
 #include "comms.h"
@@ -34,13 +34,13 @@
 #include "cardhelper.h"
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
-#include "cmdsmartcard.h"   // smart select fct
+#include "cmdsmartcard.h"           // smart select fct
 #include "proxendian.h"
 #include "iclass_cmd.h"
-#include "crypto/asn1utils.h"      // ASN1 decoder
+#include "crypto/asn1utils.h"       // ASN1 decoder
 #include "preferences.h"
 
-#define PICOPASS_BLOCK_SIZE    8
+
 #define NUM_CSNS               9
 #define MAC_ITEM_SIZE          24 // csn(8) + epurse(8) + nr(4) + mac(4) = 24 bytes
 #define ICLASS_KEYS_MAX        8
@@ -1016,7 +1016,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of dump (bin/eml/json)"),
+        arg_str1("f", "file", "<fn>", "filename of dump"),
         arg_lit0("m", "mem",  "use RDV4 spiffs"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -1149,7 +1149,7 @@ static int CmdHFiClassESave(const char *Cmd) {
         FillFileNameByUID(fptr, dump, "-dump", 8);
     }
 
-    pm3_save_dump(filename, dump, bytes, jsfIclass, PICOPASS_BLOCK_SIZE);
+    pm3_save_dump(filename, dump, bytes, jsfIclass);
     free(dump);
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
@@ -1497,7 +1497,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         strcat(fptr, "hf-iclass-");
         FillFileNameByUID(fptr, hdr->csn, "-dump-decrypted", sizeof(hdr->csn));
 
-        pm3_save_dump(fptr, decrypted, decryptedlen, jsfIclass, PICOPASS_BLOCK_SIZE);
+        pm3_save_dump(fptr, decrypted, decryptedlen, jsfIclass);
 
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen, dense_output);
 
@@ -2045,7 +2045,7 @@ write_dump:
     // save the dump to .bin file
     PrintAndLogEx(SUCCESS, "saving dump file - %u blocks read", bytes_got / 8);
 
-    pm3_save_dump(filename, tag_data, bytes_got, jsfIclass, PICOPASS_BLOCK_SIZE);
+    pm3_save_dump(filename, tag_data, bytes_got, jsfIclass);
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass decrypt -f") "` to decrypt dump file");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
@@ -3026,7 +3026,7 @@ static int CmdHFiClassView(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>",  "filename of dump (bin/eml/json)"),
+        arg_str1("f", "file", "<fn>",  "filename of dump"),
         arg_int0(NULL, "first", "<dec>", "Begin printing from this block (default first user block)"),
         arg_int0(NULL, "last", "<dec>", "End printing at this block (default 0, ALL)"),
         arg_lit0("v", "verbose", "verbose output"),

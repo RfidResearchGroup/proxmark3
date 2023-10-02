@@ -2677,7 +2677,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         }
 
         uint16_t datalen = pages * MFU_BLOCK_SIZE + MFU_DUMP_PREFIX_LENGTH;
-        pm3_save_dump(filename, (uint8_t *)&dump_file_data, datalen, jsfMfuMemory, MFU_BLOCK_SIZE);
+        pm3_save_dump(filename, (uint8_t *)&dump_file_data, datalen, jsfMfuMemory);
 
         if (is_partial) {
             PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
@@ -2840,7 +2840,7 @@ int CmdHF14MfUTamper(const char *Cmd) {
 static int CmdHF14AMfURestore(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu restore",
-                  "Restore MIFARE Ultralight/NTAG dump file to tag.\n",
+                  "Restore MIFARE Ultralight/NTAG dump file (bin/eml/json) to tag.\n",
                   "hf mfu restore -f myfile -s                 -> special write\n"
                   "hf mfu restore -f myfile -k AABBCCDD -s     -> special write, use key\n"
                   "hf mfu restore -f myfile -k AABBCCDD -ser   -> special write, use key, write dump pwd, ..."
@@ -2848,7 +2848,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "specify dump filename (bin/eml/json)"),
+        arg_str1("f", "file", "<fn>", "specify dump filename"),
         arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_lit0("s", NULL, "enable special write UID -MAGIC TAG ONLY-"),
@@ -4443,13 +4443,19 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     }
 
     DropField();
-    if (fnlen != 0) {
-        saveFile(filename, ".bin", records, (size_t)maxsize);
-    }
+
     status = NDEFRecordsDecodeAndPrint(records, (size_t)maxsize, verbose);
     if (status != PM3_SUCCESS) {
         status = NDEFDecodeAndPrint(records, (size_t)maxsize, verbose);
     }
+
+    // get total NDEF length before save. If fails, we save it all
+    size_t n = 0;
+    if (NDEFGetTotalLength(records, maxsize, &n) != PM3_SUCCESS)
+        n = maxsize;
+
+    pm3_save_dump(filename, records, n, jsfNDEF);
+
 
     char *jooki = strstr((char *)records, "s.jooki.rocks/s/?s=");
     if (jooki) {
@@ -4557,12 +4563,12 @@ static int CmdHF14AMfuEView(const char *Cmd) {
 static int CmdHF14AMfuESave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu esave",
-                  "Saves emulator memory to a MIFARE Ultralight/NTAG dump file (bin/eml/json)\n"
+                  "Saves emulator memory to a MIFARE Ultralight/NTAG dump file (bin/json)\n"
                   "By default number of pages saved depends on defined tag type.\n"
                   "You can override this with option --end.",
                   "hf mfu esave\n"
                   "hf mfu esave --end 255 -> saves whole memory\n"
-                  "hf mfu esave -f hf-mfu-04010203040506-dump.json"
+                  "hf mfu esave -f hf-mfu-04010203040506-dump"
                  );
 
     void *argtable[] = {
@@ -4613,7 +4619,7 @@ static int CmdHF14AMfuESave(const char *Cmd) {
 
     // save dump. Last block contains PACK + RFU
     uint16_t datalen = (end + 1) * MFU_BLOCK_SIZE + MFU_DUMP_PREFIX_LENGTH;
-    res = pm3_save_dump(filename, (uint8_t *)dump, datalen, jsfMfuMemory, MFU_BLOCK_SIZE);
+    res = pm3_save_dump(filename, (uint8_t *)dump, datalen, jsfMfuMemory);
 
     free(dump);
     return res;
