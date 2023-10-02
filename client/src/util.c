@@ -959,7 +959,7 @@ int hextobinstring_n(char *target, char *source, int sourcelen) {
 }
 
 // convert bytes to binary string
-int byte_2_binstr(char *target,  const uint8_t *source, size_t sourcelen) {
+void byte_2_binstr(char *target,  const uint8_t *source, size_t sourcelen) {
     //uint8_t *p = *source;
     for (int i = 0 ; i < sourcelen; ++i) {
         uint8_t b = *(source++);
