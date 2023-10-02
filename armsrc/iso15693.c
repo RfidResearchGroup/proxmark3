@@ -1060,7 +1060,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 
                 if (dtf->len > dtf->max_len) {
                     ret = PM3_EOVFLOW;
-                    Dbprintf("overflow (%d > %d", dtf->len, dtf->max_len);
+                    Dbprintf("overflow (%d > %d)", dtf->len, dtf->max_len);
                 }
                 break;
             }
@@ -1083,7 +1083,7 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
 
                 if (dt->len > dt->max_len) {
                     ret = PM3_EOVFLOW;
-                    Dbprintf("overflow (%d > %d", dt->len, dt->max_len);
+                    Dbprintf("overflow (%d > %d)", dt->len, dt->max_len);
                 }
                 break;
             }

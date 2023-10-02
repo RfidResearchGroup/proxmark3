@@ -1249,7 +1249,7 @@ static int CmdHF15EView(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Downloading %u bytes from emulator memory", bytes);
-    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
         return PM3_ETIMEOUT;

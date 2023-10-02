@@ -69,7 +69,6 @@
 #define HF_ICALSSS_READSIM_TEMP_MOD_BIN  "iceclass-temp-mod.bin"
 #define HF_ICLASS_FULLSIM_MOD       "iceclass-modified"
 #define HF_ICLASS_FULLSIM_MOD_BIN   HF_ICLASS_FULLSIM_MOD".bin"
-#define HF_ICLASS_FULLSIM_MOD_EML   HF_ICLASS_FULLSIM_MOD".eml"
 #define HF_ICLASS_ATTACK_BIN        "iclass_mac_attack"
 
 #define HF_ICLASS_CC_A              "iceclass_cc_a.bin"
