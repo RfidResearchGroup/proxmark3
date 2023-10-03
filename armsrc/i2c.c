@@ -240,7 +240,7 @@ static bool I2C_WaitForSim(uint32_t wait) {
     // 1000*110*3.07  = 337.7ms  (337700)
     // 4 560 000 * 3.07 = 13999,2ms (13999200)
     // 1byte transfer == 1ms with max frame being 256bytes
-    
+
     // fct WaitSCL_H_delay uses a I2C_DELAY_1CLK in the loop with "wait" as number of iterations.
     // I2C_DELAY_1CLK == I2CSpinDelayClk(1) = 3.07us
     return WaitSCL_H_delay(wait);
@@ -474,7 +474,7 @@ bool I2C_BufferWrite(const uint8_t *data, uint16_t len, uint8_t device_cmd, uint
         if (len == 0) {
             _break = false;
         }
-        
+
     } while (false);
 
     I2C_Stop();
@@ -586,7 +586,7 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
 //    Dbprintf("rec len...  %u  readcount... %u", recv_len, readcount);
 //    Dbhexdump(readcount, pd, false);
 
-    if (readcount < 2 ) {
+    if (readcount < 2) {
         return 0;
     }
 
@@ -771,7 +771,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     if (card_ptr == NULL) {
         return false;
     }
-   
+
 
     card_ptr->atr_len = 0;
     memset(card_ptr->atr, 0, sizeof(card_ptr->atr));
@@ -781,7 +781,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
     // wait for sim card to answer.
-    // 1byte = 1ms ,  max frame 256bytes.  Should wait 256ms atleast just in case.  
+    // 1byte = 1ms ,  max frame 256bytes.  Should wait 256ms atleast just in case.
     if (I2C_WaitForSim(SIM_WAIT_DELAY) == false) {
         return false;
     }

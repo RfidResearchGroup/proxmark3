@@ -361,7 +361,7 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
 
             // size of header 56b
-            
+
             size_t len = (datalen - MFU_DUMP_PREFIX_LENGTH) / MFU_BLOCK_SIZE;
 
             for (size_t i = 0; i < len; i++) {
@@ -426,7 +426,7 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             for (size_t i = 0; i < datalen / 4; i++) {
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, &data[i * 4], 4);
-            }            
+            }
             break;
         }
         // handles ISO15693 w blocksize of 4 bytes
@@ -438,7 +438,7 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             break;
         }
-        // handles ISO15693 w blocksize of 8 bytes                
+        // handles ISO15693 w blocksize of 8 bytes
         case jsf15_v3: {
             JsonSaveStr(root, "FileType", "15693 v3");
             for (size_t i = 0; i < datalen / 8; i++) {
@@ -457,8 +457,8 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             if (datalen % 16) {
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &data[i * 16], (datalen % 16));  
-            } 
+                JsonSaveBufAsHexCompact(root, path, &data[i * 16], (datalen % 16));
+            }
             break;
         }
         case jsfT5555: {
@@ -610,7 +610,7 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             break;
         }
         case jsfNDEF: {
-            JsonSaveStr(root, "FileType", "ndef");            
+            JsonSaveStr(root, "FileType", "ndef");
             JsonSaveInt(root, "Ndef.Size", datalen);
             size_t i = 0;
             for (; i < datalen / 16; i++) {
@@ -619,17 +619,17 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             if (datalen % 16) {
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &data[i * 16], (datalen % 16));  
-            }            
+                JsonSaveBufAsHexCompact(root, path, &data[i * 16], (datalen % 16));
+            }
             break;
         }
         // no action
-        case jsfFido: 
+        case jsfFido:
             break;
         // depricated
-        case jsfCardMemory:                
+        case jsfCardMemory:
         case jsf14b:
-        case jsf15:        
+        case jsf15:
         case jsfLegic:
         default:
             break;
@@ -1264,7 +1264,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     // handles ISO15693 w blocksize of 4 bytes.
     if (!strcmp(ctype, "15693 v2")) {
-       size_t sptr = 0;
+        size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
                 retval = PM3_EMALLOC;
@@ -1284,7 +1284,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     }
     // handles ISO15693 w blocksize of 8 bytes.
     if (!strcmp(ctype, "15693 v3")) {
-       size_t sptr = 0;
+        size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 8); i++) {
             if (sptr + 8 > maxdatalen) {
                 retval = PM3_EMALLOC;
@@ -1403,36 +1403,36 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 //        size_t sptr = (14 + atslen);
 //         uint8_t dvdata[4][0xE][24 + 1] = {{{0}}};
 
-            /*
-            for (int i = 0; i < (int)datalen; i++) {
-                char path[PATH_MAX_LENGTH] = {0};
+        /*
+        for (int i = 0; i < (int)datalen; i++) {
+            char path[PATH_MAX_LENGTH] = {0};
 
-                if (dvdata[0][i][0]) {
-                    snprintf(path, sizeof(path), "$.DES.%d.Key", i);
-                    JsonSaveBufAsHexCompact(root, path, &dvdata[0][i][1], DES_KEY_LEN);
-                }
-
-                if (dvdata[1][i][0]) {
-                    snprintf(path, sizeof(path), "$.3DES.%d.Key", i);
-                    JsonSaveBufAsHexCompact(root, path, &dvdata[1][i][1], T2DES_KEY_LEN);
-                }
-                if (dvdata[2][i][0]) {
-                    snprintf(path, sizeof(path), "$.AES.%d.Key", i);
-                    JsonSaveBufAsHexCompact(root, path, &dvdata[2][i][1], AES_KEY_LEN);
-                }
-                if (dvdata[3][i][0]) {
-                    snprintf(path, sizeof(path), "$.K3KDES.%d.Key", i);
-                    JsonSaveBufAsHexCompact(root, path, &dvdata[3][i][1], T3DES_KEY_LEN);
-                }
+            if (dvdata[0][i][0]) {
+                snprintf(path, sizeof(path), "$.DES.%d.Key", i);
+                JsonSaveBufAsHexCompact(root, path, &dvdata[0][i][1], DES_KEY_LEN);
             }
-            */
+
+            if (dvdata[1][i][0]) {
+                snprintf(path, sizeof(path), "$.3DES.%d.Key", i);
+                JsonSaveBufAsHexCompact(root, path, &dvdata[1][i][1], T2DES_KEY_LEN);
+            }
+            if (dvdata[2][i][0]) {
+                snprintf(path, sizeof(path), "$.AES.%d.Key", i);
+                JsonSaveBufAsHexCompact(root, path, &dvdata[2][i][1], AES_KEY_LEN);
+            }
+            if (dvdata[3][i][0]) {
+                snprintf(path, sizeof(path), "$.K3KDES.%d.Key", i);
+                JsonSaveBufAsHexCompact(root, path, &dvdata[3][i][1], T3DES_KEY_LEN);
+            }
+        }
+        */
 //        memcpy(&data[14 + atslen], dvdata, 4 * 0xE * (24 + 1));
 
         goto out;
     }
 
     if (!strcmp(ctype, "14b v2")) {
-       size_t sptr = 0;
+        size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
                 retval = PM3_EMALLOC;
@@ -1452,7 +1452,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     }
 
     if (!strcmp(ctype, "lto")) {
-       size_t sptr = 0;
+        size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 32); i++) {
             if (sptr + 32 > maxdatalen) {
                 retval = PM3_EMALLOC;
@@ -1472,7 +1472,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     }
 
     if (!strcmp(ctype, "cryptorf")) {
-       size_t sptr = 0;
+        size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 8); i++) {
             if (sptr + 8 > maxdatalen) {
                 retval = PM3_EMALLOC;
@@ -2318,7 +2318,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
 
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
     if (fn == NULL || strlen(fn) == 0) {
-        return PM3_EINVARG;       
+        return PM3_EINVARG;
     }
     if (d == NULL || n == 0) {
         PrintAndLogEx(INFO, "No data to save, skipping...");

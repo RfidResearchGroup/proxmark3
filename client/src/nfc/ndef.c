@@ -1285,22 +1285,22 @@ int NDEFGetTotalLength(uint8_t *ndef, size_t ndeflen, size_t *outlen) {
     size_t idx = 0;
     while (idx < ndeflen) {
 
-        if (ndef[idx] == 0x00 || 
-            ndef[idx] == 0x01 || 
-            ndef[idx] == 0x02 || 
-            ndef[idx] == 0x03 || 
-            ndef[idx] == 0xFD) {
+        if (ndef[idx] == 0x00 ||
+                ndef[idx] == 0x01 ||
+                ndef[idx] == 0x02 ||
+                ndef[idx] == 0x03 ||
+                ndef[idx] == 0xFD) {
             idx++;
             idx += ndefTLVGetLength(&ndef[idx], &idx);
             continue;
         }
-        
+
         if (ndef[idx] == 0xFE) {
             idx++;
             break;
         }
 
-        // invalid NDEF 
+        // invalid NDEF
         *outlen = 0;
         return PM3_ESOFT;
     }

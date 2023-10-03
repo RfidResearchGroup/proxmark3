@@ -455,7 +455,7 @@ static int CmdSmartRaw(const char *Cmd) {
         if (active_select)
             payload->flags |= SC_SELECT;
     }
-    
+
     payload->wait_delay = 0;
     if (timeout > -1) {
         payload->flags |= SC_WAIT;

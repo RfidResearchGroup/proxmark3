@@ -412,7 +412,7 @@ int CmdHFST25TANdefRead(const char *Cmd) {
         n = resplen;
 
     pm3_save_dump(filename, response + 2, n, jsfNDEF);
-    
+
     return PM3_SUCCESS;
 }
 

@@ -301,10 +301,10 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
  * It also tries to save according to user preferences set dump folder paths.
  * E.g. dumpdata.bin
  * E.g. dumpdata.json
- * 
+ *
  * This function is dedicated for MIFARE CLASSIC dumps.  Checking for 4 or 7 byte UID in indata.
  * Saves the corrected data in the json file
- * 
+ *
  * @param fn
  * @param d The binary data to write to the file
  * @param n the length of the data

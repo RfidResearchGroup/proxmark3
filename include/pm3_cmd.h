@@ -700,7 +700,7 @@ typedef struct {
 #define CMD_HF_MIFARE_G4_GDM_CONFIG                                       0x0872
 #define CMD_HF_MIFARE_G4_GDM_WRCFG                                        0x0873
 
-// HID SAM 
+// HID SAM
 #define CMD_HF_SAM_PICOPASS                                               0x0900
 #define CMD_HF_SAM_SEOS                                                   0x0901
 #define CMD_HF_SAM_MFC                                                    0x0902

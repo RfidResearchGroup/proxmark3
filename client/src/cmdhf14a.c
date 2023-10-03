@@ -2939,7 +2939,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("NDEF raw") " ----------------");
         print_buffer(ndef_file, ndef_size, 1);
-    }    
+    }
 
     NDEFRecordsDecodeAndPrint(ndef_file, ndef_size, verbose);
 

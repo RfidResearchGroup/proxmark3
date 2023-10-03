@@ -966,11 +966,11 @@ void byte_2_binstr(char *target,  const uint8_t *source, size_t sourcelen) {
         *(target++) = ((b >> 7) & 0x1) + '0';
         *(target++) = ((b >> 6) & 0x1) + '0';
         *(target++) = ((b >> 5) & 0x1) + '0';
-        *(target++) = ((b >> 4) & 0x1) + '0';                
+        *(target++) = ((b >> 4) & 0x1) + '0';
         *(target++) = ((b >> 3) & 0x1) + '0';
         *(target++) = ((b >> 2) & 0x1) + '0';
         *(target++) = ((b >> 1) & 0x1) + '0';
-        *(target++) = (b & 0x1) + '0';        
+        *(target++) = (b & 0x1) + '0';
     }
     *target = '\0';
 }
