@@ -60,7 +60,7 @@ static uint8_t empty[PICOPASS_BLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 static uint8_t zeros[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static int CmdHelp(const char *Cmd);
-static void printIclassSIO(uint8_t *iclass_dump);
+static void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len);
 
 static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][PICOPASS_BLOCK_SIZE] = {
     { 0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78 },
@@ -1215,7 +1215,7 @@ static int CmdHFiClassEView(const char *Cmd) {
     printIclassDumpContents(dump, 1, blocks, bytes, dense_output);
 
     if (verbose) {
-        printIclassSIO(dump);
+        print_iclass_sio(dump, bytes);
     }
 
     free(dump);
@@ -1266,7 +1266,8 @@ static int CmdHFiClassESetBlk(const char *Cmd) {
 }
 
 static void iclass_decode_credentials(uint8_t *data) {
-    if (memcmp(data + (5 * PICOPASS_BLOCK_SIZE), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
+    picopass_hdr_t *hdr = (picopass_hdr_t *)data;
+    if (memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
         // Not a Legacy or SR card, nothing to do here.
         return;
     }
@@ -1502,7 +1503,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen, dense_output);
 
         if (verbose) {
-            printIclassSIO(decrypted);
+            print_iclass_sio(decrypted, decryptedlen);
         }
 
         PrintAndLogEx(NORMAL, "");
@@ -2750,67 +2751,99 @@ static int CmdHFiClass_loclass(const char *Cmd) {
     return bruteforceFileNoKeys(filename);
 }
 
-static void detect_credential(uint8_t *data, bool *legacy, bool *se, bool *sr) {
-    *legacy = false;
-    *sr = false;
-    *se = false;
+static void detect_credential(uint8_t *iclass_dump, size_t dump_len, bool *is_legacy, bool *is_se, bool *is_sr, uint8_t **sio_start_ptr, size_t *sio_length) {
+    *is_legacy = false;
+    *is_sr = false;
+    *is_se = false;
+    if (sio_start_ptr != NULL) {
+        *sio_start_ptr = NULL;
+    }
+    if (sio_length != NULL) {
+        *sio_length = 0;
+    }
 
+    if (dump_len < sizeof(picopass_hdr_t)) {
+        // Can't really do anything with a dump that doesn't include the header
+        return;
+    }
+
+    picopass_hdr_t *hdr = (picopass_hdr_t *)iclass_dump;
+
+    if (!memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
     // Legacy AIA
-    if (!memcmp(data + (5 * PICOPASS_BLOCK_SIZE), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
-        *legacy = true;
+        *is_legacy = true;
 
-        // SR bit set in legacy config block
-        if ((data[6 * PICOPASS_BLOCK_SIZE] & ICLASS_CFG_BLK_SR_BIT) == ICLASS_CFG_BLK_SR_BIT) {
-            // If the card is blank (all FF's) then we'll reach here too, so check for an empty block 10
-            // to avoid false positivies
-            if (memcmp(data + (10 * PICOPASS_BLOCK_SIZE), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
-                *sr = true;
-            }
+        if (dump_len < 11 * PICOPASS_BLOCK_SIZE) {
+            // Can't reliably detect if the card is SR without checking
+            // blocks 6 and 10
+            return;
         }
 
+        // SR bit set in legacy config block
+        if ((iclass_dump[6 * PICOPASS_BLOCK_SIZE] & ICLASS_CFG_BLK_SR_BIT) == ICLASS_CFG_BLK_SR_BIT) {
+            // If the card is blank (all FF's) then we'll reach here too, so check for an empty block 10
+            // to avoid false positivies
+            if (memcmp(iclass_dump + (10 * PICOPASS_BLOCK_SIZE), "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
+                *is_sr = true;
+                if (sio_start_ptr != NULL) {
+                    // SR SIO starts at block 10
+                    *sio_start_ptr = iclass_dump + (10 * PICOPASS_BLOCK_SIZE);
+                }
+            }
+        }
+    } else if (!memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\x00\x06\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
+        // SE AIA
+        *is_se = true;
+
+        if (sio_start_ptr != NULL) {
+            // SE SIO starts at block 6
+            *sio_start_ptr = iclass_dump + (6 * PICOPASS_BLOCK_SIZE);
+        }
+    }
+
+    if (sio_length == NULL || sio_start_ptr == NULL || *sio_start_ptr == NULL) {
+        // No need to calculate length
         return;
     }
 
-    // SE AIA
-    if (!memcmp(data + (5 * PICOPASS_BLOCK_SIZE), "\xFF\xFF\xFF\x00\x06\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
-        *se = true;
+    uint8_t *sio_start = *sio_start_ptr;
+
+    if (sio_start[0] != 0x30) {
+        // SIOs always start with a SEQUENCE(P), if this is missing then bail
         return;
     }
+
+    if (sio_start[1] >= 0x80 || sio_start[1] == 0x00) {
+        // We only support definite short form lengths
+        return;
+    }
+
+    // Length of bytes within the SEQUENCE, plus tag and length bytes for the SEQUENCE tag
+    *sio_length = sio_start[1] + 2;
 }
 
 // print ASN1 decoded array in TLV view
-static void printIclassSIO(uint8_t *iclass_dump) {
-    bool isLegacy, isSE, isSR;
-    detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
-
+static void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len) {
+    bool is_legacy, is_se, is_sr;
     uint8_t *sio_start;
-    if (isSE) {
-        // SE SIO starts at block 6
-        sio_start = iclass_dump + (6 * PICOPASS_BLOCK_SIZE);
-    } else if (isSR) {
-        // SR SIO starts at block 10
-        sio_start = iclass_dump + (10 * PICOPASS_BLOCK_SIZE);
-    } else {
-        // No SIO on Legacy credentials
+    size_t sio_length;
+    detect_credential(iclass_dump, dump_len, &is_legacy, &is_se, &is_sr, &sio_start, &sio_length);
+
+    if (sio_start == NULL) {
         return;
     }
 
-    // Readers assume the SIO always fits within 7 blocks (they don't read any further blocks)
-    // Search backwards to find the last 0x05 0x00 seen at the end of the SIO
-    const uint8_t pattern_sio_end[] = {0x05, 0x00};
-    int dlen = byte_strrstr(sio_start, 7 * PICOPASS_BLOCK_SIZE, pattern_sio_end, 2);
-    if (dlen == -1) {
+    if (dump_len < sio_length + (sio_start - iclass_dump)) {
+        // SIO length exceeds the size of the dump we have, bail
         return;
     }
-
-    dlen += sizeof(pattern_sio_end);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
-    print_hex_noascii_break(sio_start, dlen, 32);
+    print_hex_noascii_break(sio_start, sio_length, 32);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
-    asn1_print(sio_start, dlen, "  ");
+    asn1_print(sio_start, sio_length, "  ");
     PrintAndLogEx(NORMAL, "");
 }
 
@@ -2862,9 +2895,17 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     );
     */
 
-    bool isLegacy = false, isSE = false, isSR = false;
-    if (filemaxblock >= 17) {
-        detect_credential(iclass_dump, &isLegacy, &isSE, &isSR);
+    bool is_legacy, is_se, is_sr;
+    uint8_t *sio_start;
+    size_t sio_length;
+    detect_credential(iclass_dump, endblock * 8, &is_legacy, &is_se, &is_sr, &sio_start, &sio_length);
+
+    bool is_legacy_decrypted = is_legacy && (iclass_dump[(6 * PICOPASS_BLOCK_SIZE) + 7] & 0x03) == 0x00;
+
+    int sio_start_block = 0, sio_end_block = 0;
+    if (sio_start && sio_length > 0) {
+        sio_start_block = (sio_start - iclass_dump) / PICOPASS_BLOCK_SIZE;
+        sio_end_block = sio_start_block + (sio_length + PICOPASS_BLOCK_SIZE - 1) / PICOPASS_BLOCK_SIZE - 1;
     }
 
     int i = startblock;
@@ -2937,32 +2978,25 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
         } else {
             const char *info_ks[] = {"CSN", "Config", "E-purse", "Debit", "Credit", "AIA", "User"};
 
-            if (i >= 6 && i <= 9 && isLegacy && isSE == false) {
+            if (i >= 6 && i <= 9 && is_legacy) {
                 // legacy credential
-                PrintAndLogEx(INFO, "%3d/0x%02X | " _YELLOW_("%s") "| " _YELLOW_("%s") " | %s | User / Cred "
+                PrintAndLogEx(INFO, "%3d/0x%02X | " _YELLOW_("%s") "| " _YELLOW_("%s") " | %s | User / %s "
                               , i
                               , i
                               , sprint_hex(blk, 8)
                               , sprint_ascii(blk, 8)
                               , lockstr
+                              , i == 6 ? "HID CFG" : (is_legacy_decrypted ? "Cred" : "Enc Cred")
                              );
-            } else if (i >= 6 && i <= 12 && isSE) {
+            } else if (sio_start_block != 0 && i >= sio_start_block && i <= sio_end_block) {
                 // SIO credential
-                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | User / SIO / SE"
+                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | User / SIO / %s"
                               , i
                               , i
                               , sprint_hex(blk, 8)
                               , sprint_ascii(blk, 8)
                               , lockstr
-                             );
-            } else if (i >= 10 && i <= 16 && isSR) {
-                // SIO credential
-                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s") "| " _CYAN_("%s") " | %s | User / SIO / SR"
-                              , i
-                              , i
-                              , sprint_hex(blk, 8)
-                              , sprint_ascii(blk, 8)
-                              , lockstr
+                              , is_se ? "SE" : "SR"
                              );
             } else {
                 if (i < 6) {
@@ -2977,7 +3011,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 
         if (regular_print_block) {
             // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
-            // but the blocks in between are replaced with a single line of "*" if dense_output is enabled
+            // but the blocks in between are replaced with a single line of "......" if dense_output is enabled
             if (dense_output && i > 6 && i < (endblock - 1) && !in_repeated_block && !memcmp(blk, blk - 8, 8) &&
                     !memcmp(blk, blk + 8, 8) && !memcmp(blk, blk + 16, 8)) {
                 // we're in a user block that isn't the first user block nor last two user blocks,
@@ -3003,13 +3037,13 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
         i++;
     }
     PrintAndLogEx(INFO, "---------+-------------------------+----------+---+----------------");
-    if (isLegacy)
+    if (is_legacy)
         PrintAndLogEx(HINT, _YELLOW_("yellow") " = legacy credential");
 
-    if (isSE)
+    if (is_se)
         PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO / SE credential");
 
-    if (isSR)
+    if (is_sr)
         PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO / SR credential");
 
     PrintAndLogEx(NORMAL, "");
@@ -3067,7 +3101,7 @@ static int CmdHFiClassView(const char *Cmd) {
     iclass_decode_credentials(dump);
 
     if (verbose) {
-        printIclassSIO(dump);
+        print_iclass_sio(dump, bytes_read);
     }
 
     free(dump);
@@ -4535,13 +4569,13 @@ int info_iclass(bool shallow_mod) {
         memcpy(aia, hdr->app_issuer_area, sizeof(aia));
     }
 
-    // if CSN ends with FF12E0, it's inside HID CSN range.
-    bool isHidRange = (memcmp(hdr->csn + 5, "\xFF\x12\xE0", 3) == 0);
+    // if CSN starts with E012FFF (big endian), it's inside HID CSN range.
+    bool is_hid_range = (hdr->csn[4] & 0xF0) == 0xF0 && (memcmp(hdr->csn + 5, "\xFF\x12\xE0", 3) == 0);
 
-    bool legacy = (memcmp(aia, "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
-    bool se_enabled = (memcmp(aia, "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
+    if (is_hid_range) {
+        bool legacy = (memcmp(aia, "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
+        bool se_enabled = (memcmp(aia, "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
 
-    if (isHidRange) {
         PrintAndLogEx(SUCCESS, "    CSN.......... " _YELLOW_("HID range"));
         if (legacy)
             PrintAndLogEx(SUCCESS, "    Credential... " _GREEN_("iCLASS legacy"));
