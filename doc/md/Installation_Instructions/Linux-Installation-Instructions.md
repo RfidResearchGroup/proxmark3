@@ -8,6 +8,8 @@
 - [External resources](#external-resources)
 - [Install the required dependencies](#install-the-required-dependencies)
   - [On Debian / Ubuntu / Kali / ParrotOS / Raspbian](#on-debian--ubuntu--kali--parrotos--raspbian)
+    - [If you don't need...](#if-you-dont-need)
+    - [failed to load module...](#failed-to-load-module)
   - [On ArchLinux](#on-archlinux)
   - [On Fedora](#on-fedora)
   - [On openSUSE](#on-opensuse)
@@ -50,16 +52,24 @@ Install the requirements
 
 ```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev \
+libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev
 ```
 
-If you don't need the native Bluetooth support in the client, you can skip the installation of `libbluetooth-dev`.
+### If you don't need... 
+👉 If you don't need the native Bluetooth support in the client,  
+you can skip the installation of `libbluetooth-dev`.
 
-If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qtbase5-dev`.
+👉 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`),  
+you can skip the installation of `qtbase5-dev`.
 
-If you don't need support for Python3 scripts in the Proxmark3 client, you can skip the installation of `libpython3-dev`.
+👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
+you can skip the installation of `libpython3-dev`.
 
-If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to load module "canberra-gtk-module"_ you may have to install `libcanberra-gtk-module`.
+### failed to load module... 
+⚠ If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to load module "canberra-gtk-module"_  
+you may have to install `libcanberra-gtk-module`.
+
 
 ## On ArchLinux
 ^[Top](#top)
