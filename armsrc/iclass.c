@@ -1892,9 +1892,7 @@ void iClass_WriteBlock(uint8_t *msg) {
             res = false;
             goto out;
         }
-    } 
-
-    if ((pagemap != PICOPASS_NON_SECURE_PAGEMODE) && (payload->req.blockno == 3 || payload->req.blockno == 4)) {
+    } else if ((pagemap != PICOPASS_NON_SECURE_PAGEMODE) && (payload->req.blockno == 3 || payload->req.blockno == 4)) {
         // check response. Key updates always return 0xffffffffffffffff
         uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
         if (memcmp(all_ff, resp, sizeof(all_ff))) {
