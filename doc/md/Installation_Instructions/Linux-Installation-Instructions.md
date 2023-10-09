@@ -9,9 +9,11 @@
 - [Install the required dependencies](#install-the-required-dependencies)
   - [On Debian / Ubuntu / Kali / ParrotOS / Raspbian](#on-debian--ubuntu--kali--parrotos--raspbian)
     - [If you don't need...](#if-you-dont-need)
-    - [failed to load module...](#failed-to-load-module)
+    - [Failed to load module...](#failed-to-load-module)
   - [On ArchLinux](#on-archlinux)
+    - [If you don't need...](#if-you-dont-need-1)
   - [On Fedora](#on-fedora)
+    - [If you don't need...](#if-you-dont-need-2)
   - [On openSUSE](#on-opensuse)
 - [Clone the Iceman repository](#clone-the-iceman-repository)
 - [Check ModemManager](#check-modemmanager)
@@ -42,7 +44,9 @@ You might want to follow one of these external resources to get an overview, but
 ## On Debian / Ubuntu / Kali / ParrotOS / Raspbian
 ^[Top](#top)
 
-First what we want to do is get an update for the system. If you need to upgrade do this **before** the install. An upgrade was carried out prior to following these instructions. 
+First what we want to do is get an update for the system. If you need to apply updates do this **before** the install.  
+
+We assume your system was patched with latest updates prior to following these instructions. 
 
 Update the packages list
 ```sh
@@ -66,8 +70,8 @@ you can skip the installation of `qtbase5-dev`.
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `libpython3-dev`.
 
-### failed to load module... 
-⚠ If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to load module "canberra-gtk-module"_  
+### Failed to load module... 
+⚠️ If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to load module "canberra-gtk-module"_  
 you may have to install `libcanberra-gtk-module`.
 
 
@@ -75,33 +79,48 @@ you may have to install `libcanberra-gtk-module`.
 ^[Top](#top)
 
 ```sh
-sudo pacman -Syu git base-devel readline bzip2 lz4 arm-none-eabi-gcc arm-none-eabi-newlib qt5-base bluez python --needed
+sudo pacman -Syu git base-devel readline bzip2 lz4 arm-none-eabi-gcc \
+arm-none-eabi-newlib qt5-base bluez python --needed
 ```
 
-If you don't need the native Bluetooth support in the client, you can skip the installation of `bluez`.
+### If you don't need... 
+👉 If you don't need the native Bluetooth support in the client,  
+you can skip the installation of `bluez`.
 
-If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qt5-base`.
+👉 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`),  
+you can skip the installation of `qt5-base`.
 
-If you don't need support for Python3 scripts in the Proxmark3 client, you can skip the installation of `python`.
+👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
+you can skip the installation of `python`.
+
 
 ## On Fedora
 ^[Top](#top)
 
 ```sh
-sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel lz4-devel qt5-qtbase-devel bluez-libs-devel python3-devel libatomic openssl-devel
+sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib \
+readline-devel bzip2-devel lz4-devel qt5-qtbase-devel bluez-libs-devel \
+python3-devel libatomic openssl-devel
 ```
 
-If you don't need the native Bluetooth support in the client, you can skip the installation of `bluez-libs-devel`.
+### If you don't need... 
+👉 If you don't need the native Bluetooth support in the client,  
+you can skip the installation of `bluez-libs-devel`.
 
-If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `qt5-qtbase-devel`.
+👉 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`),  
+you can skip the installation of `qt5-qtbase-devel`.
 
-If you don't need support for Python3 scripts in the Proxmark3 client, you can skip the installation of `python3-devel`.
+👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
+you can skip the installation of `python3-devel`.
+
 
 ## On openSUSE
 ^[Top](#top)
 
 ```sh
-sudo zypper install git patterns-devel-base-devel_basis gcc-c++ readline-devel libbz2-devel liblz4-devel cross-arm-none-gcc9 cross-arm-none-newlib-devel python3-devel libqt5-qtbase-devel libopenssl-devel
+sudo zypper install git patterns-devel-base-devel_basis gcc-c++ \
+readline-devel libbz2-devel liblz4-devel cross-arm-none-gcc9 \
+cross-arm-none-newlib-devel python3-devel libqt5-qtbase-devel libopenssl-devel
 ```
 
 Note that Bluez is not available on openSUSE so the native Bluetooth support won't be available in the client.
@@ -145,7 +164,7 @@ And a new `/dev/ttyACM0` should have appeared.
 # Get permissions to use /dev/ttyACM0
 ^[Top](#top)
 
-Add current user to the proper group to get permission to use `/dev/ttyACM0`.
+Add current user to the proper groups to get permission to use `/dev/ttyACM0`.
 
 This step can be done from the Iceman Proxmark3 repo with:
 
