@@ -15,6 +15,7 @@
   - [On Fedora](#on-fedora)
     - [If you don't need...](#if-you-dont-need-2)
   - [On openSUSE](#on-opensuse)
+    - [If you don't need...](#if-you-dont-need-3)
 - [Clone the Iceman repository](#clone-the-iceman-repository)
 - [Check ModemManager](#check-modemmanager)
     - [⚠️ Very important ⚠️](#️-very-important-️)
@@ -124,9 +125,13 @@ cross-arm-none-newlib-devel python3-devel libqt5-qtbase-devel libopenssl-devel
 
 Note that Bluez is not available on openSUSE so the native Bluetooth support won't be available in the client.
 
-If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`), you can skip the installation of `libqt5-qtbase-devel`.
+### If you don't need... 
+👉 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`),  
+you can skip the installation of `libqt5-qtbase-devel`.
 
-If you don't need support for Python3 scripts in the Proxmark3 client, you can skip the installation of `python3-devel`.
+👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
+you can skip the installation of `python3-devel`.
+
 
 # Clone the Iceman repository
 ^[Top](#top)
