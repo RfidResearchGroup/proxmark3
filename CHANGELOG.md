@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf iclass wrbl` - pagemap bit map for secured is now handled better (@iceman1001)
  - Changed `hf iclass view/decrypt` to detect SIO lengths better and show if legacy credentials are encrypted (@nvx)
  - Changed the json file formats for mfc, 14b, 15, legic, cryptorf, ndef (@iceman1001)
  - Depricated the EML file format when saving dump files. (@iceman1001)

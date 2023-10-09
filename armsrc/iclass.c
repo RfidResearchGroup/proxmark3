@@ -1784,7 +1784,6 @@ static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac, 
         return false;
     }
 
-    uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     if (blockno == 2) {
         // check response. e-purse update swaps first and second half
         if (memcmp(data + 4, resp, 4) || memcmp(data, resp + 4, 4)) {
@@ -1792,6 +1791,7 @@ static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac, 
         }
     } else if (blockno == 3 || blockno == 4) {
         // check response. Key updates always return 0xffffffffffffffff
+        uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
         if (memcmp(all_ff, resp, 8)) {
             return false;
         }
@@ -1821,7 +1821,7 @@ void iClass_WriteBlock(uint8_t *msg) {
     // select tag.
     uint32_t eof_time = 0;
     picopass_hdr_t hdr = {0};
-    uint8_t res = select_iclass_tag(&hdr, payload->req.use_credit_key, &eof_time, shallow_mod);
+    bool res = select_iclass_tag(&hdr, payload->req.use_credit_key, &eof_time, shallow_mod);
     if (res == false) {
         goto out;
     }
@@ -1881,8 +1881,9 @@ void iClass_WriteBlock(uint8_t *msg) {
         if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             res = false;
             switch_off();
-            if (payload->req.send_reply)
-                reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_ETEAROFF, (uint8_t *)&res, sizeof(uint8_t));
+            if (payload->req.send_reply) {
+                reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_ETEAROFF, (uint8_t *)&res, sizeof(bool));
+            }
             return;
         } else {
 
@@ -1901,16 +1902,18 @@ void iClass_WriteBlock(uint8_t *msg) {
     }
 
     // verify write
-    uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     if (pagemap == PICOPASS_SECURE_PAGEMODE && payload->req.blockno == 2) {
         // check response. e-purse update swaps first and second half
         if (memcmp(payload->data + 4, resp, 4) || memcmp(payload->data, resp + 4, 4)) {
             res = false;
             goto out;
         }
-    } else if (pagemap == PICOPASS_SECURE_PAGEMODE && (payload->req.blockno == 3 || payload->req.blockno == 4)) {
+    } 
+
+    if (pagemap == PICOPASS_SECURE_PAGEMODE && (payload->req.blockno == 3 || payload->req.blockno == 4)) {
         // check response. Key updates always return 0xffffffffffffffff
-        if (memcmp(all_ff, resp, 8)) {
+        uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+        if (memcmp(all_ff, resp, sizeof(all_ff))) {
             res = false;
             goto out;
         }
@@ -1925,8 +1928,9 @@ void iClass_WriteBlock(uint8_t *msg) {
 out:
     switch_off();
 
-    if (payload->req.send_reply)
-        reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_SUCCESS, (uint8_t *)&res, sizeof(uint8_t));
+    if (payload->req.send_reply) {
+        reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_SUCCESS, (uint8_t *)&res, sizeof(bool));
+    }
 }
 
 void iclass_credit_epurse(iclass_credit_epurse_t *payload) {
@@ -1967,8 +1971,9 @@ void iclass_credit_epurse(iclass_credit_epurse_t *payload) {
     res = iclass_send_cmd_with_retries(cmd_read, sizeof(cmd_read), epurse, sizeof(epurse), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, shallow_mod);
     if (!res) {
         switch_off();
-        if (payload->req.send_reply)
+        if (payload->req.send_reply) {
             reply_ng(CMD_HF_ICLASS_CREDIT_EPURSE, PM3_ETIMEOUT, (uint8_t *)&res, sizeof(uint8_t));
+        }
         return;
     }
 
@@ -1977,7 +1982,7 @@ void iclass_credit_epurse(iclass_credit_epurse_t *payload) {
 
     uint8_t epurse_offset = 0;
     const uint8_t empty_epurse[] = {0xff, 0xff, 0xff, 0xff};
-    if (!memcmp(epurse, empty_epurse, 4)) {
+    if (memcmp(epurse, empty_epurse, 4) == 0) {
         // epurse data in stage 2
         epurse_offset = 4;
     }

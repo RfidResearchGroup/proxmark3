@@ -2086,6 +2086,7 @@ static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *macdata
         if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
         return resp.status;
     }
+
     return (resp.data.asBytes[0] == 1) ? PM3_SUCCESS : PM3_ESOFT;
 }
 
@@ -2190,7 +2191,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     int isok = iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
     switch (isok) {
         case PM3_SUCCESS:
-            PrintAndLogEx(SUCCESS, "Wrote block %3d/0x%02X successful", blockno, blockno);
+            PrintAndLogEx(SUCCESS, "Wrote block " _YELLOW_("%d") "/" _YELLOW_("0x%02X") " ( " _GREEN_("ok") " )", blockno, blockno);
             break;
         case PM3_ETEAROFF:
             if (verbose)

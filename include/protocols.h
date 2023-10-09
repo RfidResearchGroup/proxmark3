@@ -443,7 +443,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // Picopass Pagemode fuses
 #define PICOPASS_NON_SECURE_PAGEMODE 0x01
-#define PICOPASS_SECURE_PAGEMODE     0x11
+#define PICOPASS_SECURE_PAGEMODE     0x03
 
 
 // ISO 7816-4 Basic interindustry commands. For command APDU's.
