@@ -16,7 +16,7 @@
     - [If you don't need...](#if-you-dont-need-2)
   - [On openSUSE](#on-opensuse)
     - [If you don't need...](#if-you-dont-need-3)
-- [Clone the Iceman repository](#clone-the-iceman-repository)
+- [Clone the repository](#clone-the-repository)
 - [Check ModemManager](#check-modemmanager)
     - [⚠️ Very important ⚠️](#️-very-important-️)
 - [Check connection](#check-connection)
@@ -51,6 +51,8 @@ An system upgrade was carried out prior to following these instructions.
 Update the packages list
 ```sh
 sudo apt-get update
+sudo apt-get upgrade -y
+sudo apt-get auto-remove -y
 ``` 
 Install the requirements
 
@@ -133,7 +135,7 @@ you can skip the installation of `libqt5-qtbase-devel`.
 you can skip the installation of `python3-devel`.
 
 
-# Clone the Iceman repository
+# Clone the repository
 ^[Top](#top)
 
 ```sh
