@@ -42,13 +42,9 @@
 #define EMRTD_MAX_FILE_SIZE 35000
 
 // ISO7816 commands
-#define EMRTD_SELECT 0xA4
-#define EMRTD_EXTERNAL_AUTHENTICATE 0x82
-#define EMRTD_GET_CHALLENGE 0x84
-#define EMRTD_READ_BINARY 0xB0
-#define EMRTD_P1_SELECT_BY_EF 0x02
-#define EMRTD_P1_SELECT_BY_NAME 0x04
-#define EMRTD_P2_PROPRIETARY 0x0C
+#define EMRTD_P1_SELECT_BY_EF       0x02
+#define EMRTD_P1_SELECT_BY_NAME     0x04
+#define EMRTD_P2_PROPRIETARY        0x0C
 
 // App IDs
 #define EMRTD_AID_MRTD {0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01}
@@ -383,25 +379,25 @@ static void _emrtd_convert_fileid(uint16_t file, uint8_t *dataout) {
 }
 
 static int emrtd_select_file_by_name(uint8_t namelen, uint8_t *name) {
-    return emrtd_exchange_commands_noout((sAPDU_t) {0, EMRTD_SELECT, EMRTD_P1_SELECT_BY_NAME, 0x0C, namelen, name}, false, true);
+    return emrtd_exchange_commands_noout((sAPDU_t) {0, ISO7816_SELECT_FILE, EMRTD_P1_SELECT_BY_NAME, 0x0C, namelen, name}, false, true);
 }
 
 static int emrtd_select_file_by_ef(uint16_t file_id) {
     uint8_t data[2];
     _emrtd_convert_fileid(file_id, data);
-    return emrtd_exchange_commands_noout((sAPDU_t) {0, EMRTD_SELECT, EMRTD_P1_SELECT_BY_EF, 0x0C, sizeof(data), data}, false, true);
+    return emrtd_exchange_commands_noout((sAPDU_t) {0, ISO7816_SELECT_FILE, EMRTD_P1_SELECT_BY_EF, 0x0C, sizeof(data), data}, false, true);
 }
 
 static int emrtd_get_challenge(int length, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
-    return emrtd_exchange_commands((sAPDU_t) {0, EMRTD_GET_CHALLENGE, 0, 0, 0, NULL}, true, length, dataout, maxdataoutlen, dataoutlen, false, true);
+    return emrtd_exchange_commands((sAPDU_t) {0, ISO7816_GET_CHALLENGE, 0, 0, 0, NULL}, true, length, dataout, maxdataoutlen, dataoutlen, false, true);
 }
 
 static int emrtd_external_authenticate(uint8_t *data, int length, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
-    return emrtd_exchange_commands((sAPDU_t) {0, EMRTD_EXTERNAL_AUTHENTICATE, 0, 0, length, data}, true, length, dataout, maxdataoutlen, dataoutlen, false, true);
+    return emrtd_exchange_commands((sAPDU_t) {0, ISO7816_EXTERNAL_AUTHENTICATION, 0, 0, length, data}, true, length, dataout, maxdataoutlen, dataoutlen, false, true);
 }
 
 static int _emrtd_read_binary(int offset, int bytes_to_read, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
-    return emrtd_exchange_commands((sAPDU_t) {0, EMRTD_READ_BINARY, offset >> 8, offset & 0xFF, 0, NULL}, true, bytes_to_read, dataout, maxdataoutlen, dataoutlen, false, true);
+    return emrtd_exchange_commands((sAPDU_t) {0, ISO7816_READ_BINARY, offset >> 8, offset & 0xFF, 0, NULL}, true, bytes_to_read, dataout, maxdataoutlen, dataoutlen, false, true);
 }
 
 static void emrtd_bump_ssc(uint8_t *ssc) {
@@ -503,7 +499,7 @@ static bool emrtd_secure_select_file_by_ef(uint8_t *kenc, uint8_t *kmac, uint8_t
     memcpy(data + (datalen + 3), do8e, 10);
     PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
 
-    if (emrtd_exchange_commands((sAPDU_t) {0x0C, EMRTD_SELECT, EMRTD_P1_SELECT_BY_EF, 0x0C, lc, data}, true, 0, response, sizeof(response), &resplen, false, true) == false) {
+    if (emrtd_exchange_commands((sAPDU_t) {0x0C, ISO7816_SELECT_FILE, EMRTD_P1_SELECT_BY_EF, 0x0C, lc, data}, true, 0, response, sizeof(response), &resplen, false, true) == false) {
         return false;
     }
 
@@ -552,7 +548,7 @@ static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, i
     memcpy(data + 3, do8e, 10);
     PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
 
-    if (emrtd_exchange_commands((sAPDU_t) {0x0C, EMRTD_READ_BINARY, offset >> 8, offset & 0xFF, lc, data}, true, 0, dataout, maxdataoutlen, dataoutlen, false, true) == false) {
+    if (emrtd_exchange_commands((sAPDU_t) {0x0C, ISO7816_READ_BINARY, offset >> 8, offset & 0xFF, lc, data}, true, 0, dataout, maxdataoutlen, dataoutlen, false, true) == false) {
         return false;
     }
 
