@@ -30,7 +30,7 @@
 #include "cmd.h"
 
 void ModInfo(void) {
-    DbpString("  HF - Reading Visa cards & Emulating a Visa MSD Transaction(ISO14443) - (Salvador Mendoza)");
+    DbpString("  HF - Reading VISA cards & Emulating a VISA MSD Transaction(ISO14443) - (Salvador Mendoza)");
 }
 
 /* This standalone implements two different modes: reading and emulating.
@@ -132,8 +132,14 @@ static uint8_t treatPDOL(const uint8_t *apdu) {
 
 void RunMod(void) {
     StandAloneMode();
-    DbpString(_YELLOW_(">>") "Reading Visa cards & Emulating a Visa MSD Transaction a.k.a. MSDSal Started " _YELLOW_("<<"));
+    DbpString("");
+    DbpString(_YELLOW_(">>>") " Reading VISA cards & Emulating a VISA MSD Transaction a.k.a. MSDSal Started " _YELLOW_("<<<"));
+    DbpString("");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    // free eventually allocated BigBuf memory but keep Emulator Memory
+    // also sets HIGH pointer of BigBuf enabling us to malloc w/o fiddling w the reserved emulator memory
+    BigBuf_free_keep_EM();
 
     //For reading process
     iso14a_card_select_t card_a_info;
@@ -161,7 +167,6 @@ void RunMod(void) {
 
     bool existpdol;
 
-
     // - MSD token card format -
     //
     //Card number: 4412 3456 0578 1234
@@ -175,34 +180,31 @@ void RunMod(void) {
     char token[19] = {0x00};
     bool chktoken = false;
 
-    // Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
-    // Such a response is less time critical, so we can prepare them on the fly
-#define DYNAMIC_RESPONSE_BUFFER_SIZE 64
-#define DYNAMIC_MODULATION_BUFFER_SIZE 512
-
     // UID 4 bytes(could be 7 bytes if needed it)
     uint8_t flags = FLAG_4B_UID_IN_DATA;
     // in case there is a read command received we shouldn't break
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
 
-    uint8_t visauid[7] = {0x01, 0x02, 0x03, 0x04};
+    uint8_t visauid[7] = {0x04, 0x02, 0x03, 0x04};
     memcpy(data, visauid, 4);
 
     // to initialize the emulation
-    uint8_t tagType = 11; // 11 = ISO/IEC 14443-4 - javacard (JCOP)
     tag_response_info_t *responses;
+
     uint32_t cuid = 0;
-    uint32_t counters[3] = { 0x00, 0x00, 0x00 };
-    uint8_t tearings[3] = { 0xbd, 0xbd, 0xbd };
-    uint8_t pages = 0;
 
     // command buffers
     uint8_t receivedCmd[MAX_FRAME_SIZE] = { 0x00 };
     uint8_t receivedCmdPar[MAX_PARITY_SIZE] = { 0x00 };
 
-    uint8_t dynamic_response_buffer[DYNAMIC_RESPONSE_BUFFER_SIZE] = {0};
-    uint8_t dynamic_modulation_buffer[DYNAMIC_MODULATION_BUFFER_SIZE] = {0};
 
+    // Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
+    // Such a response is less time critical, so we can prepare them on the fly
+#define DYNAMIC_RESPONSE_BUFFER_SIZE 64
+#define DYNAMIC_MODULATION_BUFFER_SIZE 512
+
+    uint8_t *dynamic_response_buffer = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER_SIZE);
+    uint8_t *dynamic_modulation_buffer = BigBuf_calloc(DYNAMIC_MODULATION_BUFFER_SIZE);
     // to know the transaction status
     uint8_t prevCmd = 0;
 
@@ -223,11 +225,11 @@ void RunMod(void) {
     // Checking if the user wants to go directly to emulation mode using a hardcoded track 2
     if (chktoken == true && token[0] != 0x00) {
         state = STATE_EMU;
-        DbpString(_YELLOW_("[ ") "Initialized emulation mode" _YELLOW_(" ]"));
-        DbpString("\n"_YELLOW_("!!") "Waiting for a card reader...");
+        DbpString("Initialized [ " _BLUE_("emulation mode") " ]");
+        DbpString("Waiting for a card reader...");
     } else {
-        DbpString(_YELLOW_("[ ") "Initialized reading mode" _YELLOW_(" ]"));
-        DbpString("\n"_YELLOW_("!!") "Waiting for a Visa card...");
+        DbpString("Initialized [ " _YELLOW_("reading mode") " ]");
+        DbpString("Waiting for a VISA card...");
     }
 
     for (;;) {
@@ -240,20 +242,20 @@ void RunMod(void) {
         int button_pressed = BUTTON_HELD(1000);
 
 
-        if (button_pressed  == BUTTON_HOLD)
+        if (button_pressed  == BUTTON_HOLD) {
             break;
-        else if (button_pressed == BUTTON_SINGLE_CLICK) {
+        } else if (button_pressed == BUTTON_SINGLE_CLICK) {
             // pressing one time change between reading & emulation
             if (state == STATE_READ) {
                 if (chktoken == true && token[0] != 0x00) {
                     // only change to emulation if it saved a track 2 in memory
                     state = STATE_EMU;
-                    DbpString(_YELLOW_("[ ") "In emulation mode" _YELLOW_(" ]"));
+                    DbpString("[ " _BLUE_("Emulation mode") " ]");
                 } else
-                    DbpString(_YELLOW_("!!") "Nothing in memory to emulate");
+                    DbpString(_YELLOW_("Nothing in memory to emulate"));
             } else {
                 state = STATE_READ;
-                DbpString(_YELLOW_("[ ") "In reading mode" _YELLOW_(" ]"));
+                DbpString("[ " _YELLOW_("Reading mode") " ]");
             }
         }
 
@@ -261,14 +263,13 @@ void RunMod(void) {
 
         if (state == STATE_READ) {
             LED_A_ON();
-            if (chktoken)
+            if (chktoken) {
                 LED_C_ON();
+            }
 
             iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
             if (iso14443a_select_card(NULL, &card_a_info, NULL, true, 0, false)) {
-
-                DbpString(_YELLOW_("+") "Found ISO 14443 Type A!");
 
                 for (uint8_t i = 0; i < 4; i++) {
                     chktoken = false;
@@ -277,11 +278,11 @@ void RunMod(void) {
                     uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apduslen[i], false, apdubuffer, NULL);
 
                     if (apdulen > 0) {
-                        DbpString(_YELLOW_("[ ") "Proxmark command" _YELLOW_(" ]"));
+                        DbpString("[ " _YELLOW_("Proxmark command") " ]");
                         Dbhexdump(apduslen[i], apdus[i], false);
-                        DbpString(_GREEN_("[ ") "Card answer" _GREEN_(" ]"));
+                        DbpString("[ " _GREEN_( "Card answer") " ]");
                         Dbhexdump(apdulen - 2, apdubuffer, false);
-                        DbpString("----");
+                        DbpString("-------------------------------");
 
                         for (uint8_t u = 0; u < apdulen; u++) {
                             if (i == 1) {
@@ -309,25 +310,27 @@ void RunMod(void) {
                         }
 
                         if (i == 1) {
-                            DbpString(_GREEN_("[ ") "Challenge generated" _GREEN_(" ]"));
+                            DbpString("[ "_GREEN_("Challenge generated") " ]");
                             Dbhexdump(plen, existpdol ? ppdol : processing, false);
                         }
                     } else {
-                        DbpString(_YELLOW_("!!") "Error reading the card");
+                        DbpString(_RED_("Error reading the card"));
                     }
                     LED_B_OFF();
                 }
 
                 if (chktoken) {
-                    DbpString(_RED_("[ ") "Track 2" _RED_(" ]"));
+                    DbpString("[ " _GREEN_("Track 2") " ]");
                     Dbhexdump(19, (uint8_t *)token, false);
-                    DbpString(_YELLOW_("!!") "Card number");
+                    DbpString("[ " _GREEN_("Card Number") " ]");
                     Dbhexdump(8, (uint8_t *)token, false);
-                    DbpString("---");
+                    DbpString("-------------------------------");
+                    DbpString("");
+                    DbpString("");
                     LED_C_ON();
                     state = STATE_EMU;
-                    DbpString(_YELLOW_("[ ") "Initialized emulation mode" _YELLOW_(" ]"));
-                    DbpString("\n"_YELLOW_("!!") "Waiting for a card reader...");
+                    DbpString("Initialized [ " _BLUE_("emulation mode") " ]");
+                    DbpString("Waiting for a card reader...");
                 }
             }
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -340,14 +343,15 @@ void RunMod(void) {
             // free eventually allocated BigBuf memory but keep Emulator Memory
             BigBuf_free_keep_EM();
 
-            if (SimulateIso14443aInit(tagType, flags, data, &responses, &cuid, counters, tearings, &pages) == false) {
+            // tag type: 11 = ISO/IEC 14443-4 - javacard (JCOP)
+            if (SimulateIso14443aInit(11, flags, data, &responses, &cuid, NULL, NULL, NULL) == false) {
                 BigBuf_free_keep_EM();
                 reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
-                DbpString(_YELLOW_("!!") "Error initializing the emulation process!");
+                DbpString(_RED_("Error initializing the emulation process!"));
                 SpinDelay(500);
                 state = STATE_READ;
-                DbpString(_YELLOW_("[ ") "Initialized reading mode" _YELLOW_(" ]"));
-                DbpString("\n" _YELLOW_("!!") "Waiting for a Visa card...");
+                DbpString("Initialized [ "_YELLOW_("reading mode") " ]");
+                DbpString("Waiting for a VISA card...");
                 continue;
             }
 
@@ -366,11 +370,12 @@ void RunMod(void) {
             for (;;) {
                 LED_B_OFF();
                 // clean receive command buffer
-                if (!GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len)) {
-                    DbpString(_YELLOW_("!!") "Emulator stopped");
+                if (GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len) == false) {
+                    DbpString("Emulator stopped");
                     retval = PM3_EOPABORTED;
                     break;
                 }
+
                 tag_response_info_t *p_response = NULL;
                 LED_B_ON();
 
@@ -387,41 +392,33 @@ void RunMod(void) {
 
                     // received a HALT
                 } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {
-                    //DbpString(_YELLOW_("+") "Received a HALT");
                     p_response = NULL;
 
                     // received a WAKEUP
                 } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) {
-                    //DbpString(_YELLOW_("+") "WAKEUP Received");
                     prevCmd = 0;
                     p_response = &responses[RESP_INDEX_ATQA];
 
                     // received request for UID (cascade 1)
                 } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {
-                    //DbpString(_YELLOW_("+") "Request for UID C1");
                     p_response = &responses[RESP_INDEX_UIDC1];
 
                     // received a SELECT (cascade 1)
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {
-                    //DbpString(_YELLOW_("+") "Request for SELECT S1");
                     p_response = &responses[RESP_INDEX_SAKC1];
 
                     // received a RATS request
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {
-                    DbpString(_YELLOW_("+") "Request for RATS");
                     prevCmd = 0;
-                    //p_response = &responses[RESP_INDEX_RATS];
-
-                    static uint8_t rRATS[] = { 0x13, 0x78, 0x80, 0x72, 0x02, 0x80, 0x31, 0x80, 0x66, 0xb1, 0x84, 0x0c, 0x01, 0x6e, 0x01, 0x83, 0x00, 0x90, 0x00 };
-
-                    memcpy(&dynamic_response_info.response[0], rRATS, sizeof(rRATS));
-                    dynamic_response_info.response_n = sizeof(rRATS);
+                    p_response = &responses[RESP_INDEX_RATS];
 
                 } else {
-                    DbpString(_YELLOW_("[ ") "Card reader command" _YELLOW_(" ]"));
-                    Dbhexdump(len, receivedCmd, false);
+                    if (g_dbglevel == DBG_DEBUG ) {
+                        DbpString("[ "_YELLOW_("Card reader command") " ]");
+                        Dbhexdump(len, receivedCmd, false);
+                    }
 
-                    // emulate a Visa MSD(Magnetic stripe data) card
+                    // emulate a Visa MSD (Magnetic stripe data) card
                     if (receivedCmd[0] == 0x02 || receivedCmd[0] == 0x03) {
                         dynamic_response_info.response[0] = receivedCmd[0];
 
@@ -480,7 +477,7 @@ void RunMod(void) {
                             }
                         }
                     } else {
-                        DbpString(_YELLOW_("!!") "Received unknown command!");
+                        DbpString(_RED_("Received unknown command!"));
                         if (prevCmd < 4) {
                             memcpy(dynamic_response_info.response, receivedCmd, len);
                             dynamic_response_info.response_n = len;
@@ -491,7 +488,7 @@ void RunMod(void) {
                 }
 
                 if (dynamic_response_info.response_n > 0) {
-                    DbpString(_GREEN_("[ ") "Proxmark3 answer" _GREEN_(" ]"));
+                    DbpString("[ " _GREEN_("Proxmark3 answer") " ]");
                     Dbhexdump(dynamic_response_info.response_n, dynamic_response_info.response, false);
                     DbpString("----");
 
@@ -501,7 +498,7 @@ void RunMod(void) {
 
                     if (prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE) == false) {
                         SpinDelay(500);
-                        DbpString(_YELLOW_("!!") "Error preparing Proxmark to answer!");
+                        DbpString(_RED_("Error preparing Proxmark to answer!"));
                         continue;
                     }
                     p_response = &dynamic_response_info;
@@ -518,6 +515,8 @@ void RunMod(void) {
             reply_ng(CMD_HF_MIFARE_SIMULATE, retval, NULL, 0);
         }
     }
-    DbpString(_YELLOW_("[=]") "exiting");
+    DbpString("Exit standalone mode!");
+    DbpString("");
+    SpinErr(15, 200, 3);
     LEDsoff();
 }
