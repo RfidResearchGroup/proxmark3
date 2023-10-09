@@ -203,8 +203,8 @@ void RunMod(void) {
 #define DYNAMIC_RESPONSE_BUFFER_SIZE 64
 #define DYNAMIC_MODULATION_BUFFER_SIZE 512
 
-    uint8_t *dynamic_response_buffer = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER_SIZE);
-    uint8_t *dynamic_modulation_buffer = BigBuf_calloc(DYNAMIC_MODULATION_BUFFER_SIZE);
+    uint8_t dynamic_response_buffer[DYNAMIC_RESPONSE_BUFFER_SIZE] = {0};
+    uint8_t dynamic_modulation_buffer[DYNAMIC_MODULATION_BUFFER_SIZE] = {0};
     // to know the transaction status
     uint8_t prevCmd = 0;
 
@@ -458,12 +458,13 @@ void RunMod(void) {
 
                             // SFI
                         } else if (receivedCmd[1] == 0x00 && receivedCmd[2] == 0xB2  && prevCmd == 3) {
-                            uint8_t last[4] =  {0x70, 0x15, 0x57, 0x13};
-                            uint8_t statusapdu[2] = {0x90, 0x00};
-                            uint8_t card[25];
-                            memcpy(&card[0], last, sizeof(last));
+                            uint8_t card[25] = {
+                                0x70, 0x15, 0x57, 0x13, 0x00, 0x00, 0x00, 0x00,
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90,
+                                0x00
+                            };
                             memcpy(&card[4], token, sizeof(token));
-                            memcpy(&card[23], statusapdu, sizeof(statusapdu));
                             memcpy(&dynamic_response_info.response[1], card, sizeof(card));
                             dynamic_response_info.response_n = sizeof(card) + 1;
                             prevCmd++;

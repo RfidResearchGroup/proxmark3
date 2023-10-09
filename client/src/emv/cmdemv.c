@@ -44,28 +44,30 @@ static int CmdHelp(const char *Cmd);
 
 #define TLV_ADD(tag, value)( tlvdb_change_or_add_node(tlvRoot, tag, sizeof(value) - 1, (const unsigned char *)value) )
 static void ParamLoadDefaults(struct tlvdb *tlvRoot) {
-    //9F02:(Amount, authorized (Numeric)) len:6
+    // 9F02:(Amount, authorized (Numeric)) len:6
     TLV_ADD(0x9F02, "\x00\x00\x00\x00\x01\x00");
-    //9F1A:(Terminal Country Code) len:2
+    // 9F1A:(Terminal Country Code) len:2
     TLV_ADD(0x9F1A, "ru");
-    //5F2A:(Transaction Currency Code) len:2
+    // 5F2A:(Transaction Currency Code) len:2
     // USD 840, EUR 978, RUR 810, RUB 643, RUR 810(old), UAH 980, AZN 031, n/a 999
-    TLV_ADD(0x5F2A, "\x09\x80");
-    //9A:(Transaction Date) len:3
+    TLV_ADD(0x5F2A, "\x090\x78");
+    // 9A:(Transaction Date) len:3
     TLV_ADD(0x9A,   "\x00\x00\x00");
-    //9C:(Transaction Type) len:1   |  00 => Goods and service #01 => Cash
+    // 9C:(Transaction Type) len:1 
+    //     | 00 => Goods and Service
+    //     | 01 => Cash
     TLV_ADD(0x9C,   "\x00");
-    // 9F37 Unpredictable Number len:4
+    // 9F37 Unpredictable Number (UN) len:4
     TLV_ADD(0x9F37, "\x01\x02\x03\x04");
     // 9F6A Unpredictable Number (MSD for UDOL) len:4
     TLV_ADD(0x9F6A, "\x01\x02\x03\x04");
-    //9F66:(Terminal Transaction Qualifiers (TTQ)) len:4
+    // 9F66:(Terminal Transaction Qualifiers (TTQ)) len:4
     TLV_ADD(0x9F66, "\x26\x00\x00\x00"); // qVSDC
-    //95:(Terminal Verification Results) len:5
+    // 95:(Terminal Verification Results) len:5
     // all OK TVR
     TLV_ADD(0x95,   "\x00\x00\x00\x00\x00");
     // 9F4E Merchant Name and Location len:x
-    TLV_ADD(0x9F4E, "proxmrk3rdv\x00");
+    TLV_ADD(0x9F4E, "proxmark3rdv4\x00");
 }
 
 static void PrintChannel(Iso7816CommandChannel channel) {
@@ -298,14 +300,14 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose) {
             case 0: {
                 size_t a = strlen(token);
                 if (a == 16) {
-                    PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
+                    PrintAndLogEx(INFO, "PAN...................... " _GREEN_("%c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c"),
                                   token[1], token[2], token[3], token[4],
                                   token[5], token[6], token[7], token[8],
                                   token[9], token[10], token[11], token[12],
                                   token[13], token[14], token[15], token[16]
                                  );
                 } else if (a == 19) {
-                    PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c",
+                    PrintAndLogEx(INFO, "PAN...................... " _GREEN_("%c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c"),
                                   token[1], token[2], token[3], token[4],
                                   token[5], token[6], token[7], token[8],
                                   token[9], token[10], token[11], token[12],
@@ -362,7 +364,7 @@ static int emv_parse_track2(const uint8_t *d, size_t n, bool verbose) {
     if (tmp[0] == ';')
         tmp++;
 
-    PrintAndLogEx(INFO, "PAN...................... %c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c",
+    PrintAndLogEx(INFO, "PAN...................... "_GREEN_("%c%c%c%c %c%c%c%c %c%c%c%c %c%c%c%c"),
                   tmp[0], tmp[1], tmp[2], tmp[3],
                   tmp[4], tmp[5], tmp[6], tmp[7],
                   tmp[8], tmp[9], tmp[10], tmp[11],
@@ -479,7 +481,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen, bool verbose
     if (apan_full != NULL) {
         const struct tlv *apan_tlv = tlvdb_get_tlv(apan_full);
         if (apan_tlv->len == 8) {
-            PrintAndLogEx(INFO, "PAN.................. " _YELLOW_("%02x%02x %02x%02x %02x%02x %02x%02x"),
+            PrintAndLogEx(INFO, "PAN.................. " _GREEN_("%02x%02x %02x%02x %02x%02x %02x%02x"),
                           apan_tlv->value[0],
                           apan_tlv->value[1],
                           apan_tlv->value[2],
@@ -542,6 +544,34 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen, bool verbose
 
     // Track 3 Data
     // to be impl.
+
+    
+    // Unpredicable Number (UN)
+    struct tlvdb *un1_full = tlvdb_find_full(root, 0x9f37);
+    if (un1_full != NULL) {
+        const struct tlv *un1_tlv = tlvdb_get_tlv(un1_full);
+        if (un1_tlv->len) {
+            PrintAndLogEx(INFO, "9F37 Unpredicable Number... " _YELLOW_("%s"), sprint_hex_inrow(un1_tlv->value, un1_tlv->len));
+        }
+    }
+
+    // Unpredicable Number (UN)
+    struct tlvdb *un_full = tlvdb_find_full(root, 0x9f6a);
+    if (un_full != NULL) {
+        const struct tlv *un_tlv = tlvdb_get_tlv(un_full);
+        if (un_tlv->len) {
+            PrintAndLogEx(INFO, "9F6A Unpredicable Number... " _YELLOW_("%s"), sprint_hex_inrow(un_tlv->value, un_tlv->len));
+            emv_parse_track2(un_tlv->value, un_tlv->len, verbose);
+        }
+    }
+
+    struct tlvdb *merch_full = tlvdb_find_full(root, 0x9f4e);
+    if (merch_full != NULL) {
+        const struct tlv *merch_tlv = tlvdb_get_tlv(merch_full);
+        if (merch_tlv->len) {
+            PrintAndLogEx(INFO, "Merchant Name and Location... " _YELLOW_("%s"), sprint_hex_inrow(merch_tlv->value, merch_tlv->len));
+        }
+    }
 
     tlvdb_free(root);
     return PM3_SUCCESS;
