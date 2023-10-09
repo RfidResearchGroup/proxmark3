@@ -44,9 +44,8 @@ You might want to follow one of these external resources to get an overview, but
 ## On Debian / Ubuntu / Kali / ParrotOS / Raspbian
 ^[Top](#top)
 
-First what we want to do is get an update for the system. If you need to apply updates do this **before** the install.  
-
-We assume your system was patched with latest updates prior to following these instructions. 
+First what we want to do is get an update for the system. If you need to apply updates do this **before** installing the Proxmark3 software.  
+An system upgrade was carried out prior to following these instructions. 
 
 Update the packages list
 ```sh
