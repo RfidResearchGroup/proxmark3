@@ -21,6 +21,23 @@
 #include "common.h"
 #include "iclass_cmd.h"
 
+// iCLASS has a slightly different timing compared to ISO15693. According to the picopass data sheet the tag response is expected 330us after
+// the reader command. This is measured from end of reader EOF to first modulation of the tag's SOF which starts with a 56,64us unmodulated period.
+// 330us = 140 ssp_clk cycles @ 423,75kHz when simulating.
+// 56,64us = 24 ssp_clk_cycles
+#define DELAY_ICLASS_VCD_TO_VICC_SIM     (140 - 26) // (140 - 24)
+
+// times in ssp_clk_cycles @ 3,3625MHz when acting as reader
+#define DELAY_ICLASS_VICC_TO_VCD_READER  DELAY_ISO15693_VICC_TO_VCD_READER
+
+
+// times in samples @ 212kHz when acting as reader
+#define ICLASS_READER_TIMEOUT_ACTALL     330 // 1558us, nominal 330us + 7slots*160us = 1450us
+#define ICLASS_READER_TIMEOUT_UPDATE    3390 // 16000us, nominal 4-15ms
+#define ICLASS_READER_TIMEOUT_OTHERS      80 // 380us, nominal 330us
+
+#define AddCrc(data, len) compute_crc(CRC_ICLASS, (data), (len), (data)+(len), (data)+(len)+1)
+
 void SniffIClass(uint8_t jam_search_len, uint8_t *jam_search_string);
 void ReaderIClass(uint8_t flags);
 
@@ -43,4 +60,7 @@ bool iclass_read_block(uint16_t blockno, uint8_t *data, uint32_t *start_time, ui
 
 bool select_iclass_tag(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, bool shallow_mod);
 bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr_t *hdr, uint32_t *start_time, uint32_t *eof_time, uint8_t *mac_out);
+
+uint8_t get_pagemap(const picopass_hdr_t *hdr);
+void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time, uint32_t *end_time, bool shallow_mod);
 #endif

@@ -36,9 +36,10 @@
 #include "protocols.h"
 #include "ticks.h"
 #include "iso15693.h"
-#include "iclass_cmd.h"              /* iclass_card_select_t struct */
+#include "iclass_cmd.h"              // iclass_card_select_t struct
+#include "i2c.h"                     // i2c defines (SIM module access)
 
-static uint8_t get_pagemap(const picopass_hdr_t *hdr) {
+uint8_t get_pagemap(const picopass_hdr_t *hdr) {
     return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
 }
 
@@ -51,23 +52,6 @@ static uint8_t get_pagemap(const picopass_hdr_t *hdr) {
 #ifndef ICLASS_16KS_SIZE
 #define ICLASS_16KS_SIZE       0x100 * 8
 #endif
-
-// iCLASS has a slightly different timing compared to ISO15693. According to the picopass data sheet the tag response is expected 330us after
-// the reader command. This is measured from end of reader EOF to first modulation of the tag's SOF which starts with a 56,64us unmodulated period.
-// 330us = 140 ssp_clk cycles @ 423,75kHz when simulating.
-// 56,64us = 24 ssp_clk_cycles
-#define DELAY_ICLASS_VCD_TO_VICC_SIM     (140 - 26) // (140 - 24)
-
-// times in ssp_clk_cycles @ 3,3625MHz when acting as reader
-#define DELAY_ICLASS_VICC_TO_VCD_READER  DELAY_ISO15693_VICC_TO_VCD_READER
-
-// times in samples @ 212kHz when acting as reader
-#define ICLASS_READER_TIMEOUT_ACTALL     330 // 1558us, nominal 330us + 7slots*160us = 1450us
-#define ICLASS_READER_TIMEOUT_UPDATE    3390 // 16000us, nominal 4-15ms
-#define ICLASS_READER_TIMEOUT_OTHERS      80 // 380us, nominal 330us
-
-#define AddCrc(data, len) compute_crc(CRC_ICLASS, (data), (len), (data)+(len), (data)+(len)+1)
-
 
 /*
 * CARD TO READER
@@ -1245,7 +1229,7 @@ send:
 }
 
 // THE READER CODE
-static void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time, uint32_t *end_time, bool shallow_mod) {
+void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time, uint32_t *end_time, bool shallow_mod) {
     CodeIso15693AsReader(frame, len);
     tosend_t *ts = get_tosend();
     TransmitTo15693Tag(ts->buf, ts->max, start_time, shallow_mod);
@@ -1902,7 +1886,7 @@ void iClass_WriteBlock(uint8_t *msg) {
     }
 
     // verify write
-    if (pagemap == PICOPASS_SECURE_PAGEMODE && payload->req.blockno == 2) {
+    if ((pagemap != PICOPASS_NON_SECURE_PAGEMODE) && (payload->req.blockno == 2)) {
         // check response. e-purse update swaps first and second half
         if (memcmp(payload->data + 4, resp, 4) || memcmp(payload->data, resp + 4, 4)) {
             res = false;
@@ -1910,7 +1894,7 @@ void iClass_WriteBlock(uint8_t *msg) {
         }
     } 
 
-    if (pagemap == PICOPASS_SECURE_PAGEMODE && (payload->req.blockno == 3 || payload->req.blockno == 4)) {
+    if ((pagemap != PICOPASS_NON_SECURE_PAGEMODE) && (payload->req.blockno == 3 || payload->req.blockno == 4)) {
         // check response. Key updates always return 0xffffffffffffffff
         uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
         if (memcmp(all_ff, resp, sizeof(all_ff))) {

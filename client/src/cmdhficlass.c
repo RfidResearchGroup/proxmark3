@@ -2191,7 +2191,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     int isok = iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
     switch (isok) {
         case PM3_SUCCESS:
-            PrintAndLogEx(SUCCESS, "Wrote block " _YELLOW_("%d") "/" _YELLOW_("0x%02X") " ( " _GREEN_("ok") " )", blockno, blockno);
+            PrintAndLogEx(SUCCESS, "Wrote block " _YELLOW_("%d") " / " _YELLOW_("0x%02X") " ( " _GREEN_("ok") " )", blockno, blockno);
             break;
         case PM3_ETEAROFF:
             if (verbose)
@@ -2201,6 +2201,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
             PrintAndLogEx(FAILED, "Writing failed");
             break;
     }
+    PrintAndLogEx(NORMAL, "");
     return isok;
 }
 
