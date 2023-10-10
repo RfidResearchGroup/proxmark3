@@ -205,14 +205,14 @@ int Iso7816Select(Iso7816CommandChannel channel, bool activate_field, bool leave
                   uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw) {
 
     return Iso7816ExchangeEx(channel
-                             , activate_field
-                             , leave_field_on
-    , (sAPDU_t) {0x00, 0xa4, 0x04, 0x00, aid_len, aid}
-    , (channel == CC_CONTACTLESS)
-    , 0
-    , result
-    , max_result_len
-    , result_len
-    , sw
-                            );
+                , activate_field
+                , leave_field_on
+                , (sAPDU_t) {0x00, 0xa4, 0x04, 0x00, aid_len, aid}
+                , (channel == CC_CONTACTLESS)
+                , 0
+                , result
+                , max_result_len
+                , result_len
+                , sw
+            );
 }

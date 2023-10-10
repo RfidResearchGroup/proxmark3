@@ -1697,7 +1697,7 @@ int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
     // check result
     int status = resp.oldarg[0];
     if (status < 0) {
-        PrintAndLogEx(FAILED, "No ISO14443-B Card in field");
+        PrintAndLogEx(WARNING, "No ISO14443-B Card in field");
         switch_off_field_14b();
         return PM3_ESOFT;
     }
