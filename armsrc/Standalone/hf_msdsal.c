@@ -28,6 +28,7 @@
 #include "iso14443a.h"
 #include "protocols.h"
 #include "cmd.h"
+#include "commonutil.h"
 
 void ModInfo(void) {
     DbpString("  HF - Reading VISA cards & Emulating a VISA MSD Transaction(ISO14443) - (Salvador Mendoza)");
@@ -152,10 +153,32 @@ void RunMod(void) {
         0x59, 0x2e, 0x53, 0x59, 0x53, 0x2e, 0x44, 0x44,
         0x46, 0x30, 0x31, 0x00
     };
-    uint8_t visa[13] = {
-        0x00, 0xA4, 0x04, 0x00, 0x07, 0xa0, 0x00, 0x00,
-        0x00, 0x03, 0x10, 0x10, 0x00
+
+    uint8_t visa[] = { 0x00, 0xA4, 0x04, 0x00, 0x07, 0xa0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 0x00 };
+
+
+    /*
+    uint8_t select_aid_hdr[5] = { 0x00, 0xA4, 0x04, 0x00, 0x00 };
+    static const char* aid_list [] = {
+        "A00000000305076010",  // VISA ELO Credit
+        "A0000000031010",      // VISA Debit/Credit (Classic)
+        "A000000003101001",    // VISA Credit
+        "A000000003101002",    // VISA Debit
+        "A0000000032010",      // VISA Electron
+        "A0000000032020",      // VISA
+        "A0000000033010",      // VISA Interlink
+        "A0000000034010",      // VISA Specific
+        "A0000000035010",      // VISA Specific
+        "A0000000036010",      // Domestic Visa Cash Stored Value
+        "A0000000036020",      // International Visa Cash Stored Value
+        "A0000000038002",      // VISA Auth, VisaRemAuthen EMV-CAP (DPA)
+        "A0000000038010",      // VISA Plus
+        "A0000000039010",      // VISA Loyalty
+        "A000000003999910",    // VISA Proprietary ATM
+        "A000000098",          // Visa USA Debit Card
+        "A0000000980848",      // Visa USA Debit Cardv
     };
+    */
 
     uint8_t processing [8] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00, 0x00};
     uint8_t sfi[5] = {0x00, 0xb2, 0x01, 0x0c, 0x00};
@@ -169,11 +192,16 @@ void RunMod(void) {
 
     // - MSD token card format -
     //
-    //Card number: 4412 3456 0578 1234
-    //Expiration date: 17/11
-    //Service code: 201
-    //Discretionary data: 0000030000991
-    //char token[19] = {0x44,0x12,0x34,0x56,0x05,0x78,0x12,0x34,0xd1,0x71,0x12,0x01,0x00,0x00,0x03,0x00,0x00,0x99,0x1f};
+    // Card number.............. 4412 3456 0578 1234
+    // Expiration date.......... 17/11
+    // Service code............. 201
+    // Discretionary data....... 0000030000991
+    // Pin verification value... 0000
+    // CVV / iCvv...............     030
+    // Trailing.................        000991
+
+    //                     44   12   34   56   05   78   12   34   D 1711     2   01   00   00   03   00   00   99   1
+    // char token[19] = {0x44,0x12,0x34,0x56,0x05,0x78,0x12,0x34,0xd1,0x71,0x12,0x01,0x00,0x00,0x03,0x00,0x00,0x99,0x1f};
     //
     // It is possible to initialize directly the emulation mode, having "token" with data and set "chktoken" = true ;)
     //
@@ -185,7 +213,7 @@ void RunMod(void) {
     // in case there is a read command received we shouldn't break
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
 
-    uint8_t visauid[7] = {0x04, 0x02, 0x03, 0x04};
+    uint8_t visauid[7] = {0xE9, 0x66, 0x5D, 0x20};
     memcpy(data, visauid, 4);
 
     // to initialize the emulation
@@ -275,6 +303,10 @@ void RunMod(void) {
                     chktoken = false;
                     LED_C_OFF();
                     LED_B_ON();
+
+    // add loop visa
+    // for (int i = 0; i < ARRAYLEN(AIDlist); i ++) {
+//    hexstr_to_byte_array("a0da02631a440a44000000a012ad10a00e800200048108", sam_apdu, &sam_len);
                     uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apduslen[i], false, apdubuffer, NULL);
 
                     if (apdulen > 0) {
@@ -289,8 +321,10 @@ void RunMod(void) {
 
                                 // check for PDOL
                                 if (apdubuffer[u] == 0x9F && apdubuffer[u + 1] == 0x38) {
-                                    for (uint8_t e = 0; e <= apdubuffer[u + 2]; e++)
+
+                                    for (uint8_t e = 0; e <= apdubuffer[u + 2]; e++) {
                                         pdol[e] =  apdubuffer[u + e + 2];
+                                    }
 
                                     // generate a challenge
                                     plen = treatPDOL(pdol);
@@ -425,12 +459,16 @@ void RunMod(void) {
                         // depending on card reader commands, the Proxmark will answer to fool the reader
                         // respond with PPSE
                         if (receivedCmd[2] == 0xA4 && receivedCmd[6] == 0x32 && prevCmd == 0) {
+                            // need to adapt lengths.. 
                             uint8_t ppsea[39] = {
+                            //        0x23 = 35,  skip two first bytes then the message - SW 2 is 35 = 0x23
                                 0x6F, 0x23, 0x84, 0x0E, 0x32, 0x50, 0x41, 0x59,
                                 0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44, 0x46,
                                 0x30, 0x31, 0xA5, 0x11, 0xBF, 0x0C, 0x0E, 0x61,
-                                0x0C, 0x4F, 0x07, 0xA0, 0x00, 0x00, 0x00, 0x03,
-                                0x10, 0x10, 0x87, 0x01, 0x01, 0x90, 0x00
+                                0x0C, 0x4F, 
+                            //  len   aid0  aid1  aid2...
+                                0x07, 0xA0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+                                0x87, 0x01, 0x01, 0x90, 0x00
                             };
                             memcpy(&dynamic_response_info.response[1], ppsea, sizeof(ppsea));
                             dynamic_response_info.response_n = sizeof(ppsea) + 1;
@@ -439,10 +477,14 @@ void RunMod(void) {
                             // respond Visa AID
                         } else if (receivedCmd[2] == 0xA4 && receivedCmd[10] == 0x03 && receivedCmd[11] == 0x10 && prevCmd == 1) {
                             uint8_t visauid_long[34] = {
-                                0x6F, 0x1E, 0x84, 0x07, 0xA0, 0x00, 0x00, 0x00,
-                                0x03, 0x10, 0x10, 0xA5, 0x13, 0x50, 0x0B, 0x56,
-                                0x49, 0x53, 0x41, 0x20, 0x43, 0x52, 0x45, 0x44,
-                                0x49, 0x54, 0x9F, 0x38, 0x03, 0x9F, 0x66, 0x02,
+                        //          0x1E = 30,  skip two first bytes then the message - SW 2 is 30 = 0x1E
+                                0x6F, 0x1E, 0x84, 
+                        //      len   aid0  aid1  aid2....
+                                0x07, 0xA0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 
+                                0xA5, 0x13, 0x50, 
+                        //      len      V     I     S     A           C     R    E      D     I     T
+                                0x0B, 0x56, 0x49, 0x53, 0x41, 0x20, 0x43, 0x52, 0x45, 0x44, 0x49, 0x54, 
+                                0x9F, 0x38, 0x03, 0x9F, 0x66, 0x02,
                                 0x90, 0x00
                             };
                             memcpy(&dynamic_response_info.response[1], visauid_long, sizeof(visauid_long));
@@ -461,16 +503,18 @@ void RunMod(void) {
                             uint8_t card[25] = {
                                 0x70, 0x15, 0x57, 0x13, 0x00, 0x00, 0x00, 0x00,
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90,
-                                0x00
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+                                0x90, 0x00
                             };
+                            // add token array == Track 2 found before
                             memcpy(&card[4], token, sizeof(token));
+
                             memcpy(&dynamic_response_info.response[1], card, sizeof(card));
                             dynamic_response_info.response_n = sizeof(card) + 1;
                             prevCmd++;
 
                         } else {
-                            uint8_t finished[2] = {0x6f, 0x00};
+                            uint8_t finished[2] = {0x6F, 0x00};
                             memcpy(&dynamic_response_info.response[1], finished, sizeof(finished));
                             dynamic_response_info.response_n = sizeof(finished) + 1;
                             if (prevCmd == 5) {
@@ -509,8 +553,8 @@ void RunMod(void) {
                     EmSendPrecompiledCmd(p_response);
                 }
             }
-            switch_off();
 
+            switch_off();
             set_tracing(false);
             BigBuf_free_keep_EM();
             reply_ng(CMD_HF_MIFARE_SIMULATE, retval, NULL, 0);
