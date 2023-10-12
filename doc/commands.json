@@ -3018,7 +3018,7 @@
                 "hf iclass configcard --ci 1 -> view config card setting in slot 1",
                 "hf iclass configcard -g --ci 0 -> generate config file from slot 0"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help",
                 "--ci <dec> use config slot at index",
