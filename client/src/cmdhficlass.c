@@ -4450,7 +4450,7 @@ static command_t CommandTable[] = {
     {"esetblk",     CmdHFiClassESetBlk,         IfPm3Iclass,     "Set emulator memory block data"},
     {"eview",       CmdHFiClassEView,           IfPm3Iclass,     "View emulator memory"},
     {"-----------", CmdHelp,                    AlwaysAvailable, "---------------------- " _CYAN_("utils") " ----------------------"},
-    {"configcard",  CmdHFiClassConfigCard,      AlwaysAvailable, "Reader configuration card"},
+    {"configcard",  CmdHFiClassConfigCard,      IfPm3Smartcard,  "Reader configuration card"},
     {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "Calc diversified keys (blocks 3 & 4) to write new keys"},
     {"encode",      CmdHFiClassEncode,          AlwaysAvailable, "Encode binary wiegand to block 7"},
     {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "Encrypt given block data"},
