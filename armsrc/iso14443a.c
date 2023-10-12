@@ -1021,7 +1021,7 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
     }
 }
 
-bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_response_info_t **responses, 
+bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_response_info_t **responses,
                            uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages) {
     uint8_t sak = 0;
     // The first response contains the ATQA (note: bytes are transmitted in reverse order).
@@ -1042,7 +1042,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
     // Format byte = 0x58: FSCI=0x08 (FSC=256), TA(1) and TC(1) present,
     // TA(1) = 0x80: different divisors not supported, DR = 1, DS = 1
     // TB(1) = not present. Defaults: FWI = 4 (FWT = 256 * 16 * 2^4 * 1/fc = 4833us), SFGI = 0 (SFG = 256 * 16 * 2^0 * 1/fc = 302us)
-    // TC(1) = 0x02: CID supported, NAD not supported    
+    // TC(1) = 0x02: CID supported, NAD not supported
 //    static uint8_t rRATS[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 };
     static uint8_t rRATS[40] = { 0x05, 0x75, 0x80, 0x60, 0x02, 0x00, 0x00, 0x00 };
     uint8_t rRATS_len = 8;
@@ -1314,10 +1314,10 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
     // since rats len is variable now.
     responses_init[RESP_INDEX_RATS].response_n = rRATS_len;
 
-    // "precompiled" responses. 
+    // "precompiled" responses.
     // These exist for speed reasons.  There are no time in the anti collision phase to calculate responses.
     // There are 12 predefined responses with a total of 84 bytes data to transmit.
-    // 
+    //
     // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
     // 85 * 8 data bits, 85 * 1 parity bits, 12 start bits, 12 stop bits, 12 correction bits
     // 85 * 8 + 85 + 12 + 12 + 12 == 801

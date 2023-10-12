@@ -73,7 +73,7 @@ void ModInfo(void) {
 
 void RunMod() {
     StandAloneMode();
-    DbpString("");    
+    DbpString("");
     Dbprintf(_YELLOW_(">>> ")  " Relaying ISO/14443A data over Bluetooth a.k.a. reblay Started " _YELLOW_("<<<"));
     DbpString("");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -286,7 +286,7 @@ void RunMod() {
             int retval = PM3_SUCCESS;
 
             // Bluetooth response
-            uint8_t resp = 0; 
+            uint8_t resp = 0;
             lenpacket = 0;
 
             // Keep track of last terminal type command
@@ -357,7 +357,7 @@ void RunMod() {
                         DbpString(_YELLOW_("!!") " Avoiding request - Bluetooth data already in memory!!");
                     }
                 } else {
-                    if (g_dbglevel == DBG_DEBUG ) {
+                    if (g_dbglevel == DBG_DEBUG) {
                         DbpString("[ "_YELLOW_("Card reader command") " ]");
                         Dbhexdump(len - 2, &receivedCmd[1], false);
                     }

@@ -285,7 +285,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf iclass esave" },
     { 0, "hf iclass esetblk" },
     { 0, "hf iclass eview" },
-    { 1, "hf iclass configcard" },
+    { 0, "hf iclass configcard" },
     { 1, "hf iclass calcnewkey" },
     { 1, "hf iclass encode" },
     { 1, "hf iclass encrypt" },

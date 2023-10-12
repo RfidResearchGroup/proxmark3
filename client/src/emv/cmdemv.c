@@ -53,7 +53,7 @@ static void ParamLoadDefaults(struct tlvdb *tlvRoot) {
     TLV_ADD(0x5F2A, "\x090\x78");
     // 9A:(Transaction Date) len:3
     TLV_ADD(0x9A,   "\x00\x00\x00");
-    // 9C:(Transaction Type) len:1 
+    // 9C:(Transaction Type) len:1
     //     | 00 => Goods and Service
     //     | 01 => Cash
     TLV_ADD(0x9C,   "\x00");
@@ -544,7 +544,7 @@ static int emv_parse_card_details(uint8_t *response, size_t reslen, bool verbose
 
     // Track 3 Data
     // to be impl.
-   
+
     // Unpredicable Number (UN)
     struct tlvdb *un1_full = tlvdb_find_full(root, 0x9f37);
     if (un1_full != NULL) {
@@ -2018,7 +2018,7 @@ static int CmdEMVScan(const char *Cmd) {
     bool paramLoadJSON = arg_get_lit(ctx, 4);
 
     enum TransactionType TrType = TT_MSD;
-    if (arg_get_lit(ctx, 6)){
+    if (arg_get_lit(ctx, 6)) {
         TrType = TT_QVSDCMCHIP;
     }
     if (arg_get_lit(ctx, 7)) {

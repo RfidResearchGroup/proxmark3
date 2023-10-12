@@ -424,7 +424,7 @@ Check column "offline" for their availability.
 |`hf iclass esave        `|N       |`Save emulator memory to file`
 |`hf iclass esetblk      `|N       |`Set emulator memory block data`
 |`hf iclass eview        `|N       |`View emulator memory`
-|`hf iclass configcard   `|Y       |`Reader configuration card`
+|`hf iclass configcard   `|N       |`Reader configuration card`
 |`hf iclass calcnewkey   `|Y       |`Calc diversified keys (blocks 3 & 4) to write new keys`
 |`hf iclass encode       `|Y       |`Encode binary wiegand to block 7`
 |`hf iclass encrypt      `|Y       |`Encrypt given block data`

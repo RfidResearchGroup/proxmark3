@@ -2772,7 +2772,7 @@ static void detect_credential(uint8_t *iclass_dump, size_t dump_len, bool *is_le
     picopass_hdr_t *hdr = (picopass_hdr_t *)iclass_dump;
 
     if (!memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
-    // Legacy AIA
+        // Legacy AIA
         *is_legacy = true;
 
         if (dump_len < 11 * PICOPASS_BLOCK_SIZE) {

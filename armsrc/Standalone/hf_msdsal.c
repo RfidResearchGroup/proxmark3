@@ -304,15 +304,15 @@ void RunMod(void) {
                     LED_C_OFF();
                     LED_B_ON();
 
-    // add loop visa
-    // for (int i = 0; i < ARRAYLEN(AIDlist); i ++) {
+                    // add loop visa
+                    // for (int i = 0; i < ARRAYLEN(AIDlist); i ++) {
 //    hexstr_to_byte_array("a0da02631a440a44000000a012ad10a00e800200048108", sam_apdu, &sam_len);
                     uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apduslen[i], false, apdubuffer, NULL);
 
                     if (apdulen > 0) {
                         DbpString("[ " _YELLOW_("Proxmark command") " ]");
                         Dbhexdump(apduslen[i], apdus[i], false);
-                        DbpString("[ " _GREEN_( "Card answer") " ]");
+                        DbpString("[ " _GREEN_("Card answer") " ]");
                         Dbhexdump(apdulen - 2, apdubuffer, false);
                         DbpString("-------------------------------");
 
@@ -447,7 +447,7 @@ void RunMod(void) {
                     p_response = &responses[RESP_INDEX_RATS];
 
                 } else {
-                    if (g_dbglevel == DBG_DEBUG ) {
+                    if (g_dbglevel == DBG_DEBUG) {
                         DbpString("[ "_YELLOW_("Card reader command") " ]");
                         Dbhexdump(len, receivedCmd, false);
                     }
@@ -459,14 +459,14 @@ void RunMod(void) {
                         // depending on card reader commands, the Proxmark will answer to fool the reader
                         // respond with PPSE
                         if (receivedCmd[2] == 0xA4 && receivedCmd[6] == 0x32 && prevCmd == 0) {
-                            // need to adapt lengths.. 
+                            // need to adapt lengths..
                             uint8_t ppsea[39] = {
-                            //        0x23 = 35,  skip two first bytes then the message - SW 2 is 35 = 0x23
+                                //        0x23 = 35,  skip two first bytes then the message - SW 2 is 35 = 0x23
                                 0x6F, 0x23, 0x84, 0x0E, 0x32, 0x50, 0x41, 0x59,
                                 0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44, 0x46,
                                 0x30, 0x31, 0xA5, 0x11, 0xBF, 0x0C, 0x0E, 0x61,
-                                0x0C, 0x4F, 
-                            //  len   aid0  aid1  aid2...
+                                0x0C, 0x4F,
+                                //  len   aid0  aid1  aid2...
                                 0x07, 0xA0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
                                 0x87, 0x01, 0x01, 0x90, 0x00
                             };
@@ -477,13 +477,13 @@ void RunMod(void) {
                             // respond Visa AID
                         } else if (receivedCmd[2] == 0xA4 && receivedCmd[10] == 0x03 && receivedCmd[11] == 0x10 && prevCmd == 1) {
                             uint8_t visauid_long[34] = {
-                        //          0x1E = 30,  skip two first bytes then the message - SW 2 is 30 = 0x1E
-                                0x6F, 0x1E, 0x84, 
-                        //      len   aid0  aid1  aid2....
-                                0x07, 0xA0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 
-                                0xA5, 0x13, 0x50, 
-                        //      len      V     I     S     A           C     R    E      D     I     T
-                                0x0B, 0x56, 0x49, 0x53, 0x41, 0x20, 0x43, 0x52, 0x45, 0x44, 0x49, 0x54, 
+                                //          0x1E = 30,  skip two first bytes then the message - SW 2 is 30 = 0x1E
+                                0x6F, 0x1E, 0x84,
+                                //      len   aid0  aid1  aid2....
+                                0x07, 0xA0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10,
+                                0xA5, 0x13, 0x50,
+                                //      len      V     I     S     A           C     R    E      D     I     T
+                                0x0B, 0x56, 0x49, 0x53, 0x41, 0x20, 0x43, 0x52, 0x45, 0x44, 0x49, 0x54,
                                 0x9F, 0x38, 0x03, 0x9F, 0x66, 0x02,
                                 0x90, 0x00
                             };
@@ -503,7 +503,7 @@ void RunMod(void) {
                             uint8_t card[25] = {
                                 0x70, 0x15, 0x57, 0x13, 0x00, 0x00, 0x00, 0x00,
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                 0x90, 0x00
                             };
                             // add token array == Track 2 found before
