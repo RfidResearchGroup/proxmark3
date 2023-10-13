@@ -225,7 +225,7 @@ static bool check_config_card(const iclass_config_card_item_t *o) {
 
 static int load_config_cards(void) {
     PrintAndLogEx(INFO, "detecting cardhelper...");
-    if (IsCardHelperPresent(false)) {
+    if (IsCardHelperPresent(false) == false) {
         PrintAndLogEx(FAILED, "failed to detect cardhelper");
         return PM3_ENODATA;
     }
@@ -365,7 +365,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         // KEYROLL need to encrypt
         uint8_t key_en[16] = {0};
         uint8_t *keyptr_en = NULL;
-        if (IsCardHelperPresent(false)){
+        if (IsCardHelperPresent(false) == false){
             size_t keylen = 0;
             int res_key = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr_en, &keylen);
             if (res_key != PM3_SUCCESS) {
@@ -4422,7 +4422,7 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
                 return PM3_EINVARG;
             }
         }
-        if(ccidx < -1 && ccidx > 12 && IsCardHelperPresent(false)){
+        if(ccidx < -1 && ccidx > 12 && IsCardHelperPresent(false) == false){
             PrintAndLogEx(ERR, "Please specify a configuration between 0 and 12!");
             return PM3_EINVARG;
         }
