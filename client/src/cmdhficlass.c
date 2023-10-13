@@ -4422,10 +4422,6 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
                 return PM3_EINVARG;
             }
         }
-        if(ccidx < -1 && ccidx > 12 && IsCardHelperPresent(false) == false){
-            PrintAndLogEx(ERR, "Please specify a configuration between 0 and 12!");
-            return PM3_EINVARG;
-        }
         generate_config_card(item, key, got_kr);
     }
 
