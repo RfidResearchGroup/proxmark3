@@ -2,7 +2,7 @@
 # Proxmark3 command dump
 
 
-Some commands are available only if a Proxmark3 is actually connected.  
+Some commands are available only if a Proxmark3 is actually connected.
 
 Check column "offline" for their availability.
 

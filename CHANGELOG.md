@@ -14,6 +14,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `lf t55 detectp1` - now also accepts 0xE039 Silicon Craft Tech as valid card (@iceman1001)
  - Fixed `utils.lua` library function "convertdectohex" wasn't working (@iceman1001)
  - Added `hf iclass creditepurse` command to allow crediting the epurse debit value (@nvx)
+ - Modified `hf iclass configcard` to only support online mode @ATK
+ - Modified `hf iclass configcard` command to generate config cards without a cardhelper module by porting the contents of blocks 7 & 7 from nfc-iclass @ATK
 
 ## [Raccoon.4.17140][2023-09-09]
  - Changed text and adjust pm3_test case for mf_aes_brute (@doegox)
@@ -89,7 +91,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf mfu pwdgen -r` - now generates pwd/pack for Philips Sonicare, thanks @ckuenzi, @atc1441 (@iceman1001)
  - Changed `hf mfu info` - now detects Philips Sonicare devices (@iceman1001)
  - Fixed truncated FPGA upload due to incorrect integer size variable (@d18c7db)
- - Changed `usart btfactory` - handles the new BT board with version "BT SPP V3.0" (@iceman1001) 
+ - Changed `usart btfactory` - handles the new BT board with version "BT SPP V3.0" (@iceman1001)
  - Changed `hf mf eview --sk` - now can extract keys and save to file (@iceman1001)
  - Changed `hf mf view --sk` - now can extract keys and save to file (@iceman1001)
  - Changed `hf mf sim` - reduce 6ms threshold to 4ms for reset to idle #1974 (@net147)
@@ -116,7 +118,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf mf gdmcfg` - Support Gen4 GDM read configuration block (@iceman1001)
  - Changed magic note to include a section about GDM tags (@iceman1001)
  - Added `hf mf gdmsetblk` - Support Gen4 GDM write block (@iceman1001)
- - Changed `hf 14a info` - detect Gen GDM magic tags (@iceman1001) 
+ - Changed `hf 14a info` - detect Gen GDM magic tags (@iceman1001)
  - Changed CLI max string argument length limit from 512 to 4096 (@iceman1001)
  - Fixed `data asn1` - now handles bad input better (@iceman1001)
  - Added new public key for signature MIFARE Plus Troika (@iceman100)
@@ -186,14 +188,14 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed length check in sim module communications (@jmichelp)
  - Changed timings in i2c.c when communicating with sim module (@iceman1001)
  - Moved to non-deprecated API to initialize Python interpreter (@jmichelp)
- - Changed `sc upgrade` updated firmware v4.13 (RDV40) - frame buffer is now 384 bytes (@sentiprox) 
+ - Changed `sc upgrade` updated firmware v4.13 (RDV40) - frame buffer is now 384 bytes (@sentiprox)
  - Fixed contact interface / smartcard APDU chaining logic and allow 256 bytes ADPU payload. Need SIM firmware 4.13 to work (@jmichelp)
  - Fixed `lf hitag dump` - Should now work as described in the command help (@natmchugh)
  - Fixed SPI flash overflow when loading dictionnaries into flash. Breaking change: added 1 more sector for Mifare - dictionnaries should be loaded again (@jmichelp)
  - Added `hf mf gload, gsave, ggetblk, gsetblk` for Gen4 GTU in mifare classic mode (@DidierA)
  - Fixed `trace list -r` (relative times) not working unless `-u` (microseconds) was specified, and made `--frame` respect `-u` and `-r` options (@nvx)
  - Added detection of magic Gen4 GTU (@DidierA)
- - Added luascript `hf_i2c_plus_2k_utils` - Script for dumping/modifying user memory of sectors 0 and 1 (@flamebarke) 
+ - Added luascript `hf_i2c_plus_2k_utils` - Script for dumping/modifying user memory of sectors 0 and 1 (@flamebarke)
  - Added `hf mfu esave` - saves emulator memory to mfu dump file (@DidierA)
  - Added luascript `hf_mfu_ntag` - Script for configuring NTAG216 configuration pages (@flamebarke)
  - Changed `hf mf hardnested` - a detection for static encrypted nonces (@iceman1001)
