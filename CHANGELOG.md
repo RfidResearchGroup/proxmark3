@@ -7,15 +7,16 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `hf iclass wrbl` - pagemap bit map for secured is now handled better (@iceman1001)
  - Changed `hf iclass view/decrypt` to detect SIO lengths better and show if legacy credentials are encrypted (@nvx)
  - Changed the json file formats for mfc, 14b, 15, legic, cryptorf, ndef (@iceman1001)
- - Depricated the EML file format when saving dump files. (@iceman1001)
+ - Deprecated the EML file format when saving dump files. (@iceman1001)
  - Added `sim014.bin` - new sim module firmware v4.42 with improved ISO7816 Protocol T0 support (@gentilkiwi)
  - Added datasheet for sim module (@iceman1001)
  - Changed `smart raw --timeout` - allows for a custom timeout (@iceman1001)
  - Changed `lf t55 detectp1` - now also accepts 0xE039 Silicon Craft Tech as valid card (@iceman1001)
  - Fixed `utils.lua` library function "convertdectohex" wasn't working (@iceman1001)
  - Added `hf iclass creditepurse` command to allow crediting the epurse debit value (@nvx)
- - Modified `hf iclass configcard` to only support online mode @ATK
- - Modified `hf iclass configcard` command to generate config cards without a cardhelper module by porting the contents of blocks 7 & 7 from nfc-iclass @ATK
+ - Modified `hf iclass configcard` to only support online mode (@Antiklesys)
+ - Modified `hf iclass configcard` command to generate config cards without a cardhelper module by porting the contents of blocks 6 & 7 from nfc-iclass (@Antiklesys)
+ - Finalized implementation of configcard generation for keyroll when cardhelper is not present (@Antiklesys)
 
 ## [Raccoon.4.17140][2023-09-09]
  - Changed text and adjust pm3_test case for mf_aes_brute (@doegox)
