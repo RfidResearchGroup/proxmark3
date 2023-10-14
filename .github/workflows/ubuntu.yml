@@ -41,14 +41,12 @@ jobs:
       - name: Build
         env:
           V: 1
-        run: make
+        run: make -j$((`nproc` + 1))
 
       - name: Test
         run: make check
 
   ubuntu-make-btaddon:
-    if: always()
-    needs: [ubuntu-make]
     runs-on: ubuntu-latest
 
     steps:
@@ -74,14 +72,12 @@ jobs:
         env:
           V: 1
           PLATFORM_EXTRAS: BTADDON
-        run: make
+        run: make -j$((`nproc` + 1))
 
       - name: Test
         run: make check
 
   ubuntu-cmake:
-    if: always()
-    needs: [ubuntu-make, ubuntu-make-btaddon]
     runs-on: ubuntu-latest
 
     steps:
@@ -115,7 +111,7 @@ jobs:
       - name: Build
         env:
           VERBOSE: 1
-        run: make
+        run: make -j$((`nproc` + 1))
         working-directory: client/build/
 
       - name: Test
