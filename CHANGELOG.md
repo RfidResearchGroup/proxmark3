@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed the timeout of local TCP connections (@wh201906)
+ - Finalized implementation of configcard generation for keyroll when cardhelper is not present (@Antiklesys)
  - Added documentation for compiling on iOS (@The-SamminAter)
  - Fixed `hf iclass wrbl` - pagemap bit map for secured is now handled better (@iceman1001)
  - Changed `hf iclass view/decrypt` to detect SIO lengths better and show if legacy credentials are encrypted (@nvx)
@@ -16,7 +18,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf iclass creditepurse` command to allow crediting the epurse debit value (@nvx)
  - Modified `hf iclass configcard` to only support online mode (@Antiklesys)
  - Modified `hf iclass configcard` command to generate config cards without a cardhelper module by porting the contents of blocks 6 & 7 from nfc-iclass (@Antiklesys)
- - Finalized implementation of configcard generation for keyroll when cardhelper is not present (@Antiklesys)
 
 ## [Raccoon.4.17140][2023-09-09]
  - Changed text and adjust pm3_test case for mf_aes_brute (@doegox)
