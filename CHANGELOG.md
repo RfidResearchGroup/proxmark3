@@ -16,6 +16,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `hf iclass creditepurse` command to allow crediting the epurse debit value (@nvx)
  - Modified `hf iclass configcard` to only support online mode @ATK
  - Modified `hf iclass configcard` command to generate config cards without a cardhelper module by porting the contents of blocks 7 & 7 from nfc-iclass @ATK
+ - Changed the timeout of local TCP connections (@wh201906)
 
 ## [Raccoon.4.17140][2023-09-09]
  - Changed text and adjust pm3_test case for mf_aes_brute (@doegox)
