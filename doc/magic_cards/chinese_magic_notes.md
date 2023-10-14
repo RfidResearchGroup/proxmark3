@@ -27,6 +27,7 @@
     * [MIFARE Ultralight, Copykey](#mifare-ultralight-copykey)
   - [Other chips](#other-chips)
     * [NSCK-II](#nsck-ii)
+    * [SID](#sid)
   
 
 ## Low Frequency
@@ -203,6 +204,9 @@ hf 14a info
 
 Sold as the general cloning tag.
 Behavior: possible to issue a regular write to block 0.
+* Other names are:
+  - CAID
+  - SUID
 
 #### Identify
 ^[Top](#top)
@@ -477,7 +481,7 @@ Parsing traces:
 
 **TODO**
 
-* ZXUID, EUID, ICUID, M1-5A, SUID; TID, BOMB, SID?
+* ZXUID, EUID, ICUID, M1-5A; TID, BOMB?
 * ~~Some cards exhibit a specific SAK=28?~~ Some chips have unusual properties, like SAK 28 (BOMB) or SAK 5A (M1-5A). We are yet to find out the special functions.
 
 * What we know:
@@ -529,3 +533,42 @@ Parsing traces:
 
 - Write NSC UID: `54 [part 1b] [data 4b enc] [CRC]`
     - Tag replies: `A2 [CRC]`
+
+### SID
+^[Top](#top)
+
+- Magic tag for Fudan FM1208-9 chips
+
+#### Characteristics
+^[Top](#top)
+- ISO14443-A tag
+- ATQA-SAK: `0008`-`20`
+- ATS: `10 78 80 A0 02 00 9D 46 16 40 00 A3 [UID]`
+- Compared to real FM1208 chip:
+  - CLA byte is ignored
+  - Command parsing is irregular (some replies are wrong)
+
+#### Magic commands
+^[Top](#top)
+
+**WARNING!!!** Risk of bricking tag - cause is unknown
+- Below you can find a list of all INS bytes not present on real FM1208 chip, and what their output is when executed (P1, P2, Lc = 00)
+  - Results may vary between chips:
+```
+INS | RES
+0A  | 44454641554C540000002018112840000000000000000000000000000000000000000000000000000000400000000000
+3B  | 00000000001C0EF90000000000000000000000000000000000000000000000002000000000C09040009002840000000000000000000000000000000000006C0FC08700EB1A9F1BA01801010019000000000000000000000000000090000000000000094B066600000000007D000000000000000000000000000000003B000000107880A002009D46164000A3CA81E15000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+3C* | 0000
+3D  | 6700
+7D  | Tag does not reply (if 0<Lc<=15, RES=6700)
+CD  | 6A82
+D5  | 9000
+DD  | 6700
+DE  | 6700
+DF  | 9000
+EE  | 6700
+F0  | 6A82
+FB  | 6A82
+
+* - DO NOT EXECUTE THIS INSTRUCTION!!! After 2nd execution tag will brick (No reply to REQA/WUPA). Very likely you need to add extra data which we do not know
+```
