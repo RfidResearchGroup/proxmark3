@@ -274,6 +274,16 @@ static void print_config_card(const iclass_config_card_item_t *o) {
     }
 }
 
+static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
+    uint8_t encrypted_data[16];
+    uint8_t *encrypted = encrypted_data;
+    mbedtls_des3_context ctx;
+    mbedtls_des3_set2key_enc(&ctx, key);
+    mbedtls_des3_crypt_ecb(&ctx, blk_data, encrypted);
+    memcpy(blk_data, encrypted, 8);
+    mbedtls_des3_free(&ctx);
+}
+
 static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *key, bool got_kr) {
     if (check_config_card(o) == false) {
         return PM3_EINVARG;
@@ -353,11 +363,35 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         SetFlushAfterWrite(true);
 
         // KEYROLL need to encrypt
+        uint8_t key_en[16] = {0};
+        uint8_t *keyptr_en = NULL;
+        if (IsCardHelperPresent(false) == false){
+            size_t keylen = 0;
+            int res_key = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr_en, &keylen);
+            if (res_key != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to find iclass_decryptionkey.bin");
+                return PM3_EINVARG;
+            }
+
+            if (keylen != 16) {
+                PrintAndLogEx(ERR, "Failed to load transport key from file");
+                free(keyptr_en);
+                return PM3_EINVARG;
+            }
+            memcpy(key_en, keyptr_en, sizeof(key_en));
+            free(keyptr_en);
+        }
+
         PrintAndLogEx(INFO, "Setting up encryption... " NOLF);
         uint8_t ffs[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-        if (Encrypt(ffs, ffs) == false) {
-            PrintAndLogEx(WARNING, "failed to encrypt FF");
-        } else {
+        if (IsCardHelperPresent(false) != false){
+            if (Encrypt(ffs, ffs) == false) {
+                PrintAndLogEx(WARNING, "failed to encrypt FF");
+            } else {
+                PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
+            }
+        }else{
+            iclass_encrypt_block_data(ffs, key_en);
             PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
         }
 
@@ -366,9 +400,14 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         uint8_t lkey[8];
         memcpy(lkey, key, sizeof(lkey));
         uint8_t enckey1[8];
-        if (Encrypt(lkey, enckey1) == false) {
-            PrintAndLogEx(WARNING, "failed to encrypt key1");
-        } else {
+        if (IsCardHelperPresent(false) != false){
+            if (Encrypt(lkey, enckey1) == false) {
+                PrintAndLogEx(WARNING, "failed to encrypt key1");
+            } else {
+                PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
+            }
+        }else{
+            iclass_encrypt_block_data(lkey, key_en);
             PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
         }
 
@@ -377,9 +416,13 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         memcpy(data + (6 * 8), o->data, sizeof(o->data));
 
         // encrypted keyroll key 0D
-        memcpy(data + (0xD * 8), enckey1, sizeof(enckey1));
+        if (IsCardHelperPresent(false) != false){
+            memcpy(data + (0x0D * 8), enckey1, sizeof(enckey1));
+        } else {
+            memcpy(data + (0x0D * 8), lkey, sizeof(enckey1));
+        }
         // encrypted 0xFF
-        for (uint8_t i = 0xD; i < 0x14; i++) {
+        for (uint8_t i = 0x0D; i < 0x14; i++) {
             memcpy(data + (i * 8), ffs, sizeof(ffs));
         }
         PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
@@ -387,24 +430,37 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         // encrypted partial keyroll key 14
         PrintAndLogEx(INFO, "Setting encrypted partial key14... " NOLF);
         uint8_t foo[8] = {0x15};
-        memcpy(foo + 1, lkey, 7);
+        memcpy(foo + 1, key, 7);
         uint8_t enckey2[8];
-        if (Encrypt(foo, enckey2) == false) {
-            PrintAndLogEx(WARNING, "failed to encrypt partial 1");
+        if (IsCardHelperPresent(false) != false){
+            if (Encrypt(foo, enckey2) == false) {
+                PrintAndLogEx(WARNING, "failed to encrypt partial 1");
+            } else {
+                PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
+                memcpy(data + (0x14 * 8), enckey2, sizeof(enckey2));
+            }
+        }else{
+            iclass_encrypt_block_data(foo, key_en);
+            PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
+            memcpy(data + (0x14 * 8), foo, sizeof(enckey2));
         }
-        memcpy(data + (0x14 * 8), enckey2, sizeof(enckey2));
-        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
-
 
         // encrypted partial keyroll key 15
         PrintAndLogEx(INFO, "Setting encrypted partial key15... " NOLF);
         memset(foo, 0xFF, sizeof(foo));
         foo[0] = lkey[7];
-        if (Encrypt(foo, enckey2) == false) {
-            PrintAndLogEx(WARNING, "failed to encrypt partial 2");
+        if (IsCardHelperPresent(false) != false){
+            if (Encrypt(foo, enckey2) == false) {
+                PrintAndLogEx(WARNING, "failed to encrypt partial 2");
+            } else {
+                PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
+                memcpy(data + (0x15 * 8), enckey2, sizeof(enckey2));
+            }
+        }else{
+            iclass_encrypt_block_data(foo, key_en);
+            PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
+            memcpy(data + (0x15 * 8), foo, sizeof(enckey2));
         }
-        memcpy(data + (0x15 * 8), enckey2, sizeof(enckey2));
-        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
 
         // encrypted 0xFF
         PrintAndLogEx(INFO, "Setting 0xFF's... " NOLF);
@@ -1545,16 +1601,6 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     mbedtls_des3_free(&ctx);
     return PM3_SUCCESS;
-}
-
-static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
-    uint8_t encrypted_data[16];
-    uint8_t *encrypted = encrypted_data;
-    mbedtls_des3_context ctx;
-    mbedtls_des3_set2key_enc(&ctx, key);
-    mbedtls_des3_crypt_ecb(&ctx, blk_data, encrypted);
-    memcpy(blk_data, encrypted, 8);
-    mbedtls_des3_free(&ctx);
 }
 
 static int CmdHFiClassEncryptBlk(const char *Cmd) {
