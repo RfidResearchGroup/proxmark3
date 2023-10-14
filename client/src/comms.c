@@ -678,7 +678,16 @@ int TestProxmark(pm3_device_t *dev) {
     if (g_conn.send_via_fpc_usart) {
         PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", g_conn.uart_speed);
     } else {
-        int res = uart_reconfigure_timeouts(is_tcp_conn ? UART_TCP_CLIENT_RX_TIMEOUT_MS : UART_USB_CLIENT_RX_TIMEOUT_MS);
+        int res;
+        if (is_tcp_conn) {
+            if (memcmp(g_conn.serial_port_name + 4, "localhost", 9) == 0 || memcmp(g_conn.serial_port_name + 4, "127.0.0.1", 9) == 0) {
+                res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS * 2);
+            } else {
+                res = uart_reconfigure_timeouts(UART_TCP_CLIENT_RX_TIMEOUT_MS);
+            }
+        } else {
+            res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
+        }
         if (res != PM3_SUCCESS) {
             return res;
         }
