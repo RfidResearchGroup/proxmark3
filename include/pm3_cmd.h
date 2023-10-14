@@ -826,9 +826,10 @@ typedef struct {
 // took settings from libnfc/buses/uart.c
 
 // uart_windows.c & uart_posix.c
-# define UART_FPC_CLIENT_RX_TIMEOUT_MS  200
-# define UART_USB_CLIENT_RX_TIMEOUT_MS  20
-# define UART_TCP_CLIENT_RX_TIMEOUT_MS  500
+# define UART_FPC_CLIENT_RX_TIMEOUT_MS        200
+# define UART_USB_CLIENT_RX_TIMEOUT_MS        20
+# define UART_TCP_CLIENT_RX_TIMEOUT_MS        500
+# define UART_TCP_CLIENT_LOCAL_RX_TIMEOUT_MS  40
 
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:

@@ -46,6 +46,9 @@
 #ifndef SOL_TCP
 # define SOL_TCP IPPROTO_TCP
 #endif
+#ifndef SOL_UDP
+# define SOL_UDP IPPROTO_UDP
+#endif
 
 typedef struct termios term_info;
 typedef struct {
@@ -167,6 +170,79 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
         return sp;
     }
+
+    if (memcmp(prefix, "udp:", 4) == 0) {
+        free(prefix);
+
+        if (strlen(pcPortName) <= 4) {
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        struct addrinfo *addr = NULL, *rp;
+
+        char *addrstr = strdup(pcPortName + 4);
+        if (addrstr == NULL) {
+            PrintAndLogEx(ERR, "error: string duplication");
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        timeout.tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_MS * 1000;
+
+        char *colon = strrchr(addrstr, ':');
+        const char *portstr;
+        if (colon) {
+            portstr = colon + 1;
+            *colon = '\0';
+        } else {
+            portstr = "18888";
+        }
+
+        struct addrinfo info;
+
+        memset(&info, 0, sizeof(info));
+
+        info.ai_family = AF_INET;
+        info.ai_socktype = SOCK_DGRAM;
+//        info.ai_protocol = SOL_UDP;
+
+        int s = getaddrinfo(addrstr, portstr, &info, &addr);
+        if (s != 0) {
+            PrintAndLogEx(ERR, "error: getaddrinfo: %s", gai_strerror(s));
+            freeaddrinfo(addr);
+            free(addrstr);
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        int sfd;
+        for (rp = addr; rp != NULL; rp = rp->ai_next) {
+            sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+
+            if (sfd == -1)
+                continue;
+
+            if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1)
+                break;
+
+            close(sfd);
+        }
+
+        freeaddrinfo(addr);
+        free(addrstr);
+
+        if (rp == NULL) {               /* No address succeeded */
+            PrintAndLogEx(ERR, "error: Could not connect");
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        sp->fd = sfd;
+
+        return sp;
+    }
+
 
     if (memcmp(prefix, "bt:", 3) == 0) {
         free(prefix);

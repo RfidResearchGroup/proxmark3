@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Experimental UDP support in linux (@iceman1001)
  - Changed CI scripts to speed up the builds  (@wh201906)
  - Changed the timeout of local TCP connections (@wh201906)
  - Finalized implementation of configcard generation for keyroll when cardhelper is not present (@Antiklesys)
