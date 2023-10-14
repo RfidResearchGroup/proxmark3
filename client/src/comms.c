@@ -680,7 +680,8 @@ int TestProxmark(pm3_device_t *dev) {
     } else {
         int res;
         if (is_tcp_conn) {
-            if (memcmp(g_conn.serial_port_name + 4, "localhost", 9) == 0 || memcmp(g_conn.serial_port_name + 4, "127.0.0.1", 9) == 0) {
+            if ((strstr(g_conn.serial_port_name, "localhost") != NULL) ||
+                (strstr(g_conn.serial_port_name, "127.0.0.1") != NULL)) {
                 res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS * 2);
             } else {
                 res = uart_reconfigure_timeouts(UART_TCP_CLIENT_RX_TIMEOUT_MS);
