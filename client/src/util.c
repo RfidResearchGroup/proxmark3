@@ -1048,6 +1048,36 @@ int binstring2binarray(uint8_t *target, char *source, int length) {
     return count;
 }
 
+void binstr_2_bytes(uint8_t *target, size_t *targetlen, const char *src) {
+    size_t binlen = strlen(src);
+    if (binlen == 0) {
+        *targetlen = 0;
+        return;
+    }
+
+    // Calculate padding needed
+    size_t padding = (8 - (binlen % 8)) % 8;
+
+    // Determine the size of the hexadecimal array
+    *targetlen = (binlen + padding) / 8;
+
+    uint8_t b = 0;
+    size_t bit_cnt = padding;
+    size_t idx = 0;
+
+    // Process binary string
+    for (size_t i = 0; i < binlen; ++i) {
+        b = (b << 1) | (src[i] == '1');
+        ++bit_cnt;
+
+        if (bit_cnt == 8) {
+            target[idx++] = b;
+            b = 0;
+            bit_cnt = 0;
+        }
+    }
+}
+
 // return parity bit required to match type
 uint8_t GetParity(const uint8_t *bits, uint8_t type, int length) {
     int x;
