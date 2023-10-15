@@ -707,6 +707,7 @@ SRCS =  mifare/aiddesfire.c \
 		pm3line.c \
 		proxmark3.c \
 		scandir.c \
+		uart/ringbuffer.c \
 		uart/uart_posix.c \
 		uart/uart_win32.c \
 		scripting.c \
