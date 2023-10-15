@@ -370,12 +370,14 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
             int res_key = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr_en, &keylen);
             if (res_key != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Failed to find iclass_decryptionkey.bin");
+                free(data);
                 return PM3_EINVARG;
             }
 
             if (keylen != 16) {
                 PrintAndLogEx(ERR, "Failed to load transport key from file");
                 free(keyptr_en);
+                free(data);
                 return PM3_EINVARG;
             }
             memcpy(key_en, keyptr_en, sizeof(key_en));
