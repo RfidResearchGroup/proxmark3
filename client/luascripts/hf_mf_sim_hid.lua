@@ -7,7 +7,7 @@ local ansicolors  = require('ansicolors')
 
 copyright = ''
 author = "Michael Micsen"
-version = 'v0.0.1'
+version = 'v0.0.2'
 desc = [[
 Perform simulation of Mifare credentials with HID encoding
 This script only supports: H10301
@@ -17,12 +17,12 @@ example = [[
     script run hf_mf_sim_hid.lua -f 1 -c 10000
 ]]
 usage = [[
-script run hf_mf_sim_hid.lua -f facility -c card_number
+script run hf_mf_sim_hid.lua -f <dec> -c <dec>
 ]]
 arguments = [[
     -h      : this help
-    -f      : facility id
-    -c      : starting card id
+    -f     : facility code
+    -c     : card number
 ]]
 local DEBUG = true
 --local bxor = bit32.bxor
@@ -126,7 +126,6 @@ local function cardHex(i, f)
     sentinel = lshift(1, 26)
     bits = bor(bits, sentinel)
 
-
     return ('%08x'):format(bits)
 end
 ---
@@ -146,15 +145,14 @@ local function main(args)
         if o == 'h' then return help() end
         if o == 'f' then
             if isempty(a) then
-                print('You did not supply a facility code, using 0')
+                print('Defaulting to facility code 0')
                 facility = 0
             else
                 facility = a
             end
         end
         if o == 'c' then
-            print(a)
-            if isempty(a) then return oops('You must supply the flag -c (card number)1') end
+            if isempty(a) then return oops('You must supply a card number') end
             cardnum = a
         end
     end
@@ -162,23 +160,27 @@ local function main(args)
     --Due to my earlier complaints about how this specific getopt library
     --works, specifying ':' does not enforce supplying a value, thus we
     --need to do these checks all over again.
-    if isempty(cardnum) then return oops('You must supply the flag -c (card number)2') end
+    if isempty(cardnum) then return oops('You must supply a card number') end
+
     --If the facility ID is non specified, ensure we code it as zero
     if isempty(facility) then
-        print('Using 0 for the facility code as -f was not supplied')
+        print('Defaulting to facility code 0')
         facility = 0
     end
 
     -- Write the MAD to read for a Mifare HID credential
-    core.console('hf mf esetblk -b 1 -d 1B014D48000000000000000000000000')
-    core.console('hf mf esetblk -b 3 -d A0A1A2A3A4A5787788C189ECA97F8C2A')
+    core.console('hf mf esetblk --blk 1 -d 1B014D48000000000000000000000000')
+    core.console('hf mf esetblk --blk 3 -d A0A1A2A3A4A5787788C189ECA97F8C2A')
     --Write the sector trailer for the credential sector
-    core.console('hf mf esetblk -b 7 -d 484944204953787788AA204752454154')
+    core.console('hf mf esetblk --blk 7 -d 484944204953787788AA204752454154')
     local cardh = cardHex(cardnum, facility)
-    print('Hex')
-    print(cardh)
-    core.console( ('hf mf esetblk -b 5 -d 020000000000000000000000%s'):format(cardh) )
+    
+    print('Facility Code... ' .. facility)
+    print('Card number..... ' .. cardnum)
+    print('Hex............. ' .. cardh)
+    print('')
 
+    core.console( ('hf mf esetblk --blk 5 -d 020000000000000000000000%s'):format(cardh) )
     core.console('hf mf sim --1k -i')
 end
 
