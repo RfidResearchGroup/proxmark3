@@ -204,7 +204,7 @@ def main():
     flash_mem = "baudrate................24 mhz".lower()
 
     # check smartcard fw version
-    sm_version = "version.................v4.12".lower()
+    sm_version = "version................. v4.42".lower()
 
     # check LF
     lf_search = "valid hid prox id found!".lower()

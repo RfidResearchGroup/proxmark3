@@ -715,12 +715,14 @@ void I2C_print_status(void) {
 
     uint8_t major, minor;
     if (I2C_get_version(&major, &minor) == PM3_SUCCESS) {
-        Dbprintf("  version................. " _YELLOW_("v%x.%02d"), major, minor);
-        if (major < 4) {
-            DbpString("    " _RED_("Outdated firmware.") " Please upgrade to v4.x or above.");
-        }
+
+        Dbprintf("  version................. v%x.%02d ( %s )"
+            , major
+            , minor
+            , ( (major == 4) && (minor == 42) ) ? _GREEN_("ok") : _RED_("Outdated")
+        );
     } else {
-        DbpString("  version................. " _RED_("FAILED"));
+        DbpString("  version................. ( " _RED_("fail") " )");
     }
 }
 
