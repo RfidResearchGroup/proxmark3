@@ -174,7 +174,7 @@ local function main(args)
     --Write the sector trailer for the credential sector
     core.console('hf mf esetblk --blk 7 -d 484944204953787788AA204752454154')
     local cardh = cardHex(cardnum, facility)
-    
+
     print('Facility Code... ' .. facility)
     print('Card number..... ' .. cardnum)
     print('Hex............. ' .. cardh)
