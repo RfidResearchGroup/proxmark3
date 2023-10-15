@@ -1217,7 +1217,7 @@ There are two ways to program this card.
     
    ***OR***
 
-   2.  Use the hf_mf_ultimatecard.lua script commands designated but the `script run hf_mf_ulimatecard` examples.
+   2.  Use the hf_mf_ultimatecard.lua script commands designated but the `script run hf_mf_ultimatecard` examples.
 
 
 script run hf_mf_ultimatecard.lua -h
