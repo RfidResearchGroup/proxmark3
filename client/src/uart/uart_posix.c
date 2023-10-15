@@ -470,9 +470,9 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         
         // Reset file descriptor
         FD_ZERO(&rfds);
-        FD_SET(((serial_port_unix_t_t *)sp)->fd, &rfds);
+        FD_SET(spu->fd, &rfds);
         tv = timeout;
-        res = select(((serial_port_unix_t_t *)sp)->fd + 1, &rfds, NULL, NULL, &tv);
+        res = select(spu->fd + 1, &rfds, NULL, NULL, &tv);
 
         // Read error
         if (res < 0) {
@@ -491,7 +491,7 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         }
 
         // Retrieve the count of the incoming bytes
-        res = ioctl(((serial_port_unix_t_t *)sp)->fd, FIONREAD, &byteCount);
+        res = ioctl(spu->fd, FIONREAD, &byteCount);
 //        PrintAndLogEx(ERR, "UART:: RX ioctl res %d byteCount %u", res, byteCount);
         if (res < 0) return PM3_ENOTTY;
 
@@ -510,7 +510,7 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         }
 
         // There is something available, read the data
-        res = read(((serial_port_unix_t_t *)sp)->fd, pbtRx + (*pszRxLen), byteCount);
+        res = read(spu->fd, pbtRx + (*pszRxLen), byteCount);
 
         // Stop if the OS has some troubles reading the data
         if (res <= 0) {
@@ -532,13 +532,14 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
     uint32_t pos = 0;
     fd_set rfds;
     struct timeval tv;
+    const serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
 
     while (pos < len) {
         // Reset file descriptor
         FD_ZERO(&rfds);
-        FD_SET(((serial_port_unix_t_t *)sp)->fd, &rfds);
+        FD_SET(spu->fd, &rfds);
         tv = timeout;
-        int res = select(((serial_port_unix_t_t *)sp)->fd + 1, NULL, &rfds, NULL, &tv);
+        int res = select(spu->fd + 1, NULL, &rfds, NULL, &tv);
 
         // Write error
         if (res < 0) {
@@ -553,7 +554,7 @@ int uart_send(const serial_port sp, const uint8_t *pbtTx, const uint32_t len) {
         }
 
         // Send away the bytes
-        res = write(((serial_port_unix_t_t *)sp)->fd, pbtTx + pos, len - pos);
+        res = write(spu->fd, pbtTx + pos, len - pos);
 
         // Stop if the OS has some troubles sending the data
         if (res <= 0)
