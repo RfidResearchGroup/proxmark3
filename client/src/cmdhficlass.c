@@ -1286,7 +1286,7 @@ static int CmdHFiClassESetBlk(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("b", "blk", "<dec>", "block number"),
+        arg_int1(NULL, "blk", "<dec>", "block number"),
         arg_str0("d", "data", "<hex>", "bytes to write, 8 hex bytes"),
         arg_param_end
     };
@@ -2140,15 +2140,15 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass wrbl",
                   "Write data to an iCLASS tag",
-                  "hf iclass wrbl -b 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B\n"
-                  "hf iclass wrbl -b 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --credit\n"
-                  "hf iclass wrbl -b 10 -d AAAAAAAAAAAAAAAA --ki 0");
+                  "hf iclass wrbl --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B\n"
+                  "hf iclass wrbl --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --credit\n"
+                  "hf iclass wrbl --blk 10 -d AAAAAAAAAAAAAAAA --ki 0");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "Access key as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
-        arg_int1("b", "block", "<dec>", "The block number to read"),
+        arg_int1(NULL, "blk", "<dec>", "block number"),
         arg_str1("d", "data", "<hex>", "data to write as 8 hex bytes"),
         arg_str0("m", "mac", "<hex>", "replay mac data (4 hex bytes)"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
@@ -2599,15 +2599,15 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass rdbl",
                   "Read a iCLASS block from tag",
-                  "hf iclass rdbl -b 6 -k 0011223344556677\n"
-                  "hf iclass rdbl -b 27 -k 0011223344556677 --credit\n"
-                  "hf iclass rdbl -b 10 --ki 0");
+                  "hf iclass rdbl --blk 6 -k 0011223344556677\n"
+                  "hf iclass rdbl --blk 27 -k 0011223344556677 --credit\n"
+                  "hf iclass rdbl --blk 10 --ki 0");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "Access key as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
-        arg_int1("b", "block", "<dec>", "The block number to read"),
+        arg_int1(NULL, "blk", "<dec>", "Block number"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
@@ -4431,22 +4431,17 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
 static int CmdHFiClassSAM(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass sam",
-                  "Manage via SAM\n",
+                  "Extract PACS via a HID SAM\n",
                   "hf iclass sam\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("d", "data", "<hex>", "data"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    int dlen = 0;
-    uint8_t data[128] = {0};
-    CLIGetHexWithReturn(ctx, 1, data, &dlen);
-
-    bool verbose = arg_get_lit(ctx, 2);
+    bool verbose = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
     Iso7816CommandChannel channel = CC_CONTACT;

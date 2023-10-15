@@ -3279,9 +3279,9 @@ static int CmdNumCon(const char *Cmd) {
     } radix_t;
 
     radix_t radix[] = {
-        {"dec..... ", 10},
-        {"hex..... 0x", 16},
-        {"bin..... 0b", 2}
+        {"dec... ", 10},
+        {"hex... ", 16},
+        {"bin... ", 2}
     };
 
     char s[600] = {0};
@@ -3289,8 +3289,8 @@ static int CmdNumCon(const char *Cmd) {
 
     for (uint8_t i = 0; i < ARRAYLEN(radix); i++) {
         MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, radix[i].radix, s, sizeof(s), &slen));
-        if (slen > 0) {
-            PrintAndLogEx(INFO, "%s%s", radix[i].desc, s);
+        if (slen > 0) {           
+            PrintAndLogEx(SUCCESS, "%s%s", radix[i].desc, s);
         }
     }
 

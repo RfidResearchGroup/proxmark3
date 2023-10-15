@@ -803,6 +803,9 @@ typedef struct {
 // STATIC Nonce detect                  pm3:  when collecting nonces for hardnested
 #define PM3_ESTATIC_NONCE     -25
 
+// No PACS data                         pm3:  when using HID SAM to retried PACS data
+#define PM3_ENOPACS           -26
+
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program

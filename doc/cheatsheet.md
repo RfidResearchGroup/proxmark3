@@ -79,7 +79,7 @@ Read iCLASS Block
 Options
 ---
 -k, --key <hex>                Access key as 16 hex symbols
--b, --block <dec>              The block number to read as an integer
+    --blk <dec>                The block number to read as an integer
     --ki <dec>                 Key index to select key from memory 'hf iclass managekeys'
     --credit                   key is assumed to be the credit key
     --elite                    elite computations applied to key
@@ -94,7 +94,7 @@ Write to iCLASS Block
 Options
 ---
 -k, --key <hex>                Access key as 16 hex symbols
--b, --block <dec>              The block number to read as an integer
+    --blk <dec>                The block number to read as an integer
 -d, --data <hex>               data to write as 16 hex symbols
     --ki <dec>                 Key index to select key from memory 'hf iclass managekeys'
     --credit                   key is assumed to be the credit key
