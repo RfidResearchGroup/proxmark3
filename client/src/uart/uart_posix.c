@@ -21,6 +21,7 @@
 #define _DEFAULT_SOURCE
 
 #include "uart.h"
+#include "ringbuffer.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -55,6 +56,7 @@ typedef struct {
     int fd;           // Serial port file descriptor
     term_info tiOld;  // Terminal info before using the port
     term_info tiNew;  // Terminal info during the transaction
+    RingBuffer* udpBuffer;
 } serial_port_unix_t_t;
 
 // see pm3_cmd.h
@@ -84,6 +86,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         return INVALID_SERIAL_PORT;
     }
 
+    sp->udpBuffer = NULL;
     // init timeouts
     timeout.tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000;
 
@@ -239,6 +242,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
 
         sp->fd = sfd;
+        sp->udpBuffer = RingBuf_create(MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 20);
 
         return sp;
     }
@@ -427,6 +431,7 @@ void uart_close(const serial_port sp) {
         //silent error message as it can be called from uart_open failing modes, e.g. when waiting for port to appear
         //PrintAndLogEx(ERR, "UART error while closing port");
     }
+    RingBuf_destroy(spu->udpBuffer);
     close(spu->fd);
     free(sp);
 }
@@ -435,6 +440,7 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
     uint32_t byteCount;  // FIONREAD returns size on 32b
     fd_set rfds;
     struct timeval tv;
+    const serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
 
     if (newtimeout_pending) {
         timeout.tv_usec = newtimeout_value * 1000;
@@ -443,11 +449,30 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
     // Reset the output count
     *pszRxLen = 0;
     do {
+        int res;
+        if(spu->udpBuffer != NULL) {
+            // for UDP connection, try to use the data from the buffer
+            
+            byteCount = RingBuf_getAvailableSize(spu->udpBuffer);
+            // Cap the number of bytes, so we don't overrun the buffer
+            if (pszMaxRxLen - (*pszRxLen) < byteCount) {
+//                PrintAndLogEx(ERR, "UART:: RX prevent overrun (have %u, need %u)", pszMaxRxLen - (*pszRxLen), byteCount);
+                byteCount = pszMaxRxLen - (*pszRxLen);
+            }
+            res = RingBuf_dequeueBatch(spu->udpBuffer, pbtRx + (*pszRxLen), byteCount);
+            *pszRxLen += res;
+
+            if (*pszRxLen == pszMaxRxLen) {
+                // We have all the data we wanted.
+                return PM3_SUCCESS;
+            }
+        }
+        
         // Reset file descriptor
         FD_ZERO(&rfds);
         FD_SET(((serial_port_unix_t_t *)sp)->fd, &rfds);
         tv = timeout;
-        int res = select(((serial_port_unix_t_t *)sp)->fd + 1, &rfds, NULL, NULL, &tv);
+        res = select(((serial_port_unix_t_t *)sp)->fd + 1, &rfds, NULL, NULL, &tv);
 
         // Read error
         if (res < 0) {
@@ -469,6 +494,14 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         res = ioctl(((serial_port_unix_t_t *)sp)->fd, FIONREAD, &byteCount);
 //        PrintAndLogEx(ERR, "UART:: RX ioctl res %d byteCount %u", res, byteCount);
         if (res < 0) return PM3_ENOTTY;
+
+        // For UDP connection, put the incoming data into the buffer and handle them in the next round
+        if (spu->udpBuffer != NULL) {
+            uint8_t recvBuf[MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 20];
+            res = read(spu->fd, recvBuf, RingBuf_getAvailableSize(spu->udpBuffer));
+            RingBuf_enqueueBatch(spu->udpBuffer, recvBuf, res);
+            continue;
+        }
 
         // Cap the number of bytes, so we don't overrun the buffer
         if (pszMaxRxLen - (*pszRxLen) < byteCount) {

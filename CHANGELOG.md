@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Fixed `lf hid clone --bin` - now correctly handles sentinel bits (@iceman1001)
- - Experimental UDP support in linux (@iceman1001)
+ - Experimental UDP support in linux (@iceman1001, @wh201906)
  - Changed CI scripts to speed up the builds  (@wh201906)
  - Changed the timeout of local TCP connections (@wh201906)
  - Finalized implementation of configcard generation for keyroll when cardhelper is not present (@Antiklesys)
