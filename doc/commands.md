@@ -408,7 +408,7 @@ Check column "offline" for their availability.
 |`hf iclass help         `|Y       |`This help`
 |`hf iclass list         `|Y       |`List iclass history`
 |`hf iclass dump         `|N       |`Dump Picopass / iCLASS tag to file`
-|`hf iclass info         `|Y       |`Tag information`
+|`hf iclass info         `|N       |`Tag information`
 |`hf iclass rdbl         `|N       |`Read Picopass / iCLASS block`
 |`hf iclass reader       `|N       |`Act like a Picopass / iCLASS reader`
 |`hf iclass restore      `|N       |`Restore a dump file onto a Picopass / iCLASS tag`

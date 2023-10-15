@@ -269,7 +269,7 @@ const static vocabulary_t vocabulary[] = {
     { 1, "hf iclass help" },
     { 1, "hf iclass list" },
     { 0, "hf iclass dump" },
-    { 1, "hf iclass info" },
+    { 0, "hf iclass info" },
     { 0, "hf iclass rdbl" },
     { 0, "hf iclass reader" },
     { 0, "hf iclass restore" },
