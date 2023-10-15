@@ -439,7 +439,7 @@ static uint32_t ice_sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_t> 
     g_topbits = 0;
 
     std::vector<std::thread> threads(g_num_cpus);
-    for (uint8_t m = 0; m < g_num_cpus; m++) {
+    for (uint32_t m = 0; m < g_num_cpus; m++) {
         threads[m] = std::thread(ice_sm_right_thread, m, g_num_cpus, ks, &bincstates, mask);
     }
     for (auto &t : threads) {
@@ -552,7 +552,7 @@ static void ice_sm_left(const uint8_t *ks, uint8_t *mask, vector<cs_t> *pcstates
 
     map<uint64_t, cs_t> bincstates;
     std::vector<std::thread> threads(g_num_cpus);
-    for (uint8_t m = 0; m < g_num_cpus; m++) {
+    for (uint32_t m = 0; m < g_num_cpus; m++) {
         threads[m] = std::thread(ice_sm_left_thread, m, g_num_cpus, ks, &bincstates, mask);
     }
 
@@ -952,7 +952,7 @@ int main(int argc, const char *argv[]) {
         key_found = false;
         key = 0;
         std::vector<std::thread> threads(g_num_cpus);
-        for (uint8_t m = 0; m < g_num_cpus; m++) {
+        for (uint32_t m = 0; m < g_num_cpus; m++) {
             threads[m] =  std::thread(ice_compare, m, g_num_cpus, &pgc_candidates, &ostate, ref(Ci), ref(Q), ref(Ch), ref(Ci_1));
         }
 
