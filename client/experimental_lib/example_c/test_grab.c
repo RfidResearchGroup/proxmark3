@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     // child
     if (pid == 0) {
         printf("[INFO] inside child\n");
-       
+
         // Redirect stdout to the write end of the pipe
         dup2(pipefd[1], STDOUT_FILENO);
 
@@ -39,13 +39,13 @@ int main(int argc, char *argv[]) {
         pm3_close(p);
         _exit(-1);
     } else {
-        
+
         printf("[INFO] inside parent\n");
         // Parent: close write end of the pipe
         close(pipefd[1]);
-        
+
         // Read from the pipe
-        while (1) { 
+        while (1) {
             n = read(pipefd[0], buf, sizeof(buf));
             if (n == -1) {
                 continue;
@@ -63,5 +63,5 @@ int main(int argc, char *argv[]) {
 
         // Close read end
         close(pipefd[0]);
-    }   
+    }
 }

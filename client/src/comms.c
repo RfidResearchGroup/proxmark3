@@ -682,7 +682,7 @@ int TestProxmark(pm3_device_t *dev) {
         int res;
         if (is_tcp_conn || is_udp_conn) {
             if ((strstr(g_conn.serial_port_name, "localhost") != NULL) ||
-                (strstr(g_conn.serial_port_name, "127.0.0.1") != NULL)) {
+                    (strstr(g_conn.serial_port_name, "127.0.0.1") != NULL)) {
                 res = uart_reconfigure_timeouts(UART_TCP_CLIENT_LOCAL_RX_TIMEOUT_MS);
             } else {
                 res = uart_reconfigure_timeouts(UART_TCP_CLIENT_RX_TIMEOUT_MS);

@@ -3178,10 +3178,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-b, --blk <dec> block number",
+                "--blk <dec> block number",
                 "-d, --data <hex> bytes to write, 8 hex bytes"
             ],
-            "usage": "hf iclass esetblk [-h] -b <dec> [-d <hex>]"
+            "usage": "hf iclass esetblk [-h] --blk <dec> [-d <hex>]"
         },
         "hf iclass eview": {
             "command": "hf iclass eview",
@@ -3309,16 +3309,16 @@
             "command": "hf iclass rdbl",
             "description": "Read a iCLASS block from tag",
             "notes": [
-                "hf iclass rdbl -b 6 -k 0011223344556677",
-                "hf iclass rdbl -b 27 -k 0011223344556677 --credit",
-                "hf iclass rdbl -b 10 --ki 0"
+                "hf iclass rdbl --blk 6 -k 0011223344556677",
+                "hf iclass rdbl --blk 27 -k 0011223344556677 --credit",
+                "hf iclass rdbl --blk 10 --ki 0"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-k, --key <hex> Access key as 8 hex bytes",
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
-                "-b, --block <dec> The block number to read",
+                "--blk <dec> Block number",
                 "--credit key is assumed to be the credit key",
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key",
@@ -3326,7 +3326,7 @@
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass rdbl [-hv] [-k <hex>] [--ki <dec>] -b <dec> [--credit] [--elite] [--raw] [--nr] [--shallow]"
+            "usage": "hf iclass rdbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> [--credit] [--elite] [--raw] [--nr] [--shallow]"
         },
         "hf iclass reader": {
             "command": "hf iclass reader",
@@ -3368,17 +3368,16 @@
         },
         "hf iclass sam": {
             "command": "hf iclass sam",
-            "description": "Manage via SAM",
+            "description": "Extract PACS via a HID SAM",
             "notes": [
                 "hf iclass sam"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-d, --data <hex> data",
                 "-v, --verbose verbose output"
             ],
-            "usage": "hf iclass sam [-hv] [-d <hex>]"
+            "usage": "hf iclass sam [-hv]"
         },
         "hf iclass sim": {
             "command": "hf iclass sim",
@@ -3437,16 +3436,16 @@
             "command": "hf iclass wrbl",
             "description": "Write data to an iCLASS tag",
             "notes": [
-                "hf iclass wrbl -b 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B",
-                "hf iclass wrbl -b 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --credit",
-                "hf iclass wrbl -b 10 -d AAAAAAAAAAAAAAAA --ki 0"
+                "hf iclass wrbl --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B",
+                "hf iclass wrbl --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --credit",
+                "hf iclass wrbl --blk 10 -d AAAAAAAAAAAAAAAA --ki 0"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-k, --key <hex> Access key as 8 hex bytes",
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
-                "-b, --block <dec> The block number to read",
+                "--blk <dec> block number",
                 "-d, --data <hex> data to write as 8 hex bytes",
                 "-m, --mac <hex> replay mac data (4 hex bytes)",
                 "--credit key is assumed to be the credit key",
@@ -3456,7 +3455,7 @@
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass wrbl [-hv] [-k <hex>] [--ki <dec>] -b <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow]"
+            "usage": "hf iclass wrbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow]"
         },
         "hf jooki clone": {
             "command": "hf jooki clone",
@@ -3951,15 +3950,15 @@
             "command": "hf lto wrbl",
             "description": "Write data to block on LTO tag",
             "notes": [
-                "hf lto wrbl --block 128 -d 0001020304050607080910111213141516171819202122232425262728293031"
+                "hf lto wrbl --blk 128 -d 0001020304050607080910111213141516171819202122232425262728293031"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-d, --data <hex> 32 bytes of data to write (64 hex symbols, no spaces)",
-                "--block <dec> The block number to write to as an integer"
+                "--blk <dec> The block number to write to as an integer"
             ],
-            "usage": "hf lto wrbl [-h] -d <hex> --block <dec>"
+            "usage": "hf lto wrbl [-h] -d <hex> --blk <dec>"
         },
         "hf mf acl": {
             "command": "hf mf acl",
@@ -11857,6 +11856,6 @@
     "metadata": {
         "commands_extracted": 687,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-10-12T12:53:10"
+        "extracted_on": "2023-10-15T11:21:02"
     }
 }

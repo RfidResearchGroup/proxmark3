@@ -717,10 +717,10 @@ void I2C_print_status(void) {
     if (I2C_get_version(&major, &minor) == PM3_SUCCESS) {
 
         Dbprintf("  version................. v%x.%02d ( %s )"
-            , major
-            , minor
-            , ( (major == 4) && (minor == 42) ) ? _GREEN_("ok") : _RED_("Outdated")
-        );
+                 , major
+                 , minor
+                 , ((major == 4) && (minor == 42)) ? _GREEN_("ok") : _RED_("Outdated")
+                );
     } else {
         DbpString("  version................. ( " _RED_("fail") " )");
     }
