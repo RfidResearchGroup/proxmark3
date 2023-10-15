@@ -4472,7 +4472,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
-    {"list",        CmdHFiClassList,            IfPm3Iclass,     "List iclass history"},
+    {"list",        CmdHFiClassList,            AlwaysAvailable, "List iclass history"},
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("general") " ---------------------"},
 //    {"clone",       CmdHFiClassClone,           IfPm3Iclass,     "Create a HID credential to Picopass / iCLASS tag"},
     {"dump",        CmdHFiClassDump,            IfPm3Iclass,     "Dump Picopass / iCLASS tag to file"},
@@ -4498,7 +4498,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,                    AlwaysAvailable, "---------------------- " _CYAN_("utils") " ----------------------"},
     {"configcard",  CmdHFiClassConfigCard,      IfPm3Iclass,     "Reader configuration card"},
     {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "Calc diversified keys (blocks 3 & 4) to write new keys"},
-    {"encode",      CmdHFiClassEncode,          IfPm3Iclass,     "Encode binary wiegand to block 7"},
+    {"encode",      CmdHFiClassEncode,          AlwaysAvailable, "Encode binary wiegand to block 7"},
     {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "Encrypt given block data"},
     {"decrypt",     CmdHFiClassDecrypt,         AlwaysAvailable, "Decrypt given block data or tag dump file" },
     {"managekeys",  CmdHFiClassManageKeys,      AlwaysAvailable, "Manage keys to use with iclass commands"},

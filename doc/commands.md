@@ -406,7 +406,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf iclass help         `|Y       |`This help`
-|`hf iclass list         `|N       |`List iclass history`
+|`hf iclass list         `|Y       |`List iclass history`
 |`hf iclass dump         `|N       |`Dump Picopass / iCLASS tag to file`
 |`hf iclass info         `|N       |`Tag information`
 |`hf iclass rdbl         `|N       |`Read Picopass / iCLASS block`
@@ -426,7 +426,7 @@ Check column "offline" for their availability.
 |`hf iclass eview        `|N       |`View emulator memory`
 |`hf iclass configcard   `|N       |`Reader configuration card`
 |`hf iclass calcnewkey   `|Y       |`Calc diversified keys (blocks 3 & 4) to write new keys`
-|`hf iclass encode       `|N       |`Encode binary wiegand to block 7`
+|`hf iclass encode       `|Y       |`Encode binary wiegand to block 7`
 |`hf iclass encrypt      `|Y       |`Encrypt given block data`
 |`hf iclass decrypt      `|Y       |`Decrypt given block data or tag dump file`
 |`hf iclass managekeys   `|Y       |`Manage keys to use with iclass commands`
