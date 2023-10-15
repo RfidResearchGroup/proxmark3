@@ -3120,7 +3120,7 @@
                 "hf iclass encode -w H10301 --fc 31 --cn 337 --ki 0 -> FC 31 CN 337 (H10301)",
                 "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite -> FC 31 CN 337 (H10301), writing w elite key"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help",
                 "--bin <bin> Binary string i.e 0001001001",
@@ -3206,7 +3206,7 @@
             "notes": [
                 "hf iclass info"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help",
                 "--shallow use shallow (ASK) reader modulation instead of OOK"
@@ -3220,7 +3220,7 @@
                 "hf iclass list --frame -> show frame delay times",
                 "hf iclass list -1 -> use trace buffer"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help",
                 "-1, --buffer use data from trace buffer",
