@@ -509,6 +509,10 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
                 res = read(spu->fd, transitBuf, RingBuf_getAvailableSize(spu->udpBuffer));
                 RingBuf_enqueueBatch(spu->udpBuffer, transitBuf, res);
             }
+            // Stop if the OS has some troubles reading the data
+            if (res < 0) {
+                return PM3_EIO;
+            }
             continue;
         }
 
