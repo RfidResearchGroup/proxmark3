@@ -242,7 +242,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
 
         sp->fd = sfd;
-        sp->udpBuffer = RingBuf_create(MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 20);
+        sp->udpBuffer = RingBuf_create(MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 30);
 
         return sp;
     }
@@ -497,9 +497,22 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
 
         // For UDP connection, put the incoming data into the buffer and handle them in the next round
         if (spu->udpBuffer != NULL) {
-            uint8_t recvBuf[MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 20];
-            res = read(spu->fd, recvBuf, RingBuf_getAvailableSize(spu->udpBuffer));
-            RingBuf_enqueueBatch(spu->udpBuffer, recvBuf, res);
+            if (RingBuf_getContinousAvailableSize(spu->udpBuffer) >= byteCount) {
+                // write to the buffer directly
+                res = read(spu->fd, RingBuf_getRearPtr(spu->udpBuffer), RingBuf_getAvailableSize(spu->udpBuffer));
+                if (res >= 0) {
+                    RingBuf_postEnqueueBatch(spu->udpBuffer, res);
+                }
+            } else {
+                // use transit buffer
+                uint8_t transitBuf[MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 30];
+                res = read(spu->fd, transitBuf, RingBuf_getAvailableSize(spu->udpBuffer));
+                RingBuf_enqueueBatch(spu->udpBuffer, transitBuf, res);
+            }
+            // Stop if the OS has some troubles reading the data
+            if (res < 0) {
+                return PM3_EIO;
+            }
             continue;
         }
 

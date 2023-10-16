@@ -23,4 +23,9 @@ int RingBuf_getUsedSize(RingBuffer* buffer);
 int RingBuf_getAvailableSize(RingBuffer* buffer);
 void RingBuf_destroy(RingBuffer* buffer);
 
+// for direct write
+int RingBuf_getContinousAvailableSize(RingBuffer* buffer);
+void RingBuf_postEnqueueBatch(RingBuffer* buffer, int count);
+uint8_t* RingBuf_getRearPtr(RingBuffer* buffer);
+
 #endif
