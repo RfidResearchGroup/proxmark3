@@ -33,11 +33,11 @@ Useful docs:
   * ["DESFire" APDU, 7b UID](#desfire-apdu-7b-uid)
   * ["DESFire" APDU, 4b UID](#desfire-apdu-4b-uid)
 - [ISO14443B](#iso14443b)
-  * [ISO14443B magic](#iso14443b-magic)
+  * [Tianaxin TCOS CPU card](#tianaxin-tcos-cpu-card)
 - [ISO15693](#iso15693)
   * [ISO15693 magic](#iso15693-magic)
 - [Multi](#multi)
-  * [Gen 4 GTU](#gen-4-gtu)
+  * [Gen 4 UMC](#gen-4-umc)
 
 
 # ISO14443A
@@ -719,8 +719,6 @@ See `--uid` and `--full`
 ## MIFARE Ultralight EV1 DirectWrite
 ^[Top](#top)
 
-aka UL2
-
 Similar to MFUL DirectWrite
 
 ### Identify
@@ -801,10 +799,6 @@ hf 14a info
 * BCC: computed
 * ATS: 0A78008102DBA0C119402AB5
 * Anticol shortcut (CL1/3000): fails
-
-**TODO**
-
-* UL-X, UL-Y, UL-Z, ULtra, UL-5 ?
 
 
 # NTAG
@@ -929,7 +923,7 @@ Android compatible
 ### Characteristics
 ^[Top](#top)
 
-* ATQA: 0008 ??? This is not DESFire, 0008/20 doesn't match anything
+* ATQA: 0008 - *This is not DESFire, 0008/20 is FM1208-9*
 * SAK: 20
 * ATS: 0675338102005110 or 06757781028002F0
 
@@ -974,12 +968,35 @@ hf 14a info
 # ISO14443B
 ^[Top](#top)
 
-## ISO14443B magic
+## Tianaxin TCOS CPU card
 ^[Top](#top)
 
-No such card is available.
+This is a card sold on Taobao for testing readers.
+ISO14443-4 compliant.
 
-Some vendor allow to specify an ID (PUPI) when ordering a card.
+### Identify
+
+```
+hf 14a apdu -s 90B2900000 // Get Card OS version
+>>> 90 B2 90 00 00
+<<< 54 43 4F 53 20 56 31 2E 34 2E 30 90 00 | TCOS V1.4.0..
+```
+
+### Magic commands
+
+All commands in APDU.
+
+```
+CL IN P1 P2 Lc Data
+90 F4 CC CC 01 [..1 ] // Change protocol used              (1: ISO14443 [AA - type A, BB - type B])
+90 F6 CC CC 01 [TA1 ] // Change TA1 value (transfer speed)
+90 F8 CC CC 01 [..1 ] // Use random UID/PUPI value         (1: FF: static, AB: random)
+90 F8 DD DD 01 [..1 ] // Set UID/PUPI length               (1: bytes in UID (04, 07, 0A for 4, 7, 10 bytes accordingly))
+90 F8 EE EE 0B [... ] // Set UID/PUPI value                (enter value here). To clear, use Lc=01; data=00.
+90 FA CC CC 01 [FSCI] // Set FSCI                          (1: value 0-8)
+90 FC CC CC 01 [SFGI] // Set SFGI (DO NOT SET TOO HIGH!)   (1: value 0-E)
+90 FE CC CC 01 [FWI ] // Set FWI (DO NOT SET BELOW 4!!!)   (value 0-E)
+```
 
 # ISO15693
 ^[Top](#top)
@@ -1009,10 +1026,10 @@ script run hf_15_magic -u E004013344556677
 # Multi
 ^[Top](#top)
 
-## Gen 4 GTU
+## Gen 4 UMC
 ^[Top](#top)
 
-A.k.a ultimate magic card,  most promenent feature is shadow mode (GTU) and optional password protected backdoor commands.
+A.k.a ultimate magic card, most prominent feature is shadow mode (GTU) and optional password protected backdoor commands.
 
 Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 
@@ -1140,7 +1157,7 @@ CF <passwd> CE <1b block number>                 // Backdoor read 16b block
 CF <passwd> CF <1b param>                        // (De)Activate direct write to block 0
 CF <passwd> F0 <30b configuration data>          // Configure all params in one cmd
 CF <passwd> F1 <30b configuration data>          // Configure all params in one cmd and fuse the configuration permanently
-CF <passwd> FE <4b new_password>                 // change password
+CF <passwd> FE <4b new_password>                 // change password (does not work on new)
 ```
 Default `<passwd>`: `00000000`
 
@@ -1291,8 +1308,8 @@ Ultralight mode, 10b UID
 ### Set 14443B UID and ATQB
 ^[Top](#top) ^^[Gen4](#g4top)
 
-*This command is not available for old gen4 tags. It will return `9000`, but no changes will take place.*
-UID and ATQB are configured according to block0 with a (14a) backdoor write.
+*This command is not available for old gen4 tags. It will return `9000`, but this tag cannot reply to REQB.*
+UID and ATQB are configured according to block0 with a (14a) backdoor write to block 0.
 
 UID size is always 4 bytes.
 
@@ -1402,9 +1419,11 @@ hf 14a raw -s -c -t 1000 CF<passwd>32<1b param>
 ```
  * `<param>`
    * `00`: pre-write, shadow data can be written
-   * `01`: restore mode
+   * `01`: shadow mode
+     - WARNING: on new chips, this value is `04`.
    * `02`: disabled
    * `03`: disabled, high speed R/W mode for Ultralight?
+
 
 ### Direct block read and write
 ^[Top](#top) ^^[Gen4](#g4top)
@@ -1472,6 +1491,8 @@ Example: change password from AABBCCDD back to 00000000
 ```
 hf 14a raw -s -c -t 1000 CFAABBCCDDFE00000000
 ```
+
+WARNING: On new chips, issuing this command returns APDU error `6300`. Please write full config with F0 command instead.
 
 ### Dump configuration
 ^[Top](#top) ^^[Gen4](#g4top)
