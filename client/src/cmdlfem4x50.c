@@ -354,11 +354,12 @@ int CmdEM4x50Brute(const char *Cmd) {
 
                   "lf em 4x50 brute --mode range --begin 12330000 --end 12340000 -> tries pwds from 0x12330000 to 0x12340000\n"
                   "lf em 4x50 brute --mode charset --digits --uppercase -> tries all combinations of ASCII codes for digits and uppercase letters\n"
+                  "lf em 4x50 brute --mode smart -> enable 'smart' pattern key cracking\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL, "mode", "<str>", "Bruteforce mode (range|charset)"),
+        arg_str1(NULL, "mode", "<str>", "Bruteforce mode (range|charset|smart)"),
         arg_str0(NULL, "begin", "<hex>",   "Range mode - start of the key range"),
         arg_str0(NULL, "end", "<hex>",   "Range mode - end of the key range"),
         arg_lit0(NULL, "digits",  "Charset mode - include ASCII codes for digits"),
@@ -380,7 +381,10 @@ int CmdEM4x50Brute(const char *Cmd) {
         etd.bruteforce_mode = BF_MODE_RANGE;
     } else if (strcmp(mode, "charset") == 0) {
         etd.bruteforce_mode = BF_MODE_CHARSET;
-    } else {
+    } else if (strcmp(mode, "smart") == 0){
+        etd.bruteforce_mode = BF_MODE_SMART;
+    } else
+    {
         PrintAndLogEx(FAILED, "Unknown bruteforce mode: %s", mode);
         return PM3_EINVARG;
     }
@@ -458,7 +462,10 @@ int CmdEM4x50Brute(const char *Cmd) {
 
     dur_s -= dur_h * 3600 + dur_m * 60;
 
-    PrintAndLogEx(INFO, "Estimated duration: %ih %im %is", dur_h, dur_m, dur_s);
+    if ( no_iter > 0 )
+        PrintAndLogEx(INFO, "Estimated duration: %ih %im %is", dur_h, dur_m, dur_s);
+    else
+        PrintAndLogEx(INFO, "Estimated duration: unknown");
 
     // start
     clearCommandBuffer();

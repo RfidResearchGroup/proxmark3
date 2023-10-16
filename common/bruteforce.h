@@ -95,7 +95,7 @@ typedef int (smart_generator_t)(generator_context_t *ctx);
 
 int bf_generate_mode_smart(generator_context_t *ctx);
 
-int smart_generator_test1(generator_context_t *ctx);
+int smart_generator_byte_repeat(generator_context_t *ctx);
 int smart_generator_test2(generator_context_t *ctx);
 
 extern smart_generator_t *smart_generators[]; // array of smart cracking functions

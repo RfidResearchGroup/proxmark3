@@ -29,15 +29,15 @@ uint8_t charset_uppercase[] = {
 };
 
 smart_generator_t *smart_generators[] = {
-    smart_generator_test1, 
-    smart_generator_test2,
+    smart_generator_byte_repeat,
     NULL
 };
 
 
-void bf_generator_init(generator_context_t *ctx, uint8_t mode, uint8_t key_size) {
+void bf_generator_init(generator_context_t *ctx, uint8_t mode, uint8_t key_length) {
     memset(ctx, 0, sizeof(generator_context_t));
     ctx->mode = mode;
+    ctx->key_length = key_length;
 }
 
 int bf_generator_set_charset(generator_context_t *ctx, uint8_t charsets) {
@@ -65,7 +65,10 @@ int bf_generate(generator_context_t *ctx) {
             return _bf_generate_mode_range(ctx);
         case BF_MODE_CHARSET:
             return _bf_generate_mode_charset(ctx);
-    }
+
+        case BF_MODE_SMART:
+            return _bf_generate_mode_smart(ctx);
+        }
 
     return BF_GENERATOR_ERROR;
 }
@@ -112,6 +115,14 @@ uint64_t bf_get_key48(generator_context_t *ctx){
     return ctx->current_key & 0xFFFFFFFFFFFF;
 }
 
+void bf_generator_clear(generator_context_t *ctx){
+    ctx->flag1 = 0;
+    ctx->flag2 = 0;
+    ctx->flag3 = 0;
+    ctx->counter1 = 0;
+    ctx->counter2 = 0;
+}
+
 int _bf_generate_mode_range(generator_context_t *ctx) {
 
     if (ctx->key_length != BF_KEY_SIZE_32 && ctx->key_length != BF_KEY_SIZE_48)
@@ -135,35 +146,35 @@ int _bf_generate_mode_range(generator_context_t *ctx) {
 
 int _bf_generate_mode_charset(generator_context_t *ctx) {
 
-    if (ctx->key_length != BF_KEY_SIZE_32 && ctx->key_length != BF_KEY_SIZE_48)
+    if (ctx->key_length != BF_KEY_SIZE_32 && ctx->key_length != BF_KEY_SIZE_48){
         return BF_GENERATOR_ERROR;
+    }
 
     if (ctx->flag1)
         return BF_GENERATOR_END;
 
     uint8_t key_byte = 0;
+    ctx->current_key = 0;
 
-    for (key_byte = 0; key_byte < ctx->key_length;key_byte++){
-        ctx->current_key |= ctx->charset[ctx->pos[key_byte]] << ((ctx->key_length - key_byte) - 1 * 8);
+    for (key_byte = 0; key_byte < ctx->key_length; key_byte++)
+    {
+        ctx->current_key |=  (uint64_t) ctx->charset[ctx->pos[key_byte]] << ((ctx->key_length - key_byte - 1) * 8);
     }
 
-
-
     if (bf_array_increment(ctx->pos, ctx->key_length, ctx->charset_length) == -1)
-        // set flag1 to emit value last time and end generation
+        // set flag1 to emit value last time and end generation on next call
         ctx->flag1 = true;
 
     return BF_GENERATOR_NEXT;
 }
 
-int bf_generate_mode_smart(generator_context_t *ctx){
+int _bf_generate_mode_smart(generator_context_t *ctx){
 
     int ret;
 
     while(1){
-
         if (smart_generators[ctx->smart_mode_stage] == NULL)
-            return BF_GENERATOR_END;
+        return BF_GENERATOR_END;
 
         ret = smart_generators[ctx->smart_mode_stage](ctx);
 
@@ -174,14 +185,28 @@ int bf_generate_mode_smart(generator_context_t *ctx){
                 return ret;
             case BF_GENERATOR_END:
                 ctx->smart_mode_stage++;
+                bf_generator_clear(ctx);
                 continue;
         }
     }
 }
 
 
-int smart_generator_test1(generator_context_t *ctx){
-    return 0;
+int smart_generator_byte_repeat(generator_context_t *ctx){
+    // key consists of repeated single byte
+    uint32_t current_byte = ctx->counter1;
+
+    if (current_byte > 0xFF)
+        return BF_GENERATOR_END;
+
+    ctx->current_key = 0;
+
+    for (uint8_t key_byte = 0; key_byte < ctx->key_length;key_byte++){
+        ctx->current_key |=  (uint64_t)current_byte << ((ctx->key_length - key_byte - 1) * 8);
+    }
+
+    ctx->counter1++;
+    return BF_GENERATOR_NEXT;
 }
 int smart_generator_test2(generator_context_t *ctx){
     return 0;
