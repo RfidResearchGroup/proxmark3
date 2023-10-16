@@ -403,15 +403,16 @@ hf mf gdmsetcfg
 ^[Top](#top)
 
 Sold for "QinLin Neighbor Technology" access control system.
-The differences are presence of sector 17 and having SAK 88.
+The differences are presence of sector 16, 17 and having SAK 88.
 
 #### Characteristics
 ^[Top](#top)
 
-* SAK/ATQA: unknown
-* BCC: unknown
-* OTP/FUID chip
+* UID/BCC/SAK/ATQA: not changable
+* OTP/FUID chip (?)
 * PRNG: hard
+
+* This is potentially a non-magic chip.
 
 #### Identify
 ^[Top](#top)
@@ -422,16 +423,14 @@ The differences are presence of sector 17 and having SAK 88.
 [+] Magic capabilities: QL88
 ```
 
-Oops, the above is flawed. Some other "SAK88-IC" tags get detected as QL88.
-
-Sector 17 can be accessed using Key B: `707B11FC1481`. ~~Using it, other keys can be recovered.~~ Do not recover keys using this or run `hf 14a info` at all! 
-
-For an unknown reason if you try to get any read access block 0 write protects itself. Without methods of recovery. *To be confirmed*
+* Oops, the above is flawed. Some other "SAK88-IC" tags get detected as QL88.
+* Sector 17 can be accessed using Key B: `707B11FC1481`. Using it, other keys can be recovered.
 
 #### Magic commands
 
-- Block 0 can be written using direct write
+- Block 0 cannot be written using direct write
 - No signature sector backdoor
+- Sector 16 (`10`) present
 
 ### MIFARE Classic, FURUi detection (super) card
 ^[Top](#top)
