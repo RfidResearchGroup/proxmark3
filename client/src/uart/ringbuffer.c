@@ -100,3 +100,19 @@ void RingBuf_destroy(RingBuffer* buffer) {
         free(buffer->data);
     free(buffer);
 }
+
+inline int RingBuf_getContinousAvailableSize(RingBuffer* buffer) {
+    const int availableSize = RingBuf_getAvailableSize(buffer);
+    const int continousSize = (buffer->capacity) - (buffer->rear);
+    return (availableSize < continousSize) ? availableSize : continousSize;
+}
+
+inline void RingBuf_postEnqueueBatch(RingBuffer* buffer, int count) {
+    // no check there
+    buffer->rear = (buffer->rear + count) % buffer->capacity;
+    buffer->size += count;
+}
+
+inline uint8_t* RingBuf_getRearPtr(RingBuffer* buffer) {
+    return buffer->data + buffer->rear;
+}
