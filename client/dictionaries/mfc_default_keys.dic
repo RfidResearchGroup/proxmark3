@@ -1837,11 +1837,17 @@ E19504C39461
 FA1FBB3F0F1F
 FF16014FEFC7
 #
-#
 # Food GEM
 6686FADE5566
 #
+# Samsung Data Systems (SDS) — Electronic Locks
+# Gen 1 S10 KA/KB is FFFFFFFFFFFF, incompatible with Gen 2 locks
+#
+# SDS Gen 2 S10 KB
+C22E04247D9A
+#
 # Data from Discord, French pool
+# SDS Gen 2 S10 KA
 9B7C25052FC3
 494446555455
 #
