@@ -70,7 +70,7 @@ jobs:
       env:
         V: 1
         PLATFORM_EXTRAS: BTADDON
-      run: make
+      run: make -j$((`nproc` + 1))
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
