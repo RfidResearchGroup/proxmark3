@@ -116,10 +116,6 @@ static bool have_aa2(void) {
     return memcmp(aa2_key, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
 }
 
-static uint8_t get_pagemap(const picopass_hdr_t *hdr) {
-    return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
-}
-
 static uint8_t csns[8 * NUM_CSNS] = {
     0x01, 0x0A, 0x0F, 0xFF, 0xF7, 0xFF, 0x12, 0xE0,
     0x0C, 0x06, 0x0C, 0xFE, 0xF7, 0xFF, 0x12, 0xE0,
