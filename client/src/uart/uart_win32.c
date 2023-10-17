@@ -109,8 +109,10 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         struct addrinfo *addr = NULL, *rp;
 
-        char *addrstr = strdup(pcPortName + 4);
-        if (addrstr == NULL) {
+        char *addrPortStr = strdup(pcPortName + 4);
+        char *addrstr = addrPortStr;
+        const char *portstr;
+        if (addrPortStr == NULL) {
             PrintAndLogEx(ERR, "error: string duplication");
             free(sp);
             return INVALID_SERIAL_PORT;
@@ -118,13 +120,45 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         timeout.tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_MS * 1000;
 
-        char *colon = strrchr(addrstr, ':');
-        const char *portstr;
-        if (colon) {
-            portstr = colon + 1;
-            *colon = '\0';
-        } else {
+        // find the start of the address
+        char *endBracket = strrchr(addrPortStr, ']');
+        if (addrPortStr[0] == '[') {
+            addrstr += 1;
+            if (endBracket == NULL) {
+                PrintAndLogEx(ERR, "error: wrong address: [] unmatched");
+                free(addrPortStr);
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+        }
+
+        // find the port
+        char *lColon = strchr(addrPortStr, ':');
+        char *rColon = strrchr(addrPortStr, ':');
+        if (rColon == NULL) {
+            // no colon
+            // "tcp:<ipv4 address>", "tcp:[<ipv4 address>]"
             portstr = "18888";
+        } else if (lColon == rColon) {
+            // only one colon
+            // "tcp:<ipv4 address>:<port>", "tcp:[<ipv4 address>]:<port>"
+            portstr = rColon + 1;
+        } else {
+            // two or more colon, IPv6 address
+            // tcp:[<ipv6 address>]:<port>
+            // "tcp:<ipv6 address>", "tcp:[<ipv6 address>]"
+            if (endBracket != NULL && rColon == endBracket + 1) {
+                portstr = rColon + 1;
+            } else {
+                portstr = "18888";
+            }
+        }
+
+        // handle the end of the address
+        if (endBracket != NULL) {
+            *endBracket = '\0';
+        } else if (rColon != NULL && lColon == rColon) {
+            *rColon = '\0';
         }
 
         WSADATA wsaData;
@@ -134,19 +168,21 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
         if (iResult != 0) {
             PrintAndLogEx(ERR, "error: WSAStartup failed with error: %d", iResult);
+            free(addrPortStr);
             free(sp);
             return INVALID_SERIAL_PORT;
         }
 
         memset(&info, 0, sizeof(info));
+        info.ai_family = AF_UNSPEC;
         info.ai_socktype = SOCK_STREAM;
         info.ai_protocol = IPPROTO_TCP;
 
         int s = getaddrinfo(addrstr, portstr, &info, &addr);
         if (s != 0) {
-            PrintAndLogEx(ERR, "error: getaddrinfo: %s", gai_strerror(s));
+            PrintAndLogEx(ERR, "error: getaddrinfo: %d: %s", s, gai_strerror(s));
             freeaddrinfo(addr);
-            free(addrstr);
+            free(addrPortStr);
             free(sp);
             WSACleanup();
             return INVALID_SERIAL_PORT;
@@ -167,7 +203,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
 
         freeaddrinfo(addr);
-        free(addrstr);
+        free(addrPortStr);
 
         if (rp == NULL) {               /* No address succeeded */
             PrintAndLogEx(ERR, "error: Could not connect");
