@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added client communication timeout to preferences (@iceman1001)
  - Added IPv6 support (@wh201906)
  - Fixed `lf hid clone --bin` - now correctly handles sentinel bits (@iceman1001)
  - Experimental UDP support in linux (@iceman1001, @wh201906)

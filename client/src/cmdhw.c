@@ -932,13 +932,12 @@ static int CmdTimeout(const char *Cmd) {
     CLIParserInit(&ctx, "hw timeout",
                   "Set the communication timeout on the client side",
                   "hw timeout --> Show current timeout\n"
-                  "hw timeout -t 20 --> Set the timeout to 20ms\n"
-                  "hw timeout -t 500 --> Set the timeout to 500ms\n"
+                  "hw timeout --ms 500\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("t", "timeout", "<dec>", "timeout in ms"),
+        arg_int0(NULL, "ms", "<ms>", "timeout in micro seconds"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -949,20 +948,20 @@ static int CmdTimeout(const char *Cmd) {
 
     // timeout is not given/invalid, just show the current timeout then return
     if (arg < 0) {
-        PrintAndLogEx(INFO, "Current communication timeout: %ums", oldTimeout);
+        PrintAndLogEx(INFO, "Current communication timeout... " _GREEN_("%u") " ms", oldTimeout);
         return PM3_SUCCESS;
     }
 
     uint32_t newTimeout = arg;
     // UART_USB_CLIENT_RX_TIMEOUT_MS is considered as the minimum required timeout.
     if (newTimeout < UART_USB_CLIENT_RX_TIMEOUT_MS) {
-        PrintAndLogEx(WARNING, "Timeout less than %ums might cause errors.", UART_USB_CLIENT_RX_TIMEOUT_MS);
+        PrintAndLogEx(WARNING, "Timeout less than %u ms might cause errors.", UART_USB_CLIENT_RX_TIMEOUT_MS);
     } else if (newTimeout > 5000) {
-        PrintAndLogEx(WARNING, "Timeout greater than 5000ms makes the client unresponsive.");
+        PrintAndLogEx(WARNING, "Timeout greater than 5000 ms makes the client unresponsive.");
     }
     uart_reconfigure_timeouts(newTimeout);
-    PrintAndLogEx(INFO, "Old communication timeout: %ums", oldTimeout);
-    PrintAndLogEx(INFO, "New communication timeout: %ums", newTimeout);
+    PrintAndLogEx(INFO, "Old communication timeout... %u ms", oldTimeout);
+    PrintAndLogEx(INFO, "New communication timeout... " _GREEN_("%u") " ms", newTimeout);
     return PM3_SUCCESS;
 }
 
