@@ -931,13 +931,14 @@ static int CmdTimeout(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw timeout",
                   "Set the communication timeout on the client side",
-                  "hw timeout --> Show current timeout\n"
-                  "hw timeout --ms 500\n"
+                  "hw timeout            --> Show current timeout\n"
+                  "hw timeout -m 20      --> Set the timeout to 20ms\n"
+                  "hw timeout --ms 500   --> Set the timeout to 500ms\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "ms", "<ms>", "timeout in micro seconds"),
+        arg_int0("m", "ms", "<ms>", "timeout in micro seconds"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
