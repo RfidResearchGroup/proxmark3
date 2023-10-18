@@ -2020,7 +2020,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "-------+-------------+----------+-----+------------------------------------------------------------");
 
     smartbuf bits = { 0 };
-    bits.ptr = malloc(EM4X05_BITS_BUFSIZE);
+    bits.ptr = calloc(EM4X05_BITS_BUFSIZE, sizeof(uint8_t));
     bits.size = EM4X05_BITS_BUFSIZE;
     bits.idx = 0;
     size_t idx = 0;
