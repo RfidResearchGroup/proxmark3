@@ -4446,24 +4446,100 @@ static int CmdHFiClassSAM(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
-    Iso7816CommandChannel channel = CC_CONTACT;
-    if (IfPm3Smartcard() == false) {
-        if (channel == CC_CONTACT) {
-            PrintAndLogEx(WARNING, "PM3 does not have SMARTCARD support, exiting");
-            return PM3_EDEVNOTSUPP;
-        }
+    if (IsHIDSamPresent(verbose) == false) {
+        return PM3_ESOFT;
     }
 
-    int res = IsHIDSamPresent(verbose);
-    if (res != PM3_SUCCESS) {
-        return res;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_SAM_PICOPASS, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_SAM_PICOPASS, &resp, 4000) == false) {
+        PrintAndLogEx(WARNING, "SAM timeout");
+        return PM3_ETIMEOUT;
     }
 
-    SetAPDULogging(verbose);
+    switch (resp.status) {
+        case PM3_SUCCESS:
+            break;
+        case PM3_ENOPACS:
+            PrintAndLogEx(SUCCESS, "No PACS data found. Card empty?");
+            return resp.status;
+        default:
+            PrintAndLogEx(WARNING, "SAM select failed");
+            return resp.status;
+    }
 
-// do things with sending apdus..
+    // CSN, config, epurse, NR/MAC, AIA
+    // PACS
+    // first byte skip
+    // second byte length 
+    // third padded 
+    // fourth ..
+    uint8_t *d = resp.data.asBytes;
+    uint8_t n = d[1] - 1;  // skip length byte
+    uint8_t pad = d[2];
+    char *binstr = (char*)calloc((n * 8) + 1 , sizeof(uint8_t));
+    if (binstr == NULL) {
+        return PM3_EMALLOC;
+    }
+    
+    byte_2_binstr(binstr, d + 3, n);
 
-    SetAPDULogging(false);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(d + 2, resp.length - 2));
+    PrintAndLogEx(SUCCESS, "padded bin... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
+
+    binstr[strlen(binstr) - pad] = '\0';
+    PrintAndLogEx(SUCCESS, "bin.......... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
+
+    size_t hexlen = 0;
+    uint8_t hex[16] = {0};
+    binstr_2_bytes(hex, &hexlen,binstr);
+    PrintAndLogEx(SUCCESS, "hex.......... " _GREEN_("%s"), sprint_hex_inrow(hex, hexlen));
+
+    uint32_t top = 0, mid = 0, bot = 0;
+    if (binstring_to_u96(&top, &mid, &bot, binstr) != strlen(binstr)) {
+        PrintAndLogEx(ERR, "Binary string contains none <0|1> chars");
+        free(binstr);
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Wiegand decode");
+    wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
+    HIDTryUnpack(&packed);
+
+    PrintAndLogEx(NORMAL, "");
+
+    if (strlen(binstr) >= 26 && verbose) {
+
+        // HID Prox II
+        PrintAndLogEx(INFO, "Downgrade to " _YELLOW_("HID Prox II"));
+        PrintAndLogEx(SUCCESS, "    lf hid clone -w H10301 --bin %s", binstr);
+        PrintAndLogEx(NORMAL, "");
+        // MIFARE Classic
+        char mfcbin[28] = {0};
+        mfcbin[0] = '1';
+        memcpy(mfcbin + 1, binstr, strlen(binstr));
+        binstr_2_bytes(hex, &hexlen, mfcbin);
+
+        PrintAndLogEx(INFO, "Downgrade to " _YELLOW_("MIFARE Classic") " (Pm3 simulation)");
+        PrintAndLogEx(SUCCESS, "    hf mf eclr;");
+        PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 0 -d 049DBA42A23E80884400C82000000000;");
+        PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 1 -d 1B014D48000000000000000000000000;");
+        PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 3 -d A0A1A2A3A4A5787788C189ECA97F8C2A;");
+        PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 5 -d 020000000000000000000000%s;", sprint_hex_inrow(hex, hexlen));
+        PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 7 -d 484944204953787788AA204752454154;");
+        PrintAndLogEx(SUCCESS, "    hf mf sim --1k -i;");
+        PrintAndLogEx(NORMAL, "");
+
+        // iCLASS Legacy
+        PrintAndLogEx(INFO, "Clone to " _YELLOW_("iCLASS Legacy"));
+        PrintAndLogEx(SUCCESS, "    hf iclass encode --ki 0 --bin %s", binstr);
+        PrintAndLogEx(NORMAL, "");
+    }
+    free(binstr);
+
     return PM3_SUCCESS;
 }
 
@@ -4516,7 +4592,7 @@ int CmdHFiClass(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-//static void test_credential_type(void) {
+// static void test_credential_type(void) {
 // need AA1 key
 // Block 5 -> tells if its a legacy or SIO,  also tells which key to use.
 

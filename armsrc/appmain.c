@@ -62,7 +62,9 @@
 #include "crc16.h"
 #include "protocols.h"
 #include "mifareutil.h"
-
+#include "sam_picopass.h"
+#include "sam_seos.h"
+#include "sam_mfc.h"
 
 #ifdef WITH_LCD
 #include "LCD_disabled.h"
@@ -2038,6 +2040,21 @@ static void PacketReceived(PacketCommandNG *packet) {
             fwdata = NULL;
             break;
         }
+
+        case CMD_HF_SAM_PICOPASS: {
+            sam_picopass_get_pacs();
+            break;
+        }
+        case CMD_HF_SAM_SEOS: {
+//            sam_seos_get_pacs();
+            break;
+        }
+
+        case CMD_HF_SAM_MFC: {
+//            sam_mfc_get_pacs();
+            break;
+        }
+
 #endif
 
 #ifdef WITH_FPC_USART
