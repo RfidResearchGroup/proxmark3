@@ -1686,6 +1686,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_MIFARE_EML_MEMCLR: {
             MifareEMemClr();
             reply_ng(CMD_HF_MIFARE_EML_MEMCLR, PM3_SUCCESS, NULL, 0);
+            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMSET: {
