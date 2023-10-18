@@ -1,13 +1,13 @@
 #include "ringbuffer.h"
 #include <stdlib.h>
 
-RingBuffer* RingBuf_create(int capacity) {
-    RingBuffer* buffer = (RingBuffer*)malloc(sizeof(RingBuffer));
+RingBuffer *RingBuf_create(int capacity) {
+    RingBuffer *buffer = (RingBuffer *)malloc(sizeof(RingBuffer));
     if (!buffer) {
         return NULL;
     }
 
-    buffer->data = (uint8_t*)calloc(capacity, sizeof(uint8_t));
+    buffer->data = (uint8_t *)calloc(capacity, sizeof(uint8_t));
     if (!buffer->data) {
         free(buffer);
         return NULL;
@@ -21,15 +21,15 @@ RingBuffer* RingBuf_create(int capacity) {
     return buffer;
 }
 
-inline bool RingBuf_isFull(RingBuffer* buffer) {
+inline bool RingBuf_isFull(RingBuffer *buffer) {
     return buffer->size == buffer->capacity;
 }
 
-inline bool RingBuf_isEmpty(RingBuffer* buffer) {
+inline bool RingBuf_isEmpty(RingBuffer *buffer) {
     return buffer->size == 0;
 }
 
-bool RingBuf_enqueue(RingBuffer* buffer, uint8_t value) {
+bool RingBuf_enqueue(RingBuffer *buffer, uint8_t value) {
     if (RingBuf_isFull(buffer)) {
         return false;
     }
@@ -40,7 +40,7 @@ bool RingBuf_enqueue(RingBuffer* buffer, uint8_t value) {
     return true;
 }
 
-bool RingBuf_dequeue(RingBuffer* buffer, uint8_t* value) {
+bool RingBuf_dequeue(RingBuffer *buffer, uint8_t *value) {
     if (RingBuf_isEmpty(buffer)) {
         return false;
     }
@@ -51,7 +51,7 @@ bool RingBuf_dequeue(RingBuffer* buffer, uint8_t* value) {
     return true;
 }
 
-int RingBuf_enqueueBatch(RingBuffer* buffer, const uint8_t* values, int count) {
+int RingBuf_enqueueBatch(RingBuffer *buffer, const uint8_t *values, int count) {
     int processed = 0;
 
     if (RingBuf_getAvailableSize(buffer) < count) {
@@ -69,7 +69,7 @@ int RingBuf_enqueueBatch(RingBuffer* buffer, const uint8_t* values, int count) {
     return processed;
 }
 
-int RingBuf_dequeueBatch(RingBuffer* buffer, uint8_t* values, int count) {
+int RingBuf_dequeueBatch(RingBuffer *buffer, uint8_t *values, int count) {
     int processed = 0;
 
     if (buffer->size < count) {
@@ -87,32 +87,32 @@ int RingBuf_dequeueBatch(RingBuffer* buffer, uint8_t* values, int count) {
     return processed;
 }
 
-inline int RingBuf_getUsedSize(RingBuffer* buffer) {
+inline int RingBuf_getUsedSize(RingBuffer *buffer) {
     return buffer->size;
 }
 
-inline int RingBuf_getAvailableSize(RingBuffer* buffer) {
+inline int RingBuf_getAvailableSize(RingBuffer *buffer) {
     return (buffer->capacity) - (buffer->size);
 }
 
-void RingBuf_destroy(RingBuffer* buffer) {
+void RingBuf_destroy(RingBuffer *buffer) {
     if (buffer != NULL)
         free(buffer->data);
     free(buffer);
 }
 
-inline int RingBuf_getContinousAvailableSize(RingBuffer* buffer) {
+inline int RingBuf_getContinousAvailableSize(RingBuffer *buffer) {
     const int availableSize = RingBuf_getAvailableSize(buffer);
     const int continousSize = (buffer->capacity) - (buffer->rear);
     return (availableSize < continousSize) ? availableSize : continousSize;
 }
 
-inline void RingBuf_postEnqueueBatch(RingBuffer* buffer, int count) {
+inline void RingBuf_postEnqueueBatch(RingBuffer *buffer, int count) {
     // no check there
     buffer->rear = (buffer->rear + count) % buffer->capacity;
     buffer->size += count;
 }
 
-inline uint8_t* RingBuf_getRearPtr(RingBuffer* buffer) {
+inline uint8_t *RingBuf_getRearPtr(RingBuffer *buffer) {
     return buffer->data + buffer->rear;
 }

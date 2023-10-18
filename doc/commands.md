@@ -37,8 +37,9 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`prefs get barmode      `|Y       |`Get bar mode preference`
-|`prefs get clientdebug  `|Y       |`Get client debug level preference`
-|`prefs get clientdelay  `|Y       |`Get client execution delay preference`
+|`prefs get client.debug `|Y       |`Get client debug level preference`
+|`prefs get client.delay `|Y       |`Get client execution delay preference`
+|`prefs get client.timeout`|Y       |`Get client execution delay preference`
 |`prefs get color        `|Y       |`Get color support preference`
 |`prefs get savepaths    `|Y       |`Get file folder  `
 |`prefs get emoji        `|Y       |`Get emoji display preference`
@@ -55,8 +56,9 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`prefs set help         `|Y       |`This help`
 |`prefs set barmode      `|Y       |`Set bar mode`
-|`prefs set clientdebug  `|Y       |`Set client debug level`
-|`prefs set clientdelay  `|Y       |`Set client execution delay`
+|`prefs set client.debug `|Y       |`Set client debug level`
+|`prefs set client.delay `|Y       |`Set client execution delay`
+|`prefs set client.timeout`|Y       |`Set client communication timeout`
 |`prefs set color        `|Y       |`Set color support`
 |`prefs set emoji        `|Y       |`Set emoji display`
 |`prefs set hints        `|Y       |`Set hint display`

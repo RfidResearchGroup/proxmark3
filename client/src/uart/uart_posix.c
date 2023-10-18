@@ -56,7 +56,7 @@ typedef struct {
     int fd;           // Serial port file descriptor
     term_info tiOld;  // Terminal info before using the port
     term_info tiNew;  // Terminal info during the transaction
-    RingBuffer* udpBuffer;
+    RingBuffer *udpBuffer;
 } serial_port_unix_t_t;
 
 // see pm3_cmd.h
@@ -150,7 +150,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
                 portstr = rColon + 1;
             } else {
                 portstr = "18888";
-            } 
+            }
         }
 
         // handle the end of the address
@@ -261,7 +261,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
                 portstr = rColon + 1;
             } else {
                 portstr = "18888";
-            } 
+            }
         }
 
         // handle the end of the address
@@ -519,9 +519,9 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
     *pszRxLen = 0;
     do {
         int res;
-        if(spu->udpBuffer != NULL) {
+        if (spu->udpBuffer != NULL) {
             // for UDP connection, try to use the data from the buffer
-            
+
             byteCount = RingBuf_getAvailableSize(spu->udpBuffer);
             // Cap the number of bytes, so we don't overrun the buffer
             if (pszMaxRxLen - (*pszRxLen) < byteCount) {
@@ -536,7 +536,7 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
                 return PM3_SUCCESS;
             }
         }
-        
+
         // Reset file descriptor
         FD_ZERO(&rfds);
         FD_SET(spu->fd, &rfds);

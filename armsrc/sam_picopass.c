@@ -57,9 +57,9 @@ static int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *re
     uint16_t more_len = 0;
 
     if (resp[*resplen - 2] == 0x61 || resp[*resplen - 2] == 0x9F) {
-         more_len = resp[*resplen - 1];
+        more_len = resp[*resplen - 1];
     } else {
-        // we done, return 
+        // we done, return
         goto out;
     }
 
@@ -113,7 +113,8 @@ int sam_picopass_get_pacs(void) {
 
     clear_trace();
 
-    I2C_Reset_EnterMainProgram(); StopTicks();
+    I2C_Reset_EnterMainProgram();
+    StopTicks();
 
     uint8_t *resp = BigBuf_calloc(ISO7816_MAX_FRAME);
 
@@ -212,7 +213,7 @@ int sam_picopass_get_pacs(void) {
 
     // -----------------------------------------------------------------------------
     // SAM comms
-    // -----------------------------------------------------------------------------    
+    // -----------------------------------------------------------------------------
     size_t sam_len = 0;
     uint8_t *sam_apdu = BigBuf_calloc(ISO7816_MAX_FRAME);
 
@@ -227,7 +228,7 @@ int sam_picopass_get_pacs(void) {
         res = PM3_ECARDEXCHANGE;
         goto out;
     }
-    print_dbg("-- 1",resp, resp_len);
+    print_dbg("-- 1", resp, resp_len);
 
     // -----------------------------------------------------------------------------
     // second
@@ -237,9 +238,9 @@ int sam_picopass_get_pacs(void) {
         res = PM3_ECARDEXCHANGE;
         goto out;
     }
-    print_dbg("-- 2",resp, resp_len);
+    print_dbg("-- 2", resp, resp_len);
 
-    // TAG response 
+    // TAG response
     // --  0c 05 de64 // read block 5
     // Tag|c00a140a000000a110a10e8004 0c05de64 8102 0004 820201f4
 
@@ -256,7 +257,7 @@ int sam_picopass_get_pacs(void) {
         res = PM3_ECARDEXCHANGE;
         goto out;
     }
-    print_dbg("-- 3",resp, resp_len);
+    print_dbg("-- 3", resp, resp_len);
 
     // 88 02 --  readcheck  (block2 epurse, start of auth)
     // Tag|c00a140a000000a10ea10c8002 8802 8102 0004 820201f4 9000
@@ -272,29 +273,29 @@ int sam_picopass_get_pacs(void) {
         res = PM3_ECARDEXCHANGE;
         goto out;
     }
-    print_dbg("-- 4",resp, resp_len);
+    print_dbg("-- 4", resp, resp_len);
 
     uint8_t nr_mac[9] = {0};
     memcpy(nr_mac, resp + 11, sizeof(nr_mac));
     // resp here hold the whole   NR/MAC
     // 05 9bcd475e965ee20e // CHECK (w key)
-    print_dbg("NR/MAC",nr_mac, sizeof(nr_mac));
+    print_dbg("NR/MAC", nr_mac, sizeof(nr_mac));
 
     // c00a140a000000a115a1138009 059bcd475e965ee20e 8102 0004 820201f4 9000
 
     // pre calc ourself?
     // uint8_t cc_nr[] = {0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0};
     uint8_t div_key[8] = {0};
-    static uint8_t legacy_aa1_key[] = {0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78};    
+    static uint8_t legacy_aa1_key[] = {0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78};
     iclass_calc_div_key(hdr.csn, legacy_aa1_key, div_key, false);
 
     uint8_t mac[4] = {0};
-    if (g_dbglevel == DBG_DEBUG) {    
+    if (g_dbglevel == DBG_DEBUG) {
         uint8_t wb[16] = {0};
         memcpy(wb, hdr.epurse, sizeof(hdr.epurse));
-        memcpy(wb + sizeof(hdr.epurse), nr_mac+1, 4);
+        memcpy(wb + sizeof(hdr.epurse), nr_mac + 1, 4);
         print_dbg("cc_nr...", wb, sizeof(wb));
-        doMAC_N(wb, sizeof(wb), div_key, mac);    
+        doMAC_N(wb, sizeof(wb), div_key, mac);
         print_dbg("Calc MAC...", mac, sizeof(mac));
     }
 
@@ -315,8 +316,8 @@ int sam_picopass_get_pacs(void) {
         goto out;
     }
     // store MAC
-    memcpy(mac, resp, sizeof(mac)); 
-    print_dbg("Got MAC",mac,sizeof(mac));
+    memcpy(mac, resp, sizeof(mac));
+    print_dbg("Got MAC", mac, sizeof(mac));
 
     // -----------------------------------------------------------------------------
     // fifth  send received MAC
@@ -328,7 +329,7 @@ int sam_picopass_get_pacs(void) {
         res = PM3_ECARDEXCHANGE;
         goto out;
     }
-    print_dbg("-- 5",resp, resp_len);
+    print_dbg("-- 5", resp, resp_len);
 
     uint8_t tmp_p1[4] = {0};
     uint8_t tmp_p2[4] = {0};
@@ -350,7 +351,7 @@ int sam_picopass_get_pacs(void) {
         res = PM3_ECARDEXCHANGE;
         goto out;
     }
-     print_dbg("-- 6",resp, resp_len);
+    print_dbg("-- 6", resp, resp_len);
     // c1 61 c1 00 00 a1 10 a1 0e 80 04 0c 06 45 56 81 02 00 04 82 02 01 f4 90 00
 
     // read block 6
@@ -364,7 +365,7 @@ int sam_picopass_get_pacs(void) {
         res = PM3_ECARDEXCHANGE;
         goto out;
     }
-    print_dbg("Block 6 from Picopass",resp, resp_len);
+    print_dbg("Block 6 from Picopass", resp, resp_len);
 
     // -----------------------------------------------------------------------------
     // eight  send block 6 config to SAM
@@ -391,7 +392,7 @@ int sam_picopass_get_pacs(void) {
         res = PM3_ECARDEXCHANGE;
         goto out;
     }
-    print_dbg("Block 6-9 from Picopass",resp, resp_len);
+    print_dbg("Block 6-9 from Picopass", resp, resp_len);
 
     // -----------------------------------------------------------------------------
     // nine  send credential blocks to SAM
@@ -403,7 +404,7 @@ int sam_picopass_get_pacs(void) {
         res = PM3_ECARDEXCHANGE;
         goto out;
     }
-    print_dbg("-- 8",resp, resp_len);
+    print_dbg("-- 8", resp, resp_len);
 
 
     // -----------------------------------------------------------------------------
@@ -438,7 +439,7 @@ out:
 
 off:
     switch_off();
-    BigBuf_free();    
+    BigBuf_free();
     return res;
 }
 

@@ -852,7 +852,7 @@ static int setClientTimeout(const char *Cmd) {
     uint32_t new_value = (uint32_t)arg_get_int_def(ctx, 1, 0);
     CLIParserFree(ctx);
 
-        // UART_USB_CLIENT_RX_TIMEOUT_MS is considered as the minimum required timeout.
+    // UART_USB_CLIENT_RX_TIMEOUT_MS is considered as the minimum required timeout.
     if (new_value < UART_USB_CLIENT_RX_TIMEOUT_MS) {
         PrintAndLogEx(WARNING, "Timeout less than %u ms might cause errors.", UART_USB_CLIENT_RX_TIMEOUT_MS);
     } else if (new_value > 5000) {
@@ -1268,7 +1268,7 @@ static command_t CommandTableSet[] = {
     {"client.debug",     setCmdDebug,         AlwaysAvailable, "Set client debug level"},
     {"client.delay",     setCmdExeDelay,      AlwaysAvailable, "Set client execution delay"},
     {"client.timeout",   setClientTimeout,    AlwaysAvailable, "Set client communication timeout"},
-    
+
     {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
     {"emoji",            setCmdEmoji,         AlwaysAvailable, "Set emoji display"},
     {"hints",            setCmdHint,          AlwaysAvailable, "Set hint display"},

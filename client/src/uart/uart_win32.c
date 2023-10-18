@@ -38,7 +38,7 @@ typedef struct {
     DCB dcb;               // Device control settings
     COMMTIMEOUTS ct;       // Serial port time-out configuration
     SOCKET hSocket;        // Socket handle
-    RingBuffer* udpBuffer; // Buffer for UDP
+    RingBuffer *udpBuffer; // Buffer for UDP
 } serial_port_windows_t;
 
 // this is for TCP connection
@@ -473,7 +473,7 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         *pszRxLen = 0;
         do {
             int res;
-            if(spw->udpBuffer != NULL) {
+            if (spw->udpBuffer != NULL) {
                 // for UDP connection, try to use the data from the buffer
 
                 byteCount = RingBuf_getAvailableSize(spw->udpBuffer);

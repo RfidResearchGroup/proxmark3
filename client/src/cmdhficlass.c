@@ -4472,17 +4472,17 @@ static int CmdHFiClassSAM(const char *Cmd) {
     // CSN, config, epurse, NR/MAC, AIA
     // PACS
     // first byte skip
-    // second byte length 
-    // third padded 
+    // second byte length
+    // third padded
     // fourth ..
     uint8_t *d = resp.data.asBytes;
     uint8_t n = d[1] - 1;  // skip length byte
     uint8_t pad = d[2];
-    char *binstr = (char*)calloc((n * 8) + 1 , sizeof(uint8_t));
+    char *binstr = (char *)calloc((n * 8) + 1, sizeof(uint8_t));
     if (binstr == NULL) {
         return PM3_EMALLOC;
     }
-    
+
     byte_2_binstr(binstr, d + 3, n);
 
     PrintAndLogEx(NORMAL, "");
@@ -4494,7 +4494,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
 
     size_t hexlen = 0;
     uint8_t hex[16] = {0};
-    binstr_2_bytes(hex, &hexlen,binstr);
+    binstr_2_bytes(hex, &hexlen, binstr);
     PrintAndLogEx(SUCCESS, "hex.......... " _GREEN_("%s"), sprint_hex_inrow(hex, hexlen));
 
     uint32_t top = 0, mid = 0, bot = 0;
