@@ -10,7 +10,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 
 | Actions OSX CI |  Actions Ubuntu CI | Actions Windows CI |
 |:--------------:|:------------------:|:------------------:|
-| ![MacOS Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/MacOS%20Build%20and%20Test/badge.svg?branch=master) | ![Ubuntu Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/Ubuntu%20Build%20and%20Test/badge.svg?branch=master) | [![Windows Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml) |
+| [![MacOS Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/macos.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/macos.yml) | [![Ubuntu Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/ubuntu.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/ubuntu.yml) | [![Windows Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml) |
 
 # Table of Contents
  1. [PROXMARK3 INSTALLATION AND OVERVIEW](#proxmark3-installation-and-overview)
