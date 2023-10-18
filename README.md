@@ -77,6 +77,7 @@ We define generic Proxmark3 platforms as following devices.
   - Ryscorp green PCB version
   - Radiowar black PCB version
   - numerous Chinese adapted versions of the RDV3 easy (kkmoon, PiSwords etc)
+  - Proxmark3 SE  (Second edition)  (BLE enabled)
 
 **Not supported**
  - ⚠  Proxmark Evolution (EVO) 
@@ -95,8 +96,6 @@ We define generic Proxmark3 platforms as following devices.
 -  ⚠ Proxmark3 X 
    - **Note**: unknown device hw
 -  ⚠ Proxmark3 Ultimate
-   - **Note**: unknown device hw
--  ⚠ Proxmark3 SE
    - **Note**: unknown device hw
 
 When it comes to these new unknown models we are depending on the community to report in if this repo works and what they did to make it work.
