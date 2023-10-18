@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Add support for quoted arguments in the CLI, allowing spaces in them which
+   are removed automatically (@jmichelp)
  - Added UDP support on Windows (@wh201906)
  - Added client communication timeout to preferences (@iceman1001)
  - Added IPv6 support (@wh201906)
