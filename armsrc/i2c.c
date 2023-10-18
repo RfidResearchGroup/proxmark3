@@ -558,6 +558,15 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
             case 1: {
                 // Length (LSB)
                 recv_len += *data;
+
+                // old packages..
+                if (recv_len > 0x0200) {
+                    // [0] = len
+                    // [1] = data
+                    recv_len >>= 8;
+                    data++;
+                }
+
                 // Adjust len if needed
                 if (len > recv_len) {
                     len = recv_len;
