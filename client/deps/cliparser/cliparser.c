@@ -222,32 +222,13 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
                 break;
             case PS_QUOTE:
                 if (str[i] == '"') {
-                    // Now let's compact the argument by removing spaces
-                    if (spaceptr != NULL) {
-                        // We've seen at least 1 space
-                        char *cur_ptr = spaceptr;
-                        while (spaceptr < bufptr) {
-                            if (isSpace(*spaceptr) == false) {
-                                *cur_ptr = *spaceptr;
-                                cur_ptr++;
-                            }
-                            spaceptr++;
-                        }
-                        *cur_ptr = 0;
-                        // Rollback bufptr
-                        bufptr = cur_ptr;
-                        spaceptr = NULL;
-                    }
-                    *bufptr = 0x00;
+                    *bufptr++ = 0x00;
                     state = PS_FIRST;
                 } else {
-                    if (isSpace(str[i]) && spaceptr == NULL) {
-                        // Store first encountered space for later
-                        spaceptr = bufptr;
+                    if (isSpace(str[i]) == false) {
+                        *bufptr++ = str[i];
                     }
-                    *bufptr = str[i];
                 }
-                bufptr++;
                 break;
         }
         if (bufptr > bufptrend) {
