@@ -147,6 +147,7 @@ enum ParserState {
     PS_FIRST,
     PS_ARGUMENT,
     PS_OPTION,
+    PS_QUOTE,
 };
 
 #define isSpace(c)(c == ' ' || c == '\t')
@@ -195,6 +196,10 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
             case PS_ARGUMENT:
                 if (state == PS_FIRST)
                     state = PS_ARGUMENT;
+                if (str[i] == '"') {
+                    state = PS_QUOTE;
+                    break;
+                }
                 if (isSpace(str[i])) {
                     spaceptr = bufptr;
                     state = PS_FIRST;
@@ -213,6 +218,35 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
                 }
 
                 *bufptr = str[i];
+                bufptr++;
+                break;
+            case PS_QUOTE:
+                if (str[i] == '"') {
+                    // Now let's compact the argument by removing spaces
+                    if (spaceptr != NULL) {
+                        // We've seen at least 1 space
+                        char *cur_ptr = spaceptr;
+                        while (spaceptr < bufptr) {
+                            if (isSpace(*spaceptr) == false) {
+                                *cur_ptr = *spaceptr;
+                                cur_ptr++;
+                            }
+                            spaceptr++;
+                        }
+                        *cur_ptr = 0;
+                        // Rollback bufptr
+                        bufptr = cur_ptr;
+                        spaceptr = NULL;
+                    }
+                    *bufptr = 0x00;
+                    state = PS_FIRST;
+                } else {
+                    if (isSpace(str[i]) && spaceptr == NULL) {
+                        // Store first encountered space for later
+                        spaceptr = bufptr;
+                    }
+                    *bufptr = str[i];
+                }
                 bufptr++;
                 break;
         }
