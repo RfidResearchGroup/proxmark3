@@ -839,12 +839,13 @@ static int setClientTimeout(const char *Cmd) {
     CLIParserInit(&ctx, "prefs set client.timeout",
                   "Set persistent preference of client communication timeout",
                   "prefs set client.timeout --ms 0     --> unsets any timeout\n"
-                  "prefs set client.timeout --ms 500\n"
+                  "prefs set client.timeout -m 20      --> Set the timeout to 20ms\n"
+                  "prefs set client.timeout --ms 500   --> Set the timeout to 500ms\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "ms", "<ms>", "timeout in micro seconds"),
+        arg_int0("m", "ms", "<ms>", "timeout in micro seconds"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
