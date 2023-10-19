@@ -37,6 +37,8 @@
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
 #include "cmdhw.h"                 // set_fpga_mode
+#include "loclass/cipherutils.h"   // BitstreamOut_t
+#include "proxendian.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -483,7 +485,7 @@ static bool mf_write_block(const uint8_t *key, uint8_t keytype, uint8_t blockno,
         return false;
     }
 
-    return (resp.oldarg[0] & 0xff);
+    return ((resp.oldarg[0] & 0xff) == 1);
 }
 
 // assumes n is in number of blocks 0..255
@@ -8508,6 +8510,128 @@ static int CmdHF14AMfValue(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFMFHidEncode(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf encodehid",
+                  "Encode binary wiegand to card\n"
+                  "Use either --bin or --wiegand/--fc/--cn",
+                  "hf mf encodehid --bin 10001111100000001010100011            -> FC 31 CN 337 (H10301)\n"
+                  "hf mf encodehid -w H10301 --fc 31 --cn 337\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
+        arg_u64_0(NULL, "fc", "<dec>", "facility code"),
+        arg_u64_0(NULL, "cn", "<dec>", "card number"),
+        arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int bin_len = 120;
+    uint8_t bin[121] = {0};
+    CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
+
+    wiegand_card_t card;
+    memset(&card, 0, sizeof(wiegand_card_t));
+    card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
+    card.CardNumber = arg_get_u32_def(ctx, 3, 0);
+
+    char format[16] = {0};
+    int format_len = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)format, sizeof(format), &format_len);
+
+    bool verbose = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
+
+    // santity checks
+    if (bin_len > 120) {
+        PrintAndLogEx(ERR, "Binary wiegand string must be less than 120 bits");
+        return PM3_EINVARG;
+    }
+
+    if (bin_len == 0 && card.FacilityCode == 0 && card.CardNumber == 0) {
+        PrintAndLogEx(ERR, "Must provide either --cn/--fc or --bin");
+        return PM3_EINVARG;
+    }
+
+    uint8_t blocks[] = {
+        0x1B, 0x01, 0x4D, 0x48, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0x78, 0x77, 0x88, 0xC1, 0x89, 0xEC, 0xA9, 0x7F, 0x8C, 0x2A,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x48, 0x49, 0x44, 0x20, 0x49, 0x53, 0x78, 0x77, 0x88, 0xAA, 0x20, 0x47, 0x52, 0x45, 0x41, 0x54,
+    };
+
+    if (bin_len) {
+        char mfcbin[121] = {0};
+        mfcbin[0] = '1';
+        memcpy(mfcbin + 1, bin, strlen(bin));
+
+        size_t hexlen = 0;
+        uint8_t hex[15] = {0};
+        binstr_2_bytes(hex, &hexlen, mfcbin);
+
+        memcpy(blocks + (MFBLOCK_SIZE * 4) + 1 + (15 - hexlen), hex, hexlen);
+    } else {
+        wiegand_message_t packed;
+        memset(&packed, 0, sizeof(wiegand_message_t));
+
+        int format_idx = HIDFindCardFormat(format);
+        if (format_idx == -1) {
+            PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
+            return PM3_EINVARG;
+        }
+
+        if (HIDPack(format_idx, &card, &packed, false) == false) {
+            PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
+            return PM3_ESOFT;
+        }
+
+        // iceman: only for formats w length smaller than 37.
+        // Needs a check.
+
+        // increase length to allow setting bit just above real data
+        packed.Length++;
+        // Set sentinel bit
+        set_bit_by_position(&packed, true, 0);
+
+#ifdef HOST_LITTLE_ENDIAN
+        packed.Mid = BSWAP_32(packed.Mid);
+        packed.Bot = BSWAP_32(packed.Bot);
+#endif
+
+        memcpy(blocks + (MFBLOCK_SIZE * 4) + 8, &packed.Mid, sizeof(packed.Mid));
+        memcpy(blocks + (MFBLOCK_SIZE * 4) + 12, &packed.Bot, sizeof(packed.Bot));
+    }
+
+    uint8_t empty[MIFARE_KEY_SIZE] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+    bool res = true;
+    for (uint8_t i = 0; i < (sizeof(blocks) / MFBLOCK_SIZE); i++) {
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "Writing %u - %s", (i + 1), sprint_hex_inrow(blocks + (i * MFBLOCK_SIZE), MFBLOCK_SIZE));
+        }
+
+        if (mf_write_block(empty, MF_KEY_A, (i + 1), blocks + (i * MFBLOCK_SIZE)) == false) {
+            if (mf_write_block(empty, MF_KEY_B, (i + 1), blocks + (i * MFBLOCK_SIZE)) == false) {
+                PrintAndLogEx(WARNING, "failed writing block %d using default empty key", (i + 1));
+                res = false;
+                break;
+            }
+        }
+    }
+    if (res == false) {
+        PrintAndLogEx(WARNING, "Make sure card is wiped before running this command");
+    }
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
     {"list",        CmdHF14AMfList,         AlwaysAvailable, "List MIFARE history"},
@@ -8576,6 +8700,7 @@ static command_t CommandTable[] = {
     {"ndefformat",  CmdHFMFNDEFFormat,      IfPm3Iso14443a,  "Format MIFARE Classic Tag as NFC Tag"},
     {"ndefread",    CmdHFMFNDEFRead,        IfPm3Iso14443a,  "Read and print NDEF records from card"},
     {"ndefwrite",   CmdHFMFNDEFWrite,       IfPm3Iso14443a,  "Write NDEF records to card"},
+    {"encodehid",   CmdHFMFHidEncode,       IfPm3Iso14443a,  "Encode a HID Credential / NDEF record to card"},
     {NULL, NULL, NULL, NULL}
 
 };
