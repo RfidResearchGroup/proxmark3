@@ -3173,7 +3173,7 @@
             "command": "hf iclass esetblk",
             "description": "Sets an individual block in emulator memory.",
             "notes": [
-                "hf iclass esetblk -b 7 -d 0000000000000000"
+                "hf iclass esetblk --blk 7 -d 0000000000000000"
             ],
             "offline": false,
             "options": [

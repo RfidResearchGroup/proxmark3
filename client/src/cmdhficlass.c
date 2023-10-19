@@ -1284,7 +1284,7 @@ static int CmdHFiClassESetBlk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass esetblk",
                   "Sets an individual block in emulator memory.",
-                  "hf iclass esetblk -b 7 -d 0000000000000000");
+                  "hf iclass esetblk --blk 7 -d 0000000000000000");
 
     void *argtable[] = {
         arg_param_begin,
