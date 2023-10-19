@@ -4338,6 +4338,24 @@
             ],
             "usage": "hf mf eload [-hmv] -f <fn> [--mini] [--1k] [--2k] [--4k] [--ul] [-q <dec>]"
         },
+        "hf mf encodehid": {
+            "command": "hf mf encodehid",
+            "description": "Encode binary wiegand to card Use either --bin or --wiegand/--fc/--cn",
+            "notes": [
+                "hf mf encodehid --bin 10001111100000001010100011 -> FC 31 CN 337 (H10301)",
+                "hf mf encodehid -w H10301 --fc 31 --cn 337"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--bin <bin> Binary string i.e 0001001001",
+                "--fc <dec> facility code",
+                "--cn <dec> card number",
+                "-w, --wiegand <format> see `wiegand list` for available formats",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf mf encodehid [-hv] [--bin <bin>] [--fc <dec>] [--cn <dec>] [-w <format>]"
+        },
         "hf mf esave": {
             "command": "hf mf esave",
             "description": "Save emulator memory to file (bin/json)",
@@ -11881,8 +11899,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 689,
+        "commands_extracted": 690,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-10-18T18:30:58"
+        "extracted_on": "2023-10-19T19:41:49"
     }
 }

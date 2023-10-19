@@ -8609,7 +8609,7 @@ static int CmdHFMFHidEncode(const char *Cmd) {
         memcpy(blocks + (MFBLOCK_SIZE * 4) + 12, &packed.Bot, sizeof(packed.Bot));
     }
 
-    uint8_t empty[MIFARE_KEY_SIZE] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+    uint8_t empty[MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     bool res = true;
     for (uint8_t i = 0; i < (sizeof(blocks) / MFBLOCK_SIZE); i++) {
 

@@ -539,6 +539,7 @@ Check column "offline" for their availability.
 |`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
 |`hf mf ndefread         `|N       |`Read and print NDEF records from card`
 |`hf mf ndefwrite        `|N       |`Write NDEF records to card`
+|`hf mf encodehid        `|N       |`Encode a HID Credential / NDEF record to card`
 
 
 ### hf mfp

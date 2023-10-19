@@ -376,6 +376,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mf ndefformat" },
     { 0, "hf mf ndefread" },
     { 0, "hf mf ndefwrite" },
+    { 0, "hf mf encodehid" },
     { 1, "hf mfp help" },
     { 1, "hf mfp list" },
     { 0, "hf mfp auth" },
