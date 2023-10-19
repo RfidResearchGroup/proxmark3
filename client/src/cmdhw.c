@@ -35,6 +35,7 @@
 #include "pmflash.h"      // rdv40validation_t
 #include "cmdflashmem.h"  // get_signature..
 #include "uart/uart.h" // configure timeout
+#include "util_posix.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -979,6 +980,7 @@ static int CmdPing(const char *Cmd) {
         arg_u64_0("l", "len", "<dec>", "length of payload to send"),
         arg_param_end
     };
+
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint32_t len = arg_get_u32_def(ctx, 1, 32);
     CLIParserFree(ctx);
@@ -1000,13 +1002,18 @@ static int CmdPing(const char *Cmd) {
         data[i] = i & 0xFF;
     }
 
+    uint64_t tms = msclock();
     SendCommandNG(CMD_PING, data, len);
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
+        tms = msclock() - tms;
         if (len) {
             bool error = (memcmp(data, resp.data.asBytes, len) != 0);
-            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") " and content ( %s )", error ? _RED_("fail") : _GREEN_("ok"));
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received")
+                          " in " _YELLOW_("%" PRIu64) " ms and content ( %s )",
+                          tms, error ? _RED_("fail") : _GREEN_("ok"));
         } else {
-            PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received"));
+            PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received")
+                          " in " _YELLOW_("%" PRIu64) " ms", tms);
         }
     } else
         PrintAndLogEx(WARNING, "Ping response " _RED_("timeout"));

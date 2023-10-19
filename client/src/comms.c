@@ -802,7 +802,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
             show_warning = false;
         }
         // just to avoid CPU busy loop:
-        msleep(10);
+        msleep(1);
     }
     return false;
 }
