@@ -4513,10 +4513,16 @@ static int CmdHFiClassSAM(const char *Cmd) {
 
     if (strlen(binstr) >= 26 && verbose) {
 
+        // iCLASS Legacy
+        PrintAndLogEx(INFO, "Clone to " _YELLOW_("iCLASS Legacy"));
+        PrintAndLogEx(SUCCESS, "    hf iclass encode --ki 0 --bin %s", binstr);
+        PrintAndLogEx(NORMAL, "");
+
         // HID Prox II
         PrintAndLogEx(INFO, "Downgrade to " _YELLOW_("HID Prox II"));
         PrintAndLogEx(SUCCESS, "    lf hid clone -w H10301 --bin %s", binstr);
         PrintAndLogEx(NORMAL, "");
+
         // MIFARE Classic
         char mfcbin[28] = {0};
         mfcbin[0] = '1';
@@ -4533,9 +4539,8 @@ static int CmdHFiClassSAM(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "    hf mf sim --1k -i;");
         PrintAndLogEx(NORMAL, "");
 
-        // iCLASS Legacy
-        PrintAndLogEx(INFO, "Clone to " _YELLOW_("iCLASS Legacy"));
-        PrintAndLogEx(SUCCESS, "    hf iclass encode --ki 0 --bin %s", binstr);
+        PrintAndLogEx(INFO, "Downgrade to " _YELLOW_("MIFARE Classic 1K"));
+        PrintAndLogEx(SUCCESS, "    hf mf encodehid --bin %s", binstr);
         PrintAndLogEx(NORMAL, "");
     }
     free(binstr);
