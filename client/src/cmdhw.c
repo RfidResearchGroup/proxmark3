@@ -987,7 +987,7 @@ static int CmdPing(const char *Cmd) {
         len = PM3_CMD_DATA_SIZE;
 
     if (len) {
-        PrintAndLogEx(INFO, "Ping sent with payload len " _YELLOW_("%d"), len);
+        PrintAndLogEx(INFO, "Ping sent with payload len... " _YELLOW_("%d"), len);
     } else {
         PrintAndLogEx(INFO, "Ping sent");
     }
@@ -996,14 +996,15 @@ static int CmdPing(const char *Cmd) {
     PacketResponseNG resp;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
 
-    for (uint16_t i = 0; i < len; i++)
+    for (uint16_t i = 0; i < len; i++) {
         data[i] = i & 0xFF;
+    }
 
     SendCommandNG(CMD_PING, data, len);
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
         if (len) {
             bool error = (memcmp(data, resp.data.asBytes, len) != 0);
-            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") " and content () %s )", error ? _RED_("fail") : _GREEN_("ok"));
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") " and content ( %s )", error ? _RED_("fail") : _GREEN_("ok"));
         } else {
             PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received"));
         }
