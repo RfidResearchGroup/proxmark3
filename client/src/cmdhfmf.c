@@ -8570,7 +8570,7 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     if (bin_len) {
         char mfcbin[121] = {0};
         mfcbin[0] = '1';
-        memcpy(mfcbin + 1, bin, strlen(bin));
+        memcpy(mfcbin + 1, bin, bin_len);
 
         size_t hexlen = 0;
         uint8_t hex[15] = {0};
