@@ -2986,10 +2986,10 @@
                 "--new <hex> Specify key as 8 hex bytes",
                 "--nki <dec> New key index to select key from memory 'hf iclass managekeys'",
                 "--csn <hex> Specify a Card Serial Number (CSN) to diversify the key (if omitted will attempt to read a CSN)",
-                "--elite Elite computations applied to new key",
-                "--elite2 Elite computations applied to both old and new key"
+                "--elite2 Elite computations applied to both old and new key",
+                "--oldelite Elite computations applied only to old key"
             ],
-            "usage": "hf iclass calcnewkey [-h] [--old <hex>] [--oki <dec>] [--new <hex>] [--nki <dec>] [--csn <hex>] [--elite] [--elite2]"
+            "usage": "hf iclass calcnewkey [-h] [--old <hex>] [--oki <dec>] [--new <hex>] [--nki <dec>] [--csn <hex>] [--elite] [--elite2] [--oldelite]"
         },
         "hf iclass chk": {
             "command": "hf iclass chk",
