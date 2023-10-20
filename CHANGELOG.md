@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed the CLI prompt to show tcp/udp if used (@iceman1001)
+ - Changed `hw ping` - now shows transfer time (@doegox)
  - Added `hf mf encodehid` - writes HID legacy credential to a empty MFC (@iceman1001)
  - Added `hf iclass sam` - Added support for HID SAM Picopass communications (@iceman1001)
  - Add support for quoted arguments in the CLI, allowing spaces in them which

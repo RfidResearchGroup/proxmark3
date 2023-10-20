@@ -54,6 +54,13 @@ typedef enum {
     FPGA_MEM,
 } DeviceMemType_t;
 
+typedef enum {
+    PM3_TCPv4,
+    PM3_TCPv6,
+    PM3_UDPv4,
+    PM3_NONE,
+} CommunicationProtol_t;
+
 typedef struct {
     bool run; // If TRUE, continue running the uart_communication thread
     bool block_after_ACK; // if true, block after receiving an ACK package
@@ -62,6 +69,8 @@ typedef struct {
     bool send_with_crc_on_fpc;
     // "Session" flag, to tell via which interface next msgs are sent: USB or FPC USART
     bool send_via_fpc_usart;
+    // to tell if we are using TCP/UDP/TCPv6
+    CommunicationProtol_t send_via_ip;
     // To memorise baudrate
     uint32_t uart_speed;
     uint16_t last_command;

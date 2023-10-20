@@ -225,6 +225,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             free(sp);
             return INVALID_SERIAL_PORT;
         }
+        g_conn.send_via_ip = PM3_TCPv4;
         return sp;
     }
 
@@ -345,6 +346,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         sp->hSocket = hSocket;
         sp->udpBuffer = RingBuf_create(MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 30);
 
+        g_conn.send_via_ip = PM3_UDPv4;
         return sp;
     }
 
@@ -390,6 +392,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
     }
     g_conn.uart_speed = uart_get_speed(sp);
+    g_conn.send_via_ip = PM3_NONE;
     return sp;
 }
 

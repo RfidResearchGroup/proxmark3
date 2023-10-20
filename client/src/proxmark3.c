@@ -127,9 +127,10 @@ static void showBanner(void) {
 
 static const char *prompt_dev = "";
 static const char *prompt_ctx = "";
+static const char *prompt_net = "";
 
-static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev) {
-    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptctx);
+static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev, const char *promptnet) {
+    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
 }
 
 static int check_comm(void) {
@@ -138,7 +139,7 @@ static int check_comm(void) {
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
         prompt_dev = PROXPROMPT_DEV_OFFLINE;
         char prompt[PROXPROMPT_MAX_SIZE] = {0};
-        prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
+        prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net);
         char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
         memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
         pm3line_update_prompt(prompt_filtered);
@@ -265,10 +266,27 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 
         bool printprompt = false;
         if (g_session.pm3_present) {
-            if (g_conn.send_via_fpc_usart == false)
-                prompt_dev = PROXPROMPT_DEV_USB;
-            else
+
+            switch(g_conn.send_via_ip) {
+                case PM3_TCPv4:
+                    prompt_net = PROXPROMPT_NET_TCPV4;
+                    break;
+                case PM3_TCPv6:
+                    prompt_net = PROXPROMPT_NET_TCPV6;
+                    break;
+                case PM3_UDPv4:
+                    prompt_net = PROXPROMPT_NET_UDPV4;
+                    break;
+                case PM3_NONE:
+                default:
+                    break;
+            }
+
+            if (g_conn.send_via_fpc_usart)
                 prompt_dev = PROXPROMPT_DEV_FPC;
+            else
+                prompt_dev = PROXPROMPT_DEV_USB;
+
         } else {
             prompt_dev = PROXPROMPT_DEV_OFFLINE;
         }
@@ -341,7 +359,7 @@ check_script:
                     pm3line_check(check_comm);
                     prompt_ctx = PROXPROMPT_CTX_INTERACTIVE;
                     char prompt[PROXPROMPT_MAX_SIZE] = {0};
-                    prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
+                    prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
                     g_pendingPrompt = true;
@@ -391,7 +409,7 @@ check_script:
                     g_printAndLog &= PRINTANDLOG_LOG;
                 }
                 char prompt[PROXPROMPT_MAX_SIZE] = {0};
-                prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
+                prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net);
                 // always filter RL magic separators if not using readline
                 char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                 memcpy_filter_rlmarkers(prompt_filtered, prompt, sizeof(prompt_filtered));
