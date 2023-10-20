@@ -277,6 +277,9 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
                 case PM3_UDPv4:
                     prompt_net = PROXPROMPT_NET_UDPV4;
                     break;
+                case PM3_UDPv6:
+                    prompt_net = PROXPROMPT_NET_UDPV6;
+                    break;
                 case PM3_NONE:
                 default:
                     break;

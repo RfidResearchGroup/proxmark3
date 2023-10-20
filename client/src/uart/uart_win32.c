@@ -135,6 +135,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             }
         }
 
+        // Assume v4
+        g_conn.send_via_ip = PM3_TCPv4;
+
         // find the port
         char *lColon = strchr(addrPortStr, ':');
         char *rColon = strrchr(addrPortStr, ':');
@@ -155,6 +158,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             } else {
                 portstr = "18888";
             }
+            g_conn.send_via_ip = PM3_TCPv6;
         }
 
         // handle the end of the address
@@ -225,7 +229,6 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             free(sp);
             return INVALID_SERIAL_PORT;
         }
-        g_conn.send_via_ip = PM3_TCPv4;
         return sp;
     }
 
@@ -263,6 +266,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             }
         }
 
+        // Assume v4
+        g_conn.send_via_ip = PM3_UDPv4;
+
         // find the port
         char *lColon = strchr(addrPortStr, ':');
         char *rColon = strrchr(addrPortStr, ':');
@@ -283,6 +289,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             } else {
                 portstr = "18888";
             }
+            g_conn.send_via_ip = PM3_UDPv6;
         }
 
         // handle the end of the address
@@ -345,8 +352,6 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         sp->hSocket = hSocket;
         sp->udpBuffer = RingBuf_create(MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 30);
-
-        g_conn.send_via_ip = PM3_UDPv4;
         return sp;
     }
 

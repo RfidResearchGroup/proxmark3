@@ -58,6 +58,7 @@ typedef enum {
     PM3_TCPv4,
     PM3_TCPv6,
     PM3_UDPv4,
+    PM3_UDPv6,
     PM3_NONE,
 } CommunicationProtol_t;
 
