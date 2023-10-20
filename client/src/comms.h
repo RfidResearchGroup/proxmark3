@@ -60,7 +60,7 @@ typedef enum {
     PM3_UDPv4,
     PM3_UDPv6,
     PM3_NONE,
-} CommunicationProtol_t;
+} CommunicationProtocol_t;
 
 typedef struct {
     bool run; // If TRUE, continue running the uart_communication thread
@@ -71,7 +71,7 @@ typedef struct {
     // "Session" flag, to tell via which interface next msgs are sent: USB or FPC USART
     bool send_via_fpc_usart;
     // to tell if we are using TCP/UDP/TCPv6
-    CommunicationProtol_t send_via_ip;
+    CommunicationProtocol_t send_via_ip;
     // To memorise baudrate
     uint32_t uart_speed;
     uint16_t last_command;
