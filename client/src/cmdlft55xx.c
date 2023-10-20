@@ -2298,8 +2298,14 @@ static int CmdT55xxDump(const char *Cmd) {
         }
     }
 
+    if (nosave) {
+        PrintAndLogEx(INFO, "Called with no save option");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
+    }
+
     // all ok, save dump to file
-    if (success && nosave == false) {
+    if (success) {
 
         // set default filename, if not set by user
         if (strlen(filename) == 0) {

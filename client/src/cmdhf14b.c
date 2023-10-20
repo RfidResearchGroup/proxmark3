@@ -1537,17 +1537,21 @@ static int CmdHF14BDump(const char *Cmd) {
 
         print_sr_blocks(data, cardsize, card.uid);
 
-        if (nosave == false) {
-            // save to file
-            if (fnlen < 1) {
-                PrintAndLogEx(INFO, "using UID as filename");
-                char *fptr = filename + snprintf(filename, sizeof(filename), "hf-14b-");
-                FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
-            }
-
-            size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
-            pm3_save_dump(filename, data, datalen, jsf14b_v2);
+        if (nosave) {
+            PrintAndLogEx(INFO, "Called with no save option");
+            PrintAndLogEx(NORMAL, "");
+            return PM3_SUCCESS;
         }
+        
+        // save to file
+        if (fnlen < 1) {
+            PrintAndLogEx(INFO, "using UID as filename");
+            char *fptr = filename + snprintf(filename, sizeof(filename), "hf-14b-");
+            FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
+        }
+
+        size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
+        pm3_save_dump(filename, data, datalen, jsf14b_v2);
     }
 
     return switch_off_field_14b();

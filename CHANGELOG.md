@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Modified `hf iclass calcnewkey` - Added calculations for old key elite and new key non elite (@Antiklesys)
+ - Changed `hf iclass dump` - now allow no save of dumped data (@iceman1001)
+ - Changed `hf iclass calcnewkey` - Added calculations for old key elite and new key non elite (@Antiklesys)
  - Changed the CLI prompt to show tcp/udp if used (@iceman1001)
  - Changed `hw ping` - now shows transfer time (@doegox)
  - Added `hf mf encodehid` - writes HID legacy credential to a empty MFC (@iceman1001)

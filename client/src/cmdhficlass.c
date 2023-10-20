@@ -1754,6 +1754,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         arg_lit0("z", "dense", "dense dump output style"),
         arg_lit0(NULL, "force", "force unsecure card read"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
+        arg_lit0(NULL, "ns", "no save to file"),        
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1840,6 +1841,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     bool dense_output = g_session.dense_output || arg_get_lit(ctx, 9);
     bool force = arg_get_lit(ctx, 10);
     bool shallow_mod = arg_get_lit(ctx, 11);
+    bool nosave = arg_get_lit(ctx, 12);
 
     CLIParserFree(ctx);
 
@@ -2084,6 +2086,12 @@ write_dump:
 
     // print the dump
     printIclassDumpContents(tag_data, 1, (bytes_got / 8), bytes_got, dense_output);
+
+    if (nosave) {
+        PrintAndLogEx(INFO, "Called with no save option");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
+    }
 
     // use CSN as filename
     if (filename[0] == 0) {
