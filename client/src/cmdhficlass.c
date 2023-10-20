@@ -3215,6 +3215,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
         arg_str0(NULL, "csn", "<hex>", "Specify a Card Serial Number (CSN) to diversify the key (if omitted will attempt to read a CSN)"),
         arg_lit0(NULL, "elite", "Elite computations applied to new key"),
         arg_lit0(NULL, "elite2", "Elite computations applied to both old and new key"),
+        arg_lit0(NULL, "oldelite", "Elite computations applied only to old key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3304,6 +3305,11 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
 
     if (arg_get_lit(ctx, 7)) {
         elite = true;
+        old_elite = true;
+    }
+
+    if (arg_get_lit(ctx, 8)) {
+        elite = false;
         old_elite = true;
     }
 
