@@ -2940,7 +2940,7 @@
         "system_integrator": "A.I.I."
     },
     {
-        "application": "Multi-Modal Transit",
+        "application": "Multi-Modal Transit (Vix/ERG)",
         "company": "ERG Transit Systems",
         "mad": "0x2103",
         "service_provider": "ERG Transit Systems",
@@ -2953,6 +2953,13 @@
         "service_provider": "ERG Transit Systems",
         "system_integrator": "ERG Transit Systems"
     },
+    {
+        "application": "Transit (Metrocard / Christchurch)",
+        "company": "INIT Transit Systems",
+        "mad": "0x2105",
+        "service_provider": "INIT Transit Systems",
+        "system_integrator": "INIT Transit Systems"
+    },    
     {
         "application": "Mass Transportation Ticketing",
         "company": "Omnifare",
@@ -2997,6 +3004,13 @@
     },
     {
         "application": "Integrated multi-modal transport ticketing system",
+        "company": "HOP Fastpass",
+        "mad": "0x210E",
+        "service_provider": "HOP Fastpass",
+        "system_integrator": "HOP Fastpass"
+    },
+    {
+        "application": "Integrated multi-modal transport ticketing system",
         "company": "Keane Australia PTY Limited",
         "mad": "0x210F",
         "service_provider": "TTA",
@@ -3038,7 +3052,7 @@
         "system_integrator": "T-Systems GEI"
     },
     {
-        "application": "Transportation ticket",
+        "application": "Transportation ticket (Lítačka)",
         "company": "Haguess s.r.o.",
         "mad": "0x2115",
         "service_provider": "HAGUESS, a.s.",
@@ -3135,6 +3149,35 @@
         "service_provider": "RTD",
         "system_integrator": "ACS"
     },
+    {
+        "application": "Bus and rail fare collection (HOLO)",
+        "company": "INIT",
+        "mad": "0x2136",
+        "service_provider": "INIT",
+        "system_integrator": "INIT"
+    },
+    {
+        "application": "Bus and rail fare collection (Ventra)",
+        "company": "Cubic",
+        "mad": "0x2138",
+        "service_provider": "Cubic",
+        "system_integrator": "Cubic"
+    },
+    {
+        "application": "Bus and rail fare collection (Clipper)",
+        "company": "Cubic",
+        "mad": "0x2139",
+        "service_provider": "Cubic",
+        "system_integrator": "Cubic"
+    },
+    {
+        "application": "Bus and rail fare collection (WAVE)",
+        "company": "INIT Rhode Island",
+        "mad": "0x213A",
+        "service_provider": "INIT Rhode Island",
+        "system_integrator": "INIT Rhode Island"
+    },
+
     {
         "application": "Bus services with extension to rail and taxi",
         "company": "Questek Marketing",
@@ -13621,5 +13664,12 @@
         "mad": "0xF001",
         "service_provider": "Tech ID",
         "system_integrator": "Tech ID"
+    },
+    {
+        "application": "Miscellaneous applications",
+        "company": "Reserved For future Use",
+        "mad": "0xFFFF",
+        "service_provider": "RFU",
+        "system_integrator": "RFU"
     }
 ]
