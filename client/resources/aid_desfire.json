@@ -49,7 +49,7 @@
     },
     {
         "AID": "F21190",
-        "Vendor": "Metropolitan Transportation Commission",
+        "Vendor": "Metropolitan Transportation Commission / Cubic",
         "Country": "US",
         "Name": "Clipper Card",
         "Description": "",
@@ -81,7 +81,7 @@
     },
     {
         "AID": "784000",
-        "Vendor": "NO1",
+        "Vendor": "NOL",
         "Country": "UAE",
         "Name": "Nol Card/Dubai",
         "Description": "Nol Card/Dubai",
@@ -121,7 +121,7 @@
     },
     {
         "AID": "F21030",
-        "Vendor": "ORCA Card",
+        "Vendor": "ORCA (VUX/ERG)",
         "Country": "",
         "Name": "ORCA Card",
         "Description": "(FIDs 02: Trip History; 04: current balance)",
@@ -383,5 +383,157 @@
         "Name": "Disney MagicBand",
         "Description": "AID found on MagicBand desfire cards",
         "Type": "payment system"
+    },
+    {
+        "AID": "F21100",
+        "Vendor": "MyKI",
+        "Country": "AUS",
+        "Name": "Myki",
+        "Description": "AID found on Myki ticket cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "F210F0",
+        "Vendor": "MyKI",
+        "Country": "AUS",
+        "Name": "Myki",
+        "Description": "AID found on Myki ticket cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "F206B0",
+        "Vendor": "ACS",
+        "Country": "AUS",
+        "Name": "Metrocard / ACS",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21050",
+        "Vendor": "INIT",
+        "Country": "NZ",
+        "Name": "Metrocard / Christchurch",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21150",
+        "Vendor": "HAGUESS",
+        "Country": "CZ",
+        "Name": "Lítačka / Prague",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21360",
+        "Vendor": "INIT",
+        "Country": "CZ",
+        "Name": "HOLO",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21381",
+        "Vendor": "Cubic",
+        "Country": "US",
+        "Name": "Ventra",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "F213A0",
+        "Vendor": "INIT",
+        "Country": "US",
+        "Name": "WAVE / Rhode Island",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "F210E0",
+        "Vendor": "Hop Fastpass",
+        "Country": "",
+        "Name": "Hop Fastpass",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "EF2011",
+        "Vendor": "HSL",
+        "Country": "FI",
+        "Name": "HSL / Helsinki",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "A00216",
+        "Vendor": "ITSO",
+        "Country": "",
+        "Name": "ITSO",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "554000",
+        "Vendor": "AT HOP",
+        "Country": "",
+        "Name": "AT HOP",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "534531",
+        "Vendor": "OPAL",
+        "Country": "AUS",
+        "Name": "OPAL",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "2211AF",
+        "Vendor": "Leap",
+        "Country": "",
+        "Name": "Leap",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "015342",
+        "Vendor": "BEM",
+        "Country": "TH",
+        "Name": "BEM / Bangkok",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "012242",
+        "Vendor": "Istanbulkart",
+        "Country": "TR",
+        "Name": "Istanbulkart / Istanbul",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "010000",
+        "Vendor": "Madrid Public Transit Card",
+        "Country": "ES",
+        "Name": "Madrid Public Transit Card",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "000001",
+        "Vendor": "Invalid / reserved",
+        "Country": "",
+        "Name": "Invalid / reserved",
+        "Description": "used by Compass DESFire and Breeze DESFire",
+        "Type": "transport"
+    },
+    {
+        "AID": "FFFFFF",
+        "Vendor": "Reserved for future use",
+        "Country": "",
+        "Name": "Reserved for future use",
+        "Description": "used by AT HOP, Nol, ORCA",
+        "Type": "transport"
     }
 ]
