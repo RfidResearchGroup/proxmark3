@@ -82,4 +82,8 @@ int uart_reconfigure_timeouts(uint32_t value);
  */
 uint32_t uart_get_timeouts(void);
 
+/* Specify the outbound address and port for TCP/UDP connections
+ */
+bool uart_bind(int sfd, char *bindAddrStr, char *bindPortStr, bool isBindingIPv6);
+
 #endif // _UART_H_

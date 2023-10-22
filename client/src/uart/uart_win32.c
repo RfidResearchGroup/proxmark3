@@ -626,4 +626,8 @@ int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
     }
 }
 
+bool uart_bind(int sfd, char *bindAddrStr, char *bindPortStr, bool isBindingIPv6) {
+    return true;
+}
+
 #endif
