@@ -267,7 +267,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
         bool printprompt = false;
         if (g_session.pm3_present) {
 
-            switch(g_conn.send_via_ip) {
+            switch (g_conn.send_via_ip) {
                 case PM3_TCPv4:
                     prompt_net = PROXPROMPT_NET_TCPV4;
                     break;

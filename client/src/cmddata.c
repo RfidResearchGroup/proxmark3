@@ -3470,7 +3470,7 @@ static int CmdBinaryMap(const char *Cmd) {
 
     int hlen = 5;
     uint8_t hex[5 + 1];
-    CLIGetStrWithReturn(ctx, 1,hex, &hlen);
+    CLIGetStrWithReturn(ctx, 1, hex, &hlen);
 
     int tlen = 40;
     uint8_t template[40 + 1];
@@ -3478,10 +3478,10 @@ static int CmdBinaryMap(const char *Cmd) {
     CLIParserFree(ctx);
 
     char bits[(8 * 4) + 1] = {0};
-    hextobinstring_n(bits, (char*)hex, hlen);
+    hextobinstring_n(bits, (char *)hex, hlen);
 
     int x = 0;
-    char *token = strtok((char*)template, ",");
+    char *token = strtok((char *)template, ",");
 
     // header
     PrintAndLogEx(INFO, "---+---------------------------");
@@ -3502,7 +3502,7 @@ static int CmdBinaryMap(const char *Cmd) {
         // incease with previous offset
         x += i;
 
-        for (;i < x; i++) {
+        for (; i < x; i++) {
             PrintAndLogEx(NORMAL, "%c  " NOLF, bits[7 - i]);
         }
 

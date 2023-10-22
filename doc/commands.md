@@ -126,6 +126,7 @@ Check column "offline" for their availability.
 |`data atr               `|Y       |`ATR lookup`
 |`data bin2hex           `|Y       |`Converts binary to hexadecimal`
 |`data bitsamples        `|N       |`Get raw samples as bitstring`
+|`data bmap              `|Y       |`Convert hex value according a binary template`
 |`data clear             `|Y       |`Clears bigbuf on deviceside and graph window`
 |`data diff              `|Y       |`Diff of input files`
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`

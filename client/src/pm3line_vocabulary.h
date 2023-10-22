@@ -107,6 +107,7 @@ const static vocabulary_t vocabulary[] = {
     { 1, "data atr" },
     { 1, "data bin2hex" },
     { 0, "data bitsamples" },
+    { 1, "data bmap" },
     { 1, "data clear" },
     { 1, "data diff" },
     { 0, "data hexsamples" },

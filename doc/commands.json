@@ -275,6 +275,20 @@
             ],
             "usage": "data bitsamples [-h]"
         },
+        "data bmap": {
+            "command": "data bmap",
+            "description": "Breaks down a hex value to binary according a template data bmap -d 16 -m 4,4 This will give two rows each with four bits",
+            "notes": [
+                "data bmap -d 3B -m 2,5,1"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-d <hex> hex string",
+                "-m <str> binary template"
+            ],
+            "usage": "data bmap [-h] [-d <hex>] [-m <str>]"
+        },
         "data clear": {
             "command": "data clear",
             "description": "This function clears the bigbuff on deviceside and graph window",
@@ -2986,6 +3000,7 @@
                 "--new <hex> Specify key as 8 hex bytes",
                 "--nki <dec> New key index to select key from memory 'hf iclass managekeys'",
                 "--csn <hex> Specify a Card Serial Number (CSN) to diversify the key (if omitted will attempt to read a CSN)",
+                "--elite Elite computations applied to new key",
                 "--elite2 Elite computations applied to both old and new key",
                 "--oldelite Elite computations applied only to old key"
             ],
@@ -3092,9 +3107,10 @@
                 "--nr replay of NR/MAC",
                 "-z, --dense dense dump output style",
                 "--force force unsecure card read",
-                "--shallow use shallow (ASK) reader modulation instead of OOK"
+                "--shallow use shallow (ASK) reader modulation instead of OOK",
+                "--ns no save to file"
             ],
-            "usage": "hf iclass dump [-hz] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr] [--force] [--shallow]"
+            "usage": "hf iclass dump [-hz] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr] [--force] [--shallow] [--ns]"
         },
         "hf iclass eload": {
             "command": "hf iclass eload",
@@ -11899,8 +11915,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 690,
+        "commands_extracted": 691,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-10-19T19:41:49"
+        "extracted_on": "2023-10-22T12:20:10"
     }
 }

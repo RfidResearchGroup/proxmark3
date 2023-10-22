@@ -1542,7 +1542,7 @@ static int CmdHF14BDump(const char *Cmd) {
             PrintAndLogEx(NORMAL, "");
             return PM3_SUCCESS;
         }
-        
+
         // save to file
         if (fnlen < 1) {
             PrintAndLogEx(INFO, "using UID as filename");

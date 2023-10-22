@@ -1754,7 +1754,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         arg_lit0("z", "dense", "dense dump output style"),
         arg_lit0(NULL, "force", "force unsecure card read"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
-        arg_lit0(NULL, "ns", "no save to file"),        
+        arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
