@@ -114,7 +114,7 @@ local function main(args)
     local set_tearoff_delay = 'hw tearoff --delay %d'
     local enable_tearoff = 'hw tearoff --on'
 
-    local wr_template = 'lf em 4x05_write %s %s %s'
+    local wr_template = 'lf em 4x05 write --addr %s --data %s --pwd %s'
 
     -- init addr to value
     core.console(wr_template:format(addr, wr_value, password))
