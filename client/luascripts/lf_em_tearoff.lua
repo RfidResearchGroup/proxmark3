@@ -82,7 +82,7 @@ local function main(args)
     sd = sd or 2000
     ed = ed or 2100
 
-    if #password ~= 8 then
+    if password ~= '' and #password ~= 8 then
         return oops('password must be 4 hex bytes')
     end
 
