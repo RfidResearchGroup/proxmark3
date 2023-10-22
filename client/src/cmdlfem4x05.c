@@ -750,16 +750,16 @@ int CmdEM4x05Read(const char *Cmd) {
     bool use_pwd = false;
 
     if (addr > 15) {
-        PrintAndLogEx(ERR, "Address must be between 0 and 15");
+        PrintAndLogEx(ERR, "Address must be between 0 and 15, got " _RED_("%d"), addr);
         return PM3_EINVARG;
     }
 
     if (inputpwd == 0xFFFFFFFFFFFFFFFF) {
-        PrintAndLogEx(INFO, "Reading address %02u", addr);
+        PrintAndLogEx(INFO, "Reading address " _YELLOW_("%02u"), addr);
     } else {
         pwd = (inputpwd & 0xFFFFFFFF);
         use_pwd = true;
-        PrintAndLogEx(INFO, "Reading address %02u using password %08X", addr, pwd);
+        PrintAndLogEx(INFO, "Reading address " _YELLOW_("%02u") " using password " _YELLOW_("%08X"), addr, pwd);
     }
 
     uint32_t word = 0;
@@ -827,14 +827,14 @@ int CmdEM4x05Write(const char *Cmd) {
 
     if (use_pwd) {
         if (protect_operation)
-            PrintAndLogEx(INFO, "Writing protection words data %08X using password %08X", data, pwd);
+            PrintAndLogEx(INFO, "Writing protection words data " _YELLOW_("%08X") " using password " _YELLOW_("%08X"), data, pwd);
         else
-            PrintAndLogEx(INFO, "Writing address %d data %08X using password %08X", addr, data, pwd);
+            PrintAndLogEx(INFO, "Writing address " _YELLOW_("%d") " data " _YELLOW_("%08X") " using password " _YELLOW_("%08X"), addr, data, pwd);
     } else {
         if (protect_operation)
-            PrintAndLogEx(INFO, "Writing protection words data %08X", data);
+            PrintAndLogEx(INFO, "Writing protection words data " _YELLOW_("%08X") , data);
         else
-            PrintAndLogEx(INFO, "Writing address %d data %08X", addr, data);
+            PrintAndLogEx(INFO, "Writing address " _YELLOW_("%d") " data " _YELLOW_("%08X") , addr, data);
     }
 
     res = PM3_SUCCESS;
@@ -859,7 +859,7 @@ int CmdEM4x05Write(const char *Cmd) {
     if (status == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Data written and verified");
     else if (status == PM3_EFAILED)
-        PrintAndLogEx(ERR, "Tag denied %s operation", protect_operation ? "Protect" : "Write");
+        PrintAndLogEx(ERR, "Tag denied " _RED_("%s") " operation", protect_operation ? "Protect" : "Write");
     else
         PrintAndLogEx(DEBUG, "No answer from tag");
 
