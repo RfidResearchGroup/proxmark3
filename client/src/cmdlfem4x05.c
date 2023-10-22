@@ -514,6 +514,7 @@ int CmdEM4x05Dump(const char *Cmd) {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "password (00000000)"),
         arg_str0("f", "file", "<fn>", "override filename prefix (optional).  Default is based on UID"),
+        arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -522,6 +523,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool nosave = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     uint8_t addr = 0;
@@ -691,6 +693,13 @@ int CmdEM4x05Dump(const char *Cmd) {
         }
 
     } else {
+    }
+
+    if (nosave) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Called with no save option");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
     }
 
     // all ok save dump to file
