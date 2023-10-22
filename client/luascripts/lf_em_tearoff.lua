@@ -83,15 +83,15 @@ local function main(args)
     ed = ed or 2100
 
     if #password ~= 8 then
-        password = ''
+        return oops('password must be 4 hex bytes')
     end
 
     if #wr_value ~= 8 then
-        wr_value = 'FFFFFFFF'
+        return oops('write value must be 4 hex bytes')
     end
 
     if #rd_value ~= 8 then
-        rd_value = 'FFFFFFFF'
+        return oops('read value must be 4 hex bytes')
     end
 
     if sd > ed then
