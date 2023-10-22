@@ -3451,6 +3451,69 @@ static int CmdAtrLookup(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdBinaryMap(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data bmap",
+                  "Breaks down a hex value to binary according a template\n"
+                  "   data bmap -d 16 -m 4,4\n"
+                  "This will give two rows each with four bits",
+                  "data bmap -d 3B -m 2,5,1\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("d", NULL, "<hex>", "hex string"),
+        arg_str0("m", NULL, "<str>", "binary template"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int hlen = 5;
+    uint8_t hex[5 + 1];
+    CLIGetStrWithReturn(ctx, 1,hex, &hlen);
+
+    int tlen = 40;
+    uint8_t template[40 + 1];
+    CLIGetStrWithReturn(ctx, 2, template, &tlen);
+    CLIParserFree(ctx);
+
+    char bits[(8 * 4) + 1] = {0};
+    hextobinstring_n(bits, hex, hlen);
+
+    int x = 0;
+    char *token = strtok(template, ",");
+
+    PrintAndLogEx(INFO, "---+---------------------------");
+    PrintAndLogEx(INFO, "   | b0 b1 b2 b3 b4 b5 b6 b7");
+    PrintAndLogEx(INFO, "---+---------------------------");
+
+    uint8_t i = 0;
+    uint8_t cnt = 1;
+    while (token != NULL) {
+        sscanf(token, "%d", &x);
+
+        if (i) {
+            PrintAndLogEx(INFO, " %d | %*.s" NOLF, cnt, i * 3, " ");
+        } else {
+            PrintAndLogEx(INFO, " %d | " NOLF, cnt);
+        }
+
+        // incease with previous offset
+        x += i;
+
+        for (;i < x; i++) {
+            PrintAndLogEx(NORMAL, "%c  " NOLF, bits[7 - i]);
+        }
+
+        PrintAndLogEx(NORMAL, "");
+        token = strtok(NULL, ",");
+        cnt++;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable,  "This help"},
 
@@ -3493,6 +3556,7 @@ static command_t CommandTable[] = {
     {"atr",             CmdAtrLookup,            AlwaysAvailable,  "ATR lookup"},
     {"bin2hex",         Cmdbin2hex,              AlwaysAvailable,  "Converts binary to hexadecimal"},
     {"bitsamples",      CmdBitsamples,           IfPm3Present,     "Get raw samples as bitstring"},
+    {"bmap",            CmdBinaryMap,            AlwaysAvailable,  "Convert hex value according a binary template"},
     {"clear",           CmdBuffClear,            AlwaysAvailable,  "Clears bigbuf on deviceside and graph window"},
     {"diff",            CmdDiff,                 AlwaysAvailable,  "Diff of input files"},
     {"hexsamples",      CmdHexsamples,           IfPm3Present,     "Dump big buffer as hex bytes"},
