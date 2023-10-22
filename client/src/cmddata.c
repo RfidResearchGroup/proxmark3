@@ -3478,11 +3478,12 @@ static int CmdBinaryMap(const char *Cmd) {
     CLIParserFree(ctx);
 
     char bits[(8 * 4) + 1] = {0};
-    hextobinstring_n(bits, hex, hlen);
+    hextobinstring_n(bits, (char*)hex, hlen);
 
     int x = 0;
-    char *token = strtok(template, ",");
+    char *token = strtok((char*)template, ",");
 
+    // header
     PrintAndLogEx(INFO, "---+---------------------------");
     PrintAndLogEx(INFO, "   | b0 b1 b2 b3 b4 b5 b6 b7");
     PrintAndLogEx(INFO, "---+---------------------------");
