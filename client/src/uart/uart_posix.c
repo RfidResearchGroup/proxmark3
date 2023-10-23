@@ -317,16 +317,16 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         char *rColon = strrchr(addrPortStr, ':');
         if (rColon == NULL) {
             // no colon
-            // "tcp:<ipv4 address>", "tcp:[<ipv4 address>]"
+            // "udp:<ipv4 address>", "udp:[<ipv4 address>]"
             portstr = "18888";
         } else if (lColon == rColon) {
             // only one colon
-            // "tcp:<ipv4 address>:<port>", "tcp:[<ipv4 address>]:<port>"
+            // "udp:<ipv4 address>:<port>", "udp:[<ipv4 address>]:<port>"
             portstr = rColon + 1;
         } else {
             // two or more colon, IPv6 address
-            // "tcp:[<ipv6 address>]:<port>"
-            // "tcp:<ipv6 address>", "tcp:[<ipv6 address>]"
+            // "udp:[<ipv6 address>]:<port>"
+            // "udp:<ipv6 address>", "udp:[<ipv6 address>]"
             if (endBracket != NULL && rColon == endBracket + 1) {
                 portstr = rColon + 1;
             } else {
@@ -365,8 +365,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             if (sfd == -1)
                 continue;
 
-            if (!uart_bind(sfd, bindAddrStr, bindPortStr, isBindingIPv6)) {
+            if (!uart_bind(&sfd, bindAddrStr, bindPortStr, isBindingIPv6)) {
                 PrintAndLogEx(ERR, "error: Could not bind. errno: %d", errno);
+                close(sfd);
                 freeaddrinfo(addr);
                 free(addrPortStr);
                 free(sp);
@@ -913,7 +914,7 @@ uint32_t uart_get_speed(const serial_port sp) {
     return uiPortSpeed;
 }
 
-bool uart_bind(int sfd, char *bindAddrStr, char *bindPortStr, bool isBindingIPv6) {
+bool uart_bind(void *socket, char *bindAddrStr, char *bindPortStr, bool isBindingIPv6) {
     if (bindAddrStr == NULL && bindPortStr == NULL)
         return true; // no need to bind
 
@@ -941,7 +942,7 @@ bool uart_bind(int sfd, char *bindAddrStr, char *bindPortStr, bool isBindingIPv6
             inet_pton(AF_INET6, bindAddrStr, &(bindSockaddr6->sin6_addr));
     }
 
-    int res = bind(sfd, (struct sockaddr *)&bindSockaddr, sizeof(bindSockaddr));
+    int res = bind(*(int *)socket, (struct sockaddr *)&bindSockaddr, sizeof(bindSockaddr));
     return (res >= 0);
 }
 
