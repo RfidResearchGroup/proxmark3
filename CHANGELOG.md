@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
  - Added `bind` option for network connections to specify the outbound address and port (@wh201906)
  - Changed `lf em 4x05 dump` - now supports the `--ns` nosave parameter (@iceman1001)
+ - Fixed some wrong synchronization waits in usb_write() to increase the communication speed (@wh201906)
  - Added new command `data bmap` - breaks down a hexvalue to a binary template (@iceman1001)
  - Changed aid_desfire.json - added entreis from the Metrodroid project (@iceman1001)
  - Changed mad.json - added entries from the Metrodroid project (@iceman1001)
