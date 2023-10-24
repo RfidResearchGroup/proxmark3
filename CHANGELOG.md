@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `bind` option for network connections to specify the outbound address and port (@wh201906)
  - Changed `lf em 4x05 dump` - now supports the `--ns` nosave parameter (@iceman1001)
  - Added new command `data bmap` - breaks down a hexvalue to a binary template (@iceman1001)
  - Changed aid_desfire.json - added entreis from the Metrodroid project (@iceman1001)
