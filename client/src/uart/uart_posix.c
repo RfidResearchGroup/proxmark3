@@ -91,6 +91,8 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     sp->udpBuffer = NULL;
     // init timeouts
     timeout.tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000;
+    g_conn.send_via_local_ip = false;
+    g_conn.send_via_ip = PM3_NONE;
 
     char *prefix = strdup(pcPortName);
     if (prefix == NULL) {
@@ -119,7 +121,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             return INVALID_SERIAL_PORT;
         }
 
-        timeout.tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_MS * 1000;
+        timeout.tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000;
 
         // find the "bind" option
         char *bindAddrPortStr = strstr(addrPortStr, ",bind=");
@@ -233,6 +235,12 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         info.ai_family = PF_UNSPEC;
         info.ai_socktype = SOCK_STREAM;
 
+        if ((strstr(addrstr, "localhost") != NULL) ||
+                (strstr(addrstr, "127.0.0.1") != NULL) ||
+                (strstr(addrstr, "::1") != NULL)) {
+            g_conn.send_via_local_ip = true;
+        }
+
         int s = getaddrinfo(addrstr, portstr, &info, &addr);
         if (s != 0) {
             PrintAndLogEx(ERR, "error: getaddrinfo: %s", gai_strerror(s));
@@ -304,7 +312,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             return INVALID_SERIAL_PORT;
         }
 
-        timeout.tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_MS * 1000;
+        timeout.tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000;
 
         // find the "bind" option
         char *bindAddrPortStr = strstr(addrPortStr, ",bind=");
@@ -417,6 +425,12 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         info.ai_family = PF_UNSPEC;
         info.ai_socktype = SOCK_DGRAM;
 
+        if ((strstr(addrstr, "localhost") != NULL) ||
+                (strstr(addrstr, "127.0.0.1") != NULL) ||
+                (strstr(addrstr, "::1") != NULL)) {
+            g_conn.send_via_local_ip = true;
+        }
+
         int s = getaddrinfo(addrstr, portstr, &info, &addr);
         if (s != 0) {
             PrintAndLogEx(ERR, "error: getaddrinfo: %s", gai_strerror(s));
@@ -528,7 +542,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
 
         // we must use max timeout!
-        timeout.tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_MS * 1000;
+        timeout.tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000;
 
         size_t servernameLen = (strlen(pcPortName) - 7) + 1;
         char serverNameBuf[servernameLen];

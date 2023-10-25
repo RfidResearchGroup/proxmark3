@@ -44,7 +44,7 @@ typedef struct {
 // this is for TCP connection
 struct timeval timeout = {
     .tv_sec  = 0, // 0 second
-    .tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_MS * 1000
+    .tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000
 };
 
 uint32_t newtimeout_value = 0;
@@ -92,6 +92,8 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     }
 
     sp->udpBuffer = NULL;
+    g_conn.send_via_local_ip = false;
+    g_conn.send_via_ip = PM3_NONE;
 
     char *prefix = strdup(pcPortName);
     if (prefix == NULL) {
@@ -121,7 +123,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             return INVALID_SERIAL_PORT;
         }
 
-        timeout.tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_MS * 1000;
+        timeout.tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000;
 
         // find the "bind" option
         char *bindAddrPortStr = strstr(addrPortStr, ",bind=");
@@ -244,6 +246,12 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         info.ai_socktype = SOCK_STREAM;
         info.ai_protocol = IPPROTO_TCP;
 
+        if ((strstr(addrstr, "localhost") != NULL) ||
+                (strstr(addrstr, "127.0.0.1") != NULL) ||
+                (strstr(addrstr, "::1") != NULL)) {
+            g_conn.send_via_local_ip = true;
+        }
+
         int s = getaddrinfo(addrstr, portstr, &info, &addr);
         if (s != 0) {
             PrintAndLogEx(ERR, "error: getaddrinfo: %d: %s", s, gai_strerror(s));
@@ -322,7 +330,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             return INVALID_SERIAL_PORT;
         }
 
-        timeout.tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_MS * 1000;
+        timeout.tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000;
 
         // find the "bind" option
         char *bindAddrPortStr = strstr(addrPortStr, ",bind=");
@@ -444,6 +452,12 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         info.ai_family = AF_UNSPEC;
         info.ai_socktype = SOCK_DGRAM;
         info.ai_protocol = IPPROTO_UDP;
+
+        if ((strstr(addrstr, "localhost") != NULL) ||
+                (strstr(addrstr, "127.0.0.1") != NULL) ||
+                (strstr(addrstr, "::1") != NULL)) {
+            g_conn.send_via_local_ip = true;
+        }
 
         int s = getaddrinfo(addrstr, portstr, &info, &addr);
         if (s != 0) {

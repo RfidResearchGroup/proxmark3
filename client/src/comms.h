@@ -70,8 +70,10 @@ typedef struct {
     bool send_with_crc_on_fpc;
     // "Session" flag, to tell via which interface next msgs are sent: USB or FPC USART
     bool send_via_fpc_usart;
-    // to tell if we are using TCP/UDP/TCPv6
+    // to tell if we are using TCP/UDP/TCP(IPv6)/UDP(IPv6)
     CommunicationProtocol_t send_via_ip;
+    // to tell if the target address is local address(127.0.0.1/localhost/::1)
+    bool send_via_local_ip;
     // To memorise baudrate
     uint32_t uart_speed;
     uint16_t last_command;
