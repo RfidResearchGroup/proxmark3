@@ -666,9 +666,9 @@ int TestProxmark(pm3_device_t *dev) {
     g_conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
     g_conn.uart_speed = g_pm3_capabilities.baudrate;
 
-    bool is_tcp_conn = (memcmp(g_conn.serial_port_name, "tcp:", 4) == 0);
+    bool is_tcp_conn = (g_conn.send_via_ip == PM3_TCPv4 || g_conn.send_via_ip == PM3_TCPv6);
     bool is_bt_conn = (memcmp(g_conn.serial_port_name, "bt:", 3) == 0);
-    bool is_udp_conn = (memcmp(g_conn.serial_port_name, "udp:", 4) == 0);
+    bool is_udp_conn = (g_conn.send_via_ip == PM3_UDPv4 || g_conn.send_via_ip == PM3_UDPv6);
 
     PrintAndLogEx(INFO, "Communicating with PM3 over %s%s%s%s",
                   (g_conn.send_via_fpc_usart) ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
@@ -680,15 +680,11 @@ int TestProxmark(pm3_device_t *dev) {
         PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", g_conn.uart_speed);
     } else {
         int res;
-        if (is_tcp_conn || is_udp_conn) {
-            if ((strstr(g_conn.serial_port_name, "localhost") != NULL) ||
-                    (strstr(g_conn.serial_port_name, "127.0.0.1") != NULL) ||
-                    (strstr(g_conn.serial_port_name, "[::1]") != NULL) ||
-                    (strstr(g_conn.serial_port_name, "p:::1") != NULL)) {
-                res = uart_reconfigure_timeouts(UART_TCP_CLIENT_LOCAL_RX_TIMEOUT_MS);
-            } else {
-                res = uart_reconfigure_timeouts(UART_TCP_CLIENT_RX_TIMEOUT_MS);
-            }
+        if (g_conn.send_via_local_ip) {
+            // (g_conn.send_via_local_ip == true) -> ((is_tcp_conn || is_udp_conn) == true)
+            res = uart_reconfigure_timeouts(is_tcp_conn ? UART_TCP_LOCAL_CLIENT_RX_TIMEOUT_MS : UART_UDP_LOCAL_CLIENT_RX_TIMEOUT_MS);
+        } else if (is_tcp_conn || is_udp_conn) {
+            res = uart_reconfigure_timeouts(UART_NET_CLIENT_RX_TIMEOUT_MS);
         } else {
             res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
         }

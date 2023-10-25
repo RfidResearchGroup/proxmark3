@@ -15,12 +15,13 @@
       * [ Flashing the kernel ](#flashing-the-kernel)
       * [ Testing ](#testing)
       * [ Troubleshooting ](#troubleshooting)
-  * [ TCP bridge method ](#tcp-bridge-method)
+  * [ TCP/UDP bridge method ](#tcpudp-bridge-method)
     * [ USB connection ](#usb-connection)
       * [ USB-UART bridge application ](#usb-uart-bridge-application)
     * [ Bluetooth connection ](#bluetooth-connection)
       * [ BT-UART bridge application ](#bt-uart-bridge-application)
     * [ TCP connection ](#tcp-connection)
+    * [ UDP connection ](#udp-connection)
     * [Troubleshooting](#troubleshooting-1)
       * [BTADDON Missing in Firmware of PM3](#btaddon-missing-in-firmware-of-pm3)
   * [Compiling and Flashing a Proxmark3 Firmware from non-root Android](#compiling-and-flashing-a-proxmark3-firmware-from-non-root-android)
@@ -125,16 +126,20 @@ Everything should work just like if it was your PC!
 - `dmesg | grep usb` - useful debug info
 - `/proc/config.gz` - contains your kernel's build configuration. Look for `CONFIG_USB_ACM`, which should be enabled
 
-## TCP bridge method
+## TCP/UDP bridge method
 ^[Top](#top)
 
 Termux doesn't come with usb serial neither bluetooth serial drivers.
-However, it is fully integrated with phone's network, so we need to talk to the proxmark using serial to tcp sockets (carried out by android apps).
+However, it is fully integrated with phone's network, so we need to talk to the proxmark using serial to TCP/UDP sockets (carried out by other android apps).
+
+```
+|Client in Termux| <--TCP/UDP--> |Bridge App| <--USB/Bluetooth--> |Proxmark3| 
+```
 
 ### USB connection
 ^[Top](#top)
 
-#### USB-UART Bridge Application
+#### USB-UART Bridge Application for TCP to USB bridging
 ^[Top](#top)
 
 Install [this free TCPUART app](https://play.google.com/store/apps/details?id=com.hardcodedjoy.tcpuart) on the Play Store
@@ -153,7 +158,7 @@ It is possible to record the config as autostart, cf 'Settings' -> 'Autostart se
 ### Bluetooth connection
 ^[Top](#top)
 
-#### BT-UART Bridge Application
+#### BT-UART Bridge Application for TCP to BT bridging
 ^[Top](#top)
 
 Install [this free app](https://play.google.com/store/apps/details?id=masar.bb) or [the paid version](https://play.google.com/store/apps/details?id=masar.bluetoothbridge.pro) (which includes usb bridge)
@@ -175,6 +180,42 @@ Alternatively, if you have made the client in the git repo:
 ```
 ./client/proxmark3 tcp:localhost:<chosenPort>
 ```
+If the last colon and the chosen port are missing, the client will use `18888` as the default port.
+
+### UDP connection
+^[Top](#top)
+
+Start a new session, then:
+```
+proxmark3 udp:localhost:<chosenPort>
+```
+Alternatively, if you have made the client in the git repo:
+```
+./client/proxmark3 udp:localhost:<chosenPort>
+```
+If the last colon and the chosen port are missing, the client will use `18888` as the default port.  
+
+You can also specify the outbound port for UDP connections, which might be required for some UDP to USB/BT bridge app as the target port of it.  
+The format is
+```
+proxmark3 udp:localhost:<chosenPort>,bind=:<outboundPort>
+```
+Some examples:
+```
+# The bridge app listens on Port 12345, and the client listens on Port 12355
+proxmark3 udp:localhost:12345,bind=:12355
+
+# 127.0.0.1 is also a valid local address
+proxmark3 udp:127.0.0.1:12345,bind=:12355
+
+# The bridge app listens on the default port 18888, and the client listens on Port 12355
+proxmark3 udp:127.0.0.1,bind=:12355
+
+# OutboundPort is randomly picked by the system, which requires the "UDP server" mode for the bridge app
+proxmark3 udp:localhost:12345
+```
+
+
 ### Troubleshooting
 ^[Top](#top)
 
