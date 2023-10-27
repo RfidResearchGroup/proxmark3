@@ -98,19 +98,19 @@ typedef struct {
 } ntag424_session_keys_t;
 
 // -------------- File settings structs -------------------------
-#define FILE_SETTINGS_OPTIONS_SDM_AND_MIRRORING (1 << 6)
+// Enabling this bit in the settings will also reset the read counter to 0
+#define FILE_SETTINGS_OPTIONS_SDM_AND_MIRRORING (1 << 6) 
 
 #define FILE_SETTINGS_SDM_OPTIONS_UID (1 << 7)
 #define FILE_SETTINGS_SDM_OPTIONS_SDM_READ_COUNTER (1 << 6)
 #define FILE_SETTINGS_SDM_OPTIONS_SDM_READ_COUNTER_LIMIT (1 << 5)
 #define FILE_SETTINGS_SDM_OPTIONS_SDM_ENC_FILE_DATA (1 << 4)
-// RFU stuff...
 #define FILE_SETTINGS_SDM_OPTIONS_ENCODING_MODE_ASCII (1 << 0)
 
 typedef struct {
     uint8_t sdm_options;
     uint8_t sdm_access[2];
-    uint8_t offset[8][3];
+    uint8_t sdm_data[8][3];
 } ntag424_file_sdm_settings_t;
 
 typedef struct {
@@ -121,7 +121,7 @@ typedef struct {
     ntag424_file_sdm_settings_t optional_sdm_settings;
 } ntag424_file_settings_t;
 
-#define SETTINGS_WITHOUT_OFFSETS_SIZE (1+1+2+3+1+2)
+#define SETTINGS_WITHOUT_SDM_DATA_SIZE (1+1+2+3+1+2)
 
 // A different struct is used when actually writing the settings back,
 // since we obviously can't change the size or type of a static file.
@@ -143,11 +143,10 @@ typedef struct {
 
 // Currently unused functions, commented out due to -Wunused-function
 /*static void ntag424_file_settings_set_sdm_access_rights(ntag424_file_settings_t *settings,
-                                                        uint8_t sdm_meta_read, uint8_t sdm_file_read,
-                                                        uint8_t rfu, uint8_t sdm_ctr_ret)
+                                                        uint8_t sdm_meta_read, uint8_t sdm_file_read, uint8_t sdm_ctr_ret)
 {
     settings->optional_sdm_settings.sdm_access[1] = sdm_meta_read << 4 | sdm_file_read;
-    settings->optional_sdm_settings.sdm_access[0] = rfu << 4 | sdm_ctr_ret;
+    settings->optional_sdm_settings.sdm_access[0] = 0xf << 4 | sdm_ctr_ret; // (0xf is due to reserved for future use)
 }*/
 
 
@@ -160,11 +159,7 @@ static uint8_t ntag424_file_settings_get_sdm_file_read(const ntag424_file_settin
 }
 
 // Currently unused functions, commented out due to -Wunused-function
-/*static uint8_t ntag424_file_settings_get_sdm_rfu(const ntag424_file_settings_t *settings) {
-    return settings->optional_sdm_settings.sdm_access[0] >> 4;
-}
-
-static uint8_t ntag424_file_settings_get_sdm_ctr_ret(const ntag424_file_settings_t *settings) {
+/*static uint8_t ntag424_file_settings_get_sdm_ctr_ret(const ntag424_file_settings_t *settings) {
     return settings->optional_sdm_settings.sdm_access[0] & 4;
 }*/
 
@@ -233,7 +228,7 @@ static int ntag424_read_file_settings(uint8_t fileno, ntag424_file_settings_t *s
     }
 
     if(outlen < 9) {
-        PrintAndLogEx(ERR, "Incorrect response asdaslength: %d", outlen);
+        PrintAndLogEx(ERR, "Incorrect response length: %d", outlen);
         return PM3_ESOFT;
     }
 
@@ -275,7 +270,7 @@ static void ntag424_calc_mac(ntag424_session_keys_t *session_keys, uint8_t comma
     memcpy(mac_input, mac_input_header, sizeof(mac_input_header));
     memcpy(&mac_input[sizeof(mac_input_header)], data, datalen);
     uint8_t mac[16] = {0};
-    mbedtls_aes_cmac_prf_128(session_keys->mac, 16, mac_input, sizeof(mac_input_header) + 32, mac);
+    mbedtls_aes_cmac_prf_128(session_keys->mac, 16, mac_input, sizeof(mac_input_header) + datalen, mac);
     
     for(int i = 0; i < 8; i++)
     {
@@ -349,7 +344,7 @@ static int ntag424_write_file_settings(uint8_t fileno, ntag424_file_settings_t *
     }
 
     if(outlen != RESPONSE_LENGTH) {
-        PrintAndLogEx(ERR, "Incorrect response asdaslength: %d, %02X%02X", outlen, resp[outlen-2], resp[outlen-1]);
+        PrintAndLogEx(ERR, "Incorrect response length: %d, %02X%02X", outlen, resp[outlen-2], resp[outlen-1]);
         return PM3_ESOFT;
     }
 
@@ -366,7 +361,7 @@ static int ntag424_write_file_settings(uint8_t fileno, ntag424_file_settings_t *
 
 static void ntag424_print_file_settings(uint8_t fileno, const ntag424_file_settings_t *settings) {
 
-    int num_offsets = (ntag424_calc_file_settings_size(settings) - SETTINGS_WITHOUT_OFFSETS_SIZE) / 3;
+    int num_sdm_data = (ntag424_calc_file_settings_size(settings) - SETTINGS_WITHOUT_SDM_DATA_SIZE) / 3;
     
     PrintAndLogEx(SUCCESS, "--- " _CYAN_("File %d settings:") , fileno);
 
@@ -381,21 +376,18 @@ static void ntag424_print_file_settings(uint8_t fileno, const ntag424_file_setti
         PrintAndLogEx(SUCCESS, "    options: " _GREEN_("%02X"), settings->optional_sdm_settings.sdm_options);
         PrintAndLogEx(SUCCESS, " sdm access: " _GREEN_("%02X%02X"), settings->optional_sdm_settings.sdm_access[0], settings->optional_sdm_settings.sdm_access[1]);
 
-        if(num_offsets > 0)
+        if(num_sdm_data > 0)
         {
-            PrintAndLogEx(SUCCESS, "--- " _CYAN_("SDM offsets: "));
-            for(int i = 0; i < num_offsets; i++)
+            PrintAndLogEx(SUCCESS, "--- " _CYAN_("SDM data: "));
+            for(int i = 0; i < num_sdm_data; i++)
             {
-                PrintAndLogEx(SUCCESS, "   offset %d: %02X%02X%02X", i,
-                              settings->optional_sdm_settings.offset[i][2],
-                              settings->optional_sdm_settings.offset[i][1],
-                              settings->optional_sdm_settings.offset[i][0]);
+                PrintAndLogEx(SUCCESS, "          %d: %02X%02X%02X", i,
+                              settings->optional_sdm_settings.sdm_data[i][2],
+                              settings->optional_sdm_settings.sdm_data[i][1],
+                              settings->optional_sdm_settings.sdm_data[i][0]);
             }
         }
     }
-
-    
-    // Add printing of variable number of offsets here...
 }
 
 // NTAG424 only have one static application, so we select it here
@@ -1089,15 +1081,16 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
                   
                   "sdmaccess: two byte access rights.\n"
                   "Each nibble is a key, or E for plain mirror and F for no mirroring\n"
-                  "Order is SDMMetaRead, SDMFileRead, RFU and SDMCtrRet\n\n"
+                  "Order is SDMMetaRead, SDMFileRead, Reserved and SDMCtrRet\n\n"
 
-                  "offset: A three byte offset to the data to be mirrored to/from. Can be specified multiple times.\n\n"
+                  "sdm_data: Three bytes of data used to control SDM settings. Can be specified multiple times.\n"
+                  "Data means different things depending on settings.\n\n"
 
                   "Note: Not all of these settings will be written. It depends on the option byte, and the keys set. See AN12196 for more information.\n"
-                  "You must also start with offset1, then offset2, up to the number of offsets you want to write",
+                  "You must also start with sdmdata1, then sdmdata2, up to the number of sdm_data you want to write",
                   
                   
-                  "hf ntag424 changefilesettings -f 2 -n 0 -k 00000000000000000000000000000000 -o 40 -a 00E0 -s C1 -c F000 --offset1 000020 --offset2 000043 --offset3 000043");
+                  "hf ntag424 changefilesettings -f 2 -n 0 -k 00000000000000000000000000000000 -o 40 -a 00E0 -s C1 -c F000 --sdmdata1 000020 --sdmdata2 000043 --sdmdata3 000043");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1108,13 +1101,14 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         arg_str0("a",  "access", "<hex>", "File access settings (HEX 2 bytes)"),
         arg_str0("s",  "sdmoptions", "<hex>", "SDM options (HEX 1 byte)"),
         arg_str0("c",  "sdmaccess", "<hex>", "SDM access settings (HEX 2 bytes)"),
-        arg_str0(NULL, "offset1", "<hex>", "SDM offset (HEX 3 bytes)"),
-        arg_str0(NULL, "offset2", "<hex>", "SDM offset (HEX 3 bytes)"),
-        arg_str0(NULL, "offset3", "<hex>", "SDM offset (HEX 3 bytes)"),
-        arg_str0(NULL, "offset4", "<hex>", "SDM offset (HEX 3 bytes)"),
-        arg_str0(NULL, "offset5", "<hex>", "SDM offset (HEX 3 bytes)"),
-        arg_str0(NULL, "offset6", "<hex>", "SDM offset (HEX 3 bytes)"),
-        arg_str0(NULL, "offset7", "<hex>", "SDM offset (HEX 3 bytes)"),
+        arg_str0(NULL, "sdmdata1", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "sdmdata2", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "sdmdata3", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "sdmdata4", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "sdmdata5", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "sdmdata6", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "sdmdata7", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "sdmdata8", "<hex>", "SDM data (HEX 3 bytes)"),
         // Sorry, couldn't figure out how to work with arg_strn...
         arg_param_end
     };
@@ -1132,9 +1126,8 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
     uint8_t sdmoptions[1];
     uint8_t has_sdmaccess = 0;
     uint8_t sdmaccess[2];
-    uint8_t num_offsets = 0;
-    uint8_t offsets[8][3];
-
+    uint8_t num_sdm_data = 0;
+    uint8_t sdm_data[8][3];
 
     if(ntag424_cli_get_auth_information(ctx, 2, 3, &keyno, key) != PM3_SUCCESS)
     {
@@ -1161,7 +1154,7 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         CLIGetHexWithReturn(ctx, 5, access, &len);
         if(len != 2)
         {
-            PrintAndLogEx(ERR, "access must be 2 bytes");
+            PrintAndLogEx(ERR, "Access must be 2 bytes");
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
@@ -1185,7 +1178,7 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         CLIGetHexWithReturn(ctx, 7, sdmaccess, &len);
         if(len != 2)
         {
-            PrintAndLogEx(ERR, "SDM access must be 2 bytes");
+            PrintAndLogEx(ERR, "SDM Access must be 2 bytes");
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
@@ -1196,11 +1189,11 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         if(arg_get_str(ctx,8+i)->count == 1)
         {
             len = 3;
-            num_offsets++;
-            CLIGetHexWithReturn(ctx, 8+i, offsets[i], &len);
+            num_sdm_data++;
+            CLIGetHexWithReturn(ctx, 8+i, sdm_data[i], &len);
             if(len != 3)
             {
-                PrintAndLogEx(ERR, "Offset must be 3 bytes");
+                PrintAndLogEx(ERR, "sdmdata must be 3 bytes");
                 CLIParserFree(ctx);
                 return PM3_EINVARG;
             }
@@ -1263,11 +1256,11 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         memcpy(settings.optional_sdm_settings.sdm_access, sdmaccess, 2);
     }
 
-    for(int i = 0; i < num_offsets; i++)
+    for(int i = 0; i < num_sdm_data; i++)
     {
-        settings.optional_sdm_settings.offset[i][2] = offsets[i][0];
-        settings.optional_sdm_settings.offset[i][1] = offsets[i][1];
-        settings.optional_sdm_settings.offset[i][0] = offsets[i][2];
+        settings.optional_sdm_settings.sdm_data[i][2] = sdm_data[i][0];
+        settings.optional_sdm_settings.sdm_data[i][1] = sdm_data[i][1];
+        settings.optional_sdm_settings.sdm_data[i][0] = sdm_data[i][2];
     }
 
     if(ntag424_write_file_settings(fileno, &settings, &session) != PM3_SUCCESS)
