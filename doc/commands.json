@@ -6790,6 +6790,78 @@
             ],
             "usage": "hf mfu wrbl [-hl] [-k <hex>] -b <dec> -d <hex> [--force]"
         },
+        "hf ntag424 auth": {
+            "command": "hf ntag424 auth",
+            "description": "Authenticate with selected key against NTAG424.",
+            "notes": [
+                "hf ntag424 auth -n 0 -k 00000000000000000000000000000000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-n, --keyno <dec> Key number",
+                "-k, --key <hex> Key for authenticate (HEX 16 bytes)"
+            ],
+            "usage": "hf ntag424 auth [-h] -n <dec> -k <hex>"
+        },
+        "hf ntag424 changefilesettings": {
+            "command": "hf ntag424 changefilesettings",
+            "description": "Updates file settings for file, must be authenticated. This is a short explanation of the settings. See AN12196 for more information: options: byte with bit flags Bit: Setting: 6 Enable SDM and mirroring access: two byte access rights. Each nibble is a key number, or E for free access. Order is key for readwrite, change, read and write sdmoptions: byte with bit flags Bit: Setting: 0 ASCII encoding 4 SDMEncFileData 5 SDMReadCtrLimit 6 SDMReadCtr 7 SDMOptionsUID sdmaccess: two byte access rights. Each nibble is a key, or E for plain mirror and F for no mirroring Order is SDMMetaRead, SDMFileRead, Reserved and SDMCtrRet sdm_data: Three bytes of data used to control SDM settings. Can be specified multiple times. Data means different things depending on settings. Note: Not all of these settings will be written. It depends on the option byte, and the keys set. See AN12196 for more information. You must also start with sdmdata1, then sdmdata2, up to the number of sdm_data you want to write",
+            "notes": [
+                "hf ntag424 changefilesettings -f 2 -n 0 -k 00000000000000000000000000000000 -o 40 -a 00E0 -s C1 -c F000 --sdmdata1 000020 --sdmdata2 000043 --sdmdata3 000043"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <dec> File number",
+                "-n, --keyno <dec> Key number",
+                "-k, --key <hex> Key for authentication (HEX 16 bytes)",
+                "-o, --options <hex> File options byte (HEX 1 byte)",
+                "-a, --access <hex> File access settings (HEX 2 bytes)",
+                "-s, --sdmoptions <hex> SDM options (HEX 1 byte)",
+                "-c, --sdmaccess <hex> SDM access settings (HEX 2 bytes)",
+                "--sdmdata1 <hex> SDM data (HEX 3 bytes)",
+                "--sdmdata2 <hex> SDM data (HEX 3 bytes)",
+                "--sdmdata3 <hex> SDM data (HEX 3 bytes)",
+                "--sdmdata4 <hex> SDM data (HEX 3 bytes)",
+                "--sdmdata5 <hex> SDM data (HEX 3 bytes)",
+                "--sdmdata6 <hex> SDM data (HEX 3 bytes)",
+                "--sdmdata7 <hex> SDM data (HEX 3 bytes)",
+                "--sdmdata8 <hex> SDM data (HEX 3 bytes)"
+            ],
+            "usage": "hf ntag424 changefilesettings [-h] -f <dec> -n <dec> -k <hex> [-o <hex>] [-a <hex>] [-s <hex>] [-c <hex>] [--sdmdata1 <hex>] [--sdmdata2 <hex>] [--sdmdata3 <hex>] [--sdmdata4 <hex>] [--sdmdata5 <hex>] [--sdmdata6 <hex>] [--sdmdata7 <hex>] [--sdmdata8 <hex>]"
+        },
+        "hf ntag424 changekey": {
+            "command": "hf ntag424 changekey",
+            "description": "Change a key. Authentication key must currently be different to the one we want to change.",
+            "notes": [
+                "hf ntag424 changekey -n 1 --oldkey 00000000000000000000000000000000 --newkey 11111111111111111111111111111111 --key0 00000000000000000000000000000000 -v 1",
+                "hf ntag424 changekey -n 0 --newkey 11111111111111111111111111111111 --key0 00000000000000000000000000000000 -v 1"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-n, --keyno <dec> Key number to change",
+                "--oldkey <hex> Old key (only needed when changing key 1-4, HEX 16 bytes)",
+                "--newkey <hex> New key (HEX 16 bytes)",
+                "--key0 <hex> Authentication key (must be key 0, HEX 16 bytes)",
+                "-v, --version <dec> Version of the new key"
+            ],
+            "usage": "hf ntag424 changekey [-h] -n <dec> [--oldkey <hex>] --newkey <hex> --key0 <hex> -v <dec>"
+        },
+        "hf ntag424 getfilesettings": {
+            "command": "hf ntag424 getfilesettings",
+            "description": "Read and print file settings for file",
+            "notes": [
+                "hf ntag424 getfilesettings -f 2"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <dec> File number"
+            ],
+            "usage": "hf ntag424 getfilesettings [-h] -f <dec>"
+        },
         "hf ntag424 info": {
             "command": "hf ntag424 info",
             "description": "Get info about NXP NTAG424 DNA Family styled tag.",
@@ -6802,17 +6874,22 @@
             ],
             "usage": "hf ntag424 info [-h]"
         },
-        "hf ntag424 sdm": {
-            "command": "hf ntag424 sdm",
-            "description": "Validate a SDM message",
+        "hf ntag424 read": {
+            "command": "hf ntag424 read",
+            "description": "Read and print data from file on NTAG424 tag. Will authenticate if key information is provided.",
             "notes": [
-                "hf ntag424 sdm"
+                "hf ntag424 read -f 2 -n 0 -k 00000000000000000000000000000000 -o 0 -l 256"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-f, --fileno <dec> File number (1-3), (default 2)",
+                "-n, --keyno <dec> Key number",
+                "-k, --key <hex> Key for authentication (HEX 16 bytes)",
+                "-o, --offset <dec> Offset to read in file (default 0)",
+                "-l, --length <dec> Number of bytes to read"
             ],
-            "usage": "hf ntag424 sdm [-h]"
+            "usage": "hf ntag424 read [-h] -f <dec> [-n <dec>] [-k <hex>] [-o <dec>] -l <dec>"
         },
         "hf ntag424 view": {
             "command": "hf ntag424 view",
@@ -6827,6 +6904,23 @@
                 "-v, --verbose Verbose output"
             ],
             "usage": "hf ntag424 view [-hv] -f <fn>"
+        },
+        "hf ntag424 write": {
+            "command": "hf ntag424 write",
+            "description": "Write data to file on NTAG424 tag. Will authenticate if key information is provided.",
+            "notes": [
+                "hf ntag424 write -f 2 -n 0 -k 00000000000000000000000000000000 -o 0 -d 1122334455667788"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --fileno <dec> File number (1-3), (default 2)",
+                "-n, --keyno <dec> Key number",
+                "-k, --key <hex> Key for authentication (HEX 16 bytes)",
+                "-o, --offset <dec> Offset to write in file (default 0)",
+                "-d, --data <hex> Data to write"
+            ],
+            "usage": "hf ntag424 write [-h] -f <dec> [-n <dec>] [-k <hex>] [-o <dec>] -d <hex>"
         },
         "hf plot": {
             "command": "hf plot",
@@ -8053,9 +8147,10 @@
             "options": [
                 "-h, --help This help",
                 "-p, --pwd <hex> password (00000000)",
-                "-f, --file <fn> override filename prefix (optional). Default is based on UID"
+                "-f, --file <fn> override filename prefix (optional). Default is based on UID",
+                "--ns no save to file"
             ],
-            "usage": "lf em 4x05 dump [-h] [-p <hex>] [-f <fn>]"
+            "usage": "lf em 4x05 dump [-h] [-p <hex>] [-f <fn>] [--ns]"
         },
         "lf em 4x05 info": {
             "command": "lf em 4x05 info",
@@ -11915,8 +12010,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 691,
+        "commands_extracted": 696,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-10-22T12:20:10"
+        "extracted_on": "2023-10-27T16:08:32"
     }
 }
