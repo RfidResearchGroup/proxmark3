@@ -251,6 +251,40 @@ static int ntag424_read_file_settings(uint8_t fileno, ntag424_file_settings_t *s
     return PM3_SUCCESS;
 }
 
+static void ntag424_calc_iv(ntag424_session_keys_t *session_keys, uint8_t *out_ivc) {
+    uint8_t iv_clear[] = { 0xa5, 0x5a,
+        session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3],
+        (uint8_t)(session_keys->command_counter), (uint8_t)(session_keys->command_counter >> 8),
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    uint8_t zero_iv[16] = {0};
+    aes_encode(zero_iv, session_keys->encryption, iv_clear, out_ivc, 16);
+}
+
+static void ntag424_calc_mac(ntag424_session_keys_t *session_keys, uint8_t command, uint8_t command_header, uint8_t *data, uint8_t datalen, uint8_t *out_mac) {
+    uint8_t mac_input_header[] = { command,
+        (uint8_t)session_keys->command_counter, (uint8_t)(session_keys->command_counter >> 8),
+        session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3],
+        command_header,
+    };
+
+    int mac_input_len = sizeof(mac_input_header) + datalen;
+
+    uint8_t *mac_input = (uint8_t*)malloc(mac_input_len);
+    memcpy(mac_input, mac_input_header, sizeof(mac_input_header));
+    memcpy(&mac_input[sizeof(mac_input_header)], data, datalen);
+    uint8_t mac[16] = {0};
+    mbedtls_aes_cmac_prf_128(session_keys->mac, 16, mac_input, sizeof(mac_input_header) + 32, mac);
+    
+    for(int i = 0; i < 8; i++)
+    {
+        out_mac[i] = mac[i*2+1];
+    }
+
+    free(mac_input);
+}
+
 // Write file settings is done with full communication mode. This can probably be broken out
 // and used for read/write of file when full communication mode is needed.
 static int ntag424_write_file_settings(uint8_t fileno, ntag424_file_settings_t *settings, ntag424_session_keys_t *session_keys) {
@@ -265,15 +299,8 @@ static int ntag424_write_file_settings(uint8_t fileno, ntag424_file_settings_t *
 
 
     // ------- Calculate IV
-    uint8_t iv_clear[] = { 0xa5, 0x5a,
-        session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3],
-        (uint8_t)(session_keys->command_counter), (uint8_t)(session_keys->command_counter >> 8),
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    };
-
-    uint8_t zero_iv[16] = {0};
-    uint8_t ivc[16] = {0};
-    aes_encode(zero_iv, session_keys->encryption, iv_clear, ivc, 16);
+    uint8_t ivc[16];
+    ntag424_calc_iv(session_keys, ivc);
     
     // ------- Encrypt file settings
     uint8_t padded_cmddata_buffer[256] = {0};
@@ -289,18 +316,8 @@ static int ntag424_write_file_settings(uint8_t fileno, ntag424_file_settings_t *
     aes_encode(ivc, session_keys->encryption, padded_cmddata_buffer, encrypted_cmddata, total_size);
 
     // ------- Calculate MAC
-    uint8_t mac_input_header[] = { 0x5f,
-        (uint8_t)session_keys->command_counter, (uint8_t)(session_keys->command_counter >> 8),
-        session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3],
-        fileno // CmdHeader
-    };
-
-    uint8_t mac_input[256] = {0};
-    memcpy(mac_input, mac_input_header, sizeof(mac_input_header));
-    memcpy(&mac_input[sizeof(mac_input_header)], encrypted_cmddata, total_size);
-    uint8_t mac[16] = {0};
-    mbedtls_aes_cmac_prf_128(session_keys->mac, 16, mac_input, sizeof(mac_input_header) + total_size, mac);
-    uint8_t mact[8] = { mac[1], mac[3], mac[5], mac[7], mac[9], mac[11], mac[13], mac[15] };
+    uint8_t mact[8];
+    ntag424_calc_mac(session_keys, 0x5f, fileno, encrypted_cmddata, total_size, mact);
 
     // ------- Assemble the actual command
     uint8_t lc = 1 + total_size + 8; // CmdHeader + size + mac*/
@@ -675,15 +692,8 @@ static int ntag424_change_key(uint8_t keyno, uint8_t *new_key, uint8_t *old_key,
 
 
      // ------- Calculate IV
-    uint8_t iv_clear[] = { 0xa5, 0x5a,
-        session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3],
-        (uint8_t)(session_keys->command_counter), (uint8_t)(session_keys->command_counter >> 8),
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    };
-
-    uint8_t zero_iv[16] = {0};
-    uint8_t ive[16] = {0};
-    aes_encode(zero_iv, session_keys->encryption, iv_clear, ive, 16);
+    uint8_t ive[16];
+    ntag424_calc_iv(session_keys, ive);
 
     // ------- Calculate KeyData
     uint8_t keydata[32] = {0};
@@ -703,19 +713,8 @@ static int ntag424_change_key(uint8_t keyno, uint8_t *new_key, uint8_t *old_key,
     aes_encode(ive, session_keys->encryption, keydata, enc_keydata, 32);
 
     // -------- Calculate MAC
-    uint8_t mac_input_header[] = { 0xC4,
-        (uint8_t)session_keys->command_counter, (uint8_t)(session_keys->command_counter >> 8),
-        session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3],
-        keyno,
-    };
-
-    uint8_t mac_input[256] = {0};
-    memcpy(mac_input, mac_input_header, sizeof(mac_input_header));
-    memcpy(&mac_input[sizeof(mac_input_header)], enc_keydata, 32);
-    uint8_t mac[16] = {0};
-    mbedtls_aes_cmac_prf_128(session_keys->mac, 16, mac_input, sizeof(mac_input_header) + 32, mac);
-    uint8_t mact[8] = { mac[1], mac[3], mac[5], mac[7], mac[9], mac[11], mac[13], mac[15] };
-
+    uint8_t mact[8];
+    ntag424_calc_mac(session_keys, 0xC4, keyno, enc_keydata, 32, mact);
 
     // ------- Assemble APDU
     uint8_t cmd_header[] = {
@@ -1290,7 +1289,8 @@ static int CmdHF_ntag424_changekey(const char *Cmd) {
     CLIParserInit(&ctx, "hf ntag424 changekey",
                   "Change a key.\n"
                   "Authentication key must currently be different to the one we want to change.\n",
-                  "hf ntag424 changekey -n 1 --oldkey 00000000000000000000000000000000 --newkey 11111111111111111111111111111111 --key0 00000000000000000000000000000000 -v 1"
+                  "hf ntag424 changekey -n 1 --oldkey 00000000000000000000000000000000 --newkey 11111111111111111111111111111111 --key0 00000000000000000000000000000000 -v 1\n"
+                  "hf ntag424 changekey -n 0 --newkey 11111111111111111111111111111111 --key0 00000000000000000000000000000000 -v 1\n"
                  );
     void *argtable[] = {
         arg_param_begin,
