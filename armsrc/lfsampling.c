@@ -128,20 +128,6 @@ sample_config *getSamplingConfig(void) {
     return &config;
 }
 
-/**
- * @brief Pushes bit onto the stream
- * @param stream
- * @param bit
- */
-static void pushBit(BitstreamOut_t *stream, uint8_t bit) {
-    int bytepos = stream->position >> 3; // divide by 8
-    int bitpos = stream->position & 7;
-    *(stream->buffer + bytepos) &= ~(1 << (7 - bitpos));
-    *(stream->buffer + bytepos) |= (bit > 0) << (7 - bitpos);
-    stream->position++;
-    stream->numbits++;
-}
-
 void initSampleBuffer(uint32_t *sample_size) {
     initSampleBufferEx(sample_size, false);
 }
@@ -233,13 +219,20 @@ void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool
         data.numbits = samples.total_saved << 3;
 
     } else {
-        pushBit(&data, sample & 0x80);
-        if (bits_per_sample > 1) pushBit(&data, sample & 0x40);
-        if (bits_per_sample > 2) pushBit(&data, sample & 0x20);
-        if (bits_per_sample > 3) pushBit(&data, sample & 0x10);
-        if (bits_per_sample > 4) pushBit(&data, sample & 0x08);
-        if (bits_per_sample > 5) pushBit(&data, sample & 0x04);
-        if (bits_per_sample > 6) pushBit(&data, sample & 0x02);
+        // truncate trailing data
+        sample >>= 8 - bits_per_sample;
+        sample <<= 8 - bits_per_sample;
+
+        uint8_t bits_offset = data.numbits & 0x7;
+        uint8_t bits_cap = 8 - bits_offset;
+
+        // write the current byte
+        data.buffer[data.numbits >> 3] |= sample >> bits_offset;
+        int numbits = data.numbits + bits_cap;
+
+        // write the remaining bits to the next byte
+        data.buffer[numbits >> 3] |= sample << (bits_cap);
+        data.numbits += bits_per_sample;
     }
 }
 
