@@ -28,6 +28,7 @@
 #include "crypto/libpcrypto.h"  // aes_decode
 #include "cmac.h"
 #include "cmdhf14a.h"
+#include "ui.h"
 #include "util.h"
 #include "crc32.h"
 
@@ -212,6 +213,10 @@ static int ntag424_calc_file_settings_size(const ntag424_file_settings_t *settin
 
     return size;
 }
+
+static int ntag424_calc_file_write_settings_size(const ntag424_file_settings_t *settings) {
+    return ntag424_calc_file_settings_size(settings) - 4;
+}
     
 static int ntag424_read_file_settings(uint8_t fileno, ntag424_file_settings_t *settings_out) {
     const size_t RESPONSE_LENGTH = sizeof(ntag424_file_settings_t) + 2;
@@ -280,8 +285,52 @@ static void ntag424_calc_mac(ntag424_session_keys_t *session_keys, uint8_t comma
     free(mac_input);
 }
 
-// Write file settings is done with full communication mode. This can probably be broken out
-// and used for read/write of file when full communication mode is needed.
+static int ntag424_comm_full_encrypt_apdu(const uint8_t *apdu_in, uint8_t *apdu_out, int *apdu_out_size, ntag424_session_keys_t *session_keys)
+{
+#define MAC_SIZE 8
+#define APDU_HEADER_SIZE 5
+#define APDU_OVERHEAD (APDU_HEADER_SIZE + 1)
+    
+    // ------- Calculate IV
+    uint8_t ivc[16];
+    ntag424_calc_iv(session_keys, ivc);
+
+
+    // ------- Copy apdu header
+    size_t size = apdu_in[4];
+    memcpy(apdu_out, apdu_in, 6);
+
+    size_t encrypt_data_size = size - 1;
+    size_t padded_data_size = encrypt_data_size + 16 - (encrypt_data_size % 16); // pad up to 16 byte blocks
+    uint8_t temp_buffer[256] = {0};
+
+    int apdu_final_size = APDU_OVERHEAD + padded_data_size + 8 + 1; // + MAC and CmdHdr
+    if(*apdu_out_size < apdu_final_size)
+    {
+        PrintAndLogEx(ERR, "APDU out buffer not large enough");
+        return PM3_EINVARG;
+    }
+
+    *apdu_out_size = apdu_final_size;
+
+    // ------ Pad data
+    memcpy(temp_buffer, &apdu_in[APDU_HEADER_SIZE + 1], encrypt_data_size); // We encrypt everything except the CmdHdr
+    temp_buffer[encrypt_data_size] = 0x80;
+
+    // ------ Encrypt it
+    memcpy(apdu_out, apdu_in, 4);
+    aes_encode(ivc, session_keys->encryption, temp_buffer, &apdu_out[6], padded_data_size);
+
+    // ------ Add MAC
+    ntag424_calc_mac(session_keys, apdu_in[1], apdu_in[5], &apdu_out[6], padded_data_size, &apdu_out[APDU_HEADER_SIZE + padded_data_size + 1]);
+
+    apdu_out[4] = (uint8_t)(padded_data_size+8+1); // Set size to CmdHdr + padded data + MAC
+    apdu_out[APDU_HEADER_SIZE + padded_data_size + 8 + 1] = 0; // Le
+        
+
+    return PM3_SUCCESS;
+}
+
 static int ntag424_write_file_settings(uint8_t fileno, ntag424_file_settings_t *settings, ntag424_session_keys_t *session_keys) {
     
     // ------- Convert file settings to the format for writing
@@ -292,51 +341,29 @@ static int ntag424_write_file_settings(uint8_t fileno, ntag424_file_settings_t *
         .optional_sdm_settings = settings->optional_sdm_settings,
     };
 
-
-    // ------- Calculate IV
-    uint8_t ivc[16];
-    ntag424_calc_iv(session_keys, ivc);
-    
-    // ------- Encrypt file settings
-    uint8_t padded_cmddata_buffer[256] = {0};
-    uint8_t encrypted_cmddata[256] = {0};
-    size_t settings_size = ntag424_calc_file_settings_size(settings) - 4; // This is weird, but since the write settings are the same as
-                                                                          // the settings read out, but minus file type and file size, we subtract 4 here.
-    
-    size_t total_size = settings_size + 16 - (settings_size % 16); // pad up to 16 byte blocks
-    memcpy(padded_cmddata_buffer, (void*)&write_settings, settings_size);
-    if(total_size > settings_size) {
-        padded_cmddata_buffer[settings_size] = 0x80;
-    }
-    aes_encode(ivc, session_keys->encryption, padded_cmddata_buffer, encrypted_cmddata, total_size);
-
-    // ------- Calculate MAC
-    uint8_t mact[8];
-    ntag424_calc_mac(session_keys, 0x5f, fileno, encrypted_cmddata, total_size, mact);
-
     // ------- Assemble the actual command
-    uint8_t lc = 1 + total_size + 8; // CmdHeader + size + mac*/
+    size_t settings_size = ntag424_calc_file_write_settings_size(settings);
+    uint8_t lc = 1 + settings_size; // CmdHeader + size */
 
     uint8_t cmd_header[] = {
         0x90, 0x5f, 0x00, 0x00,
         lc,
         fileno
     };
-
     uint8_t cmd[256] = {0};
-
     memcpy(cmd, cmd_header, sizeof(cmd_header));
-    memcpy(&cmd[sizeof(cmd_header)], encrypted_cmddata, total_size);
-    memcpy(&cmd[sizeof(cmd_header) + total_size], mact, sizeof(mact));
-    cmd[sizeof(cmd_header) + total_size + sizeof(mact)] = 0x00;
+    memcpy(&cmd[sizeof(cmd_header)], (void*)&write_settings, settings_size);
+    cmd[sizeof(cmd_header) + settings_size] = 0x00;
 
-    size_t apdu_size = sizeof(cmd_header) + total_size + sizeof(mact) + 1;
+    uint8_t apdu_out[256] = {0};
+    int apdu_out_size = 256;
+    ntag424_comm_full_encrypt_apdu(cmd, apdu_out, &apdu_out_size, session_keys);
 
     // ------- Actually send the APDU
     const size_t RESPONSE_LENGTH = 8 + 2;
     int outlen;
     uint8_t resp[RESPONSE_LENGTH];
-    int res = ExchangeAPDU14a(cmd, apdu_size, false, true, resp, RESPONSE_LENGTH, &outlen);
+    int res = ExchangeAPDU14a(apdu_out, apdu_out_size, false, true, resp, RESPONSE_LENGTH, &outlen);
     if(res != PM3_SUCCESS)
     {
         PrintAndLogEx(ERR, "Failed to send apdu");
@@ -355,7 +382,6 @@ static int ntag424_write_file_settings(uint8_t fileno, ntag424_file_settings_t *
     }
 
     session_keys->command_counter++; // Should this be incremented only on success?
-        
     return PM3_SUCCESS;
 }
 
@@ -681,50 +707,43 @@ static int ntag424_change_key(uint8_t keyno, uint8_t *new_key, uint8_t *old_key,
     {
         memcpy(key, new_key, 16);
     }
-
-
-     // ------- Calculate IV
-    uint8_t ive[16];
-    ntag424_calc_iv(session_keys, ive);
-
+    
     // ------- Calculate KeyData
     uint8_t keydata[32] = {0};
     memcpy(keydata, key, 16);
     keydata[16] = version;
+    int key_data_len;
     if(keyno != 0)
     {
         memcpy(&keydata[17], crc, 4);
         keydata[21] = 0x80;
+        key_data_len = 16 + 4 + 1;
     }
     else
     {
         keydata[17] = 0x80;
+        key_data_len = 16 + 1;
     }
-
-    uint8_t enc_keydata[32] = {0};
-    aes_encode(ive, session_keys->encryption, keydata, enc_keydata, 32);
-
-    // -------- Calculate MAC
-    uint8_t mact[8];
-    ntag424_calc_mac(session_keys, 0xC4, keyno, enc_keydata, 32, mact);
 
     // ------- Assemble APDU
     uint8_t cmd_header[] = {
-        0x90, 0xC4, 0x00, 0x00, 0x29, keyno
+        0x90, 0xC4, 0x00, 0x00, key_data_len+1, keyno
     };
 
     uint8_t cmd[512] = {0};
     memcpy(cmd, cmd_header, sizeof(cmd_header));
-    memcpy(&cmd[sizeof(cmd_header)], enc_keydata, 32);
-    memcpy(&cmd[sizeof(cmd_header) + 32], mact, 8);
-    int apdu_size = sizeof(cmd_header) + 32 + 8 + 1;
+    memcpy(&cmd[sizeof(cmd_header)], keydata, key_data_len);
+
+    uint8_t apdu_out[256];
+    int apdu_out_size = 256;
+    ntag424_comm_full_encrypt_apdu(cmd, apdu_out, &apdu_out_size, session_keys);
         
 
     // ------- Actually send the APDU
     const size_t RESPONSE_LENGTH = 8 + 2;
     int outlen;
     uint8_t resp[RESPONSE_LENGTH];
-    int res = ExchangeAPDU14a(cmd, apdu_size, false, true, resp, RESPONSE_LENGTH, &outlen);
+    int res = ExchangeAPDU14a(apdu_out, apdu_out_size, false, true, resp, RESPONSE_LENGTH, &outlen);
     if(res != PM3_SUCCESS)
     {
         PrintAndLogEx(ERR, "Failed to send apdu");
@@ -738,7 +757,7 @@ static int ntag424_change_key(uint8_t keyno, uint8_t *new_key, uint8_t *old_key,
 
     if(resp[outlen-2] != 0x91 || resp[outlen-1] != 0x00)
     {
-        PrintAndLogEx(ERR, "Failed to get file settings");
+        PrintAndLogEx(ERR, "Error when changing key. Wrong old key?");
         return PM3_ESOFT;
     }
 
@@ -761,7 +780,6 @@ static int CmdHF_ntag424_info(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-
     PrintAndLogEx(INFO, "not implemented yet");
     PrintAndLogEx(INFO, "Feel free to contribute!");
     return PM3_SUCCESS;
