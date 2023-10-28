@@ -1025,7 +1025,7 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
 
                   "sdmaccess: two byte access rights.\n"
                   "Each nibble is a key, or E for plain mirror and F for no mirroring\n"
-                  "Order is SDMMetaRead, SDMFileRead, Reserved and SDMCtrRet\n\n"
+                  "Order is Reserved, SDMCtrRet, SDMMetaRead and SDMFileRead\n\n"
 
                   "sdm_data: Three bytes of data used to control SDM settings. Can be specified multiple times.\n"
                   "Data means different things depending on settings.\n\n"
