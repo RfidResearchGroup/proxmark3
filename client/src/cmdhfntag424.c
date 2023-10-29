@@ -854,11 +854,13 @@ static int CmdHF_ntag424_read(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf ntag424 read",
                   "Read and print data from file on NTAG424 tag. Will authenticate if key information is provided.",
-                  "hf ntag424 read -f 2 -n 0 -k 00000000000000000000000000000000 -o 0 -l 256");
+                  "hf ntag424 read -f 1 -n 0 -k 00000000000000000000000000000000 -o 0 -l 32\n"
+                  "hf ntag424 read -f 2 -n 0 -k 00000000000000000000000000000000 -o 0 -l 256\n"
+                  "hf ntag424 read -f 3 -n 3 -k 00000000000000000000000000000000 -o 0 -l 128 -m encrypt");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("f",  "fileno", "<dec>", "File number (1-3), (default 2)"),
+        arg_int1("f",  "fileno", "<dec>", "File number (1-3)"),
         arg_int0("n",  "keyno", "<dec>", "Key number"),
         arg_str0("k",  "key", "<hex>", "Key for authentication (HEX 16 bytes)"),
         arg_int0("o",  "offset", "<dec>", "Offset to read in file (default 0)"),
@@ -941,7 +943,8 @@ static int CmdHF_ntag424_write(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf ntag424 write",
                   "Write data to file on NTAG424 tag. Will authenticate if key information is provided.",
-                  "hf ntag424 write -f 2 -n 0 -k 00000000000000000000000000000000 -o 0 -d 1122334455667788");
+                  "hf ntag424 write -f 2 -n 0 -k 00000000000000000000000000000000 -o 0 -d 1122334455667788\n"
+                  "hf ntag424 write -f 3 -n 3 -k 00000000000000000000000000000000 -o 0 -d 1122334455667788 -m encrypt");
 
     void *argtable[] = {
         arg_param_begin,
