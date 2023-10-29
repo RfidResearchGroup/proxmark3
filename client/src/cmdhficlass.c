@@ -31,7 +31,7 @@
 #include "loclass/elite_crack.h"
 #include "fileutils.h"
 #include "protocols.h"
-#include "cardhelper.h"
+#include "samcard.h"
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
 #include "cmdsmartcard.h"           // smart select fct
@@ -209,46 +209,8 @@ static iclass_config_card_item_t iclass_config_types[14] =  {
     {"Keyroll DISABLE - Set ELITE Key and DISABLE Keyrolling", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
     {"Keyroll ENABLE - Set ELITE Key and ENABLE Keyrolling", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
     {"Reset READER - Reset READER to defaults", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-    {"Reset ENROLLER - Reset ENROLLER to defaults", {0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF}},
-    // must be the last entry
-    {"no config card info available", ""}
+    {"Reset ENROLLER - Reset ENROLLER to defaults", {0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF}}
 };
-
-static bool check_config_card(const iclass_config_card_item_t *o) {
-    if (o == NULL || strlen(o->desc) == 0) {
-        PrintAndLogEx(INFO, "No data available");
-        PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass config -l") "` to download from cardhelper");
-        return false;
-    }
-    return true;
-}
-
-static int load_config_cards(void) {
-    PrintAndLogEx(INFO, "detecting cardhelper...");
-    if (IsCardHelperPresent(false) == false) {
-        PrintAndLogEx(FAILED, "failed to detect cardhelper");
-        return PM3_ENODATA;
-    }
-
-    for (int i = 0; i < ARRAYLEN(iclass_config_types); ++i) {
-
-        PrintAndLogEx(INPLACE, "loading setting %i", i);
-        iclass_config_card_item_t *ret = &iclass_config_types[i];
-
-        uint8_t desc[70] = {0};
-        if (GetConfigCardStrByIdx(i, desc) == PM3_SUCCESS) {
-            memcpy(ret->desc, desc, sizeof(desc));
-        }
-
-        uint8_t blocks[16] = {0};
-        if (GetConfigCardByIdx(i, blocks) == PM3_SUCCESS) {
-            memcpy(ret->data, blocks, sizeof(blocks));
-        }
-    }
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass configcard -p") "` to list all");
-    return PM3_SUCCESS;
-}
 
 static const iclass_config_card_item_t *get_config_card_item(int idx) {
     if (idx > -1 && idx < 14) {
@@ -258,20 +220,16 @@ static const iclass_config_card_item_t *get_config_card_item(int idx) {
 }
 
 static void print_config_cards(void) {
-    if (check_config_card(&iclass_config_types[0])) {
-        PrintAndLogEx(INFO, "---- " _CYAN_("Config cards available") " ------------");
-        for (int i = 0; i < ARRAYLEN(iclass_config_types) - 1   ; ++i) {
-            PrintAndLogEx(INFO, "%2d, %s", i, iclass_config_types[i].desc);
-        }
-        PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---- " _CYAN_("Config cards available") " ------------");
+    for (int i = 0; i < ARRAYLEN(iclass_config_types) - 1   ; ++i) {
+        PrintAndLogEx(INFO, "%2d, %s", i, iclass_config_types[i].desc);
     }
+    PrintAndLogEx(NORMAL, "");
 }
 
 static void print_config_card(const iclass_config_card_item_t *o) {
-    if (check_config_card(o)) {
-        PrintAndLogEx(INFO, "description... " _YELLOW_("%s"), o->desc);
-        PrintAndLogEx(INFO, "data.......... " _YELLOW_("%s"), sprint_hex_inrow(o->data, sizeof(o->data)));
-    }
+    PrintAndLogEx(INFO, "description... " _YELLOW_("%s"), o->desc);
+    PrintAndLogEx(INFO, "data.......... " _YELLOW_("%s"), sprint_hex_inrow(o->data, sizeof(o->data)));
 }
 
 static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
@@ -285,9 +243,6 @@ static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
 }
 
 static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *key, bool got_kr) {
-    if (check_config_card(o) == false) {
-        return PM3_EINVARG;
-    }
 
     // generated config card header
     picopass_hdr_t configcard;
@@ -365,64 +320,43 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         // KEYROLL need to encrypt
         uint8_t key_en[16] = {0};
         uint8_t *keyptr_en = NULL;
-        if (IsCardHelperPresent(false) == false) {
-            size_t keylen = 0;
-            int res_key = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr_en, &keylen);
-            if (res_key != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Failed to find iclass_decryptionkey.bin");
-                free(data);
-                return PM3_EINVARG;
-            }
 
-            if (keylen != 16) {
-                PrintAndLogEx(ERR, "Failed to load transport key from file");
-                free(keyptr_en);
-                free(data);
-                return PM3_EINVARG;
-            }
-            memcpy(key_en, keyptr_en, sizeof(key_en));
-            free(keyptr_en);
+        size_t keylen = 0;
+        int res_key = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr_en, &keylen);
+        if (res_key != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to find iclass_decryptionkey.bin");
+            free(data);
+            return PM3_EINVARG;
         }
+
+        if (keylen != 16) {
+            PrintAndLogEx(ERR, "Failed to load transport key from file");
+            free(keyptr_en);
+            free(data);
+            return PM3_EINVARG;
+        }
+        memcpy(key_en, keyptr_en, sizeof(key_en));
+        free(keyptr_en);
 
         PrintAndLogEx(INFO, "Setting up encryption... " NOLF);
         uint8_t ffs[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-        if (IsCardHelperPresent(false) != false) {
-            if (Encrypt(ffs, ffs) == false) {
-                PrintAndLogEx(WARNING, "failed to encrypt FF");
-            } else {
-                PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
-            }
-        } else {
-            iclass_encrypt_block_data(ffs, key_en);
-            PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
-        }
+        iclass_encrypt_block_data(ffs, key_en);
+        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
 
         // local key copy
         PrintAndLogEx(INFO, "Encrypting local key... " NOLF);
         uint8_t lkey[8];
         memcpy(lkey, key, sizeof(lkey));
         uint8_t enckey1[8];
-        if (IsCardHelperPresent(false) != false) {
-            if (Encrypt(lkey, enckey1) == false) {
-                PrintAndLogEx(WARNING, "failed to encrypt key1");
-            } else {
-                PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
-            }
-        } else {
-            iclass_encrypt_block_data(lkey, key_en);
-            PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
-        }
+        iclass_encrypt_block_data(lkey, key_en);
+        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
 
         PrintAndLogEx(INFO, "Copy data... " NOLF);
         memcpy(data, cc, sizeof(picopass_hdr_t));
         memcpy(data + (6 * 8), o->data, sizeof(o->data));
 
         // encrypted keyroll key 0D
-        if (IsCardHelperPresent(false) != false) {
-            memcpy(data + (0x0D * 8), enckey1, sizeof(enckey1));
-        } else {
-            memcpy(data + (0x0D * 8), lkey, sizeof(enckey1));
-        }
+        memcpy(data + (0x0D * 8), lkey, sizeof(enckey1));
         // encrypted 0xFF
         for (uint8_t i = 0x0E; i < 0x14; i++) {
             memcpy(data + (i * 8), ffs, sizeof(ffs));
@@ -434,35 +368,17 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         uint8_t foo[8] = {0x15};
         memcpy(foo + 1, key, 7);
         uint8_t enckey2[8];
-        if (IsCardHelperPresent(false) != false) {
-            if (Encrypt(foo, enckey2) == false) {
-                PrintAndLogEx(WARNING, "failed to encrypt partial 1");
-            } else {
-                PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
-                memcpy(data + (0x14 * 8), enckey2, sizeof(enckey2));
-            }
-        } else {
-            iclass_encrypt_block_data(foo, key_en);
-            PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
-            memcpy(data + (0x14 * 8), foo, sizeof(enckey2));
-        }
+        iclass_encrypt_block_data(foo, key_en);
+        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
+        memcpy(data + (0x14 * 8), foo, sizeof(enckey2));
 
         // encrypted partial keyroll key 15
         PrintAndLogEx(INFO, "Setting encrypted partial key15... " NOLF);
         memset(foo, 0xFF, sizeof(foo));
         foo[0] = key[7];
-        if (IsCardHelperPresent(false) != false) {
-            if (Encrypt(foo, enckey2) == false) {
-                PrintAndLogEx(WARNING, "failed to encrypt partial 2");
-            } else {
-                PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
-                memcpy(data + (0x15 * 8), enckey2, sizeof(enckey2));
-            }
-        } else {
-            iclass_encrypt_block_data(foo, key_en);
-            PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
-            memcpy(data + (0x15 * 8), foo, sizeof(enckey2));
-        }
+        iclass_encrypt_block_data(foo, key_en);
+        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
+        memcpy(data + (0x15 * 8), foo, sizeof(enckey2));
 
         // encrypted 0xFF
         PrintAndLogEx(INFO, "Setting 0xFF's... " NOLF);
@@ -1367,9 +1283,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                   "which is defined by the configuration block.\n"
                   "\nOBS!\n"
                   "In order to use this function, the file `iclass_decryptionkey.bin` must reside\n"
-                  "in the resources directory. The file must be 16 bytes binary data\n"
-                  "or...\n"
-                  "make sure your cardhelper is placed in the sim module",
+                  "in the resources directory. The file must be 16 bytes binary data\n",
                   "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
                   "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin -k 000102030405060708090a0b0c0d0e0f\n"
                   "hf iclass decrypt -d 1122334455667788 -k 000102030405060708090a0b0c0d0e0f");
@@ -1404,7 +1318,6 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     CLIGetHexWithReturn(clictx, 3, key, &key_len);
 
     bool verbose = arg_get_lit(clictx, 4);
-    bool use_decode6 = arg_get_lit(clictx, 5);
     bool dense_output = g_session.dense_output || arg_get_lit(clictx, 6);
     CLIParserFree(clictx);
 
@@ -1443,27 +1356,23 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     }
 
     // load transport key
-    bool use_sc = false;
     if (have_key == false) {
-        use_sc = IsCardHelperPresent(verbose);
-        if (use_sc == false) {
-            size_t keylen = 0;
-            res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(INFO, "Couldn't find any decryption methods");
-                free(decrypted);
-                return PM3_EINVARG;
-            }
-
-            if (keylen != 16) {
-                PrintAndLogEx(ERR, "Failed to load transport key from file");
-                free(keyptr);
-                free(decrypted);
-                return PM3_EINVARG;
-            }
-            memcpy(key, keyptr, sizeof(key));
-            free(keyptr);
+        size_t keylen = 0;
+        res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Couldn't find any decryption methods");
+            free(decrypted);
+            return PM3_EINVARG;
         }
+
+        if (keylen != 16) {
+            PrintAndLogEx(ERR, "Failed to load transport key from file");
+            free(keyptr);
+            free(decrypted);
+            return PM3_EINVARG;
+        }
+        memcpy(key, keyptr, sizeof(key));
+        free(keyptr);
     }
 
     // tripledes
@@ -1474,17 +1383,11 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     if (have_data) {
 
         uint8_t dec_data[8] = {0};
-        if (use_sc) {
-            Decrypt(enc_data, dec_data);
-        } else {
-            mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
-        }
+        mbedtls_des3_crypt_ecb(&ctx, enc_data, dec_data);
 
         PrintAndLogEx(SUCCESS, "encrypted... %s", sprint_hex_inrow(enc_data, sizeof(enc_data)));
         PrintAndLogEx(SUCCESS, "plain....... " _YELLOW_("%s"), sprint_hex_inrow(dec_data, sizeof(dec_data)));
 
-        if (use_sc && use_decode6)
-            DecodeBlock6(dec_data);
     }
 
     // decrypt dump file data
@@ -1523,11 +1426,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
                 case TRIPLEDES:
                     // Decrypt block 7,8,9 if configured.
                     if (blocknum > 6 && blocknum <= 9 && memcmp(enc_data, empty, 8) != 0) {
-                        if (use_sc) {
-                            Decrypt(enc_data, decrypted + idx);
-                        } else {
-                            mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
-                        }
+                        mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
                         decrypted_block789 = true;
                     }
                     break;
@@ -1566,35 +1465,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         PrintAndLogEx(NORMAL, "");
 
-        // decode block 6
-        bool has_values = (memcmp(decrypted + (8 * 6), empty, 8) != 0) && (memcmp(decrypted + (8 * 6), zeros, 8) != 0);
-        if (has_values) {
-            if (use_sc) {
-                DecodeBlock6(decrypted + (8 * 6));
-            }
-        }
-
         // decode block 7-8-9
         iclass_decode_credentials(decrypted);
-
-        // decode block 9
-        has_values = (memcmp(decrypted + (8 * 9), empty, 8) != 0) && (memcmp(decrypted + (8 * 9), zeros, 8) != 0);
-        if (has_values && use_sc) {
-            uint8_t usr_blk_len = GetNumberBlocksForUserId(decrypted + (8 * 6));
-            if (usr_blk_len < 3) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, "Block 9 decoder");
-
-                uint8_t pinsize = GetPinSize(decrypted + (8 * 6));
-                if (pinsize > 0) {
-
-                    uint64_t pin = bytes_to_num(decrypted + (8 * 9), 5);
-                    char tmp[17] = {0};
-                    snprintf(tmp, sizeof(tmp), "%."PRIu64, BCD2DEC(pin));
-                    PrintAndLogEx(INFO, "PIN........................ " _GREEN_("%.*s"), pinsize, tmp);
-                }
-            }
-        }
 
         PrintAndLogEx(INFO, "-----------------------------------------------------------------");
         free(decrypted);
@@ -1650,14 +1522,9 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
         have_key = true;
     }
 
-    bool verbose = arg_get_lit(clictx, 3);
-
     CLIParserFree(clictx);
 
-    bool use_sc = false;
     if (have_key == false) {
-        use_sc = IsCardHelperPresent(verbose);
-        if (use_sc == false) {
             size_t keylen = 0;
             int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen);
             if (res != PM3_SUCCESS) {
@@ -1672,17 +1539,12 @@ static int CmdHFiClassEncryptBlk(const char *Cmd) {
             }
             memcpy(key, keyptr, sizeof(key));
             free(keyptr);
-        }
     }
 
 
     PrintAndLogEx(SUCCESS, "plain....... %s", sprint_hex_inrow(blk_data, sizeof(blk_data)));
 
-    if (use_sc) {
-        Encrypt(blk_data, blk_data);
-    } else {
-        iclass_encrypt_block_data(blk_data, key);
-    }
+    iclass_encrypt_block_data(blk_data, key);
 
     PrintAndLogEx(SUCCESS, "encrypted... " _YELLOW_("%s"), sprint_hex_inrow(blk_data, sizeof(blk_data)));
     return PM3_SUCCESS;
@@ -2704,61 +2566,6 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     if (memcmp(data, empty, 8) == 0)
         return PM3_SUCCESS;
 
-    bool use_sc = IsCardHelperPresent(verbose);
-    if (use_sc == false)
-        return PM3_SUCCESS;
-
-    // crypto helper available.
-    PrintAndLogEx(INFO, "----------------------------- " _CYAN_("Cardhelper") " -----------------------------");
-
-    switch (blockno) {
-        case 6: {
-            DecodeBlock6(data);
-            break;
-        }
-        case 7: {
-
-            uint8_t dec_data[8];
-
-            uint64_t a = bytes_to_num(data, 8);
-            bool starts = (leadingzeros(a) < 12);
-            bool ones = (bitcount64(a) > 16 && bitcount64(a) < 48);
-
-            if (starts && ones) {
-                PrintAndLogEx(INFO, "data looks encrypted, False Positives " _YELLOW_("ARE") " possible");
-                Decrypt(data, dec_data);
-                PrintAndLogEx(SUCCESS, "decrypted : " _GREEN_("%s"), sprint_hex(dec_data, sizeof(dec_data)));
-            } else {
-                memcpy(dec_data, data, sizeof(dec_data));
-                PrintAndLogEx(INFO, "data looks unencrypted, trying to decode");
-            }
-
-            if (memcmp(dec_data, empty, 8) != 0) {
-
-                //todo:  remove preamble/sentinel
-                uint32_t top = 0, mid = 0, bot = 0;
-
-                char hexstr[16 + 1] = {0};
-                hex_to_buffer((uint8_t *)hexstr, dec_data, 8, sizeof(hexstr) - 1, 0, 0, true);
-                hexstring_to_u96(&top, &mid, &bot, hexstr);
-
-                char binstr[64 + 1];
-                hextobinstring(binstr, hexstr);
-                char *pbin = binstr;
-                while (strlen(pbin) && *(++pbin) == '0');
-
-                PrintAndLogEx(SUCCESS, "      bin : %s", pbin);
-                PrintAndLogEx(INFO, "");
-                PrintAndLogEx(INFO, "------------------------------ " _CYAN_("Wiegand") " -------------------------------");
-                wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
-                HIDTryUnpack(&packed);
-            } else {
-                PrintAndLogEx(INFO, "no credential found");
-            }
-            break;
-        }
-    }
-    PrintAndLogEx(INFO, "----------------------------------------------------------------------");
     return PM3_SUCCESS;
 }
 
@@ -4188,7 +3995,6 @@ static int CmdHFiClassEncode(const char *Cmd) {
     uint8_t enc_key[16] = {0};
     uint8_t *enckeyptr = NULL;
     bool have_enc_key = false;
-    bool use_sc = false;
     CLIGetHexWithReturn(ctx, 6, enc_key, &enc_key_len);
 
     wiegand_card_t card;
@@ -4229,22 +4035,19 @@ static int CmdHFiClassEncode(const char *Cmd) {
     }
 
     if (have_enc_key == false) {
-        use_sc = IsCardHelperPresent(false);
-        if (use_sc == false) {
-            size_t keylen = 0;
-            int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&enckeyptr, &keylen);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Failed to find the transport key");
-                return PM3_EINVARG;
-            }
-            if (keylen != 16) {
-                PrintAndLogEx(ERR, "Failed to load transport key from file");
-                free(enckeyptr);
-                return PM3_EINVARG;
-            }
-            memcpy(enc_key, enckeyptr, sizeof(enc_key));
-            free(enckeyptr);
+        size_t keylen = 0;
+        int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&enckeyptr, &keylen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to find the transport key");
+            return PM3_EINVARG;
         }
+        if (keylen != 16) {
+            PrintAndLogEx(ERR, "Failed to load transport key from file");
+            free(enckeyptr);
+            return PM3_EINVARG;
+        }
+        memcpy(enc_key, enckeyptr, sizeof(enc_key));
+        free(enckeyptr);
     }
 
     uint8_t credential[] = {
@@ -4311,15 +4114,9 @@ static int CmdHFiClassEncode(const char *Cmd) {
     }
 
     // encrypt with transport key
-    if (use_sc) {
-        Encrypt(credential + 8, credential + 8);
-        Encrypt(credential + 16, credential + 16);
-        Encrypt(credential + 24, credential + 24);
-    } else {
         iclass_encrypt_block_data(credential + 8, enc_key);
         iclass_encrypt_block_data(credential + 16, enc_key);
         iclass_encrypt_block_data(credential + 24, enc_key);
-    }
 
     if (verbose) {
         for (uint8_t i = 0; i < 4; i++) {
@@ -4375,10 +4172,9 @@ static int CmdHFiClassAutopwn(const char *Cmd) {
 static int CmdHFiClassConfigCard(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass configcard",
-                  "Manage reader configuration card via Cardhelper,\n"
+                  "Manage reader configuration card,\n"
                   "The generated config card will be uploaded to device emulator memory.\n"
                   "You can start simulating `hf iclass sim -t 3` or use the emul commands",
-                  "hf iclass configcard -l           --> download config card settings\n"
                   "hf iclass configcard -p           --> print all config cards\n"
                   "hf iclass configcard --ci 1       --> view config card setting in slot 1\n"
                   "hf iclass configcard -g --ci 0    --> generate config file from slot 0"
@@ -4389,7 +4185,6 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
         arg_int0(NULL, "ci", "<dec>", "use config slot at index"),
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
         arg_lit0("g", NULL, "generate card dump file"),
-        arg_lit0("l", NULL, "load available cards"),
         arg_lit0("p", NULL, "print available cards"),
         arg_param_end
     };
@@ -4398,8 +4193,7 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
     int ccidx = arg_get_int_def(ctx, 1, -1);
     int kidx = arg_get_int_def(ctx, 2, -1);
     bool do_generate = arg_get_lit(ctx, 3);
-    bool do_load = arg_get_lit(ctx, 4);
-    bool do_print = arg_get_lit(ctx, 5);
+    bool do_print = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     bool got_kr = false;
@@ -4415,22 +4209,16 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
         }
     }
 
-    if (do_load) {
-        if (load_config_cards() != PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "failed to load, check your cardhelper");
-        }
-    }
-
     if (do_print) {
         print_config_cards();
     }
 
-    if (ccidx > -1 && ccidx < 14) {
+    if (ccidx > -1 && ccidx < 13) {
         const iclass_config_card_item_t *item = get_config_card_item(ccidx);
         print_config_card(item);
     }
 
-    if (do_generate) {
+    if (do_generate && (ccidx > -1 && ccidx < 13)) {
         const iclass_config_card_item_t *item = get_config_card_item(ccidx);
         if (strstr(item->desc, "Keyroll") != NULL) {
             if (got_kr == false) {
@@ -4439,6 +4227,8 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
             }
         }
         generate_config_card(item, key, got_kr);
+    } else {
+        PrintAndLogEx(ERR, "Please specify a valid configuration number!");
     }
 
     return PM3_SUCCESS;

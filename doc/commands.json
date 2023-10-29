@@ -3026,9 +3026,8 @@
         },
         "hf iclass configcard": {
             "command": "hf iclass configcard",
-            "description": "Manage reader configuration card via Cardhelper, The generated config card will be uploaded to device emulator memory. You can start simulating `hf iclass sim -t 3` or use the emul commands",
+            "description": "Manage reader configuration card, The generated config card will be uploaded to device emulator memory. You can start simulating `hf iclass sim -t 3` or use the emul commands",
             "notes": [
-                "hf iclass configcard -l -> download config card settings",
                 "hf iclass configcard -p -> print all config cards",
                 "hf iclass configcard --ci 1 -> view config card setting in slot 1",
                 "hf iclass configcard -g --ci 0 -> generate config file from slot 0"
@@ -3066,7 +3065,7 @@
         },
         "hf iclass decrypt": {
             "command": "hf iclass decrypt",
-            "description": "3DES decrypt data This is a naive implementation, it tries to decrypt every block after block 6. Correct behaviour would be to decrypt only the application areas where the key is valid, which is defined by the configuration block. OBS! In order to use this function, the file `iclass_decryptionkey.bin` must reside in the resources directory. The file must be 16 bytes binary data or... make sure your cardhelper is placed in the sim module",
+            "description": "3DES decrypt data This is a naive implementation, it tries to decrypt every block after block 6. Correct behaviour would be to decrypt only the application areas where the key is valid, which is defined by the configuration block. OBS! In order to use this function, the file `iclass_decryptionkey.bin` must reside in the resources directory. The file must be 16 bytes binary data.",
             "notes": [
                 "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin",
                 "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin -k 000102030405060708090a0b0c0d0e0f",

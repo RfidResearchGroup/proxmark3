@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Deprecated cardhelper as all functionalities are now within the PM3 firmware, renamed cardhelper.c and cardhelper.h to samcard.c and samcard.h as their functionality is now sam exclusive (@Antiklesys)
  - Additional fixes to configcard code for keyroll mode based on nfc-iclass output (@Antiklesys)
  - Added `bind` option for network connections to specify the outbound address and port (@wh201906)
  - Changed `lf em 4x05 dump` - now supports the `--ns` nosave parameter (@iceman1001)

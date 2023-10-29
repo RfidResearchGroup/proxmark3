@@ -719,7 +719,7 @@ SRCS =  mifare/aiddesfire.c \
 
 # common
 SRCS += bucketsort.c \
-		cardhelper.c \
+		samcard.c \
 		crapto1/crapto1.c \
 		crapto1/crypto1.c \
 		crc.c \
