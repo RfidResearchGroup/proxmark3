@@ -236,7 +236,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/common/lfdemod.c
         ${PM3_ROOT}/common/legic_prng.c
         ${PM3_ROOT}/common/iso15693tools.c
-        ${PM3_ROOT}/common/cardhelper.c
+        ${PM3_ROOT}/common/samcard.c
         ${PM3_ROOT}/common/generator.c
         ${PM3_ROOT}/client/src/crypto/asn1dump.c
         ${PM3_ROOT}/client/src/crypto/asn1utils.c
