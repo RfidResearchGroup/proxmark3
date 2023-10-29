@@ -123,14 +123,6 @@ typedef enum {
     TRIPLEDES
 } BLOCK79ENCRYPTION;
 
-static inline uint32_t leadingzeros(uint64_t a) {
-#if defined __GNUC__
-    return __builtin_clzll(a);
-#else
-    return 0;
-#endif
-}
-
 static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t offset, uint16_t *bytes_sent) {
 
     struct p {
