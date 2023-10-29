@@ -6887,9 +6887,10 @@
                 "-n, --keyno <dec> Key number",
                 "-k, --key <hex> Key for authentication (HEX 16 bytes)",
                 "-o, --offset <dec> Offset to read in file (default 0)",
-                "-l, --length <dec> Number of bytes to read"
+                "-l, --length <dec> Number of bytes to read",
+                "-m, --cmode <plain|mac|encrypt> Communicaton mode"
             ],
-            "usage": "hf ntag424 read [-h] -f <dec> [-n <dec>] [-k <hex>] [-o <dec>] -l <dec>"
+            "usage": "hf ntag424 read [-h] -f <dec> [-n <dec>] [-k <hex>] [-o <dec>] -l <dec> [-m <plain|mac|encrypt>]"
         },
         "hf ntag424 view": {
             "command": "hf ntag424 view",
@@ -6918,9 +6919,10 @@
                 "-n, --keyno <dec> Key number",
                 "-k, --key <hex> Key for authentication (HEX 16 bytes)",
                 "-o, --offset <dec> Offset to write in file (default 0)",
-                "-d, --data <hex> Data to write"
+                "-d, --data <hex> Data to write",
+                "-m, --cmode <plain|mac|encrypt> Communicaton mode"
             ],
-            "usage": "hf ntag424 write [-h] -f <dec> [-n <dec>] [-k <hex>] [-o <dec>] -d <hex>"
+            "usage": "hf ntag424 write [-h] -f <dec> [-n <dec>] [-k <hex>] [-o <dec>] -d <hex> [-m <plain|mac|encrypt>]"
         },
         "hf plot": {
             "command": "hf plot",
@@ -12012,6 +12014,6 @@
     "metadata": {
         "commands_extracted": 696,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-10-29T12:42:07"
+        "extracted_on": "2023-10-29T15:43:05"
     }
 }

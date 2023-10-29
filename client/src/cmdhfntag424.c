@@ -45,45 +45,6 @@
 #define NTAG424_CMD_AUTHENTICATE_EV2_FIRST_PART_1 0x71
 #define NTAG424_CMD_AUTHENTICATE_EV2_FIRST_PART_2 0xAF
 
-static int CmdHelp(const char *Cmd);
-
-static int CmdHF_ntag424_view(const char *Cmd) {
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf ntag424 view",
-                  "Print a NTAG 424 DNA dump file (bin/eml/json)",
-                  "hf ntag424 view -f hf-ntag424-01020304-dump.bin"
-                 );
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
-        arg_lit0("v", "verbose", "Verbose output"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE];
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    bool verbose = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx);
-
-    // read dump file
-    uint8_t *dump = NULL;
-    size_t bytes_read = NTAG424_MAX_BYTES;
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, NTAG424_MAX_BYTES);
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-
-    if (verbose) {
-        PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
-        PrintAndLogEx(INFO, "File size %zu bytes", bytes_read);
-    }
-
-    free(dump);
-    return PM3_SUCCESS;
-}
-
 //
 // Original from  https://github.com/rfidhacking/node-sdm/
 //
@@ -114,6 +75,13 @@ typedef enum {
     COMM_MAC,
     COMM_FULL
 } ntag424_communication_mode_t;
+
+const CLIParserOption ntag424_communication_mode_options[] = {
+    {COMM_PLAIN,     "plain"},
+    {COMM_MAC,     "mac"},
+    {COMM_FULL, "encrypt"},
+    {0,    NULL},
+};
 
 // -------------- File settings structs -------------------------
 // Enabling this bit in the settings will also reset the read counter to 0
@@ -231,7 +199,7 @@ static int ntag424_calc_file_write_settings_size(const ntag424_file_settings_t *
     return ntag424_calc_file_settings_size(settings) - 4;
 }
 
-static void ntag424_calc_iv(ntag424_session_keys_t *session_keys, uint8_t *out_ivc) {
+static void ntag424_calc_send_iv(ntag424_session_keys_t *session_keys, uint8_t *out_ivc) {
     uint8_t iv_clear[] = { 0xa5, 0x5a,
                            session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3],
                            (uint8_t)(session_keys->command_counter), (uint8_t)(session_keys->command_counter >> 8),
@@ -242,11 +210,21 @@ static void ntag424_calc_iv(ntag424_session_keys_t *session_keys, uint8_t *out_i
     aes_encode(zero_iv, session_keys->encryption, iv_clear, out_ivc, 16);
 }
 
-static void ntag424_calc_mac(ntag424_session_keys_t *session_keys, uint8_t command, uint8_t command_header, uint8_t *data, uint8_t datalen, uint8_t *out_mac) {
+static void ntag424_calc_recieve_iv(ntag424_session_keys_t *session_keys, uint8_t *out_ivc) {
+    uint8_t iv_clear[] = { 0x5a, 0xa5,
+                           session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3],
+                           (uint8_t)(session_keys->command_counter), (uint8_t)(session_keys->command_counter >> 8),
+                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                         };
+
+    uint8_t zero_iv[16] = {0};
+    aes_encode(zero_iv, session_keys->encryption, iv_clear, out_ivc, 16);
+}
+
+static void ntag424_calc_mac(ntag424_session_keys_t *session_keys, uint8_t command, uint8_t *data, uint8_t datalen, uint8_t *out_mac) {
     uint8_t mac_input_header[] = { command,
                                    (uint8_t)session_keys->command_counter, (uint8_t)(session_keys->command_counter >> 8),
-                                   session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3],
-                                   command_header,
+                                   session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3]
                                  };
 
     int mac_input_len = sizeof(mac_input_header) + datalen;
@@ -264,7 +242,7 @@ static void ntag424_calc_mac(ntag424_session_keys_t *session_keys, uint8_t comma
     free(mac_input);
 }
 
-static int ntag424_comm_mac_apdu(APDU_t *apdu, int apdu_max_data_size, ntag424_session_keys_t *session_keys) {
+static int ntag424_comm_mac_apdu(APDU_t *apdu, int command_header_length, int apdu_max_data_size, ntag424_session_keys_t *session_keys) {
 
     int size = apdu->lc;
 
@@ -272,41 +250,45 @@ static int ntag424_comm_mac_apdu(APDU_t *apdu, int apdu_max_data_size, ntag424_s
         return PM3_EOVFLOW;
     }
 
-    ntag424_calc_mac(session_keys, apdu->ins, apdu->data[0], &apdu->data[1], size - 1, &apdu->data[size]);
-
+    ntag424_calc_mac(session_keys, apdu->ins, apdu->data, size, &apdu->data[size]);
+    session_keys->command_counter++; // CmdCtr should be incremented each time a MAC is calculated
     apdu->lc = size + 8;
 
     return PM3_SUCCESS;
 }
 
-static int ntag424_comm_encrypt_apdu(APDU_t *apdu, int apdu_max_data_size, ntag424_session_keys_t *session_keys) {
+static int ntag424_comm_encrypt_apdu(APDU_t *apdu, int command_header_length, int apdu_max_data_size, ntag424_session_keys_t *session_keys) {
     // ------- Calculate IV
     uint8_t ivc[16];
-    ntag424_calc_iv(session_keys, ivc);
+    ntag424_calc_send_iv(session_keys, ivc);
 
     int size = apdu->lc;
 
-    size_t encrypt_data_size = size - 1;
+    size_t encrypt_data_size = size - command_header_length;
     size_t padded_data_size = encrypt_data_size + 16 - (encrypt_data_size % 16); // pad up to 16 byte blocks
     uint8_t temp_buffer[256] = {0};
 
-    if (padded_data_size + 1 > apdu_max_data_size) {
+    if (!encrypt_data_size) {
+        return PM3_SUCCESS;
+    }
+
+    if (padded_data_size + command_header_length > apdu_max_data_size) {
         return PM3_EOVFLOW;
     }
 
     // ------ Pad data
-    memcpy(temp_buffer, &apdu->data[1], encrypt_data_size); // We encrypt everything except the CmdHdr (first byte in data)
+    memcpy(temp_buffer, &apdu->data[command_header_length], encrypt_data_size); // We encrypt everything except the CmdHdr (first byte in data)
     temp_buffer[encrypt_data_size] = 0x80;
 
     // ------ Encrypt it
-    aes_encode(ivc, session_keys->encryption, temp_buffer, &apdu->data[1], padded_data_size);
+    aes_encode(ivc, session_keys->encryption, temp_buffer, &apdu->data[command_header_length], padded_data_size);
 
-    apdu->lc = (uint8_t)(1 + padded_data_size); // Set size to CmdHdr + padded data
+    apdu->lc = (uint8_t)(command_header_length + padded_data_size); // Set size to CmdHdr + padded data
 
     return PM3_SUCCESS;
 }
 
-static int ntag424_exchange_apdu(APDU_t *apdu, uint8_t *response, int *response_length, ntag424_communication_mode_t comm_mode, ntag424_session_keys_t *session_keys, uint8_t sw1_expected, uint8_t sw2_expected) {
+static int ntag424_exchange_apdu(APDU_t *apdu, int command_header_length, uint8_t *response, int *response_length, ntag424_communication_mode_t comm_mode, ntag424_session_keys_t *session_keys, uint8_t sw1_expected, uint8_t sw2_expected) {
 
     int res;
 
@@ -324,14 +306,14 @@ static int ntag424_exchange_apdu(APDU_t *apdu, uint8_t *response, int *response_
     }
 
     if (comm_mode == COMM_FULL) {
-        res = ntag424_comm_encrypt_apdu(apdu, buffer_length, session_keys);
+        res = ntag424_comm_encrypt_apdu(apdu, command_header_length, buffer_length, session_keys);
         if (res != PM3_SUCCESS) {
             return res;
         }
     }
 
     if (comm_mode == COMM_MAC || comm_mode == COMM_FULL) {
-        res = ntag424_comm_mac_apdu(apdu, buffer_length, session_keys);
+        res = ntag424_comm_mac_apdu(apdu, command_header_length, buffer_length, session_keys);
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -346,7 +328,7 @@ static int ntag424_exchange_apdu(APDU_t *apdu, uint8_t *response, int *response_
 
     res = ExchangeAPDU14a(cmd, apdu_length + 1, false, true, response, *response_length, response_length);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to exchange APDU");
+        PrintAndLogEx(ERR, "Failed to exchange APDU: %d", res);
         return res;
     }
 
@@ -363,8 +345,18 @@ static int ntag424_exchange_apdu(APDU_t *apdu, uint8_t *response, int *response_
         return PM3_ESOFT;
     }
 
-    // TODO: In case of COMM_FULL we would need to decrypt response here as well.
-    // And in case of COMM_MAC we would need to verify the MAC here, if we want to verify the card.
+    // Decrypt data if we are in full communications mode. If we want to verify MAC, this
+    // should also be done here
+    if (comm_mode == COMM_FULL) {
+        uint8_t iv[16] = {0};
+        ntag424_calc_recieve_iv(session_keys, iv);
+
+        uint8_t tmp[256];
+        memcpy(tmp, response, *response_length);
+        aes_decode(iv, session_keys->encryption, response, tmp, *response_length - 10);
+
+        memcpy(response, tmp, *response_length);
+    }
 
     return PM3_SUCCESS;
 }
@@ -382,7 +374,7 @@ static int ntag424_get_file_settings(uint8_t fileno, ntag424_file_settings_t *se
         .extended_apdu = false
     };
 
-    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
+    int res = ntag424_exchange_apdu(&apdu, 1, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -422,10 +414,7 @@ static int ntag424_write_file_settings(uint8_t fileno, ntag424_file_settings_t *
     int response_length = 8 + 2;
     uint8_t response[response_length];
 
-    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_FULL, session_keys, 0x91, 0x00);
-
-
-    session_keys->command_counter++; // Should this be incremented only on success?
+    int res = ntag424_exchange_apdu(&apdu, 1, response, &response_length, COMM_FULL, session_keys, 0x91, 0x00);
     return res;
 }
 
@@ -492,7 +481,7 @@ static int ntag424_auth_first_step(uint8_t keyno, uint8_t *key, uint8_t *out) {
     int response_length = 16 + 2;
     uint8_t response[response_length];
 
-    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_PLAIN, NULL, 0x91, 0xAF);
+    int res = ntag424_exchange_apdu(&apdu, 2, response, &response_length, COMM_PLAIN, NULL, 0x91, 0xAF);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -518,7 +507,7 @@ static int ntag424_auth_second_step(uint8_t *challenge, uint8_t *response_out) {
     int response_length = 256;
     uint8_t response[response_length];
 
-    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
+    int res = ntag424_exchange_apdu(&apdu, 0x20, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -628,7 +617,7 @@ static int ntag424_authenticate_ev2_first(uint8_t keyno, uint8_t *key, ntag424_s
 
 // Write file to card. Only supports plain communications mode. Authentication must be done
 // first unless file has free write access.
-static int ntag424_write_data(uint8_t fileno, uint16_t offset, uint16_t num_bytes, uint8_t *in) {
+static int ntag424_write_data(uint8_t fileno, uint16_t offset, uint16_t num_bytes, uint8_t *in, ntag424_communication_mode_t comm_mode, ntag424_session_keys_t *session_keys) {
     size_t remainder = 0;
 
     // Split writes that are too large for one APDU
@@ -655,16 +644,16 @@ static int ntag424_write_data(uint8_t fileno, uint16_t offset, uint16_t num_byte
         .data = cmd,
     };
 
-    int response_length = 2;
+    int response_length = 8 + 2; // potential MAC and result
     uint8_t response[response_length];
 
-    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
+    int res = ntag424_exchange_apdu(&apdu, sizeof(cmd_header), response, &response_length, comm_mode, session_keys, 0x91, 0x00);
     if (res != PM3_SUCCESS) {
         return res;
     }
 
     if (remainder > 0) {
-        return ntag424_write_data(fileno, offset + num_bytes, remainder, &in[num_bytes]);
+        return ntag424_write_data(fileno, offset + num_bytes, remainder, &in[num_bytes], comm_mode, session_keys);
     }
 
     return PM3_SUCCESS;
@@ -672,8 +661,8 @@ static int ntag424_write_data(uint8_t fileno, uint16_t offset, uint16_t num_byte
 
 // Read file from card. Only supports plain communications mode. Authentication must be done
 // first unless file has free read access.
-static int ntag424_read_data(uint8_t fileno, uint16_t offset, uint16_t num_bytes, uint8_t *out) {
-    uint8_t cmd[] = {
+static int ntag424_read_data(uint8_t fileno, uint16_t offset, uint16_t num_bytes, uint8_t *out, ntag424_communication_mode_t comm_mode, ntag424_session_keys_t *session_keys) {
+    uint8_t cmd_header[] = {
         fileno,
         (uint8_t)offset, (uint8_t)(offset << 8), (uint8_t)(offset << 16), // offset
         (uint8_t)num_bytes, (uint8_t)(num_bytes >> 8), 0x00
@@ -682,14 +671,14 @@ static int ntag424_read_data(uint8_t fileno, uint16_t offset, uint16_t num_bytes
     APDU_t apdu = {
         .cla = 0x90,
         .ins = NTAG424_CMD_READ_DATA,
-        .lc = sizeof(cmd),
-        .data = cmd,
+        .lc = sizeof(cmd_header),
+        .data = cmd_header,
     };
 
-    int response_length = num_bytes + 2;
+    int response_length = num_bytes + 4 + 2 + 20; // number of bytes to read + mac + result + potential padding
     uint8_t response[response_length];
 
-    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
+    int res = ntag424_exchange_apdu(&apdu, sizeof(cmd_header), response, &response_length, comm_mode, session_keys, 0x91, 0x00);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -734,12 +723,47 @@ static int ntag424_change_key(uint8_t keyno, uint8_t *new_key, uint8_t *old_key,
     int response_length = 8 + 2;
     uint8_t response[response_length];
 
-    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_FULL, session_keys, 0x91, 0x00);
-
-    session_keys->command_counter++; // Should this be incremented only on success?
-
+    int res = ntag424_exchange_apdu(&apdu, 1, response, &response_length, COMM_FULL, session_keys, 0x91, 0x00);
     return res;
+}
 
+static int CmdHelp(const char *Cmd);
+
+static int CmdHF_ntag424_view(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf ntag424 view",
+                  "Print a NTAG 424 DNA dump file (bin/eml/json)",
+                  "hf ntag424 view -f hf-ntag424-01020304-dump.bin"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_lit0("v", "verbose", "Verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    // read dump file
+    uint8_t *dump = NULL;
+    size_t bytes_read = NTAG424_MAX_BYTES;
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, NTAG424_MAX_BYTES);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
+        PrintAndLogEx(INFO, "File size %zu bytes", bytes_read);
+    }
+
+    free(dump);
+    return PM3_SUCCESS;
 }
 
 static int CmdHF_ntag424_info(const char *Cmd) {
@@ -769,7 +793,6 @@ static int ntag424_cli_get_auth_information(CLIParserContext *ctx, int key_no_in
     CLIGetHexWithReturn(ctx, key_index, key, &keylen);
 
     if (keylen != 16) {
-        PrintAndLogEx(ERR, "Key must be 16 bytes");
         return PM3_ESOFT;
     }
 
@@ -840,6 +863,7 @@ static int CmdHF_ntag424_read(const char *Cmd) {
         arg_str0("k",  "key", "<hex>", "Key for authentication (HEX 16 bytes)"),
         arg_int0("o",  "offset", "<dec>", "Offset to read in file (default 0)"),
         arg_int1("l",  "length", "<dec>", "Number of bytes to read"),
+        arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -851,10 +875,20 @@ static int CmdHF_ntag424_read(const char *Cmd) {
     int fileno = arg_get_int(ctx, 1);
 
     if (ntag424_cli_get_auth_information(ctx, 2, 3, &keyno, key) != PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "Reading unauthenticated");
         auth = 0;
-    } else {
-        PrintAndLogEx(INFO, "Reading authenticated");
+    }
+
+    ntag424_communication_mode_t comm_mode;
+    int comm_out = 0;
+    if (CLIGetOptionList(arg_get_str(ctx, 6), ntag424_communication_mode_options, &comm_out)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    comm_mode = comm_out;
+
+    if (comm_mode != COMM_PLAIN && auth == 0) {
+        PrintAndLogEx(ERR, "Only plain communication mode can be used without a key specified");
+        return PM3_EINVARG;
     }
 
     int offset = arg_get_int_def(ctx, 4, 0);
@@ -875,8 +909,9 @@ static int CmdHF_ntag424_read(const char *Cmd) {
         return res;
     }
 
+    ntag424_session_keys_t session_keys;
     if (auth) {
-        res = ntag424_authenticate_ev2_first(keyno, key, NULL);
+        res = ntag424_authenticate_ev2_first(keyno, key, &session_keys);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Failed to authenticate with key %d", keyno);
             DropField();
@@ -888,7 +923,7 @@ static int CmdHF_ntag424_read(const char *Cmd) {
 
     uint8_t data[512];
 
-    res = ntag424_read_data(fileno, offset, read_length, data);
+    res = ntag424_read_data(fileno, offset, read_length, data, comm_mode, &session_keys);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
@@ -915,6 +950,7 @@ static int CmdHF_ntag424_write(const char *Cmd) {
         arg_str0("k",  "key", "<hex>", "Key for authentication (HEX 16 bytes)"),
         arg_int0("o",  "offset", "<dec>", "Offset to write in file (default 0)"),
         arg_str1("d",  "data", "<hex>", "Data to write"),
+        arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -926,10 +962,20 @@ static int CmdHF_ntag424_write(const char *Cmd) {
     int fileno = arg_get_int(ctx, 1);
 
     if (ntag424_cli_get_auth_information(ctx, 2, 3, &keyno, key) != PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "Will write unauthenticated");
         auth = 0;
-    } else {
-        PrintAndLogEx(INFO, "Will write authenticated");
+    }
+
+    ntag424_communication_mode_t comm_mode;
+    int comm_out = 0;
+    if (CLIGetOptionList(arg_get_str(ctx, 6), ntag424_communication_mode_options, &comm_out)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    comm_mode = comm_out;
+
+    if (comm_mode != COMM_PLAIN && auth == 0) {
+        PrintAndLogEx(ERR, "Only plain communication mode can be used without a key specified");
+        return PM3_EINVARG;
     }
 
     int offset = arg_get_int_def(ctx, 4, 0);
@@ -953,8 +999,9 @@ static int CmdHF_ntag424_write(const char *Cmd) {
         return res;
     }
 
+    ntag424_session_keys_t session_keys;
     if (auth) {
-        res = ntag424_authenticate_ev2_first(keyno, key, NULL);
+        res = ntag424_authenticate_ev2_first(keyno, key, &session_keys);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Failed to authenticate with key %d", keyno);
             DropField();
@@ -964,7 +1011,7 @@ static int CmdHF_ntag424_write(const char *Cmd) {
         }
     }
 
-    res = ntag424_write_data(fileno, offset, datalen, data);
+    res = ntag424_write_data(fileno, offset, datalen, data, comm_mode, &session_keys);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
