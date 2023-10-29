@@ -649,9 +649,14 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf ntag424 help        `|Y       |`This help`
-|`hf ntag424 info        `|N       |`Tag information`
-|`hf ntag424 sdm         `|N       |`Prints NDEF records from card`
+|`hf ntag424 info        `|N       |`Tag information (not implemented yet)`
 |`hf ntag424 view        `|Y       |`Display content from tag dump file`
+|`hf ntag424 auth        `|N       |`Test authentication with key`
+|`hf ntag424 read        `|N       |`Read file`
+|`hf ntag424 write       `|N       |`Write file`
+|`hf ntag424 getfilesettings`|N       |`Get file settings`
+|`hf ntag424 changefilesettings`|N       |`Change file settings`
+|`hf ntag424 changekey   `|N       |`Change key`
 
 
 ### hf seos
