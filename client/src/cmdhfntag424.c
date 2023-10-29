@@ -21,6 +21,7 @@
 #include "cmdparser.h"
 #include "commonutil.h"
 #include "comms.h"
+#include "iso7816/apduinfo.h"
 #include "protocols.h"
 #include "cliparser.h"
 #include "cmdmain.h"
@@ -32,7 +33,17 @@
 #include "util.h"
 #include "crc32.h"
 
-#define NTAG424_MAX_BYTES  412
+#define NTAG424_MAX_BYTES 412
+
+
+// NTAG424 commands currently implemented
+#define NTAG424_CMD_GET_FILE_SETTINGS             0xF5
+#define NTAG424_CMD_CHANGE_FILE_SETTINGS          0x5F
+#define NTAG424_CMD_CHANGE_KEY                    0xC4
+#define NTAG424_CMD_READ_DATA                     0xAD
+#define NTAG424_CMD_WRITE_DATA                    0x8D
+#define NTAG424_CMD_AUTHENTICATE_EV2_FIRST_PART_1 0x71
+#define NTAG424_CMD_AUTHENTICATE_EV2_FIRST_PART_2 0xAF
 
 static int CmdHelp(const char *Cmd);
 
@@ -97,6 +108,12 @@ typedef struct {
     uint8_t encryption[16];
     uint8_t mac[16];
 } ntag424_session_keys_t;
+
+typedef enum {
+    COMM_PLAIN,
+    COMM_MAC,
+    COMM_FULL
+} ntag424_communication_mode_t;
 
 // -------------- File settings structs -------------------------
 // Enabling this bit in the settings will also reset the read counter to 0
@@ -214,36 +231,6 @@ static int ntag424_calc_file_write_settings_size(const ntag424_file_settings_t *
     return ntag424_calc_file_settings_size(settings) - 4;
 }
 
-static int ntag424_read_file_settings(uint8_t fileno, ntag424_file_settings_t *settings_out) {
-    const size_t RESPONSE_LENGTH = sizeof(ntag424_file_settings_t) + 2;
-    uint8_t cmd[] = { 0x90, 0xF5, 0x00, 0x00, 0x01, fileno, 0x00};
-    uint8_t resp[RESPONSE_LENGTH];
-    int outlen = 0;
-    int res;
-
-    res = ExchangeAPDU14a(cmd, sizeof(cmd), false, true, resp, RESPONSE_LENGTH, &outlen);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to send apdu");
-        return res;
-    }
-
-    if (outlen < 9) {
-        PrintAndLogEx(ERR, "Incorrect response length: %d", outlen);
-        return PM3_ESOFT;
-    }
-
-    if (resp[outlen - 2] != 0x91 || resp[outlen - 1] != 0x00) {
-        PrintAndLogEx(ERR, "Failed to get file settings");
-        return PM3_ESOFT;
-    }
-
-    if (settings_out) {
-        memcpy(settings_out, resp, outlen - 2);
-    }
-
-    return PM3_SUCCESS;
-}
-
 static void ntag424_calc_iv(ntag424_session_keys_t *session_keys, uint8_t *out_ivc) {
     uint8_t iv_clear[] = { 0xa5, 0x5a,
                            session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3],
@@ -277,46 +264,132 @@ static void ntag424_calc_mac(ntag424_session_keys_t *session_keys, uint8_t comma
     free(mac_input);
 }
 
-static int ntag424_comm_full_encrypt_apdu(const uint8_t *apdu_in, uint8_t *apdu_out, int *apdu_out_size, ntag424_session_keys_t *session_keys) {
-#define MAC_SIZE 8
-#define APDU_HEADER_SIZE 5
-#define APDU_OVERHEAD (APDU_HEADER_SIZE + 1)
+static int ntag424_comm_mac_apdu(APDU_t *apdu, int apdu_max_data_size, ntag424_session_keys_t *session_keys) {
 
+    int size = apdu->lc;
+
+    if (size + 8 > apdu_max_data_size) {
+        return PM3_EOVFLOW;
+    }
+
+    ntag424_calc_mac(session_keys, apdu->ins, apdu->data[0], &apdu->data[1], size - 1, &apdu->data[size]);
+
+    apdu->lc = size + 8;
+
+    return PM3_SUCCESS;
+}
+
+static int ntag424_comm_encrypt_apdu(APDU_t *apdu, int apdu_max_data_size, ntag424_session_keys_t *session_keys) {
     // ------- Calculate IV
     uint8_t ivc[16];
     ntag424_calc_iv(session_keys, ivc);
 
-
-    // ------- Copy apdu header
-    size_t size = apdu_in[4];
-    memcpy(apdu_out, apdu_in, 6);
+    int size = apdu->lc;
 
     size_t encrypt_data_size = size - 1;
     size_t padded_data_size = encrypt_data_size + 16 - (encrypt_data_size % 16); // pad up to 16 byte blocks
     uint8_t temp_buffer[256] = {0};
 
-    int apdu_final_size = APDU_OVERHEAD + padded_data_size + 8 + 1; // + MAC and CmdHdr
-    if (*apdu_out_size < apdu_final_size) {
-        PrintAndLogEx(ERR, "APDU out buffer not large enough");
-        return PM3_EINVARG;
+    if (padded_data_size + 1 > apdu_max_data_size) {
+        return PM3_EOVFLOW;
     }
 
-    *apdu_out_size = apdu_final_size;
-
     // ------ Pad data
-    memcpy(temp_buffer, &apdu_in[APDU_HEADER_SIZE + 1], encrypt_data_size); // We encrypt everything except the CmdHdr
+    memcpy(temp_buffer, &apdu->data[1], encrypt_data_size); // We encrypt everything except the CmdHdr (first byte in data)
     temp_buffer[encrypt_data_size] = 0x80;
 
     // ------ Encrypt it
-    memcpy(apdu_out, apdu_in, 4);
-    aes_encode(ivc, session_keys->encryption, temp_buffer, &apdu_out[6], padded_data_size);
+    aes_encode(ivc, session_keys->encryption, temp_buffer, &apdu->data[1], padded_data_size);
 
-    // ------ Add MAC
-    ntag424_calc_mac(session_keys, apdu_in[1], apdu_in[5], &apdu_out[6], padded_data_size, &apdu_out[APDU_HEADER_SIZE + padded_data_size + 1]);
+    apdu->lc = (uint8_t)(1 + padded_data_size); // Set size to CmdHdr + padded data
 
-    apdu_out[4] = (uint8_t)(padded_data_size + 8 + 1); // Set size to CmdHdr + padded data + MAC
-    apdu_out[APDU_HEADER_SIZE + padded_data_size + 8 + 1] = 0; // Le
+    return PM3_SUCCESS;
+}
 
+static int ntag424_exchange_apdu(APDU_t *apdu, uint8_t *response, int *response_length, ntag424_communication_mode_t comm_mode, ntag424_session_keys_t *session_keys, uint8_t sw1_expected, uint8_t sw2_expected) {
+
+    int res;
+
+    // New buffer since we might need to expand the data in the apdu
+    int buffer_length = 256;
+    uint8_t tmp_apdu_buffer[256] = {0};
+
+    if (comm_mode != COMM_PLAIN) {
+        if (session_keys == NULL) {
+            PrintAndLogEx(ERR, "Non-plain communications mode requested but no session keys supplied");
+            return PM3_EINVARG;
+        }
+        memcpy(tmp_apdu_buffer, apdu->data, apdu->lc);
+        apdu->data = tmp_apdu_buffer;
+    }
+
+    if (comm_mode == COMM_FULL) {
+        res = ntag424_comm_encrypt_apdu(apdu, buffer_length, session_keys);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+    }
+
+    if (comm_mode == COMM_MAC || comm_mode == COMM_FULL) {
+        res = ntag424_comm_mac_apdu(apdu, buffer_length, session_keys);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+    }
+
+    uint8_t cmd[256] = {0};
+    int apdu_length = 256;
+
+    if (APDUEncode(apdu, cmd, &apdu_length) != 0) {
+        return PM3_EINVARG;
+    }
+
+    res = ExchangeAPDU14a(cmd, apdu_length + 1, false, true, response, *response_length, response_length);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to exchange APDU");
+        return res;
+    }
+
+    if (*response_length < 2) {
+        PrintAndLogEx(ERR, "No response");
+        return PM3_ESOFT;
+    }
+
+    uint8_t sw1 = response[*response_length - 2];
+    uint8_t sw2 = response[*response_length - 1];
+
+    if (sw1 != sw1_expected || sw2 != sw2_expected) {
+        PrintAndLogEx(ERR, "Error from card: %02X %02X (%s)", sw1, sw2, GetAPDUCodeDescription(sw1, sw2));
+        return PM3_ESOFT;
+    }
+
+    // TODO: In case of COMM_FULL we would need to decrypt response here as well.
+    // And in case of COMM_MAC we would need to verify the MAC here, if we want to verify the card.
+
+    return PM3_SUCCESS;
+}
+
+
+static int ntag424_get_file_settings(uint8_t fileno, ntag424_file_settings_t *settings_out) {
+    int response_length = sizeof(ntag424_file_settings_t) + 2;
+    uint8_t response[response_length];
+
+    APDU_t apdu = {
+        .cla = 0x90,
+        .ins = NTAG424_CMD_GET_FILE_SETTINGS,
+        .lc = 1,
+        .data = &fileno,
+        .extended_apdu = false
+    };
+
+    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (settings_out) {
+        memcpy(settings_out, response, response_length);
+    }
 
     return PM3_SUCCESS;
 }
@@ -331,46 +404,29 @@ static int ntag424_write_file_settings(uint8_t fileno, ntag424_file_settings_t *
         .optional_sdm_settings = settings->optional_sdm_settings,
     };
 
-    // ------- Assemble the actual command
     size_t settings_size = ntag424_calc_file_write_settings_size(settings);
-    uint8_t lc = 1 + settings_size; // CmdHeader + size */
 
-    uint8_t cmd_header[] = {
-        0x90, 0x5f, 0x00, 0x00,
-        lc,
-        fileno
+    uint8_t cmd_buffer[256];
+    cmd_buffer[0] = fileno;
+    memcpy(&cmd_buffer[1], &write_settings, settings_size);
+
+    APDU_t apdu = {
+        .cla = 0x90,
+        .ins = NTAG424_CMD_CHANGE_FILE_SETTINGS,
+        .lc = 1 + settings_size,
+        .data = cmd_buffer
     };
-    uint8_t cmd[256] = {0};
-    memcpy(cmd, cmd_header, sizeof(cmd_header));
-    memcpy(&cmd[sizeof(cmd_header)], (void *)&write_settings, settings_size);
-    cmd[sizeof(cmd_header) + settings_size] = 0x00;
 
-    uint8_t apdu_out[256] = {0};
-    int apdu_out_size = 256;
-    ntag424_comm_full_encrypt_apdu(cmd, apdu_out, &apdu_out_size, session_keys);
 
     // ------- Actually send the APDU
-    const size_t RESPONSE_LENGTH = 8 + 2;
-    int outlen;
-    uint8_t resp[RESPONSE_LENGTH];
-    int res = ExchangeAPDU14a(apdu_out, apdu_out_size, false, true, resp, RESPONSE_LENGTH, &outlen);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to send apdu");
-        return res;
-    }
+    int response_length = 8 + 2;
+    uint8_t response[response_length];
 
-    if (outlen != RESPONSE_LENGTH) {
-        PrintAndLogEx(ERR, "Incorrect response length: %d, %02X%02X", outlen, resp[outlen - 2], resp[outlen - 1]);
-        return PM3_ESOFT;
-    }
+    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_FULL, session_keys, 0x91, 0x00);
 
-    if (resp[outlen - 2] != 0x91 || resp[outlen - 1] != 0x00) {
-        PrintAndLogEx(ERR, "Failed to get file settings");
-        return PM3_ESOFT;
-    }
 
     session_keys->command_counter++; // Should this be incremented only on success?
-    return PM3_SUCCESS;
+    return res;
 }
 
 static void ntag424_print_file_settings(uint8_t fileno, const ntag424_file_settings_t *settings) {
@@ -424,53 +480,50 @@ static int ntag424_select_application(void) {
 }
 
 static int ntag424_auth_first_step(uint8_t keyno, uint8_t *key, uint8_t *out) {
-    const size_t RESPONSE_LENGTH = 16 + 2;
-    uint8_t cmd[] = {0x90, 0x71, 0x00, 0x00, 0x02, keyno, 0x00, 0x00};
-    uint8_t resp[RESPONSE_LENGTH];
-    int outlen = 0;
-    int res;
+    uint8_t key_number[2] = { keyno, 0x00 };
 
-    res = ExchangeAPDU14a(cmd, sizeof(cmd), false, true, resp, RESPONSE_LENGTH, &outlen);
+    APDU_t apdu = {
+        .cla = 0x90,
+        .ins = NTAG424_CMD_AUTHENTICATE_EV2_FIRST_PART_1,
+        .lc = 0x02,
+        .data = key_number
+    };
+
+    int response_length = 16 + 2;
+    uint8_t response[response_length];
+
+    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_PLAIN, NULL, 0x91, 0xAF);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to send apdu");
         return res;
     }
 
-    if (outlen != RESPONSE_LENGTH || resp[RESPONSE_LENGTH - 2] != 0x91 || resp[RESPONSE_LENGTH - 1] != 0xAF) {
+    if (response_length != 16 + 2) {
         PrintAndLogEx(ERR, "Failed to get RndB (invalid key number?)");
         return PM3_ESOFT;
     }
 
     uint8_t iv[16] = {0};
-    aes_decode(iv, key, resp, out, 16);
+    aes_decode(iv, key, response, out, 16);
 
     return PM3_SUCCESS;
 }
 
-static int ntag424_auth_second_step(uint8_t *challenge, uint8_t *response) {
-    uint8_t cmd_header[] = { 0x90, 0xAF, 0x00, 0x00, 0x20 };
+static int ntag424_auth_second_step(uint8_t *challenge, uint8_t *response_out) {
+    APDU_t apdu = {
+        .cla = 0x90,
+        .ins = NTAG424_CMD_AUTHENTICATE_EV2_FIRST_PART_2,
+        .lc = 0x20,
+        .data = challenge,
+    };
+    int response_length = 256;
+    uint8_t response[response_length];
 
-    uint8_t cmd[sizeof(cmd_header) + 32 + 1] = {0};
-
-    memcpy(cmd, cmd_header, sizeof(cmd_header));
-    memcpy(&cmd[sizeof(cmd_header)], challenge, 32);
-
-    const size_t RESPONSE_LENGTH = 256;
-    uint8_t resp[RESPONSE_LENGTH];
-    int outlen = 0;
-    int res;
-
-    res = ExchangeAPDU14a(cmd, sizeof(cmd), false, true, resp, RESPONSE_LENGTH, &outlen);
+    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
     if (res != PM3_SUCCESS) {
         return res;
     }
 
-    if (resp[outlen - 2] != 0x91 || resp[outlen - 1] != 0x00) {
-        PrintAndLogEx(ERR, "Challenge failed: wrong key?");
-        return PM3_ESOFT;
-    }
-
-    memcpy(response, resp, outlen - 2);
+    memcpy(response_out, response, response_length - 2);
 
     return PM3_SUCCESS;
 }
@@ -571,54 +624,47 @@ static int ntag424_authenticate_ev2_first(uint8_t keyno, uint8_t *key, ntag424_s
     return PM3_SUCCESS;
 }
 
-#define MAX_WRITE_APDU 248
+#define MAX_WRITE_APDU (200)
 
 // Write file to card. Only supports plain communications mode. Authentication must be done
 // first unless file has free write access.
-static int ntag424_write_file(uint8_t fileno, uint16_t offset, uint16_t num_bytes, uint8_t *in) {
-    const size_t RESPONSE_LENGTH = 2;
+static int ntag424_write_data(uint8_t fileno, uint16_t offset, uint16_t num_bytes, uint8_t *in) {
     size_t remainder = 0;
 
+    // Split writes that are too large for one APDU
     if (num_bytes > MAX_WRITE_APDU) {
         remainder = num_bytes - MAX_WRITE_APDU;
         num_bytes = MAX_WRITE_APDU;
     }
 
-    // 248 +
-    uint8_t cmd_header[] = { 0x90, 0x8d, 0x00, 0x00, 0x07 + num_bytes, fileno,
-                             (uint8_t)offset, (uint8_t)(offset << 8), (uint8_t)(offset << 16), // offset
-                             (uint8_t)num_bytes, (uint8_t)(num_bytes >> 8), (uint8_t)(num_bytes >> 16) //size
-                           };
+    uint8_t cmd_header[] = {
+        fileno,
+        (uint8_t)offset, (uint8_t)(offset << 8), (uint8_t)(offset << 16), // offset
+        (uint8_t)num_bytes, (uint8_t)(num_bytes >> 8), (uint8_t)(num_bytes >> 16) //size
+    };
 
-    uint8_t cmd[512] = {0};
+    uint8_t cmd[256] = {0};
 
     memcpy(cmd, cmd_header, sizeof(cmd_header));
     memcpy(&cmd[sizeof(cmd_header)], in, num_bytes);
 
-    size_t total_size = sizeof(cmd_header) + num_bytes + 1; //(Le)
+    APDU_t apdu = {
+        .cla = 0x90,
+        .ins = NTAG424_CMD_WRITE_DATA,
+        .lc = sizeof(cmd_header) + num_bytes,
+        .data = cmd,
+    };
 
-    uint8_t resp[RESPONSE_LENGTH];
-    int outlen = 0;
-    int res;
+    int response_length = 2;
+    uint8_t response[response_length];
 
-    res = ExchangeAPDU14a(cmd, total_size, false, true, resp, RESPONSE_LENGTH, &outlen);
+    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to send apdu");
         return res;
     }
 
-    if (outlen != RESPONSE_LENGTH) {
-        PrintAndLogEx(ERR, "Incorrect response length: %d, %s", outlen, sprint_hex(resp, 2));
-        return PM3_ESOFT;
-    }
-
-    if (resp[outlen - 2] != 0x91 || resp[outlen - 1] != 0x00) {
-        PrintAndLogEx(ERR, "Failed to write file");
-        return PM3_ESOFT;
-    }
-
     if (remainder > 0) {
-        return ntag424_write_file(fileno, offset + num_bytes, remainder, &in[num_bytes]);
+        return ntag424_write_data(fileno, offset + num_bytes, remainder, &in[num_bytes]);
     }
 
     return PM3_SUCCESS;
@@ -626,35 +672,29 @@ static int ntag424_write_file(uint8_t fileno, uint16_t offset, uint16_t num_byte
 
 // Read file from card. Only supports plain communications mode. Authentication must be done
 // first unless file has free read access.
-static int ntag424_read_file(uint8_t fileno, uint16_t offset, uint16_t num_bytes, uint8_t *out) {
-    const size_t RESPONSE_LENGTH = num_bytes + 2;
+static int ntag424_read_data(uint8_t fileno, uint16_t offset, uint16_t num_bytes, uint8_t *out) {
+    uint8_t cmd[] = {
+        fileno,
+        (uint8_t)offset, (uint8_t)(offset << 8), (uint8_t)(offset << 16), // offset
+        (uint8_t)num_bytes, (uint8_t)(num_bytes >> 8), 0x00
+    };
 
-    uint8_t cmd[] = { 0x90, 0xad, 0x00, 0x00, 0x07, fileno,
-                      (uint8_t)offset, (uint8_t)(offset << 8), (uint8_t)(offset << 16), // offset
-                      (uint8_t)num_bytes, (uint8_t)(num_bytes >> 8), 0x00, //size
-                      0x00
-                    };
-    uint8_t resp[RESPONSE_LENGTH];
-    int outlen = 0;
-    int res;
+    APDU_t apdu = {
+        .cla = 0x90,
+        .ins = NTAG424_CMD_READ_DATA,
+        .lc = sizeof(cmd),
+        .data = cmd,
+    };
 
-    res = ExchangeAPDU14a(cmd, sizeof(cmd), false, true, resp, RESPONSE_LENGTH, &outlen);
+    int response_length = num_bytes + 2;
+    uint8_t response[response_length];
+
+    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to send apdu");
         return res;
     }
 
-    if (outlen != RESPONSE_LENGTH) {
-        PrintAndLogEx(ERR, "Incorrect response length: %d, %s", outlen, sprint_hex(resp, 2));
-        return PM3_ESOFT;
-    }
-
-    if (resp[outlen - 2] != 0x91 || resp[outlen - 1] != 0x00) {
-        PrintAndLogEx(ERR, "Failed to read file");
-        return PM3_ESOFT;
-    }
-
-    memcpy(out, resp, num_bytes);
+    memcpy(out, response, num_bytes);
     return PM3_SUCCESS;
 }
 
@@ -671,57 +711,34 @@ static int ntag424_change_key(uint8_t keyno, uint8_t *new_key, uint8_t *old_key,
         memcpy(key, new_key, 16);
     }
 
-    // ------- Calculate KeyData
-    uint8_t keydata[32] = {0};
-    memcpy(keydata, key, 16);
-    keydata[16] = version;
+    // ------- Assemble KeyData command
+    uint8_t key_cmd_data[32] = {0};
+    key_cmd_data[0] = keyno;
+    memcpy(&key_cmd_data[1], key, 16);
+    key_cmd_data[17] = version;
     int key_data_len;
     if (keyno != 0) {
-        memcpy(&keydata[17], crc, 4);
-        keydata[21] = 0x80;
-        key_data_len = 16 + 4 + 1;
+        memcpy(&key_cmd_data[18], crc, sizeof(crc));
+        key_data_len = sizeof(keyno) + sizeof(key) + sizeof(version) + sizeof(crc);
     } else {
-        keydata[17] = 0x80;
-        key_data_len = 16 + 1;
+        key_data_len = sizeof(keyno) + sizeof(key) + sizeof(version);
     }
 
-    // ------- Assemble APDU
-    uint8_t cmd_header[] = {
-        0x90, 0xC4, 0x00, 0x00, key_data_len + 1, keyno
+    APDU_t apdu = {
+        .cla = 0x90,
+        .ins = NTAG424_CMD_CHANGE_KEY,
+        .lc = key_data_len,
+        .data = key_cmd_data
     };
 
-    uint8_t cmd[512] = {0};
-    memcpy(cmd, cmd_header, sizeof(cmd_header));
-    memcpy(&cmd[sizeof(cmd_header)], keydata, key_data_len);
+    int response_length = 8 + 2;
+    uint8_t response[response_length];
 
-    uint8_t apdu_out[256];
-    int apdu_out_size = 256;
-    ntag424_comm_full_encrypt_apdu(cmd, apdu_out, &apdu_out_size, session_keys);
-
-
-    // ------- Actually send the APDU
-    const size_t RESPONSE_LENGTH = 8 + 2;
-    int outlen;
-    uint8_t resp[RESPONSE_LENGTH];
-    int res = ExchangeAPDU14a(apdu_out, apdu_out_size, false, true, resp, RESPONSE_LENGTH, &outlen);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to send apdu");
-        return res;
-    }
-
-    if (outlen < 2) {
-        PrintAndLogEx(ERR, "Incorrect response length: %d", outlen);
-        return PM3_ESOFT;
-    }
-
-    if (resp[outlen - 2] != 0x91 || resp[outlen - 1] != 0x00) {
-        PrintAndLogEx(ERR, "Error when changing key. Wrong old key?");
-        return PM3_ESOFT;
-    }
+    int res = ntag424_exchange_apdu(&apdu, response, &response_length, COMM_FULL, session_keys, 0x91, 0x00);
 
     session_keys->command_counter++; // Should this be incremented only on success?
 
-    return PM3_SUCCESS;
+    return res;
 
 }
 
@@ -871,7 +888,7 @@ static int CmdHF_ntag424_read(const char *Cmd) {
 
     uint8_t data[512];
 
-    res = ntag424_read_file(fileno, offset, read_length, data);
+    res = ntag424_read_data(fileno, offset, read_length, data);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
@@ -947,7 +964,7 @@ static int CmdHF_ntag424_write(const char *Cmd) {
         }
     }
 
-    res = ntag424_write_file(fileno, offset, datalen, data);
+    res = ntag424_write_data(fileno, offset, datalen, data);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
@@ -990,7 +1007,7 @@ static int CmdHF_ntag424_getfilesettings(const char *Cmd) {
     }
 
     ntag424_file_settings_t settings;
-    res = ntag424_read_file_settings(fileno, &settings);
+    res = ntag424_get_file_settings(fileno, &settings);
     DropField();
     if (res != PM3_SUCCESS) {
         return res;
@@ -1151,7 +1168,7 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
     }
 
     ntag424_file_settings_t settings;
-    res = ntag424_read_file_settings(fileno, &settings);
+    res = ntag424_get_file_settings(fileno, &settings);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;

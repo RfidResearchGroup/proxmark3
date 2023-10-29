@@ -6806,7 +6806,7 @@
         },
         "hf ntag424 changefilesettings": {
             "command": "hf ntag424 changefilesettings",
-            "description": "Updates file settings for file, must be authenticated. This is a short explanation of the settings. See AN12196 for more information: options: byte with bit flags Bit: Setting: 6 Enable SDM and mirroring access: two byte access rights. Each nibble is a key number, or E for free access. Order is key for readwrite, change, read and write sdmoptions: byte with bit flags Bit: Setting: 0 ASCII encoding 4 SDMEncFileData 5 SDMReadCtrLimit 6 SDMReadCtr 7 SDMOptionsUID sdmaccess: two byte access rights. Each nibble is a key, or E for plain mirror and F for no mirroring Order is SDMMetaRead, SDMFileRead, Reserved and SDMCtrRet sdm_data: Three bytes of data used to control SDM settings. Can be specified multiple times. Data means different things depending on settings. Note: Not all of these settings will be written. It depends on the option byte, and the keys set. See AN12196 for more information. You must also start with sdmdata1, then sdmdata2, up to the number of sdm_data you want to write",
+            "description": "Updates file settings for file, must be authenticated. This is a short explanation of the settings. See AN12196 for more information: options: byte with bit flags Bit: Setting: 6 Enable SDM and mirroring access: two byte access rights. Each nibble is a key number, or E for free access. Order is key for readwrite, change, read and write sdmoptions: byte with bit flags Bit: Setting: 0 ASCII encoding 4 SDMEncFileData 5 SDMReadCtrLimit 6 SDMReadCtr 7 SDMOptionsUID sdmaccess: two byte access rights. Each nibble is a key, or E for plain mirror and F for no mirroring Order is Reserved, SDMCtrRet, SDMMetaRead and SDMFileRead sdm_data: Three bytes of data used to control SDM settings. Can be specified multiple times. Data means different things depending on settings. Note: Not all of these settings will be written. It depends on the option byte, and the keys set. See AN12196 for more information. You must also start with sdmdata1, then sdmdata2, up to the number of sdm_data you want to write",
             "notes": [
                 "hf ntag424 changefilesettings -f 2 -n 0 -k 00000000000000000000000000000000 -o 40 -a 00E0 -s C1 -c F000 --sdmdata1 000020 --sdmdata2 000043 --sdmdata3 000043"
             ],
@@ -12012,6 +12012,6 @@
     "metadata": {
         "commands_extracted": 696,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-10-27T16:08:32"
+        "extracted_on": "2023-10-29T12:42:07"
     }
 }
