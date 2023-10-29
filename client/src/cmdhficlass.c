@@ -424,7 +424,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
             memcpy(data + (0x0D * 8), lkey, sizeof(enckey1));
         }
         // encrypted 0xFF
-        for (uint8_t i = 0x0D; i < 0x14; i++) {
+        for (uint8_t i = 0x0E; i < 0x14; i++) {
             memcpy(data + (i * 8), ffs, sizeof(ffs));
         }
         PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
@@ -450,7 +450,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         // encrypted partial keyroll key 15
         PrintAndLogEx(INFO, "Setting encrypted partial key15... " NOLF);
         memset(foo, 0xFF, sizeof(foo));
-        foo[0] = lkey[7];
+        foo[0] = key[7];
         if (IsCardHelperPresent(false) != false) {
             if (Encrypt(foo, enckey2) == false) {
                 PrintAndLogEx(WARNING, "failed to encrypt partial 2");
