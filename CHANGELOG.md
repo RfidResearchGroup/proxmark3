@@ -3,8 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `data bmap` - now default `-m` is 8 (@iceman1001)
  - Added support for NTAG424 cards. (@dankar)
  - Additional fixes to configcard code for keyroll mode based on nfc-iclass output (@Antiklesys)
+ - Changed lf sampling - improved the performance (@yah01)
  - Added `bind` option for network connections to specify the outbound address and port (@wh201906)
  - Changed `lf em 4x05 dump` - now supports the `--ns` nosave parameter (@iceman1001)
  - Fixed some wrong synchronization waits in usb_write() to increase the communication speed (@wh201906)
@@ -41,7 +43,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Modified `hf iclass configcard` to only support online mode (@Antiklesys)
  - Modified `hf iclass configcard` command to generate config cards without a cardhelper module by porting the contents of blocks 6 & 7 from nfc-iclass (@Antiklesys)
  - Fixed `hf iclass info` command showing incorrectly in offline mode (@Antiklesys)
- - Changed lf sampling - improved the performance (@yah01)
 
 ## [Raccoon.4.17140][2023-09-09]
  - Changed text and adjust pm3_test case for mf_aes_brute (@doegox)

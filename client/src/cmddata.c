@@ -3457,6 +3457,7 @@ static int CmdBinaryMap(const char *Cmd) {
                   "Breaks down a hex value to binary according a template\n"
                   "   data bmap -d 16 -m 4,4\n"
                   "This will give two rows each with four bits",
+                  "data bmap -d 3B\n"
                   "data bmap -d 3B -m 2,5,1\n"
                  );
 
@@ -3480,7 +3481,11 @@ static int CmdBinaryMap(const char *Cmd) {
     char bits[(8 * 4) + 1] = {0};
     hextobinstring_n(bits, (char *)hex, hlen);
 
-    int x = 0;
+    if (tlen == 0) {
+        template[0] = '8';
+        template[1] = 0;
+    }
+
     char *token = strtok((char *)template, ",");
 
     // header
@@ -3490,19 +3495,16 @@ static int CmdBinaryMap(const char *Cmd) {
 
     uint8_t i = 0;
     uint8_t cnt = 1;
+    int x = 0;
     while (token != NULL) {
         sscanf(token, "%d", &x);
 
-        if (i) {
-            PrintAndLogEx(INFO, " %d | %*.s" NOLF, cnt, i * 3, " ");
-        } else {
-            PrintAndLogEx(INFO, " %d | " NOLF, cnt);
-        }
+        PrintAndLogEx(INFO, " %d | %*.s" NOLF, cnt, i * 3, " ");
 
         // incease with previous offset
         x += i;
 
-        for (; i < x; i++) {
+        for (; i < (uint8_t)x; i++) {
             PrintAndLogEx(NORMAL, "%c  " NOLF, bits[7 - i]);
         }
 
