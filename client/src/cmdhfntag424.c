@@ -792,20 +792,16 @@ static int CmdHF_ntag424_info(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int ntag424_cli_get_auth_information(CLIParserContext *ctx, int key_no_index, int key_index, int *keyno, uint8_t *key_out) {
+static int ntag424_cli_get_auth_information(CLIParserContext *ctx, int keyno_index, int key_index, int *keyno, uint8_t *key_out) {
+
+    if (keyno) {
+        *keyno = arg_get_int(ctx, keyno_index);
+    }
 
     int keylen = 16;
-    if (keyno) {
-        *keyno = arg_get_int(ctx, key_no_index);
-    }
-
     uint8_t key[16] = {0};
-    CLIGetHexWithReturn(ctx, key_index, key, &keylen);
-    if (CLIParamHexToBuf(arg_get_str((ctx), key_index), key, sizeof(key), &keylen)) {
 
-    }
-
-    if (keylen != 16) {
+    if (CLIParamHexToBuf(arg_get_str(ctx, key_index), key, sizeof(key), &keylen) || (keylen != 16)) {
         return PM3_ESOFT;
     }
 
