@@ -1129,7 +1129,8 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     // Proxmark3 settings file.  No
     if (!strcmp(ctype, "settings")) {
-        PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " appears to be Proxmark3 settings file ... not a valid dump file.", preferredName);
+        PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " appears to be Proxmark3 settings file", preferredName);
+        PrintAndLogEx(INFO, "not a valid dump file");
         goto out;
     }
 
@@ -1214,6 +1215,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (int i = 0; i < maxdatalen; i++) {
             if (sptr + 4 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1247,6 +1249,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (int i = 0; i < 256; i++) {
             if (sptr + 4 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1270,6 +1273,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (size_t i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1290,6 +1294,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (size_t i = 0; i < (maxdatalen / PICOPASS_BLOCK_SIZE); i++) {
             if (sptr + PICOPASS_BLOCK_SIZE > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1309,6 +1314,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (size_t i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1328,6 +1334,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (size_t i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1354,6 +1361,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1374,6 +1382,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 8); i++) {
             if (sptr + 8 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1394,6 +1403,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (int i = 0; i < 64; i++) {
             if (sptr + 16 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1426,6 +1436,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         for (int i = 0; i < (TOPAZ_STATIC_MEMORY / 8); i++) {
 
             if (sptr + TOPAZ_BLOCK_SIZE > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1461,6 +1472,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         for (size_t i = 0; i < 64; i++) {
 
             if ((sptr + (AES_KEY_LEN * 2)) > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 break;
             }
 
@@ -1522,6 +1534,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1542,6 +1555,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 32); i++) {
             if (sptr + 32 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1562,6 +1576,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 8); i++) {
             if (sptr + 8 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1593,6 +1608,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 16); i++) {
             if (sptr + 16 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
