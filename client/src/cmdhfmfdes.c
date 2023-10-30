@@ -439,6 +439,10 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
     return PM3_SUCCESS;
 }
 
+int DesfirePrintSignature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len) {
+    return desfire_print_signature(uid, uidlen, signature, signature_len, DESFIRE_UNKNOWN);
+}
+
 static void swap24(uint8_t *data) {
     if (data == NULL) return;
     uint8_t tmp = data[0];
