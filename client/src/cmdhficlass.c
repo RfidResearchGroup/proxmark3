@@ -4375,11 +4375,11 @@ static int CmdHFiClassAutopwn(const char *Cmd) {
 static int CmdHFiClassConfigCard(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass configcard",
-                  "Manage reader configuration card via Cardhelper,\n"
+                  "Manage reader configuration card via Cardhelper or internal database,\n"
                   "The generated config card will be uploaded to device emulator memory.\n"
                   "You can start simulating `hf iclass sim -t 3` or use the emul commands",
-                  "hf iclass configcard -l           --> download config card settings\n"
-                  "hf iclass configcard -p           --> print all config cards\n"
+                  "hf iclass configcard -l           --> download config card settings (requires card helper)\n"
+                  "hf iclass configcard -p           --> print all config cards in the database (doesn't require cardhelper)\n"
                   "hf iclass configcard --ci 1       --> view config card setting in slot 1\n"
                   "hf iclass configcard -g --ci 0    --> generate config file from slot 0"
                  );
@@ -4425,12 +4425,14 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
         print_config_cards();
     }
 
-    if (ccidx > -1 && ccidx < 14) {
+    if (ccidx > -1 && ccidx < 13) {
         const iclass_config_card_item_t *item = get_config_card_item(ccidx);
         print_config_card(item);
+    } else {
+        PrintAndLogEx(ERR, "Please specify a valid configuration number!");
     }
 
-    if (do_generate) {
+    if (do_generate && (ccidx > -1 && ccidx < 13)) {
         const iclass_config_card_item_t *item = get_config_card_item(ccidx);
         if (strstr(item->desc, "Keyroll") != NULL) {
             if (got_kr == false) {
