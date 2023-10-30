@@ -628,10 +628,10 @@ static int ntag424_write_data(uint8_t fileno, uint32_t offset, uint32_t num_byte
 
     uint8_t cmd_header[] = {
         fileno,
-        (uint8_t)offset, 
-        (uint8_t)(offset << 8), 
+        (uint8_t)offset,
+        (uint8_t)(offset << 8),
         (uint8_t)(offset << 16), // offset
-        (uint8_t)num_bytes, 
+        (uint8_t)num_bytes,
         (uint8_t)(num_bytes >> 8),
         (uint8_t)(num_bytes >> 16) // size
     };
@@ -768,7 +768,7 @@ static int CmdHF_ntag424_view(const char *Cmd) {
 
     // to be implemented...
     PrintAndLogEx(INFO, "not implemented yet");
-    PrintAndLogEx(INFO, "Feel free to contribute!");    
+    PrintAndLogEx(INFO, "Feel free to contribute!");
 
     free(dump);
     return PM3_SUCCESS;
@@ -978,7 +978,7 @@ static int CmdHF_ntag424_write(const char *Cmd) {
         PrintAndLogEx(ERR, "Only plain communication mode can be used without a key specified");
         return PM3_EINVARG;
     }
-    
+
     if (SelectCard14443A_4(false, true, NULL) != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(ERR, "Failed to select card");
@@ -1081,7 +1081,7 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
                   "You must also start with sdmdata1, then sdmdata2, up to the number of sdm_data you want to write",
 
                   "hf ntag424 changefs --fileno 2 --keyno 0 -k 00000000000000000000000000000000 -o 40 -a 00E0 -s C1 -c F000 --data1 000020 --data2 000043 --data3 000043"
-            );
+                 );
 
     void *argtable[] = {
         arg_param_begin,

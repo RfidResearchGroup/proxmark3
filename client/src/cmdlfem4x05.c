@@ -832,9 +832,9 @@ int CmdEM4x05Write(const char *Cmd) {
             PrintAndLogEx(INFO, "Writing address " _YELLOW_("%d") " data " _YELLOW_("%08X") " using password " _YELLOW_("%08X"), addr, data, pwd);
     } else {
         if (protect_operation)
-            PrintAndLogEx(INFO, "Writing protection words data " _YELLOW_("%08X") , data);
+            PrintAndLogEx(INFO, "Writing protection words data " _YELLOW_("%08X"), data);
         else
-            PrintAndLogEx(INFO, "Writing address " _YELLOW_("%d") " data " _YELLOW_("%08X") , addr, data);
+            PrintAndLogEx(INFO, "Writing address " _YELLOW_("%d") " data " _YELLOW_("%08X"), addr, data);
     }
 
     res = PM3_SUCCESS;
