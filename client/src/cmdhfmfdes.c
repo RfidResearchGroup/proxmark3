@@ -372,8 +372,7 @@ static int mfdes_get_info(mfdes_info_res_t *info) {
 }
 
 // --- GET SIGNATURE
-static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len, nxp_cardtype_t card_type) {
-    (void)card_type;
+static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len) {
 
     if (uid == NULL) {
         PrintAndLogEx(DEBUG, "UID=NULL");
@@ -742,7 +741,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         res = DesfireReadSignature(&dctx, 0x00, signature, &signature_len);
         if (res == PM3_SUCCESS) {
             if (signature_len == 56)
-                desfire_print_signature(info.uid, info.uidlen, signature, signature_len, cardtype);
+                desfire_print_signature(info.uid, info.uidlen, signature, signature_len);
             else
                 PrintAndLogEx(WARNING, "--- GetSignature returned wrong signature length: %zu", signature_len);
         } else {
