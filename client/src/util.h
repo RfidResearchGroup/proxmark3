@@ -106,7 +106,6 @@ uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base);
 float param_getfloat(const char *line, int paramnum, float deflt);
 uint8_t param_getdec(const char *line, int paramnum, uint8_t *destination);
 uint8_t param_isdec(const char *line, int paramnum);
-int param_gethex(const char *line, int paramnum, uint8_t *data, int hexcnt);
 int param_gethex_ex(const char *line, int paramnum, uint8_t *data, int *hexcnt);
 int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, int maxdatalen, int *datalen);
 int param_getbin_to_eol(const char *line, int paramnum, uint8_t *data, int maxdatalen, int *datalen);

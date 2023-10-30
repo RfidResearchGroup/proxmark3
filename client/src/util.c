@@ -759,25 +759,6 @@ float param_getfloat(const char *line, int paramnum, float deflt) {
         return deflt;
 }
 
-int param_gethex(const char *line, int paramnum, uint8_t *data, int hexcnt) {
-    int bg, en, i;
-    uint32_t temp;
-
-    if (hexcnt & 1) return 1;
-
-    if (param_getptr(line, &bg, &en, paramnum)) return 1;
-
-    if (en - bg + 1 != hexcnt) return 1;
-
-    for (i = 0; i < hexcnt; i += 2) {
-        if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1]))) return 1;
-
-        sscanf((char[]) {line[bg + i], line[bg + i + 1], 0}, "%X", &temp);
-        data[i / 2] = temp & 0xff;
-    }
-
-    return 0;
-}
 int param_gethex_ex(const char *line, int paramnum, uint8_t *data, int *hexcnt) {
     int bg, en, i;
     uint32_t temp;
@@ -785,8 +766,11 @@ int param_gethex_ex(const char *line, int paramnum, uint8_t *data, int *hexcnt) 
     if (param_getptr(line, &bg, &en, paramnum)) return 1;
 
     *hexcnt = en - bg + 1;
-    if (*hexcnt % 2) //error if not complete hex bytes
+
+    // error if not complete hex bytes
+    if (*hexcnt & 1) {
         return 1;
+    }
 
     for (i = 0; i < *hexcnt; i += 2) {
         if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1]))) return 1;

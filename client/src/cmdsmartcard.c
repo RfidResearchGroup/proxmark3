@@ -590,9 +590,10 @@ static int CmdSmartUpgrade(const char *Cmd) {
     }
     hashstring[128] = '\0';
 
+    int hash1n = 0;
     uint8_t hash_1[64];
-    if (param_gethex(hashstring, 0, hash_1, 128)) {
-        PrintAndLogEx(FAILED, "Couldn't read SHA-512 file");
+    if (param_gethex_ex(hashstring, 0, hash_1, &hash1n) && hash1n != 128) {
+        PrintAndLogEx(FAILED, "Couldn't read SHA-512 file. expect 128 hex bytes, got ( "_RED_("%d") " )", hash1n);
         free(hashstring);
         free(firmware);
         return PM3_ESOFT;

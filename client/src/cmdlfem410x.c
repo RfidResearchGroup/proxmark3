@@ -528,8 +528,9 @@ static int CmdEM410xBrute(const char *Cmd) {
         //The line start with # is comment, skip
         if (buf[0] == '#') continue;
 
-        if (param_gethex(buf, 0, uid, 10)) {
-            PrintAndLogEx(FAILED, "EM Tag IDs must include 5 hex bytes (10 hex symbols)");
+        int uidlen = 0;
+        if (param_gethex_ex(buf, 0, uid, &uidlen) && (uidlen != 10)) {
+            PrintAndLogEx(FAILED, "EM Tag IDs must include 5 hex bytes (10 hex symbols), got ( " _RED_("%d") " )", uidlen);
             free(uidblock);
             fclose(f);
             return PM3_ESOFT;

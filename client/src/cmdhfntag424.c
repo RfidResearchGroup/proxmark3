@@ -617,7 +617,7 @@ static int ntag424_authenticate_ev2_first(uint8_t keyno, uint8_t *key, ntag424_s
 
 // Write file to card. Only supports plain communications mode. Authentication must be done
 // first unless file has free write access.
-static int ntag424_write_data(uint8_t fileno, uint16_t offset, uint16_t num_bytes, uint8_t *in, ntag424_communication_mode_t comm_mode, ntag424_session_keys_t *session_keys) {
+static int ntag424_write_data(uint8_t fileno, uint32_t offset, uint32_t num_bytes, uint8_t *in, ntag424_communication_mode_t comm_mode, ntag424_session_keys_t *session_keys) {
     size_t remainder = 0;
 
     // Split writes that are too large for one APDU
@@ -628,8 +628,12 @@ static int ntag424_write_data(uint8_t fileno, uint16_t offset, uint16_t num_byte
 
     uint8_t cmd_header[] = {
         fileno,
-        (uint8_t)offset, (uint8_t)(offset << 8), (uint8_t)(offset << 16), // offset
-        (uint8_t)num_bytes, (uint8_t)(num_bytes >> 8), (uint8_t)(num_bytes >> 16) //size
+        (uint8_t)offset, 
+        (uint8_t)(offset << 8), 
+        (uint8_t)(offset << 16), // offset
+        (uint8_t)num_bytes, 
+        (uint8_t)(num_bytes >> 8),
+        (uint8_t)(num_bytes >> 16) // size
     };
 
     uint8_t cmd[256] = {0};
@@ -744,23 +748,27 @@ static int CmdHF_ntag424_view(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int fnlen = 0;
-    char filename[FILE_PATH_SIZE];
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    char fn[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)fn, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     // read dump file
     uint8_t *dump = NULL;
     size_t bytes_read = NTAG424_MAX_BYTES;
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, NTAG424_MAX_BYTES);
+    int res = pm3_load_dump(fn, (void **)&dump, &bytes_read, NTAG424_MAX_BYTES);
     if (res != PM3_SUCCESS) {
         return res;
     }
 
     if (verbose) {
-        PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
+        PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), fn);
         PrintAndLogEx(INFO, "File size %zu bytes", bytes_read);
     }
+
+    // to be implemented...
+    PrintAndLogEx(INFO, "not implemented yet");
+    PrintAndLogEx(INFO, "Feel free to contribute!");    
 
     free(dump);
     return PM3_SUCCESS;
@@ -785,19 +793,23 @@ static int CmdHF_ntag424_info(const char *Cmd) {
 }
 
 static int ntag424_cli_get_auth_information(CLIParserContext *ctx, int key_no_index, int key_index, int *keyno, uint8_t *key_out) {
-    uint8_t key[16];
+
     int keylen = 16;
     if (keyno) {
         *keyno = arg_get_int(ctx, key_no_index);
     }
+
+    uint8_t key[16] = {0};
     CLIGetHexWithReturn(ctx, key_index, key, &keylen);
+    if (CLIParamHexToBuf(arg_get_str((ctx), key_index), key, sizeof(key), &keylen)) {
+
+    }
 
     if (keylen != 16) {
         return PM3_ESOFT;
     }
 
     memcpy(key_out, key, 16);
-
     return PM3_SUCCESS;
 }
 
@@ -805,18 +817,18 @@ static int CmdHF_ntag424_auth(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf ntag424 auth",
                   "Authenticate with selected key against NTAG424.",
-                  "hf ntag424 auth -n 0 -k 00000000000000000000000000000000");
+                  "hf ntag424 auth --keyno 0 -k 00000000000000000000000000000000");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("n",  "keyno", "<dec>", "Key number"),
+        arg_int1(NULL, "keyno", "<dec>", "Key number"),
         arg_str1("k",  "key", "<hex>", "Key for authenticate (HEX 16 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+
     int keyno;
     uint8_t key[16] = {0};
-
     if (ntag424_cli_get_auth_information(ctx, 1, 2, &keyno, key) != PM3_SUCCESS) {
         CLIParserFree(ctx);
         return PM3_ESOFT;
@@ -824,29 +836,26 @@ static int CmdHF_ntag424_auth(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    int res = SelectCard14443A_4(false, true, NULL);
-    if (res != PM3_SUCCESS) {
+    if (SelectCard14443A_4(false, true, NULL) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to select card");
         DropField();
-        return res;
+        return PM3_ERFTRANS;
     }
 
-    res = ntag424_select_application();
-    if (res != PM3_SUCCESS) {
+    if (ntag424_select_application() != PM3_SUCCESS) {
         DropField();
-        return res;
+        return PM3_ESOFT;
     }
 
-    res = ntag424_authenticate_ev2_first(keyno, key, NULL);
+    int res = ntag424_authenticate_ev2_first(keyno, key, NULL);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to authenticate with key %d", keyno);
+        PrintAndLogEx(ERR, "Auth key %d ( " _RED_("fail") " )", keyno);
     } else {
-        PrintAndLogEx(SUCCESS, "Successfully authenticated with key %d", keyno);
+        PrintAndLogEx(SUCCESS, "Auth key %d ( " _GREEN_("ok") " )", keyno);
     }
 
     DropField();
-
-    return res;
+    return PM3_SUCCESS;
 }
 
 // Read can only read files with plain communication mode!
@@ -854,31 +863,30 @@ static int CmdHF_ntag424_read(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf ntag424 read",
                   "Read and print data from file on NTAG424 tag. Will authenticate if key information is provided.",
-                  "hf ntag424 read -f 1 -n 0 -k 00000000000000000000000000000000 -o 0 -l 32\n"
-                  "hf ntag424 read -f 2 -n 0 -k 00000000000000000000000000000000 -o 0 -l 256\n"
-                  "hf ntag424 read -f 3 -n 3 -k 00000000000000000000000000000000 -o 0 -l 128 -m encrypt");
+                  "hf ntag424 read --fileno 1 --keyno 0 -k 00000000000000000000000000000000 -o 0 -l 32\n"
+                  "hf ntag424 read --fileno 2 --keyno 0 -k 00000000000000000000000000000000 -o 0 -l 256\n"
+                  "hf ntag424 read --fileno 3 --keyno 3 -k 00000000000000000000000000000000 -o 0 -l 128 -m encrypt");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("f",  "fileno", "<dec>", "File number (1-3)"),
-        arg_int0("n",  "keyno", "<dec>", "Key number"),
-        arg_str0("k",  "key", "<hex>", "Key for authentication (HEX 16 bytes)"),
-        arg_int0("o",  "offset", "<dec>", "Offset to read in file (default 0)"),
-        arg_int1("l",  "length", "<dec>", "Number of bytes to read"),
-        arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
+        arg_int1(NULL, "fileno", "<1|2|3>", "File number"),
+        arg_int0(NULL, "keyno",  "<dec>",   "Key number"),
+        arg_str0("k",  "key",    "<hex>",   "Key for authentication (HEX 16 bytes)"),
+        arg_int0("o",  "offset", "<dec>",   "Offset to read in file (def 0)"),
+        arg_int1("l",  "length", "<dec>",   "Number of bytes to read"),
+        arg_str0("m",  "cmode",  "<plain|mac|encrypt>", "Communication mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int keyno;
-    uint8_t key[16] = {0};
-    int auth = 1;
-
     int fileno = arg_get_int(ctx, 1);
 
-    if (ntag424_cli_get_auth_information(ctx, 2, 3, &keyno, key) != PM3_SUCCESS) {
-        auth = 0;
-    }
+    int keyno;
+    uint8_t key[16] = {0};
+    bool auth = (ntag424_cli_get_auth_information(ctx, 2, 3, &keyno, key) == PM3_SUCCESS);
+
+    int offset = arg_get_int_def(ctx, 4, 0);
+    int read_length = arg_get_int(ctx, 5);
 
     ntag424_communication_mode_t comm_mode;
     int comm_out = 0;
@@ -886,56 +894,46 @@ static int CmdHF_ntag424_read(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
+    CLIParserFree(ctx);
+
     comm_mode = comm_out;
 
-    if (comm_mode != COMM_PLAIN && auth == 0) {
+    if (comm_mode != COMM_PLAIN && auth == false) {
         PrintAndLogEx(ERR, "Only plain communication mode can be used without a key specified");
         return PM3_EINVARG;
     }
 
-    int offset = arg_get_int_def(ctx, 4, 0);
-    int read_length = arg_get_int(ctx, 5);
-
-    CLIParserFree(ctx);
-
-    int res = SelectCard14443A_4(false, true, NULL);
-    if (res != PM3_SUCCESS) {
+    if (SelectCard14443A_4(false, true, NULL) != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(ERR, "Failed to select card");
-        return res;
+        return PM3_ERFTRANS;
     }
 
-    res = ntag424_select_application();
-    if (res != PM3_SUCCESS) {
+    if (ntag424_select_application() != PM3_SUCCESS) {
         DropField();
-        return res;
+        return PM3_ESOFT;
     }
 
+    int res = PM3_SUCCESS;
     ntag424_session_keys_t session_keys;
     if (auth) {
         res = ntag424_authenticate_ev2_first(keyno, key, &session_keys);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Failed to authenticate with key %d", keyno);
+            PrintAndLogEx(ERR, "Auth key %d ( " _RED_("fail") " )", keyno);
             DropField();
             return res;
         } else {
-            PrintAndLogEx(SUCCESS, "Successfully authenticated with key %d", keyno);
+            PrintAndLogEx(SUCCESS, "Auth key %d ( " _GREEN_("ok") " )", keyno);
         }
     }
 
-    uint8_t data[512];
-
+    uint8_t data[512] = {0};
     res = ntag424_read_data(fileno, offset, read_length, data, comm_mode, &session_keys);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
-    }
-
-    PrintAndLogEx(SUCCESS, " -------- Read file %d contents ------------ ", fileno);
-    print_hex_break(data, read_length, 16);
-
     DropField();
-
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, " -------- Read file " _YELLOW_("%d") " contents ------------ ", fileno);
+        print_hex_break(data, read_length, 16);
+    }
     return res;
 }
 
@@ -943,30 +941,32 @@ static int CmdHF_ntag424_write(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf ntag424 write",
                   "Write data to file on NTAG424 tag. Will authenticate if key information is provided.",
-                  "hf ntag424 write -f 2 -n 0 -k 00000000000000000000000000000000 -o 0 -d 1122334455667788\n"
-                  "hf ntag424 write -f 3 -n 3 -k 00000000000000000000000000000000 -o 0 -d 1122334455667788 -m encrypt");
+                  "hf ntag424 write --fileno 2 --keyno 0 -k 00000000000000000000000000000000 -o 0 -d 1122334455667788\n"
+                  "hf ntag424 write --fileno 3 --keyno 3 -k 00000000000000000000000000000000 -o 0 -d 1122334455667788 -m encrypt");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("f",  "fileno", "<dec>", "File number (1-3), (default 2)"),
-        arg_int0("n",  "keyno", "<dec>", "Key number"),
-        arg_str0("k",  "key", "<hex>", "Key for authentication (HEX 16 bytes)"),
-        arg_int0("o",  "offset", "<dec>", "Offset to write in file (default 0)"),
-        arg_str1("d",  "data", "<hex>", "Data to write"),
-        arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
+        arg_u64_1(NULL, "fileno",  "<1|2|3>", "File number (def 2)"),
+        arg_int0(NULL, "keyno",   "<dec>", "Key number"),
+        arg_str0("k",  "key",     "<hex>", "Key for authentication (HEX 16 bytes)"),
+        arg_int0("o",  "offset",  "<dec>", "Offset to write in file (def 0)"),
+        arg_str1("d",  "data",    "<hex>", "Data to write"),
+        arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communication mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int keyno;
-    uint8_t key[16] = {0};
-    int auth = 1;
-
     int fileno = arg_get_int(ctx, 1);
 
-    if (ntag424_cli_get_auth_information(ctx, 2, 3, &keyno, key) != PM3_SUCCESS) {
-        auth = 0;
-    }
+    int keyno = 0;
+    uint8_t key[16] = {0};
+    bool auth = (ntag424_cli_get_auth_information(ctx, 2, 3, &keyno, key) == PM3_SUCCESS);
+
+    uint32_t offset = arg_get_u32_def(ctx, 4, 0);
+
+    uint8_t data[512] = {0};
+    int datalen = 512;
+    CLIGetHexWithReturn(ctx, 5, data, &datalen);
 
     ntag424_communication_mode_t comm_mode;
     int comm_out = 0;
@@ -974,68 +974,58 @@ static int CmdHF_ntag424_write(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
+    CLIParserFree(ctx);
+
     comm_mode = comm_out;
 
-    if (comm_mode != COMM_PLAIN && auth == 0) {
+    if (comm_mode != COMM_PLAIN && auth == false) {
         PrintAndLogEx(ERR, "Only plain communication mode can be used without a key specified");
         return PM3_EINVARG;
     }
-
-    int offset = arg_get_int_def(ctx, 4, 0);
-
-    uint8_t data[512] = {0};
-    int datalen = 512;
-    CLIGetHexWithReturn(ctx, 5, data, &datalen);
-
-    CLIParserFree(ctx);
-
-    int res = SelectCard14443A_4(false, true, NULL);
-    if (res != PM3_SUCCESS) {
+    
+    if (SelectCard14443A_4(false, true, NULL) != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(ERR, "Failed to select card");
-        return res;
+        return PM3_ERFTRANS;
     }
 
-    res = ntag424_select_application();
-    if (res != PM3_SUCCESS) {
+    if (ntag424_select_application() != PM3_SUCCESS) {
         DropField();
-        return res;
+        return PM3_ESOFT;
     }
 
-    ntag424_session_keys_t session_keys;
+    int res = PM3_SUCCESS;
+    ntag424_session_keys_t session_keys = {0};
     if (auth) {
         res = ntag424_authenticate_ev2_first(keyno, key, &session_keys);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Failed to authenticate with key %d", keyno);
+            PrintAndLogEx(ERR, "Auth key %d ( " _RED_("fail") " )", keyno);
             DropField();
             return res;
         } else {
-            PrintAndLogEx(SUCCESS, "Successfully authenticated with key %d", keyno);
+            PrintAndLogEx(SUCCESS, "Auth key %d ( " _GREEN_("ok") " )", keyno);
         }
     }
 
-    res = ntag424_write_data(fileno, offset, datalen, data, comm_mode, &session_keys);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
-    }
-
-    PrintAndLogEx(SUCCESS, "Wrote %d bytes", datalen);
-
+    res = ntag424_write_data(fileno, offset, (uint32_t)datalen, data, comm_mode, &session_keys);
     DropField();
-
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Wrote " _YELLOW_("%d") " bytes ( " _GREEN_("ok") " )", datalen);
+    } else {
+        PrintAndLogEx(ERR, "Wrote " _YELLOW_("%d") " bytes ( " _RED_("fail") " )", datalen);
+    }
     return res;
 }
 
 static int CmdHF_ntag424_getfilesettings(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf ntag424 getfilesettings",
+    CLIParserInit(&ctx, "hf ntag424 getfs",
                   "Read and print file settings for file",
-                  "hf ntag424 getfilesettings -f 2");
+                  "hf ntag424 getfs --fileno 2");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("f",  "file", "<dec>", "File number"),
+        arg_int1(NULL,  "fileno", "<dec>", "File number"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1043,35 +1033,29 @@ static int CmdHF_ntag424_getfilesettings(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    int res = SelectCard14443A_4(false, true, NULL);
-    if (res != PM3_SUCCESS) {
+    if (SelectCard14443A_4(false, true, NULL) != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(ERR, "Failed to select card");
-        return res;
+        return PM3_ERFTRANS;
     }
 
-    res = ntag424_select_application();
-    if (res != PM3_SUCCESS) {
+    if (ntag424_select_application() != PM3_SUCCESS) {
         DropField();
-        return res;
+        return PM3_ESOFT;
     }
 
-    ntag424_file_settings_t settings;
-    res = ntag424_get_file_settings(fileno, &settings);
+    ntag424_file_settings_t settings = {0};
+    int res = ntag424_get_file_settings(fileno, &settings);
     DropField();
-    if (res != PM3_SUCCESS) {
-        return res;
+    if (res == PM3_SUCCESS) {
+        ntag424_print_file_settings(fileno, &settings);
     }
-
-    ntag424_print_file_settings(fileno, &settings);
-
-
     return res;
 }
 
 static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf ntag424 changefilesettings",
+    CLIParserInit(&ctx, "hf ntag424 changefs",
                   "Updates file settings for file, must be authenticated.\n"
                   "This is a short explanation of the settings. See AN12196 for more information:\n"
                   "options: byte with bit flags\n"
@@ -1100,26 +1084,26 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
                   "Note: Not all of these settings will be written. It depends on the option byte, and the keys set. See AN12196 for more information.\n"
                   "You must also start with sdmdata1, then sdmdata2, up to the number of sdm_data you want to write",
 
-
-                  "hf ntag424 changefilesettings -f 2 -n 0 -k 00000000000000000000000000000000 -o 40 -a 00E0 -s C1 -c F000 --sdmdata1 000020 --sdmdata2 000043 --sdmdata3 000043");
+                  "hf ntag424 changefs --fileno 2 --keyno 0 -k 00000000000000000000000000000000 -o 40 -a 00E0 -s C1 -c F000 --data1 000020 --data2 000043 --data3 000043"
+            );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("f",  "file", "<dec>", "File number"),
-        arg_int1("n",  "keyno", "<dec>", "Key number"),
+        arg_int1(NULL, "fileno", "<dec>", "File number"),
+        arg_int1(NULL, "keyno", "<dec>", "Key number"),
         arg_str1("k",  "key", "<hex>", "Key for authentication (HEX 16 bytes)"),
         arg_str0("o",  "options", "<hex>", "File options byte (HEX 1 byte)"),
         arg_str0("a",  "access", "<hex>", "File access settings (HEX 2 bytes)"),
         arg_str0("s",  "sdmoptions", "<hex>", "SDM options (HEX 1 byte)"),
         arg_str0("c",  "sdmaccess", "<hex>", "SDM access settings (HEX 2 bytes)"),
-        arg_str0(NULL, "sdmdata1", "<hex>", "SDM data (HEX 3 bytes)"),
-        arg_str0(NULL, "sdmdata2", "<hex>", "SDM data (HEX 3 bytes)"),
-        arg_str0(NULL, "sdmdata3", "<hex>", "SDM data (HEX 3 bytes)"),
-        arg_str0(NULL, "sdmdata4", "<hex>", "SDM data (HEX 3 bytes)"),
-        arg_str0(NULL, "sdmdata5", "<hex>", "SDM data (HEX 3 bytes)"),
-        arg_str0(NULL, "sdmdata6", "<hex>", "SDM data (HEX 3 bytes)"),
-        arg_str0(NULL, "sdmdata7", "<hex>", "SDM data (HEX 3 bytes)"),
-        arg_str0(NULL, "sdmdata8", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "data1", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "data2", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "data3", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "data4", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "data5", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "data6", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "data7", "<hex>", "SDM data (HEX 3 bytes)"),
+        arg_str0(NULL, "data8", "<hex>", "SDM data (HEX 3 bytes)"),
         // Sorry, couldn't figure out how to work with arg_strn...
         arg_param_end
     };
@@ -1145,12 +1129,13 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
+
     int len = 1;
     if (arg_get_str(ctx, 4)->count == 1) {
         has_options = 1;
         CLIGetHexWithReturn(ctx, 4, options, &len);
         if (len != 1) {
-            PrintAndLogEx(ERR, "Options must be 1 byte");
+            PrintAndLogEx(ERR, "Options must be 1 byte, got ( %d )", len);
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
@@ -1160,7 +1145,7 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         has_access = 1;
         CLIGetHexWithReturn(ctx, 5, access, &len);
         if (len != 2) {
-            PrintAndLogEx(ERR, "Access must be 2 bytes");
+            PrintAndLogEx(ERR, "Access must be 2 bytes, got ( %d )", len);
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
@@ -1170,7 +1155,7 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         has_sdmoptions = 1;
         CLIGetHexWithReturn(ctx, 6, sdmoptions, &len);
         if (len != 1) {
-            PrintAndLogEx(ERR, "SDM Options must be 1 byte");
+            PrintAndLogEx(ERR, "SDM Options must be 1 byte, got ( %d )", len);
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
@@ -1180,7 +1165,7 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         has_sdmaccess = 1;
         CLIGetHexWithReturn(ctx, 7, sdmaccess, &len);
         if (len != 2) {
-            PrintAndLogEx(ERR, "SDM Access must be 2 bytes");
+            PrintAndLogEx(ERR, "SDM Access must be 2 bytes, got ( %d )", len);
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
@@ -1192,7 +1177,7 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
             num_sdm_data++;
             CLIGetHexWithReturn(ctx, 8 + i, sdm_data[i], &len);
             if (len != 3) {
-                PrintAndLogEx(ERR, "sdmdata must be 3 bytes");
+                PrintAndLogEx(ERR, "sdmdata must be 3 bytes, got ( %d )", len);
                 CLIParserFree(ctx);
                 return PM3_EINVARG;
             }
@@ -1201,46 +1186,48 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         }
     }
 
-
     CLIParserFree(ctx);
 
-    int res = SelectCard14443A_4(false, true, NULL);
-    if (res != PM3_SUCCESS) {
+    if (SelectCard14443A_4(false, true, NULL) != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(ERR, "Failed to select card");
-        return res;
+        return PM3_ERFTRANS;
     }
 
-    res = ntag424_select_application();
-    if (res != PM3_SUCCESS) {
+    if (ntag424_select_application() != PM3_SUCCESS) {
         DropField();
-        return res;
+        return PM3_ESOFT;
     }
 
-    ntag424_file_settings_t settings;
-    res = ntag424_get_file_settings(fileno, &settings);
-    if (res != PM3_SUCCESS) {
+    ntag424_file_settings_t settings = {0};
+    if (ntag424_get_file_settings(fileno, &settings) != PM3_SUCCESS) {
         DropField();
-        return res;
+        return PM3_ESOFT;
     }
 
+    int res = PM3_SUCCESS;
     ntag424_session_keys_t session = {0};
     res = ntag424_authenticate_ev2_first(keyno, key, &session);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to authenticate with key %d", keyno);
+        PrintAndLogEx(ERR, "Auth key %d ( " _RED_("fail") " )", keyno);
         DropField();
         return res;
+    } else {
+        PrintAndLogEx(SUCCESS, "Auth key %d ( " _GREEN_("ok") " )", keyno);
     }
 
     if (has_options) {
         settings.options = options[0];
     }
+
     if (has_access) {
         memcpy(settings.access, access, 2);
     }
+
     if (has_sdmoptions) {
         settings.optional_sdm_settings.sdm_options = sdmoptions[0];
     }
+
     if (has_sdmaccess) {
         memcpy(settings.optional_sdm_settings.sdm_access, sdmaccess, 2);
     }
@@ -1251,15 +1238,14 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         settings.optional_sdm_settings.sdm_data[i][0] = sdm_data[i][2];
     }
 
-    if (ntag424_write_file_settings(fileno, &settings, &session) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to write settings");
-        DropField();
-        return PM3_ESOFT;
-    }
-    PrintAndLogEx(SUCCESS, "Wrote settings successfully");
-    ntag424_print_file_settings(fileno, &settings);
-
+    res = ntag424_write_file_settings(fileno, &settings, &session);
     DropField();
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Write settings ( " _GREEN_("ok") " )");
+        ntag424_print_file_settings(fileno, &settings);
+    } else {
+        PrintAndLogEx(ERR, "Write settings (" _RED_("fail") " )");
+    }
     return res;
 }
 
@@ -1269,39 +1255,40 @@ static int CmdHF_ntag424_changekey(const char *Cmd) {
     CLIParserInit(&ctx, "hf ntag424 changekey",
                   "Change a key.\n"
                   "Authentication key must currently be different to the one we want to change.\n",
-                  "hf ntag424 changekey -n 1 --oldkey 00000000000000000000000000000000 --newkey 11111111111111111111111111111111 --key0 00000000000000000000000000000000 -v 1\n"
-                  "hf ntag424 changekey -n 0 --newkey 11111111111111111111111111111111 --key0 00000000000000000000000000000000 -v 1\n"
+                  "hf ntag424 changekey --keyno 1 --oldkey 00000000000000000000000000000000 --newkey 11111111111111111111111111111111 --key0 00000000000000000000000000000000 --kv 1\n"
+                  "hf ntag424 changekey --keyno 0 --newkey 11111111111111111111111111111111 --key0 00000000000000000000000000000000 --kv 1\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("n",  "keyno", "<dec>", "Key number to change"),
+        arg_int1(NULL, "keyno",  "<dec>", "Key number to change"),
         arg_str0(NULL, "oldkey", "<hex>", "Old key (only needed when changing key 1-4, HEX 16 bytes)"),
         arg_str1(NULL, "newkey", "<hex>", "New key (HEX 16 bytes)"),
-        arg_str1(NULL, "key0", "<hex>", "Authentication key (must be key 0, HEX 16 bytes)"),
-        arg_int1("v",  "version", "<dec>", "Version of the new key"),
+        arg_str1(NULL, "key0",   "<hex>", "Authentication key (must be key 0, HEX 16 bytes)"),
+        arg_int1(NULL, "kv",     "<dec>", "New key version number"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     uint8_t version = arg_get_int(ctx, 6);
     int keyno = arg_get_int(ctx, 1);
-    uint8_t oldkey[16];
-    uint8_t newkey[16];
-    uint8_t authkey[16];
 
+    uint8_t oldkey[16] = {0};
     if (keyno != 0) {
         if (ntag424_cli_get_auth_information(ctx, 0, 2, NULL, oldkey) != PM3_SUCCESS) {
-
             PrintAndLogEx(ERR, "Could not get keyno or old key");
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
+
+    uint8_t newkey[16] = {0};
     if (ntag424_cli_get_auth_information(ctx, 0, 3, NULL, newkey) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Could not get new key");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
+
+    uint8_t authkey[16] = {0};
     if (ntag424_cli_get_auth_information(ctx, 0, 4, NULL, authkey) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Could not get authentication key");
         CLIParserFree(ctx);
@@ -1309,57 +1296,50 @@ static int CmdHF_ntag424_changekey(const char *Cmd) {
     }
     CLIParserFree(ctx);
 
-    int res = SelectCard14443A_4(false, true, NULL);
-    if (res != PM3_SUCCESS) {
+    if (SelectCard14443A_4(false, true, NULL) != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(ERR, "Failed to select card");
-        return res;
+        return PM3_ERFTRANS;
     }
 
-    res = ntag424_select_application();
-    if (res != PM3_SUCCESS) {
+    if (ntag424_select_application() != PM3_SUCCESS) {
         DropField();
-        return res;
+        return PM3_ESOFT;
     }
 
+    int res = PM3_SUCCESS;
     ntag424_session_keys_t session = {0};
     res = ntag424_authenticate_ev2_first(0, authkey, &session);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(ERR, "Failed to authenticate");
+        PrintAndLogEx(ERR, "Auth ( " _RED_("fail") " )");
         return PM3_ESOFT;
     } else {
-        PrintAndLogEx(SUCCESS, "Successfully authenticated");
+        PrintAndLogEx(SUCCESS, "Auth ( " _GREEN_("ok") " )");
     }
 
     res = ntag424_change_key(keyno, newkey, oldkey, version, &session);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        PrintAndLogEx(ERR, "Failed to change key");
-        DropField();
-        return PM3_ESOFT;
+    DropField();
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Change key %d ( " _GREEN_("ok") " )", keyno);
     } else {
-        PrintAndLogEx(SUCCESS, "Successfully changed key %d", keyno);
+        PrintAndLogEx(ERR, "Change key %d ( "_RED_("fail") " )", keyno);
     }
 
-    DropField();
-    return PM3_SUCCESS;
+    return res;
 }
 
-//------------------------------------
-// Menu Stuff
-//------------------------------------
 static command_t CommandTable[] = {
-    {"help",            CmdHelp,                             AlwaysAvailable,  "This help"},
-    {"-----------",     CmdHelp,                             IfPm3Iso14443a,   "----------------------- " _CYAN_("operations") " -----------------------"},
-    {"info",               CmdHF_ntag424_info,               IfPm3Iso14443a,   "Tag information (not implemented yet)"},
-    {"view",               CmdHF_ntag424_view,               AlwaysAvailable,  "Display content from tag dump file"},
-    {"auth",               CmdHF_ntag424_auth,               IfPm3Iso14443a,   "Test authentication with key"},
-    {"read",               CmdHF_ntag424_read,               IfPm3Iso14443a,   "Read file"},
-    {"write",              CmdHF_ntag424_write,              IfPm3Iso14443a,   "Write file"},
-    {"getfilesettings",    CmdHF_ntag424_getfilesettings,    IfPm3Iso14443a,   "Get file settings"},
-    {"changefilesettings", CmdHF_ntag424_changefilesettings, IfPm3Iso14443a,   "Change file settings"},
-    {"changekey",          CmdHF_ntag424_changekey,          IfPm3Iso14443a,   "Change key"},
+    {"help",         CmdHelp,                          AlwaysAvailable,  "This help"},
+    {"-----------",  CmdHelp,                          IfPm3Iso14443a,   "----------------------- " _CYAN_("operations") " -----------------------"},
+    {"info",         CmdHF_ntag424_info,               IfPm3Iso14443a,   "Tag information"},
+    {"view",         CmdHF_ntag424_view,               AlwaysAvailable,  "Display content from tag dump file"},
+    {"auth",         CmdHF_ntag424_auth,               IfPm3Iso14443a,   "Test authentication with key"},
+    {"read",         CmdHF_ntag424_read,               IfPm3Iso14443a,   "Read file"},
+    {"write",        CmdHF_ntag424_write,              IfPm3Iso14443a,   "Write file"},
+    {"getfs",        CmdHF_ntag424_getfilesettings,    IfPm3Iso14443a,   "Get file settings"},
+    {"changefs",     CmdHF_ntag424_changefilesettings, IfPm3Iso14443a,   "Change file settings"},
+    {"changekey",    CmdHF_ntag424_changekey,          IfPm3Iso14443a,   "Change key"},
     {NULL, NULL, NULL, NULL}
 };
 

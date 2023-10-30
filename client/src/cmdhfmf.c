@@ -3990,7 +3990,10 @@ static int CmdHF14AMfKeyBrute(const char *Cmd) {
     if (cmdp == 'b') keytype = MF_KEY_B;
 
     // key
-    if (param_gethex(Cmd, 2, key, 12)) return usage_hf14_keybrute();
+    int keylen = 0;
+    if (param_gethex_ex(Cmd, 2, key, &keylen) && (keylen != 12)) {
+        return usage_hf14_keybrute();
+    }
 
     uint64_t t1 = msclock();
 
