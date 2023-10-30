@@ -1129,6 +1129,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     // Proxmark3 settings file.  No
     if (!strcmp(ctype, "settings")) {
+        PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " appears to be Proxmark3 settings file ... not a valid dump file.", preferredName);
         goto out;
     }
 
@@ -1144,21 +1145,26 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     // depricated mfcard
     if (!strcmp(ctype, "mfcard") || !strcmp(ctype, "mfc v2")) {
         size_t sptr = 0;
-        for (int i = 0; i < maxdatalen; i++) {
-
+        // load blocks (i) from 0..N, but check sptr against total data length, not `i`
+        for (int i = 0; sptr < maxdatalen; i++) {
             if (sptr + MFBLOCK_SIZE > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%4d (%04x)   block (i)=%4d (%04x)   sptr=%4d (%04x) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
-            uint8_t block[MFBLOCK_SIZE];
+            uint8_t block[MFBLOCK_SIZE] = {0}; // ensure zero-filled when partial block of data read
             JsonLoadBufAsHex(root, blocks, block, MFBLOCK_SIZE, &len);
-            if (!len)
+            if (!len) {
+                PrintAndLogEx(WARNING, "WARNING: json %s block %d has zero-length data ... file parsing stopped", ctype, i);
                 break;
+            } else if (len != MFBLOCK_SIZE) {
+                PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %d bytes, expected %d (will fill with zero data)", ctype, i, len, MFBLOCK_SIZE);
+            }
 
             memcpy(&udata.bytes[sptr], block, MFBLOCK_SIZE);
-            sptr += len;
+            sptr += MFBLOCK_SIZE; // always increment pointer by the full block size, even if only partial data read from dump file
         }
 
         *datalen = sptr;
