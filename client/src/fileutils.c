@@ -1148,7 +1148,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         // load blocks (i) from 0..N, but check sptr against total data length, not `i`
         for (int i = 0; sptr < maxdatalen; i++) {
             if (sptr + MFBLOCK_SIZE > maxdatalen) {
-                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%4d (%04x)   block (i)=%4d (%04x)   sptr=%4d (%04x) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1161,7 +1161,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 PrintAndLogEx(INFO, "file parsing stopped");
                 break;
             } else if (len != MFBLOCK_SIZE) {
-                PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %d bytes, expected %d (will fill with zero data)", ctype, i, len, MFBLOCK_SIZE);
+                PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %zu bytes, expected %d (will fill with zero data)", ctype, i, len, MFBLOCK_SIZE);
             }
 
             memcpy(&udata.bytes[sptr], block, MFBLOCK_SIZE);
@@ -1186,7 +1186,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         // load blocks (i) from 0..N, but check sptr against total data length, not `i`
         for (int i = 0; sptr < maxdatalen; i++) {
             if (sptr + MFBLOCK_SIZE > maxdatalen) {
-                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%4d (%04x)   block (i)=%4d (%04x)   sptr=%4d (%04x) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
                 retval = PM3_EMALLOC;
                 goto out;
             }
@@ -1199,7 +1199,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 PrintAndLogEx(INFO, "file parsing stopped");
                 break;
             } else if (len != MFBLOCK_SIZE) {
-                PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %d bytes, expected %d (will fill with zero data)", ctype, i, len, MFBLOCK_SIZE);
+                PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %zu bytes, expected %d (will fill with zero data)", ctype, i, len, MFBLOCK_SIZE);
             }
 
             memcpy(&udata.bytes[sptr], block, MFBLOCK_SIZE);
