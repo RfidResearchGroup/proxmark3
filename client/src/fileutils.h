@@ -39,12 +39,14 @@ typedef union {
     mfu_dump_t *mfu;
     topaz_tag_t *topaz;
     iso14a_mf_extdump_t *mfc;
+    iso14a_mf_dump_ev1_t *mfc_ev1;
 } udata_t;
 
 typedef enum {
     jsfRaw,
     jsfCardMemory,
     jsfMfc_v2,
+    jsfMfc_v3,
     jsfMfuMemory,
     jsfHitag,
     jsfIclass,
