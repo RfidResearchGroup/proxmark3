@@ -104,9 +104,7 @@ static int CIPURSEExchangeEx(bool activate_field, bool leave_field_on, sAPDU_t a
         memcpy(result, securedata, rlen);
     }
 
-    if (result_len != NULL) {
-        *result_len = rlen;
-    }
+    *result_len = rlen;
 
     if (sw != NULL) {
         *sw = isw;
