@@ -196,7 +196,7 @@ static uint8_t card_app2_limit[] = {
     0xff,
 };
 
-static iclass_config_card_item_t iclass_config_types[14] =  {
+static iclass_config_card_item_t iclass_config_types[13] =  {
     {"Audio/Visual #1 - Beep ON, LED Off, Flash GREEN on read", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x00, 0xA8, 0x8F, 0xA7, 0x80, 0xA9, 0x01}},
     {"Audio/Visual #2 - Beep ON, LED RED, Host must flash GREEN", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x87, 0x18, 0xAC, 0x00, 0xA8, 0x1F, 0xA7, 0x80, 0xA9, 0x01}},
     {"Audio/Visual #3 - Beep ON, LED Off, Host must flash RED and/or GREEN", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x00, 0xA8, 0x0F, 0xA9, 0x03, 0xA7, 0x80}},
@@ -209,9 +209,7 @@ static iclass_config_card_item_t iclass_config_types[14] =  {
     {"Keyroll DISABLE - Set ELITE Key and DISABLE Keyrolling", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
     {"Keyroll ENABLE - Set ELITE Key and ENABLE Keyrolling", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
     {"Reset READER - Reset READER to defaults", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-    {"Reset ENROLLER - Reset ENROLLER to defaults", {0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF}},
-    // must be the last entry
-    {"no config card info available", ""}
+    {"Reset ENROLLER - Reset ENROLLER to defaults", {0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF}}
 };
 
 static bool check_config_card(const iclass_config_card_item_t *o) {
@@ -260,7 +258,7 @@ static const iclass_config_card_item_t *get_config_card_item(int idx) {
 static void print_config_cards(void) {
     if (check_config_card(&iclass_config_types[0])) {
         PrintAndLogEx(INFO, "---- " _CYAN_("Config cards available") " ------------");
-        for (int i = 0; i < ARRAYLEN(iclass_config_types) - 1   ; ++i) {
+        for (int i = 0; i < ARRAYLEN(iclass_config_types)   ; ++i) {
             PrintAndLogEx(INFO, "%2d, %s", i, iclass_config_types[i].desc);
         }
         PrintAndLogEx(NORMAL, "");
@@ -4378,8 +4376,8 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
                   "Manage reader configuration card via Cardhelper or internal database,\n"
                   "The generated config card will be uploaded to device emulator memory.\n"
                   "You can start simulating `hf iclass sim -t 3` or use the emul commands",
-                  "hf iclass configcard -l           --> download config card settings (requires card helper)\n"
-                  "hf iclass configcard -p           --> print all config cards in the database (doesn't require cardhelper)\n"
+                  "hf iclass configcard -l           --> download config card settings from cardhelper\n"
+                  "hf iclass configcard -p           --> print all config cards in the database\n"
                   "hf iclass configcard --ci 1       --> view config card setting in slot 1\n"
                   "hf iclass configcard -g --ci 0    --> generate config file from slot 0"
                  );
@@ -4425,14 +4423,14 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
         print_config_cards();
     }
 
-    if (ccidx > -1 && ccidx < 13) {
+    if (ccidx > -1 && ccidx < ARRAYLEN(iclass_config_types)) {
         const iclass_config_card_item_t *item = get_config_card_item(ccidx);
         print_config_card(item);
     } else {
         PrintAndLogEx(ERR, "Please specify a valid configuration number!");
     }
 
-    if (do_generate && (ccidx > -1 && ccidx < 13)) {
+    if (do_generate && (ccidx > -1 && ccidx < ARRAYLEN(iclass_config_types))) {
         const iclass_config_card_item_t *item = get_config_card_item(ccidx);
         if (strstr(item->desc, "Keyroll") != NULL) {
             if (got_kr == false) {
