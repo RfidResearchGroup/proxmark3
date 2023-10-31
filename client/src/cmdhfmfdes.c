@@ -372,7 +372,7 @@ static int mfdes_get_info(mfdes_info_res_t *info) {
 }
 
 // --- GET SIGNATURE
-static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len) {
+int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len) {
 
     if (uid == NULL) {
         PrintAndLogEx(DEBUG, "UID=NULL");
@@ -437,10 +437,6 @@ static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signat
     PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
     PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
     return PM3_SUCCESS;
-}
-
-int DesfirePrintSignature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len) {
-    return desfire_print_signature(uid, uidlen, signature, signature_len, DESFIRE_UNKNOWN);
 }
 
 static void swap24(uint8_t *data) {

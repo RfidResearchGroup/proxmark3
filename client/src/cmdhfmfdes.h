@@ -28,7 +28,7 @@ char *getVersionStr(uint8_t major, uint8_t minor);
 int getKeySettings(uint8_t *aid);
 */
 
-int DesfirePrintSignature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len);
+int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len);
 
 // Ev1 card limits
 #define MAX_NUM_KEYS                0x0F

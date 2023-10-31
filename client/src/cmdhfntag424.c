@@ -928,7 +928,7 @@ static int CmdHF_ntag424_info(const char *Cmd) {
 
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(INFO, "--- " _CYAN_("NXP originality signature:"), fileno);
-        DesfirePrintSignature(version.production.uid, 7, signature, NXP_SIGNATURE_LENGTH);
+        desfire_print_signature(version.production.uid, 7, signature, NXP_SIGNATURE_LENGTH);
     }
 
     return res;
