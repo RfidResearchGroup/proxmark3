@@ -1088,6 +1088,17 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
     return retval;
 }
 
+static int load_file_sanity(char *s, uint32_t datalen, int i, size_t len) {
+    if (len == 0) {
+        PrintAndLogEx(WARNING, "WARNING: json %s block %d has zero-length data", s, i);
+        PrintAndLogEx(INFO, "file parsing stopped");
+        return false;
+    } else if (len != datalen) {
+        PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %zu bytes, expected %d (will fill with zero data)", s, i, len, datalen);
+    }
+    return true;
+}
+
 int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, void (*callback)(json_t *)) {
     return loadFileJSONex(preferredName, data, maxdatalen, datalen, true, callback);
 }
@@ -1157,12 +1168,8 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             uint8_t block[MFBLOCK_SIZE] = {0}; // ensure zero-filled when partial block of data read
             JsonLoadBufAsHex(root, blocks, block, MFBLOCK_SIZE, &len);
-            if (!len) {
-                PrintAndLogEx(WARNING, "WARNING: json %s block %d has zero-length data", ctype, i);
-                PrintAndLogEx(INFO, "file parsing stopped");
+            if (load_file_sanity(ctype, MFBLOCK_SIZE, i, len) == false) {
                 break;
-            } else if (len != MFBLOCK_SIZE) {
-                PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %zu bytes, expected %d (will fill with zero data)", ctype, i, len, MFBLOCK_SIZE);
             }
 
             memcpy(&udata.bytes[sptr], block, MFBLOCK_SIZE);
@@ -1195,12 +1202,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             uint8_t block[MFBLOCK_SIZE] = {0}; // ensure zero-filled when partial block of data read
             JsonLoadBufAsHex(root, blocks, block, MFBLOCK_SIZE, &len);
-            if (!len) {
-                PrintAndLogEx(WARNING, "WARNING: json %s block %d has zero-length data", ctype, i);
-                PrintAndLogEx(INFO, "file parsing stopped");
+
+            if (load_file_sanity(ctype, MFBLOCK_SIZE, i, len) == false) {
                 break;
-            } else if (len != MFBLOCK_SIZE) {
-                PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %zu bytes, expected %d (will fill with zero data)", ctype, i, len, MFBLOCK_SIZE);
             }
 
             memcpy(&udata.bytes[sptr], block, MFBLOCK_SIZE);
@@ -1222,9 +1226,10 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
-            if (!len)
-                break;
 
+            if (load_file_sanity(ctype, 4, i, len) == false) {
+                break;
+            }
             sptr += len;
         }
 
@@ -1256,8 +1261,10 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.mfu->data[sptr], MFU_BLOCK_SIZE, &len);
-            if (!len)
+
+            if (load_file_sanity(ctype, MFU_BLOCK_SIZE, i, len) == false) {
                 break;
+            }
 
             sptr += len;
             udata.mfu->pages++;
@@ -1280,8 +1287,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
-            if (!len)
+            if (load_file_sanity(ctype, 4, i, len) == false) {
                 break;
+            }
 
             sptr += len;
         }
@@ -1301,8 +1309,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], PICOPASS_BLOCK_SIZE, &len);
-            if (!len)
+            if (load_file_sanity(ctype, PICOPASS_BLOCK_SIZE, i, len) == false) {
                 break;
+            }
 
             sptr += len;
         }
@@ -1321,8 +1330,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
-            if (!len)
+            if (load_file_sanity(ctype, 4, i, len) == false) {
                 break;
+            }
 
             sptr += len;
         }
@@ -1341,8 +1351,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
-            if (!len)
+            if (load_file_sanity(ctype, 4, i, len) == false) {
                 break;
+            }
 
             sptr += len;
         }
@@ -1368,8 +1379,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
-            if (!len)
+            if (load_file_sanity(ctype, 4, i, len) == false) {
                 break;
+            }
 
             sptr += len;
         }
@@ -1389,9 +1401,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 8, &len);
-            if (!len)
+            if (load_file_sanity(ctype, 8, i, len) == false) {
                 break;
-
+            }
             sptr += len;
         }
 
@@ -1410,9 +1422,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 16, &len);
-            if (!len)
+            if (load_file_sanity(ctype, 16, i, len) == false) {
                 break;
-
+            }
             sptr += len;
         }
 
@@ -1443,8 +1455,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.topaz->data_blocks[sptr][0], TOPAZ_BLOCK_SIZE, &len);
-            if (!len)
+            if (load_file_sanity(ctype, TOPAZ_BLOCK_SIZE, i, len) == false) {
                 break;
+            }
 
             sptr += len;
             // ICEMAN todo:  add dynamic memory.
@@ -1541,9 +1554,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
-            if (!len)
+            if (load_file_sanity(ctype, 4, i, len) == false) {
                 break;
-
+            }
             sptr += len;
         }
 
@@ -1562,9 +1575,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 32, &len);
-            if (!len)
+            if (load_file_sanity(ctype, 32, i, len) == false) {
                 break;
-
+            }
             sptr += len;
         }
 
@@ -1583,9 +1596,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 8, &len);
-            if (!len)
+            if (load_file_sanity(ctype, 8, i, len) == false) {
                 break;
-
+            }
             sptr += len;
         }
 
@@ -1615,8 +1628,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 16, &len);
-            if (!len)
+            if (load_file_sanity(ctype, 16, i, len) == false) {
                 break;
+            }
 
             sptr += len;
         }
