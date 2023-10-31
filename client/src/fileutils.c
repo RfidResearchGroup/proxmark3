@@ -1138,10 +1138,8 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     char ctype[100] = {0};
     JsonLoadStr(root, "$.FileType", ctype);
 
-    // Proxmark3 settings file.  No
+    // Proxmark3 settings file.  Nothing to do except call the callback function
     if (!strcmp(ctype, "settings")) {
-        PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " appears to be Proxmark3 settings file", preferredName);
-        PrintAndLogEx(INFO, "not a valid dump file");
         goto out;
     }
 
