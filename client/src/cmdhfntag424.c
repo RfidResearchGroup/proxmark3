@@ -32,18 +32,21 @@
 #include "ui.h"
 #include "util.h"
 #include "crc32.h"
+#include "cmdhfmfdes.h"
 
 #define NTAG424_MAX_BYTES 412
 
 
 // NTAG424 commands currently implemented
-#define NTAG424_CMD_GET_FILE_SETTINGS             0xF5
-#define NTAG424_CMD_CHANGE_FILE_SETTINGS          0x5F
-#define NTAG424_CMD_CHANGE_KEY                    0xC4
-#define NTAG424_CMD_READ_DATA                     0xAD
-#define NTAG424_CMD_WRITE_DATA                    0x8D
-#define NTAG424_CMD_AUTHENTICATE_EV2_FIRST_PART_1 0x71
-#define NTAG424_CMD_AUTHENTICATE_EV2_FIRST_PART_2 0xAF
+#define NTAG424_CMD_GET_FILE_SETTINGS      0xF5
+#define NTAG424_CMD_CHANGE_FILE_SETTINGS   0x5F
+#define NTAG424_CMD_CHANGE_KEY             0xC4
+#define NTAG424_CMD_READ_DATA              0xAD
+#define NTAG424_CMD_WRITE_DATA             0x8D
+#define NTAG424_CMD_AUTHENTICATE_EV2_FIRST 0x71
+#define NTAG424_CMD_MORE_DATA              0xAF
+#define NTAG424_CMD_GET_VERSION            0x60
+#define NTAG424_CMD_GET_SIGNATURE          0x3C
 
 //
 // Original from  https://github.com/rfidhacking/node-sdm/
@@ -116,6 +119,62 @@ typedef struct {
     uint8_t access[2];
     ntag424_file_sdm_settings_t optional_sdm_settings;
 } file_settings_write_t;
+
+// -------------- Version information structs -------------------------
+typedef struct {
+    uint8_t vendor_id;
+    uint8_t type;
+    uint8_t sub_type;
+    uint8_t major_version;
+    uint8_t minor_version;
+    uint8_t storage_size;
+    uint8_t protocol;
+} PACKED ntag424_version_information_t;
+
+typedef struct {
+    uint8_t uid[7];
+    uint8_t batch[4];
+    uint8_t fab_key_high : 4;
+    uint8_t batchno : 4;
+    uint8_t week_prod : 7;
+    uint8_t fab_key_low : 1;
+    uint8_t year_prod;
+} PACKED ntag424_production_information_t;
+
+typedef struct {
+    ntag424_version_information_t hardware;
+    ntag424_version_information_t software;
+    ntag424_production_information_t production;
+} ntag424_full_version_information_t;
+
+
+static void ntag424_print_version_information(ntag424_version_information_t *version) {
+    PrintAndLogEx(INFO, "   vendor id: " _GREEN_("%02X"), version->vendor_id);
+    PrintAndLogEx(INFO, "        type: " _GREEN_("%02X"), version->type);
+    PrintAndLogEx(INFO, "    sub type: " _GREEN_("%02X"), version->sub_type);
+    PrintAndLogEx(INFO, "     version: " _GREEN_("%d.%d"), version->major_version, version->minor_version);
+    PrintAndLogEx(INFO, "storage size: " _GREEN_("%02X"), version->storage_size);
+    PrintAndLogEx(INFO, "    protocol: " _GREEN_("%02X"), version->protocol);
+}
+
+static void ntag424_print_production_information(ntag424_production_information_t *version) {
+    PrintAndLogEx(INFO, "         uid: " _GREEN_("%s"), sprint_hex(version->uid, sizeof(version->uid)));
+    PrintAndLogEx(INFO, "       batch: " _GREEN_("%s"), sprint_hex(version->batch, sizeof(version->batch)));
+    PrintAndLogEx(INFO, "     batchno: " _GREEN_("%02X"), version->batchno);
+    PrintAndLogEx(INFO, "     fab key: " _GREEN_("%02X"), (version->fab_key_high << 1) | version->fab_key_low);
+    PrintAndLogEx(INFO, "        date: week " _GREEN_("%02X") " / " _GREEN_("20%02X"), version->week_prod, version->year_prod);
+}
+
+static void ntag424_print_full_version_information(ntag424_full_version_information_t *version) {
+    PrintAndLogEx(INFO, "--- " _CYAN_("Hardware version information:"), fileno);
+    ntag424_print_version_information(&version->hardware);
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Software version information:"), fileno);
+    ntag424_print_version_information(&version->software);
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Production information:"), fileno);
+    ntag424_print_production_information(&version->production);
+}
 
 // Currently unused functions, commented out due to -Wunused-function
 /*static void ntag424_file_settings_set_access_rights(ntag424_file_settings_t *settings,
@@ -473,7 +532,7 @@ static int ntag424_auth_first_step(uint8_t keyno, uint8_t *key, uint8_t *out) {
 
     APDU_t apdu = {
         .cla = 0x90,
-        .ins = NTAG424_CMD_AUTHENTICATE_EV2_FIRST_PART_1,
+        .ins = NTAG424_CMD_AUTHENTICATE_EV2_FIRST,
         .lc = 0x02,
         .data = key_number
     };
@@ -500,7 +559,7 @@ static int ntag424_auth_first_step(uint8_t keyno, uint8_t *key, uint8_t *out) {
 static int ntag424_auth_second_step(uint8_t *challenge, uint8_t *response_out) {
     APDU_t apdu = {
         .cla = 0x90,
-        .ins = NTAG424_CMD_AUTHENTICATE_EV2_FIRST_PART_2,
+        .ins = NTAG424_CMD_MORE_DATA,
         .lc = 0x20,
         .data = challenge,
     };
@@ -691,6 +750,63 @@ static int ntag424_read_data(uint8_t fileno, uint16_t offset, uint16_t num_bytes
     return PM3_SUCCESS;
 }
 
+static int ntag424_get_version(ntag424_full_version_information_t *version) {
+    APDU_t apdu = {
+        .cla = 0x90,
+        .ins = NTAG424_CMD_GET_VERSION,
+    };
+
+
+    uint8_t response[256];
+
+    int response_length = sizeof(ntag424_version_information_t) + 2;
+    if (ntag424_exchange_apdu(&apdu, 0, response, &response_length, COMM_PLAIN, NULL, 0x91, 0xAF) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+    memcpy(&version->hardware, response, sizeof(ntag424_version_information_t));
+
+    APDU_t continue_apdu = {
+        .cla = 0x90,
+        .ins = NTAG424_CMD_MORE_DATA,
+    };
+
+    response_length = sizeof(ntag424_version_information_t) + 2;
+    if (ntag424_exchange_apdu(&continue_apdu, 0, response, &response_length, COMM_PLAIN, NULL, 0x91, 0xAF) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+    memcpy(&version->software, response, sizeof(ntag424_version_information_t));
+
+    response_length = sizeof(ntag424_production_information_t) + 2;
+    if (ntag424_exchange_apdu(&continue_apdu, 0, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+    memcpy(&version->production, response, sizeof(ntag424_production_information_t));
+
+    return PM3_SUCCESS;
+}
+
+#define NXP_SIGNATURE_LENGTH 56
+#define NXP_SIGNATURE_ID 0x00
+
+static int ntag424_get_signature(uint8_t *signature_out) {
+    uint8_t signature_id = NXP_SIGNATURE_ID;
+    APDU_t apdu = {
+        .cla = 0x90,
+        .ins = NTAG424_CMD_GET_SIGNATURE,
+        .lc = 1,
+        .data = &signature_id,
+    };
+
+    int response_length = NXP_SIGNATURE_LENGTH + 2;
+    // This is a weird one. Datasheet claims this command should result in 91 00, but cards, and the AN12196
+    // document shows 91 90 on success.
+    if (ntag424_exchange_apdu(&apdu, 1, signature_out, &response_length, COMM_PLAIN, NULL, 0x91, 0x90) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int ntag424_change_key(uint8_t keyno, uint8_t *new_key, uint8_t *old_key, uint8_t version, ntag424_session_keys_t *session_keys) {
     // -------- Calculate xor and crc
     uint8_t key[16] = {0};
@@ -787,9 +903,35 @@ static int CmdHF_ntag424_info(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-    PrintAndLogEx(INFO, "not implemented yet");
-    PrintAndLogEx(INFO, "Feel free to contribute!");
-    return PM3_SUCCESS;
+
+    if (SelectCard14443A_4(false, true, NULL) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to select card");
+        DropField();
+        return PM3_ERFTRANS;
+    }
+
+    if (ntag424_select_application() != PM3_SUCCESS) {
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    ntag424_full_version_information_t version = {0};
+    if (ntag424_get_version(&version) != PM3_SUCCESS) {
+        DropField();
+        return PM3_ESOFT;
+    }
+    ntag424_print_full_version_information(&version);
+
+    uint8_t signature[NXP_SIGNATURE_LENGTH];
+    int res = ntag424_get_signature(signature);
+    DropField();
+
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("NXP originality signature:"), fileno);
+        desfire_print_signature(version.production.uid, 7, signature, NXP_SIGNATURE_LENGTH);
+    }
+
+    return res;
 }
 
 static int ntag424_cli_get_auth_information(CLIParserContext *ctx, int keyno_index, int key_index, int *keyno, uint8_t *key_out) {

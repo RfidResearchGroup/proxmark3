@@ -372,7 +372,7 @@ static int mfdes_get_info(mfdes_info_res_t *info) {
 }
 
 // --- GET SIGNATURE
-static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len) {
+int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len) {
 
     if (uid == NULL) {
         PrintAndLogEx(DEBUG, "UID=NULL");
