@@ -1030,6 +1030,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
     
     udata_t udata = (udata_t)data;
     int n = 0;
+    uint32_t counter = 0;
 
     while (!feof(f)) {
 
@@ -1052,14 +1053,14 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
 
         if (str_startswith(line, "uid:")) {
             if (ft == NFC_DF_MFC) {
-                param_gethex_to_eol(line + 4, 0, udata.mfc->card_info.uid, sizeof(udata.mfc->card_info.uid), &n);
+//                param_gethex_to_eol(line + 4, 0, udata.mfc->card_info.uid, sizeof(udata.mfc->card_info.uid), &n);
             }
             continue;
         } 
 
         if (str_startswith(line, "atqa:")) {
             if (ft == NFC_DF_MFC) {
-                param_gethex_to_eol(line + 5, 0, udata.mfc->card_info.atqa, sizeof(udata.mfc->card_info.atqa), &n);
+//                param_gethex_to_eol(line + 5, 0, udata.mfc->card_info.atqa, sizeof(udata.mfc->card_info.atqa), &n);
             }
             continue;
         } 
@@ -1068,7 +1069,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
             if (ft == NFC_DF_MFC) {
                 int sak = 0;
                 sscanf(line, "sak: %d", &sak);
-                udata.mfc->card_info.sak = sak & 0xFF;
+//                udata.mfc->card_info.sak = sak & 0xFF;
             }
             continue;
         } 
@@ -1166,8 +1167,14 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
             int pageno = 0;
             sscanf(line, "page %d:", &pageno);
 
+            if (strcmp(line, "??") == 0) {
+                PrintAndLogEx(INFO, "Missing data detected in page %i,  skipping...", pageno);
+                continue;
+            }
+
             char *p = line;
             while (*p++ != ':') {};
+            p++;
 
             if (ft == NFC_DF_MFU) {
                 param_gethex_to_eol(p, 0, udata.mfu->data + (pageno * MFU_BLOCK_SIZE), MFU_BLOCK_SIZE, &n);
@@ -1181,19 +1188,28 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
             int blockno = 0;
             sscanf(line, "block %d:", &blockno);
 
+            if (strcmp(line, "??") == 0) {
+                PrintAndLogEx(INFO, "Missing data detected in block %i,  skipping...", blockno);
+                continue;
+            }
+
             char *p = line;
             while (*p++ != ':') {};
+            p++;
 
             if (ft == NFC_DF_MFC) {
-                param_gethex_to_eol(p, 0, udata.mfc->dump + (blockno * MFBLOCK_SIZE), MFBLOCK_SIZE, &n);
-                udata.mfc->dumplen += MFBLOCK_SIZE;
+                uint8_t block[MFBLOCK_SIZE] = {0};
+                param_gethex_to_eol(p, 0, block, MFBLOCK_SIZE, &n);
+                memcpy(&udata.bytes[(blockno * MFBLOCK_SIZE)], block, MFBLOCK_SIZE);
             }
+            counter += MFBLOCK_SIZE;
             continue;
         }
     }
 
     // add header length
     if (ft == NFC_DF_MFC) {
+        *datalen = counter;
     } else if (ft == NFC_DF_MFU) {
         *datalen += MFU_DUMP_PREFIX_LENGTH;
     }
@@ -2725,7 +2741,11 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             nfc_df_e foo = detect_nfc_dump_format(fn, true);
             if (foo == NFC_DF_MFC || foo == NFC_DF_MFU) {
 
-                *pdump = calloc(maxdumplen, sizeof(uint8_t));
+                if (foo == NFC_DF_MFC) {
+                    *pdump = calloc(maxdumplen, sizeof(uint8_t));
+                } else  {
+                    *pdump = calloc(maxdumplen, sizeof(uint8_t));
+                }
                 if (*pdump == NULL) {
                     PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
                     return PM3_EMALLOC;
