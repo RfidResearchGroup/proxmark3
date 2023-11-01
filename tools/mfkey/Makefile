@@ -4,7 +4,6 @@ MYINCLUDES = -I../../include -I../../common
 MYCFLAGS = -O3 --param max-completely-peeled-insns=1000 --param max-completely-peel-times=10000
 MYDEFS =
 
-#BINS = mfkey32 mfkey32v2 mfkey64 staticnested
 BINS = mfkey32 mfkey32v2 mfkey64
 INSTALLTOOLS = $(BINS)
 
@@ -20,4 +19,3 @@ endif
 mfkey32 : $(OBJDIR)/mfkey32.o $(MYOBJS)
 mfkey32v2 : $(OBJDIR)/mfkey32v2.o $(MYOBJS)
 mfkey64 : $(OBJDIR)/mfkey64.o $(MYOBJS)
-#staticnested : $(OBJDIR)/staticnested.o $(MYOBJS)
