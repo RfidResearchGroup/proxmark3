@@ -86,6 +86,8 @@ DumpFileType_t getfiletype(const char *filename) {
             o = DICTIONARY;
         } else if (str_endswith(s, "mct")) {
             o = MCT;
+        } else if (str_endswith(s, "nfc")) {
+            o = NFC;
         } else {
             // mfd, trc, trace is binary
             o = BIN;
@@ -998,6 +1000,195 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
     if (datalen)
         *datalen = counter;
 
+    return retval;
+}
+
+int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, nfc_df_e ft) {
+
+    if (data == NULL) return PM3_EINVARG;
+
+    *datalen = 0;
+    int retval = PM3_SUCCESS;
+
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, "", false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    FILE *f = fopen(path, "r");
+    if (!f) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+    free(path);
+
+    // 256 + 2 newline chars + 1 null terminator
+    char line[256 + 2 + 1];
+    memset(line, 0, sizeof(line));
+    
+    udata_t udata = (udata_t)data;
+    int n = 0;
+
+    while (!feof(f)) {
+
+        memset(line, 0, sizeof(line));
+
+        if (fgets(line, sizeof(line), f) == NULL) {
+            if (feof(f))
+                break;
+
+            fclose(f);
+            PrintAndLogEx(FAILED, "File reading error.");
+            return PM3_EFILE;
+        }
+
+        if (line[0] == '#')
+            continue;
+
+        strcleanrn(line, sizeof(line));
+        str_lower(line);
+
+
+        if (str_startswith(line, "uid:")) {
+            if (ft == NFC_DF_MFC) {
+                param_gethex_to_eol(line + 4, 0, udata.mfc->card_info.uid, sizeof(udata.mfc->card_info.uid), &n);
+            }
+            continue;
+        } 
+
+        if (str_startswith(line, "atqa:")) {
+            if (ft == NFC_DF_MFC) {
+                param_gethex_to_eol(line + 5, 0, udata.mfc->card_info.atqa, sizeof(udata.mfc->card_info.atqa), &n);
+            }
+            continue;
+        } 
+
+        if (str_startswith(line, "sak:")) {
+            if (ft == NFC_DF_MFC) {
+                int sak = 0;
+                sscanf(line, "sak: %d", &sak);
+                udata.mfc->card_info.sak = sak & 0xFF;
+            }
+            continue;
+        } 
+
+        if (str_startswith(line, "signature:")) {
+            if (ft == NFC_DF_MFC) {
+            } else if (ft == NFC_DF_MFU) {
+                param_gethex_to_eol(line + 11, 0, udata.mfu->signature, sizeof(udata.mfu->signature), &n);
+            }
+            continue;
+        } 
+
+        if (str_startswith(line, "mifare version:")) {
+            if (ft == NFC_DF_MFC) {
+            } else if (ft == NFC_DF_MFU) {
+                param_gethex_to_eol(line + 16, 0, udata.mfu->version, sizeof(udata.mfu->version), &n);
+            }
+            continue;
+        } 
+
+        if (str_startswith(line, "counter 0:")) {
+            int no = 0;
+            sscanf(line, "counter 0: %d", &no);
+            if (ft == NFC_DF_MFC) {
+            } else if (ft == NFC_DF_MFU) {
+                udata.mfu->counter_tearing[0][0] = no & 0xFF;
+                udata.mfu->counter_tearing[0][1] = no & 0xFF;
+                udata.mfu->counter_tearing[0][2] = no & 0xFF;
+            }
+            continue;
+        } 
+
+        if (str_startswith(line, "tearing 0:")) {
+            if (ft == NFC_DF_MFC) {
+            } else if (ft == NFC_DF_MFU) {
+                sscanf(line, "tearing 0: %02x", &n);
+                udata.mfu->counter_tearing[0][3] = n & 0xFF;
+            }
+            continue;
+        } 
+
+        if (str_startswith(line, "counter 1:")) {
+            int no = 0;
+            sscanf(line, "counter 1: %d", &no);
+            if (ft == NFC_DF_MFC) {
+            } else if (ft == NFC_DF_MFU) {
+                udata.mfu->counter_tearing[1][0] = no & 0xFF;
+                udata.mfu->counter_tearing[1][1] = no & 0xFF;
+                udata.mfu->counter_tearing[1][2] = no & 0xFF;
+            }
+            continue;
+        } 
+
+        if (str_startswith(line, "tearing 1:")) {
+            if (ft == NFC_DF_MFC) {
+            } else if (ft == NFC_DF_MFU) {
+                sscanf(line, "tearing 1: %02x", &n);
+                udata.mfu->counter_tearing[1][3] = n & 0xFF;
+            }
+            continue;
+        }
+
+        if (str_startswith(line, "counter 2:")) {
+            int no = 0;
+            sscanf(line, "counter 2: %d", &no);
+            if (ft == NFC_DF_MFC) {
+            } else if (ft == NFC_DF_MFU) {
+                udata.mfu->counter_tearing[2][0] = no & 0xFF;
+                udata.mfu->counter_tearing[2][1] = no & 0xFF;
+                udata.mfu->counter_tearing[2][2] = no & 0xFF;
+            }
+            continue;
+        } 
+
+        if (str_startswith(line, "tearing 2:")) {
+            if (ft == NFC_DF_MFC) {
+            } else if (ft == NFC_DF_MFU) {
+                sscanf(line, "tearing 2: %02x", &n);
+                udata.mfu->counter_tearing[2][3] = n & 0xFF;
+            }
+            continue;
+        } 
+
+        if (str_startswith(line, "pages total:")) {
+            sscanf(line, "pages total: %d", &n);
+            if (ft == NFC_DF_MFC) {
+            } else if (ft == NFC_DF_MFU) {
+                udata.mfu->pages = n;
+            }
+            continue;
+        } 
+
+        // Page 0: 04 10 56 CA
+        if (str_startswith(line, "page ")) {
+            int pageno = 0;
+            sscanf(line, "page %d:", &pageno);
+
+            char *p = line;
+            while (*p++ != ':') {};
+
+            if (ft == NFC_DF_MFC) {
+                param_gethex_to_eol(p, 0, udata.mfc->dump + (pageno * MFBLOCK_SIZE), MFBLOCK_SIZE, &n);
+                udata.mfc->dumplen += MFBLOCK_SIZE;
+            } else if (ft == NFC_DF_MFU) {
+                param_gethex_to_eol(p, 0, udata.mfu->data + (pageno * MFU_BLOCK_SIZE), MFU_BLOCK_SIZE, &n);
+                *datalen += MFU_BLOCK_SIZE;
+            }
+            continue;
+        } 
+    }
+
+    // add header length
+    if (ft == NFC_DF_MFC) {
+    } else if (ft == NFC_DF_MFU) {
+        *datalen += MFU_DUMP_PREFIX_LENGTH;
+    }
+
+    fclose(f);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from NFC file `" _YELLOW_("%s") "`", *datalen, preferredName);
     return retval;
 }
 
@@ -1926,7 +2117,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     return PM3_SUCCESS;
 }
 
-mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
+mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose) {
 
     mfu_df_e retval = MFU_DF_UNKNOWN;
     uint8_t bcc0, bcc1;
@@ -1973,6 +2164,99 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
                 break;
             case MFU_DF_UNKNOWN:
                 PrintAndLogEx(WARNING, "failed to detected mfu dump format");
+                break;
+        }
+    }
+    return retval;
+}
+
+nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
+
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, "", false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    FILE *f = fopen(path, "r");
+    if (!f) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+    free(path);
+
+    nfc_df_e retval = NFC_DF_UNKNOWN;
+
+    char line[256];
+    memset(line, 0, sizeof(line));
+
+    while (!feof(f)) {
+
+        memset(line, 0, sizeof(line));
+
+        if (fgets(line, sizeof(line), f) == NULL) {
+            if (feof(f)) {
+                break;
+            }
+
+            fclose(f);
+            PrintAndLogEx(FAILED, "File reading error.");
+            return PM3_EFILE;
+        }
+
+        strcleanrn(line, sizeof(line));
+        str_lower(line);
+
+        if (str_startswith(line, "device type: ntag")) {
+            retval = NFC_DF_MFU;
+            break;
+        }
+        if (str_startswith(line, "device type: mifare classic")) {
+            retval = NFC_DF_MFC;
+            break;
+        }
+        if (str_startswith(line, "device type: mifare desfire")) {
+            retval = NFC_DF_MFDES;
+            break;
+        }
+        if (str_startswith(line, "device type: iso14443-3a")) {
+            retval = NFC_DF_14_3A;
+            break;
+        }
+        if (str_startswith(line, "device type: iso14443-3b")) {
+            retval = NFC_DF_14_3B;
+            break;
+        }
+        if (str_startswith(line, "device type: iso14443-4a")) {
+            retval = NFC_DF_14_4A;
+            break;
+        }              
+    }
+    fclose(f);
+
+    if (verbose) {
+        switch (retval) {
+            case NFC_DF_MFU:
+                PrintAndLogEx(INFO, "detected MIFARE Ultralight / NTAG based dump format");
+                break;
+            case NFC_DF_MFC:
+                PrintAndLogEx(INFO, "detected MIFARE Classic based dump format");
+                break;
+            case NFC_DF_MFDES:
+                PrintAndLogEx(INFO, "detected MIFARE DESFire based dump format");
+                break;
+            case NFC_DF_14_3A:
+                PrintAndLogEx(INFO, "detected ISO14443-3A based dump format. No data available");
+                break;
+            case NFC_DF_14_3B:
+                PrintAndLogEx(INFO, "detected ISO14443-3B based dump format. No data available");
+                break;
+            case NFC_DF_14_4A:
+                PrintAndLogEx(INFO, "detected ISO14443-4A based dump format. No data available");
+                break;
+            case NFC_DF_UNKNOWN:
+                PrintAndLogEx(WARNING, "failed to detected dump format");
                 break;
         }
     }
@@ -2055,7 +2339,7 @@ int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
         return PM3_EINVARG;
     }
 
-    mfu_df_e res = detect_mfu_dump_format(dump, dumplen, verbose);
+    mfu_df_e res = detect_mfu_dump_format(dump, verbose);
 
     switch (res) {
         case MFU_DF_NEWBIN:
@@ -2419,15 +2703,38 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             break;
         }
         case DICTIONARY: {
-            PrintAndLogEx(ERR, "Only BIN/EML/JSON formats allowed");
+            PrintAndLogEx(ERR, "Only <BIN|EML|JSON|MCT|NFC formats allowed");
             return PM3_EINVARG;
         }
         case MCT: {
             res = loadFileMCT_safe(fn, pdump, dumplen);
             break;
         }
-    }
+        case NFC: {
+            nfc_df_e foo = detect_nfc_dump_format(fn, true);
+            if (foo == NFC_DF_MFC || foo == NFC_DF_MFU) {
 
+                *pdump = calloc(maxdumplen, sizeof(uint8_t));
+                if (*pdump == NULL) {
+                    PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                    return PM3_EMALLOC;
+                }
+                res = loadFileNFC_safe(fn, *pdump, maxdumplen, dumplen, foo);
+                if (res == PM3_SUCCESS) {
+                    return res;
+                }
+
+                free(*pdump);
+
+                if (res == PM3_ESOFT) {
+                    PrintAndLogEx(WARNING, "NFC objects failed to load");
+                } else if (res == PM3_EMALLOC) {
+                    PrintAndLogEx(WARNING, "Wrong size of allocated memory. Check your parameters");
+                }
+            }
+            break;
+        }
+    }
     return res;
 }
 

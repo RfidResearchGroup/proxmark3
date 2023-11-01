@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `nfc decode` - now properly handles MFU dump files (@iceman1001)
+ - Added support for loading Flipper MCT/MFU dump files (@iceman1001)
  - Changed `data bmap` - now default `-m` is 8 (@iceman1001)
  - Added support for NTAG424 cards. (@dankar)
  - Additional fixes to configcard code for keyroll mode based on nfc-iclass output (@Antiklesys)

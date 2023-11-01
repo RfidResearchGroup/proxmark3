@@ -113,26 +113,45 @@ static int CmdNfcDecode(const char *Cmd) {
             return res;
         }
 
-        // convert from MFC dump file to a pure NDEF byte array
-        if (HasMADKey(dump)) {
-            PrintAndLogEx(SUCCESS, "MFC dump file detected. Converting...");
-            uint8_t ndef[4096] = {0};
-            uint16_t ndeflen = 0;
+        uint8_t *tmp = dump; 
 
-            if (convert_mad_to_arr(dump, bytes_read, ndef, &ndeflen) != PM3_SUCCESS) {
-                PrintAndLogEx(FAILED, "Failed converting, aborting...");
-                free(dump);
-                return PM3_ESOFT;
+        // if not MIFARE Classic default sizes,  assume its Ultralight/NTAG
+        if (bytes_read != 4096 || bytes_read != 2048 || bytes_read != 1024 || bytes_read != 320) {
+
+            uint8_t **pd = &tmp;
+            mfu_df_e df = detect_mfu_dump_format(pd, verbose);
+            if (df == MFU_DF_OLDBIN) {
+                tmp += OLD_MFU_DUMP_PREFIX_LENGTH + (4 * 4);
+                bytes_read -= OLD_MFU_DUMP_PREFIX_LENGTH + ( 4 * 4);
+            } else if (df == MFU_DF_NEWBIN) {
+                tmp += MFU_DUMP_PREFIX_LENGTH + (4 * 4);
+                bytes_read -= MFU_DUMP_PREFIX_LENGTH + ( 4 * 4);
             }
+            pd = NULL;
 
-            memcpy(dump, ndef, ndeflen);
-            bytes_read = ndeflen;
+        } else  {
+
+            // convert from MFC dump file to a pure NDEF byte array
+            if (HasMADKey(tmp)) {
+                PrintAndLogEx(SUCCESS, "MFC dump file detected. Converting...");
+                uint8_t ndef[4096] = {0};
+                uint16_t ndeflen = 0;
+
+                if (convert_mad_to_arr(tmp, bytes_read, ndef, &ndeflen) != PM3_SUCCESS) {
+                    PrintAndLogEx(FAILED, "Failed converting, aborting...");
+                    free(dump);
+                    return PM3_ESOFT;
+                }
+
+                memcpy(tmp, ndef, ndeflen);
+                bytes_read = ndeflen;
+            }
         }
 
-        res = NDEFDecodeAndPrint(dump, bytes_read, verbose);
+        res = NDEFDecodeAndPrint(tmp, bytes_read, verbose);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
-            res = NDEFRecordsDecodeAndPrint(dump, bytes_read, verbose);
+            res = NDEFRecordsDecodeAndPrint(tmp, bytes_read, verbose);
         }
 
         free(dump);

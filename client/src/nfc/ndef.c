@@ -649,7 +649,7 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
 
         if (ndef->Payload[pos] != 0x10) {
             n -= 1;
-            pos -= 1;
+            pos += 1;
             continue;
         }
 
@@ -770,6 +770,16 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
         if (memcmp(&ndef->Payload[pos], "\x10\x30\x2A", 3) == 0) {
             uint8_t len = 1;
             PrintAndLogEx(INFO, "Vendor WFA......... %s", sprint_hex(&ndef->Payload[pos + 2], len));
+            n -= 2;
+            n -= len;
+            pos += 2;
+            pos += len;
+        }
+
+        // unknown the length.
+        if (memcmp(&ndef->Payload[pos], "\x10\x3C", 2) == 0) {
+            uint8_t len = 3;
+            PrintAndLogEx(INFO, "Unknown......... %s", sprint_hex(&ndef->Payload[pos + 2], len));
             n -= 2;
             n -= len;
             pos += 2;
@@ -1182,6 +1192,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("NDEF parsing") " ----------------");
     while (indx < ndefLen) {
+
         switch (ndef[indx]) {
             case 0x00: {
                 indx++;
@@ -1246,8 +1257,9 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                     PrintAndLogEx(SUCCESS, "Found NDEF message ( " _YELLOW_("%u") " bytes )", len);
 
                     int res = NDEFRecordsDecodeAndPrint(&ndef[indx], len, verbose);
-                    if (res != PM3_SUCCESS)
+                    if (res != PM3_SUCCESS) {
                         return res;
+                    }
                 }
 
                 indx += len;
@@ -1269,9 +1281,9 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 return PM3_SUCCESS;
             }
             default: {
-                if (verbose)
+                if (verbose) {
                     PrintAndLogEx(ERR, "unknown tag 0x%02x", ndef[indx]);
-
+                }
                 return PM3_ESOFT;
             }
         }

@@ -79,7 +79,25 @@ typedef enum {
     JSON,
     DICTIONARY,
     MCT,
+    NFC,
 } DumpFileType_t;
+
+typedef enum {
+    MFU_DF_UNKNOWN,
+    MFU_DF_PLAINBIN,
+    MFU_DF_OLDBIN,
+    MFU_DF_NEWBIN
+} mfu_df_e;
+
+typedef enum {
+    NFC_DF_UNKNOWN,
+    NFC_DF_MFC,
+    NFC_DF_MFU,
+    NFC_DF_MFDES,
+    NFC_DF_14_3A,
+    NFC_DF_14_3B,
+    NFC_DF_14_4A
+} nfc_df_e;
 
 int fileExists(const char *filename);
 
@@ -186,6 +204,19 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen);
 int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen);
 
 /**
+ * @brief  Utility function to load data from a textfile (NFC). This method takes a preferred name.
+ * E.g. dumpdata-15.nfc
+ *
+ * @param preferredName
+ * @param data The data array to store the loaded bytes from file
+ * @param maxdatalen maximum size of data array in bytes
+ * @param datalen the number of bytes loaded from file
+ * @param ft
+ * @return 0 for ok, 1 for failz
+*/
+int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, nfc_df_e ft);
+
+/**
  * @brief  Utility function to load data from a JSON textfile. This method takes a preferred name.
  * E.g. dumpdata-15.json
  *
@@ -244,12 +275,6 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
 int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen);
 
-typedef enum {
-    MFU_DF_UNKNOWN,
-    MFU_DF_PLAINBIN,
-    MFU_DF_OLDBIN,
-    MFU_DF_NEWBIN
-} mfu_df_e;
 /**
  * @brief  Utility function to check and convert plain mfu dump format to new mfu binary format.
  * plain dumps doesn't have any extra data, like version, signature etc.
@@ -259,7 +284,8 @@ typedef enum {
  * @return PM3_SUCCESS for ok, PM3_ESOFT for fails
 */
 int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
-mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
+mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose);
+nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose);
 
 int searchAndList(const char *pm3dir, const char *ext);
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent);
