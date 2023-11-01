@@ -2328,7 +2328,12 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
 
     for (uint16_t i = 0; i < pages; ++i) {
         if (i < 3) {
-            PrintAndLogEx(INFO, "%3d/0x%02X | %s|   | %s", i + startpage, i + startpage, sprint_hex(data + i * 4, 4), sprint_ascii(data + i * 4, 4));
+            PrintAndLogEx(INFO, "%3d/0x%02X | " _RED_("%s")"|   | %s",
+                i + startpage,
+                i + startpage,
+                sprint_hex(data + i * 4, 4),
+                sprint_ascii(data + i * 4, 4)
+            );
             continue;
         }
         switch (i) {
