@@ -1,7 +1,7 @@
 MYSRCPATHS = ../../common ../../common/crapto1
 MYSRCS = crypto1.c crapto1.c bucketsort.c
 MYINCLUDES = -I../../include -I../../common
-MYCFLAGS =
+MYCFLAGS = -O3
 MYDEFS =
 
 BINS = mfkey32 mfkey32v2 mfkey64
