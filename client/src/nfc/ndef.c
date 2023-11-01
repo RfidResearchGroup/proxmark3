@@ -634,6 +634,7 @@ static const char *ndef_wifi_auth_lookup(uint8_t *d) {
     return "";
 }
 
+
 static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
     if (ndef->PayloadLen == 0) {
         PrintAndLogEx(INFO, "no payload");
@@ -713,7 +714,7 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
             pos += len;
         }
 
-        // NETWORK_IDX
+        // NETWORK_IDX - always set to 1, deprecated
         if (memcmp(&ndef->Payload[pos], "\x10\x26", 2) == 0) {
             // 10 26 00 01 01
             uint8_t len = 3;
@@ -776,10 +777,16 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
             pos += len;
         }
 
-        // unknown the length.
+        // rf-bands
         if (memcmp(&ndef->Payload[pos], "\x10\x3C", 2) == 0) {
             uint8_t len = 3;
-            PrintAndLogEx(INFO, "Unknown......... %s", sprint_hex(&ndef->Payload[pos + 2], len));
+
+            if (ndef->Payload[pos + 2 + 2] == 0x01) {
+                PrintAndLogEx(INFO, "RF Bands........ %s ( " _YELLOW_("2.4 GHZ")" )", sprint_hex(&ndef->Payload[pos + 2], len));
+            } else if (ndef->Payload[pos + 2 + 2] == 0x02) {
+                PrintAndLogEx(INFO, "RF Bands........ %s ( " _YELLOW_("5.0 GHZ")" )", sprint_hex(&ndef->Payload[pos + 2], len));
+            }
+
             n -= 2;
             n -= len;
             pos += 2;
@@ -791,13 +798,12 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
         ap-channel   0,  6
     +        credential
         device-name
-        mac-address
+
         manufacturer
         model-name
         model-number
     +        oob-password
         primary-device-type
-        rf-bands
         secondary-device-type-list
         serial-number
         ssid
