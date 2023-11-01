@@ -45,6 +45,7 @@ static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
         case 0x270B0A40:
             asBuff = "AT91SAM7S512 Rev A";
             break;
+        case 0x270B0A4E:
         case 0x270B0A4F:
             asBuff = "AT91SAM7S512 Rev B";
             break;
@@ -153,6 +154,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
         case 0x270B0A40:
             asBuff = "AT91SAM7S512 Rev A";
             break;
+        case 0x270B0A4E:
         case 0x270B0A4F:
             asBuff = "AT91SAM7S512 Rev B";
             break;
