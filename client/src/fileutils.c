@@ -1011,7 +1011,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
     int retval = PM3_SUCCESS;
 
     char *path;
-    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, "", false);
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".nfc", false);
     if (res != PM3_SUCCESS) {
         return PM3_EFILE;
     }
