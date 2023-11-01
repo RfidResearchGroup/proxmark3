@@ -1,7 +1,7 @@
 MYSRCPATHS = ../../common ../../common/crapto1
 MYSRCS = crypto1.c crapto1.c bucketsort.c
 MYINCLUDES = -I../../include -I../../common
-MYCFLAGS = -O3 -funroll-all-loops --param max-completely-peeled-insns=1000 --param max-completely-peel-times=10000
+MYCFLAGS = -O3 --param max-completely-peeled-insns=1000 --param max-completely-peel-times=10000
 MYDEFS =
 
 #BINS = mfkey32 mfkey32v2 mfkey64 staticnested
