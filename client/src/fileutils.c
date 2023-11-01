@@ -1050,7 +1050,6 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
         strcleanrn(line, sizeof(line));
         str_lower(line);
 
-
         if (str_startswith(line, "uid:")) {
             if (ft == NFC_DF_MFC) {
                 param_gethex_to_eol(line + 4, 0, udata.mfc->card_info.uid, sizeof(udata.mfc->card_info.uid), &n);
@@ -1151,7 +1150,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 udata.mfu->counter_tearing[2][3] = n & 0xFF;
             }
             continue;
-        } 
+        }
 
         if (str_startswith(line, "pages total:")) {
             sscanf(line, "pages total: %d", &n);
@@ -1170,15 +1169,27 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
             char *p = line;
             while (*p++ != ':') {};
 
-            if (ft == NFC_DF_MFC) {
-                param_gethex_to_eol(p, 0, udata.mfc->dump + (pageno * MFBLOCK_SIZE), MFBLOCK_SIZE, &n);
-                udata.mfc->dumplen += MFBLOCK_SIZE;
-            } else if (ft == NFC_DF_MFU) {
+            if (ft == NFC_DF_MFU) {
                 param_gethex_to_eol(p, 0, udata.mfu->data + (pageno * MFU_BLOCK_SIZE), MFU_BLOCK_SIZE, &n);
                 *datalen += MFU_BLOCK_SIZE;
             }
             continue;
-        } 
+        }
+
+        // Block 0: 11 22 33 44 55 66 77 88 99 AA BB CC DD EE FF
+        if (str_startswith(line, "block ")) {
+            int blockno = 0;
+            sscanf(line, "block %d:", &blockno);
+
+            char *p = line;
+            while (*p++ != ':') {};
+
+            if (ft == NFC_DF_MFC) {
+                param_gethex_to_eol(p, 0, udata.mfc->dump + (blockno * MFBLOCK_SIZE), MFBLOCK_SIZE, &n);
+                udata.mfc->dumplen += MFBLOCK_SIZE;
+            }
+            continue;
+        }
     }
 
     // add header length
