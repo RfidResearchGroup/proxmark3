@@ -7353,7 +7353,7 @@ static int CmdHF14AMfView(const char *Cmd) {
     // read dump file
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK));
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, MIFARE_4K_MAX_BYTES);
     if (res != PM3_SUCCESS) {
         return res;
     }
