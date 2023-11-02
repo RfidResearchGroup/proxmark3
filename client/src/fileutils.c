@@ -1509,7 +1509,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (load_file_sanity(ctype, 4, i, len) == false) {
                 break;
@@ -1531,7 +1531,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], PICOPASS_BLOCK_SIZE, &len);
             if (load_file_sanity(ctype, PICOPASS_BLOCK_SIZE, i, len) == false) {
                 break;
@@ -1552,7 +1552,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (load_file_sanity(ctype, 4, i, len) == false) {
                 break;
@@ -1573,7 +1573,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            snprintf(blocks, sizeof(blocks), "$.blocks.%zu", i);
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
             if (load_file_sanity(ctype, 4, i, len) == false) {
                 break;
@@ -1715,10 +1715,10 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             size_t offset = (14 + atslen) + (i * 2 * AES_KEY_LEN);
 
-            snprintf(blocks, sizeof(blocks), "$.SectorKeys.%zu.KeyA", i);
+            snprintf(blocks, sizeof(blocks), "$.SectorKeys.%d.KeyA", i);
             JsonLoadBufAsHex(root, blocks, udata.bytes + offset, AES_KEY_LEN, datalen);
 
-            snprintf(blocks, sizeof(blocks), "$.SectorKeys.%zu.KeyB", i);
+            snprintf(blocks, sizeof(blocks), "$.SectorKeys.%d.KeyB", i);
             JsonLoadBufAsHex(root, blocks, udata.bytes + offset + AES_KEY_LEN, AES_KEY_LEN, datalen);
 
             sptr += (2 * AES_KEY_LEN);
