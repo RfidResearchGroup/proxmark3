@@ -290,25 +290,28 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             break;
         }
         case jsfMfc_v2: {
-            iso14a_mf_extdump_t *xdump = (iso14a_mf_extdump_t *)data;
+            
+            iso14a_mf_extdump_t xdump;
+            memcpy(&xdump, data, sizeof(iso14a_mf_extdump_t));
+
             JsonSaveStr(root, "FileType", "mfc v2");
-            JsonSaveBufAsHexCompact(root, "$.Card.UID", xdump->card_info.uid, xdump->card_info.uidlen);
-            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", xdump->card_info.atqa, 2);
-            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &(xdump->card_info.sak), 1);
-            for (size_t i = 0; i < (xdump->dumplen / MFBLOCK_SIZE); i++) {
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", xdump.card_info.uid, xdump.card_info.uidlen);
+            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", xdump.card_info.atqa, 2);
+            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &(xdump.card_info.sak), 1);
+            for (size_t i = 0; i < (xdump.dumplen / MFBLOCK_SIZE); i++) {
 
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * MFBLOCK_SIZE], MFBLOCK_SIZE);
+                JsonSaveBufAsHexCompact(root, path, &xdump.dump[i * MFBLOCK_SIZE], MFBLOCK_SIZE);
                 if (mfIsSectorTrailer(i)) {
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyA", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * MFBLOCK_SIZE], 6);
+                    JsonSaveBufAsHexCompact(root, path, &xdump.dump[i * MFBLOCK_SIZE], 6);
 
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyB", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * MFBLOCK_SIZE + 10], 6);
+                    JsonSaveBufAsHexCompact(root, path, &xdump.dump[i * MFBLOCK_SIZE + 10], 6);
 
-                    uint8_t *adata = &xdump->dump[i * MFBLOCK_SIZE + 6];
+                    uint8_t *adata = &xdump.dump[i * MFBLOCK_SIZE + 6];
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditions", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * MFBLOCK_SIZE + 6], 4);
+                    JsonSaveBufAsHexCompact(root, path, &xdump.dump[i * MFBLOCK_SIZE + 6], 4);
 
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 3);
                     JsonSaveStr(root, path, mfGetAccessConditionsDesc(0, adata));
@@ -329,28 +332,31 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             break;
         }
         case jsfMfc_v3: {
-            iso14a_mf_dump_ev1_t *xdump = (iso14a_mf_dump_ev1_t *)data;
-            JsonSaveStr(root, "FileType", "mfc v3");
-            JsonSaveBufAsHexCompact(root, "$.Card.UID", xdump->card.ev1.uid, xdump->card.ev1.uidlen);
-            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", xdump->card.ev1.atqa, 2);
-            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &(xdump->card.ev1.sak), 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.ATS", xdump->card.ev1.ats, sizeof(xdump->card.ev1.ats_len));
-            JsonSaveBufAsHexCompact(root, "$.Card.SIGNATURE", xdump->card.ev1.signature, sizeof(xdump->card.ev1.signature));
 
-            for (size_t i = 0; i < (xdump->dumplen / MFBLOCK_SIZE); i++) {
+            iso14a_mf_dump_ev1_t xdump;
+            memcpy(&xdump, data, sizeof(iso14a_mf_dump_ev1_t));
+
+            JsonSaveStr(root, "FileType", "mfc v3");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", xdump.card.ev1.uid, xdump.card.ev1.uidlen);
+            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", xdump.card.ev1.atqa, 2);
+            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &(xdump.card.ev1.sak), 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.ATS", xdump.card.ev1.ats, sizeof(xdump.card.ev1.ats_len));
+            JsonSaveBufAsHexCompact(root, "$.Card.SIGNATURE", xdump.card.ev1.signature, sizeof(xdump.card.ev1.signature));
+
+            for (size_t i = 0; i < (xdump.dumplen / MFBLOCK_SIZE); i++) {
 
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * MFBLOCK_SIZE], MFBLOCK_SIZE);
+                JsonSaveBufAsHexCompact(root, path, &xdump.dump[i * MFBLOCK_SIZE], MFBLOCK_SIZE);
                 if (mfIsSectorTrailer(i)) {
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyA", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * MFBLOCK_SIZE], 6);
+                    JsonSaveBufAsHexCompact(root, path, &xdump.dump[i * MFBLOCK_SIZE], 6);
 
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.KeyB", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * MFBLOCK_SIZE + 10], 6);
+                    JsonSaveBufAsHexCompact(root, path, &xdump.dump[i * MFBLOCK_SIZE + 10], 6);
 
-                    uint8_t *adata = &xdump->dump[i * MFBLOCK_SIZE + 6];
+                    uint8_t *adata = &xdump.dump[i * MFBLOCK_SIZE + 6];
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditions", mfSectorNum(i));
-                    JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * MFBLOCK_SIZE + 6], 4);
+                    JsonSaveBufAsHexCompact(root, path, &xdump.dump[i * MFBLOCK_SIZE + 6], 4);
 
                     snprintf(path, sizeof(path), "$.SectorKeys.%d.AccessConditionsText.block%zu", mfSectorNum(i), i - 3);
                     JsonSaveStr(root, path, mfGetAccessConditionsDesc(0, adata));
@@ -371,37 +377,39 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             break;
         }
         case jsfFudan: {
-            iso14a_mf_extdump_t *xdump = (iso14a_mf_extdump_t *)(void *) data;
+            iso14a_mf_extdump_t xdump;
+            memcpy(&xdump, data, sizeof(iso14a_mf_extdump_t));
+
             JsonSaveStr(root, "FileType", "fudan");
-            JsonSaveBufAsHexCompact(root, "$.Card.UID", xdump->card_info.uid, xdump->card_info.uidlen);
-            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", xdump->card_info.atqa, 2);
-            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &(xdump->card_info.sak), 1);
-            for (size_t i = 0; i < (xdump->dumplen / 4); i++) {
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", xdump.card_info.uid, xdump.card_info.uidlen);
+            JsonSaveBufAsHexCompact(root, "$.Card.ATQA", xdump.card_info.atqa, 2);
+            JsonSaveBufAsHexCompact(root, "$.Card.SAK", &(xdump.card_info.sak), 1);
+            for (size_t i = 0; i < (xdump.dumplen / 4); i++) {
 
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &xdump->dump[i * 4], 4);
+                JsonSaveBufAsHexCompact(root, path, &xdump.dump[i * 4], 4);
             }
             break;
         }
         case jsfMfuMemory: {
-            JsonSaveStr(root, "FileType", "mfu");
-
-            mfu_dump_t *tmp = (mfu_dump_t *)data;
+            mfu_dump_t tmp;
+            memcpy(&tmp, data, sizeof(mfu_dump_t));
 
             uint8_t uid[7] = {0};
-            memcpy(uid, tmp->data, 3);
-            memcpy(uid + 3, tmp->data + 4, 4);
+            memcpy(uid, tmp.data, 3);
+            memcpy(uid + 3, tmp.data + 4, 4);
 
+            JsonSaveStr(root, "FileType", "mfu");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
-            JsonSaveBufAsHexCompact(root, "$.Card.Version", tmp->version, sizeof(tmp->version));
-            JsonSaveBufAsHexCompact(root, "$.Card.TBO_0", tmp->tbo, sizeof(tmp->tbo));
-            JsonSaveBufAsHexCompact(root, "$.Card.TBO_1", tmp->tbo1, sizeof(tmp->tbo1));
-            JsonSaveBufAsHexCompact(root, "$.Card.Signature", tmp->signature, sizeof(tmp->signature));
+            JsonSaveBufAsHexCompact(root, "$.Card.Version", tmp.version, sizeof(tmp.version));
+            JsonSaveBufAsHexCompact(root, "$.Card.TBO_0", tmp.tbo, sizeof(tmp.tbo));
+            JsonSaveBufAsHexCompact(root, "$.Card.TBO_1", tmp.tbo1, sizeof(tmp.tbo1));
+            JsonSaveBufAsHexCompact(root, "$.Card.Signature", tmp.signature, sizeof(tmp.signature));
             for (uint8_t i = 0; i < 3; i ++) {
                 snprintf(path, sizeof(path), "$.Card.Counter%d", i);
-                JsonSaveBufAsHexCompact(root, path, tmp->counter_tearing[i], 3);
+                JsonSaveBufAsHexCompact(root, path, tmp.counter_tearing[i], 3);
                 snprintf(path, sizeof(path), "$.Card.Tearing%d", i);
-                JsonSaveBufAsHexCompact(root, path, tmp->counter_tearing[i] + 3, 1);
+                JsonSaveBufAsHexCompact(root, path, tmp.counter_tearing[i] + 3, 1);
             }
 
             // size of header 56b
@@ -410,15 +418,14 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
 
             for (size_t i = 0; i < len; i++) {
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, tmp->data + (i * MFU_BLOCK_SIZE), MFU_BLOCK_SIZE);
+                JsonSaveBufAsHexCompact(root, path, tmp.data + (i * MFU_BLOCK_SIZE), MFU_BLOCK_SIZE);
             }
             break;
         }
         case jsfHitag: {
-            JsonSaveStr(root, "FileType", "hitag");
             uint8_t uid[4] = {0};
             memcpy(uid, data, 4);
-
+            JsonSaveStr(root, "FileType", "hitag");
             JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
 
             for (size_t i = 0; i < (datalen / 4); i++) {
@@ -428,25 +435,27 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             break;
         }
         case jsfIclass: {
+
+            picopass_hdr_t hdr;
+            memcpy(&hdr, data, sizeof(picopass_hdr_t));
+
             JsonSaveStr(root, "FileType", "iclass");
+            JsonSaveBufAsHexCompact(root, "$.Card.CSN", hdr.csn, sizeof(hdr.csn));
+            JsonSaveBufAsHexCompact(root, "$.Card.Configuration", (uint8_t *)&hdr.conf, sizeof(hdr.conf));
 
-            picopass_hdr_t *hdr = (picopass_hdr_t *)data;
-            JsonSaveBufAsHexCompact(root, "$.Card.CSN", hdr->csn, sizeof(hdr->csn));
-            JsonSaveBufAsHexCompact(root, "$.Card.Configuration", (uint8_t *)&hdr->conf, sizeof(hdr->conf));
-
-            uint8_t pagemap = get_pagemap(hdr);
+            uint8_t pagemap = get_pagemap(&hdr);
             if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
-                picopass_ns_hdr_t *ns_hdr = (picopass_ns_hdr_t *)data;
-                JsonSaveBufAsHexCompact(root, "$.Card.AIA", ns_hdr->app_issuer_area, sizeof(ns_hdr->app_issuer_area));
+                picopass_ns_hdr_t ns_hdr;
+                memcpy(&ns_hdr, data, sizeof(picopass_hdr_t));
+                JsonSaveBufAsHexCompact(root, "$.Card.AIA", ns_hdr.app_issuer_area, sizeof(ns_hdr.app_issuer_area));
             } else {
-                JsonSaveBufAsHexCompact(root, "$.Card.Epurse", hdr->epurse, sizeof(hdr->epurse));
-                JsonSaveBufAsHexCompact(root, "$.Card.Kd", hdr->key_d, sizeof(hdr->key_d));
-                JsonSaveBufAsHexCompact(root, "$.Card.Kc", hdr->key_c, sizeof(hdr->key_c));
-                JsonSaveBufAsHexCompact(root, "$.Card.AIA", hdr->app_issuer_area, sizeof(hdr->app_issuer_area));
+                JsonSaveBufAsHexCompact(root, "$.Card.Epurse", hdr.epurse, sizeof(hdr.epurse));
+                JsonSaveBufAsHexCompact(root, "$.Card.Kd", hdr.key_d, sizeof(hdr.key_d));
+                JsonSaveBufAsHexCompact(root, "$.Card.Kc", hdr.key_c, sizeof(hdr.key_c));
+                JsonSaveBufAsHexCompact(root, "$.Card.AIA", hdr.app_issuer_area, sizeof(hdr.app_issuer_area));
             }
 
             for (size_t i = 0; i < (datalen / PICOPASS_BLOCK_SIZE); i++) {
-
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, data + (i * PICOPASS_BLOCK_SIZE), PICOPASS_BLOCK_SIZE);
             }
