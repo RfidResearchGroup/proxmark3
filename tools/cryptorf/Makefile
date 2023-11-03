@@ -1,7 +1,7 @@
 MYSRCPATHS = ../../common ../../common/cryptorf
 MYSRCS = cryptolib.c util.c
 MYINCLUDES = -I../../common/cryptorf
-MYCFLAGS =
+MYCFLAGS = -O3
 MYDEFS =
 
 # build artifacts
