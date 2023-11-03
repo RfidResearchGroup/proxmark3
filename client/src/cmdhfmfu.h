@@ -43,7 +43,7 @@ typedef struct {
 } PACKED old_mfu_dump_t;
 
 uint32_t GetHF14AMfU_Type(void);
-int ul_print_type(uint32_t tagtype, uint8_t spaces);
+int ul_print_type(uint64_t tagtype, uint8_t spaces);
 void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage);
 int ul_read_uid(uint8_t *uid);
 int trace_mfuc_try_default_3des_keys(uint8_t **correct_key, int state, uint8_t (*authdata)[16]);
@@ -55,44 +55,43 @@ int CmdHF14MfUTamper(const char *Cmd);
 uint16_t ul_ev1_packgen_VCNEW(uint8_t *uid, uint32_t pwd);
 uint32_t ul_ev1_otpgenA(uint8_t *uid);
 
-typedef enum TAGTYPE_UL {
-    UNKNOWN          = 0x000000,
-    UL               = 0x1,
-    UL_C             = 0x2,
-    UL_EV1_48        = 0x4,
-    UL_EV1_128       = 0x8,
-    NTAG             = 0x10,
-    NTAG_203         = 0x20,
-    NTAG_210         = 0x40,
-    NTAG_212         = 0x80,
-    NTAG_213         = 0x100,
-    NTAG_215         = 0x200,
-    NTAG_216         = 0x400,
-    MY_D             = 0x800,
-    MY_D_NFC         = 0x1000,
-    MY_D_MOVE        = 0x2000,
-    MY_D_MOVE_NFC    = 0x4000,
-    MY_D_MOVE_LEAN   = 0x8000,
-    NTAG_I2C_1K      = 0x10000,
-    NTAG_I2C_2K      = 0x20000,
-    NTAG_I2C_1K_PLUS = 0x40000,
-    NTAG_I2C_2K_PLUS = 0x80000,
-    FUDAN_UL         = 0x100000,
-    MAGIC            = 0x200000,
-    NTAG_213_F       = 0x400000,
-    NTAG_216_F       = 0x800000,
-    UL_EV1           = 0x1000000,
-    UL_NANO_40       = 0x2000000,
-    NTAG_213_TT      = 0x4000000,
-    NTAG_213_C       = 0x8000000,
-    MAGIC_1A         = 0x10000000 | MAGIC,
-    MAGIC_1B         = 0x20000000 | MAGIC,
-    MAGIC_NTAG       = 0x40000000 | MAGIC,
-    NTAG_210u        = 0x80000000,
-    UL_MAGIC         = UL | MAGIC,
-    UL_C_MAGIC       = UL_C | MAGIC,
-    // Don't forget to fill UL_TYPES_ARRAY and UL_MEMORY_ARRAY if new types are added
-    UL_ERROR         = 0xFFFFFF,
-} TagTypeUL_t;
+#define MFU_TT_UNKNOWN          0x0ULL
+#define MFU_TT_UL               0x1ULL
+#define MFU_TT_UL_C             0x2ULL
+#define MFU_TT_UL_EV1_48        0x4ULL
+#define MFU_TT_UL_EV1_128       0x8ULL
+#define MFU_TT_NTAG             0x10ULL
+#define MFU_TT_NTAG_203         0x20ULL
+#define MFU_TT_NTAG_210         0x40ULL
+#define MFU_TT_NTAG_212         0x80ULL
+#define MFU_TT_NTAG_213         0x100ULL
+#define MFU_TT_NTAG_215         0x200ULL
+#define MFU_TT_NTAG_216         0x400ULL
+#define MFU_TT_MY_D             0x800ULL
+#define MFU_TT_MY_D_NFC         0x1000ULL
+#define MFU_TT_MY_D_MOVE        0x2000ULL
+#define MFU_TT_MY_D_MOVE_NFC    0x4000ULL
+#define MFU_TT_MY_D_MOVE_LEAN   0x8000ULL
+#define MFU_TT_NTAG_I2C_1K      0x10000ULL
+#define MFU_TT_NTAG_I2C_2K      0x20000ULL
+#define MFU_TT_NTAG_I2C_1K_PLUS 0x40000ULL
+#define MFU_TT_NTAG_I2C_2K_PLUS 0x80000ULL
+#define MFU_TT_FUDAN_UL         0x100000ULL
+#define MFU_TT_MAGIC            0x200000ULL
+#define MFU_TT_NTAG_213_F       0x400000ULL
+#define MFU_TT_NTAG_216_F       0x800000ULL
+#define MFU_TT_UL_EV1           0x1000000ULL
+#define MFU_TT_UL_NANO_40       0x2000000ULL
+#define MFU_TT_NTAG_213_TT      0x4000000ULL
+#define MFU_TT_NTAG_213_C       0x8000000ULL
+#define MFU_TT_MAGIC_1A         (0x10000000ULL | MFU_TT_MAGIC)
+#define MFU_TT_MAGIC_1B         (0x20000000ULL | MFU_TT_MAGIC)
+#define MFU_TT_MAGIC_NTAG       (0x40000000ULL | MFU_TT_MAGIC)
+#define MFU_TT_NTAG_210u        0x80000000ULL
+#define MFU_TT_UL_MAGIC         (MFU_TT_UL | MFU_TT_MAGIC)
+#define MFU_TT_UL_C_MAGIC       (MFU_TT_UL_C | MFU_TT_MAGIC)
+// Don't forget to fill UL_TYPES_ARRAY and UL_MEMORY_ARRAY if new types are added
+#define MFU_TT_UL_ERROR         0x7FFFFFFFULL
+
 
 #endif

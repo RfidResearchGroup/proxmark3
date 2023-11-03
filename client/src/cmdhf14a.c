@@ -2010,8 +2010,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         // ******** is card of the MFU type (UL/ULC/NTAG/ etc etc)
                         DropField();
 
-                        uint32_t tagT = GetHF14AMfU_Type();
-                        if (tagT != UL_ERROR) {
+                        uint64_t tagT = GetHF14AMfU_Type();
+                        if (tagT != MFU_TT_UL_ERROR) {
                             ul_print_type(tagT, 0);
                             isMifareUltralight = true;
                             printTag("MIFARE Ultralight/C/NTAG Compatible");

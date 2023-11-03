@@ -2485,8 +2485,8 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // ------------------------------
 
-    uint32_t tagT = GetHF14AMfU_Type();
-    if (tagT != UL_ERROR) {
+    uint64_t tagT = GetHF14AMfU_Type();
+    if (tagT != MFU_TT_UL_ERROR) {
         PrintAndLogEx(ERR, "Detected a MIFARE Ultralight/C/NTAG Compatible card.");
         PrintAndLogEx(ERR, "This command targets " _YELLOW_("MIFARE Classic"));
         return PM3_ESOFT;
