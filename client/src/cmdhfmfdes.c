@@ -444,7 +444,7 @@ static void swap24(uint8_t *data) {
     uint8_t tmp = data[0];
     data[0] = data[2];
     data[2] = tmp;
-};
+}
 
 // default parameters
 static uint8_t defaultKeyNum = 0;

@@ -317,7 +317,7 @@ bool KSX6924ParsePurseInfo(const uint8_t *purseInfo, size_t purseLen, struct ksx
 
     // TODO
     return true;
-};
+}
 
 /**
  * Prints out a ksx6924_purse_info
@@ -520,7 +520,7 @@ bool KSX6924ParseInitializeCardResponse(const uint8_t *initCardResponse, size_t 
 
     // TODO
     return true;
-};
+}
 
 /**
  * Prints out a Initialize Card response
