@@ -860,7 +860,7 @@ int param_getbin_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
 
         if (strlen(buf) > 0) {
             uint32_t temp = 0;
-            sscanf(buf, "%d", &temp);
+            sscanf(buf, "%u", &temp);
             data[*datalen] = (uint8_t)(temp & 0xff);
             *buf = 0;
             (*datalen)++;
