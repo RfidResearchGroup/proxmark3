@@ -166,13 +166,13 @@ static void ntag424_print_production_information(ntag424_production_information_
 }
 
 static void ntag424_print_full_version_information(ntag424_full_version_information_t *version) {
-    PrintAndLogEx(INFO, "--- " _CYAN_("Hardware version information:"), fileno);
+    PrintAndLogEx(INFO, "--- " _CYAN_("Hardware version information:"));
     ntag424_print_version_information(&version->hardware);
 
-    PrintAndLogEx(INFO, "--- " _CYAN_("Software version information:"), fileno);
+    PrintAndLogEx(INFO, "--- " _CYAN_("Software version information:"));
     ntag424_print_version_information(&version->software);
 
-    PrintAndLogEx(INFO, "--- " _CYAN_("Production information:"), fileno);
+    PrintAndLogEx(INFO, "--- " _CYAN_("Production information:"));
     ntag424_print_production_information(&version->production);
 }
 
@@ -927,7 +927,7 @@ static int CmdHF_ntag424_info(const char *Cmd) {
     DropField();
 
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "--- " _CYAN_("NXP originality signature:"), fileno);
+        PrintAndLogEx(INFO, "--- " _CYAN_("NXP originality signature:"));
         desfire_print_signature(version.production.uid, 7, signature, NXP_SIGNATURE_LENGTH);
     }
 

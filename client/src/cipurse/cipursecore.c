@@ -626,7 +626,7 @@ void CIPURSEPrintFileAttrEx(uint8_t *attr, size_t len, bool isDGI) {
 }
 
 void CIPURSEPrintFileAttr(uint8_t *attr, size_t len) {
-    return CIPURSEPrintFileAttrEx(attr, len, false);
+    CIPURSEPrintFileAttrEx(attr, len, false);
 }
 
 void CIPURSEPrintFileUpdateAttr(uint8_t *attr, size_t len) {

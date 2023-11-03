@@ -4009,7 +4009,7 @@ static int CmdHF14AMfKeyBrute(const char *Cmd) {
 */
 
 void printKeyTable(size_t sectorscnt, sector_t *e_sector) {
-    return printKeyTableEx(sectorscnt, e_sector, 0);
+    printKeyTableEx(sectorscnt, e_sector, 0);
 }
 
 void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {

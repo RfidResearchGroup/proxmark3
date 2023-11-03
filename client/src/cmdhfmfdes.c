@@ -807,9 +807,9 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     iso14a_card_select_t card;
     res = SelectCard14443A_4(true, false, &card);
     if (res == PM3_SUCCESS) {
-        static const char STANDALONE_DESFIRE[] = { 0x75, 0x77, 0x81, 0x02 };
-        static const char JCOP_DESFIRE[] = { 0x75, 0xf7, 0xb1, 0x02 };
-        static const char JCOP3_DESFIRE[] = { 0x78, 0x77, 0x71, 0x02 };
+        static const uint8_t STANDALONE_DESFIRE[] = { 0x75, 0x77, 0x81, 0x02 };
+        static const uint8_t JCOP_DESFIRE[] = { 0x75, 0xf7, 0xb1, 0x02 };
+        static const uint8_t JCOP3_DESFIRE[] = { 0x78, 0x77, 0x71, 0x02 };
 
         if (card.sak == 0x20) {
 
