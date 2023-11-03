@@ -586,10 +586,10 @@ static command_t CommandTable[] = {
 int CmdHFVAS(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
-};
+}
 
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return PM3_SUCCESS;
-};
+}

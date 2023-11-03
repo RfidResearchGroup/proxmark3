@@ -95,7 +95,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     g_conn.send_via_local_ip = false;
     g_conn.send_via_ip = PM3_NONE;
 
-    char *prefix = strdup(pcPortName);
+    char *prefix = str_dup(pcPortName);
     if (prefix == NULL) {
         PrintAndLogEx(ERR, "error:  string duplication");
         free(sp);
@@ -114,7 +114,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         struct addrinfo *addr = NULL, *rp;
 
-        char *addrPortStr = strdup(pcPortName + 4);
+        char *addrPortStr = str_dup(pcPortName + 4);
         char *addrstr = addrPortStr;
         const char *portstr;
         if (addrPortStr == NULL) {
@@ -321,7 +321,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         struct addrinfo *addr = NULL, *rp;
 
-        char *addrPortStr = strdup(pcPortName + 4);
+        char *addrPortStr = str_dup(pcPortName + 4);
         char *addrstr = addrPortStr;
         const char *portstr;
         if (addrPortStr == NULL) {
