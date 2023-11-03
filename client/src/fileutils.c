@@ -1114,8 +1114,9 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
         if (str_startswith(line, "tearing 0:")) {
             if (ft == NFC_DF_MFC) {
             } else if (ft == NFC_DF_MFU) {
-                sscanf(line, "tearing 0: %02x", &n);
-                udata.mfu->counter_tearing[0][3] = n & 0xFF;
+                uint32_t b = 0;
+                sscanf(line, "tearing 0: %02x", &b);
+                udata.mfu->counter_tearing[0][3] = b & 0xFF;
             }
             continue;
         } 
@@ -1135,8 +1136,9 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
         if (str_startswith(line, "tearing 1:")) {
             if (ft == NFC_DF_MFC) {
             } else if (ft == NFC_DF_MFU) {
-                sscanf(line, "tearing 1: %02x", &n);
-                udata.mfu->counter_tearing[1][3] = n & 0xFF;
+                uint32_t b = 0;
+                sscanf(line, "tearing 1: %02x", &b);
+                udata.mfu->counter_tearing[1][3] = b & 0xFF;
             }
             continue;
         }
@@ -1156,8 +1158,9 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
         if (str_startswith(line, "tearing 2:")) {
             if (ft == NFC_DF_MFC) {
             } else if (ft == NFC_DF_MFU) {
-                sscanf(line, "tearing 2: %02x", &n);
-                udata.mfu->counter_tearing[2][3] = n & 0xFF;
+                uint32_t b = 0;
+                sscanf(line, "tearing 2: %02x", &b);
+                udata.mfu->counter_tearing[2][3] = b & 0xFF;
             }
             continue;
         }
