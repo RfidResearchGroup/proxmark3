@@ -446,7 +446,7 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             uint8_t pagemap = get_pagemap(&hdr);
             if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
                 picopass_ns_hdr_t ns_hdr;
-                memcpy(&ns_hdr, data, sizeof(picopass_hdr_t));
+                memcpy(&ns_hdr, data, sizeof(picopass_ns_hdr_t));
                 JsonSaveBufAsHexCompact(root, "$.Card.AIA", ns_hdr.app_issuer_area, sizeof(ns_hdr.app_issuer_area));
             } else {
                 JsonSaveBufAsHexCompact(root, "$.Card.Epurse", hdr.epurse, sizeof(hdr.epurse));
