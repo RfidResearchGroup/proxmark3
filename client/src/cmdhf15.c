@@ -849,7 +849,7 @@ static int CmdHF15Info(const char *Cmd) {
                   "hf 15 info -u E011223344556677"
                  );
 
-    void *argtable[6 + 1] = {};
+    void *argtable[6 + 1] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_param_end;
 
@@ -1365,12 +1365,13 @@ static int CmdHF15WriteAfi(const char *Cmd) {
                   "hf 15 writeafi -u E011223344556677 --afi 12 -p 0F0F0F0F"
                  );
 
-    void *argtable[5] = {};
-    argtable[0] = arg_param_begin;
-    argtable[1] = arg_str0("u", "uid", "<hex>", "full UID, 8 bytes");
-    argtable[2] = arg_int1(NULL, "afi", "<dec>", "AFI number (0-255)");
-    argtable[3] = arg_str0("p", "pwd", "<hex>", "optional AFI/EAS password");
-    argtable[4] = arg_param_end;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("u", "uid", "<hex>", "full UID, 8 bytes"),
+        arg_int1(NULL, "afi", "<dec>", "AFI number (0-255)"),
+        arg_str0("p", "pwd", "<hex>", "optional AFI/EAS password"),
+        arg_param_end
+    };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
@@ -1448,7 +1449,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
                   "hf 15 writedsfid -u E011223344556677 --dsfid 12"
                  );
 
-    void *argtable[6 + 2] = {};
+    void *argtable[6 + 2] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1(NULL, "dsfid", "<dec>", "DSFID number (0-255)");
     argtable[arglen++] = arg_param_end;
@@ -1548,7 +1549,7 @@ static int CmdHF15Dump(const char *Cmd) {
                   "hf 15 dump -u E011223344556677 -f hf-15-my-dump.bin"
                  );
 
-    void *argtable[6 + 2] = {};
+    void *argtable[6 + 2] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
                          argtable[arglen++] = arg_param_end;
@@ -1792,7 +1793,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
                   "hf 15 rdmulti -u E011223344556677 -b 12 --cnt 3 -> read three blocks"
                  );
 
-    void *argtable[6 + 3] = {};
+    void *argtable[6 + 3] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", NULL, "<dec>", "first page number (0-255)");
     argtable[arglen++] = arg_int1(NULL, "cnt", "<dec>", "number of pages (1-6)");
@@ -1928,7 +1929,7 @@ static int CmdHF15Readblock(const char *Cmd) {
                   "hf 15 rdbl -u E011223344556677 -b 12"
                  );
 
-    void *argtable[6 + 2] = {};
+    void *argtable[6 + 2] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
     argtable[arglen++] = arg_param_end;
@@ -2090,7 +2091,7 @@ static int CmdHF15Write(const char *Cmd) {
                   "hf 15 wrbl -u E011223344556677 -b 12 -d AABBCCDD"
                  );
 
-    void *argtable[6 + 4] = {};
+    void *argtable[6 + 4] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
     argtable[arglen++] = arg_str1("d", "data", "<hex>", "data, 4 bytes");
@@ -2181,7 +2182,7 @@ static int CmdHF15Restore(const char *Cmd) {
                   "hf 15 restore -u E011223344556677 -f hf-15-my-dump.bin"
                  );
 
-    void *argtable[6 + 5] = {};
+    void *argtable[6 + 5] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
                          argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)"),
