@@ -147,6 +147,7 @@ void strcleanrn(char *buf, size_t len);
 void strcreplace(char *buf, size_t len, char from, char to);
 char *str_dup(const char *src);
 char *str_ndup(const char *src, size_t len);
+size_t str_nlen(const char *src, size_t maxlen);
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const uint8_t *arr, int arrlen);

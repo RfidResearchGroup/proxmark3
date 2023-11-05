@@ -1198,6 +1198,16 @@ char *str_ndup(const char *src, size_t len) {
     return dest;
 }
 
+size_t str_nlen(const char *src, size_t maxlen) {
+    size_t len = 0;
+    if(src {
+        for(char c = *src; (len < maxlen && c != '\0'); c = *++src) {
+            len++;
+        }
+    }
+    return len;
+}
+
 /**
  * Converts a hex string to component "hi2", "hi" and "lo" 32-bit integers
  * one nibble at a time.
