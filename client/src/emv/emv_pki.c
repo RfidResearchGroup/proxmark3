@@ -37,7 +37,7 @@ void PKISetStrictExecution(bool se) {
     strictExecution = se;
 }
 
-static const unsigned char empty_tlv_value[] = {};
+static const unsigned char empty_tlv_value[] = {0};
 static const struct tlv empty_tlv = {.tag = 0x0, .len = 0, .value = empty_tlv_value};
 
 static size_t emv_pki_hash_psn[256] = { 0, 0, 11, 2, 17, 2, };
