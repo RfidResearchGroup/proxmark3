@@ -40,6 +40,7 @@
 #include "crypto/libpcrypto.h"
 #include "util.h" // xor
 #include "mbedtls/sha1.h"       // SHA1
+#include "gen4.h"
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;
@@ -1171,6 +1172,84 @@ int mfGen3Freeze(void) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
+}
+
+static int mfG4ExCommand(uint8_t cmd, uint8_t *pwd, uint8_t *data, size_t datalen, uint8_t *response, size_t *responselen) {
+    struct p {
+        uint8_t cmdheader;
+        uint8_t pwd[4];
+        uint8_t command;
+        uint8_t data[32];
+    } PACKED payload;
+    memset(&payload, 0, sizeof(payload));
+
+    if (datalen > sizeof(payload.data)) {
+        return PM3_EINVARG;
+    }
+
+    payload.cmdheader = 0xCF;
+    payload.command = cmd;
+    if (pwd != NULL) {
+        memcpy(payload.pwd, pwd, sizeof(payload.pwd));
+    }
+    if (data != NULL && datalen > 0) {
+        memcpy(payload.data, data, datalen);
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_G4_RDBL, (uint8_t *)&payload, 1 + 4 + 1 + datalen);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_RDBL, &resp, 1500)) {
+        if (resp.status != PM3_SUCCESS) {
+            return PM3_EUNDEF;
+        }
+
+        if (response != NULL)
+            memcpy(response, resp.data.asBytes, resp.length);
+
+        if (responselen != NULL)
+            *responselen = resp.length;
+    } else {
+        PrintAndLogEx(WARNING, "command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+    return PM3_SUCCESS;
+}
+
+int mfG4GetConfig(uint8_t *pwd, uint8_t *data, size_t *datalen) {
+    uint8_t resp[40] = {0};
+    size_t resplen = 0;
+
+    int res = mfG4ExCommand(GEN4_CMD_DUMP_CONFIG, pwd, NULL, 0, resp, &resplen);
+    if (res != PM3_SUCCESS) {
+        return PM3_EUNDEF;
+    }
+
+    if (data != NULL)
+        memcpy(data, resp, resplen);
+
+    if (datalen != NULL)
+        *datalen = resplen;
+
+    return PM3_SUCCESS;
+}
+
+int mfG4GetFactoryTest(uint8_t *pwd, uint8_t *data, size_t *datalen) {
+    uint8_t resp[40] = {0};
+    size_t resplen = 0;
+
+    int res = mfG4ExCommand(GEN4_CMD_FACTORY_TEST, pwd, NULL, 0, resp, &resplen);
+    if (res != PM3_SUCCESS) {
+        return PM3_EUNDEF;
+    }
+
+    if (data != NULL)
+        memcpy(data, resp, resplen);
+
+    if (datalen != NULL)
+        *datalen = resplen;
+
+    return PM3_SUCCESS;
 }
 
 int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags) {
