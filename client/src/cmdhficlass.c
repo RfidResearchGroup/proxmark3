@@ -1371,6 +1371,8 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
         return PM3_EINVARG;
     }
 
+    free(binstr);
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Wiegand decode");
     wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
@@ -2783,9 +2785,9 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
         }
         case 7: {
 
-            uint8_t dec_data[8];
+            uint8_t dec_data[PICOPASS_BLOCK_SIZE];
 
-            uint64_t a = bytes_to_num(data, 8);
+            uint64_t a = bytes_to_num(data, PICOPASS_BLOCK_SIZE);
             bool starts = (leadingzeros(a) < 12);
             bool ones = (bitcount64(a) > 16 && bitcount64(a) < 48);
 
@@ -2798,25 +2800,32 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                 PrintAndLogEx(INFO, "data looks unencrypted, trying to decode");
             }
 
-            if (memcmp(dec_data, empty, 8) != 0) {
+            bool has_new_pacs = iclass_detect_new_pacs(dec_data);
+            bool has_values = (memcmp(dec_data, empty, PICOPASS_BLOCK_SIZE) != 0) && (memcmp(dec_data, zeros, PICOPASS_BLOCK_SIZE) != 0);
 
-                //todo:  remove preamble/sentinel
-                uint32_t top = 0, mid = 0, bot = 0;
+            if (has_values) {
 
-                char hexstr[16 + 1] = {0};
-                hex_to_buffer((uint8_t *)hexstr, dec_data, 8, sizeof(hexstr) - 1, 0, 0, true);
-                hexstring_to_u96(&top, &mid, &bot, hexstr);
+                if (has_new_pacs) {
+                    iclass_decode_credentials_new_pacs(dec_data);
+                } else {
+                    //todo:  remove preamble/sentinel
+                    uint32_t top = 0, mid = 0, bot = 0;
 
-                char binstr[64 + 1];
-                hextobinstring(binstr, hexstr);
-                char *pbin = binstr;
-                while (strlen(pbin) && *(++pbin) == '0');
+                    char hexstr[16 + 1] = {0};
+                    hex_to_buffer((uint8_t *)hexstr, dec_data, PICOPASS_BLOCK_SIZE, sizeof(hexstr) - 1, 0, 0, true);
+                    hexstring_to_u96(&top, &mid, &bot, hexstr);
 
-                PrintAndLogEx(SUCCESS, "      bin : %s", pbin);
-                PrintAndLogEx(INFO, "");
-                PrintAndLogEx(INFO, "------------------------------ " _CYAN_("Wiegand") " -------------------------------");
-                wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
-                HIDTryUnpack(&packed);
+                    char binstr[64 + 1];
+                    hextobinstring(binstr, hexstr);
+                    char *pbin = binstr;
+                    while (strlen(pbin) && *(++pbin) == '0');
+
+                    PrintAndLogEx(SUCCESS, "      bin : %s", pbin);
+                    PrintAndLogEx(INFO, "");
+                    PrintAndLogEx(INFO, "------------------------------ " _CYAN_("Wiegand") " -------------------------------");
+                    wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
+                    HIDTryUnpack(&packed);
+                }
             } else {
                 PrintAndLogEx(INFO, "no credential found");
             }
