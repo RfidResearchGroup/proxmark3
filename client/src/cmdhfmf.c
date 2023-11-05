@@ -7471,15 +7471,24 @@ static int CmdHF14AGen4Info(const char *cmd) {
 
     PrintAndLogEx(INFO, "---------- Gen4 configuration ----------");
     PrintAndLogEx(INFO, "Raw config [%02d]: %s", resplen, sprint_hex_inrow(resp, resplen));
-    if (resplen != 32 && resplen != 34) {
+    if (resplen != 30 && resplen != 32) {
         PrintAndLogEx(WARNING, "Unknown config format");
         return PM3_SUCCESS;
     }
 
-    res = mfG4GetFactoryTest(pwd, resp, &resplen, verbose);
+    res = mfG4GetFactoryTest(pwd, resp, &resplen, false);
     if (res == PM3_SUCCESS && resplen > 2) {
-        PrintAndLogEx(INFO, "Raw test   [%02d]: %s", resplen, sprint_hex_inrow(resp, resplen));
-        return PM3_ESOFT;
+        if (verbose)
+            PrintAndLogEx(INFO, "Raw test   [%02d]: %s", resplen, sprint_hex_inrow(resp, resplen));
+
+        if (resp[resplen - 2] == 0x66 && resp[resplen - 1] == 0x66)
+            PrintAndLogEx(INFO, "Card type      : generic");
+        else if (resp[resplen - 2] == 0x02 && resp[resplen - 1] == 0xaa)
+            PrintAndLogEx(INFO, "Card type      : limited functionality");
+        else if (resp[resplen - 2] == 0x06 && resp[resplen - 1] == 0xa0)
+            PrintAndLogEx(INFO, "Card type      : broken functionality");
+        else
+            PrintAndLogEx(INFO, "Card type      : unknown %02x%02x", resp[resplen - 2], resp[resplen - 1]);
     }
 
 
