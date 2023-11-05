@@ -79,7 +79,7 @@ typedef enum {
     JSON,
     DICTIONARY,
     MCT,
-    NFC,
+    FLIPPER,
 } DumpFileType_t;
 
 typedef enum {
@@ -96,7 +96,8 @@ typedef enum {
     NFC_DF_MFDES,
     NFC_DF_14_3A,
     NFC_DF_14_3B,
-    NFC_DF_14_4A
+    NFC_DF_14_4A,
+    NFC_DF_PICOPASS,
 } nfc_df_e;
 
 int fileExists(const char *filename);

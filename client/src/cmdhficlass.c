@@ -1321,36 +1321,101 @@ static int CmdHFiClassESetBlk(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static bool iclass_detect_new_pacs(uint8_t *d) {
+    uint8_t n = 0;
+    while (n++ < (PICOPASS_BLOCK_SIZE / 2)) {
+        if (d[n] && 
+            d[n + 1] == 0xA6) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// block 7 decoder for PACS 
+static int iclass_decode_credentials_new_pacs(uint8_t *d) {
+
+    uint8_t offset = 0;
+    while(d[offset] == 0 && (offset < PICOPASS_BLOCK_SIZE / 2)) {
+        offset++;
+    }
+
+    uint8_t pad = d[offset];
+
+    PrintAndLogEx(INFO, "%u , %u", offset, pad);
+
+    char *binstr = (char *)calloc((PICOPASS_BLOCK_SIZE * 8) + 1, sizeof(uint8_t));
+    if (binstr == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    uint8_t n = PICOPASS_BLOCK_SIZE - offset - 2;    
+    byte_2_binstr(binstr, d + offset + 2, n);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(d + offset + 2, n));
+    PrintAndLogEx(SUCCESS, "padded bin... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
+
+    binstr[strlen(binstr) - pad] = '\0';
+    PrintAndLogEx(SUCCESS, "bin.......... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
+
+    size_t hexlen = 0;
+    uint8_t hex[16] = {0};
+    binstr_2_bytes(hex, &hexlen, binstr);
+    PrintAndLogEx(SUCCESS, "hex.......... " _GREEN_("%s"), sprint_hex_inrow(hex, hexlen));
+
+    uint32_t top = 0, mid = 0, bot = 0;
+    if (binstring_to_u96(&top, &mid, &bot, binstr) != strlen(binstr)) {
+        PrintAndLogEx(ERR, "Binary string contains none <0|1> chars");
+        free(binstr);
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Wiegand decode");
+    wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
+    HIDTryUnpack(&packed);
+}
+
 static void iclass_decode_credentials(uint8_t *data) {
     picopass_hdr_t *hdr = (picopass_hdr_t *)data;
-    if (memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
+    if (memcmp(hdr->app_issuer_area, empty, PICOPASS_BLOCK_SIZE)) {
         // Not a Legacy or SR card, nothing to do here.
         return;
     }
 
-    BLOCK79ENCRYPTION encryption = (data[(6 * 8) + 7] & 0x03);
-    bool has_values = (memcmp(data + (8 * 7), empty, 8) != 0) && (memcmp(data + (8 * 7), zeros, 8) != 0);
+    BLOCK79ENCRYPTION encryption = (data[(6 * PICOPASS_BLOCK_SIZE) + 7] & 0x03);
+
+    uint8_t *b7 = data + (PICOPASS_BLOCK_SIZE * 7);
+
+    bool has_new_pacs = iclass_detect_new_pacs(b7);
+    bool has_values = (memcmp(b7, empty, PICOPASS_BLOCK_SIZE) != 0) && (memcmp(b7, zeros, PICOPASS_BLOCK_SIZE) != 0);
     if (has_values && encryption == None) {
 
-        //todo:  remove preamble/sentinel
-        uint32_t top = 0, mid = 0, bot = 0;
-
+        // todo:  remove preamble/sentinel
         PrintAndLogEx(INFO, "Block 7 decoder");
 
-        char hexstr[16 + 1] = {0};
-        hex_to_buffer((uint8_t *)hexstr, data + (8 * 7), 8, sizeof(hexstr) - 1, 0, 0, true);
-        hexstring_to_u96(&top, &mid, &bot, hexstr);
+        if (has_new_pacs) {
+            iclass_decode_credentials_new_pacs(b7);
+        } else {
+            char hexstr[16 + 1] = {0};
+            hex_to_buffer((uint8_t *)hexstr, b7, PICOPASS_BLOCK_SIZE, sizeof(hexstr) - 1, 0, 0, true);
 
-        char binstr[64 + 1];
-        hextobinstring(binstr, hexstr);
-        char *pbin = binstr;
-        while (strlen(pbin) && *(++pbin) == '0');
+            uint32_t top = 0, mid = 0, bot = 0;
+            hexstring_to_u96(&top, &mid, &bot, hexstr);
 
-        PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), pbin);
+            char binstr[64 + 1];
+            hextobinstring(binstr, hexstr);
+            char *pbin = binstr;
+            while (strlen(pbin) && *(++pbin) == '0');
 
-        PrintAndLogEx(INFO, "Wiegand decode");
-        wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
-        HIDTryUnpack(&packed);
+            PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), pbin);
+
+            PrintAndLogEx(INFO, "Wiegand decode");
+            wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
+            HIDTryUnpack(&packed);
+        }
+
     } else {
         PrintAndLogEx(INFO, "No unencrypted legacy credential found");
     }

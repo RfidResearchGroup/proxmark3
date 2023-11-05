@@ -87,7 +87,9 @@ DumpFileType_t getfiletype(const char *filename) {
         } else if (str_endswith(s, "mct")) {
             o = MCT;
         } else if (str_endswith(s, "nfc")) {
-            o = NFC;
+            o = FLIPPER;
+        } else if (str_endswith(s, "picopass")) {
+            o = FLIPPER;
         } else {
             // mfd, trc, trace is binary
             o = BIN;
@@ -1020,7 +1022,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
     int retval = PM3_SUCCESS;
 
     char *path;
-    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".nfc", false);
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, "", false);
     if (res != PM3_SUCCESS) {
         return PM3_EFILE;
     }
@@ -1221,14 +1223,18 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 uint8_t block[MFBLOCK_SIZE] = {0};
                 param_gethex_to_eol(p, 0, block, MFBLOCK_SIZE, &n);
                 memcpy(&udata.bytes[(blockno * MFBLOCK_SIZE)], block, MFBLOCK_SIZE);
+            } else if (ft == NFC_DF_PICOPASS) {
+                uint8_t block[PICOPASS_BLOCK_SIZE] = {0};
+                param_gethex_to_eol(p, 0, block, PICOPASS_BLOCK_SIZE, &n);
+                memcpy(&udata.bytes[(blockno * PICOPASS_BLOCK_SIZE)], block, PICOPASS_BLOCK_SIZE);
             }
-            counter += MFBLOCK_SIZE;
+            counter += PICOPASS_BLOCK_SIZE;
             continue;
         }
     }
 
     // add header length
-    if (ft == NFC_DF_MFC) {
+    if (ft == NFC_DF_MFC || ft == NFC_DF_PICOPASS) {
         *datalen = counter;
     } else if (ft == NFC_DF_MFU) {
         *datalen += MFU_DUMP_PREFIX_LENGTH;
@@ -1382,6 +1388,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     }
 
     udata_t udata = (udata_t)data;
+
     size_t len = 0;
     char blocks[PATH_MAX_LENGTH] = {0};
 
@@ -2278,7 +2285,12 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
         if (str_startswith(line, "device type: iso14443-4a")) {
             retval = NFC_DF_14_4A;
             break;
-        }              
+        }
+        if (str_startswith(line, "filetype: flipper picopass device")) {
+            retval = NFC_DF_PICOPASS;
+            break;
+        }
+
     }
     fclose(f);
 
@@ -2302,6 +2314,9 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
             case NFC_DF_14_4A:
                 PrintAndLogEx(INFO, "detected ISO14443-4A based dump format. No data available");
                 break;
+            case NFC_DF_PICOPASS:
+                PrintAndLogEx(INFO, "detected PICOPASS based dump format");
+                break; 
             case NFC_DF_UNKNOWN:
                 PrintAndLogEx(WARNING, "failed to detected dump format");
                 break;
@@ -2757,9 +2772,9 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             res = loadFileMCT_safe(fn, pdump, dumplen);
             break;
         }
-        case NFC: {
+        case FLIPPER: {
             nfc_df_e foo = detect_nfc_dump_format(fn, true);
-            if (foo == NFC_DF_MFC || foo == NFC_DF_MFU) {
+            if (foo == NFC_DF_MFC || foo == NFC_DF_MFU || foo == NFC_DF_PICOPASS) {
 
                 if (foo == NFC_DF_MFC) {
                     *pdump = calloc(maxdumplen, sizeof(uint8_t));
