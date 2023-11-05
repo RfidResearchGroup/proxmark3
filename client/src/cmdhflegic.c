@@ -112,27 +112,25 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
 
         int fl = 0;
 
-        if (data[6] == 0xec) {
+        if (data[6] == 0xEC) {
             strncpy(token_type, "XAM", sizeof(token_type) - 1);
             fl = 1;
             stamp_len = 0x0c - (data[5] >> 4);
         } else {
-            switch (data[5] & 0x7f) {
-                case 0x00 ... 0x2f:
-                    strncpy(token_type, "IAM", sizeof(token_type) - 1);
-                    fl = (0x2f - (data[5] & 0x7f)) + 1;
-                    break;
-                case 0x30 ... 0x6f:
-                    strncpy(token_type, "SAM", sizeof(token_type) - 1);
-                    fl = (0x6f - (data[5] & 0x7f)) + 1;
-                    break;
-                case 0x70 ... 0x7f:
-                    strncpy(token_type, "GAM", sizeof(token_type) - 1);
-                    fl = (0x7f - (data[5] & 0x7f)) + 1;
-                    break;
+
+            uint8_t tmp = data[5] & 0x7F;
+            if (tmp <= 0x2F) {
+                strncpy(token_type, "IAM", sizeof(token_type) - 1);
+                fl = (0x2F - tmp) + 1;
+            } else if (tmp >= 0x30 && tmp <= 0x6F) {
+                strncpy(token_type, "SAM", sizeof(token_type) - 1);
+                fl = (0x6F - tmp) + 1;
+            } else if (tmp >= 0x70 && tmp <= 0x7F) {
+                strncpy(token_type, "GAM", sizeof(token_type) - 1);
+                fl = (0x7F - tmp) + 1;
             }
 
-            stamp_len = 0xfc - data[6];
+            stamp_len = 0xFC - data[6];
         }
 
         PrintAndLogEx(SUCCESS, "DCF: %d (%02x %02x) Token Type=" _YELLOW_("%s") " (OLE=%01u) OL=%02u FL=%02u",
