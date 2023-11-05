@@ -1200,7 +1200,7 @@ char *str_ndup(const char *src, size_t len) {
 
 size_t str_nlen(const char *src, size_t maxlen) {
     size_t len = 0;
-    if(src {
+    if(src) {
         for(char c = *src; (len < maxlen && c != '\0'); c = *++src) {
             len++;
         }

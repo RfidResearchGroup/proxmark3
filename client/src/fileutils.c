@@ -1223,12 +1223,13 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 uint8_t block[MFBLOCK_SIZE] = {0};
                 param_gethex_to_eol(p, 0, block, MFBLOCK_SIZE, &n);
                 memcpy(&udata.bytes[(blockno * MFBLOCK_SIZE)], block, MFBLOCK_SIZE);
+                counter += MFBLOCK_SIZE;
             } else if (ft == NFC_DF_PICOPASS) {
                 uint8_t block[PICOPASS_BLOCK_SIZE] = {0};
                 param_gethex_to_eol(p, 0, block, PICOPASS_BLOCK_SIZE, &n);
                 memcpy(&udata.bytes[(blockno * PICOPASS_BLOCK_SIZE)], block, PICOPASS_BLOCK_SIZE);
+                counter += PICOPASS_BLOCK_SIZE;
             }
-            counter += PICOPASS_BLOCK_SIZE;
             continue;
         }
     }
