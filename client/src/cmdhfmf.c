@@ -7448,16 +7448,39 @@ static int CmdHF14AGen4Info(const char *cmd) {
         arg_str0("p", "pwd", "<hex>", "password 4bytes"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, cmd, argtable, false);
-    //bool verbose = arg_get_lit(ctx, 1);
+    CLIExecWithReturn(ctx, cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
 
     int pwd_len = 0;
     uint8_t pwd[4] = {0};
     CLIGetHexWithReturn(ctx, 3, pwd, &pwd_len);
     CLIParserFree(ctx);
 
+    if (pwd_len != 0 && pwd_len != 4) {
+        PrintAndLogEx(FAILED, "Password must be 4 bytes length, got " _YELLOW_("%u"), pwd_len);
+        return PM3_EINVARG;
+    }
 
+    uint8_t resp[40] = {0};
+    size_t resplen = 0;
+    int res = mfG4GetConfig(pwd, resp, &resplen, verbose);
+    if (res != PM3_SUCCESS || resplen == 0) {
+        PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%d", res, resplen);
+        return PM3_ESOFT;
+    }
 
+    PrintAndLogEx(INFO, "---------- Gen4 configuration ----------");
+    PrintAndLogEx(INFO, "Raw config [%02d]: %s", resplen, sprint_hex_inrow(resp, resplen));
+    if (resplen != 32 && resplen != 34) {
+        PrintAndLogEx(WARNING, "Unknown config format");
+        return PM3_SUCCESS;
+    }
+
+    res = mfG4GetFactoryTest(pwd, resp, &resplen, verbose);
+    if (res == PM3_SUCCESS && resplen > 2) {
+        PrintAndLogEx(INFO, "Raw test   [%02d]: %s", resplen, sprint_hex_inrow(resp, resplen));
+        return PM3_ESOFT;
+    }
 
 
     return PM3_SUCCESS;

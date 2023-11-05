@@ -40,6 +40,7 @@
 #include "crypto/libpcrypto.h"
 #include "util.h" // xor
 #include "mbedtls/sha1.h"       // SHA1
+#include "cmdhf14a.h"
 #include "gen4.h"
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
@@ -1174,7 +1175,7 @@ int mfGen3Freeze(void) {
     }
 }
 
-static int mfG4ExCommand(uint8_t cmd, uint8_t *pwd, uint8_t *data, size_t datalen, uint8_t *response, size_t *responselen) {
+static int mfG4ExCommand(uint8_t cmd, uint8_t *pwd, uint8_t *data, size_t datalen, uint8_t *response, size_t *responselen, bool verbose) {
     struct p {
         uint8_t cmdheader;
         uint8_t pwd[4];
@@ -1196,31 +1197,65 @@ static int mfG4ExCommand(uint8_t cmd, uint8_t *pwd, uint8_t *data, size_t datale
         memcpy(payload.data, data, datalen);
     }
 
+    int resplen = 0;
+
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_G4_RDBL, (uint8_t *)&payload, 1 + 4 + 1 + datalen);
+    SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_RAW | ISO14A_NO_RATS | ISO14A_APPEND_CRC, 6 + datalen, 0, (uint8_t *)&payload, 6 + datalen);
+
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_RDBL, &resp, 1500)) {
-        if (resp.status != PM3_SUCCESS) {
-            return PM3_EUNDEF;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+        if (resp.oldarg[0] != 2) {
+            if (verbose) PrintAndLogEx(ERR, "No card in the field.");
+            return PM3_ETIMEOUT;
+        }
+        
+        iso14a_card_select_t card;
+        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+            PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
+            PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+        }
+    } else {
+        if (verbose) PrintAndLogEx(ERR, "No card in the field.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+        resplen = resp.oldarg[0];
+    
+        if (!resplen) {
+            if (verbose) PrintAndLogEx(ERR, "No card response.");
+            return PM3_EFAILED;
+        }
+
+        resplen = resplen - 2; // 14A CRC
+        if (resplen < 0)
+            resplen = 0;
+
+        if (resplen > 40) {
+            if (verbose) PrintAndLogEx(ERR, "Buffer too small(%d).", resplen);
+            return PM3_EOVFLOW;
         }
 
         if (response != NULL)
-            memcpy(response, resp.data.asBytes, resp.length);
+            memcpy(response, resp.data.asBytes, resplen);
 
         if (responselen != NULL)
-            *responselen = resp.length;
+            *responselen = resplen;
+
+        return PM3_SUCCESS;
     } else {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        if (verbose) PrintAndLogEx(ERR, "Reply timeout.");
         return PM3_ETIMEOUT;
     }
-    return PM3_SUCCESS;
 }
 
-int mfG4GetConfig(uint8_t *pwd, uint8_t *data, size_t *datalen) {
+int mfG4GetConfig(uint8_t *pwd, uint8_t *data, size_t *datalen, bool verbose) {
     uint8_t resp[40] = {0};
     size_t resplen = 0;
 
-    int res = mfG4ExCommand(GEN4_CMD_DUMP_CONFIG, pwd, NULL, 0, resp, &resplen);
+    int res = mfG4ExCommand(GEN4_CMD_DUMP_CONFIG, pwd, NULL, 0, resp, &resplen, verbose);
     if (res != PM3_SUCCESS) {
         return PM3_EUNDEF;
     }
@@ -1234,11 +1269,11 @@ int mfG4GetConfig(uint8_t *pwd, uint8_t *data, size_t *datalen) {
     return PM3_SUCCESS;
 }
 
-int mfG4GetFactoryTest(uint8_t *pwd, uint8_t *data, size_t *datalen) {
+int mfG4GetFactoryTest(uint8_t *pwd, uint8_t *data, size_t *datalen, bool verbose) {
     uint8_t resp[40] = {0};
     size_t resplen = 0;
 
-    int res = mfG4ExCommand(GEN4_CMD_FACTORY_TEST, pwd, NULL, 0, resp, &resplen);
+    int res = mfG4ExCommand(GEN4_CMD_FACTORY_TEST, pwd, NULL, 0, resp, &resplen, verbose);
     if (res != PM3_SUCCESS) {
         return PM3_EUNDEF;
     }
