@@ -1289,7 +1289,7 @@ CF <passwd> 69 <00-01>                           // (De)Activate Ultralight mode
 CF <passwd> 6A <00-03>                           // Select Ultralight mode
 CF <passwd> 6B <1b>                              // Set Ultralight and M1 maximum read/write sectors
 CF <passwd> C6                                   // Dump configuration
-CF <passwd> CC                                   // Factory test, returns 6666
+CF <passwd> CC                                   // Factory test, returns 6666 for generic card, 02AA for limited functionality card and 06A0 for broken functionality card
 CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
 CF <passwd> CE <1b block number>                 // Backdoor read 16b block
 CF <passwd> CF <1b param>                        // (De)Activate direct write to block 0
