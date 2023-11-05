@@ -1375,6 +1375,8 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
     PrintAndLogEx(INFO, "Wiegand decode");
     wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
     HIDTryUnpack(&packed);
+
+    return PM3_SUCCESS;
 }
 
 static void iclass_decode_credentials(uint8_t *data) {
