@@ -7473,11 +7473,22 @@ static int CmdHF14AGen4Info(const char *cmd) {
     }
 
     PrintAndLogEx(INFO, "---------- Gen4 configuration ----------");
-    PrintAndLogEx(INFO, "Raw config [%02d]: %s", resplen, sprint_hex_inrow(resp, resplen));
     if (resplen != 30 && resplen != 32) {
+        PrintAndLogEx(INFO, "Raw config [%02d]: %s", resplen, sprint_hex_inrow(resp, resplen));
         PrintAndLogEx(WARNING, "Unknown config format");
         return PM3_SUCCESS;
     }
+    if (verbose)
+        PrintAndLogEx(INFO, "Raw config [%02d]: %s", resplen, sprint_hex_inrow(resp, resplen));
+
+    PrintAndLogEx(INFO, "UL protocol: %02x", resp[0]);
+    PrintAndLogEx(INFO, "UID length: %02x", resp[1]);
+    PrintAndLogEx(INFO, "Password: %s", sprint_hex_inrow(&resp[2], 4));
+    PrintAndLogEx(INFO, "GTU mode: %02x", resp[6]);
+    PrintAndLogEx(INFO, "ATS [%d]: %s", resp[7], sprint_hex_inrow(&resp[8], resp[7]));
+    PrintAndLogEx(INFO, "ATQA: %02x%02x", resp[25]);
+    PrintAndLogEx(INFO, "SAK: %02x", resp[26]);
+
 
     res = mfG4GetFactoryTest(pwd, resp, &resplen, false);
     if (res == PM3_SUCCESS && resplen > 2) {
@@ -7493,7 +7504,6 @@ static int CmdHF14AGen4Info(const char *cmd) {
         else
             PrintAndLogEx(INFO, "Card type      : unknown %02x%02x", resp[resplen - 2], resp[resplen - 1]);
     }
-
 
     return PM3_SUCCESS;
 }
