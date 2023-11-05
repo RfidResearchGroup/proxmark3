@@ -7465,7 +7465,10 @@ static int CmdHF14AGen4Info(const char *cmd) {
     size_t resplen = 0;
     int res = mfG4GetConfig(pwd, resp, &resplen, verbose);
     if (res != PM3_SUCCESS || resplen == 0) {
-        PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%d", res, resplen);
+        if (res == PM3_ETIMEOUT)
+            PrintAndLogEx(ERR, "No card in the field or card command timeout.");
+        else
+            PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%d", res, resplen);
         return PM3_ESOFT;
     }
 

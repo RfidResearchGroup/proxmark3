@@ -1257,7 +1257,7 @@ int mfG4GetConfig(uint8_t *pwd, uint8_t *data, size_t *datalen, bool verbose) {
 
     int res = mfG4ExCommand(GEN4_CMD_DUMP_CONFIG, pwd, NULL, 0, resp, &resplen, verbose);
     if (res != PM3_SUCCESS) {
-        return PM3_EUNDEF;
+        return res;
     }
 
     if (data != NULL)
@@ -1275,7 +1275,7 @@ int mfG4GetFactoryTest(uint8_t *pwd, uint8_t *data, size_t *datalen, bool verbos
 
     int res = mfG4ExCommand(GEN4_CMD_FACTORY_TEST, pwd, NULL, 0, resp, &resplen, verbose);
     if (res != PM3_SUCCESS) {
-        return PM3_EUNDEF;
+        return res;
     }
 
     if (data != NULL)
