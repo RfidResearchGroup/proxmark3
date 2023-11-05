@@ -113,12 +113,12 @@ static int CmdNfcDecode(const char *Cmd) {
             return res;
         }
 
-        uint8_t *tmp = dump; 
+        uint8_t *tmp = dump;
 
         // if not MIFARE Classic default sizes,  assume its Ultralight/NTAG
-        if (   bytes_read != MIFARE_4K_MAX_BYTES 
-            && bytes_read != MIFARE_2K_MAX_BYTES 
-            && bytes_read != MIFARE_1K_MAX_BYTES 
+        if (   bytes_read != MIFARE_4K_MAX_BYTES
+            && bytes_read != MIFARE_2K_MAX_BYTES
+            && bytes_read != MIFARE_1K_MAX_BYTES
             && bytes_read != MIFARE_MINI_MAX_BYTES) {
 
             uint8_t **pd = &tmp;

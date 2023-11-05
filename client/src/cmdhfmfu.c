@@ -70,7 +70,7 @@ static uint8_t default_pwd_pack[][4] = {
 };
 
 static uint64_t UL_TYPES_ARRAY[] = {
-    MFU_TT_UNKNOWN,           MFU_TT_UL,          
+    MFU_TT_UNKNOWN,           MFU_TT_UL,
     MFU_TT_UL_C,              MFU_TT_UL_EV1_48,
     MFU_TT_UL_EV1_128,        MFU_TT_NTAG,
     MFU_TT_NTAG_203,          MFU_TT_NTAG_210,
@@ -79,7 +79,7 @@ static uint64_t UL_TYPES_ARRAY[] = {
     MFU_TT_MY_D,              MFU_TT_MY_D_NFC,
     MFU_TT_MY_D_MOVE,         MFU_TT_MY_D_MOVE_NFC,
     MFU_TT_MY_D_MOVE_LEAN,    MFU_TT_NTAG_I2C_1K,
-    MFU_TT_NTAG_I2C_2K,       MFU_TT_NTAG_I2C_1K_PLUS, 
+    MFU_TT_NTAG_I2C_2K,       MFU_TT_NTAG_I2C_1K_PLUS,
     MFU_TT_NTAG_I2C_2K_PLUS,  MFU_TT_FUDAN_UL,
     MFU_TT_NTAG_213_F,        MFU_TT_NTAG_216_F,
     MFU_TT_UL_EV1,            MFU_TT_UL_NANO_40,
@@ -1891,7 +1891,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     }
 
     // Read signature
-    if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 | 
+    if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 |
                    MFU_TT_NTAG_210u | MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
                    MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
                    MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS))) {

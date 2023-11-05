@@ -1208,7 +1208,7 @@ static int mfG4ExCommand(uint8_t cmd, uint8_t *pwd, uint8_t *data, size_t datale
             if (verbose) PrintAndLogEx(ERR, "No card in the field.");
             return PM3_ETIMEOUT;
         }
-        
+
         iso14a_card_select_t card;
         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
         if (verbose) {
@@ -1223,7 +1223,7 @@ static int mfG4ExCommand(uint8_t cmd, uint8_t *pwd, uint8_t *data, size_t datale
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         resplen = resp.oldarg[0];
-    
+
         if (!resplen) {
             if (verbose) PrintAndLogEx(ERR, "No card response.");
             return PM3_EFAILED;

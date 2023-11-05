@@ -1324,7 +1324,7 @@ static int CmdHFiClassESetBlk(const char *Cmd) {
 static bool iclass_detect_new_pacs(uint8_t *d) {
     uint8_t n = 0;
     while (n++ < (PICOPASS_BLOCK_SIZE / 2)) {
-        if (d[n] && 
+        if (d[n] &&
             d[n + 1] == 0xA6) {
             return true;
         }
@@ -1332,7 +1332,7 @@ static bool iclass_detect_new_pacs(uint8_t *d) {
     return false;
 }
 
-// block 7 decoder for PACS 
+// block 7 decoder for PACS
 static int iclass_decode_credentials_new_pacs(uint8_t *d) {
 
     uint8_t offset = 0;
@@ -1349,7 +1349,7 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
         return PM3_EMALLOC;
     }
 
-    uint8_t n = PICOPASS_BLOCK_SIZE - offset - 2;    
+    uint8_t n = PICOPASS_BLOCK_SIZE - offset - 2;
     byte_2_binstr(binstr, d + offset + 2, n);
 
     PrintAndLogEx(NORMAL, "");
