@@ -7434,6 +7434,35 @@ static int CmdHF14AMfView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// info about Gen4 GTU card
+static int CmdHF14AGen4Info(const char *cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf ginfo",
+                  "Read info about magic gen4 GTU card.",
+                  "hf mf ginfo                  --> get info with default password 00000000\n"
+                  "hf mf ginfo --pwd 01020304   --> get info with password\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_str0("p", "pwd", "<hex>", "password 4bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, cmd, argtable, false);
+    //bool verbose = arg_get_lit(ctx, 1);
+
+    int pwd_len = 0;
+    uint8_t pwd[4] = {0};
+    CLIGetHexWithReturn(ctx, 3, pwd, &pwd_len);
+    CLIParserFree(ctx);
+
+
+
+
+
+    return PM3_SUCCESS;
+}
+
 // Read block from Gen4 GTU card
 static int CmdHF14AGen4GetBlk(const char *cmd) {
     CLIParserContext *ctx;
@@ -8689,6 +8718,7 @@ static command_t CommandTable[] = {
     {"gen3blk",     CmdHf14AGen3Block,      IfPm3Iso14443a,  "Overwrite manufacturer block"},
     {"gen3freeze",  CmdHf14AGen3Freeze,     IfPm3Iso14443a,  "Perma lock UID changes. irreversible"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GTU") " --------------------------"},
+    {"ginfo",       CmdHF14AGen4Info,       IfPm3Iso14443a,  "Info about configuration of the card"},
     {"ggetblk",     CmdHF14AGen4GetBlk,     IfPm3Iso14443a,  "Read block from card"},
     {"gload",       CmdHF14AGen4Load,       IfPm3Iso14443a,  "Load dump to card"},
     {"gsave",       CmdHF14AGen4Save,       IfPm3Iso14443a,  "Save dump from card into file or emulator"},
