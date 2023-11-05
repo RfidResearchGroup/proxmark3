@@ -3403,7 +3403,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int loadKeys(char *filename) {
+static int iclass_load_keys(char *filename) {
 
     uint8_t *dump = NULL;
     size_t bytes_read = 0;
@@ -3412,46 +3412,30 @@ static int loadKeys(char *filename) {
         return PM3_EFILE;
     }
 
-    if (bytes_read > ICLASS_KEYS_MAX * 8) {
+    if (bytes_read > ICLASS_KEYS_MAX *  PICOPASS_BLOCK_SIZE) {
         PrintAndLogEx(WARNING, "File is too long to load - bytes: %zu", bytes_read);
         free(dump);
         return PM3_EFILE;
     }
     size_t i = 0;
-    for (; i < bytes_read / 8; i++)
-        memcpy(iClass_Key_Table[i], dump + (i * 8), 8);
+    for (; i < bytes_read / PICOPASS_BLOCK_SIZE; i++) {
+        memcpy(iClass_Key_Table[i], dump + (i * PICOPASS_BLOCK_SIZE), PICOPASS_BLOCK_SIZE);
+    }
 
     free(dump);
     PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2zd") " keys from %s", i, filename);
     return PM3_SUCCESS;
 }
 
-static int saveKeys(char *filename) {
-    FILE *f;
-    f = fopen(filename, "wb");
-    if (!f) {
-        PrintAndLogEx(FAILED, "File: " _YELLOW_("%s") ": not found or locked.", filename);
-        return PM3_EFILE;
-    }
-    for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++) {
-        if (fwrite(iClass_Key_Table[i], 8, 1, f) != 1) {
-            PrintAndLogEx(WARNING, "save key failed to write to file:" _YELLOW_("%s"), filename);
-            break;
-        }
-    }
-    fclose(f);
-    return PM3_SUCCESS;
-}
-
-static int printKeys(void) {
+static int iclass_print_keys(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "idx| key");
     PrintAndLogEx(INFO, "---+------------------------");
     for (uint8_t i = 0; i < ICLASS_KEYS_MAX; i++) {
-        if (memcmp(iClass_Key_Table[i], "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0)
+        if (memcmp(iClass_Key_Table[i], zeros, sizeof(zeros)) == 0)
             PrintAndLogEx(INFO, " %u |", i);
         else
-            PrintAndLogEx(INFO, " %u | " _YELLOW_("%s"), i, sprint_hex(iClass_Key_Table[i], 8));
+            PrintAndLogEx(INFO, " %u | " _YELLOW_("%s"), i, sprint_hex(iClass_Key_Table[i], PICOPASS_BLOCK_SIZE));
     }
     PrintAndLogEx(INFO, "---+------------------------");
     PrintAndLogEx(NORMAL, "");
@@ -3544,11 +3528,15 @@ static int CmdHFiClassManageKeys(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "    New key[%d] " _GREEN_("%s"), key_nr, sprint_hex_inrow(iClass_Key_Table[key_nr], 8));
             return PM3_SUCCESS;
         case 4:
-            return printKeys();
+            return iclass_print_keys();
         case 5:
-            return loadKeys(filename);
-        case 6:
-            return saveKeys(filename);
+            return iclass_load_keys(filename);
+        case 6: {
+            bool isOK = saveFile(filename, ".bin", iClass_Key_Table, sizeof(iClass_Key_Table));
+            if (isOK == false) {
+                return PM3_EFILE;
+            }
+        }
     }
     return PM3_SUCCESS;
 }
