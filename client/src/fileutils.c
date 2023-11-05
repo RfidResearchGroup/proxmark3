@@ -292,7 +292,7 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             break;
         }
         case jsfMfc_v2: {
-            
+
             iso14a_mf_extdump_t xdump;
             memcpy(&xdump, data, sizeof(iso14a_mf_extdump_t));
 
@@ -1038,7 +1038,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
     // 256 + 2 newline chars + 1 null terminator
     char line[256 + 2 + 1];
     memset(line, 0, sizeof(line));
-    
+
     udata_t udata = (udata_t)data;
     int n = 0;
     uint32_t counter = 0;
@@ -1067,14 +1067,14 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
 //                param_gethex_to_eol(line + 4, 0, udata.mfc->card_info.uid, sizeof(udata.mfc->card_info.uid), &n);
             }
             continue;
-        } 
+        }
 
         if (str_startswith(line, "atqa:")) {
             if (ft == NFC_DF_MFC) {
 //                param_gethex_to_eol(line + 5, 0, udata.mfc->card_info.atqa, sizeof(udata.mfc->card_info.atqa), &n);
             }
             continue;
-        } 
+        }
 
         if (str_startswith(line, "sak:")) {
             if (ft == NFC_DF_MFC) {
@@ -1083,7 +1083,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
 //                udata.mfc->card_info.sak = sak & 0xFF;
             }
             continue;
-        } 
+        }
 
         if (str_startswith(line, "signature:")) {
             if (ft == NFC_DF_MFC) {
@@ -1091,7 +1091,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 param_gethex_to_eol(line + 11, 0, udata.mfu->signature, sizeof(udata.mfu->signature), &n);
             }
             continue;
-        } 
+        }
 
         if (str_startswith(line, "mifare version:")) {
             if (ft == NFC_DF_MFC) {
@@ -1099,7 +1099,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 param_gethex_to_eol(line + 16, 0, udata.mfu->version, sizeof(udata.mfu->version), &n);
             }
             continue;
-        } 
+        }
 
         if (str_startswith(line, "counter 0:")) {
             int no = 0;
@@ -1111,7 +1111,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 udata.mfu->counter_tearing[0][2] = no & 0xFF;
             }
             continue;
-        } 
+        }
 
         if (str_startswith(line, "tearing 0:")) {
             if (ft == NFC_DF_MFC) {
@@ -1121,7 +1121,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 udata.mfu->counter_tearing[0][3] = b & 0xFF;
             }
             continue;
-        } 
+        }
 
         if (str_startswith(line, "counter 1:")) {
             int no = 0;
@@ -1133,7 +1133,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 udata.mfu->counter_tearing[1][2] = no & 0xFF;
             }
             continue;
-        } 
+        }
 
         if (str_startswith(line, "tearing 1:")) {
             if (ft == NFC_DF_MFC) {
@@ -1155,7 +1155,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 udata.mfu->counter_tearing[2][2] = no & 0xFF;
             }
             continue;
-        } 
+        }
 
         if (str_startswith(line, "tearing 2:")) {
             if (ft == NFC_DF_MFC) {
@@ -1174,7 +1174,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 udata.mfu->pages = n;
             }
             continue;
-        } 
+        }
 
         // Page 0: 04 10 56 CA
         if (str_startswith(line, "page ")) {
@@ -2317,7 +2317,7 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
                 break;
             case NFC_DF_PICOPASS:
                 PrintAndLogEx(INFO, "detected PICOPASS based dump format");
-                break; 
+                break;
             case NFC_DF_UNKNOWN:
                 PrintAndLogEx(WARNING, "failed to detected dump format");
                 break;

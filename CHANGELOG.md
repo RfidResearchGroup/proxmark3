@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mf ginfo` command for get info about Gen4 GTU configuration (@merlokk)
  - Added support for loading Flipper PICOPASS dump files (@iceman1001)
  - Fixed unknown chip identification (@jmichelp)
  - Fixed `nfc decode` - now properly handles MFU dump files (@iceman1001)

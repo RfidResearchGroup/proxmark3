@@ -7434,6 +7434,83 @@ static int CmdHF14AMfView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// info about Gen4 GTU card
+static int CmdHF14AGen4Info(const char *cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf ginfo",
+                  "Read info about magic gen4 GTU card.",
+                  "hf mf ginfo                  --> get info with default password 00000000\n"
+                  "hf mf ginfo --pwd 01020304   --> get info with password\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_str0("p", "pwd", "<hex>", "password 4bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
+
+    int pwd_len = 0;
+    uint8_t pwd[4] = {0};
+    CLIGetHexWithReturn(ctx, 3, pwd, &pwd_len);
+    CLIParserFree(ctx);
+
+    if (pwd_len != 0 && pwd_len != 4) {
+        PrintAndLogEx(FAILED, "Password must be 4 bytes length, got " _YELLOW_("%u"), pwd_len);
+        return PM3_EINVARG;
+    }
+
+    uint8_t resp[40] = {0};
+    size_t resplen = 0;
+    int res = mfG4GetConfig(pwd, resp, &resplen, verbose);
+    if (res != PM3_SUCCESS || resplen == 0) {
+        if (res == PM3_ETIMEOUT)
+            PrintAndLogEx(ERR, "No card in the field or card command timeout.");
+        else
+            PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%d", res, resplen);
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "---------- Gen4 configuration ----------");
+    if (resplen != 30 && resplen != 32) {
+        PrintAndLogEx(INFO, "Raw config [%02d] %s", resplen, sprint_hex_inrow(resp, resplen));
+        PrintAndLogEx(WARNING, "Unknown config format");
+        return PM3_SUCCESS;
+    }
+    if (verbose)
+        PrintAndLogEx(INFO, "Raw config [%02d]..... %s", resplen, sprint_hex_inrow(resp, resplen));
+
+    PrintAndLogEx(INFO, "UL protocol......... %02x", resp[0]);
+    PrintAndLogEx(INFO, "UID length.......... %02x", resp[1]);
+    PrintAndLogEx(INFO, "Password............ %s", sprint_hex_inrow(&resp[2], 4));
+    PrintAndLogEx(INFO, "GTU mode............ %02x", resp[6]);
+    PrintAndLogEx(INFO, "ATS [%02d]............ %s", resp[7], sprint_hex_inrow(&resp[8], resp[7]));
+    PrintAndLogEx(INFO, "ATQA................ %02x%02x", resp[24], resp[25]);
+    PrintAndLogEx(INFO, "SAK................. %02x", resp[26]);
+    PrintAndLogEx(INFO, "UL mode............. %02x", resp[27]);
+    PrintAndLogEx(INFO, "max rd/wr sectors... %02x", resp[28]);
+    PrintAndLogEx(INFO, "block0 direct wr.... %02x", resp[29]);
+
+
+    res = mfG4GetFactoryTest(pwd, resp, &resplen, false);
+    if (res == PM3_SUCCESS && resplen > 2) {
+        if (verbose)
+            PrintAndLogEx(INFO, "Raw test [%02d]....... %s", resplen, sprint_hex_inrow(resp, resplen));
+
+        if (resp[resplen - 2] == 0x66 && resp[resplen - 1] == 0x66)
+            PrintAndLogEx(INFO, "Card type........... generic");
+        else if (resp[resplen - 2] == 0x02 && resp[resplen - 1] == 0xaa)
+            PrintAndLogEx(INFO, "Card type........... limited functionality");
+        else if (resp[resplen - 2] == 0x06 && resp[resplen - 1] == 0xa0)
+            PrintAndLogEx(INFO, "Card type........... broken functionality");
+        else
+            PrintAndLogEx(INFO, "Card type........... unknown %02x%02x", resp[resplen - 2], resp[resplen - 1]);
+    }
+
+    return PM3_SUCCESS;
+}
+
 // Read block from Gen4 GTU card
 static int CmdHF14AGen4GetBlk(const char *cmd) {
     CLIParserContext *ctx;
@@ -8689,6 +8766,7 @@ static command_t CommandTable[] = {
     {"gen3blk",     CmdHf14AGen3Block,      IfPm3Iso14443a,  "Overwrite manufacturer block"},
     {"gen3freeze",  CmdHf14AGen3Freeze,     IfPm3Iso14443a,  "Perma lock UID changes. irreversible"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GTU") " --------------------------"},
+    {"ginfo",       CmdHF14AGen4Info,       IfPm3Iso14443a,  "Info about configuration of the card"},
     {"ggetblk",     CmdHF14AGen4GetBlk,     IfPm3Iso14443a,  "Read block from card"},
     {"gload",       CmdHF14AGen4Load,       IfPm3Iso14443a,  "Load dump to card"},
     {"gsave",       CmdHF14AGen4Save,       IfPm3Iso14443a,  "Save dump from card into file or emulator"},

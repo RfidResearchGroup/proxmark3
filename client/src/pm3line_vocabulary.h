@@ -366,6 +366,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mf gen3uid" },
     { 0, "hf mf gen3blk" },
     { 0, "hf mf gen3freeze" },
+    { 0, "hf mf ginfo" },
     { 0, "hf mf ggetblk" },
     { 0, "hf mf gload" },
     { 0, "hf mf gsave" },

@@ -96,6 +96,9 @@ int mfGen3UID(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid);
 int mfGen3Block(uint8_t *block, int blockLen, uint8_t *newBlock);
 int mfGen3Freeze(void);
 
+int mfG4GetConfig(uint8_t *pwd, uint8_t *data, size_t *datalen, bool verbose);
+int mfG4GetFactoryTest(uint8_t *pwd, uint8_t *data, size_t *datalen, bool verbose);
+
 int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags);
 int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags);
 

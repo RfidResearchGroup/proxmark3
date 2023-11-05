@@ -279,6 +279,7 @@
             "command": "data bmap",
             "description": "Breaks down a hex value to binary according a template data bmap -d 16 -m 4,4 This will give two rows each with four bits",
             "notes": [
+                "data bmap -d 3B",
                 "data bmap -d 3B -m 2,5,1"
             ],
             "offline": true,
@@ -3026,10 +3027,10 @@
         },
         "hf iclass configcard": {
             "command": "hf iclass configcard",
-            "description": "Manage reader configuration card via Cardhelper, The generated config card will be uploaded to device emulator memory. You can start simulating `hf iclass sim -t 3` or use the emul commands",
+            "description": "Manage reader configuration card via Cardhelper or internal database, The generated config card will be uploaded to device emulator memory. You can start simulating `hf iclass sim -t 3` or use the emul commands",
             "notes": [
-                "hf iclass configcard -l -> download config card settings",
-                "hf iclass configcard -p -> print all config cards",
+                "hf iclass configcard -l -> download config card settings from cardhelper",
+                "hf iclass configcard -p -> print all config cards in the database",
                 "hf iclass configcard --ci 1 -> view config card setting in slot 1",
                 "hf iclass configcard -g --ci 0 -> generate config file from slot 0"
             ],
@@ -4552,6 +4553,21 @@
                 "-p, --pwd <hex> password 4bytes"
             ],
             "usage": "hf mf ggetblk [-hv] -b <dec> [-p <hex>]"
+        },
+        "hf mf ginfo": {
+            "command": "hf mf ginfo",
+            "description": "Read info about magic gen4 GTU card.",
+            "notes": [
+                "hf mf ginfo -> get info with default password 00000000",
+                "hf mf ginfo --pwd 01020304 -> get info with password"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output",
+                "-p, --pwd <hex> password 4bytes"
+            ],
+            "usage": "hf mf ginfo [-hv] [-p <hex>]"
         },
         "hf mf gload": {
             "command": "hf mf gload",
@@ -8939,7 +8955,7 @@
                 "-1, --ht1 Card type Hitag 1",
                 "-2, --ht2 Card type Hitag 2",
                 "-s, --hts Card type Hitag S",
-                "-m, --htm Card type Hitag \u03bc"
+                "-m, --htm Card type Hitag \u041e\u0458"
             ],
             "usage": "lf hitag eload [-h12sm] -f <fn>"
         },
@@ -12015,8 +12031,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 696,
+        "commands_extracted": 697,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-10-30T12:11:34"
+        "extracted_on": "2023-11-05T22:22:55"
     }
 }
