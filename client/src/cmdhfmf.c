@@ -7482,7 +7482,21 @@ static int CmdHF14AGen4Info(const char *cmd) {
         PrintAndLogEx(INFO, "Raw config [%02d]..... %s", resplen, sprint_hex_inrow(resp, resplen));
 
     PrintAndLogEx(INFO, "UL protocol......... %02x", resp[0]);
-    PrintAndLogEx(INFO, "UID length.......... %02x", resp[1]);
+    PrintAndLogEx(INFO, "UID length.......... %02x" NOLF, resp[1]);
+    switch (resp[1]){
+        case 0x01:
+            PrintAndLogEx(NORMAL, " (4 byte)");
+            break;
+        case 0x01:
+            PrintAndLogEx(NORMAL, " (7 byte)");
+            break;
+        case 0x02:
+            PrintAndLogEx(NORMAL, " (10 byte)");
+            break;
+        default:
+            PrintAndLogEx(NORMAL, " (unknown %02x)", resp[1]);
+            break;
+    }
     PrintAndLogEx(INFO, "Password............ %s", sprint_hex_inrow(&resp[2], 4));
     PrintAndLogEx(INFO, "GTU mode............ %02x", resp[6]);
     PrintAndLogEx(INFO, "ATS [%02d]............ %s", resp[7], sprint_hex_inrow(&resp[8], resp[7]));
