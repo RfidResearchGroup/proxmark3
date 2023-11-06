@@ -109,8 +109,6 @@ UID 7b:
 ## MIFARE Classic Gen1A aka UID
 ^[Top](#top)
 
-aka MF ZERO
-
 ### Identify
 ^[Top](#top)
 
@@ -269,8 +267,6 @@ hf 14a info
 
 ## MIFARE Classic Gen1A OTP/One Time Programming
 ^[Top](#top)
-
-aka MF OTP 2.0
 
 Similar to Gen1A, but after first block 0 edit, tag no longer replies to 0x40 command.
 
@@ -441,8 +437,6 @@ hf 14a reader
 
 ## MIFARE Classic DirectWrite, FUID version aka 1-write
 ^[Top](#top)
-
-aka MF OTP
 
 Same as MIFARE Classic DirectWrite, but block0 can be written only once.
 
@@ -651,8 +645,7 @@ No implemented commands today
 
 **TODO**
 
-* ZXUID, EUID, ICUID, KUID, HUID, RFUID ?
-* Some cards exhibit a specific SAK=28 ??
+* ZXUID, EUID, ICUID, KUID?
 
 ## MIFARE Classic Super
 ^[Top](#top)
@@ -874,8 +867,6 @@ See `--uid` and `--full`
 ## MIFARE Ultralight EV1 DirectWrite
 ^[Top](#top)
 
-aka UL2
-
 Similar to MFUL DirectWrite
 
 ### Identify
@@ -956,11 +947,6 @@ hf 14a info
 * BCC: computed
 * ATS: 0A78008102DBA0C119402AB5
 * Anticol shortcut (CL1/3000): fails
-
-**TODO**
-
-* UL-X, UL-Y, UL-Z, ULtra, UL-5 ?
-
 
 # NTAG
 ^[Top](#top)
