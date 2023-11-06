@@ -812,19 +812,29 @@ static int CmdStatus(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw status",
                   "Show runtime status information about the connected Proxmark3",
-                  "hw status"
+                  "hw status\n"
+                  "hw status --ms 1000 -> Test connection speed with 1000ms timeout\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_int0("m", "ms", "<ms>", "speed test timeout in micro seconds"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int32_t speedTestTimeout = arg_get_int_def(ctx, 1, -1);
     CLIParserFree(ctx);
+
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandNG(CMD_STATUS, NULL, 0);
-    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000) == false) {
+    if (speedTestTimeout < 0) {
+        speedTestTimeout = 0;
+        SendCommandNG(CMD_STATUS, NULL, 0);
+    } else {
+        SendCommandNG(CMD_STATUS, (uint8_t *)&speedTestTimeout, sizeof(speedTestTimeout));
+    }
+
+    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000 + speedTestTimeout) == false) {
         PrintAndLogEx(WARNING, "Status command timeout. Communication speed test timed out");
         return PM3_ETIMEOUT;
     }

@@ -37,6 +37,9 @@ int tearoff_hook(void);
 // ADC Vref = 3300mV,  (240k-10M):240k voltage divider,  140800 mV
 #define MAX_ADC_LF_VOLTAGE 140800
 
+// Default connection speed test timeout, used in hw status
+#define CONN_SPEED_TEST_MIN_TIME_DEFAULT 500 // in milliseconds
+
 extern int ToSendMax;
 extern uint8_t ToSend[];
 

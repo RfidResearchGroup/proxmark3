@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `--ms` option in `hw status` to specify the timeout of connection speed test (@wh201906)
  - Added `hf mf ginfo` command for get info about Gen4 GTU configuration (@merlokk)
  - Added support for loading Flipper PICOPASS dump files (@iceman1001)
  - Fixed unknown chip identification (@jmichelp)
@@ -101,7 +102,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed compiling liblua on iOS (@The-SamminAter)
  - Changed `hf_mf_luxeo_dump.lua` - now have list of keys to iterate (@iceman1001)
  - Fixed the timeout of TCP connections (@wh201906)
- - Changed the connection timeout configurable (@wh201906)
+ - Added `hw timeout` - make the connection timeout configurable (@wh201906)
 
 ## [Seven.4.16717][2023-06-25]
  - Change `hf 14a info` - now identifes QL88 tags (@iceman1001)
@@ -341,6 +342,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added new standalone mode `lf_em4100rsww` (@zabszk)
  - Fixed `hf 15 slixdisable` wrong pass id (@r1ddl3rz)
  - Added `script run hf_mf_hid_sim.lua` (@micsen)
+ - Added flashmem support in `HF_14BSNIFF` standalone mode (@wh201906)
+ - Changed `HF_14ASNIFF` standalone mode - now supports Proxmark3 without flashmem (@wh201906)
 
 ## [Frostbit.4.14831][2022-01-11]
  - Changed Wiegand format lookup - now case-insensitive (@iceman1001)
