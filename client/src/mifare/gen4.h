@@ -18,6 +18,8 @@
 #ifndef __GEN4_H
 #define __GEN4_H
 
+#include "common.h"
+
 #define GEN4_CMD_CONFIG_GTU                0x32
 #define GEN4_CMD_CONFIG_ATS                0x34
 #define GEN4_CMD_CONFIG_ATQA_SAK           0x35
@@ -33,5 +35,11 @@
 #define GEN4_CMD_SET_CONFIG                0xF0
 #define GEN4_CMD_SET_CONFIG_PERMANENT      0xF1
 #define GEN4_CMD_CHANGE_PASSWORD           0xFE
+
+int mfG4GetConfig(uint8_t *pwd, uint8_t *data, size_t *datalen, bool verbose);
+int mfG4GetFactoryTest(uint8_t *pwd, uint8_t *data, size_t *datalen, bool verbose);
+
+int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags);
+int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags);
 
 #endif

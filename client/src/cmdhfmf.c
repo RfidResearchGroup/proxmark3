@@ -39,6 +39,7 @@
 #include "cmdhw.h"                 // set_fpga_mode
 #include "loclass/cipherutils.h"   // BitstreamOut_t
 #include "proxendian.h"
+#include "mifare/gen4.h"
 
 static int CmdHelp(const char *Cmd);
 
