@@ -25,13 +25,12 @@ Useful docs:
   * [MIFARE Classic block0](#mifare-classic-block0)
   * [MIFARE Classic Gen1A aka UID](#mifare-classic-gen1a-aka-uid)
   * [MIFARE Classic Gen1B](#mifare-classic-gen1b)
-  * [MIFARE Classic Gen1A OTP/One Time Programming](#mifare-classic-gen1a-otpone-time-programming)
+  * [MIFARE Classic OTP2](#mifare-classic-otp2)
   * [MIFARE Classic DirectWrite aka Gen2 aka CUID](#mifare-classic-directwrite-aka-gen2-aka-cuid)
   * [MIFARE Classic DirectWrite, FUID version aka 1-write](#mifare-classic-directwrite-fuid-version-aka-1-write)
-  * [MIFARE Classic DirectWrite, UFUID version](#mifare-classic-directwrite-ufuid-version)
-  * [MIFARE Classic, other versions](#mifare-classic-other-versions)
   * [MIFARE Classic Gen3 aka APDU](#mifare-classic-gen3-aka-apdu)
-  * [MIFARE Classic Gen4 aka GDM](#mifare-classic-gen4-aka-gdm)
+  * [MIFARE Classic USCUID](#mifare-classic-uscuid)
+  * [MIFARE Classic, other versions](#mifare-classic-other-versions)
   * [MIFARE Classic Super](#mifare-classic-super)
 - [MIFARE Ultralight](#mifare-ultralight)
   * [MIFARE Ultralight blocks 0..2](#mifare-ultralight-blocks-02)
@@ -300,6 +299,9 @@ UID 7b:
 ## MIFARE Classic Gen1A aka UID
 ^[Top](#top)
 
+* Other names:
+  - ZERO (RU)
+
 ### Identify
 ^[Top](#top)
 
@@ -456,14 +458,17 @@ hf 14a info
 * Read: `40(7)`, `30xx`
 * Write: `40(7)`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
-## MIFARE Classic Gen1A OTP/One Time Programming
+## MIFARE Classic OTP2
 ^[Top](#top)
 
 Similar to Gen1A, but after first block 0 edit, tag no longer replies to 0x40 command.
 
-Initial UID is 00000000
+### Characteristics
 
-All bytes are 00 from factory wherever possible.
+* Initial UID is 00000000
+* BCC: unknown
+* SAK/ATQA: fixed
+* All bytes are 00 from factory wherever possible.
 
 ### Identify
 ^[Top](#top)
@@ -474,6 +479,7 @@ Only possible before personalization.
 hf 14a info
 ...
 [+] Magic capabilities : Gen 1a
+[+] Prng detection: hard
 ```
 
 ### Magic commands
@@ -485,6 +491,11 @@ hf 14a info
 ^[Top](#top)
 
 (also referred as MCT compatible by some sellers)
+
+* Other names:
+  * MF-8 (RU)
+  * MF3 (RU)
+    - What's so special about this chip in particular..?
 
 ### Identify
 ^[Top](#top)
@@ -631,39 +642,22 @@ hf 14a reader
 
 Same as MIFARE Classic DirectWrite, but block0 can be written only once.
 
-Initial UID is AA55C396
+* Other names:
+  - OTP (RU)
+
+### Characteristics
+
+* Initial UID is AA55C396
 
 ### Identify
 ^[Top](#top)
 
-Only possible before personalization.
+Only possible before personalization. *It is also possible after, but unknown how.*
 
 ```
 hf 14a info
 ...
 [+] Magic capabilities : Write Once / FUID
-```
-
-## MIFARE Classic DirectWrite, UFUID version
-^[Top](#top)
-
-Same as MIFARE Classic DirectWrite, but block0 can be locked with special command.
-
-### Identify
-^[Top](#top)
-
-**TODO**
-
-### Proxmark3 commands
-^[Top](#top)
-
-To lock definitively block0:
-```
-hf 14a raw -a -k -b 7 40
-hf 14a raw    -k      43
-hf 14a raw    -k -c   e000
-hf 14a raw    -k -c   e100
-hf 14a raw       -c   85000000000000000000000000000008
 ```
 
 ## MIFARE Classic Gen3 aka APDU
@@ -739,85 +733,133 @@ hf 14a raw -s -c  -t 2000  90F0CCCC10 041219c3219316984200e32000000000
 hf 14a raw -s -c 90FD111100
 ```
 
-## MIFARE Classic Gen4 aka GDM
+## MIFARE Classic USCUID
 ^[Top](#top)
 
-Tag has shadow mode enabled from start.
-Meaning every write or changes to normal MFC memory is restored back to a copy from persistent memory after about 3 seconds 
-off rfid field.
-Tag also seems to support Gen2 style, direct write,  to block 0 to the normal MFC memory.
-
-The persistent memory is also writable. For that tag uses its own backdoor commands.
-for example to write,  you must use a customer authentication byte, 0x80, to authenticate with an all zeros key, 0x0000000000.
-Then send the data to be written.
-
-This tag has simular commands to the [UFUID](#mifare-classic-directwrite-ufuid-version)
-This indicates that both tagtypes are developed by the same person.
-
-**OBS**
-
-When writing to persistent memory it is possible to write _bad_ ACL and perm-brick the tag. 
-
-**OBS**
-
-It is possible to write a configuration that perma locks the tag, i.e. no more magic
-
-### Identify
 ^[Top](#top)
 
-```
-hf 14a info
-...
-[+] Magic capabilities : Gen 4 GDM
-```
-### Magic commands
-^[Top](#top)
+TLDR: These magic cards have a 16 byte long configuration page, which usually starts with 0x85.
+All of the known tags using this, except for Ultralight tags, are listed here.
 
-* Auth: `80xx`+crc
-* Write: `A8xx`+crc,  `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
-* Read config: `E000`+crc
-* Write config: `E100`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
+You cannot turn a Classic tag into an Ultralight and vice-versa!
 
 ### Characteristics
 ^[Top](#top)
 
-* Have no knowledge in ATQA/SAK/BCC quirks or if there is a wipe, softbrick recover
-* Its magic part seem to be three identified custom command. 
-* Auth command 0x80, with the key 0x0000000000,  Write 0xA8 allows writing to persistent memory,  Read 0xE0  which seems to return a configuration. This is unknown today what these bytes are.
+* UID: 4/7 bytes
+* ATQA: always read from block 0
+* SAK: read from backdoor or configuration
+* BCC: read from memory, beware!
+* ATS: no/unknown
 
-Read config:
-1. sending custom auth with all zeros key
-2. send 0xE000,  will return the configuration bytes.
-`results: 850000000000000000005A5A00000008`
+### Magic commands
+^[Top](#top)
 
+* Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
+  - Backdoor read: `38xx+crc`
+  - Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
 
-Mapping of configuration bytes so far:
+  - Read configuration: `E000+crc`
+  - Write configuration: `E100+crc`; `[16 bytes data]+crc`
+* Magic wakeup (A: 00): `40(7)`, `43`
+* Magic wakeup (B: 85): `20(7)`, `23`
+  - Backdoor read main block: `30xx+crc`
+  - Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
+  - Read hidden block: `38xx+crc`
+  - Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
+
+  - Read configuration: `E000+crc`
+  - Write configuration: `E100+crc`
+  
+  **DANGER**
+  - Set main memory and config to 00 `F000+crc`
+  - Set main memory and config to FF `F100+crc`
+  - Set main memory and config to 55 (no 0A response) `F600+crc`
+  - Set backdoor memory to 00 `F800+crc`
+  - Set backdoor memory to FF `F900+crc`
+  - Set backdoor memory to 55 (no 0A response) `FE00+crc`
+ 
+### USCUID configuration guide
+^[Top](#top)
+
+1. Configuration
 ```
-850000000000000000005A5A00000008
-                              ^^  --> SAK
+85000000000000000000000000000008
+      ^^^^^^    ^^          ^^   >> ??? Mystery ???
+^^^^                             >> Gen1a mode (works with bitflip)
+    ^^                           >> Magic wakeup command (00 for 40-43; 85 for 20-23)
+            ^^                   >> Block use of Key B if readable by ACL
+              ^^                 >> CUID mode
+                  ^^             >> MFC EV1 CL2 Perso config*
+                    ^^           >> Shadow mode**
+                      ^^         >> Magic Auth command
+                        ^^       >> Static encrypted nonce mode
+                          ^^     >> Signature sector
+                              ^^ >> SAK***
+
+To enable an option, set it to 5A.
+* 5A - unfused F0. C3 - F0: CL2 UID; A5 - F1: CL2 UID with anticollision shortcut; 87 - F2: CL1 Random UID; 69 - F3: CL1 non-UID. Anything else is going to be ignored, and set as 4 bytes.
+** Do not change the real ACL! Backdoor commands only acknowledge FF0780. To recover, disable this byte and issue regular write to sector trailer.
+*** If perso byte is enabled, this SAK is ignored, and hidden SAK is used instead.
+```
+* Gen1a mode:                            Allow using custom wakeup commands, like real gen1a chip, to run backdoor commands, as well as some extras.
+* Magic wakeup command:                  Use different wakeup commands for entering Gen1a mode. A) 00 - 40(7), 43; B) 85 - 20(7), 23.
+* Block use of Key B if readable by ACL: Per the MF1ICS50 datasheet, if Key B is readable by the ACL, using it shall give a Cmd Error 04. This option controls whether it happens or not.
+* CUID mode:                             Allow direct write to block 0, instead of giving Cmd Error 04.
+* MFC EV1 CL2 Perso config:              When configured, the tag behaves like a real Mifare Classic EV1 7B UID tag, and reads UID from backdoor blocks. Otherwise, the tag acts like a 4 byte tag.
+* Shadow mode:                           Writes to memory persisting in tag RAM. As soon as no power is left, the contents are restored to saved data.
+* Magic Auth Command:                    Acknowledge command `8000` after selection, and call for Crypto1 auth with key `000000000000`.
+* Static encrypted nonce mode:           Use static encrypted nonces for authentication, making key recovery impossible.
+* Signature sector:                      Acknowledge auth commands to sector 17, which is stored in backdoor sector 1.
+* SAK:                                   If perso byte is not set, after UID select, send this value.
+
+
+2. Backdoor blocks
 ```
 
-Write config:
-1. sending custom auth with all zeros key
-2. send 0xE100
-3. send 16 bytes
+Sector 0
+88 04 BD E5 D4 04 6A BB 5B 80 0A 08 44 00 00 00 - Block 0: Perso F0, F1 data
+^^ ^^ ^^ ^^                                     - UID0
+            ^^                                  - BCC0
+               ^^                               - SAK0 (0x04 to call for CL2)
+                  ^^ ^^ ^^ ^^                   - UID1
+                              ^^                - BCC1
+                                 ^^             - SAK1
+                                    ^^ ^^ ^^ ^^ - Unused
+04 BD E5 6A 36 08 00 00 00 00 00 00 00 00 00 00 - Block 1: Perso F3 data
+^^ ^^ ^^ ^^                                     - UID0
+            ^^                                  - BCC0
+               ^^                               - SAK0
+                  ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ - Unused 
+Block 2: unused
+Block 3: ignored (custom keys, acl; broken acl ignored - anticollision will still work)
+Sector 1
+[Signature sector (#17) - needs config byte 13 (from 0) enabled to allow auth]
+Sectors 2-15
+[Unused]
+```
 
-**Warning**
+### Variations
+^[Top](#top)
+| Factory configuration | Name |
+| --- | --- |
+| 850000000000000000005A5A00000008 | GDMIC |
+| 850000000000005A0000005A5A5A0008 | UCUID |
+| 8500000000005A00005A005A005A0008 | "7 byte hard" |
+| 7AFF850102015A00005A005A005A0008 | M1-7B |
+| 7AFF85000000000000FF000000000008 | FUID |
+| 7AFF000000000000BAFA358500000008 | PFUID |
+| 7AFF000000000000BAFA000000000008 | UFUID |
 
-Example of configuration to Perma lock tag:
-`85000000000000000000000000000008`
+*Not all tags are the same!* UFUID and PFUID* are not full implementations of Magic85 - they only acknowledge the first 8 (except wakeup command) and last config byte(s).
 
+*Read and write config commands are flipped
 
-It is unknown what kind of block 0 changes the tag supports
-* UID: 4b
-* ATQA/SAK: unknown
-* BCC: unknown
-* ATS: none
-
-### Proxmark3 commands
+#### Proxmark3 commands
 ^[Top](#top)
 ```
-# Write to persistent memory
+Using magic auth:
+# Write to persistent memory:
 hf mf gdmsetblk
 
 # Read configuration (0xE0):
@@ -843,7 +885,7 @@ No implemented commands today
 
 It behaves like regular Mifare Classic but records reader auth attempts.
 
-#### MIFARE Classic Super Gen1
+### MIFARE Classic Super Gen1
 ^[Top](#top)
 
 Old type of cards, hard to obtain. They are DirectWrite, UID can be changed via 0 block or backdoor commands.
@@ -868,19 +910,19 @@ Backdoor commands provided over APDU. Format:
 
 👉 You can't change UID with backdoor command if incorrect data is written to the 0 sector trailer!
 
-#### MIFARE Classic Super Gen1B
+### MIFARE Classic Super Gen1B
 
 DirectWrite card, ATS unknown. Probably same as Gen1, except backdoor commands. 
 Implementation: https://github.com/netscylla/super-card/blob/master/libnfc-1.7.1/utils/nfc-super.c
 
-#### MIFARE Classic Super Gen2
+### MIFARE Classic Super Gen2
 ^[Top](#top)
 
 New generation of cards, based on limited Gen4 chip. Emulates Gen1 backdoor protocol, but can store up to 7 different traces.
 
-Card always answer `ff  ff  ff  ff` to auth, so writing/reading it via Mifare protocol is impossible. 
+Card always answers `ff  ff  ff  ff` as `at`, so reading/writing it via Mifare protocol is impossible. 
 
-UID is changeable via Gen4 backdoor write to 0 block.
+UID is changeable via UMC backdoor write to 0 block.
 
 * UID: 4b and 7b versions
 * ATQA/SAK: fixed
@@ -891,10 +933,51 @@ Gen4 commands available:
 
 ```
 CF <passwd> 34 <1b length><0-16b ATS>            // Configure ATS
-CF <passwd> CC                                   // Factory test, returns 00 00 00 02 AA
+CF <passwd> CC                                   // Version information, returns 00 00 00 02 AA
 CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
 CF <passwd> CE <1b block number>                 // Backdoor read 16b block
 CF <passwd> FE <4b new_password>                 // Change password
+```
+
+### MIFARE Classic Super Furui
+^[Top](#top)
+
+#### Characteristics
+^[Top](#top)
+
+* SAK/ATQA: play blindly the block0 bytes, beware!
+* BCC: play blindly the block0 BCC bytes, beware!
+* PRNG: hard
+
+**!!!WARNING!!!** This tag can die for no reason (no reply to WUPA/REQA). We don't know why this happens.
+
+#### Identify
+^[Top](#top)
+
+```
+[usb] pm3 --> hf 14a raw -sct 250 AAA500000000000000000000000000000000
+[+] 90 00
+```
+
+#### Magic commands
+^[Top](#top)
+
+* Configure: `AAA5[16 byte config]`+crc
+* Write block 0: `AAA4[4b UID][1b BCC][1b SAK][2b ATQA reversed]0000000000000000`+crc
+* Recover trace: `AAA8[00/01][00-08]`+crc
+
+Caution: tag does not append CRC to magic responses!
+
+Please use config as 00 bytes.
+
+Parsing traces:
+```
+44 33 22 11 03 61 08 68 7A C7 4B 62 43 A6 11 6F 64 F3
+^^ ^^ ^^ ^^                                           -- UID
+            ^^ ^^                                     -- auth command, reversed
+                  ^^ ^^ ^^ ^^                         -- Auth (nt)
+                              ^^ ^^ ^^ ^^             -- Auth (nr)
+                                          ^^ ^^ ^^ ^^ -- Auth (ar)
 ```
 
 ### Identify
@@ -908,6 +991,15 @@ hf 14a info
 [+] Magic capabilities : Super card (Gen ?)
 ```
 
+### Proxmark3 commands
+
+```
+[usb] pm3 --> hf mf supercard
+...
+
+[usb] pm3 --> hf mf supercard --furui
+...
+```
 # MIFARE Ultralight
 ^[Top](#top)
 
