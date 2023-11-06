@@ -145,6 +145,18 @@ int mfG4GetFactoryTest(uint8_t *pwd, uint8_t *data, size_t *datalen, bool verbos
     return PM3_SUCCESS;
 }
 
+int mfG4ChangePassword(uint8_t *pwd, uint8_t *newpwd, bool verbose) {
+    uint8_t resp[40] = {0};
+    size_t resplen = 0;
+
+    int res = mfG4ExCommand(GEN4_CMD_CHANGE_PASSWORD, pwd, newpwd, 4, resp, &resplen, verbose);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    return PM3_SUCCESS;
+}
+
 int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags) {
     struct p {
         uint8_t blockno;
