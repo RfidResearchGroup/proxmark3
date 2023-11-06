@@ -8234,7 +8234,7 @@ static int CmdHF14AGen4ChangePwd(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gchpwd",
-                  "Save `magic gen4 gtu` card memory to file (bin/json)",
+                  "Change access password for Gen4 GTU card. WARNING! If you dont KNOW the password - you CAN'T access it!!!",
                   "hf mf gchpwd --pwd 00000000 --newpwd 01020304"
                  );
     void *argtable[] = {
