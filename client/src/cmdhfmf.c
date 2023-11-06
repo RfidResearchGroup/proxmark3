@@ -8229,6 +8229,54 @@ static int CmdHF14AGen4Save(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// change Gent4 GTU card access password
+static int CmdHF14AGen4ChangePwd(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf gchpwd",
+                  "Change access password for Gen4 GTU card. WARNING! If you dont KNOW the password - you CAN'T access it!!!",
+                  "hf mf gchpwd --pwd 00000000 --newpwd 01020304"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("p", "pwd", "<hex>", "password 4 bytes"),
+        arg_str0("n", "newpwd", "<hex>", "new password 4 bytes"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int pwd_len = 0;
+    uint8_t pwd[4] = {0};
+    CLIGetHexWithReturn(ctx, 1, pwd, &pwd_len);
+
+    int new_pwd_len = 0;
+    uint8_t new_pwd[4] = {0};
+    CLIGetHexWithReturn(ctx, 2, new_pwd, &new_pwd_len);
+
+    bool verbose = arg_get_lit(ctx, 3);
+
+    if (pwd_len != 4) {
+        PrintAndLogEx(FAILED, "Old password must be 4 bytes long, got " _YELLOW_("%u"), pwd_len);
+        return PM3_EINVARG;
+    }
+
+    if (new_pwd_len != 4) {
+        PrintAndLogEx(FAILED, "New password must be 4 bytes long, got " _YELLOW_("%u"), new_pwd_len);
+        return PM3_EINVARG;
+    }
+
+    int res = mfG4ChangePassword(pwd, new_pwd, verbose);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERROR, "Change password error");
+        return res;
+    }
+
+    PrintAndLogEx(SUCCESS, "Change password done successfully.");
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14AGen4_GDM_Cfg(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gdmcfg",
@@ -8876,6 +8924,7 @@ static command_t CommandTable[] = {
     {"gsave",       CmdHF14AGen4Save,       IfPm3Iso14443a,  "Save dump from card into file or emulator"},
     {"gsetblk",     CmdHF14AGen4SetBlk,     IfPm3Iso14443a,  "Write block to card"},
     {"gview",       CmdHF14AGen4View,       IfPm3Iso14443a,  "View card"},
+    {"gchpwd",      CmdHF14AGen4ChangePwd,  IfPm3Iso14443a,  "Change card access password. Warning!"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GDM") " --------------------------"},
     {"gdmcfg",      CmdHF14AGen4_GDM_Cfg,   IfPm3Iso14443a,  "Read config block from card"},
     {"gdmsetcfg",   CmdHF14AGen4_GDM_SetCfg, IfPm3Iso14443a, "Write config block to card"},

@@ -42,4 +42,6 @@ int mfG4GetFactoryTest(uint8_t *pwd, uint8_t *data, size_t *datalen, bool verbos
 int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags);
 int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags);
 
+int mfG4ChangePassword(uint8_t *pwd, uint8_t *newpwd, bool verbose);
+
 #endif
