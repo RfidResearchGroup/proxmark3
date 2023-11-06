@@ -8268,7 +8268,7 @@ static int CmdHF14AGen4ChangePwd(const char *Cmd) {
 
     int res = mfG4ChangePassword(pwd, new_pwd, verbose);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERROR, "Change password error");
+        PrintAndLogEx(ERR, "Change password error");
         return res;
     }
 
