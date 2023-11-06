@@ -8,7 +8,17 @@ Useful docs:
 
 
 # Table of Contents
-
+- [Low frequency](#low-frequency)
+  * [T55xx](#t55xx)
+  * [EM4x05](#em4x05)
+  * [ID82xx series](#id82xx-series)
+    * [ID8265](#id8265)
+    * [ID-F8268](#id-f8268)
+    * [K8678](#k8678)
+  * [H series](#h-series)
+    * [H1](#h1)
+    * [H5.5 / H7](h55--h7)
+    * [i57 / i57v2](#i57--i57v2)
 - [ISO14443A](#iso14443a)
   * [Identifying broken ISO14443A magic](#identifying-broken-iso14443a-magic)
 - [MIFARE Classic](#mifare-classic)
@@ -43,6 +53,187 @@ Useful docs:
 - [Multi](#multi)
   * [Gen 4 GTU](#gen-4-gtu)
 
+
+# Low frequency
+
+## T55xx
+^[Top](#top)
+
+The temic T55xx/Atmel ATA5577 is the most commonly used chip for cloning LF RFIDs.
+
+A useful document can be found [here](https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/T5577_Guide.md).
+
+### Characteristics
+
+* 28/24 bytes of user memory (without/with password)
+* Universal output settings (data rate, modulation, etc)
+* Password protection (4 bytes), usually "19920427"
+* Lock bits per page
+* Analog frontend setup
+* Other names:
+  * 5577
+  * 5200 (CN)
+    - Cut down version of T55xx chip (no analog frontend setup, no test mode support).
+  * H2 (RU)
+    - Seems to be renamed 5200 chip.
+  * RW125T5 (RU)
+* Old variant "T5555" is hard to come across
+
+### Detect
+
+```
+[usb] pm3 --> lf search
+...
+[+] Chipset detection: T55xx
+```
+
+This will **not** work if you have a downlink mode other than fixed bit length!
+
+### Commands
+
+*See ATMEL ATA5577C datasheet for sending commands to chip*
+
+* **Do not mix "password read" and "regular write" commands! You risk potentially writing incorrect data.
+* When replying, the chip will use the modulation and data rate specified in block 0.
+
+## EM4x05
+^[Top](#top)
+
+The EM4305 and EM4205 (and 4469/4569) chips are the 2nd most common used chips for cloning LF RFIDs.
+It is also used by HID Global (but with a custom chip) for HIDProx credentials.
+
+### Characteristics
+
+* 36 bytes of user memory
+* Output settings are limited (ASK only, FSK added on HID variant)
+* Password protection (4 bytes), usually "84AC15E2"
+* Lock page used
+* Other names:
+  * H3 (RU)
+  * RW125EM (RU)
+
+### Detect
+
+```
+[usb] pm3 --> lf search
+...
+[+] Chipset detection: EM4x05 / EM4x69
+```
+
+### Commands
+
+*See EM microelectronic EM4305 datasheet for sending commands to chip*
+
+## ID82xx series
+^[Top](#top)
+
+These are custom chinese chips designed to clone EM IDs only. Often times, these are redesigned clones of Hitag chips.
+
+### ID8265
+^[Top](#top)
+
+This is the cheapest and most common ID82xx chip available. It is usually sold as T55xx on AliExpress, with excuses to use cloners.
+
+#### Characteristics
+
+* Chip is likely a Hitag μ (micro)
+* Password protection (4b), usually "1AC4999C"
+* Currently unimplemented in proxmark3 client
+* Other names:
+  * ID8210 (CN)
+  * H-125 (CN)
+  * H5 (RU)
+    - The sales of "H5" have been ceased because "the chip was leaked".
+
+#### Detect
+
+```
+[usb] pm3 --> lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00011 -s 3000
+[usb] pm3 --> data plot
+```
+
+Check the green line of the plot. It must be a straight line at the end with no big waves.
+
+### ID-F8268
+^[Top](#top)
+
+This is an "improved" variant of ID82xx chips, bypassing some magic detection in China.
+
+#### Characteristics
+
+* Chip is likely a Hitag 1
+* Unsure whether password protection is used
+* Currently unimplemeneted in proxmark3 client
+* Other names:
+  - F8278 (CN)
+  - F8310 (CN)
+
+#### Detect
+
+```
+[usb] pm3 --> lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110 -s 3000
+[usb] pm3 --> data plot
+```
+
+Check the green line of the plot. It must be a straight line at the end with no big waves.
+
+### K8678
+^[Top](#top)
+
+This is an "even better" chip, manufactured by Hyctec.
+
+#### Characteristics
+
+* Chip is likely a Hitag S256
+* Plain mode used, no password protection
+* Currently unimplemented in proxmark3 client
+* Memory access is odd (chip doesnt reply to memory access commands for unknown reason)
+
+#### Detect
+
+```
+[usb] pm3 --> lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110 -s 3000
+[usb] pm3 --> data plot
+```
+
+Check the green line of the plot. It must be a straight line at the end with no big waves.
+
+## H series
+^[Top](#top)
+
+These are chips sold in Russia, manufactured by iKey LLC. Often times these are custom.
+
+### H1
+^[Top](#top)
+
+Simplest EM ID cloning chip available. Officially discontinued.
+
+#### Characteristics
+
+* Currently almost all structure is unknown
+* No locking or password protection
+  * "OTP" chip is same chip, but with EM ID of zeroes. Locked after first write
+* Other names:
+  * RW64bit
+  * RW125FL
+
+
+### H5.5 / H7
+^[Top](#top)
+
+First "advanced" custom chip with H naming.
+
+#### Characteristics
+
+* Currently all structure is unknown
+* No password protection
+* Only supported by Russian "TMD"/"RFD" cloners
+* H7 is advertised to work with "Stroymaster" access control
+* Setting ID to "3F0096F87E" will make the chip show up like T55xx
+
+### i57 / i57v2
+
+\[ Chip is discontinued, no info \]
 
 # ISO14443A
 
