@@ -1309,9 +1309,37 @@ hf 14a info
 ## ISO14443B magic
 ^[Top](#top)
 
-No such card is available.
+### Tiananxin TCOS CPU card
+^[Top](#top)
 
-Some vendor allow to specify an ID (PUPI) when ordering a card.
+This is a card sold on Taobao for testing readers.
+ISO14443-4 compliant.
+
+### Identify
+
+```
+hf 14a apdu -s 90B2900000 // Get Card OS version
+>>> 90 B2 90 00 00
+<<< 54 43 4F 53 20 56 31 2E 34 2E 30 90 00 | TCOS V1.4.0..
+```
+
+### Magic commands
+
+All commands in APDU.
+
+```
+CL IN P1 P2 Lc Data
+90 F4 CC CC 01 [..1 ] // Change protocol used              (1: ISO14443 [AA - type A, BB - type B])
+90 F6 CC CC 01 [TA1 ] // Change TA1 value (transfer speed)
+90 F8 CC CC 01 [..1 ] // Use random UID/PUPI value         (1: FF: static, AB: random)
+90 F8 DD DD 01 [..1 ] // Set UID/PUPI length               (1: bytes in UID (04, 07, 0A for 4, 7, 10 bytes accordingly))
+90 F8 EE EE 0B [... ] // Set UID/PUPI value                (enter value here). To clear, use Lc=01; data=00.
+90 FA CC CC 01 [FSCI] // Set FSCI                          (1: value 0-8)
+90 FC CC CC 01 [SFGI] // Set SFGI (DO NOT SET TOO HIGH!)   (1: value 0-E)
+90 FE CC CC 01 [FWI ] // Set FWI (DO NOT SET BELOW 4!!!)   (value 0-E)
+```
+
+More commands to follow. Be careful with some.
 
 # ISO15693
 ^[Top](#top)
