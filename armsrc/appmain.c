@@ -2662,7 +2662,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_STATUS: {
-            Dbprintf("Packet Len:%d", packet->length);
             if (packet->length == 4)
                 SendStatus(packet->data.asDwords[0]);
             else

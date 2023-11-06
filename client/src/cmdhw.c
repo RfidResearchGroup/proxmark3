@@ -813,7 +813,7 @@ static int CmdStatus(const char *Cmd) {
     CLIParserInit(&ctx, "hw status",
                   "Show runtime status information about the connected Proxmark3",
                   "hw status\n"
-                  "hw status -t 1000 -> Test connection speed with 1000ms timeout\n"
+                  "hw status --ms 1000 -> Test connection speed with 1000ms timeout\n"
                  );
 
     void *argtable[] = {
