@@ -750,6 +750,77 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
     return PM3_SUCCESS ;
 }
 
+static int mfLoadKeys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, int userkeylen, const char *filename, int fnlen) {
+    // Handle Keys
+    *pkeycnt = 0;
+    *pkeyBlock = NULL;
+    uint8_t *p;
+    // Handle user supplied key
+    // (it considers *pkeycnt and *pkeyBlock as possibly non-null so logic can be easily reordered)
+    if (userkeylen >= MIFARE_KEY_SIZE) {
+        int numKeys = userkeylen / MIFARE_KEY_SIZE;
+        p = realloc(*pkeyBlock, (*pkeycnt + numKeys) * MIFARE_KEY_SIZE);
+        if (!p) {
+            PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+            free(*pkeyBlock);
+            return PM3_EMALLOC;
+        }
+        *pkeyBlock = p;
+
+        memcpy(*pkeyBlock + *pkeycnt * MIFARE_KEY_SIZE, userkey, numKeys * MIFARE_KEY_SIZE);
+
+        for (int i = 0; i < numKeys; i++) {
+            PrintAndLogEx(INFO, "[%2d] key %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
+        }
+        *pkeycnt += numKeys;
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys supplied by user ", numKeys);
+    }
+
+    // Handle default keys
+    p = realloc(*pkeyBlock, (*pkeycnt + ARRAYLEN(g_mifare_default_keys)) * MIFARE_KEY_SIZE);
+    if (!p) {
+        PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+        free(*pkeyBlock);
+        return PM3_EMALLOC;
+    }
+    *pkeyBlock = p;
+    // Copy default keys to list
+    for (int i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
+        num_to_bytes(g_mifare_default_keys[i], MIFARE_KEY_SIZE, (uint8_t *)(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE));
+        PrintAndLogEx(DEBUG, "[%2d] key %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
+    }
+    *pkeycnt += ARRAYLEN(g_mifare_default_keys);
+    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from hardcoded default array", ARRAYLEN(g_mifare_default_keys));
+
+
+    // Handle user supplied dictionary file
+    if (fnlen > 0) {
+        uint32_t loaded_numKeys = 0;
+        uint8_t *keyBlock_tmp = NULL;
+        int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock_tmp, MIFARE_KEY_SIZE, &loaded_numKeys);
+        if (res != PM3_SUCCESS || loaded_numKeys == 0 || *pkeyBlock == NULL) {
+            PrintAndLogEx(FAILED, "An error occurred while loading the dictionary!");
+            free(keyBlock_tmp);
+            free(*pkeyBlock);
+            return PM3_EFILE;
+        } else {
+            p = realloc(*pkeyBlock, (*pkeycnt + loaded_numKeys) * MIFARE_KEY_SIZE);
+            if (!p) {
+                PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+                free(keyBlock_tmp);
+                free(*pkeyBlock);
+                return PM3_EMALLOC;
+            }
+            *pkeyBlock = p;
+            memcpy(*pkeyBlock + *pkeycnt * MIFARE_KEY_SIZE, keyBlock_tmp, loaded_numKeys * MIFARE_KEY_SIZE);
+            *pkeycnt += loaded_numKeys;
+            free(keyBlock_tmp);
+        }
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary", loaded_numKeys);
+    }
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14AMfAcl(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf acl",
@@ -2320,12 +2391,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                   "hf mf autopwn\n"
                   "hf mf autopwn -s 0 -a -k FFFFFFFFFFFF     --> target MFC 1K card, Sector 0 with known key A 'FFFFFFFFFFFF'\n"
                   "hf mf autopwn --1k -f mfc_default_keys    --> target MFC 1K card, default dictionary\n"
-                  "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -f mfc_default_keys  --> combo of the two above samples"
+                  "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -f mfc_default_keys  --> combo of the two above samples\n"
+                  "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -k a0a1a2a3a4a5      --> multiple user supplied keys"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("k",  "key",    "<hex>", "Known key, 12 hex bytes"),
+        arg_strx0("k",  "key",    "<hex>", "Known key, 12 hex bytes"),
         arg_int0("s",  "sector", "<dec>", "Input sector number"),
         arg_lit0("a",   NULL,             "Input key A (def)"),
         arg_lit0("b",   NULL,             "Input key B"),
@@ -2356,17 +2428,10 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int keylen = 0;
-    uint8_t key[6] = {0};
-    int32_t res = CLIParamHexToBuf(arg_get_str(ctx, 1), key, sizeof(key), &keylen);
-    if (res) {
-        CLIParserFree(ctx);
-        PrintAndLogEx(FAILED, "Error parsing key bytes");
-        return PM3_EINVARG;
-    }
-
-    bool known_key = (keylen == 6);
-
+    int in_keys_len = 0;
+    uint8_t in_keys[100 * 6] = {0};
+    CLIGetHexWithReturn(ctx, 1, in_keys, &in_keys_len);
+ 
     uint8_t sectorno = arg_get_u32_def(ctx, 2, 0);
 
     uint8_t keytype = MF_KEY_A;
@@ -2381,7 +2446,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    bool has_filename = (fnlen > 0);
 
     bool slow = arg_get_lit(ctx, 6);
     bool legacy_mfchk = arg_get_lit(ctx, 7);
@@ -2464,26 +2528,28 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (in)
         SetSIMDInstr(SIMD_NONE);
 
-
     // Nested and Hardnested parameter
     uint64_t key64 = 0;
     bool calibrate = true;
+
     // Attack key storage variables
     uint8_t *keyBlock = NULL;
     uint32_t key_cnt = 0;
-    uint8_t tmp_key[6] = {0};
+    uint8_t tmp_key[MIFARE_KEY_SIZE] = {0};
 
     // Nested and Hardnested returned status
     uint64_t foundkey = 0;
-    int isOK = 0;
     int current_sector_i = 0, current_key_type_i = 0;
+
     // Dumping and transfere to simulater memory
-    uint8_t block[16] = {0x00};
+    uint8_t block[MFBLOCK_SIZE] = {0x00};
     int bytes;
+
     // Settings
     int prng_type = PM3_EUNDEF;
     uint8_t num_found_keys = 0;
 
+    int isOK = 0;
     // ------------------------------
 
     uint64_t tagT = GetHF14AMfU_Type();
@@ -2513,6 +2579,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // store card info
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    bool known_key = (in_keys_len > 5);
+    uint8_t key[6] = {0};
+    if (known_key) {
+        memcpy(key, in_keys, sizeof(key));
+    }
 
     // detect MFC EV1 Signature
     bool is_ev1 = detect_mfc_ev1_signature();
@@ -2579,106 +2651,20 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         PrintAndLogEx(INFO, "========================================================================");
     }
 
-    // Start the timer
-    uint64_t t1 = msclock();
-
     // check the user supplied key
     if (known_key == false) {
         PrintAndLogEx(WARNING, "no known key was supplied, key recovery might fail");
-    } else {
-        if (verbose) {
-            PrintAndLogEx(INFO, "======================= " _YELLOW_("START KNOWN KEY ATTACK") " =======================");
-        }
-
-        if (mfCheckKeys(mfFirstBlockOfSector(sectorno), keytype, true, 1, key, &key64) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "target sector %3u key type %c -- using valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
-                          sectorno,
-                          (keytype == MF_KEY_B) ? 'B' : 'A',
-                          sprint_hex_inrow(key, sizeof(key))
-                         );
-
-            // Store the key for the nested / hardnested attack (if supplied by the user)
-            e_sector[sectorno].Key[keytype] = key64;
-            e_sector[sectorno].foundKey[keytype] = 'U';
-
-            ++num_found_keys;
-        } else {
-            known_key = false;
-            PrintAndLogEx(FAILED, "Key is wrong. Can't authenticate to sector"_RED_("%3d") " key type "_RED_("%c") " key " _RED_("%s"),
-                          sectorno,
-                          (keytype == MF_KEY_B) ? 'B' : 'A',
-                          sprint_hex_inrow(key, sizeof(key))
-                         );
-            PrintAndLogEx(WARNING, "falling back to dictionary");
-        }
-
-        // Check if the user supplied key is used by other sectors
-        for (int i = 0; i < sector_cnt; i++) {
-            for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
-
-                if (e_sector[i].foundKey[j]) {
-                    continue;
-                }
-
-                if (mfCheckKeys(mfFirstBlockOfSector(i), j, true, 1, key, &key64) == PM3_SUCCESS) {
-                    e_sector[i].Key[j] = bytes_to_num(key, 6);
-                    e_sector[i].foundKey[j] = 'U';
-
-                    // If the user supplied secctor / keytype was wrong --> just be nice and correct it ;)
-                    if (known_key == false) {
-                        num_to_bytes(e_sector[i].Key[j], 6, key);
-                        known_key = true;
-                        sectorno = i;
-                        keytype = j;
-                        PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ] (used for nested / hardnested attack)",
-                                      i,
-                                      (j == MF_KEY_B) ? 'B' : 'A',
-                                      sprint_hex_inrow(key, sizeof(key))
-                                     );
-                    } else {
-                        PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
-                                      i,
-                                      (j == MF_KEY_B)  ? 'B' : 'A',
-                                      sprint_hex_inrow(key, sizeof(key))
-                                     );
-                    }
-                    ++num_found_keys;
-                }
-            }
-        }
-
-        if (num_found_keys == sector_cnt * 2) {
-            goto all_found;
-        }
     }
 
-    bool load_success = true;
-    // Load the dictionary
-    if (has_filename) {
-        res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 6, &key_cnt);
-        if (res != PM3_SUCCESS || key_cnt == 0 || keyBlock == NULL) {
-            PrintAndLogEx(FAILED, "An error occurred while loading the dictionary! (we will use the default keys now)");
-            if (keyBlock != NULL) {
-                free(keyBlock);
-            }
-            load_success = false;
-        }
+    // Start the timer
+    uint64_t t1 = msclock();
+
+    int ret = mfLoadKeys(&keyBlock, &key_cnt, in_keys, in_keys_len, filename, fnlen);
+    if (ret != PM3_SUCCESS) {
+        return ret;
     }
 
-    if (has_filename == false || load_success == false) {
-        keyBlock = calloc(ARRAYLEN(g_mifare_default_keys), 6);
-        if (keyBlock == NULL) {
-            free(e_sector);
-            free(fptr);
-            return PM3_EMALLOC;
-        }
-
-        for (int cnt = 0; cnt < ARRAYLEN(g_mifare_default_keys); cnt++) {
-            num_to_bytes(g_mifare_default_keys[cnt], 6, keyBlock + cnt * 6);
-        }
-        key_cnt = ARRAYLEN(g_mifare_default_keys);
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from hardcoded default array", key_cnt);
-    }
+    int32_t res = PM3_SUCCESS;
 
     // Use the dictionary to find sector keys on the card
     if (verbose) PrintAndLogEx(INFO, "======================= " _YELLOW_("START DICTIONARY ATTACK") " =======================");
@@ -2694,8 +2680,8 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                         PrintAndLogEx(NORMAL, "." NOLF);
                         fflush(stdout);
 
-                        if (mfCheckKeys(mfFirstBlockOfSector(i), j, true, 1, (keyBlock + (6 * k)), &key64) == PM3_SUCCESS) {
-                            e_sector[i].Key[j] = bytes_to_num((keyBlock + (6 * k)), 6);
+                        if (mfCheckKeys(mfFirstBlockOfSector(i), j, true, 1, (keyBlock + (MIFARE_KEY_SIZE * k)), &key64) == PM3_SUCCESS) {
+                            e_sector[i].Key[j] = bytes_to_num((keyBlock + (MIFARE_KEY_SIZE * k)), MIFARE_KEY_SIZE);
                             e_sector[i].foundKey[j] = 'D';
                             ++num_found_keys;
                             break;
@@ -2723,12 +2709,14 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 }
                 uint32_t size = ((key_cnt - i)  > chunksize) ? chunksize : key_cnt - i;
                 // last chunk?
-                if (size == key_cnt - i)
+                if (size == key_cnt - i) {
                     lastChunk = true;
+                }
 
-                res = mfCheckKeys_fast(sector_cnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * 6), e_sector, false);
-                if (firstChunk)
+                res = mfCheckKeys_fast(sector_cnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false);
+                if (firstChunk) {
                     firstChunk = false;
+                }
                 // all keys,  aborted
                 if (res == PM3_SUCCESS) {
                     i = key_cnt;
@@ -2749,11 +2737,11 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             }
 
             e_sector[i].foundKey[j] = 'D';
-            num_to_bytes(e_sector[i].Key[j], 6, tmp_key);
+            num_to_bytes(e_sector[i].Key[j], MIFARE_KEY_SIZE, tmp_key);
 
             // Store valid credentials for the nested / hardnested attack if none exist
             if (known_key == false) {
-                num_to_bytes(e_sector[i].Key[j], 6, key);
+                num_to_bytes(e_sector[i].Key[j], MIFARE_KEY_SIZE, key);
                 known_key = true;
                 sectorno = i;
                 keytype = j;
@@ -2823,7 +2811,7 @@ noValidKeyFound:
 
     free(keyBlock);
     // Clear the needed variables
-    num_to_bytes(0, 6, tmp_key);
+    num_to_bytes(0, MIFARE_KEY_SIZE, tmp_key);
     bool nested_failed = false;
 
     // Iterate over each sector and key(A/B)
@@ -3092,7 +3080,7 @@ tryStaticnested:
         }
     }
 
-all_found:
+// all_found:
 
     // Show the results to the user
     PrintAndLogEx(NORMAL, "");
@@ -3171,73 +3159,6 @@ all_found:
     return PM3_SUCCESS;
 }
 
-static int mfLoadKeys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, int userkeylen, const char *filename, int fnlen) {
-    // Handle Keys
-    *pkeycnt = 0;
-    *pkeyBlock = NULL;
-    uint8_t *p;
-    // Handle user supplied key
-    // (it considers *pkeycnt and *pkeyBlock as possibly non-null so logic can be easily reordered)
-    if (userkeylen >= 6) {
-        int numKeys = userkeylen / 6;
-        p = realloc(*pkeyBlock, (*pkeycnt + numKeys) * 6);
-        if (!p) {
-            PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
-            free(*pkeyBlock);
-            return PM3_EMALLOC;
-        }
-        *pkeyBlock = p;
-
-        memcpy(*pkeyBlock + *pkeycnt * 6, userkey, numKeys * 6);
-
-        for (int i = 0; i < numKeys; i++) {
-            PrintAndLogEx(INFO, "[%2d] key %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * 6, 6));
-        }
-        *pkeycnt += numKeys;
-    }
-
-    // Handle default keys
-    p = realloc(*pkeyBlock, (*pkeycnt + ARRAYLEN(g_mifare_default_keys)) * 6);
-    if (!p) {
-        PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
-        free(*pkeyBlock);
-        return PM3_EMALLOC;
-    }
-    *pkeyBlock = p;
-    // Copy default keys to list
-    for (int i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
-        num_to_bytes(g_mifare_default_keys[i], 6, (uint8_t *)(*pkeyBlock + (*pkeycnt + i) * 6));
-        PrintAndLogEx(DEBUG, "[%2d] key %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * 6, 6));
-    }
-    *pkeycnt += ARRAYLEN(g_mifare_default_keys);
-
-    // Handle user supplied dictionary file
-    if (fnlen > 0) {
-        uint32_t loaded_numKeys = 0;
-        uint8_t *keyBlock_tmp = NULL;
-        int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock_tmp, 6, &loaded_numKeys);
-        if (res != PM3_SUCCESS || loaded_numKeys == 0 || *pkeyBlock == NULL) {
-            PrintAndLogEx(FAILED, "An error occurred while loading the dictionary!");
-            free(keyBlock_tmp);
-            free(*pkeyBlock);
-            return PM3_EFILE;
-        } else {
-            p = realloc(*pkeyBlock, (*pkeycnt + loaded_numKeys) * 6);
-            if (!p) {
-                PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
-                free(keyBlock_tmp);
-                free(*pkeyBlock);
-                return PM3_EMALLOC;
-            }
-            *pkeyBlock = p;
-            memcpy(*pkeyBlock + *pkeycnt * 6, keyBlock_tmp, loaded_numKeys * 6);
-            *pkeycnt += loaded_numKeys;
-            free(keyBlock_tmp);
-        }
-    }
-    return PM3_SUCCESS;
-}
-
 static int CmdHF14AMfChk_fast(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf fchk",
@@ -3267,7 +3188,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int keylen = 0;
-    uint8_t key[255 * 6] = {0};
+    uint8_t key[100 * 6] = {0};
     CLIGetHexWithReturn(ctx, 1, key, &keylen);
 
     bool m0 = arg_get_lit(ctx, 2);
