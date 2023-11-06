@@ -8256,6 +8256,8 @@ static int CmdHF14AGen4ChangePwd(const char *Cmd) {
 
     bool verbose = arg_get_lit(ctx, 3);
 
+    CLIParserFree(ctx);
+
     if (pwd_len != 4) {
         PrintAndLogEx(FAILED, "Old password must be 4 bytes long, got " _YELLOW_("%u"), pwd_len);
         return PM3_EINVARG;
@@ -8272,8 +8274,7 @@ static int CmdHF14AGen4ChangePwd(const char *Cmd) {
         return res;
     }
 
-    PrintAndLogEx(SUCCESS, "Change password done successfully.");
-
+    PrintAndLogEx(SUCCESS, "Change password ( " _GREEN_("ok") " )");
     return PM3_SUCCESS;
 }
 
