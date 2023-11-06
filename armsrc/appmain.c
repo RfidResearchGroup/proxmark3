@@ -369,7 +369,7 @@ static void print_debug_level(void) {
 
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
-static void printConnSpeed(uint32_t testTimeout) {
+static void printConnSpeed(uint32_t wait) {
     DbpString(_CYAN_("Transfer Speed"));
     Dbprintf("  Sending packets to client...");
 
@@ -380,7 +380,7 @@ static void printConnSpeed(uint32_t testTimeout) {
 
     LED_B_ON();
 
-    while (delta_time < testTimeout) {
+    while (delta_time < wait) {
         reply_ng(CMD_DOWNLOADED_BIGBUF, PM3_SUCCESS, test_data, PM3_CMD_DATA_SIZE);
         bytes_transferred += PM3_CMD_DATA_SIZE;
         delta_time = GetTickCountDelta(start_time);
@@ -389,13 +389,13 @@ static void printConnSpeed(uint32_t testTimeout) {
 
     Dbprintf("  Time elapsed................... %dms", delta_time);
     Dbprintf("  Bytes transferred.............. %d", bytes_transferred);
-    Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / delta_time);
+    Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%llu") " bytes/s", 1000 * (uint64_t)bytes_transferred / delta_time);
 }
 
 /**
   * Prints runtime information about the PM3.
 **/
-static void SendStatus(int32_t speedTestTimeout) {
+static void SendStatus(uint32_t wait) {
     BigBuf_print_status();
     Fpga_print_status();
 #ifdef WITH_FLASH
@@ -411,7 +411,7 @@ static void SendStatus(int32_t speedTestTimeout) {
 #ifdef WITH_ISO14443a
     printHf14aConfig();   // HF 14a config
 #endif
-    printConnSpeed(speedTestTimeout);
+    printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
 
     print_stack_usage();
