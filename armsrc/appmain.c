@@ -392,6 +392,7 @@ static void printConnSpeed(uint32_t wait) {
     if (delta_time) {
         Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%llu") " bytes/s", 1000 * (uint64_t)bytes_transferred / delta_time);
     }
+}
 
 /**
   * Prints runtime information about the PM3.
