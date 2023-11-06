@@ -7453,7 +7453,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
 
     int pwd_len = 0;
     uint8_t pwd[4] = {0};
-    CLIGetHexWithReturn(ctx, 3, pwd, &pwd_len);
+    CLIGetHexWithReturn(ctx, 2, pwd, &pwd_len);
     CLIParserFree(ctx);
 
     if (pwd_len != 0 && pwd_len != 4) {
