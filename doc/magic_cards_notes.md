@@ -47,7 +47,7 @@ Useful docs:
   * ["DESFire" APDU, 7b UID](#desfire-apdu-7b-uid)
   * ["DESFire" APDU, 4b UID](#desfire-apdu-4b-uid)
 - [ISO14443B](#iso14443b)
-  * [ISO14443B magic](#iso14443b-magic)
+  * [Tiananxin TCOS CPU card](#tiananxin-tcos-cpu-card)
 - [ISO15693](#iso15693)
   * [ISO15693 magic](#iso15693-magic)
 - [Multi](#multi)
@@ -1306,10 +1306,7 @@ hf 14a info
 # ISO14443B
 ^[Top](#top)
 
-## ISO14443B magic
-^[Top](#top)
-
-### Tiananxin TCOS CPU card
+## Tiananxin TCOS CPU card
 ^[Top](#top)
 
 This is a card sold on Taobao for testing readers.
