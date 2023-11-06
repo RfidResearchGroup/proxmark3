@@ -154,6 +154,9 @@ int mfG4ChangePassword(uint8_t *pwd, uint8_t *newpwd, bool verbose) {
         return res;
     }
 
+    if (resplen != 2 || resp[0] != 0x90 || resp[1] != 0x00)
+        return PM3_EAPDU_FAIL;
+
     return PM3_SUCCESS;
 }
 
