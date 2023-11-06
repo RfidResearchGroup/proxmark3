@@ -7484,7 +7484,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
     PrintAndLogEx(INFO, "UL protocol......... %02x", resp[0]);
     PrintAndLogEx(INFO, "UID length.......... %02x" NOLF, resp[1]);
     switch (resp[1]){
-        case 0x01:
+        case 0x00:
             PrintAndLogEx(NORMAL, " (4 byte)");
             break;
         case 0x01:
