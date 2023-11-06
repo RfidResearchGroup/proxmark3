@@ -7481,7 +7481,20 @@ static int CmdHF14AGen4Info(const char *cmd) {
     if (verbose)
         PrintAndLogEx(INFO, "Raw config [%02d]..... %s", resplen, sprint_hex_inrow(resp, resplen));
 
-    PrintAndLogEx(INFO, "UL protocol......... %02x", resp[0]);
+    PrintAndLogEx(INFO, "UL protocol......... %02x" NOLF, resp[0]);
+    switch (resp[0]){
+        case 0x00:
+            PrintAndLogEx(NORMAL, " (MIFARE Classic mode)");
+            break;
+        case 0x01:
+            PrintAndLogEx(NORMAL, " (MIFARE Ultralight/NTAG mode)");
+            break;
+        default:
+            PrintAndLogEx(NORMAL, " (unknown %02x)", resp[0]);
+            break;
+    }
+
+    uint8_t uid_len = resp[1];
     PrintAndLogEx(INFO, "UID length.......... %02x" NOLF, resp[1]);
     switch (resp[1]){
         case 0x00:
@@ -7497,20 +7510,74 @@ static int CmdHF14AGen4Info(const char *cmd) {
             PrintAndLogEx(NORMAL, " (unknown %02x)", resp[1]);
             break;
     }
-    PrintAndLogEx(INFO, "Password............ %s", sprint_hex_inrow(&resp[2], 4));
-    PrintAndLogEx(INFO, "GTU mode............ %02x", resp[6]);
-    PrintAndLogEx(INFO, "ATS [%02d]............ %s", resp[7], sprint_hex_inrow(&resp[8], resp[7]));
-    PrintAndLogEx(INFO, "ATQA................ %02x%02x", resp[24], resp[25]);
-    PrintAndLogEx(INFO, "SAK................. %02x", resp[26]);
-    PrintAndLogEx(INFO, "UL mode............. %02x", resp[27]);
-    PrintAndLogEx(INFO, "max rd/wr sectors... %02x", resp[28]);
-    PrintAndLogEx(INFO, "block0 direct wr.... %02x", resp[29]);
 
+    PrintAndLogEx(INFO, "Password............ %s", sprint_hex_inrow(&resp[2], 4));
+
+    PrintAndLogEx(INFO, "GTU mode............ %02x" NOLF, resp[6]);
+    switch (resp[6]){
+        case 0x00:
+            PrintAndLogEx(NORMAL, " (pre-write, shadow data can be written)");
+            break;
+        case 0x01:
+            PrintAndLogEx(NORMAL, " (restore mode)");
+            break;
+        case 0x02:
+            PrintAndLogEx(NORMAL, " (disabled)");
+            break;
+        case 0x03:
+            PrintAndLogEx(NORMAL, " (disabled, high speed R/W mode for Ultralight?)");
+            break;
+        default:
+            PrintAndLogEx(NORMAL, " (unknown %02x)", resp[6]);
+            break;
+    }
+
+    PrintAndLogEx(INFO, "ATS [%02d]............ %s", resp[7], sprint_hex_inrow(&resp[8], resp[7]));
+    PrintAndLogEx(INFO, "ATQA................ %02x%02x", resp[25], resp[24]);
+    PrintAndLogEx(INFO, "SAK................. %02x", resp[26]);
+
+    PrintAndLogEx(INFO, "UL mode............. %02x" NOLF, resp[27]);
+    switch (resp[27]){
+        case 0x00:
+            PrintAndLogEx(NORMAL, " (UL EV1)");
+            break;
+        case 0x01:
+            PrintAndLogEx(NORMAL, " (NTAG)");
+            break;
+        case 0x02:
+            PrintAndLogEx(NORMAL, " (UL-C)");
+            break;
+        case 0x03:
+            PrintAndLogEx(NORMAL, " (UL)");
+            break;
+        default:
+            PrintAndLogEx(NORMAL, " (unknown %02x)", resp[27]);
+            break;
+    }
+
+    PrintAndLogEx(INFO, "max rd/wr sectors... %02x", resp[28]);
+    PrintAndLogEx(INFO, "block0 direct wr.... %02x" NOLF, resp[29]);
+    switch (resp[29]){
+        case 0x00:
+            PrintAndLogEx(NORMAL, " (Activate direct write to block 0 (Same behaviour of Gen2 cards. Some readers may identify the card as magic))");
+            break;
+        case 0x01:
+            PrintAndLogEx(NORMAL, " (Deactivate direct write to block 0 (Same behaviour of vanilla cards))");
+            break;
+        case 0x02:
+            PrintAndLogEx(NORMAL, " (Default value. Same behaviour as 00?");
+            break;
+        default:
+            PrintAndLogEx(NORMAL, " (unknown %02x)", resp[29]);
+            break;
+    }
 
     res = mfG4GetFactoryTest(pwd, resp, &resplen, false);
     if (res == PM3_SUCCESS && resplen > 2) {
-        if (verbose)
+        if (verbose) {
+            PrintAndLogEx(INFO, "");
             PrintAndLogEx(INFO, "Raw test [%02d]....... %s", resplen, sprint_hex_inrow(resp, resplen));
+        }
 
         if (resp[resplen - 2] == 0x66 && resp[resplen - 1] == 0x66)
             PrintAndLogEx(INFO, "Card type........... generic");
@@ -7521,6 +7588,28 @@ static int CmdHF14AGen4Info(const char *cmd) {
         else
             PrintAndLogEx(INFO, "Card type........... unknown %02x%02x", resp[resplen - 2], resp[resplen - 1]);
     }
+
+    // read block 0
+    res = mfG4GetBlock(pwd, 0, resp, MAGIC_INIT | MAGIC_OFF);
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, "Block 0............. %s", sprint_hex_inrow(resp, 16));
+
+        switch (uid_len){
+            case 0x00:
+                PrintAndLogEx(INFO, "UID [4]............. %s", sprint_hex(resp, 4));
+                break;
+            case 0x01:
+                PrintAndLogEx(INFO, "UID [7]............. %s", sprint_hex(resp, 7));
+                break;
+            case 0x02:
+                PrintAndLogEx(INFO, "UID [10]............ %s", sprint_hex(resp, 10));
+                break;
+            default:
+                break;
+        }
+    }
+
 
     return PM3_SUCCESS;
 }
