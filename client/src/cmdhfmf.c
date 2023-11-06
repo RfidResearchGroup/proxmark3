@@ -7469,18 +7469,18 @@ static int CmdHF14AGen4Info(const char *cmd) {
         if (res == PM3_ETIMEOUT)
             PrintAndLogEx(ERR, "No card in the field or card command timeout.");
         else
-            PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%d", res, resplen);
+            PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%zu", res, resplen);
         return PM3_ESOFT;
     }
 
     PrintAndLogEx(INFO, "---------- Gen4 configuration ----------");
     if (resplen != 30 && resplen != 32) {
-        PrintAndLogEx(INFO, "Raw config [%02d] %s", resplen, sprint_hex_inrow(resp, resplen));
+        PrintAndLogEx(INFO, "Raw config [%02zu] %s", resplen, sprint_hex_inrow(resp, resplen));
         PrintAndLogEx(WARNING, "Unknown config format");
         return PM3_SUCCESS;
     }
     if (verbose)
-        PrintAndLogEx(INFO, "Raw config [%02d]..... %s", resplen, sprint_hex_inrow(resp, resplen));
+        PrintAndLogEx(INFO, "Raw config [%02zu]..... %s", resplen, sprint_hex_inrow(resp, resplen));
 
     PrintAndLogEx(INFO, "UL protocol......... %02x" NOLF, resp[0]);
     switch (resp[0]){
@@ -7577,7 +7577,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
     if (res == PM3_SUCCESS && resplen > 2) {
         if (verbose) {
             PrintAndLogEx(INFO, "");
-            PrintAndLogEx(INFO, "Raw test [%02d]....... %s", resplen, sprint_hex_inrow(resp, resplen));
+            PrintAndLogEx(INFO, "Raw test [%02zu]....... %s", resplen, sprint_hex_inrow(resp, resplen));
         }
 
         if (resp[resplen - 2] == 0x66 && resp[resplen - 1] == 0x66)
