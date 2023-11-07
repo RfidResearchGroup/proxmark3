@@ -759,7 +759,7 @@ static int mfLoadKeys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, 
     // (it considers *pkeycnt and *pkeyBlock as possibly non-null so logic can be easily reordered)
     if (userkeylen >= MIFARE_KEY_SIZE) {
         int numKeys = userkeylen / MIFARE_KEY_SIZE;
-        p = realloc(*pkeyBlock, (*pkeycnt + numKeys) * MIFARE_KEY_SIZE);
+        p = realloc(*pkeyBlock, numKeys * MIFARE_KEY_SIZE);
         if (!p) {
             PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
             free(*pkeyBlock);
@@ -767,13 +767,13 @@ static int mfLoadKeys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, 
         }
         *pkeyBlock = p;
 
-        memcpy(*pkeyBlock + *pkeycnt * MIFARE_KEY_SIZE, userkey, numKeys * MIFARE_KEY_SIZE);
+        memcpy(*pkeyBlock, userkey, numKeys * MIFARE_KEY_SIZE);
 
         for (int i = 0; i < numKeys; i++) {
-            PrintAndLogEx(INFO, "[%2d] key %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
+            PrintAndLogEx(INFO, "[" _YELLOW_("%d") "] key %s", i, sprint_hex(*pkeyBlock + i * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
         }
         *pkeycnt += numKeys;
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys supplied by user ", numKeys);
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%d") " keys supplied by user ", numKeys);
     }
 
     // Handle default keys
@@ -787,10 +787,10 @@ static int mfLoadKeys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, 
     // Copy default keys to list
     for (int i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
         num_to_bytes(g_mifare_default_keys[i], MIFARE_KEY_SIZE, (uint8_t *)(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE));
-        PrintAndLogEx(DEBUG, "[%2d] key %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
+        PrintAndLogEx(DEBUG, "[" _YELLOW_("%d") "] key %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
     }
     *pkeycnt += ARRAYLEN(g_mifare_default_keys);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from hardcoded default array", ARRAYLEN(g_mifare_default_keys));
+    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%u") " keys from hardcoded default array", ARRAYLEN(g_mifare_default_keys));
 
 
     // Handle user supplied dictionary file
@@ -816,7 +816,7 @@ static int mfLoadKeys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, 
             *pkeycnt += loaded_numKeys;
             free(keyBlock_tmp);
         }
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary", loaded_numKeys);
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%u") " keys from dictionary", loaded_numKeys);
     }
     return PM3_SUCCESS;
 }
