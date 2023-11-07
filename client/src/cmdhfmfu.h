@@ -88,6 +88,7 @@ uint32_t ul_ev1_otpgenA(uint8_t *uid);
 #define MFU_TT_MAGIC_1B         (0x20000000ULL | MFU_TT_MAGIC)
 #define MFU_TT_MAGIC_NTAG       (0x40000000ULL | MFU_TT_MAGIC)
 #define MFU_TT_NTAG_210u        0x80000000ULL
+#define MFU_TT_UL_AES           0x100000000ULL
 #define MFU_TT_UL_MAGIC         (MFU_TT_UL | MFU_TT_MAGIC)
 #define MFU_TT_UL_C_MAGIC       (MFU_TT_UL_C | MFU_TT_MAGIC)
 // Don't forget to fill UL_TYPES_ARRAY and UL_MEMORY_ARRAY if new types are added
