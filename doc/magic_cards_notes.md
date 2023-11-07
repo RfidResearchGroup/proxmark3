@@ -1022,6 +1022,7 @@ Int is internal, typically 0x48
 
 Anticol shortcut (CL1/3000) is supported for UL, ULC, NTAG except NTAG I2C
 
+Some cards have a password: `B6AA558D`. Usually "copykey" chips.
 
 ## MIFARE Ultralight Gen1A
 ^[Top](#top)
