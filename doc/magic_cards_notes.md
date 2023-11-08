@@ -55,8 +55,10 @@ Useful docs:
 - [ISO15693](#iso15693)
   * [ISO15693 magic](#iso15693-magic)
 - [Multi](#multi)
-  * [Gen 4 GTU](#gen-4-gtu)
-
+  * [UMC](#umc)
+- [Other](#other)
+  * [SID](#sid)
+  * [NSCK-II](#nsck-ii)
 
 # Low frequency
 
@@ -1535,7 +1537,7 @@ script run hf_15_magic -u E004013344556677
 # Multi
 ^[Top](#top)
 
-## Gen 4 GTU
+## UMC
 ^[Top](#top)
 
 A.k.a ultimate magic card,  most promenent feature is shadow mode (GTU) and optional password protected backdoor commands.
@@ -1567,6 +1569,8 @@ Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 ^[Top](#top) ^^[Gen4](#g4top)
 
 👉 **TODO** If the password is not default, Tag doesn't get identified correctly by latest Proxmark3 client (it might get mislabeled as MFC Gen2/CUID, Gen3/APDU or NTAG21x Modifiable, depending on configured UID/ATQA/SAK/ATS)
+
+👉 **TODO** Using C6 command can change config due to a bug in some cards. CC should be used instead.
 
 ```
 hf 14a info
@@ -1660,7 +1664,7 @@ CF <passwd> 69 <00-01>                           // (De)Activate Ultralight mode
 CF <passwd> 6A <00-03>                           // Select Ultralight mode
 CF <passwd> 6B <1b>                              // Set Ultralight and M1 maximum read/write sectors
 CF <passwd> C6                                   // Dump configuration
-CF <passwd> CC                                   // Factory test, returns 6666 for generic card, 02AA for limited functionality card and 06A0 for broken functionality card
+CF <passwd> CC                                   // Version info, returns `00 00 00 [03 A0 (old) / 06 A0 (new) ]`
 CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
 CF <passwd> CE <1b block number>                 // Backdoor read 16b block
 CF <passwd> CF <1b param>                        // (De)Activate direct write to block 0
@@ -1675,10 +1679,10 @@ Default `<passwd>`: `00000000`
 
 * UID: 4b, 7b and 10b versions
 * ATQA/SAK: changeable
-* BCC: auto
+* BCC: computed
 * ATS: changeable, can be disabled
-* Card Type:  changeable
-* Shadow mode:  GTU
+* Card Type: changeable
+* Shadow mode: GTU
 * Backdoor password mode
 
 ### Proxmark3 commands
@@ -1817,9 +1821,9 @@ Ultralight mode, 10b UID
 ### Set 14443B UID and ATQB
 ^[Top](#top) ^^[Gen4](#g4top)
 
-UID and ATQB are configured according to block0 with a (14a) backdoor write.
-
-UID size is always 4 bytes.
+* UID and ATQB are configured according to block0 with a (14a) backdoor write.
+* UID size is always 4 bytes.
+* 14B will show up only on new cards.
 
 Example:
 ```
@@ -2129,3 +2133,72 @@ hf mfu wrbl -b 250 -d 00040402 --force
 hf mfu wrbl -b 251 -d 01001303 --force
 hf mfu info
 ```
+
+# Other
+^[Top](#top)
+
+These are chips to clone other ICs. Usually the originals are only sold in China.
+
+## SID
+^[Top](#top)
+
+- Magic tag for Fudan FM1208-9 chips
+
+### Characteristics
+^[Top](#top)
+- ISO14443-A tag
+- ATQA-SAK: `0008`-`20`
+- ATS: `10 78 80 A0 02 00 9D 46 16 40 00 A3 [UID]`
+- Compared to real FM1208 chip:
+  - CLA byte is ignored
+  - Command parsing is irregular (some replies are wrong)
+
+### Magic commands
+^[Top](#top)
+
+**WARNING!!!** Risk of bricking tag - cause is unknown
+- Below you can find a list of all INS bytes not present on real FM1208 chip, and what their output is when executed (P1, P2, Lc = 00)
+  - Results may vary between chips:
+```
+INS | RES
+0A  | 44454641554C540000002018112840000000000000000000000000000000000000000000000000000000400000000000
+3B  | 00000000001C0EF90000000000000000000000000000000000000000000000002000000000C09040009002840000000000000000000000000000000000006C0FC08700EB1A9F1BA01801010019000000000000000000000000000090000000000000094B066600000000007D000000000000000000000000000000003B000000107880A002009D46164000A3CA81E15000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+3C* | 0000
+3D  | 6700
+7D  | Tag does not reply (if 0<Lc<=15, RES=6700)
+CD  | 6A82
+D5  | 9000
+DD  | 6700
+DE  | 6700
+DF  | 9000
+EE  | 6700
+F0  | 6A82
+FB  | 6A82
+
+* - DO NOT EXECUTE THIS INSTRUCTION!!! After 2nd execution tag will brick (No reply to REQA/WUPA). Very likely you need to add extra data which we do not know
+```
+
+## NSCK-II
+^[Top](#top)
+
+- Magic tag for "NSC/BS-CPU"
+
+### Characteristics
+^[Top](#top)
+- Programming is done via ISO14443-A (but not sure how to modulate). Original tag is working somewhere hidden from proxmark.
+- ATQA-SAK: `0044`-`20`
+- ATS: `05 72 F7 60 02`
+- Communications encrypted(?)
+   - When writing with copykey, after RATS, this communication takes place (NSC ID programmed: `5800000000`, tag UID: `1D94CE25840000`):
+     ```
+     >>> 54 03 8A BC DF C1 [CRC]
+     <<< A2 [CRC]
+     >>> 54 04 57 AA 84 DD [CRC]
+     <<< A2 [CRC]
+     ```
+
+### Magic commands
+^[Top](#top)
+
+- Write NSC UID: `54 [part 1b] [data 4b enc] [CRC]`
+    - Tag replies: `A2 [CRC]`
