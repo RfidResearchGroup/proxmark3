@@ -1310,8 +1310,6 @@ Custom chips, manufactured by iKey LLC for cloning Ultralight tags.
 ### UL-Y
 ^[Top](#top)
 
-^[Top](#top)
-
 Ultralight magic, 16 pages. Recommended for Vizit RF3.1 with markings "3.1" or "4.1".
 Behavior: allows writes to page 0-2.
 
