@@ -711,7 +711,7 @@ int lf_read(bool verbose, uint32_t samples) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (gs_lf_threshold_set) {
+    if (gs_lf_threshold_set || verbose) {
         WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
     } else {
         if (!WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500)) {

@@ -856,7 +856,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                 bool     verbose : 1;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            uint32_t bits = SampleLF(payload->verbose, payload->samples, true);
+            uint32_t bits;
+            if (!(payload->verbose))
+                bits = SampleLF(false, payload->samples, true);
+            else
+                bits = SampleLF_realtime();
             reply_ng(CMD_LF_ACQ_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
         }

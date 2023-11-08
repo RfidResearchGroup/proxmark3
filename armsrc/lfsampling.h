@@ -50,7 +50,7 @@ void doT55x7Acquisition(size_t sample_size, bool ledcontrol);
 * @return number of bits sampled
 **/
 uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol);
-
+uint32_t SampleLF_realtime(void);
 /**
 * Initializes the FPGA for sniff-mode (field off), and acquires the samples.
 * @return number of bits sampled

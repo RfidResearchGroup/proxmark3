@@ -424,6 +424,129 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
     BigBuf_Clear_ext(false);
     return ReadLF(true, verbose, sample_size, ledcontrol);
 }
+
+// Bitmap for all status bits in CSR which must be written as 1 to cause no effect
+#define REG_NO_EFFECT_1_ALL      AT91C_UDP_RX_DATA_BK0 | AT91C_UDP_RX_DATA_BK1 \
+    |AT91C_UDP_STALLSENT   | AT91C_UDP_RXSETUP \
+    |AT91C_UDP_TXCOMP
+
+// Clear flags in the UDP_CSR register and waits for synchronization
+#define UDP_CLEAR_EP_FLAGS(endpoint, flags) { \
+        volatile unsigned int reg; \
+        reg = AT91C_BASE_UDP->UDP_CSR[(endpoint)]; \
+        reg |= REG_NO_EFFECT_1_ALL; \
+        reg &= ~(flags); \
+        AT91C_BASE_UDP->UDP_CSR[(endpoint)] = reg; \
+    }
+
+// reset flags in the UDP_CSR register and waits for synchronization
+#define UDP_SET_EP_FLAGS(endpoint, flags) { \
+        volatile unsigned int reg; \
+        reg = AT91C_BASE_UDP->UDP_CSR[(endpoint)]; \
+        reg |= REG_NO_EFFECT_1_ALL; \
+        reg |= (flags); \
+        AT91C_BASE_UDP->UDP_CSR[(endpoint)] = reg; \
+    }
+
+uint32_t SampleLF_realtime() {
+    BigBuf_Clear_ext(false);
+    LFSetupFPGAForADC(config.divisor, true);
+
+// DoAcquisition() start
+    uint32_t sample_size = 64;
+    const uint8_t bits_per_sample = config.bits_per_sample;
+    const int16_t trigger_threshold = config.trigger_threshold;
+    int32_t samples_to_skip = config.samples_to_skip;
+    const uint8_t decimation = config.decimation;
+// logic
+    int8_t counter = 0;
+    const int8_t thresholdTable[9] = {0, 64, 64, 48, 64, 40, 48, 56, 64};
+    const int8_t threshold = thresholdTable[decimation];
+    initSampleBuffer(&sample_size); // sample size in bytes
+    sample_size <<= 3; // sample size in bits
+    sample_size /= bits_per_sample; // sample count
+
+    bool trigger_hit = false;
+    int16_t checked = 0;
+
+    while (BUTTON_PRESS() == false) {
+
+        // only every 4000th times, in order to save time when collecting samples.
+        // interruptible only when logging not yet triggered
+        if ((checked >= 4000) && trigger_hit == false) {
+            if (data_available()) {
+                checked = -1;
+                break;
+            } else {
+                checked = 0;
+            }
+        }
+        ++checked;
+
+        WDT_HIT();
+
+        if ((AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY)) {
+            LED_D_ON();
+        }
+
+        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+
+            // Test point 8 (TP8) can be used to trigger oscilloscope
+            LED_D_OFF();
+
+            // threshold either high or low values 128 = center 0.  if trigger = 178
+            if (trigger_hit == false) {
+                if ((trigger_threshold > 0) && (sample < (trigger_threshold + 128)) && (sample > (128 - trigger_threshold))) {
+                    continue;
+                }
+            }
+
+            trigger_hit = true;
+
+            if (samples_to_skip > 0) {
+                samples_to_skip--;
+                continue;
+            }
+
+            logSample(sample, decimation, bits_per_sample, false);
+            counter++;
+
+            if(counter == threshold)
+            {
+                // end of transmission
+                UDP_CLEAR_EP_FLAGS(2, AT91C_UDP_TXCOMP);
+                while (AT91C_BASE_UDP->UDP_CSR[2] & AT91C_UDP_TXCOMP) {};
+
+                // can we write?
+                if ((AT91C_BASE_UDP->UDP_CSR[2] & AT91C_UDP_TXPKTRDY) != 0) 
+                    break;
+                    // return PM3_EIO;
+
+                // write data
+                uint8_t* ptr = data.buffer;
+                while(counter--)
+                    AT91C_BASE_UDP->UDP_FDR[2] = *ptr++;
+
+                // start of transmission
+                UDP_SET_EP_FLAGS(2, AT91C_UDP_TXPKTRDY);
+                while (!(AT91C_BASE_UDP->UDP_CSR[2] & AT91C_UDP_TXPKTRDY)) {};
+
+                // reset sample
+                counter = 0;
+                data.numbits = 0;
+                data.position = 0;
+                samples.total_saved = 0;
+            }
+        }
+    }
+
+// DoAcquisition() end
+
+    StopTicks();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    return 0;
+}
 /**
 * Initializes the FPGA for sniffer-mode (field off), and acquires the samples.
 * @return number of bits sampled
