@@ -20,11 +20,6 @@
 // frequency modes, the FPGA might perform some demodulation first, to
 // reduce the amount of data that we must send to the ARM.
 //-----------------------------------------------------------------------------
-//`include "fpga_lf.v"
-//`include "fpga_hf.v"
-//`include "mux2_onein.v"
-//`include "mux2_oneout.v"
-//`include "util.v"
 
 module fpga_top(
     input spck,

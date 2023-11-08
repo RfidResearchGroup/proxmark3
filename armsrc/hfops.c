@@ -200,7 +200,7 @@ static uint32_t HfEncodeTkm(const uint8_t *uid, uint8_t modulation, uint8_t *dat
     return len;
 }
 
-int HfSimulateTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout) {
+int HfSimulateTkm(const uint8_t *uid, uint8_t modulation, uint32_t timeout) {
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
 

@@ -91,18 +91,18 @@ static bool wait_for(bool value, const uint32_t timeout) {
 //  - A bit length >80.2us is a 1
 //  - A bit length <80.2us is a 0
 //  - A bit length >148.6us is a code violation
-static int8_t rx_bit(void) {
+static int32_t rx_bit(void) {
     // backup ts for threshold calculation
     uint32_t bit_start = last_frame_end;
 
     // wait for pause to end
-    if (!wait_for(RWD_PULSE, bit_start + RWD_TIME_1 * 3 / 2)) {
-        return -1;
+    if (wait_for(RWD_PULSE, bit_start + RWD_TIME_1 * 3 / 2) == false) {
+        return PM3_ERFTRANS;
     }
 
     // wait for next pause
-    if (!wait_for(RWD_PAUSE, bit_start + RWD_TIME_1 * 3 / 2)) {
-        return -1;
+    if (wait_for(RWD_PAUSE, bit_start + RWD_TIME_1 * 3 / 2) == false) {
+        return PM3_ERFTRANS;
     }
 
     // update bit and frame end
@@ -110,7 +110,7 @@ static int8_t rx_bit(void) {
 
     // check for code violation (bit to short)
     if (last_frame_end - bit_start < RWD_TIME_PAUSE) {
-        return -1;
+        return PM3_ERFTRANS;
     }
 
     // apply threshold (average of RWD_TIME_0 and )
@@ -215,7 +215,6 @@ static void tx_ack(void) {
 //  - receive the frame
 //  - detect end of frame (last pause)
 static int32_t rx_frame(uint8_t *len) {
-    int32_t frame = 0;
 
     // add 2 SSP clock cycles (1 for tx and 1 for rx pipeline delay)
     // those will be subtracted at the end of the rx phase
@@ -235,23 +234,24 @@ static int32_t rx_frame(uint8_t *len) {
 
         // check for code violation
         if (i > RWD_CMD_TIMEOUT) {
-            return -1;
+            return PM3_ETIMEOUT;
         }
     }
 
     // backup ts for trace log
     uint32_t last_frame_start = last_frame_end;
+    int32_t frame = 0;
 
     // receive frame
     for (*len = 0; true; ++(*len)) {
         // receive next bit
         LED_B_ON();
-        int8_t bit = rx_bit();
+        int32_t bit = rx_bit();
         LED_B_OFF();
 
         // check for code violation and to short / long frame
         if ((bit < 0) && ((*len < RWD_MIN_FRAME_LEN) || (*len > RWD_MAX_FRAME_LEN))) {
-            return -1;
+            return PM3_ERFTRANS;
         }
 
         // check for code violation caused by end of frame
@@ -353,7 +353,7 @@ static int32_t setup_phase(legic_card_select_t *p_card) {
     // wait for iv
     int32_t iv = rx_frame(&len);
     if ((len != 7) || (iv < 0)) {
-        return -1;
+        return PM3_ETIMEOUT;
     }
 
     // configure prng
@@ -375,19 +375,19 @@ static int32_t setup_phase(legic_card_select_t *p_card) {
     // wait for ack
     int32_t ack = rx_frame(&len);
     if ((len != 6) || (ack < 0)) {
-        return -1;
+        return PM3_ETIMEOUT;
     }
 
     // validate data
     switch (p_card->tagtype) {
         case 0:
-            if (ack != 0x19) return -1;
+            if (ack != 0x19) return PM3_ERFTRANS;
             break;
         case 1:
-            if (ack != 0x39) return -1;
+            if (ack != 0x39) return PM3_ERFTRANS;
             break;
         case 2:
-            if (ack != 0x39) return -1;
+            if (ack != 0x39) return PM3_ERFTRANS;
             break;
     }
 
@@ -399,7 +399,7 @@ static int32_t setup_phase(legic_card_select_t *p_card) {
     // the gap by one period.
     last_frame_end += TAG_BIT_PERIOD;
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static uint8_t calc_crc4(uint16_t cmd, uint8_t cmd_sz, uint8_t value) {
@@ -414,7 +414,7 @@ static int32_t connected_phase(legic_card_select_t *p_card) {
     // wait for command
     int32_t cmd = rx_frame(&len);
     if (cmd < 0) {
-        return -1;
+        return PM3_ETIMEOUT;
     }
 
     // check if command is LEGIC_READ
@@ -425,8 +425,7 @@ static int32_t connected_phase(legic_card_select_t *p_card) {
 
         // transmit data
         tx_frame((crc << 8) | byte, 12);
-
-        return 0;
+        return PM3_SUCCESS;
     }
 
     // check if command is LEGIC_WRITE
@@ -441,7 +440,7 @@ static int32_t connected_phase(legic_card_select_t *p_card) {
         uint8_t calc_crc = calc_crc4(addr << 1, p_card->cmdsize, byte);
         if (calc_crc != crc) {
             Dbprintf("!!! crc mismatch: %x != %x !!!",  calc_crc, crc);
-            return -1;
+            return PM3_ECRC;
         }
 
         // store data
@@ -449,11 +448,10 @@ static int32_t connected_phase(legic_card_select_t *p_card) {
 
         // transmit ack
         tx_ack();
-
-        return 0;
+        return PM3_SUCCESS;
     }
 
-    return -1;
+    return PM3_ERFTRANS;
 }
 
 //-----------------------------------------------------------------------------
@@ -466,26 +464,26 @@ void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
     // configure ARM and FPGA
     init_tag();
 
-    int res = PM3_SUCCESS;
+    int res = init_card(tagtype, &card);
     // verify command line input
-    if (init_card(tagtype, &card) != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS) {
         DbpString("Unknown tagtype to simulate");
-        res = PM3_ESOFT;
         goto OUT;
     }
 
-    uint16_t counter = 0;
     LED_A_ON();
 
-    Dbprintf("Legic Prime, simulating uid: %02X%02X%02X%02X", legic_mem[0], legic_mem[1], legic_mem[2], legic_mem[3]);
+    Dbprintf("Legic Prime, simulating MCD... " _YELLOW_("%02X") " MSN... " _YELLOW_("%02X%02X%02X"), legic_mem[0], legic_mem[1], legic_mem[2], legic_mem[3]);
 
+    uint16_t counter = 0;
     while (BUTTON_PRESS() == false) {
+
         WDT_HIT();
 
         if (counter >= 2000) {
             if (data_available()) {
                 res = PM3_EOPABORTED;
-                break;
+                goto OUT;
             }
             counter = 0;
         }
@@ -497,12 +495,12 @@ void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
         }
 
         // wait for connection, restart on error
-        if (setup_phase(&card)) {
+        if (setup_phase(&card) != PM3_SUCCESS) {
             continue;
         }
 
         // connection is established, process commands until one fails
-        while (connected_phase(&card) == false) {
+        while (connected_phase(&card) == PM3_SUCCESS) {
             WDT_HIT();
         }
     }
@@ -510,17 +508,19 @@ void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
 OUT:
 
     if (g_dbglevel >= DBG_ERROR) {
-        Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", get_tracing(), BigBuf_get_traceLen());
+        Dbprintf("Emulator stopped. Trace length... " _YELLOW_("%d"), BigBuf_get_traceLen());
     }
 
-    if (res == PM3_EOPABORTED)
-        DbpString("aborted by user");
+    if (res == PM3_EOPABORTED) {
+        DbpString("Aborted by user");
+    }
 
     switch_off();
     StopTicks();
 
-    if (send_reply)
+    if (send_reply) {
         reply_ng(CMD_HF_LEGIC_SIMULATE, res, NULL, 0);
+    }
 
     BigBuf_free_keep_EM();
 }

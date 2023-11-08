@@ -429,7 +429,7 @@ static void TexcomReverseCode(const uint8_t *code, int length, uint8_t *reverse_
     for (int i = 0; i < length; i++) {
         reverse_code[i] = code[(length - 1) - i];
     }
-};
+}
 
 static int texkom_get_type(texkom_card_select_t *card, bool verbose) {
 
@@ -493,7 +493,7 @@ static int texkom_get_type(texkom_card_select_t *card, bool verbose) {
             noiselvl = TEXKOM_NOISE_THRESHOLD;
         }
 
-        uint32_t implengths[256] = {};
+        uint32_t implengths[256] = { 0 };
         uint32_t implengthslen = 0;
         uint32_t impulseindx = 0;
         uint32_t impulsecnt = 0;
@@ -707,7 +707,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
         //PrintAndLogEx(WARNING, "--- indx: %d, len: %d, max: %d, noise: %d", sindx, slen, maxlvl, noiselvl);
 
-        uint32_t implengths[256] = {};
+        uint32_t implengths[256] = { 0 };
         uint32_t implengthslen = 0;
         uint32_t impulseindx = 0;
         uint32_t impulsecnt = 0;
@@ -850,10 +850,10 @@ static int CmdHFTexkomSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf texkom sim",
                   "Simulate a texkom tag",
-                  "hf texkom sim \r\n"
-                  "hf texkom sim --raw FFFF638C7DC45553 -> simulate TK13 tag with id 8C7DC455\r\n"
-                  "hf texkom sim --tk17 --raw FFFFCA17F31EC512 -> simulate TK17 tag with id 17F31EC5\r\n"
-                  "hf texkom sim --id 8C7DC455 -> simulate TK13 tag with id 8C7DC455\r\n"
+                  "hf texkom sim \n"
+                  "hf texkom sim --raw FFFF638C7DC45553 -> simulate TK13 tag with id 8C7DC455\n"
+                  "hf texkom sim --tk17 --raw FFFFCA17F31EC512 -> simulate TK17 tag with id 17F31EC5\n"
+                  "hf texkom sim --id 8C7DC455 -> simulate TK13 tag with id 8C7DC455\n"
                   "hf texkom sim --id 8C7DC455 --tk17 -> simulate TK17 tag with id 17F31EC5");
 
     void *argtable[] = {
@@ -872,7 +872,7 @@ static int CmdHFTexkomSim(const char *Cmd) {
         uint8_t data[8];
         uint8_t modulation;
         uint32_t timeout;
-    } PACKED payload = {};
+    } PACKED payload = {0};
 
     bool verbose = arg_get_lit(ctx, 1);
     payload.modulation = 0; // tk-13

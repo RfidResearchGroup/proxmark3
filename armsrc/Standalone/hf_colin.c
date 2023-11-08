@@ -293,7 +293,7 @@ static void ReadLastTagFromFlash(void) {
     rdv40_spiffs_read_as_filetype((char *)HFCOLIN_LASTTAG_SYMLINK, (uint8_t *)mem, len, RDV40_SPIFFS_SAFETY_SAFE);
 
     // copy 64blocks (16bytes) starting w block0, to emulator mem.
-    emlSetMem(mem, 0, 64);
+    emlSetMem_xt(mem, 0, 64, 16);
 
     DbprintfEx(FLAG_NEWLINE, "[OK] Last tag recovered from FLASHMEM set to emulator");
     cjSetCursLeft();
@@ -650,7 +650,7 @@ failtag:
         for (uint8_t t = 0; t < 2; t++) {
             memcpy(mblock + t * 10, foundKey[t][sectorNo], 6);
         }
-        emlSetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
+        emlSetMem_xt(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1, 16);
     }
     cjSetCursLeft();
 
@@ -827,12 +827,12 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
             };
             if (isOK) {
                 if (blockNo < NumBlocksPerSector(s) - 1) {
-                    emlSetMem(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1);
+                    emlSetMem_xt(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1, 16);
                 } else {
                     // sector trailer, keep the keys, set only the AC
                     emlGetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
                     memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
-                    emlSetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
+                    emlSetMem_xt(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1, 16);
                 }
             }
         }

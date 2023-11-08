@@ -140,15 +140,17 @@
             "command": "analyse units",
             "description": "experiments of unit conversions found in HF. ETU (1/13.56mhz), US or SSP_CLK (1/3.39MHz)",
             "notes": [
-                "analyse uints --etu 10analyse uints --us 100"
+                "analyse uints --etu 10",
+                "analyse uints --us 100"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "--etu <dec> number in ETU",
-                "--us <dec> number in micro seconds (us)"
+                "--us <dec> number in micro seconds (us)",
+                "-t, --selftest self tests"
             ],
-            "usage": "analyse units [-h] [--etu <dec>] [--us <dec>]"
+            "usage": "analyse units [-ht] [--etu <dec>] [--us <dec>]"
         },
         "auto": {
             "command": "auto",
@@ -199,9 +201,23 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
+                "-d <hex> ASN1 encoded byte array",
+                "-t, --test perform selftest"
+            ],
+            "usage": "data asn1 [-ht] [-d <hex>]"
+        },
+        "data atr": {
+            "command": "data atr",
+            "description": "look up ATR record from bytearray",
+            "notes": [
+                "data atr -d 3B6B00000031C064BE1B0100079000"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
                 "-d <hex> ASN1 encoded byte array"
             ],
-            "usage": "data asn1 [-h] -d <hex>"
+            "usage": "data atr [-h] [-d <hex>]"
         },
         "data autocorr": {
             "command": "data autocorr",
@@ -259,6 +275,21 @@
             ],
             "usage": "data bitsamples [-h]"
         },
+        "data bmap": {
+            "command": "data bmap",
+            "description": "Breaks down a hex value to binary according a template data bmap -d 16 -m 4,4 This will give two rows each with four bits",
+            "notes": [
+                "data bmap -d 3B",
+                "data bmap -d 3B -m 2,5,1"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-d <hex> hex string",
+                "-m <str> binary template"
+            ],
+            "usage": "data bmap [-h] [-d <hex>] [-m <str>]"
+        },
         "data clear": {
             "command": "data clear",
             "description": "This function clears the bigbuff on deviceside and graph window",
@@ -283,6 +314,20 @@
             ],
             "usage": "data convertbitstream [-h]"
         },
+        "data cthreshold": {
+            "command": "data cthreshold",
+            "description": "Inverse of dirty threshold command, all values between up and down will be average out",
+            "notes": [
+                "data cthreshold -u 10 -d -10"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-d, --down <dec> threshold down",
+                "-u, --up <dec> threshold up"
+            ],
+            "usage": "data cthreshold [-h] -d <dec> -u <dec>"
+        },
         "data decimate": {
             "command": "data decimate",
             "description": "Performs decimation, by reducing samples N times in the grapbuf. Good for PSK",
@@ -301,20 +346,18 @@
             "command": "data detectclock",
             "description": "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer",
             "notes": [
-                "data detectclock -A -> detect clock of an ask wave in GraphBuffer",
-                "data detectclock -F -> detect clock of an fsk wave in GraphBuffer",
-                "data detectclock -N -> detect clock of an psk wave in GraphBuffer",
-                "data detectclock -P -> detect clock of an nrz/direct wave in GraphBuffer"
+                "data detectclock --ask",
+                "data detectclock --nzr -> detect clock of an nrz/direct wave in GraphBuffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-A, --ASK specify ASK modulation clock detection",
-                "-F, --FSK specify FSK modulation clock detection",
-                "-N, --NZR specify NZR/DIRECT modulation clock detection",
-                "-P, --PSK specify PSK modulation clock detection"
+                "--ask specify ASK modulation clock detection",
+                "--fsk specify FSK modulation clock detection",
+                "--nzr specify NZR/DIRECT modulation clock detection",
+                "--psk specify PSK modulation clock detection"
             ],
-            "usage": "data detectclock [-hAFNP]"
+            "usage": "data detectclock [-h] [--ask] [--fsk] [--nzr] [--psk]"
         },
         "data diff": {
             "command": "data diff",
@@ -351,6 +394,18 @@
                 "-u, --up <dec> threshold up"
             ],
             "usage": "data dirthreshold [-h] -d <dec> -u <dec>"
+        },
+        "data envelope": {
+            "command": "data envelope",
+            "description": "Create an square envelop of the samples",
+            "notes": [
+                "data envelop"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "data envelop [-h]"
         },
         "data fsktonrz": {
             "command": "data fsktonrz",
@@ -1145,7 +1200,7 @@
         },
         "hf 14a list": {
             "command": "hf 14a list",
-            "description": "Alias of `trace list -t 14a` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t 14a -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 14a list --frame -> show frame delay times",
                 "hf 14a list -1 -> use trace buffer"
@@ -1272,19 +1327,21 @@
                 "hf 14a sim -t 7 -> MFU EV1 / NTAG 215 Amiibo",
                 "hf 14a sim -t 8 -> MIFARE Classic 4k",
                 "hf 14a sim -t 9 -> FM11RF005SH Shanghai Metro",
-                "hf 14a sim -t 10 -> ST25TA IKEA Rothult"
+                "hf 14a sim -t 10 -> ST25TA IKEA Rothult",
+                "hf 14a sim -t 11 -> Javacard (JCOP)",
+                "hf 14a sim -t 12 -> 4K Seos card"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, --type <1-10> Simulation type to use",
+                "-t, --type <1-12> Simulation type to use",
                 "-u, --uid <hex> <4|7|10> hex bytes UID",
                 "-n, --num <dec> Exit simulation after <numreads> blocks have been read by reader. 0 = infinite",
                 "-x Performs the 'reader attack', nr/ar attack against a reader",
                 "--sk Fill simulator keys from found keys",
                 "-v, --verbose verbose output"
             ],
-            "usage": "hf 14a sim [-hxv] -t <1-10> [-u <hex>] [-n <dec>] [--sk]"
+            "usage": "hf 14a sim [-hxv] -t <1-12> [-u <hex>] [-n <dec>] [--sk]"
         },
         "hf 14a sniff": {
             "command": "hf 14a sniff",
@@ -1496,7 +1553,7 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump",
+                "-f, --file <fn> Specify a filename for dump file",
                 "-v, --verbose verbose output"
             ],
             "usage": "hf 14b view [-hv] -f <fn>"
@@ -1528,7 +1585,7 @@
         },
         "hf 15 dump": {
             "command": "hf 15 dump",
-            "description": "This command dumps the contents of a ISO-15693 tag and save it to file",
+            "description": "This command dumps the contents of a ISO-15693 tag and save to file (bin/json)",
             "notes": [
                 "hf 15 dump",
                 "hf 15 dump -*",
@@ -1542,7 +1599,7 @@
                 "-* scan for tag",
                 "-2 use slower '1 out of 256' mode",
                 "-o, --opt set OPTION Flag (needed for TI)",
-                "-f, --file <fn> filename of dump"
+                "-f, --file <fn> Specify a filename for dump file"
             ],
             "usage": "hf 15 dump [-h*2o] [-u <hex>] [--ua] [-f <fn>]"
         },
@@ -1561,18 +1618,18 @@
         },
         "hf 15 esave": {
             "command": "hf 15 esave",
-            "description": "Save emulator memory into three files (BIN/EML/JSON)",
+            "description": "Save emulator memory into two files (bin/json)",
             "notes": [
                 "hf 15 esave -f hf-15-01020304hf 15 esave -b 8 -c 42 -f hf-15-01020304"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump",
-                "-b, --blocksize <dec> block size, defaults to 4",
+                "-f, --file <fn> Specify a filename for dump file",
+                "--bsize <dec> block size, defaults to 4",
                 "-c, --count <dec> number of blocks to export, defaults to all"
             ],
-            "usage": "hf 15 esave [-h] -f <fn> [-b <dec>] [-c <dec>]"
+            "usage": "hf 15 esave [-h] -f <fn> [--bsize <dec>] [-c <dec>]"
         },
         "hf 15 eview": {
             "command": "hf 15 eview",
@@ -1742,7 +1799,7 @@
         },
         "hf 15 restore": {
             "command": "hf 15 restore",
-            "description": "This command restore the contents of a dump file onto a ISO-15693 tag",
+            "description": "This command restore the contents of a dump file (bin/eml/json) onto a ISO-15693 tag",
             "notes": [
                 "hf 15 restore",
                 "hf 15 restore -*",
@@ -1756,7 +1813,7 @@
                 "-* scan for tag",
                 "-2 use slower '1 out of 256' mode",
                 "-o, --opt set OPTION Flag (needed for TI)",
-                "-f, --file <fn> filename of dump",
+                "-f, --file <fn> Specify a filename for dump file",
                 "-r, --retry <dec> number of retries (def 3)",
                 "--bs <dec> block size (def 4)",
                 "-v, --verbose verbose output"
@@ -1867,6 +1924,19 @@
                 "-h, --help This help"
             ],
             "usage": "hf 15 sniff [-h]"
+        },
+        "hf 15 view": {
+            "command": "hf 15 view",
+            "description": "Print a ISO-15693 tag dump file (bin/eml/json)",
+            "notes": [
+                "hf 15 view -f hf-iclass-AA162D30F8FF12F1-dump.bin"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> Specify a filename for dump file"
+            ],
+            "usage": "hf 15 view [-h] -f <fn>"
         },
         "hf 15 wrbl": {
             "command": "hf 15 wrbl",
@@ -2752,14 +2822,14 @@
         },
         "hf fudan dump": {
             "command": "hf fudan dump",
-            "description": "Dump FUDAN tag to binary file If no <name> given, UID will be used as filename",
+            "description": "Dump FUDAN tag to file (bin/json) If no <name> given, UID will be used as filename",
             "notes": [
                 "hf fudan dump -f mydump -> dump using filename"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump"
+                "-f, --file <fn> Specify a filename for dump file"
             ],
             "usage": "hf fudan dump [-h] [-f <fn>]"
         },
@@ -2803,7 +2873,7 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump"
+                "-f, --file <fn> Specify a filename for dump file"
             ],
             "usage": "hf fudan view [-h] -f <fn>"
         },
@@ -2932,9 +3002,10 @@
                 "--nki <dec> New key index to select key from memory 'hf iclass managekeys'",
                 "--csn <hex> Specify a Card Serial Number (CSN) to diversify the key (if omitted will attempt to read a CSN)",
                 "--elite Elite computations applied to new key",
-                "--elite2 Elite computations applied to both old and new key"
+                "--elite2 Elite computations applied to both old and new key",
+                "--oldelite Elite computations applied only to old key"
             ],
-            "usage": "hf iclass calcnewkey [-h] [--old <hex>] [--oki <dec>] [--new <hex>] [--nki <dec>] [--csn <hex>] [--elite] [--elite2]"
+            "usage": "hf iclass calcnewkey [-h] [--old <hex>] [--oki <dec>] [--new <hex>] [--nki <dec>] [--csn <hex>] [--elite] [--elite2] [--oldelite]"
         },
         "hf iclass chk": {
             "command": "hf iclass chk",
@@ -2956,14 +3027,14 @@
         },
         "hf iclass configcard": {
             "command": "hf iclass configcard",
-            "description": "Manage reader configuration card via Cardhelper, The generated config card will be uploaded to device emulator memory. You can start simulating `hf iclass sim -t 3` or use the emul commands",
+            "description": "Manage reader configuration card via Cardhelper or internal database, The generated config card will be uploaded to device emulator memory. You can start simulating `hf iclass sim -t 3` or use the emul commands",
             "notes": [
-                "hf iclass configcard -l -> download config card settings",
-                "hf iclass configcard -p -> print all config cards",
+                "hf iclass configcard -l -> download config card settings from cardhelper",
+                "hf iclass configcard -p -> print all config cards in the database",
                 "hf iclass configcard --ci 1 -> view config card setting in slot 1",
                 "hf iclass configcard -g --ci 0 -> generate config file from slot 0"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help",
                 "--ci <dec> use config slot at index",
@@ -2974,9 +3045,29 @@
             ],
             "usage": "hf iclass configcard [-hglp] [--ci <dec>] [--ki <dec>]"
         },
+        "hf iclass creditepurse": {
+            "command": "hf iclass creditepurse",
+            "description": "Credit the epurse on an iCLASS tag. The provided key must be the credit key. The first two bytes of the epurse are the debit value (big endian) and may be any value except FFFF. The remaining two bytes of the epurse are the credit value and must be smaller than the previous value.",
+            "notes": [
+                "hf iclass creditepurse -d FEFFFFFF -k 001122334455667B",
+                "hf iclass creditepurse -d FEFFFFFF --ki 0"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <hex> Credit key as 8 hex bytes",
+                "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
+                "-d, --data <hex> data to write as 8 hex bytes",
+                "--elite elite computations applied to key",
+                "--raw no computations applied to key",
+                "-v, --verbose verbose output",
+                "--shallow use shallow (ASK) reader modulation instead of OOK"
+            ],
+            "usage": "hf iclass creditepurse [-hv] [-k <hex>] [--ki <dec>] -d <hex> [--elite] [--raw] [--shallow]"
+        },
         "hf iclass decrypt": {
             "command": "hf iclass decrypt",
-            "description": "3DES decrypt data This is a naive implementation, it tries to decrypt every block after block 6. Correct behaviour would be to decrypt only the application areas where the key is valid, which is defined by the configuration block. OBS! In order to use this function, the file `iclass_decryptionkey.bin` must reside in the resources directory. The file should be 16 bytes binary data or... make sure your cardhelper is placed in the sim module",
+            "description": "3DES decrypt data This is a naive implementation, it tries to decrypt every block after block 6. Correct behaviour would be to decrypt only the application areas where the key is valid, which is defined by the configuration block. OBS! In order to use this function, the file `iclass_decryptionkey.bin` must reside in the resources directory. The file must be 16 bytes binary data or... make sure your cardhelper is placed in the sim module",
             "notes": [
                 "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin",
                 "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin -k 000102030405060708090a0b0c0d0e0f",
@@ -2985,7 +3076,7 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump file (bin/eml/json)",
+                "-f, --file <fn> Specify a filename for dump file",
                 "-d, --data <hex> 3DES encrypted data",
                 "-k, --key <hex> 3DES transport key",
                 "-v, --verbose verbose output",
@@ -3017,24 +3108,26 @@
                 "--nr replay of NR/MAC",
                 "-z, --dense dense dump output style",
                 "--force force unsecure card read",
-                "--shallow use shallow (ASK) reader modulation instead of OOK"
+                "--shallow use shallow (ASK) reader modulation instead of OOK",
+                "--ns no save to file"
             ],
-            "usage": "hf iclass dump [-hz] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr] [--force] [--shallow]"
+            "usage": "hf iclass dump [-hz] [-f <fn>] [-k <hex>] [--ki <dec>] [--credit <hex>] [--ci <dec>] [--elite] [--raw] [--nr] [--force] [--shallow] [--ns]"
         },
         "hf iclass eload": {
             "command": "hf iclass eload",
-            "description": "Load emulator memory with data from (bin/eml/json) iCLASS dump file",
+            "description": "Load emulator memory with data from (bin/json) iCLASS dump file",
             "notes": [
-                "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.eml",
+                "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.json",
                 "hf iclass eload -f hf-iclass-AA162D30F8FF12F1-dump.bin -m"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump (bin/eml/json)",
-                "-m, --mem use RDV4 spiffs"
+                "-f, --file <fn> Specify a filename for dump file",
+                "-m, --mem use RDV4 spiffs",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf iclass eload [-hm] -f <fn>"
+            "usage": "hf iclass eload [-hmv] -f <fn>"
         },
         "hf iclass encode": {
             "command": "hf iclass encode",
@@ -3079,7 +3172,7 @@
         },
         "hf iclass esave": {
             "command": "hf iclass esave",
-            "description": "Save emulator memory to file. if filename is not supplied, CSN will be used.",
+            "description": "Save emulator memory to file (bin/json) if filename is not supplied, CSN will be used.",
             "notes": [
                 "hf iclass esave",
                 "hf iclass esave -f hf-iclass-dump",
@@ -3088,10 +3181,24 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump file",
+                "-f, --file <fn> Specify a filename for dump file",
                 "-s, --size <256|2048> number of bytes to save (default 256)"
             ],
             "usage": "hf iclass esave [-h] [-f <fn>] [-s <256|2048>]"
+        },
+        "hf iclass esetblk": {
+            "command": "hf iclass esetblk",
+            "description": "Sets an individual block in emulator memory.",
+            "notes": [
+                "hf iclass esetblk --blk 7 -d 0000000000000000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--blk <dec> block number",
+                "-d, --data <hex> bytes to write, 8 hex bytes"
+            ],
+            "usage": "hf iclass esetblk [-h] --blk <dec> [-d <hex>]"
         },
         "hf iclass eview": {
             "command": "hf iclass eview",
@@ -3116,7 +3223,7 @@
             "notes": [
                 "hf iclass info"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help",
                 "--shallow use shallow (ASK) reader modulation instead of OOK"
@@ -3125,7 +3232,7 @@
         },
         "hf iclass list": {
             "command": "hf iclass list",
-            "description": "Alias of `trace list -t iclass` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t iclass -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf iclass list --frame -> show frame delay times",
                 "hf iclass list -1 -> use trace buffer"
@@ -3219,16 +3326,16 @@
             "command": "hf iclass rdbl",
             "description": "Read a iCLASS block from tag",
             "notes": [
-                "hf iclass rdbl -b 6 -k 0011223344556677",
-                "hf iclass rdbl -b 27 -k 0011223344556677 --credit",
-                "hf iclass rdbl -b 10 --ki 0"
+                "hf iclass rdbl --blk 6 -k 0011223344556677",
+                "hf iclass rdbl --blk 27 -k 0011223344556677 --credit",
+                "hf iclass rdbl --blk 10 --ki 0"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-k, --key <hex> Access key as 8 hex bytes",
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
-                "-b, --block <dec> The block number to read",
+                "--blk <dec> Block number",
                 "--credit key is assumed to be the credit key",
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key",
@@ -3236,7 +3343,7 @@
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass rdbl [-hv] [-k <hex>] [--ki <dec>] -b <dec> [--credit] [--elite] [--raw] [--nr] [--shallow]"
+            "usage": "hf iclass rdbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> [--credit] [--elite] [--raw] [--nr] [--shallow]"
         },
         "hf iclass reader": {
             "command": "hf iclass reader",
@@ -3254,7 +3361,7 @@
         },
         "hf iclass restore": {
             "command": "hf iclass restore",
-            "description": "Restore data from dumpfile onto a iCLASS tag",
+            "description": "Restore data from dumpfile (bin/eml/json) onto a iCLASS tag",
             "notes": [
                 "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0",
                 "hf iclass restore -f hf-iclass-AA162D30F8FF12F1-dump.bin --first 6 --last 18 --ki 0 --elite",
@@ -3263,7 +3370,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> specify a filename to restore (bin/eml/json)",
+                "-f, --file <fn> specify a filename to restore",
                 "-k, --key <hex> Access key as 8 hex bytes",
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
                 "--first <dec> The first block number to restore",
@@ -3275,6 +3382,19 @@
                 "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
             "usage": "hf iclass restore [-hv] -f <fn> [-k <hex>] [--ki <dec>] --first <dec> --last <dec> [--credit] [--elite] [--raw] [--shallow]"
+        },
+        "hf iclass sam": {
+            "command": "hf iclass sam",
+            "description": "Extract PACS via a HID SAM",
+            "notes": [
+                "hf iclass sam"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf iclass sam [-hv]"
         },
         "hf iclass sim": {
             "command": "hf iclass sim",
@@ -3313,13 +3433,16 @@
             "description": "Print a iCLASS tag dump file (bin/eml/json)",
             "notes": [
                 "hf iclass view -f hf-iclass-AA162D30F8FF12F1-dump.bin",
-                "hf iclass view --first 1 -f hf-iclass-AA162D30F8FF12F1-dump.bin"
+                "hf iclass view --first 1 -f hf-iclass-AA162D30F8FF12F1-dump.bin",
+                "",
+                "If --first is not specified it will default to the first user block",
+                "which is block 6 for secured chips or block 3 for non-secured chips"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump (bin/eml/json)",
-                "--first <dec> Begin printing from this block (default block 6)",
+                "-f, --file <fn> Specify a filename for dump file",
+                "--first <dec> Begin printing from this block (default first user block)",
                 "--last <dec> End printing at this block (default 0, ALL)",
                 "-v, --verbose verbose output",
                 "-z, --dense dense dump output style"
@@ -3330,16 +3453,16 @@
             "command": "hf iclass wrbl",
             "description": "Write data to an iCLASS tag",
             "notes": [
-                "hf iclass wrbl -b 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B",
-                "hf iclass wrbl -b 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --credit",
-                "hf iclass wrbl -b 10 -d AAAAAAAAAAAAAAAA --ki 0"
+                "hf iclass wrbl --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B",
+                "hf iclass wrbl --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --credit",
+                "hf iclass wrbl --blk 10 -d AAAAAAAAAAAAAAAA --ki 0"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-k, --key <hex> Access key as 8 hex bytes",
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
-                "-b, --block <dec> The block number to read",
+                "--blk <dec> block number",
                 "-d, --data <hex> data to write as 8 hex bytes",
                 "-m, --mac <hex> replay mac data (4 hex bytes)",
                 "--credit key is assumed to be the credit key",
@@ -3349,7 +3472,7 @@
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
-            "usage": "hf iclass wrbl [-hv] [-k <hex>] [--ki <dec>] -b <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow]"
+            "usage": "hf iclass wrbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow]"
         },
         "hf jooki clone": {
             "command": "hf jooki clone",
@@ -3516,7 +3639,7 @@
         },
         "hf legic dump": {
             "command": "hf legic dump",
-            "description": "Read all memory from LEGIC Prime tags and saves to (bin/eml/json) dump file It autodetects card type (MIM22, MIM256, MIM1024)",
+            "description": "Read all memory from LEGIC Prime tags and saves to (bin/json) dump file It autodetects card type (MIM22, MIM256, MIM1024)",
             "notes": [
                 "hf legic dump -> use UID as filename",
                 "hf legic dump -f myfile",
@@ -3534,13 +3657,17 @@
             "command": "hf legic einfo",
             "description": "It decodes and displays emulator memory",
             "notes": [
-                "hf legic einfo"
+                "hf legic einfo",
+                "hf legic eview --22"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "--22 LEGIC Prime MIM22",
+                "--256 LEGIC Prime MIM256 (def)",
+                "--1024 LEGIC Prime MIM1024"
             ],
-            "usage": "hf legic einfo [-h]"
+            "usage": "hf legic einfo [-h] [--22] [--256] [--1024]"
         },
         "hf legic eload": {
             "command": "hf legic eload",
@@ -3559,7 +3686,7 @@
         },
         "hf legic esave": {
             "command": "hf legic esave",
-            "description": "Saves a (bin/eml/json) dump file of emulator memory",
+            "description": "Saves a (bin/json) dump file of emulator memory",
             "notes": [
                 "hf legic esave -> uses UID as filename",
                 "hf legic esave -f myfile --22",
@@ -3588,9 +3715,10 @@
                 "-h, --help This help",
                 "--22 LEGIC Prime MIM22",
                 "--256 LEGIC Prime MIM256 (def)",
-                "--1024 LEGIC Prime MIM1024"
+                "--1024 LEGIC Prime MIM1024",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf legic eview [-h] [--22] [--256] [--1024]"
+            "usage": "hf legic eview [-hv] [--22] [--256] [--1024]"
         },
         "hf legic info": {
             "command": "hf legic info",
@@ -3600,9 +3728,10 @@
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf legic info [-h]"
+            "usage": "hf legic info [-hv]"
         },
         "hf legic list": {
             "command": "hf legic list",
@@ -3665,7 +3794,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> Filename to restore",
+                "-f, --file <fn> Specify a filename to restore",
                 "--ob obfuscate dump data (xor with MCC)"
             ],
             "usage": "hf legic restore [-h] -f <fn> [--ob]"
@@ -3694,9 +3823,10 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> Filename of dump"
+                "-f, --file <fn> Specify a filename for dump file",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf legic view [-h] -f <fn>"
+            "usage": "hf legic view [-hv] -f <fn>"
         },
         "hf legic wipe": {
             "command": "hf legic wipe",
@@ -3774,7 +3904,7 @@
         },
         "hf lto list": {
             "command": "hf lto list",
-            "description": "Alias of `trace list -t lto` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t lto -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf lto list --frame -> show frame delay times",
                 "hf lto list -1 -> use trace buffer"
@@ -3837,15 +3967,15 @@
             "command": "hf lto wrbl",
             "description": "Write data to block on LTO tag",
             "notes": [
-                "hf lto wrbl --block 128 -d 0001020304050607080910111213141516171819202122232425262728293031"
+                "hf lto wrbl --blk 128 -d 0001020304050607080910111213141516171819202122232425262728293031"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-d, --data <hex> 32 bytes of data to write (64 hex symbols, no spaces)",
-                "--block <dec> The block number to write to as an integer"
+                "--blk <dec> The block number to write to as an integer"
             ],
-            "usage": "hf lto wrbl [-h] -d <hex> --block <dec>"
+            "usage": "hf lto wrbl [-h] -d <hex> --blk <dec>"
         },
         "hf mf acl": {
             "command": "hf mf acl",
@@ -3978,14 +4108,14 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump",
+                "-f, --file <fn> Specify a filename for dump file",
                 "--emu from emulator memory"
             ],
             "usage": "hf mf cload [-h] [-f <fn>] [--emu]"
         },
         "hf mf csave": {
             "command": "hf mf csave",
-            "description": "Save magic gen1a card memory into three files (BIN/EML/JSON)or into emulator memory",
+            "description": "Save magic gen1a card memory to file (bin/json)or into emulator memory",
             "notes": [
                 "hf mf csave",
                 "hf mf csave --4k"
@@ -3993,7 +4123,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump",
+                "-f, --file <fn> Specify a filename for dump file",
                 "--mini MIFARE Classic Mini / S20",
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
@@ -4104,7 +4234,7 @@
         },
         "hf mf dump": {
             "command": "hf mf dump",
-            "description": "Dump MIFARE Classic tag to binary file If no <name> given, UID will be used as filename",
+            "description": "Dump MIFARE Classic tag to file (bin/json) If no <name> given, UID will be used as filename",
             "notes": [
                 "hf mf dump --mini -> MIFARE Mini",
                 "hf mf dump --1k -> MIFARE Classic 1k",
@@ -4115,7 +4245,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump",
+                "-f, --file <fn> Specify a filename for dump file",
                 "-k, --keys <fn> filename of keys",
                 "--mini MIFARE Classic Mini / S20",
                 "--1k MIFARE Classic 1k / S50 (def)",
@@ -4213,20 +4343,39 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump",
+                "-f, --file <fn> Specify a filename for dump file",
                 "--mini MIFARE Classic Mini / S20",
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
                 "--ul MIFARE Ultralight family",
                 "-m, --mem use RDV4 spiffs",
-                "-q, --qty <dec> manually set number of blocks (overrides)"
+                "-q, --qty <dec> manually set number of blocks (overrides)",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf mf eload [-hm] -f <fn> [--mini] [--1k] [--2k] [--4k] [--ul] [-q <dec>]"
+            "usage": "hf mf eload [-hmv] -f <fn> [--mini] [--1k] [--2k] [--4k] [--ul] [-q <dec>]"
+        },
+        "hf mf encodehid": {
+            "command": "hf mf encodehid",
+            "description": "Encode binary wiegand to card Use either --bin or --wiegand/--fc/--cn",
+            "notes": [
+                "hf mf encodehid --bin 10001111100000001010100011 -> FC 31 CN 337 (H10301)",
+                "hf mf encodehid -w H10301 --fc 31 --cn 337"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--bin <bin> Binary string i.e 0001001001",
+                "--fc <dec> facility code",
+                "--cn <dec> card number",
+                "-w, --wiegand <format> see `wiegand list` for available formats",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf mf encodehid [-hv] [--bin <bin>] [--fc <dec>] [--cn <dec>] [-w <format>]"
         },
         "hf mf esave": {
             "command": "hf mf esave",
-            "description": "Save emulator memory into three files (BIN/EML/JSON)",
+            "description": "Save emulator memory to file (bin/json)",
             "notes": [
                 "hf mf esave",
                 "hf mf esave --4k",
@@ -4235,7 +4384,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump",
+                "-f, --file <fn> Specify a filename for dump file",
                 "--mini MIFARE Classic Mini / S20",
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
@@ -4327,13 +4476,11 @@
             "options": [
                 "-h, --help This help",
                 "--blk <dec> block number",
-                "-a input key type is key A (def)",
-                "-b input key type is key B",
                 "-d, --data <hex> bytes to write, 16 hex bytes",
                 "-k, --key <hex> key, 6 hex bytes",
                 "--force override warnings"
             ],
-            "usage": "hf mf gdmsetblk [-hab] --blk <dec> [-d <hex>] [-k <hex>] [--force]"
+            "usage": "hf mf gdmsetblk [-h] --blk <dec> [-d <hex>] [-k <hex>] [--force]"
         },
         "hf mf gdmsetcfg": {
             "command": "hf mf gdmsetcfg",
@@ -4407,6 +4554,21 @@
             ],
             "usage": "hf mf ggetblk [-hv] -b <dec> [-p <hex>]"
         },
+        "hf mf ginfo": {
+            "command": "hf mf ginfo",
+            "description": "Read info about magic gen4 GTU card.",
+            "notes": [
+                "hf mf ginfo -> get info with default password 00000000",
+                "hf mf ginfo --pwd 01020304 -> get info with password"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output",
+                "-p, --pwd <hex> password 4bytes"
+            ],
+            "usage": "hf mf ginfo [-hv] [-p <hex>]"
+        },
         "hf mf gload": {
             "command": "hf mf gload",
             "description": "Load magic gen4 gtu card with data from (bin/eml/json) dump file or from emulator memory.",
@@ -4427,7 +4589,7 @@
                 "--4k MIFARE Classic 4k / S70",
                 "-p, --pwd <hex> password 4bytes",
                 "-v, --verbose verbose output",
-                "-f, --file <fn> filename of dump",
+                "-f, --file <fn> Specify a filename for dump file",
                 "--emu from emulator memory",
                 "--start <dec> index of block to start writing (default 0)",
                 "--end <dec> index of block to end writing (default last block)"
@@ -4436,7 +4598,7 @@
         },
         "hf mf gsave": {
             "command": "hf mf gsave",
-            "description": "Save `magic gen4 gtu` card memory into three files (BIN/EML/JSON)or into emulator memory",
+            "description": "Save `magic gen4 gtu` card memory to file (bin/json)or into emulator memory",
             "notes": [
                 "hf mf gsave",
                 "hf mf gsave --4k",
@@ -4449,8 +4611,8 @@
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
-                "-p, --pwd <hex> password 4bytes",
-                "-f, --file <fn> filename of dump",
+                "-p, --pwd <hex> password 4 bytes",
+                "-f, --file <fn> Specify a filename for dump file",
                 "--emu to emulator memory"
             ],
             "usage": "hf mf gsave [-h] [--mini] [--1k] [--2k] [--4k] [-p <hex>] [-f <fn>] [--emu]"
@@ -4530,7 +4692,7 @@
         },
         "hf mf list": {
             "command": "hf mf list",
-            "description": "Alias of `trace list -t mf` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mf list --frame -> show frame delay times",
                 "hf mf list -1 -> use trace buffer"
@@ -4751,7 +4913,7 @@
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
                 "-u, --uid <hex> uid, (4|7|10 hex bytes)",
-                "-f, --file <fn> specify dump filename (bin/eml/json)",
+                "-f, --file <fn> specify a filename for dump file",
                 "-k, --kfn <fn> key filename",
                 "--ka use specified keyfile to authenticate",
                 "--force override warnings"
@@ -4886,7 +5048,7 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump",
+                "-f, --file <fn> Specify a filename for dump file",
                 "-v, --verbose verbose output",
                 "--sk Save extracted keys to file"
             ],
@@ -5050,9 +5212,9 @@
             "description": "Checks keys with MIFARE DESFire card.",
             "notes": [
                 "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on aid 0x123456",
-                "hf mfdes chk -d mfdes_default_keys -> check keys from dictionary against all existing aid on card",
-                "hf mfdes chk -d mfdes_default_keys --aid 123456 -> check keys from dictionary against aid 0x123456",
-                "hf mfdes chk --aid 123456 --pattern1b -j keys -> check all 1-byte keys pattern on aid 0x123456 and save found keys to json",
+                "hf mfdes chk -d mfdes_default_keys -> check keys against all existing aid on card",
+                "hf mfdes chk -d mfdes_default_keys --aid 123456 -> check keys against aid 0x123456",
+                "hf mfdes chk --aid 123456 --pattern1b -j keys -> check all 1-byte keys pattern on aid 0x123456 and save found keys to `keys.json`",
                 "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00 -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00"
             ],
             "offline": false,
@@ -5742,7 +5904,7 @@
         },
         "hf mfdes list": {
             "command": "hf mfdes list",
-            "description": "Alias of `trace list -t des` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t des -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mfdes list --frame -> show frame delay times",
                 "hf mfdes list -1 -> use trace buffer"
@@ -6111,7 +6273,7 @@
         },
         "hf mfp dump": {
             "command": "hf mfp dump",
-            "description": "Dump MIFARE Plus tag to binary file If no <name> given, UID will be used as filename",
+            "description": "Dump MIFARE Plus tag to file (bin/json) If no <name> given, UID will be used as filename",
             "notes": [
                 "hf mfp dump",
                 "hf mfp dump --keys hf-mf-066C8B78-key.bin -> MIFARE Plus with keys from specified file"
@@ -6119,8 +6281,8 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump",
-                "-k, --keys <fn> filename of keys",
+                "-f, --file <fn> Specify a filename for dump file",
+                "-k, --keys <fn> Specify a filename for keys file",
                 "--ns no save to file",
                 "-v, --verbose Verbose mode"
             ],
@@ -6155,10 +6317,10 @@
         },
         "hf mfp list": {
             "command": "hf mfp list",
-            "description": "Alias of `trace list -t mf` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t mfp -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
-                "hf mf list --frame -> show frame delay times",
-                "hf mf list -1 -> use trace buffer"
+                "hf mfp list --frame -> show frame delay times",
+                "hf mfp list -1 -> use trace buffer"
             ],
             "offline": true,
             "options": [
@@ -6172,7 +6334,7 @@
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
                 "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "hf mf list [-h1crux] [--frame] [-f <fn>]"
+            "usage": "hf mfp list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf mfp mad": {
             "command": "hf mfp mad",
@@ -6334,7 +6496,7 @@
         },
         "hf mfu dump": {
             "command": "hf mfu dump",
-            "description": "Dump MIFARE Ultralight/NTAG tag to binary/eml/json files. It autodetects card type.Supports: Ultralight, Ultralight-C, Ultralight EV1 NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216",
+            "description": "Dump MIFARE Ultralight/NTAG tag to files (bin/json) It autodetects card type.Supports: Ultralight, Ultralight-C, Ultralight EV1 NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216",
             "notes": [
                 "hf mfu dump -f myfile",
                 "hf mfu dump -k AABBCCDD -> dump whole tag using pwd AABBCCDD",
@@ -6364,24 +6526,25 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> Filename of dump",
-                "-q, --qty <dec> Number of blocks to load from eml file"
+                "-f, --file <fn> Specify a filename for dump file",
+                "-q, --qty <dec> Number of blocks to load from eml file",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf mfu eload [-h] -f <fn> [-q <dec>]"
+            "usage": "hf mfu eload [-hv] -f <fn> [-q <dec>]"
         },
         "hf mfu esave": {
             "command": "hf mfu esave",
-            "description": "Saves emulator memory to a MIFARE Ultralight/NTAG dump file (bin/eml/json) By default number of pages saved depends on defined tag type. You can override this with option --end.",
+            "description": "Saves emulator memory to a MIFARE Ultralight/NTAG dump file (bin/json) By default number of pages saved depends on defined tag type. You can override this with option --end.",
             "notes": [
                 "hf mfu esave",
                 "hf mfu esave --end 255 -> saves whole memory",
-                "hf mfu esave -f hf-mfu-04010203040506-dump.json"
+                "hf mfu esave -f hf-mfu-04010203040506-dump"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-e, --end <dec> index of last block",
-                "-f, --file <fn> filename of dump"
+                "-f, --file <fn> Specify a filename for dump file"
             ],
             "usage": "hf mfu esave [-h] [-e <dec>] [-f <fn>]"
         },
@@ -6429,6 +6592,27 @@
                 "-r Read UID from tag"
             ],
             "usage": "hf mfu keygen [-hr] [-u <hex>]"
+        },
+        "hf mfu list": {
+            "command": "hf mfu list",
+            "description": "Alias of `trace list -t 14a -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "notes": [
+                "hf 14a list --frame -> show frame delay times",
+                "hf 14a list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-1, --buffer use data from trace buffer",
+                "--frame show frame delay times",
+                "-c mark CRC bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into Wireshark using encapsulation type \"ISO 14443\"",
+                "-f, --file <fn> filename of dictionary"
+            ],
+            "usage": "hf 14a list [-h1crux] [--frame] [-f <fn>]"
         },
         "hf mfu ndefread": {
             "command": "hf mfu ndefread",
@@ -6507,7 +6691,7 @@
         },
         "hf mfu restore": {
             "command": "hf mfu restore",
-            "description": "Restore MIFARE Ultralight/NTAG dump file to tag.",
+            "description": "Restore MIFARE Ultralight/NTAG dump file (bin/eml/json) to tag.",
             "notes": [
                 "hf mfu restore -f myfile -s -> special write",
                 "hf mfu restore -f myfile -k AABBCCDD -s -> special write, use key",
@@ -6516,7 +6700,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> specify dump filename (bin/eml/json)",
+                "-f, --file <fn> Specify a filename for dump file",
                 "-k, --key <hex> key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)",
                 "-l swap entered key's endianness",
                 "-s enable special write UID -MAGIC TAG ONLY-",
@@ -6563,12 +6747,12 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, --type <1..10> Simulation type to use",
+                "-t, --type <1..12> Simulation type to use",
                 "-u, --uid <hex> <4|7|10> hex bytes UID",
                 "-n, --num <dec> Exit simulation after <numreads> blocks. 0 = infinite",
                 "-v, --verbose Verbose output"
             ],
-            "usage": "hf mfu sim [-hv] -t <1..10> [-u <hex>] [-n <dec>]"
+            "usage": "hf mfu sim [-hv] -t <1..12> [-u <hex>] [-n <dec>]"
         },
         "hf mfu tamper": {
             "command": "hf mfu tamper",
@@ -6598,7 +6782,7 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> Filename of dump",
+                "-f, --file <fn> Specify a filename for dump file",
                 "-v, --verbose Verbose output"
             ],
             "usage": "hf mfu view [-hv] -f <fn>"
@@ -6622,6 +6806,78 @@
             ],
             "usage": "hf mfu wrbl [-hl] [-k <hex>] -b <dec> -d <hex> [--force]"
         },
+        "hf ntag424 auth": {
+            "command": "hf ntag424 auth",
+            "description": "Authenticate with selected key against NTAG424.",
+            "notes": [
+                "hf ntag424 auth --keyno 0 -k 00000000000000000000000000000000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--keyno <dec> Key number",
+                "-k, --key <hex> Key for authenticate (HEX 16 bytes)"
+            ],
+            "usage": "hf ntag424 auth [-h] --keyno <dec> -k <hex>"
+        },
+        "hf ntag424 changefs": {
+            "command": "hf ntag424 changefs",
+            "description": "Updates file settings for file, must be authenticated. This is a short explanation of the settings. See AN12196 for more information: options: byte with bit flags Bit: Setting: 6 Enable SDM and mirroring access: two byte access rights. Each nibble is a key number, or E for free access. Order is key for readwrite, change, read and write sdmoptions: byte with bit flags Bit: Setting: 0 ASCII encoding 4 SDMEncFileData 5 SDMReadCtrLimit 6 SDMReadCtr 7 SDMOptionsUID sdmaccess: two byte access rights. Each nibble is a key, or E for plain mirror and F for no mirroring Order is Reserved, SDMCtrRet, SDMMetaRead and SDMFileRead sdm_data: Three bytes of data used to control SDM settings. Can be specified multiple times. Data means different things depending on settings. Note: Not all of these settings will be written. It depends on the option byte, and the keys set. See AN12196 for more information. You must also start with sdmdata1, then sdmdata2, up to the number of sdm_data you want to write",
+            "notes": [
+                "hf ntag424 changefs --fileno 2 --keyno 0 -k 00000000000000000000000000000000 -o 40 -a 00E0 -s C1 -c F000 --data1 000020 --data2 000043 --data3 000043"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--fileno <dec> File number",
+                "--keyno <dec> Key number",
+                "-k, --key <hex> Key for authentication (HEX 16 bytes)",
+                "-o, --options <hex> File options byte (HEX 1 byte)",
+                "-a, --access <hex> File access settings (HEX 2 bytes)",
+                "-s, --sdmoptions <hex> SDM options (HEX 1 byte)",
+                "-c, --sdmaccess <hex> SDM access settings (HEX 2 bytes)",
+                "--data1 <hex> SDM data (HEX 3 bytes)",
+                "--data2 <hex> SDM data (HEX 3 bytes)",
+                "--data3 <hex> SDM data (HEX 3 bytes)",
+                "--data4 <hex> SDM data (HEX 3 bytes)",
+                "--data5 <hex> SDM data (HEX 3 bytes)",
+                "--data6 <hex> SDM data (HEX 3 bytes)",
+                "--data7 <hex> SDM data (HEX 3 bytes)",
+                "--data8 <hex> SDM data (HEX 3 bytes)"
+            ],
+            "usage": "hf ntag424 changefs [-h] --fileno <dec> --keyno <dec> -k <hex> [-o <hex>] [-a <hex>] [-s <hex>] [-c <hex>] [--data1 <hex>] [--data2 <hex>] [--data3 <hex>] [--data4 <hex>] [--data5 <hex>] [--data6 <hex>] [--data7 <hex>] [--data8 <hex>]"
+        },
+        "hf ntag424 changekey": {
+            "command": "hf ntag424 changekey",
+            "description": "Change a key. Authentication key must currently be different to the one we want to change.",
+            "notes": [
+                "hf ntag424 changekey --keyno 1 --oldkey 00000000000000000000000000000000 --newkey 11111111111111111111111111111111 --key0 00000000000000000000000000000000 --kv 1",
+                "hf ntag424 changekey --keyno 0 --newkey 11111111111111111111111111111111 --key0 00000000000000000000000000000000 --kv 1"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--keyno <dec> Key number to change",
+                "--oldkey <hex> Old key (only needed when changing key 1-4, HEX 16 bytes)",
+                "--newkey <hex> New key (HEX 16 bytes)",
+                "--key0 <hex> Authentication key (must be key 0, HEX 16 bytes)",
+                "--kv <dec> New key version number"
+            ],
+            "usage": "hf ntag424 changekey [-h] --keyno <dec> [--oldkey <hex>] --newkey <hex> --key0 <hex> --kv <dec>"
+        },
+        "hf ntag424 getfs": {
+            "command": "hf ntag424 getfs",
+            "description": "Read and print file settings for file",
+            "notes": [
+                "hf ntag424 getfs --fileno 2"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--fileno <dec> File number"
+            ],
+            "usage": "hf ntag424 getfs [-h] --fileno <dec>"
+        },
         "hf ntag424 info": {
             "command": "hf ntag424 info",
             "description": "Get info about NXP NTAG424 DNA Family styled tag.",
@@ -6634,17 +6890,25 @@
             ],
             "usage": "hf ntag424 info [-h]"
         },
-        "hf ntag424 sdm": {
-            "command": "hf ntag424 sdm",
-            "description": "Validate a SDM message",
+        "hf ntag424 read": {
+            "command": "hf ntag424 read",
+            "description": "Read and print data from file on NTAG424 tag. Will authenticate if key information is provided.",
             "notes": [
-                "hf ntag424 sdm"
+                "hf ntag424 read --fileno 1 --keyno 0 -k 00000000000000000000000000000000 -o 0 -l 32",
+                "hf ntag424 read --fileno 2 --keyno 0 -k 00000000000000000000000000000000 -o 0 -l 256",
+                "hf ntag424 read --fileno 3 --keyno 3 -k 00000000000000000000000000000000 -o 0 -l 128 -m encrypt"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "--fileno <1|2|3> File number",
+                "--keyno <dec> Key number",
+                "-k, --key <hex> Key for authentication (HEX 16 bytes)",
+                "-o, --offset <dec> Offset to read in file (def 0)",
+                "-l, --length <dec> Number of bytes to read",
+                "-m, --cmode <plain|mac|encrypt> Communication mode"
             ],
-            "usage": "hf ntag424 sdm [-h]"
+            "usage": "hf ntag424 read [-h] --fileno <1|2|3> [--keyno <dec>] [-k <hex>] [-o <dec>] -l <dec> [-m <plain|mac|encrypt>]"
         },
         "hf ntag424 view": {
             "command": "hf ntag424 view",
@@ -6655,10 +6919,29 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> Filename of dump",
+                "-f, --file <fn> Specify a filename for dump file",
                 "-v, --verbose Verbose output"
             ],
             "usage": "hf ntag424 view [-hv] -f <fn>"
+        },
+        "hf ntag424 write": {
+            "command": "hf ntag424 write",
+            "description": "Write data to file on NTAG424 tag. Will authenticate if key information is provided.",
+            "notes": [
+                "hf ntag424 write --fileno 2 --keyno 0 -k 00000000000000000000000000000000 -o 0 -d 1122334455667788",
+                "hf ntag424 write --fileno 3 --keyno 3 -k 00000000000000000000000000000000 -o 0 -d 1122334455667788 -m encrypt"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--fileno <1|2|3> File number (def 2)",
+                "--keyno <dec> Key number",
+                "-k, --key <hex> Key for authentication (HEX 16 bytes)",
+                "-o, --offset <dec> Offset to write in file (def 0)",
+                "-d, --data <hex> Data to write",
+                "-m, --cmode <plain|mac|encrypt> Communication mode"
+            ],
+            "usage": "hf ntag424 write [-h] --fileno <1|2|3> [--keyno <dec>] [-k <hex>] [-o <dec>] -d <hex> [-m <plain|mac|encrypt>]"
         },
         "hf plot": {
             "command": "hf plot",
@@ -6952,14 +7235,14 @@
         },
         "hf topaz dump": {
             "command": "hf topaz dump",
-            "description": "Dump TOPAZ tag to binary file If no <name> given, UID will be used as filename",
+            "description": "Dump TOPAZ tag to file (bin/json) If no <name> given, UID will be used as filename",
             "notes": [
                 "hf topaz dump"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump",
+                "-f, --file <fn> Specify a filename for dump file",
                 "--ns no save to file"
             ],
             "usage": "hf topaz dump [-h] [-f <fn>] [--ns]"
@@ -6981,7 +7264,7 @@
         },
         "hf topaz list": {
             "command": "hf topaz list",
-            "description": "Alias of `trace list -t topaz` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "Alias of `trace list -t topaz -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf topaz list --frame -> show frame delay times",
                 "hf topaz list -1 -> use trace buffer"
@@ -7073,7 +7356,7 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump (bin/eml/json)"
+                "-f, --file <fn> Specify a filename for dump file"
             ],
             "usage": "hf topaz view [-h] -f <fn>"
         },
@@ -7446,15 +7729,15 @@
             "description": "Set the communication timeout on the client side",
             "notes": [
                 "hw timeout -> Show current timeout",
-                "hw timeout -t 20 -> Set the timeout to 20ms",
-                "hw timeout -t 500 -> Set the timeout to 500ms"
+                "hw timeout -m 20 -> Set the timeout to 20ms",
+                "hw timeout --ms 500 -> Set the timeout to 500ms"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-t, --timeout <dec> timeout in ms"
+                "-m, --ms <ms> timeout in micro seconds"
             ],
-            "usage": "hw timeout [-h] [-t <dec>]"
+            "usage": "hw timeout [-h] [-m <ms>]"
         },
         "hw tune": {
             "command": "hw tune",
@@ -7631,9 +7914,10 @@
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-v, --verbose verbose output"
             ],
-            "usage": "lf cotag demod [-h]"
+            "usage": "lf cotag demod [-hv]"
         },
         "lf cotag reader": {
             "command": "lf cotag reader",
@@ -7884,9 +8168,10 @@
             "options": [
                 "-h, --help This help",
                 "-p, --pwd <hex> password (00000000)",
-                "-f, --file <fn> override filename prefix (optional). Default is based on UID"
+                "-f, --file <fn> override filename prefix (optional). Default is based on UID",
+                "--ns no save to file"
             ],
-            "usage": "lf em 4x05 dump [-h] [-p <hex>] [-f <fn>]"
+            "usage": "lf em 4x05 dump [-h] [-p <hex>] [-f <fn>] [--ns]"
         },
         "lf em 4x05 info": {
             "command": "lf em 4x05 info",
@@ -8023,7 +8308,7 @@
         },
         "lf em 4x50 dump": {
             "command": "lf em 4x50 dump",
-            "description": "Reads all blocks/words from EM4x50 tag and saves dump in bin/eml/json format",
+            "description": "Reads all blocks/words from EM4x50 tag and saves dump in (bin/json) format",
             "notes": [
                 "lf em 4x50 dump",
                 "lf em 4x50 dump -f mydump",
@@ -8033,7 +8318,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> specify dump filename (bin/eml/json)",
+                "-f, --file <fn> specify dump filename",
                 "-p, --pwd <hex> password, 4 hex bytes, lsb"
             ],
             "usage": "lf em 4x50 dump [-h] [-f <fn>] [-p <hex>]"
@@ -8047,13 +8332,13 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> dump filename (bin/eml/json)"
+                "-f, --file <fn> Specify a filename for dump file"
             ],
             "usage": "lf em 4x50 eload [-h] -f <fn>"
         },
         "lf em 4x50 esave": {
             "command": "lf em 4x50 esave",
-            "description": "Saves bin/eml/json dump file of emulator memory.",
+            "description": "Saves bin/json dump file of emulator memory.",
             "notes": [
                 "lf em 4x50 esave -> use UID as filename",
                 "lf em 4x50 esave -f mydump"
@@ -8148,7 +8433,7 @@
             "options": [
                 "-h, --help This help",
                 "-u, --uid <hex> uid, 4 hex bytes, msb",
-                "-f, --file <fn> specify dump filename (bin/eml/json)",
+                "-f, --file <fn> specify a filename for dump file",
                 "-p, --pwd <hex> password, 4 hex bytes, lsb"
             ],
             "usage": "lf em 4x50 restore [-h] [-u <hex>] [-f <fn>] [-p <hex>]"
@@ -8633,19 +8918,29 @@
         },
         "lf hitag dump": {
             "command": "lf hitag dump",
-            "description": "Read all card memory and save to fileIn password mode the default key is 4D494B52 (MIKR) In crypto mode the default key is 4F4E4D494B52 (ONMIKR) format: ISK high + ISK low.",
+            "description": "Read all Hitag 2 card memory and save to file Crypto mode key format: ISK high + ISK low",
             "notes": [
-                "lf hitag dump -k 4F4E4D494B52",
-                "lf hitag dump -k 4D494B52"
+                "Password mode => use default key 4D494B52 (MIKR)",
+                "lf hitag dump --pwd",
+                "Short key = password mode",
+                "lf hitag dump -k 4D494B52",
+                "Challenge mode",
+                "lf hitag dump --nrar 0102030411223344",
+                "Crypto mode => use default key 4F4E4D494B52 (ONMIKR)",
+                "lf hitag dump --crypto",
+                "Long key = crypto mode",
+                "lf hitag dump -k 4F4E4D494B52"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> specify file name",
+                "--pwd password mode",
+                "--nrar <hex> nonce / answer reader, 8 hex bytes",
+                "--crypto crypto mode",
                 "-k, --key <hex> key, 4 or 6 hex bytes",
-                "--nrar <hex> nonce / answer reader, 8 hex bytes"
+                "-f, --file <fn> specify file name"
             ],
-            "usage": "lf hitag dump [-h] [-f <fn>] [-k <hex>] [--nrar <hex>]"
+            "usage": "lf hitag dump [-h] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>] [-f <fn>]"
         },
         "lf hitag eload": {
             "command": "lf hitag eload",
@@ -8656,11 +8951,11 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> Specfiy dump filename",
-                "-1 Card type Hitag1",
-                "-2 Card type Hitag2",
-                "-s Card type HitagS",
-                "-m Card type HitagM"
+                "-f, --file <fn> Specify dump filename",
+                "-1, --ht1 Card type Hitag 1",
+                "-2, --ht2 Card type Hitag 2",
+                "-s, --hts Card type Hitag S",
+                "-m, --htm Card type Hitag \u041e\u0458"
             ],
             "usage": "lf hitag eload [-h12sm] -f <fn>"
         },
@@ -8697,46 +8992,54 @@
             ],
             "usage": "lf hitag list [-h1crux] [--frame] [-f <fn>]"
         },
-        "lf hitag reader": {
-            "command": "lf hitag reader",
-            "description": "Act like a Hitag Reader",
+        "lf hitag read": {
+            "command": "lf hitag read",
+            "description": "Read Hitag memory Crypto mode key format: ISK high + ISK low",
             "notes": [
-                "Hitag S",
-                "lf hitag reader --01 --nrar 0102030411223344",
-                "lf hitag reader --02 -k 4F4E4D494B52",
-                "Hitag 2",
-                "lf hitag reader --21 -k 4D494B52",
-                "lf hitag reader --22 --nrar 0102030411223344",
-                "lf hitag reader --23 -k 4F4E4D494B52",
-                "lf hitag reader --26"
+                "Hitag S, plain mode",
+                "lf hitag read --hts",
+                "Hitag S, challenge mode",
+                "lf hitag read --hts --nrar 0102030411223344",
+                "Hitag S, crypto mode => use default key 4F4E4D494B52 (ONMIKR)",
+                "lf hitag read --hts --crypto",
+                "Hitag S, long key = crypto mode",
+                "lf hitag read --hts -k 4F4E4D494B52",
+                "",
+                "Hitag 2, password mode => use default key 4D494B52 (MIKR)",
+                "lf hitag read --ht2 --pwd",
+                "Hitag 2, providing a short key = password mode",
+                "lf hitag read --ht2 -k 4D494B52",
+                "Hitag 2, challenge mode",
+                "lf hitag read --ht2 --nrar 0102030411223344",
+                "Hitag 2, crypto mode => use default key 4F4E4D494B52 (ONMIKR)",
+                "lf hitag read --ht2 --crypto",
+                "Hitag 2, providing a long key = crypto mode",
+                "lf hitag read --ht2 -k 4F4E4D494B52"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--01 HitagS, read all pages, challenge mode",
-                "--02 HitagS, read all pages, crypto mode. Set key=0 for no auth",
-                "--21 Hitag2, read all pages, password mode. def 4D494B52 (MIKR)",
-                "--22 Hitag2, read all pages, challenge mode",
-                "--23 Hitag2, read all pages, crypto mode. Key ISK high + ISK low. def 4F4E4D494B52 (ONMIKR)",
-                "--25 Hitag2, test recorded authentications (replay?)",
-                "--26 Hitag2, read UID",
-                "-k, --key <hex> key, 4 or 6 hex bytes",
-                "--nrar <hex> nonce / answer reader, 8 hex bytes"
+                "-s, --hts Hitag S",
+                "-2, --ht2 Hitag 2",
+                "--pwd password mode",
+                "--nrar <hex> nonce / answer writer, 8 hex bytes",
+                "--crypto crypto mode",
+                "-k, --key <hex> key, 4 or 6 hex bytes"
             ],
-            "usage": "lf hitag reader [-h] [--01] [--02] [--21] [--22] [--23] [--25] [--26] [-k <hex>] [--nrar <hex>]"
+            "usage": "lf hitag read [-hs2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>]"
         },
         "lf hitag sim": {
             "command": "lf hitag sim",
-            "description": "Simulate Hitag2 / HitagS transponder You need to `lf hitag eload` first",
+            "description": "Simulate Hitag transponder You need to `lf hitag eload` first",
             "notes": [
                 "lf hitag sim -2"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-1 simulate Hitag1",
-                "-2 simulate Hitag2",
-                "-s simulate HitagS"
+                "-1, --ht1 simulate Hitag 1",
+                "-2, --ht2 simulate Hitag 2",
+                "-s, --hts simulate Hitag S"
             ],
             "usage": "lf hitag sim [-h12s]"
         },
@@ -8752,30 +9055,43 @@
             ],
             "usage": "lf hitag sniff [-h]"
         },
-        "lf hitag writer": {
-            "command": "lf hitag writer",
-            "description": "Act like a Hitag writerIn password mode the default key is 4D494B52 (MIKR) In crypto mode the default key is 4F4E4D494B52 (ONMIKR) format: ISK high + ISK low.",
+        "lf hitag wrbl": {
+            "command": "lf hitag wrbl",
+            "description": "Write a page in Hitag memory Crypto mode key format: ISK high + ISK low",
             "notes": [
-                "Hitag S",
-                "lf hitag writer --03 --nrar 0102030411223344 -p 3 -d 01020304",
-                "lf hitag writer --04 -k 4F4E4D494B52 -p 3 -d 01020304",
-                "Hitag 2",
-                "lf hitag writer --24 -k 4F4E4D494B52 -p 3 -d 01020304",
-                "lf hitag writer --27 -k 4D494B52 -p 3 -d 01020304"
+                "Hitag S, plain mode",
+                "lf hitag wrbl --hts -p 6 -d 01020304",
+                "Hitag S, challenge mode",
+                "lf hitag wrbl --hts --nrar 0102030411223344 -p 6 -d 01020304",
+                "Hitag S, crypto mode => use default key 4F4E4D494B52 (ONMIKR)",
+                "lf hitag wrbl --hts --crypto -p 6 -d 01020304",
+                "Hitag S, long key = crypto mode",
+                "lf hitag wrbl --hts -k 4F4E4D494B52 -p 6 -d 01020304",
+                "",
+                "Hitag 2, password mode => use default key 4D494B52 (MIKR)",
+                "lf hitag wrbl --ht2 --pwd -p 6 -d 01020304",
+                "Hitag 2, providing a short key = password mode",
+                "lf hitag wrbl --ht2 -k 4D494B52 -p 6 -d 01020304",
+                "Hitag 2, challenge mode",
+                "lf hitag wrbl --ht2 --nrar 0102030411223344 -p 6 -d 01020304",
+                "Hitag 2, crypto mode => use default key 4F4E4D494B52 (ONMIKR)",
+                "lf hitag wrbl --ht2 --crypto -p 6 -d 01020304",
+                "Hitag 2, providing a long key = crypto mode",
+                "lf hitag wrbl --ht2 -k 4F4E4D494B52 -p 6 -d 01020304"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--03 HitagS, write page, challenge mode",
-                "--04 HitagS, write page, crypto mode. Set key=0 for no auth",
-                "--24 Hitag2, write page, crypto mode.",
-                "--27 Hitag2, write page, password mode",
-                "-p, --page <dec> page address to write to",
-                "-d, --data <hex> data, 4 hex bytes",
+                "-s, --hts Hitag S",
+                "-2, --ht2 Hitag 2",
+                "--pwd password mode",
+                "--nrar <hex> nonce / answer writer, 8 hex bytes",
+                "--crypto crypto mode",
                 "-k, --key <hex> key, 4 or 6 hex bytes",
-                "--nrar <hex> nonce / answer writer, 8 hex bytes"
+                "-p, --page <dec> page address to write to",
+                "-d, --data <hex> data, 4 hex bytes"
             ],
-            "usage": "lf hitag writer [-h] [--03] [--04] [--24] [--27] -p <dec> [-d <hex>] [-k <hex>] [--nrar <hex>]"
+            "usage": "lf hitag wrbl [-hs2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>] -p <dec> -d <hex>"
         },
         "lf idteck clone": {
             "command": "lf idteck clone",
@@ -9143,7 +9459,7 @@
         },
         "lf motorola demod": {
             "command": "lf motorola demod",
-            "description": "Try to find Motorola preamble, if found decode / descramble data",
+            "description": "Try to find Motorola Flexpass preamble, if found decode / descramble data",
             "notes": [
                 "lf motorola demod"
             ],
@@ -9155,7 +9471,7 @@
         },
         "lf motorola reader": {
             "command": "lf motorola reader",
-            "description": "read a Motorola tag",
+            "description": "read a Motorola Flexpass tag",
             "notes": [
                 "lf motorola reader -@ -> continuous reader mode"
             ],
@@ -10009,7 +10325,7 @@
         },
         "lf t55xx dump": {
             "command": "lf t55xx dump",
-            "description": "This command dumps a T55xx card Page 0 block 0-7. It will create three files (bin/eml/json)",
+            "description": "This command dumps a T55xx card Page 0 block 0-7. It will create two files (bin/json)",
             "notes": [
                 "lf t55xx dump",
                 "lf t55xx dump -p aabbccdd --override",
@@ -10161,7 +10477,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> filename of dump file",
+                "-f, --file <fn> Specify a filename for dump file",
                 "-p, --pwd <hex> password if target card has password set (4 hex bytes)"
             ],
             "usage": "lf t55xx restore [-h] [-f <fn>] [-p <hex>]"
@@ -10546,16 +10862,15 @@
             "description": "Dumps device SPIFFS file to a local file Size is handled by first sending a STAT command against file to verify existence",
             "notes": [
                 "mem spiffs dump -s tag.bin -> download binary file from device",
-                "mem spiffs dump -s tag.bin -d aaa -e -> download tag.bin, save as aaa.eml format"
+                "mem spiffs dump -s tag.bin -d a001 -e -> download tag.bin, save as `a001.bin`"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-s, --src <fn> SPIFFS file to save",
-                "-d, --dest <fn> file name to save to <w/o .bin>",
-                "-e, --eml also save in EML format"
+                "-d, --dest <fn> file name to save to <w/o .bin>"
             ],
-            "usage": "mem spiffs dump [-he] -s <fn> [-d <fn>]"
+            "usage": "mem spiffs dump [-h] -s <fn> [-d <fn>]"
         },
         "mem spiffs info": {
             "command": "mem spiffs info",
@@ -11055,29 +11370,41 @@
             ],
             "usage": "prefs get barmode [-h]"
         },
-        "prefs get clientdebug": {
-            "command": "prefs get clientdebug",
+        "prefs get client.debug": {
+            "command": "prefs get client.debug",
             "description": "Get preference of using clientside debug level",
             "notes": [
-                "prefs get clientdebug"
+                "prefs get client.debug"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help"
             ],
-            "usage": "prefs get clientdebug [-h]"
+            "usage": "prefs get client.debug [-h]"
         },
-        "prefs get clientdelay": {
-            "command": "prefs get clientdelay",
+        "prefs get client.delay": {
+            "command": "prefs get client.delay",
             "description": "Get preference of delay time before execution of a command in the client",
             "notes": [
-                "prefs get clientdelay"
+                "prefs get client.delay"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help"
             ],
-            "usage": "prefs get clientdelay [-h]"
+            "usage": "prefs get client.delay [-h]"
+        },
+        "prefs get client.timeout": {
+            "command": "prefs get client.timeout",
+            "description": "Get preference of delay time before execution of a command in the client",
+            "notes": [
+                "prefs get client.timeout"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "prefs get client.timeout [-h]"
         },
         "prefs get color": {
             "command": "prefs get color",
@@ -11166,11 +11493,11 @@
             ],
             "usage": "prefs set barmode [-h] [--bar] [--mix] [--val]"
         },
-        "prefs set clientdebug": {
-            "command": "prefs set clientdebug",
+        "prefs set client.debug": {
+            "command": "prefs set client.debug",
             "description": "Set persistent preference of using clientside debug level",
             "notes": [
-                "prefs set clientdebug --simple"
+                "prefs set client.debug --simple"
             ],
             "offline": true,
             "options": [
@@ -11179,21 +11506,36 @@
                 "--simple simple debug messages",
                 "--full full debug messages"
             ],
-            "usage": "prefs set clientdebug [-h] [--off] [--simple] [--full]"
+            "usage": "prefs set client.debug [-h] [--off] [--simple] [--full]"
         },
-        "prefs set clientdelay": {
-            "command": "prefs set clientdelay",
+        "prefs set client.delay": {
+            "command": "prefs set client.delay",
             "description": "Set persistent preference of delay before executing a command in the client",
             "notes": [
-                "prefs set clientdelay --ms 0 -> unsets any delay",
-                "prefs set clientdelay --ms 1000 -> sets 1000ms delay"
+                "prefs set client.delay --ms 0 -> unsets any delay",
+                "prefs set client.delay --ms 1000 -> sets 1000ms delay"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "--ms <ms> delay in micro seconds"
             ],
-            "usage": "prefs set clientdelay [-h] [--ms <ms>]"
+            "usage": "prefs set client.delay [-h] [--ms <ms>]"
+        },
+        "prefs set client.timeout": {
+            "command": "prefs set client.timeout",
+            "description": "Set persistent preference of client communication timeout",
+            "notes": [
+                "prefs set client.timeout --ms 0 -> unsets any timeout",
+                "prefs set client.timeout -m 20 -> Set the timeout to 20ms",
+                "prefs set client.timeout --ms 500 -> Set the timeout to 500ms"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-m, --ms <ms> timeout in micro seconds"
+            ],
+            "usage": "prefs set client.timeout [-h] [-m <ms>]"
         },
         "prefs set color": {
             "command": "prefs set color",
@@ -11412,9 +11754,10 @@
                 "-s active smartcard with select (get ATR)",
                 "-t, --tlv executes TLV decoder if it possible",
                 "-0 use protocol T=0",
+                "--timeout <ms> Timeout in MS waiting for SIM to respond. (def 337ms)",
                 "-d, --data <hex> bytes to send"
             ],
-            "usage": "smart raw [-hrast0] -d <hex>"
+            "usage": "smart raw [-hrast0] [--timeout <ms>] -d <hex>"
         },
         "smart reader": {
             "command": "smart reader",
@@ -11483,6 +11826,7 @@
                 "trace list -t seos -> interpret as SEOS",
                 "trace list -t thinfilm -> interpret as Thinfilm",
                 "trace list -t topaz -> interpret as Topaz",
+                "trace list -t mfp -> interpret as MIFARE Plus",
                 "",
                 "trace list -t mf -f mfc_default_keys.dic -> use default dictionary file",
                 "trace list -t 14a --frame -> show frame delay times",
@@ -11687,8 +12031,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 679,
+        "commands_extracted": 697,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-07-16T13:30:30"
+        "extracted_on": "2023-11-05T22:22:55"
     }
 }

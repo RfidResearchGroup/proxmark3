@@ -283,7 +283,6 @@ static int CmdHFMFPInfo(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
 
     // Mifare Plus info
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
@@ -1385,15 +1384,15 @@ static int CmdHFMFPChk(const char *Cmd) {
 static int CmdHFMFPDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp dump",
-                  "Dump MIFARE Plus tag to binary file\n"
+                  "Dump MIFARE Plus tag to file (bin/json)\n"
                   "If no <name> given, UID will be used as filename",
                   "hf mfp dump\n"
                   "hf mfp dump --keys hf-mf-066C8B78-key.bin --> MIFARE Plus with keys from specified file\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f",  "file", "<fn>", "filename of dump"),
-        arg_str0("k",  "keys", "<fn>", "filename of keys"),
+        arg_str0("f",  "file", "<fn>", "Specify a filename for dump file"),
+        arg_str0("k",  "keys", "<fn>", "Specify a filename for keys file"),
         arg_lit0(NULL, "ns", "no save to file"),
         arg_lit0("v",  "verbose",   "Verbose mode"),
         arg_param_end
@@ -1449,14 +1448,7 @@ static int CmdHFMFPDump(const char *Cmd) {
             free(fptr);
         }
 
-        saveFile(data_fn, ".bin", mem, MIFARE_4K_MAX_BYTES);
-        saveFileEML(data_fn, mem, MIFARE_4K_MAX_BYTES, MFBLOCK_SIZE);
-
-        iso14a_mf_extdump_t xdump;
-        xdump.card_info = card;
-        xdump.dump = mem;
-        xdump.dumplen = MIFARE_4K_MAX_BYTES;
-        saveFileJSON(data_fn, jsfCardMemory, (uint8_t *)&xdump, sizeof(xdump), NULL);
+        pm3_save_mf_dump(filename, dump, MIFARE_4K_MAX_BYTES, jsfCardMemory);
     */
     free(mem);
     return PM3_SUCCESS;
@@ -1747,15 +1739,18 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
         print_buffer(data, datalen, 1);
     }
 
-    if (fnlen != 0) {
-        saveFile(filename, ".bin", data, datalen);
-    }
-
     res = NDEFDecodeAndPrint(data, datalen, verbose);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(INFO, "Trying to parse NDEF records w/o NDEF header");
         res = NDEFRecordsDecodeAndPrint(data, datalen, verbose);
     }
+
+    // get total NDEF length before save. If fails, we save it all
+    size_t n = 0;
+    if (NDEFGetTotalLength(data, datalen, &n) != PM3_SUCCESS)
+        n = datalen;
+
+    pm3_save_dump(filename, data, n, jsfNDEF);
 
     if (verbose == false) {
         PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -v`") " for more details");
@@ -1811,7 +1806,7 @@ static int CmdHFMFPNDEFWrite(const char *Cmd) {
 }
 
 static int CmdHFMFPList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf mf", "mf");
+    return CmdTraceListAlias(Cmd, "hf mfp", "mfp -c");
 }
 
 static command_t CommandTable[] = {

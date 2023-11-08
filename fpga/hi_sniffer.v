@@ -48,10 +48,7 @@ assign ssp_din = adc_d_out[0];
 
 always @(posedge ssp_clk)
 begin
-    if(ssp_cnt[2:0] == 3'd7)
-        ssp_cnt[2:0] <= 3'd0;
-    else
-        ssp_cnt <= ssp_cnt + 1;
+    ssp_cnt <= ssp_cnt + 1;
 
     if(ssp_cnt[2:0] == 3'b000) // set frame length
     begin

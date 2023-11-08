@@ -37,13 +37,13 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_HF = hfops.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
-SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c
+SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c sam_mfc.c sam_seos.c
 #UNUSED: mifaresniff.c
 SRC_ISO14443b = iso14443b.c
 SRC_FELICA = felica.c
 SRC_CRAPTO1 = crypto1.c des.c desfire_crypto.c mifaredesfire.c aes.c platform_util.c
 SRC_CRC = crc.c crc16.c crc32.c
-SRC_ICLASS = iclass.c optimized_cipherutils.c optimized_ikeys.c optimized_elite.c optimized_cipher.c
+SRC_ICLASS = iclass.c optimized_cipherutils.c optimized_ikeys.c optimized_elite.c optimized_cipher.c sam_picopass.c
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
 SRC_NFCBARCODE = thinfilm.c
 
@@ -127,7 +127,7 @@ THUMBSRC = start.c \
     $(SRC_SMARTCARD) \
     $(SRC_FPC) \
     $(SRC_HITAG) \
-	$(SRC_EM4x50) \
+    $(SRC_EM4x50) \
     $(SRC_EM4x70) \
     $(SRC_SPIFFS) \
     $(SRC_HF) \
@@ -181,10 +181,10 @@ showinfo:
 
 .DELETE_ON_ERROR:
 
-# version_pm3.c should be remade on every time fullimage.stage1.elf should be remade
+# version_pm3.c should be checked on every time fullimage.stage1.elf should be remade
 version_pm3.c: default_version_pm3.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ) .FORCE
-	$(info [-] GEN $@)
-	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(CP) $< $@
+	$(info [-] CHECK $@)
+	$(Q)$(SH) ../tools/mkversion.sh $@ || $(CP) $< $@
 
 fpga_version_info.c: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)

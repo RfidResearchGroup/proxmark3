@@ -43,7 +43,7 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
     if (verbose) {
         PrintAndLogEx(SUCCESS, "     Data format : "_YELLOW_("%02X"), barcode[1]);
         if (barcode_len > 2) {
-            uint8_t b1, b2;
+            uint8_t b1 = 0, b2 = 0;
             compute_crc(CRC_14443_A, barcode, barcode_len - 2, &b1, &b2);
             bool isok = (barcode[barcode_len - 1] == b1 && barcode[barcode_len - 2] == b2);
 
@@ -173,7 +173,7 @@ int CmdHfThinFilmSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (addcrc && data_len <= 510) {
-        uint8_t b1, b2;
+        uint8_t b1 = 0, b2 = 0;
         compute_crc(CRC_14443_A, data, data_len, &b1, &b2);
         data[data_len++] = b2;
         data[data_len++] = b1;

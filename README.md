@@ -10,8 +10,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 
 | Actions OSX CI |  Actions Ubuntu CI | Actions Windows CI |
 |:--------------:|:------------------:|:------------------:|
-| ![MacOS Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/MacOS%20Build%20and%20Test/badge.svg?branch=master) | ![Ubuntu Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/Ubuntu%20Build%20and%20Test/badge.svg?branch=master) | [![Windows Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml) |
-
+| [![MacOS Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/macos.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/macos.yml) | [![Ubuntu Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/ubuntu.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/ubuntu.yml) | [![Windows Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml) |
 
 # Table of Contents
  1. [PROXMARK3 INSTALLATION AND OVERVIEW](#proxmark3-installation-and-overview)
@@ -35,11 +34,12 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 | :------------------: | :------------------: |
 | [Linux - Setup and Build](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) | [Compilation Instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md)|
 | [Linux - Important notes on ModemManager](/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md) | [Validating Proxmark3 Client Functionality](/doc/md/Use_of_Proxmark/1_Validation.md)|
-| [Mac OS X - Homebrew & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
-| [Mac OS X - MacPorts](/doc/md/Installation_Instructions/Mac-OS-X-MacPorts-Installation-Instructions.md) | [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
-| [Mac OS X - Setup and Build](/doc/md/Installation_Instructions/Mac-OS-X-Compile-From-Source-Instructions.md) ||
+| [macOS - Homebrew & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/macOS-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
+| [macOS - MacPorts](/doc/md/Installation_Instructions/macOS-MacPorts-Installation-Instructions.md) | [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
+| [macOS - Setup and Build](/doc/md/Installation_Instructions/macOS-Compile-From-Source-Instructions.md) ||
 | [Windows - Setup and Build](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md) ||
 | [Termux / Android - Setup and Build](/doc/termux_notes.md) ||
+| [iOS - Setup and Build](/doc/md/Installation_Instructions/iOS-Installation-Instructions.md)
 | [Blue Shark Manual](/doc/bt_manual_v10.md) | [Command Cheat Sheet](/doc/cheatsheet.md)|
 | [Advanced Compilation Parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md) | [More Cheat Sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 | [Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md) | [Complete Client Command Set](/doc/commands.md) |
@@ -77,6 +77,7 @@ We define generic Proxmark3 platforms as following devices.
   - Ryscorp green PCB version
   - Radiowar black PCB version
   - numerous Chinese adapted versions of the RDV3 easy (kkmoon, PiSwords etc)
+  - Proxmark3 SE  (Second edition)  (BLE enabled)
 
 **Not supported**
  - ⚠  Proxmark Evolution (EVO) 
@@ -95,8 +96,6 @@ We define generic Proxmark3 platforms as following devices.
 -  ⚠ Proxmark3 X 
    - **Note**: unknown device hw
 -  ⚠ Proxmark3 Ultimate
-   - **Note**: unknown device hw
--  ⚠ Proxmark3 SE
    - **Note**: unknown device hw
 
 When it comes to these new unknown models we are depending on the community to report in if this repo works and what they did to make it work.
@@ -184,7 +183,8 @@ This repo compiles nicely on
    - Windows/MinGW environment
    - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, NetHunter, Arch Linux, Fedora, Debian, Raspbian
    - Android / Termux
-   - Mac OS X / Homebrew (or MacPorts, experimental) / Apple Silicon M1
+   - macOS / Homebrew (or MacPorts, experimental) / Apple Silicon M1
+   - iOS (Jailbroken, rootful)
    - Docker container
       - [ Iceman repo based ubuntu 18.04 container ](https://hub.docker.com/r/secopsconsult/proxmark3)
       - [ Iceman fork based container v1.7 ](https://hub.docker.com/r/iceman1001/proxmark3/)

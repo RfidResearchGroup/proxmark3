@@ -76,5 +76,5 @@ typedef struct {
 
 int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose);
 int NDEFRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen, bool verbose);
-
+int NDEFGetTotalLength(uint8_t *ndef, size_t ndeflen, size_t *outlen);
 #endif // _NDEF_H_

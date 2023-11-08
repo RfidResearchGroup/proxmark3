@@ -83,6 +83,7 @@ bool mfValidateAccessConditions(const uint8_t *data) {
 
     return ((nd1 == (d1 ^ 0xF)) && (nd2 == (d2 ^ 0xF)) && (nd3 == (d3 ^ 0xF)));
 }
+
 bool mfReadOnlyAccessConditions(uint8_t blockn, const uint8_t *data) {
 
     uint8_t d1  = NIBBLE_HIGH(data[1]) >> blockn;
@@ -97,7 +98,6 @@ bool mfReadOnlyAccessConditions(uint8_t blockn, const uint8_t *data) {
     }
     return false;
 }
-
 
 const char *mfGetAccessConditionsDesc(uint8_t blockn, const uint8_t *data) {
     uint8_t d1 = NIBBLE_HIGH(data[1]) >> blockn;
@@ -118,9 +118,17 @@ const char *mfGetAccessConditionsDesc(uint8_t blockn, const uint8_t *data) {
             }
     };
 
-    static char StaticNone[] = "none";
-    return StaticNone;
+    static char none[] = "none";
+    return none;
 }
+
+uint8_t mf_get_accesscondition(uint8_t blockn, const uint8_t *data) {
+    uint8_t d1 = NIBBLE_HIGH(data[1]) >> blockn;
+    uint8_t d2 = NIBBLE_LOW(data[2]) >> blockn;
+    uint8_t d3 = NIBBLE_HIGH(data[2]) >> blockn;
+    return (d1 & 0x01) << 2 | (d2 & 0x01) << 1 | (d3 & 0x01);
+}
+
 /*
 static int CalculateEncIVCommand(mf4Session_t *mf4session, uint8_t *iv, bool verbose) {
     memcpy(&iv[0], &mf4session->TI, 4);

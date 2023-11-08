@@ -566,7 +566,7 @@ static void reverse_3des_key(const uint8_t *master_key, int length, uint8_t *rev
     for (int i = 0; i < length; i++) {
         reverse_master_key[i] = master_key[(length - 1) - i];
     }
-};
+}
 
 /**
  * Command parser for auth1

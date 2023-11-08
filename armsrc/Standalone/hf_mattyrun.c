@@ -273,12 +273,12 @@ static int saMifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
             };
 
             if (blockNo < NumBlocksPerSector(s) - 1) {
-                emlSetMem(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1);
+                emlSetMem_xt(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1, 16);
             } else {
                 // sector trailer, keep the keys, set only the AC
                 emlGetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
                 memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
-                emlSetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
+                emlSetMem_xt(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1, 16);
             }
         }
     }
@@ -505,7 +505,7 @@ void RunMod(void) {
                         memcpy(mblock + t * 10, foundKey[t][sectorNo], 6);
                     }
                 }
-                emlSetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
+                emlSetMem_xt(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1, 16);
             }
         }
 

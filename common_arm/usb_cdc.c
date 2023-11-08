@@ -777,7 +777,7 @@ int usb_write(const uint8_t *data, const size_t len) {
     }
 
     UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
-    while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY) {};
+    while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY)) {};
 
     while (length) {
         // Send next chunk
@@ -797,7 +797,7 @@ int usb_write(const uint8_t *data, const size_t len) {
         while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
 
         UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
-        while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY) {};
+        while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY)) {};
     }
 
     // Wait for the end of transfer
@@ -810,7 +810,7 @@ int usb_write(const uint8_t *data, const size_t len) {
 
 
     if (len % AT91C_EP_IN_SIZE == 0) {
-
+        // like AT91F_USB_SendZlp(), in non ping-pong mode
         UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
         while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {};
 
@@ -869,6 +869,8 @@ void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length) {
 //*----------------------------------------------------------------------------
 void AT91F_USB_SendZlp(AT91PS_UDP pudp) {
     UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXPKTRDY);
+    // for non ping-pong operation, wait until the FIFO is released
+    // the flag for FIFO released is AT91C_UDP_TXCOMP rather than AT91C_UDP_TXPKTRDY
     while (!(pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP)) {};
     UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXCOMP);
     while (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {};

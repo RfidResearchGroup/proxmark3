@@ -18,6 +18,34 @@
 #include "usart.h"
 #include "proxmark3_arm.h"
 
+#define Dbprintf_usb(...) {\
+        bool tmpfpc = g_reply_via_fpc;\
+        bool tmpusb = g_reply_via_usb;\
+        g_reply_via_fpc = false;\
+        g_reply_via_usb = true;\
+        Dbprintf(__VA_ARGS__);\
+        g_reply_via_fpc = tmpfpc;\
+        g_reply_via_usb = tmpusb;}
+
+#define Dbprintf_fpc(...) {\
+        bool tmpfpc = g_reply_via_fpc;\
+        bool tmpusb = g_reply_via_usb;\
+        g_reply_via_fpc = true;\
+        g_reply_via_usb = false;\
+        Dbprintf(__VA_ARGS__);\
+        g_reply_via_fpc = tmpfpc;\
+        g_reply_via_usb = tmpusb;}
+
+#define Dbprintf_all(...) {\
+        bool tmpfpc = g_reply_via_fpc;\
+        bool tmpusb = g_reply_via_usb;\
+        g_reply_via_fpc = true;\
+        g_reply_via_usb = true;\
+        Dbprintf(__VA_ARGS__);\
+        g_reply_via_fpc = tmpfpc;\
+        g_reply_via_usb = tmpusb;}
+
+
 static volatile AT91PS_USART pUS1 = AT91C_BASE_US1;
 static volatile AT91PS_PIO pPIO   = AT91C_BASE_PIOA;
 static volatile AT91PS_PDC pPDC   = AT91C_BASE_PDC_US1;

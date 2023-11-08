@@ -533,6 +533,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 crcStatus = !felica_CRC_check(frame + 2, data_len - 4);
                 break;
             case PROTO_MIFARE:
+            case PROTO_MFPLUS:
                 crcStatus = mifare_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case ISO_14443A:
@@ -603,7 +604,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != FELICA
                 && protocol != LTO
                 && protocol != PROTO_CRYPTORF
-                && (hdr->isResponse || protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == SEOS)
+                && (hdr->isResponse || protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == PROTO_MFPLUS || protocol == SEOS)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
             snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
@@ -654,11 +655,12 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             if (crcStatus == 0 || crcStatus == 1) {
 
                 char *pos1 = line[(data_len - 2) / TRACE_MAX_HEX_BYTES];
-                pos1 += (((data_len - 2) % TRACE_MAX_HEX_BYTES) * 4) - 1;
+                int delta = (data_len - 2) % TRACE_MAX_HEX_BYTES ? 1 : 0;
+                pos1 += (((data_len - 2) % TRACE_MAX_HEX_BYTES) * 4) - delta;
 
-                (*(pos1 + 6 + 1)) = '\0';
+                (*(pos1 + 6 + delta)) = '\0';
 
-                char *cb_str = str_dup(pos1 + 1);
+                char *cb_str = str_dup(pos1 + delta);
 
                 if (g_session.supports_colors) {
                     if (crcStatus == 0) {
@@ -701,6 +703,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     // mark short bytes (less than 8 Bit + Parity)
     if (protocol == ISO_14443A ||
             protocol == PROTO_MIFARE ||
+            protocol == PROTO_MFPLUS ||
             protocol == THINFILM) {
 
         // approximated with 128 * (9 * data_len);
@@ -747,6 +750,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             annotateIso14443a(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
             break;
         case PROTO_MIFARE:
+        case PROTO_MFPLUS:
             annotateMifare(explanation, sizeof(explanation), frame, data_len, parityBytes, TRACELOG_PARITY_LEN(hdr), hdr->isResponse);
             break;
         case PROTO_HITAG1:
@@ -766,13 +770,15 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     }
 
     if (hdr->isResponse == false) {
-
         switch (protocol) {
             case LEGIC:
                 annotateLegic(explanation, sizeof(explanation), frame, data_len);
                 break;
             case MFDES:
                 annotateMfDesfire(explanation, sizeof(explanation), frame, data_len);
+                break;
+            case PROTO_MFPLUS:
+                annotateMfPlus(explanation, sizeof(explanation), frame, data_len);
                 break;
             case ISO_14443B:
                 annotateIso14443b(explanation, sizeof(explanation), frame, data_len);
@@ -901,7 +907,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         }
     }
 
-    if (protocol == PROTO_MIFARE) {
+    if (protocol == PROTO_MIFARE || protocol == PROTO_MFPLUS) {
         uint8_t mfData[32] = {0};
         size_t mfDataLen = 0;
         if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen, mfDicKeys, mfDicKeysCount)) {
@@ -981,15 +987,15 @@ static int download_trace(void) {
     PrintAndLogEx(INFO, "downloading tracelog data from device");
 
     // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
-    PacketResponseNG response;
-    if (!GetFromDevice(BIG_BUF, gs_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &response, 4000, true)) {
+    PacketResponseNG resp;
+    if (!GetFromDevice(BIG_BUF, gs_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &resp, 4000, true)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         free(gs_trace);
         gs_trace = NULL;
         return PM3_ETIMEOUT;
     }
 
-    gs_traceLen = response.oldarg[2];
+    gs_traceLen = resp.oldarg[2];
 
     // if tracelog buffer was larger and we need to download more.
     if (gs_traceLen > PM3_CMD_DATA_SIZE) {
@@ -1171,7 +1177,7 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
     CLIParserFree(ctx);
 
     char args[128] = {0};
-    snprintf(args, sizeof(args), "-c -t %s ", protocol);
+    snprintf(args, sizeof(args), "-t %s ", protocol);
     strncat(args, Cmd, sizeof(args) - strlen(args) - 1);
     return CmdTraceList(args);
 }
@@ -1200,6 +1206,7 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t seos     -> interpret as " _YELLOW_("SEOS") "\n"
                   "trace list -t thinfilm -> interpret as " _YELLOW_("Thinfilm") "\n"
                   "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") "\n"
+                  "trace list -t mfp      -> interpret as " _YELLOW_("MIFARE Plus") "\n"
                   "\n"
                   "trace list -t mf -f mfc_default_keys.dic     -> use default dictionary file\n"
                   "trace list -t 14a --frame                    -> show frame delay times\n"
@@ -1266,6 +1273,7 @@ int CmdTraceList(const char *Cmd) {
     else if (strcmp(type, "seos") == 0)     protocol = SEOS;
     else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
     else if (strcmp(type, "topaz") == 0)    protocol = TOPAZ;
+    else if (strcmp(type, "mfp") == 0)      protocol = PROTO_MFPLUS;
     else if (strcmp(type, "") == 0)         protocol = -1;
     else {
         PrintAndLogEx(FAILED, "Unknown protocol \"%s\"", type);
@@ -1304,7 +1312,7 @@ int CmdTraceList(const char *Cmd) {
             PrintAndLogEx(INFO, _YELLOW_("start") " = start of start frame " _YELLOW_("end") " = end of frame. " _YELLOW_("src") " = source of transfer");
         }
 
-        if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == MFDES || protocol == TOPAZ || protocol == LTO) {
+        if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == MFDES || protocol == PROTO_MFPLUS || protocol == TOPAZ || protocol == LTO) {
             if (use_us)
                 PrintAndLogEx(INFO, _YELLOW_("ISO14443A") " - all times are in microseconds");
             else
@@ -1354,7 +1362,7 @@ int CmdTraceList(const char *Cmd) {
         uint32_t dicKeysCount = 0;
         bool dictionaryLoad = false;
 
-        if (protocol == PROTO_MIFARE) {
+        if (protocol == PROTO_MIFARE || protocol == PROTO_MFPLUS) {
             if (diclen > 0) {
                 uint8_t *keyBlock = NULL;
                 int res = loadFileDICTIONARY_safe(dictionary, (void **) &keyBlock, 6, &dicKeysCount);
@@ -1387,7 +1395,7 @@ int CmdTraceList(const char *Cmd) {
         PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");
 
         // clean authentication data used with the mifare classic decrypt fct
-        if (protocol == ISO_14443A || protocol == PROTO_MIFARE)
+        if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == PROTO_MFPLUS)
             ClearAuthData();
 
         uint32_t previous_EOT = 0;

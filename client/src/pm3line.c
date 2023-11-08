@@ -27,7 +27,7 @@
 #elif defined(HAVE_LINENOISE)
 #include "linenoise.h"
 #endif
-#include "pm3line_vocabulory.h"
+#include "pm3line_vocabulary.h"
 #include "pm3_cmd.h"
 #include "ui.h"                          // g_session
 #include "util.h"                        // str_ndup
@@ -45,12 +45,12 @@ static char *rl_command_generator(const char *text, int state) {
         len = strlen(text);
     }
 
-    while ((command = vocabulory[index].name))  {
+    while ((command = vocabulary[index].name))  {
 
         // When no pm3 device present
         // and the command is not available offline,
         // we skip it.
-        if ((g_session.pm3_present == false) && (vocabulory[index].offline == false))  {
+        if ((g_session.pm3_present == false) && (vocabulary[index].offline == false))  {
             index++;
             continue;
         }
@@ -82,12 +82,12 @@ static void ln_command_completion(const char *text, linenoiseCompletions *lc) {
     size_t prev_match_len = 0;
     size_t len = strlen(text);
     const char *command;
-    while ((command = vocabulory[index].name))  {
+    while ((command = vocabulary[index].name))  {
 
         // When no pm3 device present
         // and the command is not available offline,
         // we skip it.
-        if ((g_session.pm3_present == false) && (vocabulory[index].offline == false))  {
+        if ((g_session.pm3_present == false) && (vocabulary[index].offline == false))  {
             index++;
             continue;
         }

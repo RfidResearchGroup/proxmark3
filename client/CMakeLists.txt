@@ -279,6 +279,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/mifare4.c
         ${PM3_ROOT}/client/src/mifare/mifaredefault.c
         ${PM3_ROOT}/client/src/mifare/mifarehost.c
+        ${PM3_ROOT}/client/src/mifare/gen4.c
         ${PM3_ROOT}/client/src/nfc/ndef.c
         ${PM3_ROOT}/client/src/mifare/lrpcrypto.c
         ${PM3_ROOT}/client/src/mifare/desfirecrypto.c
@@ -286,6 +287,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/desfirecore.c
         ${PM3_ROOT}/client/src/mifare/desfiretest.c
         ${PM3_ROOT}/client/src/mifare/gallaghercore.c
+        ${PM3_ROOT}/client/src/uart/ringbuffer.c
         ${PM3_ROOT}/client/src/uart/uart_posix.c
         ${PM3_ROOT}/client/src/uart/uart_win32.c
         ${PM3_ROOT}/client/src/ui/overlays.ui
@@ -379,7 +381,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/fileutils.c
         ${PM3_ROOT}/client/src/flash.c
         ${PM3_ROOT}/client/src/graph.c
-		${PM3_ROOT}/client/src/iso4217.c
+        ${PM3_ROOT}/client/src/iso4217.c
         ${PM3_ROOT}/client/src/jansson_path.c
         ${PM3_ROOT}/client/src/preferences.c
         ${PM3_ROOT}/client/src/pm3.c
@@ -397,7 +399,7 @@ set (TARGET_SOURCES
 
 add_custom_command(
     OUTPUT  ${CMAKE_BINARY_DIR}/version_pm3.c
-    COMMAND sh ${PM3_ROOT}/tools/mkversion.sh > ${CMAKE_BINARY_DIR}/version_pm3.c || ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
+    COMMAND sh ${PM3_ROOT}/tools/mkversion.sh ${CMAKE_BINARY_DIR}/version_pm3.c || ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
     DEPENDS ${PM3_ROOT}/common/default_version_pm3.c
 )
 
@@ -656,20 +658,20 @@ if (MINGW)
     set(CMAKE_C_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_CXX_FLAGS}")
 
-    # GCC 10 has issues with false positives on stringop-overflow, 
-    # let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
-    # beware these flags didn't exist for GCC < 7
-    if(CMAKE_COMPILER_IS_GNUCXX)
-        execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-        if (GCC_VERSION VERSION_GREATER 10.0 OR GCC_VERSION VERSION_EQUAL 10.0)
-            set(CMAKE_C_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_C_FLAGS}")
-            set(CMAKE_CXX_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_CXX_FLAGS}")   
-        endif()
-     endif(CMAKE_COMPILER_IS_GNUCXX)
-
     # link Winsock2
     set(ADDITIONAL_LNK ws2_32 ${ADDITIONAL_LNK})
 endif (MINGW)
+
+# GCC 10 has issues with false positives on stringop-overflow,
+# let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
+# beware these flags didn't exist for GCC < 7
+if(CMAKE_COMPILER_IS_GNUCXX)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+    if (GCC_VERSION VERSION_GREATER 10.0 OR GCC_VERSION VERSION_EQUAL 10.0)
+        set(CMAKE_C_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_C_FLAGS}")
+        set(CMAKE_CXX_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_CXX_FLAGS}")
+    endif()
+endif(CMAKE_COMPILER_IS_GNUCXX)
 
 target_include_directories(proxmark3 PRIVATE
         ${PM3_ROOT}/common

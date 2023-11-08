@@ -165,6 +165,8 @@ static int em4x50_load_file(const char *filename, uint8_t *data, size_t data_len
 
 static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 
+    PrintAndLogEx(INFO, "uploading to emulator memory");
+    PrintAndLogEx(INFO, "." NOLF);
     // fast push mode
     g_conn.block_after_ACK = true;
     for (size_t i = offset; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
@@ -176,7 +178,11 @@ static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
         }
         clearCommandBuffer();
         SendCommandOLD(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
     }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", numofbytes);
 }
 
 int CmdEM4x50ELoad(const char *Cmd) {
@@ -188,7 +194,7 @@ int CmdEM4x50ELoad(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "dump filename (bin/eml/json)"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_param_end
     };
 
@@ -208,9 +214,8 @@ int CmdEM4x50ELoad(const char *Cmd) {
     }
 
     // upload to emulator memory
-    PrintAndLogEx(INFO, "Uploading to emulator memory contents of " _YELLOW_("%s"), filename);
     em4x50_seteml(data, 0, DUMP_FILESIZE);
-
+    PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`lf em 4x50 sim -h`"));
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -218,7 +223,7 @@ int CmdEM4x50ELoad(const char *Cmd) {
 int CmdEM4x50ESave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 esave",
-                  "Saves bin/eml/json dump file of emulator memory.",
+                  "Saves bin/json dump file of emulator memory.",
                   "lf em 4x50 esave                    -> use UID as filename\n"
                   "lf em 4x50 esave -f mydump\n"
                  );
@@ -259,7 +264,7 @@ int CmdEM4x50ESave(const char *Cmd) {
         FillFileNameByUID(fptr, (uint8_t *)&data[4 * EM4X50_DEVICE_ID], "-dump", 4);
     }
 
-    pm3_save_dump(filename, data, DUMP_FILESIZE, jsfEM4x50, 4);
+    pm3_save_dump(filename, data, DUMP_FILESIZE, jsfEM4x50);
     return PM3_SUCCESS;
 }
 
@@ -791,7 +796,7 @@ int CmdEM4x50Reader(const char *Cmd) {
 int CmdEM4x50Dump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 dump",
-                  "Reads all blocks/words from EM4x50 tag and saves dump in bin/eml/json format",
+                  "Reads all blocks/words from EM4x50 tag and saves dump in (bin/json) format",
                   "lf em 4x50 dump\n"
                   "lf em 4x50 dump -f mydump\n"
                   "lf em 4x50 dump -p 12345678\n"
@@ -800,7 +805,7 @@ int CmdEM4x50Dump(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "specify dump filename (bin/eml/json)"),
+        arg_str0("f", "file", "<fn>", "specify dump filename"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
         arg_param_end
     };
@@ -862,7 +867,7 @@ int CmdEM4x50Dump(const char *Cmd) {
         memcpy(data + (i * 4), words[i].byte, 4);
     }
 
-    pm3_save_dump(filename, data, sizeof(data), jsfEM4x50, 4);
+    pm3_save_dump(filename, data, sizeof(data), jsfEM4x50);
     return PM3_SUCCESS;
 }
 
@@ -1108,7 +1113,7 @@ int CmdEM4x50Restore(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("u", "uid", "<hex>", "uid, 4 hex bytes, msb"),
-        arg_str0("f", "file", "<fn>", "specify dump filename (bin/eml/json)"),
+        arg_str0("f", "file", "<fn>", "specify a filename for dump file"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
         arg_param_end
     };
@@ -1221,13 +1226,26 @@ int CmdEM4x50Sim(const char *Cmd) {
     }
 
     int status = PM3_EFAILED;
-    PrintAndLogEx(INFO, "Simulating data from emulator memory");
+    PrintAndLogEx(INFO, "Starting simulating");
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&password, sizeof(password));
-    PacketResponseNG resp;
 
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+
+    PacketResponseNG resp;
+    // init to ZERO
+    resp.cmd = 0,
+    resp.length = 0,
+    resp.magic = 0,
+    resp.status = 0,
+    resp.crc = 0,
+    resp.ng = false,
+    resp.oldarg[0] = 0;
+    resp.oldarg[1] = 0;
+    resp.oldarg[2] = 0;
+    memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
+
     bool keypress;
     do {
         keypress = kbd_enter_pressed();

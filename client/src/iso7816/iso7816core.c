@@ -133,6 +133,11 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool l
                     res = ExchangeAPDU14a(data, datalen, activate_field, leave_field_on, result, (int)max_result_len, (int *)result_len);
                     if (res != PM3_SUCCESS) {
                         res = exchange_14b_apdu(data, datalen, activate_field, leave_field_on, result, (int)max_result_len, (int *)result_len, 4000);
+                        if (res == PM3_SUCCESS) {
+                            PrintAndLogEx(INFO, "Testing ISO14443-B... ( " _GREEN_("ok") " )");
+                        } else {
+                            PrintAndLogEx(INFO, "Testing ISO14443-B... ( " _RED_("fail") " )");
+                        }
                     }
                     break;
             }

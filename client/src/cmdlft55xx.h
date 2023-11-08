@@ -21,15 +21,15 @@
 
 #include "common.h"
 
-#define T55x7_CONFIGURATION_BLOCK 0x00
-#define T55x7_PWD_BLOCK 0x07
-#define T55x7_TRACE_BLOCK1 0x01
-#define T55x7_TRACE_BLOCK2 0x02
-#define T55x7_PAGE0 0x00
-#define T55x7_PAGE1 0x01
-#define T55x7_PWD 0x00000010
-#define REGULAR_READ_MODE_BLOCK 0xFF
-#define T55x7_BLOCK_COUNT 12
+#define T55x7_CONFIGURATION_BLOCK       0x00
+#define T55x7_PWD_BLOCK                 0x07
+#define T55x7_TRACE_BLOCK1              0x01
+#define T55x7_TRACE_BLOCK2              0x02
+#define T55x7_PAGE0                     0x00
+#define T55x7_PAGE1                     0x01
+#define T55x7_PWD                       0x00000010
+#define REGULAR_READ_MODE_BLOCK         0xFF
+#define T55x7_BLOCK_COUNT               12
 
 // config blocks
 #define T55X7_DEFAULT_CONFIG_BLOCK      0x000880E8  // ASK, compat mode, data rate 32, manchester, STT, 7 data blocks
@@ -70,6 +70,7 @@
 
 #define T55X7_PAC_CONFIG_BLOCK          0x00080080  // NRZ, data rate 32, 4 data blocks
 #define T55X7_VERICHIP_CONFIG_BLOCK     0x000C0080  // NRZ, data rate 40, 4 data blocks
+
 #define T55X7_bin 0b0010
 
 // Q5 / Termic / T5555

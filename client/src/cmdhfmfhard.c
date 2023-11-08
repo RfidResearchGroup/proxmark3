@@ -301,16 +301,19 @@ static void init_bitflip_bitarrays(void) {
             free(path);
             if (statesfile == NULL) {
                 continue;
-            } else if (open_uncompressed) {
-                fseek(statesfile, 0, SEEK_END);
-                int fsize = ftell(statesfile);
-                if (fsize == -1) {
-                    PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
-                    fclose(statesfile);
-                    exit(5);
-                }
-                uint32_t filesize = (uint32_t)fsize;
-                rewind(statesfile);
+            }
+
+            fseek(statesfile, 0, SEEK_END);
+            int fsize = ftell(statesfile);
+            if (fsize == -1) {
+                PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
+                fclose(statesfile);
+                exit(5);
+            }
+            uint32_t filesize = (uint32_t)fsize;
+            rewind(statesfile);
+
+            if (open_uncompressed) {
 
                 uint32_t count = 0;
                 size_t bytesread = fread(&count, 1, sizeof(count), statesfile);
@@ -347,18 +350,12 @@ static void init_bitflip_bitarrays(void) {
                     }
 #endif
                 }
+                fclose(statesfile);
                 nraw++;
+                continue;
+
             } else if (open_lz4compressed) {
 
-                fseek(statesfile, 0, SEEK_END);
-                int fsize = ftell(statesfile);
-                if (fsize == -1) {
-                    PrintAndLogEx(ERR, "File read error with %s (1). Aborting...\n", state_file_name);
-                    fclose(statesfile);
-                    exit(5);
-                }
-                uint32_t filesize = (uint32_t)fsize;
-                rewind(statesfile);
                 char *compressed_data = calloc(filesize, sizeof(uint8_t));
                 if (compressed_data == NULL) {
                     PrintAndLogEx(ERR, "Out of memory error in init_bitflip_statelists(). Aborting...\n");
@@ -409,7 +406,8 @@ static void init_bitflip_bitarrays(void) {
                     exit(5);
                 }
 
-                uint32_t count = ((uint32_t *)uncompressed_data)[0];
+                uint32_t count;
+                memcpy(&count, uncompressed_data, sizeof(uint32_t));
 
                 if ((float)count / (1 << 24) < IGNORE_BITFLIP_THRESHOLD) {
                     uint32_t *bitset = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
@@ -436,15 +434,6 @@ static void init_bitflip_bitarrays(void) {
                 continue;
             } else if (open_bz2compressed) {
 
-                fseek(statesfile, 0, SEEK_END);
-                int fsize = ftell(statesfile);
-                if (fsize == -1) {
-                    PrintAndLogEx(ERR, "File read error with %s. Aborting...\n", state_file_name);
-                    fclose(statesfile);
-                    exit(5);
-                }
-                uint32_t filesize = (uint32_t)fsize;
-                rewind(statesfile);
                 char input_buffer[filesize];
                 size_t bytesread = fread(input_buffer, 1, filesize, statesfile);
                 if (bytesread != filesize) {
@@ -1574,7 +1563,20 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
     float brute_force_depth;
 
     FILE *fnonces = NULL;
-    PacketResponseNG resp;
+
+    // init to ZERO
+    PacketResponseNG resp = {
+        .cmd = 0,
+        .length = 0,
+        .magic = 0,
+        .status = 0,
+        .crc = 0,
+        .ng = false,
+    };
+    resp.oldarg[0] = 0;
+    resp.oldarg[1] = 0;
+    resp.oldarg[2] = 0;
+    memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
 
     uint8_t write_buf[9];
     char progress_text[80];

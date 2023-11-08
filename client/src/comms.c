@@ -97,7 +97,7 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
 #endif
 
     if (!g_session.pm3_present) {
-        PrintAndLogEx(WARNING, "Sending bytes to Proxmark3 failed." _YELLOW_("offline"));
+        PrintAndLogEx(WARNING, "Sending bytes to Proxmark3 failed ( " _RED_("offline") " )");
         return;
     }
 
@@ -156,7 +156,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
         memcpy(&txBufferNG.data, data, len);
 
     if ((g_conn.send_via_fpc_usart && g_conn.send_with_crc_on_fpc) || ((!g_conn.send_via_fpc_usart) && g_conn.send_with_crc_on_usb)) {
-        uint8_t first, second;
+        uint8_t first = 0, second = 0;
         compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(PacketCommandNGPreamble) + len, &first, &second);
         tx_post->crc = (first << 8) + second;
     } else {
@@ -666,19 +666,28 @@ int TestProxmark(pm3_device_t *dev) {
     g_conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
     g_conn.uart_speed = g_pm3_capabilities.baudrate;
 
-    bool is_tcp_conn = (memcmp(g_conn.serial_port_name, "tcp:", 4) == 0);
+    bool is_tcp_conn = (g_conn.send_via_ip == PM3_TCPv4 || g_conn.send_via_ip == PM3_TCPv6);
     bool is_bt_conn = (memcmp(g_conn.serial_port_name, "bt:", 3) == 0);
+    bool is_udp_conn = (g_conn.send_via_ip == PM3_UDPv4 || g_conn.send_via_ip == PM3_UDPv6);
 
-    PrintAndLogEx(INFO, "Communicating with PM3 over %s%s%s",
+    PrintAndLogEx(INFO, "Communicating with PM3 over %s%s%s%s",
                   (g_conn.send_via_fpc_usart) ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
                   (is_tcp_conn) ? " over " _YELLOW_("TCP") : "",
-                  (is_bt_conn) ? " over " _YELLOW_("BT") : ""
+                  (is_bt_conn) ? " over " _YELLOW_("BT") : "",
+                  (is_udp_conn) ? " over " _YELLOW_("UDP") : ""
                  );
-
     if (g_conn.send_via_fpc_usart) {
         PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", g_conn.uart_speed);
     } else {
-        int res = uart_reconfigure_timeouts(is_tcp_conn ? UART_TCP_CLIENT_RX_TIMEOUT_MS : UART_USB_CLIENT_RX_TIMEOUT_MS);
+        int res;
+        if (g_conn.send_via_local_ip) {
+            // (g_conn.send_via_local_ip == true) -> ((is_tcp_conn || is_udp_conn) == true)
+            res = uart_reconfigure_timeouts(is_tcp_conn ? UART_TCP_LOCAL_CLIENT_RX_TIMEOUT_MS : UART_UDP_LOCAL_CLIENT_RX_TIMEOUT_MS);
+        } else if (is_tcp_conn || is_udp_conn) {
+            res = uart_reconfigure_timeouts(UART_NET_CLIENT_RX_TIMEOUT_MS);
+        } else {
+            res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
+        }
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -742,9 +751,21 @@ static size_t communication_delay(void) {
 bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
 
     PacketResponseNG resp;
+    // init to ZERO
+    resp.cmd = 0,
+    resp.length = 0,
+    resp.magic = 0,
+    resp.status = 0,
+    resp.crc = 0,
+    resp.ng = false,
+    resp.oldarg[0] = 0;
+    resp.oldarg[1] = 0;
+    resp.oldarg[2] = 0;
+    memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
 
-    if (response == NULL)
+    if (response == NULL) {
         response = &resp;
+    }
 
     // Add delay depending on the communication channel & speed
     if (ms_timeout != (size_t) - 1)
@@ -777,7 +798,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
             show_warning = false;
         }
         // just to avoid CPU busy loop:
-        msleep(10);
+        msleep(1);
     }
     return false;
 }
@@ -808,11 +829,26 @@ bool WaitForResponse(uint32_t cmd, PacketResponseNG *response) {
 bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
 
     if (dest == NULL) return false;
-    if (bytes == 0) return true;
 
     PacketResponseNG resp;
-    if (response == NULL)
+    if (response == NULL) {
         response = &resp;
+    }
+
+    // init to ZERO
+    resp.cmd = 0,
+    resp.length = 0,
+    resp.magic = 0,
+    resp.status = 0,
+    resp.crc = 0,
+    resp.ng = false,
+    resp.oldarg[0] = 0;
+    resp.oldarg[1] = 0;
+    resp.oldarg[2] = 0;
+    memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
+
+    if (bytes == 0) return true;
+
 
     // clear
     clearCommandBuffer();

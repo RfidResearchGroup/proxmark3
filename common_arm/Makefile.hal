@@ -48,7 +48,9 @@ Known definitions:
 endef
 
 define HELP_DEFINITIONS
+
 Options to define platform, platform extras and/or standalone mode:
+
 (1) Run make with your PLATFORM, PLATFORM_EXTRAS and/or STANDALONE choices as follows:
 make PLATFORM=PM3GENERIC STANDALONE=$(HELP_EXAMPLE_STANDALONE)
 
@@ -65,6 +67,7 @@ STANDALONE=
 
 For Proxmarks with only 256k, you can define
 PLATFORM_SIZE=256
+
 to be warned if the image is too big for your device
 and you can specify which parts to skip in order to reduce the size:
 SKIP_LF=1
@@ -80,6 +83,7 @@ SKIP_NFCBARCODE=1
 SKIP_HFSNIFF=1
 SKIP_HFPLOT=1
 SKIP_ZX8211=1
+
 endef
 
 define KNOWN_DEFINITIONS

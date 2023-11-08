@@ -43,6 +43,7 @@
 #include "mifare/mad.h"
 #include "mifare/aiddesfire.h"
 
+
 const CLIParserOption DesfireAlgoOpts[] = {
     {T_DES,    "des"},
     {T_3DES,   "2tdea"},
@@ -1749,7 +1750,7 @@ int DesfireFillAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS ap
                 memcpy(
                     appList[indx].appDFName,
                     &buf[i * 24 + 1 + 5],
-                    // strnlen((char *)&buf[i * 24 + 1 + 5], 16)
+                    // str_nlen((char *)&buf[i * 24 + 1 + 5], 16)
                     16
                 );
             }
@@ -2879,7 +2880,7 @@ int DesfireISOSelect(DesfireContext_t *dctx, DesfireISOSelectControl cntr, uint8
 }
 
 int DesfireISOSelectDF(DesfireContext_t *dctx, char *dfname, uint8_t *resp, size_t *resplen) {
-    return DesfireISOSelect(dctx, ISSDFName, (uint8_t *)dfname, strnlen(dfname, 16), resp, resplen);
+    return DesfireISOSelect(dctx, ISSDFName, (uint8_t *)dfname, str_nlen(dfname, 16), resp, resplen);
 }
 
 int DesfireISOGetChallenge(DesfireContext_t *dctx, DesfireCryptoAlgorithm keytype, uint8_t *resp, size_t *resplen) {

@@ -8,8 +8,7 @@ RUN zypper --non-interactive install --no-recommends shadow sudo git patterns-de
 #    zypper --gpg-auto-import-keys refresh && \
 #    zypper --non-interactive install cross-arm-none-eabi-gcc12 cross-arm-none-eabi-newlib
 
-RUN zypper --non-interactive install cmake python3 python3-pip && \
-    python3 -m pip install ansicolors sslcrypto
+RUN zypper --non-interactive install cmake python311 python311-pip python311-virtualenv
 
 RUN zypper --non-interactive install ocl-icd-devel
 

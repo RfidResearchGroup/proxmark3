@@ -240,7 +240,8 @@ static int print_and_validate_version(struct version_information_t *vi) {
         return PM3_EFILE;
     }
 
-    char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+    // same limit as for ARM image
+    char temp[PM3_CMD_DATA_SIZE - 12] = {0};
     FormatVersionInformation(temp, sizeof(temp), "", vi);
     PrintAndLogEx(SUCCESS, _CYAN_("ELF file version") _YELLOW_(" %s"), temp);
 
@@ -285,7 +286,7 @@ int flash_load(flash_file_t *ctx, bool force) {
         goto fail;
     }
 
-    ctx->elf = calloc(fsize, sizeof(uint8_t));
+    ctx->elf = calloc(fsize + 1, sizeof(uint8_t));
     if (!ctx->elf) {
         PrintAndLogEx(ERR, "Error, cannot allocate memory");
         res = PM3_EMALLOC;
@@ -349,7 +350,8 @@ int flash_load(flash_file_t *ctx, bool force) {
         }
 
         if (strcmp(((char *)shstr) + shdrs[i].sh_name, ".bootphase1") == 0) {
-            uint32_t offset = *(uint32_t *)(ctx->elf + le32(shdrs[i].sh_offset) + le32(shdrs[i].sh_size) - 4);
+            uint32_t offset;
+            memcpy(&offset, ctx->elf + le32(shdrs[i].sh_offset) + le32(shdrs[i].sh_size) - 4, sizeof(uint32_t));
             if (offset >= le32(shdrs[i].sh_addr)) {
                 offset -= le32(shdrs[i].sh_addr);
                 if (offset < le32(shdrs[i].sh_size)) {

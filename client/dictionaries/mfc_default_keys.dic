@@ -36,7 +36,7 @@ D01AFEEB890A
 2612C6DE84CA
 707B11FC1481
 #
-# QL88 diversifed 
+# QL88 diversifed
 03F9067646AE
 2352C5B56D85
 #
@@ -71,8 +71,8 @@ B27CCAB30DBD
 D2ECE8B9395E
 # NSCP default key
 1494E81663D7
-# 
-# NFC tools 
+#
+# NFC tools
 7c9fb8474242
 #
 # Kiev keys
@@ -135,6 +135,15 @@ F1D83F964314
 # NSP Global keys A and B (uk housing access control)
 199404281970
 199404281998
+#
+# Data from http://www.proxmark.org/forum/viewtopic.php?pid=25925#p25925
+# Tengo Cards Key A
+FFF011223358
+FF9F11223358
+#
+# Elevator system Kherson, Ukraine
+AC37E76385F5
+576DCFFF2F25
 #
 # more Keys from mfc_default_keys.lua
 000000000001
@@ -299,7 +308,7 @@ AAFB06045877
 25094DF6F148
 #
 #
-# https://mattionline.de/fitnessstudio-armband-reverse-engineering/ 
+# https://mattionline.de/fitnessstudio-armband-reverse-engineering/
 # https://mattionline.de/milazycracker/
 # gym wistband A, same as Fysiken A
 # gym wistband B
@@ -310,7 +319,7 @@ AAFB06045877
 A05DBD98E0FC
 #
 # GoFit
-AA4DDA458EBB 
+AA4DDA458EBB
 EAB8066C7479
 #
 # Nordic Wellness A, same as Fysiken A
@@ -600,6 +609,7 @@ BFB6796A11DB
 # Data from Salto A/B
 6A1987C40A21
 7F33625BC129
+6BE9314930D8
 #
 # Data from forum
 2338B4913111
@@ -871,7 +881,7 @@ AD4FB33388BF
 #
 # HID MIFARE Classic 1k Key
 484944204953
-204752454154 
+204752454154
 # HID MIFARE SO
 3B7E4FD575AD
 11496F97752A
@@ -960,7 +970,7 @@ D58660D1ACDE
 C01FC822C6E5
 0854BF31111E
 #
-# More keys
+# More keys - Found 8A at Sebel Hotel in Canberra, Australia
 8A19D40CF2B5
 AE8587108640
 #
@@ -1022,6 +1032,10 @@ EAAC88E5DC99
 F8493407799D
 6B8BD9860763
 D3A297DC2698
+#
+# Data from reddit
+34635A313344
+593367486137
 #
 # Keys from Mifare Classic Tool project
 044CE1872BC3
@@ -1823,6 +1837,43 @@ E19504C39461
 FA1FBB3F0F1F
 FF16014FEFC7
 #
+# Food GEM
+6686FADE5566
+#
+# Samsung Data Systems (SDS) — Electronic Locks
+# Gen 1 S10 KA/KB is FFFFFFFFFFFF, incompatible with Gen 2 locks
+#
+# SDS Gen 2 S10 KB
+C22E04247D9A
+#
+# Data from Discord, French pool
+# SDS Gen 2 S10 KA
+9B7C25052FC3
+494446555455
+#
+# Data from Discord, seems to be related to ASSA
+427553754D47
+# Keys found on Edith Cowan University Smart Riders
+9A677289564D
+186C59E6AFC9
+DDDAA35A9749
+9D0D0A829F49
+# Mercator Pika Card, Slovenia
+97D77FAE77D3
+5AF445D2B87A
+#
+# Vilniečio/JUDU kortelė, Lithuania
+# A
+16901CB400BC
+F0FE56621A42
+8C187E78EE9C
+FE2A42E85CA8
+# B
+6A6C80423226
+F4CE4AF888AE
+307448829EBC
+C2A0105EB028
+#
 # Keys from Flipper Zero Community
 # Last update: Aug 13, 2022
 #
@@ -2053,6 +2104,48 @@ D144BD193063
 8627C10A7014
 453857395635
 #
+# Unknown hotel system Sec 0 / A
+353038383134
+#
+# Brazil transport Sec 8 / A
+50d4c54fcdf5
+#
+# Bandai Namco Passport [fka Banapassport] / Sega Aime Card
+# Dumped on the Flipper Devices Discord Server
+6090D00632F5
+019761AA8082
+574343467632
+A99164400748
+62742819AD7C
+CC5075E42BA1
+B9DF35A0814C
+8AF9C718F23D
+58CD5C3673CB
+FC80E88EB88C
+7A3CDAD7C023
+30424C029001
+024E4E44001F
+ECBBFA57C6AD
+4757698143BD
+1D30972E6485
+F8526D1A8D6D
+1300EC8C7E80
+F80A65A87FFA
+DEB06ED4AF8E
+4AD96BF28190
+000390014D41
+0800F9917CB0
+730050555253
+4146D4A956C4
+131157FBB126
+E69DD9015A43
+337237F254D5
+9A8389F32FBF
+7B8FB4A7100B
+C8382A233993
+7B304F2A12A6
+FC9418BF788B
+#
 # Data from "the more the marriott" mifare project (colonelborkmundus)
 # aka The Horde
 #
@@ -2169,14 +2262,29 @@ D201DBB6AB6E
 09074A146605
 151F3E85EC46
 #
+# Travelodge by Wyndham Berkeley
+0000FFFFFFFF
+4663ACD2FFFF
+EDC317193709
+# Hotel Santa Cruz
+75FAB77E2E5B
+# saflok brand HOTEL key
+32F093536677
+# A WaterFront Hotel in  Oakland
+3351916B5A77
+# Ballys (2018)
+336E34CC2177
+# Random Hawaiian Hotel
+A1670589B2AF
+# SF Hotel (SoMa area)
+2E0F00700000
 #
-# Food GEM
-6686FADE5566
+# Unknown PACS from Western Australia
+CA80E51FA52B
+A71E80EA35E1
+05597810D63D
 #
-# Data from Discord, French pool
-9B7C25052FC3
-494446555455
-#
-# Data from Discord, seems to be related to ASSA
-427553754D47
-
+# Hotel Key from Las Vegas
+EA0CA627FD06
+80BB8436024C
+5044068C5183

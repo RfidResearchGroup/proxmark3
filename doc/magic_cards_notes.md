@@ -15,9 +15,13 @@ Useful docs:
   * [MIFARE Classic block0](#mifare-classic-block0)
   * [MIFARE Classic Gen1A aka UID](#mifare-classic-gen1a-aka-uid)
   * [MIFARE Classic Gen1B](#mifare-classic-gen1b)
+  * [MIFARE Classic Gen1A OTP/One Time Programming](#mifare-classic-gen1a-otpone-time-programming)
   * [MIFARE Classic DirectWrite aka Gen2 aka CUID](#mifare-classic-directwrite-aka-gen2-aka-cuid)
+  * [MIFARE Classic DirectWrite, FUID version aka 1-write](#mifare-classic-directwrite-fuid-version-aka-1-write)
+  * [MIFARE Classic DirectWrite, UFUID version](#mifare-classic-directwrite-ufuid-version)
   * [MIFARE Classic, other versions](#mifare-classic-other-versions)
   * [MIFARE Classic Gen3 aka APDU](#mifare-classic-gen3-aka-apdu)
+  * [MIFARE Classic Gen4 aka GDM](#mifare-classic-gen4-aka-gdm)
   * [MIFARE Classic Super](#mifare-classic-super)
 - [MIFARE Ultralight](#mifare-ultralight)
   * [MIFARE Ultralight blocks 0..2](#mifare-ultralight-blocks-02)
@@ -33,11 +37,11 @@ Useful docs:
   * ["DESFire" APDU, 7b UID](#desfire-apdu-7b-uid)
   * ["DESFire" APDU, 4b UID](#desfire-apdu-4b-uid)
 - [ISO14443B](#iso14443b)
-  * [Tianaxin TCOS CPU card](#tianaxin-tcos-cpu-card)
+  * [ISO14443B magic](#iso14443b-magic)
 - [ISO15693](#iso15693)
   * [ISO15693 magic](#iso15693-magic)
 - [Multi](#multi)
-  * [Gen 4 UMC](#gen-4-umc)
+  * [Gen 4 GTU](#gen-4-gtu)
 
 
 # ISO14443A
@@ -104,6 +108,8 @@ UID 7b:
 
 ## MIFARE Classic Gen1A aka UID
 ^[Top](#top)
+
+aka MF ZERO
 
 ### Identify
 ^[Top](#top)
@@ -261,6 +267,32 @@ hf 14a info
 * Read: `40(7)`, `30xx`
 * Write: `40(7)`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
+## MIFARE Classic Gen1A OTP/One Time Programming
+^[Top](#top)
+
+aka MF OTP 2.0
+
+Similar to Gen1A, but after first block 0 edit, tag no longer replies to 0x40 command.
+
+Initial UID is 00000000
+
+All bytes are 00 from factory wherever possible.
+
+### Identify
+^[Top](#top)
+
+Only possible before personalization.
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 1a
+```
+
+### Magic commands
+^[Top](#top)
+
+* Write: `40(7)`, `43`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
 ## MIFARE Classic DirectWrite aka Gen2 aka CUID
 ^[Top](#top)
@@ -410,6 +442,8 @@ hf 14a reader
 ## MIFARE Classic DirectWrite, FUID version aka 1-write
 ^[Top](#top)
 
+aka MF OTP
+
 Same as MIFARE Classic DirectWrite, but block0 can be written only once.
 
 Initial UID is AA55C396
@@ -423,6 +457,28 @@ Only possible before personalization.
 hf 14a info
 ...
 [+] Magic capabilities : Write Once / FUID
+```
+
+## MIFARE Classic DirectWrite, UFUID version
+^[Top](#top)
+
+Same as MIFARE Classic DirectWrite, but block0 can be locked with special command.
+
+### Identify
+^[Top](#top)
+
+**TODO**
+
+### Proxmark3 commands
+^[Top](#top)
+
+To lock definitively block0:
+```
+hf 14a raw -a -k -b 7 40
+hf 14a raw    -k      43
+hf 14a raw    -k -c   e000
+hf 14a raw    -k -c   e100
+hf 14a raw       -c   85000000000000000000000000000008
 ```
 
 ## MIFARE Classic Gen3 aka APDU
@@ -498,6 +554,105 @@ hf 14a raw -s -c  -t 2000  90F0CCCC10 041219c3219316984200e32000000000
 hf 14a raw -s -c 90FD111100
 ```
 
+## MIFARE Classic Gen4 aka GDM
+^[Top](#top)
+
+Tag has shadow mode enabled from start.
+Meaning every write or changes to normal MFC memory is restored back to a copy from persistent memory after about 3 seconds 
+off rfid field.
+Tag also seems to support Gen2 style, direct write,  to block 0 to the normal MFC memory.
+
+The persistent memory is also writable. For that tag uses its own backdoor commands.
+for example to write,  you must use a customer authentication byte, 0x80, to authenticate with an all zeros key, 0x0000000000.
+Then send the data to be written.
+
+This tag has simular commands to the [UFUID](#mifare-classic-directwrite-ufuid-version)
+This indicates that both tagtypes are developed by the same person.
+
+**OBS**
+
+When writing to persistent memory it is possible to write _bad_ ACL and perm-brick the tag. 
+
+**OBS**
+
+It is possible to write a configuration that perma locks the tag, i.e. no more magic
+
+### Identify
+^[Top](#top)
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 4 GDM
+```
+### Magic commands
+^[Top](#top)
+
+* Auth: `80xx`+crc
+* Write: `A8xx`+crc,  `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
+* Read config: `E000`+crc
+* Write config: `E100`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
+
+### Characteristics
+^[Top](#top)
+
+* Have no knowledge in ATQA/SAK/BCC quirks or if there is a wipe, softbrick recover
+* Its magic part seem to be three identified custom command. 
+* Auth command 0x80, with the key 0x0000000000,  Write 0xA8 allows writing to persistent memory,  Read 0xE0  which seems to return a configuration. This is unknown today what these bytes are.
+
+Read config:
+1. sending custom auth with all zeros key
+2. send 0xE000,  will return the configuration bytes.
+`results: 850000000000000000005A5A00000008`
+
+
+Mapping of configuration bytes so far:
+```
+850000000000000000005A5A00000008
+                              ^^  --> SAK
+```
+
+Write config:
+1. sending custom auth with all zeros key
+2. send 0xE100
+3. send 16 bytes
+
+**Warning**
+
+Example of configuration to Perma lock tag:
+`85000000000000000000000000000008`
+
+
+It is unknown what kind of block 0 changes the tag supports
+* UID: 4b
+* ATQA/SAK: unknown
+* BCC: unknown
+* ATS: none
+
+### Proxmark3 commands
+^[Top](#top)
+```
+# Write to persistent memory
+hf mf gdmsetblk
+
+# Read configuration (0xE0):
+hf mf gdmcfg
+
+# Write configuration (0xE1):
+hf mf gdmsetcfg
+```
+
+### libnfc commands
+^[Top](#top)
+No implemented commands today
+
+## MIFARE Classic, other versions
+^[Top](#top)
+
+**TODO**
+
+* ZXUID, EUID, ICUID, KUID, HUID, RFUID ?
+* Some cards exhibit a specific SAK=28 ??
 
 ## MIFARE Classic Super
 ^[Top](#top)
@@ -719,6 +874,8 @@ See `--uid` and `--full`
 ## MIFARE Ultralight EV1 DirectWrite
 ^[Top](#top)
 
+aka UL2
+
 Similar to MFUL DirectWrite
 
 ### Identify
@@ -799,6 +956,10 @@ hf 14a info
 * BCC: computed
 * ATS: 0A78008102DBA0C119402AB5
 * Anticol shortcut (CL1/3000): fails
+
+**TODO**
+
+* UL-X, UL-Y, UL-Z, ULtra, UL-5 ?
 
 
 # NTAG
@@ -923,7 +1084,7 @@ Android compatible
 ### Characteristics
 ^[Top](#top)
 
-* ATQA: 0008 - *This is not DESFire, 0008/20 is FM1208-9*
+* ATQA: 0008 ??? This is not DESFire, 0008/20 doesn't match anything
 * SAK: 20
 * ATS: 0675338102005110 or 06757781028002F0
 
@@ -968,35 +1129,12 @@ hf 14a info
 # ISO14443B
 ^[Top](#top)
 
-## Tianaxin TCOS CPU card
+## ISO14443B magic
 ^[Top](#top)
 
-This is a card sold on Taobao for testing readers.
-ISO14443-4 compliant.
+No such card is available.
 
-### Identify
-
-```
-hf 14a apdu -s 90B2900000 // Get Card OS version
->>> 90 B2 90 00 00
-<<< 54 43 4F 53 20 56 31 2E 34 2E 30 90 00 | TCOS V1.4.0..
-```
-
-### Magic commands
-
-All commands in APDU.
-
-```
-CL IN P1 P2 Lc Data
-90 F4 CC CC 01 [..1 ] // Change protocol used              (1: ISO14443 [AA - type A, BB - type B])
-90 F6 CC CC 01 [TA1 ] // Change TA1 value (transfer speed)
-90 F8 CC CC 01 [..1 ] // Use random UID/PUPI value         (1: FF: static, AB: random)
-90 F8 DD DD 01 [..1 ] // Set UID/PUPI length               (1: bytes in UID (04, 07, 0A for 4, 7, 10 bytes accordingly))
-90 F8 EE EE 0B [... ] // Set UID/PUPI value                (enter value here). To clear, use Lc=01; data=00.
-90 FA CC CC 01 [FSCI] // Set FSCI                          (1: value 0-8)
-90 FC CC CC 01 [SFGI] // Set SFGI (DO NOT SET TOO HIGH!)   (1: value 0-E)
-90 FE CC CC 01 [FWI ] // Set FWI (DO NOT SET BELOW 4!!!)   (value 0-E)
-```
+Some vendor allow to specify an ID (PUPI) when ordering a card.
 
 # ISO15693
 ^[Top](#top)
@@ -1026,10 +1164,10 @@ script run hf_15_magic -u E004013344556677
 # Multi
 ^[Top](#top)
 
-## Gen 4 UMC
+## Gen 4 GTU
 ^[Top](#top)
 
-A.k.a ultimate magic card, most prominent feature is shadow mode (GTU) and optional password protected backdoor commands.
+A.k.a ultimate magic card,  most promenent feature is shadow mode (GTU) and optional password protected backdoor commands.
 
 Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 
@@ -1058,7 +1196,7 @@ Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 ^[Top](#top) ^^[Gen4](#g4top)
 
 👉 **TODO** If the password is not default, Tag doesn't get identified correctly by latest Proxmark3 client (it might get mislabeled as MFC Gen2/CUID, Gen3/APDU or NTAG21x Modifiable, depending on configured UID/ATQA/SAK/ATS)
-👉 **TODO** Using the `C6` command to identify tags may alter configuration, and `CC` command should be used instead.
+
 ```
 hf 14a info
 [+] Magic capabilities : Gen 4 GTU
@@ -1150,14 +1288,14 @@ CF <passwd> 68 <00-02>                           // Configure UID length
 CF <passwd> 69 <00-01>                           // (De)Activate Ultralight mode
 CF <passwd> 6A <00-03>                           // Select Ultralight mode
 CF <passwd> 6B <1b>                              // Set Ultralight and M1 maximum read/write sectors
-CF <passwd> C6                                   // Dump configuration; on old cards this will reset the `6B` value to 6B (bug)
-CF <passwd> CC                                   // Read tag version, returns: `000000 [03A0: old]/[06A0: new]`
+CF <passwd> C6                                   // Dump configuration
+CF <passwd> CC                                   // Factory test, returns 6666
 CF <passwd> CD <1b block number><16b block data> // Backdoor write 16b block
 CF <passwd> CE <1b block number>                 // Backdoor read 16b block
 CF <passwd> CF <1b param>                        // (De)Activate direct write to block 0
 CF <passwd> F0 <30b configuration data>          // Configure all params in one cmd
 CF <passwd> F1 <30b configuration data>          // Configure all params in one cmd and fuse the configuration permanently
-CF <passwd> FE <4b new_password>                 // change password (does not work on new)
+CF <passwd> FE <4b new_password>                 // change password
 ```
 Default `<passwd>`: `00000000`
 
@@ -1308,8 +1446,7 @@ Ultralight mode, 10b UID
 ### Set 14443B UID and ATQB
 ^[Top](#top) ^^[Gen4](#g4top)
 
-*This command is not available for old gen4 tags. It will return `9000`, but this tag cannot reply to REQB.*
-UID and ATQB are configured according to block0 with a (14a) backdoor write to block 0.
+UID and ATQB are configured according to block0 with a (14a) backdoor write.
 
 UID size is always 4 bytes.
 
@@ -1419,11 +1556,9 @@ hf 14a raw -s -c -t 1000 CF<passwd>32<1b param>
 ```
  * `<param>`
    * `00`: pre-write, shadow data can be written
-   * `01`: shadow mode
-     - WARNING: on new chips, this value is `04`.
+   * `01`: restore mode
    * `02`: disabled
    * `03`: disabled, high speed R/W mode for Ultralight?
-
 
 ### Direct block read and write
 ^[Top](#top) ^^[Gen4](#g4top)
@@ -1491,8 +1626,6 @@ Example: change password from AABBCCDD back to 00000000
 ```
 hf 14a raw -s -c -t 1000 CFAABBCCDDFE00000000
 ```
-
-WARNING: On new chips, issuing this command returns APDU error `6300`. Please write full config with F0 command instead.
 
 ### Dump configuration
 ^[Top](#top) ^^[Gen4](#g4top)

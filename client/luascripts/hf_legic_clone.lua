@@ -168,7 +168,7 @@ local function help()
     print(example)
 end
 -- read LEGIC data
-local function readlegicdata(offset, length, iv)
+local function readlegicdata(offset, len, iv)
     -- Read data
     local d0 = ('%04X%04X%02X'):format(offset, len, iv)
     local c = Command:newNG{cmd = cmds.CMD_HF_LEGIC_READER, data = d0}

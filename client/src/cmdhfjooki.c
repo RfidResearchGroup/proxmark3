@@ -200,7 +200,7 @@ static int jooki_create_ndef(uint8_t *b64ndef, uint8_t *ndefrecord) {
 static void jooki_printEx(uint8_t *b64, uint8_t *iv, uint8_t tid, uint8_t fid, uint8_t *uid, bool verbose) {
     int idx = jooki_lookup(tid, fid);
 
-    PrintAndLogEx(INFO, "Encoded URL.. %s ( %s )", sprint_hex(b64, 12), b64);
+    PrintAndLogEx(INFO, "Encoded URL.. %s ( " _YELLOW_("%s") " )", sprint_hex(b64, 12), b64);
     PrintAndLogEx(INFO, "Figurine..... %02x %02x - " _GREEN_("%s, %s")
                   , tid
                   , fid
@@ -525,29 +525,36 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
     // upload to emulator memory
     PrintAndLogEx(INFO, "Uploading to emulator memory");
-
     PrintAndLogEx(INFO, "." NOLF);
+
     // fast push mode
     g_conn.block_after_ACK = true;
     uint8_t blockwidth = 4, counter = 0, blockno = 0;
+
+    // 12 is the size of the struct the fct mfEmlSetMem_xt uses to transfer to device
+    uint16_t max_avail_blocks = ((PM3_CMD_DATA_SIZE - 12) / blockwidth) * blockwidth;
+
     while (datalen) {
         if (datalen == blockwidth) {
             // Disable fast mode on last packet
             g_conn.block_after_ACK = false;
         }
+        uint16_t chunk_size = MIN(max_avail_blocks, datalen);
+        uint16_t blocks_to_send = chunk_size / blockwidth;
 
-        if (mfEmlSetMem_xt(data + counter, blockno, 1, blockwidth) != PM3_SUCCESS) {
+        if (mfEmlSetMem_xt(data + counter, blockno, blocks_to_send, blockwidth) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Cant set emul block: %3d", blockno);
             free(data);
             return PM3_ESOFT;
         }
+        blockno += blocks_to_send;
+        counter += chunk_size;
+        datalen -= chunk_size;
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
-        blockno++;
-        counter += blockwidth;
-        datalen -= blockwidth;
     }
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", counter);
 
     struct {
         uint8_t tagtype;
@@ -566,6 +573,8 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Starting simulating");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
     for (;;) {
         if (kbd_enter_pressed()) {
@@ -574,15 +583,15 @@ static int CmdHF14AJookiSim(const char *Cmd) {
             break;
         }
 
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0)
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false)
             continue;
 
         if (resp.status != PM3_SUCCESS)
             break;
     }
     free(data);
-    PrintAndLogEx(INFO, "Done");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14a list") "` to view trace log");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 

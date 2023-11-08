@@ -95,40 +95,40 @@ void SetupSpi(int mode) {
         case SPI_FPGA_MODE:
             AT91C_BASE_SPI->SPI_MR =
                 (0 << 24)          |  // Delay between chip selects (take default: 6 MCK periods)
-                (0xE << 16)         | // Peripheral Chip Select (selects FPGA SPI_NCS0 or PA11)
+                (0xE << 16)        |  // Peripheral Chip Select (selects FPGA SPI_NCS0 or PA11)
                 (0 << 7)           |  // Local Loopback Disabled
-                AT91C_SPI_MODFDIS   | // Mode Fault Detection disabled
+                AT91C_SPI_MODFDIS  |  // Mode Fault Detection disabled
                 (0 << 2)           |  // Chip selects connected directly to peripheral
-                AT91C_SPI_PS_FIXED  | // Fixed Peripheral Select
+                AT91C_SPI_PS_FIXED |  // Fixed Peripheral Select
                 AT91C_SPI_MSTR;       // Master Mode
 
             AT91C_BASE_SPI->SPI_CSR[0] =
                 (1 << 24)          |  // Delay between Consecutive Transfers (32 MCK periods)
                 (1 << 16)          |  // Delay Before SPCK (1 MCK period)
                 (6 << 8)           |  // Serial Clock Baud Rate (baudrate = MCK/6 = 24MHz/6 = 4M baud
-                AT91C_SPI_BITS_16   | // Bits per Transfer (16 bits)
+                AT91C_SPI_BITS_16  |  // Bits per Transfer (16 bits)
                 (0 << 3)           |  // Chip Select inactive after transfer
-                AT91C_SPI_NCPHA     | // Clock Phase data captured on leading edge, changes on following edge
+                AT91C_SPI_NCPHA    |  // Clock Phase data captured on leading edge, changes on following edge
                 (0 << 0);             // Clock Polarity inactive state is logic 0
             break;
         /*
                     case SPI_LCD_MODE:
                     AT91C_BASE_SPI->SPI_MR =
-                        ( 0 << 24)          | // Delay between chip selects (take default: 6 MCK periods)
-                        (0xB << 16)         | // Peripheral Chip Select (selects LCD SPI_NCS2 or PA10)
-                        ( 0 << 7)           | // Local Loopback Disabled
-                        ( 1 << 4)           | // Mode Fault Detection disabled
-                        ( 0 << 2)           | // Chip selects connected directly to peripheral
-                        ( 0 << 1)           | // Fixed Peripheral Select
+                        ( 0 << 24)         |  // Delay between chip selects (take default: 6 MCK periods)
+                        (0xB << 16)        |  // Peripheral Chip Select (selects LCD SPI_NCS2 or PA10)
+                        ( 0 << 7)          |  // Local Loopback Disabled
+                        ( 1 << 4)          |  // Mode Fault Detection disabled
+                        ( 0 << 2)          |  // Chip selects connected directly to peripheral
+                        ( 0 << 1)          |  // Fixed Peripheral Select
                         ( 1 << 0);            // Master Mode
 
                     AT91C_BASE_SPI->SPI_CSR[2] =
-                        ( 1 << 24)          | // Delay between Consecutive Transfers (32 MCK periods)
-                        ( 1 << 16)          | // Delay Before SPCK (1 MCK period)
-                        ( 6 << 8)           | // Serial Clock Baud Rate (baudrate = MCK/6 = 24MHz/6 = 4M baud
-                        AT91C_SPI_BITS_9    | // Bits per Transfer (9 bits)
-                        ( 0 << 3)           | // Chip Select inactive after transfer
-                        ( 1 << 1)           | // Clock Phase data captured on leading edge, changes on following edge
+                        ( 1 << 24)         |  // Delay between Consecutive Transfers (32 MCK periods)
+                        ( 1 << 16)         |  // Delay Before SPCK (1 MCK period)
+                        ( 6 << 8)          |  // Serial Clock Baud Rate (baudrate = MCK/6 = 24MHz/6 = 4M baud
+                        AT91C_SPI_BITS_9   |  // Bits per Transfer (9 bits)
+                        ( 0 << 3)          |  // Chip Select inactive after transfer
+                        ( 1 << 1)          |  // Clock Phase data captured on leading edge, changes on following edge
                         ( 0 << 0);            // Clock Polarity inactive state is logic 0
                     break;
         */
@@ -162,8 +162,7 @@ void FpgaSetupSsc(uint16_t fpga_mode) {
 
     // 8, 16 or 32 bits per transfer, no loopback, MSB first, 1 transfer per sync
     // pulse, no output sync
-    if (((fpga_mode & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_READER ||
-            (fpga_mode & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_FSK_READER) &&
+    if (((fpga_mode & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_READER) &&
             (FpgaGetCurrent() == FPGA_BITSTREAM_HF || FpgaGetCurrent() == FPGA_BITSTREAM_HF_15)) {
         AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
     } else {

@@ -44,7 +44,7 @@ lf indala clone --fc 123 --cn 1337
 lf read s 10000
 data save f lf_ATA5577_indala
 
-lf indala clone -l -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5 
+lf indala clone -l -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5
 lf read s 10000
 data save f lf_ATA5577_indala_224
 
@@ -92,7 +92,7 @@ lf noralsy clone 112233
 lf read s 10000
 data save f lf_ATA5577_noralsy
 
-lf pac clone c CD4F5552 
+lf pac clone c CD4F5552
 lf read s 10000
 data save f lf_ATA5577_pac
 

@@ -46,18 +46,18 @@ typedef struct rdv40_spiffs_fsinfo {
     uint32_t usedPercent, freePercent;
 } rdv40_spiffs_fsinfo;
 
-int rdv40_spiffs_read_as_filetype(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level);
+int rdv40_spiffs_read_as_filetype(const char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level);
 
 int rdv40_spiffs_check(void);
 int rdv40_spiffs_lazy_unmount(void);
 int rdv40_spiffs_lazy_mount(void);
 int rdv40_spiffs_lazy_mount_rollback(int changed);
-int rdv40_spiffs_write(const char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level);
+int rdv40_spiffs_write(const char *filename, const uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level);
 int rdv40_spiffs_read(const char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level);
-int rdv40_spiffs_rename(char *old_filename, char *new_filename, RDV40SpiFFSSafetyLevel level);
-int rdv40_spiffs_remove(char *filename, RDV40SpiFFSSafetyLevel level);
-int rdv40_spiffs_read_as_symlink(char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level);
-void write_to_spiffs(const char *filename, uint8_t *src, uint32_t size);
+int rdv40_spiffs_rename(const char *old_filename, const char *new_filename, RDV40SpiFFSSafetyLevel level);
+int rdv40_spiffs_remove(const char *filename, RDV40SpiFFSSafetyLevel level);
+int rdv40_spiffs_read_as_symlink(const char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level);
+void write_to_spiffs(const char *filename, const uint8_t *src, uint32_t size);
 void read_from_spiffs(const char *filename, uint8_t *dst, uint32_t size);
 void test_spiffs(void);
 void rdv40_spiffs_safe_print_tree(void);
@@ -65,11 +65,11 @@ int rdv40_spiffs_unmount(void);
 int rdv40_spiffs_mount(void);
 int rdv40_spiffs_is_symlink(const char *s);
 void rdv40_spiffs_safe_print_fsinfo(void);
-int rdv40_spiffs_make_symlink(char *linkdest, char *filename, RDV40SpiFFSSafetyLevel level);
-void append_to_spiffs(const char *filename, uint8_t *src, uint32_t size);
-int rdv40_spiffs_copy(char *src, char *dst, RDV40SpiFFSSafetyLevel level);
-int rdv40_spiffs_append(const char *filename, uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level);
-int rdv40_spiffs_stat(char *filename, uint32_t *buf, RDV40SpiFFSSafetyLevel level);
+int rdv40_spiffs_make_symlink(const char *linkdest, const char *filename, RDV40SpiFFSSafetyLevel level);
+void append_to_spiffs(const char *filename, const uint8_t *src, uint32_t size);
+int rdv40_spiffs_copy(const char *src_filename, const char *dst_filename, RDV40SpiFFSSafetyLevel level);
+int rdv40_spiffs_append(const char *filename, const uint8_t *src, uint32_t size, RDV40SpiFFSSafetyLevel level);
+int rdv40_spiffs_stat(const char *filename, uint32_t *size_in_bytes, RDV40SpiFFSSafetyLevel level);
 uint32_t size_in_spiffs(const char *filename);
 int exists_in_spiffs(const char *filename);
 

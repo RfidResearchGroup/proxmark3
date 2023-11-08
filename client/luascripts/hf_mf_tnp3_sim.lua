@@ -87,12 +87,6 @@ local function ExitMsg(msg)
     print()
 end
 
-local function writedumpfile(infile)
-     t = infile:read('*all')
-     len = string.len(t)
-     local len,hex = bin.unpack(('H%d'):format(len),t)
-     return hex
-end
 -- blocks with data
 -- there are two dataareas, in block 8 or block 36,   ( 1==8 ,
 -- checksum type =  0, 1, 2, 3

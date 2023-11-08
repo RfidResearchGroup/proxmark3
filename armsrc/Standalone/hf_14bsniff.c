@@ -14,8 +14,23 @@
  * - LED3: sniffed reader command, turns off when finished sniffing tag command
  * - LED4: unmounting/sync'ing flash (normally < 100ms)
  *
+ * To retrieve trace data from flash:
+ *
+ * 1. mem spiffs dump -s hf_14bsniff.trace -d hf_14bsniff.trace
+ *    Copies trace data file from flash to your PC.
+ *
+ * 2. trace load -f hf_14bsniff.trace
+ *    Loads trace data from a file into PC-side buffers.
+ *
+ * 3. For ISO14a: trace list -t 14b -1
+ *
+ *    Lists trace data from buffer without requesting it from PM3.
+ *
  * This module emits debug strings during normal operation -- so try it out in
  * the lab connected to PM3 client before taking it into the field.
+ *
+ * To delete the trace data from flash:
+ *    mem spiffs remove -f hf_14bsniff.trace
  *
  * Caveats / notes:
  * - Trace buffer will be cleared on starting stand-alone mode.
