@@ -39,6 +39,11 @@ Useful docs:
   * [MIFARE Ultralight EV1 DirectWrite](#mifare-ultralight-ev1-directwrite)
   * [MIFARE Ultralight C Gen1A](#mifare-ultralight-c-gen1a)
   * [MIFARE Ultralight C DirectWrite](#mifare-ultralight-c-directwrite)
+  * [UL series (RU)](#ul-series-ru)
+    * [UL-Y](#ul-y)
+    * [ULtra](#ultra)
+    * [UL-5](#ul-5)
+    * [UL, other chips](#ul-other-chips)
 - [NTAG](#ntag)
   * [NTAG213 DirectWrite](#ntag213-directwrite)
   * [NTAG21x](#ntag21x)
@@ -1297,6 +1302,80 @@ Anticol shortcut (CL1/3000): fails
 script run hf_mfu_magicwrite -h
 ```
 
+## UL series (RU)
+^[Top](#top)
+
+Custom chips, manufactured by iKey LLC for cloning Ultralight tags.
+
+### UL-Y
+^[Top](#top)
+
+^[Top](#top)
+
+Ultralight magic, 16 pages. Recommended for Vizit RF3.1 with markings "3.1" or "4.1".
+Behavior: allows writes to page 0-2.
+
+#### Identify
+^[Top](#top)
+
+```
+hf mfu rdbl --force -b 16
+hf 14a raw -sct 250 60
+```
+If tag replies with
+`Cmd Error: 00`
+`00 00 00 00 00 00 00 00`
+then it is UL-Y.
+
+### ULtra
+^[Top](#top)
+
+Ultralight EV1 magic; 41 page. Recommended for Vizit RF3.1 with 41 page.
+Behavior: allows writes to page 0-2.
+
+#### Identify
+^[Top](#top)
+
+```
+hf mfu info
+...
+[=] TAG IC Signature: 0000000000000000000000000000000000000000000000000000000000000000
+[=] --- Tag Version
+[=]        Raw bytes: 00 34 21 01 01 00 0E 03
+```
+
+Remember that this is not a reliable method of identification, as it interferes with locked [UL-5](#mifare-ul-5).
+
+### UL-5
+^[Top](#top)
+
+Ultralight EV1 magic; 41 page. Recommended for Vizit RF3.1 with 41 page and if [ULtra](#mifare-ultra) has failed.
+
+Behavior: similar to Ultra, but after editing page 0, tag becomes original Mifare Ultralight EV1.
+
+**WARNING!** When using UL-5 to clone, write UID pages in inverse (from 2 to 0) and do NOT make mistakes! This tag does not allow reversing one-way actions (OTP page, lock bits).
+
+#### Identify
+^[Top](#top)
+
+```
+hf mfu info
+[=] UID: AA 55 C3 A1 30 61 80
+TAG IC Signature: 0000000000000000000000000000000000000000000000000000000000000000
+[=] --- Tag Version
+[=]        Raw bytes: 00 34 21 01 01 00 0E 03
+```
+
+After personalization it is not possible to identify UL-5. 
+
+Some chips have UID of `AA 55 C3 A4 30 61 80`.
+
+### UL, other chips
+
+**TODO**
+
+UL-X, UL-Z - ?
+
 # DESFire
 ^[Top](#top)
 
@@ -1354,7 +1433,8 @@ Android compatible
 ### Characteristics
 ^[Top](#top)
 
-* ATQA: 0008 ??? This is not DESFire, 0008/20 doesn't match anything
+* ATQA: 0008
+  * This is FM1208-9, NOT DESFire!
 * SAK: 20
 * ATS: 0675338102005110 or 06757781028002F0
 
@@ -1422,8 +1502,8 @@ CL IN P1 P2 Lc Data
 90 F4 CC CC 01 [..1 ] // Change protocol used              (1: ISO14443 [AA - type A, BB - type B])
 90 F6 CC CC 01 [TA1 ] // Change TA1 value (transfer speed)
 90 F8 CC CC 01 [..1 ] // Use random UID/PUPI value         (1: FF: static, AB: random)
-90 F8 DD DD 01 [..1 ] // Set UID/PUPI length               (1: bytes in UID (04, 07, 0A for 4, 7, 10 bytes accordingly))
-90 F8 EE EE 0B [... ] // Set UID/PUPI value                (enter value here). To clear, use Lc=01; data=00.
+90 F8 DD DD 01 [..1 ] // Set UID length                    (1: bytes in UID (04, 07, 0A for 4, 7, 10 bytes accordingly))
+90 F8 EE EE 0B [... ] // Set UID/PUPI value                (FF+enter UID value here). To clear, use Lc=01; data=00.
 90 FA CC CC 01 [FSCI] // Set FSCI                          (1: value 0-8)
 90 FC CC CC 01 [SFGI] // Set SFGI (DO NOT SET TOO HIGH!)   (1: value 0-E)
 90 FE CC CC 01 [FWI ] // Set FWI (DO NOT SET BELOW 4!!!)   (value 0-E)
