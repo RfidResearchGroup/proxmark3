@@ -453,13 +453,15 @@ uint32_t SampleLF_realtime() {
     LFSetupFPGAForADC(config.divisor, true);
 
 // DoAcquisition() start
+    uint8_t lastByte = 0;
+    uint8_t currByte = 0;
+
     uint32_t sample_size = 64;
     const uint8_t bits_per_sample = config.bits_per_sample;
     const int16_t trigger_threshold = config.trigger_threshold;
     int32_t samples_to_skip = config.samples_to_skip;
     const uint8_t decimation = config.decimation;
 // logic
-    int8_t counter = 0;
     const int8_t thresholdTable[9] = {0, 64, 64, 48, 64, 40, 48, 56, 64};
     const int8_t threshold = thresholdTable[decimation];
     initSampleBuffer(&sample_size); // sample size in bytes
@@ -510,9 +512,14 @@ uint32_t SampleLF_realtime() {
             }
 
             logSample(sample, decimation, bits_per_sample, false);
-            counter++;
 
-            if(counter == threshold)
+            // write to USB FIFO if byte changed
+            currByte = data.numbits >> 3;
+            if (currByte > lastByte)
+                AT91C_BASE_UDP->UDP_FDR[2] = data.buffer[lastByte];
+            lastByte = currByte;
+
+            if(samples.total_saved == threshold)
             {
                 // end of transmission
                 UDP_CLEAR_EP_FLAGS(2, AT91C_UDP_TXCOMP);
@@ -523,19 +530,16 @@ uint32_t SampleLF_realtime() {
                     break;
                     // return PM3_EIO;
 
-                // write data
-                uint8_t* ptr = data.buffer;
-                while(counter--)
-                    AT91C_BASE_UDP->UDP_FDR[2] = *ptr++;
-
                 // start of transmission
                 UDP_SET_EP_FLAGS(2, AT91C_UDP_TXPKTRDY);
-                while (!(AT91C_BASE_UDP->UDP_CSR[2] & AT91C_UDP_TXPKTRDY)) {};
+                // no need to wait in the while()
+                // while (!(AT91C_BASE_UDP->UDP_CSR[2] & AT91C_UDP_TXPKTRDY)) {};
 
                 // reset sample
-                counter = 0;
+                currByte = 0;
+                lastByte = 0;
                 data.numbits = 0;
-                data.position = 0;
+                // data.position = 0; // unused?
                 samples.total_saved = 0;
             }
         }
