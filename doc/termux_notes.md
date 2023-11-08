@@ -17,9 +17,10 @@
       * [ Troubleshooting ](#troubleshooting)
   * [ TCP/UDP bridge method ](#tcpudp-bridge-method)
     * [ USB connection ](#usb-connection)
-      * [ USB-UART bridge application ](#usb-uart-bridge-application)
+      * [ USB-UART bridge application for TCP to USB bridging](#usb-uart-bridge-application-for-tcp-to-usb-bridging)
+      * [ USB-UART Bridge Application for UDP to USB bridging](#usb-uart-bridge-application-for-udp-to-usb-bridging)
     * [ Bluetooth connection ](#bluetooth-connection)
-      * [ BT-UART bridge application ](#bt-uart-bridge-application)
+      * [ BT-UART bridge application for TCP to BT bridging](#bt-uart-bridge-application-for-tcp-to-bt-bridging)
     * [ TCP connection ](#tcp-connection)
     * [ UDP connection ](#udp-connection)
     * [Troubleshooting](#troubleshooting-1)
@@ -154,6 +155,18 @@ In this app, select TCP server as 'Device A' and choose an unused port (e.g. 432
 Choose your registered PM3 device as 'Device B' -> 'Connect to USB device'.
 Ensure 'Retransmission' is set to 'both ways'.
 It is possible to record the config as autostart, cf 'Settings' -> 'Autostart setting'.
+
+#### USB-UART Bridge Application for UDP to USB bridging
+^[Top](#top)
+
+Install [this free SerialPipe app](https://f-droid.org/packages/io.github.wh201906.serialpipe/) on [F-Droid](https://f-droid.org/).
+You can download the apk on this website without installing F-Droid.
+
+The app lets you choose the baudrate. Default value (115 200 baud) is fine.
+Plug the PM3 in and click `Connect`.
+Choose a random port not used by system (e.g. 4321) and click `Start Server`.
+
+Note: This app uses foreground service to keep the connection alive, so you can safely put it in the background without suspending the transmission. However, you will see a dummy notification in the status bar which is required for foreground service.
 
 ### Bluetooth connection
 ^[Top](#top)
