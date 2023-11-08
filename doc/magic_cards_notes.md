@@ -741,8 +741,6 @@ hf 14a raw -s -c 90FD111100
 ## MIFARE Classic USCUID
 ^[Top](#top)
 
-^[Top](#top)
-
 TLDR: These magic cards have a 16 byte long configuration page, which usually starts with 0x85.
 All of the known tags using this, except for Ultralight tags, are listed here.
 
