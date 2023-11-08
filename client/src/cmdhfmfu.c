@@ -51,6 +51,7 @@
 #define MAX_MY_D_MOVE       0x25
 #define MAX_MY_D_MOVE_LEAN  0x0F
 #define MAX_UL_NANO_40      0x0A
+#define MAX_UL_AES          0x37
 
 static int CmdHelp(const char *Cmd);
 
@@ -86,7 +87,8 @@ static uint64_t UL_TYPES_ARRAY[] = {
     MFU_TT_NTAG_213_TT,       MFU_TT_NTAG_213_C,
     MFU_TT_MAGIC_1A,          MFU_TT_MAGIC_1B,
     MFU_TT_MAGIC_NTAG,        MFU_TT_NTAG_210u,
-    MFU_TT_UL_MAGIC,          MFU_TT_UL_C_MAGIC
+    MFU_TT_UL_MAGIC,          MFU_TT_UL_C_MAGIC,
+    MFU_TT_UL_AES
 };
 
 static uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
@@ -107,7 +109,7 @@ static uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
 //  MAGIC_1A,           MAGIC_1B,           MAGIC_NTAG,
     MAX_UL_BLOCKS,      MAX_UL_BLOCKS,      MAX_NTAG_216,
 //  NTAG_210u,          UL_MAGIC,           UL_C_MAGIC
-    MAX_NTAG_210,       MAX_UL_BLOCKS,      MAX_ULC_BLOCKS
+    MAX_NTAG_210,       MAX_UL_BLOCKS,      MAX_ULC_BLOCKS,      MAX_UL_AES
 };
 
 //------------------------------------
@@ -428,7 +430,6 @@ static int ulev1_readTearing(uint8_t counter, uint8_t *response, uint16_t respon
 }
 
 static int ulev1_readSignature(uint8_t *response, uint16_t responseLength) {
-
     uint8_t cmd[] = {MIFARE_ULEV1_READSIG, 0x00};
     int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
     return len;
@@ -1023,6 +1024,7 @@ static int ulev1_print_counters(void) {
 static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signature, size_t signature_len) {
 
 #define PUBLIC_ECDA_KEYLEN 33
+#define PUBLIC_ECDA_192_KEYLEN 49
     // known public keys for the originality check (source: https://github.com/alexbatalov/node-nxp-originality-verifier)
     // ref: AN11350 NTAG 21x Originality Signature Validation
     // ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
@@ -1034,6 +1036,11 @@ static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signat
         {"NXP Ultralight Ev1",                    "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
         {"NXP NTAG21x (2013)",                    "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
         {"MIKRON Public key",                     "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
+    };
+
+    // https://www.nxp.com/docs/en/application-note/AN13452.pdf
+    const ecdsa_publickey_t nxp_mfu_192_public_keys[] = {
+        {"NXP Ultralight AES", "0453BF8C49B7BD9FE3207A91513B9C1D238ECAB07186B772104AB535F7D3AE63CF7C7F3DD0D169DA3E99E43C6399621A86"},
     };
 
     /*
@@ -1084,34 +1091,60 @@ static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signat
     */
     uint8_t i;
     bool is_valid = false;
-    for (i = 0; i < ARRAYLEN(nxp_mfu_public_keys); i++) {
+    if (signature_len == 32) {
+        for (i = 0; i < ARRAYLEN(nxp_mfu_public_keys); i++) {
 
-        int dl = 0;
-        uint8_t key[PUBLIC_ECDA_KEYLEN] = {0};
-        param_gethex_to_eol(nxp_mfu_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
+            int dl = 0;
+            uint8_t key[PUBLIC_ECDA_KEYLEN] = {0};
+            param_gethex_to_eol(nxp_mfu_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
 
-        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, signature_len, false);
+            int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, signature_len, false);
 
-        is_valid = (res == 0);
-        if (is_valid)
-            break;
+            is_valid = (res == 0);
+            if (is_valid)
+                break;
+        }
+    }
+
+    bool is_192_valid = false;
+    if (signature_len == 48) {
+        for (i = 0; i < ARRAYLEN(nxp_mfu_192_public_keys); i++) {
+            int dl = 0;
+            uint8_t key[PUBLIC_ECDA_192_KEYLEN] = {0};
+            param_gethex_to_eol(nxp_mfu_192_public_keys[i].value, 0, key, PUBLIC_ECDA_192_KEYLEN, &dl);
+
+            int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP192R1, key, uid, 7, signature, signature_len, false);
+
+            is_192_valid = (res == 0);
+            if (is_192_valid)
+                break;
+        }
     }
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-    if (is_valid == false || i == ARRAYLEN(nxp_mfu_public_keys)) {
-        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
+    if (is_192_valid ) {
+        PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfu_192_public_keys[i].desc);
+        PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_192_public_keys[i].value);
+        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp192r1");
         PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-        PrintAndLogEx(SUCCESS, "       Signature verification ( " _RED_("fail") " )");
-        return PM3_ESOFT;
+        PrintAndLogEx(SUCCESS, "       Signature verification ( " _GREEN_("successful") " )");
+        return PM3_SUCCESS;
     }
 
-    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfu_public_keys[i].desc);
-    PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
-    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
+    if (is_valid) {
+        PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfu_public_keys[i].desc);
+        PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
+        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
+        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
+        PrintAndLogEx(SUCCESS, "       Signature verification ( " _GREEN_("successful") " )");
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(INFO, "    Elliptic curve parameters: %s", (signature_len == 48) ? "NID_secp192r1" : "NID_secp128r1" );
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-    PrintAndLogEx(SUCCESS, "       Signature verification ( " _GREEN_("successful") " )");
-    return PM3_SUCCESS;
+    PrintAndLogEx(SUCCESS, "       Signature verification ( " _RED_("fail") " )");
+    return PM3_ESOFT;
 }
 
 static int ulev1_print_version(uint8_t *data) {
@@ -1641,13 +1674,14 @@ uint32_t GetHF14AMfU_Type(void) {
                 else if (memcmp(version, "\x00\x04\x03\x02\x01\x00\x0B", 7) == 0) { tagtype = MFU_TT_UL_EV1_48; break; }
                 else if (memcmp(version, "\x00\x04\x03\x01\x01\x00\x0E", 7) == 0) { tagtype = MFU_TT_UL_EV1_128; break; }
                 else if (memcmp(version, "\x00\x04\x03\x02\x01\x00\x0E", 7) == 0) { tagtype = MFU_TT_UL_EV1_128; break; }
+                else if (memcmp(version, "\x00\x04\x03\x01\x04\x00\x0F\x03", 8) == 0) { tagtype = MFU_TT_UL_AES; break; }
                 else if (memcmp(version, "\x00\x34\x21\x01\x01\x00\x0E", 7) == 0) { tagtype = MFU_TT_UL_EV1_128; break; } // Mikron JSC Russia EV1 41 pages tag
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0B", 7) == 0) { tagtype = MFU_TT_NTAG_210; break; }
                 else if (memcmp(version, "\x00\x04\x04\x01\x02\x00\x0B", 7) == 0) { tagtype = MFU_TT_NTAG_210u; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x02\x00\x0B", 7) == 0) { tagtype = MFU_TT_NTAG_210u; break; }
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0E", 7) == 0) { tagtype = MFU_TT_NTAG_212; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x00\x0F", 7) == 0) { tagtype = MFU_TT_NTAG_213; break; }
-                else if (memcmp(version, "\x00\x53\x04\x02\x01\x00\x0F", 7) == 0) { tagtype = MFU_TT_NTAG_213; break; } //Shanghai Feiju Microelectronics Co. Ltd. China (Xiaomi Air Purifier filter)
+                else if (memcmp(version, "\x00\x53\x04\x02\x01\x00\x0F", 7) == 0) { tagtype = MFU_TT_NTAG_213; break; } // Shanghai Feiju Microelectronics Co. Ltd. China (Xiaomi Air Purifier filter)
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x01\x0F", 7) == 0) { tagtype = MFU_TT_NTAG_213_C; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x00\x11", 7) == 0) { tagtype = MFU_TT_NTAG_215; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x01\x00\x13", 7) == 0) { tagtype = MFU_TT_NTAG_216; break; }
@@ -1894,8 +1928,9 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 |
                    MFU_TT_NTAG_210u | MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
                    MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
-                   MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS))) {
-        uint8_t ulev1_signature[32] = {0x00};
+                   MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS |
+                   MFU_TT_UL_AES))) {
+        uint8_t ulev1_signature[49] = {0x00};
         status = ulev1_readSignature(ulev1_signature, sizeof(ulev1_signature));
         if (status == -1) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ SIGNATURE");
@@ -1903,7 +1938,9 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             return PM3_ESOFT;
         }
         if (status == 32) {
-            ulev1_print_signature(tagtype, card.uid, ulev1_signature, sizeof(ulev1_signature));
+            ulev1_print_signature(tagtype, card.uid, ulev1_signature, 32);
+        } else if (status == 48) {
+            ulev1_print_signature(tagtype, card.uid, ulev1_signature, 48);
         } else {
             // re-select
             if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {

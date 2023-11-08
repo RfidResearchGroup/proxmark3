@@ -1595,6 +1595,7 @@ typedef enum {
     MTEMV = 128,
     MTFUDAN = 256,
     MTISO18092 = 512,
+    MT424 = 1024,
 } nxp_mifare_type_t;
 
 // Based on NXP AN10833 Rev 3.6 and NXP AN10834 Rev 4.1
@@ -1723,7 +1724,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
                 }
 
                 printTag("NTAG 4xx");
-                type |= MTDESFIRE;
+                type |= (MTDESFIRE | MT424);
             }
         } else if ((sak & 0x04) == 0x04) {
             printTag("Any MIFARE CL1");
@@ -1920,6 +1921,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isEMV = false;
     bool isFUDAN = false;
     bool isISO18092 = false;
+    bool isNTAG424 = false;
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
@@ -1929,6 +1931,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
         isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
         isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
+        isNTAG424 = ((nxptype & MT424) == MT424);
 
         if ((nxptype & MTOTHER) == MTOTHER)
             isMifareClassic = true;
@@ -1958,6 +1961,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
                 isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
                 isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
+                isNTAG424 = ((nxptype & MT424) == MT424);
 
                 if ((nxptype & MTOTHER) == MTOTHER)
                     isMifareClassic = true;
@@ -2460,6 +2464,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "  hf 14a raw -c 3007");
         */
     }
+
+    if (isNTAG424) {
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf ntag424 info") "`");
+    }
+
 
     PrintAndLogEx(NORMAL, "");
     DropField();
