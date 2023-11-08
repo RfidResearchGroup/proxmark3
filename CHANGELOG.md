@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `pm3_gen_dictionary.py` - python script to extract and save all keys from MFC dump files. (@iceman1001)
  - Changed `hf mfu info` - now detect MIFARE Ultralight AES (@iceman1001)
  - Changed `hf mf autopwn` - now supports multiple user supplied keys (@iceman1001)
  - Added `hf mf gchpwd` command for change Gen4 GTU card access password (@merlokk)
