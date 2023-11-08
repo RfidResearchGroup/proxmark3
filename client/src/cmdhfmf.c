@@ -7509,8 +7509,10 @@ static int CmdHF14AGen4Info(const char *cmd) {
             PrintAndLogEx(INFO, "Card type........... generic");
         else if (resp[resplen - 2] == 0x02 && resp[resplen - 1] == 0xaa)
             PrintAndLogEx(INFO, "Card type........... limited functionality");
+        else if (resp[resplen - 2] == 0x03 && resp[resplen - 1] == 0xa0)
+            PrintAndLogEx(INFO, "Card type........... old card version");
         else if (resp[resplen - 2] == 0x06 && resp[resplen - 1] == 0xa0)
-            PrintAndLogEx(INFO, "Card type........... broken functionality");
+            PrintAndLogEx(INFO, "Card type........... new card version");
         else
             PrintAndLogEx(INFO, "Card type........... unknown %02x%02x", resp[resplen - 2], resp[resplen - 1]);
     }
