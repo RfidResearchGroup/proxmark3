@@ -269,7 +269,7 @@ static void ntag424_calc_send_iv(ntag424_session_keys_t *session_keys, uint8_t *
     aes_encode(zero_iv, session_keys->encryption, iv_clear, out_ivc, 16);
 }
 
-static void ntag424_calc_recieve_iv(ntag424_session_keys_t *session_keys, uint8_t *out_ivc) {
+static void ntag424_calc_receive_iv(ntag424_session_keys_t *session_keys, uint8_t *out_ivc) {
     uint8_t iv_clear[] = { 0x5a, 0xa5,
                            session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3],
                            (uint8_t)(session_keys->command_counter), (uint8_t)(session_keys->command_counter >> 8),
@@ -347,7 +347,7 @@ static int ntag424_comm_encrypt_apdu(APDU_t *apdu, int command_header_length, in
     return PM3_SUCCESS;
 }
 
-static int ntag424_exchange_apdu(APDU_t *apdu, int command_header_length, uint8_t *response, int *response_length, ntag424_communication_mode_t comm_mode, ntag424_session_keys_t *session_keys, uint8_t sw1_expected, uint8_t sw2_expected) {
+static int ntag424_exchange_apdu(APDU_t apdu, int command_header_length, uint8_t *response, int *response_length, ntag424_communication_mode_t comm_mode, ntag424_session_keys_t *session_keys, uint8_t sw1_expected, uint8_t sw2_expected) {
 
     int res;
 
@@ -360,19 +360,19 @@ static int ntag424_exchange_apdu(APDU_t *apdu, int command_header_length, uint8_
             PrintAndLogEx(ERR, "Non-plain communications mode requested but no session keys supplied");
             return PM3_EINVARG;
         }
-        memcpy(tmp_apdu_buffer, apdu->data, apdu->lc);
-        apdu->data = tmp_apdu_buffer;
+        memcpy(tmp_apdu_buffer, apdu.data, apdu.lc);
+        apdu.data = tmp_apdu_buffer;
     }
 
     if (comm_mode == COMM_FULL) {
-        res = ntag424_comm_encrypt_apdu(apdu, command_header_length, buffer_length, session_keys);
+        res = ntag424_comm_encrypt_apdu(&apdu, command_header_length, buffer_length, session_keys);
         if (res != PM3_SUCCESS) {
             return res;
         }
     }
 
     if (comm_mode == COMM_MAC || comm_mode == COMM_FULL) {
-        res = ntag424_comm_mac_apdu(apdu, command_header_length, buffer_length, session_keys);
+        res = ntag424_comm_mac_apdu(&apdu, command_header_length, buffer_length, session_keys);
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -381,7 +381,7 @@ static int ntag424_exchange_apdu(APDU_t *apdu, int command_header_length, uint8_
     uint8_t cmd[256] = {0};
     int apdu_length = 256;
 
-    if (APDUEncode(apdu, cmd, &apdu_length) != 0) {
+    if (APDUEncode(&apdu, cmd, &apdu_length) != 0) {
         return PM3_EINVARG;
     }
 
@@ -408,7 +408,7 @@ static int ntag424_exchange_apdu(APDU_t *apdu, int command_header_length, uint8_
     // should also be done here
     if (comm_mode == COMM_FULL) {
         uint8_t iv[16] = {0};
-        ntag424_calc_recieve_iv(session_keys, iv);
+        ntag424_calc_receive_iv(session_keys, iv);
 
         uint8_t tmp[256];
         memcpy(tmp, response, *response_length);
@@ -433,7 +433,7 @@ static int ntag424_get_file_settings(uint8_t fileno, ntag424_file_settings_t *se
         .extended_apdu = false
     };
 
-    int res = ntag424_exchange_apdu(&apdu, 1, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
+    int res = ntag424_exchange_apdu(apdu, 1, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -473,7 +473,7 @@ static int ntag424_write_file_settings(uint8_t fileno, ntag424_file_settings_t *
     int response_length = 8 + 2;
     uint8_t response[response_length];
 
-    int res = ntag424_exchange_apdu(&apdu, 1, response, &response_length, COMM_FULL, session_keys, 0x91, 0x00);
+    int res = ntag424_exchange_apdu(apdu, 1, response, &response_length, COMM_FULL, session_keys, 0x91, 0x00);
     return res;
 }
 
@@ -540,7 +540,7 @@ static int ntag424_auth_first_step(uint8_t keyno, uint8_t *key, uint8_t *out) {
     int response_length = 16 + 2;
     uint8_t response[response_length];
 
-    int res = ntag424_exchange_apdu(&apdu, 2, response, &response_length, COMM_PLAIN, NULL, 0x91, 0xAF);
+    int res = ntag424_exchange_apdu(apdu, 2, response, &response_length, COMM_PLAIN, NULL, 0x91, 0xAF);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -566,7 +566,7 @@ static int ntag424_auth_second_step(uint8_t *challenge, uint8_t *response_out) {
     int response_length = 256;
     uint8_t response[response_length];
 
-    int res = ntag424_exchange_apdu(&apdu, 0x20, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
+    int res = ntag424_exchange_apdu(apdu, 0x20, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -710,7 +710,7 @@ static int ntag424_write_data(uint8_t fileno, uint32_t offset, uint32_t num_byte
     int response_length = 8 + 2; // potential MAC and result
     uint8_t response[response_length];
 
-    int res = ntag424_exchange_apdu(&apdu, sizeof(cmd_header), response, &response_length, comm_mode, session_keys, 0x91, 0x00);
+    int res = ntag424_exchange_apdu(apdu, sizeof(cmd_header), response, &response_length, comm_mode, session_keys, 0x91, 0x00);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -741,7 +741,7 @@ static int ntag424_read_data(uint8_t fileno, uint16_t offset, uint16_t num_bytes
     int response_length = num_bytes + 4 + 2 + 20; // number of bytes to read + mac + result + potential padding
     uint8_t response[response_length];
 
-    int res = ntag424_exchange_apdu(&apdu, sizeof(cmd_header), response, &response_length, comm_mode, session_keys, 0x91, 0x00);
+    int res = ntag424_exchange_apdu(apdu, sizeof(cmd_header), response, &response_length, comm_mode, session_keys, 0x91, 0x00);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -760,7 +760,7 @@ static int ntag424_get_version(ntag424_full_version_information_t *version) {
     uint8_t response[256];
 
     int response_length = sizeof(ntag424_version_information_t) + 2;
-    if (ntag424_exchange_apdu(&apdu, 0, response, &response_length, COMM_PLAIN, NULL, 0x91, 0xAF) != PM3_SUCCESS) {
+    if (ntag424_exchange_apdu(apdu, 0, response, &response_length, COMM_PLAIN, NULL, 0x91, 0xAF) != PM3_SUCCESS) {
         return PM3_ESOFT;
     }
     memcpy(&version->hardware, response, sizeof(ntag424_version_information_t));
@@ -771,13 +771,13 @@ static int ntag424_get_version(ntag424_full_version_information_t *version) {
     };
 
     response_length = sizeof(ntag424_version_information_t) + 2;
-    if (ntag424_exchange_apdu(&continue_apdu, 0, response, &response_length, COMM_PLAIN, NULL, 0x91, 0xAF) != PM3_SUCCESS) {
+    if (ntag424_exchange_apdu(continue_apdu, 0, response, &response_length, COMM_PLAIN, NULL, 0x91, 0xAF) != PM3_SUCCESS) {
         return PM3_ESOFT;
     }
     memcpy(&version->software, response, sizeof(ntag424_version_information_t));
 
     response_length = sizeof(ntag424_production_information_t) + 2;
-    if (ntag424_exchange_apdu(&continue_apdu, 0, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00) != PM3_SUCCESS) {
+    if (ntag424_exchange_apdu(continue_apdu, 0, response, &response_length, COMM_PLAIN, NULL, 0x91, 0x00) != PM3_SUCCESS) {
         return PM3_ESOFT;
     }
     memcpy(&version->production, response, sizeof(ntag424_production_information_t));
@@ -800,7 +800,7 @@ static int ntag424_get_signature(uint8_t *signature_out) {
     int response_length = NXP_SIGNATURE_LENGTH + 2;
     // This is a weird one. Datasheet claims this command should result in 91 00, but cards, and the AN12196
     // document shows 91 90 on success.
-    if (ntag424_exchange_apdu(&apdu, 1, signature_out, &response_length, COMM_PLAIN, NULL, 0x91, 0x90) != PM3_SUCCESS) {
+    if (ntag424_exchange_apdu(apdu, 1, signature_out, &response_length, COMM_PLAIN, NULL, 0x91, 0x90) != PM3_SUCCESS) {
         return PM3_ESOFT;
     }
 
@@ -843,7 +843,7 @@ static int ntag424_change_key(uint8_t keyno, uint8_t *new_key, uint8_t *old_key,
     int response_length = 8 + 2;
     uint8_t response[response_length];
 
-    int res = ntag424_exchange_apdu(&apdu, 1, response, &response_length, COMM_FULL, session_keys, 0x91, 0x00);
+    int res = ntag424_exchange_apdu(apdu, 1, response, &response_length, COMM_FULL, session_keys, 0x91, 0x00);
     return res;
 }
 
