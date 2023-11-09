@@ -53,6 +53,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Modified `hf iclass configcard` to only support online mode (@Antiklesys)
  - Modified `hf iclass configcard` command to generate config cards without a cardhelper module by porting the contents of blocks 6 & 7 from nfc-iclass (@Antiklesys)
  - Fixed `hf iclass info` command showing incorrectly in offline mode (@Antiklesys)
+ - The "doc/magic_cards_notes.md" file has been rebuilt, filled up, and so on. (@team-orangeBlue)
 
 ## [Raccoon.4.17140][2023-09-09]
  - Changed text and adjust pm3_test case for mf_aes_brute (@doegox)
