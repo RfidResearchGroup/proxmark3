@@ -90,7 +90,8 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, const uint8_t *data, 
     txBufferNG.pre.length = (len & 0x7FFF);
 
     // Add the (optional) content to the frame, with a maximum size of PM3_CMD_DATA_SIZE
-    if (data && len) {
+    // bypass data copy when executing hw status
+    if (cmd != CMD_DOWNLOADED_BIGBUF && data && len) {
         for (size_t i = 0; i < len; i++) {
             txBufferNG.data[i] = data[i];
         }
