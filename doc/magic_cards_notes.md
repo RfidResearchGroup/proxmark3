@@ -1932,6 +1932,7 @@ hf 14a raw -s -c -t 1000 CF<passwd>32<1b param>
  * `<param>`
    * `00`: pre-write, shadow data can be written
    * `01`: restore mode
+     - WARNING: new UMC (06a0) cards return garbage data when using 01, please use 04!
    * `02`: disabled
    * `03`: disabled, high speed R/W mode for Ultralight?
 
@@ -1987,7 +1988,9 @@ hf 14a raw -s -c -t 1000 CF00000000CF01
 ### Change backdoor password
 ^[Top](#top) ^^[Gen4](#g4top)
 
-All backdoor operations are protected by a password. If password is forgotten, the card can't be recovered. Default password is `00000000`.
+All backdoor operations are protected by a password. If password is forgotten, it can't be recovered. Default password is `00000000`.
+
+WARNING: new UMC (06A0) returns 6300 when issuing password change command. Please write the password using F0 and entering the full configuration, but with the new password.
 
 Change password:
 ```
