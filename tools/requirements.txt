@@ -1,3 +1,4 @@
 ansicolors==1.1.8
 sslcrypto==5.3
 pexpect==4.8.0
+bitstring==4.1.2
