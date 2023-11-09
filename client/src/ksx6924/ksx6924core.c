@@ -112,79 +112,79 @@ MAKE_ENUM_TYPE(uint8_t)
 
 // KSX6924LookupCardType
 MAKE_ENUM_CONST(CardType, uint8_t,
-    { 0x00, "Pre-paid" },
-    { 0x10, "Post-pay" },
-    { 0x20, "Mobile post-pay" },
-)
+{ 0x00, "Pre-paid" },
+{ 0x10, "Post-pay" },
+{ 0x20, "Mobile post-pay" },
+               )
 
 // KSX6924LookupAlg
 MAKE_ENUM_CONST(Alg, uint8_t,
-    { 0x00, "SEED" },
-    { 0x10, "3DES" },
-)
+{ 0x00, "SEED" },
+{ 0x10, "3DES" },
+               )
 
 // KSX6924LookupTMoneyIDCenter
 MAKE_ENUM_CONST(TMoneyIDCenter, uint8_t,
-    { 0x00, "Reserved" },
-    { 0x01, "Korea Financial Telecommunications and Clearings Institute" },
-    { 0x02, "A-Cash" },
-    { 0x03, "Mybi" },
-    { 0x04, "Reserved" },
-    { 0x05, "V-Cash" },
-    { 0x06, "Mondex Korea" },
-    { 0x07, "Korea Expressway Corporation" },
-    { 0x08, "Tmoney Co., Ltd." },
-    { 0x09, "KORAIL Networks" },
-    { 0x0a, "Reserved" },
-    { 0x0b, "EB Card Corporation" },
-    { 0x0c, "Seoul Bus Transport Association" },
-    { 0x0d, "Cardnet" },
-)
+{ 0x00, "Reserved" },
+{ 0x01, "Korea Financial Telecommunications and Clearings Institute" },
+{ 0x02, "A-Cash" },
+{ 0x03, "Mybi" },
+{ 0x04, "Reserved" },
+{ 0x05, "V-Cash" },
+{ 0x06, "Mondex Korea" },
+{ 0x07, "Korea Expressway Corporation" },
+{ 0x08, "Tmoney Co., Ltd." },
+{ 0x09, "KORAIL Networks" },
+{ 0x0a, "Reserved" },
+{ 0x0b, "EB Card Corporation" },
+{ 0x0c, "Seoul Bus Transport Association" },
+{ 0x0d, "Cardnet" },
+               )
 
 // KSX6924LookupTMoneyUserCode
 MAKE_ENUM_CONST(TMoneyUserCode, uint8_t,
-    { 0x01, "Regular/normal" },
-    { 0x02, "Child" },
-    { 0x04, "Youth" },
-    { 0x06, "elderly" },
-    { 0x0f, "Test" },
-    { 0xff, "Inactive" },
-)
+{ 0x01, "Regular/normal" },
+{ 0x02, "Child" },
+{ 0x04, "Youth" },
+{ 0x06, "elderly" },
+{ 0x0f, "Test" },
+{ 0xff, "Inactive" },
+               )
 
 // KSX6924LookupTMoneyDisRate
 MAKE_ENUM_CONST(TMoneyDisRate, uint8_t,
-    { 0x00, "No discount" },
+{ 0x00, "No discount" },
 
-    { 0x10, "Disabled, basic" },
-    { 0x11, "Disabled, companion" },
+{ 0x10, "Disabled, basic" },
+{ 0x11, "Disabled, companion" },
 
-    { 0x20, "Merit, basic" },
-    { 0x21, "Merit, companion" },
-)
+{ 0x20, "Merit, basic" },
+{ 0x21, "Merit, companion" },
+               )
 
 // KSX6924LookupTMoneyTCode
 MAKE_ENUM_CONST(TMoneyTCode, uint8_t,
-    { 0x00, "None" },
-    { 0x01, "SK Telecom" },
-    { 0x02, "Korea Telecom" },
-    { 0x03, "LG Uplus" },
-)
+{ 0x00, "None" },
+{ 0x01, "SK Telecom" },
+{ 0x02, "Korea Telecom" },
+{ 0x03, "LG Uplus" },
+               )
 
 // KSX6924LookupTMoneyCCode
 MAKE_ENUM_CONST(TMoneyCCode, uint8_t,
-    { 0x00, "None" },
-    { 0x01, "KB Card" },
-    { 0x02, "NH Card" },
-    { 0x03, "Lotte Card" },
-    { 0x04, "BC Card" },
-    { 0x05, "Samsung Card" },
-    { 0x06, "Shinhan Card" },
-    { 0x07, "Citibank Korea" },
-    { 0x08, "Korea Exchange Bank" },
-    { 0x09, "Woori Card" },
-    { 0x0a, "Hana SK Card" },
-    { 0x0b, "Hyundai Card" },
-)
+{ 0x00, "None" },
+{ 0x01, "KB Card" },
+{ 0x02, "NH Card" },
+{ 0x03, "Lotte Card" },
+{ 0x04, "BC Card" },
+{ 0x05, "Samsung Card" },
+{ 0x06, "Shinhan Card" },
+{ 0x07, "Citibank Korea" },
+{ 0x08, "Korea Exchange Bank" },
+{ 0x09, "Woori Card" },
+{ 0x0a, "Hana SK Card" },
+{ 0x0b, "Hyundai Card" },
+               )
 
 static const char *KSX6924_UNKNOWN = "Unknown";
 

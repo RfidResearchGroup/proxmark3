@@ -4013,7 +4013,8 @@
                 "hf mf autopwn",
                 "hf mf autopwn -s 0 -a -k FFFFFFFFFFFF -> target MFC 1K card, Sector 0 with known key A 'FFFFFFFFFFFF'",
                 "hf mf autopwn --1k -f mfc_default_keys -> target MFC 1K card, default dictionary",
-                "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -f mfc_default_keys -> combo of the two above samples"
+                "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -f mfc_default_keys -> combo of the two above samples",
+                "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -k a0a1a2a3a4a5 -> multiple user supplied keys"
             ],
             "offline": false,
             "options": [
@@ -4037,7 +4038,7 @@
                 "--i2 AVX2",
                 "--i5 AVX512"
             ],
-            "usage": "hf mf autopwn [-hablv] [-k <hex>] [-s <dec>] [-f <fn>] [--slow] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
+            "usage": "hf mf autopwn [-hablv] [-k <hex>]... [-s <dec>] [-f <fn>] [--slow] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
         },
         "hf mf cgetblk": {
             "command": "hf mf cgetblk",
@@ -4452,6 +4453,21 @@
                 "-f, --file <fn> filename of dictionary"
             ],
             "usage": "hf mf fchk [-h] [-k <hex>]... [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [--mem] [-f <fn>]"
+        },
+        "hf mf gchpwd": {
+            "command": "hf mf gchpwd",
+            "description": "Change access password for Gen4 GTU card. WARNING! If you dont KNOW the password - you CAN'T access it!!!",
+            "notes": [
+                "hf mf gchpwd --pwd 00000000 --newpwd 01020304"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-p, --pwd <hex> password 4 bytes",
+                "-n, --newpwd <hex> new password 4 bytes",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf mf gchpwd [-hv] [-p <hex>] [-n <hex>]"
         },
         "hf mf gdmcfg": {
             "command": "hf mf gdmcfg",
@@ -7686,13 +7702,15 @@
             "command": "hw status",
             "description": "Show runtime status information about the connected Proxmark3",
             "notes": [
-                "hw status"
+                "hw status",
+                "hw status --ms 1000 -> Test connection speed with 1000ms timeout"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-m, --ms <ms> speed test timeout in micro seconds"
             ],
-            "usage": "hw status [-h]"
+            "usage": "hw status [-h] [-m <ms>]"
         },
         "hw tearoff": {
             "command": "hw tearoff",
@@ -8955,7 +8973,7 @@
                 "-1, --ht1 Card type Hitag 1",
                 "-2, --ht2 Card type Hitag 2",
                 "-s, --hts Card type Hitag S",
-                "-m, --htm Card type Hitag \u041e\u0458"
+                "-m, --htm Card type Hitag \u03bc"
             ],
             "usage": "lf hitag eload [-h12sm] -f <fn>"
         },
@@ -12031,8 +12049,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 697,
+        "commands_extracted": 698,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-11-05T22:22:55"
+        "extracted_on": "2023-11-09T16:29:08"
     }
 }

@@ -1123,7 +1123,7 @@ static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signat
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-    if (is_192_valid ) {
+    if (is_192_valid) {
         PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfu_192_public_keys[i].desc);
         PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_192_public_keys[i].value);
         PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp192r1");
@@ -1141,7 +1141,7 @@ static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signat
         return PM3_SUCCESS;
     }
 
-    PrintAndLogEx(INFO, "    Elliptic curve parameters: %s", (signature_len == 48) ? "NID_secp192r1" : "NID_secp128r1" );
+    PrintAndLogEx(INFO, "    Elliptic curve parameters: %s", (signature_len == 48) ? "NID_secp192r1" : "NID_secp128r1");
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
     PrintAndLogEx(SUCCESS, "       Signature verification ( " _RED_("fail") " )");
     return PM3_ESOFT;
@@ -1926,10 +1926,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
 
     // Read signature
     if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 |
-                   MFU_TT_NTAG_210u | MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
-                   MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
-                   MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS |
-                   MFU_TT_UL_AES))) {
+                    MFU_TT_NTAG_210u | MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
+                    MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
+                    MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS |
+                    MFU_TT_UL_AES))) {
         uint8_t ulev1_signature[49] = {0x00};
         status = ulev1_readSignature(ulev1_signature, sizeof(ulev1_signature));
         if (status == -1) {
@@ -2377,11 +2377,11 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
     for (uint16_t i = 0; i < pages; ++i) {
         if (i < 3) {
             PrintAndLogEx(INFO, "%3d/0x%02X | " _RED_("%s")"|   | %s",
-                i + startpage,
-                i + startpage,
-                sprint_hex(data + i * 4, 4),
-                sprint_ascii(data + i * 4, 4)
-            );
+                          i + startpage,
+                          i + startpage,
+                          sprint_hex(data + i * 4, 4),
+                          sprint_ascii(data + i * 4, 4)
+                         );
             continue;
         }
         switch (i) {

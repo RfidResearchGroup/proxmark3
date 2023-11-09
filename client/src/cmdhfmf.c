@@ -2431,7 +2431,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     int in_keys_len = 0;
     uint8_t in_keys[100 * MIFARE_KEY_SIZE] = {0};
     CLIGetHexWithReturn(ctx, 1, in_keys, &in_keys_len);
- 
+
     uint8_t sectorno = arg_get_u32_def(ctx, 2, 0);
 
     uint8_t keytype = MF_KEY_A;
@@ -7409,7 +7409,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
         PrintAndLogEx(INFO, "Raw config [%02zu]..... %s", resplen, sprint_hex_inrow(resp, resplen));
 
     PrintAndLogEx(INFO, "UL protocol......... %02x" NOLF, resp[0]);
-    switch (resp[0]){
+    switch (resp[0]) {
         case 0x00:
             PrintAndLogEx(NORMAL, " (MIFARE Classic mode)");
             break;
@@ -7423,7 +7423,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
 
     uint8_t uid_len = resp[1];
     PrintAndLogEx(INFO, "UID length.......... %02x" NOLF, resp[1]);
-    switch (resp[1]){
+    switch (resp[1]) {
         case 0x00:
             PrintAndLogEx(NORMAL, " (4 byte)");
             break;
@@ -7441,7 +7441,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
     PrintAndLogEx(INFO, "Password............ %s", sprint_hex_inrow(&resp[2], 4));
 
     PrintAndLogEx(INFO, "GTU mode............ %02x" NOLF, resp[6]);
-    switch (resp[6]){
+    switch (resp[6]) {
         case 0x00:
             PrintAndLogEx(NORMAL, " (pre-write, shadow data can be written)");
             break;
@@ -7464,7 +7464,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
     PrintAndLogEx(INFO, "SAK................. %02x", resp[26]);
 
     PrintAndLogEx(INFO, "UL mode............. %02x" NOLF, resp[27]);
-    switch (resp[27]){
+    switch (resp[27]) {
         case 0x00:
             PrintAndLogEx(NORMAL, " (UL EV1)");
             break;
@@ -7484,7 +7484,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
 
     PrintAndLogEx(INFO, "max rd/wr sectors... %02x", resp[28]);
     PrintAndLogEx(INFO, "block0 direct wr.... %02x" NOLF, resp[29]);
-    switch (resp[29]){
+    switch (resp[29]) {
         case 0x00:
             PrintAndLogEx(NORMAL, " (Activate direct write to block 0 (Same behaviour of Gen2 cards. Some readers may identify the card as magic))");
             break;
@@ -7524,7 +7524,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
         PrintAndLogEx(INFO, "");
         PrintAndLogEx(INFO, "Block 0............. %s", sprint_hex_inrow(resp, 16));
 
-        switch (uid_len){
+        switch (uid_len) {
             case 0x00:
                 PrintAndLogEx(INFO, "UID [4]............. %s", sprint_hex(resp, 4));
                 break;

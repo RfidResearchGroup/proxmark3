@@ -1324,8 +1324,7 @@ static int CmdHFiClassESetBlk(const char *Cmd) {
 static bool iclass_detect_new_pacs(uint8_t *d) {
     uint8_t n = 0;
     while (n++ < (PICOPASS_BLOCK_SIZE / 2)) {
-        if (d[n] &&
-            d[n + 1] == 0xA6) {
+        if (d[n] && d[n + 1] == 0xA6) {
             return true;
         }
     }
@@ -1336,7 +1335,7 @@ static bool iclass_detect_new_pacs(uint8_t *d) {
 static int iclass_decode_credentials_new_pacs(uint8_t *d) {
 
     uint8_t offset = 0;
-    while(d[offset] == 0 && (offset < PICOPASS_BLOCK_SIZE / 2)) {
+    while (d[offset] == 0 && (offset < PICOPASS_BLOCK_SIZE / 2)) {
         offset++;
     }
 

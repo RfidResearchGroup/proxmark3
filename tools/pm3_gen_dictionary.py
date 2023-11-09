@@ -38,7 +38,7 @@ import fnmatch
 #
 # Info:
 #   Will search all dump files files in given folder and all its subfolders
-#   With the option to save found keys to a text file. 
+#   With the option to save found keys to a text file.
 #
 '''
 
@@ -60,7 +60,7 @@ def parse_keys(line):
     if not key:
         return []
 
-    try:                
+    try:
         keys.add(key[0])
         keys.add(key[1])
     except AttributeError:
@@ -116,7 +116,7 @@ def main():
                 found = False
                 for line in msg.splitlines():
 
-                    if found == False:        
+                    if found == False:
                         key_row = line.find('000 | 003')
                         if key_row > -1:
                             found = True

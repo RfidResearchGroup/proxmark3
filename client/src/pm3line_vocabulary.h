@@ -372,6 +372,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mf gsave" },
     { 0, "hf mf gsetblk" },
     { 0, "hf mf gview" },
+    { 0, "hf mf gchpwd" },
     { 0, "hf mf gdmcfg" },
     { 0, "hf mf gdmsetcfg" },
     { 0, "hf mf gdmsetblk" },

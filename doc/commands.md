@@ -535,6 +535,7 @@ Check column "offline" for their availability.
 |`hf mf gsave            `|N       |`Save dump from card into file or emulator`
 |`hf mf gsetblk          `|N       |`Write block to card`
 |`hf mf gview            `|N       |`View card`
+|`hf mf gchpwd           `|N       |`Change card access password. Warning!`
 |`hf mf gdmcfg           `|N       |`Read config block from card`
 |`hf mf gdmsetcfg        `|N       |`Write config block to card`
 |`hf mf gdmsetblk        `|N       |`Write block to card`

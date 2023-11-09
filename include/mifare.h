@@ -73,8 +73,7 @@ typedef struct {
 } iso14a_mf_extdump_t;
 
 typedef struct {
-    union
-    {
+    union {
         iso14a_card_select_t mfc;
         iso14a_card_select_ev1_t ev1;
     } card;

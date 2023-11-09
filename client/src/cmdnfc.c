@@ -116,19 +116,19 @@ static int CmdNfcDecode(const char *Cmd) {
         uint8_t *tmp = dump;
 
         // if not MIFARE Classic default sizes,  assume its Ultralight/NTAG
-        if (   bytes_read != MIFARE_4K_MAX_BYTES
-            && bytes_read != MIFARE_2K_MAX_BYTES
-            && bytes_read != MIFARE_1K_MAX_BYTES
-            && bytes_read != MIFARE_MINI_MAX_BYTES) {
+        if (bytes_read != MIFARE_4K_MAX_BYTES
+                && bytes_read != MIFARE_2K_MAX_BYTES
+                && bytes_read != MIFARE_1K_MAX_BYTES
+                && bytes_read != MIFARE_MINI_MAX_BYTES) {
 
             uint8_t **pd = &tmp;
             mfu_df_e df = detect_mfu_dump_format(pd, verbose);
             if (df == MFU_DF_OLDBIN) {
                 tmp += OLD_MFU_DUMP_PREFIX_LENGTH + (4 * 4);
-                bytes_read -= OLD_MFU_DUMP_PREFIX_LENGTH + ( 4 * 4);
+                bytes_read -= OLD_MFU_DUMP_PREFIX_LENGTH + (4 * 4);
             } else if (df == MFU_DF_NEWBIN) {
                 tmp += MFU_DUMP_PREFIX_LENGTH + (4 * 4);
-                bytes_read -= MFU_DUMP_PREFIX_LENGTH + ( 4 * 4);
+                bytes_read -= MFU_DUMP_PREFIX_LENGTH + (4 * 4);
             }
             pd = NULL;
 
