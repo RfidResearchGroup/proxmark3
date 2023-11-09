@@ -22,6 +22,7 @@
 #include "cmdsmartcard.h"
 #include "ui.h"
 #include "util.h"
+#include "commonutil.h"
 
 #define CARD_INS_DECRYPT    0x01
 #define CARD_INS_ENCRYPT    0x02
@@ -78,7 +79,7 @@ bool IsHIDSamPresent(bool verbose) {
         {11, {0x3b, 0x90, 0x96, 0x91, 0x81, 0xb1, 0xfe, 0x55, 0x1f, 0xc7, 0xd4}},
     };
     bool found = false;
-    for (int i = 0; i < sizeof(supported) / sizeof(supported[0]); i++) {
+    for (int i = 0; i < ARRAYLEN(supported); i++) {
         if ((card.atr_len == supported[i].atr_len) &&
                 (memcmp(card.atr, supported[i].atr, supported[i].atr_len) == 0)) {
             found = true;

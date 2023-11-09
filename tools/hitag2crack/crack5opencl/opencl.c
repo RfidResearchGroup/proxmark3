@@ -23,6 +23,7 @@ License: GNU General Public License v3 or any later version (see LICENSE.txt)
 ****************************************************************************/
 
 #include "opencl.h"
+#define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
 
 bool plat_dev_enabled(unsigned int id, const unsigned int *sel,
                       unsigned int cnt, unsigned int cur_type, unsigned int allow_type) {
@@ -106,10 +107,10 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
     }
 
     cl_platform_info ocl_platforms_info[3] = { CL_PLATFORM_NAME, CL_PLATFORM_VENDOR, CL_PLATFORM_VERSION };
-    unsigned int ocl_platforms_info_cnt = sizeof(ocl_platforms_info) / sizeof(cl_platform_info);
+    unsigned int ocl_platforms_info_cnt = ARRAYLEN(ocl_platforms_info);
 
     cl_device_info ocl_devices_info[8] = { CL_DEVICE_TYPE, CL_DEVICE_NAME, CL_DEVICE_VERSION, CL_DRIVER_VERSION, CL_DEVICE_VENDOR, CL_DEVICE_LOCAL_MEM_TYPE, CL_DEVICE_MAX_WORK_ITEM_SIZES, CL_DEVICE_MAX_COMPUTE_UNITS };
-    unsigned int ocl_devices_info_cnt = sizeof(ocl_devices_info) / sizeof(cl_device_info);
+    unsigned int ocl_devices_info_cnt = ARRAYLEN(ocl_devices_info);
 
     unsigned int info_idx;
     size_t tmp_len = 0;
