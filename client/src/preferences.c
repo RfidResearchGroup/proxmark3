@@ -26,13 +26,13 @@
 //-----------------------------------------------------------------------------
 
 #include "preferences.h"
-#include "comms.h"
-#include "emv/emvjson.h"
 #include <string.h>
-#include "cmdparser.h"
 #include <ctype.h>
 #include <dirent.h>
-#include <proxmark3.h>
+#include "proxmark3.h"
+#include "comms.h"
+#include "emv/emvjson.h"
+#include "cmdparser.h"
 #include "cliparser.h"
 #include "uart/uart.h" // uart_reconfigure_timeouts
 
@@ -45,7 +45,7 @@ static char *prefGetFilename(void) {
     if (searchHomeFilePath(&path, NULL, preferencesFilename, false) == PM3_SUCCESS)
         return path;
     else
-        return strdup(preferencesFilename);
+        return str_dup(preferencesFilename);
 }
 
 int preferences_load(void) {
