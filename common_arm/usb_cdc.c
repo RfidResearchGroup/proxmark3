@@ -821,6 +821,30 @@ int usb_write(const uint8_t *data, const size_t len) {
     return PM3_SUCCESS;
 }
 
+inline void usb_write_byte_async(uint8_t data)
+{
+    pUdp->UDP_FDR[AT91C_EP_IN] = data;
+}
+
+inline bool usb_write_request(void)
+{
+    // clear transmission completed flag
+    UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
+    while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
+
+    // can we write?
+    if ((pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY) != 0) 
+        return false;
+
+    // start of transmission
+    UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
+
+    // hack: no need to wait if UDP_CSR is not used immediately.
+    // while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY)) {};
+
+    return true;
+}
+
 /*
  *----------------------------------------------------------------------------
  * \fn    AT91F_USB_SendData

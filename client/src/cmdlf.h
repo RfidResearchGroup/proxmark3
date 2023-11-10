@@ -41,7 +41,8 @@ int CmdVchDemod(const char *Cmd);
 int CmdLFfind(const char *Cmd);
 
 int lf_read(bool verbose, uint32_t samples);
-int lf_sniff(bool verbose, uint32_t samples);
+int lf_read_internal(bool realtime, bool verbose, uint32_t samples);
+int lf_sniff(bool realtime, bool verbose, uint32_t samples);
 int lf_config(sample_config *config);
 int lf_getconfig(sample_config *config);
 int lfsim_upload_gb(void);

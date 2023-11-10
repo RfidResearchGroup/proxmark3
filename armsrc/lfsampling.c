@@ -27,6 +27,7 @@
 #include "lfdemod.h"
 #include "string.h"  // memset
 #include "appmain.h" // print stack
+#include "usb_cdc.h" // real-time sampling
 
 /*
 Default LF config is set to:
@@ -425,45 +426,29 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
     return ReadLF(true, verbose, sample_size, ledcontrol);
 }
 
-// Bitmap for all status bits in CSR which must be written as 1 to cause no effect
-#define REG_NO_EFFECT_1_ALL      AT91C_UDP_RX_DATA_BK0 | AT91C_UDP_RX_DATA_BK1 \
-    |AT91C_UDP_STALLSENT   | AT91C_UDP_RXSETUP \
-    |AT91C_UDP_TXCOMP
-
-// Clear flags in the UDP_CSR register and waits for synchronization
-#define UDP_CLEAR_EP_FLAGS(endpoint, flags) { \
-        volatile unsigned int reg; \
-        reg = AT91C_BASE_UDP->UDP_CSR[(endpoint)]; \
-        reg |= REG_NO_EFFECT_1_ALL; \
-        reg &= ~(flags); \
-        AT91C_BASE_UDP->UDP_CSR[(endpoint)] = reg; \
-    }
-
-// reset flags in the UDP_CSR register and waits for synchronization
-#define UDP_SET_EP_FLAGS(endpoint, flags) { \
-        volatile unsigned int reg; \
-        reg = AT91C_BASE_UDP->UDP_CSR[(endpoint)]; \
-        reg |= REG_NO_EFFECT_1_ALL; \
-        reg |= (flags); \
-        AT91C_BASE_UDP->UDP_CSR[(endpoint)] = reg; \
-    }
-
-uint32_t SampleLF_realtime() {
+/**
+* SampleLF()/SniffLF() + ReadLF() + DoAcquisition_config() 
+* @return sampling result
+**/
+int ReadLF_realtime(bool reader_field) {
     BigBuf_Clear_ext(false);
-    LFSetupFPGAForADC(config.divisor, true);
+    LFSetupFPGAForADC(config.divisor, reader_field);
 
-// DoAcquisition() start
-    uint8_t lastByte = 0;
-    uint8_t currByte = 0;
-
-    uint32_t sample_size = 64;
+    // parameters from config and constants
     const uint8_t bits_per_sample = config.bits_per_sample;
     const int16_t trigger_threshold = config.trigger_threshold;
     int32_t samples_to_skip = config.samples_to_skip;
     const uint8_t decimation = config.decimation;
-// logic
-    const int8_t thresholdTable[9] = {0, 64, 64, 48, 64, 40, 48, 56, 64};
-    const int8_t threshold = thresholdTable[decimation];
+
+    uint32_t sample_size = 64;
+    const int8_t size_threshold_table[9] = {0, 64, 64, 48, 64, 40, 48, 56, 64};
+    const int8_t size_threshold = size_threshold_table[decimation];
+
+    // DoAcquisition() start
+    uint8_t last_byte = 0;
+    uint8_t curr_byte = 0;
+    int return_value = PM3_SUCCESS;
+
     initSampleBuffer(&sample_size); // sample size in bytes
     sample_size <<= 3; // sample size in bits
     sample_size /= bits_per_sample; // sample count
@@ -514,30 +499,21 @@ uint32_t SampleLF_realtime() {
             logSample(sample, decimation, bits_per_sample, false);
 
             // write to USB FIFO if byte changed
-            currByte = data.numbits >> 3;
-            if (currByte > lastByte)
-                AT91C_BASE_UDP->UDP_FDR[2] = data.buffer[lastByte];
-            lastByte = currByte;
+            curr_byte = data.numbits >> 3;
+            if (curr_byte > last_byte)
+                usb_write_byte_async(data.buffer[last_byte]);
+            last_byte = curr_byte;
 
-            if(samples.total_saved == threshold)
+            if(samples.total_saved == size_threshold)
             {
-                // end of transmission
-                UDP_CLEAR_EP_FLAGS(2, AT91C_UDP_TXCOMP);
-                while (AT91C_BASE_UDP->UDP_CSR[2] & AT91C_UDP_TXCOMP) {};
-
-                // can we write?
-                if ((AT91C_BASE_UDP->UDP_CSR[2] & AT91C_UDP_TXPKTRDY) != 0) 
+                // request usb transmission and change FIFO bank
+                if (usb_write_request() == false) {
+                    return_value = PM3_EIO;
                     break;
-                    // return PM3_EIO;
-
-                // start of transmission
-                UDP_SET_EP_FLAGS(2, AT91C_UDP_TXPKTRDY);
-                // no need to wait in the while()
-                // while (!(AT91C_BASE_UDP->UDP_CSR[2] & AT91C_UDP_TXPKTRDY)) {};
+                }
 
                 // reset sample
-                currByte = 0;
-                lastByte = 0;
+                last_byte = 0;
                 data.numbits = 0;
                 // data.position = 0; // unused?
                 samples.total_saved = 0;
@@ -545,11 +521,10 @@ uint32_t SampleLF_realtime() {
         }
     }
 
-// DoAcquisition() end
-
+    // DoAcquisition() end
     StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    return 0;
+    return return_value;
 }
 /**
 * Initializes the FPGA for sniffer-mode (field off), and acquires the samples.

@@ -852,15 +852,16 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_ACQ_RAW_ADC: {
             struct p {
-                uint32_t samples : 31;
-                bool     verbose : 1;
+                uint32_t samples  : 30;
+                bool     realtime : 1;
+                bool     verbose  : 1;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
             uint32_t bits;
-            if (!(payload->verbose))
-                bits = SampleLF(false, payload->samples, true);
+            if (payload->realtime)
+                bits = ReadLF_realtime(true);
             else
-                bits = SampleLF_realtime();
+                bits = SampleLF(payload->verbose, payload->samples, true);
             reply_ng(CMD_LF_ACQ_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
         }
@@ -885,12 +886,16 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_SNIFF_RAW_ADC: {
             struct p {
-                uint32_t samples : 31;
-                bool     verbose : 1;
+                uint32_t samples  : 30;
+                bool     realtime : 1;
+                bool     verbose  : 1;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-
-            uint32_t bits = SniffLF(payload->verbose, payload->samples, true);
+            uint32_t bits;
+            if (payload->realtime)
+                bits = ReadLF_realtime(false);
+            else
+                bits = SniffLF(payload->verbose, payload->samples, true);
             reply_ng(CMD_LF_SNIFF_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
         }

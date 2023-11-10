@@ -697,21 +697,28 @@ int CmdLFConfig(const char *Cmd) {
 }
 
 int lf_read(bool verbose, uint32_t samples) {
+    return lf_read_internal(false, verbose, samples);
+}
+
+int lf_read_internal(bool realtime, bool verbose, uint32_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
     struct p {
-        uint32_t samples : 31;
-        bool     verbose : 1;
+        // 64KB SRAM -> 524288 bits(max sample num) < 2^30
+        uint32_t samples  : 30;
+        bool     realtime : 1;
+        bool     verbose  : 1;
     } PACKED;
 
     struct p payload;
+    payload.samples = (samples & 0x3FFFFFFF);
+    payload.realtime = realtime;
     payload.verbose = verbose;
-    payload.samples = samples;
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (gs_lf_threshold_set || verbose) {
+    if (gs_lf_threshold_set || realtime) {
         WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
     } else {
         if (!WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500)) {
@@ -741,12 +748,14 @@ int CmdLFRead(const char *Cmd) {
         arg_u64_0("s", "samples", "<dec>", "number of samples to collect"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("@", NULL, "continuous reading mode"),
+        arg_lit0("r", "realtime", "real-time reading mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint32_t samples = arg_get_u32_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
     bool cm = arg_get_lit(ctx, 3);
+    bool realtime = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     if (g_session.pm3_present == false)
@@ -757,26 +766,29 @@ int CmdLFRead(const char *Cmd) {
     }
     int ret = PM3_SUCCESS;
     do {
-        ret = lf_read(verbose, samples);
+        ret = lf_read_internal(realtime, verbose, samples);
     } while (cm && kbd_enter_pressed() == false);
     return ret;
 }
 
-int lf_sniff(bool verbose, uint32_t samples) {
+int lf_sniff(bool realtime, bool verbose, uint32_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
     struct p {
-        uint32_t samples : 31;
-        bool     verbose : 1;
+        // 64KB SRAM -> 524288 bits(max sample num) < 2^ 30
+        uint32_t samples  : 30;
+        bool     realtime : 1;
+        bool     verbose  : 1;
     } PACKED payload;
 
-    payload.samples = (samples & 0xFFFF);
+    payload.samples = (samples & 0x3FFFFFFF);
+    payload.realtime = realtime;
     payload.verbose = verbose;
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (gs_lf_threshold_set) {
+    if (gs_lf_threshold_set || realtime) {
         WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp);
     } else {
         if (WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500) == false) {
@@ -809,12 +821,14 @@ int CmdLFSniff(const char *Cmd) {
         arg_u64_0("s", "samples", "<dec>", "number of samples to collect"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("@", NULL, "continuous sniffing mode"),
+        arg_lit0("r", "realtime", "real-time sniffing mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint32_t samples = (arg_get_u32_def(ctx, 1, 0) & 0xFFFF);
     bool verbose = arg_get_lit(ctx, 2);
     bool cm = arg_get_lit(ctx, 3);
+    bool realtime = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     if (g_session.pm3_present == false)
@@ -825,7 +839,7 @@ int CmdLFSniff(const char *Cmd) {
     }
     int ret = PM3_SUCCESS;
     do {
-        ret = lf_sniff(verbose, samples);
+        ret = lf_sniff(realtime, verbose, samples);
     } while (cm && !kbd_enter_pressed());
     return ret;
 }
