@@ -2659,6 +2659,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     int ret = mfLoadKeys(&keyBlock, &key_cnt, in_keys, in_keys_len, filename, fnlen);
     if (ret != PM3_SUCCESS) {
+        free(e_sector);
         return ret;
     }
 
