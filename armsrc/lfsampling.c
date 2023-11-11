@@ -306,7 +306,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
 
         // only every 4000th times, in order to save time when collecting samples.
         // interruptible only when logging not yet triggered
-        if (unlikely(trigger_hit == false && (checked >= 4000))) {
+        if (trigger_hit == false && (checked >= 4000)) {
             if (data_available()) {
                 checked = -1;
                 break;
@@ -329,7 +329,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
             if (ledcontrol) LED_D_OFF();
 
             // threshold either high or low values 128 = center 0.  if trigger = 178
-            if (unlikely(trigger_hit == false)) {
+            if (trigger_hit == false) {
                 if ((trigger_threshold > 0) && (sample < (trigger_threshold + 128)) && (sample > (128 - trigger_threshold))) {
                     if (cancel_after > 0) {
                         cancel_counter++;
@@ -341,7 +341,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
                 trigger_hit = true;
             }
 
-            if (unlikely(samples_to_skip > 0)) {
+            if (samples_to_skip > 0) {
                 samples_to_skip--;
                 continue;
             }
@@ -463,7 +463,7 @@ int ReadLF_realtime(bool reader_field) {
 
         // only every 4000th times, in order to save time when collecting samples.
         // interruptible only when logging not yet triggered
-        if (unlikely(trigger_hit == false && (checked >= 4000))) {
+        if (trigger_hit == false && (checked >= 4000)) {
             if (data_available()) {
                 checked = -1;
                 break;
@@ -486,14 +486,14 @@ int ReadLF_realtime(bool reader_field) {
             LED_D_OFF();
 
             // threshold either high or low values 128 = center 0.  if trigger = 178
-            if (unlikely(trigger_hit == false)) {
+            if (trigger_hit == false) {
                 if ((trigger_threshold > 0) && (sample < (trigger_threshold + 128)) && (sample > (128 - trigger_threshold))) {
                     continue;
                 }
                 trigger_hit = true;
             }
 
-            if (unlikely(samples_to_skip > 0)) {
+            if (samples_to_skip > 0) {
                 samples_to_skip--;
                 continue;
             }
