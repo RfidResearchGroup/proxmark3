@@ -10,6 +10,11 @@ int main(int argc, char *argv[]) {
     char buf[8196 + 1];
     size_t n;
 
+    if (argc < 2) {
+        printf("Usage: %s <port>\n", argv[0]);
+        exit(-1);
+    }
+
     if (pipe(pipefd) == -1) {
         exit(-1);
     }
@@ -31,8 +36,7 @@ int main(int argc, char *argv[]) {
         close(pipefd[1]);  // Close original write end
 
         pm3 *p;
-        p = pm3_open("/dev/ttyS9");
-        //printf("Device: %s\n", pm3_name_get(p));
+        p = pm3_open(argv[1]);
 
         // Execute the command
         pm3_console(p, "hw status");
@@ -55,6 +59,9 @@ int main(int argc, char *argv[]) {
             } else {
                 // null termination
                 buf[n] = 0;
+                if (strstr(buf, "ERROR") != NULL) {
+                    printf("%s", buf);
+                }
                 if (strstr(buf, "Unique ID") != NULL) {
                     printf("%s", buf);
                 }
