@@ -441,8 +441,8 @@ int ReadLF_realtime(bool reader_field) {
     const uint8_t decimation = config.decimation;
 
     uint32_t sample_size = 64;
-    const int8_t size_threshold_table[9] = {0, 64, 64, 48, 64, 40, 48, 56, 64};
-    const int8_t size_threshold = size_threshold_table[decimation];
+    const int8_t size_threshold_table[9] = {0, 64, 64, 60, 64, 60, 60, 56, 64};
+    const int8_t size_threshold = size_threshold_table[bits_per_sample];
 
     // DoAcquisition() start
     uint8_t last_byte = 0;
@@ -500,8 +500,9 @@ int ReadLF_realtime(bool reader_field) {
 
             // write to USB FIFO if byte changed
             curr_byte = data.numbits >> 3;
-            if (curr_byte > last_byte)
+            if (curr_byte > last_byte) {
                 usb_write_byte_async(data.buffer[last_byte]);
+            }
             last_byte = curr_byte;
 
             if(samples.total_saved == size_threshold)

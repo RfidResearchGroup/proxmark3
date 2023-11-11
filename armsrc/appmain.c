@@ -858,10 +858,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
             uint32_t bits;
-            if (payload->realtime)
+            if (payload->realtime) {
                 bits = ReadLF_realtime(true);
-            else
+            } else {
                 bits = SampleLF(payload->verbose, payload->samples, true);
+            }
             reply_ng(CMD_LF_ACQ_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
         }
@@ -892,10 +893,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
             uint32_t bits;
-            if (payload->realtime)
+            if (payload->realtime) {
                 bits = ReadLF_realtime(false);
-            else
+            } else {
                 bits = SniffLF(payload->verbose, payload->samples, true);
+            }
             reply_ng(CMD_LF_SNIFF_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
             break;
         }
