@@ -1,10 +1,10 @@
 MYSRCPATHS = ../../common ../../common/crapto1
-MYSRCS = crypto1.c crapto1.c bucketsort.c
+MYSRCS = crypto1.c crapto1.c bucketsort.c nested_util.c
 MYINCLUDES = -I../../include -I../../common
 MYCFLAGS = -O3
 MYDEFS =
 
-BINS = mfkey32 mfkey32v2 mfkey64
+BINS = mfkey32 mfkey32v2 mfkey64 staticnested
 INSTALLTOOLS = $(BINS)
 
 include ../../Makefile.host
@@ -24,3 +24,4 @@ endif
 mfkey32 : $(OBJDIR)/mfkey32.o $(MYOBJS)
 mfkey32v2 : $(OBJDIR)/mfkey32v2.o $(MYOBJS)
 mfkey64 : $(OBJDIR)/mfkey64.o $(MYOBJS)
+staticnested : $(OBJDIR)/staticnested.o $(MYOBJS)
