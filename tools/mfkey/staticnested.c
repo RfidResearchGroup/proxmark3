@@ -182,6 +182,8 @@ static int usage(void) {
     printf("samples:\n");
     printf("\n");
     printf("  ./staticnested 461dce03 7eef3586 ffb02eda 322bc14d ffc875ca\n");
+    printf("  ./staticnested 461dce03 7eef3586 1fb6b496 322bc14d 1f4eebdd\n");
+    printf("  ./staticnested 461dce03 7eef3586 7fa28c7e 322bc14d 7f62b3d6\n");
     printf("\n");
     return 1;
 }
