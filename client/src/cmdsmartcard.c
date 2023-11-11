@@ -37,6 +37,7 @@
 #include "mifare.h"
 #include "util_posix.h"
 #include "cmdhf14a.h"
+#include "cmdhf14b.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -1193,7 +1194,7 @@ static void atsToEmulatedAtr(uint8_t *ats, uint8_t *atr, int *atrLen) {
     atr[2] = 0x80;
     atr[3] = 0x01;
 
-    uint8_t tck = 0;
+    uint8_t tck = atr[1] ^ atr[2] ^ atr[3];
     for (int i = 0; i < historicalLen; ++i) {
         atr[4 + i] = ats[offset + i];
         tck = tck ^ ats[offset + i];
@@ -1201,6 +1202,24 @@ static void atsToEmulatedAtr(uint8_t *ats, uint8_t *atr, int *atrLen) {
     atr[4 + historicalLen] = tck;
 
     *atrLen = 5 + historicalLen;
+}
+
+static void atqbToEmulatedAtr(uint8_t *atqb, uint8_t cid, uint8_t *atr, int *atrLen) {
+	atr[0] = 0x3B;
+	atr[1] = 0x80 | 8;
+	atr[2] = 0x80;
+	atr[3] = 0x01;
+
+	memcpy(atr + 4, atqb, 7);
+	atr[11] = cid >> 4;
+
+	uint8_t tck = 0;
+	for (int i = 1; i < 12; ++i) {
+		tck = tck ^ atr[i];
+	}
+	atr[12] = tck;
+
+	*atrLen = 13;
 }
 
 static int CmdRelay(const char *Cmd) {
@@ -1243,11 +1262,13 @@ static int CmdRelay(const char *Cmd) {
     PrintAndLogEx(INFO, "Relaying pm3 to host OS pcsc daemon. Press " _GREEN_("Enter") " to exit");
 
     uint8_t cmdbuf[512] = {0};
-    bool haveCard = false;
-    iso14a_card_select_t selectedCard;
+    iso14a_card_select_t selectedCard14a;
+		iso14b_card_select_t selectedCard14b;
+		isodep_state_t cardType = ISODEP_INACTIVE;
+		bool fieldActivated = false;
 
     do {
-        if (haveCard) {
+        if (cardType != ISODEP_INACTIVE) {
             int bytesRead = mbedtls_net_recv_timeout(&netCtx, cmdbuf, sizeof(cmdbuf), 100);
 
             if (bytesRead == MBEDTLS_ERR_SSL_TIMEOUT || bytesRead == MBEDTLS_ERR_SSL_WANT_READ) {
@@ -1258,7 +1279,12 @@ static int CmdRelay(const char *Cmd) {
                 if (cmdbuf[1] == 0x01 && cmdbuf[2] == 0x04) { // vpcd GET ATR
                     uint8_t atr[20] = {0};
                     int atrLen = 0;
-                    atsToEmulatedAtr(selectedCard.ats, atr, &atrLen);
+
+										if (cardType == ISODEP_NFCA) {
+											atsToEmulatedAtr(selectedCard14a.ats, atr, &atrLen);
+										} else if (cardType == ISODEP_NFCB) {
+											atqbToEmulatedAtr(selectedCard14b.atqb, selectedCard14b.cid, atr, &atrLen);
+										}
 
                     uint8_t res[22] = {0};
                     res[1] = atrLen;
@@ -1274,11 +1300,21 @@ static int CmdRelay(const char *Cmd) {
                         PrintAndLogEx(INFO, ">> %s", sprint_hex(cmdbuf + 2, apduLen));
                     }
 
-                    if (ExchangeAPDU14a(cmdbuf + 2, apduLen, true, true, apduRes, sizeof(apduRes), &apduResLen) != PM3_SUCCESS) {
-                        haveCard = false;
-                        mbedtls_net_close(&netCtx);
-                        continue;
-                    }
+										if (cardType == ISODEP_NFCA) {
+											if (ExchangeAPDU14a(cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen) != PM3_SUCCESS) {
+												cardType = ISODEP_INACTIVE;
+												mbedtls_net_close(&netCtx);
+												continue;
+											}
+										} else if (cardType == ISODEP_NFCB) {
+											if (exchange_14b_apdu(cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen, 0))	{
+												cardType = ISODEP_INACTIVE;
+												mbedtls_net_close(&netCtx);
+												continue;
+											}
+										}
+
+										fieldActivated = true;
 
                     if (verbose) {
                         PrintAndLogEx(INFO, "<< %s", sprint_hex(apduRes, apduResLen));
@@ -1292,18 +1328,22 @@ static int CmdRelay(const char *Cmd) {
                 }
             }
         } else {
-            if (SelectCard14443A_4(false, false, &selectedCard) == PM3_SUCCESS) {
-                if (mbedtls_net_connect(&netCtx, (char *) host, (char *) port, MBEDTLS_NET_PROTO_TCP)) {
-                    PrintAndLogEx(FAILED, "Failed to connect to vpcd socket. Ensure you have vpcd installed and running");
-                    mbedtls_net_close(&netCtx);
-                    mbedtls_net_free(&netCtx);
-                    DropField();
-                    return PM3_EINVARG;
-                }
-
-                haveCard = true;
-            }
-            msleep(300);
+					if (IfPm3Iso14443a() && SelectCard14443A_4(false, false, &selectedCard14a) == PM3_SUCCESS) {
+							cardType = ISODEP_NFCA;
+					} else if (IfPm3Iso14443b() && select_card_14443b_4(false, &selectedCard14b) == PM3_SUCCESS) {
+							cardType = ISODEP_NFCB;
+					}
+					if (cardType != ISODEP_INACTIVE) {
+							fieldActivated = false;
+							if (mbedtls_net_connect(&netCtx, (char *) host, (char *) port, MBEDTLS_NET_PROTO_TCP)) {
+									PrintAndLogEx(FAILED, "Failed to connect to vpcd socket. Ensure you have vpcd installed and running");
+									mbedtls_net_close(&netCtx);
+									mbedtls_net_free(&netCtx);
+									DropField();
+									return PM3_EINVARG;
+							}
+					}
+					msleep(300);
         }
     } while (!kbd_enter_pressed());
 
