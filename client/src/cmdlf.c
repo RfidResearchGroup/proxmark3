@@ -699,15 +699,8 @@ int CmdLFConfig(const char *Cmd) {
 static int lf_read_internal(bool realtime, bool verbose, uint32_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
-    struct p {
-        // 64KB SRAM -> 524288 bits(max sample num) < 2^30
-        uint32_t samples  : 30;
-        bool     realtime : 1;
-        bool     verbose  : 1;
-    } PACKED;
-
-    struct p payload;
-    payload.samples = (samples & 0x3FFFFFFF);
+    lf_sample_config_t payload;
+    payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
     payload.realtime = realtime;
     payload.verbose = verbose;
 
@@ -774,14 +767,8 @@ int CmdLFRead(const char *Cmd) {
 int lf_sniff(bool realtime, bool verbose, uint32_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
-    struct p {
-        // 64KB SRAM -> 524288 bits(max sample num) < 2^ 30
-        uint32_t samples  : 30;
-        bool     realtime : 1;
-        bool     verbose  : 1;
-    } PACKED payload;
-
-    payload.samples = (samples & 0x3FFFFFFF);
+    lf_sample_config_t payload;
+    payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
     payload.realtime = realtime;
     payload.verbose = verbose;
 

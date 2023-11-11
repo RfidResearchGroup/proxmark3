@@ -851,12 +851,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_ACQ_RAW_ADC: {
-            struct p {
-                uint32_t samples  : 30;
-                bool     realtime : 1;
-                bool     verbose  : 1;
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
+            lf_sample_config_t *payload = (lf_sample_config_t *)packet->data.asBytes;
             uint32_t bits;
             if (payload->realtime) {
                 bits = ReadLF_realtime(true);
@@ -886,12 +881,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_SNIFF_RAW_ADC: {
-            struct p {
-                uint32_t samples  : 30;
-                bool     realtime : 1;
-                bool     verbose  : 1;
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
+            lf_sample_config_t *payload = (lf_sample_config_t *)packet->data.asBytes;
             uint32_t bits;
             if (payload->realtime) {
                 bits = ReadLF_realtime(false);
