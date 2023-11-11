@@ -447,15 +447,12 @@ static void *check_default_keys(void *arguments) {
     for (uint8_t i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
 
         uint64_t key = g_mifare_default_keys[i];
-        if (args->part_key != (key & 0xffffffff)) {
-            continue;
-        }
 
         // Init cipher with key
         struct Crypto1State *pcs = crypto1_create(key);
 
         // NESTED decrypt nt with help of new key
-        crypto1_word(pcs, args->nt_enc ^ args->uid, 0);
+        crypto1_word(pcs, args->nt_enc ^ args->uid, 1);
         crypto1_word(pcs, args->nr_enc, 1);
         crypto1_word(pcs, 0, 0);
         crypto1_word(pcs, 0, 0);
@@ -470,7 +467,7 @@ static void *check_default_keys(void *arguments) {
         // check if cmd exists
         bool res = checkValidCmdByte(dec, args->enc_len);
         if (args->enc_len > 4) {
-            res |= checkValidCmdByte(dec + 4,  args->enc_len -4);
+            res |= checkValidCmdByte(dec + 4,  args->enc_len - 4);
         }
 
         if (res == false) {
@@ -690,7 +687,7 @@ int main(int argc, const char *argv[]) {
         cmd_enc = (enc[0] << 24 | enc[1] << 16 | enc[2] << 8 | enc[3]);
     }
 
-    printf("----------- " _CYAN_("Phase 1 examine") " ------------------------\n");
+    printf("----------- " _CYAN_("information") " ------------------------\n");
     printf("uid.................. %08x\n", uid);
     printf("nt encrypted......... %08x\n", nt_enc);
     printf("nt parity err........ %04x\n", nt_par_err);
@@ -718,16 +715,35 @@ int main(int argc, const char *argv[]) {
         thread_count = 2;
 #endif  /* _WIN32 */
 
-    printf("\nBruteforce using " _YELLOW_("%d") " threads\n", thread_count);
-    printf("looking for the last bytes of the encrypted tagnonce\n");
-
-    printf("\nTarget old MFC...\n");
+    printf("\nBruteforce using " _YELLOW_("%d") " threads\n\n", thread_count);
 
     pthread_t threads[thread_count];
 
     // create a mutex to avoid interlacing print commands from our different threads
     pthread_mutex_init(&print_lock, NULL);
 
+    // if we have 4 or more bytes,  look for a default key
+    if (enc_len > 3) {
+        printf("----------- " _CYAN_("Phase 1 pre-processing") " ------------------------\n");
+        printf("Testing default keys using NESTED authentication...\n");
+        struct thread_key_args *def = calloc(1, sizeof(struct thread_key_args));
+        def->thread = 0;
+        def->idx = 0;
+        def->uid = uid;
+        def->nt_enc = nt_enc;
+        def->nr_enc = nr_enc;
+        def->enc_len = enc_len;
+        memcpy(def->enc, enc, enc_len);
+        pthread_create(&threads[0], NULL, check_default_keys, (void *)def);
+        pthread_join(threads[0], NULL);
+        if (global_found) {
+            goto out;
+        }
+    }
+
+    printf("\n----------- " _CYAN_("Phase 2 examine") " -------------------------------\n");
+    printf("Looking for the last bytes of the encrypted tagnonce\n");
+    printf("\nTarget old MFC...\n");
     // the rest of available threads to EV1 scenario
     for (int i = 0; i < thread_count; ++i) {
         struct thread_args *a = calloc(1, sizeof(struct thread_args));
@@ -784,7 +800,7 @@ int main(int argc, const char *argv[]) {
     global_found = 0;
     global_found_candidate = 0;
 
-    printf("\n----------- " _CYAN_("Phase 2 validating") " ------------------------\n");
+    printf("\n----------- " _CYAN_("Phase 3 validating") " ----------------------------\n");
     printf("uid.................. %08x\n", uid);
     printf("partial key.......... %08x\n", (uint32_t)(global_candidate_key & 0xFFFFFFFF));
     printf("nt enc............... %08x\n", nt_enc);
@@ -804,10 +820,7 @@ int main(int argc, const char *argv[]) {
         b->nr_enc = nr_enc;
         b->enc_len = enc_len;
         memcpy(b->enc, enc, enc_len);
-        if ( i == 0)
-            pthread_create(&threads[0], NULL, check_default_keys, (void *)b);
-        else
-            pthread_create(&threads[i], NULL, brute_key_thread, (void *)b);
+        pthread_create(&threads[i], NULL, brute_key_thread, (void *)b);
     }
 
     // wait for threads to terminate:
