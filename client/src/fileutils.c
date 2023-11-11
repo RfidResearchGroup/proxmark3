@@ -1195,6 +1195,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
             p++;
 
             if (ft == NFC_DF_MFU) {
+                n = 0;
                 param_gethex_to_eol(p, 0, udata.mfu->data + (pageno * MFU_BLOCK_SIZE), MFU_BLOCK_SIZE, &n);
                 *datalen += MFU_BLOCK_SIZE;
             }
