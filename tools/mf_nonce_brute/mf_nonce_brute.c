@@ -525,7 +525,7 @@ static void *brute_thread(void *arguments) {
             free(revstate);
             continue;
         }
-        
+
         // lock this section to avoid interlacing prints from different threats
         pthread_mutex_lock(&print_lock);
         if (args->ev1) {
@@ -533,11 +533,11 @@ static void *brute_thread(void *arguments) {
         }
 
 #if 0
-            printf("thread #%d idx %d %s\n", args->thread, args->idx, (args->ev1) ? "(Ev1)" : "");
-            printf("current nt(%08x)  ar_enc(%08x)  at_enc(%08x)\n", nt, ar_enc, at_enc);
-            printf("ks2:%08x\n", ks2);
-            printf("ks3:%08x\n", ks3);
-            printf("ks4:%08x\n", ks4);
+        printf("thread #%d idx %d %s\n", args->thread, args->idx, (args->ev1) ? "(Ev1)" : "");
+        printf("current nt(%08x)  ar_enc(%08x)  at_enc(%08x)\n", nt, ar_enc, at_enc);
+        printf("ks2:%08x\n", ks2);
+        printf("ks3:%08x\n", ks3);
+        printf("ks4:%08x\n", ks4);
 #endif
         if (cmd_enc) {
             uint32_t decrypted = ks4 ^ cmd_enc;
@@ -681,7 +681,7 @@ int main(int argc, const char *argv[]) {
 
     // next encrypted command + a full read/write
     int enc_len = 0;
-    uint8_t enc[ENC_LEN] = {0}; 
+    uint8_t enc[ENC_LEN] = {0};
     if (argc > 9) {
         param_gethex_to_eol(argv[9], 0, enc, sizeof(enc), &enc_len);
         cmd_enc = (enc[0] << 24 | enc[1] << 16 | enc[2] << 8 | enc[3]);

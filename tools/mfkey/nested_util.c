@@ -235,7 +235,7 @@ uint64_t *nested(NtpKs1 *pNK, uint32_t sizePNK, uint32_t authuid, uint32_t *keyC
         free(pRPs);
         return NULL;
     }
-    
+
     for (i = 0; i < TRY_KEYS; i++) {
         // We don't known this key, try to break it
         // This key can be found here two or more times

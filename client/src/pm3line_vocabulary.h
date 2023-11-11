@@ -791,6 +791,7 @@ const static vocabulary_t vocabulary[] = {
     { 1, "smart help" },
     { 1, "smart list" },
     { 0, "smart info" },
+    { 0, "smart relay" },
     { 0, "smart reader" },
     { 0, "smart raw" },
     { 1, "smart upgrade" },
