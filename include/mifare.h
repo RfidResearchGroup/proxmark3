@@ -68,8 +68,8 @@ typedef struct {
 
 typedef struct {
     iso14a_card_select_t card_info;
-    uint8_t *dump;
     uint16_t dumplen;
+    uint8_t *dump;
 } iso14a_mf_extdump_t;
 
 typedef struct {
