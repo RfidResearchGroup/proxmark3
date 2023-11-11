@@ -450,6 +450,10 @@ int ReadLF_realtime(bool reader_field) {
     int return_value = PM3_SUCCESS;
 
     initSampleBuffer(&sample_size); // sample size in bytes
+    if (sample_size != 64) {
+        return PM3_EFAILED;
+    }
+
     sample_size <<= 3; // sample size in bits
     sample_size /= bits_per_sample; // sample count
 
@@ -505,8 +509,7 @@ int ReadLF_realtime(bool reader_field) {
             }
             last_byte = curr_byte;
 
-            if(samples.total_saved == size_threshold)
-            {
+            if(samples.total_saved == size_threshold) {
                 // request usb transmission and change FIFO bank
                 if (usb_write_request() == false) {
                     return_value = PM3_EIO;

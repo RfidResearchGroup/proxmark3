@@ -696,11 +696,7 @@ int CmdLFConfig(const char *Cmd) {
     return lf_config(&config);
 }
 
-int lf_read(bool verbose, uint32_t samples) {
-    return lf_read_internal(false, verbose, samples);
-}
-
-int lf_read_internal(bool realtime, bool verbose, uint32_t samples) {
+static int lf_read_internal(bool realtime, bool verbose, uint32_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
     struct p {
@@ -731,6 +727,10 @@ int lf_read_internal(bool realtime, bool verbose, uint32_t samples) {
     uint32_t size = (resp.data.asDwords[0] / 8);
     getSamples(size, verbose);
     return PM3_SUCCESS;
+}
+
+int lf_read(bool verbose, uint32_t samples) {
+    return lf_read_internal(false, verbose, samples);
 }
 
 int CmdLFRead(const char *Cmd) {
