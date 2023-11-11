@@ -2777,11 +2777,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             nfc_df_e foo = detect_nfc_dump_format(fn, true);
             if (foo == NFC_DF_MFC || foo == NFC_DF_MFU || foo == NFC_DF_PICOPASS) {
 
-                if (foo == NFC_DF_MFC) {
-                    *pdump = calloc(maxdumplen, sizeof(uint8_t));
-                } else  {
-                    *pdump = calloc(maxdumplen, sizeof(uint8_t));
-                }
+                *pdump = calloc(maxdumplen, sizeof(uint8_t));
                 if (*pdump == NULL) {
                     PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
                     return PM3_EMALLOC;
