@@ -62,6 +62,7 @@ typedef struct {
     uint16_t client_exe_delay;
     char *history_path;
     pm3_device_t *current_device;
+    uint32_t timeout;
 } session_arg_t;
 
 extern session_arg_t g_session;

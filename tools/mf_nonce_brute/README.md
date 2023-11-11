@@ -108,7 +108,7 @@ This one uses the encrypted tagnonce `nt`=`5a920d85` and the encrypted cmd `3e70
 ```
 Full output:
 ```
-$ ./mf_nonce_brute 9c599b32 5a920d85 1011 98d76b77 d6c6e870 0000 ca7e0b63 0111 3e709c8a
+./mf_nonce_brute 9c599b32 5a920d85 1011 98d76b77 d6c6e870 0000 ca7e0b63 0111 3e709c8a
 Mifare classic nested auth key recovery. Phase 1.
 -------------------------------------------------
 uid:            9c599b32

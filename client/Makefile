@@ -371,12 +371,16 @@ ifeq ($(PYTHON_FOUND),1)
 endif
 
 #######################################################################################################
+# macOS doesn't like this params
+#MYCFLAGS += --param max-completely-peeled-insns=1000 --param max-completely-peel-times=10000
+MYCFLAGS += -O3
+
 CFLAGS ?= $(DEFCFLAGS)
 CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
 
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS)
-PM3CFLAGS += -g -I./src -I./include -I../include -I../common -I../common_fpga $(PM3INCLUDES) $(INCLUDES)
+PM3CFLAGS += -I./src -I./include -I../include -I../common -I../common_fpga $(PM3INCLUDES) $(INCLUDES)
 # WIP Testing
 #PM3CFLAGS += -std=c11 -pedantic
 
@@ -415,7 +419,7 @@ endif
 
 PM3CFLAGS += -DHAVE_SNPRINTF
 
-CXXFLAGS ?= -Wall -Werror -O3
+CXXFLAGS ?= -Wall -Werror
 CXXFLAGS += $(MYDEFS) $(MYCXXFLAGS) $(MYINCLUDES)
 
 PM3CXXFLAGS = $(CXXFLAGS)
@@ -699,6 +703,7 @@ SRCS =  mifare/aiddesfire.c \
 		mifare/mifare4.c \
 		mifare/mifaredefault.c \
 		mifare/mifarehost.c \
+		mifare/gen4.c \
 		nfc/ndef.c \
 		pm3.c \
 		pm3_binlib.c \
@@ -707,6 +712,7 @@ SRCS =  mifare/aiddesfire.c \
 		pm3line.c \
 		proxmark3.c \
 		scandir.c \
+		uart/ringbuffer.c \
 		uart/uart_posix.c \
 		uart/uart_win32.c \
 		scripting.c \

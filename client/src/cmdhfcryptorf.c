@@ -414,9 +414,8 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
         FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
     }
 
-    saveFileEML(filename, data, datalen, 4);
-    saveFile(filename, ".bin", data, datalen);
-    // json?
+    pm3_save_dump(filename, data, datalen, jsfCryptorf);
+
     return switch_off_field_cryptorf();
 }
 
@@ -424,13 +423,13 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cryptorf eload",
-                  "Loads CryptoRF tag dump into emulator memory on device",
+                  "Loads CryptoRF tag dump (bin/eml/json) into emulator memory on device",
                   "hf cryptorf eload -f hf-cryptorf-0102030405-dump.bin\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -486,14 +485,14 @@ static int CmdHFCryptoRFESave(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cryptorf esave",
-                  "Save emulator memory to bin/eml/json file\n"
+                  "Save emulator memory to file (bin/json)\n"
                   "if filename is not supplied, UID will be used.",
                   "hf cryptorf esave\n"
                   "hf cryptorf esave -f filename"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dumpfile"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -527,11 +526,7 @@ static int CmdHFCryptoRFESave(const char *Cmd) {
         FillFileNameByUID(fptr, data, "-dump", 4);
     }
 
-    saveFile(filename, ".bin", data, numofbytes);
-    //needs to change
-    saveFileEML(filename, data, numofbytes, 8);
-    //needs to change
-    saveFileJSON(filename, jsfRaw, data, numofbytes, NULL);
+    pm3_save_dump(filename, data, numofbytes, jsfCryptorf);
     free(data);
     return PM3_SUCCESS;
 }

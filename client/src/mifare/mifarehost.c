@@ -40,6 +40,8 @@
 #include "crypto/libpcrypto.h"
 #include "util.h" // xor
 #include "mbedtls/sha1.h"       // SHA1
+#include "cmdhf14a.h"
+#include "gen4.h"
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;
@@ -1172,58 +1174,6 @@ int mfGen3Freeze(void) {
         return PM3_ETIMEOUT;
     }
 }
-
-int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags) {
-    struct p {
-        uint8_t blockno;
-        uint8_t pwd[4];
-        uint8_t workFlags;
-    } PACKED payload;
-    payload.blockno = blockno;
-    memcpy(payload.pwd, pwd, sizeof(payload.pwd));
-    payload.workFlags = workFlags;
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_G4_RDBL, (uint8_t *)&payload, sizeof(payload));
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_RDBL, &resp, 1500)) {
-        if (resp.status != PM3_SUCCESS) {
-            return PM3_EUNDEF;
-        }
-        memcpy(data, resp.data.asBytes, MFBLOCK_SIZE);
-    } else {
-        PrintAndLogEx(WARNING, "command execute timeout");
-        return PM3_ETIMEOUT;
-    }
-    return PM3_SUCCESS;
-}
-
-int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags) {
-    struct p {
-        uint8_t blockno;
-        uint8_t pwd[4];
-        uint8_t data[MFBLOCK_SIZE];
-        uint8_t workFlags;
-    } PACKED payload;
-    payload.blockno = blockno;
-    memcpy(payload.pwd, pwd, sizeof(payload.pwd));
-    memcpy(payload.data, data, sizeof(payload.data));
-    payload.workFlags = workFlags;
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_G4_WRBL, (uint8_t *)&payload, sizeof(payload));
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_WRBL, &resp, 1500)) {
-        if (resp.status != PM3_SUCCESS) {
-            return PM3_EUNDEF;
-        }
-    } else {
-        PrintAndLogEx(WARNING, "command execute timeout");
-        return PM3_ETIMEOUT;
-    }
-    return PM3_SUCCESS;
-}
-
 
 // variables
 uint32_t cuid = 0;    // uid part used for crypto1.

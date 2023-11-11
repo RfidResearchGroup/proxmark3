@@ -634,6 +634,7 @@ static const char *ndef_wifi_auth_lookup(uint8_t *d) {
     return "";
 }
 
+
 static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
     if (ndef->PayloadLen == 0) {
         PrintAndLogEx(INFO, "no payload");
@@ -649,7 +650,7 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
 
         if (ndef->Payload[pos] != 0x10) {
             n -= 1;
-            pos -= 1;
+            pos += 1;
             continue;
         }
 
@@ -713,7 +714,7 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
             pos += len;
         }
 
-        // NETWORK_IDX
+        // NETWORK_IDX - always set to 1, deprecated
         if (memcmp(&ndef->Payload[pos], "\x10\x26", 2) == 0) {
             // 10 26 00 01 01
             uint8_t len = 3;
@@ -775,19 +776,34 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
             pos += 2;
             pos += len;
         }
+
+        // rf-bands
+        if (memcmp(&ndef->Payload[pos], "\x10\x3C", 2) == 0) {
+            uint8_t len = 3;
+
+            if (ndef->Payload[pos + 2 + 2] == 0x01) {
+                PrintAndLogEx(INFO, "RF Bands........ %s ( " _YELLOW_("2.4 GHZ")" )", sprint_hex(&ndef->Payload[pos + 2], len));
+            } else if (ndef->Payload[pos + 2 + 2] == 0x02) {
+                PrintAndLogEx(INFO, "RF Bands........ %s ( " _YELLOW_("5.0 GHZ")" )", sprint_hex(&ndef->Payload[pos + 2], len));
+            }
+
+            n -= 2;
+            n -= len;
+            pos += 2;
+            pos += len;
+        }
     }
 
     /*
         ap-channel   0,  6
     +        credential
         device-name
-        mac-address
+
         manufacturer
         model-name
         model-number
     +        oob-password
         primary-device-type
-        rf-bands
         secondary-device-type-list
         serial-number
         ssid
@@ -1182,6 +1198,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("NDEF parsing") " ----------------");
     while (indx < ndefLen) {
+
         switch (ndef[indx]) {
             case 0x00: {
                 indx++;
@@ -1246,8 +1263,9 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                     PrintAndLogEx(SUCCESS, "Found NDEF message ( " _YELLOW_("%u") " bytes )", len);
 
                     int res = NDEFRecordsDecodeAndPrint(&ndef[indx], len, verbose);
-                    if (res != PM3_SUCCESS)
+                    if (res != PM3_SUCCESS) {
                         return res;
+                    }
                 }
 
                 indx += len;
@@ -1269,12 +1287,42 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 return PM3_SUCCESS;
             }
             default: {
-                if (verbose)
+                if (verbose) {
                     PrintAndLogEx(ERR, "unknown tag 0x%02x", ndef[indx]);
-
+                }
                 return PM3_ESOFT;
             }
         }
     }
+    return PM3_SUCCESS;
+}
+
+
+int NDEFGetTotalLength(uint8_t *ndef, size_t ndeflen, size_t *outlen) {
+
+    size_t idx = 0;
+    while (idx < ndeflen) {
+
+        if (ndef[idx] == 0x00 ||
+                ndef[idx] == 0x01 ||
+                ndef[idx] == 0x02 ||
+                ndef[idx] == 0x03 ||
+                ndef[idx] == 0xFD) {
+            idx++;
+            idx += ndefTLVGetLength(&ndef[idx], &idx);
+            continue;
+        }
+
+        if (ndef[idx] == 0xFE) {
+            idx++;
+            break;
+        }
+
+        // invalid NDEF
+        *outlen = 0;
+        return PM3_ESOFT;
+    }
+
+    *outlen = idx;
     return PM3_SUCCESS;
 }

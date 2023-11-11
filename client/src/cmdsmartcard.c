@@ -179,7 +179,7 @@ static void PrintATR(uint8_t *atr, size_t atrlen) {
 
     if (T0 & 0x80) {
         uint8_t TD1 = atr[2 + T1len];
-        PrintAndLogEx(INFO, "    - TD1 (First offered transmission protocol, presence of TA2..TD2) [ 0x%02x ] Protocol T%d", TD1, TD1 & 0x0f);
+        PrintAndLogEx(INFO, "    - TD1 (First offered transmission protocol, presence of TA2..TD2) [ 0x%02x ] Protocol " _GREEN_("T%d"), TD1, TD1 & 0x0f);
         protocol_T0_present = false;
         if ((TD1 & 0x0f) == 0) {
             protocol_T0_present = true;
@@ -204,7 +204,7 @@ static void PrintATR(uint8_t *atr, size_t atrlen) {
         }
         if (TD1 & 0x80) {
             uint8_t TDi = atr[2 + T1len + TD1len];
-            PrintAndLogEx(INFO, "    - TD2 (A supported protocol or more global parameters, presence of TA3..TD3) [ 0x%02x ] Protocol T%d", TDi, TDi & 0x0f);
+            PrintAndLogEx(INFO, "    - TD2 (A supported protocol or more global parameters, presence of TA3..TD3) [ 0x%02x ] Protocol " _GREEN_("T%d"), TDi, TDi & 0x0f);
             if ((TDi & 0x0f) == 0) {
                 protocol_T0_present = true;
             }
@@ -333,7 +333,7 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
         needGetData = true;
     }
 
-    if (needGetData == true) {
+    if (needGetData) {
         // Don't discard data we already received except the SW code.
         // If we only received 1 byte, this is the echo of INS, we discard it.
         totallen -= 2;
@@ -360,6 +360,7 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
         payload->flags = SC_RAW | SC_LOG;
         payload->len = sizeof(cmd_getresp);
+        payload->wait_delay = 0;
         memcpy(payload->data, cmd_getresp, sizeof(cmd_getresp));
 
         clearCommandBuffer();
@@ -421,6 +422,7 @@ static int CmdSmartRaw(const char *Cmd) {
         arg_lit0("s", NULL, "active smartcard with select (get ATR)"),
         arg_lit0("t", "tlv", "executes TLV decoder if it possible"),
         arg_lit0("0", NULL, "use protocol T=0"),
+        arg_int0(NULL, "timeout", "<ms>", "Timeout in MS waiting for SIM to respond. (def 337ms)"),
         arg_str1("d", "data", "<hex>", "bytes to send"),
         arg_param_end
     };
@@ -431,10 +433,11 @@ static int CmdSmartRaw(const char *Cmd) {
     bool active_select = arg_get_lit(ctx, 3);
     bool decode_tlv = arg_get_lit(ctx, 4);
     bool use_t0 = arg_get_lit(ctx, 5);
+    int timeout = arg_get_int_def(ctx, 6, -1);
 
     int dlen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 6), data, sizeof(data), &dlen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 7), data, sizeof(data), &dlen);
     CLIParserFree(ctx);
 
     if (res) {
@@ -457,6 +460,13 @@ static int CmdSmartRaw(const char *Cmd) {
         if (active_select)
             payload->flags |= SC_SELECT;
     }
+
+    payload->wait_delay = 0;
+    if (timeout > -1) {
+        payload->flags |= SC_WAIT;
+        payload->wait_delay = timeout;
+    }
+    PrintAndLogEx(DEBUG, "SIM Card timeout... %u ms", payload->wait_delay);
 
     if (dlen > 0) {
         if (use_t0)
@@ -500,9 +510,9 @@ static int CmdSmartRaw(const char *Cmd) {
         data[4] = 0;
     }
 
-    if (decode_tlv && len > 4)
+    if (decode_tlv && len > 4) {
         TLVPrintFromBuffer(buf, len - 2);
-    else {
+    } else {
         if (len > 2) {
             PrintAndLogEx(INFO, "Response data:");
             PrintAndLogEx(INFO, " # | bytes                                           | ascii");
@@ -518,16 +528,16 @@ out:
 }
 
 static int CmdSmartUpgrade(const char *Cmd) {
-    PrintAndLogEx(INFO, "-------------------------------------------------------------------");
+    PrintAndLogEx(INFO, "--------------------------------------------------------------------");
     PrintAndLogEx(WARNING, _RED_("WARNING") " - sim module firmware upgrade");
     PrintAndLogEx(WARNING, _RED_("A dangerous command, do wrong and you could brick the sim module"));
-    PrintAndLogEx(INFO, "-------------------------------------------------------------------");
+    PrintAndLogEx(INFO, "--------------------------------------------------------------------");
     PrintAndLogEx(NORMAL, "");
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart upgrade",
                   "Upgrade RDV4 sim module firmware",
-                  "smart upgrade -f sim013.bin"
+                  "smart upgrade -f sim014.bin"
                  );
 
     void *argtable[] = {
@@ -585,9 +595,10 @@ static int CmdSmartUpgrade(const char *Cmd) {
     }
     hashstring[128] = '\0';
 
+    int hash1n = 0;
     uint8_t hash_1[64];
-    if (param_gethex(hashstring, 0, hash_1, 128)) {
-        PrintAndLogEx(FAILED, "Couldn't read SHA-512 file");
+    if (param_gethex_ex(hashstring, 0, hash_1, &hash1n) && hash1n != 128) {
+        PrintAndLogEx(FAILED, "Couldn't read SHA-512 file. expect 128 hex bytes, got ( "_RED_("%d") " )", hash1n);
         free(hashstring);
         free(firmware);
         return PM3_ESOFT;
@@ -903,6 +914,7 @@ static void smart_brute_prim(void) {
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + 5);
         payload->flags = SC_RAW_T0;
         payload->len = 5;
+        payload->wait_delay = 0;
         memcpy(payload->data, get_card_data + i, 5);
 
         clearCommandBuffer();
@@ -946,6 +958,7 @@ static int smart_brute_sfi(bool decodeTLV) {
             smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) +  sizeof(READ_RECORD));
             payload->flags = SC_RAW_T0;
             payload->len = sizeof(READ_RECORD);
+            payload->wait_delay = 0;
             memcpy(payload->data, READ_RECORD, sizeof(READ_RECORD));
 
             clearCommandBuffer();
@@ -1099,7 +1112,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + hexlen);
         payload->flags = SC_RAW_T0;
         payload->len = hexlen;
-
+        payload->wait_delay = 0;
         memcpy(payload->data, cmddata, hexlen);
         clearCommandBuffer();
         SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + hexlen);
@@ -1335,6 +1348,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
         payload->flags |= (SC_SELECT | SC_CONNECT);
     }
     payload->len = datainlen;
+    payload->wait_delay = 0;
     memcpy(payload->data, datain, datainlen);
 
     clearCommandBuffer();
@@ -1366,8 +1380,9 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
 }
 
 bool smart_select(bool verbose, smart_card_atr_t *atr) {
-    if (atr)
+    if (atr) {
         memset(atr, 0, sizeof(smart_card_atr_t));
+    }
 
     clearCommandBuffer();
     SendCommandNG(CMD_SMART_ATR, NULL, 0);
@@ -1385,8 +1400,9 @@ bool smart_select(bool verbose, smart_card_atr_t *atr) {
     smart_card_atr_t card;
     memcpy(&card, (smart_card_atr_t *)resp.data.asBytes, sizeof(smart_card_atr_t));
 
-    if (atr)
+    if (atr) {
         memcpy(atr, &card, sizeof(smart_card_atr_t));
+    }
 
     if (verbose)
         PrintAndLogEx(INFO, "ISO7816-3 ATR : %s", sprint_hex(card.atr, card.atr_len));

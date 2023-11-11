@@ -112,27 +112,25 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
 
         int fl = 0;
 
-        if (data[6] == 0xec) {
+        if (data[6] == 0xEC) {
             strncpy(token_type, "XAM", sizeof(token_type) - 1);
             fl = 1;
             stamp_len = 0x0c - (data[5] >> 4);
         } else {
-            switch (data[5] & 0x7f) {
-                case 0x00 ... 0x2f:
-                    strncpy(token_type, "IAM", sizeof(token_type) - 1);
-                    fl = (0x2f - (data[5] & 0x7f)) + 1;
-                    break;
-                case 0x30 ... 0x6f:
-                    strncpy(token_type, "SAM", sizeof(token_type) - 1);
-                    fl = (0x6f - (data[5] & 0x7f)) + 1;
-                    break;
-                case 0x70 ... 0x7f:
-                    strncpy(token_type, "GAM", sizeof(token_type) - 1);
-                    fl = (0x7f - (data[5] & 0x7f)) + 1;
-                    break;
+
+            uint8_t tmp = data[5] & 0x7F;
+            if (tmp <= 0x2F) {
+                strncpy(token_type, "IAM", sizeof(token_type) - 1);
+                fl = (0x2F - tmp) + 1;
+            } else if (tmp >= 0x30 && tmp <= 0x6F) {
+                strncpy(token_type, "SAM", sizeof(token_type) - 1);
+                fl = (0x6F - tmp) + 1;
+            } else if (tmp >= 0x70 && tmp <= 0x7F) {
+                strncpy(token_type, "GAM", sizeof(token_type) - 1);
+                fl = (0x7F - tmp) + 1;
             }
 
-            stamp_len = 0xfc - data[6];
+            stamp_len = 0xFC - data[6];
         }
 
         PrintAndLogEx(SUCCESS, "DCF: %d (%02x %02x) Token Type=" _YELLOW_("%s") " (OLE=%01u) OL=%02u FL=%02u",
@@ -858,7 +856,7 @@ static int CmdLegicReader(const char *Cmd) {
 static int CmdLegicDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic dump",
-                  "Read all memory from LEGIC Prime tags and saves to (bin/eml/json) dump file\n"
+                  "Read all memory from LEGIC Prime tags and saves to (bin/json) dump file\n"
                   "It autodetects card type (MIM22, MIM256, MIM1024)",
                   "hf legic dump             --> use UID as filename\n"
                   "hf legic dump -f myfile \n"
@@ -951,7 +949,7 @@ static int CmdLegicDump(const char *Cmd) {
         FillFileNameByUID(filename, data, "-dump", 4);
     }
 
-    pm3_save_dump(filename, data, readlen, jsfLegic, LEGIC_BLOCK_SIZE);
+    pm3_save_dump(filename, data, readlen, jsfLegic_v2);
     free(data);
     return PM3_SUCCESS;
 }
@@ -966,7 +964,7 @@ static int CmdLegicRestore(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Filename to restore"),
+        arg_str1("f", "file", "<fn>", "Specify a filename to restore"),
         arg_lit0(NULL, "ob", "obfuscate dump data (xor with MCC)"),
         arg_param_end
     };
@@ -1119,7 +1117,7 @@ static int CmdLegicELoad(const char *Cmd) {
 static int CmdLegicESave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic esave",
-                  "Saves a (bin/eml/json) dump file of emulator memory",
+                  "Saves a (bin/json) dump file of emulator memory",
                   "hf legic esave                    --> uses UID as filename\n"
                   "hf legic esave -f myfile --22\n"
                   "hf legic esave -f myfile --22 --de\n"
@@ -1188,7 +1186,7 @@ static int CmdLegicESave(const char *Cmd) {
         legic_xor(data, numofbytes);
     }
 
-    pm3_save_dump(filename, data, numofbytes, jsfLegic, LEGIC_BLOCK_SIZE);
+    pm3_save_dump(filename, data, numofbytes, jsfLegic_v2);
     return PM3_SUCCESS;
 }
 
@@ -1406,7 +1404,7 @@ static int CmdLegicView(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };

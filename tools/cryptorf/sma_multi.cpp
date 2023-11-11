@@ -332,21 +332,6 @@ static inline uint8_t next_left_fast(uint8_t in, uint64_t *left) {
     return lookup->out;
 }
 
-static inline uint8_t next_left_ksbyte(uint64_t *left) {
-    lookup_entry *lookup;
-    uint8_t bt;
-
-    *left = (((*left) >> 5) | ((uint64_t)left_addition[((*left) & 0xf801f)] << 30));
-    lookup = &(lookup_left[((*left) & 0xf801f)]);
-    *left = (((*left) >> 5) | ((uint64_t)lookup->addition << 30));
-    bt = lookup->out << 4;
-    *left = (((*left) >> 5) | ((uint64_t)left_addition[((*left) & 0xf801f)] << 30));
-    lookup = &(lookup_left[((*left) & 0xf801f)]);
-    *left = (((*left) >> 5) | ((uint64_t)lookup->addition << 30));
-    bt |= lookup->out;
-    return bt;
-}
-
 static inline uint8_t next_right_fast(uint8_t in, uint64_t *right) {
     if (in) *right ^= ((in & 0xf8) << 12);
     lookup_entry *lookup = &(lookup_right[((*right) & 0x7c1f)]);
@@ -451,10 +436,10 @@ static void ice_sm_right_thread(
 static uint32_t ice_sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_t> *pcrstates) {
 
     map<uint64_t, uint64_t> bincstates;
-    g_topbits = ATOMIC_VAR_INIT(0);
+    g_topbits = 0;
 
     std::vector<std::thread> threads(g_num_cpus);
-    for (uint8_t m = 0; m < g_num_cpus; m++) {
+    for (uint32_t m = 0; m < g_num_cpus; m++) {
         threads[m] = std::thread(ice_sm_right_thread, m, g_num_cpus, ks, &bincstates, mask);
     }
     for (auto &t : threads) {
@@ -567,7 +552,7 @@ static void ice_sm_left(const uint8_t *ks, uint8_t *mask, vector<cs_t> *pcstates
 
     map<uint64_t, cs_t> bincstates;
     std::vector<std::thread> threads(g_num_cpus);
-    for (uint8_t m = 0; m < g_num_cpus; m++) {
+    for (uint32_t m = 0; m < g_num_cpus; m++) {
         threads[m] = std::thread(ice_sm_left_thread, m, g_num_cpus, ks, &bincstates, mask);
     }
 
@@ -587,72 +572,6 @@ static void ice_sm_left(const uint8_t *ks, uint8_t *mask, vector<cs_t> *pcstates
     }
     // Reverse the vector order (so the highest bin comes first)
     reverse(pcstates->begin(), pcstates->end());
-}
-
-static inline uint32_t sm_right(const uint8_t *ks, uint8_t *mask, vector<uint64_t> *pcrstates) {
-    uint8_t tmp_mask[16];
-    size_t topbits = 0;
-    map<uint64_t, uint64_t> bincstates;
-    map<uint64_t, uint64_t>::iterator it;
-
-
-    for (uint64_t counter = 0; counter < 0x2000000; counter++) {
-        // Reset the current bitcount of correct bits
-        size_t bits = 0;
-
-        // Copy the state we are going to test
-        uint64_t rstate = counter;
-
-        for (size_t pos = 0; pos < 16; pos++) {
-            next_right_fast(0, &rstate);
-            uint8_t bt = next_right_fast(0, &rstate) << 4;
-            next_right_fast(0, &rstate);
-            bt |= next_right_fast(0, &rstate);
-
-            // xor the bits with the keystream and count the "correct" bits
-            bt ^= ks[pos];
-
-            // Save the mask for the left produced bits
-            tmp_mask[pos] = bt;
-
-            for (size_t bit = 0; bit < 8; bit++) {
-                // When the bit is xored away (=zero), it was the same, so correct ;)
-                if ((bt & 0x01) == 0) bits++;
-                bt >>= 1;
-            }
-        }
-
-        if (bits > topbits) {
-            topbits = bits;
-            // Copy the winning mask
-            memcpy(mask, tmp_mask, 16);
-        }
-
-        // Ignore states under 90
-        if (bits >= 90) {
-            //  Make sure the bits are used for ordering
-            bincstates[(((uint64_t)bits) << 56) | counter] = counter;
-        }
-
-        if ((counter & 0xfffff) == 0) {
-            printf(".");
-            fflush(stdout);
-        }
-    }
-    printf("\n");
-
-    // Clear the candidate state vector
-    pcrstates->clear();
-
-    // Copy the order the states from lowest-bin to highest-bin
-    for (it = bincstates.begin(); it != bincstates.end(); ++it) {
-        pcrstates->push_back(it->second);
-    }
-
-    // Reverse the vector order (so the highest bin comes first)
-    reverse(pcrstates->begin(), pcrstates->end());
-
-    return topbits;
 }
 
 static inline void previous_all_input(vector<cs_t> *pcstates, uint32_t gc_byte_index, cipher_state_side css) {
@@ -741,94 +660,6 @@ static inline void search_gc_candidates_right(const uint64_t rstate_before_gc, c
     }
 }
 
-static inline void sm_left(const uint8_t *ks, const uint8_t *mask, vector<cs_t> *pcstates) {
-    map<uint64_t, cs_t> bincstates;
-    map<uint64_t, cs_t>::iterator it;
-    uint64_t counter;
-    size_t pos, bits;
-    uint8_t correct_bits[16];
-    uint8_t bt;
-    cs_t state;
-    lookup_entry *lookup;
-
-    // Reset and initialize the cryptostate and vecctor
-    memset(&state, 0x00, sizeof(cs_t));
-    state.invalid = false;
-
-    for (counter = 0; counter < 0x800000000ull; counter++) {
-        uint64_t lstate = counter;
-
-        for (pos = 0; pos < 16; pos++) {
-
-            lstate = (((lstate) >> 5) | ((uint64_t)left_addition[((lstate) & 0xf801f)] << 30));
-            lookup = &(lookup_left[((lstate) & 0xf801f)]);
-            lstate = (((lstate) >> 5) | ((uint64_t)lookup->addition << 30));
-            bt = lookup->out << 4;
-            lstate = (((lstate) >> 5) | ((uint64_t)left_addition[((lstate) & 0xf801f)] << 30));
-            lookup = &(lookup_left[((lstate) & 0xf801f)]);
-            lstate = (((lstate) >> 5) | ((uint64_t)lookup->addition << 30));
-            bt |= lookup->out;
-
-            // xor the bits with the keystream and count the "correct" bits
-            bt ^= ks[pos];
-
-            // When the REQUIRED bits are NOT xored away (=zero), ignore this wrong state
-            if ((bt & mask[pos]) != 0) break;
-
-            // Save the correct bits for statistical information
-            correct_bits[pos] = bt;
-        }
-
-        // If we have parsed all 16 bytes of keystream, we have a valid CANDIDATE!
-        if (pos == 16) {
-            // Count the total correct bits
-            bits = 0;
-            for (pos = 0; pos < 16; pos++) {
-                // Get the next byte-value with correct bits
-                bt = correct_bits[pos];
-
-                // Count all the (correct) bits
-                // When the bit is xored away (=zero), it was the same, so correct ;)
-                if ((bt & 0x01) == 0) bits++;
-                if (((bt >> 1) & 0x01) == 0) bits++;
-                if (((bt >> 2) & 0x01) == 0) bits++;
-                if (((bt >> 3) & 0x01) == 0) bits++;
-                if (((bt >> 4) & 0x01) == 0) bits++;
-                if (((bt >> 5) & 0x01) == 0) bits++;
-                if (((bt >> 6) & 0x01) == 0) bits++;
-                if (((bt >> 7) & 0x01) == 0) bits++;
-
-            }
-
-            // Print the left candidate
-            //      printf("%09llx (%d)\n",counter,bits);
-            printf(".");
-            fflush(stdout);
-
-            state.l = counter;
-            //  Make sure the bits are used for ordering
-            bincstates[(((uint64_t)bits) << 56) | counter] = state;
-        }
-
-        if ((counter & 0xffffffffull) == 0) {
-            printf("%02.1f%%.", ((float)100 / 8) * (counter >> 32));
-            fflush(stdout);
-        }
-    }
-
-    printf("100%%\n");
-
-    // Clear the candidate state vector
-    pcstates->clear();
-
-    // Copy the order the states from lowest-bin to highest-bin
-    for (it = bincstates.begin(); it != bincstates.end(); ++it) {
-        pcstates->push_back(it->second);
-    }
-    // Reverse the vector order (so the highest bin comes first)
-    reverse(pcstates->begin(), pcstates->end());
-}
-
 static inline void search_gc_candidates_left(const uint64_t lstate_before_gc, const uint8_t *Q, vector<cs_t> *pcstates) {
     vector<cs_t> csl_cand, csl_search;
     vector<cs_t>::iterator itsearch, itcand;
@@ -885,7 +716,7 @@ static inline void search_gc_candidates_left(const uint64_t lstate_before_gc, co
 
 void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcstates, vector<uint64_t> *pgc_candidates) {
     vector<cs_t>::iterator itl, itr;
-    size_t pos, count;
+    size_t pos;
     uint64_t gc;
     bool valid;
 
@@ -902,7 +733,6 @@ void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcs
 
     // Clean up the candidate list
     pgc_candidates->clear();
-    count = 0;
     for (itl = outer.begin(); itl != outer.end(); ++itl) {
         for (itr = inner.begin(); itr != inner.end(); ++itr) {
             valid = true;
@@ -923,7 +753,6 @@ void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcs
 
                 pgc_candidates->push_back(gc);
             }
-            count++;
         }
     }
     printf("Found a total of " _YELLOW_("%llu")" combinations, ", ((unsigned long long)plcstates->size()) * prcstates->size());
@@ -1120,10 +949,10 @@ int main(int argc, const char *argv[]) {
         printf("Filtering the correct one using the middle part\n");
 
 
-        key_found = ATOMIC_VAR_INIT(false);
-        key = ATOMIC_VAR_INIT(0);
+        key_found = false;
+        key = 0;
         std::vector<std::thread> threads(g_num_cpus);
-        for (uint8_t m = 0; m < g_num_cpus; m++) {
+        for (uint32_t m = 0; m < g_num_cpus; m++) {
             threads[m] =  std::thread(ice_compare, m, g_num_cpus, &pgc_candidates, &ostate, ref(Ci), ref(Q), ref(Ch), ref(Ci_1));
         }
 

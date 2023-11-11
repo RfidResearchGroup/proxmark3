@@ -759,25 +759,6 @@ float param_getfloat(const char *line, int paramnum, float deflt) {
         return deflt;
 }
 
-int param_gethex(const char *line, int paramnum, uint8_t *data, int hexcnt) {
-    int bg, en, i;
-    uint32_t temp;
-
-    if (hexcnt & 1) return 1;
-
-    if (param_getptr(line, &bg, &en, paramnum)) return 1;
-
-    if (en - bg + 1 != hexcnt) return 1;
-
-    for (i = 0; i < hexcnt; i += 2) {
-        if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1]))) return 1;
-
-        sscanf((char[]) {line[bg + i], line[bg + i + 1], 0}, "%X", &temp);
-        data[i / 2] = temp & 0xff;
-    }
-
-    return 0;
-}
 int param_gethex_ex(const char *line, int paramnum, uint8_t *data, int *hexcnt) {
     int bg, en, i;
     uint32_t temp;
@@ -785,8 +766,11 @@ int param_gethex_ex(const char *line, int paramnum, uint8_t *data, int *hexcnt) 
     if (param_getptr(line, &bg, &en, paramnum)) return 1;
 
     *hexcnt = en - bg + 1;
-    if (*hexcnt % 2) //error if not complete hex bytes
+
+    // error if not complete hex bytes
+    if (*hexcnt & 1) {
         return 1;
+    }
 
     for (i = 0; i < *hexcnt; i += 2) {
         if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1]))) return 1;
@@ -876,7 +860,7 @@ int param_getbin_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
 
         if (strlen(buf) > 0) {
             uint32_t temp = 0;
-            sscanf(buf, "%d", &temp);
+            sscanf(buf, "%u", &temp);
             data[*datalen] = (uint8_t)(temp & 0xff);
             *buf = 0;
             (*datalen)++;
@@ -944,11 +928,11 @@ int hextobinarray_n(char *target, char *source, int sourcelen) {
     return count;
 }
 
-// convert hex to human readable binary string
+// convert hexstring to human readable binary string
 int hextobinstring(char *target, char *source) {
     return hextobinstring_n(target, source, strlen(source));
 }
-
+// convert hexstring to human readable binary string
 int hextobinstring_n(char *target, char *source, int sourcelen) {
     int length = hextobinarray_n(target, source, sourcelen);
     if (length == 0) {
@@ -956,6 +940,23 @@ int hextobinstring_n(char *target, char *source, int sourcelen) {
     }
     binarraytobinstring(target, target, length);
     return length;
+}
+
+// convert bytes to binary string
+void byte_2_binstr(char *target,  const uint8_t *source, size_t sourcelen) {
+    //uint8_t *p = *source;
+    for (int i = 0 ; i < sourcelen; ++i) {
+        uint8_t b = *(source++);
+        *(target++) = ((b >> 7) & 0x1) + '0';
+        *(target++) = ((b >> 6) & 0x1) + '0';
+        *(target++) = ((b >> 5) & 0x1) + '0';
+        *(target++) = ((b >> 4) & 0x1) + '0';
+        *(target++) = ((b >> 3) & 0x1) + '0';
+        *(target++) = ((b >> 2) & 0x1) + '0';
+        *(target++) = ((b >> 1) & 0x1) + '0';
+        *(target++) = (b & 0x1) + '0';
+    }
+    *target = '\0';
 }
 
 // convert binary array of 0x00/0x01 values to hex
@@ -1007,8 +1008,9 @@ int binarraytohex(char *target, const size_t targetlen, const char *source, size
 
 // convert binary array to human readable binary
 void binarraytobinstring(char *target, char *source,  int length) {
-    for (int i = 0 ; i < length; ++i)
+    for (int i = 0 ; i < length; ++i) {
         *(target++) = *(source++) + '0';
+    }
     *target = '\0';
 }
 
@@ -1028,6 +1030,36 @@ int binstring2binarray(uint8_t *target, char *source, int length) {
         count++;
     }
     return count;
+}
+
+void binstr_2_bytes(uint8_t *target, size_t *targetlen, const char *src) {
+    size_t binlen = strlen(src);
+    if (binlen == 0) {
+        *targetlen = 0;
+        return;
+    }
+
+    // Calculate padding needed
+    size_t padding = (8 - (binlen % 8)) % 8;
+
+    // Determine the size of the hexadecimal array
+    *targetlen = (binlen + padding) / 8;
+
+    uint8_t b = 0;
+    size_t bit_cnt = padding;
+    size_t idx = 0;
+
+    // Process binary string
+    for (size_t i = 0; i < binlen; ++i) {
+        b = (b << 1) | (src[i] == '1');
+        ++bit_cnt;
+
+        if (bit_cnt == 8) {
+            target[idx++] = b;
+            b = 0;
+            bit_cnt = 0;
+        }
+    }
 }
 
 // return parity bit required to match type
@@ -1164,6 +1196,16 @@ char *str_ndup(const char *src, size_t len) {
         dest[len] = '\0';
     }
     return dest;
+}
+
+size_t str_nlen(const char *src, size_t maxlen) {
+    size_t len = 0;
+    if (src) {
+        for (char c = *src; (len < maxlen && c != '\0'); c = *++src) {
+            len++;
+        }
+    }
+    return len;
 }
 
 /**

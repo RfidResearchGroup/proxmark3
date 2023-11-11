@@ -22,6 +22,7 @@
 #define TLV_H
 
 #include "common.h"
+#include <stdbool.h>
 
 typedef uint32_t tlv_tag_t;
 
@@ -41,7 +42,7 @@ struct tlvdb {
 struct tlvdb_root {
     struct tlvdb db;
     size_t len;
-    unsigned char buf[0];
+    unsigned char buf[];
 };
 
 typedef void (*tlv_cb)(void *data, const struct tlv *tlv, int level, bool is_leaf);

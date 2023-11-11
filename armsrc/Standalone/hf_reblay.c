@@ -73,29 +73,25 @@ void ModInfo(void) {
 
 void RunMod() {
     StandAloneMode();
-    Dbprintf(_YELLOW_(">>")  "Relaying ISO/14443A data over Bluetooth a.k.a. reblay Started<<");
+    DbpString("");
+    Dbprintf(_YELLOW_(">>> ")  " Relaying ISO/14443A data over Bluetooth a.k.a. reblay Started " _YELLOW_("<<<"));
+    DbpString("");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
-// Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
-// Such a response is less time critical, so we can prepare them on the fly
-#define DYNAMIC_RESPONSE_BUFFER_SIZE 512
-#define DYNAMIC_MODULATION_BUFFER_SIZE 1024
 
-    uint8_t flags = FLAG_4B_UID_IN_DATA; //UID 4 bytes(could be 7 bytes if needed it)
-    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00}; // in case there is a read command received we shouldn't break
 
-    uint8_t visauid[7] = {0x01, 0x02, 0x03, 0x04};
+    // UID 4 bytes(could be 7 bytes if needed it)
+    uint8_t flags = FLAG_4B_UID_IN_DATA;
+    // in case there is a read command received we shouldn't break
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
+
+    uint8_t visauid[7] = {0xE9, 0x66, 0x5D, 0x20};
     memcpy(data, visauid, 4);
 
     // to initialize the emulation
-    uint8_t tagType = 4; // 4 = ISO/IEC 14443-4 - javacard (JCOP)
     tag_response_info_t *responses;
 
     uint32_t cuid = 0;
-    uint32_t counters[3] = { 0x00, 0x00, 0x00 };
-    uint8_t tearings[3] = { 0xbd, 0xbd, 0xbd };
-    uint8_t pages = 0;
-
 
     // For received Bluetooth package
     uint8_t rpacket[MAX_FRAME_SIZE] = { 0x00 };
@@ -126,6 +122,12 @@ void RunMod() {
     uint8_t receivedCmd[MAX_FRAME_SIZE] = { 0x00 };
     uint8_t receivedCmdPar[MAX_PARITY_SIZE] = { 0x00 };
 
+
+// Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
+// Such a response is less time critical, so we can prepare them on the fly
+#define DYNAMIC_RESPONSE_BUFFER_SIZE 512
+#define DYNAMIC_MODULATION_BUFFER_SIZE 1024
+
     uint8_t dynamic_response_buffer[DYNAMIC_RESPONSE_BUFFER_SIZE] = {0};
     uint8_t dynamic_modulation_buffer[DYNAMIC_MODULATION_BUFFER_SIZE] = {0};
 
@@ -143,9 +145,9 @@ void RunMod() {
     uint8_t state = STATE_READ;
 
     if (state == STATE_READ) {
-        DbpString(_YELLOW_("[ ") "In reading mode" _YELLOW_(" ]"));
+        DbpString("Initialized [ " _YELLOW_("reading mode") " ]");
     } else {
-        DbpString(_YELLOW_("[ ") "In emulation mode" _YELLOW_(" ]"));
+        DbpString("Initialized [ " _BLUE_("emulation mode") " ]");
     }
 
     for (;;) {
@@ -162,10 +164,10 @@ void RunMod() {
         else if (button_pressed == BUTTON_SINGLE_CLICK) { // Pressing one time change between reading & emulation
             if (state == STATE_READ) {
                 state = STATE_EMU;
-                DbpString(_YELLOW_("[ ") "In emulation mode" _YELLOW_(" ]"));
+                DbpString("[ " _BLUE_("Emulation mode") " ]");
             } else {
                 state = STATE_READ;
-                DbpString(_YELLOW_("[ ") "In reading mode" _YELLOW_(" ]"));
+                DbpString("[ " _YELLOW_("Reading mode") " ]");
             }
         }
 
@@ -178,6 +180,7 @@ void RunMod() {
 
             iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
             if (iso14443a_select_card(NULL, &card_a_info, NULL, true, 0, false)) {
+
                 LED_B_ON();
 
                 // Get data to send a ping with UID + ATQA + SAK
@@ -208,7 +211,9 @@ void RunMod() {
                 Dbhexdump(uidlen + 4, rdata, false);
 
                 DbpString(_YELLOW_("[ ") "Sending ping" _YELLOW_(" ]"));
+
                 if (usart_writebuffer_sync(rdata, uidlen + 4) == PM3_SUCCESS) {
+
                     DbpString(_YELLOW_("[ ") "Sent!" _YELLOW_(" ]"));
 
                     for (;;) {
@@ -261,26 +266,31 @@ void RunMod() {
             // free eventually allocated BigBuf memory but keep Emulator Memory
             BigBuf_free_keep_EM();
 
-            if (SimulateIso14443aInit(tagType, flags, data, &responses, &cuid, counters, tearings, &pages) == false) {
+            // 4 = ISO/IEC 14443-4 - javacard (JCOP)
+            if (SimulateIso14443aInit(4, flags, data, &responses, &cuid, NULL, NULL, NULL) == false) {
                 BigBuf_free_keep_EM();
                 reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
-                DbpString(_YELLOW_("!!") "Error initializing the emulation process!");
+                DbpString(_RED_("Error initializing the emulation process!"));
                 SpinDelay(500);
                 state = STATE_READ;
-                DbpString(_YELLOW_("[ ") "Initialized reading mode" _YELLOW_(" ]"));
+                DbpString("Initialized [ "_YELLOW_("reading mode") " ]");
                 continue;
             }
 
             // We need to listen to the high-frequency, peak-detected path.
             iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
-            int len = 0; // Command length
-            int retval = PM3_SUCCESS; // Check emulation status
+            // Command length
+            int len = 0;
+            // Check emulation status
+            int retval = PM3_SUCCESS;
 
-            uint8_t resp = 0; // Bluetooth response
+            // Bluetooth response
+            uint8_t resp = 0;
             lenpacket = 0;
 
-            uint8_t prevcmd = 0x00; // Keep track of last terminal type command
+            // Keep track of last terminal type command
+            uint8_t prevcmd = 0x00;
 
             clear_trace();
             set_tracing(true);
@@ -288,11 +298,12 @@ void RunMod() {
             for (;;) {
                 LED_B_OFF();
                 // Clean receive command buffer
-                if (!GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len)) {
-                    DbpString(_YELLOW_("!!") "Emulator stopped");
+                if (GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len) == false) {
+                    DbpString("Emulator stopped");
                     retval = PM3_EOPABORTED;
                     break;
                 }
+
                 tag_response_info_t *p_response = NULL;
                 LED_B_ON();
 
@@ -314,46 +325,42 @@ void RunMod() {
                     }
                 }
                 if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) {  // Received a REQUEST
-//                    DbpString(_YELLOW_("+") "REQUEST Received");
                     p_response = &responses[RESP_INDEX_ATQA];
                 } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {  // Received a HALT
-//                    DbpString(_YELLOW_("+") "Received a HALT");
                     p_response = NULL;
                     resp = 0;
                 } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) {  // Received a WAKEUP
-//                    DbpString(_YELLOW_("+") "WAKEUP Received");
                     p_response = &responses[RESP_INDEX_ATQA];
                     resp = 0;
                 } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {  // Received request for UID (cascade 1)
-//                    DbpString(_YELLOW_("+") "Request for UID C1");
                     p_response = &responses[RESP_INDEX_UIDC1];
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {  // Received a SELECT (cascade 1)
-//                    DbpString(_YELLOW_("+") "Request for SELECT S1");
                     p_response = &responses[RESP_INDEX_SAKC1];
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {  // Received a RATS request
-//                    DbpString(_YELLOW_("+") "Request for RATS");
                     p_response = &responses[RESP_INDEX_RATS];
                     resp = 1;
                 } else if (receivedCmd[0] == 0xf2 && len == 4) {  // ACKed - Time extension
-                    DbpString(_YELLOW_("!!") "Reader accepted time extension!");
+                    DbpString(_YELLOW_("!!") " Reader accepted time extension!");
                     p_response = NULL;
                 } else if ((receivedCmd[0] == 0xb2 || receivedCmd[0] == 0xb3) && len == 3) { //NACK - Request more time WTX
-                    DbpString(_YELLOW_("!!") "NACK - time extension request?");
+                    DbpString(_YELLOW_("!!") " NACK - time extension request?");
                     if (resp == 2 && lenpacket == 0) {
-                        DbpString(_YELLOW_("!!") "Requesting more time - WTX");
+                        DbpString(_YELLOW_("!!") " Requesting more time - WTX");
                         dynamic_response_info.response_n = 2;
                         dynamic_response_info.response[0] = 0xf2;
                         dynamic_response_info.response[1] = 0x0b;  // Requesting the maximum amount of time
                     } else if (lenpacket == 0) {
-                        DbpString(_YELLOW_("!!") "NACK - ACK - Resend last command!"); // To burn some time as well
+                        DbpString(_YELLOW_("!!") " NACK - ACK - Resend last command!"); // To burn some time as well
                         dynamic_response_info.response[0] = 0xa3;
                         dynamic_response_info.response_n = 1;
                     } else {
-                        DbpString(_YELLOW_("!!") "Avoiding request - Bluetooth data already in memory!!");
+                        DbpString(_YELLOW_("!!") " Avoiding request - Bluetooth data already in memory!!");
                     }
                 } else {
-                    DbpString(_GREEN_("[ ") "Card reader command" _GREEN_(" ]"));
-                    Dbhexdump(len - 2, &receivedCmd[1], false);
+                    if (g_dbglevel == DBG_DEBUG) {
+                        DbpString("[ "_YELLOW_("Card reader command") " ]");
+                        Dbhexdump(len - 2, &receivedCmd[1], false);
+                    }
 
                     if ((receivedCmd[0] == 0x02 || receivedCmd[0] == 0x03) && len > 3) { // Process reader commands
 
@@ -379,16 +386,17 @@ void RunMod() {
 
                     } else {
                         if (lenpacket == 0) {
-                            DbpString(_YELLOW_("!!") "Received unknown command!");
+                            DbpString(_RED_("Received unknown command!"));
                             memcpy(dynamic_response_info.response, receivedCmd, len);
                             dynamic_response_info.response_n = len;
                         } else {
-                            DbpString(_YELLOW_("!!") "Avoiding unknown command - Bluetooth data already in memory!!");
+                            DbpString(_YELLOW_("!!") " Avoiding unknown command - Bluetooth data already in memory !!");
                         }
                     }
                 }
+
                 if (dynamic_response_info.response_n > 0) {
-                    DbpString(_GREEN_("[ ") "Proxmark3 answer" _GREEN_(" ]"));
+                    DbpString("[ " _GREEN_("Proxmark3 answer") " ]");
                     Dbhexdump(dynamic_response_info.response_n, dynamic_response_info.response, false);
                     DbpString("----");
                     if (lenpacket > 0) {
@@ -402,7 +410,7 @@ void RunMod() {
                     if (prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE) == false) {
                         Dbprintf(_YELLOW_("[ ") "Buffer size: %d "_YELLOW_(" ]"), dynamic_response_info.response_n);
                         SpinDelay(500);
-                        DbpString(_YELLOW_("!!") "Error preparing Proxmark to answer!");
+                        DbpString(_RED_("Error preparing Proxmark to answer!"));
                         continue;
                     }
                     p_response = &dynamic_response_info;
@@ -412,13 +420,15 @@ void RunMod() {
                     EmSendPrecompiledCmd(p_response);
                 }
             }
-            switch_off();
 
+            switch_off();
             set_tracing(false);
             BigBuf_free_keep_EM();
             reply_ng(CMD_HF_MIFARE_SIMULATE, retval, NULL, 0);
         }
     }
-    DbpString(_YELLOW_("[=]") "exiting");
+    DbpString("Exit standalone mode!");
+    DbpString("");
+    SpinErr(15, 200, 3);
     LEDsoff();
 }

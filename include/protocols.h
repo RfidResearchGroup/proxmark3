@@ -442,9 +442,10 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FUSE_RA      0x01
 
 // Picopass Pagemode fuses
-#define PICOPASS_NON_SECURE_PAGEMODE 0x01
-#define PICOPASS_SECURE_PAGEMODE     0x11
-
+#define PICOPASS_SECURE_PAGEMODE_AUTH_DISABLED      0x00
+#define PICOPASS_NON_SECURE_PAGEMODE                0x01
+#define PICOPASS_SECURE_PAGEMODE_KEYS_LOCKED        0x02
+#define PICOPASS_SECURE_PAGEMODE_KEYS_MODIFIABLE    0x03
 
 // ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO7816_READ_BINARY             0xB0

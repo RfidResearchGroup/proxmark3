@@ -429,7 +429,7 @@ static void TexcomReverseCode(const uint8_t *code, int length, uint8_t *reverse_
     for (int i = 0; i < length; i++) {
         reverse_code[i] = code[(length - 1) - i];
     }
-};
+}
 
 static int texkom_get_type(texkom_card_select_t *card, bool verbose) {
 
@@ -493,7 +493,7 @@ static int texkom_get_type(texkom_card_select_t *card, bool verbose) {
             noiselvl = TEXKOM_NOISE_THRESHOLD;
         }
 
-        uint32_t implengths[256] = {};
+        uint32_t implengths[256] = { 0 };
         uint32_t implengthslen = 0;
         uint32_t impulseindx = 0;
         uint32_t impulsecnt = 0;
@@ -707,7 +707,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
         //PrintAndLogEx(WARNING, "--- indx: %d, len: %d, max: %d, noise: %d", sindx, slen, maxlvl, noiselvl);
 
-        uint32_t implengths[256] = {};
+        uint32_t implengths[256] = { 0 };
         uint32_t implengthslen = 0;
         uint32_t impulseindx = 0;
         uint32_t impulsecnt = 0;
@@ -872,7 +872,7 @@ static int CmdHFTexkomSim(const char *Cmd) {
         uint8_t data[8];
         uint8_t modulation;
         uint32_t timeout;
-    } PACKED payload = {};
+    } PACKED payload = {0};
 
     bool verbose = arg_get_lit(ctx, 1);
     payload.modulation = 0; // tk-13

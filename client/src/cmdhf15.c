@@ -62,7 +62,7 @@
 
 typedef struct {
     uint8_t lock;
-    uint8_t block[4];
+    uint8_t block[8];
 } t15memory_t;
 
 // structure and database for uid -> tagtype lookups
@@ -849,7 +849,7 @@ static int CmdHF15Info(const char *Cmd) {
                   "hf 15 info -u E011223344556677"
                  );
 
-    void *argtable[6 + 1] = {};
+    void *argtable[6 + 1] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_param_end;
 
@@ -1143,14 +1143,14 @@ static int CmdHF15ELoad(const char *Cmd) {
 static int CmdHF15ESave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 esave",
-                  "Save emulator memory into three files (BIN/EML/JSON) ",
+                  "Save emulator memory into two files (bin/json) ",
                   "hf 15 esave -f hf-15-01020304"
                   "hf 15 esave -b 8 -c 42 -f hf-15-01020304"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of dump"),
-        arg_int0("b", "blocksize", "<dec>", "block size, defaults to 4"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_int0(NULL, "bsize", "<dec>", "block size, defaults to 4"),
         arg_int0("c", "count", "<dec>", "number of blocks to export, defaults to all"),
         arg_param_end
     };
@@ -1176,13 +1176,18 @@ static int CmdHF15ESave(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Downloading %u bytes from emulator memory", bytes);
-    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
         return PM3_ETIMEOUT;
     }
 
-    pm3_save_dump(filename, dump, bytes, jsf15, blocksize);
+    if (blocksize == 8) {
+        pm3_save_dump(filename, dump, bytes, jsf15_v3);
+    } else {
+        pm3_save_dump(filename, dump, bytes, jsf15_v2);
+    }
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -1244,7 +1249,7 @@ static int CmdHF15EView(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Downloading %u bytes from emulator memory", bytes);
-    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
         return PM3_ETIMEOUT;
@@ -1360,12 +1365,13 @@ static int CmdHF15WriteAfi(const char *Cmd) {
                   "hf 15 writeafi -u E011223344556677 --afi 12 -p 0F0F0F0F"
                  );
 
-    void *argtable[5] = {};
-    argtable[0] = arg_param_begin;
-    argtable[1] = arg_str0("u", "uid", "<hex>", "full UID, 8 bytes");
-    argtable[2] = arg_int1(NULL, "afi", "<dec>", "AFI number (0-255)");
-    argtable[3] = arg_str0("p", "pwd", "<hex>", "optional AFI/EAS password");
-    argtable[4] = arg_param_end;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("u", "uid", "<hex>", "full UID, 8 bytes"),
+        arg_int1(NULL, "afi", "<dec>", "AFI number (0-255)"),
+        arg_str0("p", "pwd", "<hex>", "optional AFI/EAS password"),
+        arg_param_end
+    };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
@@ -1443,7 +1449,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
                   "hf 15 writedsfid -u E011223344556677 --dsfid 12"
                  );
 
-    void *argtable[6 + 2] = {};
+    void *argtable[6 + 2] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1(NULL, "dsfid", "<dec>", "DSFID number (0-255)");
     argtable[arglen++] = arg_param_end;
@@ -1537,15 +1543,15 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
 static int CmdHF15Dump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 dump",
-                  "This command dumps the contents of a ISO-15693 tag and save it to file",
+                  "This command dumps the contents of a ISO-15693 tag and save to file (bin/json)",
                   "hf 15 dump\n"
                   "hf 15 dump -*\n"
                   "hf 15 dump -u E011223344556677 -f hf-15-my-dump.bin"
                  );
 
-    void *argtable[6 + 2] = {};
+    void *argtable[6 + 2] = {0};
     uint8_t arglen = arg_add_default(argtable);
-    argtable[arglen++] = arg_str0("f", "file", "<fn>", "filename of dump"),
+    argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
                          argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1604,8 +1610,11 @@ static int CmdHF15Dump(const char *Cmd) {
     // memory.
     t15memory_t mem[256];
 
-    uint8_t data[256 * 4] = {0};
+    uint8_t data[256 * 8] = {0};
     memset(data, 0, sizeof(data));
+
+    // keep track of which block length tag returned?
+    uint8_t blklen = 4;
 
     for (int retry = 0; (retry < 5 && blocknum < 0x100); retry++) {
 
@@ -1646,9 +1655,15 @@ static int CmdHF15Dump(const char *Cmd) {
                 break;
             }
 
+            // lock byte value
             mem[blocknum].lock = resp.data.asBytes[0];
-            memcpy(mem[blocknum].block, resp.data.asBytes + 1, 4);
-            memcpy(data + (blocknum * 4), resp.data.asBytes + 1, 4);
+
+            // is tag responding with 4 or 8 bytes?
+            if (resp.length == 11) {
+                blklen = 8;
+            }
+            memcpy(mem[blocknum].block, resp.data.asBytes + 1, blklen);
+            memcpy(data + (blocknum * 4), resp.data.asBytes + 1, blklen);
 
             retry = 0;
             blocknum++;
@@ -1658,6 +1673,10 @@ static int CmdHF15Dump(const char *Cmd) {
     }
 
     DropField();
+
+    if (blklen == 8) {
+        PrintAndLogEx(INFO, "8 byte block length detected");
+    }
 
     PrintAndLogEx(NORMAL, "\n");
     PrintAndLogEx(INFO, "block#   | data         |lck| ascii");
@@ -1672,9 +1691,9 @@ static int CmdHF15Dump(const char *Cmd) {
         PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s"
                       , i
                       , i
-                      , sprint_hex(mem[i].block, 4)
+                      , sprint_hex(mem[i].block, blklen)
                       , lck
-                      , sprint_ascii(mem[i].block, 4)
+                      , sprint_ascii(mem[i].block, blklen)
                      );
     }
     PrintAndLogEx(NORMAL, "");
@@ -1687,8 +1706,11 @@ static int CmdHF15Dump(const char *Cmd) {
         FillFileNameByUID(fptr, SwapEndian64(uid, sizeof(uid), 8), "-dump", sizeof(uid));
     }
 
-    size_t datalen = blocknum * 4;
-    pm3_save_dump(filename, data, datalen, jsf15, 4);
+    if (blklen == 8) {
+        pm3_save_dump(filename, data, (size_t)(blocknum * blklen), jsf15_v3);
+    } else {
+        pm3_save_dump(filename, data, (size_t)(blocknum * blklen), jsf15_v2);
+    }
     return PM3_SUCCESS;
 }
 
@@ -1771,7 +1793,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
                   "hf 15 rdmulti -u E011223344556677 -b 12 --cnt 3 -> read three blocks"
                  );
 
-    void *argtable[6 + 3] = {};
+    void *argtable[6 + 3] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", NULL, "<dec>", "first page number (0-255)");
     argtable[arglen++] = arg_int1(NULL, "cnt", "<dec>", "number of pages (1-6)");
@@ -1907,7 +1929,7 @@ static int CmdHF15Readblock(const char *Cmd) {
                   "hf 15 rdbl -u E011223344556677 -b 12"
                  );
 
-    void *argtable[6 + 2] = {};
+    void *argtable[6 + 2] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
     argtable[arglen++] = arg_param_end;
@@ -2000,15 +2022,16 @@ static int CmdHF15Readblock(const char *Cmd) {
         return PM3_EWRONGANSWER;
     }
 
+
     // print response
     char lck[16] = {0};
     if (data[1]) {
-        snprintf(lck, sizeof(lck), _RED_("%d"), data[1]);
+        snprintf(lck, sizeof(lck), _RED_("%02X"), data[1]);
     } else {
-        snprintf(lck, sizeof(lck), "%d", data[1]);
+        snprintf(lck, sizeof(lck), "%02X", data[1]);
     }
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "      #%3d  |lck| ascii", block);
+    PrintAndLogEx(INFO, "#%3d        |lck| ascii", block);
     PrintAndLogEx(INFO, "------------+---+------");
     PrintAndLogEx(INFO, "%s| %s | %s", sprint_hex(data + 2, resp.length - 4), lck, sprint_ascii(data + 2, resp.length - 4));
     PrintAndLogEx(NORMAL, "");
@@ -2068,7 +2091,7 @@ static int CmdHF15Write(const char *Cmd) {
                   "hf 15 wrbl -u E011223344556677 -b 12 -d AABBCCDD"
                  );
 
-    void *argtable[6 + 4] = {};
+    void *argtable[6 + 4] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
     argtable[arglen++] = arg_str1("d", "data", "<hex>", "data, 4 bytes");
@@ -2153,15 +2176,15 @@ static int CmdHF15Write(const char *Cmd) {
 static int CmdHF15Restore(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 restore",
-                  "This command restore the contents of a dump file onto a ISO-15693 tag",
+                  "This command restore the contents of a dump file (bin/eml/json) onto a ISO-15693 tag",
                   "hf 15 restore\n"
                   "hf 15 restore -*\n"
                   "hf 15 restore -u E011223344556677 -f hf-15-my-dump.bin"
                  );
 
-    void *argtable[6 + 5] = {};
+    void *argtable[6 + 5] = {0};
     uint8_t arglen = arg_add_default(argtable);
-    argtable[arglen++] = arg_str0("f", "file", "<fn>", "filename of dump"),
+    argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
                          argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)"),
                                               argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
                                                       argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
@@ -2834,7 +2857,7 @@ static int CmdHF15View(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>",  "filename of dump (bin/eml/json)"),
+        arg_str1("f", "file", "<fn>",  "Specify a filename for dump file"),
 //        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+// //-----------------------------------------------------------------------------
 // Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -469,7 +469,7 @@ int CmdFlexdemod(const char *Cmd) {
             sum += data[i++];
         }
         bits[bit] = (sum > 0) ? 1 : 0;
-        PrintAndLogEx(NORMAL, "bit %d sum %d", bit, sum);
+        // PrintAndLogEx(NORMAL, "bit %d sum %d", bit, sum);
     }
 
     for (bit = 0; bit < 64; bit++) {

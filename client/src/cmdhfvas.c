@@ -356,7 +356,7 @@ static int VASReader(uint8_t *pidHash, const char *url, size_t urlLen, uint8_t *
     };
 
     if (SelectCard14443A_4_WithParameters(false, false, NULL, &polling_parameters) != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "No card in field");
+        PrintAndLogEx(WARNING, "No ISO14443-A Card in field");
         return PM3_ECARDEXCHANGE;
     }
 
@@ -586,10 +586,10 @@ static command_t CommandTable[] = {
 int CmdHFVAS(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
-};
+}
 
 static int CmdHelp(const char *Cmd) {
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return PM3_SUCCESS;
-};
+}

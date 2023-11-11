@@ -994,7 +994,7 @@ int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card
     // check result
     if (resp.oldarg[0] == 0) {
         if (verbose) {
-            PrintAndLogEx(FAILED, "No card in field");
+            PrintAndLogEx(WARNING, "No ISO1443-A Card in field");
         }
         return PM3_ECARDEXCHANGE;
     }
@@ -1595,6 +1595,7 @@ typedef enum {
     MTEMV = 128,
     MTFUDAN = 256,
     MTISO18092 = 512,
+    MT424 = 1024,
 } nxp_mifare_type_t;
 
 // Based on NXP AN10833 Rev 3.6 and NXP AN10834 Rev 4.1
@@ -1723,7 +1724,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
                 }
 
                 printTag("NTAG 4xx");
-                type |= MTDESFIRE;
+                type |= (MTDESFIRE | MT424);
             }
         } else if ((sak & 0x04) == 0x04) {
             printTag("Any MIFARE CL1");
@@ -1920,6 +1921,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isEMV = false;
     bool isFUDAN = false;
     bool isISO18092 = false;
+    bool isNTAG424 = false;
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
@@ -1929,6 +1931,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
         isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
         isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
+        isNTAG424 = ((nxptype & MT424) == MT424);
 
         if ((nxptype & MTOTHER) == MTOTHER)
             isMifareClassic = true;
@@ -1958,6 +1961,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
                 isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
                 isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
+                isNTAG424 = ((nxptype & MT424) == MT424);
 
                 if ((nxptype & MTOTHER) == MTOTHER)
                     isMifareClassic = true;
@@ -2010,8 +2014,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         // ******** is card of the MFU type (UL/ULC/NTAG/ etc etc)
                         DropField();
 
-                        uint32_t tagT = GetHF14AMfU_Type();
-                        if (tagT != UL_ERROR) {
+                        uint64_t tagT = GetHF14AMfU_Type();
+                        if (tagT != MFU_TT_UL_ERROR) {
                             ul_print_type(tagT, 0);
                             isMifareUltralight = true;
                             printTag("MIFARE Ultralight/C/NTAG Compatible");
@@ -2461,6 +2465,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         */
     }
 
+    if (isNTAG424) {
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf ntag424 info") "`");
+    }
+
+
     PrintAndLogEx(NORMAL, "");
     DropField();
     return select_status;
@@ -2748,6 +2757,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     bool verbose = arg_get_lit(ctx, 2);
+    bool verbose2 = arg_get_lit(ctx, 2) > 1;
     CLIParserFree(ctx);
 
     bool activate_field = true;
@@ -2934,11 +2944,24 @@ int CmdHF14ANdefRead(const char *Cmd) {
         memcpy(ndef_file + (i - offset), response, segment_size);
     }
 
-    if (fnlen != 0) {
-        saveFile(filename, ".bin", ndef_file, ndef_size);
+    if (verbose2) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("NDEF raw") " ----------------");
+        print_buffer(ndef_file, ndef_size, 1);
     }
 
     NDEFRecordsDecodeAndPrint(ndef_file, ndef_size, verbose);
+
+    pm3_save_dump(filename, ndef_file, ndef_size, jsfNDEF);
+
+    if (verbose == false) {
+        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf 14a ndefread -v`") " for more details");
+    } else {
+        if (verbose2 == false) {
+            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf 14a ndefread -vv`") " for more details");
+        }
+    }
+
     free(ndef_file);
     return PM3_SUCCESS;
 }

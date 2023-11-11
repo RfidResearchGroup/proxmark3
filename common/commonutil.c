@@ -485,3 +485,45 @@ void reverse_array_copy(const uint8_t *src, int src_len, uint8_t *dest) {
         dest[i] = src[(src_len - 1) - i];
     }
 }
+
+static int hexchar_to_dec(char ch) {
+    if (ch >= '0' && ch <= '9') {
+        return ch - '0';
+    }
+    if (ch >= 'a' && ch <= 'f') {
+        return ch - 'a' + 10;
+    }
+    if (ch >= 'A' && ch <= 'F') {
+        return ch - 'A' + 10;
+    }
+    return -1;
+}
+
+// no spaces allowed for input hex string
+bool hexstr_to_byte_array(const char *hexstr, uint8_t *d, size_t *n) {
+
+    size_t hexstr_len = strlen(hexstr);
+    if (hexstr_len & 1) {
+        return false;
+    }
+
+    *n = (hexstr_len >> 1);
+
+    for (int i = 0; i < *n; i++) {
+
+        char c1 = *hexstr++;
+        char c2 = *hexstr++;
+
+        if (c1 == '\0' || c2 == '\0') {
+            return false;
+        }
+
+        int b = (hexchar_to_dec(c1) << 4) | hexchar_to_dec(c2);
+        if (b < 0) {
+            // Error: invalid hex character
+            return false;
+        }
+        d[i] = (uint8_t) b;
+    }
+    return true;
+}

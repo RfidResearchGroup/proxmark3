@@ -655,12 +655,12 @@ static int CmdHfLTOWriteBlock(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf lto wrbl",
                   "Write data to block on LTO tag",
-                  "hf lto wrbl --block 128 -d 0001020304050607080910111213141516171819202122232425262728293031");
+                  "hf lto wrbl --blk 128 -d 0001020304050607080910111213141516171819202122232425262728293031");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("d", "data", "<hex>", "32 bytes of data to write (64 hex symbols, no spaces)"),
-        arg_int1(NULL, "block", "<dec>", "The  block number to write to as an integer"),
+        arg_int1(NULL, "blk", "<dec>", "The  block number to write to as an integer"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -771,8 +771,7 @@ static int CmdHfLTODump(const char *Cmd) {
         char *fptr = filename + snprintf(filename, sizeof(filename), "hf-lto-");
         FillFileNameByUID(fptr, dump, "-dump", 5);
     }
-    saveFile(filename, ".bin", dump, dump_len);
-    saveFileEML(filename, dump, dump_len, 32);
+    pm3_save_dump(filename, dump, dump_len, jsfLto);
     free(dump);
     return PM3_SUCCESS;
 }

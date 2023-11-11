@@ -35,6 +35,7 @@
 #include "pmflash.h"      // rdv40validation_t
 #include "cmdflashmem.h"  // get_signature..
 #include "uart/uart.h" // configure timeout
+#include "util_posix.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -44,6 +45,7 @@ static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
         case 0x270B0A40:
             asBuff = "AT91SAM7S512 Rev A";
             break;
+        case 0x270B0A4E:
         case 0x270B0A4F:
             asBuff = "AT91SAM7S512 Rev B";
             break;
@@ -152,6 +154,7 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
         case 0x270B0A40:
             asBuff = "AT91SAM7S512 Rev A";
             break;
+        case 0x270B0A4E:
         case 0x270B0A4F:
             asBuff = "AT91SAM7S512 Rev B";
             break;
@@ -809,19 +812,29 @@ static int CmdStatus(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw status",
                   "Show runtime status information about the connected Proxmark3",
-                  "hw status"
+                  "hw status\n"
+                  "hw status --ms 1000 -> Test connection speed with 1000ms timeout\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_int0("m", "ms", "<ms>", "speed test timeout in micro seconds"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int32_t speedTestTimeout = arg_get_int_def(ctx, 1, -1);
     CLIParserFree(ctx);
+
     clearCommandBuffer();
     PacketResponseNG resp;
-    SendCommandNG(CMD_STATUS, NULL, 0);
-    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000) == false) {
+    if (speedTestTimeout < 0) {
+        speedTestTimeout = 0;
+        SendCommandNG(CMD_STATUS, NULL, 0);
+    } else {
+        SendCommandNG(CMD_STATUS, (uint8_t *)&speedTestTimeout, sizeof(speedTestTimeout));
+    }
+
+    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000 + speedTestTimeout) == false) {
         PrintAndLogEx(WARNING, "Status command timeout. Communication speed test timed out");
         return PM3_ETIMEOUT;
     }
@@ -931,14 +944,14 @@ static int CmdTimeout(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw timeout",
                   "Set the communication timeout on the client side",
-                  "hw timeout --> Show current timeout\n"
-                  "hw timeout -t 20 --> Set the timeout to 20ms\n"
-                  "hw timeout -t 500 --> Set the timeout to 500ms\n"
+                  "hw timeout            --> Show current timeout\n"
+                  "hw timeout -m 20      --> Set the timeout to 20ms\n"
+                  "hw timeout --ms 500   --> Set the timeout to 500ms\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("t", "timeout", "<dec>", "timeout in ms"),
+        arg_int0("m", "ms", "<ms>", "timeout in micro seconds"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -949,20 +962,20 @@ static int CmdTimeout(const char *Cmd) {
 
     // timeout is not given/invalid, just show the current timeout then return
     if (arg < 0) {
-        PrintAndLogEx(INFO, "Current communication timeout: %ums", oldTimeout);
+        PrintAndLogEx(INFO, "Current communication timeout... " _GREEN_("%u") " ms", oldTimeout);
         return PM3_SUCCESS;
     }
 
     uint32_t newTimeout = arg;
     // UART_USB_CLIENT_RX_TIMEOUT_MS is considered as the minimum required timeout.
     if (newTimeout < UART_USB_CLIENT_RX_TIMEOUT_MS) {
-        PrintAndLogEx(WARNING, "Timeout less than %ums might cause errors.", UART_USB_CLIENT_RX_TIMEOUT_MS);
+        PrintAndLogEx(WARNING, "Timeout less than %u ms might cause errors.", UART_USB_CLIENT_RX_TIMEOUT_MS);
     } else if (newTimeout > 5000) {
-        PrintAndLogEx(WARNING, "Timeout greater than 5000ms makes the client unresponsive.");
+        PrintAndLogEx(WARNING, "Timeout greater than 5000 ms makes the client unresponsive.");
     }
     uart_reconfigure_timeouts(newTimeout);
-    PrintAndLogEx(INFO, "Old communication timeout: %ums", oldTimeout);
-    PrintAndLogEx(INFO, "New communication timeout: %ums", newTimeout);
+    PrintAndLogEx(INFO, "Old communication timeout... %u ms", oldTimeout);
+    PrintAndLogEx(INFO, "New communication timeout... " _GREEN_("%u") " ms", newTimeout);
     return PM3_SUCCESS;
 }
 
@@ -979,6 +992,7 @@ static int CmdPing(const char *Cmd) {
         arg_u64_0("l", "len", "<dec>", "length of payload to send"),
         arg_param_end
     };
+
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint32_t len = arg_get_u32_def(ctx, 1, 32);
     CLIParserFree(ctx);
@@ -987,7 +1001,7 @@ static int CmdPing(const char *Cmd) {
         len = PM3_CMD_DATA_SIZE;
 
     if (len) {
-        PrintAndLogEx(INFO, "Ping sent with payload len " _YELLOW_("%d"), len);
+        PrintAndLogEx(INFO, "Ping sent with payload len... " _YELLOW_("%d"), len);
     } else {
         PrintAndLogEx(INFO, "Ping sent");
     }
@@ -996,16 +1010,22 @@ static int CmdPing(const char *Cmd) {
     PacketResponseNG resp;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
 
-    for (uint16_t i = 0; i < len; i++)
+    for (uint16_t i = 0; i < len; i++) {
         data[i] = i & 0xFF;
+    }
 
+    uint64_t tms = msclock();
     SendCommandNG(CMD_PING, data, len);
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
+        tms = msclock() - tms;
         if (len) {
             bool error = (memcmp(data, resp.data.asBytes, len) != 0);
-            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") " and content () %s )", error ? _RED_("fail") : _GREEN_("ok"));
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received")
+                          " in " _YELLOW_("%" PRIu64) " ms and content ( %s )",
+                          tms, error ? _RED_("fail") : _GREEN_("ok"));
         } else {
-            PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received"));
+            PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received")
+                          " in " _YELLOW_("%" PRIu64) " ms", tms);
         }
     } else
         PrintAndLogEx(WARNING, "Ping response " _RED_("timeout"));

@@ -370,14 +370,13 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
                   "Dumps device SPIFFS file to a local file\n"
                   "Size is handled by first sending a STAT command against file to verify existence",
                   "mem spiffs dump -s tag.bin             --> download binary file from device\n"
-                  "mem spiffs dump -s tag.bin -d aaa -e   --> download tag.bin, save as aaa.eml format"
+                  "mem spiffs dump -s tag.bin -d a001 -e   --> download tag.bin, save as `a001.bin`"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("s", "src", "<fn>", "SPIFFS file to save"),
         arg_str0("d", "dest", "<fn>", "file name to save to <w/o .bin>"),
-        arg_lit0("e", "eml", "also save in EML format"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -390,7 +389,6 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
     char dest[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)dest, FILE_PATH_SIZE, &dlen);
 
-    bool eml = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     // get size from spiffs itself !
@@ -433,15 +431,6 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
     else
         saveFile(fn, ".bin", dump, len); // default
 
-    if (eml) {
-        uint8_t eml_len = 16;
-        if (strstr(fn, "class") != NULL)
-            eml_len = 8;
-        else if (strstr(fn, "mfu") != NULL)
-            eml_len = 4;
-
-        saveFileEML(fn, dump, len, eml_len);
-    }
     free(dump);
     return PM3_SUCCESS;
 }

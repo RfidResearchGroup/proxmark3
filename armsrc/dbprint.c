@@ -76,11 +76,11 @@ void Dbprintf(const char *fmt, ...) {
 // prints HEX & ASCII
 void Dbhexdump(int len, const uint8_t *d, bool bAsci) {
 #if DEBUG
-    char ascii[9];
+    char ascii[17];
 
     while (len > 0) {
 
-        int l = (len > 8) ? 8 : len;
+        int l = (len > 16) ? 16 : len;
 
         memcpy(ascii, d, l);
         ascii[l] = 0;
@@ -97,33 +97,41 @@ void Dbhexdump(int len, const uint8_t *d, bool bAsci) {
         else
             Dbprintf("%*D", l, d, " ");
 
-        len -= 8;
-        d += 8;
+        len -= 16;
+        d += 16;
     }
 #endif
 }
 
-void print_result(const char *name, const uint8_t *buf, size_t len) {
+void print_result(const char *name, const uint8_t *d, size_t n) {
 
-    const uint8_t *p = buf;
-    uint16_t tmp = len & 0xFFF0;
+    const uint8_t *p = d;
+    uint16_t tmp = n & 0xFFF0;
 
-    for (; p - buf < tmp; p += 16) {
+    for (; p - d < tmp; p += 16) {
         Dbprintf("[%s: %02d/%02d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
                  name,
-                 p - buf,
-                 len,
+                 p - d,
+                 n,
                  p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]
                 );
     }
-    if (len % 16 != 0) {
+
+    if (n % 16 != 0) {
         char s[46] = {0};
         char *sp = s;
-        for (; p - buf < len; p++) {
+        for (; p - d < n; p++) {
             sprintf(sp, "%02x ", p[0]);
             sp += 3;
         }
-        Dbprintf("[%s: %02d/%02d] %s", name, p - buf, len, s);
+        Dbprintf("[%s: %02d/%02d] %s", name, p - d, n, s);
+    }
+}
+
+// Prints message and hexdump
+void print_dbg(char *msg, uint8_t *d, uint16_t n) {
+    if (g_dbglevel == DBG_DEBUG) {
+        print_result(msg, d, n);
     }
 }
 

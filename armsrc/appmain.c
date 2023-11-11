@@ -62,7 +62,9 @@
 #include "crc16.h"
 #include "protocols.h"
 #include "mifareutil.h"
-
+#include "sam_picopass.h"
+#include "sam_seos.h"
+#include "sam_mfc.h"
 
 #ifdef WITH_LCD
 #include "LCD_disabled.h"
@@ -367,11 +369,10 @@ static void print_debug_level(void) {
 
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
-static void printConnSpeed(void) {
+static void printConnSpeed(uint32_t wait) {
     DbpString(_CYAN_("Transfer Speed"));
     Dbprintf("  Sending packets to client...");
 
-#define CONN_SPEED_TEST_MIN_TIME 500 // in milliseconds
     uint8_t *test_data = BigBuf_get_addr();
     uint32_t start_time = GetTickCount();
     uint32_t delta_time = 0;
@@ -379,7 +380,7 @@ static void printConnSpeed(void) {
 
     LED_B_ON();
 
-    while (delta_time < CONN_SPEED_TEST_MIN_TIME) {
+    while (delta_time < wait) {
         reply_ng(CMD_DOWNLOADED_BIGBUF, PM3_SUCCESS, test_data, PM3_CMD_DATA_SIZE);
         bytes_transferred += PM3_CMD_DATA_SIZE;
         delta_time = GetTickCountDelta(start_time);
@@ -388,13 +389,15 @@ static void printConnSpeed(void) {
 
     Dbprintf("  Time elapsed................... %dms", delta_time);
     Dbprintf("  Bytes transferred.............. %d", bytes_transferred);
-    Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%d") " bytes/s", 1000 * bytes_transferred / delta_time);
+    if (delta_time) {
+        Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%llu") " bytes/s", 1000 * (uint64_t)bytes_transferred / delta_time);
+    }
 }
 
 /**
   * Prints runtime information about the PM3.
 **/
-static void SendStatus(void) {
+static void SendStatus(uint32_t wait) {
     BigBuf_print_status();
     Fpga_print_status();
 #ifdef WITH_FLASH
@@ -410,7 +413,7 @@ static void SendStatus(void) {
 #ifdef WITH_ISO14443a
     printHf14aConfig();   // HF 14a config
 #endif
-    printConnSpeed();
+    printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
 
     print_stack_usage();
@@ -1684,6 +1687,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_MIFARE_EML_MEMCLR: {
             MifareEMemClr();
             reply_ng(CMD_HF_MIFARE_EML_MEMCLR, PM3_SUCCESS, NULL, 0);
+            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMSET: {
@@ -2038,6 +2042,21 @@ static void PacketReceived(PacketCommandNG *packet) {
             fwdata = NULL;
             break;
         }
+
+        case CMD_HF_SAM_PICOPASS: {
+            sam_picopass_get_pacs();
+            break;
+        }
+        case CMD_HF_SAM_SEOS: {
+//            sam_seos_get_pacs();
+            break;
+        }
+
+        case CMD_HF_SAM_MFC: {
+//            sam_mfc_get_pacs();
+            break;
+        }
+
 #endif
 
 #ifdef WITH_FPC_USART
@@ -2645,7 +2664,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_STATUS: {
-            SendStatus();
+            if (packet->length == 4)
+                SendStatus(packet->data.asDwords[0]);
+            else
+                SendStatus(CONN_SPEED_TEST_MIN_TIME_DEFAULT);
             break;
         }
         case CMD_TIA: {

@@ -108,20 +108,20 @@ typedef struct {
       return r->value; \
    }
 
-MAKE_ENUM_TYPE(uint8_t);
+MAKE_ENUM_TYPE(uint8_t)
 
 // KSX6924LookupCardType
 MAKE_ENUM_CONST(CardType, uint8_t,
 { 0x00, "Pre-paid" },
 { 0x10, "Post-pay" },
 { 0x20, "Mobile post-pay" },
-               );
+               )
 
 // KSX6924LookupAlg
 MAKE_ENUM_CONST(Alg, uint8_t,
 { 0x00, "SEED" },
 { 0x10, "3DES" },
-               );
+               )
 
 // KSX6924LookupTMoneyIDCenter
 MAKE_ENUM_CONST(TMoneyIDCenter, uint8_t,
@@ -139,20 +139,17 @@ MAKE_ENUM_CONST(TMoneyIDCenter, uint8_t,
 { 0x0b, "EB Card Corporation" },
 { 0x0c, "Seoul Bus Transport Association" },
 { 0x0d, "Cardnet" },
-               );
+               )
 
 // KSX6924LookupTMoneyUserCode
 MAKE_ENUM_CONST(TMoneyUserCode, uint8_t,
 { 0x01, "Regular/normal" },
 { 0x02, "Child" },
-
 { 0x04, "Youth" },
-
 { 0x06, "elderly" },
-
 { 0x0f, "Test" },
 { 0xff, "Inactive" },
-               );
+               )
 
 // KSX6924LookupTMoneyDisRate
 MAKE_ENUM_CONST(TMoneyDisRate, uint8_t,
@@ -163,7 +160,7 @@ MAKE_ENUM_CONST(TMoneyDisRate, uint8_t,
 
 { 0x20, "Merit, basic" },
 { 0x21, "Merit, companion" },
-               );
+               )
 
 // KSX6924LookupTMoneyTCode
 MAKE_ENUM_CONST(TMoneyTCode, uint8_t,
@@ -171,7 +168,7 @@ MAKE_ENUM_CONST(TMoneyTCode, uint8_t,
 { 0x01, "SK Telecom" },
 { 0x02, "Korea Telecom" },
 { 0x03, "LG Uplus" },
-               );
+               )
 
 // KSX6924LookupTMoneyCCode
 MAKE_ENUM_CONST(TMoneyCCode, uint8_t,
@@ -187,7 +184,7 @@ MAKE_ENUM_CONST(TMoneyCCode, uint8_t,
 { 0x09, "Woori Card" },
 { 0x0a, "Hana SK Card" },
 { 0x0b, "Hyundai Card" },
-               );
+               )
 
 static const char *KSX6924_UNKNOWN = "Unknown";
 
@@ -320,7 +317,7 @@ bool KSX6924ParsePurseInfo(const uint8_t *purseInfo, size_t purseLen, struct ksx
 
     // TODO
     return true;
-};
+}
 
 /**
  * Prints out a ksx6924_purse_info
@@ -523,7 +520,7 @@ bool KSX6924ParseInitializeCardResponse(const uint8_t *initCardResponse, size_t 
 
     // TODO
     return true;
-};
+}
 
 /**
  * Prints out a Initialize Card response

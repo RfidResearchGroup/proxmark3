@@ -29,15 +29,34 @@
 #include "mifare/mifarehost.h"
 #include "cmdhfmfu.h"
 
+#include "protocols.h"    // iclass defines
+#include "cmdhftopaz.h"   // TOPAZ defines
+#include "mifare/mifaredefault.h"     // MFP / AES defines
+
+typedef union {
+    void *v;
+    uint8_t *bytes;
+    mfu_dump_t *mfu;
+    topaz_tag_t *topaz;
+    iso14a_mf_extdump_t *mfc;
+    iso14a_mf_dump_ev1_t *mfc_ev1;
+} udata_t;
+
 typedef enum {
     jsfRaw,
     jsfCardMemory,
+    jsfMfc_v2,
+    jsfMfc_v3,
     jsfMfuMemory,
     jsfHitag,
     jsfIclass,
     jsf14b,
+    jsf14b_v2,
     jsf15,
+    jsf15_v2,
+    jsf15_v3,
     jsfLegic,
+    jsfLegic_v2,
     jsfT55x7,
     jsfT5555,
     jsfMfPlusKeys,
@@ -49,6 +68,9 @@ typedef enum {
     jsfFido,
     jsfFudan,
     jsfTopaz,
+    jsfLto,
+    jsfCryptorf,
+    jsfNDEF,
 } JSONFileType;
 
 typedef enum {
@@ -57,7 +79,26 @@ typedef enum {
     JSON,
     DICTIONARY,
     MCT,
+    FLIPPER,
 } DumpFileType_t;
+
+typedef enum {
+    MFU_DF_UNKNOWN,
+    MFU_DF_PLAINBIN,
+    MFU_DF_OLDBIN,
+    MFU_DF_NEWBIN
+} mfu_df_e;
+
+typedef enum {
+    NFC_DF_UNKNOWN,
+    NFC_DF_MFC,
+    NFC_DF_MFU,
+    NFC_DF_MFDES,
+    NFC_DF_14_3A,
+    NFC_DF_14_3B,
+    NFC_DF_14_4A,
+    NFC_DF_PICOPASS,
+} nfc_df_e;
 
 int fileExists(const char *filename);
 
@@ -79,19 +120,6 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
  * @return 0 for ok, 1 for failz
  */
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen);
-
-/**
- * @brief Utility function to save data to a textfile (EML). This method takes a preferred name, but if that
- * file already exists, it tries with another name until it finds something suitable.
- * E.g. dumpdata-15.txt
- *
- * @param preferredName
- * @param data The binary data to write to the file
- * @param datalen the length of the data
- * @param blocksize the length of one row
- * @return 0 for ok, 1 for failz
-*/
-int saveFileEML(const char *preferredName, uint8_t *data, size_t datalen, size_t blocksize);
 
 /** STUB
  * @brief Utility function to save JSON data to a file. This method takes a preferred name, but if that
@@ -177,6 +205,19 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen);
 int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen);
 
 /**
+ * @brief  Utility function to load data from a textfile (NFC). This method takes a preferred name.
+ * E.g. dumpdata-15.nfc
+ *
+ * @param preferredName
+ * @param data The data array to store the loaded bytes from file
+ * @param maxdatalen maximum size of data array in bytes
+ * @param datalen the number of bytes loaded from file
+ * @param ft
+ * @return 0 for ok, 1 for failz
+*/
+int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, nfc_df_e ft);
+
+/**
  * @brief  Utility function to load data from a JSON textfile. This method takes a preferred name.
  * E.g. dumpdata-15.json
  *
@@ -235,12 +276,6 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
 
 int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen);
 
-typedef enum {
-    MFU_DF_UNKNOWN,
-    MFU_DF_PLAINBIN,
-    MFU_DF_OLDBIN,
-    MFU_DF_NEWBIN
-} mfu_df_e;
 /**
  * @brief  Utility function to check and convert plain mfu dump format to new mfu binary format.
  * plain dumps doesn't have any extra data, like version, signature etc.
@@ -250,7 +285,8 @@ typedef enum {
  * @return PM3_SUCCESS for ok, PM3_ESOFT for fails
 */
 int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
-mfu_df_e detect_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
+mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose);
+nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose);
 
 int searchAndList(const char *pm3dir, const char *ext);
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent);
@@ -276,18 +312,33 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
 
 
 /** STUB
- * @brief Utility function to save data to three file files (BIN/EML/JSON).
+ * @brief Utility function to save data to three file files (BIN/JSON).
  * It also tries to save according to user preferences set dump folder paths.
  * E.g. dumpdata.bin
- * E.g. dumpdata.eml
  * E.g. dumpdata.json
-
+ *
  * @param fn
  * @param d The binary data to write to the file
  * @param n the length of the data
  * @param jsft json format type for the different memory cards (MFC, MFUL, LEGIC, 14B, 15, ICLASS etc)
- * @param blocksize
  * @return PM3_SUCCESS if OK
  */
-int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, size_t blocksize);
+int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
+
+/** STUB
+ * @brief Utility function to save data to three file files (BIN/JSON).
+ * It also tries to save according to user preferences set dump folder paths.
+ * E.g. dumpdata.bin
+ * E.g. dumpdata.json
+ *
+ * This function is dedicated for MIFARE CLASSIC dumps.  Checking for 4 or 7 byte UID in indata.
+ * Saves the corrected data in the json file
+ *
+ * @param fn
+ * @param d The binary data to write to the file
+ * @param n the length of the data
+ * @param jsft json format type for the different memory cards (MFC, MFUL, LEGIC, 14B, 15, ICLASS etc)
+ * @return PM3_SUCCESS if OK
+ */
+int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
 #endif // FILEUTILS_H

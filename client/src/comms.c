@@ -666,19 +666,28 @@ int TestProxmark(pm3_device_t *dev) {
     g_conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
     g_conn.uart_speed = g_pm3_capabilities.baudrate;
 
-    bool is_tcp_conn = (memcmp(g_conn.serial_port_name, "tcp:", 4) == 0);
+    bool is_tcp_conn = (g_conn.send_via_ip == PM3_TCPv4 || g_conn.send_via_ip == PM3_TCPv6);
     bool is_bt_conn = (memcmp(g_conn.serial_port_name, "bt:", 3) == 0);
+    bool is_udp_conn = (g_conn.send_via_ip == PM3_UDPv4 || g_conn.send_via_ip == PM3_UDPv6);
 
-    PrintAndLogEx(INFO, "Communicating with PM3 over %s%s%s",
+    PrintAndLogEx(INFO, "Communicating with PM3 over %s%s%s%s",
                   (g_conn.send_via_fpc_usart) ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
                   (is_tcp_conn) ? " over " _YELLOW_("TCP") : "",
-                  (is_bt_conn) ? " over " _YELLOW_("BT") : ""
+                  (is_bt_conn) ? " over " _YELLOW_("BT") : "",
+                  (is_udp_conn) ? " over " _YELLOW_("UDP") : ""
                  );
-
     if (g_conn.send_via_fpc_usart) {
         PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", g_conn.uart_speed);
     } else {
-        int res = uart_reconfigure_timeouts(is_tcp_conn ? UART_TCP_CLIENT_RX_TIMEOUT_MS : UART_USB_CLIENT_RX_TIMEOUT_MS);
+        int res;
+        if (g_conn.send_via_local_ip) {
+            // (g_conn.send_via_local_ip == true) -> ((is_tcp_conn || is_udp_conn) == true)
+            res = uart_reconfigure_timeouts(is_tcp_conn ? UART_TCP_LOCAL_CLIENT_RX_TIMEOUT_MS : UART_UDP_LOCAL_CLIENT_RX_TIMEOUT_MS);
+        } else if (is_tcp_conn || is_udp_conn) {
+            res = uart_reconfigure_timeouts(UART_NET_CLIENT_RX_TIMEOUT_MS);
+        } else {
+            res = uart_reconfigure_timeouts(UART_USB_CLIENT_RX_TIMEOUT_MS);
+        }
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -789,7 +798,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
             show_warning = false;
         }
         // just to avoid CPU busy loop:
-        msleep(10);
+        msleep(1);
     }
     return false;
 }

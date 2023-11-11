@@ -50,14 +50,12 @@ jobs:
       - name: Build
         env:
           V: 1
-        run: make
+        run: make -j$((`sysctl -n hw.ncpu` + 1))
 
       - name: Test
         run: make check
 
   macos-make-btaddon:
-    if: always()
-    needs: [macos-make]
     runs-on: macos-latest
 
     steps:
@@ -93,14 +91,12 @@ jobs:
         env:
           V: 1
           PLATFORM_EXTRAS: BTADDON
-        run: make
+        run: make -j$((`sysctl -n hw.ncpu` + 1))
 
       - name: Test
         run: make check
 
   macos-cmake:
-    if: always()
-    needs: [macos-make, macos-make-btaddon]
     runs-on: macos-latest
 
     steps:
@@ -144,7 +140,7 @@ jobs:
       - name: Build
         env:
           VERBOSE: 1
-        run: make
+        run: make -j$((`sysctl -n hw.ncpu` + 1))
         working-directory: client/build/
 
       - name: Test

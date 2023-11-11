@@ -109,4 +109,5 @@ uint16_t get_sw(const uint8_t *d, uint16_t n);
 void reverse_array(uint8_t *d, size_t n);
 void reverse_array_copy(const uint8_t *src, int src_len, uint8_t *dest);
 
+bool hexstr_to_byte_array(const char *hexstr, uint8_t *d, size_t *n);
 #endif

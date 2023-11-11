@@ -1537,17 +1537,21 @@ static int CmdHF14BDump(const char *Cmd) {
 
         print_sr_blocks(data, cardsize, card.uid);
 
-        if (nosave == false) {
-            // save to file
-            if (fnlen < 1) {
-                PrintAndLogEx(INFO, "using UID as filename");
-                char *fptr = filename + snprintf(filename, sizeof(filename), "hf-14b-");
-                FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
-            }
-
-            size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
-            pm3_save_dump(filename, data, datalen, jsf14b, ST25TB_SR_BLOCK_SIZE);
+        if (nosave) {
+            PrintAndLogEx(INFO, "Called with no save option");
+            PrintAndLogEx(NORMAL, "");
+            return PM3_SUCCESS;
         }
+
+        // save to file
+        if (fnlen < 1) {
+            PrintAndLogEx(INFO, "using UID as filename");
+            char *fptr = filename + snprintf(filename, sizeof(filename), "hf-14b-");
+            FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), "-dump", card.uidlen);
+        }
+
+        size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
+        pm3_save_dump(filename, data, datalen, jsf14b_v2);
     }
 
     return switch_off_field_14b();
@@ -1697,7 +1701,7 @@ int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
     // check result
     int status = resp.oldarg[0];
     if (status < 0) {
-        PrintAndLogEx(ERR, "No card in field.");
+        PrintAndLogEx(WARNING, "No ISO14443-B Card in field");
         switch_off_field_14b();
         return PM3_ESOFT;
     }
@@ -2121,9 +2125,13 @@ int CmdHF14BNdefRead(const char *Cmd) {
         goto out;
     }
 
-    if (fnlen != 0) {
-        saveFile(filename, ".bin", response + 2, resplen - 4);
-    }
+    // get total NDEF length before save. If fails, we save it all
+    size_t n = 0;
+    if (NDEFGetTotalLength(response + 2, resplen - 4, &n) != PM3_SUCCESS)
+        n = resplen - 4;
+
+    pm3_save_dump(filename, response + 2, n, jsfNDEF);
+
     res = NDEFRecordsDecodeAndPrint(response + 2, resplen - 4, verbose);
 
 out:
@@ -2164,7 +2172,7 @@ static int CmdHF14BView(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };

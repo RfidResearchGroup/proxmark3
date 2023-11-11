@@ -17,6 +17,7 @@
 //-----------------------------------------------------------------------------
 
 #include "uart.h"
+#include "ringbuffer.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -33,16 +34,17 @@
 #include <ws2tcpip.h>
 
 typedef struct {
-    HANDLE hPort;     // Serial port handle
-    DCB dcb;          // Device control settings
-    COMMTIMEOUTS ct;  // Serial port time-out configuration
-    SOCKET hSocket;   // Socket handle
+    HANDLE hPort;          // Serial port handle
+    DCB dcb;               // Device control settings
+    COMMTIMEOUTS ct;       // Serial port time-out configuration
+    SOCKET hSocket;        // Socket handle
+    RingBuffer *udpBuffer; // Buffer for UDP
 } serial_port_windows_t;
 
 // this is for TCP connection
 struct timeval timeout = {
     .tv_sec  = 0, // 0 second
-    .tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_MS * 1000
+    .tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000
 };
 
 uint32_t newtimeout_value = 0;
@@ -63,8 +65,7 @@ static int uart_reconfigure_timeouts_polling(serial_port sp) {
         return PM3_SUCCESS;
     newtimeout_pending = false;
 
-    serial_port_windows_t *spw;
-    spw = (serial_port_windows_t *)sp;
+    serial_port_windows_t *spw = (serial_port_windows_t *)sp;
     spw->ct.ReadIntervalTimeout         = newtimeout_value;
     spw->ct.ReadTotalTimeoutMultiplier  = 0;
     spw->ct.ReadTotalTimeoutConstant    = newtimeout_value;
@@ -90,7 +91,11 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         return INVALID_SERIAL_PORT;
     }
 
-    char *prefix = strdup(pcPortName);
+    sp->udpBuffer = NULL;
+    g_conn.send_via_local_ip = false;
+    g_conn.send_via_ip = PM3_NONE;
+
+    char *prefix = str_dup(pcPortName);
     if (prefix == NULL) {
         PrintAndLogEx(ERR, "error:  string duplication");
         free(sp);
@@ -109,22 +114,119 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         struct addrinfo *addr = NULL, *rp;
 
-        char *addrstr = strdup(pcPortName + 4);
-        if (addrstr == NULL) {
+        char *addrPortStr = str_dup(pcPortName + 4);
+        char *addrstr = addrPortStr;
+        const char *portstr;
+        if (addrPortStr == NULL) {
             PrintAndLogEx(ERR, "error: string duplication");
             free(sp);
             return INVALID_SERIAL_PORT;
         }
 
-        timeout.tv_usec = UART_TCP_CLIENT_RX_TIMEOUT_MS * 1000;
+        timeout.tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000;
 
-        char *colon = strrchr(addrstr, ':');
-        const char *portstr;
-        if (colon) {
-            portstr = colon + 1;
-            *colon = '\0';
-        } else {
+        // find the "bind" option
+        char *bindAddrPortStr = strstr(addrPortStr, ",bind=");
+        char *bindAddrStr = NULL;
+        char *bindPortStr = NULL;
+        bool isBindingIPv6 = false; // Assume v4
+        if (bindAddrPortStr != NULL) {
+            *bindAddrPortStr = '\0'; // as the end of target address (and port)
+            bindAddrPortStr += 6;
+            bindAddrStr = bindAddrPortStr;
+
+            // find the start of the bind address
+            char *endBracket = strrchr(bindAddrPortStr, ']');
+            if (bindAddrPortStr[0] == '[') {
+                bindAddrStr += 1;
+                if (endBracket == NULL) {
+                    PrintAndLogEx(ERR, "error: wrong address: [] unmatched in bind option");
+                    free(addrPortStr);
+                    free(sp);
+                    return INVALID_SERIAL_PORT;
+                }
+            }
+
+            // find the bind port
+            char *lColon = strchr(bindAddrPortStr, ':');
+            char *rColon = strrchr(bindAddrPortStr, ':');
+            if (rColon == NULL) {
+                // no colon
+                // ",bind=<ipv4 address>", ",bind=[<ipv4 address>]"
+                bindPortStr = NULL;
+            } else if (lColon == rColon) {
+                // only one colon
+                // ",bind=<ipv4 address>:<port>", ",bind=[<ipv4 address>]:<port>"
+                bindPortStr = rColon + 1;
+            } else {
+                // two or more colon, IPv6 address
+                // ",bind=[<ipv6 address>]:<port>"
+                // ",bind=<ipv6 address>", ",bind=[<ipv6 address>]"
+                if (endBracket != NULL && rColon == endBracket + 1) {
+                    bindPortStr = rColon + 1;
+                } else {
+                    bindPortStr = NULL;
+                }
+                isBindingIPv6 = true;
+            }
+
+            // handle the end of the bind address
+            if (endBracket != NULL) {
+                *endBracket = '\0';
+            } else if (rColon != NULL && lColon == rColon) {
+                *rColon = '\0';
+            }
+
+            // for bind option, it's possible to only specify address or port
+            if (strlen(bindAddrStr) == 0)
+                bindAddrStr = NULL;
+            if (bindPortStr != NULL && strlen(bindPortStr) == 0)
+                bindPortStr = NULL;
+        }
+
+        // find the start of the address
+        char *endBracket = strrchr(addrPortStr, ']');
+        if (addrPortStr[0] == '[') {
+            addrstr += 1;
+            if (endBracket == NULL) {
+                PrintAndLogEx(ERR, "error: wrong address: [] unmatched");
+                free(addrPortStr);
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+        }
+
+        // Assume v4
+        g_conn.send_via_ip = PM3_TCPv4;
+
+        // find the port
+        char *lColon = strchr(addrPortStr, ':');
+        char *rColon = strrchr(addrPortStr, ':');
+        if (rColon == NULL) {
+            // no colon
+            // "tcp:<ipv4 address>", "tcp:[<ipv4 address>]"
             portstr = "18888";
+        } else if (lColon == rColon) {
+            // only one colon
+            // "tcp:<ipv4 address>:<port>", "tcp:[<ipv4 address>]:<port>"
+            portstr = rColon + 1;
+        } else {
+            // two or more colon, IPv6 address
+            // "tcp:[<ipv6 address>]:<port>"
+            // "tcp:<ipv6 address>", "tcp:[<ipv6 address>]"
+            if (endBracket != NULL && rColon == endBracket + 1) {
+                portstr = rColon + 1;
+            } else {
+                portstr = "18888";
+            }
+            g_conn.send_via_ip = PM3_TCPv6;
+        }
+
+        // handle the end of the address
+        if (endBracket != NULL) {
+            *endBracket = '\0';
+        } else if (rColon != NULL && lColon == rColon) {
+            *rColon = '\0';
         }
 
         WSADATA wsaData;
@@ -134,19 +236,27 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
         if (iResult != 0) {
             PrintAndLogEx(ERR, "error: WSAStartup failed with error: %d", iResult);
+            free(addrPortStr);
             free(sp);
             return INVALID_SERIAL_PORT;
         }
 
         memset(&info, 0, sizeof(info));
+        info.ai_family = AF_UNSPEC;
         info.ai_socktype = SOCK_STREAM;
         info.ai_protocol = IPPROTO_TCP;
 
+        if ((strstr(addrstr, "localhost") != NULL) ||
+                (strstr(addrstr, "127.0.0.1") != NULL) ||
+                (strstr(addrstr, "::1") != NULL)) {
+            g_conn.send_via_local_ip = true;
+        }
+
         int s = getaddrinfo(addrstr, portstr, &info, &addr);
         if (s != 0) {
-            PrintAndLogEx(ERR, "error: getaddrinfo: %s", gai_strerror(s));
+            PrintAndLogEx(ERR, "error: getaddrinfo: %d: %s", s, gai_strerror(s));
             freeaddrinfo(addr);
-            free(addrstr);
+            free(addrPortStr);
             free(sp);
             WSACleanup();
             return INVALID_SERIAL_PORT;
@@ -159,6 +269,17 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             if (hSocket == INVALID_SOCKET)
                 continue;
 
+            if (!uart_bind(&hSocket, bindAddrStr, bindPortStr, isBindingIPv6)) {
+                PrintAndLogEx(ERR, "error: Could not bind. error: %u", WSAGetLastError());
+                closesocket(hSocket);
+                hSocket = INVALID_SOCKET;
+                freeaddrinfo(addr);
+                free(addrPortStr);
+                free(sp);
+                WSACleanup();
+                return INVALID_SERIAL_PORT;
+            }
+
             if (connect(hSocket, rp->ai_addr, (int)rp->ai_addrlen) != INVALID_SOCKET)
                 break;
 
@@ -167,7 +288,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
 
         freeaddrinfo(addr);
-        free(addrstr);
+        free(addrPortStr);
 
         if (rp == NULL) {               /* No address succeeded */
             PrintAndLogEx(ERR, "error: Could not connect");
@@ -186,6 +307,205 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             free(sp);
             return INVALID_SERIAL_PORT;
         }
+        return sp;
+    }
+
+    if (memcmp(prefix, "udp:", 4) == 0) {
+        free(prefix);
+
+        if (strlen(pcPortName) <= 4) {
+            PrintAndLogEx(ERR, "error: tcp port name length too short");
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        struct addrinfo *addr = NULL, *rp;
+
+        char *addrPortStr = str_dup(pcPortName + 4);
+        char *addrstr = addrPortStr;
+        const char *portstr;
+        if (addrPortStr == NULL) {
+            PrintAndLogEx(ERR, "error: string duplication");
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        timeout.tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000;
+
+        // find the "bind" option
+        char *bindAddrPortStr = strstr(addrPortStr, ",bind=");
+        char *bindAddrStr = NULL;
+        char *bindPortStr = NULL;
+        bool isBindingIPv6 = false; // Assume v4
+        if (bindAddrPortStr != NULL) {
+            *bindAddrPortStr = '\0'; // as the end of target address (and port)
+            bindAddrPortStr += 6;
+            bindAddrStr = bindAddrPortStr;
+
+            // find the start of the bind address
+            char *endBracket = strrchr(bindAddrPortStr, ']');
+            if (bindAddrPortStr[0] == '[') {
+                bindAddrStr += 1;
+                if (endBracket == NULL) {
+                    PrintAndLogEx(ERR, "error: wrong address: [] unmatched in bind option");
+                    free(addrPortStr);
+                    free(sp);
+                    return INVALID_SERIAL_PORT;
+                }
+            }
+
+            // find the bind port
+            char *lColon = strchr(bindAddrPortStr, ':');
+            char *rColon = strrchr(bindAddrPortStr, ':');
+            if (rColon == NULL) {
+                // no colon
+                // ",bind=<ipv4 address>", ",bind=[<ipv4 address>]"
+                bindPortStr = NULL;
+            } else if (lColon == rColon) {
+                // only one colon
+                // ",bind=<ipv4 address>:<port>", ",bind=[<ipv4 address>]:<port>"
+                bindPortStr = rColon + 1;
+            } else {
+                // two or more colon, IPv6 address
+                // ",bind=[<ipv6 address>]:<port>"
+                // ",bind=<ipv6 address>", ",bind=[<ipv6 address>]"
+                if (endBracket != NULL && rColon == endBracket + 1) {
+                    bindPortStr = rColon + 1;
+                } else {
+                    bindPortStr = NULL;
+                }
+                isBindingIPv6 = true;
+            }
+
+            // handle the end of the bind address
+            if (endBracket != NULL) {
+                *endBracket = '\0';
+            } else if (rColon != NULL && lColon == rColon) {
+                *rColon = '\0';
+            }
+
+            // for bind option, it's possible to only specify address or port
+            if (strlen(bindAddrStr) == 0)
+                bindAddrStr = NULL;
+            if (bindPortStr != NULL && strlen(bindPortStr) == 0)
+                bindPortStr = NULL;
+        }
+
+        // find the start of the address
+        char *endBracket = strrchr(addrPortStr, ']');
+        if (addrPortStr[0] == '[') {
+            addrstr += 1;
+            if (endBracket == NULL) {
+                PrintAndLogEx(ERR, "error: wrong address: [] unmatched");
+                free(addrPortStr);
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+        }
+
+        // Assume v4
+        g_conn.send_via_ip = PM3_UDPv4;
+
+        // find the port
+        char *lColon = strchr(addrPortStr, ':');
+        char *rColon = strrchr(addrPortStr, ':');
+        if (rColon == NULL) {
+            // no colon
+            // "udp:<ipv4 address>", "udp:[<ipv4 address>]"
+            portstr = "18888";
+        } else if (lColon == rColon) {
+            // only one colon
+            // "udp:<ipv4 address>:<port>", "udp:[<ipv4 address>]:<port>"
+            portstr = rColon + 1;
+        } else {
+            // two or more colon, IPv6 address
+            // "udp:[<ipv6 address>]:<port>"
+            // "udp:<ipv6 address>", "udp:[<ipv6 address>]"
+            if (endBracket != NULL && rColon == endBracket + 1) {
+                portstr = rColon + 1;
+            } else {
+                portstr = "18888";
+            }
+            g_conn.send_via_ip = PM3_UDPv6;
+        }
+
+        // handle the end of the address
+        if (endBracket != NULL) {
+            *endBracket = '\0';
+        } else if (rColon != NULL && lColon == rColon) {
+            *rColon = '\0';
+        }
+
+        WSADATA wsaData;
+        struct addrinfo info;
+        int iResult;
+
+        iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+        if (iResult != 0) {
+            PrintAndLogEx(ERR, "error: WSAStartup failed with error: %d", iResult);
+            free(addrPortStr);
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        memset(&info, 0, sizeof(info));
+        info.ai_family = AF_UNSPEC;
+        info.ai_socktype = SOCK_DGRAM;
+        info.ai_protocol = IPPROTO_UDP;
+
+        if ((strstr(addrstr, "localhost") != NULL) ||
+                (strstr(addrstr, "127.0.0.1") != NULL) ||
+                (strstr(addrstr, "::1") != NULL)) {
+            g_conn.send_via_local_ip = true;
+        }
+
+        int s = getaddrinfo(addrstr, portstr, &info, &addr);
+        if (s != 0) {
+            PrintAndLogEx(ERR, "error: getaddrinfo: %d: %s", s, gai_strerror(s));
+            freeaddrinfo(addr);
+            free(addrPortStr);
+            free(sp);
+            WSACleanup();
+            return INVALID_SERIAL_PORT;
+        }
+
+        SOCKET hSocket = INVALID_SOCKET;
+        for (rp = addr; rp != NULL; rp = rp->ai_next) {
+            hSocket = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+
+            if (hSocket == INVALID_SOCKET)
+                continue;
+
+            if (!uart_bind(&hSocket, bindAddrStr, bindPortStr, isBindingIPv6)) {
+                PrintAndLogEx(ERR, "error: Could not bind. error: %u", WSAGetLastError());
+                closesocket(hSocket);
+                hSocket = INVALID_SOCKET;
+                freeaddrinfo(addr);
+                free(addrPortStr);
+                free(sp);
+                WSACleanup();
+                return INVALID_SERIAL_PORT;
+            }
+
+            if (connect(hSocket, rp->ai_addr, (int)rp->ai_addrlen) != INVALID_SOCKET)
+                break;
+
+            closesocket(hSocket);
+            hSocket = INVALID_SOCKET;
+        }
+
+        freeaddrinfo(addr);
+        free(addrPortStr);
+
+        if (rp == NULL) {               /* No address succeeded */
+            PrintAndLogEx(ERR, "error: Could not connect");
+            WSACleanup();
+            free(sp);
+            return INVALID_SERIAL_PORT;
+        }
+
+        sp->hSocket = hSocket;
+        sp->udpBuffer = RingBuf_create(MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 30);
         return sp;
     }
 
@@ -231,6 +551,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
     }
     g_conn.uart_speed = uart_get_speed(sp);
+    g_conn.send_via_ip = PM3_NONE;
     return sp;
 }
 
@@ -241,13 +562,14 @@ void uart_close(const serial_port sp) {
         closesocket(spw->hSocket);
         WSACleanup();
     }
+    RingBuf_destroy(spw->udpBuffer);
     if (spw->hPort != INVALID_HANDLE_VALUE)
         CloseHandle(spw->hPort);
     free(sp);
 }
 
 bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
-    serial_port_windows_t *spw;
+    serial_port_windows_t *spw = (serial_port_windows_t *)sp;
 
     // Set port speed (Input and Output)
     switch (uiPortSpeed) {
@@ -265,7 +587,6 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
             return false;
     };
 
-    spw = (serial_port_windows_t *)sp;
     spw->dcb.BaudRate = uiPortSpeed;
     bool result = SetCommState(spw->hPort, &spw->dcb);
     PurgeComm(spw->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
@@ -284,11 +605,12 @@ uint32_t uart_get_speed(const serial_port sp) {
 }
 
 int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen) {
-    serial_port_windows_t *spw = (serial_port_windows_t *)sp;
-    if (spw->hSocket == INVALID_SOCKET) { // serial port
+    const serial_port_windows_t *spw = (serial_port_windows_t *)sp;
+    if (spw->hSocket == INVALID_SOCKET) {
+        // serial port
         uart_reconfigure_timeouts_polling(sp);
 
-        int res = ReadFile(((serial_port_windows_t *)sp)->hPort, pbtRx, pszMaxRxLen, (LPDWORD)pszRxLen, NULL);
+        int res = ReadFile(spw->hPort, pbtRx, pszMaxRxLen, (LPDWORD)pszRxLen, NULL);
         if (res)
             return PM3_SUCCESS;
 
@@ -299,7 +621,8 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         }
 
         return PM3_ENOTTY;
-    } else { // TCP
+    } else {
+        // TCP or UDP
         uint32_t byteCount;  // FIONREAD returns size on 32b
         fd_set rfds;
         struct timeval tv;
@@ -311,12 +634,31 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         // Reset the output count
         *pszRxLen = 0;
         do {
+            int res;
+            if (spw->udpBuffer != NULL) {
+                // for UDP connection, try to use the data from the buffer
+
+                byteCount = RingBuf_getAvailableSize(spw->udpBuffer);
+                // Cap the number of bytes, so we don't overrun the buffer
+                if (pszMaxRxLen - (*pszRxLen) < byteCount) {
+                    // PrintAndLogEx(ERR, "UART:: RX prevent overrun (have %u, need %u)", pszMaxRxLen - (*pszRxLen), byteCount);
+                    byteCount = pszMaxRxLen - (*pszRxLen);
+                }
+                res = RingBuf_dequeueBatch(spw->udpBuffer, pbtRx + (*pszRxLen), byteCount);
+                *pszRxLen += res;
+
+                if (*pszRxLen == pszMaxRxLen) {
+                    // We have all the data we wanted.
+                    return PM3_SUCCESS;
+                }
+            }
+
             // Reset file descriptor
             FD_ZERO(&rfds);
             FD_SET(spw->hSocket, &rfds);
             tv = timeout;
             // the first argument nfds is ignored in Windows
-            int res = select(0, &rfds, NULL, NULL, &tv);
+            res = select(0, &rfds, NULL, NULL, &tv);
 
             // Read error
             if (res == SOCKET_ERROR) {
@@ -336,8 +678,29 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
 
             // Retrieve the count of the incoming bytes
             res = ioctlsocket(spw->hSocket, FIONREAD, (u_long *)&byteCount);
-            //        PrintAndLogEx(ERR, "UART:: RX ioctl res %d byteCount %u", res, byteCount);
+            // PrintAndLogEx(ERR, "UART:: RX ioctl res %d byteCount %u", res, byteCount);
             if (res == SOCKET_ERROR) return PM3_ENOTTY;
+
+            // For UDP connection, put the incoming data into the buffer and handle them in the next round
+            if (spw->udpBuffer != NULL) {
+                if (RingBuf_getContinousAvailableSize(spw->udpBuffer) >= byteCount) {
+                    // write to the buffer directly
+                    res = recv(spw->hSocket, (char *)RingBuf_getRearPtr(spw->udpBuffer), RingBuf_getAvailableSize(spw->udpBuffer), 0);
+                    if (res >= 0) {
+                        RingBuf_postEnqueueBatch(spw->udpBuffer, res);
+                    }
+                } else {
+                    // use transit buffer
+                    uint8_t transitBuf[MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 30];
+                    res = recv(spw->hSocket, (char *)transitBuf, RingBuf_getAvailableSize(spw->udpBuffer), 0);
+                    RingBuf_enqueueBatch(spw->udpBuffer, transitBuf, res);
+                }
+                // Stop if the OS has some troubles reading the data
+                if (res < 0) {
+                    return PM3_EIO;
+                }
+                continue;
+            }
 
             // Cap the number of bytes, so we don't overrun the buffer
             if (pszMaxRxLen - (*pszRxLen) < byteCount) {
@@ -366,10 +729,10 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
 }
 
 int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
-    serial_port_windows_t *spw = (serial_port_windows_t *)sp;
+    const serial_port_windows_t *spw = (serial_port_windows_t *)sp;
     if (spw->hSocket == INVALID_SOCKET) { // serial port
         DWORD txlen = 0;
-        int res = WriteFile(((serial_port_windows_t *)sp)->hPort, p_tx, len, &txlen, NULL);
+        int res = WriteFile(spw->hPort, p_tx, len, &txlen, NULL);
         if (res)
             return PM3_SUCCESS;
 
@@ -415,6 +778,38 @@ int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
         return PM3_SUCCESS;
 
     }
+}
+
+bool uart_bind(void *socket, char *bindAddrStr, char *bindPortStr, bool isBindingIPv6) {
+    if (bindAddrStr == NULL && bindPortStr == NULL)
+        return true; // no need to bind
+
+    struct sockaddr_storage bindSockaddr;
+    memset(&bindSockaddr, 0, sizeof(bindSockaddr));
+    int bindPort = 0; // 0: port unspecified
+    if (bindPortStr != NULL)
+        bindPort = atoi(bindPortStr);
+
+    if (!isBindingIPv6) {
+        struct sockaddr_in *bindSockaddr4 = (struct sockaddr_in *)&bindSockaddr;
+        bindSockaddr4->sin_family = AF_INET;
+        bindSockaddr4->sin_port = htons(bindPort);
+        if (bindAddrStr == NULL)
+            bindSockaddr4->sin_addr.s_addr = INADDR_ANY;
+        else
+            bindSockaddr4->sin_addr.s_addr = inet_addr(bindAddrStr);
+    } else {
+        struct sockaddr_in6 *bindSockaddr6 = (struct sockaddr_in6 *)&bindSockaddr;
+        bindSockaddr6->sin6_family = AF_INET6;
+        bindSockaddr6->sin6_port = htons(bindPort);
+        if (bindAddrStr == NULL)
+            bindSockaddr6->sin6_addr = in6addr_any;
+        else
+            inet_pton(AF_INET6, bindAddrStr, &(bindSockaddr6->sin6_addr));
+    }
+
+    int res = bind(*(SOCKET *)socket, (struct sockaddr *)&bindSockaddr, sizeof(bindSockaddr));
+    return (res >= 0);
 }
 
 #endif

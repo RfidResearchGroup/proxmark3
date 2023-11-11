@@ -44,6 +44,7 @@
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
 #include "cmdlfem4x05.h"  // EM defines
+#include "loclass/cipherutils.h"  // bitstreamout
 
 #ifndef BITS
 # define BITS 96
@@ -399,14 +400,32 @@ static int CmdHIDClone(const char *Cmd) {
         packed.Mid = mid;
         packed.Bot = bot;
     } else if (bin_len) {
-        int res = binstring_to_u96(&top, &mid, &bot, (const char *)bin);
-        if (res != bin_len) {
-            PrintAndLogEx(ERR, "Binary string contains none <0|1> chars");
-            return PM3_EINVARG;
+
+        uint8_t hex[12];
+        memset(hex, 0, sizeof(hex));
+        BitstreamOut_t bout = {hex, 0, 0 };
+
+        for (int i = 0; i < 96 - bin_len - 1; i++) {
+            pushBit(&bout, 0);
         }
-        packed.Top = top;
-        packed.Mid = mid;
-        packed.Bot = bot;
+        // add binary sentinel bit.
+        pushBit(&bout, 1);
+
+        // convert binary string to hex bytes
+        for (int i = 0; i < bin_len; i++) {
+            char c = bin[i];
+            if (c == '1')
+                pushBit(&bout, 1);
+            else if (c == '0')
+                pushBit(&bout, 0);
+        }
+
+        packed.Length = bin_len;
+        packed.Top = bytes_to_num(hex, 4);
+        packed.Mid = bytes_to_num(hex + 4, 4);
+        packed.Bot = bytes_to_num(hex + 8, 4);
+        add_HID_header(&packed);
+
     } else {
         if (HIDPack(format_idx, &card, &packed, true) == false) {
             PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");

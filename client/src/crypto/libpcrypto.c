@@ -629,8 +629,10 @@ int blowfish_decrypt(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output,
     mbedtls_blowfish_init(&blow);
     if (mbedtls_blowfish_setkey(&blow, key, 64))
         return 1;
+
     if (mbedtls_blowfish_crypt_cbc(&blow, MBEDTLS_BLOWFISH_DECRYPT, length, iiv, input, output))
         return 2;
+
     mbedtls_blowfish_free(&blow);
 
     return 0;
@@ -647,7 +649,7 @@ int ansi_x963_sha256(uint8_t *sharedSecret, size_t sharedSecretLen, uint8_t *sha
     uint32_t counter = 0x00000001;
 
     for (int i = 0; i < (keyDataLen / 32); ++i) {
-        uint8_t *hashMaterial = malloc(4 + sharedSecretLen + sharedInfoLen);
+        uint8_t *hashMaterial = calloc(4 + sharedSecretLen + sharedInfoLen, sizeof(uint8_t));
         memcpy(hashMaterial, sharedSecret, sharedSecretLen);
         hashMaterial[sharedSecretLen] = (counter >> 24);
         hashMaterial[sharedSecretLen + 1] = (counter >> 16) & 0xFF;

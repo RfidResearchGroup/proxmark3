@@ -79,7 +79,7 @@ Read iCLASS Block
 Options
 ---
 -k, --key <hex>                Access key as 16 hex symbols
--b, --block <dec>              The block number to read as an integer
+    --blk <dec>                The block number to read as an integer
     --ki <dec>                 Key index to select key from memory 'hf iclass managekeys'
     --credit                   key is assumed to be the credit key
     --elite                    elite computations applied to key
@@ -94,7 +94,7 @@ Write to iCLASS Block
 Options
 ---
 -k, --key <hex>                Access key as 16 hex symbols
--b, --block <dec>              The block number to read as an integer
+    --blk <dec>                The block number to read as an integer
 -d, --data <hex>               data to write as 16 hex symbols
     --ki <dec>                 Key index to select key from memory 'hf iclass managekeys'
     --credit                   key is assumed to be the credit key
@@ -140,7 +140,7 @@ Decrypt iCLASS Block / file
 ```
 Options
 ---
--f, --file <filename>          filename of dumpfile
+-f, --file <filename>          Specify a filename for dump file
 -d, --data <hex>               3DES encrypted data
 -k, --key <hex>                3DES transport key
 -v, --verbose                  verbose output
@@ -153,7 +153,7 @@ Load iCLASS dump into memory for simulation
 ```
 Options
 ---
--f, --file <filename>          filename of dump
+-f, --file <filename>          Specify a filename for dump file
     --json                     load JSON type dump
     --eml                      load EML type dump
 
@@ -261,8 +261,8 @@ Dump MIFARE Classic card contents
 ```
 Options:
 ---
--f, --file <filename>          filename of dump
--k, --keys <filename>          filename of keys
+-f, --file <filename>          Specify a filename for dump file
+-k, --keys <filename>          Specify a filename for keys file
     --mini                     MIFARE Classic Mini / S20
     --1k                       MIFARE Classic 1k / S50 (default)
     --2k                       MIFARE Classic/Plus 2k
@@ -335,7 +335,7 @@ Accepts (BIN/EML/JSON)
 ```
 Options
 ---
--f, --file <fn>                filename of dump
+-f, --file <fn>                Specify a filename for dump file
     --mini                     MIFARE Classic Mini / S20
     --1k                       MIFARE Classic 1k / S50 (def)
     --2k                       MIFARE Classic/Plus 2k
@@ -712,7 +712,7 @@ pm3 --> mem load -f iclass_default_keys --iclass
 
 Upgrade Sim Module firmware
 ```
-pm3 --> smart upgrade -f sim013.bin
+pm3 --> smart upgrade -f sim014.bin
 ```
 
 ## Smart Card

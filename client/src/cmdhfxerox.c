@@ -611,9 +611,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-
     bool decrypt = arg_get_lit(ctx, 2);
-
     CLIParserFree(ctx);
 
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 11);
@@ -682,7 +680,6 @@ static int CmdHFXeroxDump(const char *Cmd) {
 
             PrintAndLogEx(NORMAL, "." NOLF);
             fflush(stdout);
-//            PrintAndLogEx(INPLACE, "blk %3d", blocknum);
         }
     }
 
@@ -773,23 +770,13 @@ static int CmdHFXeroxDump(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     if (0 == filename[0]) { // generate filename from uid
-        /*
-                PrintAndLogEx(INFO, "Using UID as filename");
-
-                sprintf(filename, "hf-xerox-%02X%02X%02X%02X%02X%02X%02X%02X-dump%s",
-                    card.uid[7],card.uid[6],card.uid[5],card.uid[4],card.uid[3],card.uid[2],card.uid[1],card.uid[0],
-                    decrypt ? "-dec" : "");
-        */
         char *fptr = filename;
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += snprintf(fptr, sizeof(filename), "hf-xerox-");
         FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), decrypt ? "-dump-dec" : "-dump", card.uidlen);
     }
 
-    size_t datalen = blocknum * 4;
-    saveFile(filename, ".bin", data, datalen);
-    saveFileEML(filename, data, datalen, 4);
-//    saveFileJSON(filename, jsf15, data, datalen, NULL);
+    pm3_save_dump(filename, data, blocknum * 4, jsf14b_v2);
     return PM3_SUCCESS;
 }
 
