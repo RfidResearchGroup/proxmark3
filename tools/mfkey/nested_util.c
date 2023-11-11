@@ -196,53 +196,66 @@ uint64_t *nested(NtpKs1 *pNK, uint32_t sizePNK, uint32_t authuid, uint32_t *keyC
     }
     free(threads);
 
-    if (*keyCount != 0) {
-        keys = malloc((*keyCount) * sizeof(uint64_t));
-        if (keys != NULL) {
-            for (i = 0, j = 0; i < manyThread; i++) {
-                if (pRPs[i].keyCount > 0) {
-                    // printf("The thread %d recover %d keys.\r\n", i, pRPs[i].keyCount);
-                    if (pRPs[i].keys != NULL) {
-                        memcpy(
-                            keys + j,
-                            pRPs[i].keys,
-                            pRPs[i].keyCount * sizeof(uint64_t)
-                        );
-                        j += pRPs[i].keyCount;
-                        free(pRPs[i].keys);
-                    }
-                }
-            }
+    if (*keyCount == 0) {
+        printf("Didn't recover any keys.\r\n");
+        free(pRPs);
+        return NULL;
+    }
 
-            countKeys *ck = uniqsort(keys, *keyCount);
-            free(keys);
-            keys = (uint64_t *)NULL;
-            *keyCount = 0;
+    keys = calloc((*keyCount) * sizeof(uint64_t), sizeof(uint8_t));
+    if (keys == NULL) {
+        printf("Cannot allocate memory to merge keys.\r\n");
+        free(pRPs);
+        return NULL;
+    }
 
-            if (ck != NULL) {
-                for (i = 0; i < TRY_KEYS; i++) {
-                    // We don't known this key, try to break it
-                    // This key can be found here two or more times
-                    if (ck[i].count > 0) {
-                        *keyCount += 1;
-                        void *tmp = realloc(keys, sizeof(uint64_t) * (*keyCount));
-                        if (tmp != NULL) {
-                            keys = tmp;
-                            keys[*keyCount - 1] = ck[i].key;
-                        } else {
-                            printf("Cannot allocate memory for keys on merge.");
-                            free(keys);
-                            break;
-                        }
-                    }
-                }
-            } else {
-                printf("Cannot allocate memory for ck on uniqsort.");
+    for (i = 0, j = 0; i < manyThread; i++) {
+        if (pRPs[i].keyCount > 0) {
+            // printf("The thread %d recover %d keys.\r\n", i, pRPs[i].keyCount);
+            if (pRPs[i].keys != NULL) {
+                memcpy(
+                    keys + j,
+                    pRPs[i].keys,
+                    pRPs[i].keyCount * sizeof(uint64_t)
+                );
+                j += pRPs[i].keyCount;
+                free(pRPs[i].keys);
             }
-        } else {
-            printf("Cannot allocate memory to merge keys.\r\n");
         }
     }
+
+    countKeys *ck = uniqsort(keys, *keyCount);
+    free(keys);
+    keys = (uint64_t *)NULL;
+    *keyCount = 0;
+
+    if (ck == NULL) {
+        printf("Cannot allocate memory for ck on uniqsort.");
+        free(ck);
+        free(pRPs);
+        return NULL;
+    }
+    
+    for (i = 0; i < TRY_KEYS; i++) {
+        // We don't known this key, try to break it
+        // This key can be found here two or more times
+        if (ck[i].count > 0) {
+            *keyCount += 1;
+            void *tmp = realloc(keys, sizeof(uint64_t) * (*keyCount));
+            if (tmp == NULL) {
+                printf("Cannot allocate memory for keys on merge.");
+                free(ck);
+                free(keys);
+                free(pRPs);
+                return NULL;
+            }
+
+            keys = tmp;
+            keys[*keyCount - 1] = ck[i].key;
+        }
+    }
+
+    free(ck);
     free(pRPs);
     return keys;
 }
