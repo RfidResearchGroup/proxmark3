@@ -96,10 +96,14 @@ void clearCommandBuffer(void);
 
 #define FLASHMODE_SPEED 460800
 bool IsCommunicationThreadDead(void);
+bool SetCommunicationReceiveMode(bool isRawMode);
+void SetCommunicationRawReceiveBuffer(uint8_t* buffer, size_t len);
+size_t GetCommunicationRawReceiveNum(void);
 bool OpenProxmark(pm3_device_t **dev, const char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);
 int TestProxmark(pm3_device_t *dev);
 void CloseProxmark(pm3_device_t *dev);
 
+size_t WaitForRawData(uint8_t* buffer, size_t len, size_t ms_timeout, bool show_process);
 bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 bool WaitForResponseTimeout(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout);
 bool WaitForResponse(uint32_t cmd, PacketResponseNG *response);
@@ -111,5 +115,3 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
 }
 #endif
 #endif
-
-
