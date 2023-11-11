@@ -790,7 +790,7 @@ static int mfLoadKeys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, 
         PrintAndLogEx(DEBUG, "[" _YELLOW_("%d") "] key %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
     }
     *pkeycnt += ARRAYLEN(g_mifare_default_keys);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%u") " keys from hardcoded default array", ARRAYLEN(g_mifare_default_keys));
+    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%zu") " keys from hardcoded default array", ARRAYLEN(g_mifare_default_keys));
 
 
     // Handle user supplied dictionary file
