@@ -65,6 +65,8 @@
 #include "cmdlfzx8211.h"    // for ZX8211 menu
 #include "crc.h"
 #include "pm3_cmd.h"        // for LF_CMDREAD_MAX_EXTRA_SYMBOLS
+#include "fileutils.h"      // for real-time sampling
+#include "loclass/cipherutils.h" // for decimating samples in getsamples
 
 static bool gs_lf_threshold_set = false;
 
@@ -696,27 +698,81 @@ int CmdLFConfig(const char *Cmd) {
     return lf_config(&config);
 }
 
+static bool _headBit(BitstreamOut_t *stream) {
+    int bytepos = stream->position >> 3; // divide by 8
+    int bitpos = (stream->position++) & 7; // mask out 00000111
+    return (*(stream->buffer + bytepos) >> (7 - bitpos)) & 1;
+}
+
+static uint8_t getByte(uint8_t bits_per_sample, BitstreamOut_t *b) {
+    uint8_t val = 0;
+    for (int i = 0 ; i < bits_per_sample; i++)
+        val |= (_headBit(b) << (7 - i));
+
+    return val;
+}
+
 static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
-    lf_sample_config_t payload;
+    lf_sample_payload_t payload;
     payload.realtime = realtime;
     payload.verbose = verbose;
 
-    uint8_t *realtimeBuf = NULL;
+    if (realtime) {
+        uint8_t *realtimeBuf = calloc(samples, sizeof(uint8_t));
 
-    if (realtime) {
-        realtimeBuf = calloc(samples, sizeof(uint8_t));
-    } else {
-        payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
-    }
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-    if (realtime) {
-        samples = WaitForRawDataTimeout(realtimeBuf, samples, 1000, true);
-        // ...
+        sample_config current_config;
+        int retval = lf_getconfig(&current_config);
+        if (retval != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to get current device config");
+            return retval;
+        }
+        
+        size_t sample_bytes = samples * current_config.bits_per_sample;
+        sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+        sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true);
+        print_hex(realtimeBuf, 2048);
+
+        // getSamplesEx() start
+        if (current_config.bits_per_sample < 8) {
+
+            if (verbose) PrintAndLogEx(INFO, "Unpacking...");
+
+            BitstreamOut_t bout = {realtimeBuf, sample_bytes * 8,  0};
+            size_t j = 0;
+            for (j = 0; j * current_config.bits_per_sample < sample_bytes * 8 && j * current_config.bits_per_sample < MAX_GRAPH_TRACE_LEN * 8; j++) {
+                uint8_t sample = getByte(current_config.bits_per_sample, &bout);
+                g_GraphBuffer[j] = ((int) sample) - 127;
+            }
+            g_GraphTraceLen = j;
+
+            if (verbose) PrintAndLogEx(INFO, "Unpacked %d samples", j);
+
+        } else {
+            for (size_t j = 0; j < sample_bytes && j < MAX_GRAPH_TRACE_LEN; j++) {
+                g_GraphBuffer[j] = ((int)realtimeBuf[j]) - 127;
+            }
+            g_GraphTraceLen = sample_bytes;
+        }
+
+        uint8_t bits[g_GraphTraceLen];
+        size_t size = getFromGraphBuf(bits);
+        // set signal properties low/high/mean/amplitude and is_noise detection
+        computeSignalProperties(bits, size);
+
+        setClockGrid(0, 0);
+        g_DemodBufferLen = 0;
+        RepaintGraphWindow();
+        // getSamplesEx() end
+
         free(realtimeBuf);
     } else {
+        payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         PacketResponseNG resp;
         if (gs_lf_threshold_set) {
             WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
@@ -783,7 +839,7 @@ int CmdLFRead(const char *Cmd) {
 int lf_sniff(bool realtime, bool verbose, uint32_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
-    lf_sample_config_t payload;
+    lf_sample_payload_t payload;
     payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
     payload.realtime = realtime;
     payload.verbose = verbose;

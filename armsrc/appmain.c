@@ -851,7 +851,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_ACQ_RAW_ADC: {
-            lf_sample_config_t *payload = (lf_sample_config_t *)packet->data.asBytes;
+            lf_sample_payload_t *payload = (lf_sample_payload_t *)packet->data.asBytes;
             uint32_t bits;
             if (payload->realtime) {
                 bits = ReadLF_realtime(true);
@@ -881,7 +881,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_SNIFF_RAW_ADC: {
-            lf_sample_config_t *payload = (lf_sample_config_t *)packet->data.asBytes;
+            lf_sample_payload_t *payload = (lf_sample_payload_t *)packet->data.asBytes;
             uint32_t bits;
             if (payload->realtime) {
                 bits = ReadLF_realtime(false);

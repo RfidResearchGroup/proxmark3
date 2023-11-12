@@ -283,7 +283,7 @@ typedef struct {
     uint32_t samples  : LF_SAMPLES_BITS;
     bool     realtime : 1;
     bool     verbose  : 1;
-} PACKED lf_sample_config_t;
+} PACKED lf_sample_payload_t;
 
 typedef struct {
     uint8_t blockno;
