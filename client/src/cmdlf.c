@@ -734,7 +734,6 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
         clearCommandBuffer();
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true);
-        print_hex(realtimeBuf, 2048);
 
         // getSamplesEx() start
         if (current_config.bits_per_sample < 8) {
@@ -755,7 +754,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
             for (size_t j = 0; j < sample_bytes && j < MAX_GRAPH_TRACE_LEN; j++) {
                 g_GraphBuffer[j] = ((int)realtimeBuf[j]) - 127;
             }
-            g_GraphTraceLen = sample_bytes;
+            g_GraphTraceLen = MIN(sample_bytes, MAX_GRAPH_TRACE_LEN);
         }
 
         uint8_t bits[g_GraphTraceLen];
