@@ -42,7 +42,7 @@ int GetNrzClock(const char *str, bool verbose);
 int GetFskClock(const char *str, bool verbose);
 bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge);
 
-#define MAX_GRAPH_TRACE_LEN (40000 * 8)
+#define MAX_GRAPH_TRACE_LEN (40000 * 16)
 #define GRAPH_SAVE 1
 #define GRAPH_RESTORE 0
 
