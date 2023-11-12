@@ -654,7 +654,7 @@ inline uint16_t usb_available_length(void) {
 bool usb_poll_validate_length(void) {
     if (!usb_check()) return false;
     if (!(pUdp->UDP_CSR[AT91C_EP_OUT] & btReceiveBank)) return false;
-    return usb_available_length() > 0;
+    return ((pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16) > 0;
 }
 
 /*
@@ -676,7 +676,7 @@ uint32_t usb_read(uint8_t *data, size_t len) {
 
         if (pUdp->UDP_CSR[AT91C_EP_OUT] & bank) {
 
-            packetSize = usb_available_length();
+            packetSize = ((pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16);
             packetSize = MIN(packetSize, len);
             len -= packetSize;
             while (packetSize--)
@@ -732,7 +732,7 @@ uint32_t usb_read_ng(uint8_t *data, size_t len) {
 
         if ((pUdp->UDP_CSR[AT91C_EP_OUT] & bank)) {
 
-            uint32_t available = usb_available_length();
+            uint32_t available = ((pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16);
             packetSize = MIN(available, len);
             available -= packetSize;
             len -= packetSize;

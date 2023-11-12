@@ -526,7 +526,7 @@ int ReadLF_realtime(bool reader_field) {
 
             } else if (samples.total_saved == 1) {
                 // check if there is any data from client
-                if (usb_available_length() > 0) {
+                if (data_available_fast()) {
                     break;
                 }
             }
