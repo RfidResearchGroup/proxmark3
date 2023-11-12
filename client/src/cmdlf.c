@@ -696,7 +696,7 @@ int CmdLFConfig(const char *Cmd) {
     return lf_config(&config);
 }
 
-static int lf_read_internal(bool realtime, bool verbose, uint32_t samples) {
+static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
     lf_sample_config_t payload;
@@ -734,7 +734,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint32_t samples) {
     return PM3_SUCCESS;
 }
 
-int lf_read(bool verbose, uint32_t samples) {
+int lf_read(bool verbose, uint64_t samples) {
     return lf_read_internal(false, verbose, samples);
 }
 
@@ -757,7 +757,7 @@ int CmdLFRead(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t samples = arg_get_u32_def(ctx, 1, 0);
+    uint64_t samples = arg_get_u64_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
     bool cm = arg_get_lit(ctx, 3);
     bool realtime = arg_get_lit(ctx, 4);

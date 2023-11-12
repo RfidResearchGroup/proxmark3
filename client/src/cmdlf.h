@@ -40,7 +40,7 @@ int CmdLFSniff(const char *Cmd);
 int CmdVchDemod(const char *Cmd);
 int CmdLFfind(const char *Cmd);
 
-int lf_read(bool verbose, uint32_t samples);
+int lf_read(bool verbose, uint64_t samples);
 int lf_sniff(bool realtime, bool verbose, uint32_t samples);
 int lf_config(sample_config *config);
 int lf_getconfig(sample_config *config);
