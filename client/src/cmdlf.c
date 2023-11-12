@@ -749,7 +749,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
             }
             g_GraphTraceLen = j;
 
-            if (verbose) PrintAndLogEx(INFO, "Unpacked %d samples", j);
+            if (verbose) PrintAndLogEx(INFO, "Unpacked %zu samples", j);
 
         } else {
             for (size_t j = 0; j < sample_bytes && j < MAX_GRAPH_TRACE_LEN; j++) {
