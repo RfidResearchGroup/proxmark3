@@ -27,11 +27,14 @@ void usb_disable(void);
 void usb_enable(void);
 bool usb_check(void);
 bool usb_poll(void);
+uint16_t usb_available_length(void);
 bool usb_poll_validate_length(void);
 uint32_t usb_read(uint8_t *data, size_t len);
 int usb_write(const uint8_t *data, const size_t len);
-void usb_write_byte_async(uint8_t data);
-bool usb_write_request(void);
+int async_usb_write_start(void);
+void async_usb_write_pushByte(uint8_t data);
+bool async_usb_write_requestWrite(void);
+int async_usb_write_stop(void);
 uint32_t usb_read_ng(uint8_t *data, size_t len);
 void usb_update_serial(uint64_t newSerialNumber);
 

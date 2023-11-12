@@ -700,25 +700,37 @@ static int lf_read_internal(bool realtime, bool verbose, uint32_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
     lf_sample_config_t payload;
-    payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
     payload.realtime = realtime;
     payload.verbose = verbose;
 
+    uint8_t *realtimeBuf = NULL;
+
+    if (realtime) {
+        realtimeBuf = calloc(samples, sizeof(uint8_t));
+    } else {
+        payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
+    }
     clearCommandBuffer();
     SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-    PacketResponseNG resp;
-    if (gs_lf_threshold_set || realtime) {
-        WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
+    if (realtime) {
+        samples = WaitForRawDataTimeout(realtimeBuf, samples, 1000, true);
+        // ...
+        free(realtimeBuf);
     } else {
-        if (!WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500)) {
-            PrintAndLogEx(WARNING, "(lf_read) command execution time out");
-            return PM3_ETIMEOUT;
+        PacketResponseNG resp;
+        if (gs_lf_threshold_set) {
+            WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
+        } else {
+            if (!WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500)) {
+                PrintAndLogEx(WARNING, "(lf_read) command execution time out");
+                return PM3_ETIMEOUT;
+            }
         }
+        // response is number of bits read
+        uint32_t size = (resp.data.asDwords[0] / 8);
+        getSamples(size, verbose);
     }
 
-    // response is number of bits read
-    uint32_t size = (resp.data.asDwords[0] / 8);
-    getSamples(size, verbose);
     return PM3_SUCCESS;
 }
 
@@ -754,7 +766,11 @@ int CmdLFRead(const char *Cmd) {
     if (g_session.pm3_present == false)
         return PM3_ENOTTY;
 
-    if (cm) {
+    if (realtime && samples == 0) {
+        samples = 8 * 1024 * 1024;
+    }
+
+    if (cm || realtime) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
     int ret = PM3_SUCCESS;

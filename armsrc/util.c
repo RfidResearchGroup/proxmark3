@@ -305,3 +305,11 @@ bool data_available(void) {
     return usb_poll_validate_length();
 #endif
 }
+
+bool data_available_fast(void) {
+#ifdef WITH_FPC_USART_HOST
+    return usb_available_length() > 0 || (usart_rxdata_available() > 0);
+#else
+    return usb_available_length() > 0;
+#endif
+}

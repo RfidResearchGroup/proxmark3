@@ -42,7 +42,7 @@ capabilities_t g_pm3_capabilities;
 static pthread_t communication_thread;
 static bool comm_thread_dead = false;
 static bool comm_raw_mode = false;
-static uint8_t* comm_raw_data = NULL;
+static uint8_t *comm_raw_data = NULL;
 static size_t comm_raw_len = 0;
 static size_t comm_raw_pos = 0;
 
@@ -350,6 +350,7 @@ __attribute__((force_align_arg_pointer))
     bool commfailed = false;
     PacketResponseNG rx;
     PacketResponseNGRaw rx_raw;
+    bool is_receiving_raw_last = false;
 
 #if defined(__MACH__) && defined(__APPLE__)
     disableAppNap("Proxmark3 polling UART");
@@ -372,35 +373,42 @@ __attribute__((force_align_arg_pointer))
             break;
         }
 
-        // TODO:
-        // cache is_receiving_raw. if it changes from true to false, do the post receiving work( stop from user request)
         bool is_receiving_raw = __atomic_load_n(&comm_raw_mode, __ATOMIC_SEQ_CST);
 
         if (is_receiving_raw) {
-            uint8_t* bufferData = __atomic_load_n(&comm_raw_data, __ATOMIC_SEQ_CST); // read only
+            uint8_t *bufferData = __atomic_load_n(&comm_raw_data, __ATOMIC_SEQ_CST); // read only
             size_t bufferLen = __atomic_load_n(&comm_raw_len, __ATOMIC_SEQ_CST); // read only
             size_t bufferPos = __atomic_load_n(&comm_raw_pos, __ATOMIC_SEQ_CST); // read and write
-            if (bufferLen > bufferPos) {
+            if (bufferPos < bufferLen) {
                 size_t rxMaxLen = bufferLen - bufferPos;
 
                 rxMaxLen = MIN(1024, rxMaxLen);
-            
+
                 res = uart_receive(sp, bufferData + bufferPos, rxMaxLen, &rxlen);
                 if (res == PM3_SUCCESS) {
+                    uint64_t clk = msclock();
+                    __atomic_store_n(&timeout_start_time,  clk, __ATOMIC_SEQ_CST);
                     __atomic_store_n(&comm_raw_pos, bufferPos + rxlen, __ATOMIC_SEQ_CST);
-                } else {
-                    PrintAndLogEx(WARNING, "Error when reading raw data: %zu/%zu", bufferPos, bufferLen);
+                } else if (res != PM3_ENODATA) {
+                    PrintAndLogEx(WARNING, "Error when reading raw data: %zu/%zu, %d", bufferPos, bufferLen, res);
                     error = true;
                     if (res == PM3_ENOTTY) {
                         commfailed = true;
                     }
                 }
             } else {
-                __atomic_store_n(&comm_raw_mode, false, __ATOMIC_SEQ_CST);
+                // ignore data when bufferPos >= bufferLen and is_receiving_raw has not been set to false
+                uint8_t dummyData[64];
+                uint32_t dummyLen;
+                uart_receive(sp, dummyData, sizeof(dummyData), &dummyLen);
+
+                // set the buffer as undefined
                 __atomic_store_n(&comm_raw_data, NULL, __ATOMIC_SEQ_CST);
             }
         } else {
-
+            if (is_receiving_raw_last) {
+                __atomic_store_n(&comm_raw_data, NULL, __ATOMIC_SEQ_CST);
+            }
             res = uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen);
 
             if ((res == PM3_SUCCESS) && (rxlen == sizeof(PacketResponseNGPreamble))) {
@@ -532,6 +540,7 @@ __attribute__((force_align_arg_pointer))
             }
         }
 
+        is_receiving_raw_last = is_receiving_raw;
         // TODO if error, shall we resync ?
 
         pthread_mutex_lock(&txBufferMutex);
@@ -596,7 +605,7 @@ bool IsCommunicationThreadDead(void) {
 
 bool SetCommunicationReceiveMode(bool isRawMode) {
     if (isRawMode) {
-        uint8_t* buffer = __atomic_load_n(&comm_raw_data, __ATOMIC_SEQ_CST);
+        uint8_t *buffer = __atomic_load_n(&comm_raw_data, __ATOMIC_SEQ_CST);
         if (buffer == NULL) {
             PrintAndLogEx(ERR, "Buffer for raw data is not set");
             return false;
@@ -606,7 +615,7 @@ bool SetCommunicationReceiveMode(bool isRawMode) {
     return true;
 }
 
-void SetCommunicationRawReceiveBuffer(uint8_t* buffer, size_t len) {
+void SetCommunicationRawReceiveBuffer(uint8_t *buffer, size_t len) {
     __atomic_store_n(&comm_raw_data,  buffer, __ATOMIC_SEQ_CST);
     __atomic_store_n(&comm_raw_len,  len, __ATOMIC_SEQ_CST);
     __atomic_store_n(&comm_raw_pos,  0, __ATOMIC_SEQ_CST);
@@ -794,19 +803,55 @@ static size_t communication_delay(void) {
     return 0;
 }
 
-size_t WaitForRawData(uint8_t* buffer, size_t len, size_t ms_timeout, bool show_process) {
-    memset(buffer, 0, len);
+size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process) {
+    uint8_t print_counter = 0;
+    size_t last_pos = 0;
 
     // Add delay depending on the communication channel & speed
-    if (ms_timeout != (size_t) - 1)
+    if (ms_timeout != (size_t) - 1) {
         ms_timeout += communication_delay();
+    }
+    __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
 
     SetCommunicationRawReceiveBuffer(buffer, len);
     SetCommunicationReceiveMode(true);
 
-    // TODO:
-    // wait for the data in a loop, respond to user input(press any key to stop), show process
-    return 0;
+    size_t pos = 0;
+    while (pos < len) {
+
+        if (kbd_enter_pressed()) {
+            // send anything to stop the transfer
+            PrintAndLogEx(INFO, "Stopping");
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        }
+
+        pos = __atomic_load_n(&comm_raw_pos, __ATOMIC_SEQ_CST);
+
+        // check the timeout if pos is not updated
+        if (last_pos == pos) {
+            uint64_t tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
+            if ((msclock() - tmp_clk > ms_timeout)) {
+                break;
+            }
+        } else {
+            // print when (print_counter / 64) == 0
+            if ((print_counter & 0x3F) == 0) {
+                PrintAndLogEx(INFO, "[%zu/%zu]", pos, len);
+            }
+        }
+
+        print_counter++;
+        last_pos = pos;
+        msleep(10);
+    }
+    if (pos == len) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        msleep(ms_timeout);
+    }
+    SetCommunicationReceiveMode(false);
+    pos = __atomic_load_n(&comm_raw_pos, __ATOMIC_SEQ_CST);
+    PrintAndLogEx(INFO, "[%zu/%zu]", pos, len);
+    return pos;
 }
 
 /**

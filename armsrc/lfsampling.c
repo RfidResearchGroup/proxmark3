@@ -426,13 +426,10 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
 }
 
 /**
-* SampleLF()/SniffLF() + ReadLF() + DoAcquisition_config() 
+* SampleLF()/SniffLF() + ReadLF() + DoAcquisition_config()
 * @return sampling result
 **/
 int ReadLF_realtime(bool reader_field) {
-    BigBuf_Clear_ext(false);
-    LFSetupFPGAForADC(config.divisor, reader_field);
-
     // parameters from config and constants
     const uint8_t bits_per_sample = config.bits_per_sample;
     const int16_t trigger_threshold = config.trigger_threshold;
@@ -459,8 +456,15 @@ int ReadLF_realtime(bool reader_field) {
     bool trigger_hit = false;
     int16_t checked = 0;
 
-    while (BUTTON_PRESS() == false) {
+    return_value = async_usb_write_start();
+    if (return_value != PM3_SUCCESS) {
+        return return_value;
+    }
 
+    BigBuf_Clear_ext(false);
+    LFSetupFPGAForADC(config.divisor, reader_field);
+
+    while (BUTTON_PRESS() == false) {
         // only every 4000th times, in order to save time when collecting samples.
         // interruptible only when logging not yet triggered
         if (unlikely(trigger_hit == false && (checked >= 4000))) {
@@ -503,13 +507,13 @@ int ReadLF_realtime(bool reader_field) {
             // write to USB FIFO if byte changed
             curr_byte = data.numbits >> 3;
             if (curr_byte > last_byte) {
-                usb_write_byte_async(data.buffer[last_byte]);
+                async_usb_write_pushByte(data.buffer[last_byte]);
             }
             last_byte = curr_byte;
 
-            if(samples.total_saved == size_threshold) {
+            if (samples.total_saved == size_threshold) {
                 // request usb transmission and change FIFO bank
-                if (usb_write_request() == false) {
+                if (async_usb_write_requestWrite() == false) {
                     return_value = PM3_EIO;
                     break;
                 }
@@ -519,9 +523,17 @@ int ReadLF_realtime(bool reader_field) {
                 data.numbits = 0;
                 // data.position = 0; // unused?
                 samples.total_saved = 0;
+
+            } else if (samples.total_saved == 1) {
+                // check if there is any data from client
+                if (usb_available_length() > 0) {
+                    break;
+                }
             }
         }
     }
+    LED_D_OFF();
+    return_value = async_usb_write_stop();
 
     // DoAcquisition() end
     StopTicks();
