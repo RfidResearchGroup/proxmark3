@@ -723,7 +723,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
         sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
         
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-        sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true);
+        sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000 + FPGA_LOAD_WAIT_TIME, true);
         samples = sample_bytes * 8 / bits_per_sample;
         getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
 
@@ -753,6 +753,7 @@ int lf_read(bool verbose, uint64_t samples) {
 }
 
 int CmdLFRead(const char *Cmd) {
+    // In real-time mode, the first few bytes might be the response of CMD_WTX rather than the real samples
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf read",
                   "Sniff low frequency signal.\n"
@@ -818,7 +819,7 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
         sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
 
         SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-        sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true);
+        sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000 + FPGA_LOAD_WAIT_TIME, true);
         samples = sample_bytes * 8 / bits_per_sample;
         getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
 
@@ -844,6 +845,7 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
 }
 
 int CmdLFSniff(const char *Cmd) {
+    // In real-time mode, the first few bytes might be the response of CMD_WTX rather than the real samples
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf sniff",
                   "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually.\n"
