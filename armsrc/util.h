@@ -101,5 +101,6 @@ void SpinUp(uint32_t speed);
 int BUTTON_CLICKED(int ms);
 int BUTTON_HELD(int ms);
 bool data_available(void);
+bool data_available_fast(void);
 
 #endif

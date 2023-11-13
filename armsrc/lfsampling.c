@@ -27,6 +27,7 @@
 #include "lfdemod.h"
 #include "string.h"  // memset
 #include "appmain.h" // print stack
+#include "usb_cdc.h" // real-time sampling
 
 /*
 Default LF config is set to:
@@ -423,6 +424,126 @@ static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size, bo
 uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
     BigBuf_Clear_ext(false);
     return ReadLF(true, verbose, sample_size, ledcontrol);
+}
+
+/**
+ * Do LF sampling and send samples to the USB
+ * 
+ * Uses parameters in config. Only bits_per_sample = 8 is working now
+ * 
+ * @param reader_field - true for reading tags, false for sniffing
+ * @return sampling result
+**/
+int ReadLF_realtime(bool reader_field) {
+    // parameters from config and constants
+    const uint8_t bits_per_sample = config.bits_per_sample;
+    const int16_t trigger_threshold = config.trigger_threshold;
+    int32_t samples_to_skip = config.samples_to_skip;
+    const uint8_t decimation = config.decimation;
+
+    uint32_t sample_size = 64;
+    const int8_t size_threshold_table[9] = {0, 64, 64, 60, 64, 60, 60, 56, 64};
+    const int8_t size_threshold = size_threshold_table[bits_per_sample];
+
+    // DoAcquisition() start
+    uint8_t last_byte = 0;
+    uint8_t curr_byte = 0;
+    int return_value = PM3_SUCCESS;
+
+    initSampleBuffer(&sample_size); // sample size in bytes
+    if (sample_size != 64) {
+        return PM3_EFAILED;
+    }
+
+    sample_size <<= 3; // sample size in bits
+    sample_size /= bits_per_sample; // sample count
+
+    bool trigger_hit = false;
+    int16_t checked = 0;
+
+    return_value = async_usb_write_start();
+    if (return_value != PM3_SUCCESS) {
+        return return_value;
+    }
+
+    BigBuf_Clear_ext(false);
+    LFSetupFPGAForADC(config.divisor, reader_field);
+
+    while (BUTTON_PRESS() == false) {
+        // only every 4000th times, in order to save time when collecting samples.
+        // interruptible only when logging not yet triggered
+        if (unlikely(trigger_hit == false && (checked >= 4000))) {
+            if (data_available()) {
+                checked = -1;
+                break;
+            } else {
+                checked = 0;
+            }
+        }
+        ++checked;
+
+        WDT_HIT();
+
+        if ((AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY)) {
+            LED_D_ON();
+        }
+
+        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+
+            // (RDV4) Test point 8 (TP8) can be used to trigger oscilloscope
+            LED_D_OFF();
+
+            // threshold either high or low values 128 = center 0.  if trigger = 178
+            if (unlikely(trigger_hit == false)) {
+                if ((trigger_threshold > 0) && (sample < (trigger_threshold + 128)) && (sample > (128 - trigger_threshold))) {
+                    continue;
+                }
+                trigger_hit = true;
+            }
+
+            if (unlikely(samples_to_skip > 0)) {
+                samples_to_skip--;
+                continue;
+            }
+
+            logSample(sample, decimation, bits_per_sample, false);
+
+            // write to USB FIFO if byte changed
+            curr_byte = data.numbits >> 3;
+            if (curr_byte > last_byte) {
+                async_usb_write_pushByte(data.buffer[last_byte]);
+            }
+            last_byte = curr_byte;
+
+            if (samples.total_saved == size_threshold) {
+                // request usb transmission and change FIFO bank
+                if (async_usb_write_requestWrite() == false) {
+                    return_value = PM3_EIO;
+                    break;
+                }
+
+                // reset sample
+                last_byte = 0;
+                data.numbits = 0;
+                samples.counter = size_threshold;
+                samples.total_saved = 0;
+
+            } else if (samples.total_saved == 1) {
+                // check if there is any data from client
+                if (data_available_fast()) {
+                    break;
+                }
+            }
+        }
+    }
+    LED_D_OFF();
+    return_value = async_usb_write_stop();
+
+    // DoAcquisition() end
+    StopTicks();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    return return_value;
 }
 /**
 * Initializes the FPGA for sniffer-mode (field off), and acquires the samples.
