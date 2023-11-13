@@ -33,7 +33,12 @@
 #include "crc16.h"              // crc
 #include "cliparser.h"          // cliparsing
 #include "atrs.h"               // ATR lookup
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wswitch-enum"
 #include "mbedtls/net_sockets.h"
+#pragma GCC diagnostic pop
+
 #include "mifare.h"
 #include "util_posix.h"
 #include "cmdhf14a.h"
