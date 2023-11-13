@@ -41,6 +41,10 @@ capabilities_t g_pm3_capabilities;
 
 static pthread_t communication_thread;
 static bool comm_thread_dead = false;
+static bool comm_raw_mode = false;
+static uint8_t *comm_raw_data = NULL;
+static size_t comm_raw_len = 0;
+static size_t comm_raw_pos = 0;
 
 // Transmit buffer.
 static PacketCommandOLD txBuffer;
@@ -346,6 +350,8 @@ __attribute__((force_align_arg_pointer))
     bool commfailed = false;
     PacketResponseNG rx;
     PacketResponseNGRaw rx_raw;
+    // stash the last state of is_receiving_raw, to detect if state changed
+    bool is_receiving_raw_last = false;
 
 #if defined(__MACH__) && defined(__APPLE__)
     disableAppNap("Proxmark3 polling UART");
@@ -368,136 +374,179 @@ __attribute__((force_align_arg_pointer))
             break;
         }
 
-        res = uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen);
+        bool is_receiving_raw = __atomic_load_n(&comm_raw_mode, __ATOMIC_SEQ_CST);
 
-        if ((res == PM3_SUCCESS) && (rxlen == sizeof(PacketResponseNGPreamble))) {
-            rx.magic = rx_raw.pre.magic;
-            uint16_t length = rx_raw.pre.length;
-            rx.ng = rx_raw.pre.ng;
-            rx.status = rx_raw.pre.status;
-            rx.cmd = rx_raw.pre.cmd;
-            if (rx.magic == RESPONSENG_PREAMBLE_MAGIC) { // New style NG reply
-                if (length > PM3_CMD_DATA_SIZE) {
-                    PrintAndLogEx(WARNING, "Received packet frame with incompatible length: 0x%04x", length);
+        if (is_receiving_raw) {
+            uint8_t *bufferData = __atomic_load_n(&comm_raw_data, __ATOMIC_SEQ_CST); // read only
+            size_t bufferLen = __atomic_load_n(&comm_raw_len, __ATOMIC_SEQ_CST); // read only
+            size_t bufferPos = __atomic_load_n(&comm_raw_pos, __ATOMIC_SEQ_CST); // read and write
+            if (bufferPos < bufferLen) {
+                size_t rxMaxLen = bufferLen - bufferPos;
+
+                rxMaxLen = MIN(COMM_RAW_RECEIVE_LEN, rxMaxLen);
+
+                res = uart_receive(sp, bufferData + bufferPos, rxMaxLen, &rxlen);
+                if (res == PM3_SUCCESS) {
+                    uint64_t clk = msclock();
+                    __atomic_store_n(&timeout_start_time,  clk, __ATOMIC_SEQ_CST);
+                    __atomic_store_n(&comm_raw_pos, bufferPos + rxlen, __ATOMIC_SEQ_CST);
+                } else if (res != PM3_ENODATA) {
+                    PrintAndLogEx(WARNING, "Error when reading raw data: %zu/%zu, %d", bufferPos, bufferLen, res);
                     error = true;
+                    if (res == PM3_ENOTTY) {
+                        commfailed = true;
+                    }
                 }
+            } else {
+                // ignore data when bufferPos >= bufferLen and is_receiving_raw has not been set to false
+                uint8_t dummyData[64];
+                uint32_t dummyLen;
+                uart_receive(sp, dummyData, sizeof(dummyData), &dummyLen);
 
-                if ((!error) && (length > 0)) { // Get the variable length payload
+                // set the buffer as undefined
+                // comm_raw_data == NULL is used in SetCommunicationReceiveMode()
+                __atomic_store_n(&comm_raw_data, NULL, __ATOMIC_SEQ_CST);
+            }
+        } else {
+            if (is_receiving_raw_last) {
+                // is_receiving_raw changed from true to false
 
-                    res = uart_receive(sp, (uint8_t *)&rx_raw.data, length, &rxlen);
-                    if ((res != PM3_SUCCESS) || (rxlen != length)) {
-                        PrintAndLogEx(WARNING, "Received packet frame with variable part too short? %d/%d", rxlen, length);
+                // set the buffer as undefined
+                // comm_raw_data == NULL is used in SetCommunicationReceiveMode()
+                __atomic_store_n(&comm_raw_data, NULL, __ATOMIC_SEQ_CST);
+            }
+            res = uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen);
+
+            if ((res == PM3_SUCCESS) && (rxlen == sizeof(PacketResponseNGPreamble))) {
+                rx.magic = rx_raw.pre.magic;
+                uint16_t length = rx_raw.pre.length;
+                rx.ng = rx_raw.pre.ng;
+                rx.status = rx_raw.pre.status;
+                rx.cmd = rx_raw.pre.cmd;
+                if (rx.magic == RESPONSENG_PREAMBLE_MAGIC) { // New style NG reply
+                    if (length > PM3_CMD_DATA_SIZE) {
+                        PrintAndLogEx(WARNING, "Received packet frame with incompatible length: 0x%04x", length);
                         error = true;
-                    } else {
+                    }
 
-                        if (rx.ng) {      // Received a valid NG frame
-                            memcpy(&rx.data, &rx_raw.data, length);
-                            rx.length = length;
-                            if ((rx.cmd == g_conn.last_command) && (rx.status == PM3_SUCCESS)) {
-                                ACK_received = true;
-                            }
+                    if ((!error) && (length > 0)) { // Get the variable length payload
+
+                        res = uart_receive(sp, (uint8_t *)&rx_raw.data, length, &rxlen);
+                        if ((res != PM3_SUCCESS) || (rxlen != length)) {
+                            PrintAndLogEx(WARNING, "Received packet frame with variable part too short? %d/%d", rxlen, length);
+                            error = true;
                         } else {
-                            uint64_t arg[3];
-                            if (length < sizeof(arg)) {
-                                PrintAndLogEx(WARNING, "Received MIX packet frame with incompatible length: 0x%04x", length);
-                                error = true;
-                            }
-                            if (!error) { // Received a valid MIX frame
-                                memcpy(arg, &rx_raw.data, sizeof(arg));
-                                rx.oldarg[0] = arg[0];
-                                rx.oldarg[1] = arg[1];
-                                rx.oldarg[2] = arg[2];
-                                memcpy(&rx.data, ((uint8_t *)&rx_raw.data) + sizeof(arg), length - sizeof(arg));
-                                rx.length = length - sizeof(arg);
-                                if (rx.cmd == CMD_ACK) {
+
+                            if (rx.ng) {      // Received a valid NG frame
+                                memcpy(&rx.data, &rx_raw.data, length);
+                                rx.length = length;
+                                if ((rx.cmd == g_conn.last_command) && (rx.status == PM3_SUCCESS)) {
                                     ACK_received = true;
+                                }
+                            } else {
+                                uint64_t arg[3];
+                                if (length < sizeof(arg)) {
+                                    PrintAndLogEx(WARNING, "Received MIX packet frame with incompatible length: 0x%04x", length);
+                                    error = true;
+                                }
+                                if (!error) { // Received a valid MIX frame
+                                    memcpy(arg, &rx_raw.data, sizeof(arg));
+                                    rx.oldarg[0] = arg[0];
+                                    rx.oldarg[1] = arg[1];
+                                    rx.oldarg[2] = arg[2];
+                                    memcpy(&rx.data, ((uint8_t *)&rx_raw.data) + sizeof(arg), length - sizeof(arg));
+                                    rx.length = length - sizeof(arg);
+                                    if (rx.cmd == CMD_ACK) {
+                                        ACK_received = true;
+                                    }
                                 }
                             }
                         }
-                    }
-                } else if ((!error) && (length == 0)) { // we received an empty frame
-                    if (rx.ng)
-                        rx.length = 0; // set received length to 0
-                    else {  // old frames can't be empty
-                        PrintAndLogEx(WARNING, "Received empty MIX packet frame (length: 0x00)");
-                        error = true;
-                    }
-                }
-
-                if (!error) {                        // Get the postamble
-                    res = uart_receive(sp, (uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), &rxlen);
-                    if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseNGPostamble))) {
-                        PrintAndLogEx(WARNING, "Received packet frame without postamble");
-                        error = true;
-                    }
-                }
-
-                if (!error) {                        // Check CRC, accept MAGIC as placeholder
-                    rx.crc = rx_raw.foopost.crc;
-                    if (rx.crc != RESPONSENG_POSTAMBLE_MAGIC) {
-                        uint8_t first, second;
-                        compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketResponseNGPreamble) + length, &first, &second);
-                        if ((first << 8) + second != rx.crc) {
-                            PrintAndLogEx(WARNING, "Received packet frame with invalid CRC %02X%02X <> %04X", first, second, rx.crc);
+                    } else if ((!error) && (length == 0)) { // we received an empty frame
+                        if (rx.ng)
+                            rx.length = 0; // set received length to 0
+                        else {  // old frames can't be empty
+                            PrintAndLogEx(WARNING, "Received empty MIX packet frame (length: 0x00)");
                             error = true;
                         }
                     }
-                }
-                if (!error) {             // Received a valid OLD frame
-#ifdef COMMS_DEBUG
-                    PrintAndLogEx(NORMAL, "Receiving %s:", rx.ng ? "NG" : "MIX");
-#endif
-#ifdef COMMS_DEBUG_RAW
-                    print_hex_break((uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), 32);
-                    print_hex_break((uint8_t *)&rx_raw.data, rx_raw.pre.length, 32);
-                    print_hex_break((uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), 32);
-#endif
-                    PacketResponseReceived(&rx);
-                }
-            } else {                               // Old style reply
-                PacketResponseOLD rx_old;
-                memcpy(&rx_old, &rx_raw.pre, sizeof(PacketResponseNGPreamble));
 
-                res = uart_receive(sp, ((uint8_t *)&rx_old) + sizeof(PacketResponseNGPreamble), sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble), &rxlen);
-                if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble))) {
-                    PrintAndLogEx(WARNING, "Received packet OLD frame with payload too short? %d/%zu", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
-                    error = true;
-                }
-                if (!error) {
+                    if (!error) {                        // Get the postamble
+                        res = uart_receive(sp, (uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), &rxlen);
+                        if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseNGPostamble))) {
+                            PrintAndLogEx(WARNING, "Received packet frame without postamble");
+                            error = true;
+                        }
+                    }
+
+                    if (!error) {                        // Check CRC, accept MAGIC as placeholder
+                        rx.crc = rx_raw.foopost.crc;
+                        if (rx.crc != RESPONSENG_POSTAMBLE_MAGIC) {
+                            uint8_t first, second;
+                            compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketResponseNGPreamble) + length, &first, &second);
+                            if ((first << 8) + second != rx.crc) {
+                                PrintAndLogEx(WARNING, "Received packet frame with invalid CRC %02X%02X <> %04X", first, second, rx.crc);
+                                error = true;
+                            }
+                        }
+                    }
+                    if (!error) {             // Received a valid OLD frame
 #ifdef COMMS_DEBUG
-                    PrintAndLogEx(NORMAL, "Receiving OLD:");
+                        PrintAndLogEx(NORMAL, "Receiving %s:", rx.ng ? "NG" : "MIX");
 #endif
 #ifdef COMMS_DEBUG_RAW
-                    print_hex_break((uint8_t *)&rx_old.cmd, sizeof(rx_old.cmd), 32);
-                    print_hex_break((uint8_t *)&rx_old.arg, sizeof(rx_old.arg), 32);
-                    print_hex_break((uint8_t *)&rx_old.d, sizeof(rx_old.d), 32);
+                        print_hex_break((uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), 32);
+                        print_hex_break((uint8_t *)&rx_raw.data, rx_raw.pre.length, 32);
+                        print_hex_break((uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), 32);
 #endif
-                    rx.ng = false;
-                    rx.magic = 0;
-                    rx.status = 0;
-                    rx.crc = 0;
-                    rx.cmd = rx_old.cmd;
-                    rx.oldarg[0] = rx_old.arg[0];
-                    rx.oldarg[1] = rx_old.arg[1];
-                    rx.oldarg[2] = rx_old.arg[2];
-                    rx.length = PM3_CMD_DATA_SIZE;
-                    memcpy(&rx.data, &rx_old.d, rx.length);
-                    PacketResponseReceived(&rx);
-                    if (rx.cmd == CMD_ACK) {
-                        ACK_received = true;
+                        PacketResponseReceived(&rx);
+                    }
+                } else {                               // Old style reply
+                    PacketResponseOLD rx_old;
+                    memcpy(&rx_old, &rx_raw.pre, sizeof(PacketResponseNGPreamble));
+
+                    res = uart_receive(sp, ((uint8_t *)&rx_old) + sizeof(PacketResponseNGPreamble), sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble), &rxlen);
+                    if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble))) {
+                        PrintAndLogEx(WARNING, "Received packet OLD frame with payload too short? %d/%zu", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
+                        error = true;
+                    }
+                    if (!error) {
+#ifdef COMMS_DEBUG
+                        PrintAndLogEx(NORMAL, "Receiving OLD:");
+#endif
+#ifdef COMMS_DEBUG_RAW
+                        print_hex_break((uint8_t *)&rx_old.cmd, sizeof(rx_old.cmd), 32);
+                        print_hex_break((uint8_t *)&rx_old.arg, sizeof(rx_old.arg), 32);
+                        print_hex_break((uint8_t *)&rx_old.d, sizeof(rx_old.d), 32);
+#endif
+                        rx.ng = false;
+                        rx.magic = 0;
+                        rx.status = 0;
+                        rx.crc = 0;
+                        rx.cmd = rx_old.cmd;
+                        rx.oldarg[0] = rx_old.arg[0];
+                        rx.oldarg[1] = rx_old.arg[1];
+                        rx.oldarg[2] = rx_old.arg[2];
+                        rx.length = PM3_CMD_DATA_SIZE;
+                        memcpy(&rx.data, &rx_old.d, rx.length);
+                        PacketResponseReceived(&rx);
+                        if (rx.cmd == CMD_ACK) {
+                            ACK_received = true;
+                        }
                     }
                 }
-            }
-        } else {
-            if (rxlen > 0) {
-                PrintAndLogEx(WARNING, "Received packet frame preamble too short: %d/%zu", rxlen, sizeof(PacketResponseNGPreamble));
-                error = true;
-            }
-            if (res == PM3_ENOTTY) {
-                commfailed = true;
+            } else {
+                if (rxlen > 0) {
+                    PrintAndLogEx(WARNING, "Received packet frame preamble too short: %d/%zu", rxlen, sizeof(PacketResponseNGPreamble));
+                    error = true;
+                }
+                if (res == PM3_ENOTTY) {
+                    commfailed = true;
+                }
             }
         }
 
+        is_receiving_raw_last = is_receiving_raw;
         // TODO if error, shall we resync ?
 
         pthread_mutex_lock(&txBufferMutex);
@@ -558,6 +607,45 @@ __attribute__((force_align_arg_pointer))
 bool IsCommunicationThreadDead(void) {
     bool ret = __atomic_load_n(&comm_thread_dead, __ATOMIC_SEQ_CST);
     return ret;
+}
+
+// To start raw receive mode:
+// 1. Call SetCommunicationRawReceiveBuffer(...)
+// 2. Call SetCommunicationReceiveMode(true)
+//
+// To stop raw receive mode:
+// Call SetCommunicationReceiveMode(false)
+//
+// Note: 
+// 1. The receiving thread won't accept any normal packets after calling
+// SetCommunicationReceiveMode(true). You need to call 
+// SetCommunicationReceiveMode(false) to stop the raw receiving process.
+// 2. If the received size >= len used in SetCommunicationRawReceiveBuffer(),
+// The receiving thread will ignore the incoming data to prevent overflow.
+// 3. Normally you only need WaitForRawDataTimeout() rather than the 
+// low level functions like SetCommunicationReceiveMode(), 
+// SetCommunicationRawReceiveBuffer() and GetCommunicationRawReceiveNum()
+
+bool SetCommunicationReceiveMode(bool isRawMode) {
+    if (isRawMode) {
+        uint8_t *buffer = __atomic_load_n(&comm_raw_data, __ATOMIC_SEQ_CST);
+        if (buffer == NULL) {
+            PrintAndLogEx(ERR, "Buffer for raw data is not set");
+            return false;
+        }
+    }
+    __atomic_store_n(&comm_raw_mode, isRawMode, __ATOMIC_SEQ_CST);
+    return true;
+}
+
+void SetCommunicationRawReceiveBuffer(uint8_t *buffer, size_t len) {
+    __atomic_store_n(&comm_raw_data,  buffer, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&comm_raw_len,  len, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&comm_raw_pos,  0, __ATOMIC_SEQ_CST);
+}
+
+size_t GetCommunicationRawReceiveNum(void) {
+    return __atomic_load_n(&comm_raw_pos, __ATOMIC_SEQ_CST);
 }
 
 bool OpenProxmark(pm3_device_t **dev, const char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
@@ -736,6 +824,67 @@ static size_t communication_delay(void) {
     if (g_conn.send_via_fpc_usart)  // needed also for Windows USB USART??
         return 2 * (12000000 / g_conn.uart_speed);
     return 0;
+}
+
+
+/**
+ * @brief Wait for receiving a specified amount of bytes
+ * 
+ * @param buffer The receive buffer
+ * @param len The maximum receive byte size
+ * @param ms_timeout the maximum timeout
+ * @param show_process print how many bytes are received
+ * @return the number of received bytes
+ */
+size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process) {
+    uint8_t print_counter = 0;
+    size_t last_pos = 0;
+
+    // Add delay depending on the communication channel & speed
+    if (ms_timeout != (size_t) - 1) {
+        ms_timeout += communication_delay();
+    }
+    __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
+
+    SetCommunicationRawReceiveBuffer(buffer, len);
+    SetCommunicationReceiveMode(true);
+
+    size_t pos = 0;
+    while (pos < len) {
+
+        if (kbd_enter_pressed()) {
+            // send anything to stop the transfer
+            PrintAndLogEx(INFO, "Stopping");
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        }
+
+        pos = __atomic_load_n(&comm_raw_pos, __ATOMIC_SEQ_CST);
+
+        // check the timeout if pos is not updated
+        if (last_pos == pos) {
+            uint64_t tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
+            if ((msclock() - tmp_clk > ms_timeout)) {
+                break;
+            }
+        } else {
+            // print when (print_counter % 64) == 0
+            if (show_process && (print_counter & 0x3F) == 0) {
+                PrintAndLogEx(INFO, "[%zu/%zu]", pos, len);
+            }
+        }
+
+        print_counter++;
+        last_pos = pos;
+        msleep(10);
+    }
+    if (pos == len) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        msleep(ms_timeout);
+    }
+    SetCommunicationReceiveMode(false);
+    pos = __atomic_load_n(&comm_raw_pos, __ATOMIC_SEQ_CST);
+    PrintAndLogEx(INFO, "Done: [%zu/%zu]", pos, len);
+    return pos;
 }
 
 /**
