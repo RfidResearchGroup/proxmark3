@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
-## [Faraday][2023-11-13]
+## [Faraday.4.17511][2023-11-13]
  - Fixed Python support of `experimental_client_with_swig` (@doegox)
  - Use proxmark3 as a generic smartcard reader with other software with `smart relay` (@gm3197)
  - Added `tools\mfkeys\staticnested` - program to recover static nested keys (@iceman1001)
