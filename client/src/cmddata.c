@@ -1708,7 +1708,7 @@ int CmdHpf(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = malloc(g_GraphTraceLen);
     size_t size = getFromGraphBuf(bits);
     removeSignalOffset(bits, size);
     // push it back to graph
@@ -1717,6 +1717,7 @@ int CmdHpf(const char *Cmd) {
     computeSignalProperties(bits, size);
 
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -2104,12 +2105,13 @@ static int CmdLoad(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " samples", g_GraphTraceLen);
 
     if (nofix == false) {
-        uint8_t bits[g_GraphTraceLen];
+        uint8_t *bits = malloc(g_GraphTraceLen);
         size_t size = getFromGraphBuf(bits);
 
         removeSignalOffset(bits, size);
         setGraphBuf(bits, size);
         computeSignalProperties(bits, size);
+        free(bits);
     }
 
     setClockGrid(0, 0);
@@ -2241,12 +2243,13 @@ int CmdNorm(const char *Cmd) {
         }
     }
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = malloc(g_GraphTraceLen);
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
 
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -2387,12 +2390,13 @@ static int CmdDirectionalThreshold(const char *Cmd) {
     directionalThreshold(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, up, down);
 
     // set signal properties low/high/mean/amplitude and isnoice detection
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = malloc(g_GraphTraceLen);
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
 
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -2430,11 +2434,12 @@ static int CmdZerocrossings(const char *Cmd) {
         }
     }
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = malloc(g_GraphTraceLen);
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -2743,11 +2748,12 @@ static int CmdDataIIR(const char *Cmd) {
 
     iceSimple_Filter(g_GraphBuffer, g_GraphTraceLen, k);
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = malloc(g_GraphTraceLen);
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -3370,11 +3376,12 @@ static int CmdCenterThreshold(const char *Cmd) {
     centerThreshold(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, up, down);
 
     // set signal properties low/high/mean/amplitude and isnoice detection
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = malloc(g_GraphTraceLen);
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -3415,11 +3422,12 @@ static int CmdEnvelope(const char *Cmd) {
 
     envelope_square(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen);
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = malloc(g_GraphTraceLen);
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 

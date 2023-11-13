@@ -117,10 +117,11 @@ int demodHID(bool verbose) {
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint32_t hi2 = 0, hi = 0, lo = 0;
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = malloc(g_GraphTraceLen);
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID not enough samples"));
+        free(bits);
         return PM3_ESOFT;
     }
     //get binary from fsk wave
@@ -146,6 +147,7 @@ int demodHID(bool verbose) {
 
     setDemodBuff(bits, size, idx);
     setClockGrid(50, waveIdx + (idx * 50));
+    free(bits);
 
     if (hi2 == 0 && hi == 0 && lo == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID no values found"));

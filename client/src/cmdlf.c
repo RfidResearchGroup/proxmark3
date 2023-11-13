@@ -435,7 +435,7 @@ int CmdFlexdemod(const char *Cmd) {
 #endif
     int i, j, start, bit, sum;
 
-    int data[g_GraphTraceLen];
+    int *data = malloc(g_GraphTraceLen * sizeof(int));
     memcpy(data, g_GraphBuffer, g_GraphTraceLen);
 
     size_t size = g_GraphTraceLen;
@@ -456,6 +456,7 @@ int CmdFlexdemod(const char *Cmd) {
 
     if (start == size - LONG_WAIT) {
         PrintAndLogEx(WARNING, "nothing to wait for");
+        free(data);
         return PM3_ENODATA;
     }
 
@@ -499,6 +500,7 @@ int CmdFlexdemod(const char *Cmd) {
         }
     }
     RepaintGraphWindow();
+    free(data);
     return PM3_SUCCESS;
 }
 
