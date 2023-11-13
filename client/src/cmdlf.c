@@ -742,7 +742,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
 
             BitstreamOut_t bout = {realtimeBuf, sample_bytes * 8,  0};
             size_t j = 0;
-            for (j = 0; j * current_config.bits_per_sample < sample_bytes * 8 && j * current_config.bits_per_sample < MAX_GRAPH_TRACE_LEN * 8; j++) {
+            for (j = 0; j * current_config.bits_per_sample < sample_bytes * 8 && j < MAX_GRAPH_TRACE_LEN; j++) {
                 uint8_t sample = getByte(current_config.bits_per_sample, &bout);
                 g_GraphBuffer[j] = ((int) sample) - 127;
             }

@@ -1783,7 +1783,7 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
 
         BitstreamOut_t bout = { got, bits_per_sample * n,  0};
         uint32_t j = 0;
-        for (j = 0; j * bits_per_sample < n * 8 && j * bits_per_sample < MAX_GRAPH_TRACE_LEN * 8; j++) {
+        for (j = 0; j * bits_per_sample < n * 8 && j < MAX_GRAPH_TRACE_LEN; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
             g_GraphBuffer[j] = ((int) sample) - 127;
         }
@@ -1792,7 +1792,7 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
         if (verbose) PrintAndLogEx(INFO, "Unpacked %d samples", j);
 
     } else {
-        for (uint32_t j = 0; j < n; j++) {
+        for (uint32_t j = 0; j < n && j < MAX_GRAPH_TRACE_LEN; j++) {
             g_GraphBuffer[j] = ((int)got[j]) - 127;
         }
         g_GraphTraceLen = n;
