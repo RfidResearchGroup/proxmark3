@@ -229,7 +229,7 @@ void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool
 
         // write the current byte
         data.buffer[data.numbits >> 3] |= sample >> bits_offset;
-        int numbits = data.numbits + bits_cap;
+        uint32_t numbits = data.numbits + bits_cap;
 
         // write the remaining bits to the next byte
         data.buffer[numbits >> 3] |= sample << (bits_cap);
@@ -521,7 +521,7 @@ int ReadLF_realtime(bool reader_field) {
                 // reset sample
                 last_byte = 0;
                 data.numbits = 0;
-                // data.position = 0; // unused?
+                samples.counter = size_threshold;
                 samples.total_saved = 0;
 
             } else if (samples.total_saved == 1) {
