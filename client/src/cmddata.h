@@ -86,6 +86,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
 
 int getSamples(uint32_t n, bool verbose);
 int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_config);
+void getSamplesFromBufEx(uint8_t* data, size_t sample_num, uint8_t bits_per_sample, bool verbose);
 
 void setClockGrid(uint32_t clk, int offset);
 int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down);
