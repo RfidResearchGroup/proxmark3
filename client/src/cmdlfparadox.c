@@ -125,7 +125,7 @@ int demodParadox(bool verbose, bool oldChksum) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox preamble not found");
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error demoding fsk %d", idx);
-        
+
         free(bits);
         return PM3_ESOFT;
     }

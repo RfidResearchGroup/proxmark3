@@ -718,10 +718,10 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
 
     if (realtime) {
         uint8_t *realtimeBuf = calloc(samples, sizeof(uint8_t));
-        
+
         size_t sample_bytes = samples * bits_per_sample;
         sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
-        
+
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000 + FPGA_LOAD_WAIT_TIME, true);
         samples = sample_bytes * 8 / bits_per_sample;
@@ -814,7 +814,7 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
 
     if (realtime) {
         uint8_t *realtimeBuf = calloc(samples, sizeof(uint8_t));
-        
+
         size_t sample_bytes = samples * bits_per_sample;
         sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
 

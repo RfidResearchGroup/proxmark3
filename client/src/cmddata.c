@@ -1783,7 +1783,7 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
     return PM3_SUCCESS;
 }
 
-void getSamplesFromBufEx(uint8_t* data, size_t sample_num, uint8_t bits_per_sample, bool verbose) {
+void getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_sample, bool verbose) {
 
     size_t max_num = MIN(sample_num, MAX_GRAPH_TRACE_LEN);
 
