@@ -9,7 +9,6 @@ assignees: doegox, iceman1001
 
 # Checklist
 
-- [ ] CHANGELOG.md: add title: `## [releasename][YYYY-MM-DD]`
 - [ ] `make style`
 - [ ] `make miscchecks`
 - [ ] `make clean; make client CC=clang CXX=clang++ LD=clang++` on recent Debian or Ubuntu
@@ -44,14 +43,24 @@ Run `tools/release_tests.sh` on:
 
 # creating release
 
-- [ ] `make release RELEASE_NAME="ice awesome"`
-  - last line of output,  gives you next command to run.
+- [ ] CHANGELOG.md: add title: `## [myreleasename][YYYY-MM-DD]`
+- [ ] `make release RELEASE_NAME="myreleasename"`
+  - last line of output gives you next command to run.
   - Sample:  `git push && git push origin v4.12345`
-- [ ] CHANGELOG.md: edit title to add version info: `## [releasename.4.12345][YYYY-MM-DD]`
+- [ ] CHANGELOG.md: edit title to add version info: `## [myreleasename.4.12345][YYYY-MM-DD]`
 
 ## Step Github releases
 
 - [ ] Go to Github releases,  create release based on the new created tag and publish
+  - Choose a tag: v4.12345
+  - Target: master
+  - Set as the latest release
+  - Title: `proxmark3-v4.12345`
+  - Description:
+```
+Release v4.12345
+Nickname "myreleasename"
+```
 
 ## Step Homebrew updates
 
