@@ -1011,7 +1011,7 @@ static int CmdUndecimate(const char *Cmd) {
     CLIParserFree(ctx);
 
     //We have memory, don't we?
-    int swap[MAX_GRAPH_TRACE_LEN] = {0};
+    int *swap = calloc(MAX_GRAPH_TRACE_LEN, sizeof(int));
     uint32_t g_index = 0, s_index = 0;
     while (g_index < g_GraphTraceLen && s_index + factor < MAX_GRAPH_TRACE_LEN) {
         int count = 0;
@@ -1028,6 +1028,7 @@ static int CmdUndecimate(const char *Cmd) {
     memcpy(g_GraphBuffer, swap, s_index * sizeof(int));
     g_GraphTraceLen = s_index;
     RepaintGraphWindow();
+    free(swap);
     return PM3_SUCCESS;
 }
 
