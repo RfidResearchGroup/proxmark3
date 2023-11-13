@@ -19,6 +19,7 @@ endif
 # macOS doesn't like these compiler params
 ifneq ($(platform),Darwin)
     MYCFLAGS += --param max-completely-peeled-insns=1000 --param max-completely-peel-times=10000
+    MYLDLIBS += -lpthread -latomic
 endif
 
 mfkey32 : $(OBJDIR)/mfkey32.o $(MYOBJS)
