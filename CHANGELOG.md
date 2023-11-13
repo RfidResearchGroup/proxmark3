@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed Python support of `experimental_client_with_swig` (@doegox)
  - Use proxmark3 as a generic smartcard reader with other software with `smart relay` (@gm3197)
  - Added `tools\mfkeys\staticnested` - program to recover static nested keys (@iceman1001)
  - Added `pm3_gen_dictionary.py` - python script to extract and save all keys from MFC dump files. (@iceman1001)
