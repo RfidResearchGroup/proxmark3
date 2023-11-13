@@ -711,6 +711,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
         PrintAndLogEx(ERR, "failed to get current device config");
         return retval;
     }
+    clearCommandBuffer();
     const uint8_t bits_per_sample = current_config.bits_per_sample;
 
     if (realtime) {
@@ -718,16 +719,15 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
         
         size_t sample_bytes = samples * bits_per_sample;
         sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
-        clearCommandBuffer();
+        
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true);
-
-        getSamplesFromBufEx(realtimeBuf, samples, current_config.bits_per_sample, verbose);
+        samples = sample_bytes * 8 / bits_per_sample;
+        getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
 
         free(realtimeBuf);
     } else {
         payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
-        clearCommandBuffer();
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         PacketResponseNG resp;
         if (gs_lf_threshold_set) {
@@ -758,6 +758,7 @@ int CmdLFRead(const char *Cmd) {
                   _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at it"),
                   "lf read -v -s 12000   --> collect 12000 samples\n"
                   "lf read -s 3000 -@    --> oscilloscope style \n"
+                  "lf read -r            --> use real-time mode \n"
                  );
 
     void *argtable[] = {
@@ -779,7 +780,7 @@ int CmdLFRead(const char *Cmd) {
         return PM3_ENOTTY;
 
     if (realtime && samples == 0) {
-        samples = 8 * 1024 * 1024;
+        samples = MAX_GRAPH_TRACE_LEN;
     }
 
     if (cm || realtime) {
@@ -792,29 +793,51 @@ int CmdLFRead(const char *Cmd) {
     return ret;
 }
 
-int lf_sniff(bool realtime, bool verbose, uint32_t samples) {
+int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
     lf_sample_payload_t payload;
-    payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
     payload.realtime = realtime;
     payload.verbose = verbose;
 
+    sample_config current_config;
+    int retval = lf_getconfig(&current_config);
+    if (retval != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to get current device config");
+        return retval;
+    }
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-    PacketResponseNG resp;
-    if (gs_lf_threshold_set || realtime) {
-        WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp);
+    const uint8_t bits_per_sample = current_config.bits_per_sample;
+
+    if (realtime) {
+        uint8_t *realtimeBuf = calloc(samples, sizeof(uint8_t));
+        
+        size_t sample_bytes = samples * bits_per_sample;
+        sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
+
+        SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+        sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true);
+        samples = sample_bytes * 8 / bits_per_sample;
+        getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
+
+        free(realtimeBuf);
     } else {
-        if (WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500) == false) {
-            PrintAndLogEx(WARNING, "(lf_read) command execution time out");
-            return PM3_ETIMEOUT;
+        payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
+        SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+        PacketResponseNG resp;
+        if (gs_lf_threshold_set) {
+            WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp);
+        } else {
+            if (WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500) == false) {
+                PrintAndLogEx(WARNING, "(lf_read) command execution time out");
+                return PM3_ETIMEOUT;
+            }
         }
+        // response is number of bits read
+        uint32_t size = (resp.data.asDwords[0] / bits_per_sample);
+        getSamples(size, verbose);
     }
 
-    // response is number of bits read
-    uint32_t size = (resp.data.asDwords[0] / 8);
-    getSamples(size, verbose);
     return PM3_SUCCESS;
 }
 
@@ -829,6 +852,7 @@ int CmdLFSniff(const char *Cmd) {
                   _CYAN_(" - use ") _YELLOW_("`lf search -1`") _CYAN_(" to see if signal can be automatic decoded\n"),
                   "lf sniff -v\n"
                   "lf sniff -s 3000 -@    --> oscilloscope style \n"
+                  "lf sniff -r            --> use real-time mode \n"
                  );
 
     void *argtable[] = {
@@ -840,7 +864,7 @@ int CmdLFSniff(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t samples = (arg_get_u32_def(ctx, 1, 0) & 0xFFFF);
+    uint64_t samples = arg_get_u64_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
     bool cm = arg_get_lit(ctx, 3);
     bool realtime = arg_get_lit(ctx, 4);
@@ -849,13 +873,17 @@ int CmdLFSniff(const char *Cmd) {
     if (g_session.pm3_present == false)
         return PM3_ENOTTY;
 
-    if (cm) {
+    if (realtime && samples == 0) {
+        samples = MAX_GRAPH_TRACE_LEN;
+    }
+
+    if (cm || realtime) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
     int ret = PM3_SUCCESS;
     do {
         ret = lf_sniff(realtime, verbose, samples);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && kbd_enter_pressed() == false);
     return ret;
 }
 
