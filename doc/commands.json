@@ -11790,6 +11790,21 @@
             ],
             "usage": "smart reader [-hv]"
         },
+        "smart relay": {
+            "command": "smart relay",
+            "description": "Make pm3 available to host OS smartcard driver via vpcd to enable use with other software such as GlobalPlatform Pro",
+            "notes": [
+                "Requires the virtual smartcard daemon to be installed and running, see https://frankmorgner.github.io/vsmartcard/virtualsmartcard/README.html"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--host <str> vpcd socket host (default: localhost)",
+                "-p, --port <int> vpcd socket port (default: 35963)",
+                "-v, --verbose display APDU transactions between OS and card"
+            ],
+            "usage": "smart relay [-hv] [--host <str>] [-p <int>]"
+        },
         "smart setclock": {
             "command": "smart setclock",
             "description": "Set clock speed for smart card interface.",
@@ -12049,8 +12064,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 698,
+        "commands_extracted": 699,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-11-09T16:29:08"
+        "extracted_on": "2023-11-11T20:31:02"
     }
 }

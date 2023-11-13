@@ -1424,6 +1424,7 @@ Check column "offline" for their availability.
 |`smart help             `|Y       |`This help`
 |`smart list             `|Y       |`List ISO 7816 history`
 |`smart info             `|N       |`Tag information`
+|`smart relay            `|N       |`Turn pm3 into pcsc reader and relay to host OS via vpcd`
 |`smart reader           `|N       |`Act like an IS07816 reader`
 |`smart raw              `|N       |`Send raw hex data to tag`
 |`smart upgrade          `|Y       |`Upgrade sim module firmware`
