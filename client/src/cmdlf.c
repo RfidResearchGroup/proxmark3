@@ -699,12 +699,7 @@ int CmdLFConfig(const char *Cmd) {
 int lf_read(bool verbose, uint32_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
-    struct p {
-        uint32_t samples : 31;
-        bool     verbose : 1;
-    } PACKED;
-
-    struct p payload;
+    lf_sample_payload_t payload;
     payload.verbose = verbose;
     payload.samples = samples;
 
@@ -765,10 +760,7 @@ int CmdLFRead(const char *Cmd) {
 int lf_sniff(bool verbose, uint32_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
-    struct p {
-        uint32_t samples : 31;
-        bool     verbose : 1;
-    } PACKED payload;
+    lf_sample_payload_t payload;
 
     payload.samples = (samples & 0xFFFF);
     payload.verbose = verbose;
