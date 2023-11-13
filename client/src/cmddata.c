@@ -1776,36 +1776,45 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
         bits_per_sample = sc->bits_per_sample;
     }
 
+    getSamplesFromBufEx(got, n, bits_per_sample, verbose);
+
+    return PM3_SUCCESS;
+}
+
+void getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_sample, bool verbose) {
+
+    size_t max_num = MIN(sample_num, MAX_GRAPH_TRACE_LEN);
+
     if (bits_per_sample < 8) {
 
         if (verbose) PrintAndLogEx(INFO, "Unpacking...");
 
-        BitstreamOut_t bout = { got, bits_per_sample * n,  0};
-        uint32_t j = 0;
-        for (j = 0; j * bits_per_sample < n * 8 && j * bits_per_sample < MAX_GRAPH_TRACE_LEN * 8; j++) {
+        BitstreamOut_t bout = {data, bits_per_sample * sample_num,  0};
+        size_t j = 0;
+        for (j = 0; j < max_num; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
             g_GraphBuffer[j] = ((int) sample) - 127;
         }
         g_GraphTraceLen = j;
 
-        if (verbose) PrintAndLogEx(INFO, "Unpacked %d samples", j);
+        if (verbose) PrintAndLogEx(INFO, "Unpacked %zu samples", j);
 
     } else {
-        for (uint32_t j = 0; j < n; j++) {
-            g_GraphBuffer[j] = ((int)got[j]) - 127;
+        for (size_t j = 0; j < max_num; j++) {
+            g_GraphBuffer[j] = ((int)data[j]) - 127;
         }
-        g_GraphTraceLen = n;
+        g_GraphTraceLen = max_num;
     }
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = malloc(g_GraphTraceLen);
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
+    free(bits);
 
     setClockGrid(0, 0);
     g_DemodBufferLen = 0;
     RepaintGraphWindow();
-    return PM3_SUCCESS;
 }
 
 static int CmdSamples(const char *Cmd) {
@@ -3584,4 +3593,3 @@ int CmdData(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
