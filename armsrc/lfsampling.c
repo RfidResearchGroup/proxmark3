@@ -229,7 +229,7 @@ void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool
 
         // write the current byte
         data.buffer[data.numbits >> 3] |= sample >> bits_offset;
-        int numbits = data.numbits + bits_cap;
+        uint32_t numbits = data.numbits + bits_cap;
 
         // write the remaining bits to the next byte
         data.buffer[numbits >> 3] |= sample << (bits_cap);
@@ -306,7 +306,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
 
         // only every 4000th times, in order to save time when collecting samples.
         // interruptible only when logging not yet triggered
-        if ((checked >= 4000) && trigger_hit == false) {
+        if (unlikely(trigger_hit == false && (checked >= 4000))) {
             if (data_available()) {
                 checked = -1;
                 break;
@@ -325,11 +325,11 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
             volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
 
-            // Test point 8 (TP8) can be used to trigger oscilloscope
+            // (RDV4) Test point 8 (TP8) can be used to trigger oscilloscope
             if (ledcontrol) LED_D_OFF();
 
             // threshold either high or low values 128 = center 0.  if trigger = 178
-            if (trigger_hit == false) {
+            if (unlikely(trigger_hit == false)) {
                 if ((trigger_threshold > 0) && (sample < (trigger_threshold + 128)) && (sample > (128 - trigger_threshold))) {
                     if (cancel_after > 0) {
                         cancel_counter++;
@@ -338,11 +338,10 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
                     }
                     continue;
                 }
+                trigger_hit = true;
             }
 
-            trigger_hit = true;
-
-            if (samples_to_skip > 0) {
+            if (unlikely(samples_to_skip > 0)) {
                 samples_to_skip--;
                 continue;
             }
@@ -371,6 +370,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
     }
     return data.numbits;
 }
+
 /**
  * @brief Does sample acquisition, ignoring the config values set in the sample_config.
  * This method is typically used by tag-specific readers who just wants to read the samples
@@ -441,7 +441,7 @@ int ReadLF_realtime(bool reader_field) {
     int32_t samples_to_skip = config.samples_to_skip;
     const uint8_t decimation = config.decimation;
 
-    uint32_t sample_size = 64;
+    uint32_t sample_buffer_len = 64;
     const int8_t size_threshold_table[9] = {0, 64, 64, 60, 64, 60, 60, 56, 64};
     const int8_t size_threshold = size_threshold_table[bits_per_sample];
 
@@ -450,13 +450,10 @@ int ReadLF_realtime(bool reader_field) {
     uint8_t curr_byte = 0;
     int return_value = PM3_SUCCESS;
 
-    initSampleBuffer(&sample_size); // sample size in bytes
-    if (sample_size != 64) {
+    initSampleBuffer(&sample_buffer_len);
+    if (sample_buffer_len != 64) {
         return PM3_EFAILED;
     }
-
-    sample_size <<= 3; // sample size in bits
-    sample_size /= bits_per_sample; // sample count
 
     bool trigger_hit = false;
     int16_t checked = 0;

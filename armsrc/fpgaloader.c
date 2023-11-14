@@ -493,7 +493,7 @@ void FpgaDownloadAndGo(int bitstream_version) {
 #endif
 
     // Send waiting time extension request as this will take a while
-    send_wtx(1500);
+    send_wtx(FPGA_LOAD_WAIT_TIME);
 
     bool verbose = (g_dbglevel > 3);
 
