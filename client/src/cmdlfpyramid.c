@@ -43,10 +43,11 @@ static int CmdHelp(const char *Cmd);
 int demodPyramid(bool verbose) {
     (void) verbose; // unused so far
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
-    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid not enough samples");
+        free(bits);
         return PM3_ESOFT;
     }
     //get binary from fsk wave
@@ -65,6 +66,7 @@ int demodPyramid(bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: size not correct: %zu", size);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: error demoding fsk idx: %d", idx);
+        free(bits);
         return PM3_ESOFT;
     }
     setDemodBuff(bits, size, idx);
@@ -113,6 +115,7 @@ int demodPyramid(bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: parity check failed - IDX: %d, hi3: %08X", idx, rawHi3);
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid: at parity check - tag size does not match Pyramid format, SIZE: %zu, IDX: %d, hi3: %08X", size, idx, rawHi3);
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -181,6 +184,7 @@ int demodPyramid(bool verbose) {
         printDemodBuff(0, false, false, false);
     }
 
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -507,4 +511,3 @@ int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx) {
 
     return (int)startIdx;
 }
-
