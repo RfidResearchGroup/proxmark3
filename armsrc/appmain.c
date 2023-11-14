@@ -432,7 +432,7 @@ static void SendStatus(uint32_t wait) {
     delta_time = GetTickCountDelta(start_time);
     if ((delta_time < SLCK_CHECK_MS - 1) || (delta_time > SLCK_CHECK_MS + 1)) {
         // error > 2% with SLCK_CHECK_MS=50
-        Dbprintf(_RED_("  Slow Clock speed change detected, TIA needed"));
+        Dbprintf(_RED_("  Slow Clock speed change detected, run `hw tia`"));
         Dbprintf(_YELLOW_("  Slow Clock actual speed seems closer to %d kHz"),
                  (16 * MAINCK / 1000) / mainf * delta_time / SLCK_CHECK_MS);
     }
