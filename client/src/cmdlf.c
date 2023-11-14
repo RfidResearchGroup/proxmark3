@@ -66,8 +66,6 @@
 #include "crc.h"
 #include "pm3_cmd.h"        // for LF_CMDREAD_MAX_EXTRA_SYMBOLS
 
-static bool gs_lf_threshold_set = false;
-
 static int CmdHelp(const char *Cmd);
 
 // Informative user function.
@@ -646,7 +644,6 @@ int CmdLFConfig(const char *Cmd) {
         config.divisor = LF_DIVISOR_125;
         config.samples_to_skip = 0;
         config.trigger_threshold = 0;
-        gs_lf_threshold_set = false;
     }
 
     if (use_125)
@@ -691,7 +688,6 @@ int CmdLFConfig(const char *Cmd) {
 
     if (trigg > -1) {
         config.trigger_threshold = trigg;
-        gs_lf_threshold_set = (config.trigger_threshold > 0);
     }
 
     config.samples_to_skip = skip;
@@ -713,6 +709,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
     }
     clearCommandBuffer();
     const uint8_t bits_per_sample = current_config.bits_per_sample;
+    const bool is_trigger_threshold_set = (current_config.trigger_threshold > 0);
 
     if (realtime) {
         uint8_t *realtimeBuf = calloc(samples, sizeof(uint8_t));
@@ -721,16 +718,27 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
         sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
 
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-        sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000 + FPGA_LOAD_WAIT_TIME, true);
+        if (is_trigger_threshold_set) {
+            size_t first_receive_len = 32; // larger than the response of CMD_WTX
+            // wait until a bunch of data arrives
+            first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false);
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000 + FPGA_LOAD_WAIT_TIME, true);
+            sample_bytes += first_receive_len;
+        } else {
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000 + FPGA_LOAD_WAIT_TIME, true);
+        }
         samples = sample_bytes * 8 / bits_per_sample;
-        getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
+        PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
+        if (samples != 0) {
+            getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
+        }
 
         free(realtimeBuf);
     } else {
         payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         PacketResponseNG resp;
-        if (gs_lf_threshold_set) {
+        if (is_trigger_threshold_set) {
             WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
         } else {
             if (!WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500)) {
@@ -809,6 +817,7 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
     }
     clearCommandBuffer();
     const uint8_t bits_per_sample = current_config.bits_per_sample;
+    const bool is_trigger_threshold_set = (current_config.trigger_threshold > 0);
 
     if (realtime) {
         uint8_t *realtimeBuf = calloc(samples, sizeof(uint8_t));
@@ -817,16 +826,27 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
         sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
 
         SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-        sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000 + FPGA_LOAD_WAIT_TIME, true);
+        if (is_trigger_threshold_set) {
+            size_t first_receive_len = 32; // larger than the response of CMD_WTX
+            // wait until a bunch of data arrives
+            first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false);
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000 + FPGA_LOAD_WAIT_TIME, true);
+            sample_bytes += first_receive_len;
+        } else {
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000 + FPGA_LOAD_WAIT_TIME, true);
+        }
         samples = sample_bytes * 8 / bits_per_sample;
-        getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
+        PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
+        if (samples != 0) {
+            getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
+        }
 
         free(realtimeBuf);
     } else {
         payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
         SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         PacketResponseNG resp;
-        if (gs_lf_threshold_set) {
+        if (is_trigger_threshold_set) {
             WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp);
         } else {
             if (WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500) == false) {
