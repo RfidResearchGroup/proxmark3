@@ -432,6 +432,10 @@ int CmdFlexdemod(const char *Cmd) {
     int i, j, start, bit, sum;
 
     int *data = malloc(g_GraphTraceLen * sizeof(int));
+    if (data == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     memcpy(data, g_GraphBuffer, g_GraphTraceLen);
 
     size_t size = g_GraphTraceLen;
@@ -697,7 +701,7 @@ int CmdLFConfig(const char *Cmd) {
 static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
-    lf_sample_payload_t payload;
+    lf_sample_payload_t payload = {0};
     payload.realtime = realtime;
     payload.verbose = verbose;
 
@@ -720,7 +724,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         if (is_trigger_threshold_set) {
             size_t first_receive_len = 32; // larger than the response of CMD_WTX
-            // wait until a bunch of data arrives
+            // Wait until a bunch of data arrives
             first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false);
             sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000 + FPGA_LOAD_WAIT_TIME, true);
             sample_bytes += first_receive_len;
@@ -759,7 +763,8 @@ int lf_read(bool verbose, uint64_t samples) {
 }
 
 int CmdLFRead(const char *Cmd) {
-    // In real-time mode, the first few bytes might be the response of CMD_WTX rather than the real samples
+    // In real-time mode, the first few bytes might be the response of CMD_WTX 
+    // rather than the real samples if the LF FPGA image is not ready.
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf read",
                   "Sniff low frequency signal.\n"
@@ -805,7 +810,7 @@ int CmdLFRead(const char *Cmd) {
 int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
-    lf_sample_payload_t payload;
+    lf_sample_payload_t payload = {0};
     payload.realtime = realtime;
     payload.verbose = verbose;
 
@@ -828,7 +833,7 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
         SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         if (is_trigger_threshold_set) {
             size_t first_receive_len = 32; // larger than the response of CMD_WTX
-            // wait until a bunch of data arrives
+            // Wait until a bunch of data arrives
             first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false);
             sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000 + FPGA_LOAD_WAIT_TIME, true);
             sample_bytes += first_receive_len;
@@ -863,7 +868,8 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
 }
 
 int CmdLFSniff(const char *Cmd) {
-    // In real-time mode, the first few bytes might be the response of CMD_WTX rather than the real samples
+    // In real-time mode, the first few bytes might be the response of CMD_WTX 
+    // rather than the real samples if the LF FPGA image is not ready.
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf sniff",
                   "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually.\n"

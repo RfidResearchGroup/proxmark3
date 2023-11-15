@@ -1012,6 +1012,10 @@ static int CmdUndecimate(const char *Cmd) {
 
     //We have memory, don't we?
     int *swap = calloc(MAX_GRAPH_TRACE_LEN, sizeof(int));
+    if (swap == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     uint32_t g_index = 0, s_index = 0;
     while (g_index < g_GraphTraceLen && s_index + factor < MAX_GRAPH_TRACE_LEN) {
         int count = 0;
@@ -1709,6 +1713,10 @@ int CmdHpf(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint8_t *bits = malloc(g_GraphTraceLen);
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     removeSignalOffset(bits, size);
     // push it back to graph
@@ -2106,6 +2114,10 @@ static int CmdLoad(const char *Cmd) {
 
     if (nofix == false) {
         uint8_t *bits = malloc(g_GraphTraceLen);
+        if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
         size_t size = getFromGraphBuf(bits);
 
         removeSignalOffset(bits, size);
@@ -2244,6 +2256,10 @@ int CmdNorm(const char *Cmd) {
     }
 
     uint8_t *bits = malloc(g_GraphTraceLen);
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
@@ -2391,6 +2407,10 @@ static int CmdDirectionalThreshold(const char *Cmd) {
 
     // set signal properties low/high/mean/amplitude and isnoice detection
     uint8_t *bits = malloc(g_GraphTraceLen);
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
@@ -2435,6 +2455,10 @@ static int CmdZerocrossings(const char *Cmd) {
     }
 
     uint8_t *bits = malloc(g_GraphTraceLen);
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
@@ -2749,6 +2773,10 @@ static int CmdDataIIR(const char *Cmd) {
     iceSimple_Filter(g_GraphBuffer, g_GraphTraceLen, k);
 
     uint8_t *bits = malloc(g_GraphTraceLen);
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
@@ -3377,6 +3405,10 @@ static int CmdCenterThreshold(const char *Cmd) {
 
     // set signal properties low/high/mean/amplitude and isnoice detection
     uint8_t *bits = malloc(g_GraphTraceLen);
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
@@ -3423,6 +3455,10 @@ static int CmdEnvelope(const char *Cmd) {
     envelope_square(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen);
 
     uint8_t *bits = malloc(g_GraphTraceLen);
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);

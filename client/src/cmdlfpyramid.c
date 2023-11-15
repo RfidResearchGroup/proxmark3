@@ -44,6 +44,10 @@ int demodPyramid(bool verbose) {
     (void) verbose; // unused so far
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Pyramid not enough samples");

@@ -23,6 +23,10 @@
 #include "common.h"
 #include "at91sam7s512.h"
 
+#define AT91C_USB_EP_CONTROL_SIZE   8
+#define AT91C_USB_EP_OUT_SIZE       64
+#define AT91C_USB_EP_IN_SIZE        64
+
 void usb_disable(void);
 void usb_enable(void);
 bool usb_check(void);

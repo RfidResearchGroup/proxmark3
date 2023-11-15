@@ -350,7 +350,7 @@ __attribute__((force_align_arg_pointer))
     bool commfailed = false;
     PacketResponseNG rx;
     PacketResponseNGRaw rx_raw;
-    // stash the last state of is_receiving_raw, to detect if state changed
+    // Stash the last state of is_receiving_raw, to detect if state changed
     bool is_receiving_raw_last = false;
 
 #if defined(__MACH__) && defined(__APPLE__)
@@ -398,7 +398,7 @@ __attribute__((force_align_arg_pointer))
                     }
                 }
             } else {
-                // ignore data when bufferPos >= bufferLen and is_receiving_raw has not been set to false
+                // Ignore data when bufferPos >= bufferLen and is_receiving_raw has not been set to false
                 uint8_t dummyData[64];
                 uint32_t dummyLen;
                 uart_receive(sp, dummyData, sizeof(dummyData), &dummyLen);
@@ -407,7 +407,7 @@ __attribute__((force_align_arg_pointer))
             if (is_receiving_raw_last) {
                 // is_receiving_raw changed from true to false
 
-                // set the buffer as undefined
+                // Set the buffer as undefined
                 // comm_raw_data == NULL is used in SetCommunicationReceiveMode()
                 __atomic_store_n(&comm_raw_data, NULL, __ATOMIC_SEQ_CST);
             }
@@ -849,11 +849,11 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
     while (pos < len) {
 
         if (kbd_enter_pressed()) {
-            // send anything to stop the transfer
+            // Send anything to stop the transfer
             PrintAndLogEx(INFO, "Stopping");
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
 
-            // for ms_timeout == -1, pos < len might always be true
+            // For ms_timeout == -1, pos < len might always be true
             // so user need a spectial way to break this loop
             if (ms_timeout == (size_t) - 1) {
                 break;
@@ -862,15 +862,15 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
 
         pos = __atomic_load_n(&comm_raw_pos, __ATOMIC_SEQ_CST);
 
-        // check the timeout if pos is not updated
+        // Check the timeout if pos is not updated
         if (last_pos == pos) {
             uint64_t tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
-            // if ms_timeout == -1, the loop can only be breaked by pressing Enter or receiving enough data
+            // If ms_timeout == -1, the loop can only be breaked by pressing Enter or receiving enough data
             if ((ms_timeout != (size_t) - 1) && (msclock() - tmp_clk > ms_timeout)) {
                 break;
             }
         } else {
-            // print when (print_counter % 64) == 0
+            // Print process when (print_counter % 64) == 0
             if (show_process && (print_counter & 0x3F) == 0) {
                 PrintAndLogEx(INFO, "[%zu/%zu]", pos, len);
             }
@@ -881,11 +881,11 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
         msleep(10);
     }
     if (pos == len && (ms_timeout != (size_t) - 1)) {
-        // if ms_timeout != -1, when the desired data is received, tell the arm side
+        // If ms_timeout != -1, when the desired data is received, tell the arm side
         // to stop the current process, and wait for some time to make sure the process
-        // has been stopped
-        // if ms_timeout == -1, the user might not want to break the existing process
-        // on the arm side
+        // has been stopped.
+        // If ms_timeout == -1, the user might not want to break the existing process
+        // on the arm side.
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         msleep(ms_timeout);
     }

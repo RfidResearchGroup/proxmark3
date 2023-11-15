@@ -306,7 +306,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
 
         // only every 4000th times, in order to save time when collecting samples.
         // interruptible only when logging not yet triggered
-        if (unlikely(trigger_hit == false && (checked >= 4000))) {
+        if (trigger_hit == false && (checked >= 4000)) {
             if (data_available()) {
                 checked = -1;
                 break;
@@ -329,7 +329,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
             if (ledcontrol) LED_D_OFF();
 
             // threshold either high or low values 128 = center 0.  if trigger = 178
-            if (unlikely(trigger_hit == false)) {
+            if (trigger_hit == false) {
                 if ((trigger_threshold > 0) && (sample < (trigger_threshold + 128)) && (sample > (128 - trigger_threshold))) {
                     if (cancel_after > 0) {
                         cancel_counter++;
@@ -341,7 +341,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
                 trigger_hit = true;
             }
 
-            if (unlikely(samples_to_skip > 0)) {
+            if (samples_to_skip > 0) {
                 samples_to_skip--;
                 continue;
             }
@@ -441,7 +441,6 @@ int ReadLF_realtime(bool reader_field) {
     int32_t samples_to_skip = config.samples_to_skip;
     const uint8_t decimation = config.decimation;
 
-    uint32_t sample_buffer_len = 64;
     const int8_t size_threshold_table[9] = {0, 64, 64, 60, 64, 60, 60, 56, 64};
     const int8_t size_threshold = size_threshold_table[bits_per_sample];
 
@@ -450,8 +449,9 @@ int ReadLF_realtime(bool reader_field) {
     uint8_t curr_byte = 0;
     int return_value = PM3_SUCCESS;
 
+    uint32_t sample_buffer_len = AT91C_USB_EP_IN_SIZE;
     initSampleBuffer(&sample_buffer_len);
-    if (sample_buffer_len != 64) {
+    if (sample_buffer_len != AT91C_USB_EP_IN_SIZE) {
         return PM3_EFAILED;
     }
 
@@ -469,7 +469,7 @@ int ReadLF_realtime(bool reader_field) {
     while (BUTTON_PRESS() == false) {
         // only every 4000th times, in order to save time when collecting samples.
         // interruptible only when logging not yet triggered
-        if (unlikely(trigger_hit == false && (checked >= 4000))) {
+        if (trigger_hit == false && (checked >= 4000)) {
             if (data_available()) {
                 checked = -1;
                 break;
@@ -492,21 +492,21 @@ int ReadLF_realtime(bool reader_field) {
             LED_D_OFF();
 
             // threshold either high or low values 128 = center 0.  if trigger = 178
-            if (unlikely(trigger_hit == false)) {
+            if (trigger_hit == false) {
                 if ((trigger_threshold > 0) && (sample < (trigger_threshold + 128)) && (sample > (128 - trigger_threshold))) {
                     continue;
                 }
                 trigger_hit = true;
             }
 
-            if (unlikely(samples_to_skip > 0)) {
+            if (samples_to_skip > 0) {
                 samples_to_skip--;
                 continue;
             }
 
             logSample(sample, decimation, bits_per_sample, false);
 
-            // write to USB FIFO if byte changed
+            // Write to USB FIFO if byte changed
             curr_byte = data.numbits >> 3;
             if (curr_byte > last_byte) {
                 async_usb_write_pushByte(data.buffer[last_byte]);
@@ -514,20 +514,20 @@ int ReadLF_realtime(bool reader_field) {
             last_byte = curr_byte;
 
             if (samples.total_saved == size_threshold) {
-                // request usb transmission and change FIFO bank
+                // Request USB transmission and change FIFO bank
                 if (async_usb_write_requestWrite() == false) {
                     return_value = PM3_EIO;
                     break;
                 }
 
-                // reset sample
+                // Reset sample
                 last_byte = 0;
                 data.numbits = 0;
                 samples.counter = size_threshold;
                 samples.total_saved = 0;
 
             } else if (samples.total_saved == 1) {
-                // check if there is any data from client
+                // Check if there is any data from client
                 if (data_available_fast()) {
                     break;
                 }

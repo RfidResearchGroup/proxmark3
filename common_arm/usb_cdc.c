@@ -37,10 +37,7 @@ AT91SAM7S256  USB Device Port
 #define AT91C_EP_IN             2  // cfg bulk in
 #define AT91C_EP_NOTIFY         3  // cfg cdc notification interrup
 
-#define AT91C_EP_CONTROL_SIZE   8
-#define AT91C_EP_OUT_SIZE       64
-#define AT91C_EP_IN_SIZE        64
-
+// The endpoint size is defined in usb_cdc.h
 
 // Section: USB Descriptors
 #define USB_DESCRIPTOR_DEVICE           0x01    // DescriptorType for a Device Descriptor.
@@ -128,7 +125,7 @@ static const char devDescriptor[] = {
     2,      // Device Class:    Communication Device Class
     0,      // Device Subclass: CDC class sub code ACM [ice 0x02 = win10 virtual comport ]
     0,      // Device Protocol: CDC Device protocol (unused)
-    AT91C_EP_CONTROL_SIZE,      // MaxPacketSize0
+    AT91C_USB_EP_CONTROL_SIZE,      // MaxPacketSize0
     0xc4, 0x9a, // Vendor ID  [0x9ac4 = J. Westhues]
     0x8f, 0x4b, // Product ID [0x4b8f = Proxmark-3 RFID Instrument]
     0x00, 0x01, // BCD Device release number (1.00)
@@ -218,7 +215,7 @@ static const char cfgDescriptor[] = {
     USB_DESCRIPTOR_ENDPOINT,     // Descriptor Type
     _EP03_IN,                    // EndpointAddress:   Endpoint 03 - IN
     _INTERRUPT,                  // Attributes
-    AT91C_EP_CONTROL_SIZE, 0x00, // MaxPacket Size:    EP0 - 8
+    AT91C_USB_EP_CONTROL_SIZE, 0x00, // MaxPacket Size:    EP0 - 8
     0xFF,                        // Interval polling
 
 
@@ -239,7 +236,7 @@ static const char cfgDescriptor[] = {
     USB_DESCRIPTOR_ENDPOINT,     // Descriptor Type
     _EP01_OUT,                   // Endpoint Address:    Endpoint 01 - OUT
     _BULK,                       // Attributes:          BULK
-    AT91C_EP_OUT_SIZE, 0x00,     // MaxPacket Size:      64 bytes
+    AT91C_USB_EP_OUT_SIZE, 0x00,     // MaxPacket Size:      64 bytes
     0,                           // Interval:            ignored for bulk
 
     /* Endpoint descriptor */
@@ -247,7 +244,7 @@ static const char cfgDescriptor[] = {
     USB_DESCRIPTOR_ENDPOINT,     // Descriptor Type
     _EP02_IN,                    // Endpoint Address:    Endpoint 02 - IN
     _BULK,                       // Attribute:           BULK
-    AT91C_EP_IN_SIZE, 0x00,      // MaxPacket Size:      64 bytes
+    AT91C_USB_EP_IN_SIZE, 0x00,      // MaxPacket Size:      64 bytes
     0                            // Interval:            ignored for bulk
 };
 
@@ -775,7 +772,7 @@ int usb_write(const uint8_t *data, const size_t len) {
 
 
     // send first chunk
-    cpt = MIN(length, AT91C_EP_IN_SIZE);
+    cpt = MIN(length, AT91C_USB_EP_IN_SIZE);
     length -= cpt;
     while (cpt--) {
         pUdp->UDP_FDR[AT91C_EP_IN] = *data++;
@@ -786,7 +783,7 @@ int usb_write(const uint8_t *data, const size_t len) {
 
     while (length) {
         // Send next chunk
-        cpt = MIN(length, AT91C_EP_IN_SIZE);
+        cpt = MIN(length, AT91C_USB_EP_IN_SIZE);
         length -= cpt;
         while (cpt--) {
             pUdp->UDP_FDR[AT91C_EP_IN] = *data++;
@@ -814,7 +811,7 @@ int usb_write(const uint8_t *data, const size_t len) {
     while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
 
 
-    if (len % AT91C_EP_IN_SIZE == 0) {
+    if (len % AT91C_USB_EP_IN_SIZE == 0) {
         // like AT91F_USB_SendZlp(), in non ping-pong mode
         UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
         while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {};
@@ -857,8 +854,8 @@ int async_usb_write_start(void) {
  * \brief Push one byte to the FIFO of IN endpoint (time-critical)
  *
  * This function simply push a byte to the FIFO of IN endpoint.
- * The FIFO size is AT91C_EP_IN_SIZE. Make sure this function is not called
- * over AT91C_EP_IN_SIZE times between each async_usb_write_requestWrite().
+ * The FIFO size is AT91C_USB_EP_IN_SIZE. Make sure this function is not called
+ * over AT91C_USB_EP_IN_SIZE times between each async_usb_write_requestWrite().
  *----------------------------------------------------------------------------
 */
 inline void async_usb_write_pushByte(uint8_t data) {
@@ -947,7 +944,7 @@ void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length) {
     AT91_REG csr;
 
     do {
-        uint32_t cpt = MIN(length, AT91C_EP_CONTROL_SIZE);
+        uint32_t cpt = MIN(length, AT91C_USB_EP_CONTROL_SIZE);
         length -= cpt;
 
         while (cpt--)

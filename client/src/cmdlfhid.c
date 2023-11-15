@@ -118,6 +118,10 @@ int demodHID(bool verbose) {
     uint32_t hi2 = 0, hi = 0, lo = 0;
 
     uint8_t *bits = malloc(g_GraphTraceLen);
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID not enough samples"));
@@ -142,6 +146,7 @@ int demodHID(bool verbose) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID error demoding fsk %d"), idx);
 
+        free(bits);
         return PM3_ESOFT;
     }
 
