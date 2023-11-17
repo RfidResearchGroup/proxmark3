@@ -52,6 +52,7 @@ char g_CursorScaleFactorUnit[11] = {0};
 double g_PlotGridX = 0, g_PlotGridY = 0, g_PlotGridXdefault = 64, g_PlotGridYdefault = 64;
 uint32_t g_CursorCPos = 0, g_CursorDPos = 0, g_GraphStop = 0;
 uint32_t g_GraphStart = 0; // Starting point/offset for the left side of the graph
+uint32_t g_GraphStart_old = 0;
 double g_GraphPixelsPerPoint = 1.f; // How many visual pixels are between each sample point (x axis)
 static bool flushAfterWrite = false;
 double g_GridOffset = 0;

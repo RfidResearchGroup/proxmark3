@@ -38,6 +38,8 @@ class ProxWidget;
  * @brief The actual plot, black area were we paint the graph
  */
 class Plot: public QWidget {
+  Q_OBJECT; //needed for slot/signal classes
+
   private:
     QWidget *master;
     double g_GraphPixelsPerPoint; // How many visual pixels are between each sample point (x axis)
@@ -55,16 +57,24 @@ class Plot: public QWidget {
   public:
     Plot(QWidget *parent = 0);
 
+  public slots:
+    void Zoom(double factor, uint32_t refX);
+    void MoveTo(uint32_t pos);
+    void MoveTo(int pos);
+    void Move(int offset);
+
   protected:
     void paintEvent(QPaintEvent *event);
     void closeEvent(QCloseEvent *event);
-    void Zoom(double factor, uint32_t refX);
-    void Move(int offset);
     void Trim(void);
     void wheelEvent(QWheelEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event) { mouseMoveEvent(event); }
     void keyPressEvent(QKeyEvent *event);
+
+  signals:
+    void startMaxChanged(uint32_t startMax);
+    void graphStartChanged(uint32_t graphStart);
 };
 class ProxGuiQT;
 
@@ -97,6 +107,7 @@ class ProxWidget : public QWidget {
     Plot *plot;
     Ui::Form *opsController;
     SliderWidget *controlWidget;
+    QSlider *navSlider;
 
   public:
     ProxWidget(QWidget *parent = 0, ProxGuiQT *master = NULL);
@@ -120,6 +131,7 @@ class ProxWidget : public QWidget {
     void vchange_askedge(int v);
     void vchange_dthr_up(int v);
     void vchange_dthr_down(int v);
+    void updateNavSlider(void);
 };
 
 class WorkerThread : public QThread {

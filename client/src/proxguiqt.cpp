@@ -49,6 +49,7 @@ static int s_Buff[MAX_GRAPH_TRACE_LEN];
 static bool gs_useOverlays = false;
 static int gs_absVMax = 0;
 static uint32_t startMax; // Maximum offset in the graph (right side of graph)
+static uint32_t startMaxOld;
 static uint32_t PageWidth; // How many samples are currently visible on this 'page' / graph
 static int unlockStart = 0;
 
@@ -372,6 +373,18 @@ void ProxWidget::vchange_dthr_down(int v) {
     RepaintGraphWindow();
 }
 
+void ProxWidget::updateNavSlider() {
+    navSlider->blockSignals(true);
+    navSlider->setValue(g_GraphStart);
+    navSlider->setMaximum(startMax);
+    // for startMaxOld < g_GraphStart or startMax < g_GraphStart_old
+    navSlider->setValue(g_GraphStart);
+    navSlider->setMaximum(startMax);
+    // for click
+    navSlider->setPageStep(startMax / 10);
+    navSlider->blockSignals(false);
+}
+
 
 ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
     this->master = master;
@@ -406,9 +419,19 @@ ProxWidget::ProxWidget(QWidget *parent, ProxGuiQT *master) : QWidget(parent) {
 
     // Set up the plot widget, which does the actual plotting
     plot = new Plot(this);
+    navSlider = new QSlider(this);
     QVBoxLayout *layout = new QVBoxLayout;
-    layout->addWidget(plot);
+    layout->addWidget(plot, 1);
+    layout->addWidget(navSlider);
     setLayout(layout);
+
+    navSlider->setOrientation(Qt::Horizontal);
+    plot->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    navSlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+
+    QObject::connect(navSlider, SIGNAL(valueChanged(int)), plot, SLOT(MoveTo(int)));
+    QObject::connect(plot, SIGNAL(startMaxChanged(uint32_t)), this, SLOT(updateNavSlider(void)));
+    QObject::connect(plot, SIGNAL(graphStartChanged(uint32_t)), this, SLOT(updateNavSlider(void)));
 
     // plot window title
     QString pt = QString("[*]Plot [ %1 ]").arg(g_conn.serial_port_name);
@@ -809,6 +832,16 @@ void Plot::paintEvent(QPaintEvent *event) {
             );
     painter.setPen(WHITE);
     painter.drawText(20, infoRect.bottom() - 3, str);
+
+    if (startMaxOld != startMax) {
+        emit startMaxChanged(startMax);
+    }
+    startMaxOld = startMax;
+
+    if (g_GraphStart != g_GraphStart_old) {
+        emit graphStartChanged(g_GraphStart);
+    }
+    g_GraphStart_old = g_GraphStart;
 }
 
 Plot::Plot(QWidget *parent) : QWidget(parent), g_GraphPixelsPerPoint(1) {
@@ -866,6 +899,22 @@ void Plot::Zoom(double factor, uint32_t refX) {
             }
         }
     }
+}
+
+void Plot::MoveTo(uint32_t pos) {
+    if (g_GraphTraceLen == 0) return;
+    g_GraphStart = pos;
+
+    QObject* signalSender = sender();
+    if (signalSender != nullptr && signalSender != this) {
+        // Update if it's triggered by a signal from other object
+        this->update();
+    }
+}
+
+void Plot::MoveTo(int pos) {
+    MoveTo((uint32_t)((pos >= 0) ? pos : 0));
+    // sender() is still valid in the inner call
 }
 
 void Plot::Move(int offset) {

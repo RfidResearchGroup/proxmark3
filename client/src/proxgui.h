@@ -44,7 +44,7 @@ void ExitGraphics(void);
 extern double g_CursorScaleFactor;
 extern char g_CursorScaleFactorUnit[11];
 extern double g_PlotGridX, g_PlotGridY, g_PlotGridXdefault, g_PlotGridYdefault, g_GridOffset;
-extern uint32_t g_CursorCPos, g_CursorDPos, g_GraphStart, g_GraphStop;
+extern uint32_t g_CursorCPos, g_CursorDPos, g_GraphStart, g_GraphStart_old, g_GraphStop;
 extern int CommandFinished;
 extern int offline;
 extern bool g_GridLocked;
