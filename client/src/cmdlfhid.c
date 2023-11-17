@@ -117,7 +117,7 @@ int demodHID(bool verbose) {
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint32_t hi2 = 0, hi = 0, lo = 0;
 
-    uint8_t *bits = malloc(g_GraphTraceLen);
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;

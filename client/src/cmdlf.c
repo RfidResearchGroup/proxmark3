@@ -431,7 +431,7 @@ int CmdFlexdemod(const char *Cmd) {
 #endif
     int i, j, start, bit, sum;
 
-    int *data = malloc(g_GraphTraceLen * sizeof(int));
+    int *data = calloc(g_GraphTraceLen, sizeof(int));
     if (data == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -717,6 +717,10 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
 
     if (realtime) {
         uint8_t *realtimeBuf = calloc(samples, sizeof(uint8_t));
+        if (realtimeBuf == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate memory");
+            return PM3_EMALLOC;
+        }
 
         size_t sample_bytes = samples * bits_per_sample;
         sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
@@ -826,6 +830,10 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
 
     if (realtime) {
         uint8_t *realtimeBuf = calloc(samples, sizeof(uint8_t));
+        if (realtimeBuf == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate memory");
+            return PM3_EMALLOC;
+        }
 
         size_t sample_bytes = samples * bits_per_sample;
         sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);

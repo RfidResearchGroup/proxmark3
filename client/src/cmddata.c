@@ -1712,7 +1712,7 @@ int CmdHpf(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    uint8_t *bits = malloc(g_GraphTraceLen);
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -1786,12 +1786,10 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
         bits_per_sample = sc->bits_per_sample;
     }
 
-    getSamplesFromBufEx(got, n, bits_per_sample, verbose);
-
-    return PM3_SUCCESS;
+    return getSamplesFromBufEx(got, n, bits_per_sample, verbose);;
 }
 
-void getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_sample, bool verbose) {
+int getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_sample, bool verbose) {
 
     size_t max_num = MIN(sample_num, MAX_GRAPH_TRACE_LEN);
 
@@ -1816,7 +1814,11 @@ void getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_samp
         g_GraphTraceLen = max_num;
     }
 
-    uint8_t *bits = malloc(g_GraphTraceLen);
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
@@ -1825,6 +1827,8 @@ void getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_samp
     setClockGrid(0, 0);
     g_DemodBufferLen = 0;
     RepaintGraphWindow();
+
+    return PM3_SUCCESS;
 }
 
 static int CmdSamples(const char *Cmd) {
@@ -2113,11 +2117,11 @@ static int CmdLoad(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " samples", g_GraphTraceLen);
 
     if (nofix == false) {
-        uint8_t *bits = malloc(g_GraphTraceLen);
+        uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
         if (bits == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
-        return PM3_EMALLOC;
-    }
+            PrintAndLogEx(FAILED, "failed to allocate memory");
+            return PM3_EMALLOC;
+        }
         size_t size = getFromGraphBuf(bits);
 
         removeSignalOffset(bits, size);
@@ -2255,7 +2259,7 @@ int CmdNorm(const char *Cmd) {
         }
     }
 
-    uint8_t *bits = malloc(g_GraphTraceLen);
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -2406,7 +2410,7 @@ static int CmdDirectionalThreshold(const char *Cmd) {
     directionalThreshold(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, up, down);
 
     // set signal properties low/high/mean/amplitude and isnoice detection
-    uint8_t *bits = malloc(g_GraphTraceLen);
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -2454,7 +2458,7 @@ static int CmdZerocrossings(const char *Cmd) {
         }
     }
 
-    uint8_t *bits = malloc(g_GraphTraceLen);
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -2772,7 +2776,7 @@ static int CmdDataIIR(const char *Cmd) {
 
     iceSimple_Filter(g_GraphBuffer, g_GraphTraceLen, k);
 
-    uint8_t *bits = malloc(g_GraphTraceLen);
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -3404,7 +3408,7 @@ static int CmdCenterThreshold(const char *Cmd) {
     centerThreshold(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, up, down);
 
     // set signal properties low/high/mean/amplitude and isnoice detection
-    uint8_t *bits = malloc(g_GraphTraceLen);
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -3454,7 +3458,7 @@ static int CmdEnvelope(const char *Cmd) {
 
     envelope_square(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen);
 
-    uint8_t *bits = malloc(g_GraphTraceLen);
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
