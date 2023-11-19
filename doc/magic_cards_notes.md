@@ -1592,7 +1592,7 @@ There are two ways to program this card.
     
    ***OR***
 
-   2.  Use the hf_mf_ultimatecard.lua script commands designated but the `script run hf_mf_ultimatecard` examples.
+   2.  Use the hf_mf_ultimatecard.lua script commands designated but the `script run hf_mf_ultimatecard` examples. This script is nof fully compartible with new version UMC.
 
 
 script run hf_mf_ultimatecard.lua -h
@@ -1823,7 +1823,7 @@ Ultralight mode, 10b UID
 
 * UID and ATQB are configured according to block0 with a (14a) backdoor write.
 * UID size is always 4 bytes.
-* 14B will show up only on new cards. (Need more test on new card. Example not work)
+* 14B will show up only on new cards. (Need more tests on new card. Example not work)
 
 Example:
 ```
@@ -1904,20 +1904,21 @@ hf 14a raw -s -c -t 1000 CF000000006B3F
 ### Set shadow mode (GTU)
 ^[Top](#top) ^^[Gen4](#g4top)
 
-This mode is divided into four states: off (pre-write), on (on restore), don’t care, and high-speed read and write.
-If you use it, please enter the pre-write mode first. At this time, write the full card data.
-After writing, set it to on. At this time, after writing the data, the first time you read the data just written, the next time you read It is the pre-written data. All modes support this operation. It should be noted that using any block to read and write in this mode may give wrong results.
+This description of shadow modes wroted by seller at marketpalces:
 
-*This is very starnge and fuzzed descripotion. I don`t understand how it can work, if "using any block to read and write in this mode may give wrong result" ? Maybe this mode not work for old card too?*
+>This mode is divided into four states: off (pre-write), on (on restore), don’t care, and high-speed read and write. If you use it, please enter the pre-write mode first. At this time, write the full card data. After writing, set it to on. At this time, after writing the data, the first time you read the data just written, the next time you read It is the pre-written data. All modes support this operation. It should be noted that using any block to read and write in this mode may give wrong results.
 
-Modes description for new UMC (configured as MFC for example):
+And these conclusions were made after a number of tests with UMC (new version, configured as MFC for example):
 
-Mode 2(3): This mode have persistent buffer. All standart command (rdbl, wrbl e.t.c) and all backdoor (gsetblk, ggetblk, gload e.t.c.) commands use this buffer
-Mode 0: This mode have persistent buffer too. Standart read command use this buffer. Write command use this buffer AND buffer mode 2
-Mode 4: Here no any buffers. Read command use buffer mode0 and write command use buffer mode 2. This is split mode.
-Mode 1: Crazy mode. For new card this mode looks like a bug. Reading/writing first two block use buffer mode 2. Reading other block use (it`s only my oppinion) invalid region of memory and all data looks like pseudo-random. This data is immutable. And acl for all blocks is incorrect. But data is readable... by keys and acl wich was written in buffer mode 0. Write command in this mode use copy of buffer mode 0 and only it. It`s not affected any other buffers. So if you change keys or/and acl you will must use new keys to read data.
+| Mode | Buffer | Standart command (rdbl, wrbl e.t.c)     | Backdoor command (gsetblk, ggetblk, gload e.t.c.) |
+|------|--------|-----------------------------------------|---------------------------------------------------|
+| 2,3  |  buf23 | read/write from/to buf23                | read/write from/to buf23                          |
+|  0   |  buf0  | read from buf0, write to buf0 and buf23 | read/write from/to buf23                          |
+|  4   |   -    | read from buf0, write to buf23          | read/write from/to buf23                          |
 
-Example: 
+Mode 1: For new card this mode looks like a bug. Reading/writing first two block use *buf23*. Reading other blocks use invalid region of memory and all returned data looks like pseudo-random. All acl looks like invalid. All data is readable by the keys and acl wich was written in *buf0*. Any writing operations in this mode use copy of *buf0* and only it. It`s not affected any other buffers. So if you change keys or/and acl you will must use new keys to read data.
+
+Example (not work with new UMC): 
 `script run hf_mf_ultimatecard -w 1 -g 00 -t 18 -u 04112233445566 -s 112233445566778899001122334455667788990011223344556677 -p FFFFFFFF -a 8080 -o 11111111 -g 01`
    * -w 1 = wipe the card in Ultralight Mode
    * -g 00 = turn on pre-write mode
@@ -2109,11 +2110,13 @@ hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC1910101112131
 ### Version and Signature
 ^[Top](#top) ^^[Gen4](#g4top)
 
-Don`t forget to set up maximum read/write sectors direcly in config or  use command 6B
+Don`t forget configure maximum read/write blocks. It`s can be adjusted directly in config (see *Dump configuration*) or by command 6B: 
 
 ```
 hf mf raw -s -c -t 1000 CF000000006BFB
 ```
+
+Note: 0xFB = 251
 
 Ultralight EV1 and NTAG Version info and Signature are stored respectively in blocks 250-251 and 242-249.
 
