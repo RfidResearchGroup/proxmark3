@@ -24,7 +24,7 @@ Always use the latest repository commits from *master* branch. There are always 
   - [WSL](#wsl)
   - [Troubles with running the Proxmark3 client](#troubles-with-running-the-proxmark3-client)
   - [libQt5Core.so.5 not found](#libqt5coreso5-not-found)
-  - [bzlib.h: No such file or directory](#bzlib.h: No such file or directory)
+  - [bzlib.h: No such file or directory](#bzlibh-no-such-file-or-directory)
   - [target attribute is not supported on this machine](#target-attribute-is-not-supported-on-this-machine)
   - [Qt Session management error](#qt-session-management-error)
 
@@ -238,44 +238,7 @@ sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.s
 This particular issue occurs on Debian/Kali Linux when dependencies aren't installed appropriately. Review the [installation guide](https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Installation_Instructions/Linux-Installation-Instructions.md#on-debian--ubuntu--kali--parrotos--raspbian) for further instructions on how to set up your environment.
 
 Sample error output:
-```
-===================================================================                                                                                                                                                                          
-Version info:      Iceman/master/v4.17511-12-g7fb5a5a74                                                                                                                                                                                      
-Platform name:     Proxmark3 generic target                                                                                                                                                                                                  
-PLATFORM:          PM3GENERIC                                                                                                                                                                                                                
-PLATFORM_FPGA:     xc2s30                                                                                                                                                                                                                    
-PLATFORM_SIZE:     512                                                                                                                                                                                                                       
-Platform extras:   No extra selected                                                                                                                                                                                                         
-Included options:  LF HITAG EM4x50 EM4x70 ZX8211 GENERAL_HF ISO15693 LEGICRF ISO14443b ISO14443a ICLASS FELICA NFCBARCODE HFSNIFF HFPLOT                                                      
-Standalone mode:   LF_SAMYRUN                                                                                                          
-===================================================================                                                                    
-[*] MAKE client/all                                                                                                                    
-===================================================================                                                                               
-Version info:      Iceman/master/v4.17511-12-g7fb5a5a74                                                                                           
-Client platform:   Linux                                                                                                                          
-GUI support:       QT not found, disabled                                                                                                         
-native BT support: Bluez not found, disabled                                                                                                                  
-Jansson library:   system library not found, using local library                                                                                  
-Lua library:       system library not found, using local library                                                                                                                              
-Python3 library:   Python3 v3.11 found, enabled                                                                                        
-Readline library:  enabled                                                                                                                                                                    
-Whereami library:  system library not found, using local library                                                                       
-Lua SWIG:          wrapper found                                                                                                                  
-Python SWIG:       wrapper found                           
-compiler version:  cc (Debian 12.2.0-14) 12.2.0                                                                       
-===================================================================                                                                         ...
-[-] CC src/cmdhflto.c
-[=] CXX cm
-[=] CXX sm
-[-] CC src/cmdhfmf.c
-[-] CC src/cmdhfmfdes.c
-[-] CC src/cmdhfmfhard.c                            
-[-] CC src/cmdhfmfu.c                                                                                                                  
-[-] CC src/cmdhfmfp.c                                                                                                       
-[-] CC src/cmdhfntag424.c                                                                                                              
-[-] CC src/cmdhfseos.c
-[-] CC src/cmdhfst.c
-[-] CC src/cmdhfst25ta.c                                                                                                  
+```                                                                                          
 [-] CC src/cmdhfmfhard.c                                   
 src/cmdhfmfhard.c:34:10: fatal error: bzlib.h: No such file or directory                                                                                                                                                                     
    34 | #include <bzlib.h>                                 
