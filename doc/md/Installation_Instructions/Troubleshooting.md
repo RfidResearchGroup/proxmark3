@@ -235,7 +235,7 @@ sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.s
 ## bzlib.h: No such file or directory
 ^[Top](#top)
 
-This particular issue occurs on Debian/Kali Linux when dependencies aren't installed appropriately. Review the [installation guide](https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Installation_Instructions/Linux-Installation-Instructions.md#on-debian--ubuntu--kali--parrotos--raspbian) for further instructions on how to set up your environment.
+This particular issue occurs on Debian/Kali Linux when dependencies aren't installed appropriately; you need to install bzip2 developer (libbz2-dev on Debian-alike) package. Note that the name depends on the distro you're using. Review the [installation guide](https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Installation_Instructions/Linux-Installation-Instructions.md#on-debian--ubuntu--kali--parrotos--raspbian) for further instructions on how to set up your environment.
 
 Sample error output:
 ```                                                                                          
