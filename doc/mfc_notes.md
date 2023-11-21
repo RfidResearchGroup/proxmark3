@@ -43,3 +43,7 @@ The nonce is just the same for each auth with the same parameters.
 
 Vulnerable:
 1. decode card-reader trace
+
+## reader-only attack
+
+The readers have a random generator bug. With it, we can recover a key for the sector it tries to authenticate.
