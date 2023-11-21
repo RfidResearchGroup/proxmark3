@@ -1592,7 +1592,7 @@ There are two ways to program this card.
     
    ***OR***
 
-   2.  Use the hf_mf_ultimatecard.lua script commands designated but the `script run hf_mf_ultimatecard` examples.
+   2.  Use the hf_mf_ultimatecard.lua script commands designated but the `script run hf_mf_ultimatecard` examples. This script is nof fully compartible with new version UMC.
 
 
 script run hf_mf_ultimatecard.lua -h
@@ -1656,7 +1656,7 @@ Example usage
 Special raw commands summary:
 
 ```
-CF <passwd> 32 <00-03>                           // Configure GTU shadow mode
+CF <passwd> 32 <00-04>                           // Configure GTU shadow mode
 CF <passwd> 34 <1b length><0-16b ATS>            // Configure ATS
 CF <passwd> 35 <2b ATQA><1b SAK>                 // Configure ATQA/SAK (swap ATQA bytes)
 CF <passwd> 68 <00-02>                           // Configure UID length
@@ -1823,7 +1823,7 @@ Ultralight mode, 10b UID
 
 * UID and ATQB are configured according to block0 with a (14a) backdoor write.
 * UID size is always 4 bytes.
-* 14B will show up only on new cards.
+* 14B will show up only on new cards. (Need more tests on new card. Example not work)
 
 Example:
 ```
@@ -1904,11 +1904,21 @@ hf 14a raw -s -c -t 1000 CF000000006B3F
 ### Set shadow mode (GTU)
 ^[Top](#top) ^^[Gen4](#g4top)
 
-This mode is divided into four states: off (pre-write), on (on restore), don’t care, and high-speed read and write.
-If you use it, please enter the pre-write mode first. At this time, write the full card data.
-After writing, set it to on. At this time, after writing the data, the first time you read the data just written, the next time you read It is the pre-written data. All modes support this operation. It should be noted that using any block to read and write in this mode may give wrong results.
+This description of shadow modes wroted by seller at marketpalces:
 
-Example: 
+>This mode is divided into four states: off (pre-write), on (on restore), don’t care, and high-speed read and write. If you use it, please enter the pre-write mode first. At this time, write the full card data. After writing, set it to on. At this time, after writing the data, the first time you read the data just written, the next time you read It is the pre-written data. All modes support this operation. It should be noted that using any block to read and write in this mode may give wrong results.
+
+And these conclusions were made after a number of tests with UMC (new version, configured as MFC for example):
+
+| Mode | Buffer | Standart command (rdbl, wrbl e.t.c)     | Backdoor command (gsetblk, ggetblk, gload e.t.c.) |
+|------|--------|-----------------------------------------|---------------------------------------------------|
+| 2,3  |  buf23 | read/write from/to buf23                | read/write from/to buf23                          |
+|  0   |  buf0  | read from buf0, write to buf0 and buf23 | read/write from/to buf23                          |
+|  4   |   -    | read from buf0, write to buf23          | read/write from/to buf23                          |
+
+Mode 1: For new card this mode looks like a bug. Reading/writing first two block use *buf23*. Reading other blocks use invalid region of memory and all returned data looks like pseudo-random. All acl looks like invalid. All data is readable by the keys and acl wich was written in *buf0*. Any writing operations in this mode use copy of *buf0* and only it. It`s not affected any other buffers. So if you change keys or/and acl you will must use new keys to read data.
+
+Example (not work with new UMC): 
 `script run hf_mf_ultimatecard -w 1 -g 00 -t 18 -u 04112233445566 -s 112233445566778899001122334455667788990011223344556677 -p FFFFFFFF -a 8080 -o 11111111 -g 01`
    * -w 1 = wipe the card in Ultralight Mode
    * -g 00 = turn on pre-write mode
@@ -1932,9 +1942,10 @@ hf 14a raw -s -c -t 1000 CF<passwd>32<1b param>
  * `<param>`
    * `00`: pre-write, shadow data can be written
    * `01`: restore mode
-     - WARNING: new UMC (06a0) cards return garbage data when using 01, please use 04!
+     - WARNING: new UMC (06a0) cards return garbage data when using 01
    * `02`: disabled
    * `03`: disabled, high speed R/W mode for Ultralight?
+   * `04`: split mode, work with new UMC. With old UMC is untested.
 
 ### Direct block read and write
 ^[Top](#top) ^^[Gen4](#g4top)
@@ -2014,7 +2025,7 @@ hf 14a raw -s -c -t 1000 CF<passwd>C6
 Default configuration:
 ```
 00000000000002000978009102DABC191010111213141516040008006B024F6B
-                                                            ^^^^ ??
+                                                            ^^^^ CRC, type unknown
                                                           ^^ cf cmd cf: block0 direct write setting, factory value 0x02
                                                         ^^ cf cmd 6b: maximum read/write sectors, factory value 0x6b
                                                       ^^ cf cmd 6a: UL mode
@@ -2078,32 +2089,40 @@ hf 14a raw -s -c -t 1000 CF00000000F000010000000002000978009102DABC1910101112131
 
 **Ultralight**
 ```
-hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000003
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000003FB
 ```
 
 **Ultralight-C**
 ```
-hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000002
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000002FB
 ```
 
 **Ultralight EV1**
 ```
-hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000000
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000000FB
 ```
 
 **NTAG21x**
 ```
-hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000001
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000001FB
 ```
 
 ### Version and Signature
 ^[Top](#top) ^^[Gen4](#g4top)
 
+Don`t forget configure maximum read/write blocks. It`s can be adjusted directly in config (see *Dump configuration*) or by command 6B: 
+
+```
+hf mf raw -s -c -t 1000 CF000000006BFB
+```
+
+Note: 0xFB = 251
+
 Ultralight EV1 and NTAG Version info and Signature are stored respectively in blocks 250-251 and 242-249.
 
 Example for an Ultralight EV1 128b with the signature sample from tools/recover_pk.py
 ```
-hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000000
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000000FB
 hf mfu wrbl -b 0 -d 04C12865
 hf mfu wrbl -b 1 -d 5A373080
 hf mfu wrbl -b 242 -d CEA2EB0B --force
@@ -2121,7 +2140,7 @@ hf mfu info
 
 Example for an NTAG216 with the signature sample from tools/recover_pk.py
 ```
-hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000001
+hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000001FB
 hf mfu wrbl -b 0 -d 04E10C61
 hf mfu wrbl -b 1 -d DA993C80
 hf mfu wrbl -b 242 -d 8B76052E --force
