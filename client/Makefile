@@ -273,7 +273,7 @@ ifneq ($(SKIPPYTHON),1)
     PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3 2>/dev/null)
     ifneq ($(PYTHONLDLIBS),)
         PYTHONLIBLD = $(PYTHONLDLIBS)
-        PYTHONLIBINC = $(PYTHONINCLUDES)
+        PYTHONLIBINC = $(subst -I,-isystem ,$(PYTHONINCLUDES))
         PYTHON_FOUND = 1
     else
         # since python3.8, applications willing to embed python must use -embed:
@@ -281,7 +281,7 @@ ifneq ($(SKIPPYTHON),1)
         PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3-embed 2>/dev/null)
         ifneq ($(PYTHONLDLIBS),)
             PYTHONLIBLD = $(PYTHONLDLIBS)
-            PYTHONLIBINC = $(PYTHONINCLUDES)
+            PYTHONLIBINC = $(subst -I,-isystem ,$(PYTHONINCLUDES))
             PYTHON_FOUND = 1
         endif
     endif
