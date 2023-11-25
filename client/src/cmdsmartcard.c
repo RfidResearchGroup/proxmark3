@@ -1402,7 +1402,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
     int len = smart_responseEx(dataout, maxdataoutlen, verbose);
     if (len < 0) {
         free(payload);
-        return 1;
+        return PM3_ESOFT;
     }
 
     // retry
@@ -1419,13 +1419,13 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
         len = smart_responseEx(dataout, maxdataoutlen, verbose);
         if (len < 0) {
             free(payload);
-            return 1;
+            return PM3_ESOFT;
         }
     }
 
     free(payload);
     *dataoutlen = len;
-    return 0;
+    return PM3_SUCCESS;
 }
 
 bool smart_select(bool verbose, smart_card_atr_t *atr) {

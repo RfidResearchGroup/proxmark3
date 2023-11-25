@@ -153,7 +153,7 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool l
                 res = ExchangeAPDUSC(false, data, datalen, activate_field, leave_field_on, result, (int)max_result_len, (int *)result_len);
             }
 
-            if (res) {
+            if (res != PM3_SUCCESS) {
                 return res;
             }
             break;
