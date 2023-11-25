@@ -1417,6 +1417,10 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
         SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + 5);
         datain[4] = 0;
         len = smart_responseEx(dataout, maxdataoutlen, verbose);
+        if (len < 0) {
+            free(payload);
+            return 1;
+        }
     }
 
     free(payload);
