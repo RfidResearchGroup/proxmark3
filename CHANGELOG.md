@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf iclass dump` truncating AA2 blocks and improve reliability (@nvx)
  - Added some info about UMC in "doc/magic_cards_notes.md" (@temskiy)
 
 ## [Faraday.4.17511][2023-11-13]
