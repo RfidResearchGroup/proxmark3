@@ -66,7 +66,8 @@ int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, in
     // ref:  MIFARE Classic EV1 Originality Signature Validation
 #define PUBLIC_MFCEV1_ECDA_KEYLEN 33
     const ecdsa_publickey_t nxp_mfc_public_keys[] = {
-        {"NXP Mifare Classic MFC1C14_x", "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
+        {"NXP MIFARE Classic MFC1C14_x", "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
+        {"Manufacturer MIFARE Classic / QL88", "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
     };
 
     uint8_t i;
