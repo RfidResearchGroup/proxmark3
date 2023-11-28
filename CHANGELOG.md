@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf 14a info` - now reads and prints QL88 sigantures (@iceman1001)
  - Fixed `hf iclass dump` truncating AA2 blocks and improve reliability (@nvx)
  - Added some info about UMC in "doc/magic_cards_notes.md" (@temskiy)
 

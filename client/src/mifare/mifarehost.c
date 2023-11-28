@@ -1415,6 +1415,15 @@ int read_mfc_ev1_signature(uint8_t *signature) {
         if (res ==  PM3_SUCCESS) {
             memcpy(signature, sign, sizeof(sign));
         }
+    } else {
+        // try QL88
+        res = mfReadBlock(69, MF_KEY_B, g_mifare_ql88_signature_key_b, sign);
+        if (res == PM3_SUCCESS) {
+            res = mfReadBlock(70, MF_KEY_B, g_mifare_ql88_signature_key_b, sign + 16);
+            if (res ==  PM3_SUCCESS) {
+                memcpy(signature, sign, sizeof(sign));
+            }
+        }
     }
     return res;
 }
