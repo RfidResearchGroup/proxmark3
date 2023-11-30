@@ -564,7 +564,11 @@ static int Cmdmandecoderaw(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t bits[MAX_DEMOD_BUF_LEN] = {0};
+    uint8_t *bits = calloc(MAX_DEMOD_BUF_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     // make sure its just binary data 0|1|7 in buffer
     int high = 0, low = 0;
@@ -579,6 +583,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
 
     if (high > 7 || low < 0) {
         PrintAndLogEx(ERR, "Error: please first raw demod then manchester raw decode");
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -587,6 +592,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     uint16_t err_cnt = manrawdecode(bits, &size, invert, &offset);
     if (err_cnt > max_err) {
         PrintAndLogEx(ERR, "Too many errors attempting to decode " _RED_("%i"), err_cnt);
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -611,6 +617,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     }
     setDemodBuff(bits, size, 0);
     setClockGrid(g_DemodClock * 2, g_DemodStartIdx);
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -651,17 +658,27 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t bits[MAX_DEMOD_BUF_LEN] = {0};
-    size_t size = sizeof(bits);
-    if (!getDemodBuff(bits, &size)) return PM3_ESOFT;
+    uint8_t *bits = calloc(MAX_DEMOD_BUF_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    size_t size = MAX_DEMOD_BUF_LEN;
+    if (!getDemodBuff(bits, &size)) {
+        free(bits);
+        return PM3_ESOFT;
+    }
 
     int err_cnt = BiphaseRawDecode(bits, &size, &offset, invert);
     if (err_cnt < 0) {
         PrintAndLogEx(ERR, "Error during decode " _RED_("%i"), err_cnt);
+        free(bits);
         return PM3_ESOFT;
     }
     if (err_cnt > max_err) {
         PrintAndLogEx(ERR, "Too many errors attempting to decode " _RED_("%i"), err_cnt);
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -674,6 +691,7 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
 
     setDemodBuff(bits, size, 0);
     setClockGrid(g_DemodClock * 2, g_DemodStartIdx + g_DemodClock * offset);
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -681,10 +699,16 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
 int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     //ask raw demod g_GraphBuffer first
 
-    uint8_t bs[MAX_DEMOD_BUF_LEN];
-    size_t size = getFromGraphBuf(bs);
+    uint8_t *bs = calloc(MAX_DEMOD_BUF_LEN, sizeof(uint8_t));
+    if (bs == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    size_t size = getFromGraphBufEx(bs, MAX_DEMOD_BUF_LEN);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: no data in graphbuf");
+        free(bs);
         return PM3_ESOFT;
     }
     int startIdx = 0;
@@ -692,6 +716,7 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     int errCnt = askdemod_ext(bs, &size, &clk, &invert, maxErr, 0, 0, &startIdx);
     if (errCnt < 0 || errCnt > maxErr) {
         PrintAndLogEx(DEBUG, "DEBUG: no data or error found %d, clock: %d", errCnt, clk);
+        free(bs);
         return PM3_ESOFT;
     }
 
@@ -699,10 +724,12 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     errCnt = BiphaseRawDecode(bs, &size, &offset, invert);
     if (errCnt < 0) {
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: Error BiphaseRawDecode: %d", errCnt);
+        free(bs);
         return PM3_ESOFT;
     }
     if (errCnt > maxErr) {
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: Error BiphaseRawDecode too many errors: %d", errCnt);
+        free(bs);
         return PM3_ESOFT;
     }
 
@@ -716,6 +743,7 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
         PrintAndLogEx(DEBUG, "Biphase Decoded using offset %d | clock %d | #errors %d | start index %d\ndata\n", offset, clk, errCnt, (startIdx + clk * offset / 2));
         printDemodBuff(offset, false, false, false);
     }
+    free(bs);
     return PM3_SUCCESS;
 }
 

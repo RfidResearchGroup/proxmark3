@@ -31,6 +31,7 @@ bool HasGraphData(void);
 void setGraphBuf(const uint8_t *src, size_t size);
 void save_restoreGB(uint8_t saveOpt);
 size_t getFromGraphBuf(uint8_t *dest);
+size_t getFromGraphBufEx(uint8_t *dest, size_t maxLen);
 void convertGraphFromBitstream(void);
 void convertGraphFromBitstreamEx(int hi, int low);
 bool isGraphBitstream(void);
