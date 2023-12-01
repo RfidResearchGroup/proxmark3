@@ -66,10 +66,15 @@ static int CmdIOProxWatch(const char *Cmd) {
 int demodIOProx(bool verbose) {
     (void) verbose; // unused so far
     int idx = 0, retval = PM3_SUCCESS;
-    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
+    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     if (size < 65) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox not enough samples in GraphBuffer");
+        free(bits);
         return PM3_ESOFT;
     }
     //get binary from fsk wave
@@ -93,6 +98,7 @@ int demodIOProx(bool verbose) {
                 PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox error demoding fsk %d", idx);
             }
         }
+        free(bits);
         return PM3_ESOFT;
     }
     setDemodBuff(bits, size, idx);
@@ -103,6 +109,7 @@ int demodIOProx(bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox data not found - FSK Bits: %zu", size);
             if (size > 92) PrintAndLogEx(DEBUG, "%s", sprint_bytebits_bin_break(bits, 92, 16));
         }
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -156,6 +163,7 @@ int demodIOProx(bool verbose) {
         printDemodBuff(0, false, false, true);
         printDemodBuff(0, false, false, false);
     }
+    free(bits);
     return retval;
 }
 
@@ -441,4 +449,3 @@ int getIOProxBits(uint8_t version, uint8_t fc, uint16_t cn, uint8_t *bits) {
     PrintAndLogEx(SUCCESS, "IO raw bits:\n %s \n", sprint_bytebits_bin(bits, 64));
     return PM3_SUCCESS;
 }
-

@@ -298,10 +298,23 @@ int BUTTON_HELD(int ms) {
     return BUTTON_ERROR;
 }
 
+// This function returns false if no data is available or
+// the USB connection is invalid.
 bool data_available(void) {
 #ifdef WITH_FPC_USART_HOST
     return usb_poll_validate_length() || (usart_rxdata_available() > 0);
 #else
     return usb_poll_validate_length();
+#endif
+}
+
+// This function doesn't check if the USB connection is valid.
+// In most of the cases, you should use data_available() unless
+// the timing is critical.
+bool data_available_fast(void) {
+#ifdef WITH_FPC_USART_HOST
+    return usb_available_length() || (usart_rxdata_available() > 0);
+#else
+    return usb_available_length();
 #endif
 }

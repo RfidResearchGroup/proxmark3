@@ -403,7 +403,11 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
 
     // worst case with g_GraphTraceLen=40000 is < 4096
     // under normal conditions it's < 2048
-    uint8_t data[MAX_GRAPH_TRACE_LEN] = {0};
+    uint8_t *data = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
+    if (data == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t datasize = getFromGraphBuf(data);
 
     uint8_t rawbits[4096] = {0};
@@ -446,6 +450,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
             count = 0;
         }
     }
+    free(data);
 
     if (rawbit > 0) {
         PrintAndLogEx(INFO, "Recovered %d raw bits, expected: %zu", rawbit, g_GraphTraceLen / 32);

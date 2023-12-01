@@ -564,7 +564,11 @@ static int Cmdmandecoderaw(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t bits[MAX_DEMOD_BUF_LEN] = {0};
+    uint8_t *bits = calloc(MAX_DEMOD_BUF_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     // make sure its just binary data 0|1|7 in buffer
     int high = 0, low = 0;
@@ -579,6 +583,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
 
     if (high > 7 || low < 0) {
         PrintAndLogEx(ERR, "Error: please first raw demod then manchester raw decode");
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -587,6 +592,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     uint16_t err_cnt = manrawdecode(bits, &size, invert, &offset);
     if (err_cnt > max_err) {
         PrintAndLogEx(ERR, "Too many errors attempting to decode " _RED_("%i"), err_cnt);
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -611,6 +617,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     }
     setDemodBuff(bits, size, 0);
     setClockGrid(g_DemodClock * 2, g_DemodStartIdx);
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -651,17 +658,27 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t bits[MAX_DEMOD_BUF_LEN] = {0};
-    size_t size = sizeof(bits);
-    if (!getDemodBuff(bits, &size)) return PM3_ESOFT;
+    uint8_t *bits = calloc(MAX_DEMOD_BUF_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    size_t size = MAX_DEMOD_BUF_LEN;
+    if (!getDemodBuff(bits, &size)) {
+        free(bits);
+        return PM3_ESOFT;
+    }
 
     int err_cnt = BiphaseRawDecode(bits, &size, &offset, invert);
     if (err_cnt < 0) {
         PrintAndLogEx(ERR, "Error during decode " _RED_("%i"), err_cnt);
+        free(bits);
         return PM3_ESOFT;
     }
     if (err_cnt > max_err) {
         PrintAndLogEx(ERR, "Too many errors attempting to decode " _RED_("%i"), err_cnt);
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -674,6 +691,7 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
 
     setDemodBuff(bits, size, 0);
     setClockGrid(g_DemodClock * 2, g_DemodStartIdx + g_DemodClock * offset);
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -681,10 +699,16 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
 int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     //ask raw demod g_GraphBuffer first
 
-    uint8_t bs[MAX_DEMOD_BUF_LEN];
-    size_t size = getFromGraphBuf(bs);
+    uint8_t *bs = calloc(MAX_DEMOD_BUF_LEN, sizeof(uint8_t));
+    if (bs == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    size_t size = getFromGraphBufEx(bs, MAX_DEMOD_BUF_LEN);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: no data in graphbuf");
+        free(bs);
         return PM3_ESOFT;
     }
     int startIdx = 0;
@@ -692,6 +716,7 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     int errCnt = askdemod_ext(bs, &size, &clk, &invert, maxErr, 0, 0, &startIdx);
     if (errCnt < 0 || errCnt > maxErr) {
         PrintAndLogEx(DEBUG, "DEBUG: no data or error found %d, clock: %d", errCnt, clk);
+        free(bs);
         return PM3_ESOFT;
     }
 
@@ -699,10 +724,12 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     errCnt = BiphaseRawDecode(bs, &size, &offset, invert);
     if (errCnt < 0) {
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: Error BiphaseRawDecode: %d", errCnt);
+        free(bs);
         return PM3_ESOFT;
     }
     if (errCnt > maxErr) {
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: Error BiphaseRawDecode too many errors: %d", errCnt);
+        free(bs);
         return PM3_ESOFT;
     }
 
@@ -716,6 +743,7 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
         PrintAndLogEx(DEBUG, "Biphase Decoded using offset %d | clock %d | #errors %d | start index %d\ndata\n", offset, clk, errCnt, (startIdx + clk * offset / 2));
         printDemodBuff(offset, false, false, false);
     }
+    free(bs);
     return PM3_SUCCESS;
 }
 
@@ -1011,7 +1039,11 @@ static int CmdUndecimate(const char *Cmd) {
     CLIParserFree(ctx);
 
     //We have memory, don't we?
-    int swap[MAX_GRAPH_TRACE_LEN] = {0};
+    int *swap = calloc(MAX_GRAPH_TRACE_LEN, sizeof(int));
+    if (swap == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     uint32_t g_index = 0, s_index = 0;
     while (g_index < g_GraphTraceLen && s_index + factor < MAX_GRAPH_TRACE_LEN) {
         int count = 0;
@@ -1028,6 +1060,7 @@ static int CmdUndecimate(const char *Cmd) {
     memcpy(g_GraphBuffer, swap, s_index * sizeof(int));
     g_GraphTraceLen = s_index;
     RepaintGraphWindow();
+    free(swap);
     return PM3_SUCCESS;
 }
 
@@ -1707,7 +1740,11 @@ int CmdHpf(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     removeSignalOffset(bits, size);
     // push it back to graph
@@ -1716,6 +1753,7 @@ int CmdHpf(const char *Cmd) {
     computeSignalProperties(bits, size);
 
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -1776,35 +1814,48 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
         bits_per_sample = sc->bits_per_sample;
     }
 
+    return getSamplesFromBufEx(got, n, bits_per_sample, verbose);;
+}
+
+int getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_sample, bool verbose) {
+
+    size_t max_num = MIN(sample_num, MAX_GRAPH_TRACE_LEN);
+
     if (bits_per_sample < 8) {
 
         if (verbose) PrintAndLogEx(INFO, "Unpacking...");
 
-        BitstreamOut_t bout = { got, bits_per_sample * n,  0};
-        uint32_t j = 0;
-        for (j = 0; j * bits_per_sample < n * 8 && j * bits_per_sample < MAX_GRAPH_TRACE_LEN * 8; j++) {
+        BitstreamOut_t bout = {data, bits_per_sample * sample_num,  0};
+        size_t j = 0;
+        for (j = 0; j < max_num; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
             g_GraphBuffer[j] = ((int) sample) - 127;
         }
         g_GraphTraceLen = j;
 
-        if (verbose) PrintAndLogEx(INFO, "Unpacked %d samples", j);
+        if (verbose) PrintAndLogEx(INFO, "Unpacked %zu samples", j);
 
     } else {
-        for (uint32_t j = 0; j < n; j++) {
-            g_GraphBuffer[j] = ((int)got[j]) - 127;
+        for (size_t j = 0; j < max_num; j++) {
+            g_GraphBuffer[j] = ((int)data[j]) - 127;
         }
-        g_GraphTraceLen = n;
+        g_GraphTraceLen = max_num;
     }
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
+    free(bits);
 
     setClockGrid(0, 0);
     g_DemodBufferLen = 0;
     RepaintGraphWindow();
+
     return PM3_SUCCESS;
 }
 
@@ -2094,12 +2145,17 @@ static int CmdLoad(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " samples", g_GraphTraceLen);
 
     if (nofix == false) {
-        uint8_t bits[g_GraphTraceLen];
+        uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+        if (bits == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate memory");
+            return PM3_EMALLOC;
+        }
         size_t size = getFromGraphBuf(bits);
 
         removeSignalOffset(bits, size);
         setGraphBuf(bits, size);
         computeSignalProperties(bits, size);
+        free(bits);
     }
 
     setClockGrid(0, 0);
@@ -2231,12 +2287,17 @@ int CmdNorm(const char *Cmd) {
         }
     }
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
 
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -2377,12 +2438,17 @@ static int CmdDirectionalThreshold(const char *Cmd) {
     directionalThreshold(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, up, down);
 
     // set signal properties low/high/mean/amplitude and isnoice detection
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
 
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -2420,11 +2486,16 @@ static int CmdZerocrossings(const char *Cmd) {
         }
     }
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -2733,11 +2804,16 @@ static int CmdDataIIR(const char *Cmd) {
 
     iceSimple_Filter(g_GraphBuffer, g_GraphTraceLen, k);
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -3360,11 +3436,16 @@ static int CmdCenterThreshold(const char *Cmd) {
     centerThreshold(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, up, down);
 
     // set signal properties low/high/mean/amplitude and isnoice detection
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -3405,11 +3486,16 @@ static int CmdEnvelope(const char *Cmd) {
 
     envelope_square(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen);
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -3584,4 +3670,3 @@ int CmdData(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
