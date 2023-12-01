@@ -767,7 +767,7 @@ int lf_read(bool verbose, uint64_t samples) {
 }
 
 int CmdLFRead(const char *Cmd) {
-    // In real-time mode, the first few bytes might be the response of CMD_WTX 
+    // In real-time mode, the first few bytes might be the response of CMD_WTX
     // rather than the real samples if the LF FPGA image is not ready.
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf read",
@@ -876,7 +876,7 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
 }
 
 int CmdLFSniff(const char *Cmd) {
-    // In real-time mode, the first few bytes might be the response of CMD_WTX 
+    // In real-time mode, the first few bytes might be the response of CMD_WTX
     // rather than the real samples if the LF FPGA image is not ready.
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf sniff",

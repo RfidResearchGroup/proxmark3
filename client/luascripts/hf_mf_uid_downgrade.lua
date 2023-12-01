@@ -15,7 +15,7 @@ Convert a facility code and card number to a Mifare Classic UID, which can be us
 Working on HID Readers with any of the following enabled
 - Generic 14333A
 - Mifare Classic SIO + CSN
-- Mifare Classic CSN 
+- Mifare Classic CSN
 ]]
 example = [[
     -- Downgrade a card with the facility code of 146 and card number of 5

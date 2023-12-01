@@ -612,14 +612,14 @@ bool IsCommunicationThreadDead(void) {
 // To stop raw receive mode:
 // Call SetCommunicationReceiveMode(false)
 //
-// Note: 
+// Note:
 // 1. The receiving thread won't accept any normal packets after calling
-// SetCommunicationReceiveMode(true). You need to call 
+// SetCommunicationReceiveMode(true). You need to call
 // SetCommunicationReceiveMode(false) to stop the raw receiving process.
 // 2. If the received size >= len used in SetCommunicationRawReceiveBuffer(),
 // The receiving thread will ignore the incoming data to prevent overflow.
-// 3. Normally you only need WaitForRawDataTimeout() rather than the 
-// low level functions like SetCommunicationReceiveMode(), 
+// 3. Normally you only need WaitForRawDataTimeout() rather than the
+// low level functions like SetCommunicationReceiveMode(),
 // SetCommunicationRawReceiveBuffer() and GetCommunicationRawReceiveNum()
 
 bool SetCommunicationReceiveMode(bool isRawMode) {
@@ -825,7 +825,7 @@ static size_t communication_delay(void) {
 
 /**
  * @brief Wait for receiving a specified amount of bytes
- * 
+ *
  * @param buffer The receive buffer
  * @param len The maximum receive byte size
  * @param ms_timeout the maximum timeout

@@ -38,7 +38,7 @@ class ProxWidget;
  * @brief The actual plot, black area were we paint the graph
  */
 class Plot: public QWidget {
-  Q_OBJECT; //needed for slot/signal classes
+    Q_OBJECT; //needed for slot/signal classes
 
   private:
     QWidget *master;

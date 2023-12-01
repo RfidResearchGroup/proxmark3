@@ -280,7 +280,8 @@ typedef struct {
 
 typedef struct {
     // 64KB SRAM -> 524288 bits(max sample num) < 2^30
-    uint32_t samples  : LF_SAMPLES_BITS;
+uint32_t samples  :
+    LF_SAMPLES_BITS;
     bool     realtime : 1;
     bool     verbose  : 1;
 } PACKED lf_sample_payload_t;

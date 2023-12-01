@@ -9995,16 +9995,18 @@
             "description": "Sniff low frequency signal. - use `lf config` to set parameters. - use `data plot` to look at it",
             "notes": [
                 "lf read -v -s 12000 -> collect 12000 samples",
-                "lf read -s 3000 -@ -> oscilloscope style"
+                "lf read -s 3000 -@ -> oscilloscope style",
+                "lf read -r -> use real-time mode"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-s, --samples <dec> number of samples to collect",
                 "-v, --verbose verbose output",
-                "-@ continuous reading mode"
+                "-@ continuous reading mode",
+                "-r, --realtime real-time reading mode"
             ],
-            "usage": "lf read [-hv@] [-s <dec>]"
+            "usage": "lf read [-hv@r] [-s <dec>]"
         },
         "lf search": {
             "command": "lf search",
@@ -10180,16 +10182,18 @@
             "description": "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually. Usually a trigger and skip samples is a good thing to set before doing a low frequency sniff. - use `lf config` to set parameters. - use `data plot` to look at sniff signal. - use `lf search -1` to see if signal can be automatic decoded",
             "notes": [
                 "lf sniff -v",
-                "lf sniff -s 3000 -@ -> oscilloscope style"
+                "lf sniff -s 3000 -@ -> oscilloscope style",
+                "lf sniff -r -> use real-time mode"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-s, --samples <dec> number of samples to collect",
                 "-v, --verbose verbose output",
-                "-@ continuous sniffing mode"
+                "-@ continuous sniffing mode",
+                "-r, --realtime real-time sniffing mode"
             ],
-            "usage": "lf sniff [-hv@] [-s <dec>]"
+            "usage": "lf sniff [-hv@r] [-s <dec>]"
         },
         "lf t55xx bruteforce": {
             "command": "lf t55xx bruteforce",
@@ -12066,6 +12070,6 @@
     "metadata": {
         "commands_extracted": 699,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-11-11T20:31:02"
+        "extracted_on": "2023-12-01T09:58:53"
     }
 }
