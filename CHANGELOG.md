@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added a slider in the plot window for navigation (@wh201906)
+ - Fixed client build bug with Python 3.12 (@wh201906)
+ - Fixed `ExchangeAPDUSC()` in `cmdsmartcard.c` to prevent client crash (@wh201906)
+ - Added real-time LF sampling support (@wh201906)
  - Changed `hf 14a info` - now reads and prints QL88 sigantures (@iceman1001)
  - Fixed `hf iclass dump` truncating AA2 blocks and improve reliability (@nvx)
  - Added some info about UMC in "doc/magic_cards_notes.md" (@temskiy)
