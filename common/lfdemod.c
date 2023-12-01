@@ -53,8 +53,8 @@
 // **********************************************************************************************
 // ---------------------------------Utilities Section--------------------------------------------
 // **********************************************************************************************
-#define LOWEST_DEFAULT_CLOCK 32
-#define FSK_PSK_THRESHOLD   123
+#define LOWEST_DEFAULT_CLOCK    32
+#define FSK_PSK_THRESHOLD       123
 
 //to allow debug print calls when used not on dev
 
@@ -1496,7 +1496,7 @@ bool DetectST(uint8_t *buffer, size_t *size, int *foundclock, size_t *ststart, s
 static int millerRawDecode(uint8_t *bits, size_t *size, int invert) {
     if (*size < 16) return -1;
 
-    uint16_t MaxBits = 512, errCnt = 0;
+    uint16_t MaxBits = MAX_DEMODULATION_BITS, errCnt = 0;
     size_t i, bitCnt = 0;
     uint8_t alignCnt = 0, curBit = bits[0], alignedIdx = 0, halfClkErr = 0;
 
@@ -1540,7 +1540,7 @@ int BiphaseRawDecode(uint8_t *bits, size_t *size, int *offset, int invert) {
     uint16_t bitnum = 0;
     uint16_t errCnt = 0;
     size_t i = *offset;
-    uint16_t maxbits = 512;
+    uint16_t maxbits = MAX_DEMODULATION_BITS;
 
     //check for phase change faults - skip one sample if faulty
     bool offsetA = true, offsetB = true;
@@ -1580,7 +1580,7 @@ uint16_t manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alig
     if (*size < 16) return 0xFFFF;
 
     int errCnt = 0, bestErr = 1000;
-    uint16_t bitnum = 0, maxBits = 512, bestRun = 0;
+    uint16_t bitnum = 0, maxBits = MAX_DEMODULATION_BITS, bestRun = 0;
     size_t i;
 
     //find correct start position [alignment]

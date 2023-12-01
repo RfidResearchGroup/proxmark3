@@ -222,7 +222,7 @@ static int CmdSetDebugMode(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// max output to 512 bits if we have more
+// max output to MAX_DEMODULATION_BITS bits if we have more
 // doesn't take inconsideration where the demod offset or bitlen found.
 int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_hex) {
     size_t len = g_DemodBufferLen;
@@ -257,8 +257,8 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
         len = (g_DemodBufferLen - offset);
     }
 
-    if (len > 512)  {
-        len = 512;
+    if (len > MAX_DEMODULATION_BITS)  {
+        len = MAX_DEMODULATION_BITS;
     }
 
     if (invert) {
@@ -275,7 +275,7 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
 
     if (print_hex) {
         p = (buf + offset);
-        char hex[512] = {0x00};
+        char hex[MAX_DEMODULATION_BITS + 1] = {0x00};
         int num_bits = binarraytohex(hex, sizeof(hex), (char *)p, len);
         if (num_bits == 0) {
             p = NULL;
