@@ -773,10 +773,11 @@ int CmdLFRead(const char *Cmd) {
     CLIParserInit(&ctx, "lf read",
                   "Sniff low frequency signal.\n"
                   " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters.\n")
-                  _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at it"),
+                  _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at it.\n")
+                  _CYAN_("If the number of samples is more than the device memory limit (40000 now), ")
+                  _CYAN_("it will try to use the real-time sampling mode."),
                   "lf read -v -s 12000   --> collect 12000 samples\n"
                   "lf read -s 3000 -@    --> oscilloscope style \n"
-                  "lf read -r            --> use real-time mode \n"
                  );
 
     void *argtable[] = {
@@ -784,22 +785,20 @@ int CmdLFRead(const char *Cmd) {
         arg_u64_0("s", "samples", "<dec>", "number of samples to collect"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("@", NULL, "continuous reading mode"),
-        arg_lit0("r", "realtime", "real-time reading mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint64_t samples = arg_get_u64_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
     bool cm = arg_get_lit(ctx, 3);
-    bool realtime = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
+
+    // the 40000 there should be the result of BigBuf_max_traceLen(), 
+    // but IDK how to get it.
+    bool realtime = samples > 40000;
 
     if (g_session.pm3_present == false)
         return PM3_ENOTTY;
-
-    if (realtime && samples == 0) {
-        samples = MAX_GRAPH_TRACE_LEN;
-    }
 
     if (cm || realtime) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
@@ -885,10 +884,11 @@ int CmdLFSniff(const char *Cmd) {
                   "\n"
                   " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters.\n")
                   _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at sniff signal.\n")
-                  _CYAN_(" - use ") _YELLOW_("`lf search -1`") _CYAN_(" to see if signal can be automatic decoded\n"),
+                  _CYAN_(" - use ") _YELLOW_("`lf search -1`") _CYAN_(" to see if signal can be automatic decoded.\n")
+                  _CYAN_("If the number of samples is more than the device memory limit (40000 now), ")
+                  _CYAN_("it will try to use the real-time sampling mode."),
                   "lf sniff -v\n"
                   "lf sniff -s 3000 -@    --> oscilloscope style \n"
-                  "lf sniff -r            --> use real-time mode \n"
                  );
 
     void *argtable[] = {
@@ -896,22 +896,20 @@ int CmdLFSniff(const char *Cmd) {
         arg_u64_0("s", "samples", "<dec>", "number of samples to collect"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("@", NULL, "continuous sniffing mode"),
-        arg_lit0("r", "realtime", "real-time sniffing mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint64_t samples = arg_get_u64_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
     bool cm = arg_get_lit(ctx, 3);
-    bool realtime = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
+
+    // the 40000 there should be the result of BigBuf_max_traceLen(), 
+    // but IDK how to get it.
+    bool realtime = samples > 40000;
 
     if (g_session.pm3_present == false)
         return PM3_ENOTTY;
-
-    if (realtime && samples == 0) {
-        samples = MAX_GRAPH_TRACE_LEN;
-    }
 
     if (cm || realtime) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
