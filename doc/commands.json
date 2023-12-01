@@ -9992,21 +9992,19 @@
         },
         "lf read": {
             "command": "lf read",
-            "description": "Sniff low frequency signal. - use `lf config` to set parameters. - use `data plot` to look at it",
+            "description": "Sniff low frequency signal. - use `lf config` to set parameters. - use `data plot` to look at it. If the number of samples is more than the device memory limit (40000 now), it will try to use the real-time sampling mode.",
             "notes": [
                 "lf read -v -s 12000 -> collect 12000 samples",
-                "lf read -s 3000 -@ -> oscilloscope style",
-                "lf read -r -> use real-time mode"
+                "lf read -s 3000 -@ -> oscilloscope style"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-s, --samples <dec> number of samples to collect",
                 "-v, --verbose verbose output",
-                "-@ continuous reading mode",
-                "-r, --realtime real-time reading mode"
+                "-@ continuous reading mode"
             ],
-            "usage": "lf read [-hv@r] [-s <dec>]"
+            "usage": "lf read [-hv@] [-s <dec>]"
         },
         "lf search": {
             "command": "lf search",
@@ -10179,21 +10177,19 @@
         },
         "lf sniff": {
             "command": "lf sniff",
-            "description": "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually. Usually a trigger and skip samples is a good thing to set before doing a low frequency sniff. - use `lf config` to set parameters. - use `data plot` to look at sniff signal. - use `lf search -1` to see if signal can be automatic decoded",
+            "description": "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually. Usually a trigger and skip samples is a good thing to set before doing a low frequency sniff. - use `lf config` to set parameters. - use `data plot` to look at sniff signal. - use `lf search -1` to see if signal can be automatic decoded. If the number of samples is more than the device memory limit (40000 now), it will try to use the real-time sampling mode.",
             "notes": [
                 "lf sniff -v",
-                "lf sniff -s 3000 -@ -> oscilloscope style",
-                "lf sniff -r -> use real-time mode"
+                "lf sniff -s 3000 -@ -> oscilloscope style"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-s, --samples <dec> number of samples to collect",
                 "-v, --verbose verbose output",
-                "-@ continuous sniffing mode",
-                "-r, --realtime real-time sniffing mode"
+                "-@ continuous sniffing mode"
             ],
-            "usage": "lf sniff [-hv@r] [-s <dec>]"
+            "usage": "lf sniff [-hv@] [-s <dec>]"
         },
         "lf t55xx bruteforce": {
             "command": "lf t55xx bruteforce",
@@ -12070,6 +12066,6 @@
     "metadata": {
         "commands_extracted": 699,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-12-01T09:58:53"
+        "extracted_on": "2023-12-01T14:06:40"
     }
 }

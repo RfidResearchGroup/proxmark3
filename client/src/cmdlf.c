@@ -793,7 +793,7 @@ int CmdLFRead(const char *Cmd) {
     bool cm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    // the 40000 there should be the result of BigBuf_max_traceLen(), 
+    // the 40000 there should be the result of BigBuf_max_traceLen(),
     // but IDK how to get it.
     bool realtime = samples > 40000;
 
@@ -904,7 +904,7 @@ int CmdLFSniff(const char *Cmd) {
     bool cm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    // the 40000 there should be the result of BigBuf_max_traceLen(), 
+    // the 40000 there should be the result of BigBuf_max_traceLen(),
     // but IDK how to get it.
     bool realtime = samples > 40000;
 
