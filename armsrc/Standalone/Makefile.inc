@@ -145,6 +145,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_TMUDFORD,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_tmudford.c
 endif
+# WITH_STANDALONE_HF_UNISNIFF
+ifneq (,$(findstring WITH_STANDALONE_HF_UNISNIFF,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_unisniff.c
+endif
 # WITH_STANDALONE_HF_YOUNG
 ifneq (,$(findstring WITH_STANDALONE_HF_YOUNG,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_young.c
