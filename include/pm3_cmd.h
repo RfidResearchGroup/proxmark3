@@ -847,6 +847,11 @@ typedef struct {
 # define UART_TCP_LOCAL_CLIENT_RX_TIMEOUT_MS  40
 # define UART_UDP_LOCAL_CLIENT_RX_TIMEOUT_MS  20
 
+// definitions for multiple FPGA config files support
+#define FPGA_BITSTREAM_LF 1
+#define FPGA_BITSTREAM_HF 2
+#define FPGA_BITSTREAM_HF_FELICA 3
+#define FPGA_BITSTREAM_HF_15 4
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the g_common_area is present */
