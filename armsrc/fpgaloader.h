@@ -24,12 +24,6 @@
 #define FpgaDisableSscDma(void) AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 #define FpgaEnableSscDma(void) AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
 
-// definitions for multiple FPGA config files support
-#define FPGA_BITSTREAM_LF 1
-#define FPGA_BITSTREAM_HF 2
-#define FPGA_BITSTREAM_HF_FELICA 3
-#define FPGA_BITSTREAM_HF_15 4
-
 /*
  Communication between ARM / FPGA is done inside armsrc/fpgaloader.c see: function FpgaSendCommand()
  Send 16 bit command / data pair to FPGA with the bit format:

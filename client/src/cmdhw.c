@@ -1105,7 +1105,7 @@ static int CmdBreak(const char *Cmd) {
 }
 
 int set_fpga_mode(uint8_t mode) {
-    if (mode < 1 || mode > 4) {
+    if (mode < FPGA_BITSTREAM_LF || mode > FPGA_BITSTREAM_HF_15) {
         return PM3_EINVARG;
     }
     uint8_t d[] = {mode};
