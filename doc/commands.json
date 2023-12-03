@@ -6247,6 +6247,32 @@
             ],
             "usage": "hf mfp auth [-hv] --ki <hex> --key <hex>"
         },
+        "hf mfp chconf": {
+            "command": "hf mfp chconf",
+            "description": "Change the configuration on a Mifare Plus tag. DANGER!",
+            "notes": [
+                "This requires Card Master Key (9000) or Card Configuration Key (9001).",
+                "Configuration block info can be found below.",
+                "* Block B000 (00; CMK): Max amount of commands without MAC (byte 0), as well as plain mode access (unknown).",
+                "* Block B001 (01; CCK): Installation identifier for Virtual Card. Please consult NXP for data.",
+                "* Block B002 (02; CCK): ATS data.",
+                "* Block B003 (03; CCK): Use Random ID in SL3, decide whether proximity check is mandatory.",
+                "  * DO NOT WRITE THIS BLOCK UNDER ANY CIRCUMSTANCES! Risk of bricking.",
+                "More configuration tips to follow. Check JMY600 Series IC Card Module.",
+                "hf mfp chconf -c 00 -d 10ffffffffffffffffffffffffffffff --key A0A1A2A3A4A5A6A7A0A1A2A3A4A5A6A7 -> Allow 16 commands without MAC in a single transaction."
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose Verbose mode",
+                "--nmr Do not expect MAC in response",
+                "-c, --conf <hex> Config block number, 0-3",
+                "-k, --key <hex> Card key, 16 hex bytes",
+                "--cck Auth as Card Configuration key instead of Card Master Key",
+                "-d, --data <hex> New configuration data, 16 hex bytes"
+            ],
+            "usage": "hf mfp chconf [-hv] [--nmr] -c <hex> [-k <hex>] [--cck] -d <hex>"
+        },
         "hf mfp chk": {
             "command": "hf mfp chk",
             "description": "Checks keys on MIFARE Plus card",
@@ -6273,6 +6299,26 @@
                 "-v, --verbose Verbose mode"
             ],
             "usage": "hf mfp chk [-habv] [-s <0..255>] [-e <0..255>] [-k <hex>] [-d <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [--dump]"
+        },
+        "hf mfp chkey": {
+            "command": "hf mfp chkey",
+            "description": "Change the keys on a Mifare Plus tag",
+            "notes": [
+                "This requires the key that can update the key that you are trying to update.",
+                "hf mfp chkey --ki 401f -d FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF --key A0A1A2A3A4A5A6A7A0A1A2A3A4A5A6A7 -> Change key B for Sector 15 from MAD to default",
+                "hf mfp chkey --ki 9000 -d 32F9351A1C02B35FF97E0CA943F814F6 --key FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> Change card master key to custom from default"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose Verbose mode",
+                "--nmr                          Do not expect MAC in response",
+                "--ki <hex>                     Key Index, 2 hex bytes",
+                "-k, --key <hex>                Current sector key, 16 hex bytes",
+                "-b, --typeb                    Sector key is key B",
+                "-d, --data <hex>               New key, 16 hex bytes"
+            ],
+            "usage": "hf mfp chkey [-hvb] [--nmr] --ki <hex> [-k <hex>] -d <hex>"
         },
         "hf mfp commitp": {
             "command": "hf mfp commitp",
@@ -6436,11 +6482,13 @@
                 "-v, --verbose Verbose mode",
                 "-n, --count <dec> Blocks count (def: 1)",
                 "-b, --keyb Use key B (def: keyA)",
-                "-p, --plain Plain communication mode between reader and card",
+                "-p, --plain Do not use encrypted transmission between reader and card",
+                "--nmc Do not append MAC to command",
+                "--nmr Do not expect MAC in reply",
                 "--blk <0..255> Block number",
                 "-k, --key <hex> Key, 16 hex bytes"
             ],
-            "usage": "hf mfp rdbl [-hvbp] [-n <dec>] --blk <0..255> [-k <hex>]"
+            "usage": "hf mfp rdbl [-hvbp] [-n <dec>] [--nmc] [--nmr] --blk <0..255> [-k <hex>]"
         },
         "hf mfp rdsc": {
             "command": "hf mfp rdsc",
@@ -6454,11 +6502,13 @@
                 "-h, --help This help",
                 "-v, --verbose Verbose mode",
                 "-b, --keyb Use key B (def: keyA)",
-                "-p, --plain Plain communication mode between reader and card",
+                "-p, --plain Do not use encrypted transmission between reader and card",
+                "--nmc Do not append MAC to command",
+                "--nmr Do not expect MAC in reply",
                 "-s, --sn <0..255> Sector number",
                 "-k, --key <hex> Key, 16 hex bytes"
             ],
-            "usage": "hf mfp rdsc [-hvbp] -s <0..255> [-k <hex>]"
+            "usage": "hf mfp rdsc [-hvbp] [--nmc] [--nmr] -s <0..255> [-k <hex>]"
         },
         "hf mfp wrbl": {
             "command": "hf mfp wrbl",
@@ -6473,26 +6523,30 @@
                 "-v, --verbose Verbose mode",
                 "-b, --keyb Use key B (def: keyA)",
                 "--blk <0..255> Block number",
+                "-p, --plain Do not use encrypted transmission",
+                "--nmr Do not expect MAC in response",
                 "-d, --data <hex> Data, 16 hex bytes",
                 "-k, --key <hex> Key, 16 hex bytes"
             ],
-            "usage": "hf mfp wrbl [-hvb] --blk <0..255> -d <hex> [-k <hex>]"
+            "usage": "hf mfp wrbl [-hvbp] --blk <0..255> [--nmr] -d <hex> [-k <hex>]"
         },
         "hf mfp wrp": {
             "command": "hf mfp wrp",
             "description": "Executes Write Perso command. Can be used in SL0 mode only.",
             "notes": [
-                "hf mfp wrp --ki 4000 --key 000102030405060708090a0b0c0d0e0f -> write key (00..0f) to key number 4000",
-                "hf mfp wrp --ki 4000 -> write default key(0xff..0xff) to key number 4000"
+                "hf mfp wrp --adr 4000 --data 000102030405060708090a0b0c0d0e0f -> write key (00..0f) to key number 4000",
+                "hf mfp wrp --adr 4000 -> write default key(0xff..0xff) to key number 4000",
+                "hf mfp wrp -a b000 -d 20FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> allow 32 commands without MAC in configuration block (B000)",
+                "hf mfp wrp -a 0003 -d 1234561234567F078869B0B1B2B3B4B5 -> write crypto1 keys A: 123456123456 and B: B0B1B2B3B4B5 to block 3"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-v, --verbose Verbose output",
-                "--ki <hex> Key number, 2 hex bytes",
-                "--key <hex> Key, 16 hex bytes"
+                "-a, --adr <hex> Address, 2 hex bytes",
+                "-d, --data <hex> Data, 16 hex bytes"
             ],
-            "usage": "hf mfp wrp [-hv] --ki <hex> [--key <hex>]"
+            "usage": "hf mfp wrp [-hv] -a <hex> [-d <hex>]"
         },
         "hf mfu cauth": {
             "command": "hf mfu cauth",
