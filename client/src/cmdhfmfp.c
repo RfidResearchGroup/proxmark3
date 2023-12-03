@@ -37,7 +37,7 @@
 #include "cmdtrace.h"
 
 static const uint8_t mfp_default_key[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-static uint16_t mfp_card_adresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
+static uint16_t mfp_card_adresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0x9006, 0x9007, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
 
 #define MFP_KEY_FILE_SIZE  14 + (2 * 64 * (AES_KEY_LEN + 1))
 
@@ -1169,7 +1169,7 @@ static int CmdHFMFPChConf(const char *Cmd) {
         arg_lit0(NULL, "nmr", "Do not expect MAC in response"),
         arg_int1("c", "conf", "<hex>", "Config block number, 0-3"),
         arg_str0("k", "key",      "<hex>", "Card key, 16 hex bytes"),
-        arg_lit0(NULL, "cck", "Auth as Card Configuration key instead of than Card Master Key"),
+        arg_lit0(NULL, "cck", "Auth as Card Configuration key instead of Card Master Key"),
         arg_str1("d",  "data",    "<hex>", "New configuration data, 16 hex bytes"),
         arg_param_end
     };
