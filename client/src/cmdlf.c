@@ -30,6 +30,7 @@
 #include "cliparser.h"      // args parsing
 #include "graph.h"          // for graph data
 #include "cmddata.h"        // for `lf search`
+#include "cmdhw.h"          // for setting FPGA image
 #include "cmdlfawid.h"      // for awid menu
 #include "cmdlfem.h"        // for em menu
 #include "cmdlfem410x.h"      // for em4x menu
@@ -725,15 +726,23 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
         size_t sample_bytes = samples * bits_per_sample;
         sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
 
+        // In real-time mode, the LF bitstream should be loaded before receiving raw data.
+        // Otherwise, the first batch of raw data might contain the response of CMD_WTX.
+        int result = set_fpga_mode(FPGA_BITSTREAM_LF);
+        if (result != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "failed to load LF bitstream to FPGA");
+            return result;
+        }
+
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         if (is_trigger_threshold_set) {
-            size_t first_receive_len = 32; // larger than the response of CMD_WTX
+            size_t first_receive_len = 32;
             // Wait until a bunch of data arrives
             first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false);
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000 + FPGA_LOAD_WAIT_TIME, true);
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000, true);
             sample_bytes += first_receive_len;
         } else {
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000 + FPGA_LOAD_WAIT_TIME, true);
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true);
         }
         samples = sample_bytes * 8 / bits_per_sample;
         PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
@@ -767,8 +776,6 @@ int lf_read(bool verbose, uint64_t samples) {
 }
 
 int CmdLFRead(const char *Cmd) {
-    // In real-time mode, the first few bytes might be the response of CMD_WTX
-    // rather than the real samples if the LF FPGA image is not ready.
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf read",
                   "Sniff low frequency signal.\n"
@@ -837,15 +844,23 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
         size_t sample_bytes = samples * bits_per_sample;
         sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
 
+        // In real-time mode, the LF bitstream should be loaded before receiving raw data.
+        // Otherwise, the first batch of raw data might contain the response of CMD_WTX.
+        int result = set_fpga_mode(FPGA_BITSTREAM_LF);
+        if (result != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "failed to load LF bitstream to FPGA");
+            return result;
+        }
+
         SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         if (is_trigger_threshold_set) {
-            size_t first_receive_len = 32; // larger than the response of CMD_WTX
+            size_t first_receive_len = 32;
             // Wait until a bunch of data arrives
             first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false);
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000 + FPGA_LOAD_WAIT_TIME, true);
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000, true);
             sample_bytes += first_receive_len;
         } else {
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000 + FPGA_LOAD_WAIT_TIME, true);
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true);
         }
         samples = sample_bytes * 8 / bits_per_sample;
         PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
@@ -875,8 +890,6 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
 }
 
 int CmdLFSniff(const char *Cmd) {
-    // In real-time mode, the first few bytes might be the response of CMD_WTX
-    // rather than the real samples if the LF FPGA image is not ready.
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf sniff",
                   "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually.\n"

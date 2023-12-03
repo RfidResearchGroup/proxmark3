@@ -4249,7 +4249,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
     // ICEMAN:  bug.  if device has been using ICLASS commands,
     // the device needs to load the HF fpga image. It takes 1.5 second.
-    set_fpga_mode(2);
+    set_fpga_mode(FPGA_BITSTREAM_HF);
 
     // use RDV4 spiffs
     if (use_spiffs && IfPm3Flash() == false) {
@@ -8006,7 +8006,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
 
     // ICEMAN:  bug.  if device has been using ICLASS commands,
     // the device needs to load the HF fpga image. It takes 1.5 second.
-    set_fpga_mode(2);
+    set_fpga_mode(FPGA_BITSTREAM_HF);
 
     // validations
     if (pwd_len != 4 && pwd_len != 0) {
