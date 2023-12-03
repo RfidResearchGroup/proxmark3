@@ -133,6 +133,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_REBLAY       | 14A relay over BT  - Salvador Mendoza
 | HF_TCPRST       | IKEA Rothult ST25TA, Standalone Master Key Dump/Emulation - Nick Draffen
 | HF_TMUDFORD     | Read and emulate ISO15693 card UID - Tim Mudford
+| HF_UNISNIFF     | Combined 14a/14b/15 sniffer with runtime selection & extra save options
 | HF_YOUNG        | Mifare sniff/simulation - Craig Young
 | DANKARMULTI     | Standalone mode that bakes together multiple other standalone modes. - dankar
 
