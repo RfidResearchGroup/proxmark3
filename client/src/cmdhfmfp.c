@@ -37,7 +37,7 @@
 #include "cmdtrace.h"
 
 static const uint8_t mfp_default_key[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-static uint16_t mfp_card_adresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
+static uint16_t mfp_card_adresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0x9006, 0x9007, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
 
 #define MFP_KEY_FILE_SIZE  14 + (2 * 64 * (AES_KEY_LEN + 1))
 
@@ -389,7 +389,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
 
                 // DESFire answers 0x1C or 67 00
                 // Plus answers 0x0B, 0x09, 0x06
-                // Which tag answers 6D 00 ??
+                // 6D00 is "INS code not supported" in APDU
                 if (data[0] != 0x0b && data[0] != 0x09 && data[0] != 0x1C && data[0] != 0x67 && data[0] != 0x6d) {
                     PrintAndLogEx(INFO, _RED_("Send copy to iceman of this command output!"));
                     PrintAndLogEx(INFO, "data: %s", sprint_hex(data, datalen));
@@ -451,49 +451,59 @@ static int CmdHFMFPWritePerso(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp wrp",
                   "Executes Write Perso command. Can be used in SL0 mode only.",
-                  "hf mfp wrp --ki 4000 --key 000102030405060708090a0b0c0d0e0f  -> write key (00..0f) to key number 4000 \n"
-                  "hf mfp wrp --ki 4000                                         -> write default key(0xff..0xff) to key number 4000");
+                  "Use this command to program AES keys, as well as personalize other data on the tag.\n"
+                  "You can program:\n"
+                  "* Address 00 [00-FF]: Memory blocks (as well as ACLs and Crypto1 keys)\n"
+                  "* Address 40 [00-40]: AES sector keys\n"
+                  "* Address 90 [00-04]: AES administrative keys\n"
+                  "* Address A0 [00, 01, 80, 81]: Virtual Card keys\n"
+                  "* Address B0 [00-03]: Configuration data (DO NOT TOUCH B003)\n"
+                  "Examples:\n"
+                  "hf mfp wrp --adr 4000 --data 000102030405060708090a0b0c0d0e0f  -> write key (00..0f) to key number 4000 \n"
+                  "hf mfp wrp --adr 4000                                          -> write default key(0xff..0xff) to key number 4000\n"
+                  "hf mfp wrp --adr b000 -d FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF      -> allow 255 commands without MAC in configuration block (B000)\n"
+                  "hf mfp wrp --adr 0003 -d 1234561234567F078869B0B1B2B3B4B5      -> write crypto1 keys A: 123456123456 and B: B0B1B2B3B4B5 to block 3\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose", "Verbose output"),
-        arg_str1(NULL, "ki",  "<hex>", " Key number, 2 hex bytes"),
-        arg_str0(NULL, "key", "<hex>", " Key, 16 hex bytes"),
+        arg_str1("a", "adr",  "<hex>", "Address, 2 hex bytes"),
+        arg_str0("d", "data", "<hex>", "Data, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(ctx, 1);
 
-    uint8_t keyNum[64] = {0};
-    int keyNumLen = 0;
-    CLIGetHexWithReturn(ctx, 2, keyNum, &keyNumLen);
+    uint8_t addr[64] = {0};
+    int addrLen = 0;
+    CLIGetHexWithReturn(ctx, 2, addr, &addrLen);
 
-    uint8_t key[64] = {0};
-    int keyLen = 0;
-    CLIGetHexWithReturn(ctx, 3, key, &keyLen);
+    uint8_t datain[64] = {0};
+    int datainLen = 0;
+    CLIGetHexWithReturn(ctx, 3, datain, &datainLen);
     CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
 
-    if (!keyLen) {
-        memmove(key, mfp_default_key, 16);
-        keyLen = 16;
+    if (!datainLen) {
+        memmove(datain, mfp_default_key, 16);
+        datainLen = 16;
     }
 
-    if (keyNumLen != 2) {
-        PrintAndLogEx(ERR, "Key number length must be 2 bytes. Got %d", keyNumLen);
+    if (addrLen != 2) {
+        PrintAndLogEx(ERR, "Address length must be 2 bytes. Got %d", addrLen);
         return PM3_EINVARG;
     }
-    if (keyLen != 16) {
-        PrintAndLogEx(ERR, "Key length must be 16 bytes. Got %d", keyLen);
+    if (datainLen != 16) {
+        PrintAndLogEx(ERR, "Data length must be 16 bytes. Got %d", datainLen);
         return PM3_EINVARG;
     }
 
     uint8_t data[250] = {0};
     int datalen = 0;
 
-    int res = MFPWritePerso(keyNum, key, true, false, data, sizeof(data), &datalen);
+    int res = MFPWritePerso(addr, datain, true, false, data, sizeof(data), &datalen);
     if (res) {
         PrintAndLogEx(ERR, "Exchange error: %d", res);
         return res;
@@ -671,7 +681,29 @@ static int CmdHFMFPAuth(const char *Cmd) {
 
     return MifareAuth4(NULL, keyn, key, true, false, true, verbose, false);
 }
-
+static int data_crypt(mf4Session_t *mf4session, uint8_t *dati, uint8_t *dato, bool rev){
+uint8_t kenc[16];
+        memcpy(kenc, mf4session->Kenc, 16);
+        uint8_t ti[4];
+        memcpy(ti, mf4session->TI, 4);
+        uint8_t ctr[1];
+        uint8_t IV[16] ={0,0,0x00,0x00,0x00,0,0x00,0x00,0x00,0};
+        if (rev){
+        	ctr[0] = (uint8_t)(mf4session->R_Ctr & 0xff);
+        	for (int i = 0; i<9; i+=4){memcpy(&IV[i], ctr, 1);}
+        	memcpy(&IV[12], ti, 4); // For reads TI is LS
+        } else {
+        	ctr[0] = (uint8_t)(mf4session->W_Ctr & 0xff);
+        	for (int i = 3; i<16; i+=4){memcpy(&IV[i], ctr, 1);}
+        	memcpy(&IV[0], ti, 4); // For writes TI is MS
+        }
+        if (rev){
+            aes_decode(IV, kenc, dati, dato, 16);
+        } else {
+            aes_encode(IV, kenc, dati, dato, 16);
+        }
+        return 0;
+}
 static int CmdHFMFPRdbl(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfp rdbl",
@@ -684,7 +716,9 @@ static int CmdHFMFPRdbl(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose mode"),
         arg_int0("n",  "count", "<dec>", "Blocks count (def: 1)"),
         arg_lit0("b",  "keyb", "Use key B (def: keyA)"),
-        arg_lit0("p",  "plain", "Plain communication mode between reader and card"),
+        arg_lit0("p", "plain", "Do not use encrypted communication mode between reader and card"),
+        arg_lit0(NULL, "nmc", "Do not append MAC to command"),
+        arg_lit0(NULL, "nmr", "Do not expect MAC in reply"),
         arg_int1(NULL, "blk", "<0..255>", "Block number"),
         arg_str0("k", "key", "<hex>", "Key, 16 hex bytes"),
         arg_param_end
@@ -694,13 +728,15 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 1);
     int blocksCount = arg_get_int_def(ctx, 2, 1);
     bool keyB = arg_get_lit(ctx, 3);
-    int plain = arg_get_lit(ctx, 4);
-    uint32_t blockn = arg_get_int(ctx, 5);
+    bool plain = arg_get_lit(ctx, 4);
+    bool nomaccmd = arg_get_lit(ctx, 5);
+    bool nomacres = arg_get_lit(ctx, 6);
+    uint32_t blockn = arg_get_int(ctx, 7);
 
     uint8_t keyn[2] = {0};
     uint8_t key[250] = {0};
     int keylen = 0;
-    CLIGetHexWithReturn(ctx, 6, key, &keylen);
+    CLIGetHexWithReturn(ctx, 8, key, &keylen);
     CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
@@ -747,7 +783,7 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     uint8_t data[250] = {0};
     int datalen = 0;
     uint8_t mac[8] = {0};
-    res = MFPReadBlock(&mf4session, plain, blockn & 0xff, blocksCount, false, false, data, sizeof(data), &datalen, mac);
+    res = MFPReadBlock(&mf4session, plain, nomaccmd, nomacres, blockn & 0xff, blocksCount, false, false, data, sizeof(data), &datalen, mac);
     if (res) {
         PrintAndLogEx(ERR, "Read error: %d", res);
         return res;
@@ -757,12 +793,13 @@ static int CmdHFMFPRdbl(const char *Cmd) {
         PrintAndLogEx(ERR, "Card read error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
         return PM3_ESOFT;
     }
-
-    if (datalen != 1 + blocksCount * 16 + 8 + 2) {
+    //PrintAndLogEx(INFO, "%i", 8 && (!macres || 0xff));
+    if (datalen != 1 + blocksCount * 16 + (nomacres ? 0 : 8) + 2) {
         PrintAndLogEx(ERR, "Error return length: %d", datalen);
         return PM3_ESOFT;
     }
-
+    
+    if (!plain) data_crypt(&mf4session, &data[1], &data[1], true);
     uint8_t sector = mfSectorNum(blockn);
     mf_print_sector_hdr(sector);
 
@@ -772,11 +809,11 @@ static int CmdHFMFPRdbl(const char *Cmd) {
         indx++;
     }
 
-    if (memcmp(&data[(blocksCount * 16) + 1], mac, 8)) {
+    if (memcmp(&data[(blocksCount * 16) + 1], mac, 8) && !nomacres) {
         PrintAndLogEx(WARNING, "WARNING: mac not equal...");
         PrintAndLogEx(WARNING, "MAC   card... " _YELLOW_("%s"), sprint_hex_inrow(&data[1 + (blocksCount * MFBLOCK_SIZE)], 8));
         PrintAndLogEx(WARNING, "MAC reader... " _YELLOW_("%s"), sprint_hex_inrow(mac, sizeof(mac)));
-    } else {
+    } else if (!nomacres) {
         if (verbose) {
             PrintAndLogEx(INFO, "MAC... " _YELLOW_("%s"), sprint_hex_inrow(&data[1 + (blocksCount * MFBLOCK_SIZE)], 8));
         }
@@ -796,7 +833,9 @@ static int CmdHFMFPRdsc(const char *Cmd) {
         arg_param_begin,
         arg_lit0("v",  "verbose", "Verbose mode"),
         arg_lit0("b",  "keyb",    "Use key B (def: keyA)"),
-        arg_lit0("p",  "plain",   "Plain communication mode between reader and card"),
+        arg_lit0("p", "plain", "Do not use encrypted communication mode between reader and card"),
+        arg_lit0(NULL, "nmc", "Do not append MAC to command"),
+        arg_lit0(NULL, "nmr", "Do not expect MAC in reply"),
         arg_int1("s",  "sn",      "<0..255>", "Sector number"),
         arg_str0("k",  "key",     "<hex>", "Key, 16 hex bytes"),
         arg_param_end
@@ -806,11 +845,13 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 1);
     bool keyB = arg_get_lit(ctx, 2);
     bool plain = arg_get_lit(ctx, 3);
-    uint32_t sectorNum = arg_get_int(ctx, 4);
+    bool nomaccmd = arg_get_lit(ctx, 4);
+    bool nomacres = arg_get_lit(ctx, 5);
+    uint32_t sectorNum = arg_get_int(ctx, 6);
     uint8_t keyn[2] = {0};
     uint8_t key[250] = {0};
     int keylen = 0;
-    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+    CLIGetHexWithReturn(ctx, 7, key, &keylen);
     CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
@@ -851,7 +892,7 @@ static int CmdHFMFPRdsc(const char *Cmd) {
 
     for (int blockno = mfFirstBlockOfSector(sectorNum); blockno < mfFirstBlockOfSector(sectorNum) + mfNumBlocksPerSector(sectorNum); blockno++) {
 
-        res = MFPReadBlock(&mf4session, plain, blockno & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
+        res = MFPReadBlock(&mf4session, plain, nomaccmd, nomacres, blockno & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
         if (res) {
             PrintAndLogEx(ERR, "Read error: %d", res);
             DropField();
@@ -864,19 +905,19 @@ static int CmdHFMFPRdsc(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        if (datalen != 1 + MFBLOCK_SIZE + 8 + 2) {
+        if (datalen != 1 + MFBLOCK_SIZE + (nomacres? 0 : 8) + 2) {
             PrintAndLogEx(ERR, "Error return length:%d", datalen);
             DropField();
             return PM3_ESOFT;
         }
-
+        if (!plain) data_crypt(&mf4session, &data[1], &data[1], true);
         mf_print_block_one(blockno, data + 1, verbose);
 
-        if (memcmp(&data[1 + 16], mac, 8)) {
+        if (memcmp(&data[1 + 16], mac, 8) && !nomacres) {
             PrintAndLogEx(WARNING, "WARNING: mac on block %d not equal...", blockno);
             PrintAndLogEx(WARNING, "MAC   card... " _YELLOW_("%s"), sprint_hex_inrow(&data[1 + MFBLOCK_SIZE], 8));
             PrintAndLogEx(WARNING, "MAC reader... " _YELLOW_("%s"), sprint_hex_inrow(mac, sizeof(mac)));
-        } else {
+        } else if (!nomacres) {
             if (verbose) {
                 PrintAndLogEx(INFO, "MAC... " _YELLOW_("%s"), sprint_hex_inrow(&data[1 + MFBLOCK_SIZE], 8));
             }
@@ -900,6 +941,8 @@ static int CmdHFMFPWrbl(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose mode"),
         arg_lit0("b",  "keyb",    "Use key B (def: keyA)"),
         arg_int1(NULL, "blk",     "<0..255>", "Block number"),
+        arg_lit0("p", "plain", "Do not use encrypted transmission"),
+        arg_lit0(NULL, "nmr", "Do not expect MAC in response"),
         arg_str1("d",  "data",    "<hex>", "Data, 16 hex bytes"),
         arg_str0("k",  "key",     "<hex>", "Key, 16 hex bytes"),
         arg_param_end
@@ -909,14 +952,16 @@ static int CmdHFMFPWrbl(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 1);
     bool keyB = arg_get_lit(ctx, 2);
     uint32_t blockNum = arg_get_int(ctx, 3);
+    bool plain = arg_get_lit(ctx, 4);
+    bool nomacres = arg_get_lit(ctx, 5);
 
     uint8_t datain[250] = {0};
     int datainlen = 0;
-    CLIGetHexWithReturn(ctx, 4, datain, &datainlen);
+    CLIGetHexWithReturn(ctx, 6, datain, &datainlen);
 
     uint8_t key[250] = {0};
     int keylen = 0;
-    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+    CLIGetHexWithReturn(ctx, 7, key, &keylen);
     CLIParserFree(ctx);
 
     uint8_t keyn[2] = {0};
@@ -956,18 +1001,18 @@ static int CmdHFMFPWrbl(const char *Cmd) {
         PrintAndLogEx(ERR, "Authentication error: %d", res);
         return res;
     }
-
+    if (!plain) data_crypt(&mf4session, &datain[0], &datain[0], false);
     uint8_t data[250] = {0};
     int datalen = 0;
     uint8_t mac[8] = {0};
-    res = MFPWriteBlock(&mf4session, blockNum & 0xff, datain, false, false, data, sizeof(data), &datalen, mac);
+    res = MFPWriteBlock(&mf4session, plain, nomacres, blockNum & 0xff, 0x00, datain, false, false, data, sizeof(data), &datalen, mac);
     if (res) {
         PrintAndLogEx(ERR, "Write error: %d", res);
         DropField();
         return res;
     }
 
-    if (datalen != 3 && (datalen != 3 + 8)) {
+    if (datalen != 3 && (datalen != 3 + (nomacres ? 0 : 8))) {
         PrintAndLogEx(ERR, "Error return length:%d", datalen);
         DropField();
         return PM3_ESOFT;
@@ -979,17 +1024,240 @@ static int CmdHFMFPWrbl(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    if (memcmp(&data[1], mac, 8)) {
+    if (memcmp(&data[1], mac, 8) && !nomacres) {
         PrintAndLogEx(WARNING, "WARNING: mac not equal...");
         PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[1], 8));
         PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
-    } else {
+    } else if (!nomacres) {
         if (verbose)
             PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1], 8));
     }
 
     DropField();
     PrintAndLogEx(INFO, "Write ( " _GREEN_("ok") " )");
+    return PM3_SUCCESS;
+}
+
+static int CmdHFMFPChKey(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp chkey",
+                  "Change the keys on a Mifare Plus tag",
+                  "This requires the key that can update the key that you are trying to update.\n"
+                  "hf mfp chkey --ki 401f -d FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF --key A0A1A2A3A4A5A6A7A0A1A2A3A4A5A6A7 -> Change key B for Sector 15 from MAD to default\n"
+                  "hf mfp chkey --ki 9000 -d 32F9351A1C02B35FF97E0CA943F814F6 --key FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> Change card master key to custom from default"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0(NULL, "nmr", "Do not expect MAC in response"),
+        arg_str1(NULL, "ki", "<hex>", "Key Index, 2 hex bytes"),
+        arg_str0("k", "key",      "<hex>", "Current sector key, 16 hex bytes"),
+        arg_lit0("b", "typeb", "Sector key is key B"),
+        arg_str1("d",  "data",    "<hex>", "New key, 16 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool verbose = arg_get_lit(ctx, 1);
+    bool nomacres = arg_get_lit(ctx, 2);
+    
+    uint8_t keyn[250] = {0};
+    
+    uint8_t ki[250] = {0};
+    int kilen = 0;
+    CLIGetHexWithReturn(ctx, 3, ki, &kilen);
+
+    uint8_t key[250] = {0};
+    int keylen = 0;
+    CLIGetHexWithReturn(ctx, 4, key, &keylen);
+
+    bool usekeyb = arg_get_lit(ctx, 5);
+    uint8_t datain[250] = {0};
+    int datainlen = 0;
+    CLIGetHexWithReturn(ctx, 6, datain, &datainlen);
+    
+    CLIParserFree(ctx);
+
+    mfpSetVerboseMode(verbose);
+
+    if (!keylen) {
+        memmove(key, mfp_default_key, 16);
+        keylen = 16;
+    }
+
+    if (keylen != 16) {
+        PrintAndLogEx(ERR, "<key> must be 16 bytes. Got %d", keylen);
+        return PM3_EINVARG;
+    }
+
+    if (datainlen != 16) {
+        PrintAndLogEx(ERR, "<data> must be 16 bytes. Got %d", datainlen);
+        return PM3_EINVARG;
+    }
+    mf4Session_t mf4session;
+    keyn[0] = ki[0];
+    if (ki[0] == 0x40){ // Only if we are working with sector keys
+    	if (usekeyb){
+    		keyn[1] = (ki[1] % 2 ==0) ? ki[1] + 1 : ki[1]; // If we change using key B, check if KI is key A
+    	} else {
+    		keyn[1] = (ki[1] % 2 ==0) ? ki[1] : ki[1] -1; // If we change using key A, check if KI is key A
+    	}
+    } else {keyn[1] = ki[1];}
+    if (verbose){
+        PrintAndLogEx(INFO, "--key index:", sprint_hex(keyn, 2));
+    }
+    int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
+    if (res) {
+        PrintAndLogEx(ERR, "Authentication error: %d", res);
+        return res;
+    }
+    data_crypt(&mf4session, &datain[0], &datain[0], false);
+    uint8_t data[250] = {0};
+    int datalen = 0;
+    uint8_t mac[8] = {0};
+    res = MFPWriteBlock(&mf4session, false, nomacres, ki[1], ki[0], datain, false, false, data, sizeof(data), &datalen, mac);
+    if (res) {
+        PrintAndLogEx(ERR, "Write error: %d", res);
+        DropField();
+        return res;
+    }
+
+    if (datalen != 3 && (datalen != 3 + (nomacres ? 0 : 8))) {
+        PrintAndLogEx(ERR, "Error return length:%d", datalen);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (datalen && data[0] != 0x90) {
+        PrintAndLogEx(ERR, "Card write error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (memcmp(&data[1], mac, 8) && !nomacres) {
+        PrintAndLogEx(WARNING, "WARNING: mac not equal...");
+        PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[1], 8));
+        PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
+    } else if (!nomacres) {
+        if (verbose)
+            PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1], 8));
+    }
+
+    DropField();
+    PrintAndLogEx(INFO, "Key update ( " _GREEN_("ok") " )");
+    return PM3_SUCCESS;
+}
+
+static int CmdHFMFPChConf(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfp chconf",
+                  "Change the configuration on a Mifare Plus tag. DANGER!",
+                  "This requires Card Master Key (9000) or Card Configuration Key (9001).\n"
+                  "Configuration block info can be found below.\n"
+                  "* Block B000 (00; CMK): Max amount of commands without MAC (byte 0), as well as plain mode access (unknown).\n"
+                  "* Block B001 (01; CCK): Installation identifier for Virtual Card. Please consult NXP for data.\n"
+                  "* Block B002 (02; CCK): ATS data.\n"
+                  "* Block B003 (03; CCK): Use Random ID in SL3, decide whether proximity check is mandatory.\n  * DO NOT WRITE THIS BLOCK UNDER ANY CIRCUMSTANCES! Risk of bricking.\n"
+                  "More configuration tips to follow. Check JMY600 Series IC Card Module.\n"
+                  "hf mfp chconf -c 00 -d 10ffffffffffffffffffffffffffffff --key A0A1A2A3A4A5A6A7A0A1A2A3A4A5A6A7 -> Allow 16 commands without MAC in a single transaction."
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0(NULL, "nmr", "Do not expect MAC in response"),
+        arg_int1("c", "conf", "<hex>", "Config block number, 0-3"),
+        arg_str0("k", "key",      "<hex>", "Card key, 16 hex bytes"),
+        arg_lit0(NULL, "cck", "Auth as Card Configuration key instead of Card Master Key"),
+        arg_str1("d",  "data",    "<hex>", "New configuration data, 16 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool verbose = arg_get_lit(ctx, 1);
+    bool nomacres = arg_get_lit(ctx, 2);
+    
+    uint8_t keyn[250] = {0};
+    uint32_t blockNum = arg_get_int(ctx, 3);
+
+    uint8_t key[250] = {0};
+    int keylen = 0;
+    CLIGetHexWithReturn(ctx, 4, key, &keylen);
+    bool usecck = arg_get_lit(ctx, 5);
+    
+    uint8_t datain[250] = {0};
+    int datainlen = 0;
+    CLIGetHexWithReturn(ctx, 6, datain, &datainlen);
+    
+    CLIParserFree(ctx);
+
+    mfpSetVerboseMode(verbose);
+
+    if (!keylen) {
+        memmove(key, mfp_default_key, 16);
+        keylen = 16;
+    }
+
+    if (keylen != 16) {
+        PrintAndLogEx(ERR, "<key> must be 16 bytes. Got %d", keylen);
+        return PM3_EINVARG;
+    }
+
+    if (datainlen != 16) {
+        PrintAndLogEx(ERR, "<data> must be 16 bytes. Got %d", datainlen);
+        return PM3_EINVARG;
+    }
+    
+    if (blockNum > 3) {
+        PrintAndLogEx(ERR, "<config number> must be in range [0..3]. Got %d", blockNum);
+        return PM3_EINVARG;
+    }
+    mf4Session_t mf4session;
+    keyn[0] = 0x90;
+    keyn[1] = usecck ? 0x01 : 0x00;
+    if (verbose){
+        PrintAndLogEx(INFO, "--key index:", sprint_hex(keyn, 2));
+    }
+    int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
+    if (res) {
+        PrintAndLogEx(ERR, "Authentication error: %d", res);
+        return res;
+    }
+    data_crypt(&mf4session, &datain[0], &datain[0], false);
+    uint8_t data[250] = {0};
+    int datalen = 0;
+    uint8_t mac[8] = {0};
+    res = MFPWriteBlock(&mf4session, false, nomacres, blockNum & 0xff, 0xb0, datain, false, false, data, sizeof(data), &datalen, mac);
+    if (res) {
+        PrintAndLogEx(ERR, "Write error: %d", res);
+        DropField();
+        return res;
+    }
+
+    if (datalen != 3 && (datalen != 3 + (nomacres ? 0 : 8))) {
+        PrintAndLogEx(ERR, "Error return length:%d", datalen);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (datalen && data[0] != 0x90) {
+        PrintAndLogEx(ERR, "Card write error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (memcmp(&data[1], mac, 8) && !nomacres) {
+        PrintAndLogEx(WARNING, "WARNING: mac not equal...");
+        PrintAndLogEx(WARNING, "MAC   card: %s", sprint_hex(&data[1], 8));
+        PrintAndLogEx(WARNING, "MAC reader: %s", sprint_hex(mac, 8));
+    } else if (!nomacres) {
+        if (verbose)
+            PrintAndLogEx(INFO, "MAC: %s", sprint_hex(&data[1], 8));
+    }
+
+    DropField();
+    PrintAndLogEx(INFO, "Write config ( " _GREEN_("ok") " )");
     return PM3_SUCCESS;
 }
 
@@ -1821,6 +2089,8 @@ static command_t CommandTable[] = {
     {"rdbl",        CmdHFMFPRdbl,            IfPm3Iso14443a,  "Read blocks from card"},
     {"rdsc",        CmdHFMFPRdsc,            IfPm3Iso14443a,  "Read sectors from card"},
     {"wrbl",        CmdHFMFPWrbl,            IfPm3Iso14443a,  "Write block to card"},
+    {"chkey",	CmdHFMFPChKey,	    IfPm3Iso14443a,  "Change key on card"},
+    {"chconf",    CmdHFMFPChConf,     IfPm3Iso14443a,  "Change config on card"},
     {"-----------", CmdHelp,                 IfPm3Iso14443a,  "---------------- " _CYAN_("personalization") " -------------------"},
     {"commitp",     CmdHFMFPCommitPerso,     IfPm3Iso14443a,  "Configure security layer (SL1/SL3 mode)"},
     {"initp",       CmdHFMFPInitPerso,       IfPm3Iso14443a,  "Fill all the card's keys in SL0 mode"},
