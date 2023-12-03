@@ -56,9 +56,9 @@
  *     append = append to existing file, create if not existing.
  *     none   = do not save to SPIFFS, leave in trace buffer only.
  *
- *   protocol = [14a|14b|15|ask]
+ *   protocol = [14a|14b|15|user]
  *     which protocol to sniff.  If you choose a protocol it will go directly
- *     to work.  If you choose 'ask' you may select the protocol at the start
+ *     to work.  If you choose 'user' you may select the protocol at the start
  *     of each session.
  *
  * To retrieve trace data from flash:
@@ -120,12 +120,12 @@
 #define HF_UNISNIFF_CONFIG "hf_unisniff.conf"
 #define HF_UNISNIFF_CONFIG_SIZE 128
 
-#define HF_UNISNIFF_PROTOCOLS {"14a","14b","15", "ask"}     // The logic requires ASK be last.
+#define HF_UNISNIFF_PROTOCOLS {"14a","14b","15", "user"}     // The logic requires USER be last.
 #define HF_UNISNIFF_NUM_PROTOCOLS 4
 #define HF_UNISNIFF_PROTO_14a 0
 #define HF_UNISNIFF_PROTO_14b 1
 #define HF_UNISNIFF_PROTO_15 2
-#define HF_UNISNIFF_PROTO_ASK HF_UNISNIFF_NUM_PROTOCOLS-1
+#define HF_UNISNIFF_PROTO_USER HF_UNISNIFF_NUM_PROTOCOLS-1
 
 #define HF_UNISNIFF_SAVE_MODE HF_UNISNIFF_SAVE_MODE_NEW     // Default, override in .conf
 #define HF_UNISNIFF_SAVE_MODE_NEW 0
@@ -225,7 +225,7 @@ void RunMod(void) {
     }
 #endif
 
-    if (sniff_protocol >= HF_UNISNIFF_PROTO_ASK) {
+    if (sniff_protocol >= HF_UNISNIFF_PROTO_USER) {
         Dbprintf("[!] Protocol undefined, going to prompt loop");
         sniff_protocol = default_sniff_protocol;      // Default to compile-time setting.
         for (;;) {
@@ -243,7 +243,7 @@ void RunMod(void) {
             int button_pressed = BUTTON_HELD(1000);
             if (button_pressed == BUTTON_SINGLE_CLICK) {
                 sniff_protocol++;
-                if (sniff_protocol >= HF_UNISNIFF_PROTO_ASK) sniff_protocol=0;
+                if (sniff_protocol >= HF_UNISNIFF_PROTO_USER) sniff_protocol=0;
                 SpinDelay(100);
                 Dbprintf("Selected protocol: '%s'", protocols[sniff_protocol]);
             } else if (button_pressed == BUTTON_HOLD) {
