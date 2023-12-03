@@ -561,6 +561,8 @@ Check column "offline" for their availability.
 |`hf mfp rdbl            `|N       |`Read blocks from card`
 |`hf mfp rdsc            `|N       |`Read sectors from card`
 |`hf mfp wrbl            `|N       |`Write block to card`
+|`hf mfp chkey           `|N       |`Change key on card`
+|`hf mfp chconf          `|N       |`Change config on card`
 |`hf mfp commitp         `|N       |`Configure security layer (SL1/SL3 mode)`
 |`hf mfp initp           `|N       |`Fill all the card's keys in SL0 mode`
 |`hf mfp wrp             `|N       |`Write Perso command`

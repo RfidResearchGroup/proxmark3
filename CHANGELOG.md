@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added encryption and other SL3 functions for Mifare Plus - more to come (@team-orangeBlue)
+ - Fixed the corrupted data in real-time sampling (@wh201906)
  - Added a slider in the plot window for navigation (@wh201906)
  - Fixed client build bug with Python 3.12 (@wh201906)
  - Fixed `ExchangeAPDUSC()` in `cmdsmartcard.c` to prevent client crash (@wh201906)

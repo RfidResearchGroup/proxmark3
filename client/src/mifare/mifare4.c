@@ -258,9 +258,9 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     memmove(&raw[16], &RndB[1], 16);
 
     aes_encode(NULL, key, raw, &cmd2[1], 32);
-    if (verbose)
+    if (verbose){
         PrintAndLogEx(INFO, ">phase2: %s", sprint_hex(cmd2, 33));
-
+    }
     res = ExchangeRAW14a(cmd2, sizeof(cmd2), false, true, data, sizeof(data), &datalen, silentMode);
     if (res) {
         if (!silentMode) PrintAndLogEx(ERR, "Exchange raw error: %d", res);
@@ -372,26 +372,34 @@ int MFPCommitPerso(bool activateField, bool leaveSignalON, uint8_t *dataout, int
     return intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
 }
 
-int MFPReadBlock(mf4Session_t *mf4session, bool plain, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
-    uint8_t rcmd[4 + 8] = {(plain ? (0x37) : (0x33)), blockNum, 0x00, blockCount};
-    if (!plain && mf4session)
-        CalculateMAC(mf4session, mtypReadCmd, blockNum, blockCount, rcmd, 4, &rcmd[4], g_verbose_mode);
-
-    int res = intExchangeRAW14aPlus(rcmd, plain ? 4 : sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
+int MFPReadBlock(mf4Session_t *mf4session, bool plain, bool nomaccmd, bool nomacres, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
+    int cmdb = 0x31;
+    if (nomacres){cmdb = cmdb ^ 0x01;} // If we do not want MAC in reply, remove 0x01
+    if (plain){cmdb = cmdb ^ 0x02;}  // If we do not need an encrypted transmission, add 0x02
+    if (nomaccmd){cmdb = cmdb ^ 0x04;} // If we do not want to send a MAC, remove 0x04
+    uint8_t rcmd1[4] = {cmdb, blockNum, 0x00, blockCount};
+    uint8_t maccmddat[8] = {0};
+    uint8_t rcmd[nomaccmd ? 4 : 12];
+    if (!nomaccmd && mf4session)
+        CalculateMAC(mf4session, mtypReadCmd, blockNum, blockCount, rcmd1, 4, &maccmddat[0], g_verbose_mode);
+    memmove(rcmd, rcmd1, 4);
+    if (!nomaccmd){memmove(&rcmd[4], maccmddat, 8);}
+    int res = intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
     if (res)
         return res;
-
     if (mf4session)
         mf4session->R_Ctr++;
-
-    if (mf4session && mac && *dataoutlen > 11)
+    if (mf4session && !nomacres && *dataoutlen > 11)
         CalculateMAC(mf4session, mtypReadResp, blockNum, blockCount, dataout, *dataoutlen - 8 - 2, mac, g_verbose_mode);
 
     return 0;
 }
 
-int MFPWriteBlock(mf4Session_t *mf4session, uint8_t blockNum, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
-    uint8_t rcmd[1 + 2 + 16 + 8] = {0xA3, blockNum, 0x00};
+int MFPWriteBlock(mf4Session_t *mf4session, bool plain, bool nomacres, uint8_t blockNum, uint8_t blockHdr, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
+    int cmdb = 0xA1;
+    if (nomacres){cmdb = cmdb ^ 0x01;} // If we do not want MAC in reply, remove 0x01
+    if (plain){cmdb = cmdb ^ 0x02;}  // If we do not need an encrypted transmission, add 0x02
+    uint8_t rcmd[1 + 2 + 16 + 8] = {cmdb, blockNum, blockHdr};
     memmove(&rcmd[3], data, 16);
     if (mf4session)
         CalculateMAC(mf4session, mtypWriteCmd, blockNum, 1, rcmd, 19, &rcmd[19], g_verbose_mode);
@@ -403,7 +411,7 @@ int MFPWriteBlock(mf4Session_t *mf4session, uint8_t blockNum, uint8_t *data, boo
     if (mf4session)
         mf4session->W_Ctr++;
 
-    if (mf4session && mac && *dataoutlen > 3)
+    if (mf4session && mac && *dataoutlen > 3 && !nomacres)
         CalculateMAC(mf4session, mtypWriteResp, blockNum, 1, dataout, *dataoutlen, mac, g_verbose_mode);
 
     return 0;
@@ -431,7 +439,7 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, uint8_t *key, uint8_t *data
     uint8_t mac[8] = {0};
     uint8_t firstBlockNo = mfFirstBlockOfSector(sectorNo);
     for (int n = firstBlockNo; n < firstBlockNo + mfNumBlocksPerSector(sectorNo); n++) {
-        res = MFPReadBlock(&_session, plain, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
+        res = MFPReadBlock(&_session, plain, false, false, n & 0xff, 1, false, true, data, sizeof(data), &datalen, mac);
         if (res) {
             PrintAndLogEx(ERR, "Sector %u read error: %d", sectorNo, res);
             DropField();
