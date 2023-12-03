@@ -1339,8 +1339,7 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         		snprintf(exp, strlen(stringdata)+1, stringdata, uKeyNum);
                         		break;
                         	case 0x4000:
-                        		stringdata = "FIRST AUTH (Keynr 0x%04X: %c sector %d)";
-                        		snprintf(exp, strlen(stringdata)+1, stringdata, uKeyNum, uKeyNum & 0x0001 ? 'B' : 'A', (uKeyNum - 0x4000) / 2);
+                        		snprintf(exp, size, "FIRST AUTH (Keynr 0x%04X: %c sector %d)", uKeyNum, uKeyNum & 0x0001 ? 'B' : 'A', (uKeyNum - 0x4000) / 2);
                         		break;
                         	case 0xA000: // There are virtual card encryption and MACing keys, but this is NOT their place!
                         		stringdata = "FIRST AUTH(Keynr 0x%04X: Proximity Check Key)";
@@ -1438,8 +1437,7 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         		snprintf(exp, size, stringdata, encrypted, uBlockNum, responseMaced);
                         		break;
                         	case 0x4000:
-                        		stringdata = "WRITE (Keynr 0x%04X: %c sector %d)";
-                        		snprintf(exp, strlen(stringdata)+1, stringdata, uBlockNum, uBlockNum & 0x0001 ? 'B' : 'A', (uBlockNum - 0x4000) / 2);
+                        		snprintf(exp, size, "WRITE (Keynr 0x%04X: %c sector %d)", uBlockNum, uBlockNum & 0x0001 ? 'B' : 'A', (uBlockNum - 0x4000) / 2);
                         		break;
                         	case 0xA000: // There are virtual card encryption and MACing keys, but this is NOT their place!
                         		stringdata = "WRITE(Keynr 0x%04X: Proximity Check Key)";
