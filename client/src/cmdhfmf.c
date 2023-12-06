@@ -3890,6 +3890,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
             nonces_t data[1];
             memcpy(data, resp.data.asBytes, sizeof(data));
             readerAttack(k_sector, k_sectors_cnt, data[0], setEmulatorMem, verbose);
+            break;
         }
         //iceman:  readerAttack call frees k_sector.  this call below is useless.
         showSectorTable(k_sector, k_sectors_cnt);
