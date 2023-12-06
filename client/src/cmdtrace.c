@@ -1293,7 +1293,7 @@ int CmdTraceList(const char *Cmd) {
 
     if (use_buffer == false) {
         download_trace();
-    } else if (gs_traceLen == 0) {
+    } else if (gs_traceLen == 0 || gs_trace ==NULL) {
         PrintAndLogEx(FAILED, "You requested a trace list in offline mode but there is no trace.");
         PrintAndLogEx(FAILED, "Consider using " _YELLOW_("`trace load`") " or removing parameter " _YELLOW_("`-1`"));
         return PM3_EINVARG;
