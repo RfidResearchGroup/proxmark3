@@ -554,7 +554,7 @@ static int CmdHF14AReader(const char *Cmd) {
     }
 
     if (continuous) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
     int res = PM3_SUCCESS;
@@ -566,7 +566,6 @@ static int CmdHF14AReader(const char *Cmd) {
         } else {
             SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
         }
-
 
         if (ISO14A_CONNECT & cm) {
             PacketResponseNG resp;
