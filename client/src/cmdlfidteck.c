@@ -214,7 +214,7 @@ static int CmdIdteckSim(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Simulating Idteck - raw " _YELLOW_("%s"), sprint_hex_inrow(raw, raw_len));
-    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
+    PrintAndLogEx(SUCCESS, "Press " _GREEN_("pm3 button") " to abort simulation or run another command");
     PrintAndLogEx(NORMAL, "");
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));

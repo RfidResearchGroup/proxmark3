@@ -55,7 +55,7 @@ static int CmdIOProxWatch(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(SUCCESS, "Watching for IO Prox cards - place tag on antenna");
-    PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to stop reading cards");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_IO_WATCH, NULL, 0);
     return lfsim_wait_check(CMD_LF_IO_WATCH);
@@ -237,7 +237,7 @@ static int CmdIOProxSim(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Simulating ioProx version: " _YELLOW_("%u") " FC: " _YELLOW_("%u (0x%02x)") " CN: " _YELLOW_("%u"), version, fc, fc, cn);
-    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
+    PrintAndLogEx(SUCCESS, "Press " _GREEN_("pm3 button") " to abort simulation or run another command");
 
     uint8_t bs[64];
     memset(bs, 0x00, sizeof(bs));

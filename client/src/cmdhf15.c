@@ -1024,7 +1024,7 @@ static int CmdHF15Reader(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (cm) {
-        PrintAndLogEx(INFO, "press " _GREEN_("`Enter`") " to exit");
+        PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
     }
     readHF15Uid(cm, true);
     return PM3_SUCCESS;
@@ -1321,7 +1321,7 @@ static int CmdHF15FindAfi(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "click " _GREEN_("pm3 button") " or press " _GREEN_("Enter") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to exit");
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandMIX(CMD_HF_ISO15693_FINDAFI, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);

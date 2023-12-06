@@ -1783,7 +1783,7 @@ static int CmdHFFelicaSniff(const char *Cmd) {
 
 
     PrintAndLogEx(INFO, "Sniff Felica,  getting first %" PRIu32 " frames, skipping after %" PRIu32 " triggers", payload.samples,   payload.triggers);
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort sniffing");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort sniffing");
     clearCommandBuffer();
     SendCommandNG(CMD_HF_FELICA_SNIFF, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
@@ -1830,7 +1830,7 @@ static int CmdHFFelicaSimLite(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_FELICALITE_SIMULATE, payload.uid, sizeof(payload));
@@ -2035,7 +2035,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     SendCommandNG(CMD_HF_FELICALITE_DUMP, NULL, 0);
     PacketResponseNG resp;
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort dumping");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort dumping");
 
     uint8_t timeout = 0;
     while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {

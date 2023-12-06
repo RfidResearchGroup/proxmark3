@@ -752,7 +752,7 @@ static int CmdIndalaSim(const char *Cmd) {
     // lf simpsk -1 -c 32 --fc 2 -d 0102030405060708
 
 
-    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
+    PrintAndLogEx(SUCCESS, "Press " _GREEN_("pm3 button") " to abort simulation or run another command");
 
     // indala PSK,  clock 32, carrier 0
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
@@ -1015,7 +1015,7 @@ static int CmdIndalaBrute(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Started brute-forcing INDALA Prox reader");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
     PrintAndLogEx(NORMAL, "");
 
     // main loop

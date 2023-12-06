@@ -239,7 +239,7 @@ static int CmdHF14BSim(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Simulate with PUPI : " _GREEN_("%s"), sprint_hex_inrow(pupi, sizeof(pupi)));
-    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_SIMULATE, pupi, sizeof(pupi));
     return PM3_SUCCESS;

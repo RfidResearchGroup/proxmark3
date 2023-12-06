@@ -239,7 +239,7 @@ static int CmdHIDWatch(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(SUCCESS, "Watching for HID Prox cards - place tag on antenna");
-    PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to stop reading cards");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_WATCH, NULL, 0);
     return lfsim_wait_check(CMD_LF_HID_WATCH);
@@ -592,7 +592,7 @@ static int CmdHIDBrute(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Started bruteforcing HID Prox reader");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
     PrintAndLogEx(NORMAL, "");
     // copy values to low.
     card_low = card_hi;

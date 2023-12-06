@@ -837,7 +837,7 @@ int CmdHF14ASim(const char *Cmd) {
     sector_t *k_sector = NULL;
     size_t k_sectors_cnt = MIFARE_4K_MAXSECTOR;
 
-    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
 

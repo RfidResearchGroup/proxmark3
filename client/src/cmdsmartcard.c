@@ -1264,7 +1264,8 @@ static int CmdRelay(const char *Cmd) {
     mbedtls_net_context netCtx;
     mbedtls_net_init(&netCtx);
 
-    PrintAndLogEx(INFO, "Relaying pm3 to host OS pcsc daemon. Press " _GREEN_("Enter") " to exit");
+    PrintAndLogEx(INFO, "Relaying PM3 to host OS pcsc daemon");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
     uint8_t cmdbuf[512] = {0};
     iso14a_card_select_t selectedCard14a;

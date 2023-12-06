@@ -3872,7 +3872,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
     PacketResponseNG resp;
 
     if (flags & FLAG_INTERACTIVE) {
-        PrintAndLogEx(INFO, "Press pm3-button or send another cmd to abort simulation");
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or send another cmd to abort simulation");
 
         sector_t *k_sector = NULL;
 
@@ -3896,7 +3896,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
         showSectorTable(k_sector, k_sectors_cnt);
 
     } else {
-        PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
     }
     return PM3_SUCCESS;
 }

@@ -2716,7 +2716,7 @@ static int CmdEMVReader(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (continuous) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
     uint8_t AID[APDU_AID_LEN] = {0};
