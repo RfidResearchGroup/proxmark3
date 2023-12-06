@@ -52,7 +52,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
     // message
     PrintAndLogEx(INFO, "Expected execution time is about 25seconds on average");
-    PrintAndLogEx(INFO, "Press pm3-button to abort");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort");
 
     while (true) {
         clearCommandBuffer();
@@ -1180,8 +1180,9 @@ uint32_t cuid = 0;    // uid part used for crypto1.
 
 void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted) {
     if (len != 1) {
-        for (int i = 0; i < len; i++)
+        for (int i = 0; i < len; i++) {
             data[i] = crypto1_byte(pcs, 0x00, isEncrypted) ^ data[i];
+        }
     } else {
         uint8_t bt = 0;
         bt |= (crypto1_bit(pcs, 0, isEncrypted) ^ BIT(data[0], 0)) << 0;
@@ -1193,11 +1194,12 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
 }
 
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len) {
+
     PrintAndLogEx(SUCCESS, "encrypted data... %s", sprint_hex(data, len));
-    struct Crypto1State *s;
     uint32_t ks2 = ar_enc ^ prng_successor(nt, 64);
     uint32_t ks3 = at_enc ^ prng_successor(nt, 96);
-    s = lfsr_recovery64(ks2, ks3);
+
+    struct Crypto1State *s = lfsr_recovery64(ks2, ks3);
     mf_crypto1_decrypt(s, data, len, false);
     PrintAndLogEx(SUCCESS, "decrypted data... " _YELLOW_("%s"), sprint_hex(data, len));
     PrintAndLogEx(NORMAL, "");
@@ -1261,8 +1263,9 @@ int detect_classic_nackbug(bool verbose) {
 
     PrintAndLogEx(INFO, "Checking for NACK bug");
 
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.\n");
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "press " _GREEN_("pm3 button") " to abort both Proxmark3 and client\n");
+    }
 
     PrintAndLogEx(INFO, "." NOLF);
 
