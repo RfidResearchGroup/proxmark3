@@ -92,6 +92,30 @@ int kbd_enter_pressed(void) {
 }
 #endif
 
+static char inv_b2s(char v, bool uppercase) {
+
+    if (isxdigit(v) == 0) {
+        return '.';
+    }
+
+    uint8_t lut[] = {
+        'f', 'e', 'd', 'c',
+        'b', 'a', '9', '8',
+        '7', '6', '5', '4',
+        '3', '2', '1', '0'
+    };
+    
+    uint8_t tmp = (tolower(v) - 'a' + 10);
+    if (isdigit(v)) {
+        tmp = (v - 0x30);
+    }
+
+    if (uppercase)
+        return toupper(lut[tmp]);
+    else 
+        return lut[tmp];
+}
+
 static char b2s(uint8_t v, bool uppercase) {
     // clear higher bits
     v &= 0xF;
@@ -938,12 +962,12 @@ int hextobinstring_n(char *target, char *source, int sourcelen) {
     if (length == 0) {
         return 0;
     }
-    binarraytobinstring(target, target, length);
+    binarray_2_binstr(target, target, length);
     return length;
 }
 
 // convert bytes to binary string
-void byte_2_binstr(char *target,  const uint8_t *source, size_t sourcelen) {
+void bytes_2_binstr(char *target,  const uint8_t *source, size_t sourcelen) {
     //uint8_t *p = *source;
     for (int i = 0 ; i < sourcelen; ++i) {
         uint8_t b = *(source++);
@@ -961,7 +985,7 @@ void byte_2_binstr(char *target,  const uint8_t *source, size_t sourcelen) {
 
 // convert binary array of 0x00/0x01 values to hex
 // return number of bits converted
-int binarraytohex(char *target, const size_t targetlen, const char *source, size_t srclen) {
+int binarray_2_hex(char *target, const size_t targetlen, const char *source, size_t srclen) {
     uint8_t i = 0, x = 0;
     uint32_t t = 0; // written target chars
     uint32_t r = 0; // consumed bits
@@ -1007,14 +1031,14 @@ int binarraytohex(char *target, const size_t targetlen, const char *source, size
 }
 
 // convert binary array to human readable binary
-void binarraytobinstring(char *target, char *source,  int length) {
+void binarray_2_binstr(char *target, char *source,  int length) {
     for (int i = 0 ; i < length; ++i) {
         *(target++) = *(source++) + '0';
     }
     *target = '\0';
 }
 
-int binstring2binarray(uint8_t *target, char *source, int length) {
+int binstr_2_binarray(uint8_t *target, char *source, int length) {
     int count = 0;
     char *start = source;
     while (length--) {
@@ -1171,13 +1195,13 @@ void clean_ascii(unsigned char *buf, size_t len) {
 }
 
 // replace \r \n to \0
-void strcleanrn(char *buf, size_t len) {
-    strcreplace(buf, len, '\n', '\0');
-    strcreplace(buf, len, '\r', '\0');
+void str_cleanrn(char *buf, size_t len) {
+    str_creplace(buf, len, '\n', '\0');
+    str_creplace(buf, len, '\r', '\0');
 }
 
 // replace char in buffer
-void strcreplace(char *buf, size_t len, char from, char to) {
+void str_creplace(char *buf, size_t len, char from, char to) {
     for (size_t i = 0; i < len; i++) {
         if (buf[i] == from)
             buf[i] = to;
@@ -1207,6 +1231,34 @@ size_t str_nlen(const char *src, size_t maxlen) {
     }
     return len;
 }
+
+void str_reverse(char *buf,  size_t len) {
+    for (size_t i = 0; i < (len>>1); i++) {
+        char tmp = buf[i];
+        buf[i] = buf[len - i - 1];
+        buf[len - i - 1] = tmp;
+    }
+}
+
+void str_inverse_hex(char *buf, size_t len) {
+   for (size_t i = 0; i < len; i++) {
+        buf[i] = inv_b2s(buf[i], true);
+    }
+}
+
+void str_inverse_bin(char *buf, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+
+        char c = buf[i];
+        if (c == '1')
+            buf[i] = '0';
+        else if ( c == '0')
+            buf[i] = '1';
+        else 
+            buf[i] = '.';
+    }
+}
+
 
 /**
  * Converts a hex string to component "hi2", "hi" and "lo" 32-bit integers

@@ -276,7 +276,7 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
     if (print_hex) {
         p = (buf + offset);
         char hex[MAX_DEMODULATION_BITS + 1] = {0x00};
-        int num_bits = binarraytohex(hex, sizeof(hex), (char *)p, len);
+        int num_bits = binarray_2_hex(hex, sizeof(hex), (char *)p, len);
         if (num_bits == 0) {
             p = NULL;
             free(buf);
@@ -3281,6 +3281,7 @@ static int CmdNumCon(const char *Cmd) {
         arg_str0(NULL,  "hex", "<hex>", "hexadecimal value"),
         arg_str0(NULL,  "bin", "<bin>", "binary value"),
         arg_lit0("i",  NULL,  "print inverted value"),
+        arg_lit0("r",  NULL,  "print reversed value"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3302,6 +3303,7 @@ static int CmdNumCon(const char *Cmd) {
     res |= CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)bin, sizeof(bin), &blen);
 
     bool shall_invert = arg_get_lit(ctx, 4);
+    bool shall_reverse = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     // sanity checks
@@ -3343,11 +3345,6 @@ static int CmdNumCon(const char *Cmd) {
     mbedtls_mpi_init(&base);
     mbedtls_mpi_add_int(&base, &base, 10);
 
-    if (shall_invert) {
-        PrintAndLogEx(INFO, "should invert");
-        MBEDTLS_MPI_CHK(mbedtls_mpi_inv_mod(&N, &N, &base));
-    }
-
     // printing
     typedef struct {
         const char *desc;
@@ -3365,10 +3362,52 @@ static int CmdNumCon(const char *Cmd) {
 
     for (uint8_t i = 0; i < ARRAYLEN(radix); i++) {
         MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, radix[i].radix, s, sizeof(s), &slen));
-        if (slen > 0) {
+        if (slen) {
             PrintAndLogEx(SUCCESS, "%s%s", radix[i].desc, s);
         }
     }
+
+    // reverse
+    if (shall_reverse) {
+        PrintAndLogEx(SUCCESS, _CYAN_("Reversed"));
+        for (uint8_t i = 0; i < ARRAYLEN(radix); i++) {
+            MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, radix[i].radix, s, sizeof(s), &slen));
+
+            str_reverse(s, strlen(s));
+
+            if (slen) {
+                PrintAndLogEx(SUCCESS, "%s%s", radix[i].desc, s);
+            }
+        }
+    }
+
+    // invert
+    if (shall_invert) {
+        PrintAndLogEx(SUCCESS, _CYAN_("Inverted"));
+        for (uint8_t i = 0; i < ARRAYLEN(radix); i++) {
+            MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, radix[i].radix, s, sizeof(s), &slen));
+            if (slen == 0) { 
+                continue;
+            }
+
+            switch(i) {
+                case 0:
+//                    MBEDTLS_MPI_CHK(mbedtls_mpi_inv_mod(&N, &N, &base));
+                    break;
+                case 1:
+                    str_inverse_hex(s, strlen(s));
+                    PrintAndLogEx(SUCCESS, "%s%s", radix[i].desc, s);
+                    break;
+                case 2:
+                    str_inverse_bin(s, strlen(s));
+                    PrintAndLogEx(SUCCESS, "%s%s", radix[i].desc, s);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
 
     // check if number is a prime
     mbedtls_entropy_context entropy;

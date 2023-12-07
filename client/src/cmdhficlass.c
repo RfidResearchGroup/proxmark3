@@ -1349,7 +1349,7 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
     }
 
     uint8_t n = PICOPASS_BLOCK_SIZE - offset - 2;
-    byte_2_binstr(binstr, d + offset + 2, n);
+    bytes_2_binstr(binstr, d + offset + 2, n);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(d + offset + 2, n));
@@ -4562,7 +4562,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    byte_2_binstr(binstr, d + 3, n);
+    bytes_2_binstr(binstr, d + 3, n);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(d + 2, resp.length - 2));
