@@ -416,8 +416,8 @@ static void emrtd_bump_ssc(uint8_t *ssc) {
 
 static bool emrtd_check_cc(uint8_t *ssc, uint8_t *key, uint8_t *rapdu, int rapdulength) {
     // https://elixi.re/i/clarkson.png
-    uint8_t k[500];
-    uint8_t cc[500];
+    uint8_t k[500] = { 0x00 };
+    uint8_t cc[500] = { 0x00 };
 
     emrtd_bump_ssc(ssc);
 
@@ -449,16 +449,16 @@ static bool emrtd_check_cc(uint8_t *ssc, uint8_t *key, uint8_t *rapdu, int rapdu
 }
 
 static bool emrtd_secure_select_file_by_ef(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint16_t file) {
-    uint8_t response[PM3_CMD_DATA_SIZE];
+    uint8_t response[PM3_CMD_DATA_SIZE] = { 0x00 };
     size_t resplen = 0;
 
     // convert fileid to bytes
-    uint8_t file_id[2];
+    uint8_t file_id[2] = { 0x00 };
     _emrtd_convert_fileid(file, file_id);
 
     uint8_t iv[8] = { 0x00 };
-    uint8_t cmd[8];
-    uint8_t data[21];
+    uint8_t cmd[8] = { 0x00 };
+    uint8_t data[21] = { 0x00 };
     uint8_t temp[8] = {0x0c, 0xa4, EMRTD_P1_SELECT_BY_EF, 0x0c};
 
     int cmdlen = pad_block(temp, 4, cmd);
@@ -507,8 +507,8 @@ static bool emrtd_secure_select_file_by_ef(uint8_t *kenc, uint8_t *kmac, uint8_t
 }
 
 static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
-    uint8_t cmd[8];
-    uint8_t data[21];
+    uint8_t cmd[8] = { 0x00 };
+    uint8_t data[21] = { 0x00 };
     uint8_t temp[8] = {0x0c, 0xb0};
 
     PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 20));
@@ -522,18 +522,18 @@ static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, i
 
     uint8_t do97[3] = {0x97, 0x01, bytes_to_read};
 
-    uint8_t m[11];
+    uint8_t m[11] = { 0x00 };
     memcpy(m, cmd, 8);
     memcpy(m + 8, do97, 3);
 
     emrtd_bump_ssc(ssc);
 
-    uint8_t n[19];
+    uint8_t n[19] = { 0x00 };
     memcpy(n, ssc, 8);
     memcpy(n + 8, m, 11);
     PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, 19));
 
-    uint8_t cc[8];
+    uint8_t cc[8] = { 0x00 };
     retail_mac(kmac, n, 19, cc);
     PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, 8));
 
@@ -556,8 +556,8 @@ static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, i
 }
 
 static bool _emrtd_secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, size_t *dataoutlen) {
-    uint8_t response[500];
-    uint8_t temp[500];
+    uint8_t response[500] = { 0x00 };
+    uint8_t temp[500] = { 0x00 };
     size_t resplen, cutat = 0;
     uint8_t iv[8] = { 0x00 };
 
@@ -578,9 +578,9 @@ static bool _emrtd_secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint
 }
 
 static int emrtd_read_file(uint8_t *dataout, size_t *dataoutlen, uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, bool use_secure) {
-    uint8_t response[EMRTD_MAX_FILE_SIZE];
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
-    uint8_t tempresponse[500];
+    uint8_t tempresponse[500] = { 0x00 };
     size_t tempresplen = 0;
     int toread = 4;
     int offset = 0;
@@ -747,7 +747,7 @@ static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const c
 }
 
 static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length, const char *path) {
-    uint8_t data[EMRTD_MAX_FILE_SIZE];
+    uint8_t data[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t datalen = 0;
 
     // If we can't find image in EF_DG5, return false.
@@ -757,8 +757,9 @@ static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length, const c
 
     if (datalen < EMRTD_MAX_FILE_SIZE) {
         char *filepath = calloc(strlen(path) + 100, sizeof(char));
-        if (filepath == NULL)
+        if (filepath == NULL) {
             return PM3_EMALLOC;
+        }
         strcpy(filepath, path);
         strncat(filepath, PATHSEP, 2);
         strcat(filepath, dg_table[EF_DG5].filename);
@@ -774,7 +775,7 @@ static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length, const c
 }
 
 static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length, const char *path) {
-    uint8_t data[EMRTD_MAX_FILE_SIZE];
+    uint8_t data[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t datalen = 0;
 
     // If we can't find image in EF_DG7, return false.
@@ -784,8 +785,9 @@ static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length, const c
 
     if (datalen < EMRTD_MAX_FILE_SIZE) {
         char *filepath = calloc(strlen(path) + 100, sizeof(char));
-        if (filepath == NULL)
+        if (filepath == NULL) {
             return PM3_EMALLOC;
+        }
         strcpy(filepath, path);
         strncat(filepath, PATHSEP, 2);
         strcat(filepath, dg_table[EF_DG7].filename);
@@ -810,8 +812,9 @@ static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const c
     }
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
-    if (filepath == NULL)
+    if (filepath == NULL) {
         return PM3_EMALLOC;
+    }
 
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
@@ -823,7 +826,7 @@ static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const c
 }
 
 static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, uint16_t file, const char *name, bool use_secure, const char *path) {
-    uint8_t response[EMRTD_MAX_FILE_SIZE];
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
 
     if (emrtd_select_and_read(response, &resplen, file, ks_enc, ks_mac, ssc, use_secure) == false) {
@@ -831,8 +834,9 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, uint
     }
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
-    if (filepath == NULL)
+    if (filepath == NULL) {
         return false;
+    }
 
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
@@ -1048,8 +1052,9 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
-    if (filepath == NULL)
+    if (filepath == NULL) {
         return PM3_EMALLOC;
+    }
 
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
