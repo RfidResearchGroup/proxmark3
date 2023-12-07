@@ -317,8 +317,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     char buffer[MAX_PRINT_BUFFER] = {0};
     char buffer2[MAX_PRINT_BUFFER] = {0};
     char buffer3[MAX_PRINT_BUFFER] = {0};
-    // lock this section to avoid interlacing prints from different threads
-    pthread_mutex_lock(&g_print_lock);
+
     bool linefeed = true;
 
     if (logging && g_session.incognito) {
@@ -353,6 +352,8 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         }
     }
 
+    // lock this section to avoid interlacing prints from different threads
+    pthread_mutex_lock(&g_print_lock);
 
 // If there is an incoming message from the hardware (eg: lf hid read) in
 // the background (while the prompt is displayed and accepting user input),
