@@ -1791,11 +1791,13 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
 
     uint32_t n = end - start;
 
-    if (n == 0 || n > g_pm3_capabilities.bigbuf_size - 1)
+    if (n == 0 || n > g_pm3_capabilities.bigbuf_size - 1) {
         n = g_pm3_capabilities.bigbuf_size - 1;
+    }
 
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") " bytes from device memory", n);
+    }
 
     PacketResponseNG resp;
     if (GetFromDevice(BIG_BUF, got, n, start, NULL, 0, &resp, 10000, true) == false) {
@@ -1803,14 +1805,18 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
         return PM3_ETIMEOUT;
     }
 
-    if (verbose) PrintAndLogEx(SUCCESS, "Data fetched");
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Data fetched");
+    }
 
     uint8_t bits_per_sample = 8;
 
     // Old devices without this feature would send 0 at arg[0]
     if (resp.oldarg[0] > 0 && (ignore_lf_config == false)) {
         sample_config *sc = (sample_config *) resp.data.asBytes;
-        if (verbose) PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") " bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
+        if (verbose) {
+            PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") " bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
+        }
         bits_per_sample = sc->bits_per_sample;
     }
 
