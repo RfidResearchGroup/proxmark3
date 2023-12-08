@@ -40,7 +40,7 @@
 #include "mbedtls/ctr_drbg.h"    // random generator
 #include "atrs.h"                // ATR lookup
 
-uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN];
+uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN] = { 0x00 };
 size_t g_DemodBufferLen = 0;
 int32_t g_DemodStartIdx = 0;
 int g_DemodClock = 0;
