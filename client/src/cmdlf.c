@@ -817,7 +817,7 @@ int CmdLFRead(const char *Cmd) {
     } while (cm && kbd_enter_pressed() == false);
 
     if (ret == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Got " _YELLOW_("%u") " samples", g_GraphTraceLen);
+        PrintAndLogEx(SUCCESS, "Got " _YELLOW_("%zu") " samples", g_GraphTraceLen);
 
         if (getSignalProperties()->isnoise) {
             PrintAndLogEx(INFO, "signal looks like noise");
