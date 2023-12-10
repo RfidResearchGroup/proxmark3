@@ -8795,10 +8795,107 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf info",
+                  "Information and check vulnerabilities in the mfc card\n"
+                  "To check some of them need to specify key and/or specific keys in the copmmand line",
+                  "hf mf info -k ffffffff -nv\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool do_nack_test = false;
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        return 0;
+    }
+
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    /*
+        0: couldn't read
+        1: OK, with ATS
+        2: OK, no ATS
+        3: proprietary Anticollision
+    */
+    uint64_t select_status = resp.oldarg[0];
+
+    if (select_status == 0) {
+        PrintAndLogEx(DEBUG, "iso14443a card select failed");
+        return select_status;
+    }
+
+    if (select_status == 3) {
+        PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
+
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
+        }
+
+        return select_status;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") "---------------------");
+    }
+
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+    PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
+    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+
+    int res = detect_classic_static_nonce();
+    if (res == NONCE_STATIC)
+        PrintAndLogEx(SUCCESS, "Static nonce: " _YELLOW_("yes"));
+
+    if (res == NONCE_FAIL && verbose)
+        PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("read failed"));
+
+    if (res == NONCE_NORMAL) {
+
+        // not static
+        res = detect_classic_prng();
+        if (res == 1)
+            PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
+        else if (res == 0)
+            PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
+        else
+            PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
+
+        if (do_nack_test)
+            detect_classic_nackbug(verbose);
+    }
+
+    uint8_t signature[32] = {0};
+    res = read_mfc_ev1_signature(signature);
+    if (res == PM3_SUCCESS) {
+        mfc_ev1_print_signature(card.uid, card.uidlen, signature, sizeof(signature));
+    }
+
+
+
+    PrintAndLogEx(NORMAL, "done...");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
     {"list",        CmdHF14AMfList,         AlwaysAvailable, "List MIFARE history"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("recovery") " -----------------------"},
+    {"info",        CmdHF14AMfInfo,         IfPm3Iso14443a,  "mfc card Info"},
     {"darkside",    CmdHF14AMfDarkside,     IfPm3Iso14443a,  "Darkside attack"},
     {"nested",      CmdHF14AMfNested,       IfPm3Iso14443a,  "Nested attack"},
     {"hardnested",  CmdHF14AMfNestedHard,   AlwaysAvailable, "Nested attack for hardened MIFARE Classic cards"},
