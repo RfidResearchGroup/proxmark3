@@ -8879,6 +8879,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             detect_classic_nackbug(verbose);
     }
 
+    detect_mf_magic(true);
+
     uint8_t signature[32] = {0};
     res = read_mfc_ev1_signature(signature);
     if (res == PM3_SUCCESS) {
