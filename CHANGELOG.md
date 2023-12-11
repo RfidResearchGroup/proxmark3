@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Added `hf mf info` command and static encrypted nonce detection (@merlokk)
+ - Added Saflok KDF - generate MFC keys (@h1kari)
  - Changed `lf fdx demod` - now raw bytes shows all data (@iceman1001)
  - Changed `data num` - now can print reversed and inverse (@iceman1001)
  - Fixed `hf mf sim -ix` never returning console (@datatags)
