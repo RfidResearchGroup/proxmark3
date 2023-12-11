@@ -8806,15 +8806,30 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_lit0("a", NULL, "input key type is key A (def)"),
+        arg_lit0("b", NULL, "input key type is key B"),
         arg_lit0("n", "nack", "do nack test"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool do_nack_test = arg_get_lit(ctx, 2);
-    bool verbose = arg_get_lit(ctx, 3);
+    /*uint8_t keytype = MF_KEY_A;
+    if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 3)) {
+        keytype = MF_KEY_B;
+    }
+
+    int keylen = 0;
+    uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    CLIGetHexWithReturn(ctx, 4, key, &keylen);
+*/
+    bool do_nack_test = arg_get_lit(ctx, 4);
+    bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     uint8_t dbg_curr = DBG_NONE;
