@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mf info` command and static encrypted nonce detection (@merlokk)
  - Changed `lf fdx demod` - now raw bytes shows all data (@iceman1001)
  - Changed `data num` - now can print reversed and inverse (@iceman1001)
  - Fixed `hf mf sim -ix` never returning console (@datatags)
