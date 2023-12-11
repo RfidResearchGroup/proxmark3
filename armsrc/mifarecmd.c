@@ -2724,7 +2724,7 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
             goto OUT;
         };
 
-        if (g_dbglevel >= DBG_INFO) 
+        if (g_dbglevel >= DBG_INFO)
             Dbprintf("nt: %x, nt encoded: %x", nt, ntenc);
 
         if (oldntenc == 0)

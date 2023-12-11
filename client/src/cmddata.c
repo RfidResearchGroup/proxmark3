@@ -3392,7 +3392,7 @@ static int CmdNumCon(const char *Cmd) {
         PrintAndLogEx(SUCCESS, _CYAN_("Inverted"));
         for (uint8_t i = 0; i < ARRAYLEN(radix); i++) {
             MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, radix[i].radix, s, sizeof(s), &slen));
-            if (slen == 0) { 
+            if (slen == 0) {
                 continue;
             }
 

@@ -485,6 +485,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf mf help             `|Y       |`This help`
 |`hf mf list             `|Y       |`List MIFARE history`
+|`hf mf info             `|N       |`mfc card Info`
 |`hf mf darkside         `|N       |`Darkside attack`
 |`hf mf nested           `|N       |`Nested attack`
 |`hf mf hardnested       `|Y       |`Nested attack for hardened MIFARE Classic cards`

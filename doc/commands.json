@@ -608,9 +608,10 @@
                 "--dec <dec> decimal value",
                 "--hex <hex> hexadecimal value",
                 "--bin <bin> binary value",
-                "-i print inverted value"
+                "-i print inverted value",
+                "-r print reversed value"
             ],
-            "usage": "data num [-hi] [--dec <dec>] [--hex <hex>] [--bin <bin>]"
+            "usage": "data num [-hir] [--dec <dec>] [--hex <hex>] [--bin <bin>]"
         },
         "data plot": {
             "command": "data plot",
@@ -4706,6 +4707,25 @@
             ],
             "usage": "hf mf hardnested [-habrstw] [-k <hex>] [--blk <dec>] [--tblk <dec>] [--ta] [--tb] [--tk <hex>] [-u <hex>] [-f <fn>] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
         },
+        "hf mf info": {
+            "command": "hf mf info",
+            "description": "Information and check vulnerabilities in a MIFARE Classic card Some cards in order to extract information you need to specify key and/or specific keys in the copmmand line",
+            "notes": [
+                "hf mf info",
+                "hf mf info -k ffffffff -n -v"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--blk <dec> block number",
+                "-a input key type is key A (def)",
+                "-b input key type is key B",
+                "-k, --key <hex> key, 6 hex bytes",
+                "-n, --nack do nack test",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf mf info [-habnv] [--blk <dec>] [-k <hex>]"
+        },
         "hf mf list": {
             "command": "hf mf list",
             "description": "Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
@@ -6257,7 +6277,7 @@
                 "* Block B001 (01; CCK): Installation identifier for Virtual Card. Please consult NXP for data.",
                 "* Block B002 (02; CCK): ATS data.",
                 "* Block B003 (03; CCK): Use Random ID in SL3, decide whether proximity check is mandatory.",
-                "  * DO NOT WRITE THIS BLOCK UNDER ANY CIRCUMSTANCES! Risk of bricking.",
+                "* DO NOT WRITE THIS BLOCK UNDER ANY CIRCUMSTANCES! Risk of bricking.",
                 "More configuration tips to follow. Check JMY600 Series IC Card Module.",
                 "hf mfp chconf -c 00 -d 10ffffffffffffffffffffffffffffff --key A0A1A2A3A4A5A6A7A0A1A2A3A4A5A6A7 -> Allow 16 commands without MAC in a single transaction."
             ],
@@ -6312,11 +6332,11 @@
             "options": [
                 "-h, --help This help",
                 "-v, --verbose Verbose mode",
-                "--nmr                          Do not expect MAC in response",
-                "--ki <hex>                     Key Index, 2 hex bytes",
-                "-k, --key <hex>                Current sector key, 16 hex bytes",
-                "-b, --typeb                    Sector key is key B",
-                "-d, --data <hex>               New key, 16 hex bytes"
+                "--nmr Do not expect MAC in response",
+                "--ki <hex> Key Index, 2 hex bytes",
+                "-k, --key <hex> Current sector key, 16 hex bytes",
+                "-b, --typeb Sector key is key B",
+                "-d, --data <hex> New key, 16 hex bytes"
             ],
             "usage": "hf mfp chkey [-hvb] [--nmr] --ki <hex> [-k <hex>] -d <hex>"
         },
@@ -6482,7 +6502,7 @@
                 "-v, --verbose Verbose mode",
                 "-n, --count <dec> Blocks count (def: 1)",
                 "-b, --keyb Use key B (def: keyA)",
-                "-p, --plain Do not use encrypted transmission between reader and card",
+                "-p, --plain Do not use encrypted communication mode between reader and card",
                 "--nmc Do not append MAC to command",
                 "--nmr Do not expect MAC in reply",
                 "--blk <0..255> Block number",
@@ -6502,7 +6522,7 @@
                 "-h, --help This help",
                 "-v, --verbose Verbose mode",
                 "-b, --keyb Use key B (def: keyA)",
-                "-p, --plain Do not use encrypted transmission between reader and card",
+                "-p, --plain Do not use encrypted communication mode between reader and card",
                 "--nmc Do not append MAC to command",
                 "--nmr Do not expect MAC in reply",
                 "-s, --sn <0..255> Sector number",
@@ -6534,10 +6554,18 @@
             "command": "hf mfp wrp",
             "description": "Executes Write Perso command. Can be used in SL0 mode only.",
             "notes": [
+                "Use this command to program AES keys, as well as personalize other data on the tag.",
+                "You can program:",
+                "* Address 00 [00-FF]: Memory blocks (as well as ACLs and Crypto1 keys)",
+                "* Address 40 [00-40]: AES sector keys",
+                "* Address 90 [00-04]: AES administrative keys",
+                "* Address A0 [00, 01, 80, 81]: Virtual Card keys",
+                "* Address B0 [00-03]: Configuration data (DO NOT TOUCH B003)",
+                "Examples:",
                 "hf mfp wrp --adr 4000 --data 000102030405060708090a0b0c0d0e0f -> write key (00..0f) to key number 4000",
                 "hf mfp wrp --adr 4000 -> write default key(0xff..0xff) to key number 4000",
-                "hf mfp wrp -a b000 -d 20FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> allow 32 commands without MAC in configuration block (B000)",
-                "hf mfp wrp -a 0003 -d 1234561234567F078869B0B1B2B3B4B5 -> write crypto1 keys A: 123456123456 and B: B0B1B2B3B4B5 to block 3"
+                "hf mfp wrp --adr b000 -d FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -> allow 255 commands without MAC in configuration block (B000)",
+                "hf mfp wrp --adr 0003 -d 1234561234567F078869B0B1B2B3B4B5 -> write crypto1 keys A: 123456123456 and B: B0B1B2B3B4B5 to block 3"
             ],
             "offline": false,
             "options": [
@@ -7446,7 +7474,7 @@
         },
         "hf tune": {
             "command": "hf tune",
-            "description": "Continuously measure HF antenna tuning. Press button or <Enter> to interrupt.",
+            "description": "Continuously measure HF antenna tuning. Press pm3 button or <Enter> to interrupt.",
             "notes": [
                 "hf tune",
                 "hf tune --mix"
@@ -9027,7 +9055,7 @@
                 "-1, --ht1 Card type Hitag 1",
                 "-2, --ht2 Card type Hitag 2",
                 "-s, --hts Card type Hitag S",
-                "-m, --htm Card type Hitag \u03bc"
+                "-m, --htm Card type Hitag \u041e\u0458"
             ],
             "usage": "lf hitag eload [-h12sm] -f <fn>"
         },
@@ -12118,8 +12146,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 699,
+        "commands_extracted": 702,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-12-01T14:06:40"
+        "extracted_on": "2023-12-11T23:10:13"
     }
 }

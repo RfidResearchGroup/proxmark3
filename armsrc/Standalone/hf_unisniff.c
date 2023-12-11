@@ -180,7 +180,7 @@ void RunMod(void) {
         char *config_buffer = &config_buffer_array[0];
         uint32_t config_size = size_in_spiffs(HF_UNISNIFF_CONFIG);
         if (config_size > HF_UNISNIFF_CONFIG_SIZE) config_size = HF_UNISNIFF_CONFIG_SIZE;
-        rdv40_spiffs_read_as_filetype(HF_UNISNIFF_CONFIG, (uint8_t *)config_buffer, 
+        rdv40_spiffs_read_as_filetype(HF_UNISNIFF_CONFIG, (uint8_t *)config_buffer,
             config_size, RDV40_SPIFFS_SAFETY_SAFE);
         // This parser is terrible but I think fairly memory efficient?  Maybe better to use JSON?
         char *x = config_buffer;

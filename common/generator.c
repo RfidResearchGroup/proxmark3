@@ -354,7 +354,7 @@ int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t 
         uint64_t id = (bytes_to_num(uid, 4) << 8);
 
         *key = (h + (id + m + ((uint64_t)h << 40ULL))) & 0xFFFFFFFFFFFFULL;
-     
+
     } else {
         *key = 0xFFFFFFFFFFFF;
     }
