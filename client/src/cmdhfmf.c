@@ -39,6 +39,7 @@
 #include "cmdhw.h"                 // set_fpga_mode
 #include "loclass/cipherutils.h"   // BitstreamOut_t
 #include "proxendian.h"
+#include "preferences.h"
 #include "mifare/gen4.h"
 
 static int CmdHelp(const char *Cmd);
@@ -8795,10 +8796,209 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf info",
+                  "Information and check vulnerabilities in the mfc card\n"
+                  "To check some of them need to specify key and/or specific keys in the copmmand line",
+                  "hf mf info -k ffffffff -nv\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "blk", "<dec>", "block number"),
+        arg_lit0("a", NULL, "input key type is key A (def)"),
+        arg_lit0("b", NULL, "input key type is key B"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_lit0("n", "nack", "do nack test"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int blockn = arg_get_int_def(ctx, 1, 0);
+
+    uint8_t keytype = MF_KEY_A;
+    if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 3)) {
+        keytype = MF_KEY_B;
+    }
+
+    int keylen = 0;
+    uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    CLIGetHexWithReturn(ctx, 4, key, &keylen);
+
+    bool do_nack_test = arg_get_lit(ctx, 5);
+    bool verbose = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS)
+        return PM3_EFAILED;
+
+    if (keylen != 0 && keylen != 6) {
+        PrintAndLogEx(ERR, "Key length must be 6 bytes");
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        return 0;
+    }
+
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    /*
+        0: couldn't read
+        1: OK, with ATS
+        2: OK, no ATS
+        3: proprietary Anticollision
+    */
+    uint64_t select_status = resp.oldarg[0];
+
+    if (select_status == 0) {
+        PrintAndLogEx(DEBUG, "iso14443a card select failed");
+        return select_status;
+    }
+
+    if (select_status == 3) {
+        PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
+
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
+        }
+
+        return select_status;
+    }
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") "---------------------");
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+    PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
+    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+
+    if (setDeviceDebugLevel(verbose ? DBG_INFO : DBG_NONE, false) != PM3_SUCCESS)
+        return PM3_EFAILED;
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Backdoors Information") "---------------------");
+    if (detect_mf_magic(true) == 0)
+        PrintAndLogEx(INFO, "<none>");
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Keys Information") "---------------------");
+    uint8_t fkey[MIFARE_KEY_SIZE] = {0};
+    uint8_t fKeyType = 0xff;
+
+    int sectorsCnt = 1;
+    uint8_t *keyBlock = NULL;
+    uint32_t keycnt = 0;
+    int res = mfLoadKeys(&keyBlock, &keycnt, NULL, 0, NULL, 0);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    // create/initialize key storage structure
+    sector_t *e_sector = NULL;
+    if (initSectorTable(&e_sector, sectorsCnt) != PM3_SUCCESS) {
+        free(keyBlock);
+        return PM3_EMALLOC;
+    }
+    res = mfCheckKeys_fast(sectorsCnt, true, true, 1, keycnt, keyBlock, e_sector, false);
+    if (res == PM3_SUCCESS) {
+        uint8_t blockdata[MFBLOCK_SIZE] = {0};
+
+        if (e_sector[0].foundKey[0]) {
+            PrintAndLogEx(SUCCESS, "Sector 0 key A... %12llx", e_sector[0].Key[0]);
+
+            num_to_bytes(e_sector[0].Key[0], MIFARE_KEY_SIZE, fkey);
+            if (mfReadBlock(0, MF_KEY_A, key, blockdata) == PM3_SUCCESS)
+                fKeyType = MF_KEY_A;
+        }
+
+        if (e_sector[0].foundKey[1]) {
+            PrintAndLogEx(SUCCESS, "Sector 0 key B... %12llx", e_sector[0].Key[1]);
+
+            if (fKeyType == 0xff) {
+                num_to_bytes(e_sector[0].Key[1], MIFARE_KEY_SIZE, fkey);
+                if (mfReadBlock(0, MF_KEY_B, key, blockdata) == PM3_SUCCESS)
+                    fKeyType = MF_KEY_B;
+            }
+        }
+
+        if (fKeyType != 0xff)
+            PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
+    }
+
+    free(keyBlock);
+    free(e_sector);
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("RNG Information") "---------------------");
+
+    res = detect_classic_static_nonce();
+    if (res == NONCE_STATIC)
+        PrintAndLogEx(SUCCESS, "Static nonce: " _YELLOW_("yes"));
+
+    if (res == NONCE_FAIL && verbose)
+        PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("read failed"));
+
+    if (res == NONCE_NORMAL) {
+        // not static
+        res = detect_classic_prng();
+        if (res == 1)
+            PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
+        else if (res == 0)
+            PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
+        else
+            PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
+
+
+        // detect static encrypted nonce
+        if (keylen == 6) {
+            res = detect_classic_static_encrypted_nonce(blockn, keytype, key);
+            if (res == NONCE_STATIC) {
+                PrintAndLogEx(SUCCESS, "Static nested nonce: " _YELLOW_("yes"));
+                fKeyType = 0xff; // dont detect twice
+            }
+            if (res == NONCE_STATIC_ENC) {
+                PrintAndLogEx(SUCCESS, "Static encrypted nonce: " _YELLOW_("yes"));
+                fKeyType = 0xff; // dont detect twice
+            }
+        }
+        if (fKeyType != 0xff) {
+            res = detect_classic_static_encrypted_nonce(0, fKeyType, fkey);
+            if (res == NONCE_STATIC)
+                PrintAndLogEx(SUCCESS, "Static nested nonce: " _YELLOW_("yes"));
+            if (res == NONCE_STATIC_ENC)
+                PrintAndLogEx(SUCCESS, "Static encrypted nonce: " _YELLOW_("yes"));
+        }
+
+        if (do_nack_test)
+            detect_classic_nackbug(verbose);
+    }
+
+    uint8_t signature[32] = {0};
+    res = read_mfc_ev1_signature(signature);
+    if (res == PM3_SUCCESS)     {
+        PrintAndLogEx(INFO, "--- " _CYAN_("Signature Information") "---------------------");
+        mfc_ev1_print_signature(card.uid, card.uidlen, signature, sizeof(signature));
+    }
+
+    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS)
+        return PM3_EFAILED;
+
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
     {"list",        CmdHF14AMfList,         AlwaysAvailable, "List MIFARE history"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("recovery") " -----------------------"},
+    {"info",        CmdHF14AMfInfo,         IfPm3Iso14443a,  "mfc card Info"},
     {"darkside",    CmdHF14AMfDarkside,     IfPm3Iso14443a,  "Darkside attack"},
     {"nested",      CmdHF14AMfNested,       IfPm3Iso14443a,  "Nested attack"},
     {"hardnested",  CmdHF14AMfNestedHard,   AlwaysAvailable, "Nested attack for hardened MIFARE Classic cards"},

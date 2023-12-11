@@ -49,6 +49,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);  // Work wi
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);
 void MifareCIdent(bool is_mfc);  // is "magic chinese" card?
 void MifareHasStaticNonce(void);  // Has the tag a static nonce?
+void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *key); // Has the tag a static encrypted nonce?
 
 // MFC GEN3
 int DoGen3Cmd(uint8_t *cmd, uint8_t cmd_len);

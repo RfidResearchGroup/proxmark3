@@ -799,7 +799,8 @@ static void PacketReceived(PacketCommandNG *packet) {
         // emulator
         case CMD_SET_DBGMODE: {
             g_dbglevel = packet->data.asBytes[0];
-            print_debug_level();
+            if (packet->length == 1 || packet->data.asBytes[1] != 0)
+                print_debug_level();
             reply_ng(CMD_SET_DBGMODE, PM3_SUCCESS, NULL, 0);
             break;
         }
@@ -1863,6 +1864,17 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_MIFARE_STATIC_NONCE: {
             MifareHasStaticNonce();
+            break;
+        }
+        case CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE: {
+            struct p {
+                uint8_t block_no;
+                uint8_t key_type;
+                uint8_t key[6];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            
+            MifareHasStaticEncryptedNonce(payload->block_no, payload->key_type, payload->key);
             break;
         }
 #endif
