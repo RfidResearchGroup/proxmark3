@@ -104,7 +104,7 @@ static char inv_b2s(char v, bool uppercase) {
         '7', '6', '5', '4',
         '3', '2', '1', '0'
     };
-    
+
     uint8_t tmp = (tolower(v) - 'a' + 10);
     if (isdigit(v)) {
         tmp = (v - 0x30);
@@ -112,7 +112,7 @@ static char inv_b2s(char v, bool uppercase) {
 
     if (uppercase)
         return toupper(lut[tmp]);
-    else 
+    else
         return lut[tmp];
 }
 
@@ -1254,7 +1254,7 @@ void str_inverse_bin(char *buf, size_t len) {
             buf[i] = '0';
         else if ( c == '0')
             buf[i] = '1';
-        else 
+        else
             buf[i] = '.';
     }
 }

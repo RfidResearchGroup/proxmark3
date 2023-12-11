@@ -798,7 +798,7 @@ static int CmdHFMFPRdbl(const char *Cmd) {
         PrintAndLogEx(ERR, "Error return length: %d", datalen);
         return PM3_ESOFT;
     }
-    
+
     if (!plain) data_crypt(&mf4session, &data[1], &data[1], true);
     uint8_t sector = mfSectorNum(blockn);
     mf_print_sector_hdr(sector);
@@ -1061,9 +1061,9 @@ static int CmdHFMFPChKey(const char *Cmd) {
 
     bool verbose = arg_get_lit(ctx, 1);
     bool nomacres = arg_get_lit(ctx, 2);
-    
+
     uint8_t keyn[250] = {0};
-    
+
     uint8_t ki[250] = {0};
     int kilen = 0;
     CLIGetHexWithReturn(ctx, 3, ki, &kilen);
@@ -1076,7 +1076,7 @@ static int CmdHFMFPChKey(const char *Cmd) {
     uint8_t datain[250] = {0};
     int datainlen = 0;
     CLIGetHexWithReturn(ctx, 6, datain, &datainlen);
-    
+
     CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
@@ -1177,7 +1177,7 @@ static int CmdHFMFPChConf(const char *Cmd) {
 
     bool verbose = arg_get_lit(ctx, 1);
     bool nomacres = arg_get_lit(ctx, 2);
-    
+
     uint8_t keyn[250] = {0};
     uint32_t blockNum = arg_get_int(ctx, 3);
 
@@ -1185,11 +1185,11 @@ static int CmdHFMFPChConf(const char *Cmd) {
     int keylen = 0;
     CLIGetHexWithReturn(ctx, 4, key, &keylen);
     bool usecck = arg_get_lit(ctx, 5);
-    
+
     uint8_t datain[250] = {0};
     int datainlen = 0;
     CLIGetHexWithReturn(ctx, 6, datain, &datainlen);
-    
+
     CLIParserFree(ctx);
 
     mfpSetVerboseMode(verbose);
@@ -1208,7 +1208,7 @@ static int CmdHFMFPChConf(const char *Cmd) {
         PrintAndLogEx(ERR, "<data> must be 16 bytes. Got %d", datainlen);
         return PM3_EINVARG;
     }
-    
+
     if (blockNum > 3) {
         PrintAndLogEx(ERR, "<config number> must be in range [0..3]. Got %d", blockNum);
         return PM3_EINVARG;

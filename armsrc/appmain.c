@@ -1873,7 +1873,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t key[6];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            
+
             MifareHasStaticEncryptedNonce(payload->block_no, payload->key_type, payload->key);
             break;
         }
