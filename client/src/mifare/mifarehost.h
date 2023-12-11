@@ -102,6 +102,7 @@ int detect_classic_prng(void);
 int detect_classic_nackbug(bool verbose);
 int detect_mf_magic(bool is_mfc);
 int detect_classic_static_nonce(void);
+int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, uint8_t *key);
 bool detect_mfc_ev1_signature(void);
 int read_mfc_ev1_signature(uint8_t *signature);
 

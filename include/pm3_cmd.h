@@ -675,6 +675,7 @@ typedef struct {
 
 #define CMD_HF_MIFARE_NACK_DETECT                                         0x0730
 #define CMD_HF_MIFARE_STATIC_NONCE                                        0x0731
+#define CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE                              0x0732
 
 // MFU OTP TearOff
 #define CMD_HF_MFU_OTP_TEAROFF                                            0x0740
@@ -740,9 +741,10 @@ typedef struct {
 #define MODE_FULLSIM        2
 
 // Static Nonce detection
-#define NONCE_FAIL      0x01
-#define NONCE_NORMAL    0x02
-#define NONCE_STATIC    0x03
+#define NONCE_FAIL       0x01
+#define NONCE_NORMAL     0x02
+#define NONCE_STATIC     0x03
+#define NONCE_STATIC_ENC 0x04
 
 // Dbprintf flags
 #define FLAG_RAWPRINT    0x00

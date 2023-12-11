@@ -1866,6 +1866,17 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareHasStaticNonce();
             break;
         }
+        case CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE: {
+            struct p {
+                uint8_t block_no;
+                uint8_t key_type;
+                uint8_t key[6];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            
+            MifareHasStaticEncryptedNonce(payload->block_no, payload->key_type, payload->key);
+            break;
+        }
 #endif
 
 #ifdef WITH_NFCBARCODE

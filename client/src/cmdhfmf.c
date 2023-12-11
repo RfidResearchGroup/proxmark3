@@ -8875,7 +8875,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
-    if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS)
+    if (setDeviceDebugLevel(verbose ? DBG_INFO : DBG_NONE, false) != PM3_SUCCESS)
         return PM3_EFAILED;
 
     PrintAndLogEx(INFO, "--- " _CYAN_("Backdoors Information") "---------------------");
@@ -8951,7 +8951,11 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
         // detect static encrypted nonce
         if (keyType != 0xff) {
-
+            res = detect_classic_static_encrypted_nonce(0, keyType, key); // TODO: add block number to the config
+            if (res == NONCE_STATIC)
+                PrintAndLogEx(SUCCESS, "Static nested nonce: " _YELLOW_("yes"));
+            if (res == NONCE_STATIC_ENC)
+                PrintAndLogEx(SUCCESS, "Static encrypted nonce: " _YELLOW_("yes"));
         }
 
         if (do_nack_test)

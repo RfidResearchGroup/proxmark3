@@ -1349,6 +1349,33 @@ int detect_classic_static_nonce(void) {
     return NONCE_FAIL;
 }
 
+/* Detect Mifare Classic static encrypted nonce
+detects special magic cards that has a static / fixed nonce
+returns:
+0  = nonce ok
+1  = has static/fixed nonce
+2  = cmd failed
+3  = has encrypted nonce
+*/
+int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, uint8_t *key) {
+
+    clearCommandBuffer();
+    uint8_t cdata[1 + 1 + MIFARE_KEY_SIZE] = {0};
+    cdata[0] = block_no;
+    cdata[1] = key_type;
+    memcpy(&cdata[2], key, MIFARE_KEY_SIZE);
+    SendCommandNG(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, cdata, sizeof(cdata));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1000)) {
+
+        if (resp.status == PM3_ESOFT)
+            return NONCE_FAIL;
+
+        return resp.data.asBytes[0];
+    }
+    return NONCE_FAIL;
+}
+
 /* try to see if card responses to "Chinese magic backdoor" commands. */
 int detect_mf_magic(bool is_mfc) {
 
