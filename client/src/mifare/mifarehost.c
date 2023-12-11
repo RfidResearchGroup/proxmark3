@@ -222,7 +222,7 @@ int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keyc
 // 1 ==
 // 2 == Time-out, aborting
 int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
-                     uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory) {
+                     uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory, bool verbose) {
 
     uint64_t t2 = msclock();
 
@@ -256,7 +256,9 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
     // time to convert the returned data.
     uint8_t curr_keys = resp.oldarg[0];
 
-    PrintAndLogEx(INFO, "Chunk %.1fs | found %u/%u keys (%u)", (float)(t2 / 1000.0), curr_keys, (sectorsCnt << 1), size);
+    if (verbose) {
+        PrintAndLogEx(INFO, "Chunk %.1fs | found %u/%u keys (%u)", (float)(t2 / 1000.0), curr_keys, (sectorsCnt << 1), size);
+    }
 
     // all keys?
     if (curr_keys == sectorsCnt * 2 || lastChunk) {
@@ -1385,8 +1387,9 @@ int detect_mf_magic(bool is_mfc) {
     uint8_t payload[] = { is_mfc };
     SendCommandNG(CMD_HF_MIFARE_CIDENT, payload, sizeof(payload));
     if (WaitForResponseTimeout(CMD_HF_MIFARE_CIDENT, &resp, 1500)) {
-        if (resp.status == PM3_SUCCESS)
+        if (resp.status == PM3_SUCCESS) {
             isGeneration = resp.data.asBytes[0];
+        }
     }
 
     switch (isGeneration) {
