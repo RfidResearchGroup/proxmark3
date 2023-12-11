@@ -8806,16 +8806,19 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_int0(NULL, "blk", "<dec>", "block number"),
         arg_lit0("a", NULL, "input key type is key A (def)"),
         arg_lit0("b", NULL, "input key type is key B"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
         arg_lit0("n", "nack", "do nack test"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    /*uint8_t keytype = MF_KEY_A;
+    int blockn = arg_get_int_def(ctx, 1, 0);
+
+    uint8_t keytype = MF_KEY_A;
     if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
         CLIParserFree(ctx);
         PrintAndLogEx(WARNING, "Input key type must be A or B");
@@ -8827,14 +8830,19 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     int keylen = 0;
     uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     CLIGetHexWithReturn(ctx, 4, key, &keylen);
-*/
-    bool do_nack_test = arg_get_lit(ctx, 4);
-    bool verbose = arg_get_lit(ctx, 5);
+
+    bool do_nack_test = arg_get_lit(ctx, 5);
+    bool verbose = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     uint8_t dbg_curr = DBG_NONE;
     if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS)
         return PM3_EFAILED;
+
+    if (keylen != 0 && keylen != 6) {
+        PrintAndLogEx(ERR, "Key length must be 6 bytes");
+        return PM3_EINVARG;
+    }
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
@@ -8883,8 +8891,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         PrintAndLogEx(INFO, "<none>");
 
     PrintAndLogEx(INFO, "--- " _CYAN_("Keys Information") "---------------------");
-    uint8_t key[MIFARE_KEY_SIZE] = {0};
-    uint8_t keyType = 0xff;
+    uint8_t fkey[MIFARE_KEY_SIZE] = {0};
+    uint8_t fKeyType = 0xff;
 
     int sectorsCnt = 1;
     uint8_t *keyBlock = NULL;
@@ -8907,22 +8915,22 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         if (e_sector[0].foundKey[0]) {
             PrintAndLogEx(SUCCESS, "Sector 0 key A... %12llx", e_sector[0].Key[0]);
 
-            num_to_bytes(e_sector[0].Key[0], MIFARE_KEY_SIZE, key);
+            num_to_bytes(e_sector[0].Key[0], MIFARE_KEY_SIZE, fkey);
             if (mfReadBlock(0, MF_KEY_A, key, blockdata) == PM3_SUCCESS)
-                keyType = MF_KEY_A;
+                fKeyType = MF_KEY_A;
         }
 
         if (e_sector[0].foundKey[1]) {
             PrintAndLogEx(SUCCESS, "Sector 0 key B... %12llx", e_sector[0].Key[1]);
 
-            if (keyType == 0xff) {
-                num_to_bytes(e_sector[0].Key[1], MIFARE_KEY_SIZE, key);
+            if (fKeyType == 0xff) {
+                num_to_bytes(e_sector[0].Key[1], MIFARE_KEY_SIZE, fkey);
                 if (mfReadBlock(0, MF_KEY_B, key, blockdata) == PM3_SUCCESS)
-                    keyType = MF_KEY_B;
+                    fKeyType = MF_KEY_B;
             }
         }
 
-        if (keyType != 0xff)
+        if (fKeyType != 0xff)
             PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
     }
 
@@ -8950,8 +8958,19 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
 
         // detect static encrypted nonce
-        if (keyType != 0xff) {
-            res = detect_classic_static_encrypted_nonce(0, keyType, key); // TODO: add block number to the config
+        if (keylen == 6) {
+            res = detect_classic_static_encrypted_nonce(blockn, keytype, key);
+            if (res == NONCE_STATIC) {
+                PrintAndLogEx(SUCCESS, "Static nested nonce: " _YELLOW_("yes"));
+                fKeyType = 0xff; // dont detect twice
+            }
+            if (res == NONCE_STATIC_ENC) {
+                PrintAndLogEx(SUCCESS, "Static encrypted nonce: " _YELLOW_("yes"));
+                fKeyType = 0xff; // dont detect twice
+            }
+        }
+        if (fKeyType != 0xff) {
+            res = detect_classic_static_encrypted_nonce(0, fKeyType, fkey);
             if (res == NONCE_STATIC)
                 PrintAndLogEx(SUCCESS, "Static nested nonce: " _YELLOW_("yes"));
             if (res == NONCE_STATIC_ENC)
