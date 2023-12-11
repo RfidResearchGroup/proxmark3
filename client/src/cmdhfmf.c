@@ -8806,13 +8806,14 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
+        arg_lit0("n", "nack", "do nack test"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool do_nack_test = false;
-    bool verbose = arg_get_lit(ctx, 2);
+    bool do_nack_test = arg_get_lit(ctx, 2);
+    bool verbose = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     clearCommandBuffer();
@@ -8849,13 +8850,12 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         return select_status;
     }
 
-    if (verbose) {
-        PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") "---------------------");
-    }
-
+    PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") "---------------------");
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("RNG Information") "---------------------");
 
     int res = detect_classic_static_nonce();
     if (res == NONCE_STATIC)
@@ -8879,11 +8879,37 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             detect_classic_nackbug(verbose);
     }
 
-    detect_mf_magic(true);
+    PrintAndLogEx(INFO, "--- " _CYAN_("Backdoors Information") "---------------------");
+    if (detect_mf_magic(true) == 0)
+        PrintAndLogEx(INFO, "<none>");
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Keys Information") "---------------------");
+    int sectorsCnt = 1;
+    uint8_t *keyBlock = NULL;
+    uint32_t keycnt = 0;
+    int ret = mfLoadKeys(&keyBlock, &keycnt, NULL, 0, NULL, 0);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    // create/initialize key storage structure
+    sector_t *e_sector = NULL;
+    if (initSectorTable(&e_sector, sectorsCnt) != PM3_SUCCESS) {
+        free(keyBlock);
+        return PM3_EMALLOC;
+    }
+    res = mfCheckKeys_fast(sectorsCnt, true, true, 1, keycnt, keyBlock, e_sector, false);
+
+    PrintAndLogEx(FAILED, "res:  %d, %d %d", res, e_sector[0].foundKey[0], e_sector[0].foundKey[1]);
+
+    free(keyBlock);
+    free(e_sector);
+
 
     uint8_t signature[32] = {0};
     res = read_mfc_ev1_signature(signature);
-    if (res == PM3_SUCCESS) {
+    if (res == PM3_SUCCESS)     {
+        PrintAndLogEx(INFO, "--- " _CYAN_("Signature Information") "---------------------");
         mfc_ev1_print_signature(card.uid, card.uidlen, signature, sizeof(signature));
     }
 
