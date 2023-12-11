@@ -8803,7 +8803,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
                   "Some cards in order to extract information you need to specify key\n"
                   "and/or specific keys in the copmmand line",
                   "hf mf info\n"
-                  "hf mf info -k ffffffff -n -v\n"
+                  "hf mf info -k FFFFFFFFFFFF -n -v\n"
                  );
 
     void *argtable[] = {
