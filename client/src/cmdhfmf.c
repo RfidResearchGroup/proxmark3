@@ -39,6 +39,7 @@
 #include "cmdhw.h"                 // set_fpga_mode
 #include "loclass/cipherutils.h"   // BitstreamOut_t
 #include "proxendian.h"
+#include "preferences.h"
 #include "mifare/gen4.h"
 
 static int CmdHelp(const char *Cmd);
@@ -8816,6 +8817,10 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS)
+        return PM3_EFAILED;
+
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
@@ -8854,6 +8859,9 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+
+    if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS)
+        return PM3_EFAILED;
 
     PrintAndLogEx(INFO, "--- " _CYAN_("RNG Information") "---------------------");
 
@@ -8938,7 +8946,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         mfc_ev1_print_signature(card.uid, card.uidlen, signature, sizeof(signature));
     }
 
-
+    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS)
+        return PM3_EFAILED;
 
     PrintAndLogEx(NORMAL, "done...");
     return PM3_SUCCESS;
