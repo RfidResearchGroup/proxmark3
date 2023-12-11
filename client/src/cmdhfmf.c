@@ -8863,30 +8863,6 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS)
         return PM3_EFAILED;
 
-    PrintAndLogEx(INFO, "--- " _CYAN_("RNG Information") "---------------------");
-
-    int res = detect_classic_static_nonce();
-    if (res == NONCE_STATIC)
-        PrintAndLogEx(SUCCESS, "Static nonce: " _YELLOW_("yes"));
-
-    if (res == NONCE_FAIL && verbose)
-        PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("read failed"));
-
-    if (res == NONCE_NORMAL) {
-
-        // not static
-        res = detect_classic_prng();
-        if (res == 1)
-            PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
-        else if (res == 0)
-            PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
-        else
-            PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
-
-        if (do_nack_test)
-            detect_classic_nackbug(verbose);
-    }
-
     PrintAndLogEx(INFO, "--- " _CYAN_("Backdoors Information") "---------------------");
     if (detect_mf_magic(true) == 0)
         PrintAndLogEx(INFO, "<none>");
@@ -8898,9 +8874,9 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     int sectorsCnt = 1;
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
-    int ret = mfLoadKeys(&keyBlock, &keycnt, NULL, 0, NULL, 0);
-    if (ret != PM3_SUCCESS) {
-        return ret;
+    int res = mfLoadKeys(&keyBlock, &keycnt, NULL, 0, NULL, 0);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     // create/initialize key storage structure
@@ -8938,6 +8914,34 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     free(keyBlock);
     free(e_sector);
 
+    PrintAndLogEx(INFO, "--- " _CYAN_("RNG Information") "---------------------");
+
+    res = detect_classic_static_nonce();
+    if (res == NONCE_STATIC)
+        PrintAndLogEx(SUCCESS, "Static nonce: " _YELLOW_("yes"));
+
+    if (res == NONCE_FAIL && verbose)
+        PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("read failed"));
+
+    if (res == NONCE_NORMAL) {
+        // not static
+        res = detect_classic_prng();
+        if (res == 1)
+            PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
+        else if (res == 0)
+            PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
+        else
+            PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
+
+
+        // detect static encrypted nonce
+        if (keyType != 0xff) {
+
+        }
+
+        if (do_nack_test)
+            detect_classic_nackbug(verbose);
+    }
 
     uint8_t signature[32] = {0};
     res = read_mfc_ev1_signature(signature);
@@ -8949,7 +8953,6 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS)
         return PM3_EFAILED;
 
-    PrintAndLogEx(NORMAL, "done...");
     return PM3_SUCCESS;
 }
 
