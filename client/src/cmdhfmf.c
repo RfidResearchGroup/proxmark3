@@ -8884,6 +8884,9 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         PrintAndLogEx(INFO, "<none>");
 
     PrintAndLogEx(INFO, "--- " _CYAN_("Keys Information") "---------------------");
+    uint8_t key[MIFARE_KEY_SIZE] = {0};
+    uint8_t keyType = 0xff;
+
     int sectorsCnt = 1;
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
@@ -8899,8 +8902,30 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         return PM3_EMALLOC;
     }
     res = mfCheckKeys_fast(sectorsCnt, true, true, 1, keycnt, keyBlock, e_sector, false);
+    if (res == PM3_SUCCESS) {
+        uint8_t blockdata[MFBLOCK_SIZE] = {0};
 
-    PrintAndLogEx(FAILED, "res:  %d, %d %d", res, e_sector[0].foundKey[0], e_sector[0].foundKey[1]);
+        if (e_sector[0].foundKey[0]) {
+            PrintAndLogEx(SUCCESS, "Sector 0 key A... %12llx", e_sector[0].Key[0]);
+
+            num_to_bytes(e_sector[0].Key[0], MIFARE_KEY_SIZE, key);
+            if (mfReadBlock(0, MF_KEY_A, key, blockdata) == PM3_SUCCESS)
+                keyType = MF_KEY_A;
+        }
+
+        if (e_sector[0].foundKey[1]) {
+            PrintAndLogEx(SUCCESS, "Sector 0 key B... %12llx", e_sector[0].Key[1]);
+
+            if (keyType == 0xff) {
+                num_to_bytes(e_sector[0].Key[1], MIFARE_KEY_SIZE, key);
+                if (mfReadBlock(0, MF_KEY_B, key, blockdata) == PM3_SUCCESS)
+                    keyType = MF_KEY_B;
+            }
+        }
+
+        if (keyType != 0xff)
+            PrintAndLogEx(SUCCESS, "Block 0 ......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
+    }
 
     free(keyBlock);
     free(e_sector);
