@@ -8923,7 +8923,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         }
 
         if (keyType != 0xff)
-            PrintAndLogEx(SUCCESS, "Block 0 ......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
+            PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
     }
 
     free(keyBlock);
