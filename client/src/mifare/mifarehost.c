@@ -270,16 +270,19 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         foo = bytes_to_num(resp.data.asBytes + 480, 8);
         bar = (resp.data.asBytes[489]  << 8 | resp.data.asBytes[488]);
 
-        for (uint8_t i = 0; i < 64; i++)
+        for (uint8_t i = 0; i < 64; i++) {
             arr[i] = (foo >> i) & 0x1;
+        }
 
-        for (uint8_t i = 0; i < 16; i++)
+        for (uint8_t i = 0; i < 16; i++) {
             arr[i + 64] = (bar >> i) & 0x1;
+        }
 
         // initialize storage for found keys
         icesector_t *tmp = calloc(sectorsCnt, sizeof(icesector_t));
-        if (tmp == NULL)
+        if (tmp == NULL) {
             return PM3_EMALLOC;
+        }
 
         memcpy(tmp, resp.data.asBytes, sectorsCnt * sizeof(icesector_t));
 
@@ -297,10 +300,19 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         }
         free(tmp);
 
-        if (curr_keys == sectorsCnt * 2)
+        // if all keys where found
+        if (curr_keys == sectorsCnt * 2) {
             return PM3_SUCCESS;
-        if (lastChunk)
+        }
+
+        // if some keys was found
+        if (curr_keys > 0)  {
+            return PM3_EPARTIAL;
+        }
+
+        if (lastChunk) {
             return PM3_ESOFT;
+        }
     }
     return PM3_ESOFT;
 }
@@ -1360,7 +1372,6 @@ returns:
 3  = has encrypted nonce
 */
 int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, uint8_t *key) {
-
     clearCommandBuffer();
     uint8_t cdata[1 + 1 + MIFARE_KEY_SIZE] = {0};
     cdata[0] = block_no;
@@ -1370,9 +1381,9 @@ int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, ui
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1000)) {
 
-        if (resp.status == PM3_ESOFT)
+        if (resp.status == PM3_ESOFT) {
             return NONCE_FAIL;
-
+        }
         return resp.data.asBytes[0];
     }
     return NONCE_FAIL;

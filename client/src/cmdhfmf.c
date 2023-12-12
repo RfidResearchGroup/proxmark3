@@ -8905,6 +8905,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Keys Information"));
+
     uint8_t fkey[MIFARE_KEY_SIZE] = {0};
     uint8_t fKeyType = 0xff;
 
@@ -8924,7 +8925,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     res = mfCheckKeys_fast(sectorsCnt, true, true, 1, keycnt, keyBlock, e_sector, false, verbose);
-    if (res == PM3_SUCCESS) {
+    if (res == PM3_SUCCESS || res == PM3_EPARTIAL) {
         uint8_t blockdata[MFBLOCK_SIZE] = {0};
 
         if (e_sector[0].foundKey[0]) {
