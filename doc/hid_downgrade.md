@@ -142,8 +142,8 @@ You can verify that the low frequency ProxII is enabled by using one of the foll
 
 Below are two dump files provided for easy testing.
 
-PM3 - Download [hf-iclass-dump.json](../traces/iclass/hf-iclass-dump.json)
-F0  - Download [iclass-flipper.picopass](../traces/iclass/iclass-flipper.picopass)
+- PM3 - Download [hf-iclass-dump.json](../traces/iclass/hf-iclass-dump.json)
+- F0  - Download [iclass-flipper.picopass](../traces/iclass/iclass-flipper.picopass)
 
 
 How to restore the dump files on each device.
@@ -187,7 +187,7 @@ drop iclass-flipper.picopass file here and simulate on Flipper
 3. Start Omnikey workbench
 4. Switch reader mode to CCID mode
 5. Go to reader upload tab 
-6. Use the "load file" function and load the `encoder.cfg` [config file](https://github.com/kitsunehunter/proxmark3/blob/master/traces/iclass/encoder.cfg)
+6. Use the "load file" function and load the `encoder.cfg` [config file](../traces/iclass/encoder.cfg)
 7. Launch PM3 client, place iCLASS/Picopass card on HF antenna and read your original card on the Omnikey reader
 8. Press enter
 
