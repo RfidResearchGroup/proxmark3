@@ -1298,14 +1298,16 @@ static int CmdPCSC(const char *Cmd) {
                     uint8_t atr[50] = {0};
                     int atrLen = 0;
 
-                    if (isContact) {
+                    if (cardType == CC_CONTACT) {
                         memcpy(atr, selectedCardContact.atr, selectedCardContact.atr_len);
                         atrLen = selectedCardContact.atr_len;
-                    } else if (cardType == ISODEP_NFCA) {
-                        atsToEmulatedAtr(selectedCard14a.ats, atr, &atrLen);
-                    } else if (cardType == ISODEP_NFCB) {
-                        atqbToEmulatedAtr(selectedCard14b.atqb, selectedCard14b.cid, atr, &atrLen);
-                    }
+                    } else if (cardType == CC_CONTACTLESS) { 
+											if (contactlessProto == ISODEP_NFCA) {
+                          atsToEmulatedAtr(selectedCard14a.ats, atr, &atrLen);
+											} else if (contactlessProto == ISODEP_NFCB) {
+													atqbToEmulatedAtr(selectedCard14b.atqb, selectedCard14b.cid, atr, &atrLen);
+											}
+										}
 
                     uint8_t res[22] = {0};
                     res[1] = atrLen;
@@ -1365,7 +1367,7 @@ static int CmdPCSC(const char *Cmd) {
                 haveCard = true;
                 cardType = CC_CONTACTLESS;
                 contactlessProto = ISODEP_NFCB;
-            } else if (useContact && IfPm3Iso14443() && smart_select(false, &selectCardContact) == PM3_SUCCESS) {
+            } else if (useContact && IfPm3Iso14443() && smart_select(false, &selectedCardContact) == PM3_SUCCESS) {
                 haveCard = true;
                 cardType = CC_CONTACT;
             }
