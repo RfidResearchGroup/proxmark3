@@ -1239,9 +1239,9 @@ static int CmdPCSC(const char *Cmd) {
         arg_str0(NULL, "host", "<str>", "vpcd socket host (default: localhost)"),
         arg_str0("p", "port", "<int>", "vpcd socket port (default: 35963)"),
         arg_lit0("v", "verbose", "display APDU transactions between OS and card"),
-				arg_lit0("a", NULL, "use ISO 14443A contactless interface"),
-				arg_lit0("b", NULL, "use ISO 14443B contactless interface"),
-				arg_lit0("c", NULL, "use ISO 7816 contact interface"),
+        arg_lit0("a", NULL, "use ISO 14443A contactless interface"),
+        arg_lit0("b", NULL, "use ISO 14443B contactless interface"),
+        arg_lit0("c", NULL, "use ISO 7816 contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1277,10 +1277,10 @@ static int CmdPCSC(const char *Cmd) {
     uint8_t cmdbuf[512] = {0};
     iso14a_card_select_t selectedCard14a;
     iso14b_card_select_t selectedCard14b;
-		smart_card_atr_t selectedCardContact;
+    smart_card_atr_t selectedCardContact;
 
-		bool haveCard = false;
-		Iso7816CommandChannel cardType = CC_CONTACT;
+    bool haveCard = false;
+    Iso7816CommandChannel cardType = CC_CONTACT;
     isodep_state_t contactlessProto = ISODEP_INACTIVE;
 
     bool fieldActivated = false;
@@ -1299,9 +1299,9 @@ static int CmdPCSC(const char *Cmd) {
                     int atrLen = 0;
 
                     if (isContact) {
-											memcpy(atr, selectedCardContact.atr, selectedCardContact.atr_len);
-											atrLen = selectedCardContact.atr_len;
-										} else if (cardType == ISODEP_NFCA) {
+                        memcpy(atr, selectedCardContact.atr, selectedCardContact.atr_len);
+                        atrLen = selectedCardContact.atr_len;
+                    } else if (cardType == ISODEP_NFCA) {
                         atsToEmulatedAtr(selectedCard14a.ats, atr, &atrLen);
                     } else if (cardType == ISODEP_NFCB) {
                         atqbToEmulatedAtr(selectedCard14b.atqb, selectedCard14b.cid, atr, &atrLen);
@@ -1322,25 +1322,25 @@ static int CmdPCSC(const char *Cmd) {
                     }
 
                     if (cardType == CC_CONTACT) {
-											if (ExchangeAPDUSC(false, cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen) != PM3_SUCCESS) {
-													haveCard = false;
-													mbedtls_net_close(&netCtx);
-													continue;
-											}
-										} else if (cardType == CC_CONTACTLESS) {
-											if (contactlessProto == ISODEP_NFCA) {
-													if (ExchangeAPDU14a(cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen) != PM3_SUCCESS) {
-															haveCard = false;
-															mbedtls_net_close(&netCtx);
-															continue;
-													}
-											} else if (contactlessProto == ISODEP_NFCB) {
-													if (exchange_14b_apdu(cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen, 0))	{
-															haveCard = false;
-															mbedtls_net_close(&netCtx);
-															continue;
-													}
-											}
+                        if (ExchangeAPDUSC(false, cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen) != PM3_SUCCESS) {
+                            haveCard = false;
+                            mbedtls_net_close(&netCtx);
+                            continue;
+                        }
+                    } else if (cardType == CC_CONTACTLESS) {
+                        if (contactlessProto == ISODEP_NFCA) {
+                            if (ExchangeAPDU14a(cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen) != PM3_SUCCESS) {
+                                haveCard = false;
+                                mbedtls_net_close(&netCtx);
+                                continue;
+                            }
+                        } else if (contactlessProto == ISODEP_NFCB) {
+                            if (exchange_14b_apdu(cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen, 0))	{
+                                haveCard = false;
+                                mbedtls_net_close(&netCtx);
+                                continue;
+                            }
+                        }
                     }
 
                     fieldActivated = true;
@@ -1358,17 +1358,17 @@ static int CmdPCSC(const char *Cmd) {
             }
         } else {
             if (use14a && IfPm3Iso14443a() && SelectCard14443A_4(false, false, &selectedCard14a) == PM3_SUCCESS) {
-								haveCard = true;
+                haveCard = true;
                 cardType = CC_CONTACTLESS;
-								contactlessProto = ISODEP_NFCA;
+                contactlessProto = ISODEP_NFCA;
             } else if (use14b && IfPm3Iso14443b() && select_card_14443b_4(false, &selectedCard14b) == PM3_SUCCESS) {
-								haveCard = true;
+                haveCard = true;
                 cardType = CC_CONTACTLESS;
-								contactlessProto = ISODEP_NFCB;
+                contactlessProto = ISODEP_NFCB;
             } else if (useContact && IfPm3Iso14443() && smart_select(false, &selectCardContact) == PM3_SUCCESS) {
-								haveCard = true;
-								cardType = CC_CONTACT;
-						}
+                haveCard = true;
+                cardType = CC_CONTACT;
+            }
             if (haveCard) {
                 fieldActivated = false;
                 if (mbedtls_net_connect(&netCtx, (char *) host, (char *) port, MBEDTLS_NET_PROTO_TCP)) {

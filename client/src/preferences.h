@@ -31,7 +31,7 @@ int preferences_save(void);
 void preferences_save_callback(json_t *root);
 void preferences_load_callback(json_t *root);
 
-int getDeviceDebugLevel (uint8_t *debug_level);
-int setDeviceDebugLevel (uint8_t debug_level, bool verbose);
+int getDeviceDebugLevel(uint8_t *debug_level);
+int setDeviceDebugLevel(uint8_t debug_level, bool verbose);
 
 #endif

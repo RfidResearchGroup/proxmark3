@@ -762,7 +762,7 @@ static int setCmdDeviceDebug (const char *Cmd)
 }
 */
 
-int getDeviceDebugLevel (uint8_t *debug_level) {
+int getDeviceDebugLevel(uint8_t *debug_level) {
     if (!g_session.pm3_present)
         return PM3_EFAILED;
 
@@ -780,19 +780,19 @@ int getDeviceDebugLevel (uint8_t *debug_level) {
     return PM3_SUCCESS;
 }
 
-int setDeviceDebugLevel (uint8_t debug_level, bool verbose) {
+int setDeviceDebugLevel(uint8_t debug_level, bool verbose) {
     if (!g_session.pm3_present)
         return PM3_EFAILED;
 
     if (verbose)
-        PrintAndLogEx (INFO,"setting device debug loglevel to %u", debug_level);
+        PrintAndLogEx(INFO, "setting device debug loglevel to %u", debug_level);
 
     uint8_t cdata[] = {debug_level, verbose};
     clearCommandBuffer();
     SendCommandNG(CMD_SET_DBGMODE, cdata, sizeof(cdata));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_SET_DBGMODE, &resp, 2000) == false) {
-        PrintAndLogEx (WARNING,"failed to set device debug loglevel");
+        PrintAndLogEx(WARNING, "failed to set device debug loglevel");
         return PM3_EFAILED;
     }
 

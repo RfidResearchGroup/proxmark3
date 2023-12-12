@@ -151,20 +151,20 @@ void ModInfo(void) {
 }
 
 void RunMod(void) {
-    char *protocols[]=HF_UNISNIFF_PROTOCOLS;
+    char *protocols[] = HF_UNISNIFF_PROTOCOLS;
     uint8_t sniff_protocol, default_sniff_protocol;
     StandAloneMode();
 
     Dbprintf(_YELLOW_("HF UNISNIFF started"));
-    for (sniff_protocol=0; sniff_protocol<HF_UNISNIFF_NUM_PROTOCOLS; sniff_protocol++) {
+    for (sniff_protocol = 0; sniff_protocol < HF_UNISNIFF_NUM_PROTOCOLS; sniff_protocol++) {
         if (!strcmp(protocols[sniff_protocol], HF_UNISNIFF_PROTOCOL)) break;
     }
-    default_sniff_protocol=sniff_protocol;
+    default_sniff_protocol = sniff_protocol;
 #ifdef HF_UNISNIFF_VERBOSE_DEBUG
     Dbprintf("Compile-time configured protocol: %d", sniff_protocol);
 #endif
 #ifdef WITH_FLASH
-    uint8_t save_mode=HF_UNISNIFF_SAVE_MODE;
+    uint8_t save_mode = HF_UNISNIFF_SAVE_MODE;
     rdv40_spiffs_lazy_mount();
     // Allocate memory now for buffer for filename to save to.  Who knows what'll be
     // available after filling the trace buffer.
@@ -181,12 +181,12 @@ void RunMod(void) {
         uint32_t config_size = size_in_spiffs(HF_UNISNIFF_CONFIG);
         if (config_size > HF_UNISNIFF_CONFIG_SIZE) config_size = HF_UNISNIFF_CONFIG_SIZE;
         rdv40_spiffs_read_as_filetype(HF_UNISNIFF_CONFIG, (uint8_t *)config_buffer,
-            config_size, RDV40_SPIFFS_SAFETY_SAFE);
+                                      config_size, RDV40_SPIFFS_SAFETY_SAFE);
         // This parser is terrible but I think fairly memory efficient?  Maybe better to use JSON?
         char *x = config_buffer;
         char *y = x;
         // strip out all the whitespace and Windows line-endings
-    	do {
+        do {
             while (*y == 0x20 || *y == 0x09 || *y == 0x0D) {
                 ++y;
             }
@@ -197,10 +197,10 @@ void RunMod(void) {
             char *tag = strtok(config_buffer, "=");
             char *value = strtok(NULL, "\n");
             if (tag != NULL && value != NULL) {
-                if (!strcmp(tag,"protocol")) {
+                if (!strcmp(tag, "protocol")) {
                     // If we got a selection here, override compile-time selection
                     uint8_t conf_protocol;
-                    for (conf_protocol=0; conf_protocol<HF_UNISNIFF_NUM_PROTOCOLS; conf_protocol++) {
+                    for (conf_protocol = 0; conf_protocol < HF_UNISNIFF_NUM_PROTOCOLS; conf_protocol++) {
                         if (!strcmp(protocols[conf_protocol], value)) {
                             sniff_protocol = conf_protocol;
                             break;
@@ -209,8 +209,8 @@ void RunMod(void) {
 #ifdef HF_UNISNIFF_VERBOSE_DEBUG
                     Dbprintf("Run-time configured protocol: %d", conf_protocol);
 #endif
-                } else if (!strcmp(tag,"save")) {
-                    if (!strcmp(value,"append")) save_mode = HF_UNISNIFF_SAVE_MODE_APPEND;
+                } else if (!strcmp(tag, "save")) {
+                    if (!strcmp(value, "append")) save_mode = HF_UNISNIFF_SAVE_MODE_APPEND;
                     else if (!strcmp(value, "none")) save_mode = HF_UNISNIFF_SAVE_MODE_NONE;
                     else save_mode = HF_UNISNIFF_SAVE_MODE_NEW;
 #ifdef HF_UNISNIFF_VERBOSE_DEBUG
@@ -243,13 +243,13 @@ void RunMod(void) {
             int button_pressed = BUTTON_HELD(1000);
             if (button_pressed == BUTTON_SINGLE_CLICK) {
                 sniff_protocol++;
-                if (sniff_protocol >= HF_UNISNIFF_PROTO_USER) sniff_protocol=0;
+                if (sniff_protocol >= HF_UNISNIFF_PROTO_USER) sniff_protocol = 0;
                 SpinDelay(100);
                 Dbprintf("Selected protocol: '%s'", protocols[sniff_protocol]);
             } else if (button_pressed == BUTTON_HOLD) {
                 Dbprintf("Executing protocol %s", protocols[sniff_protocol]);
-                for (uint8_t i=0; i<4; i++) {
-                    LED(15,0);
+                for (uint8_t i = 0; i < 4; i++) {
+                    LED(15, 0);
                     SpinDelay(100);
                     LEDsoff();
                     SpinDelay(100);
@@ -262,7 +262,7 @@ void RunMod(void) {
         }
     }
 
-    switch(sniff_protocol) {
+    switch (sniff_protocol) {
         case HF_UNISNIFF_PROTO_14a:
             SniffIso14443a(0);
             break;
@@ -300,11 +300,11 @@ void RunMod(void) {
 
         sprintf(filename, "%s_%s%s", HF_UNISNIFF_LOGFILE, protocols[sniff_protocol], HF_UNISNIFF_LOGEXT);
         if (save_mode == HF_UNISNIFF_SAVE_MODE_NEW) {
-            uint16_t file_index=0;
+            uint16_t file_index = 0;
             while (exists_in_spiffs(filename)) {
                 if (file_index++ == 1000) break;
                 sprintf(filename, "%s_%s-%03d%s", HF_UNISNIFF_LOGFILE, protocols[sniff_protocol],
-                 file_index, HF_UNISNIFF_LOGEXT);
+                        file_index, HF_UNISNIFF_LOGEXT);
             }
             if (file_index > 999) {
                 Dbprintf("[!] Too many files!  Trace not saved.  Clean up your SPIFFS.");

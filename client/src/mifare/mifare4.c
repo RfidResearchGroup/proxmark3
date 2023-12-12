@@ -258,7 +258,7 @@ int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool acti
     memmove(&raw[16], &RndB[1], 16);
 
     aes_encode(NULL, key, raw, &cmd2[1], 32);
-    if (verbose){
+    if (verbose) {
         PrintAndLogEx(INFO, ">phase2: %s", sprint_hex(cmd2, 33));
     }
     res = ExchangeRAW14a(cmd2, sizeof(cmd2), false, true, data, sizeof(data), &datalen, silentMode);
@@ -374,16 +374,16 @@ int MFPCommitPerso(bool activateField, bool leaveSignalON, uint8_t *dataout, int
 
 int MFPReadBlock(mf4Session_t *mf4session, bool plain, bool nomaccmd, bool nomacres, uint8_t blockNum, uint8_t blockCount, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
     int cmdb = 0x31;
-    if (nomacres){cmdb = cmdb ^ 0x01;} // If we do not want MAC in reply, remove 0x01
-    if (plain){cmdb = cmdb ^ 0x02;}  // If we do not need an encrypted transmission, add 0x02
-    if (nomaccmd){cmdb = cmdb ^ 0x04;} // If we do not want to send a MAC, remove 0x04
+    if (nomacres) {cmdb = cmdb ^ 0x01;} // If we do not want MAC in reply, remove 0x01
+    if (plain) {cmdb = cmdb ^ 0x02;} // If we do not need an encrypted transmission, add 0x02
+    if (nomaccmd) {cmdb = cmdb ^ 0x04;} // If we do not want to send a MAC, remove 0x04
     uint8_t rcmd1[4] = {cmdb, blockNum, 0x00, blockCount};
     uint8_t maccmddat[8] = {0};
     uint8_t rcmd[nomaccmd ? 4 : 12];
     if (!nomaccmd && mf4session)
         CalculateMAC(mf4session, mtypReadCmd, blockNum, blockCount, rcmd1, 4, &maccmddat[0], g_verbose_mode);
     memmove(rcmd, rcmd1, 4);
-    if (!nomaccmd){memmove(&rcmd[4], maccmddat, 8);}
+    if (!nomaccmd) {memmove(&rcmd[4], maccmddat, 8);}
     int res = intExchangeRAW14aPlus(rcmd, sizeof(rcmd), activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen);
     if (res)
         return res;
@@ -397,8 +397,8 @@ int MFPReadBlock(mf4Session_t *mf4session, bool plain, bool nomaccmd, bool nomac
 
 int MFPWriteBlock(mf4Session_t *mf4session, bool plain, bool nomacres, uint8_t blockNum, uint8_t blockHdr, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
     int cmdb = 0xA1;
-    if (nomacres){cmdb = cmdb ^ 0x01;} // If we do not want MAC in reply, remove 0x01
-    if (plain){cmdb = cmdb ^ 0x02;}  // If we do not need an encrypted transmission, add 0x02
+    if (nomacres) {cmdb = cmdb ^ 0x01;} // If we do not want MAC in reply, remove 0x01
+    if (plain) {cmdb = cmdb ^ 0x02;} // If we do not need an encrypted transmission, add 0x02
     uint8_t rcmd[1 + 2 + 16 + 8] = {cmdb, blockNum, blockHdr};
     memmove(&rcmd[3], data, 16);
     if (mf4session)

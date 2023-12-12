@@ -681,28 +681,28 @@ static int CmdHFMFPAuth(const char *Cmd) {
 
     return MifareAuth4(NULL, keyn, key, true, false, true, verbose, false);
 }
-static int data_crypt(mf4Session_t *mf4session, uint8_t *dati, uint8_t *dato, bool rev){
-uint8_t kenc[16];
-        memcpy(kenc, mf4session->Kenc, 16);
-        uint8_t ti[4];
-        memcpy(ti, mf4session->TI, 4);
-        uint8_t ctr[1];
-        uint8_t IV[16] ={0,0,0x00,0x00,0x00,0,0x00,0x00,0x00,0};
-        if (rev){
-        	ctr[0] = (uint8_t)(mf4session->R_Ctr & 0xff);
-        	for (int i = 0; i<9; i+=4){memcpy(&IV[i], ctr, 1);}
-        	memcpy(&IV[12], ti, 4); // For reads TI is LS
-        } else {
-        	ctr[0] = (uint8_t)(mf4session->W_Ctr & 0xff);
-        	for (int i = 3; i<16; i+=4){memcpy(&IV[i], ctr, 1);}
-        	memcpy(&IV[0], ti, 4); // For writes TI is MS
-        }
-        if (rev){
-            aes_decode(IV, kenc, dati, dato, 16);
-        } else {
-            aes_encode(IV, kenc, dati, dato, 16);
-        }
-        return 0;
+static int data_crypt(mf4Session_t *mf4session, uint8_t *dati, uint8_t *dato, bool rev) {
+    uint8_t kenc[16];
+    memcpy(kenc, mf4session->Kenc, 16);
+    uint8_t ti[4];
+    memcpy(ti, mf4session->TI, 4);
+    uint8_t ctr[1];
+    uint8_t IV[16] = {0, 0, 0x00, 0x00, 0x00, 0, 0x00, 0x00, 0x00, 0};
+    if (rev) {
+        ctr[0] = (uint8_t)(mf4session->R_Ctr & 0xff);
+        for (int i = 0; i < 9; i += 4) {memcpy(&IV[i], ctr, 1);}
+        memcpy(&IV[12], ti, 4); // For reads TI is LS
+    } else {
+        ctr[0] = (uint8_t)(mf4session->W_Ctr & 0xff);
+        for (int i = 3; i < 16; i += 4) {memcpy(&IV[i], ctr, 1);}
+        memcpy(&IV[0], ti, 4); // For writes TI is MS
+    }
+    if (rev) {
+        aes_decode(IV, kenc, dati, dato, 16);
+    } else {
+        aes_encode(IV, kenc, dati, dato, 16);
+    }
+    return 0;
 }
 static int CmdHFMFPRdbl(const char *Cmd) {
     CLIParserContext *ctx;
@@ -905,7 +905,7 @@ static int CmdHFMFPRdsc(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        if (datalen != 1 + MFBLOCK_SIZE + (nomacres? 0 : 8) + 2) {
+        if (datalen != 1 + MFBLOCK_SIZE + (nomacres ? 0 : 8) + 2) {
             PrintAndLogEx(ERR, "Error return length:%d", datalen);
             DropField();
             return PM3_ESOFT;
@@ -1097,14 +1097,14 @@ static int CmdHFMFPChKey(const char *Cmd) {
     }
     mf4Session_t mf4session;
     keyn[0] = ki[0];
-    if (ki[0] == 0x40){ // Only if we are working with sector keys
-    	if (usekeyb){
-    		keyn[1] = (ki[1] % 2 ==0) ? ki[1] + 1 : ki[1]; // If we change using key B, check if KI is key A
-    	} else {
-    		keyn[1] = (ki[1] % 2 ==0) ? ki[1] : ki[1] -1; // If we change using key A, check if KI is key A
-    	}
+    if (ki[0] == 0x40) { // Only if we are working with sector keys
+        if (usekeyb) {
+            keyn[1] = (ki[1] % 2 == 0) ? ki[1] + 1 : ki[1]; // If we change using key B, check if KI is key A
+        } else {
+            keyn[1] = (ki[1] % 2 == 0) ? ki[1] : ki[1] - 1; // If we change using key A, check if KI is key A
+        }
     } else {keyn[1] = ki[1];}
-    if (verbose){
+    if (verbose) {
         PrintAndLogEx(INFO, "--key index:", sprint_hex(keyn, 2));
     }
     int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);
@@ -1216,7 +1216,7 @@ static int CmdHFMFPChConf(const char *Cmd) {
     mf4Session_t mf4session;
     keyn[0] = 0x90;
     keyn[1] = usecck ? 0x01 : 0x00;
-    if (verbose){
+    if (verbose) {
         PrintAndLogEx(INFO, "--key index:", sprint_hex(keyn, 2));
     }
     int res = MifareAuth4(&mf4session, keyn, key, true, true, true, verbose, false);

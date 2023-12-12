@@ -329,8 +329,8 @@ int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t 
 
     if (keytype == 0 && sector == 2) {
         *key = 0xFFFFFFFFFFFF;
-    return PM3_SUCCESS;
-}
+        return PM3_SUCCESS;
+    }
 
     if (keytype == 0 && sector == 1) {
         *key = 0x2a2c13cc242a;

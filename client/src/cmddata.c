@@ -3396,7 +3396,7 @@ static int CmdNumCon(const char *Cmd) {
                 continue;
             }
 
-            switch(i) {
+            switch (i) {
                 case 0:
 //                    MBEDTLS_MPI_CHK(mbedtls_mpi_inv_mod(&N, &N, &base));
                     break;
