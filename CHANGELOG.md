@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change `notes on downgrade attacks` - reworked the original text follow repo style (@iceman1001)
  - Added `hf mf info` command and static encrypted nonce detection (@merlokk)
  - Added Saflok KDF - generate MFC keys (@h1kari)
  - Changed `lf fdx demod` - now raw bytes shows all data (@iceman1001)
