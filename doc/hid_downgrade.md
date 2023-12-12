@@ -241,6 +241,7 @@ IT IS ABSOLUTELY NECESSARY THAT THE READER AND ESPKEY SHARE THE SAME GROUND EVEN
 ^[Top](#top)
 
 OBS!  Downgrading to a T5577 will only work if reader has low frequency (125 kHz) / Prox II enabled.
+A good indicator to look out for is the "MultiClass" sticker on the reader.
 
 ## Using Proxmark3
 ^[Top](#top)
