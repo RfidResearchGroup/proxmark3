@@ -186,10 +186,10 @@ drop iclass-flipper.picopass file here and simulate on Flipper
 2. Plug in Omnikey reader
 3. Start Omnikey workbench
 4. Switch reader mode to CCID mode
-5. Go to card diagnostic tab and place card on reader
-6. Copy the raw PACS binary
-7. Launch PM3 client, place iCLASS/Picopass card on HF antenna, and use following command to write your credential
-    `hf iclass encode --bin <COPIED BINARY> --ki 0` 
+5. Go to reader upload tab 
+6. Use the "load file" function and load the `encoder.cfg` [config file](https://github.com/kitsunehunter/proxmark3/blob/master/traces/iclass/encoder.cfg)
+7. Launch PM3 client, place iCLASS/Picopass card on HF antenna and read your original card on the Omnikey reader
+8. Press enter
 
 ## Using Flipper Zero with NARD
 ^[Top](#top)
@@ -234,8 +234,7 @@ IT IS ABSOLUTELY NECESSARY THAT THE READER AND ESPKEY SHARE THE SAME GROUND EVEN
 3. Connect to the wifi network the ESPKEY and navigate to `192.168.1.1` for the interface
 4. Scan your credential on the reader
 5. Open `log.txt` and copy the binary string WITHOUT the preamble
-6. Use the above instructions and encode the binary wiegand data to a iCLASS card using PM3
-
+6. Use `hf iclass encode --bin <COPIED BINARY STRING> --ki 0` to encode the PACS payload to a iClass legacy card
 
 
 # Write ProxII credential to a T5577
