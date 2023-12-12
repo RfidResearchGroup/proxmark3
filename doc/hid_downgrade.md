@@ -1,12 +1,16 @@
-# Notes on iCLASS SE / SEOS downgrade attacks
+# Notes on downgrade attacks
 <a id="top"></a>
 
+Author [@kitsunehunter](https://gist.github.com/kitsunehunter) 2023
+
 This is a reworked text. You find the [original text here](https://gist.github.com/kitsunehunter/c75294bdbd0533eca298d122c39fb1bd)
+
+The collective notes on iCLASS SR / iCLASS SE / SEOS downgrade attacks.
 
 This document targets both Proxmark3 and Flipper Zero devices. 
 
 # Table of Contents
-- [Notes on iCLASS SE / SEOS downgrade attacks](#notes-on-iclass-se--seos-downgrade-attacks)
+- [Notes on downgrade attacks](#notes-on-downgrade-attacks)
 - [Table of Contents](#table-of-contents)
 - [Terminology](#terminology)
 - [Useful links](#useful-links)
@@ -54,11 +58,13 @@ This document targets both Proxmark3 and Flipper Zero devices.
 ^[Top](#top)
 
 [HID iCLASS Credentials tech primer](https://forum.dangerousthings.com/t/types-of-hid-iclass-cards/12243)
+
 [What does all data on my card mean?!](https://www.hidglobal.com/doclib/files/resource_files/an0109_a.2_credential_id_markings_application_note.pdf)
 
 
 # Downgrade concept
 ^[Top](#top)
+
 There is not much you can do with just a card and a Proxmark3 or Flipper Zero.  There is no card-only attack vectors.  There are however reader/card vectors but that is outside the scope of this note.
 
 Your iCLASS SR/iCLASS SE/SEOS credential has a SIO (Secure Identity Object) that stores your access control information also known as the PACS payload. We will need to extract the SIO with one of the methods outlined below and write that data onto a Picopass or a T5577.
@@ -254,5 +260,3 @@ Below is example syntax, you will use your specific card information gathered in
 2. select the ``save RFID`` option 
 3. Use the 125kHz RFID app and write the data to a T5577
 
-
-Author [@kitsunehunter](https://gist.github.com/kitsunehunter) 2023
