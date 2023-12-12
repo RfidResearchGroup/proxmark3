@@ -216,7 +216,7 @@ int CmdHFTune(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf tune",
                   "Continuously measure HF antenna tuning.\n"
-                  "Press button or <Enter> to interrupt.",
+                  "Press pm3 button or <Enter> to interrupt.",
                   "hf tune\n"
                   "hf tune --mix"
                  );
@@ -249,7 +249,8 @@ int CmdHFTune(const char *Cmd) {
     if (is_value)
         style = STYLE_VALUE;
 
-    PrintAndLogEx(INFO, "Measuring HF antenna, click " _GREEN_("pm3 button") " or press " _GREEN_("Enter") " to exit");
+    PrintAndLogEx(INFO, "Measuring HF antenna");
+    PrintAndLogEx(INFO, "click " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to exit");
     PacketResponseNG resp;
     clearCommandBuffer();
 

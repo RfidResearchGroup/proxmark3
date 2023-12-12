@@ -1677,7 +1677,7 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    int bs_len = binstring2binarray(ng.data, (char *)bin, bin_len);
+    int bs_len = binstr_2_binarray(ng.data, (char *)bin, bin_len);
     if (bs_len == 0) {
         return PM3_EINVARG;
     }

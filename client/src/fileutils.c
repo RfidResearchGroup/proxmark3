@@ -986,7 +986,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
         if (line[0] == '#')
             continue;
 
-        strcleanrn(line, sizeof(line));
+        str_cleanrn(line, sizeof(line));
 
         res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
         if (res == 0) {
@@ -1059,7 +1059,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
         if (line[0] == '#')
             continue;
 
-        strcleanrn(line, sizeof(line));
+        str_cleanrn(line, sizeof(line));
         str_lower(line);
 
         if (str_startswith(line, "uid:")) {
@@ -1306,7 +1306,7 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
         if (line[0] == '+')
             continue;
 
-        strcleanrn(line, sizeof(line));
+        str_cleanrn(line, sizeof(line));
 
         res = param_gethex_to_eol(line, 0, buf, sizeof(buf), &hexlen);
         if (res == 0) {
@@ -2261,7 +2261,7 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
             return PM3_EFILE;
         }
 
-        strcleanrn(line, sizeof(line));
+        str_cleanrn(line, sizeof(line));
         str_lower(line);
 
         if (str_startswith(line, "device type: ntag")) {

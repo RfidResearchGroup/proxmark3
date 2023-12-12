@@ -905,7 +905,7 @@ void Plot::MoveTo(uint32_t pos) {
     if (g_GraphTraceLen == 0) return;
     g_GraphStart = pos;
 
-    QObject* signalSender = sender();
+    QObject *signalSender = sender();
     if (signalSender != nullptr && signalSender != this) {
         // Update if it's triggered by a signal from other object
         this->update();

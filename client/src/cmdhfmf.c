@@ -39,6 +39,7 @@
 #include "cmdhw.h"                 // set_fpga_mode
 #include "loclass/cipherutils.h"   // BitstreamOut_t
 #include "proxendian.h"
+#include "preferences.h"
 #include "mifare/gen4.h"
 
 static int CmdHelp(const char *Cmd);
@@ -66,7 +67,8 @@ int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, in
     // ref:  MIFARE Classic EV1 Originality Signature Validation
 #define PUBLIC_MFCEV1_ECDA_KEYLEN 33
     const ecdsa_publickey_t nxp_mfc_public_keys[] = {
-        {"NXP Mifare Classic MFC1C14_x", "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
+        {"NXP MIFARE Classic MFC1C14_x", "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
+        {"Manufacturer MIFARE Classic / QL88", "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
     };
 
     uint8_t i;
@@ -1765,7 +1767,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
         }
 
         PrintAndLogEx(SUCCESS, "Testing known keys. Sector count "_YELLOW_("%d"), SectorsCnt);
-        int res = mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, use_flashmemory);
+        int res = mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, use_flashmemory, false);
         if (res == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "Fast check found all keys");
             goto jumptoend;
@@ -1807,7 +1809,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                             e_sector[sectorNo].foundKey[trgKeyType] = 1;
                             e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
 
-                            mfCheckKeys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false);
+                            mfCheckKeys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false, false);
                             continue;
                         default :
                             PrintAndLogEx(ERR, "Unknown error\n");
@@ -2021,7 +2023,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Testing known keys. Sector count "_YELLOW_("%d"), SectorsCnt);
-    int res = mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, false);
+    int res = mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, false, false);
     if (res == PM3_SUCCESS) {
         // all keys found
         PrintAndLogEx(SUCCESS, "Fast check found all keys");
@@ -2054,7 +2056,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
                         e_sector[sectorNo].foundKey[trgKeyType] = 1;
                         e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
 
-                        // mfCheckKeys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false);
+                        // mfCheckKeys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false, false);
                         continue;
                     default :
                         PrintAndLogEx(ERR, "unknown error.\n");
@@ -2711,7 +2713,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                     lastChunk = true;
                 }
 
-                res = mfCheckKeys_fast(sector_cnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false);
+                res = mfCheckKeys_fast(sector_cnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false, verbose);
                 if (firstChunk) {
                     firstChunk = false;
                 }
@@ -2832,7 +2834,7 @@ noValidKeyFound:
 
                 // Try the found keys are reused
                 if (bytes_to_num(tmp_key, MIFARE_KEY_SIZE) != 0) {
-                    // <!> The fast check --> mfCheckKeys_fast(sector_cnt, true, true, 2, 1, tmp_key, e_sector, false);
+                    // <!> The fast check --> mfCheckKeys_fast(sector_cnt, true, true, 2, 1, tmp_key, e_sector, false, verbose);
                     // <!> Returns false keys, so we just stick to the slower mfchk.
                     for (int i = 0; i < sector_cnt; i++) {
                         for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
@@ -3257,7 +3259,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
     if (use_flashmemory) {
         PrintAndLogEx(SUCCESS, "Using dictionary in flash memory");
-        mfCheckKeys_fast(sectorsCnt, true, true, 1, 0, keyBlock, e_sector, use_flashmemory);
+        mfCheckKeys_fast(sectorsCnt, true, true, 1, 0, keyBlock, e_sector, use_flashmemory, false);
     } else {
 
         // strategys. 1= deep first on sector 0 AB,  2= width first on all sectors
@@ -3278,7 +3280,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                 if (size == keycnt - i)
                     lastChunk = true;
 
-                int res = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false);
+                int res = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false, false);
 
                 if (firstChunk)
                     firstChunk = false;
@@ -3871,7 +3873,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
     PacketResponseNG resp;
 
     if (flags & FLAG_INTERACTIVE) {
-        PrintAndLogEx(INFO, "Press pm3-button or send another cmd to abort simulation");
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or send another cmd to abort simulation");
 
         sector_t *k_sector = NULL;
 
@@ -3889,12 +3891,13 @@ static int CmdHF14AMfSim(const char *Cmd) {
             nonces_t data[1];
             memcpy(data, resp.data.asBytes, sizeof(data));
             readerAttack(k_sector, k_sectors_cnt, data[0], setEmulatorMem, verbose);
+            break;
         }
         //iceman:  readerAttack call frees k_sector.  this call below is useless.
         showSectorTable(k_sector, k_sectors_cnt);
 
     } else {
-        PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
     }
     return PM3_SUCCESS;
 }
@@ -4248,7 +4251,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
     // ICEMAN:  bug.  if device has been using ICLASS commands,
     // the device needs to load the HF fpga image. It takes 1.5 second.
-    set_fpga_mode(2);
+    set_fpga_mode(FPGA_BITSTREAM_HF);
 
     // use RDV4 spiffs
     if (use_spiffs && IfPm3Flash() == false) {
@@ -8005,7 +8008,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
 
     // ICEMAN:  bug.  if device has been using ICLASS commands,
     // the device needs to load the HF fpga image. It takes 1.5 second.
-    set_fpga_mode(2);
+    set_fpga_mode(FPGA_BITSTREAM_HF);
 
     // validations
     if (pwd_len != 4 && pwd_len != 0) {
@@ -8793,10 +8796,230 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf info",
+                  "Information and check vulnerabilities in a MIFARE Classic card\n"
+                  "Some cards in order to extract information you need to specify key\n"
+                  "and/or specific keys in the copmmand line",
+                  "hf mf info\n"
+                  "hf mf info -k FFFFFFFFFFFF -n -v\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "blk", "<dec>", "block number"),
+        arg_lit0("a", NULL, "input key type is key A (def)"),
+        arg_lit0("b", NULL, "input key type is key B"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_lit0("n", "nack", "do nack test"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int blockn = arg_get_int_def(ctx, 1, 0);
+
+    uint8_t keytype = MF_KEY_A;
+    if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 3)) {
+        keytype = MF_KEY_B;
+    }
+
+    int keylen = 0;
+    uint8_t key[MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    CLIGetHexWithReturn(ctx, 4, key, &keylen);
+
+    bool do_nack_test = arg_get_lit(ctx, 5);
+    bool verbose = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
+    if (keylen != 0 && keylen != MIFARE_KEY_SIZE) {
+        PrintAndLogEx(ERR, "Key length must be %u bytes", MIFARE_KEY_SIZE);
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        return 0;
+    }
+
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    /*
+        0: couldn't read
+        1: OK, with ATS
+        2: OK, no ATS
+        3: proprietary Anticollision
+    */
+    uint64_t select_status = resp.oldarg[0];
+
+    if (select_status == 0) {
+        PrintAndLogEx(DEBUG, "iso14443a card select failed");
+        return select_status;
+    }
+
+    if (select_status == 3) {
+        PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
+
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
+        }
+
+        return select_status;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") " ---------------------");
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+    PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
+    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+
+    if (setDeviceDebugLevel(verbose ? DBG_INFO : DBG_NONE, false) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
+    uint8_t signature[32] = {0};
+    int res = read_mfc_ev1_signature(signature);
+    if (res == PM3_SUCCESS) {
+        mfc_ev1_print_signature(card.uid, card.uidlen, signature, sizeof(signature));
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Magic Tag Information"));
+    if (detect_mf_magic(true) == 0) {
+        PrintAndLogEx(INFO, "<N/A>");
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Keys Information"));
+
+    uint8_t fkey[MIFARE_KEY_SIZE] = {0};
+    uint8_t fKeyType = 0xff;
+
+    int sectorsCnt = 1;
+    uint8_t *keyBlock = NULL;
+    uint32_t keycnt = 0;
+    res = mfLoadKeys(&keyBlock, &keycnt, NULL, 0, NULL, 0);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    // create/initialize key storage structure
+    sector_t *e_sector = NULL;
+    if (initSectorTable(&e_sector, sectorsCnt) != PM3_SUCCESS) {
+        free(keyBlock);
+        return PM3_EMALLOC;
+    }
+
+    res = mfCheckKeys_fast(sectorsCnt, true, true, 1, keycnt, keyBlock, e_sector, false, verbose);
+    if (res == PM3_SUCCESS || res == PM3_EPARTIAL) {
+        uint8_t blockdata[MFBLOCK_SIZE] = {0};
+
+        if (e_sector[0].foundKey[0]) {
+            PrintAndLogEx(SUCCESS, "Sector 0 key A... " _GREEN_("%12" PRIX64), e_sector[0].Key[0]);
+
+            num_to_bytes(e_sector[0].Key[MF_KEY_A], MIFARE_KEY_SIZE, fkey);
+            if (mfReadBlock(0, MF_KEY_A, key, blockdata) == PM3_SUCCESS) {
+                fKeyType = MF_KEY_A;
+            }
+        }
+
+        if (e_sector[0].foundKey[1]) {
+            PrintAndLogEx(SUCCESS, "Sector 0 key B... " _GREEN_("%12" PRIX64), e_sector[0].Key[1]);
+
+            if (fKeyType == 0xFF) {
+                num_to_bytes(e_sector[0].Key[MF_KEY_B], MIFARE_KEY_SIZE, fkey);
+                if (mfReadBlock(0, MF_KEY_B, key, blockdata) == PM3_SUCCESS) {
+                    fKeyType = MF_KEY_B;
+                }
+            }
+        }
+
+        if (fKeyType != 0xFF) {
+            PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
+        }
+    } else {
+        PrintAndLogEx(INFO, "<N/A>");
+    }
+
+    free(keyBlock);
+    free(e_sector);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("RNG Information"));
+
+    res = detect_classic_static_nonce();
+    if (res == NONCE_STATIC) {
+        PrintAndLogEx(SUCCESS, "Static nonce... " _YELLOW_("yes"));
+    }
+
+    if (res == NONCE_FAIL && verbose) {
+        PrintAndLogEx(SUCCESS, "Static nonce... " _RED_("read failed"));
+    }
+
+    if (res == NONCE_NORMAL) {
+        // not static
+        res = detect_classic_prng();
+        if (res == 1)
+            PrintAndLogEx(SUCCESS, "Prng... " _GREEN_("weak"));
+        else if (res == 0)
+            PrintAndLogEx(SUCCESS, "Prng... " _YELLOW_("hard"));
+        else
+            PrintAndLogEx(FAILED, "Prng... " _RED_("fail"));
+
+
+        // detect static encrypted nonce
+        if (keylen == MIFARE_KEY_SIZE) {
+            res = detect_classic_static_encrypted_nonce(blockn, keytype, key);
+            if (res == NONCE_STATIC) {
+                PrintAndLogEx(SUCCESS, "Static nested nonce... " _YELLOW_("yes"));
+                fKeyType = 0xFF; // dont detect twice
+            }
+            if (res == NONCE_STATIC_ENC) {
+                PrintAndLogEx(SUCCESS, "Static encrypted nonce... " _RED_("yes"));
+                fKeyType = 0xFF; // dont detect twice
+            }
+        }
+
+        if (fKeyType != 0xFF) {
+            res = detect_classic_static_encrypted_nonce(0, fKeyType, fkey);
+            if (res == NONCE_STATIC)
+                PrintAndLogEx(SUCCESS, "Static nested nonce... " _YELLOW_("yes"));
+            if (res == NONCE_STATIC_ENC)
+                PrintAndLogEx(SUCCESS, "Static encrypted nonce... " _RED_("yes"));
+        }
+
+        if (do_nack_test) {
+            detect_classic_nackbug(verbose);
+        }
+    }
+
+    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
     {"list",        CmdHF14AMfList,         AlwaysAvailable, "List MIFARE history"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("recovery") " -----------------------"},
+    {"info",        CmdHF14AMfInfo,         IfPm3Iso14443a,  "mfc card Info"},
     {"darkside",    CmdHF14AMfDarkside,     IfPm3Iso14443a,  "Darkside attack"},
     {"nested",      CmdHF14AMfNested,       IfPm3Iso14443a,  "Nested attack"},
     {"hardnested",  CmdHF14AMfNestedHard,   AlwaysAvailable, "Nested attack for hardened MIFARE Classic cards"},

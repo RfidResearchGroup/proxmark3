@@ -1271,7 +1271,8 @@ static int CmdPCSC(const char *Cmd) {
     mbedtls_net_context netCtx;
     mbedtls_net_init(&netCtx);
 
-    PrintAndLogEx(INFO, "Relaying pm3 to host OS pcsc daemon. Press " _GREEN_("Enter") " to exit");
+    PrintAndLogEx(INFO, "Relaying PM3 to host OS pcsc daemon");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
     uint8_t cmdbuf[512] = {0};
     iso14a_card_select_t selectedCard14a;
@@ -1432,7 +1433,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
     int len = smart_responseEx(dataout, maxdataoutlen, verbose);
     if (len < 0) {
         free(payload);
-        return 1;
+        return PM3_ESOFT;
     }
 
     // retry
@@ -1447,11 +1448,15 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
         SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + 5);
         datain[4] = 0;
         len = smart_responseEx(dataout, maxdataoutlen, verbose);
+        if (len < 0) {
+            free(payload);
+            return PM3_ESOFT;
+        }
     }
 
     free(payload);
     *dataoutlen = len;
-    return 0;
+    return PM3_SUCCESS;
 }
 
 bool smart_select(bool verbose, smart_card_atr_t *atr) {

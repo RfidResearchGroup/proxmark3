@@ -799,7 +799,8 @@ static void PacketReceived(PacketCommandNG *packet) {
         // emulator
         case CMD_SET_DBGMODE: {
             g_dbglevel = packet->data.asBytes[0];
-            print_debug_level();
+            if (packet->length == 1 || packet->data.asBytes[1] != 0)
+                print_debug_level();
             reply_ng(CMD_SET_DBGMODE, PM3_SUCCESS, NULL, 0);
             break;
         }
@@ -851,13 +852,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_ACQ_RAW_ADC: {
-            struct p {
-                uint32_t samples : 31;
-                bool     verbose : 1;
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
-            uint32_t bits = SampleLF(payload->verbose, payload->samples, true);
-            reply_ng(CMD_LF_ACQ_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
+            lf_sample_payload_t *payload = (lf_sample_payload_t *)packet->data.asBytes;
+            if (payload->realtime) {
+                ReadLF_realtime(true);
+            } else {
+                uint32_t bits = SampleLF(payload->verbose, payload->samples, true);
+                reply_ng(CMD_LF_ACQ_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
+            }
             break;
         }
         case CMD_LF_MOD_THEN_ACQ_RAW_ADC: {
@@ -880,14 +881,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_SNIFF_RAW_ADC: {
-            struct p {
-                uint32_t samples : 31;
-                bool     verbose : 1;
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
-
-            uint32_t bits = SniffLF(payload->verbose, payload->samples, true);
-            reply_ng(CMD_LF_SNIFF_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
+            lf_sample_payload_t *payload = (lf_sample_payload_t *)packet->data.asBytes;
+            if (payload->realtime) {
+                ReadLF_realtime(false);
+            } else {
+                uint32_t bits = SniffLF(payload->verbose, payload->samples, true);
+                reply_ng(CMD_LF_SNIFF_RAW_ADC, PM3_SUCCESS, (uint8_t *)&bits, sizeof(bits));
+            }
             break;
         }
         case CMD_LF_HID_WATCH: {
@@ -1864,6 +1864,17 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_MIFARE_STATIC_NONCE: {
             MifareHasStaticNonce();
+            break;
+        }
+        case CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE: {
+            struct p {
+                uint8_t block_no;
+                uint8_t key_type;
+                uint8_t key[6];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+
+            MifareHasStaticEncryptedNonce(payload->block_no, payload->key_type, payload->key);
             break;
         }
 #endif

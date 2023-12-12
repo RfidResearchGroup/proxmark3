@@ -31,6 +31,7 @@
 #include "cmdhw.h"
 #include "cmddata.h"
 #include "commonutil.h"
+#include "preferences.h"
 #include "pm3_cmd.h"
 #include "pmflash.h"      // rdv40validation_t
 #include "cmdflashmem.h"  // get_signature..
@@ -476,14 +477,9 @@ static int CmdDbg(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_GET_DBGMODE, NULL, 0);
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_GET_DBGMODE, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "Failed to get current device debug level");
-        return PM3_ETIMEOUT;
-    }
-    uint8_t curr = resp.data.asBytes[0];
+    uint8_t curr = DBG_NONE;
+    if (getDeviceDebugLevel(&curr) != PM3_SUCCESS)
+        return PM3_EFAILED;
 
     const char *dbglvlstr;
     switch (curr) {
@@ -522,8 +518,8 @@ static int CmdDbg(const char *Cmd) {
         else if (lv4)
             dbg = 4;
 
-        clearCommandBuffer();
-        SendCommandNG(CMD_SET_DBGMODE, &dbg, sizeof(dbg));
+        if (setDeviceDebugLevel(dbg, true) != PM3_SUCCESS)
+            return PM3_EFAILED;
     }
     return PM3_SUCCESS;
 }
@@ -1105,7 +1101,7 @@ static int CmdBreak(const char *Cmd) {
 }
 
 int set_fpga_mode(uint8_t mode) {
-    if (mode < 1 || mode > 4) {
+    if (mode < FPGA_BITSTREAM_LF || mode > FPGA_BITSTREAM_HF_15) {
         return PM3_EINVARG;
     }
     uint8_t d[] = {mode};

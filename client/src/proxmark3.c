@@ -223,7 +223,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     uint16_t script_cmd_len = 0;
     if (execCommand) {
         script_cmd_len = strlen(script_cmd);
-        strcreplace(script_cmd, script_cmd_len, ';', '\0');
+        str_creplace(script_cmd, script_cmd_len, ';', '\0');
     }
     bool stdinOnPipe = !isatty(STDIN_FILENO);
     char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
@@ -312,7 +312,7 @@ check_script:
             prompt_ctx = PROXPROMPT_CTX_SCRIPTFILE;
 
             // remove linebreaks
-            strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
+            str_cleanrn(script_cmd_buf, sizeof(script_cmd_buf));
 
             cmd = str_dup(script_cmd_buf);
             if (cmd != NULL) {
@@ -354,9 +354,9 @@ check_script:
                     fromInteractive = false;
                     script_cmd = script_cmd_buf;
                     script_cmd_len = strlen(script_cmd);
-                    strcreplace(script_cmd, script_cmd_len, ';', '\0');
+                    str_creplace(script_cmd, script_cmd_len, ';', '\0');
                     // remove linebreaks
-                    strcleanrn(script_cmd, script_cmd_len);
+                    str_cleanrn(script_cmd, script_cmd_len);
                     goto check_script;
                 } else {
                     pm3line_check(check_comm);
@@ -376,9 +376,9 @@ check_script:
                         stayInCommandLoop = true;
                         fromInteractive = true;
                         script_cmd_len = strlen(script_cmd);
-                        strcreplace(script_cmd, script_cmd_len, ';', '\0');
+                        str_creplace(script_cmd, script_cmd_len, ';', '\0');
                         // remove linebreaks
-                        strcleanrn(script_cmd, script_cmd_len);
+                        str_cleanrn(script_cmd, script_cmd_len);
                         goto check_script;
                     }
                     fflush(NULL);

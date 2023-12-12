@@ -90,7 +90,7 @@ int16_t mifare_cmd_readblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t read_c
         goto OUT;
     }
 
-    if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, NULL, NULL)) {
+    if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, NULL, NULL, NULL)) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
         retval = PM3_ESOFT;
         goto OUT;
@@ -158,7 +158,7 @@ int16_t mifare_cmd_writeblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t write
         goto OUT;
     };
 
-    if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, NULL, NULL)) {
+    if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, NULL, NULL, NULL)) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
         retval = PM3_ESOFT;
         goto OUT;
@@ -2680,6 +2680,73 @@ OUT:
 // FUDAN card w static encrypted nonces
 // 2B F9 1C 1B D5 08 48 48 03 A4 B1 B1 75 FF 2D 90
 //                         ^^                   ^^
+
+void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *key) {
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+    clear_trace();
+    set_tracing(true);
+
+    int retval = PM3_SUCCESS;
+    uint8_t *uid = BigBuf_malloc(10);
+    memset(uid, 0x00, 10);
+
+    uint8_t data[1] = { NONCE_FAIL };
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs;
+    pcs = &mpcs;
+    uint64_t ui64key = bytes_to_num(key, 6);
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
+    iso14a_card_select_t card_info;
+    uint32_t cuid = 0;
+    if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+        retval = PM3_ESOFT;
+        goto OUT;
+    }
+
+    uint8_t key_auth_cmd = MIFARE_AUTH_KEYA + (key_type & 1);
+    if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, NULL, NULL, NULL)) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
+        retval = PM3_ESOFT;
+        goto OUT;
+    };
+
+    uint32_t nt = 0;
+    uint8_t enc_counter = 0;
+    uint32_t ntenc = 0;
+    uint32_t oldntenc = 0;
+    for (uint8_t i = 0; i < 3; i++) {
+        if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_NESTED, &nt, &ntenc, NULL)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
+            retval = PM3_ESOFT;
+            goto OUT;
+        };
+
+        if (g_dbglevel >= DBG_INFO)
+            Dbprintf("nt: %x, nt encoded: %x", nt, ntenc);
+
+        if (oldntenc == 0)
+            oldntenc = ntenc;
+        else if (ntenc == oldntenc)
+            enc_counter++;
+    }
+
+    if (enc_counter) {
+        data[0] = NONCE_STATIC_ENC;
+    } else {
+        data[0] = NONCE_NORMAL;
+    }
+
+OUT:
+    crypto1_deinit(pcs);
+
+    reply_ng(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, retval, data, sizeof(data));
+    // turns off
+    OnSuccessMagic();
+    BigBuf_free();
+}
 
 void OnSuccessMagic(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

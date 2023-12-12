@@ -3,6 +3,22 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change `notes on downgrade attacks` - reworked the original text follow repo style (@iceman1001)
+ - Added `hf mf info` command and static encrypted nonce detection (@merlokk)
+ - Added Saflok KDF - generate MFC keys (@h1kari)
+ - Changed `lf fdx demod` - now raw bytes shows all data (@iceman1001)
+ - Changed `data num` - now can print reversed and inverse (@iceman1001)
+ - Fixed `hf mf sim -ix` never returning console (@datatags)
+ - Added standalone mode `hf_unisniff` combining 14a/14b/15 sniffing with extra flash save options (@hazardousvoltage)
+ - Added encryption and other SL3 functions for Mifare Plus - more to come (@team-orangeBlue)
+ - Fixed the corrupted data in real-time sampling (@wh201906)
+ - Added a slider in the plot window for navigation (@wh201906)
+ - Fixed client build bug with Python 3.12 (@wh201906)
+ - Fixed `ExchangeAPDUSC()` in `cmdsmartcard.c` to prevent client crash (@wh201906)
+ - Added real-time LF sampling support (@wh201906)
+ - Changed `hf 14a info` - now reads and prints QL88 sigantures (@iceman1001)
+ - Fixed `hf iclass dump` truncating AA2 blocks and improve reliability (@nvx)
+ - Added some info about UMC in "doc/magic_cards_notes.md" (@temskiy)
 
 ## [Faraday.4.17511][2023-11-13]
  - Fixed Python support of `experimental_client_with_swig` (@doegox)

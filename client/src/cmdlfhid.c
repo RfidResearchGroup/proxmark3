@@ -117,10 +117,15 @@ int demodHID(bool verbose) {
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint32_t hi2 = 0, hi = 0, lo = 0;
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID not enough samples"));
+        free(bits);
         return PM3_ESOFT;
     }
     //get binary from fsk wave
@@ -141,11 +146,13 @@ int demodHID(bool verbose) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID error demoding fsk %d"), idx);
 
+        free(bits);
         return PM3_ESOFT;
     }
 
     setDemodBuff(bits, size, idx);
     setClockGrid(50, waveIdx + (idx * 50));
+    free(bits);
 
     if (hi2 == 0 && hi == 0 && lo == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID no values found"));
@@ -232,7 +239,7 @@ static int CmdHIDWatch(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(SUCCESS, "Watching for HID Prox cards - place tag on antenna");
-    PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to stop reading cards");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_WATCH, NULL, 0);
     return lfsim_wait_check(CMD_LF_HID_WATCH);
@@ -585,7 +592,7 @@ static int CmdHIDBrute(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Started bruteforcing HID Prox reader");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
     PrintAndLogEx(NORMAL, "");
     // copy values to low.
     card_low = card_hi;

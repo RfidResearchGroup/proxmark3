@@ -37,10 +37,7 @@ AT91SAM7S256  USB Device Port
 #define AT91C_EP_IN             2  // cfg bulk in
 #define AT91C_EP_NOTIFY         3  // cfg cdc notification interrup
 
-#define AT91C_EP_CONTROL_SIZE   8
-#define AT91C_EP_OUT_SIZE       64
-#define AT91C_EP_IN_SIZE        64
-
+// The endpoint size is defined in usb_cdc.h
 
 // Section: USB Descriptors
 #define USB_DESCRIPTOR_DEVICE           0x01    // DescriptorType for a Device Descriptor.
@@ -114,6 +111,7 @@ AT91SAM7S256  USB Device Port
 #define SET_LINE_CODING               0x2021
 #define SET_CONTROL_LINE_STATE        0x2221
 
+static bool isAsyncRequestFinished = false;
 static AT91PS_UDP pUdp = AT91C_BASE_UDP;
 static uint8_t btConfiguration = 0;
 static uint8_t btConnection    = 0;
@@ -127,7 +125,7 @@ static const char devDescriptor[] = {
     2,      // Device Class:    Communication Device Class
     0,      // Device Subclass: CDC class sub code ACM [ice 0x02 = win10 virtual comport ]
     0,      // Device Protocol: CDC Device protocol (unused)
-    AT91C_EP_CONTROL_SIZE,      // MaxPacketSize0
+    AT91C_USB_EP_CONTROL_SIZE,      // MaxPacketSize0
     0xc4, 0x9a, // Vendor ID  [0x9ac4 = J. Westhues]
     0x8f, 0x4b, // Product ID [0x4b8f = Proxmark-3 RFID Instrument]
     0x00, 0x01, // BCD Device release number (1.00)
@@ -217,7 +215,7 @@ static const char cfgDescriptor[] = {
     USB_DESCRIPTOR_ENDPOINT,     // Descriptor Type
     _EP03_IN,                    // EndpointAddress:   Endpoint 03 - IN
     _INTERRUPT,                  // Attributes
-    AT91C_EP_CONTROL_SIZE, 0x00, // MaxPacket Size:    EP0 - 8
+    AT91C_USB_EP_CONTROL_SIZE, 0x00, // MaxPacket Size:    EP0 - 8
     0xFF,                        // Interval polling
 
 
@@ -238,7 +236,7 @@ static const char cfgDescriptor[] = {
     USB_DESCRIPTOR_ENDPOINT,     // Descriptor Type
     _EP01_OUT,                   // Endpoint Address:    Endpoint 01 - OUT
     _BULK,                       // Attributes:          BULK
-    AT91C_EP_OUT_SIZE, 0x00,     // MaxPacket Size:      64 bytes
+    AT91C_USB_EP_OUT_SIZE, 0x00,     // MaxPacket Size:      64 bytes
     0,                           // Interval:            ignored for bulk
 
     /* Endpoint descriptor */
@@ -246,7 +244,7 @@ static const char cfgDescriptor[] = {
     USB_DESCRIPTOR_ENDPOINT,     // Descriptor Type
     _EP02_IN,                    // Endpoint Address:    Endpoint 02 - IN
     _BULK,                       // Attribute:           BULK
-    AT91C_EP_IN_SIZE, 0x00,      // MaxPacket Size:      64 bytes
+    AT91C_USB_EP_IN_SIZE, 0x00,      // MaxPacket Size:      64 bytes
     0                            // Interval:            ignored for bulk
 };
 
@@ -638,6 +636,10 @@ bool usb_poll(void) {
     return (pUdp->UDP_CSR[AT91C_EP_OUT] & btReceiveBank);
 }
 
+inline uint16_t usb_available_length(void) {
+    return ((pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16);
+}
+
 /**
     In github PR #129, some users appears to get a false positive from
     usb_poll, which returns true, but the usb_read operation
@@ -649,7 +651,7 @@ bool usb_poll(void) {
 bool usb_poll_validate_length(void) {
     if (!usb_check()) return false;
     if (!(pUdp->UDP_CSR[AT91C_EP_OUT] & btReceiveBank)) return false;
-    return ((pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16) >  0;
+    return ((pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16) > 0;
 }
 
 /*
@@ -671,7 +673,7 @@ uint32_t usb_read(uint8_t *data, size_t len) {
 
         if (pUdp->UDP_CSR[AT91C_EP_OUT] & bank) {
 
-            packetSize = (pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16;
+            packetSize = ((pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16);
             packetSize = MIN(packetSize, len);
             len -= packetSize;
             while (packetSize--)
@@ -727,7 +729,7 @@ uint32_t usb_read_ng(uint8_t *data, size_t len) {
 
         if ((pUdp->UDP_CSR[AT91C_EP_OUT] & bank)) {
 
-            uint32_t available = (pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16;
+            uint32_t available = ((pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16);
             packetSize = MIN(available, len);
             available -= packetSize;
             len -= packetSize;
@@ -770,7 +772,7 @@ int usb_write(const uint8_t *data, const size_t len) {
 
 
     // send first chunk
-    cpt = MIN(length, AT91C_EP_IN_SIZE);
+    cpt = MIN(length, AT91C_USB_EP_IN_SIZE);
     length -= cpt;
     while (cpt--) {
         pUdp->UDP_FDR[AT91C_EP_IN] = *data++;
@@ -781,7 +783,7 @@ int usb_write(const uint8_t *data, const size_t len) {
 
     while (length) {
         // Send next chunk
-        cpt = MIN(length, AT91C_EP_IN_SIZE);
+        cpt = MIN(length, AT91C_USB_EP_IN_SIZE);
         length -= cpt;
         while (cpt--) {
             pUdp->UDP_FDR[AT91C_EP_IN] = *data++;
@@ -809,7 +811,7 @@ int usb_write(const uint8_t *data, const size_t len) {
     while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
 
 
-    if (len % AT91C_EP_IN_SIZE == 0) {
+    if (len % AT91C_USB_EP_IN_SIZE == 0) {
         // like AT91F_USB_SendZlp(), in non ping-pong mode
         UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
         while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {};
@@ -823,6 +825,117 @@ int usb_write(const uint8_t *data, const size_t len) {
 
 /*
  *----------------------------------------------------------------------------
+ * \fn     async_usb_write_start
+ * \brief  Start async write process
+ * \return PM3_EIO if USB is invalid, PM3_SUCCESS if it is ready for write
+ *
+ * This function checks if the USB is connected, and wait until the FIFO
+ * is ready to be filled.
+ *
+ * Warning: usb_write() should not be called between
+ * async_usb_write_start() and async_usb_write_stop().
+ *----------------------------------------------------------------------------
+*/
+int async_usb_write_start(void) {
+
+    if (!usb_check()) return PM3_EIO;
+
+    while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY) {
+        if (!usb_check()) return PM3_EIO;
+    }
+
+    isAsyncRequestFinished = false;
+    return PM3_SUCCESS;
+}
+
+/*
+ *----------------------------------------------------------------------------
+ * \fn    async_usb_write_pushByte
+ * \brief Push one byte to the FIFO of IN endpoint (time-critical)
+ *
+ * This function simply push a byte to the FIFO of IN endpoint.
+ * The FIFO size is AT91C_USB_EP_IN_SIZE. Make sure this function is not called
+ * over AT91C_USB_EP_IN_SIZE times between each async_usb_write_requestWrite().
+ *----------------------------------------------------------------------------
+*/
+inline void async_usb_write_pushByte(uint8_t data) {
+    pUdp->UDP_FDR[AT91C_EP_IN] = data;
+    isAsyncRequestFinished = false;
+}
+
+/*
+ *----------------------------------------------------------------------------
+ * \fn     async_usb_write_requestWrite
+ * \brief  Request a write operation (time-critical)
+ * \return false if the last write request is not finished, true if success
+ *
+ * This function requests a write operation from FIFO to the USB bus,
+ * and switch the internal banks of FIFO. It doesn't wait for the end of
+ * transmission from FIFO to the USB bus.
+ *
+ * Note: This function doesn't check if the usb is valid, as it is
+ * time-critical.
+ *----------------------------------------------------------------------------
+*/
+inline bool async_usb_write_requestWrite(void) {
+
+    // check if last request is finished
+    if (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY) {
+        return false;
+    }
+
+    // clear transmission completed flag
+    UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
+    while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
+
+    // start of transmission
+    UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
+
+    // hack: no need to wait if UDP_CSR and UDP_FDR are not used immediately.
+    // while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY)) {};
+    isAsyncRequestFinished = true;
+    return true;
+}
+
+/*
+ *----------------------------------------------------------------------------
+ * \fn     async_usb_write_stop
+ * \brief  Stop async write process
+ * \return PM3_EIO if USB is invalid, PM3_SUCCESS if data is written
+ *
+ * This function makes sure the data left in the FIFO is written to the
+ * USB bus.
+ *
+ * Warning: usb_write() should not be called between
+ * async_usb_write_start() and async_usb_write_stop().
+ *----------------------------------------------------------------------------
+*/
+int async_usb_write_stop(void) {
+    // Wait for the end of transfer
+    while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY) {
+        if (!usb_check()) return PM3_EIO;
+    }
+
+    // clear transmission completed flag
+    UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
+    while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
+
+    // FIFO is not empty, request a write in non-ping-pong mode
+    if (isAsyncRequestFinished == false) {
+        UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
+
+        while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {
+            if (!usb_check()) return PM3_EIO;
+        }
+
+        UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
+        while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
+    }
+    return PM3_SUCCESS;
+}
+
+/*
+ *----------------------------------------------------------------------------
  * \fn    AT91F_USB_SendData
  * \brief Send Data through the control endpoint
  *----------------------------------------------------------------------------
@@ -831,7 +944,7 @@ void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length) {
     AT91_REG csr;
 
     do {
-        uint32_t cpt = MIN(length, AT91C_EP_CONTROL_SIZE);
+        uint32_t cpt = MIN(length, AT91C_USB_EP_CONTROL_SIZE);
         length -= cpt;
 
         while (cpt--)

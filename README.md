@@ -13,20 +13,22 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 | [![MacOS Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/macos.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/macos.yml) | [![Ubuntu Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/ubuntu.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/ubuntu.yml) | [![Windows Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml) |
 
 # Table of Contents
- 1. [PROXMARK3 INSTALLATION AND OVERVIEW](#proxmark3-installation-and-overview)
- 2. [Notes / helpful documents](#notes--helpful-documents)
- 3. [How to build?](#how-to-build)
-     1. [Proxmark3 RDV4](#proxmark3-rdv4)
-     2. [Generic Proxmark3 platforms](#generic-proxmark3-platforms)
- 4. [What has changed?](#what-has-changed)
- 5. [Development](#development)
- 6. [Supported operative systems](#supported-operative-systems)
- 7. [Precompiled binaries](#precompiled-binaries)
- 8. [Proxmark3 GUI](#proxmark3-gui)
- 9. [Official channels](#official-channels)
-10. [Maintainers](#maintainers)
-11. [Citation](#citation)
-12. [Copyright and licensing terms](#copyright-and-licensing-terms)
+- [Iceman Fork - Proxmark3](#iceman-fork---proxmark3)
+- [Table of Contents](#table-of-contents)
+- [PROXMARK3 INSTALLATION AND OVERVIEW](#proxmark3-installation-and-overview)
+  - [Notes / helpful documents](#notes--helpful-documents)
+- [How to build?](#how-to-build)
+  - [Proxmark3 RDV4](#proxmark3-rdv4)
+  - [Generic Proxmark3 platforms](#generic-proxmark3-platforms)
+- [What has changed?](#what-has-changed)
+- [Development](#development)
+  - [Supported operative systems](#supported-operative-systems)
+  - [Precompiled binaries](#precompiled-binaries)
+  - [Proxmark3 GUI](#proxmark3-gui)
+  - [Official channels](#official-channels)
+  - [Maintainers](#maintainers)
+  - [Citation](#citation)
+  - [Copyright and licensing terms](#copyright-and-licensing-terms)
 
 # PROXMARK3 INSTALLATION AND OVERVIEW
 
@@ -58,7 +60,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)|[Notes on Magic UID cards](/doc/magic_cards_notes.md)|
 |[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|[Notes on Cloner guns](/doc/cloner_notes.md)|
 |[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)|[Notes on MIFARE DESFire](/doc/desfire.md)|
-|[Notes on CIPURSE](/doc/cipurse.md)|[Notes on NDEF type4a](/doc/ndef_type4a.md)||
+|[Notes on CIPURSE](/doc/cipurse.md)|[Notes on NDEF type4a](/doc/ndef_type4a.md)|[Notes on downgrade attacks](/doc/hid_downgrade.md)|
 
 # How to build?
 

@@ -403,7 +403,11 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
 
     // worst case with g_GraphTraceLen=40000 is < 4096
     // under normal conditions it's < 2048
-    uint8_t data[MAX_GRAPH_TRACE_LEN] = {0};
+    uint8_t *data = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
+    if (data == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t datasize = getFromGraphBuf(data);
 
     uint8_t rawbits[4096] = {0};
@@ -446,6 +450,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
             count = 0;
         }
     }
+    free(data);
 
     if (rawbit > 0) {
         PrintAndLogEx(INFO, "Recovered %d raw bits, expected: %zu", rawbit, g_GraphTraceLen / 32);
@@ -747,7 +752,7 @@ static int CmdIndalaSim(const char *Cmd) {
     // lf simpsk -1 -c 32 --fc 2 -d 0102030405060708
 
 
-    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or run another command");
+    PrintAndLogEx(SUCCESS, "Press " _GREEN_("pm3 button") " to abort simulation or run another command");
 
     // indala PSK,  clock 32, carrier 0
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
@@ -1010,7 +1015,7 @@ static int CmdIndalaBrute(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Started brute-forcing INDALA Prox reader");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
     PrintAndLogEx(NORMAL, "");
 
     // main loop

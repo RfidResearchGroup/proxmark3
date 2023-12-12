@@ -1288,6 +1288,58 @@ static bool Unpack_bc40(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
+
+static bool step_parity_check(wiegand_message_t *packed, int start, int length, bool even_parity) {
+    bool parity = even_parity;
+    for (int i = start; i < start + length; i += 2) {
+        // Extract 2 bits
+        bool bit1 = get_bit_by_position(packed, i);
+        bool bit2 = get_bit_by_position(packed, i + 1);
+
+        // Calculate parity for these 2 bits
+        parity ^= (bit1 ^ bit2);
+    }
+    return parity;
+}
+
+static bool Pack_Avig56(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+    memset(packed, 0, sizeof(wiegand_message_t));
+    packed->Length = 56;
+
+    if (card->FacilityCode > 0xFFFFF) return false; // Can't encode FC.
+    if (card->CardNumber > 0x3FFFFFFFF) return false; // Can't encode CN.
+
+    set_linear_field(packed, card->FacilityCode, 1, 20);
+    set_linear_field(packed, card->CardNumber, 21, 34);
+
+    bool even_parity_valid = step_parity_check(packed, 0, 28, true);
+    set_bit_by_position(packed, !even_parity_valid, 0);
+
+    bool odd_parity_valid = step_parity_check(packed, 28, 28, false);
+    set_bit_by_position(packed, !odd_parity_valid, 55);
+
+    if (preamble)
+        return add_HID_header(packed);
+
+    return true;
+}
+
+static bool Unpack_Avig56(wiegand_message_t *packed, wiegand_card_t *card) {
+    memset(card, 0, sizeof(wiegand_card_t));
+
+    if (packed->Length != 56) return false;
+
+    card->FacilityCode = get_linear_field(packed, 1, 20);
+    card->CardNumber = get_linear_field(packed, 21, 34);
+
+    // Check step parity for every 2 bits
+    bool even_parity_valid = step_parity_check(packed, 0, 28, true);
+    bool odd_parity_valid = step_parity_check(packed, 28, 28, false);
+
+    card->ParityValid = even_parity_valid && odd_parity_valid;
+    return true;
+}
+
 // ---------------------------------------------------------------------------------------------------
 
 void print_desc_wiegand(cardformat_t *fmt, wiegand_message_t *packed) {
@@ -1414,6 +1466,7 @@ static const cardformat_t FormatTable[] = {
     {"Casi40",  Pack_CasiRusco40, Unpack_CasiRusco40, "Casi-Rusco 40-bit",     {1, 0, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit std", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {"BC40",    Pack_bc40,    Unpack_bc40,    "Bundy TimeClock 40-bit",     {1, 1, 0, 1, 1}}, // from
+    {"Avig56", Pack_Avig56, Unpack_Avig56, "Avigilon 56-bit", {1, 1, 0, 0, 1}},
     {NULL, NULL, NULL, NULL, {0, 0, 0, 0, 0}} // Must null terminate array
 };
 

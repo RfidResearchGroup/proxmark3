@@ -30,6 +30,9 @@
 // ignore first x samples of the buffer
 #define SIGNAL_IGNORE_FIRST_SAMPLES 10
 
+// Max number of bits when demodulating a signal
+#define MAX_DEMODULATION_BITS   4096
+
 // generic
 typedef struct {
     int low;

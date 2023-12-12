@@ -145,6 +145,10 @@ FF9F11223358
 AC37E76385F5
 576DCFFF2F25
 #
+# Car wash system
+1EE38419EF39
+26578719DCD9
+#
 # more Keys from mfc_default_keys.lua
 000000000001
 000000000002
@@ -1137,6 +1141,33 @@ A2B2C9D187FB
 #
 # Hotel Adina
 9EBC3EB37130
+#
+# Misc. keys from hotels & library cards in Germany
+914f57280ce3
+324a82200018
+370aee95cd69
+2e032ad6850d
+1feda39d38ec
+288b7a34dbf8
+0965e3193497
+18c628493f7f
+064d9423938a
+995fd2a2351e
+7c7d672bc62e
+217250fb7014
+ae7478ccaee7
+abbf6d116eaf
+05862c58edfb
+e43b7f185460
+6a59aa9a959b
+b79e5b175227
+7bc9ebb8274b
+b2afbf2331d4
+223e5847dd79
+640524d2a39b
+aee297cb2fd6
+3da5dfa54604
+0cf1a2aa1f8d
 #
 # most likely diversifed individual keys.
 # data from https://github.com/korsehindi/proxmark3/commit/24fdbfa9a1d5c996aaa5c192bc07e4ab28db4c5c
