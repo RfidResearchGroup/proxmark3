@@ -234,14 +234,14 @@ IT IS ABSOLUTELY NECESSARY THAT THE READER AND ESPKEY SHARE THE SAME GROUND EVEN
 3. Connect to the wifi network the ESPKEY and navigate to `192.168.1.1` for the interface
 4. Scan your credential on the reader
 5. Open `log.txt` and copy the binary string WITHOUT the preamble
-6. Use `hf iclass encode --bin <COPIED BINARY STRING> --ki 0` to encode the PACS payload to a iClass legacy card
+6. Use `hf iclass encode --bin <COPIED BINARY STRING> --ki 0` to encode the PACS payload to a iCLASS legacy card
 
 
 # Write ProxII credential to a T5577
 ^[Top](#top)
 
 OBS!  Downgrading to a T5577 will only work if reader has low frequency (125 kHz) / Prox II enabled.
-A good indicator to look out for is the "MultiClass" sticker on the reader.
+A good indicator to look out for is the "multiCLASS" sticker on the reader.
 
 ## Using Proxmark3
 ^[Top](#top)
