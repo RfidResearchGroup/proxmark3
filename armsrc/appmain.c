@@ -2826,13 +2826,14 @@ void  __attribute__((noreturn)) AppMain(void) {
     usart_init(USART_BAUD_RATE, USART_PARITY);
 #endif
 
+    allow_send_wtx = true;
+
     // This is made as late as possible to ensure enumeration without timeout
     // against device such as http://www.hobbytronics.co.uk/usb-host-board-v2
     // In other words, keep the interval between usb_enable() and the main loop as short as possible.
     // (AT91F_CDC_Enumerate() will be called in the main loop)
     usb_disable();
     usb_enable();
-    allow_send_wtx = true;
 
     for (;;) {
         WDT_HIT();
@@ -2840,6 +2841,7 @@ void  __attribute__((noreturn)) AppMain(void) {
         if (*_stack_start != 0xdeadbeef) {
             Dbprintf("Stack overflow detected! Please increase stack size, currently %d bytes", (uint32_t)_stack_end - (uint32_t)_stack_start);
             Dbprintf("Unplug your device now.");
+            hf_field_off();
             while (1);
         }
 
