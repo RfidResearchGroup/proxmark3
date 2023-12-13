@@ -82,13 +82,21 @@ Known issues:
 
 Here are the supported values you can assign to `PLATFORM_EXTRAS` in `Makefile.platform`:
 
-| PLATFORM_EXTRAS | DESCRIPTION                            |
-|-----------------|----------------------------------------|
-| BTADDON         | Proxmark3 rdv4 BT add-on               |
+| PLATFORM_EXTRAS | DESCRIPTION                             |
+|-----------------|-----------------------------------------|
+| BTADDON         | Proxmark3 rdv4 BT add-on                |
+| FLASH           | Flash modding for generic Proxmark3     |
+| SMARTCARD       | Smartcard modding for generic Proxmark3 |
 
 By default `PLATFORM_EXTRAS=`.
 
-If you have installed a Blue Shark add-on on your RDV4, define `PLATFORM_EXTRAS=BTADDON` in your `Makefile.platform`.
+If you have installed a Blue Shark add-on on your RDV4, define `PLATFORM_EXTRAS=BTADDON` in your `Makefile.platform` to enable it.
+
+If you did some modding on the `PM3GENERIC` platform, you can define `FLASH` and `SMARTCARD` to enable these features, like
+`PLATFORM_EXTRAS=FLASH`
+
+You can also define multiple options like
+`PLATFORM_EXTRAS=FLASH SMARTCARD`
 
 
 ## STANDALONE
