@@ -129,7 +129,7 @@ void BigBuf_Clear_keep_EM(void) {
 // allocate a chunk of memory from BigBuf. We allocate high memory first. The unallocated memory
 // at the beginning of BigBuf is always for traces/samples
 uint8_t *BigBuf_malloc(uint16_t chunksize) {
-    if (s_bigbuf_hi < chunksize)
+    if (s_bigbuf_hi < (chunksize + 3))
         return NULL; // no memory left
 
     chunksize = (chunksize + 3) & 0xfffc; // round to next multiple of 4
@@ -142,7 +142,7 @@ uint8_t *BigBuf_malloc(uint16_t chunksize) {
 uint8_t *BigBuf_calloc(uint16_t chunksize) {
     uint8_t *mem = BigBuf_malloc(chunksize);
     if (mem != NULL) {
-        memset(mem, 0x00, chunksize);
+        memset(mem, 0x00, ((chunksize + 3) & 0xfffc)); // round to next multiple of 4
     }
     return mem;
 }
