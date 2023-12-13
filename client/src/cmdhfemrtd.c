@@ -2087,13 +2087,13 @@ static int CmdHFeMRTDDump(const char *Cmd) {
                   "Dump all files on an eMRTD",
                   "hf emrtd dump\n"
                   "hf emrtd dump --dir ../dump\n"
-                  "hf emrtd dump -n 123456789 -d 19890101 -e 20250401"
+                  "hf emrtd dump -n 123456789 -d 890101 -e 250401"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
-        arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
+        arg_str0("n", "doc", "<alphanum>", "document number, up to 9 chars"),
+        arg_str0("d", "date", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars"),
         arg_str0(NULL, "dir", "<str>", "save dump to the given dirpath"),
@@ -2187,14 +2187,14 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
                   "Display info about an eMRTD",
                   "hf emrtd info\n"
                   "hf emrtd info --dir ../dumps\n"
-                  "hf emrtd info -n 123456789 -d 19890101 -e 20250401\n"
-                  "hf emrtd info -n 123456789 -d 19890101 -e 20250401 -i"
+                  "hf emrtd info -n 123456789 -d 890101 -e 250401\n"
+                  "hf emrtd info -n 123456789 -d 890101 -e 250401 -i"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
-        arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
+        arg_str0("n", "doc", "<alphanum>", "document number, up to 9 chars"),
+        arg_str0("d", "date", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars (passports only)"),
         arg_str0(NULL, "dir", "<str>", "display info from offline dump stored in dirpath"),
