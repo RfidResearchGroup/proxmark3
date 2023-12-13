@@ -212,6 +212,12 @@ static void UsbPacketReceived(uint8_t *packet) {
         reply_old(CMD_ACK, arg0, 0, 0, 0, 0);
 }
 
+// delay_loop(1) = 3.07us
+static volatile uint32_t c;
+static void __attribute__((optimize("O0"))) delay_loop(uint32_t delay) {
+    for (c = delay * 2; c; c--) {};
+}
+
 static void flash_mode(void) {
     start_addr = 0;
     end_addr = 0;
@@ -234,7 +240,7 @@ static void flash_mode(void) {
     usb_enable();
 
     // wait for reset to be complete?
-    for (volatile size_t i = 0; i < 0x100000; i++) {};
+    delay_loop(100000);
 
     for (;;) {
         WDT_HIT();
