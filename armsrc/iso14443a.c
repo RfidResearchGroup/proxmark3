@@ -1942,8 +1942,10 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
         else
             PrepareDelayedTransfer(*timing & 0x00000007);        // Delay transfer (fine tuning - up to 7 MF clock ticks)
 
-        if (g_dbglevel >= DBG_EXTENDED && GetCountSspClk() >= (*timing & 0xfffffff8))
+        if (g_dbglevel >= DBG_EXTENDED && GetCountSspClk() >= (*timing & 0xfffffff8)) {
             Dbprintf("TransmitFor14443a: Missed timing");
+        }
+
         while (GetCountSspClk() < (*timing & 0xfffffff8)) {};    // Delay transfer (multiple of 8 MF clock ticks)
         LastTimeProxToAirStart = *timing;
     } else {
@@ -2298,7 +2300,7 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 //-----------------------------------------------------------------------------
 bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *received_len) {
 
-    if (!g_hf_field_active) {
+    if (g_hf_field_active == false) {
         Dbprintf("Warning: HF field is off, ignoring GetIso14443aAnswerFromTag_Thinfilm command");
         return false;
     }
@@ -2346,8 +2348,10 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *rec
 //  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
 static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receivedResponsePar, uint16_t offset) {
-    if (g_hf_field_active == false)
+    if (g_hf_field_active == false) {
+        Dbprintf("Warning: HF field is off, ignoring GetIso14443aAnswerFromTag command");
         return false;
+    }
 
     // Set FPGA mode to "reader listen mode", no modulation (listen
     // only, since we are receiving, not transmitting).
@@ -2911,8 +2915,8 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
 }
 
 /* Peter Fillmore 2015
-Added card id field to the function
- info from ISO14443A standard
+Added card id field to the function info from ISO14443A standard
+
 b1 = Block Number
 b2 = RFU (always 1)
 b3 = depends on block
@@ -2920,14 +2924,17 @@ b4 = Card ID following if set to 1
 b5 = depends on block type
 b6 = depends on block type
 b7,b8 = block type.
+
 Coding of I-BLOCK:
 b8 b7 b6 b5 b4 b3 b2 b1
 0  0  0  x  x  x  1  x
 b5 = chaining bit
+
 Coding of R-block:
 b8 b7 b6 b5 b4 b3 b2 b1
 1  0  1  x  x  0  1  x
 b5 = ACK/NACK
+
 Coding of S-block:
 b8 b7 b6 b5 b4 b3 b2 b1
 1  1  x  x  x  0  1  0
