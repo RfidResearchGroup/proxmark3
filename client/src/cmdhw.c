@@ -37,6 +37,7 @@
 #include "cmdflashmem.h"  // get_signature..
 #include "uart/uart.h" // configure timeout
 #include "util_posix.h"
+#include "flash.h" // reboot to bootloader mode
 
 static int CmdHelp(const char *Cmd);
 
@@ -1100,6 +1101,25 @@ static int CmdBreak(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdBootloader(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bootloader",
+                  "Reboot Proxmark3 into bootloader mode",
+                  "hw bootloader\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    clearCommandBuffer();
+    flash_reboot_bootloader(g_conn.serial_port_name, false);
+    return PM3_SUCCESS;
+}
+
 int set_fpga_mode(uint8_t mode) {
     if (mode < FPGA_BITSTREAM_LF || mode > FPGA_BITSTREAM_HF_15) {
         return PM3_EINVARG;
@@ -1122,6 +1142,7 @@ static command_t CommandTable[] = {
     {"-------------", CmdHelp,         AlwaysAvailable, "----------------------- " _CYAN_("Hardware") " -----------------------"},
     {"help",          CmdHelp,         AlwaysAvailable, "This help"},
     {"break",         CmdBreak,        IfPm3Present,    "Send break loop usb command"},
+    {"bootloader",    CmdBootloader,   IfPm3Present,    "Reboot Proxmark3 into bootloader mode"},    
     {"connect",       CmdConnect,      AlwaysAvailable, "Connect Proxmark3 to serial port"},
     {"dbg",           CmdDbg,          IfPm3Present,    "Set Proxmark3 debug level"},
     {"detectreader",  CmdDetectReader, IfPm3Present,    "Detect external reader field"},

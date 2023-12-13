@@ -19,6 +19,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf 14a info` - now reads and prints QL88 sigantures (@iceman1001)
  - Fixed `hf iclass dump` truncating AA2 blocks and improve reliability (@nvx)
  - Added some info about UMC in "doc/magic_cards_notes.md" (@temskiy)
+ - Added `hw bootloader` to reboot to the bootloader mode (@wh201906)
 
 ## [Faraday.4.17511][2023-11-13]
  - Fixed Python support of `experimental_client_with_swig` (@doegox)
