@@ -733,7 +733,7 @@ static int reboot_bootloader_pm3(char *serial_port_name) {
     }
 
     PrintAndLogEx(NORMAL, _GREEN_(" found"));
-    return flash_reboot_bootloader(serial_port_name);
+    return flash_reboot_bootloader(serial_port_name, true);
 }
 
 #endif //LIBPM3
