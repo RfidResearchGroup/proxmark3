@@ -30,7 +30,7 @@
 common_area_t g_common_area __attribute__((section(".commonarea")));
 uint32_t start_addr, end_addr;
 bool bootrom_unlocked;
-extern uint32_t _bootrom_start[], _bootrom_end[], _flash_start[], _flash_end[], _osimage_entry[];
+extern uint32_t _bootrom_start[], _bootrom_end[], _flash_start[], _flash_end[], _osimage_entry[], __bss_start__[], __bss_end__[];
 
 static int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     PacketResponseOLD txcmd;
@@ -268,6 +268,10 @@ static void flash_mode(void) {
 
 void BootROM(void);
 void BootROM(void) {
+    /* Set up (that is: clear) BSS. */
+    uint32_t *bss_dst = __bss_start__;
+    while (bss_dst < __bss_end__) *bss_dst++ = 0;
+
     //------------
     // First set up all the I/O pins; GPIOs configured directly, other ones
     // just need to be assigned to the appropriate peripheral.
