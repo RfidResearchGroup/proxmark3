@@ -698,7 +698,7 @@ uint32_t usb_read(uint8_t *data, size_t len) {
     return nbBytesRcv;
 }
 
-static uint8_t usb_read_ng_buffer[64];
+static uint8_t usb_read_ng_buffer[64] = {0};
 static size_t usb_read_ng_bufoff = 0;
 static size_t usb_read_ng_buflen = 0;
 
