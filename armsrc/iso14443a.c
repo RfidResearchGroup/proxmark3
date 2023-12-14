@@ -150,6 +150,8 @@ static iso14a_polling_parameters_t WUPA_POLLING_PARAMETERS = {
     .extra_timeout = 0,
 };
 
+// parity isn't used much
+static uint8_t parity_array[MAX_PARITY_SIZE] = {0};
 
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
@@ -871,9 +873,8 @@ static void CodeIso14443aAsTagPar(const uint8_t *cmd, uint16_t len, const uint8_
 }
 
 static void CodeIso14443aAsTagEx(const uint8_t *cmd, uint16_t len, bool collision) {
-    uint8_t par[MAX_PARITY_SIZE] = {0};
-    GetParity(cmd, len, par);
-    CodeIso14443aAsTagPar(cmd, len, par, collision);
+    GetParity(cmd, len, parity_array);
+    CodeIso14443aAsTagPar(cmd, len, parity_array, collision);
 }
 static void CodeIso14443aAsTag(const uint8_t *cmd, uint16_t len) {
     CodeIso14443aAsTagEx(cmd, len, false);
@@ -2246,17 +2247,15 @@ int EmSendCmd(uint8_t *resp, uint16_t respLen) {
     return EmSendCmdEx(resp, respLen, false);
 }
 int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision) {
-    uint8_t par[MAX_PARITY_SIZE] = {0x00};
-    GetParity(resp, respLen, par);
-    return EmSendCmdParEx(resp, respLen, par, collision);
+    GetParity(resp, respLen, parity_array);
+    return EmSendCmdParEx(resp, respLen, parity_array, collision);
 }
 
 int EmSendPrecompiledCmd(tag_response_info_t *p_response) {
     if (p_response == NULL) return 0;
     int ret = EmSendCmd14443aRaw(p_response->modulation, p_response->modulation_n);
     // do the tracing for the previous reader request and this tag answer:
-    uint8_t par[MAX_PARITY_SIZE] = {0x00};
-    GetParity(p_response->response, p_response->response_n, par);
+    GetParity(p_response->response, p_response->response_n, parity_array);
 
     EmLogTrace(Uart.output,
                Uart.len,
@@ -2267,7 +2266,7 @@ int EmSendPrecompiledCmd(tag_response_info_t *p_response) {
                p_response->response_n,
                LastTimeProxToAirStart * 16 + DELAY_ARM2AIR_AS_TAG,
                (LastTimeProxToAirStart + p_response->ProxToAirDuration) * 16 + DELAY_ARM2AIR_AS_TAG,
-               par);
+               parity_array);
     return ret;
 }
 
@@ -2349,7 +2348,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *rec
 //-----------------------------------------------------------------------------
 static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receivedResponsePar, uint16_t offset) {
     if (g_hf_field_active == false) {
-        Dbprintf("Warning: HF field is off, ignoring GetIso14443aAnswerFromTag command");
+        Dbprintf("Warning: HF field is off");
         return false;
     }
 
@@ -2407,16 +2406,14 @@ void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *tim
 
 static void ReaderTransmitBits(uint8_t *frame, uint16_t len, uint32_t *timing) {
     // Generate parity and redirect
-    uint8_t par[MAX_PARITY_SIZE] = {0x00};
-    GetParity(frame, len / 8, par);
-    ReaderTransmitBitsPar(frame, len, par, timing);
+    GetParity(frame, len / 8, parity_array);
+    ReaderTransmitBitsPar(frame, len, parity_array, timing);
 }
 
 void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing) {
     // Generate parity and redirect
-    uint8_t par[MAX_PARITY_SIZE] = {0x00};
-    GetParity(frame, len, par);
-    ReaderTransmitBitsPar(frame, len * 8, par, timing);
+    GetParity(frame, len, parity_array);
+    ReaderTransmitBitsPar(frame, len * 8, parity_array, timing);
 }
 
 static uint16_t ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t offset, uint8_t *par) {
@@ -2942,8 +2939,7 @@ b5,b6 = 00 - DESELECT
         11 - WTX
 */
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint8_t *res) {
-    uint8_t parity[MAX_PARITY_SIZE] = {0x00};
-    uint8_t real_cmd[cmd_len + 4];
+    uint8_t *real_cmd = BigBuf_calloc(cmd_len + 4);
 
     if (cmd_len) {
         // ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
@@ -2963,11 +2959,12 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 
     ReaderTransmit(real_cmd, cmd_len + 3, NULL);
 
-    size_t len = ReaderReceive(data, parity);
+    size_t len = ReaderReceive(data, parity_array);
     uint8_t *data_bytes = (uint8_t *) data;
 
     if (!len) {
-        return 0; //DATA LINK ERROR
+        BigBuf_free();
+        return 0; // DATA LINK ERROR
     } else {
         // S-Block WTX
         while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
@@ -2982,7 +2979,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
             // transmit S-Block
             ReaderTransmit(data_bytes, len, NULL);
             // retrieve the result again (with increased timeout)
-            len = ReaderReceive(data, parity);
+            len = ReaderReceive(data, parity_array);
             data_bytes = data;
             // restore timeout
             iso14a_set_timeout(save_iso14a_timeout);
@@ -2998,11 +2995,13 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
         }
 
         // if we received I-block with chaining we need to send ACK and receive another block of data
-        if (res)
+        if (res) {
             *res = data_bytes[0];
+        }
 
         // crc check
         if (len >= 3 && !CheckCrc14A(data_bytes, len)) {
+            BigBuf_free();
             return -1;
         }
 
@@ -3012,10 +3011,12 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
         // cut frame byte
         len -= 1;
         // memmove(data_bytes, data_bytes + 1, len);
-        for (int i = 0; i < len; i++)
+        for (int i = 0; i < len; i++) {
             data_bytes[i] = data_bytes[i + 1];
+        }
     }
 
+    BigBuf_free();
     return len;
 }
 
