@@ -391,6 +391,8 @@ void loadT55xxConfig(void) {
     if (isok == T55XX_CONFIG_LEN) {
         if (g_dbglevel > 1) DbpString("T55XX Config load success");
     }
+
+    BigBuf_free();
 #endif
 }
 
