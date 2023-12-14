@@ -2197,8 +2197,9 @@ static void PacketReceived(PacketCommandNG *packet) {
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, NULL, 0);
                     break;
                 case 2:
-                    if (button_status == BUTTON_SINGLE_CLICK)
+                    if (button_status == BUTTON_SINGLE_CLICK) {
                         reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EOPABORTED, NULL, 0);
+                    }
                     uint16_t volt = MeasureAntennaTuningHfData();
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_SUCCESS, (uint8_t *)&volt, sizeof(volt));
                     break;
@@ -2225,8 +2226,9 @@ static void PacketReceived(PacketCommandNG *packet) {
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_SUCCESS, NULL, 0);
                     break;
                 case 2:
-                    if (button_status == BUTTON_SINGLE_CLICK)
+                    if (button_status == BUTTON_SINGLE_CLICK) {
                         reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_EOPABORTED, NULL, 0);
+                    }
 
                     uint32_t volt = MeasureAntennaTuningLfData();
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_LF, PM3_SUCCESS, (uint8_t *)&volt, sizeof(volt));
@@ -2839,8 +2841,9 @@ void  __attribute__((noreturn)) AppMain(void) {
         WDT_HIT();
 
         if (*_stack_start != 0xdeadbeef) {
-            Dbprintf("Stack overflow detected! Please increase stack size, currently %d bytes", (uint32_t)_stack_end - (uint32_t)_stack_start);
-            Dbprintf("Unplug your device now.");
+            Dbprintf("DEBUG: increase stack size, currently " _YELLOW_("%d") " bytes", (uint32_t)_stack_end - (uint32_t)_stack_start);
+            Dbprintf("Stack overflow detected");
+            Dbprintf("--> Unplug your device now! <--");
             hf_field_off();
             while (1);
         }

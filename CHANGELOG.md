@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change `dbprint` on device side to use max 200 chars strings. (@iceman1001)
  - Fixed bootloader to correctly clear bss segment on start. Fixes USB serial number sometimes not working in the bootloader (@nvx)
  - Change `notes on downgrade attacks` - reworked the original text follow repo style (@iceman1001)
  - Added `hf mf info` command and static encrypted nonce detection (@merlokk)

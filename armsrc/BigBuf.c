@@ -328,9 +328,9 @@ uint8_t emlGet(uint8_t *out, uint32_t offset, uint32_t length) {
 // get the address of the ToSend buffer. Allocate part of Bigbuf for it, if not yet done
 tosend_t *get_tosend(void) {
 
-    if (toSend.buf == NULL)
+    if (toSend.buf == NULL) {
         toSend.buf = BigBuf_malloc(TOSEND_BUFFER_SIZE);
-
+    }
     return &toSend;
 }
 

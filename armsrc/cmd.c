@@ -18,6 +18,7 @@
 #include "usart.h"
 #include "crc16.h"
 #include "string.h"
+#include "BigBuf.h"
 
 // Flags to tell where to add CRC on sent replies
 bool g_reply_with_crc_on_usb = false;
@@ -29,8 +30,8 @@ bool g_reply_via_usb = false;
 int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
     PacketResponseOLD txcmd = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
 
-//    for (size_t i = 0; i < sizeof(PacketResponseOLD); i++)
-//        ((uint8_t *)&txcmd)[i] = 0x00;
+    for (size_t i = 0; i < sizeof(PacketResponseOLD); i++)
+        ((uint8_t *)&txcmd)[i] = 0x00;
 
     // Compose the outgoing command frame
     txcmd.cmd = cmd;
@@ -147,7 +148,8 @@ int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
     if (len && data)
         memcpy(cmddata + sizeof(arg), data, (int)len);
 
-    return reply_ng_internal((cmd & 0xFFFF), status, cmddata, len + sizeof(arg), false);
+    int res = reply_ng_internal((cmd & 0xFFFF), status, cmddata, len + sizeof(arg), false);
+    return res;
 }
 
 static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *data, size_t len), bool usb, bool fpc) {
@@ -178,9 +180,10 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
             memcpy(rx->data.asBytes, rx_raw.data, length);
             rx->length = length;
         } else {
-            uint64_t arg[3];
-            if (length < sizeof(arg))
+            uint64_t arg[3] = {0};
+            if (length < sizeof(arg)) {
                 return PM3_EIO;
+            }
 
             memcpy(arg, rx_raw.data, sizeof(arg));
             rx->oldarg[0] = arg[0];
