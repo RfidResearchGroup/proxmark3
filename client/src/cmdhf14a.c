@@ -921,8 +921,10 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
     uint8_t data[PM3_CMD_DATA_SIZE] = { 0x0a | gs_frames_num, 0x00};
     gs_frames_num ^= 1;
-    memcpy(&data[2], datain, datainlen & 0xFFFF);
-    SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF) + 2, 0, data, (datainlen & 0xFFFF) + 2);
+
+    int min = MIN( (PM3_CMD_DATA_SIZE - 2), (datainlen & 0x1FF));
+    memcpy(&data[2], datain, min);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF) + 2, 0, data, min + 2);
 
     uint8_t *recv;
     PacketResponseNG resp;
@@ -1376,7 +1378,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     bool use_magsafe = arg_get_lit(ctx, 12);
 
     int datalen = 0;
-    uint8_t data[PM3_CMD_DATA_SIZE];
+    uint8_t data[PM3_CMD_DATA_SIZE_MIX] = {0};
     CLIGetHexWithReturn(ctx, 13, data, &datalen);
     CLIParserFree(ctx);
 
@@ -1442,11 +1444,11 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         // flags |= ISO14A_USE_ECP;
     }
 
-    // Max buffer is PM3_CMD_DATA_SIZE
-    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
+    // Max buffer is PM3_CMD_DATA_SIZE_MIX
+    datalen = (datalen > PM3_CMD_DATA_SIZE_MIX) ? PM3_CMD_DATA_SIZE_MIX : datalen;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ISO14443A_READER, flags, (datalen & 0xFFFF) | ((uint32_t)(numbits << 16)), argtimeout, data, datalen & 0xFFFF);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, flags, (datalen & 0x1FF) | ((uint32_t)(numbits << 16)), argtimeout, data, datalen);
 
     if (reply) {
         int res = 0;
