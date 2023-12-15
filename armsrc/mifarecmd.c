@@ -1052,14 +1052,9 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
             };
 
             // cards with fixed nonce
-            /*
-            if (nt1 == nt2) {
-                Dbprintf("Nested: %08x vs %08x", nt1, nt2);
-                break;
-            }
-            */
+            // NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
 
-            uint32_t nttmp = prng_successor(nt1, 100); //NXP Mifare is typical around 840,but for some unlicensed/compatible mifare card this can be 160
+            uint32_t nttmp = prng_successor(nt1, 100);
             for (i = 101; i < 1200; i++) {
                 nttmp = prng_successor(nttmp, 1);
                 if (nttmp == nt2) break;
@@ -1071,12 +1066,14 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
                     dmin = MIN(dmin, i);
                     dmax = MAX(dmax, i);
                 } else {
-                    delta_time = auth2_time - auth1_time + 32;  // allow some slack for proper timing
+                    // allow some slack for proper timing
+                    delta_time = auth2_time - auth1_time + 32;  
                 }
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Nested: calibrating... ntdist=%d", i);
             } else {
                 unsuccessful_tries++;
-                if (unsuccessful_tries > NESTED_MAX_TRIES) { // card isn't vulnerable to nested attack (random numbers are not predictable)
+                // card isn't vulnerable to nested attack (random numbers are not predictable)
+                if (unsuccessful_tries > NESTED_MAX_TRIES) { 
                     isOK = PM3_EFAILED;
                 }
             }
@@ -1146,7 +1143,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
             // nested authentication
             auth2_time = auth1_time + delta_time;
 
-            len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, &auth2_time);
+            len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, &auth2_time);
             if (len != 4) {
                 if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth2 error len=%d", len);
                 continue;
@@ -1271,7 +1268,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
             target_nt[1] = prng_successor(nt1, 320);
         }
 
-        len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
+        len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
         if (len != 4) {
             continue;
         };
@@ -1296,10 +1293,11 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
             continue;
         };
 
-        len = mifare_sendcmd_short(pcs, AUTH_NESTED, 0x60 + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
+        len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
         if (len != 4) {
             continue;
         };
+
         nt3 = bytes_to_num(receivedAnswer, 4);
         target_ks[1] = nt3 ^ target_nt[1];
 
@@ -2632,8 +2630,7 @@ void MifareHasStaticNonce(void) {
     uint8_t counter = 0;
     for (uint8_t i = 0; i < 3; i++) {
 
-        iso14a_card_select_t card_info;
-        if (!iso14443a_select_card(uid, &card_info, NULL, true, 0, true)) {
+        if (!iso14443a_select_card(uid, NULL, NULL, true, 0, true)) {
             retval = PM3_ESOFT;
             goto OUT;
         }
@@ -2699,9 +2696,8 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
-    iso14a_card_select_t card_info;
     uint32_t cuid = 0;
-    if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+    if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
         retval = PM3_ESOFT;
         goto OUT;
     }
@@ -2779,7 +2775,6 @@ int DoGen3Cmd(uint8_t *cmd, uint8_t cmd_len) {
     }
     iso14a_set_timeout(save_iso14a_timeout);
     LED_B_OFF();
-
     return retval;
 }
 
