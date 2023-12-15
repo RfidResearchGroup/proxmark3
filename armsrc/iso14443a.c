@@ -2597,7 +2597,6 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
                             iso14a_polling_parameters_t *polling_parameters) {
 
     uint8_t resp[MAX_FRAME_SIZE] = {0}; // theoretically. A usual RATS will be much smaller
-    uint8_t resp_par[MAX_PARITY_SIZE] = {0};
 
     uint8_t sak = 0; // cascade uid
     bool do_cascade = 1;
@@ -2609,7 +2608,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
         p_card->ats_len = 0;
     }
 
-    if (GetATQA(resp, resp_par, polling_parameters) == 0) {
+    if (GetATQA(resp, parity_array, polling_parameters) == 0) {
         return 0;
     }
 
@@ -2626,7 +2625,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             // Read real UID
             uint8_t fudan_read[] = { 0x30, 0x01, 0x8B, 0xB9};
             ReaderTransmit(fudan_read, sizeof(fudan_read), NULL);
-            if (!ReaderReceive(resp, resp_par)) {
+            if (!ReaderReceive(resp, parity_array)) {
                 if (g_dbglevel >= DBG_INFO) Dbprintf("Card didn't answer to select all");
                 return 0;
             }
@@ -2634,11 +2633,11 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             memcpy(p_card->uid, resp, 4);
 
             // select again?
-            if (GetATQA(resp, resp_par, &WUPA_POLLING_PARAMETERS) == 0) {
+            if (GetATQA(resp, parity_array, &WUPA_POLLING_PARAMETERS) == 0) {
                 return 0;
             }
 
-            if (GetATQA(resp, resp_par, &WUPA_POLLING_PARAMETERS) == 0) {
+            if (GetATQA(resp, parity_array, &WUPA_POLLING_PARAMETERS) == 0) {
                 return 0;
             }
 
@@ -2656,7 +2655,10 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
 
     if (hf14aconfig.forceanticol == 0) {
         // check for proprietary anticollision:
-        if ((resp[0] & 0x1F) == 0) return 3;
+        if ((resp[0] & 0x1F) == 0) {
+            return 3;
+        }
+
     } else if (hf14aconfig.forceanticol == 2) {
         return 3; // force skipping anticol
     } // else force executing
@@ -2675,7 +2677,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
 
             // SELECT_ALL
             ReaderTransmit(sel_all, sizeof(sel_all), NULL);
-            if (!ReaderReceive(resp, resp_par)) {
+            if (!ReaderReceive(resp, parity_array)) {
                 if (g_dbglevel >= DBG_INFO) Dbprintf("Card didn't answer to CL%i select all", cascade_level + 1);
                 return 0;
             }
@@ -2688,10 +2690,12 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
                 // anti-collision-loop:
                 while (Demod.collisionPos) {
                     Dbprintf("Multiple tags detected. Collision after Bit %d", Demod.collisionPos);
+
                     for (uint16_t i = collision_answer_offset; i < Demod.collisionPos; i++, uid_resp_bits++) {    // add valid UID bits before collision point
                         uint16_t UIDbit = (resp[i / 8] >> (i % 8)) & 0x01;
                         uid_resp[uid_resp_bits / 8] |= UIDbit << (uid_resp_bits % 8);
                     }
+ 
                     uid_resp[uid_resp_bits / 8] |= 1 << (uid_resp_bits % 8);                  // next time select the card(s) with a 1 in the collision position
                     uid_resp_bits++;
                     // construct anticollision command:
@@ -2699,9 +2703,13 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
                     for (uint16_t i = 0; i <= uid_resp_bits / 8; i++) {
                         sel_uid[2 + i] = uid_resp[i];
                     }
+
                     collision_answer_offset = uid_resp_bits % 8;
+
                     ReaderTransmitBits(sel_uid, 16 + uid_resp_bits, NULL);
-                    if (!ReaderReceiveOffset(resp, collision_answer_offset, resp_par)) return 0;
+                    if (!ReaderReceiveOffset(resp, collision_answer_offset, parity_array)) {
+                        return 0;
+                    }
                 }
 
                 // finally, add the last bits and BCC of the UID
@@ -2732,17 +2740,21 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
         sel_uid[1] = 0x70;                                              // transmitting a full UID (1 Byte cmd, 1 Byte NVB, 4 Byte UID, 1 Byte BCC, 2 Bytes CRC)
 
         if (anticollision) {
+
             memcpy(sel_uid + 2, uid_resp, 5);                               // the UID received during anticollision with original BCC
             uint8_t bcc = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5]; // calculate BCC
             if (sel_uid[6] != bcc) {
+
                 Dbprintf("BCC%d incorrect, got 0x%02x, expected 0x%02x", cascade_level, sel_uid[6], bcc);
+
                 if (hf14aconfig.forcebcc == 0) {
                     Dbprintf("Aborting");
                     return 0;
                 } else if (hf14aconfig.forcebcc == 1) {
                     sel_uid[6] = bcc;
                 } // else use card BCC
-                Dbprintf("Using BCC%d=" _YELLOW_("0x%02x") " to perform anticollision", cascade_level, sel_uid[6]);
+
+                Dbprintf("Using BCC%d =" _YELLOW_("0x%02x"), cascade_level, sel_uid[6]);
             }
         } else {
             memcpy(sel_uid + 2, uid_resp, 4);                               // the provided UID
@@ -2753,7 +2765,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
         ReaderTransmit(sel_uid, sizeof(sel_uid), NULL);
 
         // Receive the SAK
-        if (!ReaderReceive(resp, resp_par)) {
+        if (!ReaderReceive(resp, parity_array)) {
             if (g_dbglevel >= DBG_INFO) Dbprintf("Card didn't answer to select");
             return 0;
         }
@@ -2761,13 +2773,16 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
 
         // Test if more parts of the uid are coming
         do_cascade = (((sak & 0x04) /* && uid_resp[0] == 0x88 */) > 0);
+
         if (cascade_level == 0) {
+
             if (hf14aconfig.forcecl2 == 2) {
                 do_cascade = false;
             } else if (hf14aconfig.forcecl2 == 1) {
                 do_cascade = true;
             } // else 0==auto
         } else if (cascade_level == 1) {
+
             if (hf14aconfig.forcecl3 == 2) {
                 do_cascade = false;
             } else if (hf14aconfig.forcecl3 == 1) {
@@ -2798,7 +2813,10 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
 
     if (hf14aconfig.forcerats == 0) {
         // PICC compliant with iso14443a-4 ---> (SAK & 0x20 != 0)
-        if ((sak & 0x20) == 0) return 2;
+        if ((sak & 0x20) == 0) {
+            return 2;
+        }
+
     } else if (hf14aconfig.forcerats == 2) {
         if ((sak & 0x20) != 0) Dbprintf("Skipping RATS according to hf 14a config");
         return 2;
@@ -2808,12 +2826,14 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
 
     // RATS, Request for answer to select
     if (no_rats == false) {
+
         uint8_t rats[] = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0
         AddCrc14A(rats, 2);
         ReaderTransmit(rats, sizeof(rats), NULL);
-        int len = ReaderReceive(resp, resp_par);
-        if (len == 0)
+        int len = ReaderReceive(resp, parity_array);
+        if (len == 0) {
             return 0;
+        }
 
         if (p_card) {
             memcpy(p_card->ats, resp, sizeof(p_card->ats));
