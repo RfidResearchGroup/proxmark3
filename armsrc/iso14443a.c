@@ -1932,7 +1932,7 @@ static void PrepareDelayedTransfer(uint16_t delay) {
 static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing) {
 
     if (g_hf_field_active == false) {
-        Dbprintf("Warning: HF field is off, ignoring TransmitFor14443a command");
+        Dbprintf("Warning: HF field is off");
         return;
     }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
@@ -1942,10 +1942,6 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
             *timing = (GetCountSspClk() + 8) & 0xfffffff8;
         else
             PrepareDelayedTransfer(*timing & 0x00000007);        // Delay transfer (fine tuning - up to 7 MF clock ticks)
-
-        if (g_dbglevel >= DBG_EXTENDED && GetCountSspClk() >= (*timing & 0xfffffff8)) {
-            Dbprintf("TransmitFor14443a: Missed timing");
-        }
 
         while (GetCountSspClk() < (*timing & 0xfffffff8)) {};    // Delay transfer (multiple of 8 MF clock ticks)
         LastTimeProxToAirStart = *timing;
@@ -3035,8 +3031,8 @@ void ReaderIso14443a(PacketCommandNG *c) {
     uint32_t timeout = c->oldarg[2];
     uint8_t *cmd = c->data.asBytes;
     uint32_t arg0;
+
     uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
-    uint8_t par[MAX_PARITY_SIZE] = {0x00};
 
     if ((param & ISO14A_CONNECT)) {
         iso14_pcb_blocknum = 0;
@@ -3079,7 +3075,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
         arg0 = iso14_apdu(cmd, len, (param & ISO14A_SEND_CHAINING), buf, &res);
         FpgaDisableTracing();
 
-        reply_old(CMD_ACK, arg0, res, 0, buf, sizeof(buf));
+        reply_mix(CMD_ACK, arg0, res, 0, buf, sizeof(buf));
     }
 
     if ((param & ISO14A_RAW)) {
@@ -3108,8 +3104,8 @@ void ReaderIso14443a(PacketCommandNG *c) {
                     bits_to_send -= 8;
                 }
             } else {
-                GetParity(cmd, lenbits / 8, par);
-                ReaderTransmitBitsPar(cmd, lenbits, par, NULL);                         // bytes are 8 bit with odd parity
+                GetParity(cmd, lenbits / 8, parity_array);
+                ReaderTransmitBitsPar(cmd, lenbits, parity_array, NULL);               // bytes are 8 bit with odd parity
             }
         } else {                    // want to send complete bytes only
             if ((param & ISO14A_TOPAZMODE)) {
@@ -3130,14 +3126,14 @@ void ReaderIso14443a(PacketCommandNG *c) {
                     FpgaDisableTracing();
                     reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
                 } else {
-                    arg0 = ReaderReceive(buf, par);
+                    arg0 = ReaderReceive(buf, parity_array);
                     FpgaDisableTracing();
-                    reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+                    reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
                 }
             } else {
-                arg0 = ReaderReceive(buf, par);
+                arg0 = ReaderReceive(buf, parity_array);
                 FpgaDisableTracing();
-                reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+                reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
             }
 
         } else {
@@ -3146,9 +3142,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 FpgaDisableTracing();
                 reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
             } else {
-                arg0 = ReaderReceive(buf, par);
+                arg0 = ReaderReceive(buf, parity_array);
                 FpgaDisableTracing();
-                reply_old(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
+                reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
             }
         }
     }
@@ -3160,8 +3156,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
         iso14a_set_timeout(save_iso14a_timeout);
     }
 
-    if ((param & ISO14A_NO_DISCONNECT))
+    if ((param & ISO14A_NO_DISCONNECT)) {
         return;
+    }
 
 OUT:
     hf_field_off();
@@ -3209,11 +3206,11 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
     clear_trace();
     set_tracing(true);
 
-    uint8_t mf_auth[]     = { keytype, block, 0x00, 0x00 };
-    uint8_t mf_nr_ar[]    = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t uid[10]       = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t par_list[8]   = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t ks_list[8]    = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t mf_auth[4] = { keytype, block, 0x00, 0x00 };
+    uint8_t mf_nr_ar[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t par_list[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t ks_list[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
     uint8_t par[1] = {0};    // maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
@@ -3496,12 +3493,12 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
  * Thanks to @doegox for the feedback and new approaches.
 */
 void DetectNACKbug(void) {
-    uint8_t mf_auth[] = {0x60, 0x00, 0xF5, 0x7B};
-    uint8_t mf_nr_ar[]    = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t uid[10]       = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
-    uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
-    uint8_t par[1] = {0};    // maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
+    uint8_t mf_auth[4] = { MIFARE_AUTH_KEYA, 0x00, 0xF5, 0x7B };
+    uint8_t mf_nr_ar[8]= { 0x00 };
+    uint8_t uid[10] = { 0x00 };
+    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = { 0x00 };
+    uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = { 0x00 };
+    uint8_t par[1] = {0x00 };    // maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
 
     uint32_t nt = 0, previous_nt = 0, nt_attacked = 0, cuid = 0;
     int32_t catch_up_cycles = 0, last_catch_up = 0;
@@ -3651,17 +3648,18 @@ void DetectNACKbug(void) {
 
                 sync_cycles = (sync_cycles - nt_distance) / elapsed_prng_sequences;
 
-                if (sync_cycles <= 0)
+                if (sync_cycles <= 0) {
                     sync_cycles += PRNG_SEQUENCE_LENGTH;
+                }
 
                 if (sync_cycles > PRNG_SEQUENCE_LENGTH * 2) {
                     isOK = 96;             // Card's PRNG runs at an unexpected frequency or resets unexpectedly
                     break;
                 }
 
-                if (g_dbglevel >= DBG_EXTENDED)
+                if (g_dbglevel >= DBG_EXTENDED) {
                     Dbprintf("calibrating in cycle %d. nt_distance=%d, elapsed_prng_sequences=%d, new sync_cycles: %d\n", i, nt_distance, elapsed_prng_sequences, sync_cycles);
-
+                }
                 continue;
             }
         }
@@ -3693,7 +3691,7 @@ void DetectNACKbug(void) {
                 sync_cycles += catch_up_cycles;
 
                 if (g_dbglevel >= DBG_EXTENDED) {
-                    Dbprintf("Lost sync in cycle %d for the fourth time consecutively (nt_distance = %d). Adjusting sync_cycles to %d.\n", i, catch_up_cycles, sync_cycles);
+                    Dbprintf("Lost sync in cycle %d for the fourth time consecutively (nt_distance = %d). Adjusting sync_cycles to %d\n", i, catch_up_cycles, sync_cycles);
                     Dbprintf("nt [%08x] attacted [%08x]", nt, nt_attacked);
                 }
                 last_catch_up = 0;
@@ -3704,8 +3702,9 @@ void DetectNACKbug(void) {
         }
 
         // Receive answer. This will be a 4 Bit NACK when the 8 parity bits are OK after decoding
-        if (received_nack)
+        if (received_nack) {
             catch_up_cycles = 8;     // the PRNG is delayed by 8 cycles due to the NAC (4Bits = 0x05 encrypted) transfer
+        }
 
         // we are testing all 256 possibilities.
         par[0]++;
@@ -3713,8 +3712,9 @@ void DetectNACKbug(void) {
         // tried all 256 possible parities without success.
         if (par[0] == 0) {
             // did we get one NACK?
-            if (num_nacks == 1)
+            if (num_nacks == 1) {
                 isOK = 1;
+            }
             break;
         }
 
