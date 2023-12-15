@@ -2313,7 +2313,9 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *rec
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;
 
+    uint32_t timeout = iso14a_get_timeout();
     uint32_t receive_timer = GetTickCount();
+
     for (;;) {
         WDT_HIT();
 
@@ -2321,17 +2323,18 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *rec
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             if (ManchesterDecoding_Thinfilm(b)) {
                 *received_len = Demod.len;
-                // log
+
                 LogTrace(receivedResponse, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, NULL, false);
                 return true;
             }
         }
 
-        if (GetTickCountDelta(receive_timer) >  100)
+        if (GetTickCountDelta(receive_timer) > timeout + 100)
             break;
     }
+
     *received_len = Demod.len;
-    // log
+
     LogTrace(receivedResponse, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, NULL, false);
     return false;
 }
