@@ -469,7 +469,34 @@ hf 14a info
 ## Mifare Classic Direct Write OTP
 ^[Top](#top)
 
-TODO
+Chip manufactured by iKey LLC as a bypass for Gen1 filters.
+Support Direct Write as CUID, but block0 can be written only once.
+
+The chip had an issue in the protocol implementation.
+
+The reader could interrupt radiofield for 2-3 microseconds (standard pause in the bit period of ISO14443-2).
+After the response to first `26 (7)` command, but before the following `93 70` command. In that case original M1 card will stop the flow, but OTP will continue it.
+
+That issue led to the development of the filters against that card and discontinuation of the production. 
+
+As a successor, [OTP 2.0](#mifare-classic-otp-2.0) was created.
+
+### Characteristics
+^[Top](#top)
+
+* Initial UID is AA55C396
+* Android compatible
+
+### Identify
+^[Top](#top)
+
+Only possible before personalization.
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Write Once / FUID
+```
 
 ## MIFARE Classic OTP 2.0
 ^[Top](#top)
