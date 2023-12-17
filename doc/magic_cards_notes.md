@@ -25,7 +25,8 @@ Useful docs:
   * [MIFARE Classic block0](#mifare-classic-block0)
   * [MIFARE Classic Gen1A aka UID](#mifare-classic-gen1a-aka-uid)
   * [MIFARE Classic Gen1B](#mifare-classic-gen1b)
-  * [MIFARE Classic OTP2](#mifare-classic-otp2)
+  * [Mifare Classic Direct Write OTP](#mifare-classic-direct-write-otp)
+  * [MIFARE Classic OTP 2.0](#mifare-classic-otp-2.0)
   * [MIFARE Classic DirectWrite aka Gen2 aka CUID](#mifare-classic-directwrite-aka-gen2-aka-cuid)
   * [MIFARE Classic DirectWrite, FUID version aka 1-write](#mifare-classic-directwrite-fuid-version-aka-1-write)
   * [MIFARE Classic Gen3 aka APDU](#mifare-classic-gen3-aka-apdu)
@@ -465,10 +466,16 @@ hf 14a info
 * Read: `40(7)`, `30xx`
 * Write: `40(7)`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
-## MIFARE Classic OTP2
+## Mifare Classic Direct Write OTP
+^[Top](#top)
+
+TODO
+
+## MIFARE Classic OTP 2.0
 ^[Top](#top)
 
 Similar to Gen1A, but after first block 0 edit, tag no longer replies to 0x40 command.
+Were manufactured by iKey LLC as a replacement for [OTP](#mifare-classic-direct-write-otp)
 
 ### Characteristics
 
