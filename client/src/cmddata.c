@@ -233,7 +233,7 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
 
     uint8_t *buf = calloc(len, sizeof(uint8_t));
     if (buf == NULL) {
-        PrintAndLogEx(WARNING, "dail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
     memcpy(buf, g_DemodBuffer, len);
@@ -870,24 +870,34 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     int foo = ABS(hi - hi_1);
     int bar = (int)((int)((hi + hi_1) / 2) * 0.04);
 
-    if (verbose && foo < bar) {
-        distance = idx_1 - idx;
-        PrintAndLogEx(SUCCESS, "possible visible correlation "_YELLOW_("%4d") " samples", distance);
-    } else if (verbose && (correlation > 1)) {
-        PrintAndLogEx(SUCCESS, "possible correlation " _YELLOW_("%4zu") " samples", correlation);
+    int retval = correlation;
+
+    if (foo < bar) {
+        distance = (idx_1 - idx);
+        retval = distance;
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "possible visible correlation "_YELLOW_("%4d") " samples", distance);
+        }
+
+    } else if (correlation > 1) {
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "possible correlation " _YELLOW_("%4zu") " samples", correlation);
+        }
     } else {
-        PrintAndLogEx(FAILED, "no repeating pattern found, try increasing window size");
+        PrintAndLogEx(HINT, "no repeating pattern found, try increasing window size");
+        // return value -1, indication to increase window size
+        return -1;
     }
 
-    int retval = correlation;
     if (SaveGrph) {
         //g_GraphTraceLen = g_GraphTraceLen - window;
         memcpy(out, correl_buf, len * sizeof(int));
         if (distance > 0) {
             setClockGrid(distance, idx);
             retval = distance;
-        } else
+        } else {
             setClockGrid(correlation, idx);
+        }
 
         g_CursorCPos = idx_1;
         g_CursorDPos = idx_1 + retval;

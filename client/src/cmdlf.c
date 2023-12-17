@@ -1504,7 +1504,7 @@ int CmdVchDemod(const char *Cmd) {
 }
 */
 
-static bool CheckChipType(bool getDeviceData) {
+static bool check_chiptype(bool getDeviceData) {
 
     bool retval = false;
 
@@ -1555,6 +1555,41 @@ out:
     return retval;
 }
 
+static int check_autocorrelate(int clock) {
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, _CYAN_("Performing auto correlations..."));
+    for (int win = 4000; win < 30000; win += 2000) {
+        int ans = AutoCorrelate(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, win, false, false);
+        if (ans == -1) {
+            continue;
+        }
+    
+        if (ans > 1) {
+            PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " repeating samples", ans);
+
+            // If we got a field clock / bit rate from before
+            // we can use it for predict number of repeating bytes 
+            // this signal contain.
+            if (clock > 0) {
+                int bytes = ans / (8 * clock);
+                int mod = (bytes % 4);
+                int blocks  = (bytes / 4);
+
+                PrintAndLogEx(SUCCESS, "   " _YELLOW_("%u") " clock, " _YELLOW_("%d") " bytes repeating", clock, bytes);
+
+                if (mod == 0 && blocks < 7) {
+                    PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " T5577 block%c needed", (bytes / 4), (mod == 1) ? ' ' : 's');
+                }
+            }
+            PrintAndLogEx(NORMAL, "");
+            return PM3_SUCCESS;
+        }
+    }
+    PrintAndLogEx(NORMAL, "");    
+    return PM3_EFAILED;
+}
+
 int CmdLFfind(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -1598,7 +1633,7 @@ int CmdLFfind(const char *Cmd) {
     PrintAndLogEx(INFO, "if it finds something that looks like a tag");
     PrintAndLogEx(INFO, "False Positives " _YELLOW_("ARE") " possible");
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "Checking for known tags...");
+    PrintAndLogEx(INFO, _CYAN_("Checking for known tags..."));
     PrintAndLogEx(INFO, "");
 
     // only run these tests if device is online
@@ -1872,21 +1907,17 @@ int CmdLFfind(const char *Cmd) {
     }
 
     if (search_unk) {
-        //test unknown tag formats (raw mode)
-        PrintAndLogEx(INFO, "\nChecking for unknown tags:\n");
-        int ans = AutoCorrelate(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, 8000, false, false);
-        if (ans > 0) {
 
-            PrintAndLogEx(INFO, "Possible auto correlation of %d repeating samples", ans);
+        // test unknown tag formats (raw mode)
+        PrintAndLogEx(INFO, _CYAN_("Checking for unknown tags...") "\n");
 
-            if (ans % 8 == 0)
-                PrintAndLogEx(INFO, "Possible %d bytes", (ans / 8));
-        }
-
-        //fsk
-        if (GetFskClock("", false)) {
+        // FSK
+        int clock = GetFskClock("", false);
+        if (clock) {
             if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
-                PrintAndLogEx(INFO, "Unknown FSK Modulated Tag found!");
+                PrintAndLogEx(INFO, _GREEN_("FSK") " modulation detected!");
+                check_autocorrelate(clock);
+
                 if (search_cont) {
                     found++;
                 } else {
@@ -1895,31 +1926,58 @@ int CmdLFfind(const char *Cmd) {
             }
         }
 
-        bool st = true;
-        if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Unknown ASK Modulated and Manchester encoded Tag found!");
-            PrintAndLogEx(INFO, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
-            if (search_cont) {
-                found++;
-            } else {
-                goto out;
+        // ASK
+        clock = GetAskClock("", false);
+        if (clock) {
+            bool st = true;
+            if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
+                PrintAndLogEx(INFO, _GREEN_("ASK") " modulation / Manchester encoding detected!");
+                PrintAndLogEx(INFO, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
+                check_autocorrelate(clock);
+
+                if (search_cont) {
+                    found++;
+                } else {
+                    goto out;
+                }
             }
         }
 
-        if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Possible unknown PSK1 Modulated Tag found above!");
-            PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod --p2'"));
-            PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
-            PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod --nr"));
-            if (search_cont) {
-                found++;
-            } else {
-                goto out;
+        // NZR
+        clock = GetNrzClock("", false);
+        if (clock) {
+            if (NRZrawDemod(0, 0, 0,false) == PM3_SUCCESS) {
+                PrintAndLogEx(INFO, _GREEN_("NRZ") " modulation detected!");
+                check_autocorrelate(clock);
+
+                if (search_cont) {
+                    found++;
+                } else {
+                    goto out;
+                }
+            }
+        }
+
+        // PSK
+        clock = GetPskClock("", false);
+        if (clock) {
+            if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
+                PrintAndLogEx(INFO, "Possible " _GREEN_("PSK1") " modulation detected!");
+                PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod --p2'"));
+                PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
+                PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod --nr"));
+                check_autocorrelate(clock);
+
+                if (search_cont) {
+                    found++;
+                } else {
+                    goto out;
+                }
             }
         }
 
         if (found == 0) {
-            PrintAndLogEx(FAILED, _RED_("No data found!"));
+            PrintAndLogEx(FAILED, _RED_("Failed to determine any modulations or patterns"));
         }
     }
 
@@ -1929,7 +1987,7 @@ int CmdLFfind(const char *Cmd) {
 
 out:
     // identify chipset
-    if (CheckChipType(is_online) == false) {
+    if (check_chiptype(is_online) == false) {
         PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
     }
     return retval;
