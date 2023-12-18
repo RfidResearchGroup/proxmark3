@@ -818,10 +818,6 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
         window = len;
     }
 
-    if (verbose) {
-        PrintAndLogEx(INFO, "performing " _YELLOW_("%zu") " correlations", g_GraphTraceLen - window);
-    }
-
     //test
     double autocv = 0.0;    // Autocovariance value
     size_t correlation = 0;
@@ -852,7 +848,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
 
         // keep track of which distance is repeating.
         // A value near 1.0 or more indicates a correlation in the signal
-        if (ac_value > 0.95) {
+        if (ac_value > 0.95f) {
             correlation = i - lastmax;
             lastmax = i;
 
@@ -882,10 +878,10 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
 
     if (distance > -1) {
         if (verbose) {
-            PrintAndLogEx(SUCCESS, "possible correlation at "_YELLOW_("%4d") " samples", distance);
+            PrintAndLogEx(SUCCESS, "Possible correlation at "_YELLOW_("%4d") " samples", distance);
         }
     } else {
-        PrintAndLogEx(HINT, "no repeating pattern found, try increasing window size");
+        PrintAndLogEx(HINT, "No repeating pattern found, try increasing window size");
         // return value -1, indication to increase window size
         return -1;
     }
@@ -1154,7 +1150,7 @@ static int CmdDetectClockRate(const char *Cmd) {
         arg_lit0(NULL, "psk", "specify PSK modulation clock detection"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool a = arg_get_lit(ctx, 1);
     bool f = arg_get_lit(ctx, 2);
     bool n = arg_get_lit(ctx, 3);
@@ -1165,6 +1161,25 @@ static int CmdDetectClockRate(const char *Cmd) {
     if (tmp > 1) {
         PrintAndLogEx(WARNING, "Only specify one modulation");
         return PM3_EINVARG;
+    } else if (tmp == 0) {
+
+        int clock = GetFskClock("", false);
+        if (clock > 0) {
+            PrintAndLogEx(SUCCESS, "FSK Clock... %d", clock);
+        }
+        clock = GetAskClock("", false);
+        if (clock > 0) {
+            PrintAndLogEx(SUCCESS, "ASK Clock... %d", clock);
+        }
+        clock = GetNrzClock("", false);
+        if (clock > 0) {
+            PrintAndLogEx(SUCCESS, "NRZ Clock... %d", clock);
+        }
+        clock = GetPskClock("", false);
+        if (clock > 0) {
+            PrintAndLogEx(SUCCESS, "PSK Clock... %d", clock);
+        }
+        return PM3_SUCCESS;
     }
 
     if (a)

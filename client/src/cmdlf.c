@@ -1562,30 +1562,34 @@ static int check_autocorrelate(const char *prefix, int clock) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _CYAN_("%s - auto correlations"), prefix);
     for (int win = 2000; win < 30000; win += 2000) {
-        int ans = AutoCorrelate(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, win, false, false);
-        if (ans == -1) {
+        int samples = AutoCorrelate(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, win, false, false);
+        if (samples == -1) {
             continue;
         }
 
-        if (ans > 1) {
-            PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " repeating samples", ans);
+        if ((samples > 1) && (clock > 0)) {
 
             // If we got a field clock / bit rate from before
-            // we can use it for predict number of repeating bytes
-            // this signal contain.
-            if (clock > 0) {
-                int bytes = round( (float)ans / (8 * clock));
-                int mod = (bytes % 4);
-                int blocks  = (bytes / 4);
+            // we can use it for predict number of repeating bytes within
 
-                PrintAndLogEx(SUCCESS, "   " _YELLOW_("%u") " clock, " _YELLOW_("%d") " bytes repeating", clock, bytes);
+            int bytes = (samples / (8 * clock));
+            int mod = (bytes % 4);
+            if (mod)
+                bytes++;
 
-                if (mod == 0 && blocks < 7) {
-                    PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " T5577 block%c needed", (bytes / 4), (mod == 1) ? ' ' : 's');
-                }
+            int blocks = (bytes / 4);
+            PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " samples / 8 bits / " _YELLOW_("%d") " clock", samples, clock);
+            PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " bytes repeating", bytes);
+
+            if (blocks < 7) {
+                PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " block%c", blocks, (blocks == 1) ? ' ' : 's');
+                PrintAndLogEx(NORMAL, "");
+                return PM3_SUCCESS;
+            } else {
+                PrintAndLogEx(INFO, "   " _YELLOW_("%d") " blocks  ( too large for T5577 )", blocks);
+                PrintAndLogEx(NORMAL, "");
+                return PM3_EFAILED;
             }
-            PrintAndLogEx(NORMAL, "");
-            return PM3_SUCCESS;
         }
     }
     PrintAndLogEx(NORMAL, "");
@@ -1598,16 +1602,16 @@ int CmdLFfind(const char *Cmd) {
     CLIParserInit(&ctx, "lf search",
                   "Read and search for valid known tag. For offline mode, you can `data load` first then search.",
                   "lf search       -> try reading data from tag & search for known tag\n"
-                  "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
                   "lf search -u    -> try reading data from tag & search for known and unknown tag\n"
-                  "lf search -1u   -> use data from the GraphBuffer & search for known and unknown tag\n"
+                  "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
+                  "lf search -1uc  -> use data from the GraphBuffer & search for known and unknown tag\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("1", NULL, "Use data from Graphbuffer to search"),
-        arg_lit0("c", NULL, "Continue searching even after a first hit"),
-        arg_lit0("u", NULL, "Search for unknown tags. If not set, reads only known tags"),
+        arg_lit0("1", NULL, "Use data from Graphbuffer to search (offline mode)"),
+        arg_lit0("c", NULL, "Continue searching after successful match"),
+        arg_lit0("u", NULL, "Search for unknown tags"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1627,13 +1631,11 @@ int CmdLFfind(const char *Cmd) {
     }
 
     if (search_cont) {
-        PrintAndLogEx(INFO, "Continuous search enabled");
+        PrintAndLogEx(INFO, "Continue searching after successful match");
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "NOTE: some demods output possible binary");
-    PrintAndLogEx(INFO, "if it finds something that looks like a tag");
-    PrintAndLogEx(INFO, "False Positives " _YELLOW_("ARE") " possible");
+    PrintAndLogEx(INFO, "Note: False Positives " _YELLOW_("ARE") " possible");
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, _CYAN_("Checking for known tags..."));
     PrintAndLogEx(INFO, "");
@@ -1913,6 +1915,15 @@ int CmdLFfind(const char *Cmd) {
         // test unknown tag formats (raw mode)
         PrintAndLogEx(INFO, _CYAN_("Checking for unknown tags...") "\n");
 
+        uint8_t ones[] = {
+                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+            };
+
         // FSK
         PrintAndLogEx(INFO, "FSK clock.......... " NOLF);
         int clock = GetFskClock("", false);
@@ -1920,12 +1931,7 @@ int CmdLFfind(const char *Cmd) {
             PrintAndLogEx(NORMAL, _GREEN_("detected"));
             if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
                 check_autocorrelate("FSK", clock);
-
-                if (search_cont) {
-                    found++;
-                } else {
-                    goto out;
-                }
+                found++;
             } else {
                 PrintAndLogEx(INFO, "FSK demodulation... " _RED_("failed"));
             }
@@ -1944,12 +1950,7 @@ int CmdLFfind(const char *Cmd) {
                 PrintAndLogEx(INFO, _GREEN_("ASK") " modulation / Manchester encoding detected!");
                 PrintAndLogEx(INFO, "   could also be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
                 check_autocorrelate("ASK", clock);
-
-                if (search_cont) {
-                    found++;
-                } else {
-                    goto out;
-                }
+                found++;
             } else {
                 PrintAndLogEx(INFO, "ASK demodulation... " _RED_("failed"));
             }
@@ -1960,15 +1961,18 @@ int CmdLFfind(const char *Cmd) {
         // NZR
         PrintAndLogEx(INFO, "NRZ clock.......... " NOLF);
         clock = GetNrzClock("", false);
-        if (clock) {
+        if (clock && clock > 8) {
             PrintAndLogEx(NORMAL, _GREEN_("detected"));
             if (NRZrawDemod(0, 0, 0, true) == PM3_SUCCESS) {
-                check_autocorrelate("NRZ", clock);
 
-                if (search_cont) {
+                int min = MIN(g_DemodBufferLen, sizeof(ones));
+                // if demodulated binary is only 1,  skip autocorrect
+                if (memcmp(g_DemodBuffer, ones, min) != 0) {
+                    check_autocorrelate("NRZ", clock);
                     found++;
                 } else {
-                    goto out;
+                    PrintAndLogEx(INFO, "NRZ ............... " _RED_("false positive")); 
+                    PrintAndLogEx(NORMAL, "");
                 }
             } else {
                 PrintAndLogEx(INFO, "NRZ demodulation... " _RED_("failed"));
@@ -1988,12 +1992,7 @@ int CmdLFfind(const char *Cmd) {
                 PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
                 PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod --nr"));
                 check_autocorrelate("PSK", clock);
-
-                if (search_cont) {
-                    found++;
-                } else {
-                    goto out;
-                }
+                found++;
             } else {
                 PrintAndLogEx(INFO, "PSK demodulation... " _RED_("failed"));
             }
@@ -2002,7 +2001,7 @@ int CmdLFfind(const char *Cmd) {
         }
 
         if (found == 0) {
-            PrintAndLogEx(FAILED, _RED_("Failed to determine any modulations or patterns"));
+            PrintAndLogEx(FAILED, _RED_("Failed to demodulated signal"));
         }
     }
 
