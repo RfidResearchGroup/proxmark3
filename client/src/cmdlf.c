@@ -21,6 +21,7 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
+#include <math.h>
 #include "cmdparser.h"      // command_t
 #include "comms.h"
 #include "commonutil.h"     // ARRAYLEN
@@ -643,15 +644,6 @@ int CmdLFConfig(const char *Cmd) {
         .verbose = true
     };
 
-    if (reset) {
-        config.decimation = 1;
-        config.bits_per_sample = 8;
-        config.averaging = 1,
-        config.divisor = LF_DIVISOR_125;
-        config.samples_to_skip = 0;
-        config.trigger_threshold = 0;
-    }
-
     if (use_125)
         config.divisor = LF_DIVISOR_125;
 
@@ -697,6 +689,16 @@ int CmdLFConfig(const char *Cmd) {
     }
 
     config.samples_to_skip = skip;
+
+    if (reset) {
+        config.decimation = 1;
+        config.bits_per_sample = 8;
+        config.averaging = 1,
+        config.divisor = LF_DIVISOR_125;
+        config.samples_to_skip = 0;
+        config.trigger_threshold = 0;
+    }
+
     return lf_config(&config);
 }
 
@@ -1572,7 +1574,7 @@ static int check_autocorrelate(const char *prefix, int clock) {
             // we can use it for predict number of repeating bytes
             // this signal contain.
             if (clock > 0) {
-                int bytes = ans / (8 * clock);
+                int bytes = round( (float)ans / (8 * clock));
                 int mod = (bytes % 4);
                 int blocks  = (bytes / 4);
 
@@ -1917,7 +1919,6 @@ int CmdLFfind(const char *Cmd) {
         if (clock) {
             PrintAndLogEx(NORMAL, _GREEN_("detected"));
             if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
-                PrintAndLogEx(INFO, _GREEN_("FSK") " modulation detected!");
                 check_autocorrelate("FSK", clock);
 
                 if (search_cont) {
@@ -1935,13 +1936,13 @@ int CmdLFfind(const char *Cmd) {
         // ASK
         PrintAndLogEx(INFO, "ASK clock.......... " NOLF);
         clock = GetAskClock("", false);
-        if (clock) {
+        if (clock && clock > 8) {
             PrintAndLogEx(NORMAL, _GREEN_("detected"));
             bool st = true;
             if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(INFO, _GREEN_("ASK") " modulation / Manchester encoding detected!");
-                PrintAndLogEx(INFO, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
+                PrintAndLogEx(INFO, "   could also be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
                 check_autocorrelate("ASK", clock);
 
                 if (search_cont) {
@@ -1962,7 +1963,6 @@ int CmdLFfind(const char *Cmd) {
         if (clock) {
             PrintAndLogEx(NORMAL, _GREEN_("detected"));
             if (NRZrawDemod(0, 0, 0, true) == PM3_SUCCESS) {
-                PrintAndLogEx(INFO, _GREEN_("NRZ") " modulation detected!");
                 check_autocorrelate("NRZ", clock);
 
                 if (search_cont) {
