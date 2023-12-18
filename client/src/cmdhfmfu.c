@@ -3700,7 +3700,9 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "--------------------+----------+-----");
     PrintAndLogEx(INFO, " Vingcard algo");
-    PrintAndLogEx(INFO, " Saflok algo");
+    uint64_t key = 0;
+    mfc_algo_saflok_one(uid, 0, 0, &key);
+    PrintAndLogEx(INFO, " Saflok algo        | %012" PRIX64, key);
     PrintAndLogEx(INFO, " SALTO algo");
     PrintAndLogEx(INFO, " Dorma Kaba algo");
     PrintAndLogEx(INFO, " STiD algo");

@@ -3254,6 +3254,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     bool firstChunk = true, lastChunk = false;
 
     int i = 0;
+
     // time
     uint64_t t1 = msclock();
 
@@ -3288,6 +3289,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                 // all keys,  aborted
                 if (res == PM3_SUCCESS || res == 2)
                     goto out;
+
             } // end chunks of keys
             firstChunk = true;
             lastChunk = false;
@@ -8905,6 +8907,21 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Keys Information"));
+
+    /*
+    1. fast check for different KDF here
+    2. mew command "hf mf keygen"
+
+    " Vingcard algo");
+    PrintAndLogEx(INFO, " Saflok algo");
+    PrintAndLogEx(INFO, " SALTO algo");
+    uint64_t key = 0;
+    mfc_algo_saflok_one(uid, 1, 0, &key);
+    PrintAndLogEx(INFO, " Dorma Kaba algo    | %012X" PRIX64, key);
+    PrintAndLogEx(INFO, " STiD algo");
+    PrintAndLogEx(INFO, "-------------------------------------");
+    */
+
 
     uint8_t fkey[MIFARE_KEY_SIZE] = {0};
     uint8_t fKeyType = 0xff;
