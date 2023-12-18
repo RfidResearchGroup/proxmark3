@@ -814,9 +814,13 @@ static int Cmdaskrawdemod(const char *Cmd) {
 
 int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveGrph, bool verbose) {
     // sanity check
-    if (window > len) window = len;
+    if (window > len) {
+        window = len;
+    }
 
-    if (verbose) PrintAndLogEx(INFO, "performing " _YELLOW_("%zu") " correlations", g_GraphTraceLen - window);
+    if (verbose) {
+        PrintAndLogEx(INFO, "performing " _YELLOW_("%zu") " correlations", g_GraphTraceLen - window);
+    }
 
     //test
     double autocv = 0.0;    // Autocovariance value
@@ -829,6 +833,9 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     double variance = compute_variance(in, len);
 
     int *correl_buf = calloc(MAX_GRAPH_TRACE_LEN, sizeof(int));
+
+    uint8_t peak_cnt = 0;
+    size_t peaks[10] = {0};
 
     for (size_t i = 0; i < len - window; ++i) {
 
@@ -844,44 +851,38 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
         double ac_value = autocv / variance;
 
         // keep track of which distance is repeating.
-        if (ac_value > 1) {
+        // A value near 1.0 or more indicates a correlation in the signal
+        if (ac_value > 0.95) {
             correlation = i - lastmax;
             lastmax = i;
+
+            if ((correlation > 1) && peak_cnt < ARRAYLEN(peaks)) {
+                peaks[peak_cnt++] = correlation;
+            }
         }
     }
 
-    //
-    int hi = 0, idx = 0;
-    int distance = 0, hi_1 = 0, idx_1 = 0;
-    for (size_t i = 0; i <= len; ++i) {
-        if (correl_buf[i] > hi) {
-            hi = correl_buf[i];
-            idx = i;
+    // Find shorts distance between peaks
+    int distance = -1;
+    for (size_t i = 0; i < ARRAYLEN(peaks); ++i) {
+
+        if (peaks[i] < 2) {
+            continue;
+        }
+
+        if (distance == -1) {
+            distance = peaks[i];
+            continue;
+        } 
+
+        if (peaks[i] < distance) {
+            distance = peaks[i];
         }
     }
 
-    for (size_t i = idx + 1; i <= window; ++i) {
-        if (correl_buf[i] > hi_1) {
-            hi_1 = correl_buf[i];
-            idx_1 = i;
-        }
-    }
-
-    int foo = ABS(hi - hi_1);
-    int bar = (int)((int)((hi + hi_1) / 2) * 0.04);
-
-    int retval = correlation;
-
-    if (foo < bar) {
-        distance = (idx_1 - idx);
-        retval = distance;
+    if (distance > -1) {
         if (verbose) {
-            PrintAndLogEx(SUCCESS, "possible visible correlation "_YELLOW_("%4d") " samples", distance);
-        }
-
-    } else if (correlation > 1) {
-        if (verbose) {
-            PrintAndLogEx(SUCCESS, "possible correlation " _YELLOW_("%4zu") " samples", correlation);
+            PrintAndLogEx(SUCCESS, "possible correlation at "_YELLOW_("%4d") " samples", distance);
         }
     } else {
         PrintAndLogEx(HINT, "no repeating pattern found, try increasing window size");
@@ -892,20 +893,12 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     if (SaveGrph) {
         //g_GraphTraceLen = g_GraphTraceLen - window;
         memcpy(out, correl_buf, len * sizeof(int));
-        if (distance > 0) {
-            setClockGrid(distance, idx);
-            retval = distance;
-        } else {
-            setClockGrid(correlation, idx);
-        }
-
-        g_CursorCPos = idx_1;
-        g_CursorDPos = idx_1 + retval;
+        setClockGrid(distance, 0);
         g_DemodBufferLen = 0;
         RepaintGraphWindow();
     }
     free(correl_buf);
-    return retval;
+    return distance;
 }
 
 static int CmdAutoCorr(const char *Cmd) {
@@ -1413,7 +1406,8 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
 
     if (errCnt > 0 && (verbose || g_debugMode)) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Errors during Demoding (shown as 7 in bit stream): %d", errCnt);
     if (verbose || g_debugMode) {
-        PrintAndLogEx(SUCCESS, "NRZ demoded bitstream:");
+        PrintAndLogEx(SUCCESS, "NRZ demoded bitstream");
+        PrintAndLogEx(INFO, "---------------------");
         // Now output the bitstream to the scrollback by line of 16 bits
         printDemodBuff(0, false, invert, false);
     }

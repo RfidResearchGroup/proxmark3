@@ -1555,11 +1555,11 @@ out:
     return retval;
 }
 
-static int check_autocorrelate(int clock) {
+static int check_autocorrelate(const char *prefix, int clock) {
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, _CYAN_("Performing auto correlations..."));
-    for (int win = 4000; win < 30000; win += 2000) {
+    PrintAndLogEx(INFO, _CYAN_("%s - auto correlations"), prefix);
+    for (int win = 2000; win < 30000; win += 2000) {
         int ans = AutoCorrelate(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, win, false, false);
         if (ans == -1) {
             continue;
@@ -1912,68 +1912,93 @@ int CmdLFfind(const char *Cmd) {
         PrintAndLogEx(INFO, _CYAN_("Checking for unknown tags...") "\n");
 
         // FSK
+        PrintAndLogEx(INFO, "FSK clock.......... " NOLF);
         int clock = GetFskClock("", false);
         if (clock) {
+            PrintAndLogEx(NORMAL, _GREEN_("detected")); 
             if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
                 PrintAndLogEx(INFO, _GREEN_("FSK") " modulation detected!");
-                check_autocorrelate(clock);
+                check_autocorrelate("FSK", clock);
 
                 if (search_cont) {
                     found++;
                 } else {
                     goto out;
                 }
-            }
+            } else {
+                PrintAndLogEx(INFO, "FSK demodulation... " _RED_("failed"));
+            }           
+        } else {
+            PrintAndLogEx(NORMAL, _RED_("no")); 
         }
 
         // ASK
+        PrintAndLogEx(INFO, "ASK clock.......... " NOLF);
         clock = GetAskClock("", false);
         if (clock) {
+            PrintAndLogEx(NORMAL, _GREEN_("detected"));
             bool st = true;
             if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(INFO, _GREEN_("ASK") " modulation / Manchester encoding detected!");
                 PrintAndLogEx(INFO, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
-                check_autocorrelate(clock);
+                check_autocorrelate("ASK", clock);
 
                 if (search_cont) {
                     found++;
                 } else {
                     goto out;
                 }
+            } else {
+                PrintAndLogEx(INFO, "ASK demodulation... " _RED_("failed"));
             }
+        } else {
+            PrintAndLogEx(NORMAL, _RED_("no")); 
         }
 
         // NZR
+        PrintAndLogEx(INFO, "NRZ clock.......... " NOLF);
         clock = GetNrzClock("", false);
         if (clock) {
-            if (NRZrawDemod(0, 0, 0,false) == PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, _GREEN_("detected"));
+            if (NRZrawDemod(0, 0, 0, true) == PM3_SUCCESS) {
                 PrintAndLogEx(INFO, _GREEN_("NRZ") " modulation detected!");
-                check_autocorrelate(clock);
+                check_autocorrelate("NRZ", clock);
 
                 if (search_cont) {
                     found++;
                 } else {
                     goto out;
                 }
-            }
+            } else {
+                PrintAndLogEx(INFO, "NRZ demodulation... " _RED_("failed"));
+            }  
+        } else {
+            PrintAndLogEx(NORMAL, _RED_("no")); 
         }
 
         // PSK
+        PrintAndLogEx(INFO, "PSK clock.......... " NOLF);
         clock = GetPskClock("", false);
-        if (clock) {
+        if (clock) {           
+            PrintAndLogEx(NORMAL, _GREEN_("detected"));
             if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
                 PrintAndLogEx(INFO, "Possible " _GREEN_("PSK1") " modulation detected!");
                 PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod --p2'"));
                 PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
                 PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod --nr"));
-                check_autocorrelate(clock);
+                check_autocorrelate("PSK", clock);
 
                 if (search_cont) {
                     found++;
                 } else {
                     goto out;
                 }
+            } else {
+                PrintAndLogEx(INFO, "PSK demodulation... " _RED_("failed"));
             }
+        } else {
+            PrintAndLogEx(NORMAL, _RED_("no")); 
         }
 
         if (found == 0) {
