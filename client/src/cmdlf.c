@@ -1564,12 +1564,12 @@ static int check_autocorrelate(const char *prefix, int clock) {
         if (ans == -1) {
             continue;
         }
-    
+
         if (ans > 1) {
             PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " repeating samples", ans);
 
             // If we got a field clock / bit rate from before
-            // we can use it for predict number of repeating bytes 
+            // we can use it for predict number of repeating bytes
             // this signal contain.
             if (clock > 0) {
                 int bytes = ans / (8 * clock);
@@ -1586,7 +1586,7 @@ static int check_autocorrelate(const char *prefix, int clock) {
             return PM3_SUCCESS;
         }
     }
-    PrintAndLogEx(NORMAL, "");    
+    PrintAndLogEx(NORMAL, "");
     return PM3_EFAILED;
 }
 
@@ -1915,7 +1915,7 @@ int CmdLFfind(const char *Cmd) {
         PrintAndLogEx(INFO, "FSK clock.......... " NOLF);
         int clock = GetFskClock("", false);
         if (clock) {
-            PrintAndLogEx(NORMAL, _GREEN_("detected")); 
+            PrintAndLogEx(NORMAL, _GREEN_("detected"));
             if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
                 PrintAndLogEx(INFO, _GREEN_("FSK") " modulation detected!");
                 check_autocorrelate("FSK", clock);
@@ -1927,9 +1927,9 @@ int CmdLFfind(const char *Cmd) {
                 }
             } else {
                 PrintAndLogEx(INFO, "FSK demodulation... " _RED_("failed"));
-            }           
+            }
         } else {
-            PrintAndLogEx(NORMAL, _RED_("no")); 
+            PrintAndLogEx(NORMAL, _RED_("no"));
         }
 
         // ASK
@@ -1953,7 +1953,7 @@ int CmdLFfind(const char *Cmd) {
                 PrintAndLogEx(INFO, "ASK demodulation... " _RED_("failed"));
             }
         } else {
-            PrintAndLogEx(NORMAL, _RED_("no")); 
+            PrintAndLogEx(NORMAL, _RED_("no"));
         }
 
         // NZR
@@ -1972,15 +1972,15 @@ int CmdLFfind(const char *Cmd) {
                 }
             } else {
                 PrintAndLogEx(INFO, "NRZ demodulation... " _RED_("failed"));
-            }  
+            }
         } else {
-            PrintAndLogEx(NORMAL, _RED_("no")); 
+            PrintAndLogEx(NORMAL, _RED_("no"));
         }
 
         // PSK
         PrintAndLogEx(INFO, "PSK clock.......... " NOLF);
         clock = GetPskClock("", false);
-        if (clock) {           
+        if (clock) {
             PrintAndLogEx(NORMAL, _GREEN_("detected"));
             if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
                 PrintAndLogEx(INFO, "Possible " _GREEN_("PSK1") " modulation detected!");
@@ -1998,7 +1998,7 @@ int CmdLFfind(const char *Cmd) {
                 PrintAndLogEx(INFO, "PSK demodulation... " _RED_("failed"));
             }
         } else {
-            PrintAndLogEx(NORMAL, _RED_("no")); 
+            PrintAndLogEx(NORMAL, _RED_("no"));
         }
 
         if (found == 0) {

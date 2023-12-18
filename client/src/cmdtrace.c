@@ -927,16 +927,16 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
                 if (hdr->isResponse) {
                     PrintAndLogEx(NORMAL, "            |            |  *  |%-*s | %-4s| %s",
-                                str_padder,
-                                sprint_hex_inrow_spaces(mfData + j, plen, 2),
-                                (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
-                                explanation);
+                                  str_padder,
+                                  sprint_hex_inrow_spaces(mfData + j, plen, 2),
+                                  (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
+                                  explanation);
                 } else {
                     PrintAndLogEx(NORMAL, "            |            |  *  |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
-                                str_padder,
-                                sprint_hex_inrow_spaces(mfData + j, plen, 2),
-                                (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
-                                explanation);
+                                  str_padder,
+                                  sprint_hex_inrow_spaces(mfData + j, plen, 2),
+                                  (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
+                                  explanation);
                 }
             }
         }
@@ -1106,7 +1106,7 @@ static int CmdTraceLoad(const char *Cmd) {
     if (gs_trace) {
         free(gs_trace);	// maybe better to not clobber this until we have successful load?
         gs_trace = NULL;
-	gs_traceLen = 0;
+        gs_traceLen = 0;
     }
 
     size_t len = 0;
@@ -1293,7 +1293,7 @@ int CmdTraceList(const char *Cmd) {
 
     if (use_buffer == false) {
         download_trace();
-    } else if (gs_traceLen == 0 || gs_trace ==NULL) {
+    } else if (gs_traceLen == 0 || gs_trace == NULL) {
         PrintAndLogEx(FAILED, "You requested a trace list in offline mode but there is no trace.");
         PrintAndLogEx(FAILED, "Consider using " _YELLOW_("`trace load`") " or removing parameter " _YELLOW_("`-1`"));
         return PM3_EINVARG;

@@ -2320,13 +2320,13 @@
             "notes": [
                 "hf emrtd dump",
                 "hf emrtd dump --dir ../dump",
-                "hf emrtd dump -n 123456789 -d 19890101 -e 20250401"
+                "hf emrtd dump -n 123456789 -d 890101 -e 250401"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-n, --documentnumber <alphanum> document number, up to 9 chars",
-                "-d, --dateofbirth <YYMMDD> date of birth in YYMMDD format",
+                "-n, --doc <alphanum> document number, up to 9 chars",
+                "-d, --date <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars",
                 "--dir <str> save dump to the given dirpath"
@@ -2339,14 +2339,14 @@
             "notes": [
                 "hf emrtd info",
                 "hf emrtd info --dir ../dumps",
-                "hf emrtd info -n 123456789 -d 19890101 -e 20250401",
-                "hf emrtd info -n 123456789 -d 19890101 -e 20250401 -i"
+                "hf emrtd info -n 123456789 -d 890101 -e 250401",
+                "hf emrtd info -n 123456789 -d 890101 -e 250401 -i"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-n, --documentnumber <alphanum> document number, up to 9 chars",
-                "-d, --dateofbirth <YYMMDD> date of birth in YYMMDD format",
+                "-n, --doc <alphanum> document number, up to 9 chars",
+                "-d, --date <YYMMDD> date of birth in YYMMDD format",
                 "-e, --expiry <YYMMDD> expiry in YYMMDD format",
                 "-m, --mrz <[0-9A-Z<]> 2nd line of MRZ, 44 chars (passports only)",
                 "--dir <str> display info from offline dump stored in dirpath",
@@ -4712,7 +4712,7 @@
             "description": "Information and check vulnerabilities in a MIFARE Classic card Some cards in order to extract information you need to specify key and/or specific keys in the copmmand line",
             "notes": [
                 "hf mf info",
-                "hf mf info -k ffffffff -n -v"
+                "hf mf info -k FFFFFFFFFFFF -n -v"
             ],
             "offline": false,
             "options": [
@@ -7601,6 +7601,18 @@
             ],
             "usage": "hints [-h10]"
         },
+        "hw bootloader": {
+            "command": "hw bootloader",
+            "description": "Reboot Proxmark3 into bootloader mode",
+            "notes": [
+                "hw bootloader"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw bootloader [-h]"
+        },
         "hw break": {
             "command": "hw break",
             "description": "send break loop package",
@@ -9055,7 +9067,7 @@
                 "-1, --ht1 Card type Hitag 1",
                 "-2, --ht2 Card type Hitag 2",
                 "-s, --hts Card type Hitag S",
-                "-m, --htm Card type Hitag \u041e\u0458"
+                "-m, --htm Card type Hitag \u03bc"
             ],
             "usage": "lf hitag eload [-h12sm] -f <fn>"
         },
@@ -12146,8 +12158,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 702,
+        "commands_extracted": 703,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-12-11T23:10:13"
+        "extracted_on": "2023-12-18T09:05:00"
     }
 }

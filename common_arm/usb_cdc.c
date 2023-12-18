@@ -669,7 +669,7 @@ uint32_t usb_read(uint8_t *data, size_t len) {
     uint32_t time_out = 0;
 
     while (len)  {
-        if (!usb_check()) 
+        if (!usb_check())
             break;
 
         if (pUdp->UDP_CSR[AT91C_EP_OUT] & bank) {
@@ -690,7 +690,7 @@ uint32_t usb_read(uint8_t *data, size_t len) {
                 bank = AT91C_UDP_RX_DATA_BK0;
         }
 
-        if (time_out++ == 0x1fff) 
+        if (time_out++ == 0x1fff)
             break;
     }
 
@@ -735,7 +735,7 @@ uint32_t usb_read_ng(uint8_t *data, size_t len) {
     }
 
     while (len)  {
-        if (!usb_check()) 
+        if (!usb_check())
             break;
 
         if ((pUdp->UDP_CSR[AT91C_EP_OUT] & bank)) {

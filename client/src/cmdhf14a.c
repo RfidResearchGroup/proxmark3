@@ -922,7 +922,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     uint8_t data[PM3_CMD_DATA_SIZE] = { 0x0a | gs_frames_num, 0x00};
     gs_frames_num ^= 1;
 
-    int min = MIN( (PM3_CMD_DATA_SIZE - 2), (datainlen & 0x1FF));
+    int min = MIN((PM3_CMD_DATA_SIZE - 2), (datainlen & 0x1FF));
     memcpy(&data[2], datain, min);
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF) + 2, 0, data, min + 2);
 

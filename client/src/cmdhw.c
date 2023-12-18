@@ -1142,7 +1142,7 @@ static command_t CommandTable[] = {
     {"-------------", CmdHelp,         AlwaysAvailable, "----------------------- " _CYAN_("Hardware") " -----------------------"},
     {"help",          CmdHelp,         AlwaysAvailable, "This help"},
     {"break",         CmdBreak,        IfPm3Present,    "Send break loop usb command"},
-    {"bootloader",    CmdBootloader,   IfPm3Present,    "Reboot Proxmark3 into bootloader mode"},    
+    {"bootloader",    CmdBootloader,   IfPm3Present,    "Reboot Proxmark3 into bootloader mode"},
     {"connect",       CmdConnect,      AlwaysAvailable, "Connect Proxmark3 to serial port"},
     {"dbg",           CmdDbg,          IfPm3Present,    "Set Proxmark3 debug level"},
     {"detectreader",  CmdDetectReader, IfPm3Present,    "Detect external reader field"},

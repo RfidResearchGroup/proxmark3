@@ -784,6 +784,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hw help                `|Y       |`This help`
 |`hw break               `|N       |`Send break loop usb command`
+|`hw bootloader          `|N       |`Reboot Proxmark3 into bootloader mode`
 |`hw connect             `|Y       |`Connect Proxmark3 to serial port`
 |`hw dbg                 `|N       |`Set Proxmark3 debug level`
 |`hw detectreader        `|N       |`Detect external reader field`

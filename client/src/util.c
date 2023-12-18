@@ -1233,7 +1233,7 @@ size_t str_nlen(const char *src, size_t maxlen) {
 }
 
 void str_reverse(char *buf,  size_t len) {
-    for (size_t i = 0; i < (len>>1); i++) {
+    for (size_t i = 0; i < (len >> 1); i++) {
         char tmp = buf[i];
         buf[i] = buf[len - i - 1];
         buf[len - i - 1] = tmp;
@@ -1241,7 +1241,7 @@ void str_reverse(char *buf,  size_t len) {
 }
 
 void str_inverse_hex(char *buf, size_t len) {
-   for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++) {
         buf[i] = inv_b2s(buf[i], true);
     }
 }
@@ -1252,7 +1252,7 @@ void str_inverse_bin(char *buf, size_t len) {
         char c = buf[i];
         if (c == '1')
             buf[i] = '0';
-        else if ( c == '0')
+        else if (c == '0')
             buf[i] = '1';
         else
             buf[i] = '.';

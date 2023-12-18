@@ -970,8 +970,8 @@ static int CmdAnalyseFreq(const char *Cmd) {
     PrintAndLogEx(INFO, " 13.56 mHz has %f m, rf range %f m", len_1356, rf_range_1356);
 
     PrintAndLogEx(INFO, "Antenna lengths");
-    PrintAndLogEx(INFO, "   125 kHz 1/2 = %f m, 1/4 = %f m", (len_125 / 2), (len_125 / 4) );
-    PrintAndLogEx(INFO, "   134 kHz 1/2 = %f m, 1/4 = %f m", (len_134 / 2), (len_134 / 4) );
+    PrintAndLogEx(INFO, "   125 kHz 1/2 = %f m, 1/4 = %f m", (len_125 / 2), (len_125 / 4));
+    PrintAndLogEx(INFO, "   134 kHz 1/2 = %f m, 1/4 = %f m", (len_134 / 2), (len_134 / 4));
     PrintAndLogEx(INFO, " 13.56 mHz 1/2 = %f m, 1/4 = %f m", (len_1356 / 2), (len_1356 / 4));
 
 
