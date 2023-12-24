@@ -334,7 +334,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
     }
 
     msleep(500);
-    
+
     if (isBluetoothExtensionHC04 != true) {
         // parity must be changed before baudrate
         if (parity != USART_PARITY) {
@@ -387,7 +387,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         if (ret == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
             if (strcmp((char *)data, "OK")) {
-                PrintAndLogEx(SUCCESS, "Parity set to " _GREEN_("None") "and Baudrate set to " _GREEN_("115200"));
+                PrintAndLogEx(SUCCESS, "Parity set to " _GREEN_("None") " and Baudrate set to " _GREEN_("115200"));
             } else {
                 PrintAndLogEx(WARNING, "Unexpected response to AT+BAUD: " _YELLOW_("%.*s"), (int)len, data);
             }
