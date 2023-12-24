@@ -1675,10 +1675,14 @@ static int CmdHFMFPDump(const char *Cmd) {
     char key_fn[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)key_fn, FILE_PATH_SIZE, &keyfnlen);
 
-    bool nosave = arg_get_lit(ctx, 3);
-    bool verbose = arg_get_lit(ctx, 4);
+//    bool nosave = arg_get_lit(ctx, 3);
+//    bool verbose = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
+    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    return PM3_ENOTIMPL;
+
+/*
     mfpSetVerboseMode(verbose);
 
     // read card
@@ -1688,14 +1692,14 @@ static int CmdHFMFPDump(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    /*
-        iso14a_card_select_t card ;
-        int res = mfp_read_tag(&card, mem, key_fn);
-        if (res != PM3_SUCCESS) {
-            free(mem);
-            return res;
-        }
-    */
+
+//        iso14a_card_select_t card ;
+//        int res = mfp_read_tag(&card, mem, key_fn);
+//        if (res != PM3_SUCCESS) {
+//            free(mem);
+//            return res;
+//        }
+
 
     // Skip saving card data to file
     if (nosave) {
@@ -1703,23 +1707,21 @@ static int CmdHFMFPDump(const char *Cmd) {
         free(mem);
         return PM3_SUCCESS;
     }
-    /*
+
         // Save to file
-        if (strlen(data_fn) < 1) {
+//        if (strlen(data_fn) < 1) {
+//            char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-dump")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
+//            strcpy(fptr, "hf-mfp-");
+//            FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
+//            strcpy(data_fn, fptr);
+//            free(fptr);
+//        }
 
-            char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-dump")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
-            strcpy(fptr, "hf-mfp-");
+//        pm3_save_mf_dump(filename, dump, MIFARE_4K_MAX_BYTES, jsfCardMemory);
 
-            FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
-
-            strcpy(data_fn, fptr);
-            free(fptr);
-        }
-
-        pm3_save_mf_dump(filename, dump, MIFARE_4K_MAX_BYTES, jsfCardMemory);
-    */
     free(mem);
     return PM3_SUCCESS;
+*/
 }
 
 
