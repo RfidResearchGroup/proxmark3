@@ -165,23 +165,22 @@ static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
 
     // 1000, such large timeout needed
     ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
-    if (ret == PM3_SUCCESS)
-    {
+    if (ret == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
         if (str_startswith((char *)data, "hc01.comV2.0") ||
             str_startswith((char *)data, "www.hc01.com") ||
-            str_startswith((char *)data, "BT SPP V4.0"))
-        {
+            str_startswith((char *)data, "BT SPP V4.0")) {
+
             PrintAndLogEx(SUCCESS, "Add-on " _GREEN_("found!"));
+
             // if it fully match HC-04's attribute
-            if (str_startswith((char *)data, "www.hc01.com V2.5, 2022-04-26"))
-            {
+            if (str_startswith((char *)data, "www.hc01.com V2.5, 2022-04-26")) {
                 isBluetoothExtensionHC04 = true;
                 PrintAndLogEx(INFO, "Bluetooth module identified as HC-04.");
             }
 
             // if it fully match Blueshark HC-05's attribute
-            if (str_startswith((char *)data, "hc01.comV2.0")){
+            if (str_startswith((char *)data, "hc01.comV2.0")) {
                 isBluetoothExtensionHC05Blueshark = true;
                 PrintAndLogEx(INFO, "Bluetooth module identified as Blueshark HC-05.");
             }
