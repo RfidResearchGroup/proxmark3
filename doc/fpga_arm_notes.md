@@ -69,7 +69,7 @@ There is very rarely changes to the images so there is no need to setup a fpga t
 Since the FPGA is very old,  the Xilinx WebPack ISE 10.1  is the last working tool chain.  You can download this legacy development on Xilinx and register for a free product installation id.
 Or use mine  `11LTAJ5ZJK3PXTUBMF0C0J6C4`    The package to download is about 7Gb and linux based.   Though I recently managed to install it on WSL for Windows 10.
 
-There is a docker image with webpack built in which has been built which you can use to easily compile the images:
+There is a docker image with webpack installed which has been built which you can use to easily compile the images:
 
 ```
 docker pull nhutton/prox-container:webp_image_complete
