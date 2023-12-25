@@ -49,6 +49,8 @@
 // App IDs
 #define EMRTD_AID_MRTD {0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01}
 
+#define EMRTD_KMAC_LEN              16
+
 // DESKey Types
 static const uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
 static const uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
@@ -511,7 +513,7 @@ static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, i
     uint8_t data[21] = { 0x00 };
     uint8_t temp[8] = {0x0c, 0xb0};
 
-    PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 20));
+    PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, EMRTD_KMAC_LEN));
 
     // Set p1 and p2
     temp[2] = (uint8_t)(offset >> 8);
@@ -531,15 +533,15 @@ static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, i
     uint8_t n[19] = { 0x00 };
     memcpy(n, ssc, 8);
     memcpy(n + 8, m, 11);
-    PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, 19));
+    PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, sizeof(n)));
 
     uint8_t cc[8] = { 0x00 };
     retail_mac(kmac, n, 19, cc);
-    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, 8));
+    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, sizeof(cc)));
 
     uint8_t do8e[10] = {0x8E, 0x08};
     memcpy(do8e + 2, cc, 8);
-    PrintAndLogEx(DEBUG, "do8e: %s", sprint_hex_inrow(do8e, 10));
+    PrintAndLogEx(DEBUG, "do8e: %s", sprint_hex_inrow(do8e, sizeof(do8e)));
 
     int lc = 13;
     PrintAndLogEx(DEBUG, "lc: %i", lc);
@@ -1021,8 +1023,8 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
     uint8_t ssc[8] = { 0x00 };
-    uint8_t ks_enc[16] = { 0x00 };
-    uint8_t ks_mac[16] = { 0x00 };
+    uint8_t ks_enc[EMRTD_KMAC_LEN] = { 0x00 };
+    uint8_t ks_mac[EMRTD_KMAC_LEN] = { 0x00 };
     bool BAC = false;
 
     // Select the eMRTD
@@ -1282,18 +1284,40 @@ static void emrtd_print_issuance(char *data, bool ascii) {
     PrintAndLogEx(SUCCESS, "Date of issue.........: " _YELLOW_("%s"), final_date);
 }
 
-static void emrtd_print_personalization_timestamp(uint8_t *data) {
+static void emrtd_print_personalization_timestamp(uint8_t *data, size_t datalen) {
+    if (datalen < 7 ) {
+        return;
+    }
+
     char str_date[0x0F] = { 0x00 };
     strncpy(str_date, sprint_hex_inrow(data, 0x07), sizeof(str_date) - 1);
+
     char final_date[20] = { 0x00 };
-    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", str_date, str_date + 4, str_date + 6, str_date + 8, str_date + 10, str_date + 12);
+    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s"
+        , str_date
+        , str_date + 4
+        , str_date + 6
+        , str_date + 8
+        , str_date + 10
+        , str_date + 12
+    );
 
     PrintAndLogEx(SUCCESS, "Personalization at....: " _YELLOW_("%s"), final_date);
 }
 
-static void emrtd_print_unknown_timestamp_5f85(uint8_t *data) {
+static void emrtd_print_unknown_timestamp_5f85(uint8_t *data, size_t datalen) {
+    if (datalen < 14) {
+        return;
+    }
     char final_date[20] = { 0x00 };
-    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", data, data + 4, data + 6, data + 8, data + 10, data + 12);
+    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s"
+        , data
+        , data + 4
+        , data + 6
+        , data + 8
+        , data + 10
+        , data + 12
+    );
 
     PrintAndLogEx(SUCCESS, "Unknown timestamp 5F85: " _YELLOW_("%s"), final_date);
     PrintAndLogEx(HINT, "This is very likely the personalization timestamp, but it is using an undocumented tag.");
@@ -1588,13 +1612,13 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
                     saveFile("BackOfDocument", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x55:
-                    emrtd_print_personalization_timestamp(tagdata);
+                    emrtd_print_personalization_timestamp(tagdata, tagdatalen);
                     break;
                 case 0x56:
                     PrintAndLogEx(SUCCESS, "Serial of Personalization System: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x85:
-                    emrtd_print_unknown_timestamp_5f85(tagdata);
+                    emrtd_print_unknown_timestamp_5f85(tagdata, tagdatalen);
                     break;
                 default:
                     PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....: %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
