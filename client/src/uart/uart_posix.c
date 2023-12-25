@@ -106,6 +106,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         free(prefix);
 
         if (strlen(pcPortName) <= 4) {
+            PrintAndLogEx(ERR, "error: tcp port name length too short");
             free(sp);
             return INVALID_SERIAL_PORT;
         }
@@ -297,6 +298,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         free(prefix);
 
         if (strlen(pcPortName) <= 4) {
+            PrintAndLogEx(ERR, "error: udp port name length too short");
             free(sp);
             return INVALID_SERIAL_PORT;
         }
@@ -994,38 +996,6 @@ uint32_t uart_get_speed(const serial_port sp) {
             return 0;
     };
     return uiPortSpeed;
-}
-
-bool uart_bind(void *socket, char *bindAddrStr, char *bindPortStr, bool isBindingIPv6) {
-    if (bindAddrStr == NULL && bindPortStr == NULL)
-        return true; // no need to bind
-
-    struct sockaddr_storage bindSockaddr;
-    memset(&bindSockaddr, 0, sizeof(bindSockaddr));
-    int bindPort = 0; // 0: port unspecified
-    if (bindPortStr != NULL)
-        bindPort = atoi(bindPortStr);
-
-    if (!isBindingIPv6) {
-        struct sockaddr_in *bindSockaddr4 = (struct sockaddr_in *)&bindSockaddr;
-        bindSockaddr4->sin_family = AF_INET;
-        bindSockaddr4->sin_port = htons(bindPort);
-        if (bindAddrStr == NULL)
-            bindSockaddr4->sin_addr.s_addr = INADDR_ANY;
-        else
-            bindSockaddr4->sin_addr.s_addr = inet_addr(bindAddrStr);
-    } else {
-        struct sockaddr_in6 *bindSockaddr6 = (struct sockaddr_in6 *)&bindSockaddr;
-        bindSockaddr6->sin6_family = AF_INET6;
-        bindSockaddr6->sin6_port = htons(bindPort);
-        if (bindAddrStr == NULL)
-            bindSockaddr6->sin6_addr = in6addr_any;
-        else
-            inet_pton(AF_INET6, bindAddrStr, &(bindSockaddr6->sin6_addr));
-    }
-
-    int res = bind(*(int *)socket, (struct sockaddr *)&bindSockaddr, sizeof(bindSockaddr));
-    return (res >= 0);
 }
 
 #endif
