@@ -322,7 +322,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
     ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
     if (ret == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
-        if (strcmp((char *)data, "OK")) {
+        if (strstr((char *)data, "OK")  != NULL) {
             PrintAndLogEx(SUCCESS, "PIN set to " _GREEN_("1234"));
         } else {
             PrintAndLogEx(WARNING, "Unexpected response to AT+PIN: " _YELLOW_("%.*s"), (int)len, data);
@@ -385,7 +385,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
         ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
         if (ret == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
-            if (strcmp((char *)data, "OK")) {
+            if (strstr((char *)data, "OK") != NULL) {
                 PrintAndLogEx(SUCCESS, "Parity set to " _GREEN_("None") " and Baudrate set to " _GREEN_("115200"));
             } else {
                 PrintAndLogEx(WARNING, "Unexpected response to AT+BAUD: " _YELLOW_("%.*s"), (int)len, data);
