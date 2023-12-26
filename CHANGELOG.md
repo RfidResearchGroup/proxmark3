@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `uart_receive()` - Check if TCP connection is lost (@wh201906)
  - Change `data detectclock` - now tries all clocks if called w/o any params (@iceman1001)
  - Changed `lf search -1u` - improved the autocorrelation detection for unknown signals (@iceman1001)
  - Fixed `hf emrtd dump` stack smashing on device side (@iceman1001)
