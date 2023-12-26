@@ -35,6 +35,7 @@ Useful docs:
      * [UFUID](#ufuid)
      * [ZUID](#zuid)
      * [GDM](#gdm)
+     * [GDCUID](#gdcuid)
   * [MIFARE Classic, other versions](#mifare-classic-other-versions)
   * [MIFARE Classic Super](#mifare-classic-super)
 - [MIFARE Ultralight](#mifare-ultralight)
@@ -880,6 +881,7 @@ No implemented commands today
 | Factory configuration | Name |
 | --- | --- |
 | 850000000000000000005A5A00000008 | GDM |
+| 850000000000005A00FF005A00000008 | GDCUID |
 | 850000000000005A0000005A5A5A0008 | UCUID |
 | 8500000000005A00005A005A005A0008 | "7 byte hard" |
 | 7AFF850102015A00005A005A005A0008 | M1-7B |
@@ -1078,7 +1080,7 @@ Could be manually validated with the configuration block value:
 
 ```
 [usb] pm3 --> hf mf gdmcfg
-[+] config... 85 00 00 00 00 00 00 5A 00 FF 00 5A 00 00 00 08
+[+] config... 85 00 00 00 00 00 00 00 00 00 5A 5A 00 00 00 08
 ```
 
 ### Commands
@@ -1094,6 +1096,44 @@ Could be manually validated with the configuration block value:
   * Read configuration: `gdmcfg`
   * Write configuration: `gdmsetcfg`
 
+## GDCUID
+^[Top](#top)
+
+That tag is a CUID tag, built on USCUID chip. It doesn't sold separately, but could be found on marketplaces under the guise of a CUID tag.
+
+### Characteristics
+^[Top](#top)
+
+* Configuration block value: `850000000000005A00FF005A00000008`
+* Allows direct write to the block 0, so is Android compatible
+* Responds to magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
+
+### Identify
+^[Top](#top)
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 4 GDM
+
+```
+Currently Proxmark3 doesn't identify it as a separate tag. 
+Could be manually validated with the configuration block value:
+
+```
+[usb] pm3 --> hf mf gdmcfg
+[+] config... 85 00 00 00 00 00 00 5A 00 FF 00 5A 00 00 00 08
+```
+
+### Commands
+^[Top](#top)
+
+* Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`; `[16 bytes data]+crc`
+* Proxmark3 commands (does auth and executes the corresponding command)
+  * Read configuration: `gdmcfg`
+  * Write configuration: `gdmsetcfg`
 
 ## MIFARE Classic, other versions
 ^[Top](#top)
