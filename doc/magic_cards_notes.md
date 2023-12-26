@@ -32,6 +32,7 @@ Useful docs:
   * [MIFARE Classic Gen3 aka APDU](#mifare-classic-gen3-aka-apdu)
   * [MIFARE Classic USCUID](#mifare-classic-uscuid)
      * [FUID](#fuid)
+     * [UFUID](#ufuid)
   * [MIFARE Classic, other versions](#mifare-classic-other-versions)
   * [MIFARE Classic Super](#mifare-classic-super)
 - [MIFARE Ultralight](#mifare-ultralight)
@@ -950,6 +951,53 @@ More correct detection should be based on a backdoor commands and configuration 
 [=]   # | sector 00 / 0x00                                | ascii
 [=] ----+-------------------------------------------------+-----------------
 [=]   0 | B5 02 45 4E BC 08 04 00 01 68 AA 89 47 CE 4D 1D | ..EN.....h..G.M.
+```
+
+## UFUID
+^[Top](#top)
+
+The card is positioned as "sealable UID", so that means you could use the same commands, as you could use for UID chip in a default state. But after the sealing (changing the configuration) card will not answer to the backdoor commands and will behave as a normal Mifare Classic card. 
+
+*But at the same time there is some unidentified behavior, which doesn't fully corresponds the protocol and original Mifare Classic cards. So the card could be filtered out with a protocol-based filters (i.e. Iron Logic OTP2 filter).* 
+
+### Characteristics
+^[Top](#top)
+
+* Configuration block value: `7AFF000000000000BAFA000000000008`
+* No direct write to block 0
+* Responds to magic wakeup `40(7)`, `43` commands before the sealing
+* Acknowledge only the first (except wakeup command) and last config byte(s), so doesn't have the hidden block
+
+### Identify
+^[Top](#top)
+
+Currently Proxmark3 doesn't identify it as a sepatate card. 
+Before the sealing could be detected from the config block value:
+
+```
+[usb] pm3 --> hf 14a raw -k -a -b 7 40
+[+] 0A
+[usb] pm3 --> hf 14a raw -k -a 43
+[+] 0A
+[usb] pm3 --> hf 14a raw -c -k -a E000
+[+] 7A FF 00 00 00 00 00 00 BA FA 00 00 00 00 00 08 [ F1 69 ]
+```
+
+### Proxmark3 commands
+^[Top](#top)
+
+All commands are available before sealing.
+* Proxmark3 magic Gen1 commands
+* Read configuration: `E000+crc`
+* Write configuration: `E100+crc`
+
+Example of the sealing, performed by Chinese copiers in raw commands:
+
+```
+hf 14a raw -a -k -b 7 40
+hf 14a raw    -k      43
+hf 14a raw    -k -c   e100
+hf 14a raw       -c   85000000000000000000000000000008
 ```
 
 ## MIFARE Classic, other versions
