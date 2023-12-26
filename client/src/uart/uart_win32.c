@@ -103,163 +103,16 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     }
     str_lower(prefix);
 
-    if (memcmp(prefix, "tcp:", 4) == 0) {
-        free(prefix);
-
-        if (strlen(pcPortName) <= 4) {
-            PrintAndLogEx(ERR, "error: tcp port name length too short");
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
-
-        struct addrinfo *addr = NULL, *rp;
-
-        char *addrPortStr = str_dup(pcPortName + 4);
-        if (addrPortStr == NULL) {
-            PrintAndLogEx(ERR, "error: string duplication");
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
-
-        timeout.tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000;
-
-        // find the "bind" option
-        char *bindAddrPortStr = strstr(addrPortStr, ",bind=");
-        const char *bindAddrStr = NULL;
-        const char *bindPortStr = NULL;
-        bool isBindingIPv6 = false;
-
-        if (bindAddrPortStr != NULL) {
-            *bindAddrPortStr = '\0'; // as the end of target address (and port)
-            bindAddrPortStr += 6; // strlen(",bind=")
-
-            int result = uart_parse_address_port(bindAddrPortStr, &bindAddrStr, &bindPortStr, &isBindingIPv6);
-            if (result != PM3_SUCCESS) {
-                if (result == PM3_ESOFT) {
-                    PrintAndLogEx(ERR, "error: wrong address: [] unmatched in bind option");
-                } else {
-                    PrintAndLogEx(ERR, "error: failed to parse address and port in bind option");
-                }
-                free(addrPortStr);
-                free(sp);
-                return INVALID_SERIAL_PORT;
-            }
-
-            // for bind option, it's possible to only specify address or port
-            if (strlen(bindAddrStr) == 0)
-                bindAddrStr = NULL;
-            if (bindPortStr != NULL && strlen(bindPortStr) == 0)
-                bindPortStr = NULL;
-        }
-
-        const char *addrStr = NULL;
-        const char *portStr = NULL;
-        bool isIPv6 = false;
-
-        int result = uart_parse_address_port(addrPortStr, &addrStr, &portStr, &isIPv6);
-        if (result != PM3_SUCCESS) {
-            if (result == PM3_ESOFT) {
-                PrintAndLogEx(ERR, "error: wrong address: [] unmatched");
-            } else {
-                PrintAndLogEx(ERR, "error: failed to parse address and port");
-            }
-            free(addrPortStr);
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
-
-        g_conn.send_via_ip = isIPv6 ? PM3_TCPv6 : PM3_TCPv4;
-        portStr = (portStr == NULL) ? "18888" : portStr;
-
-        WSADATA wsaData;
-        struct addrinfo info;
-        int iResult;
-
-        iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-        if (iResult != 0) {
-            PrintAndLogEx(ERR, "error: WSAStartup failed with error: %d", iResult);
-            free(addrPortStr);
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
-
-        memset(&info, 0, sizeof(info));
-        info.ai_family = AF_UNSPEC;
-        info.ai_socktype = SOCK_STREAM;
-        info.ai_protocol = IPPROTO_TCP;
-
-        if ((strstr(addrStr, "localhost") != NULL) ||
-                (strstr(addrStr, "127.0.0.1") != NULL) ||
-                (strstr(addrStr, "::1") != NULL)) {
-            g_conn.send_via_local_ip = true;
-        }
-
-        int s = getaddrinfo(addrStr, portStr, &info, &addr);
-        if (s != 0) {
-            PrintAndLogEx(ERR, "error: getaddrinfo: %d: %s", s, gai_strerror(s));
-            freeaddrinfo(addr);
-            free(addrPortStr);
-            free(sp);
-            WSACleanup();
-            return INVALID_SERIAL_PORT;
-        }
-
-        SOCKET hSocket = INVALID_SOCKET;
-        for (rp = addr; rp != NULL; rp = rp->ai_next) {
-            hSocket = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-
-            if (hSocket == INVALID_SOCKET)
-                continue;
-
-            if (!uart_bind(&hSocket, bindAddrStr, bindPortStr, isBindingIPv6)) {
-                PrintAndLogEx(ERR, "error: Could not bind. error: %u", WSAGetLastError());
-                closesocket(hSocket);
-                hSocket = INVALID_SOCKET;
-                freeaddrinfo(addr);
-                free(addrPortStr);
-                free(sp);
-                WSACleanup();
-                return INVALID_SERIAL_PORT;
-            }
-
-            if (connect(hSocket, rp->ai_addr, (int)rp->ai_addrlen) != INVALID_SOCKET)
-                break;
-
-            closesocket(hSocket);
-            hSocket = INVALID_SOCKET;
-        }
-
-        freeaddrinfo(addr);
-        free(addrPortStr);
-
-        if (rp == NULL) {               /* No address succeeded */
-            PrintAndLogEx(ERR, "error: Could not connect");
-            WSACleanup();
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
-
-        sp->hSocket = hSocket;
-
-        int one = 1;
-        int res = setsockopt(sp->hSocket, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
-        if (res != 0) {
-            closesocket(hSocket);
-            WSACleanup();
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
-        return sp;
+    bool isTCP = false;
+    bool isUDP = false;
+    if (strlen(prefix) > 4) {
+        isTCP = (memcmp(prefix, "tcp:", 4) == 0);
+        isUDP = (memcmp(prefix, "udp:", 4) == 0);
     }
 
-    if (memcmp(prefix, "udp:", 4) == 0) {
-        free(prefix);
+    if (isTCP || isUDP) {
 
-        if (strlen(pcPortName) <= 4) {
-            PrintAndLogEx(ERR, "error: udp port name length too short");
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
+        free(prefix);
 
         struct addrinfo *addr = NULL, *rp;
 
@@ -277,7 +130,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         const char *bindAddrStr = NULL;
         const char *bindPortStr = NULL;
         bool isBindingIPv6 = false;
-    
+
         if (bindAddrPortStr != NULL) {
             *bindAddrPortStr = '\0'; // as the end of target address (and port)
             bindAddrPortStr += 6; // strlen(",bind=")
@@ -317,7 +170,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             return INVALID_SERIAL_PORT;
         }
 
-        g_conn.send_via_ip = isIPv6 ? PM3_UDPv6 : PM3_UDPv4;
+        g_conn.send_via_ip = isIPv6 ? (isTCP ? PM3_TCPv6 : PM3_UDPv6) : (isTCP ? PM3_TCPv4 : PM3_UDPv4);
         portStr = (portStr == NULL) ? "18888" : portStr;
 
         WSADATA wsaData;
@@ -334,8 +187,8 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         memset(&info, 0, sizeof(info));
         info.ai_family = AF_UNSPEC;
-        info.ai_socktype = SOCK_DGRAM;
-        info.ai_protocol = IPPROTO_UDP;
+        info.ai_socktype = isTCP ? SOCK_STREAM : SOCK_DGRAM;
+        info.ai_protocol = isTCP ? IPPROTO_TCP : IPPROTO_UDP;
 
         if ((strstr(addrStr, "localhost") != NULL) ||
                 (strstr(addrStr, "127.0.0.1") != NULL) ||
@@ -389,7 +242,20 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
 
         sp->hSocket = hSocket;
-        sp->udpBuffer = RingBuf_create(MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 30);
+
+        if (isTCP) {
+            int one = 1;
+            int res = setsockopt(sp->hSocket, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
+            if (res != 0) {
+                closesocket(hSocket);
+                WSACleanup();
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+        } else if (isUDP) {
+            sp->udpBuffer = RingBuf_create(MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 30);
+        }
+
         return sp;
     }
 
