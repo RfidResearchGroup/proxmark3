@@ -84,6 +84,11 @@ uint32_t uart_get_timeouts(void);
 
 /* Specify the outbound address and port for TCP/UDP connections
  */
-bool uart_bind(void *socket, char *bindAddrStr, char *bindPortStr, bool isBindingIPv6);
+bool uart_bind(void *socket, const char *bindAddrStr, const char *bindPortStr, bool isBindingIPv6);
+
+/* Parse address and port from string.
+   This could change the addrPortStr
+ */
+int uart_parse_address_port(char *addrPortStr, const char **addrStr, const char **portStr, bool *isIPv6);
 
 #endif // _UART_H_

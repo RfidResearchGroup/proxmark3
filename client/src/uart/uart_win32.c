@@ -115,8 +115,6 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         struct addrinfo *addr = NULL, *rp;
 
         char *addrPortStr = str_dup(pcPortName + 4);
-        char *addrstr = addrPortStr;
-        const char *portstr;
         if (addrPortStr == NULL) {
             PrintAndLogEx(ERR, "error: string duplication");
             free(sp);
@@ -127,54 +125,24 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         // find the "bind" option
         char *bindAddrPortStr = strstr(addrPortStr, ",bind=");
-        char *bindAddrStr = NULL;
-        char *bindPortStr = NULL;
-        bool isBindingIPv6 = false; // Assume v4
+        const char *bindAddrStr = NULL;
+        const char *bindPortStr = NULL;
+        bool isBindingIPv6 = false;
+
         if (bindAddrPortStr != NULL) {
             *bindAddrPortStr = '\0'; // as the end of target address (and port)
-            bindAddrPortStr += 6;
-            bindAddrStr = bindAddrPortStr;
+            bindAddrPortStr += 6; // strlen(",bind=")
 
-            // find the start of the bind address
-            char *endBracket = strrchr(bindAddrPortStr, ']');
-            if (bindAddrPortStr[0] == '[') {
-                bindAddrStr += 1;
-                if (endBracket == NULL) {
+            int result = uart_parse_address_port(bindAddrPortStr, &bindAddrStr, &bindPortStr, &isBindingIPv6);
+            if (result != PM3_SUCCESS) {
+                if (result == PM3_ESOFT) {
                     PrintAndLogEx(ERR, "error: wrong address: [] unmatched in bind option");
-                    free(addrPortStr);
-                    free(sp);
-                    return INVALID_SERIAL_PORT;
-                }
-            }
-
-            // find the bind port
-            char *lColon = strchr(bindAddrPortStr, ':');
-            char *rColon = strrchr(bindAddrPortStr, ':');
-            if (rColon == NULL) {
-                // no colon
-                // ",bind=<ipv4 address>", ",bind=[<ipv4 address>]"
-                bindPortStr = NULL;
-            } else if (lColon == rColon) {
-                // only one colon
-                // ",bind=<ipv4 address>:<port>", ",bind=[<ipv4 address>]:<port>"
-                bindPortStr = rColon + 1;
-            } else {
-                // two or more colon, IPv6 address
-                // ",bind=[<ipv6 address>]:<port>"
-                // ",bind=<ipv6 address>", ",bind=[<ipv6 address>]"
-                if (endBracket != NULL && rColon == endBracket + 1) {
-                    bindPortStr = rColon + 1;
                 } else {
-                    bindPortStr = NULL;
+                    PrintAndLogEx(ERR, "error: failed to parse address and port in bind option");
                 }
-                isBindingIPv6 = true;
-            }
-
-            // handle the end of the bind address
-            if (endBracket != NULL) {
-                *endBracket = '\0';
-            } else if (rColon != NULL && lColon == rColon) {
-                *rColon = '\0';
+                free(addrPortStr);
+                free(sp);
+                return INVALID_SERIAL_PORT;
             }
 
             // for bind option, it's possible to only specify address or port
@@ -184,50 +152,24 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
                 bindPortStr = NULL;
         }
 
-        // find the start of the address
-        char *endBracket = strrchr(addrPortStr, ']');
-        if (addrPortStr[0] == '[') {
-            addrstr += 1;
-            if (endBracket == NULL) {
+        const char *addrStr = NULL;
+        const char *portStr = NULL;
+        bool isIPv6 = false;
+
+        int result = uart_parse_address_port(addrPortStr, &addrStr, &portStr, &isIPv6);
+        if (result != PM3_SUCCESS) {
+            if (result == PM3_ESOFT) {
                 PrintAndLogEx(ERR, "error: wrong address: [] unmatched");
-                free(addrPortStr);
-                free(sp);
-                return INVALID_SERIAL_PORT;
-            }
-        }
-
-        // Assume v4
-        g_conn.send_via_ip = PM3_TCPv4;
-
-        // find the port
-        char *lColon = strchr(addrPortStr, ':');
-        char *rColon = strrchr(addrPortStr, ':');
-        if (rColon == NULL) {
-            // no colon
-            // "tcp:<ipv4 address>", "tcp:[<ipv4 address>]"
-            portstr = "18888";
-        } else if (lColon == rColon) {
-            // only one colon
-            // "tcp:<ipv4 address>:<port>", "tcp:[<ipv4 address>]:<port>"
-            portstr = rColon + 1;
-        } else {
-            // two or more colon, IPv6 address
-            // "tcp:[<ipv6 address>]:<port>"
-            // "tcp:<ipv6 address>", "tcp:[<ipv6 address>]"
-            if (endBracket != NULL && rColon == endBracket + 1) {
-                portstr = rColon + 1;
             } else {
-                portstr = "18888";
+                PrintAndLogEx(ERR, "error: failed to parse address and port");
             }
-            g_conn.send_via_ip = PM3_TCPv6;
+            free(addrPortStr);
+            free(sp);
+            return INVALID_SERIAL_PORT;
         }
 
-        // handle the end of the address
-        if (endBracket != NULL) {
-            *endBracket = '\0';
-        } else if (rColon != NULL && lColon == rColon) {
-            *rColon = '\0';
-        }
+        g_conn.send_via_ip = isIPv6 ? PM3_TCPv6 : PM3_TCPv4;
+        portStr = (portStr == NULL) ? "18888" : portStr;
 
         WSADATA wsaData;
         struct addrinfo info;
@@ -246,13 +188,13 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         info.ai_socktype = SOCK_STREAM;
         info.ai_protocol = IPPROTO_TCP;
 
-        if ((strstr(addrstr, "localhost") != NULL) ||
-                (strstr(addrstr, "127.0.0.1") != NULL) ||
-                (strstr(addrstr, "::1") != NULL)) {
+        if ((strstr(addrStr, "localhost") != NULL) ||
+                (strstr(addrStr, "127.0.0.1") != NULL) ||
+                (strstr(addrStr, "::1") != NULL)) {
             g_conn.send_via_local_ip = true;
         }
 
-        int s = getaddrinfo(addrstr, portstr, &info, &addr);
+        int s = getaddrinfo(addrStr, portStr, &info, &addr);
         if (s != 0) {
             PrintAndLogEx(ERR, "error: getaddrinfo: %d: %s", s, gai_strerror(s));
             freeaddrinfo(addr);
@@ -322,8 +264,6 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         struct addrinfo *addr = NULL, *rp;
 
         char *addrPortStr = str_dup(pcPortName + 4);
-        char *addrstr = addrPortStr;
-        const char *portstr;
         if (addrPortStr == NULL) {
             PrintAndLogEx(ERR, "error: string duplication");
             free(sp);
@@ -334,54 +274,24 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         // find the "bind" option
         char *bindAddrPortStr = strstr(addrPortStr, ",bind=");
-        char *bindAddrStr = NULL;
-        char *bindPortStr = NULL;
-        bool isBindingIPv6 = false; // Assume v4
+        const char *bindAddrStr = NULL;
+        const char *bindPortStr = NULL;
+        bool isBindingIPv6 = false;
+    
         if (bindAddrPortStr != NULL) {
             *bindAddrPortStr = '\0'; // as the end of target address (and port)
-            bindAddrPortStr += 6;
-            bindAddrStr = bindAddrPortStr;
+            bindAddrPortStr += 6; // strlen(",bind=")
 
-            // find the start of the bind address
-            char *endBracket = strrchr(bindAddrPortStr, ']');
-            if (bindAddrPortStr[0] == '[') {
-                bindAddrStr += 1;
-                if (endBracket == NULL) {
+            int result = uart_parse_address_port(bindAddrPortStr, &bindAddrStr, &bindPortStr, &isBindingIPv6);
+            if (result != PM3_SUCCESS) {
+                if (result == PM3_ESOFT) {
                     PrintAndLogEx(ERR, "error: wrong address: [] unmatched in bind option");
-                    free(addrPortStr);
-                    free(sp);
-                    return INVALID_SERIAL_PORT;
-                }
-            }
-
-            // find the bind port
-            char *lColon = strchr(bindAddrPortStr, ':');
-            char *rColon = strrchr(bindAddrPortStr, ':');
-            if (rColon == NULL) {
-                // no colon
-                // ",bind=<ipv4 address>", ",bind=[<ipv4 address>]"
-                bindPortStr = NULL;
-            } else if (lColon == rColon) {
-                // only one colon
-                // ",bind=<ipv4 address>:<port>", ",bind=[<ipv4 address>]:<port>"
-                bindPortStr = rColon + 1;
-            } else {
-                // two or more colon, IPv6 address
-                // ",bind=[<ipv6 address>]:<port>"
-                // ",bind=<ipv6 address>", ",bind=[<ipv6 address>]"
-                if (endBracket != NULL && rColon == endBracket + 1) {
-                    bindPortStr = rColon + 1;
                 } else {
-                    bindPortStr = NULL;
+                    PrintAndLogEx(ERR, "error: failed to parse address and port in bind option");
                 }
-                isBindingIPv6 = true;
-            }
-
-            // handle the end of the bind address
-            if (endBracket != NULL) {
-                *endBracket = '\0';
-            } else if (rColon != NULL && lColon == rColon) {
-                *rColon = '\0';
+                free(addrPortStr);
+                free(sp);
+                return INVALID_SERIAL_PORT;
             }
 
             // for bind option, it's possible to only specify address or port
@@ -391,50 +301,24 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
                 bindPortStr = NULL;
         }
 
-        // find the start of the address
-        char *endBracket = strrchr(addrPortStr, ']');
-        if (addrPortStr[0] == '[') {
-            addrstr += 1;
-            if (endBracket == NULL) {
+        const char *addrStr = NULL;
+        const char *portStr = NULL;
+        bool isIPv6 = false;
+
+        int result = uart_parse_address_port(addrPortStr, &addrStr, &portStr, &isIPv6);
+        if (result != PM3_SUCCESS) {
+            if (result == PM3_ESOFT) {
                 PrintAndLogEx(ERR, "error: wrong address: [] unmatched");
-                free(addrPortStr);
-                free(sp);
-                return INVALID_SERIAL_PORT;
-            }
-        }
-
-        // Assume v4
-        g_conn.send_via_ip = PM3_UDPv4;
-
-        // find the port
-        char *lColon = strchr(addrPortStr, ':');
-        char *rColon = strrchr(addrPortStr, ':');
-        if (rColon == NULL) {
-            // no colon
-            // "udp:<ipv4 address>", "udp:[<ipv4 address>]"
-            portstr = "18888";
-        } else if (lColon == rColon) {
-            // only one colon
-            // "udp:<ipv4 address>:<port>", "udp:[<ipv4 address>]:<port>"
-            portstr = rColon + 1;
-        } else {
-            // two or more colon, IPv6 address
-            // "udp:[<ipv6 address>]:<port>"
-            // "udp:<ipv6 address>", "udp:[<ipv6 address>]"
-            if (endBracket != NULL && rColon == endBracket + 1) {
-                portstr = rColon + 1;
             } else {
-                portstr = "18888";
+                PrintAndLogEx(ERR, "error: failed to parse address and port");
             }
-            g_conn.send_via_ip = PM3_UDPv6;
+            free(addrPortStr);
+            free(sp);
+            return INVALID_SERIAL_PORT;
         }
 
-        // handle the end of the address
-        if (endBracket != NULL) {
-            *endBracket = '\0';
-        } else if (rColon != NULL && lColon == rColon) {
-            *rColon = '\0';
-        }
+        g_conn.send_via_ip = isIPv6 ? PM3_UDPv6 : PM3_UDPv4;
+        portStr = (portStr == NULL) ? "18888" : portStr;
 
         WSADATA wsaData;
         struct addrinfo info;
@@ -453,13 +337,13 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         info.ai_socktype = SOCK_DGRAM;
         info.ai_protocol = IPPROTO_UDP;
 
-        if ((strstr(addrstr, "localhost") != NULL) ||
-                (strstr(addrstr, "127.0.0.1") != NULL) ||
-                (strstr(addrstr, "::1") != NULL)) {
+        if ((strstr(addrStr, "localhost") != NULL) ||
+                (strstr(addrStr, "127.0.0.1") != NULL) ||
+                (strstr(addrStr, "::1") != NULL)) {
             g_conn.send_via_local_ip = true;
         }
 
-        int s = getaddrinfo(addrstr, portstr, &info, &addr);
+        int s = getaddrinfo(addrStr, portStr, &info, &addr);
         if (s != 0) {
             PrintAndLogEx(ERR, "error: getaddrinfo: %d: %s", s, gai_strerror(s));
             freeaddrinfo(addr);

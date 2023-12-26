@@ -38,7 +38,7 @@
 #include <sys/un.h>
 #endif
 
-bool uart_bind(void *socket, char *bindAddrStr, char *bindPortStr, bool isBindingIPv6) {
+bool uart_bind(void *socket, const char *bindAddrStr, const char *bindPortStr, bool isBindingIPv6) {
     if (bindAddrStr == NULL && bindPortStr == NULL)
         return true; // no need to bind
 
@@ -71,4 +71,64 @@ bool uart_bind(void *socket, char *bindAddrStr, char *bindPortStr, bool isBindin
     int res = bind(*(int *)socket, (struct sockaddr *)&bindSockaddr, sizeof(bindSockaddr));
 #endif
     return (res >= 0);
+}
+
+int uart_parse_address_port(char *addrPortStr, const char **addrStr, const char **portStr, bool *isIPv6) {
+
+    if (addrPortStr == NULL || addrStr == NULL || portStr == NULL) {
+        return PM3_EINVARG;
+    }
+
+    *addrStr = addrPortStr;
+    *portStr = NULL;
+
+    // find the start of the address
+    char *endBracket = strrchr(addrPortStr, ']');
+    if (addrPortStr[0] == '[') {
+        *addrStr += 1;
+        if (endBracket == NULL) {
+            // [] unmatched
+            return PM3_ESOFT;
+        }
+    }
+
+    if (isIPv6 != NULL) {
+        // Assume v4
+        *isIPv6 = false;
+    }
+
+    // find the port
+    char *lColon = strchr(addrPortStr, ':');
+    char *rColon = strrchr(addrPortStr, ':');
+    if (rColon == NULL) {
+        // no colon
+        // "<ipv4 address>", "[<ipv4 address>]"
+        *portStr = NULL;
+    } else if (lColon == rColon) {
+        // only one colon
+        // "<ipv4 address>:<port>", "[<ipv4 address>]:<port>"
+        *portStr = rColon + 1;
+    } else {
+        // two or more colon, IPv6 address
+        // "[<ipv6 address>]:<port>"
+        // "<ipv6 address>", "[<ipv6 address>]"
+        if (endBracket != NULL && rColon == endBracket + 1) {
+            *portStr = rColon + 1;
+        } else {
+            *portStr = NULL;
+        }
+
+        if (isIPv6 != NULL) {
+            *isIPv6 = true;
+        }
+    }
+
+    // handle the end of the address
+    if (endBracket != NULL) {
+        *endBracket = '\0';
+    } else if (rColon != NULL && lColon == rColon) {
+        *rColon = '\0';
+    }
+
+    return PM3_SUCCESS;
 }
