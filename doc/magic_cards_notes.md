@@ -34,6 +34,7 @@ Useful docs:
      * [FUID](#fuid)
      * [UFUID](#ufuid)
      * [ZUID](#zuid)
+     * [GDM](#gdm)
   * [MIFARE Classic, other versions](#mifare-classic-other-versions)
   * [MIFARE Classic Super](#mifare-classic-super)
 - [MIFARE Ultralight](#mifare-ultralight)
@@ -878,7 +879,7 @@ No implemented commands today
 ^[Top](#top)
 | Factory configuration | Name |
 | --- | --- |
-| 850000000000000000005A5A00000008 | GDMIC |
+| 850000000000000000005A5A00000008 | GDM |
 | 850000000000005A0000005A5A5A0008 | UCUID |
 | 8500000000005A00005A005A005A0008 | "7 byte hard" |
 | 7AFF850102015A00005A005A005A0008 | M1-7B |
@@ -900,7 +901,7 @@ Known as "write only once", which is only partially true.
 
 Allows direct write to block 0 only when UID is default `AA55C396`. But always could be rewritten multiple times with backdoors commands.
 
-Backdoor commands are available even after the personalization and makes that card detectable.
+Backdoor commands are available even after the personalization and makes that tag detectable.
 
 That's a key difference from [OTP](#mifare-classic-direct-write-otp)/[OTP 2.0](#mifare-classic-otp-2.0) tags.
 
@@ -933,7 +934,7 @@ More correct detection should be based on a backdoor commands and configuration 
 [usb] pm3 --> hf 14a raw -c -k -a E000
 [+] 7A FF 85 00 00 00 00 00 00 FF 00 00 00 00 00 08 [ 66 92 ]
 ```
-### Proxmark3 commands
+### Commands
 ^[Top](#top)
 
 * Commands described under the corresponding section of USCUID chip
@@ -958,9 +959,9 @@ More correct detection should be based on a backdoor commands and configuration 
 ## UFUID
 ^[Top](#top)
 
-The card is positioned as "sealable UID", so that means you could use the same commands, as you could use for UID chip in a default state. But after the sealing (changing the configuration) card will not answer to the backdoor commands and will behave as a normal Mifare Classic card. 
+The tag is positioned as "sealable UID", so that means you could use the same commands, as you could use for UID chip in a default state. But after the sealing (changing the configuration) tag will not answer to the backdoor commands and will behave as a normal Mifare Classic tag. 
 
-*But at the same time there is some unidentified behavior, which doesn't fully corresponds the protocol and original Mifare Classic cards. So the card could be filtered out with a protocol-based filters (i.e. Iron Logic OTP2 filter).* 
+*But at the same time there is some unidentified behavior, which doesn't fully corresponds the protocol and original Mifare Classic tags. So the tag could be filtered out with a protocol-based filters (i.e. Iron Logic OTP2 filter).* 
 
 ### Characteristics
 ^[Top](#top)
@@ -980,7 +981,7 @@ hf 14a info
 
 ```
 
-Currently Proxmark3 doesn't identify it as a sepatate card. 
+Currently Proxmark3 doesn't identify it as a separate tag. 
 Before the sealing could be detected from the config block value:
 
 ```
@@ -992,7 +993,7 @@ Before the sealing could be detected from the config block value:
 [+] 7A FF 00 00 00 00 00 00 BA FA 00 00 00 00 00 08 [ F1 69 ]
 ```
 
-### Proxmark3 commands
+### Commands
 ^[Top](#top)
 
 All commands are available before sealing.
@@ -1012,7 +1013,7 @@ hf 14a raw       -c   85000000000000000000000000000008
 ## ZUID
 ^[Top](#top)
 
-That card is a UID card, built on USCUID chip. It doesn't sold separately, but could be found on marketplaces under the guise of a UID card.
+That tag is a UID tag, built on USCUID chip. It doesn't sold separately, but could be found on marketplaces under the guise of a UID tag.
 
 ### Characteristics
 ^[Top](#top)
@@ -1032,7 +1033,7 @@ hf 14a info
 
 ```
 
-Currently Proxmark3 doesn't identify it as a sepatate card. 
+Currently Proxmark3 doesn't identify it as a separate tag. 
 Could be detected from the config block value:
 
 ```
@@ -1044,12 +1045,55 @@ Could be detected from the config block value:
 [+] 7A FF 00 00 00 00 00 00 00 00 00 00 00 00 00 08 [ 4E 17 ]
 ```
 
-### Proxmark3 commands
+### Commands
 ^[Top](#top)
 
 * Proxmark3 magic Gen1 commands
 * Read configuration: `E000+crc`
 * Write configuration: `E100+crc`
+
+## GDM
+^[Top](#top)
+
+The tag has a shadow mode, which means that every change to normal MFC memory would be restored back from the persistent memory after being off RFID field.
+
+### Characteristics
+^[Top](#top)
+
+* Configuration block value: `850000000000000000005A5A00000008`
+* No direct write to block 0
+* Responds to magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
+
+### Identify
+^[Top](#top)
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 4 GDM
+
+```
+
+Could be manually validated with the configuration block value:
+
+```
+[usb] pm3 --> hf mf gdmcfg
+[+] config... 85 00 00 00 00 00 00 5A 00 FF 00 5A 00 00 00 08
+```
+
+### Commands
+^[Top](#top)
+
+* Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
+  * Backdoor read: `38xx+crc`
+  * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`; `[16 bytes data]+crc`
+* Proxmark3 commands (does auth and executes the corresponding command)
+  * Backdoor write: `gdmsetcfg`
+  * Read configuration: `gdmcfg`
+  * Write configuration: `gdmsetcfg`
+
 
 ## MIFARE Classic, other versions
 ^[Top](#top)
