@@ -1562,7 +1562,7 @@ script run hf_mfu_magicwrite -h
 ## UL series (RU)
 ^[Top](#top)
 
-Custom chips, manufactured by iKey LLC for cloning Ultralight tags.
+Custom chips, manufactured by iKey LLC for cloning Ultralight tags used in Visit intercoms. That leads to the non-standard for Ultralight chips tag version.
 
 ### UL-Y
 ^[Top](#top)
@@ -1597,16 +1597,44 @@ hf mfu info
 [=] TAG IC Signature: 0000000000000000000000000000000000000000000000000000000000000000
 [=] --- Tag Version
 [=]        Raw bytes: 00 34 21 01 01 00 0E 03
+[=]        Vendor ID: 34, Mikron JSC Russia
+[=]     Product type: 21, unknown
 ```
 
-Remember that this is not a reliable method of identification, as it interferes with locked [UL-5](#mifare-ul-5).
+#### ULtra flavour 1
+^[Top](#top)
+
+Could be identified by indirect evidence before writing
+
+* Initial UID: `34 D7 08 11 AD D7 D0`
+* `hf mfu dump --ns`
+  ```
+  [=]   3/0x03 | CF 39 A1 C8 | 1 | .9..
+  [=]   4/0x04 | B6 69 26 0D | 1 | .i&.
+  [=]   5/0x05 | EC A1 73 C4 | 1 | ..s.
+  [=]   6/0x06 | 81 3D 29 B8 | 1 | .=).
+  [=]  16/0x10 | 6A F0 2D FF | 0 | j.-.
+  [=]  20/0x14 | 6A F0 2D FF | 0 | j.-.
+  [=]  24/0x18 | 6A F0 2D FF | 0 | j.-.
+  [=]  38/0x26 | 00 E2 00 00 | 0 | .... <- E2, Virtual Card Type Identifier is not default
+
+  ```
+
+#### ULtra flavour 2
+^[Top](#top)
+
+Could be identified by indirect evidence before writing
+
+* Initial UID: `04 15 4A 23 36 2F 81`
+* Values in pages `3, 4, 5, 6, 16, 20, 24, 38` are default for that tag flavour
 
 ### UL-5
 ^[Top](#top)
 
-Ultralight EV1 magic; 41 page. Recommended for Vizit RF3.1 with 41 page and if [ULtra](#mifare-ultra) has failed.
+Ultralight EV1 magic; 41 page. Recommended for Vizit RF3.1 with 41 page.
+Created as a response to filters that try to overwrite page 0 (as a detection for [ULtra](#mifare-ultra) tags).
 
-Behavior: similar to Ultra, but after editing page 0, tag becomes original Mifare Ultralight EV1.
+Behavior: similar to Ultra, but after editing page 0 become locked and tag becomes the original Mifare Ultralight EV1 (except the tag version, which remains specific).
 
 **WARNING!** When using UL-5 to clone, write UID pages in inverse (from 2 to 0) and do NOT make mistakes! This tag does not allow reversing one-way actions (OTP page, lock bits).
 
@@ -1619,11 +1647,14 @@ hf mfu info
 TAG IC Signature: 0000000000000000000000000000000000000000000000000000000000000000
 [=] --- Tag Version
 [=]        Raw bytes: 00 34 21 01 01 00 0E 03
+[=]        Vendor ID: 34, Mikron JSC Russia
 ```
 
 After personalization it is not possible to identify UL-5. 
 
-Some chips have UID of `AA 55 C3 A4 30 61 80`.
+Usually chips have initial UIDs: 
+  * `AA 55 C3 A4 30 61 80`
+  * `AA 55 C3 A4 30 61 80`
 
 ### UL, other chips
 
