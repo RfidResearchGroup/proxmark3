@@ -33,6 +33,7 @@ Useful docs:
   * [MIFARE Classic USCUID](#mifare-classic-uscuid)
      * [FUID](#fuid)
      * [UFUID](#ufuid)
+     * [ZUID](#zuid)
   * [MIFARE Classic, other versions](#mifare-classic-other-versions)
   * [MIFARE Classic Super](#mifare-classic-super)
 - [MIFARE Ultralight](#mifare-ultralight)
@@ -884,8 +885,9 @@ No implemented commands today
 | 7AFF85000000000000FF000000000008 | FUID |
 | 7AFF000000000000BAFA358500000008 | PFUID |
 | 7AFF000000000000BAFA000000000008 | UFUID |
+| 7AFF0000000000000000000000000008 | ZUID |
 
-*Not all tags are the same!* UFUID and PFUID* are not full implementations of Magic85 - they only acknowledge the first 8 (except wakeup command) and last config byte(s).
+*Not all tags are the same!* UFUID, ZUID and PFUID* are not full implementations of Magic85 - they only acknowledge the first 8 (except wakeup command) and last config byte(s).
 
 *Read and write config commands are flipped
 
@@ -971,6 +973,13 @@ The card is positioned as "sealable UID", so that means you could use the same c
 ### Identify
 ^[Top](#top)
 
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 1a
+
+```
+
 Currently Proxmark3 doesn't identify it as a sepatate card. 
 Before the sealing could be detected from the config block value:
 
@@ -999,6 +1008,48 @@ hf 14a raw    -k      43
 hf 14a raw    -k -c   e100
 hf 14a raw       -c   85000000000000000000000000000008
 ```
+
+## ZUID
+^[Top](#top)
+
+That card is a UID card, built on USCUID chip. It doesn't sold separately, but could be found on marketplaces under the guise of a UID card.
+
+### Characteristics
+^[Top](#top)
+
+* Configuration block value: `7AFF0000000000000000000000000008`
+* No direct write to block 0
+* Responds to magic wakeup `40(7)`, `43` commands
+* Acknowledge only the first (except wakeup command) and last config byte(s), so doesn't have the hidden block
+
+### Identify
+^[Top](#top)
+
+```
+hf 14a info
+...
+[+] Magic capabilities : Gen 1a
+
+```
+
+Currently Proxmark3 doesn't identify it as a sepatate card. 
+Could be detected from the config block value:
+
+```
+[usb] pm3 --> hf 14a raw -k -a -b 7 40
+[+] 0A
+[usb] pm3 --> hf 14a raw -k -a 43
+[+] 0A
+[usb] pm3 --> hf 14a raw -c -k -a E000
+[+] 7A FF 00 00 00 00 00 00 00 00 00 00 00 00 00 08 [ 4E 17 ]
+```
+
+### Proxmark3 commands
+^[Top](#top)
+
+* Proxmark3 magic Gen1 commands
+* Read configuration: `E000+crc`
+* Write configuration: `E100+crc`
 
 ## MIFARE Classic, other versions
 ^[Top](#top)
