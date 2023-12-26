@@ -31,6 +31,7 @@ Useful docs:
   * [MIFARE Classic DirectWrite, FUID version aka 1-write](#mifare-classic-directwrite-fuid-version-aka-1-write)
   * [MIFARE Classic Gen3 aka APDU](#mifare-classic-gen3-aka-apdu)
   * [MIFARE Classic USCUID](#mifare-classic-uscuid)
+     * [FUID](#fuid)
   * [MIFARE Classic, other versions](#mifare-classic-other-versions)
   * [MIFARE Classic Super](#mifare-classic-super)
 - [MIFARE Ultralight](#mifare-ultralight)
@@ -678,29 +679,6 @@ hf 14a config --std
 hf 14a reader
 ```
 
-## MIFARE Classic DirectWrite, FUID version aka 1-write
-^[Top](#top)
-
-Same as MIFARE Classic DirectWrite, but block0 can be written only once.
-
-* Other names:
-  - OTP (RU)
-
-### Characteristics
-
-* Initial UID is AA55C396
-
-### Identify
-^[Top](#top)
-
-Only possible before personalization. *It is also possible after, but unknown how.*
-
-```
-hf 14a info
-...
-[+] Magic capabilities : Write Once / FUID
-```
-
 ## MIFARE Classic Gen3 aka APDU
 ^[Top](#top)
 
@@ -797,7 +775,6 @@ You cannot turn a Classic tag into an Ultralight and vice-versa!
 * Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
   - Backdoor read: `38xx+crc`
   - Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
-
   - Read configuration: `E000+crc`
   - Write configuration: `E100+crc`; `[16 bytes data]+crc`
 * Magic wakeup (A: 00): `40(7)`, `43`
@@ -806,7 +783,6 @@ You cannot turn a Classic tag into an Ultralight and vice-versa!
   - Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
   - Read hidden block: `38xx+crc`
   - Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
-
   - Read configuration: `E000+crc`
   - Write configuration: `E100+crc`
   
@@ -878,23 +854,7 @@ Sectors 2-15
 [Unused]
 ```
 
-### Variations
-^[Top](#top)
-| Factory configuration | Name |
-| --- | --- |
-| 850000000000000000005A5A00000008 | GDMIC |
-| 850000000000005A0000005A5A5A0008 | UCUID |
-| 8500000000005A00005A005A005A0008 | "7 byte hard" |
-| 7AFF850102015A00005A005A005A0008 | M1-7B |
-| 7AFF85000000000000FF000000000008 | FUID |
-| 7AFF000000000000BAFA358500000008 | PFUID |
-| 7AFF000000000000BAFA000000000008 | UFUID |
-
-*Not all tags are the same!* UFUID and PFUID* are not full implementations of Magic85 - they only acknowledge the first 8 (except wakeup command) and last config byte(s).
-
-*Read and write config commands are flipped
-
-#### Proxmark3 commands
+### Proxmark3 commands
 ^[Top](#top)
 ```
 Using magic auth:
@@ -911,6 +871,86 @@ hf mf gdmsetcfg
 ### libnfc commands
 ^[Top](#top)
 No implemented commands today
+
+### Variations
+^[Top](#top)
+| Factory configuration | Name |
+| --- | --- |
+| 850000000000000000005A5A00000008 | GDMIC |
+| 850000000000005A0000005A5A5A0008 | UCUID |
+| 8500000000005A00005A005A005A0008 | "7 byte hard" |
+| 7AFF850102015A00005A005A005A0008 | M1-7B |
+| 7AFF85000000000000FF000000000008 | FUID |
+| 7AFF000000000000BAFA358500000008 | PFUID |
+| 7AFF000000000000BAFA000000000008 | UFUID |
+
+*Not all tags are the same!* UFUID and PFUID* are not full implementations of Magic85 - they only acknowledge the first 8 (except wakeup command) and last config byte(s).
+
+*Read and write config commands are flipped
+
+Well-known variations are described below.
+
+## FUID
+^[Top](#top)
+
+Known as "write only once", which is only partially true. 
+
+Allows direct write to block 0 only when UID is default `AA55C396`. But always could be rewritten multiple times with backdoors commands.
+
+Backdoor commands are available even after the personalization and makes that card detectable.
+
+That's a key difference from [OTP](#mifare-classic-direct-write-otp)/[OTP 2.0](#mifare-classic-otp-2.0) tags.
+
+### Characteristics
+^[Top](#top)
+
+* Configuration block value: `7AFF85000000000000FF000000000008`
+* Initial UID: `AA55C396`
+* Allows direct write to the block 0 (before the personalisation), so is Android compatible
+* Responds to magic wakeup `20(7)`, `23` commands
+
+### Identify
+^[Top](#top)
+```
+hf 14a info
+...
+[+] Magic capabilities : Write Once / FUID
+
+```
+
+⚠️ **Current Proxmark3 identification is based on the initial UID. That could lead to the false positives. Also that doesn't allow to detect FUID after the personalization.**
+
+More correct detection should be based on a backdoor commands and configuration block value:
+
+```
+[usb] pm3 --> hf 14a raw -k -a -b 7 20
+[+] 0A
+[usb] pm3 --> hf 14a raw -k -a 23
+[+] 0A
+[usb] pm3 --> hf 14a raw -c -k -a E000
+[+] 7A FF 85 00 00 00 00 00 00 FF 00 00 00 00 00 08 [ 66 92 ]
+```
+### Proxmark3 commands
+^[Top](#top)
+
+* Commands described under the corresponding section of USCUID chip
+* Example of changing block 0 after the personalization:
+```
+[usb] pm3 --> hf 14a raw -k -a -b 7 20
+[+] 0A
+[usb] pm3 --> hf 14a raw -k -a 23
+[+] 0A
+[usb] pm3 --> hf 14a raw -c -k -a A000
+[+] 0A
+[usb] pm3 --> hf 14a raw -c -k -a B502454EBC0804000168AA8947CE4D1D <- Writing 0 block with the backdoor command
+[+] 0A
+[usb] pm3 --> hf 14a raw -c -a 5000
+[usb] pm3 --> hf mf rdbl --blk 0
+
+[=]   # | sector 00 / 0x00                                | ascii
+[=] ----+-------------------------------------------------+-----------------
+[=]   0 | B5 02 45 4E BC 08 04 00 01 68 AA 89 47 CE 4D 1D | ..EN.....h..G.M.
+```
 
 ## MIFARE Classic, other versions
 ^[Top](#top)
