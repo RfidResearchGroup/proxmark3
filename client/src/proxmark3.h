@@ -39,6 +39,7 @@
 #define PROXPROMPT_NET_UDPV4   "|" _RL_BOLD_GREEN_("udp")
 #define PROXPROMPT_NET_TCPV6   "|" _RL_BOLD_GREEN_("tcp v6")
 #define PROXPROMPT_NET_UDPV6   "|" _RL_BOLD_GREEN_("udp v6")
+#define PROXPROMPT_NET_NONE    ""
 
 
 #define PROXHISTORY "history.txt"
