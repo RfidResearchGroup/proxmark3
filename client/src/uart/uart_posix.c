@@ -90,6 +90,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     }
 
     sp->udpBuffer = NULL;
+    rx_empty_counter = 0;
     // init timeouts
     timeout.tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000;
     g_conn.send_via_local_ip = false;
@@ -157,10 +158,12 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             }
 
             // for bind option, it's possible to only specify address or port
-            if (strlen(bindAddrStr) == 0)
+            if (strlen(bindAddrStr) == 0) {
                 bindAddrStr = NULL;
-            if (bindPortStr != NULL && strlen(bindPortStr) == 0)
+            }
+            if (bindPortStr != NULL && strlen(bindPortStr) == 0) {
                 bindPortStr = NULL;
+            }
         }
 
         const char *addrStr = NULL;
@@ -208,8 +211,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         for (rp = addr; rp != NULL; rp = rp->ai_next) {
             sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 
-            if (sfd == -1)
+            if (sfd == -1) {
                 continue;
+            }
 
             if (!uart_bind(&sfd, bindAddrStr, bindPortStr, isBindingIPv6)) {
                 PrintAndLogEx(ERR, "error: Could not bind. errno: %d", errno);
@@ -220,8 +224,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
                 return INVALID_SERIAL_PORT;
             }
 
-            if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1)
+            if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1) {
                 break;
+            }
 
             close(sfd);
         }
