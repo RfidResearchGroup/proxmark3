@@ -49,6 +49,7 @@ struct timeval timeout = {
 
 uint32_t newtimeout_value = 0;
 bool newtimeout_pending = false;
+uint8_t rx_empty_counter = 0;
 
 int uart_reconfigure_timeouts(uint32_t value) {
     newtimeout_value = value;
@@ -679,7 +680,21 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
             // Retrieve the count of the incoming bytes
             res = ioctlsocket(spw->hSocket, FIONREAD, (u_long *)&byteCount);
             // PrintAndLogEx(ERR, "UART:: RX ioctl res %d byteCount %u", res, byteCount);
-            if (res == SOCKET_ERROR) return PM3_ENOTTY;
+            if (res == SOCKET_ERROR) {
+                // error occurred (maybe disconnected)
+                // This happens when USB-CDC connection is lost
+                return PM3_ENOTTY;
+            } else if (byteCount == 0) {
+                // select() > 0 && byteCount > 0 ===> data available
+                // select() > 0 && byteCount always equals to 0 ===> maybe disconnected
+                // This happens when TCP connection is lost
+                rx_empty_counter++;
+                if (rx_empty_counter > 3) {
+                    return PM3_ENOTTY;
+                }
+            } else {
+                rx_empty_counter = 0;
+            }
 
             // For UDP connection, put the incoming data into the buffer and handle them in the next round
             if (spw->udpBuffer != NULL) {
