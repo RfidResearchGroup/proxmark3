@@ -281,6 +281,8 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
                     prompt_net = PROXPROMPT_NET_UDPV6;
                     break;
                 case PM3_NONE:
+                    prompt_net = PROXPROMPT_NET_NONE;
+                    break;
                 default:
                     break;
             }

@@ -93,6 +93,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     }
 
     sp->udpBuffer = NULL;
+    rx_empty_counter = 0;
     g_conn.send_via_local_ip = false;
     g_conn.send_via_ip = PM3_NONE;
 
@@ -149,10 +150,12 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
             }
 
             // for bind option, it's possible to only specify address or port
-            if (strlen(bindAddrStr) == 0)
+            if (strlen(bindAddrStr) == 0) {
                 bindAddrStr = NULL;
-            if (bindPortStr != NULL && strlen(bindPortStr) == 0)
+            }
+            if (bindPortStr != NULL && strlen(bindPortStr) == 0) {
                 bindPortStr = NULL;
+            }
         }
 
         const char *addrStr = NULL;
@@ -211,8 +214,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         for (rp = addr; rp != NULL; rp = rp->ai_next) {
             hSocket = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 
-            if (hSocket == INVALID_SOCKET)
+            if (hSocket == INVALID_SOCKET) {
                 continue;
+            }
 
             if (!uart_bind(&hSocket, bindAddrStr, bindPortStr, isBindingIPv6)) {
                 PrintAndLogEx(ERR, "error: Could not bind. error: %u", WSAGetLastError());
@@ -225,8 +229,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
                 return INVALID_SERIAL_PORT;
             }
 
-            if (connect(hSocket, rp->ai_addr, (int)rp->ai_addrlen) != INVALID_SOCKET)
+            if (connect(hSocket, rp->ai_addr, (int)rp->ai_addrlen) != INVALID_SOCKET) {
                 break;
+            }
 
             closesocket(hSocket);
             hSocket = INVALID_SOCKET;
