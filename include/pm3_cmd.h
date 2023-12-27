@@ -842,7 +842,7 @@ typedef struct {
 // all zero's configure: no timeout for read/write used.
 // took settings from libnfc/buses/uart.c
 
-// uart_windows.c & uart_posix.c
+// uart_win32.c & uart_posix.c
 # define UART_FPC_CLIENT_RX_TIMEOUT_MS        200
 # define UART_USB_CLIENT_RX_TIMEOUT_MS        20
 # define UART_NET_CLIENT_RX_TIMEOUT_MS        500
