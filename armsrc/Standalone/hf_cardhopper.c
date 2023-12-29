@@ -27,7 +27,18 @@
 #include "ticks.h"
 #include "util.h"
 #include "usart.h"
+#include "cmd.h"
+#include "usb_cdc.h"
 
+#ifdef CARDHOPPER_USB
+#define cardhopper_write usb_write
+#define cardhopper_read usb_read_ng
+#define cardhopper_data_available usb_poll_validate_length
+#else
+#define cardhopper_write usart_writebuffer_sync
+#define cardhopper_read usart_read_ng
+#define cardhopper_data_available usart_rxdata_available
+#endif
 
 void ModInfo(void) {
     DbpString("  HF - Long-range relay 14a over serial<->IP -  a.k.a. CardHopper (Sam Haskins)");
@@ -64,6 +75,13 @@ static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *, uint8_t *, int
 
 
 void RunMod(void) {
+    // Ensure debug logs don't polute stream
+#ifdef CARDHOPPER_USB
+    g_reply_via_usb = false;
+#else
+    g_reply_via_fpc = false;
+#endif
+
     StandAloneMode();
     DbpString(_CYAN_("[@]") " CardHopper has started - waiting for mode");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -191,7 +209,7 @@ static void become_card(void) {
         WDT_HIT();
 
         if (!GetIso14443aCommandFromReaderInterruptible(fromReaderDat, parity, &fromReaderLen)) {
-            if (usart_rxdata_available()) {
+            if (cardhopper_data_available()) {
                 read_packet(rx);
                 if (memcmp(magicRSRT, rx->dat, sizeof(magicRSRT)) == 0) {
                     DbpString(_CYAN_("[@]") " Breaking from reader loop");
@@ -359,23 +377,25 @@ static void reply_with_packet(packet_t *packet) {
 
 
 static void read_packet(packet_t *packet) {
-    while (!usart_rxdata_available()) {
+    while (!cardhopper_data_available()) {
         WDT_HIT();
         SpinDelayUs(100);
     }
 
-    uint32_t dataReceived = usart_read_ng((uint8_t *) packet, sizeof(packet_t)) - 1;
-    while (dataReceived != packet->len) {
-        while (!usart_rxdata_available()) WDT_HIT();
+    cardhopper_read((uint8_t *) &packet->len, 1);
 
-        dataReceived += usart_read_ng(packet->dat + dataReceived, 255 - dataReceived);
+    uint32_t dataReceived = 0;
+    while (dataReceived != packet->len) {
+        while (!cardhopper_data_available()) WDT_HIT();
+
+        dataReceived += cardhopper_read(packet->dat + dataReceived, packet->len - dataReceived);
     }
-    usart_writebuffer_sync(magicACK, sizeof(magicACK));
+    cardhopper_write(magicACK, sizeof(magicACK));
 }
 
 
 static void write_packet(packet_t *packet) {
-    usart_writebuffer_sync((uint8_t *) packet, packet->len + 1);
+    cardhopper_write((uint8_t *) packet, packet->len + 1);
 }
 
 
@@ -394,7 +414,7 @@ static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *received, uint8_
         WDT_HIT();
 
         if (flip == 3) {
-            if (usart_rxdata_available())
+            if (cardhopper_data_available())
                 return false;
 
             flip = 0;
