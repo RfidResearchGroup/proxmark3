@@ -8900,12 +8900,6 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Magic Tag Information"));
-    if (detect_mf_magic(true) == 0) {
-        PrintAndLogEx(INFO, "<N/A>");
-    }
-
-    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Keys Information"));
 
     /*
@@ -8945,8 +8939,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     if (res == PM3_SUCCESS || res == PM3_EPARTIAL) {
         uint8_t blockdata[MFBLOCK_SIZE] = {0};
 
-        if (e_sector[0].foundKey[0]) {
-            PrintAndLogEx(SUCCESS, "Sector 0 key A... " _GREEN_("%12" PRIX64), e_sector[0].Key[0]);
+        if (e_sector[0].foundKey[MF_KEY_A]) {
+            PrintAndLogEx(SUCCESS, "Sector 0 key A... " _GREEN_("%12" PRIX64), e_sector[0].Key[MF_KEY_A]);
 
             num_to_bytes(e_sector[0].Key[MF_KEY_A], MIFARE_KEY_SIZE, fkey);
             if (mfReadBlock(0, MF_KEY_A, key, blockdata) == PM3_SUCCESS) {
@@ -8954,8 +8948,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             }
         }
 
-        if (e_sector[0].foundKey[1]) {
-            PrintAndLogEx(SUCCESS, "Sector 0 key B... " _GREEN_("%12" PRIX64), e_sector[0].Key[1]);
+        if (e_sector[0].foundKey[MF_KEY_B]) {
+            PrintAndLogEx(SUCCESS, "Sector 0 key B... " _GREEN_("%12" PRIX64), e_sector[0].Key[MF_KEY_B]);
 
             if (fKeyType == 0xFF) {
                 num_to_bytes(e_sector[0].Key[MF_KEY_B], MIFARE_KEY_SIZE, fkey);
@@ -8968,34 +8962,48 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         if (fKeyType != 0xFF) {
             PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
         }
+
+        if (memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
+            PrintAndLogEx(SUCCESS, "   indication of Fudan");
+        }
+
     } else {
         PrintAndLogEx(INFO, "<N/A>");
     }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Magic Tag Information"));
+    if (detect_mf_magic(true, e_sector[0].Key[MF_KEY_B]) == 0) {
+        if (detect_mf_magic(true, e_sector[0].Key[MF_KEY_A]) == 0) {
+            PrintAndLogEx(INFO, "<N/A>");
+        }
+    }
+
 
     free(keyBlock);
     free(e_sector);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("RNG Information"));
+    PrintAndLogEx(INFO, "--- " _CYAN_("PRNG Information"));
 
     res = detect_classic_static_nonce();
     if (res == NONCE_STATIC) {
-        PrintAndLogEx(SUCCESS, "Static nonce... " _YELLOW_("yes"));
+        PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
     }
 
     if (res == NONCE_FAIL && verbose) {
-        PrintAndLogEx(SUCCESS, "Static nonce... " _RED_("read failed"));
+        PrintAndLogEx(SUCCESS, "Static nonce......... " _RED_("read failed"));
     }
 
     if (res == NONCE_NORMAL) {
         // not static
         res = detect_classic_prng();
         if (res == 1)
-            PrintAndLogEx(SUCCESS, "Prng... " _GREEN_("weak"));
+            PrintAndLogEx(SUCCESS, "Prng................. " _GREEN_("weak"));
         else if (res == 0)
-            PrintAndLogEx(SUCCESS, "Prng... " _YELLOW_("hard"));
+            PrintAndLogEx(SUCCESS, "Prng................. " _YELLOW_("hard"));
         else
-            PrintAndLogEx(FAILED, "Prng... " _RED_("fail"));
+            PrintAndLogEx(FAILED, "Prng................. " _RED_("fail"));
 
 
         // detect static encrypted nonce

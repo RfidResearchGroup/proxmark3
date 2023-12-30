@@ -1390,12 +1390,14 @@ int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, ui
 }
 
 /* try to see if card responses to "Chinese magic backdoor" commands. */
-int detect_mf_magic(bool is_mfc) {
+int detect_mf_magic(bool is_mfc, uint64_t key) {
 
     uint8_t isMagic = 0;
     PacketResponseNG resp;
     clearCommandBuffer();
-    uint8_t payload[] = { is_mfc };
+    uint8_t payload[1 + MIFARE_KEY_SIZE] = { is_mfc };
+    num_to_bytes(key, MIFARE_KEY_SIZE, payload + 1);
+
     SendCommandNG(CMD_HF_MIFARE_CIDENT, payload, sizeof(payload));
     if (WaitForResponseTimeout(CMD_HF_MIFARE_CIDENT, &resp, 1500)) {
         if (resp.status != PM3_SUCCESS) {
@@ -1407,43 +1409,43 @@ int detect_mf_magic(bool is_mfc) {
         isMagic = 1;
         switch (resp.data.asBytes[i]) {
             case MAGIC_GEN_1A:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 1a"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 1a"));
                 break;
             case MAGIC_GEN_1B:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 1b"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 1b"));
                 break;
             case MAGIC_GEN_2:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 2 / CUID"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 2 / CUID"));
                 break;
             case MAGIC_GEN_3:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : possibly " _GREEN_("Gen 3 / APDU"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 3 / APDU") " ( possibly )");
                 break;
             case MAGIC_GEN_4GTU:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GTU"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GTU"));
                 break;
             case MAGIC_GDM_AUTH:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GDM / USCUID (Magic Auth)"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Magic Auth )");
                 break;
             case MAGIC_GDM_WUP_20:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GDM / USCUID (Alt Magic Wakeup)"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Alt Magic Wakeup )");
                 break;
             case MAGIC_GDM_WUP_40:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GDM / USCUID (Gen1 Magic Wakeup)"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Gen1 Magic Wakeup )");
                 break;
             case MAGIC_GEN_UNFUSED:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Write Once / FUID"));
                 break;
             case MAGIC_SUPER_GEN1:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Super card (") _CYAN_("Gen 1") _GREEN_(")"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Super card ( ") _CYAN_("Gen 1") _GREEN_(" )"));
                 break;
             case MAGIC_SUPER_GEN2:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Super card (") _CYAN_("Gen 2") _GREEN_(")"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Super card ( ") _CYAN_("Gen 2") _GREEN_(" )"));
                 break;
             case MAGIC_NTAG21X:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("NTAG21x"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("NTAG21x"));
                 break;
             case MAGIC_QL88:
-                PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("QL88"));
+                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("QL88"));
             default:
                 break;
         }

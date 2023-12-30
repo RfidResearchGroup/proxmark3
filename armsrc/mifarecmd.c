@@ -2414,7 +2414,13 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
     iso14a_set_timeout(timeout);
 }
 
-void MifareCIdent(bool is_mfc) {
+static void mf_reset_card(void) {
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    SpinDelay(40);
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+}
+
+void MifareCIdent(bool is_mfc, uint8_t *key) {
     // variables
     uint8_t rec[1] = {0x00};
     uint8_t recpar[1] = {0x00};
@@ -2428,17 +2434,13 @@ void MifareCIdent(bool is_mfc) {
     bool isGen2 = false;
     bool isGen1AGdm = false;
 
-    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
-    uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
-    uint8_t *uid = BigBuf_malloc(10);
-
-    memset(par, 0x00, MAX_PARITY_SIZE);
-    memset(buf, 0x00, PM3_CMD_DATA_SIZE);
-    memset(uid, 0x00, 10);
+    uint8_t *par = BigBuf_calloc(MAX_PARITY_SIZE);
+    uint8_t *buf = BigBuf_calloc(PM3_CMD_DATA_SIZE);
+    uint8_t *uid = BigBuf_calloc(10);
+    uint8_t *data = BigBuf_calloc(16);
 
     uint32_t cuid = 0;
     size_t data_off = 0;
-    uint8_t data[16] = {0x00};
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -2460,18 +2462,10 @@ void MifareCIdent(bool is_mfc) {
         }
     }
 
-    // reset card
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    SpinDelay(40);
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
-    // reset card
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    SpinDelay(40);
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    mf_reset_card();
 
     int res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-    if (res == 2) {
+    if (res) {
         // Check for Magic Gen4 GTU with default password:
         // Get config should return 30 or 32 bytes
         AddCrc14A(gen4GetConf, sizeof(gen4GetConf) - 2);
@@ -2483,42 +2477,19 @@ void MifareCIdent(bool is_mfc) {
     }
 
     // reset card
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    SpinDelay(40);
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+     mf_reset_card();
 
-    res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-    if (res == 2) {
+    res = iso14443a_select_card(uid, NULL, &cuid, true, 0, false);
+    if (res) {
         if (cuid == 0xAA55C396) {
             data[data_off++] = MAGIC_GEN_UNFUSED;
         }
 
         ReaderTransmit(rats, sizeof(rats), NULL);
         res = ReaderReceive(buf, par);
+
         if (res) {
-            // test for super card
-            ReaderTransmit(superGen1, sizeof(superGen1), NULL);
-            res = ReaderReceive(buf, par);
-            if (res == 22) {
-                uint8_t isGen = MAGIC_SUPER_GEN1;
-
-                // check for super card gen2
-                // not available after RATS, reset card before executing
-                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-                SpinDelay(40);
-                iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
-                iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-                ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
-                res = ReaderReceive(buf, par);
-                if (res == 18) {
-                    isGen = MAGIC_SUPER_GEN2;
-                }
-
-                data[data_off++] = isGen;
-            }
-
-            if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10\xF0\x05", 11) == 0) {
+            if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10", 9) == 0) {
                 // test for some MFC gen2
                 isGen2 = true;
                 data[data_off++] = MAGIC_GEN_2;
@@ -2547,13 +2518,34 @@ void MifareCIdent(bool is_mfc) {
                 isGen2 = true;
                 data[data_off++] = MAGIC_GEN_2;
             }
+
+            // test for super card
+            ReaderTransmit(superGen1, sizeof(superGen1), NULL);
+            res = ReaderReceive(buf, par);
+            if (res == 22) {
+                uint8_t isGen = MAGIC_SUPER_GEN1;
+
+                // check for super card gen2
+                // not available after RATS, reset card before executing
+                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                SpinDelay(40);
+                iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
+                iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+                ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
+                res = ReaderReceive(buf, par);
+                if (res == 18) {
+                    isGen = MAGIC_SUPER_GEN2;
+                }
+
+                data[data_off++] = isGen;
+            }
         }
 
         if (is_mfc == false) {
             // magic ntag test
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-            SpinDelay(40);
-            iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+            mf_reset_card();
+
             res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
             if (res == 2) {
                 ReaderTransmit(rdblf0, sizeof(rdblf0), NULL);
@@ -2563,19 +2555,22 @@ void MifareCIdent(bool is_mfc) {
                 }
             }
         } else {
+
+            // CUID (with default sector 0 B key) test
+            // regular cards will NAK the WRITEBLOCK(0) command, while DirectWrite will ACK it
+            // if we do get an ACK, we immediately abort to ensure nothing is ever actually written
+            // only perform test if we haven't already identified Gen2.  No need test if we have a positive identification already
             if (!isGen2) {
-                // CUID (with default sector 0 B key) test
-                // regular cards will NAK the WRITEBLOCK(0) command, while DirectWrite will ACK it
-                // if we do get an ACK, we immediately abort to ensure nothing is ever actually written
-                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-                SpinDelay(40);
-                iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+                mf_reset_card();
+
                 res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-                if (res == 2) {
+                if (res) {
                     struct Crypto1State mpcs = {0, 0};
                     struct Crypto1State *pcs;
                     pcs = &mpcs;
-                    if (mifare_classic_authex(pcs, cuid, 0, MF_KEY_B, 0xFFFFFFFFFFFF, AUTH_FIRST, NULL, NULL) == 0) {
+
+                    uint64_t tmpkey = bytes_to_num(key, 6);
+                    if (mifare_classic_authex(pcs, cuid, 0, MF_KEY_B, tmpkey, AUTH_FIRST, NULL, NULL) == 0) {
                         uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
                         uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
                         if ((mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, 0, receivedAnswer, receivedAnswerPar, NULL) == 1) && (receivedAnswer[0] == 0x0A)) {
@@ -2589,11 +2584,10 @@ void MifareCIdent(bool is_mfc) {
             }
 
             // magic MFC Gen3 test 1
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-            SpinDelay(40);
-            iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+            mf_reset_card();
+
             res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-            if (res == 2) {
+            if (res) {
                 ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
                 res = ReaderReceive(buf, par);
                 if (res == 18) {
@@ -2602,11 +2596,10 @@ void MifareCIdent(bool is_mfc) {
             }
 
             // magic MFC Gen4 GDM magic auth test
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-            SpinDelay(40);
-            iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+            mf_reset_card();
+
             res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-            if (res == 2) {
+            if (res) {
                 ReaderTransmit(gen4gdmAuth, sizeof(gen4gdmAuth), NULL);
                 res = ReaderReceive(buf, par);
                 if (res == 4) {
@@ -2615,11 +2608,10 @@ void MifareCIdent(bool is_mfc) {
             }
 
             // QL88 test
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-            SpinDelay(40);
-            iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+            mf_reset_card();
+
             res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-            if (res == 2) {
+            if (res) {
                 struct Crypto1State mpcs = {0, 0};
                 struct Crypto1State *pcs;
                 pcs = &mpcs;
@@ -2698,7 +2690,7 @@ void MifareHasStaticNonce(void) {
     }
 
     if (counter) {
-        Dbprintf("%u static nonce %08x", data[0], nt);
+        Dbprintf("Static nonce......... " _YELLOW_("%08x"), nt);
         data[0] = NONCE_STATIC;
     } else {
         data[0] = NONCE_NORMAL;

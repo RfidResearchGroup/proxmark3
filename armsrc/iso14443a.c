@@ -2827,8 +2827,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
     // RATS, Request for answer to select
     if (no_rats == false) {
 
-        uint8_t rats[] = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0
-        AddCrc14A(rats, 2);
+        uint8_t rats[] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 }; // FSD=256, FSDI=8, CID=0
         ReaderTransmit(rats, sizeof(rats), NULL);
         int len = ReaderReceive(resp, parity_array);
         if (len == 0) {
@@ -3055,7 +3054,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
     uint8_t *cmd = c->data.asBytes;
     uint32_t arg0;
 
-    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
+    uint8_t buf[PM3_CMD_DATA_SIZE_MIX] = {0x00};
 
     if ((param & ISO14A_CONNECT)) {
         iso14_pcb_blocknum = 0;
