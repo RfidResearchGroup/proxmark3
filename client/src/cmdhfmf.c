@@ -8803,7 +8803,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf info",
                   "Information and check vulnerabilities in a MIFARE Classic card\n"
                   "Some cards in order to extract information you need to specify key\n"
-                  "and/or specific keys in the copmmand line",
+                  "and/or specific keys in the command line",
                   "hf mf info\n"
                   "hf mf info -k FFFFFFFFFFFF -n -v\n"
                  );
