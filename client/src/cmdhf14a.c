@@ -42,6 +42,7 @@
 #include "desfire.h"             // desfire enums
 #include "mifare/desfirecore.h"  // desfire context
 #include "mifare/mifaredefault.h"
+#include "preferences.h"         // get/set device debug level
 
 static bool g_apdu_in_framing_enable = true;
 bool Get_apdu_in_framing(void) {
@@ -1862,6 +1863,12 @@ static void get_compact_tlv(uint8_t *d, uint8_t n) {
 }
 
 int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
+
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
@@ -2397,6 +2404,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             select_status = 2;
     }
 
+    if (setDeviceDebugLevel(verbose ? DBG_INFO : DBG_NONE, false) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
     int isMagic = 0;
     if (isMifareClassic) {
         isMagic = detect_mf_magic(true);
@@ -2434,6 +2445,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
 
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf`") " commands");
+    }
+
+    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
+        return PM3_EFAILED;
     }
 
     if (isMifareUltralight)
