@@ -2710,14 +2710,14 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
     set_tracing(true);
 
     int retval = PM3_SUCCESS;
-    uint8_t *uid = BigBuf_malloc(10);
-    memset(uid, 0x00, 10);
+    uint8_t *uid = BigBuf_calloc(10);
 
+    uint64_t ui64key = bytes_to_num(key, 6);
     uint8_t data[1] = { NONCE_FAIL };
+
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
-    uint64_t ui64key = bytes_to_num(key, 6);
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -2774,6 +2774,7 @@ void OnSuccessMagic(void) {
     LEDsoff();
     set_tracing(false);
 }
+
 void OnErrorMagic(uint8_t reason) {
     //          ACK, ISOK, reason,0,0,0
     reply_mix(CMD_ACK, 0, reason, 0, 0, 0);
@@ -2782,8 +2783,8 @@ void OnErrorMagic(uint8_t reason) {
 
 int DoGen3Cmd(uint8_t *cmd, uint8_t cmd_len) {
     int retval = PM3_SUCCESS;
-    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
-    uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
+    uint8_t *par = BigBuf_calloc(MAX_PARITY_SIZE);
+    uint8_t *buf = BigBuf_calloc(PM3_CMD_DATA_SIZE);
 
     LED_B_ON();
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
@@ -2806,9 +2807,9 @@ int DoGen3Cmd(uint8_t *cmd, uint8_t cmd_len) {
 void MifareGen3UID(uint8_t uidlen, uint8_t *uid) {
     int retval = PM3_SUCCESS;
     uint8_t uid_cmd[5] = { 0x90, 0xfb, 0xcc, 0xcc, 0x07 };
-    uint8_t *old_uid = BigBuf_malloc(10);
-    uint8_t *cmd = BigBuf_malloc(sizeof(uid_cmd) + uidlen + 2);
-    iso14a_card_select_t *card_info = (iso14a_card_select_t *) BigBuf_malloc(sizeof(iso14a_card_select_t));
+    uint8_t *old_uid = BigBuf_calloc(10);
+    uint8_t *cmd = BigBuf_calloc(sizeof(uid_cmd) + uidlen + 2);
+    iso14a_card_select_t *card_info = (iso14a_card_select_t *) BigBuf_calloc(sizeof(iso14a_card_select_t));
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     clear_trace();
@@ -2838,12 +2839,12 @@ OUT:
 }
 
 void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
-#define MIFARE_BLOCK_SIZE (MAX_MIFARE_FRAME_SIZE - 2)
+
     int retval = PM3_SUCCESS;
     uint8_t block_cmd[5] = { 0x90, 0xf0, 0xcc, 0xcc, 0x10 };
-    uint8_t *uid = BigBuf_malloc(10);
-    uint8_t *cmd = BigBuf_malloc(sizeof(block_cmd) + MAX_MIFARE_FRAME_SIZE);
-    iso14a_card_select_t *card_info = (iso14a_card_select_t *) BigBuf_malloc(sizeof(iso14a_card_select_t));
+    uint8_t *uid = BigBuf_calloc(10);
+    uint8_t *cmd = BigBuf_calloc(sizeof(block_cmd) + MAX_MIFARE_FRAME_SIZE);
+    iso14a_card_select_t *card_info = (iso14a_card_select_t *) BigBuf_calloc(sizeof(iso14a_card_select_t));
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     clear_trace();
