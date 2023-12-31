@@ -133,10 +133,12 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
     if (no_newline) {
         snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
     } else {
-        snprintf(buf, buflen - 1, "\r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+
+        snprintf(buf, buflen - 1, "\r                      \r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
     }
 }
 
+// This function is hooked via RL_EVENT_HOOK.
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && g_session.pm3_present) {
@@ -148,7 +150,18 @@ static int check_comm(void) {
         memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
         pm3line_update_prompt(prompt_filtered);
         CloseProxmark(g_session.current_device);
+        StartReconnectProxmark();
+    } 
+    // its alive again
+    if (IsReconnectedOk() && g_session.pm3_present) {
+        prompt_dev = PROXPROMPT_DEV_USB;
+        char prompt[PROXPROMPT_MAX_SIZE] = {0};
+        prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, false);
+        char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
+        memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
+        pm3line_update_prompt(prompt_filtered);
     }
+
     msleep(10);
     return 0;
 }

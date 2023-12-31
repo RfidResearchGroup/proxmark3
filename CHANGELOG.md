@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added a thread to check when device comes online again. It will connect and update prompt (@iceman1001)
  - Changed CLI offline prompt - replaces the old prompt when offline is detected (@iceman100)
  - Changed `hf mf info` - it now uses found keys to try identify Gen2 cards (@iceman1001)
  - Changed `hf 14a info` - disabled debug logging while performing the magic tests (@iceman1001)
