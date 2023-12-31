@@ -8940,7 +8940,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         uint8_t blockdata[MFBLOCK_SIZE] = {0};
 
         if (e_sector[0].foundKey[MF_KEY_A]) {
-            PrintAndLogEx(SUCCESS, "Sector 0 key A... " _GREEN_("%12" PRIX64), e_sector[0].Key[MF_KEY_A]);
+            PrintAndLogEx(SUCCESS, "Sector 0 key A... " _GREEN_("%012" PRIX64), e_sector[0].Key[MF_KEY_A]);
 
             num_to_bytes(e_sector[0].Key[MF_KEY_A], MIFARE_KEY_SIZE, fkey);
             if (mfReadBlock(0, MF_KEY_A, key, blockdata) == PM3_SUCCESS) {
@@ -8949,7 +8949,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         }
 
         if (e_sector[0].foundKey[MF_KEY_B]) {
-            PrintAndLogEx(SUCCESS, "Sector 0 key B... " _GREEN_("%12" PRIX64), e_sector[0].Key[MF_KEY_B]);
+            PrintAndLogEx(SUCCESS, "Sector 0 key B... " _GREEN_("%012" PRIX64), e_sector[0].Key[MF_KEY_B]);
 
             if (fKeyType == 0xFF) {
                 num_to_bytes(e_sector[0].Key[MF_KEY_B], MIFARE_KEY_SIZE, fkey);
@@ -9010,11 +9010,11 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         if (keylen == MIFARE_KEY_SIZE) {
             res = detect_classic_static_encrypted_nonce(blockn, keytype, key);
             if (res == NONCE_STATIC) {
-                PrintAndLogEx(SUCCESS, "Static nested nonce... " _YELLOW_("yes"));
+                PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
                 fKeyType = 0xFF; // dont detect twice
             }
             if (res == NONCE_STATIC_ENC) {
-                PrintAndLogEx(SUCCESS, "Static encrypted nonce... " _RED_("yes"));
+                PrintAndLogEx(SUCCESS, "Static enc nonce..... " _RED_("yes"));
                 fKeyType = 0xFF; // dont detect twice
             }
         }
@@ -9022,9 +9022,9 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         if (fKeyType != 0xFF) {
             res = detect_classic_static_encrypted_nonce(0, fKeyType, fkey);
             if (res == NONCE_STATIC)
-                PrintAndLogEx(SUCCESS, "Static nested nonce... " _YELLOW_("yes"));
+                PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
             if (res == NONCE_STATIC_ENC)
-                PrintAndLogEx(SUCCESS, "Static encrypted nonce... " _RED_("yes"));
+                PrintAndLogEx(SUCCESS, "Static enc nonce..... " _RED_("yes"));
         }
 
         if (do_nack_test) {
