@@ -2527,9 +2527,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
 
                 // check for super card gen2
                 // not available after RATS, reset card before executing
-                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-                SpinDelay(40);
-                iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+                mf_reset_card();
 
                 iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
                 ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
@@ -2556,6 +2554,10 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
             }
         } else {
 
+            struct Crypto1State mpcs = {0, 0};
+            struct Crypto1State *pcs;
+            pcs = &mpcs;
+            
             // CUID (with default sector 0 B key) test
             // regular cards will NAK the WRITEBLOCK(0) command, while DirectWrite will ACK it
             // if we do get an ACK, we immediately abort to ensure nothing is ever actually written
@@ -2565,15 +2567,11 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
 
                 res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
                 if (res) {
-                    struct Crypto1State mpcs = {0, 0};
-                    struct Crypto1State *pcs;
-                    pcs = &mpcs;
 
                     uint64_t tmpkey = bytes_to_num(key, 6);
                     if (mifare_classic_authex(pcs, cuid, 0, keytype, tmpkey, AUTH_FIRST, NULL, NULL) == 0) {
-                        uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
-                        uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
-                        if ((mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, 0, receivedAnswer, receivedAnswerPar, NULL) == 1) && (receivedAnswer[0] == 0x0A)) {
+
+                        if ((mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, 0, buf, par, NULL) == 1) && (buf[0] == 0x0A)) {
                             data[data_off++] = MAGIC_GEN_2;
                             // turn off immediately to ensure nothing ever accidentally writes to the block
                             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -2612,9 +2610,6 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
 
             res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
             if (res) {
-                struct Crypto1State mpcs = {0, 0};
-                struct Crypto1State *pcs;
-                pcs = &mpcs;
                 if (mifare_classic_authex(pcs, cuid, 68, MF_KEY_B, 0x707B11FC1481, AUTH_FIRST, NULL, NULL) == 0) {
                     data[data_off++] = MAGIC_QL88;
                 }
