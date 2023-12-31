@@ -129,8 +129,12 @@ static const char *prompt_dev = "";
 static const char *prompt_ctx = "";
 static const char *prompt_net = "";
 
-static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev, const char *promptnet) {
-    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev, const char *promptnet, bool no_newline) {
+    if (no_newline) {
+        snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+    } else {
+        snprintf(buf, buflen - 1, "\r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+    }
 }
 
 static int check_comm(void) {
@@ -139,7 +143,7 @@ static int check_comm(void) {
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
         prompt_dev = PROXPROMPT_DEV_OFFLINE;
         char prompt[PROXPROMPT_MAX_SIZE] = {0};
-        prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net);
+        prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, false);
         char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
         memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
         pm3line_update_prompt(prompt_filtered);
@@ -364,7 +368,7 @@ check_script:
                     pm3line_check(check_comm);
                     prompt_ctx = PROXPROMPT_CTX_INTERACTIVE;
                     char prompt[PROXPROMPT_MAX_SIZE] = {0};
-                    prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net);
+                    prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, true);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
                     g_pendingPrompt = true;
@@ -414,7 +418,7 @@ check_script:
                     g_printAndLog &= PRINTANDLOG_LOG;
                 }
                 char prompt[PROXPROMPT_MAX_SIZE] = {0};
-                prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net);
+                prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, true);
                 // always filter RL magic separators if not using readline
                 char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                 memcpy_filter_rlmarkers(prompt_filtered, prompt, sizeof(prompt_filtered));
