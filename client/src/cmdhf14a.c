@@ -2410,10 +2410,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     int isMagic = 0;
     if (isMifareClassic) {
-        isMagic = detect_mf_magic(true, 0);
+        isMagic = detect_mf_magic(true, MF_KEY_A, 0);
     }
     if (isMifareUltralight) {
-        isMagic = (detect_mf_magic(false, 0) == MAGIC_NTAG21X);
+        isMagic = (detect_mf_magic(false, MF_KEY_A, 0) == MAGIC_NTAG21X);
     }
     if (isMifareClassic) {
         int res = detect_classic_static_nonce();
