@@ -8923,7 +8923,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     int sectorsCnt = 1;
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
-    res = mfLoadKeys(&keyBlock, &keycnt, NULL, 0, NULL, 0);
+    res = mfLoadKeys(&keyBlock, &keycnt, key, MIFARE_KEY_SIZE, NULL, 0);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -8973,8 +8973,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Magic Tag Information"));
-    if (detect_mf_magic(true, e_sector[0].Key[MF_KEY_B]) == 0) {
-        if (detect_mf_magic(true, e_sector[0].Key[MF_KEY_A]) == 0) {
+    if (detect_mf_magic(true, MF_KEY_B, e_sector[0].Key[MF_KEY_B]) == 0) {
+        if (detect_mf_magic(true, MF_KEY_A, e_sector[0].Key[MF_KEY_A]) == 0) {
             PrintAndLogEx(INFO, "<N/A>");
         }
     }

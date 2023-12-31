@@ -1736,10 +1736,11 @@ static void PacketReceived(PacketCommandNG *packet) {
 
            struct p {
                 uint8_t is_mfc;
+                uint8_t keytype;
                 uint8_t key[6];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareCIdent(payload->is_mfc, payload->key);
+            MifareCIdent(payload->is_mfc, payload->keytype, payload->key);
             break;
         }
         // Gen 3 magic cards

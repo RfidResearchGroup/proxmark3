@@ -2420,7 +2420,7 @@ static void mf_reset_card(void) {
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 }
 
-void MifareCIdent(bool is_mfc, uint8_t *key) {
+void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     // variables
     uint8_t rec[1] = {0x00};
     uint8_t recpar[1] = {0x00};
@@ -2570,7 +2570,7 @@ void MifareCIdent(bool is_mfc, uint8_t *key) {
                     pcs = &mpcs;
 
                     uint64_t tmpkey = bytes_to_num(key, 6);
-                    if (mifare_classic_authex(pcs, cuid, 0, MF_KEY_B, tmpkey, AUTH_FIRST, NULL, NULL) == 0) {
+                    if (mifare_classic_authex(pcs, cuid, 0, keytype, tmpkey, AUTH_FIRST, NULL, NULL) == 0) {
                         uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
                         uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
                         if ((mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, 0, receivedAnswer, receivedAnswerPar, NULL) == 1) && (receivedAnswer[0] == 0x0A)) {

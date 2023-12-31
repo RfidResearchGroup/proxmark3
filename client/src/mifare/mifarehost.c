@@ -1373,7 +1373,7 @@ returns:
 */
 int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, uint8_t *key) {
     clearCommandBuffer();
-    uint8_t cdata[1 + 1 + MIFARE_KEY_SIZE] = {0};
+    uint8_t cdata[1 + 1 + MIFARE_KEY_SIZE] = { 0 };
     cdata[0] = block_no;
     cdata[1] = key_type;
     memcpy(&cdata[2], key, MIFARE_KEY_SIZE);
@@ -1390,13 +1390,13 @@ int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, ui
 }
 
 /* try to see if card responses to "Chinese magic backdoor" commands. */
-int detect_mf_magic(bool is_mfc, uint64_t key) {
+int detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
 
     uint8_t isMagic = 0;
     PacketResponseNG resp;
     clearCommandBuffer();
-    uint8_t payload[1 + MIFARE_KEY_SIZE] = { is_mfc };
-    num_to_bytes(key, MIFARE_KEY_SIZE, payload + 1);
+    uint8_t payload[1 + 1 + MIFARE_KEY_SIZE] = { is_mfc, key_type };
+    num_to_bytes(key, MIFARE_KEY_SIZE, payload + 2);
 
     SendCommandNG(CMD_HF_MIFARE_CIDENT, payload, sizeof(payload));
     if (WaitForResponseTimeout(CMD_HF_MIFARE_CIDENT, &resp, 1500)) {
