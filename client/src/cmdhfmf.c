@@ -8963,8 +8963,12 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
         }
 
-        if (memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
-            PrintAndLogEx(SUCCESS, "   indication of Fudan");
+        if (
+            (blockdata[8] == 0x03 && blockdata[15] == 0x90) ||
+            (blockdata[9] == 0x02 && blockdata[14] == 0x1D) || 
+            (memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0)
+        ) {
+            PrintAndLogEx(SUCCESS, "   Fudan tag detected");
         }
 
     } else {
