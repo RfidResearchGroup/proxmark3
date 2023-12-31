@@ -2811,6 +2811,7 @@ void MifareGen3UID(uint8_t uidlen, uint8_t *uid) {
     uint8_t *cmd = BigBuf_calloc(sizeof(uid_cmd) + uidlen + 2);
     iso14a_card_select_t *card_info = (iso14a_card_select_t *) BigBuf_calloc(sizeof(iso14a_card_select_t));
 
+    LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     clear_trace();
     set_tracing(true);
@@ -2842,15 +2843,15 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
 
     int retval = PM3_SUCCESS;
     uint8_t block_cmd[5] = { 0x90, 0xf0, 0xcc, 0xcc, 0x10 };
-    uint8_t *uid = BigBuf_calloc(10);
     uint8_t *cmd = BigBuf_calloc(sizeof(block_cmd) + MAX_MIFARE_FRAME_SIZE);
     iso14a_card_select_t *card_info = (iso14a_card_select_t *) BigBuf_calloc(sizeof(iso14a_card_select_t));
 
+    LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     clear_trace();
     set_tracing(true);
 
-    if (iso14443a_select_card(uid, card_info, NULL, true, 0, true) == false) {
+    if (iso14443a_select_card(NULL, card_info, NULL, true, 0, true) == false) {
         retval = PM3_ESOFT;
         goto OUT;
     }
@@ -2885,7 +2886,7 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
         AddCrc14A(cmd, sizeof(block_cmd) + MIFARE_BLOCK_SIZE);
 
         if (doReselect) {
-            if (!iso14443a_select_card(uid, NULL, NULL, true, 0, true)) {
+            if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
                 retval = PM3_ESOFT;
                 goto OUT;
             }
@@ -2902,15 +2903,16 @@ OUT:
 }
 
 void MifareGen3Freez(void) {
+
+    LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     clear_trace();
     set_tracing(true);
 
     int retval = PM3_SUCCESS;
     uint8_t freeze_cmd[7] = { 0x90, 0xfd, 0x11, 0x11, 0x00, 0xe7, 0x91 };
-    uint8_t *uid = BigBuf_malloc(10);
 
-    if (iso14443a_select_card(uid, NULL, NULL, true, 0, true) == false) {
+    if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == false) {
         retval = PM3_ESOFT;
         goto OUT;
     }
@@ -2926,7 +2928,7 @@ OUT:
 
 void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd, uint8_t workFlags) {
     bool setup = ((workFlags & MAGIC_INIT) == MAGIC_INIT) ;
-    bool  done = ((workFlags & MAGIC_OFF)  == MAGIC_OFF) ;
+    bool done = ((workFlags & MAGIC_OFF)  == MAGIC_OFF) ;
 
     int res = 0;
     int retval = PM3_SUCCESS;
@@ -2944,16 +2946,12 @@ void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd, uint8_t workFlags) {
     }
 
     if (setup) {
-        uint8_t *uid = BigBuf_malloc(10);
-        if (uid == NULL) {
-            retval = PM3_EMALLOC;
-            goto OUT;
-        }
+        LEDsoff();
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
         clear_trace();
         set_tracing(true);
 
-        if (iso14443a_select_card(uid, NULL, NULL, true, 0, true) == false) {
+        if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == false) {
             retval = PM3_ESOFT;
             goto OUT;
         }
@@ -2982,21 +2980,31 @@ void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd, uint8_t workFlags) {
         retval = PM3_ESOFT;
     }
 
-    if (done || retval != 0) iso14a_set_timeout(save_iso14a_timeout);
+    if (done || retval != 0) {
+        iso14a_set_timeout(save_iso14a_timeout);
+    }
+
     LED_B_OFF();
 
 OUT:
     reply_ng(CMD_HF_MIFARE_G4_RDBL, retval, buf, res);
+
     // turns off
-    if (done || retval != 0) FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    if (done || retval != 0) {
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    }
+
     LEDsoff();
-    if (done || retval != 0) set_tracing(false);
+    if (done || retval != 0) {
+        set_tracing(false);
+    }
+
     BigBuf_free();
 }
 
 void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t workFlags) {
     bool setup = ((workFlags & MAGIC_INIT) == MAGIC_INIT) ;
-    bool  done = ((workFlags & MAGIC_OFF)  == MAGIC_OFF) ;
+    bool done = ((workFlags & MAGIC_OFF)  == MAGIC_OFF) ;
 
     int res = 0;
     int retval = PM3_SUCCESS;
@@ -3020,16 +3028,12 @@ void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t work
     }
 
     if (setup) {
-        uint8_t *uid = BigBuf_malloc(10);
-        if (uid == NULL) {
-            retval = PM3_EMALLOC;
-            goto OUT;
-        }
+        LEDsoff();
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
         clear_trace();
         set_tracing(true);
 
-        if (iso14443a_select_card(uid, NULL, NULL, true, 0, true) == false) {
+        if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == false) {
             retval = PM3_ESOFT;
             goto OUT;
         }
@@ -3061,15 +3065,23 @@ void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t work
         retval = PM3_ESOFT;
     }
 
-    if (done || retval != 0) iso14a_set_timeout(save_iso14a_timeout);
+    if (done || retval != 0) {
+        iso14a_set_timeout(save_iso14a_timeout);
+    }
     LED_B_OFF();
 
 OUT:
     reply_ng(CMD_HF_MIFARE_G4_WRBL, retval, buf, res);
     // turns off
-    if (done || retval != 0) FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    if (done || retval != 0) {
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    }
+
     LEDsoff();
-    if (done || retval != 0) set_tracing(false);
+    if (done || retval != 0) {
+        set_tracing(false);
+    }
+
     BigBuf_free();
 }
 
@@ -3080,24 +3092,25 @@ void MifareSetMod(uint8_t *datain) {
 
     // variables
     uint16_t isOK = PM3_EUNDEF;
-    uint8_t uid[10] = {0};
+    uint8_t *uid = BigBuf_calloc(10);
+
     uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs = &mpcs;
-    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0};
-    uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0};
 
+    uint8_t *buf = BigBuf_calloc(MAX_MIFARE_FRAME_SIZE);
+    uint8_t *par = BigBuf_calloc(MAX_MIFARE_PARITY_SIZE);
+
+    LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     clear_trace();
     set_tracing(true);
 
     LED_A_ON();
-    LED_B_OFF();
-    LED_C_OFF();
 
     while (true) {
-        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+        if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == false) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
             break;
         }
@@ -3108,8 +3121,8 @@ void MifareSetMod(uint8_t *datain) {
         }
 
         int respLen;
-        if (((respLen = mifare_sendcmd_short(pcs, CRYPT_ALL, MIFARE_EV1_SETMOD, mod, receivedAnswer, receivedAnswerPar, NULL)) != 1) || (receivedAnswer[0] != 0x0a)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("SetMod error; response[0]: %hhX, len: %d", receivedAnswer[0], respLen);
+        if (((respLen = mifare_sendcmd_short(pcs, CRYPT_ALL, MIFARE_EV1_SETMOD, mod, buf, par, NULL)) != 1) || (buf[0] != 0x0a)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("SetMod error; response[0]: %hhX, len: %d", buf[0], respLen);
             break;
         }
 
@@ -3130,6 +3143,7 @@ void MifareSetMod(uint8_t *datain) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
+    BigBuf_free();
 }
 
 //
@@ -3137,14 +3151,13 @@ void MifareSetMod(uint8_t *datain) {
 //
 void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain) {
     uint8_t dataout[12] = {0x00};
-    uint8_t uid[10] = {0x00};
     uint32_t cuid = 0;
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     clear_trace();
     set_tracing(true);
 
-    int len = iso14443a_select_card(uid, NULL, &cuid, true, 0, false);
+    int len = iso14443a_select_card(NULL, NULL, &cuid, true, 0, false);
     if (!len) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
         OnError(1);
@@ -3193,8 +3206,10 @@ void MifareU_Otp_Tearoff(uint8_t blno, uint32_t tearoff_time, uint8_t *data_test
 
     if (g_dbglevel >= DBG_DEBUG) DbpString("Preparing OTP tear-off");
 
-    if (tearoff_time > 43000)
+    if (tearoff_time > 43000) {
         tearoff_time = 43000;
+    }
+
     g_tearoff_delay_us = tearoff_time;
     g_tearoff_enabled = true;
 
@@ -3213,7 +3228,7 @@ void MifareU_Otp_Tearoff(uint8_t blno, uint32_t tearoff_time, uint8_t *data_test
     AddCrc14A(cmd, sizeof(cmd) - 2);
 
     // anticollision / select card
-    if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+    if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == false) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
         OnError(1);
         reply_ng(CMD_HF_MFU_OTP_TEAROFF, PM3_EFAILED, NULL, 0);
@@ -3230,8 +3245,9 @@ void MifareU_Otp_Tearoff(uint8_t blno, uint32_t tearoff_time, uint8_t *data_test
 // Tear-off attack against MFU counter
 void MifareU_Counter_Tearoff(uint8_t counter, uint32_t tearoff_time, uint8_t *datain) {
 
-    if (tearoff_time > 43000)
+    if (tearoff_time > 43000) {
         tearoff_time = 43000;
+    }
 
     LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -3252,7 +3268,7 @@ void MifareU_Counter_Tearoff(uint8_t counter, uint32_t tearoff_time, uint8_t *da
     AddCrc14A(cmd, sizeof(cmd) - 2);
 
     // anticollision / select card
-    if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+    if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == false) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
         OnError(1);
         switch_off();
