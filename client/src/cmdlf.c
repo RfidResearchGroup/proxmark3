@@ -1916,13 +1916,13 @@ int CmdLFfind(const char *Cmd) {
         PrintAndLogEx(INFO, _CYAN_("Checking for unknown tags...") "\n");
 
         uint8_t ones[] = {
-                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-                1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-            };
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        };
 
         // FSK
         PrintAndLogEx(INFO, "FSK clock.......... " NOLF);
@@ -1971,7 +1971,7 @@ int CmdLFfind(const char *Cmd) {
                     check_autocorrelate("NRZ", clock);
                     found++;
                 } else {
-                    PrintAndLogEx(INFO, "NRZ ............... " _RED_("false positive")); 
+                    PrintAndLogEx(INFO, "NRZ ............... " _RED_("false positive"));
                     PrintAndLogEx(NORMAL, "");
                 }
             } else {

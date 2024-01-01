@@ -2477,7 +2477,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     }
 
     // reset card
-     mf_reset_card();
+    mf_reset_card();
 
     res = iso14443a_select_card(uid, NULL, &cuid, true, 0, false);
     if (res) {
@@ -2557,7 +2557,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
             struct Crypto1State mpcs = {0, 0};
             struct Crypto1State *pcs;
             pcs = &mpcs;
-            
+
             // CUID (with default sector 0 B key) test
             // regular cards will NAK the WRITEBLOCK(0) command, while DirectWrite will ACK it
             // if we do get an ACK, we immediately abort to ensure nothing is ever actually written

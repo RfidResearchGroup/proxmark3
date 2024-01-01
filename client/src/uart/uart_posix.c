@@ -108,8 +108,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
     bool isUDP = false;
     bool isBluetooth = false;
     bool isUnixSocket = false;
-    if (strlen(prefix) > 4)
-    {
+    if (strlen(prefix) > 4) {
         isTCP = (memcmp(prefix, "tcp:", 4) == 0);
         isUDP = (memcmp(prefix, "udp:", 4) == 0);
     }

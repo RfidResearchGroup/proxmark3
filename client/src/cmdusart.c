@@ -168,8 +168,8 @@ static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
     if (ret == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
         if (str_startswith((char *)data, "hc01.comV2.0") ||
-            str_startswith((char *)data, "www.hc01.com") ||
-            str_startswith((char *)data, "BT SPP V4.0")) {
+                str_startswith((char *)data, "www.hc01.com") ||
+                str_startswith((char *)data, "BT SPP V4.0")) {
 
             PrintAndLogEx(SUCCESS, "Add-on " _GREEN_("found!"));
 
@@ -310,7 +310,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
 
     memset(data, 0, sizeof(data));
     len = 0;
-    
+
     if (isBluetoothExtensionHC04 == true) {
         string = "AT+PIN=1234";
     } else {
@@ -378,7 +378,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
     } else {
 
         memset(data, 0, sizeof(data));
-        len=0;
+        len = 0;
         string = "AT+BAUD=115200,N";
         PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
 

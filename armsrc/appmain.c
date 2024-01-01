@@ -1734,7 +1734,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_MIFARE_CIDENT: {
 
 
-           struct p {
+            struct p {
                 uint8_t is_mfc;
                 uint8_t keytype;
                 uint8_t key[6];

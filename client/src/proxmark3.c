@@ -190,7 +190,7 @@ static int check_comm(void) {
         CloseProxmark(g_session.current_device);
         StartReconnectProxmark();
         c_update_reconnect_prompt = true;
-    } 
+    }
     // its alive again
     if (c_update_reconnect_prompt && IsReconnectedOk() && g_session.pm3_present) {
 

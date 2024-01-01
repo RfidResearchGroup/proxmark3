@@ -2695,7 +2695,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
                         uint16_t UIDbit = (resp[i / 8] >> (i % 8)) & 0x01;
                         uid_resp[uid_resp_bits / 8] |= UIDbit << (uid_resp_bits % 8);
                     }
- 
+
                     uid_resp[uid_resp_bits / 8] |= 1 << (uid_resp_bits % 8);                  // next time select the card(s) with a 1 in the collision position
                     uid_resp_bits++;
                     // construct anticollision command:
@@ -3516,7 +3516,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
 */
 void DetectNACKbug(void) {
     uint8_t mf_auth[4] = { MIFARE_AUTH_KEYA, 0x00, 0xF5, 0x7B };
-    uint8_t mf_nr_ar[8]= { 0x00 };
+    uint8_t mf_nr_ar[8] = { 0x00 };
     uint8_t uid[10] = { 0x00 };
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = { 0x00 };
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = { 0x00 };

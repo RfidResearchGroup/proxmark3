@@ -1682,46 +1682,46 @@ static int CmdHFMFPDump(const char *Cmd) {
     PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
     return PM3_ENOTIMPL;
 
-/*
-    mfpSetVerboseMode(verbose);
+    /*
+        mfpSetVerboseMode(verbose);
 
-    // read card
-    uint8_t *mem = calloc(MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, sizeof(uint8_t));
-    if (mem == NULL) {
-        PrintAndLogEx(ERR, "failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-
-
-//        iso14a_card_select_t card ;
-//        int res = mfp_read_tag(&card, mem, key_fn);
-//        if (res != PM3_SUCCESS) {
-//            free(mem);
-//            return res;
-//        }
+        // read card
+        uint8_t *mem = calloc(MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, sizeof(uint8_t));
+        if (mem == NULL) {
+            PrintAndLogEx(ERR, "failed to allocate memory");
+            return PM3_EMALLOC;
+        }
 
 
-    // Skip saving card data to file
-    if (nosave) {
-        PrintAndLogEx(INFO, "Called with no save option");
+    //        iso14a_card_select_t card ;
+    //        int res = mfp_read_tag(&card, mem, key_fn);
+    //        if (res != PM3_SUCCESS) {
+    //            free(mem);
+    //            return res;
+    //        }
+
+
+        // Skip saving card data to file
+        if (nosave) {
+            PrintAndLogEx(INFO, "Called with no save option");
+            free(mem);
+            return PM3_SUCCESS;
+        }
+
+            // Save to file
+    //        if (strlen(data_fn) < 1) {
+    //            char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-dump")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
+    //            strcpy(fptr, "hf-mfp-");
+    //            FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
+    //            strcpy(data_fn, fptr);
+    //            free(fptr);
+    //        }
+
+    //        pm3_save_mf_dump(filename, dump, MIFARE_4K_MAX_BYTES, jsfCardMemory);
+
         free(mem);
         return PM3_SUCCESS;
-    }
-
-        // Save to file
-//        if (strlen(data_fn) < 1) {
-//            char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-dump")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
-//            strcpy(fptr, "hf-mfp-");
-//            FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
-//            strcpy(data_fn, fptr);
-//            free(fptr);
-//        }
-
-//        pm3_save_mf_dump(filename, dump, MIFARE_4K_MAX_BYTES, jsfCardMemory);
-
-    free(mem);
-    return PM3_SUCCESS;
-*/
+    */
 }
 
 

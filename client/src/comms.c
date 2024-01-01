@@ -362,7 +362,7 @@ void *uart_reconnect(void *targ) {
         }
 
         if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
-            CloseProxmark(g_session.current_device);            
+            CloseProxmark(g_session.current_device);
         } else {
             break;
         }
@@ -728,7 +728,7 @@ bool OpenProxmarkSilent(pm3_device_t **dev, const char *port, uint32_t speed) {
         pthread_create(&communication_thread, NULL, &uart_communication, &g_conn);
         __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
         __atomic_clear(&reconnect_ok, __ATOMIC_SEQ_CST);
-        
+
         g_session.pm3_present = true; // TODO support for multiple devices
 
         fflush(stdout);
