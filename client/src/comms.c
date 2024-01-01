@@ -355,6 +355,8 @@ void *uart_reconnect(void *targ) {
     }
 
     while (1) {
+        // throttle
+        msleep(200);
         if (OpenProxmarkSilent(&g_session.current_device, connection->serial_port_name, speed) == false) {
             continue;
         }
