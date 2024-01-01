@@ -133,7 +133,6 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
     if (no_newline) {
         snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
     } else {
-
         snprintf(buf, buflen - 1, "\r                                         \r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
     }
 }
@@ -142,7 +141,10 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && g_session.pm3_present) {
+
+#ifndef HAVE_READLINE
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
+#endif
         prompt_dev = PROXPROMPT_DEV_OFFLINE;
         char prompt[PROXPROMPT_MAX_SIZE] = {0};
         prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, false);
@@ -162,7 +164,7 @@ static int check_comm(void) {
         pm3line_update_prompt(prompt_filtered);
     }
 
-    msleep(10);
+    msleep(50);
     return 0;
 }
 
