@@ -699,7 +699,7 @@ size_t GetCommunicationRawReceiveNum(void) {
 
 bool OpenProxmarkSilent(pm3_device_t **dev, const char *port, uint32_t speed) {
 
-    sp = uart_open(port, speed);
+    sp = uart_open(port, speed, true);
 
     // check result of uart opening
     if (sp == INVALID_SERIAL_PORT) {
@@ -742,14 +742,14 @@ bool OpenProxmark(pm3_device_t **dev, const char *port, bool wait_for_port, int 
 
     if (!wait_for_port) {
         PrintAndLogEx(INFO, "Using UART port " _YELLOW_("%s"), port);
-        sp = uart_open(port, speed);
+        sp = uart_open(port, speed, false);
     } else {
         PrintAndLogEx(SUCCESS, "Waiting for Proxmark3 to appear on " _YELLOW_("%s"), port);
         fflush(stdout);
         int openCount = 0;
         PrintAndLogEx(INPLACE, "% 3i", timeout);
         do {
-            sp = uart_open(port, speed);
+            sp = uart_open(port, speed, false);
             msleep(500);
             PrintAndLogEx(INPLACE, "% 3i", timeout - openCount - 1);
 

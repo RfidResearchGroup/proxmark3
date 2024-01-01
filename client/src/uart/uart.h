@@ -40,8 +40,10 @@ typedef void *serial_port;
  * used for future references to that port.
  *
  * On errors, this method returns INVALID_SERIAL_PORT or CLAIMED_SERIAL_PORT.
+ * If slient is set to false, this function will print the error information
+ * when error occurs.
  */
-serial_port uart_open(const char *pcPortName, uint32_t speed);
+serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient);
 
 /* Closes the given port.
  */
