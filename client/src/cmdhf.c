@@ -175,6 +175,7 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iclass()) {
         if (read_iclass_csn(false, false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iCLASS tag / PicoPass tag") " found\n");
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf iclass`") " commands\n");
             res = PM3_SUCCESS;
         }
     }
