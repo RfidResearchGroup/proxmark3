@@ -82,7 +82,7 @@ static int uart_reconfigure_timeouts_polling(serial_port sp) {
     return PM3_SUCCESS;
 }
 
-serial_port uart_open(const char *pcPortName, uint32_t speed) {
+serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
     char acPortName[255] = {0};
     serial_port_windows_t *sp = calloc(sizeof(serial_port_windows_t), sizeof(uint8_t));
     sp->hSocket = INVALID_SOCKET; // default: serial port
@@ -99,7 +99,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
     char *prefix = str_dup(pcPortName);
     if (prefix == NULL) {
-        PrintAndLogEx(ERR, "error:  string duplication");
+        PrintAndLogEx(ERR, "error: string duplication");
         free(sp);
         return INVALID_SERIAL_PORT;
     }
@@ -241,7 +241,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         free(addrPortStr);
 
         if (rp == NULL) {               /* No address succeeded */
-            PrintAndLogEx(ERR, "error: Could not connect");
+            if (slient == false) {
+                PrintAndLogEx(ERR, "error: Could not connect");
+            }
             WSACleanup();
             free(sp);
             return INVALID_SERIAL_PORT;
