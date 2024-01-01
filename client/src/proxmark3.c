@@ -134,7 +134,7 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
         snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
     } else {
 
-        snprintf(buf, buflen - 1, "\r                      \r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+        snprintf(buf, buflen - 1, "\r                                         \r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
     }
 }
 
