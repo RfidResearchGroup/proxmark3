@@ -129,6 +129,40 @@ static const char *prompt_dev = "";
 static const char *prompt_ctx = "";
 static const char *prompt_net = "";
 
+
+static void prompt_set(void) {
+    if (g_session.pm3_present) {
+
+        switch (g_conn.send_via_ip) {
+            case PM3_TCPv4:
+                prompt_net = PROXPROMPT_NET_TCPV4;
+                break;
+            case PM3_TCPv6:
+                prompt_net = PROXPROMPT_NET_TCPV6;
+                break;
+            case PM3_UDPv4:
+                prompt_net = PROXPROMPT_NET_UDPV4;
+                break;
+            case PM3_UDPv6:
+                prompt_net = PROXPROMPT_NET_UDPV6;
+                break;
+            case PM3_NONE:
+                prompt_net = PROXPROMPT_NET_NONE;
+                break;
+            default:
+                break;
+        }
+
+        if (g_conn.send_via_fpc_usart)
+            prompt_dev = PROXPROMPT_DEV_FPC;
+        else
+            prompt_dev = PROXPROMPT_DEV_USB;
+
+    } else {
+        prompt_dev = PROXPROMPT_DEV_OFFLINE;
+    }
+}
+
 static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev, const char *promptnet, bool no_newline) {
     if (no_newline) {
         snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
@@ -136,6 +170,8 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
         snprintf(buf, buflen - 1, "\r                                         \r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
     }
 }
+
+static bool c_update_reconnect_prompt = false;
 
 // This function is hooked via RL_EVENT_HOOK.
 static int check_comm(void) {
@@ -153,15 +189,19 @@ static int check_comm(void) {
         pm3line_update_prompt(prompt_filtered);
         CloseProxmark(g_session.current_device);
         StartReconnectProxmark();
+        c_update_reconnect_prompt = true;
     } 
     // its alive again
-    if (IsReconnectedOk() && g_session.pm3_present) {
-        prompt_dev = PROXPROMPT_DEV_USB;
+    if (c_update_reconnect_prompt && IsReconnectedOk() && g_session.pm3_present) {
+
+        prompt_set();
+
         char prompt[PROXPROMPT_MAX_SIZE] = {0};
         prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, false);
         char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
         memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
         pm3line_update_prompt(prompt_filtered);
+        c_update_reconnect_prompt = false;
     }
 
     msleep(50);
@@ -284,36 +324,8 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     while (1) {
 
         bool printprompt = false;
-        if (g_session.pm3_present) {
 
-            switch (g_conn.send_via_ip) {
-                case PM3_TCPv4:
-                    prompt_net = PROXPROMPT_NET_TCPV4;
-                    break;
-                case PM3_TCPv6:
-                    prompt_net = PROXPROMPT_NET_TCPV6;
-                    break;
-                case PM3_UDPv4:
-                    prompt_net = PROXPROMPT_NET_UDPV4;
-                    break;
-                case PM3_UDPv6:
-                    prompt_net = PROXPROMPT_NET_UDPV6;
-                    break;
-                case PM3_NONE:
-                    prompt_net = PROXPROMPT_NET_NONE;
-                    break;
-                default:
-                    break;
-            }
-
-            if (g_conn.send_via_fpc_usart)
-                prompt_dev = PROXPROMPT_DEV_FPC;
-            else
-                prompt_dev = PROXPROMPT_DEV_USB;
-
-        } else {
-            prompt_dev = PROXPROMPT_DEV_OFFLINE;
-        }
+        prompt_set();
 
 check_script:
         // If there is a script file
