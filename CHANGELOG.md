@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Added hint for iClass to `hf search` (@bettse)
+ - Changed `hf search` - added hints for all HF protocols we search for (@iceman1001)
+ - Changed `hf search` - added hint for iClass (@bettse)
  - Changed `hf 14a apdu` - It now uses the FWI and SGFI values from the ATS to determine an appropriate timeout (@nvx)
  - Added a thread to check when device comes online again. It will connect and update prompt (@iceman1001)
  - Changed CLI offline prompt - replaces the old prompt when offline is detected (@iceman100)
