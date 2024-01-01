@@ -450,8 +450,9 @@ static void iso14b_set_timeout(uint32_t timeout_etu) {
 
     uint32_t ssp = HF14_ETU_TO_SSP(timeout_etu);
 
-    if (ssp > MAX_14B_TIMEOUT)
+    if (ssp > MAX_14B_TIMEOUT) {
         ssp = MAX_14B_TIMEOUT;
+    }
 
     iso14b_timeout = ssp;
     if (g_dbglevel >= DBG_DEBUG) {
@@ -466,8 +467,9 @@ static void iso14b_set_fwt(uint8_t fwt) {
 }
 
 static void iso14b_set_maxframesize(uint16_t size) {
-    if (size > 256)
+    if (size > 256) {
         size = MAX_FRAME_SIZE;
+    }
 
     Uart.byteCntMax = size;
     if (g_dbglevel >= DBG_DEBUG) Dbprintf("ISO14443B Max frame size set to %d bytes", Uart.byteCntMax);
@@ -1309,6 +1311,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
 
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf16_t *dma = get_dma16();
+
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
         if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
         return -1;
@@ -1396,6 +1399,8 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
                                 + (10));    // time for EOF transfer
         LogTrace(Demod.output, Demod.len, sof_time, *eof_time, NULL, false);
     }
+
+
     return Demod.len;
 }
 
@@ -1661,9 +1666,10 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
     if (len) {
         // cut frame byte
         len -= 1;
-        // memmove(data_bytes, data_bytes + 1, len);
-        for (int i = 0; i < len; i++)
+
+        for (int i = 0; i < len; i++) {
             data_bytes[i] = data_bytes[i + 1];
+        }
     }
 
     return len;
@@ -1825,7 +1831,7 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
 // the original chips require all commands in this sequence
 
 // 0: OK, 1: select fail, 2: attrib fail, 3: crc fail, 4: password fail
-int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
+static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
 //                                          AFI
     static const uint8_t x_wup1[] = { 0x0D, 0x37, 0x21, 0x92, 0xf2 };
     static const uint8_t x_wup2[] = { 0x5D, 0x37, 0x21, 0x71, 0x71 };
@@ -2396,15 +2402,12 @@ static void iso14b_set_trigger(bool enable) {
 void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
 
     // receive buffer
-    uint8_t buf[PM3_CMD_DATA_SIZE];
-    memset(buf, 0, sizeof(buf));
-    if (g_dbglevel > DBG_DEBUG) {
-        Dbprintf("14b raw: param, %04x", p->flags);
-    }
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
 
     // turn on trigger (LED_A)
-    if ((p->flags & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
+    if ((p->flags & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER) {
         iso14b_set_trigger(true);
+    }
 
     if ((p->flags & ISO14B_CONNECT) == ISO14B_CONNECT) {
         iso14443b_setup();
@@ -2420,43 +2423,42 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
     }
     set_tracing(true);
 
-    int status;
+    int status = 0;
     uint32_t sendlen = sizeof(iso14b_card_select_t);
-    iso14b_card_select_t card;
-    memset((void *)&card, 0x00, sizeof(card));
+    iso14b_card_select_t *card = (iso14b_card_select_t *)buf;
 
     if ((p->flags & ISO14B_SELECT_STD) == ISO14B_SELECT_STD) {
-        status = iso14443b_select_card(&card);
+        status = iso14443b_select_card(card);
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, (uint8_t *)&card, sendlen);
         // 0: OK -1: attrib fail, -2:crc fail,
         if (status != 0) goto out;
     }
 
     if ((p->flags & ISO14B_SELECT_SR) == ISO14B_SELECT_SR) {
-        status = iso14443b_select_srx_card(&card);
+        status = iso14443b_select_srx_card(card);
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, (uint8_t *)&card, sendlen);
-        // 0: OK 2: demod fail, 3:crc fail,
-        if (status > 0) goto out;
-    }
-
-    if ((p->flags & ISO14B_SELECT_CTS) == ISO14B_SELECT_CTS) {
-        iso14b_cts_card_select_t cts;
-        sendlen = sizeof(iso14b_cts_card_select_t);
-        status = iso14443b_select_cts_card(&cts);
-        reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, (uint8_t *)&cts, sendlen);
         // 0: OK 2: demod fail, 3:crc fail,
         if (status > 0) goto out;
     }
 
     if ((p->flags & ISO14B_SELECT_XRX) == ISO14B_SELECT_XRX) {
-        status = iso14443b_select_xrx_card(&card);
+        status = iso14443b_select_xrx_card(card);
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, (uint8_t *)&card, sendlen);
         // 0: OK, 1: select fail, 2: attrib fail, 3: crc fail, 4: password fail
         if (status != 0) goto out;
     }
 
+    if ((p->flags & ISO14B_SELECT_CTS) == ISO14B_SELECT_CTS) {
+        iso14b_cts_card_select_t *cts = (iso14b_cts_card_select_t *)buf;
+        sendlen = sizeof(iso14b_cts_card_select_t);
+        status = iso14443b_select_cts_card(cts);
+        reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, (uint8_t *)&cts, sendlen);
+        // 0: OK 2: demod fail, 3:crc fail,
+        if (status > 0) goto out;
+    }
+
     if ((p->flags & ISO14B_APDU) == ISO14B_APDU) {
-        uint8_t res;
+        uint8_t res = 0;
         status = iso14443b_apdu(p->raw, p->rawlen, (p->flags & ISO14B_SEND_CHAINING), buf, sizeof(buf), &res);
         sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, res, 0, buf, sendlen);
@@ -2488,8 +2490,9 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
 
 out:
     // turn off trigger (LED_A)
-    if ((p->flags & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER)
+    if ((p->flags & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER) {
         iso14b_set_trigger(false);
+    }
 
     // turn off antenna et al
     // we don't send a HALT command.

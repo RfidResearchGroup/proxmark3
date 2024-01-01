@@ -69,8 +69,6 @@ static dmabuf8_t dma_8 = {
     .buf = NULL
 };
 
-
-
 // trace related variables
 static uint32_t trace_len = 0;
 static bool tracing = true;
@@ -99,6 +97,11 @@ uint8_t *BigBuf_get_EM_addr(void) {
 
     return emulator_memory;
 }
+
+uint32_t BigBuf_get_hi(void) {
+    return s_bigbuf_hi;
+}
+
 /*
 uint32_t BigBuf_get_EM_size(void) {
     return CARD_MEMORY_SIZE;

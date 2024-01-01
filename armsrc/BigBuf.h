@@ -35,6 +35,8 @@ uint8_t *BigBuf_get_addr(void);
 uint32_t BigBuf_get_size(void);
 uint8_t *BigBuf_get_EM_addr(void);
 uint16_t BigBuf_max_traceLen(void);
+uint32_t BigBuf_get_hi(void);
+
 void BigBuf_initialize(void);
 void BigBuf_Clear(void);
 void BigBuf_Clear_ext(bool verbose);
