@@ -91,6 +91,25 @@ static uint8_t calc_pos(const uint8_t *d) {
     return pos;
 }
 
+// Copy an existing buffer into client trace buffer
+// I think this is cleaner than further globalizing gs_trace, and may lend itself to more modularity later?
+bool ImportTraceBuffer(uint8_t *trace_src, uint16_t trace_len)
+{
+    if (trace_len == 0 || trace_src == NULL) return(false);
+    if (gs_trace) {
+        free(gs_trace);
+        gs_traceLen = 0;
+    }
+    gs_trace = calloc(trace_len, sizeof(uint8_t));
+    if (gs_trace == NULL)
+    {
+        return(false);
+    }
+    memcpy(gs_trace, trace_src, trace_len);
+    gs_traceLen = trace_len;
+    return(true);
+}
+
 static uint8_t extract_uid[10] = {0};
 static uint8_t extract_uidlen = 0;
 static uint8_t extract_epurse[8] = {0};
