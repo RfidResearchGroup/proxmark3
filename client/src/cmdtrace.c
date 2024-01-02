@@ -1121,7 +1121,7 @@ static int CmdTraceLoad(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (gs_trace) {
-        free(gs_trace);	// maybe better to not clobber this until we have successful load?
+        free(gs_trace); // maybe better to not clobber this until we have successful load?
         gs_trace = NULL;
         gs_traceLen = 0;
     }

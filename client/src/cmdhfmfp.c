@@ -2091,7 +2091,7 @@ static command_t CommandTable[] = {
     {"rdbl",        CmdHFMFPRdbl,            IfPm3Iso14443a,  "Read blocks from card"},
     {"rdsc",        CmdHFMFPRdsc,            IfPm3Iso14443a,  "Read sectors from card"},
     {"wrbl",        CmdHFMFPWrbl,            IfPm3Iso14443a,  "Write block to card"},
-    {"chkey",	CmdHFMFPChKey,	    IfPm3Iso14443a,  "Change key on card"},
+    {"chkey",   CmdHFMFPChKey,      IfPm3Iso14443a,  "Change key on card"},
     {"chconf",    CmdHFMFPChConf,     IfPm3Iso14443a,  "Change config on card"},
     {"-----------", CmdHelp,                 IfPm3Iso14443a,  "---------------- " _CYAN_("personalization") " -------------------"},
     {"commitp",     CmdHFMFPCommitPerso,     IfPm3Iso14443a,  "Configure security layer (SL1/SL3 mode)"},

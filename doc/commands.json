@@ -10973,16 +10973,18 @@
             "command": "mem spiffs dump",
             "description": "Dumps device SPIFFS file to a local file Size is handled by first sending a STAT command against file to verify existence",
             "notes": [
-                "mem spiffs dump -s tag.bin -> download binary file from device",
-                "mem spiffs dump -s tag.bin -d a001 -e -> download tag.bin, save as `a001.bin`"
+                "mem spiffs dump -s tag.bin -> download binary file from device, saved as `tag.bin`",
+                "mem spiffs dump -s tag.bin -d a001 -> download tag.bin, save as `a001.bin`",
+                "mem spiffs dump -s tag.bin -t -> download tag.bin into trace buffer"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-s, --src <fn> SPIFFS file to save",
-                "-d, --dest <fn> file name to save to <w/o .bin>"
+                "-d, --dest <fn> file name to save to <w/o .bin>",
+                "-t, --trace download into trace buffer"
             ],
-            "usage": "mem spiffs dump [-h] -s <fn> [-d <fn>]"
+            "usage": "mem spiffs dump [-ht] -s <fn> [-d <fn>]"
         },
         "mem spiffs info": {
             "command": "mem spiffs info",
@@ -11087,7 +11089,7 @@
         },
         "mem spiffs view": {
             "command": "mem spiffs view",
-            "description": "View a file on flash memory on devicer in console",
+            "description": "View a file on flash memory on device in console",
             "notes": [
                 "mem spiffs view -f tag.bin"
             ],
@@ -12160,6 +12162,6 @@
     "metadata": {
         "commands_extracted": 703,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-01-02T20:54:40"
+        "extracted_on": "2024-01-02T22:09:45"
     }
 }
