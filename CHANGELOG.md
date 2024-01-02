@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `mem spiffs dump -t` - now supports downloading direct into trace buffer (@hazardousvoltage)
  - Changed `hf search` - added hints for all HF protocols we search for (@iceman1001)
  - Changed `hf search` - added hint for iClass (@bettse)
  - Changed `hf 14a apdu` - It now uses the FWI and SGFI values from the ATS to determine an appropriate timeout (@nvx)
