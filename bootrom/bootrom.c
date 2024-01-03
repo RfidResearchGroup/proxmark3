@@ -252,10 +252,17 @@ static void flash_mode(void) {
             }
         }
 
-        if (g_common_area.flags.button_pressed && BUTTON_PRESS() == false) {
+        bool button_state = BUTTON_PRESS();
+        // ~10ms, prevent jitter
+        delay_loop(3333);
+        if (button_state != BUTTON_PRESS()) {
+            // in jitter state, ignore
+            continue;
+        }
+        if (g_common_area.flags.button_pressed && button_state == false) {
             g_common_area.flags.button_pressed = 0;
         }
-        if (!g_common_area.flags.button_pressed && BUTTON_PRESS()) {
+        if (!g_common_area.flags.button_pressed && button_state) {
             /* Perform a reset to leave flash mode */
             g_common_area.flags.button_pressed = 1;
             usb_disable();

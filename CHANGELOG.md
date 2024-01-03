@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed bootloader - Ignore jitters when pressing the button (@wh201906)
 
 ## [Steamboat Willie.4.17768][2024-01-03]
  - Changed `mem spiffs dump -t` - now supports downloading direct into trace buffer (@hazardousvoltage)
