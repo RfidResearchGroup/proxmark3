@@ -419,7 +419,7 @@ endif
 
 PM3CFLAGS += -DHAVE_SNPRINTF
 
-CXXFLAGS ?= -Wall -Werror
+CXXFLAGS ?= -Wall
 CXXFLAGS += $(MYDEFS) $(MYCXXFLAGS) $(MYINCLUDES)
 
 PM3CXXFLAGS = $(CXXFLAGS)
@@ -927,7 +927,7 @@ src/pm3_pywrap.c: pm3.i
 # version_pm3.c should be checked on every compilation
 src/version_pm3.c: default_version_pm3.c .FORCE
 	$(info [=] CHECK $@)
-	$(Q)$(SH) ../tools/mkversion.sh $@ || $(CP) $< $@
+	$(Q)$(CP) $< $@
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)
