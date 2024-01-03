@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
-## [Steamboat Willie][2024-01-03]
+## [Steamboat Willie.4.17768][2024-01-03]
  - Changed `mem spiffs dump -t` - now supports downloading direct into trace buffer (@hazardousvoltage)
  - Changed `hf search` - added hints for all HF protocols we search for (@iceman1001)
  - Changed `hf search` - added hint for iClass (@bettse)
