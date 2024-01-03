@@ -149,8 +149,8 @@ static int CmdUsartConfig(const char *Cmd) {
 }
 
 // module command not universal so specific commands needed if anyone DIY'd their own Blueshark.
-bool isBluetoothExtensionHC04 = false;
-bool isBluetoothExtensionHC05Blueshark = false;
+bool BT_EXTENSION_HC04 = false;
+bool BT_EXTENSION_HC05_BLUESHARK = false;
 
 static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
     int ret = set_usart_config(baudrate, parity);
@@ -175,13 +175,13 @@ static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
 
             // if it fully match HC-04's attribute
             if (str_startswith((char *)data, "www.hc01.com V2.5, 2022-04-26")) {
-                isBluetoothExtensionHC04 = true;
+                BT_EXTENSION_HC04 = true;
                 PrintAndLogEx(INFO, "Bluetooth module identified as HC-04.");
             }
 
             // if it fully match Blueshark HC-05's attribute
             if (str_startswith((char *)data, "hc01.comV2.0")) {
-                isBluetoothExtensionHC05Blueshark = true;
+                BT_EXTENSION_HC05_BLUESHARK = true;
                 PrintAndLogEx(INFO, "Bluetooth module identified as Blueshark HC-05.");
             }
             return PM3_SUCCESS;
@@ -265,7 +265,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
     size_t len = 0;
     memset(data, 0, sizeof(data));
 
-    if (isBluetoothExtensionHC04 == true) {
+    if (BT_EXTENSION_HC04 == true) {
         string = "AT+NAME=PM3_RDV4.0";
     } else {
         string = "AT+NAMEPM3_RDV4.0";
@@ -311,7 +311,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
     memset(data, 0, sizeof(data));
     len = 0;
 
-    if (isBluetoothExtensionHC04 == true) {
+    if (BT_EXTENSION_HC04 == true) {
         string = "AT+PIN=1234";
     } else {
         string = "AT+PIN1234";
@@ -322,7 +322,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
     ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
     if (ret == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
-        if (strstr((char *)data, "OK")  != NULL) {
+        if (strstr((char *)data, "OK")) {
             PrintAndLogEx(SUCCESS, "PIN set to " _GREEN_("1234"));
         } else {
             PrintAndLogEx(WARNING, "Unexpected response to AT+PIN: " _YELLOW_("%.*s"), (int)len, data);
@@ -334,7 +334,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
 
     msleep(500);
 
-    if (isBluetoothExtensionHC04 != true) {
+    if (BT_EXTENSION_HC04 != true) {
         // parity must be changed before baudrate
         if (parity != USART_PARITY) {
             memset(data, 0, sizeof(data));
