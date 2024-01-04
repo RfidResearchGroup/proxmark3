@@ -148,6 +148,10 @@ static int CmdUsartConfig(const char *Cmd) {
     return set_usart_config(baudrate, parity);
 }
 
+// module command not universal so specific commands needed if anyone DIY'd their own Blueshark.
+bool BT_EXTENSION_HC04 = false;
+bool BT_EXTENSION_HC05_BLUESHARK = false;
+
 static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
     int ret = set_usart_config(baudrate, parity);
     if (ret != PM3_SUCCESS)
@@ -163,8 +167,23 @@ static int usart_bt_testcomm(uint32_t baudrate, uint8_t parity) {
     ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
     if (ret == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
-        if (str_startswith((char *)data, "hc01.comV2.0") || str_startswith((char *)data, "BT SPP V3.0")) {
+        if (str_startswith((char *)data, "hc01.comV2.0") ||
+                str_startswith((char *)data, "www.hc01.com") ||
+                str_startswith((char *)data, "BT SPP V4.0")) {
+
             PrintAndLogEx(SUCCESS, "Add-on " _GREEN_("found!"));
+
+            // if it fully match HC-04's attribute
+            if (str_startswith((char *)data, "www.hc01.com V2.5, 2022-04-26")) {
+                BT_EXTENSION_HC04 = true;
+                PrintAndLogEx(INFO, "Bluetooth module identified as HC-04.");
+            }
+
+            // if it fully match Blueshark HC-05's attribute
+            if (str_startswith((char *)data, "hc01.comV2.0")) {
+                BT_EXTENSION_HC05_BLUESHARK = true;
+                PrintAndLogEx(INFO, "Bluetooth module identified as Blueshark HC-05.");
+            }
             return PM3_SUCCESS;
         }
     }
@@ -236,7 +255,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
     }
 
     if (!found) {
-        PrintAndLogEx(FAILED, "Sorry, add-on not found. Abort.");
+        PrintAndLogEx(FAILED, "Sorry, add-on not found. Abort. If you DIY'd your own, please report your model and manual to us.");
         return PM3_ESOFT;
     }
 
@@ -246,13 +265,18 @@ static int CmdUsartBtFactory(const char *Cmd) {
     size_t len = 0;
     memset(data, 0, sizeof(data));
 
-    string = "AT+NAMEPM3_RDV4.0";
+    if (BT_EXTENSION_HC04 == true) {
+        string = "AT+NAME=PM3_RDV4.0";
+    } else {
+        string = "AT+NAMEPM3_RDV4.0";
+    }
+
     PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
 
     int ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
     if (ret == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
-        if (strcmp((char *)data, "OKsetname") == 0) {
+        if (strstr((char *)data, "OK")) {
             PrintAndLogEx(SUCCESS, "Name set to " _GREEN_("PM3_RDV4.0"));
         } else {
             PrintAndLogEx(WARNING, "Unexpected response to AT+NAME: " _YELLOW_("%.*s"), (int)len, data);
@@ -262,6 +286,8 @@ static int CmdUsartBtFactory(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    msleep(500);
+
     memset(data, 0, sizeof(data));
     len = 0;
     string = "AT+ROLE=S";
@@ -270,7 +296,7 @@ static int CmdUsartBtFactory(const char *Cmd) {
     ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
     if (ret == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
-        if (strcmp((char *)data, "OK+ROLE:S") == 0) {
+        if (strstr((char *)data, "OK")) {
             PrintAndLogEx(SUCCESS, "Role set to " _GREEN_("Slave"));
         } else {
             PrintAndLogEx(WARNING, "Unexpected response to AT+ROLE=S: " _YELLOW_("%.*s"), (int)len, data);
@@ -280,15 +306,23 @@ static int CmdUsartBtFactory(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    msleep(500);
+
     memset(data, 0, sizeof(data));
     len = 0;
-    string = "AT+PIN1234";
+
+    if (BT_EXTENSION_HC04 == true) {
+        string = "AT+PIN=1234";
+    } else {
+        string = "AT+PIN1234";
+    }
+
     PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
 
     ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
     if (ret == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
-        if (strcmp((char *)data, "OKsetPIN") == 0) {
+        if (strstr((char *)data, "OK")) {
             PrintAndLogEx(SUCCESS, "PIN set to " _GREEN_("1234"));
         } else {
             PrintAndLogEx(WARNING, "Unexpected response to AT+PIN: " _YELLOW_("%.*s"), (int)len, data);
@@ -298,38 +332,61 @@ static int CmdUsartBtFactory(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    // parity must be changed before baudrate
-    if (parity != USART_PARITY) {
-        memset(data, 0, sizeof(data));
-        len = 0;
-        string = "AT+PN";
-        PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
+    msleep(500);
 
-        ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
-        if (ret == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
-            if (strcmp((char *)data, "OK None") == 0) {
-                PrintAndLogEx(SUCCESS, "Parity set to " _GREEN_("None"));
+    if (BT_EXTENSION_HC04 != true) {
+        // parity must be changed before baudrate
+        if (parity != USART_PARITY) {
+            memset(data, 0, sizeof(data));
+            len = 0;
+            string = "AT+PN";
+            PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
+
+            ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
+            if (ret == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
+                if (strcmp((char *)data, "OK None") == 0) {
+                    PrintAndLogEx(SUCCESS, "Parity set to " _GREEN_("None"));
+                } else {
+                    PrintAndLogEx(WARNING, "Unexpected response to AT+P: " _YELLOW_("%.*s"), (int)len, data);
+                }
             } else {
-                PrintAndLogEx(WARNING, "Unexpected response to AT+P: " _YELLOW_("%.*s"), (int)len, data);
+                PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
+                return PM3_ESOFT;
             }
-        } else {
-            PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
-            return PM3_ESOFT;
         }
-    }
 
-    if (baudrate != USART_BAUD_RATE) {
+        if (baudrate != USART_BAUD_RATE) {
+            memset(data, 0, sizeof(data));
+            len = 0;
+            string = BTADDON_BAUD_AT;
+            PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
+
+            ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
+            if (ret == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
+                if (strcmp((char *)data, "OK" BTADDON_BAUD_NUM) == 0) {
+                    PrintAndLogEx(SUCCESS, "Baudrate set to " _GREEN_(BTADDON_BAUD_NUM));
+                } else {
+                    PrintAndLogEx(WARNING, "Unexpected response to AT+BAUD: " _YELLOW_("%.*s"), (int)len, data);
+                }
+            } else {
+                PrintAndLogEx(WARNING, "Lost contact with add-on, please try again");
+                return PM3_ESOFT;
+            }
+        }
+    } else {
+
         memset(data, 0, sizeof(data));
         len = 0;
-        string = BTADDON_BAUD_AT;
+        string = "AT+BAUD=115200,N";
         PrintAndLogEx(SUCCESS, "TX (%3zu):%.*s", strlen(string), (int)strlen(string), string);
 
         ret = usart_txrx((uint8_t *)string, strlen(string), data, &len, 1000);
         if (ret == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "RX (%3zu):%.*s", len, (int)len, data);
-            if (strcmp((char *)data, "OK" BTADDON_BAUD_NUM) == 0) {
-                PrintAndLogEx(SUCCESS, "Baudrate set to " _GREEN_(BTADDON_BAUD_NUM));
+            if (strstr((char *)data, "OK") != NULL) {
+                PrintAndLogEx(SUCCESS, "Parity set to " _GREEN_("None") " and Baudrate set to " _GREEN_("115200"));
             } else {
                 PrintAndLogEx(WARNING, "Unexpected response to AT+BAUD: " _YELLOW_("%.*s"), (int)len, data);
             }

@@ -368,7 +368,7 @@ static int CmdPyramidSim(const char *Cmd) {
                   "The facility-code is 8-bit and the card number is 16-bit. Larger values are truncated.\n"
                   "Currently work only on 26bit",
                   "lf pyramid sim --fc 123 --cn 1337\n"
-                  "lf pyramid clone --raw 0001010101010101010440013223921c"
+                  "lf pyramid sim --raw 0001010101010101010440013223921c"
                  );
 
     void *argtable[] = {
@@ -385,7 +385,7 @@ static int CmdPyramidSim(const char *Cmd) {
     int raw_len = 0;
     // skip first block,  4*4 = 16 bytes left
     uint8_t raw[16] = {0};
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 5), raw, sizeof raw, &raw_len);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 3), raw, sizeof raw, &raw_len);
     if (res) {
         CLIParserFree(ctx);
         return PM3_EINVARG;

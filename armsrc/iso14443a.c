@@ -2695,7 +2695,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
                         uint16_t UIDbit = (resp[i / 8] >> (i % 8)) & 0x01;
                         uid_resp[uid_resp_bits / 8] |= UIDbit << (uid_resp_bits % 8);
                     }
- 
+
                     uid_resp[uid_resp_bits / 8] |= 1 << (uid_resp_bits % 8);                  // next time select the card(s) with a 1 in the collision position
                     uid_resp_bits++;
                     // construct anticollision command:
@@ -2827,8 +2827,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
     // RATS, Request for answer to select
     if (no_rats == false) {
 
-        uint8_t rats[] = { ISO14443A_CMD_RATS, 0x80, 0x00, 0x00 }; // FSD=256, FSDI=8, CID=0
-        AddCrc14A(rats, 2);
+        uint8_t rats[] = { ISO14443A_CMD_RATS, 0x80, 0x31, 0x73 }; // FSD=256, FSDI=8, CID=0
         ReaderTransmit(rats, sizeof(rats), NULL);
         int len = ReaderReceive(resp, parity_array);
         if (len == 0) {
@@ -3055,7 +3054,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
     uint8_t *cmd = c->data.asBytes;
     uint32_t arg0;
 
-    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
+    uint8_t buf[PM3_CMD_DATA_SIZE_MIX] = {0x00};
 
     if ((param & ISO14A_CONNECT)) {
         iso14_pcb_blocknum = 0;
@@ -3517,7 +3516,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
 */
 void DetectNACKbug(void) {
     uint8_t mf_auth[4] = { MIFARE_AUTH_KEYA, 0x00, 0xF5, 0x7B };
-    uint8_t mf_nr_ar[8]= { 0x00 };
+    uint8_t mf_nr_ar[8] = { 0x00 };
     uint8_t uid[10] = { 0x00 };
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = { 0x00 };
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = { 0x00 };

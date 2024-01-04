@@ -3,6 +3,20 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `lf pyramid sim` - wrong parameter handling (@iceman1001)
+ - Fixed bootloader - Ignore jitters when pressing the button (@wh201906)
+
+## [Steamboat Willie.4.17768][2024-01-03]
+ - Changed `mem spiffs dump -t` - now supports downloading direct into trace buffer (@hazardousvoltage)
+ - Changed `hf search` - added hints for all HF protocols we search for (@iceman1001)
+ - Changed `hf search` - added hint for iClass (@bettse)
+ - Changed `hf 14a apdu` - It now uses the FWI and SGFI values from the ATS to determine an appropriate timeout (@nvx)
+ - Added a thread to check when device comes online again. It will connect and update prompt (@iceman1001)
+ - Changed CLI offline prompt - replaces the old prompt when offline is detected (@iceman100)
+ - Changed `hf mf info` - it now uses found keys to try identify Gen2 cards (@iceman1001)
+ - Changed `hf 14a info` - disabled debug logging while performing the magic tests (@iceman1001)
+ - Changed `hf 14a info` - magic detection to better detect different GDM/USCUID configurations and improved Gen2/CUID detection when default keys are used (@nvx)
+ - Changed `hf_cardhopper` - standalone mode to allow running over the internal Proxmark3 USB-CDC serial port (@nvx)
  - Fixed CLI prompt - Update connection type prompt after running `hw connect` (@wh201906)
  - Changed `uart_receive()` - Check if TCP connection is lost (@wh201906)
  - Change `data detectclock` - now tries all clocks if called w/o any params (@iceman1001)

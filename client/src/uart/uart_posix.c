@@ -81,7 +81,7 @@ uint32_t uart_get_timeouts(void) {
     return newtimeout_value;
 }
 
-serial_port uart_open(const char *pcPortName, uint32_t speed) {
+serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
     serial_port_unix_t_t *sp = calloc(sizeof(serial_port_unix_t_t), sizeof(uint8_t));
 
     if (sp == 0) {
@@ -98,7 +98,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
     char *prefix = str_dup(pcPortName);
     if (prefix == NULL) {
-        PrintAndLogEx(ERR, "error:  string duplication");
+        PrintAndLogEx(ERR, "error: string duplication");
         free(sp);
         return INVALID_SERIAL_PORT;
     }
@@ -108,8 +108,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     bool isUDP = false;
     bool isBluetooth = false;
     bool isUnixSocket = false;
-    if (strlen(prefix) > 4)
-    {
+    if (strlen(prefix) > 4) {
         isTCP = (memcmp(prefix, "tcp:", 4) == 0);
         isUDP = (memcmp(prefix, "udp:", 4) == 0);
     }
@@ -235,7 +234,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         free(addrPortStr);
 
         if (rp == NULL) {               /* No address succeeded */
-            PrintAndLogEx(ERR, "error: Could not connect");
+            if (slient == false) {
+                PrintAndLogEx(ERR, "error: Could not connect");
+            }
             free(sp);
             return INVALID_SERIAL_PORT;
         }
@@ -292,7 +293,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
 
         if (connect(sfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-            PrintAndLogEx(ERR, "Error: cannot connect device " _YELLOW_("%s") " over Bluetooth", addrstr);
+            if (slient == false) {
+                PrintAndLogEx(ERR, "Error: cannot connect device " _YELLOW_("%s") " over Bluetooth", addrstr);
+            }
             close(sfd);
             free(addrstr);
             free(sp);

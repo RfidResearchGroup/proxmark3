@@ -1685,10 +1685,39 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     // it's basically a ISO14443a tag, so try annotation from there
     if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
 
-//        switch (cmd[0]) {
-//            default:
-//                break;
-//        };
+        int pos = 0;
+        switch (cmd[0]) {
+            case 2:
+            case 3:
+                pos = 2;
+                break;
+            case 0:
+                pos = 1;
+                break;
+            default:
+                pos = 2;
+                break;
+        }
+
+        if (memcmp(cmd + pos, "\x00\xa4\x04\x00\x0a", 5) == 0) {
+            snprintf(exp, size, "SELECT AID");
+        }
+
+        if (memcmp(cmd + pos, "\x80\xA5\x04\x00", 4) == 0) {
+            snprintf(exp, size, "SELECT ADF / OID");
+        }
+
+        if (memcmp(cmd + pos, "\x00\x87\x00\x01\x04\x7c\x02\x81\x00", 9) == 0) {
+            snprintf(exp, size, "GET CHALLENGE");
+        }
+
+        if (memcmp(cmd + pos, "\x00\x87\x00\x01\x2c", 5) == 0) {
+            snprintf(exp, size, "MUTUAL AUTHENTICATION");
+        }
+
+        if (memcmp(cmd + pos, "\x0c\xcb\x3f\xff", 4) == 0) {
+            snprintf(exp, size, "GET DATA");
+        }
 
         // apply ISO7816 annotations?
 //        if (annotateIso7816(exp, size, cmd, cmdsize) == 0) {

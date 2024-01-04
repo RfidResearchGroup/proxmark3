@@ -1285,7 +1285,7 @@ static void emrtd_print_issuance(char *data, bool ascii) {
 }
 
 static void emrtd_print_personalization_timestamp(uint8_t *data, size_t datalen) {
-    if (datalen < 7 ) {
+    if (datalen < 7) {
         return;
     }
 
@@ -1294,13 +1294,13 @@ static void emrtd_print_personalization_timestamp(uint8_t *data, size_t datalen)
 
     char final_date[20] = { 0x00 };
     snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s"
-        , str_date
-        , str_date + 4
-        , str_date + 6
-        , str_date + 8
-        , str_date + 10
-        , str_date + 12
-    );
+             , str_date
+             , str_date + 4
+             , str_date + 6
+             , str_date + 8
+             , str_date + 10
+             , str_date + 12
+            );
 
     PrintAndLogEx(SUCCESS, "Personalization at....: " _YELLOW_("%s"), final_date);
 }
@@ -1311,13 +1311,13 @@ static void emrtd_print_unknown_timestamp_5f85(uint8_t *data, size_t datalen) {
     }
     char final_date[20] = { 0x00 };
     snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s"
-        , data
-        , data + 4
-        , data + 6
-        , data + 8
-        , data + 10
-        , data + 12
-    );
+             , data
+             , data + 4
+             , data + 6
+             , data + 8
+             , data + 10
+             , data + 12
+            );
 
     PrintAndLogEx(SUCCESS, "Unknown timestamp 5F85: " _YELLOW_("%s"), final_date);
     PrintAndLogEx(HINT, "This is very likely the personalization timestamp, but it is using an undocumented tag.");

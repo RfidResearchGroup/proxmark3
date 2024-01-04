@@ -1313,7 +1313,7 @@ static int CmdRelay(const char *Cmd) {
                             continue;
                         }
                     } else if (cardType == ISODEP_NFCB) {
-                        if (exchange_14b_apdu(cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen, 0))	{
+                        if (exchange_14b_apdu(cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen, 0))    {
                             cardType = ISODEP_INACTIVE;
                             mbedtls_net_close(&netCtx);
                             continue;

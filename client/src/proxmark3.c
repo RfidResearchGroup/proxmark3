@@ -129,23 +129,82 @@ static const char *prompt_dev = "";
 static const char *prompt_ctx = "";
 static const char *prompt_net = "";
 
-static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev, const char *promptnet) {
-    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+
+static void prompt_set(void) {
+    if (g_session.pm3_present) {
+
+        switch (g_conn.send_via_ip) {
+            case PM3_TCPv4:
+                prompt_net = PROXPROMPT_NET_TCPV4;
+                break;
+            case PM3_TCPv6:
+                prompt_net = PROXPROMPT_NET_TCPV6;
+                break;
+            case PM3_UDPv4:
+                prompt_net = PROXPROMPT_NET_UDPV4;
+                break;
+            case PM3_UDPv6:
+                prompt_net = PROXPROMPT_NET_UDPV6;
+                break;
+            case PM3_NONE:
+                prompt_net = PROXPROMPT_NET_NONE;
+                break;
+            default:
+                break;
+        }
+
+        if (g_conn.send_via_fpc_usart)
+            prompt_dev = PROXPROMPT_DEV_FPC;
+        else
+            prompt_dev = PROXPROMPT_DEV_USB;
+
+    } else {
+        prompt_dev = PROXPROMPT_DEV_OFFLINE;
+    }
 }
 
+static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev, const char *promptnet, bool no_newline) {
+    if (no_newline) {
+        snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+    } else {
+        snprintf(buf, buflen - 1, "\r                                         \r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+    }
+}
+
+static bool c_update_reconnect_prompt = false;
+
+// This function is hooked via RL_EVENT_HOOK.
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && g_session.pm3_present) {
+
+#ifndef HAVE_READLINE
         PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
+#endif
         prompt_dev = PROXPROMPT_DEV_OFFLINE;
         char prompt[PROXPROMPT_MAX_SIZE] = {0};
-        prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net);
+        prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, false);
         char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
         memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
         pm3line_update_prompt(prompt_filtered);
         CloseProxmark(g_session.current_device);
+        StartReconnectProxmark();
+        c_update_reconnect_prompt = true;
     }
-    msleep(10);
+    // its alive again
+    if (c_update_reconnect_prompt && IsReconnectedOk() && g_session.pm3_present) {
+
+        prompt_set();
+
+        char prompt[PROXPROMPT_MAX_SIZE] = {0};
+        prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, false);
+        char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
+        memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
+        pm3line_update_prompt(prompt_filtered);
+        c_update_reconnect_prompt = false;
+    }
+
+    msleep(50);
     return 0;
 }
 
@@ -265,36 +324,8 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     while (1) {
 
         bool printprompt = false;
-        if (g_session.pm3_present) {
 
-            switch (g_conn.send_via_ip) {
-                case PM3_TCPv4:
-                    prompt_net = PROXPROMPT_NET_TCPV4;
-                    break;
-                case PM3_TCPv6:
-                    prompt_net = PROXPROMPT_NET_TCPV6;
-                    break;
-                case PM3_UDPv4:
-                    prompt_net = PROXPROMPT_NET_UDPV4;
-                    break;
-                case PM3_UDPv6:
-                    prompt_net = PROXPROMPT_NET_UDPV6;
-                    break;
-                case PM3_NONE:
-                    prompt_net = PROXPROMPT_NET_NONE;
-                    break;
-                default:
-                    break;
-            }
-
-            if (g_conn.send_via_fpc_usart)
-                prompt_dev = PROXPROMPT_DEV_FPC;
-            else
-                prompt_dev = PROXPROMPT_DEV_USB;
-
-        } else {
-            prompt_dev = PROXPROMPT_DEV_OFFLINE;
-        }
+        prompt_set();
 
 check_script:
         // If there is a script file
@@ -364,7 +395,7 @@ check_script:
                     pm3line_check(check_comm);
                     prompt_ctx = PROXPROMPT_CTX_INTERACTIVE;
                     char prompt[PROXPROMPT_MAX_SIZE] = {0};
-                    prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net);
+                    prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, true);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
                     g_pendingPrompt = true;
@@ -414,7 +445,7 @@ check_script:
                     g_printAndLog &= PRINTANDLOG_LOG;
                 }
                 char prompt[PROXPROMPT_MAX_SIZE] = {0};
-                prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net);
+                prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, true);
                 // always filter RL magic separators if not using readline
                 char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                 memcpy_filter_rlmarkers(prompt_filtered, prompt, sizeof(prompt_filtered));
@@ -671,6 +702,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *file
 
     if (OpenProxmark(&g_session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
         PrintAndLogEx(NORMAL, _GREEN_(" found"));
+        msleep(200);
     } else {
         PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
         ret = PM3_ETIMEOUT;

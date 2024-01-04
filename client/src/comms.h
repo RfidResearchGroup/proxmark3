@@ -89,6 +89,9 @@ typedef struct pm3_device {
     int script_embedded;
 } pm3_device_t;
 
+
+void *uart_reconnect(void *targ);
+
 void *uart_receiver(void *targ);
 void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
 void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len);
@@ -97,13 +100,18 @@ void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, v
 void clearCommandBuffer(void);
 
 #define FLASHMODE_SPEED 460800
+
+bool IsReconnectedOk(void);
 bool IsCommunicationThreadDead(void);
 bool SetCommunicationReceiveMode(bool isRawMode);
 void SetCommunicationRawReceiveBuffer(uint8_t *buffer, size_t len);
 size_t GetCommunicationRawReceiveNum(void);
+
+bool OpenProxmarkSilent(pm3_device_t **dev, const char *port, uint32_t speed);
 bool OpenProxmark(pm3_device_t **dev, const char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed);
 int TestProxmark(pm3_device_t *dev);
 void CloseProxmark(pm3_device_t *dev);
+void StartReconnectProxmark(void);
 
 size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process);
 bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout, bool show_warning);

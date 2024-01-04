@@ -4709,7 +4709,7 @@
         },
         "hf mf info": {
             "command": "hf mf info",
-            "description": "Information and check vulnerabilities in a MIFARE Classic card Some cards in order to extract information you need to specify key and/or specific keys in the copmmand line",
+            "description": "Information and check vulnerabilities in a MIFARE Classic card Some cards in order to extract information you need to specify key and/or specific keys in the command line",
             "notes": [
                 "hf mf info",
                 "hf mf info -k FFFFFFFFFFFF -n -v"
@@ -7257,7 +7257,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-1 Use data from Graphbuffer",
+                "-1 Use data from Graphbuffer (offline mode)",
                 "-v, --verbose Verbose scan and output",
                 "-@ optional - continuous reader mode"
             ],
@@ -10073,7 +10073,7 @@
             "description": "Enables simulation of Farpointe/Pyramid card with specified card number. Simulation runs until the button is pressed or another USB command is issued. The facility-code is 8-bit and the card number is 16-bit. Larger values are truncated. Currently work only on 26bit",
             "notes": [
                 "lf pyramid sim --fc 123 --cn 1337",
-                "lf pyramid clone --raw 0001010101010101010440013223921c"
+                "lf pyramid sim --raw 0001010101010101010440013223921c"
             ],
             "offline": false,
             "options": [
@@ -10105,16 +10105,16 @@
             "description": "Read and search for valid known tag. For offline mode, you can `data load` first then search.",
             "notes": [
                 "lf search -> try reading data from tag & search for known tag",
-                "lf search -1 -> use data from the GraphBuffer & search for known tag",
                 "lf search -u -> try reading data from tag & search for known and unknown tag",
-                "lf search -1u -> use data from the GraphBuffer & search for known and unknown tag"
+                "lf search -1 -> use data from the GraphBuffer & search for known tag",
+                "lf search -1uc -> use data from the GraphBuffer & search for known and unknown tag"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-1 Use data from Graphbuffer to search",
-                "-c Continue searching even after a first hit",
-                "-u Search for unknown tags. If not set, reads only known tags"
+                "-1 Use data from Graphbuffer to search (offline mode)",
+                "-c Continue searching after successful match",
+                "-u Search for unknown tags"
             ],
             "usage": "lf search [-h1cu]"
         },
@@ -10973,16 +10973,18 @@
             "command": "mem spiffs dump",
             "description": "Dumps device SPIFFS file to a local file Size is handled by first sending a STAT command against file to verify existence",
             "notes": [
-                "mem spiffs dump -s tag.bin -> download binary file from device",
-                "mem spiffs dump -s tag.bin -d a001 -e -> download tag.bin, save as `a001.bin`"
+                "mem spiffs dump -s tag.bin -> download binary file from device, saved as `tag.bin`",
+                "mem spiffs dump -s tag.bin -d a001 -> download tag.bin, save as `a001.bin`",
+                "mem spiffs dump -s tag.bin -t -> download tag.bin into trace buffer"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-s, --src <fn> SPIFFS file to save",
-                "-d, --dest <fn> file name to save to <w/o .bin>"
+                "-d, --dest <fn> file name to save to <w/o .bin>",
+                "-t, --trace download into trace buffer"
             ],
-            "usage": "mem spiffs dump [-h] -s <fn> [-d <fn>]"
+            "usage": "mem spiffs dump [-ht] -s <fn> [-d <fn>]"
         },
         "mem spiffs info": {
             "command": "mem spiffs info",
@@ -11087,7 +11089,7 @@
         },
         "mem spiffs view": {
             "command": "mem spiffs view",
-            "description": "View a file on flash memory on devicer in console",
+            "description": "View a file on flash memory on device in console",
             "notes": [
                 "mem spiffs view -f tag.bin"
             ],
@@ -12160,6 +12162,6 @@
     "metadata": {
         "commands_extracted": 703,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2023-12-18T09:05:00"
+        "extracted_on": "2024-01-04T12:13:24"
     }
 }

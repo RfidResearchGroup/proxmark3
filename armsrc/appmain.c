@@ -1732,8 +1732,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_CIDENT: {
-            bool is_mfc = packet->data.asBytes[0];
-            MifareCIdent(is_mfc);
+
+
+            struct p {
+                uint8_t is_mfc;
+                uint8_t keytype;
+                uint8_t key[6];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareCIdent(payload->is_mfc, payload->keytype, payload->key);
             break;
         }
         // Gen 3 magic cards

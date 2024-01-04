@@ -862,7 +862,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     int distance = -1;
     for (size_t i = 0; i < ARRAYLEN(peaks); ++i) {
 
-        PrintAndLogEx(DEBUG, "%zu | %d", i, peaks[i]);
+        PrintAndLogEx(DEBUG, "%zu | %zu", i, peaks[i]);
         if (peaks[i] < 128) {
             continue;
         }
@@ -870,7 +870,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
         if (distance == -1) {
             distance = peaks[i];
             continue;
-        } 
+        }
 
         if (peaks[i] < distance) {
             distance = peaks[i];
@@ -3416,7 +3416,7 @@ static int CmdNumCon(const char *Cmd) {
                 continue;
             }
 
-            switch(i) {
+            switch (i) {
                 case 0:
 //                    MBEDTLS_MPI_CHK(mbedtls_mpi_inv_mod(&N, &N, &base));
                     break;
