@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added trace of sniffed SEOS traffic between reader and card (@iceman1001)
+ - Change `hf seos list` - print crc and annotate better (@iceman1001) 
  - Added troubleshooting entry - ARM architecture error (@francis2054)
  - Fixed `lf pyramid sim` - wrong parameter handling (@iceman1001)
  - Fixed bootloader - Ignore jitters when pressing the button (@wh201906)
