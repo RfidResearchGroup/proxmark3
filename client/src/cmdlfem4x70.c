@@ -488,11 +488,11 @@ int CmdEM4x70WritePIN(const char *Cmd) {
 
     if (resp.status) {
         print_info_result(resp.data.asBytes);
-        PrintAndLogEx(INFO, "Writing new PIN: " _GREEN_("SUCCESS"));
+        PrintAndLogEx(INFO, "Writing new PIN: " _GREEN_("ok"));
         return PM3_SUCCESS;
     }
 
-    PrintAndLogEx(FAILED, "Writing new PIN: " _RED_("FAILED"));
+    PrintAndLogEx(FAILED, "Writing new PIN: " _RED_("failed"));
     return PM3_ESOFT;
 }
 
@@ -539,11 +539,11 @@ int CmdEM4x70WriteKey(const char *Cmd) {
     }
 
     if (resp.status) {
-        PrintAndLogEx(INFO, "Writing new crypt key: " _GREEN_("SUCCESS"));
+        PrintAndLogEx(INFO, "Writing new crypt key: " _GREEN_("ok"));
         return PM3_SUCCESS;
     }
 
-    PrintAndLogEx(FAILED, "Writing new crypt key: " _RED_("FAILED"));
+    PrintAndLogEx(FAILED, "Writing new crypt key: " _RED_("failed"));
     return PM3_ESOFT;
 }
 

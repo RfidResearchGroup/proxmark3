@@ -552,7 +552,7 @@ static int mf_analyse_st_block(uint8_t blockno, uint8_t *block, bool force) {
             return PM3_EINVARG;
         }
     } else {
-        PrintAndLogEx(SUCCESS, "ST passed checks, continuing...");
+        PrintAndLogEx(SUCCESS, "ST checks ( " _GREEN_("ok") " )");
     }
 
     return PM3_SUCCESS;
