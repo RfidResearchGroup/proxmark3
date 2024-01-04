@@ -307,3 +307,28 @@ Try running the client without the SESSION_MANAGER environment variable.
 ```
 env -u SESSION_MANAGER ./pm3
 ```
+
+## found architecture 'x86_64', required architecture 'arm64' error
+^[Top](#top)
+
+If you get the message  
+
+```
+warning: ignoring file '/usr/local/Cellar/jansson/2.14/lib/libjansson.4.dylib': found architecture 'x86_64', required architecture 'arm64'
+```
+
+when running
+```make clean && make -j```
+
+then it likely means you are on an ARM device, possibly an Apple ARM computer.
+
+Solution:
+
+```
+brew install jansson
+```
+Then run this again
+
+```
+make clean && make -j
+```
