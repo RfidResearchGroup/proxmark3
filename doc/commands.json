@@ -10073,7 +10073,7 @@
             "description": "Enables simulation of Farpointe/Pyramid card with specified card number. Simulation runs until the button is pressed or another USB command is issued. The facility-code is 8-bit and the card number is 16-bit. Larger values are truncated. Currently work only on 26bit",
             "notes": [
                 "lf pyramid sim --fc 123 --cn 1337",
-                "lf pyramid clone --raw 0001010101010101010440013223921c"
+                "lf pyramid sim --raw 0001010101010101010440013223921c"
             ],
             "offline": false,
             "options": [
@@ -12162,6 +12162,6 @@
     "metadata": {
         "commands_extracted": 703,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-01-02T22:09:45"
+        "extracted_on": "2024-01-04T12:13:24"
     }
 }

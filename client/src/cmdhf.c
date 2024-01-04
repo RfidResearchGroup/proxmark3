@@ -133,7 +133,7 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443a()) {
         if (readTopazUid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
-            success[TOPAZ] = true;            
+            success[TOPAZ] = true;
             res = PM3_SUCCESS;
         }
     }
@@ -209,7 +209,7 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443b()) {
         if (readHFCryptoRF(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") " found\n");
-            success[CRYPTORF] = true;            
+            success[CRYPTORF] = true;
             res = PM3_SUCCESS;
         }
     }
