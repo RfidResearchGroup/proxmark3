@@ -742,8 +742,8 @@ bool OpenProxmarkSilent(pm3_device_t **dev, const char *port, uint32_t speed) {
 
 bool OpenProxmark(pm3_device_t **dev, const char *port, bool wait_for_port, int timeout, bool flash_mode, uint32_t speed) {
 
-    if (!wait_for_port) {
-        PrintAndLogEx(INFO, "Using UART port " _YELLOW_("%s"), port);
+    if (wait_for_port == false) {
+        PrintAndLogEx(SUCCESS, "Using UART port " _GREEN_("%s"), port);
         sp = uart_open(port, speed, false);
     } else {
         PrintAndLogEx(SUCCESS, "Waiting for Proxmark3 to appear on " _YELLOW_("%s"), port);
@@ -803,8 +803,9 @@ int TestProxmark(pm3_device_t *dev) {
 
     uint16_t len = 32;
     uint8_t data[len];
-    for (uint16_t i = 0; i < len; i++)
+    for (uint16_t i = 0; i < len; i++) {
         data[i] = i & 0xFF;
+    }
 
     __atomic_store_n(&last_packet_time,  msclock(), __ATOMIC_SEQ_CST);
     clearCommandBuffer();
@@ -850,14 +851,14 @@ int TestProxmark(pm3_device_t *dev) {
     bool is_bt_conn = (memcmp(g_conn.serial_port_name, "bt:", 3) == 0);
     bool is_udp_conn = (g_conn.send_via_ip == PM3_UDPv4 || g_conn.send_via_ip == PM3_UDPv6);
 
-    PrintAndLogEx(INFO, "Communicating with PM3 over %s%s%s%s",
-                  (g_conn.send_via_fpc_usart) ? _YELLOW_("FPC UART") : _YELLOW_("USB-CDC"),
-                  (is_tcp_conn) ? " over " _YELLOW_("TCP") : "",
-                  (is_bt_conn) ? " over " _YELLOW_("BT") : "",
-                  (is_udp_conn) ? " over " _YELLOW_("UDP") : ""
+    PrintAndLogEx(SUCCESS, "Communicating with PM3 over %s%s%s%s",
+                  (g_conn.send_via_fpc_usart) ? _GREEN_("FPC UART") : _GREEN_("USB-CDC"),
+                  (is_tcp_conn) ? " over " _GREEN_("TCP") : "",
+                  (is_bt_conn) ? " over " _GREEN_("BT") : "",
+                  (is_udp_conn) ? " over " _GREEN_("UDP") : ""
                  );
     if (g_conn.send_via_fpc_usart) {
-        PrintAndLogEx(INFO, "PM3 UART serial baudrate: " _YELLOW_("%u") "\n", g_conn.uart_speed);
+        PrintAndLogEx(SUCCESS, "PM3 UART serial baudrate: " _GREEN_("%u") "\n", g_conn.uart_speed);
     } else {
         int res;
         if (g_conn.send_via_local_ip) {
