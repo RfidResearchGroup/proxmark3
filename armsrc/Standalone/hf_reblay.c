@@ -46,14 +46,14 @@ void ModInfo(void) {
 * standalone.
 *
 * For the reading mode:
-* - Set up and run the other end first, to where the Proxmark will send the data.
+* - Set up and run the other end first, to where the Proxmark3 will send the data.
 * - After the card is detected, Proxmark3 will send a package. The first byte will be the package
 *   length, then, the card data. Use the first length byte to read the whole package.
 * - Proxmark3 will expect a raw APDU from the other end, then it will be sent to the card.
 * - The answer of the card will be sent back to the connection, repeating the cycle.
 *
 * For the emulation mode:
-* - Set up and run the other end first, from where the Proxmark will receive the data.
+* - Set up and run the other end first, from where the Proxmark3 will receive the data.
 * - When the Proxmark3 detected the terminal, it will send the command to the connection.
 * - The first byte will be the package length, then, the terminal command. Use the first
 *   length byte to read the whole package.

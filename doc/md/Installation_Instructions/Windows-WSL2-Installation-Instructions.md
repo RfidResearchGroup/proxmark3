@@ -56,7 +56,7 @@ This is *NOT* intended to be a full description of how to use USBIPD.
 Rather, this is intended only to give a starting point, as ***the values
 shown here are extremely likely to differ per machine***.
 
-It's presumed that you've already installed USBIPD.  Plug the Proxmark
+It's presumed that you've already installed USBIPD.  Plug the Proxmark3
 device into a USB port.  Then, from a `cmd.exe` or `wt.exe` ***launched
 with administrative permissions***:
 

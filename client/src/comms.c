@@ -838,7 +838,7 @@ int TestProxmark(pm3_device_t *dev) {
 
     if ((resp.length != sizeof(g_pm3_capabilities)) || (resp.data.asBytes[0] != CAPABILITIES_VERSION)) {
         PrintAndLogEx(ERR, _RED_("Capabilities structure version sent by Proxmark3 is not the same as the one used by the client!"));
-        PrintAndLogEx(ERR, _RED_("Please flash the Proxmark with the same version as the client."));
+        PrintAndLogEx(ERR, _RED_("Please flash the Proxmark3 with the same version as the client."));
         return PM3_EDEVNOTSUPP;
     }
 
