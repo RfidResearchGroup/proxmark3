@@ -65,7 +65,7 @@ gdImagePtr img_palettize(gdImagePtr rgb, int * palette, int palette_size) {
      * Note that we are storing two extra values so we don't have to do boundary checking at
      * the left and right edges of the image.
      */
-    struct ycbcr_t * forward = malloc((gdImageSX(rgb) + 2) * sizeof(struct ycbcr_t));
+    struct ycbcr_t * forward = calloc(gdImageSX(rgb) + 2, sizeof(struct ycbcr_t));
     if (!forward) {
         free(pal_ycbcr);
         gdImageDestroy(res);
