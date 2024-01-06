@@ -674,15 +674,11 @@ static int CmdHF14AWSLoad(const char *Cmd) {
             return PM3_EMALLOC;
         }
     }
-
     gdImageDestroy(pal_img);
+
     int res = start_drawing(model_nr, black_plane, red_plane);
-
     free(black_plane);
-    if (red_plane) {
-        free(red_plane);
-    }
-
+    free(red_plane);
     return res;
 }
 

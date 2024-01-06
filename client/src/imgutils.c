@@ -53,7 +53,7 @@ gdImagePtr img_palettize(gdImagePtr rgb, int * palette, int palette_size) {
     }
 
     // Allocate space for palette in YCbCr
-    struct ycbcr_t * pal_ycbcr = malloc(palette_size * sizeof(struct ycbcr_t));
+    struct ycbcr_t * pal_ycbcr = calloc(palette_size, sizeof(struct ycbcr_t));
     if (!pal_ycbcr) {
         gdImageDestroy(res);
         return NULL;
