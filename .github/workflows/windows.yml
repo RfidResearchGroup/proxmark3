@@ -119,6 +119,7 @@ jobs:
             python3-dev
             libpython3-all-dev
             libssl-dev
+            libgd-dev
 
       - name: Install Python dependencies
         run: |
