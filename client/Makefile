@@ -421,6 +421,10 @@ ifeq ($(PYTHON_FOUND),1)
     PM3CFLAGS += -DHAVE_PYTHON
 endif
 
+ifeq ($(GD_FOUND),1)
+    PM3CFLAGS += -DHAVE_GD
+endif
+
 ifeq ($(SWIG_LUA_FOUND),1)
     PM3CFLAGS += -DHAVE_LUA_SWIG
 endif
