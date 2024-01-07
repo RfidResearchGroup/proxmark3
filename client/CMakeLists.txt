@@ -236,7 +236,7 @@ if (NOT SKIPGD EQUAL 1)
         set(GD_LIBRARIES ${GD_INSTALL_DIR}/lib/libgd.a)
         set(GD_FOUND ON)
     else (EMBED_GD)
-        find_package(GD 2.2.0...<3.0.0 QUIET)
+        pkg_search_module(GD QUIET gdlib)
     endif (EMBED_GD)
 endif (NOT SKIPGD EQUAL 1)
 
