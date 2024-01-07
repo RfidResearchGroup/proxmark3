@@ -359,7 +359,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfthinfilm.c
         ${PM3_ROOT}/client/src/cmdhftopaz.c
         ${PM3_ROOT}/client/src/cmdhfvas.c
-        ${PM3_ROOT}/client/src/cmdhfwaveshare.c
         ${PM3_ROOT}/client/src/cmdhfxerox.c
         ${PM3_ROOT}/client/src/cmdhw.c
         ${PM3_ROOT}/client/src/cmdlf.c
@@ -522,15 +521,18 @@ if (LZ4_FOUND)
     set(ADDITIONAL_LNK ${LZ4_LIBRARIES} ${ADDITIONAL_LNK})
 endif (LZ4_FOUND)
 
-if (GD_FOUND)
-    set(ADDITIONAL_DIRS ${GD_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
-    set(ADDITIONAL_LNK ${GD_LIBRARIES} ${ADDITIONAL_LNK})
-    set(TARGET_SOURCES
-            ${PM3_ROOT}/client/src/imgutils.c
-            ${PM3_ROOT}/client/src/cmdhfwaveshare.c
-            ${TARGET_SOURCES})
-    add_definitions("-DHAVE_GD")
-endif (GD_FOUND)
+if (NOT SKIPGD EQUAL 1)
+    if (GD_FOUND)
+        set(ADDITIONAL_DIRS ${GD_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+        set(ADDITIONAL_LNK ${GD_LIBRARIES} ${ADDITIONAL_LNK})
+        set(ADDITIONAL_LNKDIRS ${GD_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})
+        set(TARGET_SOURCES
+                ${PM3_ROOT}/client/src/imgutils.c
+                ${PM3_ROOT}/client/src/cmdhfwaveshare.c
+                ${TARGET_SOURCES})
+        add_definitions("-DHAVE_GD")
+    endif (GD_FOUND)
+endif(NOT SKIPGD EQUAL 1)
 
 if (WHEREAMI_FOUND)
     set(ADDITIONAL_DIRS ${WHEREAMI_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
@@ -770,13 +772,13 @@ endif (NOT SKIPPTHREAD EQUAL 1)
 if (NOT SKIPPYTHON EQUAL 1)
     # OSX have a hard time compiling python3 dependency with older cmake.
     if (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
-        if (NOT CMAKE_VERSION VERSION_LESS 3.13)
-               target_link_directories(proxmark3 PRIVATE ${ADDITIONAL_LNKDIRS})
-        elseif (APPLE)
-               message( SEND_ERROR "Your CMAKE version is too old for Apple platform, please update to a version >=3.13" )
-        endif (NOT CMAKE_VERSION VERSION_LESS 3.13)
+        if (CMAKE_VERSION VERSION_LESS 3.13)
+            message( SEND_ERROR "Your CMAKE version is too old for Apple platform, please update to a version >=3.13" )
+        endif (CMAKE_VERSION VERSION_LESS 3.13)
     endif (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
 endif (NOT SKIPPYTHON EQUAL 1)
+
+target_link_directories(proxmark3 PRIVATE ${ADDITIONAL_LNKDIRS})
 
 install(TARGETS proxmark3 DESTINATION "bin")
 install(DIRECTORY cmdscripts lualibs luascripts pyscripts resources dictionaries DESTINATION "share/proxmark3")
