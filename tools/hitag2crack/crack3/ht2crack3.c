@@ -196,7 +196,7 @@ static void *crack(void *d) {
     numnrar = data->numnrar;
 
     // create space for tables
-    Tk = (struct Tklower *)malloc(sizeof(struct Tklower) * 0x40000);
+    Tk = (struct Tklower *)calloc(sizeof(struct Tklower) * 0x40000, sizeof(uint8_t));
     if (!Tk) {
         printf("Failed to allocate memory (Tk)\n");
         exit(1);
@@ -314,7 +314,7 @@ int main(int argc, char *argv[]) {
     }
 
     // create table of nR aR pairs
-    TnRaR = (struct nRaR *)malloc(sizeof(struct nRaR) * NUM_NRAR);
+    TnRaR = (struct nRaR *)calloc(sizeof(struct nRaR) * NUM_NRAR, sizeof(uint8_t));
 
     // open file
     fp = fopen(argv[2], "r");

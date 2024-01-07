@@ -365,7 +365,7 @@ static void *bf_thread(void *thread_arg) {
         // success
         if (memcmp(calculated_MAC, mac, 4) == 0) {
 
-            loclass_thread_ret_t *r = (loclass_thread_ret_t *)malloc(sizeof(loclass_thread_ret_t));
+            loclass_thread_ret_t *r = (loclass_thread_ret_t *)calloc(sizeof(loclass_thread_ret_t), sizeof(uint8_t));
 
             for (uint8_t i = 0 ; i < numbytes_to_recover; i++) {
                 r->values[i] = keytable[bytes_to_recover[i]] & 0xFF;

@@ -1930,7 +1930,7 @@ static void add_matching_states(statelist_t *cands, uint8_t part_sum_a0, uint8_t
 
     const uint32_t worstcase_size = 1 << 20;
 
-    cands->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
+    cands->states[odd_even] = (uint32_t *)calloc(sizeof(uint32_t) * worstcase_size, sizeof(uint8_t));
     if (cands->states[odd_even] == NULL) {
         PrintAndLogEx(ERR, "Out of memory error in add_matching_states() - statelist.\n");
         exit(4);
