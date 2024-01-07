@@ -631,14 +631,13 @@ static int CmdHF14AWSLoad(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    if (
-        gdImageSX(rgb_img) != models[model_nr].width ||
-        gdImageSY(rgb_img) != models[model_nr].height
-    ) {
-        PrintAndLogEx(WARNING, "Image size does not match panel size");
+    gdImagePtr scaled_img = img_crop_to_fit(rgb_img, models[model_nr].width, models[model_nr].height);
+    if (scaled_img == NULL) {
+        PrintAndLogEx(WARNING, "Failed to scale input image");
         gdImageDestroy(rgb_img);
         return PM3_EFILE;
     }
+    gdImageDestroy(rgb_img);
 
     int pal_len = 2;
     int pal[3];
@@ -649,8 +648,8 @@ static int CmdHF14AWSLoad(const char *Cmd) {
         pal[2] = gdTrueColorAlpha(0xFF, 0x00, 0x00, 0); // Red
     }
 
-    gdImagePtr pal_img = img_palettize(rgb_img, pal, pal_len);
-    gdImageDestroy(rgb_img);
+    gdImagePtr pal_img = img_palettize(scaled_img, pal, pal_len);
+    gdImageDestroy(scaled_img);
 
     if (!pal_img) {
         PrintAndLogEx(WARNING, "Could not convert image");
@@ -662,7 +661,7 @@ static int CmdHF14AWSLoad(const char *Cmd) {
             PrintAndLogEx(INFO, "Save converted image to " _YELLOW_("%s"), outfile);
             gdImageDestroy(pal_img);
             return PM3_SUCCESS;
-		} else {
+        } else {
             PrintAndLogEx(WARNING, "Could not save converted image", outfile);
             gdImageDestroy(pal_img);
             return PM3_EFILE;

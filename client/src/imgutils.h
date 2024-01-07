@@ -20,6 +20,20 @@
 
 #include <gd.h>
 
+/*
+ * Converts a true color image to a palette image, using Floyd-Steinberg dithering.
+ *
+ * For color matching, this function uses the Euclidean distance between colors in the
+ * YCbCr color space, which yields to better results than using sRGB directly.
+ *
+ * A comparison can be found at https://twitter.com/Socram4x8/status/1733157380097995205/photo/1.
+ */
 gdImagePtr img_palettize(gdImagePtr rgb, int * palette, int palette_size);
+
+/*
+ * This function scales and crops the image to the given size.
+ * Think of "background-size: cover" in CSS.
+ */
+gdImagePtr img_crop_to_fit(gdImagePtr orig, int width, int height);
 
 #endif

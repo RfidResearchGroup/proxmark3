@@ -33,14 +33,6 @@ static inline void cap_comp(int * x) {
     }
 }
 
-/*
- * The following function implements a Floyd-Steinberg in YCbCr color space.
- *
- * Using this colorspace, the Euclidean distance between colors is closer to human perception than
- * in sRGB, which results in a more accurate color rendering.
- *
- * A comparison can be found at https://twitter.com/Socram4x8/status/1733157380097995205/photo/1.
- */
 gdImagePtr img_palettize(gdImagePtr rgb, int * palette, int palette_size) {
     assert(rgb != NULL);
     assert(palette != NULL);
@@ -155,5 +147,60 @@ gdImagePtr img_palettize(gdImagePtr rgb, int * palette, int palette_size) {
 
     free(forward);
     free(pal_ycbcr);
+    return res;
+}
+
+gdImagePtr img_crop_to_fit(gdImagePtr orig, int width, int height) {
+    assert(orig != NULL);
+    assert(width >= 1);
+    assert(height >= 1);
+
+    gdImagePtr res;
+    if (gdImageTrueColor(orig)) {
+        res = gdImageCreateTrueColor(width, height);
+    } else {
+        res = gdImageCreate(width, height);
+    }
+
+    if (!res) {
+        return NULL;
+    }
+
+    if (gdImageSY(orig) * width <= gdImageSX(orig) * height) {
+        // Image is wider than expected, so we will crop the left and right sides
+
+        int crop_width = gdImageSY(orig) * width / height;
+        int crop_sx = gdImageSX(orig) / 2 - crop_width / 2;
+        gdImageCopyResampled(
+            res,             // Dest img
+            orig,            // Src image
+            0,               // Dest X
+            0,               // Dest Y
+            crop_sx,         // Src X
+            0,               // Src Y
+            width,           // Dest width
+            height,          // Dest height
+            crop_width,      // Src width
+            gdImageSY(orig)  // Src height
+        );
+    } else {
+        // Image is taller than expected, so we will crop the top and bottom sides
+
+        int crop_height = gdImageSX(orig) * height / width;
+        int crop_sy = gdImageSY(orig) / 2 - crop_height / 2;
+        gdImageCopyResampled(
+            res,             // Dest img
+            orig,            // Src image
+            0,               // Dest X
+            0,               // Dest Y
+            0,               // Src X
+            crop_sy,         // Src Y
+            width,           // Dest width
+            height,          // Dest height
+            gdImageSX(orig), // Src width
+            crop_height      // Src height
+        );
+    }
+
     return res;
 }

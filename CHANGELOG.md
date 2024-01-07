@@ -9,6 +9,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Fixed `lf pyramid sim` - wrong parameter handling (@iceman1001)
  - Fixed bootloader - Ignore jitters when pressing the button (@wh201906)
  - Changed `hf waveshare` - image loading and processing is now done using [GDlib](https://github.com/libgd/libgd) (@socram8888)
+ - Changed `hf waveshare` - image is automatically scaled and cropped to match panel size (@socram8888)
 
 ## [Steamboat Willie.4.17768][2024-01-03]
  - Changed `mem spiffs dump -t` - now supports downloading direct into trace buffer (@hazardousvoltage)
