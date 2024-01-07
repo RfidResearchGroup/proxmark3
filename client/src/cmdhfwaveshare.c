@@ -85,7 +85,7 @@ static uint8_t * map8to1(gdImagePtr img, int color) {
     // Calculate width rounding up
     uint16_t width8 = (gdImageSX(img) + 7) / 8;
 
-    uint8_t * colormap8 = malloc(width8 * gdImageSY(img));
+    uint8_t * colormap8 = calloc(width8 * gdImageSY(img), sizeof(uint8_t));
     if (!colormap8) {
         return NULL;
     }
