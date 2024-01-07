@@ -1575,9 +1575,11 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
     if (msg_len) {
         // ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
         real_cmd[0] = 0x02; // bnr, nad, cid, chn=0; i-block(0x00)
+
         if (send_chaining) {
             real_cmd[0] |= 0x10;
         }
+
         // put block number into the PCB
         real_cmd[0] |= iso14b_pcb_blocknum;
         memcpy(real_cmd + 1, msg, msg_len);
@@ -1912,7 +1914,6 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
     }
 
     if (x_atqb[0] != 0x50) {
-//        DbpString("aqtb bad");
         return 1;
     }
 
@@ -1921,8 +1922,6 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
         memcpy(card->uid, x_atqb + 1, 8);
         memcpy(card->atqb, x_atqb + 9, 7);
     }
-
-//    DbpString("aqtb ok");
 
     // send ATTRIB command
 
@@ -1945,7 +1944,6 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
     FpgaDisableTracing();
 
     if (retlen < 3) {
-//        DbpString("attrib failed");
         return 2;
     }
 
@@ -1954,11 +1952,8 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
     }
 
     if (x_atqb[0] != 0) {
-//        DbpString("attrib failed");
         return 2;
     }
-
-//    DbpString("attrib ok");
 
     // apply PASSWORD command
 
@@ -1980,7 +1975,6 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
     retlen = Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), iso14b_timeout, &eof_time);
 
     if (retlen < 4) {
-//        DbpString("passwd failed");
         return 4;
     }
 
@@ -1989,11 +1983,8 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
     }
 
     if (x_atqb[0] != 2 || x_atqb[1] != 0) {
-//        DbpString("passwd failed");
         return 4;
     }
-
-//    DbpString("passwd ok");
 
     return 0;
 }
@@ -2101,8 +2092,8 @@ void iso14443b_setup(void) {
     BigBuf_free();
 
     // Initialize Demod and Uart structs
-    Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
-    Uart14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
+    Demod14bInit(BigBuf_calloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
+    Uart14bInit(BigBuf_calloc(MAX_FRAME_SIZE));
 
     // connect Demodulated Signal to ADC:
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
@@ -2460,7 +2451,7 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
     if ((p->flags & ISO14B_APDU) == ISO14B_APDU) {
         uint8_t res = 0;
         status = iso14443b_apdu(p->raw, p->rawlen, (p->flags & ISO14B_SEND_CHAINING), buf, sizeof(buf), &res);
-        sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);
+        sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE_MIX);
         reply_mix(CMD_HF_ISO14443B_COMMAND, status, res, 0, buf, sendlen);
     }
 
@@ -2483,7 +2474,7 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
             status = Get14443bAnswerFromTag(buf, sizeof(buf), iso14b_timeout, &eof_time); // raw
             FpgaDisableTracing();
 
-            sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE);
+            sendlen = MIN(Demod.len, PM3_CMD_DATA_SIZE_MIX);
             reply_mix(CMD_HF_ISO14443B_COMMAND, status, sendlen, 0, Demod.output, sendlen);
         }
     }
