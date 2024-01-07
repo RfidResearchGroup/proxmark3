@@ -332,6 +332,17 @@ endif
 LDLIBS += $(QTLDLIBS)
 CXXINCLUDES += $(QTINCLUDES)
 
+## GD (optional)
+ifneq ($(SKIPGD),1)
+    GDINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags gdlib 2>/dev/null)
+    GDLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs gdlib 2>/dev/null)
+    ifneq ($(GDLDLIBS),)
+        LDLIBS += $(GDLDLIBS)
+        PM3INCLUDES += $(GDINCLUDES)
+        GD_FOUND = 1
+    endif
+endif
+
 ## Readline
 ifneq ($(SKIPREADLINE),1)
     ifeq ($(USE_BREW),1)
@@ -408,6 +419,10 @@ endif
 
 ifeq ($(PYTHON_FOUND),1)
     PM3CFLAGS += -DHAVE_PYTHON
+endif
+
+ifeq ($(GD_FOUND),1)
+    PM3CFLAGS += -DHAVE_GD
 endif
 
 ifeq ($(SWIG_LUA_FOUND),1)
@@ -510,6 +525,16 @@ else
     endif
 endif
 
+ifeq ($(SKIPGD),1)
+    $(info GD library:        skipped)
+else
+    ifeq ($(GD_FOUND),1)
+        $(info GD library:        GD v$(shell $(PKG_CONFIG_ENV) pkg-config --modversion gdlib) found, enabled)
+    else
+        $(info GD library:        GD not found, disabled)
+    endif
+endif
+
 ifeq ($(SKIPREADLINE),1)
     $(info Readline library:  skipped)
 else
@@ -605,7 +630,6 @@ SRCS =  mifare/aiddesfire.c \
 		cmdhftopaz.c \
 		cmdhftexkom.c \
 		cmdhfvas.c \
-		cmdhfwaveshare.c \
 		cmdhfxerox.c \
 		cmdhw.c \
 		cmdlf.c \
@@ -737,6 +761,12 @@ SRCS += bucketsort.c \
 		legic_prng.c \
 		lfdemod.c \
 		util_posix.c
+
+ifeq ($(GD_FOUND),1)
+    # electronic shelf labels
+    SRCS += imgutils.c \
+	cmdhfwaveshare.c
+endif
 
 # swig
 
