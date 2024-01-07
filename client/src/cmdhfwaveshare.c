@@ -569,7 +569,7 @@ static int CmdHF14AWSLoad(const char *Cmd) {
     for (uint8_t i = 0; i < MEND; i++) {
         snprintf(desc + strlen(desc),
                  sizeof(desc) - strlen(desc),
-                 "hf waveshare loadbmp -f myfile -m %2u -> %s ( %u, %u )\n",
+                 "hf waveshare load -f myfile -m %2u -> %s ( %u, %u )\n",
                  i,
                  models[i].desc,
                  models[i].width,
@@ -578,8 +578,8 @@ static int CmdHF14AWSLoad(const char *Cmd) {
     }
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf waveshare loadbmp",
-                  "Load BMP file to Waveshare NFC ePaper.",
+    CLIParserInit(&ctx, "hf waveshare load",
+                  "Load image file to Waveshare NFC ePaper",
                   desc
                  );
 
