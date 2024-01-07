@@ -8,6 +8,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added troubleshooting entry - ARM architecture error (@francis2054)
  - Fixed `lf pyramid sim` - wrong parameter handling (@iceman1001)
  - Fixed bootloader - Ignore jitters when pressing the button (@wh201906)
+ - Changed `hf waveshare` - image loading and processing is now done using [GDlib](https://github.com/libgd/libgd) (@socram8888)
 
 ## [Steamboat Willie.4.17768][2024-01-03]
  - Changed `mem spiffs dump -t` - now supports downloading direct into trace buffer (@hazardousvoltage)

@@ -108,12 +108,14 @@ then, install proxmark dependencies:
 sudo apt-get install --no-install-recommends \
   git ca-certificates build-essential pkg-config \
   libreadline-dev gcc-arm-none-eabi libnewlib-dev \
-  libbz2-dev liblz4-dev libpython3-dev qtbase5-dev libssl-dev
+  libbz2-dev liblz4-dev libpython3-dev qtbase5-dev \
+  libssl-dev libgd-dev
 ```
 
 _note_
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qtbase5-dev`.  
 If you don't need support for Python3 scripts in the Proxmark3 client, you can skip the installation of `libpython3-dev`.
+If you don't need support for NFC ePaper devices, you can skip the installation of `libgd-dev`.
 
 ## X Server Installation
 ^[Top](#top)
