@@ -1348,20 +1348,20 @@ static int CmdHF14BWriteSri(const char *Cmd) {
     // special block at end of memory
     if (special) {
         blockno = 0xFF;
-        PrintAndLogEx(SUCCESS, "[%s] Write special block %02X [ " _YELLOW_("%s")" ]",
+        PrintAndLogEx(SUCCESS, _YELLOW_("%s") " Write special block %02X - " _YELLOW_("%s"),
                       (use_srix4k) ? "SRIX4K" : "SRI512",
                       blockno,
                       sprint_hex(data, sizeof(data))
                      );
     } else {
-        PrintAndLogEx(SUCCESS, "[%s] Write block %02X [ " _YELLOW_("%s")" ]",
+        PrintAndLogEx(SUCCESS, _YELLOW_("%s") " Write block %02X - " _YELLOW_("%s"),
                       (use_srix4k) ? "SRIX4K" : "SRI512",
                       blockno,
                       sprint_hex(data, sizeof(data))
                      );
     }
 
-    char str[36];
+    char str[36] = {0x00};
     memset(str, 0x00, sizeof(str));
     snprintf(str, sizeof(str), "--sr -c --data %02x%02x%02x%02x%02x%02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
     return CmdHF14BCmdRaw(str);
