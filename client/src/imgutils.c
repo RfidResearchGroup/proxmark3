@@ -64,6 +64,9 @@ gdImagePtr img_palettize(gdImagePtr rgb, int * palette, int palette_size) {
      *
      * Note that we are storing two extra values so we don't have to do boundary checking at
      * the left and right edges of the image.
+     *
+     * To reduce shifts and increase accuracy, each entry is stored with 16x times the error,
+     * and gets divided by that amount when it is read.
      */
     struct ycbcr_t * forward = calloc(gdImageSX(rgb) + 2, sizeof(struct ycbcr_t));
     if (!forward) {
@@ -89,9 +92,9 @@ gdImagePtr img_palettize(gdImagePtr rgb, int * palette, int palette_size) {
             rgb_to_ycbcr(gdImageGetTrueColorPixel(rgb, x, y), &pix);
 
             // Add error for current pixel
-            pix.y  += row_err.y;
-            pix.cb += row_err.cb;
-            pix.cr += row_err.cr;
+            pix.y  += row_err.y  / 16;
+            pix.cb += row_err.cb / 16;
+            pix.cr += row_err.cr / 16;
 
             // Cap in case it went to imaginary color territory
             cap_comp(&pix.y);
@@ -129,24 +132,24 @@ gdImagePtr img_palettize(gdImagePtr rgb, int * palette, int palette_size) {
             gdImageSetPixel(res, x, y, best_idx);
 
             // Propagate error within the current row, to the pixel to the right
-            row_err.y  = best_err.y  * 7 / 16 + forward[x + 2].y;
-            row_err.cb = best_err.cb * 7 / 16 + forward[x + 2].cb;
-            row_err.cr = best_err.cr * 7 / 16 + forward[x + 2].cr;
+            row_err.y  = best_err.y  * 7 + forward[x + 2].y;
+            row_err.cb = best_err.cb * 7 + forward[x + 2].cb;
+            row_err.cr = best_err.cr * 7 + forward[x + 2].cr;
 
             // Add error to bottom left
-            forward[x + 0].y  += best_err.y  * 3 / 16;
-            forward[x + 0].cb += best_err.cb * 3 / 16;
-            forward[x + 0].cr += best_err.cr * 3 / 16;
+            forward[x + 0].y  += best_err.y  * 3;
+            forward[x + 0].cb += best_err.cb * 3;
+            forward[x + 0].cr += best_err.cr * 3;
 
             // Add error to bottom center
-            forward[x + 1].y  += best_err.y  * 5 / 16;
-            forward[x + 1].cb += best_err.cb * 5 / 16;
-            forward[x + 1].cr += best_err.cr * 5 / 16;
+            forward[x + 1].y  += best_err.y  * 5;
+            forward[x + 1].cb += best_err.cb * 5;
+            forward[x + 1].cr += best_err.cr * 5;
 
             // Set error to bottom right
-            forward[x + 2].y   = best_err.y  * 1 / 16;
-            forward[x + 2].cb  = best_err.cb * 1 / 16;
-            forward[x + 2].cr  = best_err.cr * 1 / 16;
+            forward[x + 2].y   = best_err.y  * 1;
+            forward[x + 2].cb  = best_err.cb * 1;
+            forward[x + 2].cr  = best_err.cr * 1;
         }
     }
 
