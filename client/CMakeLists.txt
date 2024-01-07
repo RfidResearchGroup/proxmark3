@@ -217,23 +217,18 @@ endif (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
 if (NOT SKIPGD EQUAL 1)
     if (EMBED_GD)
         cmake_policy(SET CMP0114 NEW)
-        set(GD_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/gd/build)
-        set(GD_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/gd/install)
+        set(GD_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/gd)
         # Specify SOURCE_DIR will cause some errors
         ExternalProject_Add(gd
             URL                   https://github.com/libgd/libgd/releases/download/gd-2.3.3/libgd-2.3.3.tar.gz
             URL_HASH              SHA256=dd3f1f0bb016edcc0b2d082e8229c822ad1d02223511997c80461481759b1ed2
             PREFIX                deps/gd
-            DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/gd
-            CONFIGURE_COMMAND     cd ${GD_BUILD_DIR} && cmake ../src/gd -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON -DCMAKE_INSTALL_PREFIX=${GD_INSTALL_DIR}
-            BUILD_IN_SOURCE       ON
-            BUILD_COMMAND         make -C ${GD_BUILD_DIR} -j4 CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB}
-            INSTALL_COMMAND       make -C ${GD_BUILD_DIR} install
-            LOG_DOWNLOAD          ON
+            CMAKE_ARGS            -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON -DENABLE_CPP=0 -DCMAKE_INSTALL_PREFIX=.
+            PATCH_COMMAND         cat ${CMAKE_CURRENT_SOURCE_DIR}/deps/gd-static.patch | patch -p1
         )
         ExternalProject_Add_StepTargets(gd configure build install)
-        set(GD_INCLUDE_DIRS ${GD_INSTALL_DIR}/include)
-        set(GD_LIBRARIES ${GD_INSTALL_DIR}/lib/libgd.a)
+        set(GD_INCLUDE_DIRS ${GD_BUILD_DIR}/src/gd-build/include)
+        set(GD_LIBRARIES ${GD_BUILD_DIR}/src/gd-build/lib/libgd.a)
         set(GD_FOUND ON)
     else (EMBED_GD)
         pkg_search_module(GD QUIET gdlib)
