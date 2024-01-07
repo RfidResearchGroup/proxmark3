@@ -618,6 +618,10 @@ static int CmdHF14AWSLoad(const char *Cmd) {
         PrintAndLogEx(WARNING, "Unknown model");
         return PM3_EINVARG;
     }
+    if (!g_session.pm3_present && !outfilelen) {
+        PrintAndLogEx(WARNING, "Offline - can only perform image conversion");
+        return PM3_ENOTTY;
+    }
 
     bool model_has_red = model_nr == M1in54B || model_nr == M2in13B;
 
@@ -653,8 +657,16 @@ static int CmdHF14AWSLoad(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    if (outfilelen && !gdImageFile(pal_img, outfile)) {
-        PrintAndLogEx(WARNING, "Could not save converted image");
+    if (outfilelen) {
+        if (gdImageFile(pal_img, outfile)) {
+            PrintAndLogEx(INFO, "Save converted image to " _YELLOW_("%s"), outfile);
+            gdImageDestroy(pal_img);
+            return PM3_SUCCESS;
+		} else {
+            PrintAndLogEx(WARNING, "Could not save converted image", outfile);
+            gdImageDestroy(pal_img);
+            return PM3_EFILE;
+        }
     }
 
     uint8_t * black_plane = map8to1(pal_img, 1);
@@ -684,7 +696,7 @@ static int CmdHF14AWSLoad(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
-    {"load",        CmdHF14AWSLoad,       IfPm3Iso14443a,  "Load image file to Waveshare NFC ePaper"},
+    {"load",        CmdHF14AWSLoad,       AlwaysAvailable, "Load image file to Waveshare NFC ePaper"},
     {NULL, NULL, NULL, NULL}
 };
 

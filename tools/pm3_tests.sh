@@ -535,6 +535,7 @@ while true; do
       if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Test\(s\) \[ ok"; then break; fi
       if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \[ ok"; then break; fi
       if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \[ ok"; then break; fi
+      if ! CheckExecute "hf waveshare load"              "$CLIENTBIN -c 'hf waveshare load -m 6 -f tools/lena.bmp -s dither.bmp' && echo '9cee7dcc285f59f88c7cbc9de1dc02b4 dither.bmp' | md5sum -c" "dither.bmp: OK"; then break; fi
     fi
   echo -e "\n------------------------------------------------------------"
   echo -e "Tests [ ${C_GREEN}OK${C_NC} ] ${C_OK}\n"
