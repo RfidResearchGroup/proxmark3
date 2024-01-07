@@ -97,11 +97,12 @@ if (CMAKE_TOOLCHAIN_FILE)
     set(EMBED_READLINE ON)
     set(EMBED_BZIP2 ON)
     set(EMBED_LZ4 ON)
+    set(EMBED_GD ON)
 endif (CMAKE_TOOLCHAIN_FILE)
 
-if (EMBED_READLINE OR EMBED_BZIP2 OR EMBED_LZ4)
+if (EMBED_READLINE OR EMBED_BZIP2 OR EMBED_LZ4 OR EMBED_GD)
     include(ExternalProject)
-endif (EMBED_READLINE OR EMBED_BZIP2 OR EMBED_LZ4)
+endif (EMBED_READLINE OR EMBED_BZIP2 OR EMBED_LZ4 OR EMBED_GD)
 
 if (NOT SKIPREADLINE EQUAL 1)
     if (APPLE)
@@ -212,6 +213,32 @@ endif(EMBED_LZ4)
 if (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
     set(LZ4_FOUND ON)
 endif (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
+
+if (NOT SKIPGD EQUAL 1)
+    if (EMBED_GD)
+        cmake_policy(SET CMP0114 NEW)
+        set(GD_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/gd/build)
+        set(GD_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/gd/install)
+        # Specify SOURCE_DIR will cause some errors
+        ExternalProject_Add(gd
+            URL                   https://github.com/libgd/libgd/releases/download/gd-2.3.3/libgd-2.3.3.tar.gz
+            URL_HASH              SHA256=dd3f1f0bb016edcc0b2d082e8229c822ad1d02223511997c80461481759b1ed2
+            PREFIX                deps/gd
+            DOWNLOAD_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/deps/gd
+            CONFIGURE_COMMAND     cd ${GD_BUILD_DIR} && cmake ../src/gd -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON -DCMAKE_INSTALL_PREFIX=${GD_INSTALL_DIR}
+            BUILD_IN_SOURCE       ON
+            BUILD_COMMAND         make -C ${GD_BUILD_DIR} -j4 CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} LD=${CMAKE_C_COMPILER} AR=${CMAKE_AR} RANLIB=${CMAKE_RANLIB} ${CFLAGS_EXTERNAL_LIB}
+            INSTALL_COMMAND       make -C ${GD_BUILD_DIR} install
+            LOG_DOWNLOAD          ON
+        )
+        ExternalProject_Add_StepTargets(gd configure build install)
+        set(GD_INCLUDE_DIRS ${GD_INSTALL_DIR}/include)
+        set(GD_LIBRARIES ${GD_INSTALL_DIR}/lib/libgd.a)
+        set(GD_FOUND ON)
+    else (EMBED_GD)
+        find_package(GD 2.2.0...<3.0.0 QUIET)
+    endif (EMBED_GD)
+endif (NOT SKIPGD EQUAL 1)
 
 if (NOT SKIPWHEREAMISYSTEM EQUAL 1)
     find_path(WHEREAMI_INCLUDE_DIRS whereami.h)
@@ -495,6 +522,16 @@ if (LZ4_FOUND)
     set(ADDITIONAL_LNK ${LZ4_LIBRARIES} ${ADDITIONAL_LNK})
 endif (LZ4_FOUND)
 
+if (GD_FOUND)
+    set(ADDITIONAL_DIRS ${GD_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${GD_LIBRARIES} ${ADDITIONAL_LNK})
+    set(TARGET_SOURCES
+            ${PM3_ROOT}/client/src/imgutils.c
+            ${PM3_ROOT}/client/src/cmdhfwaveshare.c
+            ${TARGET_SOURCES})
+    add_definitions("-DHAVE_GD")
+endif (GD_FOUND)
+
 if (WHEREAMI_FOUND)
     set(ADDITIONAL_DIRS ${WHEREAMI_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${WHEREAMI_LIBRARIES} ${ADDITIONAL_LNK})
@@ -546,6 +583,18 @@ if (LZ4_FOUND)
 else (LZ4_FOUND)
     message(SEND_ERROR "LZ4 library:       LZ4 not found")
 endif (LZ4_FOUND)
+
+if (SKIPGD EQUAL 1)
+    message(STATUS "GD library:        skipped")
+elseif (GD_FOUND)
+    if (EMBED_GD)
+        message(STATUS "GD library:        embedded")
+    else (EMBED_GD)
+        message(STATUS "GD library:        system library found")
+    endif (EMBED_GD)
+else (SKIPGD EQUAL 1)
+    message(STATUS "GD library:        GD not found, disabled")
+endif (SKIPGD EQUAL 1)
 
 if (SKIPJANSSONSYSTEM EQUAL 1)
     message(STATUS "Jansson library:   local library forced")
