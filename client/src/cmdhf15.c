@@ -2527,7 +2527,7 @@ static int CmdHF15SlixDisable(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 slixprivacydisable",
                   "Disable privacy mode on SLIX ISO-15693 tag",
-                  "hf 15 slixdisable -p 0F0F0F0F");
+                  "hf 15 slixprivacydisable -p 0F0F0F0F");
 
     void *argtable[] = {
         arg_param_begin,
@@ -2577,7 +2577,7 @@ static int CmdHF15SlixEnable(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 slixprivacyenable",
                   "Enable privacy mode on SLIX ISO-15693 tag",
-                  "hf 15 slixenable -p 0F0F0F0F");
+                  "hf 15 slixprivacyenable -p 0F0F0F0F");
 
     void *argtable[] = {
         arg_param_begin,
