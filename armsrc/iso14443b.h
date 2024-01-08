@@ -35,13 +35,13 @@
 #endif
 
 void iso14443b_setup(void);
-int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *res);
+int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *res, int * responselen);
 
 int iso14443b_select_card(iso14b_card_select_t *card);
 
 void SimulateIso14443bTag(const uint8_t *pupi);
 void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
-void ReadSTBlock(uint8_t blocknr);
+void read_14b_st_block(uint8_t blocknr);
 void SniffIso14443b(void);
 void SendRawCommand14443B(uint32_t, uint32_t, uint8_t, uint8_t[]);
 void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p);

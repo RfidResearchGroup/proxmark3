@@ -1429,7 +1429,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t blockno;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            ReadSTBlock(payload->blockno);
+            read_14b_st_block(payload->blockno);
             break;
         }
         case CMD_HF_ISO14443B_SNIFF: {

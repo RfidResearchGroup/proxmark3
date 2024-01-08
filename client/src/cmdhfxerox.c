@@ -383,8 +383,9 @@ static int switch_off_field(void) {
 
 static int findXerox(iso14b_card_select_t *card, bool disconnect) {
 
-    if (card == NULL)
+    if (card == NULL) {
         return PM3_EINVARG;
+    }
 
     int8_t retry = 3;
     while (retry--) {
@@ -399,10 +400,10 @@ static int findXerox(iso14b_card_select_t *card, bool disconnect) {
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
-            if (resp.oldarg[0] == 0) {
+            if (resp.status == PM3_SUCCESS) {
                 memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
             }
-            return resp.oldarg[0];
+            return resp.length;
         }
     } // retry
 
@@ -513,7 +514,7 @@ static int CmdHFXeroxInfo(const char *Cmd) {
         if (verbose) {
             PrintAndLogEx(FAILED, "Fuji/Xerox tag select failed");
         }
-        return PM3_ERFTRANS;
+        return status;
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -551,7 +552,7 @@ static int CmdHFXeroxInfo(const char *Cmd) {
             */
 
             // 14b raw command send data_len instead of status
-            if (/*resp.status != 0 ||*/ resp.length < 7) {
+            if (resp.length < 7) {
                 PrintAndLogEx(FAILED, "retrying one more time");
                 continue;
             }
@@ -655,7 +656,8 @@ static int CmdHFXeroxDump(const char *Cmd) {
             resp.cmd, resp.length, resp.magic, resp.status, resp.crc, resp.oldarg[0], resp.oldarg[1], resp.oldarg[2],
             resp.data.asBytes[0], resp.data.asBytes[1], resp.data.asBytes[2], resp.ng ? 't' : 'f');
             */
-            if (/*resp.status != 0 ||*/ resp.length < 7) {  // 14b raw command send data_len instead of status
+    
+            if (resp.length < 7) {
                 PrintAndLogEx(FAILED, "retrying one more time");
                 continue;
             }
@@ -689,8 +691,9 @@ static int CmdHFXeroxDump(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
 
-    if (blocknum != 0x100)
+    if (blocknum != 0x100) {
         PrintAndLogEx(FAILED, "dump failed at block %d", blocknum);
+    }
 
     if (decrypt) {
         PrintAndLogEx(INFO, "Decrypting secret blocks...");
@@ -744,12 +747,14 @@ static int CmdHFXeroxDump(const char *Cmd) {
             uint16_t cs, csd;
 
             // calc checksum
-            for (b = 0, cs = 0; b < sizeof(decr) - 2; b += 2)   cs += decr[b] | (decr[b + 1] << 8);
+            for (b = 0, cs = 0; b < sizeof(decr) - 2; b += 2) {
+                cs += decr[b] | (decr[b + 1] << 8);
+            }
             cs = ~cs;
             csd = (decr[7] << 8) | decr[6];
 
             if (cs != csd) {
-                PrintAndLogEx(FAILED, "secret block %02X checksum failed.", dadr);
+                PrintAndLogEx(FAILED, "Secret block %02X checksum " _RED_("failed"), dadr);
             }
         }
     }
