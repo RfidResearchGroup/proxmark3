@@ -174,6 +174,62 @@ static void hf14b_aid_search(bool verbose) {
     }
 }
 
+static bool wait_14b_response(bool only_first, uint32_t timeout, uint8_t *datalen, uint8_t *data) {
+
+    /* We have scenarios.
+        A - only select
+        B - only normal respose
+        C - both select and response
+    */
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, MIN(TIMEOUT, timeout)) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return false;
+    }
+
+    if (resp.status == PM3_ETEAROFF) {
+        PrintAndLogEx(INFO, "Writing tear off triggered");
+        return true;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        return false;
+    }
+
+    // treat first reponse as same.  
+    if (only_first)  {
+
+        if (datalen) {
+            *datalen = resp.length;
+        }
+
+        if (data) {
+            memcpy(data, resp.data.asBytes, resp.length);
+        }        
+        return true;
+    }
+
+    // wait a second time.
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, MIN(TIMEOUT, timeout)) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return false;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        return false;
+    }
+
+    if (datalen) {
+        *datalen = resp.length;
+    }
+    if (data) {
+        memcpy(data, resp.data.asBytes, resp.length);
+    }
+
+    return true;
+}
+
 static bool wait_cmd_14b(bool verbose, bool is_select, uint32_t timeout) {
 
     PacketResponseNG resp;
@@ -183,29 +239,25 @@ static bool wait_cmd_14b(bool verbose, bool is_select, uint32_t timeout) {
     }
 
     if (resp.status == PM3_ETEAROFF) {
-        if (verbose) {
-            PrintAndLogEx(INFO, "Writing tear off triggered");
-        }
+        PrintAndLogEx(INFO, "Writing tear off triggered");
         return true;
+    }
+
+    if (is_select) {
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "failed status value... %d",  resp.status);
+            return false;
+        }
     }
 
     uint16_t len = resp.length;
     uint8_t *data = resp.data.asBytes;
 
-    // handle select responses
-    if (is_select) {
-
-        // 0: OK; -1: attrib fail; -2:crc fail
-        if (resp.status == PM3_SUCCESS) {
-
-            if (verbose) {
-                PrintAndLogEx(SUCCESS, "received " _YELLOW_("%u") " bytes", len);
-                PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, len));
-            }
-            return true;
-        } else {
-            return false;
-        }
+    // handle select responses OK
+    if (is_select && verbose) {
+        PrintAndLogEx(SUCCESS, "received " _YELLOW_("%u") " bytes", len);
+        PrintAndLogEx(SUCCESS, "%s", sprint_hex(data, len));
+        return true;
     }
 
     // handle raw bytes responses
@@ -214,7 +266,7 @@ static bool wait_cmd_14b(bool verbose, bool is_select, uint32_t timeout) {
             bool crc = check_crc(CRC_14443_B, data, len);
 
             PrintAndLogEx(SUCCESS, "received " _YELLOW_("%u") " bytes", len);
-            PrintAndLogEx(SUCCESS, "%s[%02X %02X] ( %s )",
+            PrintAndLogEx(SUCCESS, "%s[ " _YELLOW_("%02X %02X") " ] ( %s )",
                           sprint_hex(data, len - 2),
                           data[len - 2],
                           data[len - 1],
@@ -1103,11 +1155,11 @@ static bool HF14B_ask_ct_reader(bool verbose) {
             print_ct_general_info(resp.data.asBytes);
             return true;
         }
-        case -1: {
+        case PM3_ELENGTH: {
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CTS wrong length");
             break;
         }
-        case -2: {
+        case PM3_ECRC: {
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CTS CRC fail");
             break;
         }
@@ -1137,7 +1189,8 @@ static bool HF14B_other_reader(bool verbose) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
 
-    if (wait_cmd_14b(verbose, true, -1)) {
+    // wait for the select message and wait for response
+    if (wait_14b_response(false, 400, NULL, NULL) ) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "unknown tag type answered to a " _YELLOW_("0x000b3f80") " command");
         switch_off_field_14b();
@@ -1150,7 +1203,7 @@ static bool HF14B_other_reader(bool verbose) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
 
-    if (wait_cmd_14b(verbose, false, -1)) {
+    if (wait_14b_response(false, 400, NULL, NULL)) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "Unknown tag type answered to a " _YELLOW_("0x0A") " command");
         switch_off_field_14b();
@@ -1162,7 +1215,7 @@ static bool HF14B_other_reader(bool verbose) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
     free(packet);
-    if (wait_cmd_14b(verbose, false, -1)) {
+    if (wait_14b_response(false, 400, NULL, NULL)) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "Unknown tag type answered to a " _YELLOW_("0x0C") " command");
         switch_off_field_14b();
@@ -2245,22 +2298,30 @@ int readHF14B(bool loop, bool verbose) {
         found |= HF14B_std_reader(verbose);
         if (found && loop)
             continue;
+        else if (found)
+            return PM3_SUCCESS;
 
         // try ST Microelectronics 14b
         found |= HF14B_st_reader(verbose);
         if (found && loop)
             continue;
+        else if (found)
+            return PM3_SUCCESS;
 
         // try ASK CT 14b
         found |= HF14B_ask_ct_reader(verbose);
         if (found && loop)
             continue;
+        else if (found)
+            return PM3_SUCCESS;
 
         // try unknown 14b read commands (to be identified later)
         // could be read of calypso, CEPAS, moneo, or pico pass.
         found |= HF14B_other_reader(verbose);
         if (found && loop)
             continue;
+        else if (found)
+            return PM3_SUCCESS;
 
     } while (loop && kbd_enter_pressed() == false);
 
