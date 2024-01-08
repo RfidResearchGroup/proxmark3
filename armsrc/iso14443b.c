@@ -2068,7 +2068,7 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
     uint16_t retlen = 0;
-    if (Get14443bAnswerFromTag(r_pupid, sizeof(r_pupid), iso14b_timeout, &eof_time) != PM3_SUCCESS) {
+    if (Get14443bAnswerFromTag(r_pupid, sizeof(r_pupid), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
         goto out;
     }
 
@@ -2208,13 +2208,12 @@ static int read_14b_srx_block(uint8_t blocknr, uint8_t *block) {
     if (Get14443bAnswerFromTag(r_block, sizeof(r_block), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
         FpgaDisableTracing();
         return PM3_ECARDEXCHANGE;
-
     }
     FpgaDisableTracing();
 
     // Check if we got an answer from the tag
     if (retlen != 6) {
-        DbpString("[!] expected 6 bytes from tag, got less...");
+        Dbprintf("expected 6 bytes from tag, got %u", retlen);
         return PM3_EWRONGANSWER;
     }
     // The check the CRC of the answer
@@ -2247,6 +2246,7 @@ void read_14b_st_block(uint8_t blocknr) {
     int res = iso14443b_select_srx_card(card);
     // 0: OK -1 wrong len, -2: attrib fail, -3:crc fail,
     switch (res) {
+        case PM3_ECARDEXCHANGE:
         case PM3_ELENGTH:
         case PM3_EWRONGANSWER:
         case PM3_ECRC: {
