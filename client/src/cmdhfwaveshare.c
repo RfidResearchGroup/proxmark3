@@ -231,7 +231,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
     uint8_t step4[2] = {0xcd, 0x03};      // e-paper power on
     uint8_t step5[2] = {0xcd, 0x05};      // e-paper config2
     uint8_t step6[2] = {0xcd, 0x06};      // EDP load to main
-    uint8_t step7[2] = {0xcd, 0x07};      // Data preparation
+    uint8_t step7[3] = {0xcd, 0x07, 0};   // Data preparation
 
     uint8_t step8[123] = {0xcd, 0x08, 0x64};  // Data start command
     // 2.13inch(0x10:Send 16 data at a time)
@@ -385,7 +385,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
         }
         msleep(100);
         PrintAndLogEx(DEBUG, "Step7: Data preparation");
-        ret = transceive_blocking(step7, 2, rx, 20, actrxlen, true); // cd 07
+        ret = transceive_blocking(step7, 3, rx, 20, actrxlen, true); // cd 07
         if (ret != PM3_SUCCESS) {
             return ret;
         }
