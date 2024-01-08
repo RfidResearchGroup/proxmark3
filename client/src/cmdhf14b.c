@@ -1491,10 +1491,8 @@ static int CmdHF14BDump(const char *Cmd) {
         PacketResponseNG resp;
 
         // select SR tag
-        int status;
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
-            status = resp.status;
-            if (status != PM3_SUCCESS) {
+            if (resp.status != PM3_SUCCESS) {
                 PrintAndLogEx(FAILED, "failed to select arg0[%" PRId64 "]", resp.oldarg[0]);
                 free(packet);
                 return switch_off_field_14b();
@@ -1507,7 +1505,7 @@ static int CmdHF14BDump(const char *Cmd) {
         memset(data, 0, sizeof(data));
         uint16_t blocknum = 0;
 
-        for (int retry = 0; retry < 5; retry++) {
+        for (int retry = 0; retry < 3; retry++) {
 
             // set up the read command
             packet->flags = (ISO14B_APPEND_CRC | ISO14B_RAW);
@@ -1519,16 +1517,14 @@ static int CmdHF14BDump(const char *Cmd) {
             SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + 2);
             if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
 
-                status = resp.status;
-                if (status != PM3_SUCCESS) {
+                if (resp.status != PM3_SUCCESS) {
                     PrintAndLogEx(FAILED, "retrying one more time");
                     continue;
                 }
 
-                uint16_t len = (resp.oldarg[1] & 0xFFFF);
                 uint8_t *recv = resp.data.asBytes;
 
-                if (check_crc(CRC_14443_B, recv, len) == false) {
+                if (check_crc(CRC_14443_B, recv, resp.length) == false) {
                     PrintAndLogEx(FAILED, "crc fail, retrying one more time");
                     continue;
                 }
