@@ -3,13 +3,14 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf 14b` commands got some serious overhaul and love. Better return values and packet handling (@iceman1001)
+ - Changed `hf waveshare` - image is automatically scaled and cropped to match panel size (@socram8888)
+ - Changed `hf waveshare` - image loading and processing is now done using [GDlib](https://github.com/libgd/libgd) (@socram8888)
  - Added trace of sniffed SEOS traffic between reader and card (@iceman1001)
  - Change `hf seos list` - print crc and annotate better (@iceman1001) 
  - Added troubleshooting entry - ARM architecture error (@francis2054)
  - Fixed `lf pyramid sim` - wrong parameter handling (@iceman1001)
  - Fixed bootloader - Ignore jitters when pressing the button (@wh201906)
- - Changed `hf waveshare` - image loading and processing is now done using [GDlib](https://github.com/libgd/libgd) (@socram8888)
- - Changed `hf waveshare` - image is automatically scaled and cropped to match panel size (@socram8888)
 
 ## [Steamboat Willie.4.17768][2024-01-03]
  - Changed `mem spiffs dump -t` - now supports downloading direct into trace buffer (@hazardousvoltage)
