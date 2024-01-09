@@ -27,6 +27,7 @@ Always use the latest repository commits from *master* branch. There are always 
   - [bzlib.h: No such file or directory](#bzlibh-no-such-file-or-directory)
   - [target attribute is not supported on this machine](#target-attribute-is-not-supported-on-this-machine)
   - [Qt Session management error](#qt-session-management-error)
+  - [found architecture x86_64 required architecture arm64 error](#found-architecture-x86_64-required-architecture-arm64-error)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -308,7 +309,7 @@ Try running the client without the SESSION_MANAGER environment variable.
 env -u SESSION_MANAGER ./pm3
 ```
 
-## found architecture 'x86_64', required architecture 'arm64' error
+## found architecture 'x86_64' required architecture 'arm64' error
 ^[Top](#top)
 
 If you get the message  
