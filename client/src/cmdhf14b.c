@@ -848,12 +848,12 @@ static void print_ct_general_info(void *vcard) {
 
 static void print_hdr(void) {
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, " block#  | data         |lck| ascii");
-    PrintAndLogEx(INFO, "---------+--------------+---+------");
+    PrintAndLogEx(INFO, " block#  | data        |lck| ascii");
+    PrintAndLogEx(INFO, "---------+-------------+---+------");
 }
 
 static void print_footer(void) {
-    PrintAndLogEx(INFO, "---------+--------------+---+------");
+    PrintAndLogEx(INFO, "---------+-------------+---+------");
     PrintAndLogEx(NORMAL, "");
 }
 
@@ -893,7 +893,7 @@ static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid) {
 
     for (int i = 0; i < blocks; i++) {
         PrintAndLogEx(INFO,
-                      "%3d/0x%02X | %s | %s | %s",
+                      "%3d/0x%02X | %s| %s | %s",
                       i,
                       i,
                       sprint_hex(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE),
@@ -903,7 +903,7 @@ static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid) {
     }
 
     PrintAndLogEx(INFO,
-                  "%3d/0x%02X | %s | %s | %s",
+                  "%3d/0x%02X | %s| %s | %s",
                   0xFF,
                   0xFF,
                   sprint_hex(systemblock, ST25TB_SR_BLOCK_SIZE),
@@ -2199,7 +2199,10 @@ static int CmdHF14BView(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b view",
-                  "Print a ISO14443-B dump file (bin/eml/json)",
+                  "Print a ISO14443-B dump file (bin/eml/json)\n"
+                  "note:\n"
+                  "  - command expects the filename to contain a UID\n"
+                  "    which is needed to determine card memory type",
                   "hf 14b view -f hf-14b-01020304-dump.bin"
                  );
     void *argtable[] = {
