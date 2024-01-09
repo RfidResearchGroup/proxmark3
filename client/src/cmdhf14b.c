@@ -45,6 +45,18 @@
 // for static arrays
 #define ST25TB_SR_BLOCK_SIZE 4
 
+
+// SR memory sizes
+#define SR_SIZE_512      1
+#define SR_SIZE_4K       2
+// ST235 memory sizes
+#define ST25_SIZE_512    3
+#define ST25_SIZE_2K     4
+#define ST25_SIZE_4K     5
+
+
+
+
 // iso14b apdu input frame length
 static uint16_t apdu_frame_length = 0;
 //static uint16_t ats_fsc[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
@@ -619,8 +631,8 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
 }
 
 // get SRx chip model (from UID) // from ST Microelectronics
-static const char *get_st_chip_model(uint8_t data) {
-    switch (data) {
+static const char *get_st_chip_model(uint8_t id) {
+    switch (id) {
         case 0x0:
             return "SRIX4K (Special)";
         case 0x2:
@@ -636,9 +648,26 @@ static const char *get_st_chip_model(uint8_t data) {
         case 0xC:
             return "SRT512";
         default :
-            return "Unknown";
+            return "";
     }
 }
+
+/*
+static const char *get_st25_chip_model(uint8_t id) {
+    switch (id) {
+        case 0x1B:
+            return "ST25TB512-AC";
+        case 0x33:
+            return "ST25TB512-AT";
+        case 0x3F: 
+            return "ST25TB02K";
+        case 0x1F:
+            return "ST25TB04K";
+        default:
+            return "";
+    }
+}
+*/
 
 #define ST_LOCK_INFO_EMPTY " "
 static const char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uint8_t blk) {
@@ -806,22 +835,44 @@ static uint8_t get_st_chipid(const uint8_t *uid) {
     return uid[5] >> 2;
 }
 
+/*
+static uint8_t get_st25_chipid(const uint8_t *uid) {
+    return uid[5];
+}
+*/
+
 static uint8_t get_st_cardsize(const uint8_t *uid) {
     uint8_t chipid = get_st_chipid(uid);
     switch (chipid) {
         case 0x0:
         case 0x3:
-        case 0x7:
-            return 1;
+        case 0x7:            
+            return SR_SIZE_4K;
         case 0x4:
         case 0x6:
         case 0xC:
-            return 2;
+            return SR_SIZE_512;
         default:
             return 0;
     }
-    return 0;
 }
+
+/*
+static uint8_t get_st25_cardsize(const uint8_t *uid) {
+    uint8_t chipid = get_st25_chipid(uid);
+    switch (chipid) {
+        case 0x1B:
+        case 0x33:
+            return ST25_SIZE_512;
+        case 0x1F:
+            return ST25_SIZE_4K;
+        case 0x3F:
+            return ST25_SIZE_2K;
+        default:
+            return 0;
+    }
+}
+*/
 
 // print UID info from SRx chips (ST Microelectronics)
 static void print_st_general_info(uint8_t *data, uint8_t len) {
@@ -1531,11 +1582,11 @@ static int CmdHF14BDump(const char *Cmd) {
         uint16_t cardsize = 0;
 
         switch (cardtype) {
-            case 2:
+            case SR_SIZE_512:
                 cardsize = (512 / 8) + ST25TB_SR_BLOCK_SIZE;
                 lastblock = 0x0F;
                 break;
-            case 1:
+            case SR_SIZE_4K:
             default:
                 cardsize = (4096 / 8) + ST25TB_SR_BLOCK_SIZE;
                 lastblock = 0x7F;
@@ -1764,10 +1815,11 @@ int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
         memset(card, 0, sizeof(iso14b_card_select_t));
     }
 
+    SetAPDULogging(true);
     switch_off_field_14b();
 
     iso14b_raw_cmd_t packet = {
-        .flags = (ISO14B_CONNECT | ISO14B_SELECT_STD),
+        .flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_CLEARTRACE),
         .timeout = 0,
         .rawlen = 0,
     };
@@ -1778,13 +1830,13 @@ int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
         PrintAndLogEx(INFO, "Trying 14B Select SRx");
 
         // Anticollision + SELECT SR card
-        packet.flags = (ISO14B_CONNECT | ISO14B_SELECT_SR);
+        packet.flags = (ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_CLEARTRACE);
         SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
             PrintAndLogEx(INFO, "Trying 14B Select CTS");
 
             // Anticollision + SELECT ASK C-Ticket card
-            packet.flags = (ISO14B_CONNECT | ISO14B_SELECT_CTS);
+            packet.flags = (ISO14B_CONNECT | ISO14B_SELECT_CTS | ISO14B_CLEARTRACE);
             SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
             if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
                 PrintAndLogEx(ERR, "connection timeout");
@@ -1940,8 +1992,9 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field,
             *dataoutlen = 0;
             res = handle_14b_apdu(chainBlockNotLast, &datain[clen], vlen, v_activate_field, dataout, maxdataoutlen, dataoutlen, &chaining, user_timeout);
             if (res) {
-                if (leave_signal_on == false)
+                if (leave_signal_on == false) {
                     switch_off_field_14b();
+                }
 
                 return 200;
             }
@@ -1959,8 +2012,9 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field,
             clen += vlen;
             v_activate_field = false;
             if (*dataoutlen) {
-                if (clen != datainlen)
+                if (clen != datainlen) {
                     PrintAndLogEx(ERR, "APDU: I-block/R-block sequence error. Data len=%d, Sent=%d, Last packet len=%d", datainlen, clen, *dataoutlen);
+                }
                 break;
             }
         } while (clen < datainlen);
