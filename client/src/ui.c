@@ -323,6 +323,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     if (logging && g_session.incognito) {
         logging = 0;
     }
+    // TODO log if callback ?
     if ((g_printAndLog & PRINTANDLOG_LOG) && logging && !logfile) {
         char *my_logfile_path = NULL;
         char filename[40];
@@ -387,6 +388,15 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         fprintf(stream, "%s", buffer3);
         if (linefeed)
             fprintf(stream, "\n");
+        memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), session.emoji_mode);
+        if (linefeed && (strlen(buffer3) + 1 < sizeof(buffer3)))
+            buffer3[strlen(buffer3)]='\n';
+        bool doprint = true;
+        if (g_printCallback != NULL) {
+            doprint = g_printCallback(buffer3) != 0;
+        }
+        if (doprint)
+            fprintf(stream, "%s", buffer3);
     }
 
 #ifdef RL_STATE_READCMD

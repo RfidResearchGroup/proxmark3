@@ -31,6 +31,8 @@
 
 extern uint8_t g_debugMode;
 extern uint8_t g_printAndLog;
+typedef int (*print_cb_t)(char *s);
+extern print_cb_t g_printCallback;
 extern bool g_pendingPrompt;
 extern int g_numCPUs;
 

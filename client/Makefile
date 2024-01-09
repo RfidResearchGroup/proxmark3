@@ -361,11 +361,11 @@ endif
 # SWIG #
 ########
 
-ifneq ("$(wildcard src/pm3_luawrap.c)","")
+ifneq ("$(wildcard src/pm3_luawrap.cpp)","")
     SWIG_LUA_FOUND = 1
 endif
 ifeq ($(PYTHON_FOUND),1)
-    ifneq ("$(wildcard src/pm3_pywrap.c)","")
+    ifneq ("$(wildcard src/pm3_pywrap.cpp)","")
         SWIG_PYTHON_FOUND = 1
     endif
 endif
@@ -383,6 +383,10 @@ PM3CFLAGS = $(CFLAGS)
 PM3CFLAGS += -I./src -I./include -I../include -I../common -I../common_fpga $(PM3INCLUDES) $(INCLUDES)
 # WIP Testing
 #PM3CFLAGS += -std=c11 -pedantic
+CXXFLAGS ?= -Wall -Werror -O3
+PM3CXXFLAGS = $(CXXFLAGS)
+PM3CXXFLAGS += -I../include -I./include -I../common $(INCLUDES)
+
 
 PREFIX ?= /usr/local
 ifneq (,$(findstring MINGW,$(platform)))
@@ -412,9 +416,11 @@ endif
 
 ifeq ($(SWIG_LUA_FOUND),1)
     PM3CFLAGS += -DHAVE_LUA_SWIG
+    PM3CXXFLAGS += -DHAVE_LUA_SWIG
 endif
 ifeq ($(SWIG_PYTHON_FOUND),1)
     PM3CFLAGS += -DHAVE_PYTHON_SWIG
+    PM3CXXFLAGS += -DHAVE_PYTHON_SWIG
 endif
 
 PM3CFLAGS += -DHAVE_SNPRINTF
@@ -706,6 +712,7 @@ SRCS =  mifare/aiddesfire.c \
 		mifare/gen4.c \
 		nfc/ndef.c \
 		pm3.c \
+		mifare/ndef.c \
 		pm3_binlib.c \
 		pm3_bitlib.c \
 		preferences.c \
@@ -742,10 +749,10 @@ SRCS += bucketsort.c \
 
 SWIGSRCS =
 ifeq ($(SWIG_LUA_FOUND),1)
-    SWIGSRCS += pm3_luawrap.c
+    SWIGSRCS += pm3_luawrap.cpp
 endif
 ifeq ($(SWIG_PYTHON_FOUND),1)
-    SWIGSRCS += pm3_pywrap.c
+    SWIGSRCS += pm3_pywrap.cpp
 endif
 
 # gui
@@ -754,6 +761,7 @@ ifeq ($(QT_FOUND),1)
 else
     CXXSRCS = guidummy.cpp
 endif
+CXXSRCS += pm3.cpp
 
 # OS X
 ifeq ($(platform),Darwin)
@@ -761,7 +769,7 @@ ifeq ($(platform),Darwin)
 endif
 
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
-OBJS += $(SWIGSRCS:%.c=$(OBJDIR)/%.o)
+OBJS += $(SWIGSRCS:%.cpp=$(OBJDIR)/%.o)
 OBJS += $(CXXSRCS:%.cpp=$(OBJDIR)/%.o)
 OBJS += $(OBJCSRCS:%.m=$(OBJDIR)/%.o)
 
@@ -910,13 +918,13 @@ endif
 # SWIG #
 ########
 
-src/pm3_luawrap.c: pm3.i
+src/pm3_luawrap.cpp: pm3.i
 	$(info [=] GEN $@)
-	$(Q)$(SWIG) -lua -o $@ $<
+	$(Q)$(SWIG) -c++ -lua -o $@ $<
 
-src/pm3_pywrap.c: pm3.i
+src/pm3_pywrap.cpp: pm3.i
 	$(info [=] GEN $@)
-	$(Q)$(SWIG) -python -o $@ $<
+	$(Q)$(SWIG) -c++ -python -o $@ $<
 
 ########
 # misc #
@@ -933,11 +941,12 @@ src/version_pm3.c: default_version_pm3.c .FORCE
 print-%: ; @echo $* = $($*)
 
 # SWIG files emit a number of warnings, we've to ignore them
-%wrap.o: %wrap.c
-$(OBJDIR)/%wrap.o : %wrap.c $(OBJDIR)/%.d
-	$(info [-] CC $<)
+%wrap.o: %wrap.cpp
+$(OBJDIR)/%wrap.o : %wrap.cpp $(OBJDIR)/%.d
+	$(info [-] CXX $<)
 	$(Q)$(MKDIR) $(dir $@)
-	$(Q)$(CC) $(DEPFLAGS) $(PM3CFLAGS) -Wno-missing-prototypes -Wno-missing-declarations -Wno-missing-field-initializers -c -o $@ $<
+#	$(Q)$(CXX) $(DEPFLAGS) $(PM3CXXFLAGS) -Wno-missing-prototypes -Wno-missing-declarations -Wno-missing-field-initializers -c -o $@ $<
+	$(Q)$(CXX) $(DEPFLAGS) $(PM3CXXFLAGS) -c -o $@ $<
 	$(Q)$(POSTCOMPILE)
 
 %.o: %.c
@@ -962,7 +971,7 @@ $(OBJDIR)/%.o : %.m $(OBJDIR)/%.d
 	$(Q)$(POSTCOMPILE)
 
 DEPENDENCY_FILES = $(patsubst %.c, $(OBJDIR)/%.d, $(SRCS)) \
-                   $(patsubst %wrap.c, $(OBJDIR)/%.d, $(SWIGSRCS)) \
+                   $(patsubst %wrap.cpp, $(OBJDIR)/%.d, $(SWIGSRCS)) \
                    $(patsubst %.cpp, $(OBJDIR)/%.d, $(CXXSRCS)) \
                    $(patsubst %.m, $(OBJDIR)/%.d, $(OBJCSRCS))
 

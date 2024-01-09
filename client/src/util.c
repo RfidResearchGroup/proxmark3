@@ -38,6 +38,8 @@
 uint8_t g_debugMode = 0;
 // global client disable logging variable
 uint8_t g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
+// global client print callback
+print_cb_t g_printCallback;
 // global client tell if a pending prompt is present
 bool g_pendingPrompt = false;
 // global CPU core count override
