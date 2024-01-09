@@ -536,6 +536,7 @@ static bool get_14b_UID(uint8_t *d, iso14b_type_t *found_type) {
 
     // test 14b standard
     packet.flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT);
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
@@ -1493,7 +1494,7 @@ static int CmdHF14BDump(const char *Cmd) {
         // select SR tag
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
             if (resp.status != PM3_SUCCESS) {
-                PrintAndLogEx(FAILED, "failed to select arg0[%" PRId64 "]", resp.oldarg[0]);
+                PrintAndLogEx(FAILED, "failed to select ( " _RED_("%d") " )", resp.status);
                 free(packet);
                 return switch_off_field_14b();
             }
@@ -1553,10 +1554,11 @@ static int CmdHF14BDump(const char *Cmd) {
         free(packet);
 
         PrintAndLogEx(NORMAL, "");
+        switch_off_field_14b();
 
         if (blocknum != 0xFF) {
             PrintAndLogEx(FAILED, "dump failed");
-            return switch_off_field_14b();
+            return PM3_ESOFT;
         }
 
         print_sr_blocks(data, cardsize, card.uid);
@@ -1578,7 +1580,7 @@ static int CmdHF14BDump(const char *Cmd) {
         pm3_save_dump(filename, data, datalen, jsf14b_v2);
     }
 
-    return switch_off_field_14b();
+    return PM3_ESOFT;
 }
 /*
 
