@@ -1041,6 +1041,57 @@ static int CmdHF14Binfo(const char *Cmd) {
     return infoHF14B(verbose, do_aid_search);
 }
 
+static int read_sr_block(uint8_t blockno, uint8_t *out) {
+    struct {
+        uint8_t blockno;
+    } PACKED payload;
+
+    payload.blockno = blockno;
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_SRI_READ, (uint8_t *)&payload, sizeof(payload));
+    if (WaitForResponseTimeout(CMD_HF_SRI_READ, &resp, TIMEOUT) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_SUCCESS && out) {
+        memcpy(out, resp.data.asBytes, resp.length);
+    }
+    return resp.status;
+}
+
+static int write_sr_block(uint8_t blockno, uint8_t datalen, uint8_t *data) {
+
+    uint8_t psize = sizeof(iso14b_raw_cmd_t) + datalen + 2;
+    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, psize);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_RAW | ISO14B_APPEND_CRC | ISO14B_DISCONNECT);
+    packet->timeout = 0;
+    packet->rawlen = 6;
+    packet->raw[0] = ISO14443B_WRITE_BLK;
+    packet->raw[1] = blockno;
+    packet->raw[2] = data[0];
+    packet->raw[3] = data[1];
+    packet->raw[4] = data[2];
+    packet->raw[5] = data[3];
+
+    // SRx get and print general info about SRx chip from UID
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, psize);
+    free(packet);
+
+    if (wait_14b_response(true, NULL, NULL) == false) {
+        PrintAndLogEx(FAILED, "SRx write block ( " _RED_("failed") " )" );
+        return PM3_ESOFT;
+    } 
+    return PM3_SUCCESS;
+}
+
 static bool HF14B_st_reader(bool verbose) {
 
     iso14b_raw_cmd_t packet = {
@@ -1294,22 +1345,13 @@ static int CmdHF14BSriRdBl(const char *Cmd) {
         uint8_t cardtype = get_st_cardsize(card.uid);
         uint8_t blocks = (cardtype == 1) ? 0x7F : 0x0F;
     */
-    struct {
-        uint8_t blockno;
-    } PACKED payload;
 
-    payload.blockno = blockno;
-
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_SRI_READ, (uint8_t *)&payload, sizeof(payload));
-    if (WaitForResponseTimeout(CMD_HF_SRI_READ, &resp, TIMEOUT) == false) {
-        return PM3_ETIMEOUT;
+    uint8_t out[4] = {0};
+    int status = read_sr_block(blockno, out);
+    if (status == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "block %02u... " _GREEN_("%s") " | " _GREEN_("%s"), blockno, sprint_hex(out, sizeof(out)), sprint_ascii(out, sizeof(out)));
     }
-    if (resp.status == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "block %02u : " _GREEN_("%s") " | " _GREEN_("%s"), blockno, sprint_hex(resp.data.asBytes, resp.length), sprint_ascii(resp.data.asBytes, resp.length));
-    }
-    return resp.status;
+    return status;
 }
 
 // New command to write a SRI512/SRIX4K tag.
@@ -1394,9 +1436,22 @@ static int CmdHF14BWriteSri(const char *Cmd) {
                      );
     }
 
-    char str[36] = {0x00};
-    snprintf(str, sizeof(str), "--sr -c --data %02x%02x%02x%02x%02x%02x", ISO14443B_WRITE_BLK, blockno, data[0], data[1], data[2], data[3]);
-    return CmdHF14BCmdRaw(str);
+    int status = write_sr_block(blockno, 4, data);
+    if (status != PM3_SUCCESS) {
+        return status;
+    }
+
+    // verify
+    uint8_t out[4] = {0};
+    status = read_sr_block(blockno, out);
+    if (status == PM3_SUCCESS) {
+        if (memcmp(data, out, 4) == 0) {
+            PrintAndLogEx(SUCCESS, "SRx write block ( " _GREEN_("ok") " )" );
+        }
+    } else {
+        PrintAndLogEx(INFO, "Verifying block ( " _RED_("failed") " )");
+    }
+    return status;
 }
 
 // need to write to file
