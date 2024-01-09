@@ -174,7 +174,7 @@ static void hf14b_aid_search(bool verbose) {
     }
 }
 
-static bool wait_14b_response(bool only_first, uint32_t timeout, uint8_t *datalen, uint8_t *data) {
+static bool wait_14b_response(bool only_first, uint8_t *datalen, uint8_t *data) {
 
     /* We have scenarios.
         A - only select
@@ -183,8 +183,8 @@ static bool wait_14b_response(bool only_first, uint32_t timeout, uint8_t *datale
     */
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, MIN(TIMEOUT, timeout)) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply (first)");
         return false;
     }
 
@@ -194,6 +194,7 @@ static bool wait_14b_response(bool only_first, uint32_t timeout, uint8_t *datale
     }
 
     if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(DEBUG, "first response failed... %d", resp.status);
         return false;
     }
 
@@ -211,12 +212,13 @@ static bool wait_14b_response(bool only_first, uint32_t timeout, uint8_t *datale
     }
 
     // wait a second time.
-    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, MIN(TIMEOUT, timeout)) == false) {
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
     }
 
     if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(DEBUG, "second response failed... %d", resp.status);
         return false;
     }
 
@@ -1193,7 +1195,7 @@ static bool HF14B_other_reader(bool verbose) {
     SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
 
     // wait for the select message and wait for response
-    if (wait_14b_response(false, 400, NULL, NULL) ) {
+    if (wait_14b_response(false, NULL, NULL) ) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "unknown tag type answered to a " _YELLOW_("0x000b3f80") " command");
         switch_off_field_14b();
@@ -1206,7 +1208,7 @@ static bool HF14B_other_reader(bool verbose) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
 
-    if (wait_14b_response(false, 400, NULL, NULL)) {
+    if (wait_14b_response(false, NULL, NULL)) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "Unknown tag type answered to a " _YELLOW_("0x0A") " command");
         switch_off_field_14b();
@@ -1218,7 +1220,7 @@ static bool HF14B_other_reader(bool verbose) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
     free(packet);
-    if (wait_14b_response(false, 400, NULL, NULL)) {
+    if (wait_14b_response(false, NULL, NULL)) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "Unknown tag type answered to a " _YELLOW_("0x0C") " command");
         switch_off_field_14b();
