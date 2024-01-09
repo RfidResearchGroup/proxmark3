@@ -323,7 +323,7 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
     // select
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "failed to select %" PRId64 "]", resp.status);
+            PrintAndLogEx(FAILED, "failed to select %d]", resp.status);
             free(packet);
             return switch_off_field_cryptorf();
         }
