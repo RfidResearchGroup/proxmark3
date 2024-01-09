@@ -2241,26 +2241,23 @@ static int read_14b_srx_block(uint8_t blocknr, uint8_t *block) {
 void read_14b_st_block(uint8_t blocknr) {
     iso14443b_setup();
 
+    set_tracing(true);
+
     uint8_t *data = BigBuf_calloc(ISO14B_BLOCK_SIZE);
     iso14b_card_select_t *card = (iso14b_card_select_t *) BigBuf_calloc(sizeof(iso14b_card_select_t));
 
     int res = iso14443b_select_srx_card(card);
-    // 0: OK -1 wrong len, -2: attrib fail, -3:crc fail,
-    switch (res) {
-        case PM3_ECARDEXCHANGE:
-        case PM3_ELENGTH:
-        case PM3_EWRONGANSWER:
-        case PM3_ECRC: {
-            reply_ng(CMD_HF_SRI_READ, res, NULL, 0);
-            goto out;
-        }
+    if (res != PM3_SUCCESS) {
+        reply_ng(CMD_HF_SRI_READ, res, NULL, 0);
+        goto out;
     }
 
     res = read_14b_srx_block(blocknr, data);
     reply_ng(CMD_HF_SRI_READ, res, data, ISO14B_BLOCK_SIZE);
 
 out:
-    BigBuf_free();
+    set_tracing(false);
+    BigBuf_free_keep_EM();
     switch_off();
 }
 
@@ -2520,28 +2517,38 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
 
     if ((p->flags & ISO14B_APDU) == ISO14B_APDU) {
 
-        iso14b_raw_apdu_response_t packet = {
-            .response_byte = 0,
-            .datalen = 0,
-        };
-
         int responselen = 0;
-        status = iso14443b_apdu(p->raw, p->rawlen, (p->flags & ISO14B_SEND_CHAINING), buf, sizeof(buf), &packet.response_byte, &responselen);
-        packet.datalen = MIN(responselen, PM3_CMD_DATA_SIZE);
-        memcpy(packet.data, buf, packet.datalen);
-        reply_ng(CMD_HF_ISO14443B_COMMAND, status, (uint8_t*)&packet, sizeof(iso14b_raw_apdu_response_t) + packet.datalen);
+        uint8_t response_byte = 0;
+        status = iso14443b_apdu(p->raw, p->rawlen, (p->flags & ISO14B_SEND_CHAINING), buf, sizeof(buf), &response_byte, &responselen);
+
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+            reply_ng(CMD_HF_ISO14443B_COMMAND, PM3_ETEAROFF, NULL, 0);
+        } else {
+            responselen = MIN(responselen, PM3_CMD_DATA_SIZE);
+
+            iso14b_raw_apdu_response_t *payload = (iso14b_raw_apdu_response_t *)BigBuf_calloc( sizeof(iso14b_raw_apdu_response_t) + responselen);
+            payload->response_byte = response_byte;
+            payload->datalen = responselen;
+            memcpy(payload->data, buf, payload->datalen);
+
+            reply_ng(CMD_HF_ISO14443B_COMMAND, status, (uint8_t*)payload, sizeof(iso14b_raw_apdu_response_t) + responselen);
+            BigBuf_free_keep_EM();
+        }
     }
 
     if ((p->flags & ISO14B_RAW) == ISO14B_RAW) {
+
+        uint8_t *raw = BigBuf_calloc(p->rawlen + 2);
+        memcpy(raw, p->raw, p->rawlen);
         if (
             ((p->flags & ISO14B_APPEND_CRC) == ISO14B_APPEND_CRC) && (p->rawlen)) {
-            AddCrc14B(p->raw, p->rawlen);
+            AddCrc14B(raw, p->rawlen);
             p->rawlen += 2;
         }
 
         uint32_t start_time = 0;
         uint32_t eof_time = 0;
-        CodeAndTransmit14443bAsReader(p->raw, p->rawlen, &start_time, &eof_time, true);
+        CodeAndTransmit14443bAsReader(raw, p->rawlen, &start_time, &eof_time, true);
 
         FpgaDisableTracing();
         if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
@@ -2570,5 +2577,6 @@ out:
     if ((p->flags & ISO14B_DISCONNECT) == ISO14B_DISCONNECT) {
         switch_off(); // disconnect raw
         SpinDelay(20);
+        BigBuf_free_keep_EM();
     }
 }
