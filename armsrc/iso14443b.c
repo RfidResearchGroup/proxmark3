@@ -1686,9 +1686,7 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
         if (len >= 3 && (check_crc(CRC_14443_B, data_bytes, len) == false)) {
             return PM3_ECRC;
         }
-    }
 
-    if (len) {
         // cut frame byte
         len -= 1;
 
@@ -2148,7 +2146,10 @@ out:
 // Set up ISO 14443 Type B communication (similar to iso14443a_setup)
 // field is setup for "Sending as Reader"
 void iso14443b_setup(void) {
-    LEDsoff();
+
+    switch_off(); // disconnect raw
+    SpinDelay(20);
+
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // allocate command receive buffer

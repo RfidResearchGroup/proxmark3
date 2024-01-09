@@ -847,12 +847,13 @@ static void print_ct_general_info(void *vcard) {
 }
 
 static void print_hdr(void) {
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, " block#  | data         |lck| ascii");
-    PrintAndLogEx(INFO, "---------+--------------+---+----------");
+    PrintAndLogEx(INFO, "---------+--------------+---+------");
 }
 
 static void print_footer(void) {
-    PrintAndLogEx(INFO, "---------+--------------+---+----------");
+    PrintAndLogEx(INFO, "---------+--------------+---+------");
     PrintAndLogEx(NORMAL, "");
 }
 
@@ -882,10 +883,11 @@ static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid) {
     size_t blocks = (len / ST25TB_SR_BLOCK_SIZE) - 1 ;
     uint8_t *systemblock = data + blocks * ST25TB_SR_BLOCK_SIZE ;
     uint8_t chipid = get_st_chipid(uid);
-    PrintAndLogEx(SUCCESS, _GREEN_("%s") " tag", get_st_chip_model(chipid));
 
-    PrintAndLogEx(DEBUG, "systemblock : %s", sprint_hex(systemblock, ST25TB_SR_BLOCK_SIZE));
-    PrintAndLogEx(DEBUG, "   otp lock : %02x %02x", *systemblock, *(systemblock + 1));
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("%s tag memory") " ---------", get_st_chip_model(chipid));
+    PrintAndLogEx(DEBUG, "systemblock... " _YELLOW_("%s"), sprint_hex(systemblock, ST25TB_SR_BLOCK_SIZE));
+    PrintAndLogEx(DEBUG, "   otp lock... " _YELLOW_("%02x %02x"), *systemblock, *(systemblock + 1));
 
     print_hdr();
 
@@ -1476,7 +1478,7 @@ static int CmdHF14BDump(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "found a " _GREEN_("%s") " tag", get_st_chip_model(chipid));
 
         // detect blocksize from card :)
-        PrintAndLogEx(INFO, "reading tag memory from UID " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(card.uid, card.uidlen, 8), card.uidlen));
+        PrintAndLogEx(INFO, "reading tag memory");
 
         iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 2);
         if (packet == NULL) {
@@ -1529,7 +1531,6 @@ static int CmdHF14BDump(const char *Cmd) {
                     PrintAndLogEx(FAILED, "crc fail, retrying one more time");
                     continue;
                 }
-
 
                 // last read
                 if (blocknum == 0xFF) {
