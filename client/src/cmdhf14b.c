@@ -1369,7 +1369,8 @@ static int CmdHF14BWriteSri(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b sriwrite",
-                  "Write data to a SRI512 or SRIX4K block",
+                  "Write data to a SRI512 or SRIX4K block\n"
+                  "If writing to a block out-of-range,  use --force to override checks",
                   "hf 14b sriwrite --4k -b 100 -d 11223344\n"
                   "hf 14b sriwrite --4k --sb -d 11223344    --> special block write\n"
                   "hf 14b sriwrite --512 -b 15 -d 11223344\n"
@@ -1383,6 +1384,7 @@ static int CmdHF14BWriteSri(const char *Cmd) {
         arg_lit0(NULL, "512", "target SRI 512 tag"),
         arg_lit0(NULL, "4k", "target SRIX 4k tag"),
         arg_lit0(NULL, "sb", "special block write at end of memory (0xFF)"),
+        arg_lit0(NULL, "force", "overrides block range checks"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1398,6 +1400,7 @@ static int CmdHF14BWriteSri(const char *Cmd) {
     bool use_sri512 = arg_get_lit(ctx, 3);
     bool use_srix4k = arg_get_lit(ctx, 4);
     bool special = arg_get_lit(ctx, 5);
+    bool override = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     if (dlen != sizeof(data)) {
@@ -1411,13 +1414,21 @@ static int CmdHF14BWriteSri(const char *Cmd) {
     }
 
     if (use_srix4k && blockno > 0x7F) {
-        PrintAndLogEx(FAILED, "block number out of range, max 127 (0x7F)");
-        return PM3_EINVARG;
+        PrintAndLogEx(FAILED, "block number out of range, max 127 (0x7F), got " _RED_("%u"), blockno);
+        if (override) {
+            PrintAndLogEx(INFO, "overriding block check");
+        } else {
+            return PM3_EINVARG;
+        }
     }
 
     if (use_sri512 && blockno > 0x0F) {
-        PrintAndLogEx(FAILED, "block number out of range, max 15 (0x0F)");
-        return PM3_EINVARG;
+        PrintAndLogEx(FAILED, "block number out of range, max 15 (0x0F), got " _RED_("%u"), blockno);
+        if (override) {
+            PrintAndLogEx(INFO, "overriding block check");
+        } else {
+            return PM3_EINVARG;
+        }
     }
 
     // special block at end of memory
