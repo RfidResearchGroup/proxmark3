@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf 14b sriwrbl` - now supports --force to override block checks. Thanks @gentilkiwi for the idea! (@iceman1001)
+ - Changed `hf 14b sriwrbl` - now tries to verify the write (@iceman1001)
+ - Changed `hf 14b apdu` - now supports tearoff (@iceman1001)
+ - Fixed `hf 14b raw` - fixed a potential write out of bounds. (@iceman1001)
  - Fixed `hf 14b` commands got some serious overhaul and love. Better return values and packet handling (@iceman1001)
  - Changed `hf waveshare` - image is automatically scaled and cropped to match panel size (@socram8888)
  - Changed `hf waveshare` - image loading and processing is now done using [GDlib](https://github.com/libgd/libgd) (@socram8888)
