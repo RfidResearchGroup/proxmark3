@@ -8966,6 +8966,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         if (
             (blockdata[8] == 0x03 && blockdata[15] == 0x90) ||
             (blockdata[9] == 0x02 && blockdata[14] == 0x1D) ||
+            (blockdata[8] == 0x04 && blockdata[15] == 0x90) ||
             (memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0)
         ) {
             PrintAndLogEx(SUCCESS, "   Fudan tag detected");
