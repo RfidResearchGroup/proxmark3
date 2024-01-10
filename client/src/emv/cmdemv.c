@@ -2719,6 +2719,9 @@ static int CmdEMVReader(const char *Cmd) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
+    bool old_logging = GetAPDULogging();
+    SetAPDULogging(verbose);
+
     uint8_t AID[APDU_AID_LEN] = {0};
     size_t AIDlen = 0;
     uint8_t buf[APDU_RES_LEN] = {0};
@@ -2887,6 +2890,8 @@ static int CmdEMVReader(const char *Cmd) {
     } while (continuous);
 
     DropFieldEx(channel);
+ 
+    SetAPDULogging(old_logging);
     return PM3_SUCCESS;
 }
 
