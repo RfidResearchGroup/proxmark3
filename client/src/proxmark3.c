@@ -179,7 +179,7 @@ static int check_comm(void) {
     if (IsCommunicationThreadDead() && g_session.pm3_present) {
 
 #ifndef HAVE_READLINE
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
+        PrintAndLogEx(INFO, _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
 #endif
         prompt_dev = PROXPROMPT_DEV_OFFLINE;
         char prompt[PROXPROMPT_MAX_SIZE] = {0};
@@ -1135,19 +1135,22 @@ int main(int argc, char *argv[]) {
     }
 
     if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark\n");
+        PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark3\n");
         CloseProxmark(g_session.current_device);
     }
 
-    if ((port != NULL) && (!g_session.pm3_present))
+    if ((port != NULL) && (!g_session.pm3_present)) {
         exit(EXIT_FAILURE);
+    }
 
-    if (!g_session.pm3_present)
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
+    if (!g_session.pm3_present) {
+        PrintAndLogEx(INFO, _YELLOW_("OFFLINE") " mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
+    }
 
     // ascii art only in interactive client
-    if (!script_cmds_file && !script_cmd && g_session.stdinOnTTY && g_session.stdoutOnTTY && !flash_mode && !reboot_bootloader_mode)
+    if (!script_cmds_file && !script_cmd && g_session.stdinOnTTY && g_session.stdoutOnTTY && !flash_mode && !reboot_bootloader_mode) {
         showBanner();
+    }
 
     // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default

@@ -1364,7 +1364,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     json_error_t error;
     json_t *root = json_load_file(path, 0, &error);
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "loaded from JSON file `" _YELLOW_("%s") "`", path);
+        PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%s"), path);
     }
 
     free(path);
@@ -1904,8 +1904,9 @@ int loadFileJSONroot(const char *preferredName, void **proot, bool verbose) {
 
     json_error_t error;
     json_t *root = json_load_file(path, 0, &error);
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), path);
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%s"), path);
+    }
 
     free(path);
 

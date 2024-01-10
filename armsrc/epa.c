@@ -155,7 +155,7 @@ static int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response, uint16_t re
 #endif
         case 'b':
 #ifdef WITH_ISO14443b
-            return iso14443b_apdu(apdu, length, false, response, respmaxlen, NULL);
+            return iso14443b_apdu(apdu, length, false, response, respmaxlen, NULL, NULL);
 #else
             (void) apdu;
             (void) length;

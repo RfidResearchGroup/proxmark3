@@ -820,6 +820,9 @@ typedef struct {
 // No PACS data                         pm3:  when using HID SAM to retried PACS data
 #define PM3_ENOPACS           -26
 
+// Got wrong length error               pm3: when received wrong length of data
+#define PM3_ELENGTH           -27
+
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program

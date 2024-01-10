@@ -98,11 +98,12 @@ if (CMAKE_TOOLCHAIN_FILE)
     set(EMBED_READLINE ON)
     set(EMBED_BZIP2 ON)
     set(EMBED_LZ4 ON)
+    set(EMBED_GD ON)
 endif (CMAKE_TOOLCHAIN_FILE)
 
-if (EMBED_READLINE OR EMBED_BZIP2 OR EMBED_LZ4)
+if (EMBED_READLINE OR EMBED_BZIP2 OR EMBED_LZ4 OR EMBED_GD)
     include(ExternalProject)
-endif (EMBED_READLINE OR EMBED_BZIP2 OR EMBED_LZ4)
+endif (EMBED_READLINE OR EMBED_BZIP2 OR EMBED_LZ4 OR EMBED_GD)
 
 if (NOT SKIPREADLINE EQUAL 1)
     if (APPLE)
@@ -213,6 +214,27 @@ endif(EMBED_LZ4)
 if (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
     set(LZ4_FOUND ON)
 endif (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
+
+if (NOT SKIPGD EQUAL 1)
+    if (EMBED_GD)
+        cmake_policy(SET CMP0114 NEW)
+        set(GD_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/deps/gd)
+        # Specify SOURCE_DIR will cause some errors
+        ExternalProject_Add(gd
+            URL                   https://github.com/libgd/libgd/releases/download/gd-2.3.3/libgd-2.3.3.tar.gz
+            URL_HASH              SHA256=dd3f1f0bb016edcc0b2d082e8229c822ad1d02223511997c80461481759b1ed2
+            PREFIX                deps/gd
+            CMAKE_ARGS            -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON -DENABLE_CPP=0 -DCMAKE_INSTALL_PREFIX=.
+            PATCH_COMMAND         cat ${CMAKE_CURRENT_SOURCE_DIR}/deps/gd-static.patch | patch -p1
+        )
+        ExternalProject_Add_StepTargets(gd configure build install)
+        set(GD_INCLUDE_DIRS ${GD_BUILD_DIR}/src/gd-build/include)
+        set(GD_LIBRARIES ${GD_BUILD_DIR}/src/gd-build/lib/libgd.a)
+        set(GD_FOUND ON)
+    else (EMBED_GD)
+        pkg_search_module(GD QUIET gdlib)
+    endif (EMBED_GD)
+endif (NOT SKIPGD EQUAL 1)
 
 if (NOT SKIPWHEREAMISYSTEM EQUAL 1)
     find_path(WHEREAMI_INCLUDE_DIRS whereami.h)
@@ -333,7 +355,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfthinfilm.c
         ${PM3_ROOT}/client/src/cmdhftopaz.c
         ${PM3_ROOT}/client/src/cmdhfvas.c
-        ${PM3_ROOT}/client/src/cmdhfwaveshare.c
         ${PM3_ROOT}/client/src/cmdhfxerox.c
         ${PM3_ROOT}/client/src/cmdhw.c
         ${PM3_ROOT}/client/src/cmdlf.c
@@ -496,6 +517,17 @@ if (LZ4_FOUND)
     set(ADDITIONAL_LNK ${LZ4_LIBRARIES} ${ADDITIONAL_LNK})
 endif (LZ4_FOUND)
 
+if (NOT SKIPGD EQUAL 1 AND GD_FOUND)
+	set(ADDITIONAL_DIRS ${GD_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+	set(ADDITIONAL_LNK ${GD_LIBRARIES} ${ADDITIONAL_LNK})
+	set(ADDITIONAL_LNKDIRS ${GD_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})
+	set(TARGET_SOURCES
+			${PM3_ROOT}/client/src/imgutils.c
+			${PM3_ROOT}/client/src/cmdhfwaveshare.c
+			${TARGET_SOURCES})
+	add_definitions("-DHAVE_GD")
+endif (NOT SKIPGD EQUAL 1 AND GD_FOUND)
+
 if (WHEREAMI_FOUND)
     set(ADDITIONAL_DIRS ${WHEREAMI_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${WHEREAMI_LIBRARIES} ${ADDITIONAL_LNK})
@@ -547,6 +579,18 @@ if (LZ4_FOUND)
 else (LZ4_FOUND)
     message(SEND_ERROR "LZ4 library:       LZ4 not found")
 endif (LZ4_FOUND)
+
+if (SKIPGD EQUAL 1)
+    message(STATUS "GD library:        skipped")
+elseif (GD_FOUND)
+    if (EMBED_GD)
+        message(STATUS "GD library:        embedded")
+    else (EMBED_GD)
+        message(STATUS "GD library:        system library found")
+    endif (EMBED_GD)
+else (SKIPGD EQUAL 1)
+    message(STATUS "GD library:        GD not found, disabled")
+endif (SKIPGD EQUAL 1)
 
 if (SKIPJANSSONSYSTEM EQUAL 1)
     message(STATUS "Jansson library:   local library forced")
@@ -722,10 +766,10 @@ endif (NOT SKIPPTHREAD EQUAL 1)
 if (NOT SKIPPYTHON EQUAL 1)
     # OSX have a hard time compiling python3 dependency with older cmake.
     if (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
-        if (NOT CMAKE_VERSION VERSION_LESS 3.13)
-               target_link_directories(pm3rrg_rdv4 PRIVATE ${ADDITIONAL_LNKDIRS})
-        elseif (APPLE)
-               message( SEND_ERROR "Your CMAKE version is too old for Apple platform, please update to a version >=3.13" )
-        endif (NOT CMAKE_VERSION VERSION_LESS 3.13)
+        if (CMAKE_VERSION VERSION_LESS 3.13)
+            message( SEND_ERROR "Your CMAKE version is too old for Apple platform, please update to a version >=3.13" )
+        endif (CMAKE_VERSION VERSION_LESS 3.13)
     endif (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
 endif (NOT SKIPPYTHON EQUAL 1)
+
+target_link_directories(pm3rrg_rdv4 PRIVATE ${ADDITIONAL_LNKDIRS})

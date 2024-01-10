@@ -148,7 +148,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     // Proxmark response
     PacketResponseNG resp;
 
-    // transfer the APDUs to the Proxmark
+    // transfer the APDUs to the Proxmark3
     uint8_t data[PM3_CMD_DATA_SIZE];
     // fast push mode
     g_conn.block_after_ACK = true;

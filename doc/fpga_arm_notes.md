@@ -2,7 +2,7 @@
 <a id="top"></a>
 
 # Table of Contents
-- [Notes on ARM & FPGA communications](#notes-on-arm--fpga-communications)
+- [Notes on ARM \& FPGA communications](#notes-on-arm--fpga-communications)
 - [Table of Contents](#table-of-contents)
 - [INTERFACE FROM THE ARM TO THE FPGA](#interface-from-the-arm-to-the-fpga)
   - [FPGA](#fpga)
@@ -194,7 +194,7 @@ communicating this to the FPGA.
 The microcontroller (ARM) implements the transport layer. First it decodes the samples received from
 the FPGA. These samples are stored in a Direct Memory Access (DMA) buffer. The samples are binary
 sequences that represent whether the signal was high or low. The software on the ARM tries to decode
-these samples. When the Proxmark is in sniffing mode this is done for both the Manchester and Modified
+these samples. When the Proxmark3 is in sniffing mode this is done for both the Manchester and Modified
 Miller at the same time. Whenever one of the decoding procedures returns a valid message, this message
 is stored in another buffer (BigBuf) and both decoding procedures are set to an un-synced state. The
 BigBuf is limited to the available memory on the ARM. The current firmware has 2 KB of memory

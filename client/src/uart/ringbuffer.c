@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 RingBuffer *RingBuf_create(int capacity) {
-    RingBuffer *buffer = (RingBuffer *)malloc(sizeof(RingBuffer));
+    RingBuffer *buffer = (RingBuffer *)calloc(sizeof(RingBuffer), sizeof(uint8_t));
     if (!buffer) {
         return NULL;
     }
