@@ -65,6 +65,8 @@
 #include "sam_picopass.h"
 #include "sam_seos.h"
 #include "sam_mfc.h"
+#include "umm_malloc.h"
+#include "umm_malloc_cfg.h"
 
 #ifdef WITH_LCD
 #include "LCD_disabled.h"
@@ -115,10 +117,23 @@ void hf_field_off(void) {
     g_hf_field_active = false;
 }
 
+static bool allow_send_wtx = false;
 void send_wtx(uint16_t wtx) {
     if (allow_send_wtx) {
         reply_ng(CMD_WTX, PM3_SUCCESS, (uint8_t *)&wtx, sizeof(wtx));
     }
+}
+
+
+static void umm_test(void) {
+
+    umm_info(NULL, true);
+    uint8_t* dest = (uint8_t*)umm_malloc(2000);    
+    umm_free(dest);
+    umm_info(NULL, true);
+    dest = (uint8_t*)umm_malloc(12000);  
+    umm_info(NULL, true);
+    umm_free(dest);
 }
 
 //-----------------------------------------------------------------------------
