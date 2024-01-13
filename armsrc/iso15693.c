@@ -2447,6 +2447,8 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t flags, uin
     bool request_answer = false;
 
     switch (data[1]) {
+        case ISO15693_SET_PASSWORD:
+        case ISO15693_ENABLE_PRIVACY:
         case ISO15693_WRITEBLOCK:
         case ISO15693_LOCKBLOCK:
         case ISO15693_WRITE_MULTI_BLOCK:
