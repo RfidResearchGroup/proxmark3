@@ -32,6 +32,8 @@
 extern uint8_t g_debugMode;
 extern uint8_t g_printAndLog;
 extern bool g_pendingPrompt;
+extern bool g_field_on;
+
 extern int g_numCPUs;
 
 #define PRINTANDLOG_PRINT 1

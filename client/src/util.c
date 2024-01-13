@@ -40,6 +40,9 @@ uint8_t g_debugMode = 0;
 uint8_t g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
 // global client tell if a pending prompt is present
 bool g_pendingPrompt = false;
+// global client: set to false by DropField()
+bool g_field_on = false;
+
 // global CPU core count override
 int g_numCPUs = 0;
 
