@@ -1,4 +1,4 @@
-# Iceman Fork - Proxmark3 a RFID / NFC project.
+# Iceman Fork - Proxmark3
 
 The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the vast majority of RFID tags on a global scale. Originally built by Jonathan Westhues, the device is now the goto tool for RFID Analysis for the enthusiast. Iceman repository is considered to be the pinnacle of features and functionality, enabling a huge range of extremely useful and convenient commands and LUA scripts to automate chip identification, penetration testing, and programming
 
@@ -10,24 +10,25 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 
 | Actions OSX CI |  Actions Ubuntu CI | Actions Windows CI |
 |:--------------:|:------------------:|:------------------:|
-| ![MacOS Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/MacOS%20Build%20and%20Test/badge.svg?branch=master) | ![Ubuntu Build and Test](https://github.com/RfidResearchGroup/proxmark3/workflows/Ubuntu%20Build%20and%20Test/badge.svg?branch=master) | [![Windows Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml) |
-
+| [![MacOS Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/macos.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/macos.yml) | [![Ubuntu Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/ubuntu.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/ubuntu.yml) | [![Windows Build and Test](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml/badge.svg?branch=master)](https://github.com/RfidResearchGroup/proxmark3/actions/workflows/windows.yml) |
 
 # Table of Contents
- 1. [PROXMARK3 INSTALLATION AND OVERVIEW](#proxmark3-installation-and-overview)
- 2. [Notes / helpful documents](#notes--helpful-documents)
- 3. [How to build?](#how-to-build)
-     1. [Proxmark3 RDV4](#proxmark3-rdv4)
-     2. [Generic Proxmark3 platforms](#generic-proxmark3-platforms)
- 4. [What has changed?](#what-has-changed)
- 5. [Development](#development)
- 6. [Supported operative systems](#supported-operative-systems)
- 7. [Precompiled binaries](#precompiled-binaries)
- 8. [Proxmark3 GUI](#proxmark3-gui)
- 9. [Official channels](#official-channels)
-10. [Maintainers](#maintainers)
-11. [Citation](#citation)
-12. [Copyright and licensing terms](#copyright-and-licensing-terms)
+- [Iceman Fork - Proxmark3](#iceman-fork---proxmark3)
+- [Table of Contents](#table-of-contents)
+- [PROXMARK3 INSTALLATION AND OVERVIEW](#proxmark3-installation-and-overview)
+  - [Notes / helpful documents](#notes--helpful-documents)
+- [How to build?](#how-to-build)
+  - [Proxmark3 RDV4](#proxmark3-rdv4)
+  - [Generic Proxmark3 platforms](#generic-proxmark3-platforms)
+- [What has changed?](#what-has-changed)
+- [Development](#development)
+  - [Supported operative systems](#supported-operative-systems)
+  - [Precompiled binaries](#precompiled-binaries)
+  - [Proxmark3 GUI](#proxmark3-gui)
+  - [Official channels](#official-channels)
+  - [Maintainers](#maintainers)
+  - [Citation](#citation)
+  - [Copyright and licensing terms](#copyright-and-licensing-terms)
 
 # PROXMARK3 INSTALLATION AND OVERVIEW
 
@@ -35,11 +36,12 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 | :------------------: | :------------------: |
 | [Linux - Setup and Build](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md) | [Compilation Instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md)|
 | [Linux - Important notes on ModemManager](/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md) | [Validating Proxmark3 Client Functionality](/doc/md/Use_of_Proxmark/1_Validation.md)|
-| [Mac OS X - Homebrew & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/Mac-OS-X-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
-| [Mac OS X - MacPorts](/doc/md/Installation_Instructions/Mac-OS-X-MacPorts-Installation-Instructions.md) | [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
-| [Mac OS X - Setup and Build](/doc/md/Installation_Instructions/Mac-OS-X-Compile-From-Source-Instructions.md) ||
+| [macOS - Homebrew & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/macOS-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
+| [macOS - MacPorts](/doc/md/Installation_Instructions/macOS-MacPorts-Installation-Instructions.md) | [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
+| [macOS - Setup and Build](/doc/md/Installation_Instructions/macOS-Compile-From-Source-Instructions.md) ||
 | [Windows - Setup and Build](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md) ||
 | [Termux / Android - Setup and Build](/doc/termux_notes.md) ||
+| [iOS - Setup and Build](/doc/md/Installation_Instructions/iOS-Installation-Instructions.md)
 | [Blue Shark Manual](/doc/bt_manual_v10.md) | [Command Cheat Sheet](/doc/cheatsheet.md)|
 | [Advanced Compilation Parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md) | [More Cheat Sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 | [Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md) | [Complete Client Command Set](/doc/commands.md) |
@@ -58,7 +60,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 |[Developing standalone mode](/armsrc/Standalone/readme.md)|[Wiki about standalone mode](https://github.com/RfidResearchGroup/proxmark3/wiki/Standalone-mode)|[Notes on Magic UID cards](/doc/magic_cards_notes.md)|
 |[Notes on Color usage](/doc/colors_notes.md)|[Makefile vs CMake](/doc/md/Development/Makefile-vs-CMake.md)|[Notes on Cloner guns](/doc/cloner_notes.md)|
 |[Notes on cliparser usage](/doc/cliparser.md)|[Notes on clocks](/doc/clocks.md)|[Notes on MIFARE DESFire](/doc/desfire.md)|
-|[Notes on CIPURSE](/doc/cipurse.md)|[Notes on NDEF type4a](/doc/ndef_type4a.md)||
+|[Notes on CIPURSE](/doc/cipurse.md)|[Notes on NDEF type4a](/doc/ndef_type4a.md)|[Notes on downgrade attacks](/doc/hid_downgrade.md)|
 
 # How to build?
 
@@ -77,6 +79,7 @@ We define generic Proxmark3 platforms as following devices.
   - Ryscorp green PCB version
   - Radiowar black PCB version
   - numerous Chinese adapted versions of the RDV3 easy (kkmoon, PiSwords etc)
+  - Proxmark3 SE  (Second edition)  (BLE enabled)
 
 **Not supported**
  - ⚠  Proxmark Evolution (EVO) 
@@ -95,8 +98,6 @@ We define generic Proxmark3 platforms as following devices.
 -  ⚠ Proxmark3 X 
    - **Note**: unknown device hw
 -  ⚠ Proxmark3 Ultimate
-   - **Note**: unknown device hw
--  ⚠ Proxmark3 SE
    - **Note**: unknown device hw
 
 When it comes to these new unknown models we are depending on the community to report in if this repo works and what they did to make it work.
@@ -184,7 +185,8 @@ This repo compiles nicely on
    - Windows/MinGW environment
    - Ubuntu, ParrotOS, Gentoo, Pentoo, Kali, NetHunter, Arch Linux, Fedora, Debian, Raspbian
    - Android / Termux
-   - Mac OS X / Homebrew (or MacPorts, experimental) / Apple Silicon M1
+   - macOS / Homebrew (or MacPorts, experimental) / Apple Silicon M1
+   - iOS (Jailbroken, rootful)
    - Docker container
       - [ Iceman repo based ubuntu 18.04 container ](https://hub.docker.com/r/secopsconsult/proxmark3)
       - [ Iceman fork based container v1.7 ](https://hub.docker.com/r/iceman1001/proxmark3/)

@@ -53,7 +53,7 @@ SECTIONS
     .bss : {
         __bss_start__ = .;
         *(.bss)
-        *(.bss.*) 
+        *(.bss.*)
         . = ALIGN(4);
         __bss_end__ = .;
     } >ram AT>ram :bss

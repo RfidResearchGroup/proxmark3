@@ -52,6 +52,7 @@ char g_CursorScaleFactorUnit[11] = {0};
 double g_PlotGridX = 0, g_PlotGridY = 0, g_PlotGridXdefault = 64, g_PlotGridYdefault = 64;
 uint32_t g_CursorCPos = 0, g_CursorDPos = 0, g_GraphStop = 0;
 uint32_t g_GraphStart = 0; // Starting point/offset for the left side of the graph
+uint32_t g_GraphStart_old = 0;
 double g_GraphPixelsPerPoint = 1.f; // How many visual pixels are between each sample point (x axis)
 static bool flushAfterWrite = false;
 double g_GridOffset = 0;
@@ -316,8 +317,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     char buffer[MAX_PRINT_BUFFER] = {0};
     char buffer2[MAX_PRINT_BUFFER] = {0};
     char buffer3[MAX_PRINT_BUFFER] = {0};
-    // lock this section to avoid interlacing prints from different threads
-    pthread_mutex_lock(&g_print_lock);
+
     bool linefeed = true;
 
     if (logging && g_session.incognito) {
@@ -352,6 +352,8 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         }
     }
 
+    // lock this section to avoid interlacing prints from different threads
+    pthread_mutex_lock(&g_print_lock);
 
 // If there is an incoming message from the hardware (eg: lf hid read) in
 // the background (while the prompt is displayed and accepting user input),

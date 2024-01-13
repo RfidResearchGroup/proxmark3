@@ -32,12 +32,16 @@
 
 #define STRBOOL(p) ((p) ? "1" : "0")
 
-#define NDEF_WIFIAPPL_WSC "application/vnd.wfa.wsc"
-#define NDEF_WIFIAPPL_P2P "application/vnd.wfa.p2p"
-#define NDEF_BLUEAPPL     "application/vnd.bluetooth"
-#define NDEF_JSONAPPL     "application/json"
-#define NDEF_VCARDTEXT    "text/vcard"
-#define NDEF_XVCARDTEXT   "text/x-vcard"
+#define NDEF_WIFIAPPL_WSC    "application/vnd.wfa.wsc"
+#define NDEF_WIFIAPPL_P2P    "application/vnd.wfa.p2p"
+#define NDEF_JSONAPPL        "application/json"
+#define NDEF_VCARDTEXT       "text/vcard"
+#define NDEF_XVCARDTEXT      "text/x-vcard"
+
+#define NDEF_BLUEAPPL_EP        "application/vnd.bluetooth.ep.oob"
+#define NDEF_BLUEAPPL_LE        "application/vnd.bluetooth.le.oob"
+#define NDEF_BLUEAPPL_SECURE_LE "application/vnd.bluetooth.secure.le.oob"
+
 
 static const char *TypeNameFormat_s[] = {
     "Empty Record",
@@ -117,7 +121,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose);
 static uint16_t ndefTLVGetLength(const uint8_t *data, size_t *indx) {
     uint16_t len = 0;
     if (data[0] == 0xFF) {
-        len = (data[1] << 8) + data[2];
+        len = MemBeToUint2byte(data + 1);
         *indx += 3;
     } else {
         len = data[0];
@@ -270,7 +274,7 @@ static int ndef_print_signature(uint8_t *data, uint8_t data_len, uint8_t *signat
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, " IC signature public key name: %s", ndef_public_keys[i].desc);
+    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), ndef_public_keys[i].desc);
     PrintAndLogEx(INFO, "IC signature public key value: %s", ndef_public_keys[i].value);
     PrintAndLogEx(INFO, "    Elliptic curve parameters: %s", get_curve_name(ndef_public_keys[i].grp_id));
     PrintAndLogEx(INFO, "               NDEF Signature: %s", sprint_hex_inrow(signature, 32));
@@ -313,7 +317,7 @@ static int ndefDecodeSig1(uint8_t *sig, size_t siglen) {
         if (sigType == stECDSA_P256) {
             slen = 32;
         }
-        
+
         PrintAndLogEx(SUCCESS, "\tSignature [%u]...", intsiglen);
         print_hex_noascii_break(&sig[indx], intsiglen, 32);
 
@@ -508,7 +512,7 @@ static int ndefDecodePayloadHandoverRequest(uint8_t *payload, size_t len) {
     PrintAndLogEx(INFO, _CYAN_("Handover Request"));
     uint8_t *p = payload;
     uint8_t major = (*(p) >> 4) & 0x0F;
-    uint8_t minor = *(p) & 0x0F;    
+    uint8_t minor = *(p) & 0x0F;
     p++;
 
     PrintAndLogEx(INFO, "Version....... " _YELLOW_("%u.%u"), major, minor);
@@ -630,6 +634,7 @@ static const char *ndef_wifi_auth_lookup(uint8_t *d) {
     return "";
 }
 
+
 static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
     if (ndef->PayloadLen == 0) {
         PrintAndLogEx(INFO, "no payload");
@@ -645,7 +650,7 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
 
         if (ndef->Payload[pos] != 0x10) {
             n -= 1;
-            pos -= 1;
+            pos += 1;
             continue;
         }
 
@@ -709,7 +714,7 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
             pos += len;
         }
 
-        // NETWORK_IDX
+        // NETWORK_IDX - always set to 1, deprecated
         if (memcmp(&ndef->Payload[pos], "\x10\x26", 2) == 0) {
             // 10 26 00 01 01
             uint8_t len = 3;
@@ -771,19 +776,34 @@ static int ndefDecodeMime_wifi_wsc(NDEFHeader_t *ndef) {
             pos += 2;
             pos += len;
         }
+
+        // rf-bands
+        if (memcmp(&ndef->Payload[pos], "\x10\x3C", 2) == 0) {
+            uint8_t len = 3;
+
+            if (ndef->Payload[pos + 2 + 2] == 0x01) {
+                PrintAndLogEx(INFO, "RF Bands........ %s ( " _YELLOW_("2.4 GHZ")" )", sprint_hex(&ndef->Payload[pos + 2], len));
+            } else if (ndef->Payload[pos + 2 + 2] == 0x02) {
+                PrintAndLogEx(INFO, "RF Bands........ %s ( " _YELLOW_("5.0 GHZ")" )", sprint_hex(&ndef->Payload[pos + 2], len));
+            }
+
+            n -= 2;
+            n -= len;
+            pos += 2;
+            pos += len;
+        }
     }
 
     /*
         ap-channel   0,  6
     +        credential
         device-name
-        mac-address
+
         manufacturer
         model-name
         model-number
     +        oob-password
         primary-device-type
-        rf-bands
         secondary-device-type-list
         serial-number
         ssid
@@ -854,6 +874,26 @@ static int ndefDecodeMime_json(NDEFHeader_t *ndef) {
     return PM3_SUCCESS;
 }
 
+static int ndefDecodeMime_bt_secure_le_oob(NDEFHeader_t *ndef) {
+    if (ndef->PayloadLen == 0) {
+        PrintAndLogEx(INFO, "no payload");
+        return PM3_SUCCESS;
+    }
+    PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
+    PrintAndLogEx(INFO, "To be implemented. Feel free to contribute!");
+    return PM3_SUCCESS;
+}
+
+static int ndefDecodeMime_bt_le_oob(NDEFHeader_t *ndef) {
+    if (ndef->PayloadLen == 0) {
+        PrintAndLogEx(INFO, "no payload");
+        return PM3_SUCCESS;
+    }
+    PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
+    PrintAndLogEx(INFO, "To be implemented. Feel free to contribute!");
+    return PM3_SUCCESS;
+}
+
 static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
     if (ndef->PayloadLen == 0) {
         PrintAndLogEx(INFO, "no payload");
@@ -866,7 +906,7 @@ static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
     uint8_t rev[6] = {0};
     reverse_array_copy(ndef->Payload + 2, 6, rev);
     PrintAndLogEx(INFO, "BT MAC.......... " _YELLOW_("%s"), sprint_hex(rev, sizeof(rev)));
-    
+
     // Let's check payload[8]. Tells us a bit about the UUID's. If 0x07 then it tells us a service UUID is 128bit
     switch (ndef->Payload[8]) {
         case 0x02:
@@ -903,31 +943,31 @@ static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
     return PM3_SUCCESS;
 }
 
-// https://raw.githubusercontent.com/haldean/ndef/master/docs/NFCForum-TS-RTD_1.0.pdf   
+// https://raw.githubusercontent.com/haldean/ndef/master/docs/NFCForum-TS-RTD_1.0.pdf
 static int ndefDecodeExternal_record(NDEFHeader_t *ndef) {
-    
+
     if (ndef->TypeLen == 0) {
         PrintAndLogEx(INFO, "no type");
         return PM3_SUCCESS;
     }
-        
+
     if (ndef->PayloadLen == 0) {
         PrintAndLogEx(INFO, "no payload");
         return PM3_SUCCESS;
     }
 
     PrintAndLogEx(INFO
-                    , "    URN... " _GREEN_("urn:nfc:ext:%.*s")
-                    , (int)ndef->TypeLen
-                    , ndef->Type
-                    );
+                  , "    URN... " _GREEN_("urn:nfc:ext:%.*s")
+                  , (int)ndef->TypeLen
+                  , ndef->Type
+                 );
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Payload [%zu]...", ndef->PayloadLen);
     print_hex_noascii_break(ndef->Payload, ndef->PayloadLen, 32);
-    
+
     // do a character check?
-    if (!strncmp((char *)ndef->Type, "pilet.ee:ekaart:2", ndef->TypeLen)) {
+    if (!strncmp((char *)ndef->Type, "pilet.ee:ekaart:", ndef->TypeLen - 1)) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, _GREEN_("Ekaart detected") " - Trying ASN1 decode...");
         asn1_print(ndef->Payload, ndef->PayloadLen, " ");
@@ -1023,9 +1063,18 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
             if (str_startswith(begin, NDEF_VCARDTEXT) || str_startswith(begin, NDEF_XVCARDTEXT)) {
                 ndefDecodeMime_vcard(ndef);
             }
-            if (str_startswith(begin, NDEF_BLUEAPPL)) {
+
+
+            if (str_startswith(begin, NDEF_BLUEAPPL_EP)) {
                 ndefDecodeMime_bt(ndef);
             }
+            if (str_startswith(begin, NDEF_BLUEAPPL_SECURE_LE)) {
+                ndefDecodeMime_bt_secure_le_oob(ndef);
+            }
+            if (str_startswith(begin, NDEF_BLUEAPPL_LE)) {
+                ndefDecodeMime_bt_le_oob(ndef);
+            }
+
             if (str_startswith(begin, NDEF_JSONAPPL)) {
                 ndefDecodeMime_json(ndef);
             }
@@ -1075,10 +1124,11 @@ static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen, b
         return res;
 
     ndefPrintHeader(&NDEFHeader, verbose);
-    PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, _CYAN_("Payload info"));
 
     if (verbose) {
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, _CYAN_("Payload info"));
+
         if (NDEFHeader.TypeLen) {
             PrintAndLogEx(INFO, "Type data");
             print_buffer(NDEFHeader.Type, NDEFHeader.TypeLen, 1);
@@ -1148,6 +1198,7 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("NDEF parsing") " ----------------");
     while (indx < ndefLen) {
+
         switch (ndef[indx]) {
             case 0x00: {
                 indx++;
@@ -1212,8 +1263,9 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                     PrintAndLogEx(SUCCESS, "Found NDEF message ( " _YELLOW_("%u") " bytes )", len);
 
                     int res = NDEFRecordsDecodeAndPrint(&ndef[indx], len, verbose);
-                    if (res != PM3_SUCCESS)
+                    if (res != PM3_SUCCESS) {
                         return res;
+                    }
                 }
 
                 indx += len;
@@ -1229,16 +1281,48 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 break;
             }
             case 0xFE: {
-                PrintAndLogEx(SUCCESS, "NDEF Terminator detected");
+                if (verbose) {
+                    PrintAndLogEx(SUCCESS, "NDEF Terminator detected");
+                }
                 return PM3_SUCCESS;
             }
             default: {
-                if (verbose)
+                if (verbose) {
                     PrintAndLogEx(ERR, "unknown tag 0x%02x", ndef[indx]);
-
+                }
                 return PM3_ESOFT;
             }
         }
     }
+    return PM3_SUCCESS;
+}
+
+
+int NDEFGetTotalLength(uint8_t *ndef, size_t ndeflen, size_t *outlen) {
+
+    size_t idx = 0;
+    while (idx < ndeflen) {
+
+        if (ndef[idx] == 0x00 ||
+                ndef[idx] == 0x01 ||
+                ndef[idx] == 0x02 ||
+                ndef[idx] == 0x03 ||
+                ndef[idx] == 0xFD) {
+            idx++;
+            idx += ndefTLVGetLength(&ndef[idx], &idx);
+            continue;
+        }
+
+        if (ndef[idx] == 0xFE) {
+            idx++;
+            break;
+        }
+
+        // invalid NDEF
+        *outlen = 0;
+        return PM3_ESOFT;
+    }
+
+    *outlen = idx;
     return PM3_SUCCESS;
 }

@@ -114,7 +114,7 @@ uint64_t x_bytes_to_num(uint8_t *src, size_t len) {
     return num;
 }
 
-uint8_t reversebytes(uint8_t b) {
+uint8_t reversebyte(uint8_t b) {
     b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
     b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
     b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
@@ -124,14 +124,14 @@ uint8_t reversebytes(uint8_t b) {
 void reverse_arraybytes(uint8_t *arr, size_t len) {
     size_t i;
     for (i = 0; i < len ; i++) {
-        arr[i] = reversebytes(arr[i]);
+        arr[i] = reversebyte(arr[i]);
     }
 }
 
 void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len) {
     size_t i;
     for (i = 0; i < len ; i++) {
-        dest[i] = reversebytes(arr[i]);
+        dest[i] = reversebyte(arr[i]);
     }
 }
 

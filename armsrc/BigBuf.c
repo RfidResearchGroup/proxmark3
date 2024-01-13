@@ -69,8 +69,6 @@ static dmabuf8_t dma_8 = {
     .buf = NULL
 };
 
-
-
 // trace related variables
 static uint32_t trace_len = 0;
 static bool tracing = true;
@@ -99,6 +97,11 @@ uint8_t *BigBuf_get_EM_addr(void) {
 
     return emulator_memory;
 }
+
+uint32_t BigBuf_get_hi(void) {
+    return s_bigbuf_hi;
+}
+
 /*
 uint32_t BigBuf_get_EM_size(void) {
     return CARD_MEMORY_SIZE;
@@ -129,7 +132,7 @@ void BigBuf_Clear_keep_EM(void) {
 // allocate a chunk of memory from BigBuf. We allocate high memory first. The unallocated memory
 // at the beginning of BigBuf is always for traces/samples
 uint8_t *BigBuf_malloc(uint16_t chunksize) {
-    if (s_bigbuf_hi < chunksize)
+    if (s_bigbuf_hi < (chunksize + 3))
         return NULL; // no memory left
 
     chunksize = (chunksize + 3) & 0xfffc; // round to next multiple of 4
@@ -142,7 +145,7 @@ uint8_t *BigBuf_malloc(uint16_t chunksize) {
 uint8_t *BigBuf_calloc(uint16_t chunksize) {
     uint8_t *mem = BigBuf_malloc(chunksize);
     if (mem != NULL) {
-        memset(mem, 0x00, chunksize);
+        memset(mem, 0x00, ((chunksize + 3) & 0xfffc)); // round to next multiple of 4
     }
     return mem;
 }
@@ -233,7 +236,7 @@ uint32_t BigBuf_get_traceLen(void) {
   by 'hf list -t raw', alternatively 'hf list -t <proto>' for protocol-specific
   annotation of commands/responses.
 **/
-bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool reader2tag) {
+bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, const uint8_t *parity, bool reader2tag) {
     if (tracing == false) {
         return false;
     }
@@ -290,7 +293,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
 }
 
 // specific LogTrace function for ISO15693: the duration needs to be scaled because otherwise it won't fit into a uint16_t
-bool LogTrace_ISO15693(const uint8_t *bytes, uint16_t len, uint32_t ts_start, uint32_t ts_end, uint8_t *parity, bool reader2tag) {
+bool LogTrace_ISO15693(const uint8_t *bytes, uint16_t len, uint32_t ts_start, uint32_t ts_end, const uint8_t *parity, bool reader2tag) {
     uint32_t duration = ts_end - ts_start;
     duration /= 32;
     ts_end = ts_start + duration;
@@ -306,24 +309,31 @@ bool RAMFUNC LogTraceBits(const uint8_t *btBytes, uint16_t bitLen, uint32_t time
 }
 
 // Emulator memory
-uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length) {
+uint8_t emlSet(const uint8_t *data, uint32_t offset, uint32_t length) {
     uint8_t *mem = BigBuf_get_EM_addr();
-    if (offset + length < CARD_MEMORY_SIZE) {
+    if (offset + length <= CARD_MEMORY_SIZE) {
         memcpy(mem + offset, data, length);
         return 0;
     }
-    Dbprintf("Error, trying to set memory outside of bounds! %d  > %d", (offset + length), CARD_MEMORY_SIZE);
+    Dbprintf("Error, trying to set memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
     return 1;
 }
-
-
+uint8_t emlGet(uint8_t *out, uint32_t offset, uint32_t length) {
+    uint8_t *mem = BigBuf_get_EM_addr();
+    if (offset + length <= CARD_MEMORY_SIZE) {
+        memcpy(out, mem + offset, length);
+        return 0;
+    }
+    Dbprintf("Error, trying to read memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
+    return 1;
+}
 
 // get the address of the ToSend buffer. Allocate part of Bigbuf for it, if not yet done
 tosend_t *get_tosend(void) {
 
-    if (toSend.buf == NULL)
+    if (toSend.buf == NULL) {
         toSend.buf = BigBuf_malloc(TOSEND_BUFFER_SIZE);
-
+    }
     return &toSend;
 }
 

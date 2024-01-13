@@ -22,6 +22,7 @@
 #include "cmdsmartcard.h"
 #include "ui.h"
 #include "util.h"
+#include "commonutil.h"
 
 #define CARD_INS_DECRYPT    0x01
 #define CARD_INS_ENCRYPT    0x02
@@ -35,24 +36,75 @@
 // look for CardHelper
 bool IsCardHelperPresent(bool verbose) {
 
-    if (IfPm3Smartcard()) {
-        int resp_len = 0;
-        uint8_t version[] = {0x96, 0x69, 0x00, 0x00, 0x00};
-        uint8_t resp[30] = {0};
-        ExchangeAPDUSC(verbose, version, sizeof(version), true, true, resp, sizeof(resp), &resp_len);
+    if (IfPm3Smartcard() == false) {
+        return false;
+    }
 
-        if (resp_len < 8) {
-            return false;
-        }
+    int resp_len = 0;
+    uint8_t version[] = {0x96, 0x69, 0x00, 0x00, 0x00};
+    uint8_t resp[30] = {0};
+    ExchangeAPDUSC(verbose, version, sizeof(version), true, true, resp, sizeof(resp), &resp_len);
 
-        if (strstr("CryptoHelper", (char *)resp) == 0) {
-            if (verbose) {
-                PrintAndLogEx(INFO, "Found smart card helper");
-            }
-            return true;
+    if (resp_len < 8) {
+        return false;
+    }
+
+    if (strstr("CryptoHelper", (char *)resp) == 0) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "Found smart card helper");
         }
+        return true;
     }
     return false;
+}
+
+bool IsHIDSamPresent(bool verbose) {
+
+    if (IfPm3Smartcard() == false) {
+        PrintAndLogEx(WARNING, "Proxmark3 does not have SMARTCARD support enabled, exiting");
+        return false;
+    }
+
+    // detect SAM
+    smart_card_atr_t card;
+    smart_select(verbose, &card);
+    if (card.atr_len == 0) {
+        PrintAndLogEx(ERR, "Can't get ATR from a smart card");
+        return false;
+    }
+
+    // SAM identification
+    smart_card_atr_t supported[] = {
+        {15, {0x3B, 0x95, 0x96, 0x80, 0xB1, 0xFE, 0x55, 0x1F, 0xC7, 0x47, 0x72, 0x61, 0x63, 0x65, 0x13}},
+        {11, {0x3b, 0x90, 0x96, 0x91, 0x81, 0xb1, 0xfe, 0x55, 0x1f, 0xc7, 0xd4}},
+    };
+    bool found = false;
+    for (int i = 0; i < ARRAYLEN(supported); i++) {
+        if ((card.atr_len == supported[i].atr_len) &&
+                (memcmp(card.atr, supported[i].atr, supported[i].atr_len) == 0)) {
+            found = true;
+            break;
+        }
+    }
+    if (found == false) {
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "Not detecting a SAM");
+        }
+        return false;
+    }
+
+    // Suspect some SAMs has version name in the historical bytes
+    uint8_t T0 = card.atr[1];
+    uint8_t K = T0 & 0x0F;  // Number of historical bytes
+    if (K > 0 && (K < (card.atr_len - 3)) && verbose) {
+        // Last byte of ATR is CRC and before that we have K bytes of
+        // "historical bytes".
+        // By construction K can't go above 15
+        char sam_name[16] = {0};
+        memcpy(sam_name, &card.atr[card.atr_len - 1 - K], K);
+        PrintAndLogEx(SUCCESS, "SAM (%s) detected", sam_name);
+    }
+    return true;
 }
 
 static bool executeCrypto(uint8_t ins, uint8_t *src, uint8_t *dest) {

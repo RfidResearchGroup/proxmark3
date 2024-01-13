@@ -127,24 +127,84 @@ static void showBanner(void) {
 
 static const char *prompt_dev = "";
 static const char *prompt_ctx = "";
+static const char *prompt_net = "";
 
-static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev) {
-    snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptctx);
+
+static void prompt_set(void) {
+    if (g_session.pm3_present) {
+
+        switch (g_conn.send_via_ip) {
+            case PM3_TCPv4:
+                prompt_net = PROXPROMPT_NET_TCPV4;
+                break;
+            case PM3_TCPv6:
+                prompt_net = PROXPROMPT_NET_TCPV6;
+                break;
+            case PM3_UDPv4:
+                prompt_net = PROXPROMPT_NET_UDPV4;
+                break;
+            case PM3_UDPv6:
+                prompt_net = PROXPROMPT_NET_UDPV6;
+                break;
+            case PM3_NONE:
+                prompt_net = PROXPROMPT_NET_NONE;
+                break;
+            default:
+                break;
+        }
+
+        if (g_conn.send_via_fpc_usart)
+            prompt_dev = PROXPROMPT_DEV_FPC;
+        else
+            prompt_dev = PROXPROMPT_DEV_USB;
+
+    } else {
+        prompt_dev = PROXPROMPT_DEV_OFFLINE;
+    }
 }
 
+static void prompt_compose(char *buf, size_t buflen, const char *promptctx, const char *promptdev, const char *promptnet, bool no_newline) {
+    if (no_newline) {
+        snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+    } else {
+        snprintf(buf, buflen - 1, "\r                                         \r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+    }
+}
+
+static bool c_update_reconnect_prompt = false;
+
+// This function is hooked via RL_EVENT_HOOK.
 static int check_comm(void) {
     // If communications thread goes down. Device disconnected then this should hook up PM3 again.
     if (IsCommunicationThreadDead() && g_session.pm3_present) {
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
+
+#ifndef HAVE_READLINE
+        PrintAndLogEx(INFO, _YELLOW_("OFFLINE") " mode. Use "_YELLOW_("\"hw connect\"") " to reconnect\n");
+#endif
         prompt_dev = PROXPROMPT_DEV_OFFLINE;
         char prompt[PROXPROMPT_MAX_SIZE] = {0};
-        prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
+        prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, false);
         char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
         memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
         pm3line_update_prompt(prompt_filtered);
         CloseProxmark(g_session.current_device);
+        StartReconnectProxmark();
+        c_update_reconnect_prompt = true;
     }
-    msleep(10);
+    // its alive again
+    if (c_update_reconnect_prompt && IsReconnectedOk() && g_session.pm3_present) {
+
+        prompt_set();
+
+        char prompt[PROXPROMPT_MAX_SIZE] = {0};
+        prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, false);
+        char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
+        memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
+        pm3line_update_prompt(prompt_filtered);
+        c_update_reconnect_prompt = false;
+    }
+
+    msleep(50);
     return 0;
 }
 
@@ -222,7 +282,7 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     uint16_t script_cmd_len = 0;
     if (execCommand) {
         script_cmd_len = strlen(script_cmd);
-        strcreplace(script_cmd, script_cmd_len, ';', '\0');
+        str_creplace(script_cmd, script_cmd_len, ';', '\0');
     }
     bool stdinOnPipe = !isatty(STDIN_FILENO);
     char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
@@ -250,16 +310,13 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     if (g_session.incognito) {
         PrintAndLogEx(INFO, "No history will be recorded");
     } else {
-        bool loaded_history = false;
         if (searchHomeFilePath(&g_session.history_path, NULL, PROXHISTORY, true) != PM3_SUCCESS) {
             g_session.history_path = NULL;
-        } else {
-            loaded_history = (pm3line_load_history(g_session.history_path) == PM3_SUCCESS);
-        }
-        if (loaded_history) {
-            pm3line_install_signals();
-        } else {
             PrintAndLogEx(ERR, "No history will be recorded");
+        } else {
+            if (pm3line_load_history(g_session.history_path) != PM3_SUCCESS) {
+                PrintAndLogEx(INFO, "No previous history could be loaded");
+            }
         }
     }
 
@@ -267,14 +324,8 @@ main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
     while (1) {
 
         bool printprompt = false;
-        if (g_session.pm3_present) {
-            if (g_conn.send_via_fpc_usart == false)
-                prompt_dev = PROXPROMPT_DEV_USB;
-            else
-                prompt_dev = PROXPROMPT_DEV_FPC;
-        } else {
-            prompt_dev = PROXPROMPT_DEV_OFFLINE;
-        }
+
+        prompt_set();
 
 check_script:
         // If there is a script file
@@ -285,19 +336,22 @@ check_script:
 
             // read script file
             if (fgets(script_cmd_buf, sizeof(script_cmd_buf), current_cmdscriptfile()) == NULL) {
-                if (!pop_cmdscriptfile())
+                if (pop_cmdscriptfile() == false) {
                     break;
-
+                }
                 goto check_script;
-            } else {
-                prompt_ctx = PROXPROMPT_CTX_SCRIPTFILE;
-                // remove linebreaks
-                strcleanrn(script_cmd_buf, sizeof(script_cmd_buf));
-
-                cmd = str_dup(script_cmd_buf);
-                if (cmd != NULL)
-                    printprompt = true;
             }
+
+            prompt_ctx = PROXPROMPT_CTX_SCRIPTFILE;
+
+            // remove linebreaks
+            str_cleanrn(script_cmd_buf, sizeof(script_cmd_buf));
+
+            cmd = str_dup(script_cmd_buf);
+            if (cmd != NULL) {
+                printprompt = true;
+            }
+
         } else {
             // If there is a script command
             if (execCommand) {
@@ -333,15 +387,15 @@ check_script:
                     fromInteractive = false;
                     script_cmd = script_cmd_buf;
                     script_cmd_len = strlen(script_cmd);
-                    strcreplace(script_cmd, script_cmd_len, ';', '\0');
+                    str_creplace(script_cmd, script_cmd_len, ';', '\0');
                     // remove linebreaks
-                    strcleanrn(script_cmd, script_cmd_len);
+                    str_cleanrn(script_cmd, script_cmd_len);
                     goto check_script;
                 } else {
                     pm3line_check(check_comm);
                     prompt_ctx = PROXPROMPT_CTX_INTERACTIVE;
                     char prompt[PROXPROMPT_MAX_SIZE] = {0};
-                    prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
+                    prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, true);
                     char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                     memcpy_filter_ansi(prompt_filtered, prompt, sizeof(prompt_filtered), !g_session.supports_colors);
                     g_pendingPrompt = true;
@@ -355,9 +409,9 @@ check_script:
                         stayInCommandLoop = true;
                         fromInteractive = true;
                         script_cmd_len = strlen(script_cmd);
-                        strcreplace(script_cmd, script_cmd_len, ';', '\0');
+                        str_creplace(script_cmd, script_cmd_len, ';', '\0');
                         // remove linebreaks
-                        strcleanrn(script_cmd, script_cmd_len);
+                        str_cleanrn(script_cmd, script_cmd_len);
                         goto check_script;
                     }
                     fflush(NULL);
@@ -391,7 +445,7 @@ check_script:
                     g_printAndLog &= PRINTANDLOG_LOG;
                 }
                 char prompt[PROXPROMPT_MAX_SIZE] = {0};
-                prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev);
+                prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, true);
                 // always filter RL magic separators if not using readline
                 char prompt_filtered[PROXPROMPT_MAX_SIZE] = {0};
                 memcpy_filter_rlmarkers(prompt_filtered, prompt, sizeof(prompt_filtered));
@@ -432,8 +486,9 @@ check_script:
         msleep(100); // Make sure command is sent before killing client
     }
 
-    while (current_cmdscriptfile())
+    while (current_cmdscriptfile()) {
         pop_cmdscriptfile();
+    }
 
     pm3line_flush_history();
 
@@ -574,9 +629,10 @@ static void show_help(bool showFullHelp, char *exec_name) {
         PrintAndLogEx(NORMAL, "      -s/--script-file <cmd_script_file>  script file with one Proxmark3 command per line");
         PrintAndLogEx(NORMAL, "      -i/--interactive                    enter interactive mode after executing the script or the command");
         PrintAndLogEx(NORMAL, "      --incognito                         do not use history, prefs file nor log files");
+        PrintAndLogEx(NORMAL, "      --ncpu <num_cores>                  override number of CPU cores");
         PrintAndLogEx(NORMAL, "\nOptions in flasher mode:");
         PrintAndLogEx(NORMAL, "      --flash                             flash Proxmark3, requires at least one --image");
-        PrintAndLogEx(NORMAL, "      --reboot-bootloader                 reboot Proxmark3 into bootloader mode");
+        PrintAndLogEx(NORMAL, "      --reboot-to-bootloader              reboot Proxmark3 into bootloader mode");
         PrintAndLogEx(NORMAL, "      --unlock-bootloader                 Enable flashing of bootloader area *DANGEROUS* (need --flash)");
         PrintAndLogEx(NORMAL, "      --force                             Enable flashing even if firmware seems to not match client version");
         PrintAndLogEx(NORMAL, "      --image <imagefile>                 image to flash. Can be specified several times.");
@@ -604,7 +660,7 @@ static void show_help(bool showFullHelp, char *exec_name) {
     }
 }
 
-static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[FLASH_MAX_FILES], bool can_write_bl, bool force) {
+static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *filenames[FLASH_MAX_FILES], bool can_write_bl, bool force) {
 
     int ret = PM3_EUNDEF;
     flash_file_t files[FLASH_MAX_FILES];
@@ -646,6 +702,7 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, char *filenames[
 
     if (OpenProxmark(&g_session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
         PrintAndLogEx(NORMAL, _GREEN_(" found"));
+        msleep(200);
     } else {
         PrintAndLogEx(ERR, "Could not find Proxmark3 on " _RED_("%s") ".\n", serial_port_name);
         ret = PM3_ETIMEOUT;
@@ -710,7 +767,7 @@ static int reboot_bootloader_pm3(char *serial_port_name) {
     }
 
     PrintAndLogEx(NORMAL, _GREEN_(" found"));
-    return flash_reboot_bootloader(serial_port_name);
+    return flash_reboot_bootloader(serial_port_name, true);
 }
 
 #endif //LIBPM3
@@ -754,7 +811,7 @@ int main(int argc, char *argv[]) {
     bool flash_force = false;
     bool debug_mode_forced = false;
     int flash_num_files = 0;
-    char *flash_filenames[FLASH_MAX_FILES];
+    const char *flash_filenames[FLASH_MAX_FILES];
 
     // color management:
     // 1. default = no color
@@ -995,6 +1052,23 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        if (strcmp(argv[i], "--ncpu") == 0) {
+            if (i + 1 == argc) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") " missing CPU number specification after --ncpu\n");
+                show_help(false, exec_name);
+                return 1;
+            }
+            long int ncpus = strtol(argv[i + 1], NULL, 10);
+            const int detected_cpus = detect_num_CPUs();
+            if (ncpus < 0 || ncpus >= detected_cpus) {
+                PrintAndLogEx(ERR, _RED_("ERROR:") " invalid number of CPU cores: --ncpu " _YELLOW_("%s") " (available: %d)\n", argv[i + 1], detected_cpus);
+                return 1;
+            }
+            g_numCPUs = ncpus;
+            i++;
+            continue;
+        }
+
         // We got an unknown parameter
         PrintAndLogEx(ERR, _RED_("ERROR:") " invalid parameter: " _YELLOW_("%s") "\n", argv[i]);
         show_help(false, exec_name);
@@ -1061,19 +1135,22 @@ int main(int argc, char *argv[]) {
     }
 
     if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark\n");
+        PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark3\n");
         CloseProxmark(g_session.current_device);
     }
 
-    if ((port != NULL) && (!g_session.pm3_present))
+    if ((port != NULL) && (!g_session.pm3_present)) {
         exit(EXIT_FAILURE);
+    }
 
-    if (!g_session.pm3_present)
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
+    if (!g_session.pm3_present) {
+        PrintAndLogEx(INFO, _YELLOW_("OFFLINE") " mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
+    }
 
     // ascii art only in interactive client
-    if (!script_cmds_file && !script_cmd && g_session.stdinOnTTY && g_session.stdoutOnTTY && !flash_mode && !reboot_bootloader_mode)
+    if (!script_cmds_file && !script_cmd && g_session.stdinOnTTY && g_session.stdoutOnTTY && !flash_mode && !reboot_bootloader_mode) {
         showBanner();
+    }
 
     // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default

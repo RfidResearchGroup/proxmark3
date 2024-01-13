@@ -18,6 +18,34 @@
 #include "usart.h"
 #include "proxmark3_arm.h"
 
+#define Dbprintf_usb(...) {\
+        bool tmpfpc = g_reply_via_fpc;\
+        bool tmpusb = g_reply_via_usb;\
+        g_reply_via_fpc = false;\
+        g_reply_via_usb = true;\
+        Dbprintf(__VA_ARGS__);\
+        g_reply_via_fpc = tmpfpc;\
+        g_reply_via_usb = tmpusb;}
+
+#define Dbprintf_fpc(...) {\
+        bool tmpfpc = g_reply_via_fpc;\
+        bool tmpusb = g_reply_via_usb;\
+        g_reply_via_fpc = true;\
+        g_reply_via_usb = false;\
+        Dbprintf(__VA_ARGS__);\
+        g_reply_via_fpc = tmpfpc;\
+        g_reply_via_usb = tmpusb;}
+
+#define Dbprintf_all(...) {\
+        bool tmpfpc = g_reply_via_fpc;\
+        bool tmpusb = g_reply_via_usb;\
+        g_reply_via_fpc = true;\
+        g_reply_via_usb = true;\
+        Dbprintf(__VA_ARGS__);\
+        g_reply_via_fpc = tmpfpc;\
+        g_reply_via_usb = tmpusb;}
+
+
 static volatile AT91PS_USART pUS1 = AT91C_BASE_US1;
 static volatile AT91PS_PIO pPIO   = AT91C_BASE_PIOA;
 static volatile AT91PS_PDC pPDC   = AT91C_BASE_PDC_US1;
@@ -46,8 +74,8 @@ void usart_close(void) {
 }
 */
 
-static uint8_t us_inbuf1[USART_BUFFLEN];
-static uint8_t us_inbuf2[USART_BUFFLEN];
+static uint8_t us_in_a[USART_BUFFLEN];
+static uint8_t us_in_b[USART_BUFFLEN];
 static uint8_t *usart_cur_inbuf = NULL;
 static uint16_t usart_cur_inbuf_off = 0;
 static uint8_t us_rxfifo[USART_FIFOLEN];
@@ -56,7 +84,9 @@ static size_t us_rxfifo_high = 0;
 
 
 static void usart_fill_rxfifo(void) {
-    uint16_t rxfifo_free ;
+
+    uint16_t rxfifo_free = 0;
+
     if (pUS1->US_RNCR == 0) { // One buffer got filled, backup buffer being used
 
         if (us_rxfifo_low > us_rxfifo_high)
@@ -79,19 +109,22 @@ static void usart_fill_rxfifo(void) {
             pUS1->US_RNCR = USART_BUFFLEN;
 
             // Swap current buff
-            if (usart_cur_inbuf == us_inbuf1)
-                usart_cur_inbuf = us_inbuf2;
+            if (usart_cur_inbuf == us_in_a)
+                usart_cur_inbuf = us_in_b;
             else
-                usart_cur_inbuf = us_inbuf1;
+                usart_cur_inbuf = us_in_a;
 
             usart_cur_inbuf_off = 0;
         } else {
             // Take only what we have room for
             available = rxfifo_free;
             for (uint16_t i = 0; i < available; i++) {
+
                 us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
-                if (us_rxfifo_high == sizeof(us_rxfifo))
+
+                if (us_rxfifo_high == sizeof(us_rxfifo)) {
                     us_rxfifo_high = 0;
+                }
             }
             usart_cur_inbuf_off += available;
             return;
@@ -101,18 +134,20 @@ static void usart_fill_rxfifo(void) {
     if (pUS1->US_RCR < USART_BUFFLEN - usart_cur_inbuf_off) { // Current buffer partially filled
 
         if (us_rxfifo_low > us_rxfifo_high)
-            rxfifo_free = us_rxfifo_low - us_rxfifo_high;
+            rxfifo_free = (us_rxfifo_low - us_rxfifo_high);
         else
-            rxfifo_free = sizeof(us_rxfifo) - us_rxfifo_high + us_rxfifo_low;
+            rxfifo_free = (sizeof(us_rxfifo) - us_rxfifo_high + us_rxfifo_low);
 
-        uint16_t available = USART_BUFFLEN - pUS1->US_RCR - usart_cur_inbuf_off;
+        uint16_t available = (USART_BUFFLEN - pUS1->US_RCR - usart_cur_inbuf_off);
 
         if (available > rxfifo_free)
             available = rxfifo_free;
+
         for (uint16_t i = 0; i < available; i++) {
             us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
-            if (us_rxfifo_high == sizeof(us_rxfifo))
+            if (us_rxfifo_high == sizeof(us_rxfifo)) {
                 us_rxfifo_high = 0;
+            }
         }
         usart_cur_inbuf_off += available;
     }
@@ -121,9 +156,9 @@ static void usart_fill_rxfifo(void) {
 uint16_t usart_rxdata_available(void) {
     usart_fill_rxfifo();
     if (us_rxfifo_low <= us_rxfifo_high)
-        return us_rxfifo_high - us_rxfifo_low;
+        return (us_rxfifo_high - us_rxfifo_low);
     else
-        return sizeof(us_rxfifo) - us_rxfifo_low + us_rxfifo_high;
+        return (sizeof(us_rxfifo) - us_rxfifo_low + us_rxfifo_high);
 }
 
 uint32_t usart_read_ng(uint8_t *data, size_t len) {
@@ -143,9 +178,10 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
     uint32_t maxtry = 10 * (3000000 / USART_BAUD_RATE) + tryconstant;
 
     while (len) {
-        uint32_t available = usart_rxdata_available();
 
+        uint32_t available = usart_rxdata_available();
         uint32_t packetSize = MIN(available, len);
+
         if (available > 0) {
 //            Dbprintf_usb("Dbg USART ask %d bytes, available %d bytes, packetsize %d bytes", len, available, packetSize);
 //            highest_observed_try = MAX(highest_observed_try, try);
@@ -153,8 +189,9 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
         }
         len -= packetSize;
         while (packetSize--) {
-            if (us_rxfifo_low == sizeof(us_rxfifo))
+            if (us_rxfifo_low == sizeof(us_rxfifo)) {
                 us_rxfifo_low = 0;
+            }
             data[bytes_rcv++] = us_rxfifo[us_rxfifo_low++];
         }
         if (try++ == maxtry) {
@@ -183,10 +220,13 @@ int usart_writebuffer_sync(uint8_t *data, size_t len) {
 
 void usart_init(uint32_t baudrate, uint8_t parity) {
 
-    if (baudrate != 0)
+    if (baudrate != 0) {
         g_usart_baudrate = baudrate;
-    if ((parity == 'N') || (parity == 'O') || (parity == 'E'))
+    }
+
+    if ((parity == 'N') || (parity == 'O') || (parity == 'E')) {
         g_usart_parity = parity;
+    }
 
     // For a nice detailed sample, interrupt driven but still relevant.
     // See https://www.sparkfun.com/datasheets/DevTools/SAM7/at91sam7%20serial%20communications.pdf
@@ -262,11 +302,11 @@ void usart_init(uint32_t baudrate, uint8_t parity) {
     pUS1->US_TCR = 0;
     pUS1->US_TNPR = (uint32_t)0;
     pUS1->US_TNCR = 0;
-    pUS1->US_RPR = (uint32_t)us_inbuf1;
+    pUS1->US_RPR = (uint32_t)us_in_a;
     pUS1->US_RCR = USART_BUFFLEN;
-    usart_cur_inbuf = us_inbuf1;
+    usart_cur_inbuf = us_in_a;
     usart_cur_inbuf_off = 0;
-    pUS1->US_RNPR = (uint32_t)us_inbuf2;
+    pUS1->US_RNPR = (uint32_t)us_in_b;
     pUS1->US_RNCR = USART_BUFFLEN;
 
     // Initialize our fifo

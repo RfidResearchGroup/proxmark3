@@ -1677,7 +1677,7 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    int bs_len = binstring2binarray(ng.data, (char *)bin, bin_len);
+    int bs_len = binstr_2_binarray(ng.data, (char *)bin, bin_len);
     if (bs_len == 0) {
         return PM3_EINVARG;
     }
@@ -2217,7 +2217,7 @@ static int CmdT55xxDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf t55xx dump",
                   "This command dumps a T55xx card Page 0 block 0-7.\n"
-                  "It will create three files (bin/eml/json)",
+                  "It will create two files (bin/json)",
                   "lf t55xx dump\n"
                   "lf t55xx dump -p aabbccdd --override\n"
                   "lf t55xx dump -f my_lf_dump"
@@ -2298,8 +2298,14 @@ static int CmdT55xxDump(const char *Cmd) {
         }
     }
 
+    if (nosave) {
+        PrintAndLogEx(INFO, "Called with no save option");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
+    }
+
     // all ok, save dump to file
-    if (success && nosave == false) {
+    if (success) {
 
         // set default filename, if not set by user
         if (strlen(filename) == 0) {
@@ -2315,17 +2321,13 @@ static int CmdT55xxDump(const char *Cmd) {
         }
 
         // Swap endian so the files match the txt display
-        uint32_t data[T55x7_BLOCK_COUNT];
+        uint32_t data[T55x7_BLOCK_COUNT] = {0};
 
         for (int i = 0; i < T55x7_BLOCK_COUNT; i++) {
             data[i] = BSWAP_32(cardmem[i].blockdata);
         }
 
-        // saveFileEML will add .eml extension to filename
-        // saveFile (binary) passes in the .bin extension.
-        saveFileJSON(filename, jsfT55x7, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t), NULL);
-        saveFileEML(filename, (uint8_t *)data, T55x7_BLOCK_COUNT * sizeof(uint32_t), sizeof(uint32_t));
-        saveFile(filename, ".bin", data, sizeof(data));
+        pm3_save_dump(filename, (uint8_t *)data, (T55x7_BLOCK_COUNT * sizeof(uint32_t)), jsfT55x7);
     }
 
     return PM3_SUCCESS;
@@ -2340,7 +2342,7 @@ static int CmdT55xxRestore(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump file"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_str0("p", "pwd", "<hex>", "password if target card has password set (4 hex bytes)"),
         arg_param_end
     };
@@ -3498,11 +3500,12 @@ out:
 // some return all page 1 (64 bits) and others return just that block (32 bits)
 // unfortunately the 64 bits makes this more likely to get a false positive...
 bool tryDetectP1(bool getData) {
-    uint8_t  preamble[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
-    size_t   startIdx   = 0;
-    uint8_t  fc1        = 0, fc2 = 0, ans = 0;
-    int      clk        = 0, firstClockEdge = 0;
-    bool     st         = true;
+    uint8_t preamble_atmel[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
+    uint8_t preamble_silicon[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1};
+    size_t startIdx = 0;
+    uint8_t fc1 = 0, fc2 = 0, ans = 0;
+    int clk = 0, firstClockEdge = 0;
+    bool st = true;
 
     if (getData) {
         if (!AcquireData(T55x7_PAGE1, T55x7_TRACE_BLOCK1, false, 0, 0))
@@ -3512,15 +3515,29 @@ bool tryDetectP1(bool getData) {
     // try fsk clock detect. if successful it cannot be any other type of modulation...  (in theory...)
     ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
     if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
-        if ((FSKrawDemod(0, 0, 0, 0, false) == PM3_SUCCESS) &&
-                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
-                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            return true;
+
+        if (FSKrawDemod(0, 0, 0, 0, false) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
         }
-        if ((FSKrawDemod(0, 1, 0, 0, false) == PM3_SUCCESS) &&
-                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
-                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            return true;
+
+        if (FSKrawDemod(0, 1, 0, 0, false) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
         }
         return false;
     }
@@ -3528,44 +3545,82 @@ bool tryDetectP1(bool getData) {
     // try ask clock detect.  it could be another type even if successful.
     clk = GetAskClock("", false);
     if (clk > 0) {
-        if ((ASKDemod_ext(0, 0, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS) &&
-                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
-                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            return true;
+        if (ASKDemod_ext(0, 0, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS) {
+
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
         }
 
         st = true;
-        if ((ASKDemod_ext(0, 1, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS) &&
-                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
-                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            return true;
+        if (ASKDemod_ext(0, 1, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
         }
 
-        if ((ASKbiphaseDemod(0, 0, 0, 2, false) == PM3_SUCCESS) &&
-                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
-                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            return true;
+        if (ASKbiphaseDemod(0, 0, 0, 2, false) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
         }
 
-        if ((ASKbiphaseDemod(0, 0, 1, 2, false) == PM3_SUCCESS) &&
-                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
-                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            return true;
+        if (ASKbiphaseDemod(0, 0, 1, 2, false) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
         }
     }
 
     // try NRZ clock detect.  it could be another type even if successful.
     clk = GetNrzClock("", false); //has the most false positives :(
     if (clk > 0) {
-        if ((NRZrawDemod(0, 0, 1, false) == PM3_SUCCESS) &&
-                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
-                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            return true;
+        if (NRZrawDemod(0, 0, 1, false) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
         }
-        if ((NRZrawDemod(0, 1, 1, false) == PM3_SUCCESS)  &&
-                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
-                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-            return true;
+
+        if (NRZrawDemod(0, 1, 1, false) == PM3_SUCCESS) {
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
         }
     }
 
@@ -3577,33 +3632,54 @@ bool tryDetectP1(bool getData) {
         // save_restoreGB(GRAPH_SAVE);
         // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
         //CmdLtrim("-i 160");
-        if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS) &&
-                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
-                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+        if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
             //save_restoreGB(GRAPH_RESTORE);
-            return true;
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
         }
-        if ((PSKDemod(0, 1, 6, false) == PM3_SUCCESS) &&
-                preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
-                (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+
+        if (PSKDemod(0, 1, 6, false) == PM3_SUCCESS) {
             //save_restoreGB(GRAPH_RESTORE);
-            return true;
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
+
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+                return true;
+            }
         }
+
         // PSK2 - needs a call to psk1TOpsk2.
         if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
             psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
-            if (preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &g_DemodBufferLen, &startIdx, false) &&
+
+            //save_restoreGB(GRAPH_RESTORE);
+            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
                     (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-                //save_restoreGB(GRAPH_RESTORE);
+                return true;
+            }
+
+            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
                 return true;
             }
         } // inverse waves does not affect PSK2 demod
         //undo trim samples
         //save_restoreGB(GRAPH_RESTORE);
         // no other modulation clocks = 2 or 4 so quit searching
-        if (fc1 != 8) return false;
+        if (fc1 != 8) {
+            return false;
+        }
     }
-
     return false;
 }
 //  does this need to be a callable command?
@@ -4028,7 +4104,7 @@ static int CmdT55xxSniff(const char *Cmd) {
     if (use_graphbuf == false) {
 
         // make loop to call sniff with skip samples..
-        // then build it up by adding 
+        // then build it up by adding
         CmdLFSniff("");
 
     }
@@ -4139,8 +4215,9 @@ static int CmdT55xxSniff(const char *Cmd) {
                         blockAddr = 0;
                         for (uint8_t i = 3; i < 6; i++) {
                             blockAddr <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockAddr |= 1;
+                            }
                         }
                         blockData = 0;
                         have_data = true;
@@ -4155,21 +4232,26 @@ static int CmdT55xxSniff(const char *Cmd) {
                         usedPassword = 0;
                         for (uint8_t i = 2; i <= 33; i++) {
                             usedPassword <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 usedPassword |= 1;
+                            }
                         }
+
                         // Lock bit 34
                         blockData = 0;
                         for (uint8_t i = 35; i <= 66; i++) {
                             blockData <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockData |= 1;
+                            }
                         }
+
                         blockAddr = 0;
                         for (uint8_t i = 67; i <= 69; i++) {
                             blockAddr <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockAddr |= 1;
+                            }
                         }
                         have_data = true;
                         modeText = "Default pwd write";
@@ -4190,20 +4272,24 @@ static int CmdT55xxSniff(const char *Cmd) {
                         blockData = 0;
                         for (uint8_t i = 3; i <= 34; i++) {
                             blockData <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockData |= 1;
+                            }
                         }
+
                         for (uint8_t i = 2; i <= 33; i++) {
                             usedPassword <<= 1;
                             if (data[i] == '1') {
                                 usedPassword |= 1;
                             }
                         }
+
                         blockAddr = 0;
                         for (uint8_t i = 35; i <= 37; i++) {
                             blockAddr <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockAddr |= 1;
+                            }
                         }
                         have_data = true;
                         modeText = "Default write/pwd read";
@@ -4227,21 +4313,27 @@ static int CmdT55xxSniff(const char *Cmd) {
                         usedPassword = 0;
                         for (uint8_t i = 5; i <= 36; i++) {
                             usedPassword <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 usedPassword |= 1;
+                            }
                         }
+
                         blockData = 0;
                         for (uint8_t i = 38; i <= 69; i++) {
                             blockData <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockData |= 1;
+                            }
                         }
+
                         blockAddr = 0;
                         for (uint8_t i = 70; i <= 72; i++) {
                             blockAddr <<= 1;
-                            if (data[i] == '1')
+                            if (data[i] == '1') {
                                 blockAddr |= 1;
+                            }
                         }
+
                         have_data = true;
                         modeText = "Leading 0 pwd write";
                         snprintf(pwdText, sizeof(pwdText), " %08X", usedPassword);
@@ -4253,10 +4345,29 @@ static int CmdT55xxSniff(const char *Cmd) {
 
         // Print results
         if (have_data) {
-            if (blockAddr == 7)
-                PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_YELLOW_("%8s")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
-            else
-                PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_GREEN_("%8s")" |  "_GREEN_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s", modeText, pwdText, dataText, blockAddr, page, minWidth, maxWidth, data);
+            if (blockAddr == 7) {
+                PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_YELLOW_("%8s")" |  "_YELLOW_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s"
+                              , modeText
+                              , pwdText
+                              , dataText
+                              , blockAddr
+                              , page
+                              , minWidth
+                              , maxWidth
+                              , data
+                             );
+            } else {
+                PrintAndLogEx(SUCCESS, "%-22s  | "_GREEN_("%10s")" | "_GREEN_("%8s")" |  "_GREEN_("%d")"  |   "_GREEN_("%d")"  | %3d | %3d | %s"
+                              , modeText
+                              , pwdText
+                              , dataText
+                              , blockAddr
+                              , page
+                              , minWidth
+                              , maxWidth
+                              , data
+                             );
+            }
         }
     }
 

@@ -110,7 +110,7 @@ static int fudan_get_type(iso14a_card_select_t *card, bool verbose) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(DEBUG, "iso14443a card select failed");
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         return PM3_ESOFT;
     }
 
@@ -235,14 +235,14 @@ static int CmdHFFudanReader(const char *Cmd) {
 static int CmdHFFudanDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fudan dump",
-                  "Dump FUDAN tag to binary file\n"
+                  "Dump FUDAN tag to file (bin/json)\n"
                   "If no <name> given, UID will be used as filename",
                   "hf fudan dump -f mydump        --> dump using filename\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dump"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -304,7 +304,7 @@ static int CmdHFFudanDump(const char *Cmd) {
 
             clearCommandBuffer();
             PacketResponseNG resp;
-            SendCommandOLD(CMD_HF_ISO14443A_READER, flags, sizeof(cmd) | ((uint32_t)(numbits << 16)), argtimeout, cmd, sizeof(cmd));
+            SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(cmd) | ((uint32_t)(numbits << 16)), argtimeout, cmd, sizeof(cmd));
 
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
                 if (resp.status == PM3_SUCCESS) {
@@ -339,14 +339,7 @@ static int CmdHFFudanDump(const char *Cmd) {
         free(fptr);
     }
 
-    saveFile(dataFilename, ".bin", (uint8_t *)carddata, sizeof(carddata));
-    saveFileEML(dataFilename, (uint8_t *)carddata, sizeof(carddata), MAX_FUDAN_BLOCK_SIZE);
-
-    iso14a_mf_extdump_t xdump;
-    xdump.card_info = card;
-    xdump.dump = (uint8_t *)carddata;
-    xdump.dumplen = sizeof(carddata);
-    saveFileJSON(dataFilename, jsfFudan, (uint8_t *)&xdump, sizeof(xdump), NULL);
+    pm3_save_dump(dataFilename, (uint8_t *)carddata, sizeof(carddata), jsfFudan);
     return PM3_SUCCESS;
 }
 
@@ -355,7 +348,7 @@ static int CmdHFFudanWrBl(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf fudan wrbl",
                   "Write fudan block with 4 hex bytes of data\n",
-                  "hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 01020304"
+                  "hf fudan wrbl --blk 1 -k FFFFFFFFFFFF -d 01020304"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -460,7 +453,7 @@ static int CmdHFFudanView(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of dump"),
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

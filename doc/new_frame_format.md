@@ -66,7 +66,7 @@ For commands being sent to the Proxmark3:
 * `data`:   variable length payload
 * `crc`:    either an actual CRC (crc14a) or a Magic placeholder (`a3`)
 
-For responses from the Proxmark:
+For responses from the Proxmark3:
 
     uint32_t magic;
     uint16_t length : 15;
@@ -332,9 +332,11 @@ else we get errors about partial packet reception
     FTDI 460800 hw status                   ⇒ we need 30ms
     BT   115200 hf mf fchk --1k -f file.dic ⇒ we need 140ms
 
-    # define UART_FPC_CLIENT_RX_TIMEOUT_MS  170
-    # define UART_USB_CLIENT_RX_TIMEOUT_MS  20
-    # define UART_TCP_CLIENT_RX_TIMEOUT_MS  300
+    # define UART_FPC_CLIENT_RX_TIMEOUT_MS        200
+    # define UART_USB_CLIENT_RX_TIMEOUT_MS        20
+    # define UART_NET_CLIENT_RX_TIMEOUT_MS        500
+    # define UART_TCP_LOCAL_CLIENT_RX_TIMEOUT_MS  40
+    # define UART_UDP_LOCAL_CLIENT_RX_TIMEOUT_MS  20
 
 This goes to `uart_posix.c` `timeval` struct
 and `uart_win32.c` `serial_port_windows` struct
@@ -342,7 +344,7 @@ and `uart_win32.c` `serial_port_windows` struct
 It starts at UART_FPC_CLIENT_RX_TIMEOUT_MS and once we detect we're working over USB
 it's reduced to UART_USB_CLIENT_RX_TIMEOUT_MS.
 
-
+The timeout is configurable by the `hw timeout` command (since v4.17140).
 
 Add automatically some communication delay in the `WaitForResponseTimeout` & `dl_it` timeouts.  
 Only when using FPC, timeout = 2* empirically measured delay (FTDI cable).  

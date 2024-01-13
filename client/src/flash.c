@@ -240,7 +240,8 @@ static int print_and_validate_version(struct version_information_t *vi) {
         return PM3_EFILE;
     }
 
-    char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
+    // same limit as for ARM image
+    char temp[PM3_CMD_DATA_SIZE - 12] = {0};
     FormatVersionInformation(temp, sizeof(temp), "", vi);
     PrintAndLogEx(SUCCESS, _CYAN_("ELF file version") _YELLOW_(" %s"), temp);
 
@@ -285,7 +286,7 @@ int flash_load(flash_file_t *ctx, bool force) {
         goto fail;
     }
 
-    ctx->elf = calloc(fsize, sizeof(uint8_t));
+    ctx->elf = calloc(fsize + 1, sizeof(uint8_t));
     if (!ctx->elf) {
         PrintAndLogEx(ERR, "Error, cannot allocate memory");
         res = PM3_EMALLOC;
@@ -349,7 +350,8 @@ int flash_load(flash_file_t *ctx, bool force) {
         }
 
         if (strcmp(((char *)shstr) + shdrs[i].sh_name, ".bootphase1") == 0) {
-            uint32_t offset = *(uint32_t *)(ctx->elf + le32(shdrs[i].sh_offset) + le32(shdrs[i].sh_size) - 4);
+            uint32_t offset;
+            memcpy(&offset, ctx->elf + le32(shdrs[i].sh_offset) + le32(shdrs[i].sh_size) - 4, sizeof(uint32_t));
             if (offset >= le32(shdrs[i].sh_addr)) {
                 offset -= le32(shdrs[i].sh_addr);
                 if (offset < le32(shdrs[i].sh_size)) {
@@ -425,7 +427,7 @@ static int get_proxmark_state(uint32_t *state) {
 }
 
 // Enter the bootloader to be able to start flashing
-static int enter_bootloader(char *serial_port_name) {
+static int enter_bootloader(char *serial_port_name, bool wait_appear) {
     uint32_t state;
     int ret;
 
@@ -450,12 +452,14 @@ static int enter_bootloader(char *serial_port_name) {
             SendCommandBL(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
             PrintAndLogEx(SUCCESS, "Press and hold down button NOW if your bootloader requires it.");
         }
-        msleep(100);
+        msleep(200);
         CloseProxmark(g_session.current_device);
         // Let time to OS to make the port disappear
         msleep(1000);
 
-        if (OpenProxmark(&g_session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
+        if (wait_appear == false) {
+            return PM3_SUCCESS;
+        } else if (OpenProxmark(&g_session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
             PrintAndLogEx(NORMAL, _GREEN_(" found"));
             return PM3_SUCCESS;
         } else {
@@ -510,7 +514,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
     uint32_t chipinfo = 0;
     int ret;
 
-    ret = enter_bootloader(serial_port_name);
+    ret = enter_bootloader(serial_port_name, true);
     if (ret != PM3_SUCCESS)
         return ret;
 
@@ -599,8 +603,8 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
 }
 
 // Reboot into bootloader
-int flash_reboot_bootloader(char *serial_port_name) {
-    return enter_bootloader(serial_port_name);
+int flash_reboot_bootloader(char *serial_port_name, bool wait_appear) {
+    return enter_bootloader(serial_port_name, wait_appear);
 }
 
 static int write_block(uint32_t address, uint8_t *data, uint32_t length) {

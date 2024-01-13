@@ -115,7 +115,7 @@ static void zx8211_setup_read(void) {
     WDT_HIT();
 }
 
-static void zx_send(uint8_t *cmd, uint8_t clen) {
+static void zx_send(const uint8_t *cmd, uint8_t clen) {
 
     if (clen == 0)
         return;
@@ -153,7 +153,7 @@ static void zx_get(bool ledcontrol) {
             volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             (void)sample;
 
-            // Test point 8 (TP8) can be used to trigger oscilloscope
+            // (RDV4) Test point 8 (TP8) can be used to trigger oscilloscope
             if (ledcontrol) LED_D_OFF();
 
         }

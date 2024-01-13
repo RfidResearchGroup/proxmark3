@@ -373,6 +373,7 @@ static const struct emv_tag emv_tags[] = {
     { 0xa5,     "File Control Information (FCI) Proprietary Template",         EMV_TAG_GENERIC,  NULL },
     { 0xbf0c,   "File Control Information (FCI) Issuer Discretionary Data",    EMV_TAG_GENERIC,  NULL },
     { 0xdf20,   "Issuer Proprietary Bitmap (IPB)",                             EMV_TAG_GENERIC,  NULL },
+    { 0xdf3e,   "?",                                                           EMV_TAG_BITMASK,  NULL },
     { 0xdf4b,   "POS Cardholder Interaction Information",                      EMV_TAG_GENERIC,  NULL },
     { 0xdf60,   "VISA Log Entry",                                              EMV_TAG_GENERIC,  NULL },
     { 0xdf61,   "DS Digest H",                                                 EMV_TAG_GENERIC,  NULL },
@@ -821,9 +822,11 @@ bool emv_tag_dump(const struct tlv *tlv, int level) {
             emv_tag_dump_string(tlv, tag, level);
             break;
         case EMV_TAG_NUMERIC:
+            PrintAndLogEx(NORMAL, "");
             emv_tag_dump_numeric(tlv, tag, level);
             break;
         case EMV_TAG_YYMMDD:
+            PrintAndLogEx(NORMAL, "");
             emv_tag_dump_yymmdd(tlv, tag, level);
             break;
         case EMV_TAG_CVR:

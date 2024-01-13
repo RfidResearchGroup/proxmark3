@@ -22,6 +22,6 @@
 #include "common.h"
 
 int HfReadADC(uint32_t samplesCount, bool ledcontrol);
-int HfSimulateTkm(uint8_t *uid, uint8_t modulation, uint32_t timeout);
+int HfSimulateTkm(const uint8_t *uid, uint8_t modulation, uint32_t timeout);
 
 #endif

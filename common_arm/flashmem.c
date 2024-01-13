@@ -339,10 +339,10 @@ void Flashmem_print_status(void) {
     Dbprintf("  Baudrate................ " _GREEN_("%d MHz"), FLASHMEM_SPIBAUDRATE / 1000000);
 
     if (!FlashInit()) {
-        DbpString("  Init.................... " _RED_("FAILED"));
+        DbpString("  Init.................... " _RED_("failed"));
         return;
     }
-    DbpString("  Init.................... " _GREEN_("OK"));
+    DbpString("  Init.................... " _GREEN_("ok"));
 
     // NOTE: It would likely be more useful to use JDEC ID command 9F,
     //       as it provides a third byte indicative of capacity.
@@ -402,7 +402,7 @@ void Flashmem_print_info(void) {
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  Mifare.................. "_YELLOW_("%d")" / "_GREEN_("%d")" keys", num, DEFAULT_MF_KEYS_MAX);
+            Dbprintf("  Mifare.................. "_YELLOW_("%u")" / "_GREEN_("%u")" keys", num, DEFAULT_MF_KEYS_MAX);
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
@@ -410,7 +410,7 @@ void Flashmem_print_info(void) {
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  T55x7................... "_YELLOW_("%d")" / "_GREEN_("%d")" keys", num, DEFAULT_T55XX_KEYS_MAX);
+            Dbprintf("  T55x7................... "_YELLOW_("%u")" / "_GREEN_("%u")" keys", num, DEFAULT_T55XX_KEYS_MAX);
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
@@ -418,7 +418,7 @@ void Flashmem_print_info(void) {
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
-            Dbprintf("  iClass.................. "_YELLOW_("%d")" / "_GREEN_("%d")" keys", num, DEFAULT_ICLASS_KEYS_MAX);
+            Dbprintf("  iClass.................. "_YELLOW_("%u")" / "_GREEN_("%u")" keys", num, DEFAULT_ICLASS_KEYS_MAX);
     }
 
     FlashStop();

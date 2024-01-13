@@ -196,7 +196,7 @@ static void *crack(void *d) {
     numnrar = data->numnrar;
 
     // create space for tables
-    Tk = (struct Tklower *)malloc(sizeof(struct Tklower) * 0x40000);
+    Tk = (struct Tklower *)calloc(sizeof(struct Tklower) * 0x40000, sizeof(uint8_t));
     if (!Tk) {
         printf("Failed to allocate memory (Tk)\n");
         exit(1);
@@ -314,7 +314,7 @@ int main(int argc, char *argv[]) {
     }
 
     // create table of nR aR pairs
-    TnRaR = (struct nRaR *)malloc(sizeof(struct nRaR) * NUM_NRAR);
+    TnRaR = (struct nRaR *)calloc(sizeof(struct nRaR) * NUM_NRAR, sizeof(uint8_t));
 
     // open file
     fp = fopen(argv[2], "r");
@@ -386,13 +386,14 @@ int main(int argc, char *argv[]) {
         // debug mode only runs one thread from klowerstart
         tdata[0].klowerstart = klowerstart;
         crack(tdata);
-    } else {
-        // run full threaded mode
-        for (i = 0; i < NUM_THREADS; i++) {
-            if (pthread_create(&(threads[i]), NULL, crack, (void *)(tdata + i))) {
-                printf("cannot start thread %d\n", i);
-                exit(1);
-            }
+        return 0;
+    }
+
+    // run full threaded mode
+    for (i = 0; i < NUM_THREADS; i++) {
+        if (pthread_create(&(threads[i]), NULL, crack, (void *)(tdata + i))) {
+            printf("cannot start thread %d\n", i);
+            exit(1);
         }
     }
 

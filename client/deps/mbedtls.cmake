@@ -9,6 +9,9 @@ add_library(pm3rrg_rdv4_mbedtls STATIC
         ../../common/mbedtls/entropy.c
         ../../common/mbedtls/error.c
         ../../common/mbedtls/ecp.c
+        ../../common/mbedtls/ecdh.c
+        ../../common/mbedtls/ecc_point_compression.c
+        ../../common/mbedtls/gcm.c
         ../../common/mbedtls/ecp_curves.c
         ../../common/mbedtls/certs.c
         ../../common/mbedtls/camellia.c
@@ -40,6 +43,7 @@ add_library(pm3rrg_rdv4_mbedtls STATIC
         ../../common/mbedtls/x509.c
         ../../common/mbedtls/x509_crl.c
         ../../common/mbedtls/x509_crt.c
+				../../common/mbedtls/net_sockets.c
         )
 
 target_include_directories(pm3rrg_rdv4_mbedtls PRIVATE ../../common)

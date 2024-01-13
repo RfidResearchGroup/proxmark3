@@ -26,14 +26,15 @@
 //-----------------------------------------------------------------------------
 
 #include "preferences.h"
-#include "comms.h"
-#include "emv/emvjson.h"
 #include <string.h>
-#include "cmdparser.h"
 #include <ctype.h>
 #include <dirent.h>
-#include <proxmark3.h>
+#include "proxmark3.h"
+#include "comms.h"
+#include "emv/emvjson.h"
+#include "cmdparser.h"
 #include "cliparser.h"
+#include "uart/uart.h" // uart_reconfigure_timeouts
 
 static int CmdHelp(const char *Cmd);
 static int setCmdHelp(const char *Cmd);
@@ -44,7 +45,7 @@ static char *prefGetFilename(void) {
     if (searchHomeFilePath(&path, NULL, preferencesFilename, false) == PM3_SUCCESS)
         return path;
     else
-        return strdup(preferencesFilename);
+        return str_dup(preferencesFilename);
 }
 
 int preferences_load(void) {
@@ -52,6 +53,8 @@ int preferences_load(void) {
     // Set all defaults
     g_session.client_debug_level = cdbOFF;
     //  g_session.device_debug_level = ddbOFF;
+    g_session.timeout = uart_get_timeouts();
+
     g_session.window_changed = false;
     g_session.plot.x = 10;
     g_session.plot.y = 30;
@@ -119,7 +122,7 @@ int preferences_save(void) {
         PrintAndLogEx(INFO, "No preferences file will be saved");
         return PM3_SUCCESS;
     }
-    PrintAndLogEx(INFO, "Saving preferences...");
+    PrintAndLogEx(DEBUG, "Saving preferences...");
 
     char *fn = prefGetFilename();
     int fn_len = strlen(fn) + 5; // .bak\0
@@ -260,7 +263,7 @@ void preferences_save_callback(json_t *root) {
         }
     */
     JsonSaveInt(root, "client.exe.delay", g_session.client_exe_delay);
-
+    JsonSaveInt(root, "client.timeout", g_session.timeout);
 }
 void preferences_load_callback(json_t *root) {
     json_error_t up_error = {0};
@@ -276,6 +279,12 @@ void preferences_load_callback(json_t *root) {
         if (strncmp(tempStr, "off", 3) == 0) g_session.client_debug_level = cdbOFF;
         if (strncmp(tempStr, "simple", 6) == 0) g_session.client_debug_level = cdbSIMPLE;
         if (strncmp(tempStr, "full", 4) == 0) g_session.client_debug_level = cdbFULL;
+
+        if (g_session.client_debug_level == cdbOFF) {
+            SetAPDULogging(false);
+        } else {
+            SetAPDULogging(true);
+        }
     }
 
     // default save path
@@ -355,68 +364,107 @@ void preferences_load_callback(json_t *root) {
     // client command execution delay
     if (json_unpack_ex(root, &up_error, 0, "{s:i}", "client.exe.delay", &i1) == 0)
         g_session.client_exe_delay = i1;
+
+    // client command timeout
+    if (json_unpack_ex(root, &up_error, 0, "{s:i}", "client.timeout", &i1) == 0)
+        g_session.timeout = i1;
 }
 
 // Help Functions
 
 // Preference Processing Functions
 // typedef enum preferenceId {prefNONE,prefHELP,prefEMOJI,prefCOLOR,prefPLOT,prefOVERLAY,prefHINTS,prefCLIENTDEBUG} preferenceId_t;
-typedef enum prefShowOpt {prefShowNone, prefShowOLD, prefShowNEW} prefShowOpt_t;
+typedef enum prefShowOpt {prefShowNone, prefShowOLD, prefShowNEW, prefShowOff, prefShowUnknown} prefShowOpt_t;
 
-static const char *prefShowMsg(prefShowOpt_t Opt) {
-    switch (Opt) {
+static const char *pref_show_status_msg(prefShowOpt_t opt) {
+    switch (opt) {
         case prefShowOLD:
-            return "( " _YELLOW_("old") " )";
+            return "( " _CYAN_("old") " )";
         case prefShowNEW:
             return "( " _GREEN_("new") " )";
         case prefShowNone:
+        case prefShowOff:
+        case prefShowUnknown:
+        default:
+            return "";
+
+    }
+}
+
+static const char *pref_show_value(prefShowOpt_t opt, const char* msg) {
+
+    static char s[128] = {0};
+    switch (opt) {
+        case prefShowOLD:
+            sprintf(s, _CYAN_("%s"), msg);
+            return s;
+
+        case prefShowNEW:
+            sprintf(s, _GREEN_("%s"), msg);
+            return s;
+        case prefShowNone:
+            if ((strncmp(msg, "off", 3) == 0) || (strncmp(msg, "normal", 6) ==0)) {
+                sprintf(s, _WHITE_("%s"), msg);
+            } else {
+                sprintf(s, _GREEN_("%s"), msg);
+            }
+            return s;
+
+        case prefShowOff:
+            sprintf(s, _WHITE_("%s"), msg);
+            return s;
+
+        case prefShowUnknown:
+            sprintf(s, _RED_("%s"), msg);
+            return s;
+
+        default:
             return "";
     }
-    return "";
 }
+
 
 static void showEmojiState(prefShowOpt_t opt) {
 
     switch (g_session.emoji_mode) {
         case EMO_ALIAS:
-            PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("alias"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s emoji................... %s", pref_show_status_msg(opt), pref_show_value(opt, "alias"));
             break;
         case EMO_EMOJI:
-            PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("emoji"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s emoji................... %s", pref_show_status_msg(opt), pref_show_value(opt, "emoji"));
             break;
         case EMO_ALTTEXT:
-            PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("alttext"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s emoji................... %s", pref_show_status_msg(opt), pref_show_value(opt, "alttext"));
             break;
         case EMO_NONE:
-            PrintAndLogEx(INFO, "   %s emoji.................. "_GREEN_("none"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s emoji................... %s", pref_show_status_msg(opt), pref_show_value(opt, "none"));
             break;
         default:
-            PrintAndLogEx(INFO, "   %s emoji.................. "_RED_("unknown"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s emoji................... %s", pref_show_status_msg(opt), pref_show_value(prefShowUnknown, "unknown"));
     }
 }
 
 static void showColorState(prefShowOpt_t opt) {
-
-    if (g_session.supports_colors)
-        PrintAndLogEx(INFO, "   %s color.................. "_GREEN_("ansi"), prefShowMsg(opt));
-    else
-        PrintAndLogEx(INFO, "   %s color.................. "_WHITE_("off"), prefShowMsg(opt));
+    PrintAndLogEx(INFO, "   %s color................... %s "
+        , pref_show_status_msg(opt)
+        , (g_session.supports_colors) ? pref_show_value(opt, "ansi") : pref_show_value(opt, "off")
+    );
 }
 
 static void showClientDebugState(prefShowOpt_t opt) {
 
     switch (g_session.client_debug_level) {
         case cdbOFF:
-            PrintAndLogEx(INFO, "   %s client debug........... "_WHITE_("off"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s client debug............ %s", pref_show_status_msg(opt), pref_show_value(opt, "off"));
             break;
         case cdbSIMPLE:
-            PrintAndLogEx(INFO, "   %s client debug........... "_GREEN_("simple"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s client debug............ %s", pref_show_status_msg(opt), pref_show_value(opt, "simple"));
             break;
         case cdbFULL:
-            PrintAndLogEx(INFO, "   %s client debug........... "_GREEN_("full"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s client debug............ %s", pref_show_status_msg(opt), pref_show_value(opt,"full"));
             break;
         default:
-            PrintAndLogEx(INFO, "   %s client debug........... "_RED_("unknown"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s client debug............ %s", pref_show_status_msg(opt), pref_show_value(prefShowUnknown, "unknown"));
     }
 }
 /*
@@ -448,28 +496,28 @@ static void showSavePathState(savePaths_t path_index, prefShowOpt_t opt) {
     char s[50];
     switch (path_index) {
         case spDefault:
-            strcpy(s, "default save path......");
+            strcpy(s, "default save path.......");
             break;
         case spDump:
-            strcpy(s, "dump save path.........");
+            strcpy(s, "dump save path..........");
             break;
         case spTrace:
-            strcpy(s, "trace save path........");
+            strcpy(s, "trace save path.........");
             break;
         case spItemCount:
         default:
-            strcpy(s, _RED_("unknown")" save path......");
+            strcpy(s, _RED_("unknown")" save path.......");
     }
 
     if (path_index < spItemCount) {
         if ((g_session.defaultPaths[path_index] == NULL) || (strcmp(g_session.defaultPaths[path_index], "") == 0)) {
             PrintAndLogEx(INFO, "   %s %s "_WHITE_("not set"),
-                          prefShowMsg(opt),
+                          pref_show_status_msg(opt),
                           s
                          );
         } else {
             PrintAndLogEx(INFO, "   %s %s "_GREEN_("%s"),
-                          prefShowMsg(opt),
+                          pref_show_status_msg(opt),
                           s,
                           g_session.defaultPaths[path_index]
                          );
@@ -478,7 +526,7 @@ static void showSavePathState(savePaths_t path_index, prefShowOpt_t opt) {
 }
 
 static void showPlotPosState(void) {
-    PrintAndLogEx(INFO, "    Plot window............ X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
+    PrintAndLogEx(INFO, "    plot window............. X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
                   g_session.plot.x,
                   g_session.plot.y,
                   g_session.plot.h,
@@ -487,7 +535,7 @@ static void showPlotPosState(void) {
 }
 
 static void showOverlayPosState(void) {
-    PrintAndLogEx(INFO, "    Slider/Overlay window.. X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
+    PrintAndLogEx(INFO, "    slider/overlay window... X "_GREEN_("%4d")" Y "_GREEN_("%4d")" H "_GREEN_("%4d")" W "_GREEN_("%4d"),
                   g_session.overlay.x,
                   g_session.overlay.y,
                   g_session.overlay.h,
@@ -496,45 +544,50 @@ static void showOverlayPosState(void) {
 }
 
 static void showHintsState(prefShowOpt_t opt) {
-    if (g_session.show_hints)
-        PrintAndLogEx(INFO, "   %s hints.................. "_GREEN_("on"), prefShowMsg(opt));
-    else
-        PrintAndLogEx(INFO, "   %s hints.................. "_WHITE_("off"), prefShowMsg(opt));
+    PrintAndLogEx(INFO, "   %s hints................... %s"
+        , pref_show_status_msg(opt)
+        , (g_session.show_hints) ? pref_show_value(opt,"on") : pref_show_value(opt,"off")
+    );
 }
 
 static void showPlotSliderState(prefShowOpt_t opt) {
-    if (g_session.overlay_sliders)
-        PrintAndLogEx(INFO, "   %s show plot sliders...... "_GREEN_("on"), prefShowMsg(opt));
-    else
-        PrintAndLogEx(INFO, "   %s show plot sliders...... "_WHITE_("off"), prefShowMsg(opt));
+    PrintAndLogEx(INFO, "   %s show plot sliders....... %s"
+        , pref_show_status_msg(opt)
+        , (g_session.overlay_sliders) ? pref_show_value(opt,"on") : pref_show_value(opt,"off")
+    );
 }
 
 static void showBarModeState(prefShowOpt_t opt) {
 
     switch (g_session.bar_mode) {
         case STYLE_BAR:
-            PrintAndLogEx(INFO, "   %s barmode................ "_GREEN_("bar"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(opt,"bar"));
             break;
         case STYLE_MIXED:
-            PrintAndLogEx(INFO, "   %s barmode................ "_GREEN_("mixed"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(opt,"mixed"));
             break;
         case STYLE_VALUE:
-            PrintAndLogEx(INFO, "   %s barmode................ "_GREEN_("value"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(opt,"value"));
             break;
         default:
-            PrintAndLogEx(INFO, "   %s barmode............... "_RED_("unknown"), prefShowMsg(opt));
+            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(prefShowUnknown,"unknown"));
     }
 }
 
 static void showOutputState(prefShowOpt_t opt) {
-    PrintAndLogEx(INFO, "   %s output................. %s", prefShowMsg(opt),
-                  g_session.dense_output ? _GREEN_("dense") : _WHITE_("normal"));
+    PrintAndLogEx(INFO, "   %s output.................. %s"
+        , pref_show_status_msg(opt)
+        , (g_session.dense_output) ? pref_show_value(opt,"dense") : pref_show_value(opt,"normal")
+    );
 }
 
 static void showClientExeDelayState(void) {
-    PrintAndLogEx(INFO, "    Cmd execution delay.... "_GREEN_("%u"), g_session.client_exe_delay);
+    PrintAndLogEx(INFO, "    cmd execution delay..... "_GREEN_("%u"), g_session.client_exe_delay);
 }
 
+static void showClientTimeoutState(void) {
+    PrintAndLogEx(INFO, "    communication timeout... " _GREEN_("%u") " ms", g_session.timeout);
+}
 
 static int setCmdEmoji(const char *Cmd) {
     CLIParserContext *ctx;
@@ -636,9 +689,9 @@ static int setCmdColor(const char *Cmd) {
 
 static int setCmdDebug(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "prefs set clientdebug ",
+    CLIParserInit(&ctx, "prefs set client.debug ",
                   "Set persistent preference of using clientside debug level",
-                  "prefs set clientdebug --simple"
+                  "prefs set client.debug --simple"
                  );
 
     void *argtable[] = {
@@ -664,9 +717,11 @@ static int setCmdDebug(const char *Cmd) {
     if (use_off) {
         new_value = cdbOFF;
     }
+
     if (use_simple) {
         new_value = cdbSIMPLE;
     }
+
     if (use_full) {
         new_value = cdbFULL;
     }
@@ -675,6 +730,13 @@ static int setCmdDebug(const char *Cmd) {
         showClientDebugState(prefShowOLD);
         g_session.client_debug_level = new_value;
         g_debugMode = new_value;
+
+        if (new_value == cdbOFF) {
+            SetAPDULogging(false);
+        } else {
+            SetAPDULogging(true);
+        }
+
         showClientDebugState(prefShowNEW);
         preferences_save();
     } else {
@@ -752,6 +814,44 @@ static int setCmdDeviceDebug (const char *Cmd)
 }
 */
 
+int getDeviceDebugLevel(uint8_t *debug_level) {
+    if (!g_session.pm3_present)
+        return PM3_EFAILED;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_GET_DBGMODE, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_GET_DBGMODE, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "Failed to get current device debug level");
+        return PM3_ETIMEOUT;
+    }
+
+    if (debug_level)
+        *debug_level = resp.data.asBytes[0];
+
+    return PM3_SUCCESS;
+}
+
+int setDeviceDebugLevel(uint8_t debug_level, bool verbose) {
+    if (!g_session.pm3_present)
+        return PM3_EFAILED;
+
+    if (verbose)
+        PrintAndLogEx(INFO, "setting device debug loglevel to %u", debug_level);
+
+    uint8_t cdata[] = {debug_level, verbose};
+    clearCommandBuffer();
+    SendCommandNG(CMD_SET_DBGMODE, cdata, sizeof(cdata));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_SET_DBGMODE, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "failed to set device debug loglevel");
+        return PM3_EFAILED;
+    }
+
+    return PM3_SUCCESS;
+}
+
+
 static int setCmdOutput(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "prefs set output",
@@ -798,10 +898,10 @@ static int setCmdOutput(const char *Cmd) {
 
 static int setCmdExeDelay(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "prefs set clientdelay",
+    CLIParserInit(&ctx, "prefs set client.delay",
                   "Set persistent preference of delay before executing a command in the client",
-                  "prefs set clientdelay --ms 0     --> unsets any delay\n"
-                  "prefs set clientdelay --ms 1000  --> sets 1000ms delay"
+                  "prefs set client.delay --ms 0     --> unsets any delay\n"
+                  "prefs set client.delay --ms 1000  --> sets 1000ms delay"
                  );
 
     void *argtable[] = {
@@ -824,9 +924,47 @@ static int setCmdExeDelay(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int setClientTimeout(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs set client.timeout",
+                  "Set persistent preference of client communication timeout",
+                  "prefs set client.timeout --ms 0     --> unsets any timeout\n"
+                  "prefs set client.timeout -m 20      --> Set the timeout to 20ms\n"
+                  "prefs set client.timeout --ms 500   --> Set the timeout to 500ms\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("m", "ms", "<ms>", "timeout in micro seconds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t new_value = (uint32_t)arg_get_int_def(ctx, 1, 0);
+    CLIParserFree(ctx);
+
+    // UART_USB_CLIENT_RX_TIMEOUT_MS is considered as the minimum required timeout.
+    if (new_value < UART_USB_CLIENT_RX_TIMEOUT_MS) {
+        PrintAndLogEx(WARNING, "Timeout less than %u ms might cause errors.", UART_USB_CLIENT_RX_TIMEOUT_MS);
+    } else if (new_value > 5000) {
+        PrintAndLogEx(WARNING, "Timeout greater than 5000 ms makes the client unresponsive.");
+    }
+
+    if (g_session.timeout != new_value) {
+        showClientTimeoutState();
+        g_session.timeout = new_value;
+        uart_reconfigure_timeouts(new_value);
+        showClientTimeoutState();
+        preferences_save();
+    } else {
+        showClientTimeoutState();
+    }
+    return PM3_SUCCESS;
+}
+
+
 static int setCmdHint(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "prefs set hints ",
+    CLIParserInit(&ctx, "prefs set hints",
                   "Set persistent preference of showing hint messages in the client",
                   "prefs set hints --on"
                  );
@@ -1087,9 +1225,9 @@ static int getCmdColor(const char *Cmd) {
 
 static int getCmdDebug(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "prefs get clientdebug",
+    CLIParserInit(&ctx, "prefs get client.debug",
                   "Get preference of using clientside debug level",
-                  "prefs get clientdebug"
+                  "prefs get client.debug"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -1169,9 +1307,9 @@ static int getCmdSavePaths(const char *Cmd) {
 
 static int getCmdExeDelay(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "prefs get clientdelay",
+    CLIParserInit(&ctx, "prefs get client.delay",
                   "Get preference of delay time before execution of a command in the client",
-                  "prefs get clientdelay"
+                  "prefs get client.delay"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -1183,10 +1321,27 @@ static int getCmdExeDelay(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int getClientTimeout(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "prefs get client.timeout",
+                  "Get preference of delay time before execution of a command in the client",
+                  "prefs get client.timeout"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    showClientTimeoutState();
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTableGet[] = {
     {"barmode",          getCmdBarMode,       AlwaysAvailable, "Get bar mode preference"},
-    {"clientdebug",      getCmdDebug,         AlwaysAvailable, "Get client debug level preference"},
-    {"clientdelay",      getCmdExeDelay,      AlwaysAvailable, "Get client execution delay preference"},
+    {"client.debug",     getCmdDebug,         AlwaysAvailable, "Get client debug level preference"},
+    {"client.delay",     getCmdExeDelay,      AlwaysAvailable, "Get client execution delay preference"},
+    {"client.timeout",   getClientTimeout,    AlwaysAvailable, "Get client execution delay preference"},
     {"color",            getCmdColor,         AlwaysAvailable, "Get color support preference"},
     {"savepaths",        getCmdSavePaths,     AlwaysAvailable, "Get file folder  "},
     //  {"devicedebug",      getCmdDeviceDebug,   AlwaysAvailable, "Get device debug level"},
@@ -1200,8 +1355,10 @@ static command_t CommandTableGet[] = {
 static command_t CommandTableSet[] = {
     {"help",             setCmdHelp,          AlwaysAvailable, "This help"},
     {"barmode",          setCmdBarMode,       AlwaysAvailable, "Set bar mode"},
-    {"clientdebug",      setCmdDebug,         AlwaysAvailable, "Set client debug level"},
-    {"clientdelay",      setCmdExeDelay,      AlwaysAvailable, "Set client execution delay"},
+    {"client.debug",     setCmdDebug,         AlwaysAvailable, "Set client debug level"},
+    {"client.delay",     setCmdExeDelay,      AlwaysAvailable, "Set client execution delay"},
+    {"client.timeout",   setClientTimeout,    AlwaysAvailable, "Set client communication timeout"},
+
     {"color",            setCmdColor,         AlwaysAvailable, "Set color support"},
     {"emoji",            setCmdEmoji,         AlwaysAvailable, "Set emoji display"},
     {"hints",            setCmdHint,          AlwaysAvailable, "Set hint display"},
@@ -1265,6 +1422,7 @@ static int CmdPrefShow(const char *Cmd) {
     showBarModeState(prefShowNone);
     showClientExeDelayState();
     showOutputState(prefShowNone);
+    showClientTimeoutState();
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;

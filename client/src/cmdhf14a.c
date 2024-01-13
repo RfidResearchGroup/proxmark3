@@ -42,6 +42,7 @@
 #include "desfire.h"             // desfire enums
 #include "mifare/desfirecore.h"  // desfire context
 #include "mifare/mifaredefault.h"
+#include "preferences.h"         // get/set device debug level
 
 static bool g_apdu_in_framing_enable = true;
 bool Get_apdu_in_framing(void) {
@@ -53,6 +54,35 @@ void Set_apdu_in_framing(bool v) {
 
 static int CmdHelp(const char *Cmd);
 static int waitCmd(bool i_select, uint32_t timeout, bool verbose);
+
+
+static const iso14a_polling_frame_t WUPA_FRAME = {
+    { 0x52 }, 1, 7, 0,
+};
+
+static const iso14a_polling_frame_t MAGWUPA1_FRAME = {
+    { 0x7A }, 1, 7, 0
+};
+
+static const iso14a_polling_frame_t MAGWUPA2_FRAME = {
+    { 0x7B }, 1, 7, 0
+};
+
+static const iso14a_polling_frame_t MAGWUPA3_FRAME = {
+    { 0x7C }, 1, 7, 0
+};
+
+static const iso14a_polling_frame_t MAGWUPA4_FRAME = {
+    { 0x7D }, 1, 7, 0
+};
+
+static const  iso14a_polling_frame_t ECP_FRAME = {
+    .frame = { 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8},
+    .frame_length = 15,
+    .last_byte_bits = 8,
+    .extra_delay = 0
+};
+
 
 static const manufactureName_t manufactureMapping[] = {
     // ID,  "Vendor Country"
@@ -194,6 +224,7 @@ static const hintAIDList_t hintAIDList[] = {
     { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (ppse)", "emv" },
     { "\x41\x44\x20\x46\x31", 5, "CIPURSE", "hf cipurse" },
     { "\xd2\x76\x00\x00\x85\x01\x00", 7, "desfire", "hf mfdes" },
+    { "\x4F\x53\x45\x2E\x56\x41\x53\x2E\x30\x31", 10, "Apple VAS", "hf vas"},
 };
 
 // iso14a apdu input frame length
@@ -202,7 +233,7 @@ static uint8_t gs_frames_num = 0;
 static uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
 static int CmdHF14AList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf 14a", "14a");
+    return CmdTraceListAlias(Cmd, "hf 14a", "14a -c");
 }
 
 int hf14a_getconfig(hf14a_config *config) {
@@ -254,7 +285,7 @@ static int hf_14a_config_example(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 04112233445566084400626364656667"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --std"));
     PrintAndLogEx(NORMAL, _CYAN_("    MFC 4k 7b UID")":");
-    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa forcce --bcc ignore --cl2 force --cl3 skip --rats skip"));
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip --rats skip"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf mf wrbl --blk 0 -k FFFFFFFFFFFF -d 04112233445566184200626364656667"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --std"));
     PrintAndLogEx(NORMAL, _CYAN_("    MFUL ")"/" _CYAN_(" MFUL EV1 ")"/" _CYAN_(" MFULC")":");
@@ -388,11 +419,10 @@ static int CmdHf14AConfig(const char *Cmd) {
 }
 
 int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
 
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_ACK, &resp);
-
     memcpy(card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
     uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
@@ -433,6 +463,41 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     return 0;
 }
 
+iso14a_polling_parameters_t iso14a_get_polling_parameters(bool use_ecp, bool use_magsafe) {
+    // Extra 100ms give enough time for Apple (ECP) devices to proccess field info and make a decision
+
+    if (use_ecp && use_magsafe) {
+        iso14a_polling_parameters_t full_polling_parameters = {
+            .frames = { WUPA_FRAME, ECP_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME },
+            .frame_count = 6,
+            .extra_timeout = 100
+        };
+        return full_polling_parameters;
+    } else if (use_ecp) {
+        iso14a_polling_parameters_t ecp_polling_parameters = {
+            .frames = { WUPA_FRAME, ECP_FRAME },
+            .frame_count = 2,
+            .extra_timeout = 100
+        };
+        return ecp_polling_parameters;
+    } else if (use_magsafe) {
+        iso14a_polling_parameters_t magsafe_polling_parameters = {
+            .frames = { WUPA_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME },
+            .frame_count = 5,
+            .extra_timeout = 0
+        };
+        return magsafe_polling_parameters;
+    }
+
+    iso14a_polling_parameters_t wupa_polling_parameters = {
+        .frames = { WUPA_FRAME },
+        .frame_count = 1,
+        .extra_timeout = 0,
+    };
+    return wupa_polling_parameters;
+}
+
+
 static int CmdHF14AReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a reader",
@@ -472,33 +537,40 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_NO_RATS;
     }
 
-    if (arg_get_lit(ctx, 5)) {
-        cm |= ISO14A_USE_ECP;
-    }
+    bool use_ecp = arg_get_lit(ctx, 5);
+    bool use_magsafe = arg_get_lit(ctx, 6);
 
-    if (arg_get_lit(ctx, 6)) {
-        cm |= ISO14A_USE_MAGSAFE;
+    iso14a_polling_parameters_t *polling_parameters = NULL;
+    iso14a_polling_parameters_t parameters = iso14a_get_polling_parameters(use_ecp, use_magsafe);
+    if (use_ecp || use_magsafe) {
+        cm |= ISO14A_USE_CUSTOM_POLLING;
+        polling_parameters = &parameters;
     }
 
     bool continuous = arg_get_lit(ctx, 7);
-
     CLIParserFree(ctx);
 
-    int res = PM3_SUCCESS;
-
-    if (!disconnectAfter)
+    if (disconnectAfter == false) {
         cm |= ISO14A_NO_DISCONNECT;
-    if (continuous) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
     }
+
+    if (continuous) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    int res = PM3_SUCCESS;
     do {
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
+
+        if (cm & ISO14A_USE_CUSTOM_POLLING) {
+            SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t));
+        } else {
+            SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
+        }
 
         if (ISO14A_CONNECT & cm) {
             PacketResponseNG resp;
-            if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-                if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
+            if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
                 DropField();
                 res = PM3_ESOFT;
                 goto plot;
@@ -516,7 +588,6 @@ static int CmdHF14AReader(const char *Cmd) {
             uint64_t select_status = resp.oldarg[0];
 
             if (select_status == 0) {
-                if (!silent) PrintAndLogEx(WARNING, "iso14443a card select failed");
                 DropField();
                 res = PM3_ESOFT;
                 goto plot;
@@ -532,7 +603,7 @@ static int CmdHF14AReader(const char *Cmd) {
                     } else {
                         PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
                     }
-
+                    PrintAndLogEx(NORMAL, "");
                 }
                 DropField();
                 res = PM3_ESOFT;
@@ -550,9 +621,10 @@ static int CmdHF14AReader(const char *Cmd) {
                         PrintAndLogEx(SUCCESS, " ATS: [%d] "  _GREEN_("%s"), card.ats_len, sprint_hex(card.ats, card.ats_len));
                     }
                 }
+                PrintAndLogEx(NORMAL, "");
             }
-            if (!disconnectAfter) {
-                if (!silent) PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
+            if ((disconnectAfter == false) && (silent == false)) {
+                PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
             }
         }
 plot:
@@ -680,11 +752,14 @@ int CmdHF14ASim(const char *Cmd) {
                   "hf 14a sim -t 7                 -> MFU EV1 / NTAG 215 Amiibo\n"
                   "hf 14a sim -t 8                 -> MIFARE Classic 4k\n"
                   "hf 14a sim -t 9                 -> FM11RF005SH Shanghai Metro\n"
-                  "hf 14a sim -t 10                -> ST25TA IKEA Rothult\n");
+                  "hf 14a sim -t 10                -> ST25TA IKEA Rothult\n"
+                  "hf 14a sim -t 11                -> Javacard (JCOP)\n"
+                  "hf 14a sim -t 12                -> 4K Seos card\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("t", "type", "<1-10> ", "Simulation type to use"),
+        arg_int1("t", "type", "<1-12> ", "Simulation type to use"),
         arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
         arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks have been read by reader. 0 = infinite"),
         arg_lit0("x",  NULL, "Performs the 'reader attack', nr/ar attack against a reader"),
@@ -734,7 +809,7 @@ int CmdHF14ASim(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (tagtype > 10) {
+    if (tagtype > 12) {
         PrintAndLogEx(ERR, "Undefined tag %d", tagtype);
         return PM3_EINVARG;
     }
@@ -762,7 +837,7 @@ int CmdHF14ASim(const char *Cmd) {
     sector_t *k_sector = NULL;
     size_t k_sectors_cnt = MIFARE_4K_MAXSECTOR;
 
-    PrintAndLogEx(INFO, "Press pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
 
@@ -847,8 +922,10 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
     uint8_t data[PM3_CMD_DATA_SIZE] = { 0x0a | gs_frames_num, 0x00};
     gs_frames_num ^= 1;
-    memcpy(&data[2], datain, datainlen & 0xFFFF);
-    SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF) + 2, 0, data, (datainlen & 0xFFFF) + 2);
+
+    int min = MIN((PM3_CMD_DATA_SIZE - 2), (datainlen & 0x1FF));
+    memcpy(&data[2], datain, min);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, (datainlen & 0xFFFF) + 2, 0, data, min + 2);
 
     uint8_t *recv;
     PacketResponseNG resp;
@@ -892,8 +969,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
     return 0;
 }
 
-int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card) {
-
+int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card_select_t *card, iso14a_polling_parameters_t *polling_parameters) {
     // global vars should be prefixed with g_
     gs_frame_len = 0;
     gs_frames_num = 0;
@@ -906,7 +982,12 @@ int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card
 
     // Anticollision + SELECT card
     PacketResponseNG resp;
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    if (polling_parameters != NULL) {
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_USE_CUSTOM_POLLING, 0, 0, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t));
+    } else {
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    }
+
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
@@ -915,7 +996,7 @@ int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card
     // check result
     if (resp.oldarg[0] == 0) {
         if (verbose) {
-            PrintAndLogEx(FAILED, "No card in field");
+            PrintAndLogEx(WARNING, "No ISO1443-A Card in field");
         }
         return PM3_ECARDEXCHANGE;
     }
@@ -923,6 +1004,11 @@ int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card
     if (resp.oldarg[0] != 1 && resp.oldarg[0] != 2) {
         PrintAndLogEx(WARNING, "Card not in iso14443-4, res=%" PRId64 ".", resp.oldarg[0]);
         return PM3_ECARDEXCHANGE;
+    }
+
+    iso14a_card_select_t *vcard = (iso14a_card_select_t *) resp.data.asBytes;
+    if (card) {
+        memcpy(card, vcard, sizeof(iso14a_card_select_t));
     }
 
     if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
@@ -948,18 +1034,18 @@ int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card
                 gs_frame_len = atsFSC[fsci];
             }
         }
+
+        if (card) {
+            card->ats_len = resp.oldarg[0];
+            memcpy(card->ats, resp.data.asBytes, card->ats_len);
+        }
     } else {
         // get frame length from ATS in card data structure
-        iso14a_card_select_t *vcard = (iso14a_card_select_t *) resp.data.asBytes;
         if (vcard->ats_len > 1) {
             uint8_t fsci = vcard->ats[1] & 0x0f;
             if (fsci < ARRAYLEN(atsFSC)) {
                 gs_frame_len = atsFSC[fsci];
             }
-        }
-
-        if (card) {
-            memcpy(card, vcard, sizeof(iso14a_card_select_t));
         }
     }
 
@@ -972,14 +1058,51 @@ int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card
     return PM3_SUCCESS;
 }
 
+int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card) {
+    return SelectCard14443A_4_WithParameters(disconnect, verbose, card, NULL);
+}
+
 static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chainingout) {
     *chainingout = false;
 
+    size_t timeout = 1500;
     if (activateField) {
         // select with no disconnect and set gs_frame_len
-        int selres = SelectCard14443A_4(false, true, NULL);
-        if (selres != PM3_SUCCESS)
+        iso14a_card_select_t card;
+        int selres = SelectCard14443A_4(false, true, &card);
+        if (selres != PM3_SUCCESS) {
             return selres;
+        }
+
+        // Extract FWI and SFGI from ATS and increase timeout by the indicated values
+        // for most cards these values are trivially small so will make no practical
+        // difference but some "cards" like hf_cardhopper overwrite these to their
+        // maximum values resulting in ~5 seconds each which can cause timeouts if we
+        // just ignore it
+        if (((card.ats[1] & 0x20) == 0x20) && card.ats_len > 2) {
+            // TB is present in ATS
+
+            uint8_t tb;
+            if ((card.ats[1] & 0x10) == 0x10 && card.ats_len > 3) {
+                // TA is also present, so TB at ats[3]
+                tb = card.ats[3];
+            } else {
+                // TA is not present, so TB is at ats[2]
+                tb = card.ats[2];
+            }
+
+            uint8_t fwi = (tb & 0xF0) >> 4;
+            if (fwi != 0x0F) {
+                uint32_t fwt = 256 * 16 * (1 << fwi);
+                timeout += fwt;
+            }
+
+            uint8_t sfgi = tb & 0x0F;
+            if (sfgi != 0x0F) {
+                uint32_t sgft = 256 * 16 * (1 << sfgi);
+                timeout += sgft;
+            }
+        }
     }
 
     uint16_t cmdc = 0;
@@ -991,13 +1114,13 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
     // here length PM3_CMD_DATA_SIZE=512
     // timeout must be authomatically set by "get ATS"
     if (datain)
-        SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0x1FF), 0, datain, datainlen & 0x1FF);
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0x1FF), 0, datain, datainlen & 0x1FF);
     else
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, 0, 0, NULL, 0);
 
     PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, timeout)) {
         uint8_t *recv = resp.data.asBytes;
         int iLen = resp.oldarg[0];
         uint8_t res = resp.oldarg[1];
@@ -1008,7 +1131,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
         *dataoutlen += dlen;
 
         if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
-            PrintAndLogEx(ERR, "APDU: Buffer too small(%d), needs %d bytes", *dataoutlen, maxdataoutlen);
+            PrintAndLogEx(DEBUG, "ERR: APDU: Buffer too small(%d), needs %d bytes", *dataoutlen, maxdataoutlen);
             return PM3_EAPDU_FAIL;
         }
 
@@ -1020,19 +1143,19 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
         }
 
         if (!iLen) {
-            PrintAndLogEx(ERR, "APDU: No APDU response");
+            PrintAndLogEx(DEBUG, "ERR: APDU: No APDU response");
             return PM3_EAPDU_FAIL;
         }
 
         // check apdu length
         if (iLen < 2 && iLen >= 0) {
-            PrintAndLogEx(ERR, "APDU: Small APDU response, len %d", iLen);
+            PrintAndLogEx(DEBUG, "ERR: APDU: Small APDU response, len %d", iLen);
             return PM3_EAPDU_FAIL;
         }
 
         // check block TODO
         if (iLen == -2) {
-            PrintAndLogEx(ERR, "APDU: Block type mismatch");
+            PrintAndLogEx(DEBUG, "ERR: APDU: Block type mismatch");
             return PM3_EAPDU_FAIL;
         }
 
@@ -1045,11 +1168,11 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
 
         // CRC Check
         if (iLen == -1) {
-            PrintAndLogEx(ERR, "APDU: ISO 14443A CRC error");
+            PrintAndLogEx(DEBUG, "ERR: APDU: ISO 14443A CRC error");
             return PM3_EAPDU_FAIL;
         }
     } else {
-        PrintAndLogEx(ERR, "APDU: Reply timeout");
+        PrintAndLogEx(DEBUG, "ERR: APDU: Reply timeout");
         return PM3_EAPDU_FAIL;
     }
 
@@ -1083,7 +1206,7 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
             }
 
             // check R-block ACK
-//TODO check this one...
+            // TODO check this one...
             if ((*dataoutlen == 0) && (chaining != chainBlockNotLast)) {
                 if (leaveSignalON == false)
                     DropField();
@@ -1294,7 +1417,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     bool use_magsafe = arg_get_lit(ctx, 12);
 
     int datalen = 0;
-    uint8_t data[PM3_CMD_DATA_SIZE];
+    uint8_t data[PM3_CMD_DATA_SIZE_MIX] = {0};
     CLIGetHexWithReturn(ctx, 13, data, &datalen);
     CLIParserFree(ctx);
 
@@ -1353,19 +1476,18 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         flags |= ISO14A_NO_RATS;
     }
 
-    if (use_ecp) {
-        flags |= ISO14A_USE_ECP;
+    // TODO: allow to use reader command with both data and polling configuration
+    if (use_ecp | use_magsafe) {
+        PrintAndLogEx(WARNING, "ECP and Magsafe not supported with this command at this moment. Instead use 'hf 14a reader -sk --ecp/--mag'");
+        // flags |= ISO14A_USE_MAGSAFE;
+        // flags |= ISO14A_USE_ECP;
     }
 
-    if (use_magsafe) {
-        flags |= ISO14A_USE_MAGSAFE;
-    }
-
-    // Max buffer is PM3_CMD_DATA_SIZE
-    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
+    // Max buffer is PM3_CMD_DATA_SIZE_MIX
+    datalen = (datalen > PM3_CMD_DATA_SIZE_MIX) ? PM3_CMD_DATA_SIZE_MIX : datalen;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ISO14443A_READER, flags, (datalen & 0xFFFF) | ((uint32_t)(numbits << 16)), argtimeout, data, datalen & 0xFFFF);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, flags, (datalen & 0x1FF) | ((uint32_t)(numbits << 16)), argtimeout, data, datalen);
 
     if (reply) {
         int res = 0;
@@ -1513,6 +1635,7 @@ typedef enum {
     MTEMV = 128,
     MTFUDAN = 256,
     MTISO18092 = 512,
+    MT424 = 1024,
 } nxp_mifare_type_t;
 
 // Based on NXP AN10833 Rev 3.6 and NXP AN10834 Rev 4.1
@@ -1641,7 +1764,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
                 }
 
                 printTag("NTAG 4xx");
-                type |= MTDESFIRE;
+                type |= (MTDESFIRE | MT424);
             }
         } else if ((sak & 0x04) == 0x04) {
             printTag("Any MIFARE CL1");
@@ -1778,11 +1901,17 @@ static void get_compact_tlv(uint8_t *d, uint8_t n) {
 }
 
 int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
+
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
-        if (verbose) PrintAndLogEx(WARNING, "iso14443a card select failed");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return 0;
     }
@@ -1799,7 +1928,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     uint64_t select_status = resp.oldarg[0];
 
     if (select_status == 0) {
-        if (verbose) PrintAndLogEx(WARNING, "iso14443a card select failed");
+        PrintAndLogEx(DEBUG, "iso14443a card select failed");
         DropField();
         return select_status;
     }
@@ -1838,6 +1967,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isEMV = false;
     bool isFUDAN = false;
     bool isISO18092 = false;
+    bool isNTAG424 = false;
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
@@ -1847,6 +1977,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
         isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
         isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
+        isNTAG424 = ((nxptype & MT424) == MT424);
 
         if ((nxptype & MTOTHER) == MTOTHER)
             isMifareClassic = true;
@@ -1876,6 +2007,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
                 isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
                 isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
+                isNTAG424 = ((nxptype & MT424) == MT424);
 
                 if ((nxptype & MTOTHER) == MTOTHER)
                     isMifareClassic = true;
@@ -1928,8 +2060,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         // ******** is card of the MFU type (UL/ULC/NTAG/ etc etc)
                         DropField();
 
-                        uint32_t tagT = GetHF14AMfU_Type();
-                        if (tagT != UL_ERROR) {
+                        uint64_t tagT = GetHF14AMfU_Type();
+                        if (tagT != MFU_TT_UL_ERROR) {
                             ul_print_type(tagT, 0);
                             isMifareUltralight = true;
                             printTag("MIFARE Ultralight/C/NTAG Compatible");
@@ -2310,31 +2442,35 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             select_status = 2;
     }
 
+    if (setDeviceDebugLevel(verbose ? DBG_INFO : DBG_NONE, false) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
     int isMagic = 0;
     if (isMifareClassic) {
-        isMagic = detect_mf_magic(true);
+        isMagic = detect_mf_magic(true, MF_KEY_B, 0xFFFFFFFFFFFF);
     }
     if (isMifareUltralight) {
-        isMagic = (detect_mf_magic(false) == MAGIC_NTAG21X);
+        isMagic = (detect_mf_magic(false, MF_KEY_A, 0) == MAGIC_NTAG21X);
     }
     if (isMifareClassic) {
         int res = detect_classic_static_nonce();
         if (res == NONCE_STATIC)
-            PrintAndLogEx(SUCCESS, "Static nonce: " _YELLOW_("yes"));
+            PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
 
         if (res == NONCE_FAIL && verbose)
-            PrintAndLogEx(SUCCESS, "Static nonce:  " _RED_("read failed"));
+            PrintAndLogEx(SUCCESS, "Static nonce......... " _RED_("read failed"));
 
         if (res == NONCE_NORMAL) {
 
             // not static
             res = detect_classic_prng();
             if (res == 1)
-                PrintAndLogEx(SUCCESS, "Prng detection: " _GREEN_("weak"));
+                PrintAndLogEx(SUCCESS, "Prng detection....... " _GREEN_("weak"));
             else if (res == 0)
-                PrintAndLogEx(SUCCESS, "Prng detection: " _YELLOW_("hard"));
+                PrintAndLogEx(SUCCESS, "Prng detection....... " _YELLOW_("hard"));
             else
-                PrintAndLogEx(FAILED, "Prng detection:  " _RED_("fail"));
+                PrintAndLogEx(FAILED, "Prng detection........ " _RED_("fail"));
 
             if (do_nack_test)
                 detect_classic_nackbug(false);
@@ -2349,23 +2485,27 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf`") " commands");
     }
 
+    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
     if (isMifareUltralight)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu info`"));
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfu info") "`");
 
     if (isMifarePlus && isMagic == 0 && isEMV == false)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfp info`"));
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfp info") "`");
 
     if (isMifareDESFire && isMagic == 0 && isEMV == false)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes info`"));
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfdes info") "`");
 
     if (isST)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf st info`"));
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf st info") "`");
 
     if (isEMV)
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`emv search -s`"));
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("emv reader") "`");
 
     if (isFUDAN) {
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf fudan dump`"));
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf fudan dump") "`");
         /*
         PrintAndLogEx(HINT, "  hf 14a raw -a -b 7 -k 26");
         PrintAndLogEx(HINT, "  hf 14a raw -k -c 3000");
@@ -2378,6 +2518,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "  hf 14a raw -c 3007");
         */
     }
+
+    if (isNTAG424) {
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf ntag424 info") "`");
+    }
+
 
     PrintAndLogEx(NORMAL, "");
     DropField();
@@ -2416,17 +2561,16 @@ int infoHF14A4Applications(bool verbose) {
     }
 
     if (found) {
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "---------------------------------------------------");
-        else
-            PrintAndLogEx(INFO, "Short AID search:");
+        }
 
         if (found >= ARRAYLEN(hintAIDList) - 1) {
             PrintAndLogEx(HINT, "Hint: card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
         } else {
             for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
                 if (cardFound[i] && strlen(hintAIDList[i].hint))
-                    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("%s") " commands", hintAIDList[i].hint);
+                    PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("%s") "` commands", hintAIDList[i].hint);
             }
         }
     }
@@ -2667,6 +2811,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     bool verbose = arg_get_lit(ctx, 2);
+    bool verbose2 = arg_get_lit(ctx, 2) > 1;
     CLIParserFree(ctx);
 
     bool activate_field = true;
@@ -2853,11 +2998,24 @@ int CmdHF14ANdefRead(const char *Cmd) {
         memcpy(ndef_file + (i - offset), response, segment_size);
     }
 
-    if (fnlen != 0) {
-        saveFile(filename, ".bin", ndef_file, ndef_size);
+    if (verbose2) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("NDEF raw") " ----------------");
+        print_buffer(ndef_file, ndef_size, 1);
     }
 
     NDEFRecordsDecodeAndPrint(ndef_file, ndef_size, verbose);
+
+    pm3_save_dump(filename, ndef_file, ndef_size, jsfNDEF);
+
+    if (verbose == false) {
+        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf 14a ndefread -v`") " for more details");
+    } else {
+        if (verbose2 == false) {
+            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf 14a ndefread -vv`") " for more details");
+        }
+    }
+
     free(ndef_file);
     return PM3_SUCCESS;
 }

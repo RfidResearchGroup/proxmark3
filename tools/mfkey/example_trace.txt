@@ -10,20 +10,20 @@
  +   1287:    :     a1  e4  58  ce  6e  ea  41  e0
  +     64:   0: TAG 5c  ad  f4  39
 
-:: Sample of trace above, 
+:: Sample of trace above,
 ./mfkey64 9c599b32 82a4166c a1e458ce 6eea41e0 5cadf439
 
 -----------------------------------------------------------------------------------------------------
 :: For mfkey32, you want to get two different NR_0/NR_1 values.
 
 ::        <uid>    <nt>     <nr_0>   <ar_0>   <nr_1>   <ar_1>
-./mfkey32 52B0F519 5417D1F8 4D545EA7 E15AC8C2 DAC1A7F4 5AE5C37F  
+./mfkey32 52B0F519 5417D1F8 4D545EA7 E15AC8C2 DAC1A7F4 5AE5C37F
 
 :: For mfkey32v2 (moebius), you want to get two different NT/NT1 values. (like in the SIM commands)
 
 ::          <uid>    <nt>     <nr_0>   <ar_0>   <nt1>    <nr_1>   <ar_1>
 ./mfkey32v2 12345678 1AD8DF2B 1D316024 620EF048 30D6CB07 C52077E2 837AC61A
-./mfkey32v2 52B0F519 5417D1F8 4D545EA7 E15AC8C2 A1BA88C6 DAC1A7F4 5AE5C37F 
+./mfkey32v2 52B0F519 5417D1F8 4D545EA7 E15AC8C2 A1BA88C6 DAC1A7F4 5AE5C37F
 
 :: for mfkey64, you want to have the AT response from tag.
 
@@ -32,7 +32,7 @@
 ./mfkey64 52B0F519 5417D1F8 4D545EA7 E15AC8C2 5056E41B
 
 -----------------------------------------------------------------------------------------------------
-New functionality from @zhovner,  
+New functionality from @zhovner,
 -----------------------------------------------------------------------------------------------------
 ### Communication decryption
 RDR 26

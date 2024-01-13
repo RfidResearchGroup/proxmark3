@@ -20,6 +20,7 @@
 #define _CYAN_(s) "\x1b[36m" s AEND
 
 #define odd_parity(i) (( (i) ^ (i)>>1 ^ (i)>>2 ^ (i)>>3 ^ (i)>>4 ^ (i)>>5 ^ (i)>>6 ^ (i)>>7 ^ 1) & 0x01)
+#define ARRAYLEN(x) (sizeof(x) / sizeof((x)[0]))
 
 // a global mutex to prevent interlaced printing from different threads
 pthread_mutex_t print_lock;
@@ -67,6 +68,66 @@ uint8_t cmds[8][2] = {
     {MIFARE_CMD_RESTORE, 6},
     {MIFARE_CMD_TRANSFER, 0}
 };
+
+static const uint64_t g_mifare_default_keys[] = {
+    0xffffffffffff, // Default key (first key used by program if no user defined key)
+    0xa0a1a2a3a4a5, // NFCForum MAD key
+    0xd3f7d3f7d3f7, // NDEF public key
+    0x4b791bea7bcc, // MFC EV1 Signature 17 B
+    0x5C8FF9990DA2, // MFC EV1 Signature 16 A
+    0xD01AFEEB890A, // MFC EV1 Signature 16 B
+    0x75CCB59C9BED, // MFC EV1 Signature 17 A
+    0xfc00018778f7, // Public Transport
+    0x6471a5ef2d1a, // SimonsVoss
+    0x4E3552426B32, // ID06
+    0x6A1987C40A21, // Salto
+    0xef1232ab18a0, // Schlage
+    0x3B7E4FD575AD, //
+    0xb7bf0c13066e, // Gallagher
+    0x135b88a94b8b, // Saflok
+    0x2A2C13CC242A, // Dorma Kaba
+    0x5a7a52d5e20d, // Bosch
+    0x314B49474956, // VIGIK1 A
+    0x564c505f4d41, // VIGIK1 B
+    0x021209197591, // BTCINO
+    0x484558414354, // Intratone
+    0xEC0A9B1A9E06, // Vingcard
+    0x66b31e64ca4b, // Vingcard
+    0x97F5DA640B18, // Bangkok metro key
+    0xA8844B0BCA06, // Metro Valencia key
+    0xE4410EF8ED2D, // Armenian metro
+    0x857464D3AAD1, // HTC Eindhoven key
+    0x08B386463229, // troika
+    0xe00000000000, // icopy
+    0x199404281970, // NSP A
+    0x199404281998, // NSP B
+    0x6A1987C40A21, // SALTO
+    0x7F33625BC129, // SALTO
+    0x484944204953, // HID
+    0x204752454154, // HID
+    0x3B7E4FD575AD, // HID
+    0x11496F97752A, // HID
+    0x3E65E4FB65B3, // Gym
+    0x000000000000, // Blank key
+    0xb0b1b2b3b4b5,
+    0xaabbccddeeff,
+    0x1a2b3c4d5e6f,
+    0x123456789abc,
+    0x010203040506,
+    0x123456abcdef,
+    0xabcdef123456,
+    0x4d3a99c351dd,
+    0x1a982c7e459a,
+    0x714c5c886e97,
+    0x587ee5f9350f,
+    0xa0478cc39091,
+    0x533cb6c723f6,
+    0x8fd0a4f256e9,
+    0x0000014b5c31,
+    0xb578f38a5c61,
+    0x96a301bce267,
+};
+
 
 //static int global_counter = 0;
 static int global_found = 0;
@@ -202,9 +263,10 @@ static uint16_t parity_from_err(uint32_t data, uint16_t par_err) {
 }
 
 static uint16_t xored_bits(uint16_t nt_par, uint32_t ntenc, uint16_t ar_par, uint32_t arenc, uint16_t at_par, uint32_t atenc) {
-    uint16_t xored = 0;
 
+    uint16_t xored = 0;
     uint8_t par;
+
     //1st (1st nt)
     par = (nt_par >> 12) & 1;
     xored |=  par ^ ((ntenc >> 16) & 1);
@@ -258,63 +320,73 @@ static uint16_t xored_bits(uint16_t nt_par, uint32_t ntenc, uint16_t ar_par, uin
 }
 
 static bool candidate_nonce(uint32_t xored, uint32_t nt, bool ev1) {
-    uint8_t byte, check;
+    uint8_t byte;
 
     if (!ev1) {
-        //1st (1st nt)
+        // 1st (1st nt)
         byte = (nt >> 24) & 0xFF;
-        check = odd_parity(byte) ^ ((nt >> 16) & 1) ^ ((xored >> 9) & 1);
-        if (check) return false;
+        if (odd_parity(byte) ^ ((nt >> 16) & 1) ^ ((xored >> 9) & 1)) {
+            return false;
+        }
 
-        //2nd (2nd nt)
+        // 2nd (2nd nt)
         byte = (nt >> 16) & 0xFF;
-        check = odd_parity(byte) ^ ((nt >> 8) & 1) ^ ((xored >> 8) & 1);
-        if (check) return false;
+        if (odd_parity(byte) ^ ((nt >> 8) & 1) ^ ((xored >> 8) & 1)) {
+            return false;
+        }
     }
 
-    //3rd (3rd nt)
+    // 3rd (3rd nt)
     byte = (nt >> 8) & 0xFF;
-    check = odd_parity(byte) ^ (nt & 1) ^ ((xored >> 7) & 1);
-    if (check) return false;
+    if (odd_parity(byte) ^ (nt & 1) ^ ((xored >> 7) & 1)) {
+        return false;
+    }
 
     uint32_t ar = prng_successor(nt, 64);
 
-    //4th (1st ar)
+    // 4th (1st ar)
     byte = (ar >> 24) & 0xFF;
-    check = odd_parity(byte) ^ ((ar >> 16) & 1) ^ ((xored >> 6) & 1);
-    if (check) return false;
+    if (odd_parity(byte) ^ ((ar >> 16) & 1) ^ ((xored >> 6) & 1)) {
+        return false;
+    }
 
-    //5th (2nd ar)
+    // 5th (2nd ar)
     byte = (ar >> 16) & 0x0FF;
-    check = odd_parity(byte) ^ ((ar >> 8) & 1) ^ ((xored >> 5) & 1);
-    if (check) return false;
+    if (odd_parity(byte) ^ ((ar >> 8) & 1) ^ ((xored >> 5) & 1)) {
+        return false;
+    }
 
-    //6th (3rd ar)
+    // 6th (3rd ar)
     byte = (ar >> 8) & 0xFF;
-    check = odd_parity(byte) ^ (ar & 1) ^ ((xored >> 4) & 1);
-    if (check) return false;
+    if (odd_parity(byte) ^ (ar & 1) ^ ((xored >> 4) & 1)) {
+        return false;
+    }
 
     uint32_t at = prng_successor(nt, 96);
 
-    //7th (4th ar)
+    // 7th (4th ar)
     byte = ar & 0xFF;
-    check = odd_parity(byte) ^ ((at >> 24) & 1) ^ ((xored >> 3) & 1);
-    if (check) return false;
+    if (odd_parity(byte) ^ ((at >> 24) & 1) ^ ((xored >> 3) & 1)) {
+        return false;
+    }
 
-    //8th (1st at)
+    // 8th (1st at)
     byte = (at >> 24) & 0xFF;
-    check = odd_parity(byte) ^ ((at >> 16) & 1) ^ ((xored >> 2) & 1);
-    if (check) return false;
+    if (odd_parity(byte) ^ ((at >> 16) & 1) ^ ((xored >> 2) & 1)) {
+        return false;
+    }
 
-    //9th (2nd at)
+    // 9th (2nd at)
     byte = (at >> 16) & 0xFF;
-    check = odd_parity(byte) ^ ((at >> 8) & 1) ^ ((xored >> 1) & 1) ;
-    if (check) return false;
+    if (odd_parity(byte) ^ ((at >> 8) & 1) ^ ((xored >> 1) & 1)) {
+        return false;
+    }
 
-    //10th (3rd at)
+    // 10th (3rd at)
     byte = (at >> 8) & 0xFF;
-    check = odd_parity(byte) ^ (at & 1) ^ (xored & 1);
-    if (check) return false;
+    if (odd_parity(byte) ^ (at & 1) ^ (xored & 1)) {
+        return false;
+    }
 
     return true;
 }
@@ -322,27 +394,34 @@ static bool candidate_nonce(uint32_t xored, uint32_t nt, bool ev1) {
 static bool checkValidCmd(uint32_t decrypted) {
     uint8_t cmd = (decrypted >> 24) & 0xFF;
     for (int i = 0; i < 8; ++i) {
-        if (cmd == cmds[i][0])
+        if (cmd == cmds[i][0]) {
             return true;
+        }
     }
     return false;
 }
 
 static bool checkValidCmdByte(uint8_t *cmd, uint16_t n) {
+// if we don't have enough data then this might be a false positive
 
-    bool ok = false;
-    if (cmd == NULL)
+    if (cmd == NULL) {
         return false;
+    }
+
     for (int i = 0; i < 8; ++i) {
         if (cmd[0] == cmds[i][0]) {
 
-            if (n >= 4)
-                ok = CheckCrc14443(CRC_14443_A, cmd, 4);
+            int res = 0;
 
-            if (cmds[i][1] > 0 && n >= cmds[i][1])
-                ok = CheckCrc14443(CRC_14443_A, cmd + 4, cmds[i][1]);
+            if (n >= 4) {
+                res = CheckCrc14443(CRC_14443_A, cmd, 4);
+            }
 
-            if (ok) {
+            if (res == 0 && cmds[i][1] > 0 && n >= cmds[i][1]) {
+                res = CheckCrc14443(CRC_14443_A, cmd, cmds[i][1]);
+            }
+
+            if (res) {
                 return true;
             }
         }
@@ -360,9 +439,57 @@ static bool checkCRC(uint32_t decrypted) {
     return CheckCrc14443(CRC_14443_A, data, sizeof(data));
 }
 
+static void *check_default_keys(void *arguments) {
+    struct thread_key_args *args = (struct thread_key_args *) arguments;
+    uint8_t local_enc[args->enc_len];
+    memcpy(local_enc, args->enc, args->enc_len);
+
+    for (uint8_t i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
+
+        uint64_t key = g_mifare_default_keys[i];
+
+        // Init cipher with key
+        struct Crypto1State *pcs = crypto1_create(key);
+
+        // NESTED decrypt nt with help of new key
+        crypto1_word(pcs, args->nt_enc ^ args->uid, 1);
+        crypto1_word(pcs, args->nr_enc, 1);
+        crypto1_word(pcs, 0, 0);
+        crypto1_word(pcs, 0, 0);
+
+        // decrypt bytes
+        uint8_t dec[args->enc_len];
+        for (int j = 0; j < args->enc_len; j++) {
+            dec[j] = crypto1_byte(pcs, 0x00, 0) ^ local_enc[j];
+        }
+        crypto1_destroy(pcs);
+
+        // check if cmd exists
+        bool res = checkValidCmdByte(dec, args->enc_len);
+        if (args->enc_len > 4) {
+            res |= checkValidCmdByte(dec + 4,  args->enc_len - 4);
+        }
+
+        if (res == false) {
+            continue;
+        }
+
+        __sync_fetch_and_add(&global_found, 1);
+
+        pthread_mutex_lock(&print_lock);
+        printf("\nFound a default key!\n");
+        printf("enc:  %s\n", sprint_hex_inrow_ex(local_enc, args->enc_len, 0));
+        printf("dec:  %s\n", sprint_hex_inrow_ex(dec, args->enc_len, 0));
+        printf("\nValid Key found [ " _GREEN_("%012" PRIx64) " ]\n\n", key);
+        pthread_mutex_unlock(&print_lock);
+        break;
+    }
+    free(args);
+    return NULL;
+}
+
 static void *brute_thread(void *arguments) {
 
-    //int shift = (int)arg;
     struct thread_args *args = (struct thread_args *) arguments;
 
     struct Crypto1State *revstate = NULL;
@@ -373,11 +500,10 @@ static void *brute_thread(void *arguments) {
     uint32_t nt;      // current tag nonce
 
     uint32_t p64 = 0;
-    uint32_t count;
     // TC == 4  (
     // threads calls 0 ev1 == false
     // threads calls 0,1,2  ev1 == true
-    for (count = args->idx; count <= 0xFFFF; count += thread_count - 1) {
+    for (uint32_t count = args->idx; count <= 0xFFFF; count += thread_count) {
 
         if (__atomic_load_n(&global_found, __ATOMIC_ACQUIRE) == 1) {
             break;
@@ -385,8 +511,9 @@ static void *brute_thread(void *arguments) {
 
         nt = count << 16 | prng_successor(count, 16);
 
-        if (candidate_nonce(args->xored, nt, args->ev1) == false)
+        if (candidate_nonce(args->xored, nt, args->ev1) == false) {
             continue;
+        }
 
         p64 = prng_successor(nt, 64);
         ks2 = ar_enc ^ p64;
@@ -394,68 +521,71 @@ static void *brute_thread(void *arguments) {
         revstate = lfsr_recovery64(ks2, ks3);
         ks4 = crypto1_word(revstate, 0, 0);
 
-        if (ks4 != 0) {
+        if (ks4 == 0) {
+            free(revstate);
+            continue;
+        }
 
-            // lock this section to avoid interlacing prints from different threats
-            pthread_mutex_lock(&print_lock);
-            if (args->ev1)
-                printf("\n**** Possible key candidate ****\n");
+        // lock this section to avoid interlacing prints from different threats
+        pthread_mutex_lock(&print_lock);
+        if (args->ev1) {
+            printf("\n---> " _YELLOW_(" Possible key candidate")"  <---\n");
+        }
 
 #if 0
-            printf("thread #%d idx %d %s\n", args->thread, args->idx, (args->ev1) ? "(Ev1)" : "");
-            printf("current nt(%08x)  ar_enc(%08x)  at_enc(%08x)\n", nt, ar_enc, at_enc);
-            printf("ks2:%08x\n", ks2);
-            printf("ks3:%08x\n", ks3);
-            printf("ks4:%08x\n", ks4);
+        printf("thread #%d idx %d %s\n", args->thread, args->idx, (args->ev1) ? "(Ev1)" : "");
+        printf("current nt(%08x)  ar_enc(%08x)  at_enc(%08x)\n", nt, ar_enc, at_enc);
+        printf("ks2:%08x\n", ks2);
+        printf("ks3:%08x\n", ks3);
+        printf("ks4:%08x\n", ks4);
 #endif
-            if (cmd_enc) {
-                uint32_t decrypted = ks4 ^ cmd_enc;
-                printf("CMD enc( %08x )\n", cmd_enc);
-                printf("    dec( %08x )    ", decrypted);
+        if (cmd_enc) {
+            uint32_t decrypted = ks4 ^ cmd_enc;
+            printf("CMD enc( %08x )\n", cmd_enc);
+            printf("    dec( %08x )    ", decrypted);
 
-                // check if cmd exists
-                uint8_t isOK = checkValidCmd(decrypted);
-                if (isOK == false) {
-                    printf(_RED_("<-- not a valid cmd\n"));
-                    pthread_mutex_unlock(&print_lock);
-                    free(revstate);
-                    continue;
-                }
-
-                // Add a crc-check.
-                isOK = checkCRC(decrypted);
-                if (isOK == false) {
-                    printf(_RED_("<-- not a valid crc\n"));
-                    pthread_mutex_unlock(&print_lock);
-                    free(revstate);
-                    continue;
-                } else {
-                    printf("<-- valid cmd\n");
-                }
+            // check if cmd exists
+            uint8_t isOK = checkValidCmd(decrypted);
+            if (isOK == false) {
+                printf(_RED_("<-- not a valid cmd\n"));
+                pthread_mutex_unlock(&print_lock);
+                free(revstate);
+                continue;
             }
 
-            lfsr_rollback_word(revstate, 0, 0);
-            lfsr_rollback_word(revstate, 0, 0);
-            lfsr_rollback_word(revstate, 0, 0);
-            lfsr_rollback_word(revstate, nr_enc, 1);
-            lfsr_rollback_word(revstate, uid ^ nt, 0);
-            crypto1_get_lfsr(revstate, &key);
-
-            if (args->ev1) {
-                // if it was EV1,  we know for sure xxxAAAAAAAA recovery
-                printf("\nKey candidate [ " _YELLOW_("....%08" PRIx64)" ]\n\n", key & 0xFFFFFFFF);
-                __sync_fetch_and_add(&global_found_candidate, 1);
+            // Add a crc-check.
+            isOK = checkCRC(decrypted);
+            if (isOK == false) {
+                printf(_RED_("<-- not a valid crc\n"));
+                pthread_mutex_unlock(&print_lock);
+                free(revstate);
+                continue;
             } else {
-                printf("\nKey candidate [ " _GREEN_("....%08" PRIx64) " ]\n\n", key & 0xFFFFFFFF);
-                __sync_fetch_and_add(&global_found, 1);
+                printf("<-- " _GREEN_("valid cmd") "\n");
             }
-            //release lock
-            pthread_mutex_unlock(&print_lock);
-            __sync_fetch_and_add(&global_candidate_key, key);
-            free(revstate);
-            break;
         }
+
+        lfsr_rollback_word(revstate, 0, 0);
+        lfsr_rollback_word(revstate, 0, 0);
+        lfsr_rollback_word(revstate, 0, 0);
+        lfsr_rollback_word(revstate, nr_enc, 1);
+        lfsr_rollback_word(revstate, uid ^ nt, 0);
+        crypto1_get_lfsr(revstate, &key);
         free(revstate);
+
+        if (args->ev1) {
+            // if it was EV1,  we know for sure xxxAAAAAAAA recovery
+            printf("\nKey candidate [ " _YELLOW_("....%08" PRIx64)" ]\n\n", key & 0xFFFFFFFF);
+            __sync_fetch_and_add(&global_found_candidate, 1);
+        } else {
+            printf("\nKey candidate [ " _GREEN_("....%08" PRIx64) " ]", key & 0xFFFFFFFF);
+            printf("\nKey candidate [ " _GREEN_("%12" PRIx64) " ]\n\n", key);
+            __sync_fetch_and_add(&global_found, 1);
+        }
+        // release lock
+        pthread_mutex_unlock(&print_lock);
+        __sync_fetch_and_add(&global_candidate_key, key);
+        break;
     }
     free(args);
     return NULL;
@@ -487,8 +617,9 @@ static void *brute_key_thread(void *arguments) {
 
         // decrypt 22 bytes
         uint8_t dec[args->enc_len];
-        for (int i = 0; i < args->enc_len; i++)
+        for (int i = 0; i < args->enc_len; i++) {
             dec[i] = crypto1_byte(pcs, 0x00, 0) ^ local_enc[i];
+        }
 
         crypto1_destroy(pcs);
 
@@ -496,6 +627,7 @@ static void *brute_key_thread(void *arguments) {
         if (checkValidCmdByte(dec, args->enc_len) == false) {
             continue;
         }
+
         __sync_fetch_and_add(&global_found, 1);
 
         // lock this section to avoid interlacing prints from different threats
@@ -533,7 +665,7 @@ static int usage(void) {
     return 1;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
     printf("\nMifare classic nested auth key recovery\n\n");
 
     if (argc < 9) return usage();
@@ -547,15 +679,15 @@ int main(int argc, char *argv[]) {
     sscanf(argv[7], "%x", &at_enc);
     sscanf(argv[8], "%x", &at_par_err);
 
+    // next encrypted command + a full read/write
     int enc_len = 0;
-    uint8_t enc[ENC_LEN] = {0};  // next encrypted command + a full read/write
+    uint8_t enc[ENC_LEN] = {0};
     if (argc > 9) {
-//        sscanf(argv[9], "%x", &cmd_enc);
         param_gethex_to_eol(argv[9], 0, enc, sizeof(enc), &enc_len);
         cmd_enc = (enc[0] << 24 | enc[1] << 16 | enc[2] << 8 | enc[3]);
     }
 
-    printf("----------- " _CYAN_("Phase 1") " ------------------------\n");
+    printf("----------- " _CYAN_("information") " ------------------------\n");
     printf("uid.................. %08x\n", uid);
     printf("nt encrypted......... %08x\n", nt_enc);
     printf("nt parity err........ %04x\n", nt_par_err);
@@ -574,7 +706,7 @@ int main(int argc, char *argv[]) {
     uint16_t ar_par = parity_from_err(ar_enc, ar_par_err);
     uint16_t at_par = parity_from_err(at_enc, at_par_err);
 
-    //calc (parity XOR corresponding nonce bit encoded with the same keystream bit)
+    // calc (parity XOR corresponding nonce bit encoded with the same keystream bit)
     uint16_t xored = xored_bits(nt_par, nt_enc, ar_par, ar_enc, at_par, at_enc);
 
 #if !defined(_WIN32) || !defined(__WIN32__)
@@ -583,43 +715,80 @@ int main(int argc, char *argv[]) {
         thread_count = 2;
 #endif  /* _WIN32 */
 
-    printf("\nBruteforce using " _YELLOW_("%d") " threads\n", thread_count);
-    printf("looking for the last bytes of the encrypted tagnonce\n");
+    printf("\nBruteforce using " _YELLOW_("%d") " threads\n\n", thread_count);
 
     pthread_t threads[thread_count];
 
     // create a mutex to avoid interlacing print commands from our different threads
     pthread_mutex_init(&print_lock, NULL);
 
-    // one thread T0 for none EV1.
-    struct thread_args *a = calloc(1, sizeof(struct thread_args));
-    a->xored = xored;
-    a->thread = 0;
-    a->idx = 0;
-    a->ev1 = false;
-    pthread_create(&threads[0], NULL, brute_thread, (void *)a);
+    // if we have 4 or more bytes,  look for a default key
+    if (enc_len > 3) {
+        printf("----------- " _CYAN_("Phase 1 pre-processing") " ------------------------\n");
+        printf("Testing default keys using NESTED authentication...\n");
+        struct thread_key_args *def = calloc(1, sizeof(struct thread_key_args));
+        def->thread = 0;
+        def->idx = 0;
+        def->uid = uid;
+        def->nt_enc = nt_enc;
+        def->nr_enc = nr_enc;
+        def->enc_len = enc_len;
+        memcpy(def->enc, enc, enc_len);
+        pthread_create(&threads[0], NULL, check_default_keys, (void *)def);
+        pthread_join(threads[0], NULL);
+        if (global_found) {
+            goto out;
+        }
+    }
 
+    printf("\n----------- " _CYAN_("Phase 2 examine") " -------------------------------\n");
+    printf("Looking for the last bytes of the encrypted tagnonce\n");
+    printf("\nTarget old MFC...\n");
     // the rest of available threads to EV1 scenario
-    for (int i = 0; i < thread_count - 1; ++i) {
-        struct thread_args *b = calloc(1, sizeof(struct thread_args));
-        b->xored = xored;
-        b->thread = i + 1;
-        b->idx = i;
-        b->ev1 = true;
-        pthread_create(&threads[i + 1], NULL, brute_thread, (void *)b);
+    for (int i = 0; i < thread_count; ++i) {
+        struct thread_args *a = calloc(1, sizeof(struct thread_args));
+        a->xored = xored;
+        a->thread = i;
+        a->idx = i;
+        a->ev1 = false;
+        pthread_create(&threads[i], NULL, brute_thread, (void *)a);
     }
 
     // wait for threads to terminate:
-    for (int i = 0; i < thread_count; ++i)
+    for (int i = 0; i < thread_count; ++i) {
         pthread_join(threads[i], NULL);
+    }
 
     t1 = msclock() - t1;
     printf("execution time " _YELLOW_("%.2f") " sec\n", (float)t1 / 1000.0);
 
-
     if (!global_found && !global_found_candidate) {
-        printf("\nFailed to find a key\n\n");
-        goto out;
+        printf("\nTarget MFC Ev1...\n");
+
+        t1 = msclock();
+        // the rest of available threads to EV1 scenario
+        for (int i = 0; i < thread_count; ++i) {
+            struct thread_args *a = calloc(1, sizeof(struct thread_args));
+            a->xored = xored;
+            a->thread = i;
+            a->idx = i;
+            a->ev1 = true;
+            pthread_create(&threads[i], NULL, brute_thread, (void *)a);
+        }
+
+        // wait for threads to terminate:
+        for (int i = 0; i < thread_count; ++i) {
+            pthread_join(threads[i], NULL);
+        }
+
+        t1 = msclock() - t1;
+        printf("execution time " _YELLOW_("%.2f") " sec\n", (float)t1 / 1000.0);
+
+
+        if (!global_found && !global_found_candidate) {
+            printf("\nFailed to find a key\n\n");
+            goto out;
+        }
     }
 
     if (enc_len < 4) {
@@ -631,13 +800,13 @@ int main(int argc, char *argv[]) {
     global_found = 0;
     global_found_candidate = 0;
 
-    printf("\n----------- " _CYAN_("Phase 2") " ------------------------\n");
+    printf("\n----------- " _CYAN_("Phase 3 validating") " ----------------------------\n");
     printf("uid.................. %08x\n", uid);
     printf("partial key.......... %08x\n", (uint32_t)(global_candidate_key & 0xFFFFFFFF));
     printf("nt enc............... %08x\n", nt_enc);
     printf("nr enc............... %08x\n", nr_enc);
     printf("next encrypted cmd... %s\n", sprint_hex_inrow_ex(enc, enc_len, 0));
-    printf("\nlooking for the upper 16 bits of key\n");
+    printf("\nLooking for the upper 16 bits of the key\n");
     fflush(stdout);
 
     // threads
@@ -655,8 +824,9 @@ int main(int argc, char *argv[]) {
     }
 
     // wait for threads to terminate:
-    for (int i = 0; i < thread_count; ++i)
+    for (int i = 0; i < thread_count; ++i) {
         pthread_join(threads[i], NULL);
+    }
 
     if (!global_found && !global_found_candidate) {
         printf("\nfailed to find a key\n\n");

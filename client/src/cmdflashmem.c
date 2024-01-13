@@ -275,7 +275,8 @@ static int CmdFlashMemLoad(const char *Cmd) {
             }
             break;
     }
-// not needed when we transite to loadxxxx_safe methods.(iceman)
+
+    // ICEMAN: not needed when we transite to loadxxxx_safe methods
     uint8_t *newdata = realloc(data, datalen);
     if (newdata == NULL) {
         free(data);
@@ -378,8 +379,7 @@ static int CmdFlashMemDump(const char *Cmd) {
     }
 
     if (filename[0] != '\0') {
-        saveFile(filename, ".bin", dump, len);
-        saveFileEML(filename, dump, len, 16);
+        pm3_save_dump(filename, dump, len, jsfRaw);
     }
 
     free(dump);

@@ -1,7 +1,7 @@
 MYSRCPATHS = ../../common ../../common/crapto1
 MYSRCS = crypto1.c crapto1.c bucketsort.c iso14443crc.c sleep.c util_posix.c
 MYINCLUDES = -I../../include -I../../common
-MYCFLAGS =
+MYCFLAGS = -O3
 MYDEFS =
 MYLDLIBS =
 ifneq ($(SKIPPTHREAD),1)

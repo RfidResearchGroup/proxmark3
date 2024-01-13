@@ -310,6 +310,7 @@ static bool check_ack(void) {
     return false;
 }
 
+// TODO: define and use structs for rnd, frnd, response
 static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *response) {
 
     if (find_listen_window(true)) {
@@ -350,8 +351,10 @@ static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *respon
     return PM3_ESOFT;
 }
 
-static int set_byte(uint8_t *target, int value) {
-    int c = value > 0xFF;
+// Sets one (reflected) byte and returns carry bit
+// (1 if `value` parameter was greater than 0xFF)
+static int set_byte(uint8_t *target, uint16_t value) {
+    int c = value > 0xFF ? 1 : 0; // be explicit about carry bit values
     *target = reflect8(value);
     return c;
 }
@@ -373,8 +376,8 @@ static int bruteforce(const uint8_t address, const uint8_t *rnd, const uint8_t *
         uint16_t rev_k = reflect16(k);
         switch (address) {
             case 9:
-                c = set_byte(&temp_rnd[0], rev_rnd[0] + (rev_k & 0xFF));
-                c = set_byte(&temp_rnd[1], rev_rnd[1] + c + ((rev_k >> 8) & 0xFF));
+                c = set_byte(&temp_rnd[0], rev_rnd[0]     + ((rev_k) & 0xFFu));
+                c = set_byte(&temp_rnd[1], rev_rnd[1] + c + ((rev_k >> 8) & 0xFFu));
                 c = set_byte(&temp_rnd[2], rev_rnd[2] + c);
                 c = set_byte(&temp_rnd[3], rev_rnd[3] + c);
                 c = set_byte(&temp_rnd[4], rev_rnd[4] + c);
@@ -383,16 +386,16 @@ static int bruteforce(const uint8_t address, const uint8_t *rnd, const uint8_t *
                 break;
 
             case 8:
-                c = set_byte(&temp_rnd[2], rev_rnd[2] + (rev_k & 0xFF));
-                c = set_byte(&temp_rnd[3], rev_rnd[3] + c + ((rev_k >> 8) & 0xFF));
+                c = set_byte(&temp_rnd[2], rev_rnd[2]     + ((rev_k) & 0xFFu));
+                c = set_byte(&temp_rnd[3], rev_rnd[3] + c + ((rev_k >> 8) & 0xFFu));
                 c = set_byte(&temp_rnd[4], rev_rnd[4] + c);
                 c = set_byte(&temp_rnd[5], rev_rnd[5] + c);
                 set_byte(&temp_rnd[6], rev_rnd[6] + c);
                 break;
 
             case 7:
-                c = set_byte(&temp_rnd[4], rev_rnd[4] + (rev_k & 0xFF));
-                c = set_byte(&temp_rnd[5], rev_rnd[5] + c + ((rev_k >> 8) & 0xFF));
+                c = set_byte(&temp_rnd[4], rev_rnd[4]     + ((rev_k) & 0xFFu));
+                c = set_byte(&temp_rnd[5], rev_rnd[5] + c + ((rev_k >> 8) & 0xFFu));
                 set_byte(&temp_rnd[6], rev_rnd[6] + c);
                 break;
 
@@ -707,7 +710,7 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
     return bit_pos;
 }
 
-void em4x70_info(em4x70_data_t *etd, bool ledcontrol) {
+void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -728,7 +731,7 @@ void em4x70_info(em4x70_data_t *etd, bool ledcontrol) {
     reply_ng(CMD_LF_EM4X70_INFO, status, tag.data, sizeof(tag.data));
 }
 
-void em4x70_write(em4x70_data_t *etd, bool ledcontrol) {
+void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -758,7 +761,7 @@ void em4x70_write(em4x70_data_t *etd, bool ledcontrol) {
     reply_ng(CMD_LF_EM4X70_WRITE, status, tag.data, sizeof(tag.data));
 }
 
-void em4x70_unlock(em4x70_data_t *etd, bool ledcontrol) {
+void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -791,7 +794,7 @@ void em4x70_unlock(em4x70_data_t *etd, bool ledcontrol) {
     reply_ng(CMD_LF_EM4X70_UNLOCK, status, tag.data, sizeof(tag.data));
 }
 
-void em4x70_auth(em4x70_data_t *etd, bool ledcontrol) {
+void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
     uint8_t response[3] = {0};
@@ -813,7 +816,7 @@ void em4x70_auth(em4x70_data_t *etd, bool ledcontrol) {
     reply_ng(CMD_LF_EM4X70_AUTH, status, response, sizeof(response));
 }
 
-void em4x70_brute(em4x70_data_t *etd, bool ledcontrol) {
+void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
     uint8_t status = 0;
     uint8_t response[2] = {0};
 
@@ -834,7 +837,7 @@ void em4x70_brute(em4x70_data_t *etd, bool ledcontrol) {
     reply_ng(CMD_LF_EM4X70_BRUTE, status, response, sizeof(response));
 }
 
-void em4x70_write_pin(em4x70_data_t *etd, bool ledcontrol) {
+void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 
@@ -850,7 +853,7 @@ void em4x70_write_pin(em4x70_data_t *etd, bool ledcontrol) {
         if (em4x70_read_id()) {
 
             // Write new PIN
-            if ((write(etd->pin & 0xFFFF,        EM4X70_PIN_WORD_UPPER) == PM3_SUCCESS) &&
+            if ((write((etd->pin) & 0xFFFF, EM4X70_PIN_WORD_UPPER) == PM3_SUCCESS) &&
                     (write((etd->pin >> 16) & 0xFFFF, EM4X70_PIN_WORD_LOWER) == PM3_SUCCESS)) {
 
                 // Now Try to authenticate using the new PIN
@@ -874,7 +877,7 @@ void em4x70_write_pin(em4x70_data_t *etd, bool ledcontrol) {
     reply_ng(CMD_LF_EM4X70_WRITEPIN, status, tag.data, sizeof(tag.data));
 }
 
-void em4x70_write_key(em4x70_data_t *etd, bool ledcontrol) {
+void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t status = 0;
 

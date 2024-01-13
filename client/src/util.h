@@ -32,6 +32,7 @@
 extern uint8_t g_debugMode;
 extern uint8_t g_printAndLog;
 extern bool g_pendingPrompt;
+extern int g_numCPUs;
 
 #define PRINTANDLOG_PRINT 1
 #define PRINTANDLOG_LOG   2
@@ -105,7 +106,6 @@ uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base);
 float param_getfloat(const char *line, int paramnum, float deflt);
 uint8_t param_getdec(const char *line, int paramnum, uint8_t *destination);
 uint8_t param_isdec(const char *line, int paramnum);
-int param_gethex(const char *line, int paramnum, uint8_t *data, int hexcnt);
 int param_gethex_ex(const char *line, int paramnum, uint8_t *data, int *hexcnt);
 int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, int maxdatalen, int *datalen);
 int param_getbin_to_eol(const char *line, int paramnum, uint8_t *data, int maxdatalen, int *datalen);
@@ -117,9 +117,12 @@ int hextobinarray_n(char *target, char *source, int sourcelen);
 int hextobinstring(char *target, char *source);
 int hextobinstring_n(char *target, char *source, int sourcelen);
 
-int binarraytohex(char *target, const size_t targetlen, const char *source, size_t srclen);
-void binarraytobinstring(char *target,  char *source, int length);
-int binstring2binarray(uint8_t *target, char *source, int length);
+int binarray_2_hex(char *target, const size_t targetlen, const char *source, size_t srclen);
+void binarray_2_binstr(char *target,  char *source, int length);
+int binstr_2_binarray(uint8_t *target, char *source, int length);
+
+void bytes_2_binstr(char *target,  const uint8_t *source, size_t sourcelen);
+void binstr_2_bytes(uint8_t *target, size_t *targetlen, const char *src);
 
 uint8_t GetParity(const uint8_t *bits, uint8_t type, int length);
 void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
@@ -130,7 +133,8 @@ void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length
 uint32_t PackBits(uint8_t start, uint8_t len, const uint8_t *bits);
 uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor);
 
-int num_CPUs(void); // number of logical CPUs
+int num_CPUs(void);
+int detect_num_CPUs(void); // number of logical CPUs
 
 void str_lower(char *s); // converts string to lower case
 void str_upper(char *s); // converts string to UPPER case
@@ -139,10 +143,15 @@ void strn_upper(char *s, size_t n);
 bool str_startswith(const char *s,  const char *pre);  // check for prefix in string
 bool str_endswith(const char *s,  const char *suffix);    // check for suffix in string
 void clean_ascii(unsigned char *buf, size_t len);
-void strcleanrn(char *buf, size_t len);
-void strcreplace(char *buf, size_t len, char from, char to);
+void str_cleanrn(char *buf, size_t len);
+void str_creplace(char *buf, size_t len, char from, char to);
+void str_reverse(char *buf,  size_t len);
+void str_inverse_hex(char *buf, size_t len);
+void str_inverse_bin(char *buf, size_t len);
+
 char *str_dup(const char *src);
 char *str_ndup(const char *src, size_t len);
+size_t str_nlen(const char *src, size_t maxlen);
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const uint8_t *arr, int arrlen);
@@ -153,6 +162,7 @@ uint32_t leadingzeros32(uint32_t a);
 uint64_t leadingzeros64(uint64_t a);
 
 int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen);
+int byte_strrstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen);
 
 struct smartbuf {
     char *ptr;

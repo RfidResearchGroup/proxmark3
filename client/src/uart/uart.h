@@ -40,8 +40,10 @@ typedef void *serial_port;
  * used for future references to that port.
  *
  * On errors, this method returns INVALID_SERIAL_PORT or CLAIMED_SERIAL_PORT.
+ * If slient is set to false, this function will print the error information
+ * when error occurs.
  */
-serial_port uart_open(const char *pcPortName, uint32_t speed);
+serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient);
 
 /* Closes the given port.
  */
@@ -74,8 +76,21 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed);
  */
 uint32_t uart_get_speed(const serial_port sp);
 
-/* Reconfigure timeouts
+/* Reconfigure timeouts (ms)
  */
 int uart_reconfigure_timeouts(uint32_t value);
-#endif // _UART_H_
 
+/* Get timeouts (ms)
+ */
+uint32_t uart_get_timeouts(void);
+
+/* Specify the outbound address and port for TCP/UDP connections
+ */
+bool uart_bind(void *socket, const char *bindAddrStr, const char *bindPortStr, bool isBindingIPv6);
+
+/* Parse address and port from string.
+   This could change the addrPortStr
+ */
+int uart_parse_address_port(char *addrPortStr, const char **addrStr, const char **portStr, bool *isIPv6);
+
+#endif // _UART_H_

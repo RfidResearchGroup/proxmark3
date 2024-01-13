@@ -24,7 +24,7 @@
 //-----------------------------------------------------------------------------
 // iCLASS / PICOPASS
 //-----------------------------------------------------------------------------
-
+#define PICOPASS_BLOCK_SIZE    8
 
 // iCLASS reader flags
 #define FLAG_ICLASS_READER_INIT        0x01
@@ -86,6 +86,12 @@ typedef struct {
     uint8_t data[8];
     uint8_t mac[4];
 } PACKED iclass_writeblock_req_t;
+
+// iCLASS write block request data structure
+typedef struct {
+    iclass_auth_req_t req;
+    uint8_t epurse[4];
+} PACKED iclass_credit_epurse_t;
 
 // iCLASS dump data structure
 typedef struct {

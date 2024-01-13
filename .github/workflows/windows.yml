@@ -54,7 +54,7 @@ jobs:
         run: make clean
 
       - name: Build
-        run: make V=1
+        run: make -j $([System.Environment]::ProcessorCount + 1) V=1
 
       - name: Test
         run: make check
@@ -63,7 +63,7 @@ jobs:
         run: make clean
 
       - name: Build btaddon
-        run: make V=1 PLATFORM_EXTRAS=BTADDON
+        run: make -j $([System.Environment]::ProcessorCount + 1) V=1 PLATFORM_EXTRAS=BTADDON
 
       - name: Test btaddon
         run: make check
@@ -84,7 +84,7 @@ jobs:
         working-directory: client/build/
 
       - name: Build cmake
-        run: make VERBOSE=1
+        run: make -j $([System.Environment]::ProcessorCount + 1) VERBOSE=1
         working-directory: client/build/
 
       - name: Test cmake
@@ -110,6 +110,7 @@ jobs:
             gcc-arm-none-eabi
             libnewlib-dev
             libbz2-dev
+            liblz4-dev
             qtbase5-dev
             cmake
             libpython3-dev
@@ -118,6 +119,7 @@ jobs:
             python3-dev
             libpython3-all-dev
             libssl-dev
+            libgd-dev
 
       - name: Install Python dependencies
         run: |
@@ -140,7 +142,7 @@ jobs:
         run: make clean
 
       - name: Build
-        run: make V=1
+        run: make -j$((`nproc` + 1)) V=1
 
       - name: Test
         run: make check
@@ -149,7 +151,7 @@ jobs:
         run: make clean
 
       - name: Build btaddon
-        run: make V=1 PLATFORM_EXTRAS=BTADDON
+        run: make -j$((`nproc` + 1)) V=1 PLATFORM_EXTRAS=BTADDON
 
       - name: Test btaddon
         run: make check
@@ -170,7 +172,7 @@ jobs:
         working-directory: client/build/
 
       - name: Build cmake
-        run: make VERBOSE=1
+        run: make -j$((`nproc` + 1)) VERBOSE=1
         working-directory: client/build/
 
       - name: Test cmake

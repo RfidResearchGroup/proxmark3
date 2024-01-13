@@ -42,16 +42,14 @@
 #define EMRTD_MAX_FILE_SIZE 35000
 
 // ISO7816 commands
-#define EMRTD_SELECT 0xA4
-#define EMRTD_EXTERNAL_AUTHENTICATE 0x82
-#define EMRTD_GET_CHALLENGE 0x84
-#define EMRTD_READ_BINARY 0xB0
-#define EMRTD_P1_SELECT_BY_EF 0x02
-#define EMRTD_P1_SELECT_BY_NAME 0x04
-#define EMRTD_P2_PROPRIETARY 0x0C
+#define EMRTD_P1_SELECT_BY_EF       0x02
+#define EMRTD_P1_SELECT_BY_NAME     0x04
+#define EMRTD_P2_PROPRIETARY        0x0C
 
 // App IDs
 #define EMRTD_AID_MRTD {0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01}
+
+#define EMRTD_KMAC_LEN              16
 
 // DESKey Types
 static const uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
@@ -124,7 +122,7 @@ static emrtd_hashalg_t hashalg_table[] = {
     {"SHA-1",   sha1hash,   20,  7, {0x06, 0x05, 0x2B, 0x0E, 0x03, 0x02, 0x1A}},
     {"SHA-256", sha256hash, 32, 11, {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01}},
     {"SHA-512", sha512hash, 64, 11, {0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03}},
-    {NULL,      NULL,       0,  0,  {}}
+    {NULL,      NULL,       0,  0,  {0}}
 };
 
 static emrtd_pacealg_t pacealg_table[] = {
@@ -145,7 +143,7 @@ static emrtd_pacealg_t pacealg_table[] = {
     {"ECDH, Integrated Mapping, AES-CMAC-128", NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x04, 0x02}},
     {"ECDH, Integrated Mapping, AES-CMAC-192", NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x04, 0x03}},
     {"ECDH, Integrated Mapping, AES-CMAC-256", NULL, {0x04, 0x00, 0x7F, 0x00, 0x07, 0x02, 0x02, 0x04, 0x04, 0x04}},
-    {NULL, NULL, {}}
+    {NULL, NULL, {0}}
 };
 
 static emrtd_pacesdp_t pacesdp_table[] = {
@@ -383,25 +381,25 @@ static void _emrtd_convert_fileid(uint16_t file, uint8_t *dataout) {
 }
 
 static int emrtd_select_file_by_name(uint8_t namelen, uint8_t *name) {
-    return emrtd_exchange_commands_noout((sAPDU_t) {0, EMRTD_SELECT, EMRTD_P1_SELECT_BY_NAME, 0x0C, namelen, name}, false, true);
+    return emrtd_exchange_commands_noout((sAPDU_t) {0, ISO7816_SELECT_FILE, EMRTD_P1_SELECT_BY_NAME, 0x0C, namelen, name}, false, true);
 }
 
 static int emrtd_select_file_by_ef(uint16_t file_id) {
     uint8_t data[2];
     _emrtd_convert_fileid(file_id, data);
-    return emrtd_exchange_commands_noout((sAPDU_t) {0, EMRTD_SELECT, EMRTD_P1_SELECT_BY_EF, 0x0C, sizeof(data), data}, false, true);
+    return emrtd_exchange_commands_noout((sAPDU_t) {0, ISO7816_SELECT_FILE, EMRTD_P1_SELECT_BY_EF, 0x0C, sizeof(data), data}, false, true);
 }
 
 static int emrtd_get_challenge(int length, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
-    return emrtd_exchange_commands((sAPDU_t) {0, EMRTD_GET_CHALLENGE, 0, 0, 0, NULL}, true, length, dataout, maxdataoutlen, dataoutlen, false, true);
+    return emrtd_exchange_commands((sAPDU_t) {0, ISO7816_GET_CHALLENGE, 0, 0, 0, NULL}, true, length, dataout, maxdataoutlen, dataoutlen, false, true);
 }
 
 static int emrtd_external_authenticate(uint8_t *data, int length, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
-    return emrtd_exchange_commands((sAPDU_t) {0, EMRTD_EXTERNAL_AUTHENTICATE, 0, 0, length, data}, true, length, dataout, maxdataoutlen, dataoutlen, false, true);
+    return emrtd_exchange_commands((sAPDU_t) {0, ISO7816_EXTERNAL_AUTHENTICATION, 0, 0, length, data}, true, length, dataout, maxdataoutlen, dataoutlen, false, true);
 }
 
 static int _emrtd_read_binary(int offset, int bytes_to_read, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
-    return emrtd_exchange_commands((sAPDU_t) {0, EMRTD_READ_BINARY, offset >> 8, offset & 0xFF, 0, NULL}, true, bytes_to_read, dataout, maxdataoutlen, dataoutlen, false, true);
+    return emrtd_exchange_commands((sAPDU_t) {0, ISO7816_READ_BINARY, offset >> 8, offset & 0xFF, 0, NULL}, true, bytes_to_read, dataout, maxdataoutlen, dataoutlen, false, true);
 }
 
 static void emrtd_bump_ssc(uint8_t *ssc) {
@@ -420,8 +418,8 @@ static void emrtd_bump_ssc(uint8_t *ssc) {
 
 static bool emrtd_check_cc(uint8_t *ssc, uint8_t *key, uint8_t *rapdu, int rapdulength) {
     // https://elixi.re/i/clarkson.png
-    uint8_t k[500];
-    uint8_t cc[500];
+    uint8_t k[500] = { 0x00 };
+    uint8_t cc[500] = { 0x00 };
 
     emrtd_bump_ssc(ssc);
 
@@ -453,16 +451,16 @@ static bool emrtd_check_cc(uint8_t *ssc, uint8_t *key, uint8_t *rapdu, int rapdu
 }
 
 static bool emrtd_secure_select_file_by_ef(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, uint16_t file) {
-    uint8_t response[PM3_CMD_DATA_SIZE];
+    uint8_t response[PM3_CMD_DATA_SIZE] = { 0x00 };
     size_t resplen = 0;
 
     // convert fileid to bytes
-    uint8_t file_id[2];
+    uint8_t file_id[2] = { 0x00 };
     _emrtd_convert_fileid(file, file_id);
 
     uint8_t iv[8] = { 0x00 };
-    uint8_t cmd[8];
-    uint8_t data[21];
+    uint8_t cmd[8] = { 0x00 };
+    uint8_t data[21] = { 0x00 };
     uint8_t temp[8] = {0x0c, 0xa4, EMRTD_P1_SELECT_BY_EF, 0x0c};
 
     int cmdlen = pad_block(temp, 4, cmd);
@@ -503,7 +501,7 @@ static bool emrtd_secure_select_file_by_ef(uint8_t *kenc, uint8_t *kmac, uint8_t
     memcpy(data + (datalen + 3), do8e, 10);
     PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
 
-    if (emrtd_exchange_commands((sAPDU_t) {0x0C, EMRTD_SELECT, EMRTD_P1_SELECT_BY_EF, 0x0C, lc, data}, true, 0, response, sizeof(response), &resplen, false, true) == false) {
+    if (emrtd_exchange_commands((sAPDU_t) {0x0C, ISO7816_SELECT_FILE, EMRTD_P1_SELECT_BY_EF, 0x0C, lc, data}, true, 0, response, sizeof(response), &resplen, false, true) == false) {
         return false;
     }
 
@@ -511,11 +509,11 @@ static bool emrtd_secure_select_file_by_ef(uint8_t *kenc, uint8_t *kmac, uint8_t
 }
 
 static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, size_t maxdataoutlen, size_t *dataoutlen) {
-    uint8_t cmd[8];
-    uint8_t data[21];
+    uint8_t cmd[8] = { 0x00 };
+    uint8_t data[21] = { 0x00 };
     uint8_t temp[8] = {0x0c, 0xb0};
 
-    PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 20));
+    PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, EMRTD_KMAC_LEN));
 
     // Set p1 and p2
     temp[2] = (uint8_t)(offset >> 8);
@@ -526,24 +524,24 @@ static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, i
 
     uint8_t do97[3] = {0x97, 0x01, bytes_to_read};
 
-    uint8_t m[11];
+    uint8_t m[11] = { 0x00 };
     memcpy(m, cmd, 8);
     memcpy(m + 8, do97, 3);
 
     emrtd_bump_ssc(ssc);
 
-    uint8_t n[19];
+    uint8_t n[19] = { 0x00 };
     memcpy(n, ssc, 8);
     memcpy(n + 8, m, 11);
-    PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, 19));
+    PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, sizeof(n)));
 
-    uint8_t cc[8];
+    uint8_t cc[8] = { 0x00 };
     retail_mac(kmac, n, 19, cc);
-    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, 8));
+    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, sizeof(cc)));
 
     uint8_t do8e[10] = {0x8E, 0x08};
     memcpy(do8e + 2, cc, 8);
-    PrintAndLogEx(DEBUG, "do8e: %s", sprint_hex_inrow(do8e, 10));
+    PrintAndLogEx(DEBUG, "do8e: %s", sprint_hex_inrow(do8e, sizeof(do8e)));
 
     int lc = 13;
     PrintAndLogEx(DEBUG, "lc: %i", lc);
@@ -552,7 +550,7 @@ static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, i
     memcpy(data + 3, do8e, 10);
     PrintAndLogEx(DEBUG, "data: %s", sprint_hex_inrow(data, lc));
 
-    if (emrtd_exchange_commands((sAPDU_t) {0x0C, EMRTD_READ_BINARY, offset >> 8, offset & 0xFF, lc, data}, true, 0, dataout, maxdataoutlen, dataoutlen, false, true) == false) {
+    if (emrtd_exchange_commands((sAPDU_t) {0x0C, ISO7816_READ_BINARY, offset >> 8, offset & 0xFF, lc, data}, true, 0, dataout, maxdataoutlen, dataoutlen, false, true) == false) {
         return false;
     }
 
@@ -560,8 +558,8 @@ static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, i
 }
 
 static bool _emrtd_secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, int offset, int bytes_to_read, uint8_t *dataout, size_t *dataoutlen) {
-    uint8_t response[500];
-    uint8_t temp[500];
+    uint8_t response[500] = { 0x00 };
+    uint8_t temp[500] = { 0x00 };
     size_t resplen, cutat = 0;
     uint8_t iv[8] = { 0x00 };
 
@@ -582,9 +580,9 @@ static bool _emrtd_secure_read_binary_decrypt(uint8_t *kenc, uint8_t *kmac, uint
 }
 
 static int emrtd_read_file(uint8_t *dataout, size_t *dataoutlen, uint8_t *kenc, uint8_t *kmac, uint8_t *ssc, bool use_secure) {
-    uint8_t response[EMRTD_MAX_FILE_SIZE];
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
-    uint8_t tempresponse[500];
+    uint8_t tempresponse[500] = { 0x00 };
     size_t tempresplen = 0;
     int toread = 4;
     int offset = 0;
@@ -751,7 +749,7 @@ static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const c
 }
 
 static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length, const char *path) {
-    uint8_t data[EMRTD_MAX_FILE_SIZE];
+    uint8_t data[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t datalen = 0;
 
     // If we can't find image in EF_DG5, return false.
@@ -761,8 +759,9 @@ static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length, const c
 
     if (datalen < EMRTD_MAX_FILE_SIZE) {
         char *filepath = calloc(strlen(path) + 100, sizeof(char));
-        if (filepath == NULL)
+        if (filepath == NULL) {
             return PM3_EMALLOC;
+        }
         strcpy(filepath, path);
         strncat(filepath, PATHSEP, 2);
         strcat(filepath, dg_table[EF_DG5].filename);
@@ -778,7 +777,7 @@ static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length, const c
 }
 
 static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length, const char *path) {
-    uint8_t data[EMRTD_MAX_FILE_SIZE];
+    uint8_t data[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t datalen = 0;
 
     // If we can't find image in EF_DG7, return false.
@@ -788,8 +787,9 @@ static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length, const c
 
     if (datalen < EMRTD_MAX_FILE_SIZE) {
         char *filepath = calloc(strlen(path) + 100, sizeof(char));
-        if (filepath == NULL)
+        if (filepath == NULL) {
             return PM3_EMALLOC;
+        }
         strcpy(filepath, path);
         strncat(filepath, PATHSEP, 2);
         strcat(filepath, dg_table[EF_DG7].filename);
@@ -814,8 +814,9 @@ static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const c
     }
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
-    if (filepath == NULL)
+    if (filepath == NULL) {
         return PM3_EMALLOC;
+    }
 
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
@@ -827,7 +828,7 @@ static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const c
 }
 
 static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, uint16_t file, const char *name, bool use_secure, const char *path) {
-    uint8_t response[EMRTD_MAX_FILE_SIZE];
+    uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
 
     if (emrtd_select_and_read(response, &resplen, file, ks_enc, ks_mac, ssc, use_secure) == false) {
@@ -835,8 +836,9 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, uint
     }
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
-    if (filepath == NULL)
+    if (filepath == NULL) {
         return false;
+    }
 
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
@@ -1021,8 +1023,8 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
     uint8_t ssc[8] = { 0x00 };
-    uint8_t ks_enc[16] = { 0x00 };
-    uint8_t ks_mac[16] = { 0x00 };
+    uint8_t ks_enc[EMRTD_KMAC_LEN] = { 0x00 };
+    uint8_t ks_mac[EMRTD_KMAC_LEN] = { 0x00 };
     bool BAC = false;
 
     // Select the eMRTD
@@ -1052,8 +1054,9 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
-    if (filepath == NULL)
+    if (filepath == NULL) {
         return PM3_EMALLOC;
+    }
 
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
@@ -1281,18 +1284,40 @@ static void emrtd_print_issuance(char *data, bool ascii) {
     PrintAndLogEx(SUCCESS, "Date of issue.........: " _YELLOW_("%s"), final_date);
 }
 
-static void emrtd_print_personalization_timestamp(uint8_t *data) {
+static void emrtd_print_personalization_timestamp(uint8_t *data, size_t datalen) {
+    if (datalen < 7) {
+        return;
+    }
+
     char str_date[0x0F] = { 0x00 };
     strncpy(str_date, sprint_hex_inrow(data, 0x07), sizeof(str_date) - 1);
+
     char final_date[20] = { 0x00 };
-    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", str_date, str_date + 4, str_date + 6, str_date + 8, str_date + 10, str_date + 12);
+    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s"
+             , str_date
+             , str_date + 4
+             , str_date + 6
+             , str_date + 8
+             , str_date + 10
+             , str_date + 12
+            );
 
     PrintAndLogEx(SUCCESS, "Personalization at....: " _YELLOW_("%s"), final_date);
 }
 
-static void emrtd_print_unknown_timestamp_5f85(uint8_t *data) {
+static void emrtd_print_unknown_timestamp_5f85(uint8_t *data, size_t datalen) {
+    if (datalen < 14) {
+        return;
+    }
     char final_date[20] = { 0x00 };
-    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", data, data + 4, data + 6, data + 8, data + 10, data + 12);
+    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s"
+             , data
+             , data + 4
+             , data + 6
+             , data + 8
+             , data + 10
+             , data + 12
+            );
 
     PrintAndLogEx(SUCCESS, "Unknown timestamp 5F85: " _YELLOW_("%s"), final_date);
     PrintAndLogEx(HINT, "This is very likely the personalization timestamp, but it is using an undocumented tag.");
@@ -1587,13 +1612,13 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
                     saveFile("BackOfDocument", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x55:
-                    emrtd_print_personalization_timestamp(tagdata);
+                    emrtd_print_personalization_timestamp(tagdata, tagdatalen);
                     break;
                 case 0x56:
                     PrintAndLogEx(SUCCESS, "Serial of Personalization System: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x85:
-                    emrtd_print_unknown_timestamp_5f85(tagdata);
+                    emrtd_print_unknown_timestamp_5f85(tagdata, tagdatalen);
                     break;
                 default:
                     PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....: %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
@@ -2086,13 +2111,13 @@ static int CmdHFeMRTDDump(const char *Cmd) {
                   "Dump all files on an eMRTD",
                   "hf emrtd dump\n"
                   "hf emrtd dump --dir ../dump\n"
-                  "hf emrtd dump -n 123456789 -d 19890101 -e 20250401"
+                  "hf emrtd dump -n 123456789 -d 890101 -e 250401"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
-        arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
+        arg_str0("n", "doc", "<alphanum>", "document number, up to 9 chars"),
+        arg_str0("d", "date", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars"),
         arg_str0(NULL, "dir", "<str>", "save dump to the given dirpath"),
@@ -2186,14 +2211,14 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
                   "Display info about an eMRTD",
                   "hf emrtd info\n"
                   "hf emrtd info --dir ../dumps\n"
-                  "hf emrtd info -n 123456789 -d 19890101 -e 20250401\n"
-                  "hf emrtd info -n 123456789 -d 19890101 -e 20250401 -i"
+                  "hf emrtd info -n 123456789 -d 890101 -e 250401\n"
+                  "hf emrtd info -n 123456789 -d 890101 -e 250401 -i"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
-        arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
+        arg_str0("n", "doc", "<alphanum>", "document number, up to 9 chars"),
+        arg_str0("d", "date", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars (passports only)"),
         arg_str0(NULL, "dir", "<str>", "display info from offline dump stored in dirpath"),

@@ -372,8 +372,7 @@ static int mfdes_get_info(mfdes_info_res_t *info) {
 }
 
 // --- GET SIGNATURE
-static int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len, nxp_cardtype_t card_type) {
-    (void)card_type;
+int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len) {
 
     if (uid == NULL) {
         PrintAndLogEx(DEBUG, "UID=NULL");
@@ -445,7 +444,7 @@ static void swap24(uint8_t *data) {
     uint8_t tmp = data[0];
     data[0] = data[2];
     data[2] = tmp;
-};
+}
 
 // default parameters
 static uint8_t defaultKeyNum = 0;
@@ -742,7 +741,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         res = DesfireReadSignature(&dctx, 0x00, signature, &signature_len);
         if (res == PM3_SUCCESS) {
             if (signature_len == 56)
-                desfire_print_signature(info.uid, info.uidlen, signature, signature_len, cardtype);
+                desfire_print_signature(info.uid, info.uidlen, signature, signature_len);
             else
                 PrintAndLogEx(WARNING, "--- GetSignature returned wrong signature length: %zu", signature_len);
         } else {
@@ -808,9 +807,9 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     iso14a_card_select_t card;
     res = SelectCard14443A_4(true, false, &card);
     if (res == PM3_SUCCESS) {
-        static const char STANDALONE_DESFIRE[] = { 0x75, 0x77, 0x81, 0x02 };
-        static const char JCOP_DESFIRE[] = { 0x75, 0xf7, 0xb1, 0x02 };
-        static const char JCOP3_DESFIRE[] = { 0x78, 0x77, 0x71, 0x02 };
+        static const uint8_t STANDALONE_DESFIRE[] = { 0x75, 0x77, 0x81, 0x02 };
+        static const uint8_t JCOP_DESFIRE[] = { 0x75, 0xf7, 0xb1, 0x02 };
+        static const uint8_t JCOP3_DESFIRE[] = { 0x78, 0x77, 0x71, 0x02 };
 
         if (card.sak == 0x20) {
 
@@ -1126,9 +1125,9 @@ static int CmdHF14aDesChk(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes chk",
                   "Checks keys with MIFARE DESFire card.",
                   "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f  -> check key on aid 0x123456\n"
-                  "hf mfdes chk -d mfdes_default_keys                          -> check keys from dictionary against all existing aid on card\n"
-                  "hf mfdes chk -d mfdes_default_keys --aid 123456        -> check keys from dictionary against aid 0x123456\n"
-                  "hf mfdes chk --aid 123456 --pattern1b -j keys          -> check all 1-byte keys pattern on aid 0x123456 and save found keys to json\n"
+                  "hf mfdes chk -d mfdes_default_keys                     -> check keys against all existing aid on card\n"
+                  "hf mfdes chk -d mfdes_default_keys --aid 123456        -> check keys against aid 0x123456\n"
+                  "hf mfdes chk --aid 123456 --pattern1b -j keys          -> check all 1-byte keys pattern on aid 0x123456 and save found keys to `keys.json`\n"
                   "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00  -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00");
 
     void *argtable[] = {
@@ -1411,7 +1410,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 }
 
 static int CmdHF14ADesList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf mfdes", "des");
+    return CmdTraceListAlias(Cmd, "hf mfdes", "des -c");
 }
 
 static int DesfireAuthCheck(DesfireContext_t *dctx, DesfireISOSelectWay way, uint32_t appID, DesfireSecureChannel secureChannel, uint8_t *key) {

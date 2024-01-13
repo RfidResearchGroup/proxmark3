@@ -21,7 +21,10 @@ MYSRCS = \
 	cipher.c \
 	cmac.c \
 	des.c \
+	ecc_point_compression.c \
+	ecdh.c \
 	ecdsa.c \
+	gcm.c \
 	md.c \
 	md5.c \
 	oid.c \
@@ -43,7 +46,8 @@ MYSRCS = \
 	threading.c \
 	x509.c \
 	x509_crl.c \
-	x509_crt.c
+	x509_crt.c \
+	net_sockets.c
 
 LIB_A = libmbedtls.a
 

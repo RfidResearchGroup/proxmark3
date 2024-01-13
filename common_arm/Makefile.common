@@ -44,7 +44,7 @@ OBJDIR = obj
 INCLUDE = -I../include -I../common_arm -I../common_fpga -I../common -I.
 
 # Also search prerequisites in the common directory (for usb.c), the fpga directory (for fpga.bit), and the lz4 directory
-VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/lz4 ../fpga-$(PLATFORM_FPGA) ../armsrc/Standalone
+VPATH = . ../common_arm ../common ../common/crapto1 ../common/mbedtls ../common/lz4 ../fpga ../armsrc/Standalone
 
 INCLUDES = ../include/proxmark3_arm.h ../include/at91sam7s512.h ../include/config_gpio.h ../include/pm3_cmd.h
 

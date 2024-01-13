@@ -36,9 +36,10 @@
 #include "protocols.h"
 #include "ticks.h"
 #include "iso15693.h"
-#include "iclass_cmd.h"              /* iclass_card_select_t struct */
+#include "iclass_cmd.h"              // iclass_card_select_t struct
+#include "i2c.h"                     // i2c defines (SIM module access)
 
-static uint8_t get_pagemap(const picopass_hdr_t *hdr) {
+uint8_t get_pagemap(const picopass_hdr_t *hdr) {
     return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
 }
 
@@ -51,23 +52,6 @@ static uint8_t get_pagemap(const picopass_hdr_t *hdr) {
 #ifndef ICLASS_16KS_SIZE
 #define ICLASS_16KS_SIZE       0x100 * 8
 #endif
-
-// iCLASS has a slightly different timing compared to ISO15693. According to the picopass data sheet the tag response is expected 330us after
-// the reader command. This is measured from end of reader EOF to first modulation of the tag's SOF which starts with a 56,64us unmodulated period.
-// 330us = 140 ssp_clk cycles @ 423,75kHz when simulating.
-// 56,64us = 24 ssp_clk_cycles
-#define DELAY_ICLASS_VCD_TO_VICC_SIM     (140 - 26) // (140 - 24)
-
-// times in ssp_clk_cycles @ 3,3625MHz when acting as reader
-#define DELAY_ICLASS_VICC_TO_VCD_READER  DELAY_ISO15693_VICC_TO_VCD_READER
-
-// times in samples @ 212kHz when acting as reader
-#define ICLASS_READER_TIMEOUT_ACTALL     330 // 1558us, nominal 330us + 7slots*160us = 1450us
-#define ICLASS_READER_TIMEOUT_UPDATE    3390 // 16000us, nominal 4-15ms
-#define ICLASS_READER_TIMEOUT_OTHERS      80 // 380us, nominal 330us
-
-#define AddCrc(data, len) compute_crc(CRC_ICLASS, (data), (len), (data)+(len), (data)+(len)+1)
-
 
 /*
 * CARD TO READER
@@ -1245,7 +1229,7 @@ send:
 }
 
 // THE READER CODE
-static void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time, uint32_t *end_time, bool shallow_mod) {
+void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time, uint32_t *end_time, bool shallow_mod) {
     CodeIso15693AsReader(frame, len);
     tosend_t *ts = get_tosend();
     TransmitTo15693Tag(ts->buf, ts->max, start_time, shallow_mod);
@@ -1270,6 +1254,12 @@ static bool iclass_send_cmd_with_retries(uint8_t *cmd, size_t cmdsize, uint8_t *
         if (res == PM3_SUCCESS && expected_size == resp_len) {
             return true;
         }
+
+        // Timed out waiting for the tag to reply, but perhaps the tag did hear the command and is attempting to reply
+        // So wait long enough for the tag to encode it's reply plus required frame delays on each side before retrying
+        // And then double it, because in practice it seems to make it much more likely to succeed
+        // Response time calculation from expected_size lifted from GetIso15693AnswerFromTag
+        *start_time = *eof_time + ((DELAY_ICLASS_VICC_TO_VCD_READER + DELAY_ISO15693_VCD_TO_VICC_READER + (expected_size * 8 * 8 * 16)) * 2);
     }
     return false;
 }
@@ -1755,7 +1745,7 @@ void iClass_Dump(uint8_t *msg) {
         } PACKED response;
 
         response.isOK = dumpsuccess;
-        response.block_cnt = i;
+        response.block_cnt = i - cmd->start_block;
         response.bb_offset = dataout - BigBuf_get_addr();
         reply_ng(CMD_HF_ICLASS_DUMP, PM3_SUCCESS, (uint8_t *)&response, sizeof(response));
     }
@@ -1784,7 +1774,6 @@ static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac, 
         return false;
     }
 
-    uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     if (blockno == 2) {
         // check response. e-purse update swaps first and second half
         if (memcmp(data + 4, resp, 4) || memcmp(data, resp + 4, 4)) {
@@ -1792,6 +1781,7 @@ static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac, 
         }
     } else if (blockno == 3 || blockno == 4) {
         // check response. Key updates always return 0xffffffffffffffff
+        uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
         if (memcmp(all_ff, resp, 8)) {
             return false;
         }
@@ -1821,7 +1811,7 @@ void iClass_WriteBlock(uint8_t *msg) {
     // select tag.
     uint32_t eof_time = 0;
     picopass_hdr_t hdr = {0};
-    uint8_t res = select_iclass_tag(&hdr, payload->req.use_credit_key, &eof_time, shallow_mod);
+    bool res = select_iclass_tag(&hdr, payload->req.use_credit_key, &eof_time, shallow_mod);
     if (res == false) {
         goto out;
     }
@@ -1881,8 +1871,9 @@ void iClass_WriteBlock(uint8_t *msg) {
         if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             res = false;
             switch_off();
-            if (payload->req.send_reply)
-                reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_ETEAROFF, (uint8_t *)&res, sizeof(uint8_t));
+            if (payload->req.send_reply) {
+                reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_ETEAROFF, (uint8_t *)&res, sizeof(bool));
+            }
             return;
         } else {
 
@@ -1901,16 +1892,16 @@ void iClass_WriteBlock(uint8_t *msg) {
     }
 
     // verify write
-    uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-    if (payload->req.blockno == 2) {
+    if ((pagemap != PICOPASS_NON_SECURE_PAGEMODE) && (payload->req.blockno == 2)) {
         // check response. e-purse update swaps first and second half
         if (memcmp(payload->data + 4, resp, 4) || memcmp(payload->data, resp + 4, 4)) {
             res = false;
             goto out;
         }
-    } else if (payload->req.blockno == 3 || payload->req.blockno == 4) {
+    } else if ((pagemap != PICOPASS_NON_SECURE_PAGEMODE) && (payload->req.blockno == 3 || payload->req.blockno == 4)) {
         // check response. Key updates always return 0xffffffffffffffff
-        if (memcmp(all_ff, resp, 8)) {
+        uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+        if (memcmp(all_ff, resp, sizeof(all_ff))) {
             res = false;
             goto out;
         }
@@ -1925,8 +1916,163 @@ void iClass_WriteBlock(uint8_t *msg) {
 out:
     switch_off();
 
+    if (payload->req.send_reply) {
+        reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_SUCCESS, (uint8_t *)&res, sizeof(bool));
+    }
+}
+
+void iclass_credit_epurse(iclass_credit_epurse_t *payload) {
+
+    LED_A_ON();
+
+    bool shallow_mod = payload->req.shallow_mod;
+
+    Iso15693InitReader();
+
+    // select tag.
+    uint32_t eof_time = 0;
+    picopass_hdr_t hdr = {0};
+    uint8_t res = select_iclass_tag(&hdr, payload->req.use_credit_key, &eof_time, shallow_mod);
+    if (res == false) {
+        goto out;
+    }
+
+    uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+    uint8_t mac[4] = {0};
+
+    // authenticate
+    if (payload->req.do_auth) {
+
+        res = authenticate_iclass_tag(&payload->req, &hdr, &start_time, &eof_time, mac);
+        if (res == false) {
+            goto out;
+        }
+    }
+
+    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+    uint8_t cmd_read[] = {ICLASS_CMD_READ_OR_IDENTIFY, payload->req.blockno, 0x00, 0x00};
+    AddCrc(cmd_read + 1, 1);
+
+    uint8_t epurse[10];
+    res = iclass_send_cmd_with_retries(cmd_read, sizeof(cmd_read), epurse, sizeof(epurse), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, shallow_mod);
+    if (!res) {
+        switch_off();
+        if (payload->req.send_reply) {
+            reply_ng(CMD_HF_ICLASS_CREDIT_EPURSE, PM3_ETIMEOUT, (uint8_t *)&res, sizeof(uint8_t));
+        }
+        return;
+    }
+
+    uint8_t write[14] = { 0x80 | ICLASS_CMD_UPDATE, payload->req.blockno };
+    uint8_t write_len = 14;
+
+    uint8_t epurse_offset = 0;
+    const uint8_t empty_epurse[] = {0xff, 0xff, 0xff, 0xff};
+    if (memcmp(epurse, empty_epurse, 4) == 0) {
+        // epurse data in stage 2
+        epurse_offset = 4;
+    }
+
+    memcpy(epurse + epurse_offset, payload->epurse, 4);
+
+    // blank out debiting value as per the first step of the crediting procedure
+    epurse[epurse_offset + 0] = 0xFF;
+    epurse[epurse_offset + 1] = 0xFF;
+
+    // initial epurse write for credit
+    memcpy(write + 2, epurse, 8);
+
+    doMAC_N(write + 1, 9, payload->req.use_credit_key ? hdr.key_c : hdr.key_d, mac);
+    memcpy(write + 10, mac, sizeof(mac));
+
+    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+    uint8_t resp[10] = {0};
+
+    uint8_t tries = 3;
+    while (tries-- > 0) {
+
+        iclass_send_as_reader(write, write_len, &start_time, &eof_time, shallow_mod);
+
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+            res = false;
+            switch_off();
+            if (payload->req.send_reply)
+                reply_ng(CMD_HF_ICLASS_CREDIT_EPURSE, PM3_ETEAROFF, (uint8_t *)&res, sizeof(uint8_t));
+            return;
+        } else {
+
+            uint16_t resp_len = 0;
+            int res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_UPDATE, &eof_time, false, true, &resp_len);
+            if (res2 == PM3_SUCCESS && resp_len == 10) {
+                res = true;
+                break;
+            }
+        }
+    }
+
+    if (tries == 0) {
+        res = false;
+        goto out;
+    }
+
+    // check response. e-purse update swaps first and second half
+    if (memcmp(write + 2 + 4, resp, 4) || memcmp(write + 2, resp + 4, 4)) {
+        res = false;
+        goto out;
+    }
+
+    // new epurse write
+    // epurse offset is now flipped after the first write
+    epurse_offset ^= 4;
+    memcpy(resp + epurse_offset, payload->epurse, 4);
+    memcpy(write + 2, resp, 8);
+
+    doMAC_N(write + 1, 9, payload->req.use_credit_key ? hdr.key_c : hdr.key_d, mac);
+    memcpy(write + 10, mac, sizeof(mac));
+
+    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+    tries = 3;
+    while (tries-- > 0) {
+
+        iclass_send_as_reader(write, write_len, &start_time, &eof_time, shallow_mod);
+
+        if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+            res = false;
+            switch_off();
+            if (payload->req.send_reply)
+                reply_ng(CMD_HF_ICLASS_CREDIT_EPURSE, PM3_ETEAROFF, (uint8_t *)&res, sizeof(uint8_t));
+            return;
+        } else {
+
+            uint16_t resp_len = 0;
+            int res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_UPDATE, &eof_time, false, true, &resp_len);
+            if (res2 == PM3_SUCCESS && resp_len == 10) {
+                res = true;
+                break;
+            }
+        }
+    }
+
+    if (tries == 0) {
+        res = false;
+        goto out;
+    }
+
+    // check response. e-purse update swaps first and second half
+    if (memcmp(write + 2 + 4, resp, 4) || memcmp(write + 2, resp + 4, 4)) {
+        res = false;
+        goto out;
+    }
+
+out:
+    switch_off();
+
     if (payload->req.send_reply)
-        reply_ng(CMD_HF_ICLASS_WRITEBL, PM3_SUCCESS, (uint8_t *)&res, sizeof(uint8_t));
+        reply_ng(CMD_HF_ICLASS_CREDIT_EPURSE, PM3_SUCCESS, (uint8_t *)&res, sizeof(uint8_t));
 }
 
 void iClass_Restore(iclass_restore_req_t *msg) {

@@ -18,8 +18,8 @@
 #include "atrs.h"
 #include <string.h>
 #include <stdlib.h>
-#include "commonutil.h"   // ARRAYLEN
-#include "ui.h" // PrintAndLogEx
+#include "commonutil.h" // ARRAYLEN
+#include "ui.h"         // PrintAndLogEx
 
 // get a ATR description based on the atr bytes
 // returns description of the best match
@@ -32,7 +32,7 @@ const char *getAtrInfo(const char *atr_str) {
         if (strlen(AtrTable[i].bytes) != slen)
             continue;
 
-        if (strstr(AtrTable[i].bytes, "..") != NULL) {
+        if (strstr(AtrTable[i].bytes, ".") != NULL) {
             char *tmp_atr = calloc(slen, sizeof(uint8_t));
             if (tmp_atr == NULL) {
                 PrintAndLogEx(FAILED, "failed to allocate memory");
@@ -40,7 +40,7 @@ const char *getAtrInfo(const char *atr_str) {
             }
 
             for (int j = 0; j < slen; j++) {
-                tmp_atr[j] = AtrTable[i].bytes[j] == '.' ? '.' : atr_str[j];
+                tmp_atr[j] = (AtrTable[i].bytes[j] == '.') ? '.' : atr_str[j];
             }
 
             if (strncmp(tmp_atr, AtrTable[i].bytes, slen) == 0) {
@@ -50,9 +50,12 @@ const char *getAtrInfo(const char *atr_str) {
             free(tmp_atr);
 
         } else {
-            if (strncmp(atr_str, AtrTable[i].bytes, slen) == 0) return AtrTable[i].desc;
+            if (strncmp(atr_str, AtrTable[i].bytes, slen) == 0) {
+                return AtrTable[i].desc;
+            }
         }
     }
+
     if (match >= 0) {
         return AtrTable[match].desc;
     } else {

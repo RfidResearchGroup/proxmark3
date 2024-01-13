@@ -21,7 +21,13 @@
 
 #include "common.h"
 
-#define MFKEY_SIZE              6
+#define DES_KEY_LEN             8
+#define AES_KEY_LEN             16
+#define T2DES_KEY_LEN           16
+#define T3DES_KEY_LEN           24
+
+#define MAX_AES_KEYS_LIST_LEN   1024
+
 #define MFBLOCK_SIZE            16
 
 #define MIFARE_4K_MAXBLOCK      256
@@ -41,14 +47,24 @@
 
 #define MIFARE_KEY_SIZE         6
 
+#define MIFARE_MINI_MAX_KEY_SIZE    (MIFARE_MINI_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
+#define MIFARE_1K_MAX_KEY_SIZE      (MIFARE_1K_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
+#define MIFARE_2K_MAX_KEY_SIZE      (MIFARE_2K_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
+#define MIFARE_4K_MAX_KEY_SIZE      (MIFARE_4K_MAXSECTOR * 2 * MIFARE_KEY_SIZE)
+
+
 static const uint64_t g_mifare_default_keys[] = {
     0xffffffffffff, // Default key (first key used by program if no user defined key)
-    0xa0a1a2a3a4a5, // NFCForum MAD key
+    0xa0a1a2a3a4a5, // NFCForum MAD key A
+    0xb0b1b2b3b4b5, // NFCForum MAD key B
+    0x89ECA97F8C2A, // NFCForum MAD key B
     0xd3f7d3f7d3f7, // NDEF public key
     0x4b791bea7bcc, // MFC EV1 Signature 17 B
     0x5C8FF9990DA2, // MFC EV1 Signature 16 A
     0xD01AFEEB890A, // MFC EV1 Signature 16 B
     0x75CCB59C9BED, // MFC EV1 Signature 17 A
+    0x707B11FC1481, // MFC QL88 Signature 17 B
+    0x2612C6DE84CA, // MFC QL88 Signature 17 A
     0xfc00018778f7, // Public Transport
     0x6471a5ef2d1a, // SimonsVoss
     0x4E3552426B32, // ID06
@@ -81,13 +97,12 @@ static const uint64_t g_mifare_default_keys[] = {
     0x11496F97752A, // HID
     0x3E65E4FB65B3, // Gym
     0x000000000000, // Blank key
-    0xb0b1b2b3b4b5,
-    0xaabbccddeeff,
+    0x010203040506,
     0x1a2b3c4d5e6f,
     0x123456789abc,
-    0x010203040506,
     0x123456abcdef,
     0xabcdef123456,
+    0xaabbccddeeff,
     0x4d3a99c351dd,
     0x1a982c7e459a,
     0x714c5c886e97,
@@ -107,6 +122,9 @@ static const uint8_t g_mifare_mad_key_b[] = {0x89, 0xEC, 0xA9, 0x7F, 0x8C, 0x2A}
 // 16 key B  D01AFEEB890A
 static const uint8_t g_mifare_signature_key_a[] = {0x5C, 0x8F, 0xF9, 0x99, 0x0D, 0xA2};
 static const uint8_t g_mifare_signature_key_b[] = {0x4b, 0x79, 0x1b, 0xea, 0x7b, 0xcc};
+
+// Manufacture MFC / QL88 (S17 / B)
+static const uint8_t g_mifare_ql88_signature_key_b[] = {0x70, 0x7B, 0x11, 0xFC, 0x14, 0x81};
 
 static const uint8_t g_mifare_ndef_key[] = {0xd3, 0xf7, 0xd3, 0xf7, 0xd3, 0xf7};
 static const uint8_t g_mifarep_mad_key[] =  {0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7};

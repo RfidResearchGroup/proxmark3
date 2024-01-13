@@ -1,0 +1,130 @@
+[
+    {
+        "value": "6a01000000",
+        "name": "VAS or payment",
+        "description": "Used when a reader needs a pass or a payment card. Sometimes called VAS over Payment"
+    },
+    {
+        "value": "6a01000001",
+        "name": "VAS and payment",
+        "description": "Also called single tap mode. Displays pass info under a payment card. Allows reading multiple passes with different ids in one tap"
+    },
+    {
+        "value": "6a01000002",
+        "name": "VAS only",
+        "description": "Used when a reader requests passes only"
+    },
+    {
+        "value": "6a01000003",
+        "name": "Payment only",
+        "description": "Used when a reader requests payment cards only. Also disables express mode for chinese transit cards"
+    },
+    {
+        "value": "6a01cf0000",
+        "name": "Ignore",
+        "description": "iPhones before IOS17 emit this frame so that other Apple devices don't react to the field during background reading. Also emitted during NFCReaderSession subtypes"
+    },
+
+    {
+        "value": "6a02c801000300000000000000",
+        "name": "Transit: Ventra",
+        "description": ""
+    },
+    {
+        "value": "6a02c801000304000000000000",
+        "name": "Transit: HOP Fastpass",
+        "description": ""
+    },
+    {
+        "value": "6a02c801000300010000000000",
+        "name": "Transit: WMATA",
+        "description": ""
+    },
+    {
+        "value": "6a02c801000300027900000000",
+        "name": "Transit: TFL",
+        "description": "Found by a member of Proxmark community. Data bytes define a mask of supported EMV payment networks for fallback. In this case: Amex, Visa, Mastercard, Maestro, Vpay"
+    },
+    {
+        "value": "6a02c801000300050000000000",
+        "name": "Transit: LA TAP",
+        "description": ""
+    },
+    {
+        "value": "6a02c801000300070000000000",
+        "name": "Transit: Clipper",
+        "description": ""
+    },
+
+    {
+        "value": "6a02c3020002ffff",
+        "name": "Access: Hotel: Hilton",
+        "description": "TCI might be a wildcard before a reservation is made"
+    },
+
+    {
+        "value": "6a02cb0206021100deadbeefdeadbeef",
+        "name": "Access: Home Key",
+        "description": "Last 8 bytes refer to reader group identifier, common for all readers in same home installation, allows to differentiate between keys for different homes"
+    },
+
+    {
+        "value": "6a02c30209010001",
+        "name": "Access: Car Pairing: BMW",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for BMW"
+    },
+    {
+        "value": "6a02c30209010201",
+        "name": "Access: Car Pairing: Mercedes",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Mercedes"
+    },
+    {
+        "value": "6a02c30209010051",
+        "name": "Access: Car Pairing: Genesis",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Genesis"
+    },
+    {
+        "value": "6a02c30209010041",
+        "name": "Access: Car Pairing: KIA",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for KIA"
+    },
+    {
+        "value": "6a02c30209010301",
+        "name": "Access: Car Pairing: Hyundai",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Hyundai"
+    },
+    {
+        "value": "6a02c30209010701",
+        "name": "Access: Car Pairing: BYD",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for BYD"
+    },
+    {
+        "value": "6a02c30209010241",
+        "name": "Access: Car Pairing: Denza",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Denza"
+    },
+    {
+        "value": "6a02c30209010091",
+        "name": "Access: Car Pairing: Lotus",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Lotus"
+    },
+
+
+    {
+        "value": "6a0281030000",
+        "name": "Identity",
+        "description": "Used for reading ISO18013 digital IDs"
+    },
+
+
+    {
+        "value": "6a02890500010001deadbeef6969",
+        "name": "NameDrop",
+        "description": "Triggers a warp animation. Device does not respond to poll after this frame, but it serves as a trigger for AirDrop frame. Data part contains BLE MAC address"
+    },
+    {
+        "value": "6a02890500010000000000000000",
+        "name": "AirDrop",
+        "description": "Only sent if sees a NameDrop frame of other device. Device responds to poll with UID 00010203"
+    }
+]

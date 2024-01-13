@@ -271,8 +271,20 @@ typedef struct {
 typedef struct {
     uint8_t type;
     uint16_t len;
-    uint8_t *data;
+    uint8_t data[];
 } PACKED lf_hitag_t;
+
+// For CMD_LF_SNIFF_RAW_ADC and CMD_LF_ACQ_RAW_ADC
+#define LF_SAMPLES_BITS 30
+#define MAX_LF_SAMPLES ((((uint32_t)1u) << LF_SAMPLES_BITS) - 1)
+
+typedef struct {
+    // 64KB SRAM -> 524288 bits(max sample num) < 2^30
+uint32_t samples  :
+    LF_SAMPLES_BITS;
+    bool     realtime : 1;
+    bool     verbose  : 1;
+} PACKED lf_sample_payload_t;
 
 typedef struct {
     uint8_t blockno;
@@ -338,10 +350,12 @@ typedef enum SMARTCARD_COMMAND {
     SC_RAW_T0 = (1 << 4),
     SC_CLEARLOG = (1 << 5),
     SC_LOG = (1 << 6),
+    SC_WAIT = (1 << 7),
 } smartcard_command_t;
 
 typedef struct {
     uint8_t flags;
+    uint32_t wait_delay;
     uint16_t len;
     uint8_t data[];
 } PACKED smart_card_raw_t;
@@ -415,6 +429,8 @@ typedef struct {
 #define CMD_SPIFFS_FORMAT                                                 CMD_FLASHMEM_WIPE
 
 #define CMD_SPIFFS_WIPE                                                   0x013A
+
+#define CMD_SET_FPGAMODE                                                  0x013F
 
 // This take a +0x2000 as they are high level helper and special functions
 // As the others, they may have safety level argument if it makes sense
@@ -563,7 +579,7 @@ typedef struct {
 
 #define CMD_HF_EPA_COLLECT_NONCE                                          0x038A
 #define CMD_HF_EPA_REPLAY                                                 0x038B
-#define CMD_HF_EPA_PACE_SIMULATE                                          0x039C
+#define CMD_HF_EPA_PACE_SIMULATE                                          0x038C
 
 #define CMD_HF_LEGIC_INFO                                                 0x03BC
 #define CMD_HF_LEGIC_ESET                                                 0x03BD
@@ -579,6 +595,8 @@ typedef struct {
 #define CMD_HF_ICLASS_EML_MEMSET                                          0x0398
 #define CMD_HF_ICLASS_CHKKEYS                                             0x039A
 #define CMD_HF_ICLASS_RESTORE                                             0x039B
+#define CMD_HF_ICLASS_CREDIT_EPURSE                                       0x039C
+
 
 // For ISO1092 / FeliCa
 #define CMD_HF_FELICA_SIMULATE                                            0x03A0
@@ -621,6 +639,7 @@ typedef struct {
 #define CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES                                0x0613
 #define CMD_HF_MIFARE_ACQ_NONCES                                          0x0614
 #define CMD_HF_MIFARE_STATIC_NESTED                                       0x0615
+#define CMD_HF_MIFARE_STATIC_ENC                                          0x0616
 
 #define CMD_HF_MIFARE_READBL                                              0x0620
 #define CMD_HF_MIFAREU_READBL                                             0x0720
@@ -656,11 +675,13 @@ typedef struct {
 
 #define CMD_HF_MIFARE_NACK_DETECT                                         0x0730
 #define CMD_HF_MIFARE_STATIC_NONCE                                        0x0731
+#define CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE                              0x0732
 
 // MFU OTP TearOff
 #define CMD_HF_MFU_OTP_TEAROFF                                            0x0740
 // MFU_Ev1 Counter TearOff
 #define CMD_HF_MFU_COUNTER_TEAROFF                                        0x0741
+
 
 
 #define CMD_HF_SNIFF                                                      0x0800
@@ -692,6 +713,11 @@ typedef struct {
 #define CMD_HF_MIFARE_G4_GDM_CONFIG                                       0x0872
 #define CMD_HF_MIFARE_G4_GDM_WRCFG                                        0x0873
 
+// HID SAM
+#define CMD_HF_SAM_PICOPASS                                               0x0900
+#define CMD_HF_SAM_SEOS                                                   0x0901
+#define CMD_HF_SAM_MFC                                                    0x0902
+
 #define CMD_UNKNOWN                                                       0xFFFF
 
 //Mifare simulation flags
@@ -715,9 +741,10 @@ typedef struct {
 #define MODE_FULLSIM        2
 
 // Static Nonce detection
-#define NONCE_FAIL      0x01
-#define NONCE_NORMAL    0x02
-#define NONCE_STATIC    0x03
+#define NONCE_FAIL       0x01
+#define NONCE_NORMAL     0x02
+#define NONCE_STATIC     0x03
+#define NONCE_STATIC_ENC 0x04
 
 // Dbprintf flags
 #define FLAG_RAWPRINT    0x00
@@ -790,6 +817,12 @@ typedef struct {
 // STATIC Nonce detect                  pm3:  when collecting nonces for hardnested
 #define PM3_ESTATIC_NONCE     -25
 
+// No PACS data                         pm3:  when using HID SAM to retried PACS data
+#define PM3_ENOPACS           -26
+
+// Got wrong length error               pm3: when received wrong length of data
+#define PM3_ELENGTH           -27
+
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program
@@ -812,11 +845,18 @@ typedef struct {
 // all zero's configure: no timeout for read/write used.
 // took settings from libnfc/buses/uart.c
 
-// uart_windows.c & uart_posix.c
-# define UART_FPC_CLIENT_RX_TIMEOUT_MS  200
-# define UART_USB_CLIENT_RX_TIMEOUT_MS  20
-# define UART_TCP_CLIENT_RX_TIMEOUT_MS  500
+// uart_win32.c & uart_posix.c
+# define UART_FPC_CLIENT_RX_TIMEOUT_MS        200
+# define UART_USB_CLIENT_RX_TIMEOUT_MS        20
+# define UART_NET_CLIENT_RX_TIMEOUT_MS        500
+# define UART_TCP_LOCAL_CLIENT_RX_TIMEOUT_MS  40
+# define UART_UDP_LOCAL_CLIENT_RX_TIMEOUT_MS  20
 
+// definitions for multiple FPGA config files support
+#define FPGA_BITSTREAM_LF 1
+#define FPGA_BITSTREAM_HF 2
+#define FPGA_BITSTREAM_HF_FELICA 3
+#define FPGA_BITSTREAM_HF_15 4
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the g_common_area is present */

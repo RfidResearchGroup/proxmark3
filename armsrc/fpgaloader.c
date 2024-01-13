@@ -95,40 +95,40 @@ void SetupSpi(int mode) {
         case SPI_FPGA_MODE:
             AT91C_BASE_SPI->SPI_MR =
                 (0 << 24)          |  // Delay between chip selects (take default: 6 MCK periods)
-                (0xE << 16)         | // Peripheral Chip Select (selects FPGA SPI_NCS0 or PA11)
+                (0xE << 16)        |  // Peripheral Chip Select (selects FPGA SPI_NCS0 or PA11)
                 (0 << 7)           |  // Local Loopback Disabled
-                AT91C_SPI_MODFDIS   | // Mode Fault Detection disabled
+                AT91C_SPI_MODFDIS  |  // Mode Fault Detection disabled
                 (0 << 2)           |  // Chip selects connected directly to peripheral
-                AT91C_SPI_PS_FIXED  | // Fixed Peripheral Select
+                AT91C_SPI_PS_FIXED |  // Fixed Peripheral Select
                 AT91C_SPI_MSTR;       // Master Mode
 
             AT91C_BASE_SPI->SPI_CSR[0] =
                 (1 << 24)          |  // Delay between Consecutive Transfers (32 MCK periods)
                 (1 << 16)          |  // Delay Before SPCK (1 MCK period)
                 (6 << 8)           |  // Serial Clock Baud Rate (baudrate = MCK/6 = 24MHz/6 = 4M baud
-                AT91C_SPI_BITS_16   | // Bits per Transfer (16 bits)
+                AT91C_SPI_BITS_16  |  // Bits per Transfer (16 bits)
                 (0 << 3)           |  // Chip Select inactive after transfer
-                AT91C_SPI_NCPHA     | // Clock Phase data captured on leading edge, changes on following edge
+                AT91C_SPI_NCPHA    |  // Clock Phase data captured on leading edge, changes on following edge
                 (0 << 0);             // Clock Polarity inactive state is logic 0
             break;
         /*
                     case SPI_LCD_MODE:
                     AT91C_BASE_SPI->SPI_MR =
-                        ( 0 << 24)          | // Delay between chip selects (take default: 6 MCK periods)
-                        (0xB << 16)         | // Peripheral Chip Select (selects LCD SPI_NCS2 or PA10)
-                        ( 0 << 7)           | // Local Loopback Disabled
-                        ( 1 << 4)           | // Mode Fault Detection disabled
-                        ( 0 << 2)           | // Chip selects connected directly to peripheral
-                        ( 0 << 1)           | // Fixed Peripheral Select
+                        ( 0 << 24)         |  // Delay between chip selects (take default: 6 MCK periods)
+                        (0xB << 16)        |  // Peripheral Chip Select (selects LCD SPI_NCS2 or PA10)
+                        ( 0 << 7)          |  // Local Loopback Disabled
+                        ( 1 << 4)          |  // Mode Fault Detection disabled
+                        ( 0 << 2)          |  // Chip selects connected directly to peripheral
+                        ( 0 << 1)          |  // Fixed Peripheral Select
                         ( 1 << 0);            // Master Mode
 
                     AT91C_BASE_SPI->SPI_CSR[2] =
-                        ( 1 << 24)          | // Delay between Consecutive Transfers (32 MCK periods)
-                        ( 1 << 16)          | // Delay Before SPCK (1 MCK period)
-                        ( 6 << 8)           | // Serial Clock Baud Rate (baudrate = MCK/6 = 24MHz/6 = 4M baud
-                        AT91C_SPI_BITS_9    | // Bits per Transfer (9 bits)
-                        ( 0 << 3)           | // Chip Select inactive after transfer
-                        ( 1 << 1)           | // Clock Phase data captured on leading edge, changes on following edge
+                        ( 1 << 24)         |  // Delay between Consecutive Transfers (32 MCK periods)
+                        ( 1 << 16)         |  // Delay Before SPCK (1 MCK period)
+                        ( 6 << 8)          |  // Serial Clock Baud Rate (baudrate = MCK/6 = 24MHz/6 = 4M baud
+                        AT91C_SPI_BITS_9   |  // Bits per Transfer (9 bits)
+                        ( 0 << 3)          |  // Chip Select inactive after transfer
+                        ( 1 << 1)          |  // Clock Phase data captured on leading edge, changes on following edge
                         ( 0 << 0);            // Clock Polarity inactive state is logic 0
                     break;
         */
@@ -162,8 +162,7 @@ void FpgaSetupSsc(uint16_t fpga_mode) {
 
     // 8, 16 or 32 bits per transfer, no loopback, MSB first, 1 transfer per sync
     // pulse, no output sync
-    if (((fpga_mode & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_READER ||
-            (fpga_mode & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_FSK_READER) &&
+    if (((fpga_mode & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_READER) &&
             (FpgaGetCurrent() == FPGA_BITSTREAM_HF || FpgaGetCurrent() == FPGA_BITSTREAM_HF_15)) {
         AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(16) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
     } else {
@@ -393,7 +392,7 @@ static int bitparse_find_section(int bitstream_version, char section_name, uint3
     while (numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH) {
         char current_name = get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
         numbytes++;
-        uint16_t current_length = 0;
+        uint32_t current_length = 0;
         if (current_name < 'a' || current_name > 'e') {
             /* Strange section name, abort */
             break;
@@ -404,16 +403,22 @@ static int bitparse_find_section(int bitstream_version, char section_name, uint3
                 /* Four byte length field */
                 current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 24;
                 current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 16;
-                numbytes += 2;
-            default: /* Fall through, two byte length field */
+                current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 8;
+                current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 0;
+                numbytes += 4;
+                if (current_length > 300 * 1024) {
+                    /* section e should never exceed about 300KB, if the length is too big limit it but still send the bitstream just in case */
+                    current_length = 300 * 1024;
+                }
+                break;
+            default: /* Two byte length field */
                 current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 8;
                 current_length += get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer) << 0;
                 numbytes += 2;
-        }
-
-        if (current_name != 'e' && current_length > 255) {
-            /* Maybe a parse error */
-            break;
+                if (current_length > 64) {
+                    /* if text field is too long, keep it but truncate it */
+                    current_length = 64;
+                }
         }
 
         if (current_name == section_name) {
@@ -423,7 +428,7 @@ static int bitparse_find_section(int bitstream_version, char section_name, uint3
             break;
         }
 
-        for (uint16_t i = 0; i < current_length && numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH; i++) {
+        for (uint32_t i = 0; i < current_length && numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH; i++) {
             get_from_fpga_stream(bitstream_version, compressed_fpga_stream, output_buffer);
             numbytes++;
         }
@@ -488,7 +493,7 @@ void FpgaDownloadAndGo(int bitstream_version) {
 #endif
 
     // Send waiting time extension request as this will take a while
-    send_wtx(1500);
+    send_wtx(FPGA_LOAD_WAIT_TIME);
 
     bool verbose = (g_dbglevel > 3);
 

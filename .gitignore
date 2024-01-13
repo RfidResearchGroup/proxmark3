@@ -68,6 +68,7 @@ luac
 tools/fpga_compress/fpga_compress
 tools/mfkey/mfkey32
 tools/mfkey/mfkey64
+tools/mfkey/staticnested
 tools/nonce2key/nonce2key
 tools/cryptorf/cm
 tools/cryptorf/sm
@@ -79,18 +80,9 @@ tools/jtag_openocd/openocd_configuration
 tools/mfd_aes_brute/mfd_aes_brute
 tools/mfd_aes_brute/mfd_multi_brute
 tools/mfd_aes_brute/brute_key
+!tools/lena.bmp
 
-fpga/*
-!fpga/tests
-!fpga/fpga_lf.bit
-!fpga/fpga_hf.bit
-!fpga/*.v
-!fpga/Makefile
-!fpga/fpga.ucf
-!fpga/xst_lf.scr
-!fpga/xst_hf.scr
-!fpga/go.bat
-!fpga/sim.tcl
+fpga/__build*
 
 # offcial dumps folder
 dumps/*

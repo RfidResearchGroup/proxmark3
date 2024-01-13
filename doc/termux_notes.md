@@ -2,30 +2,36 @@
 <a id="top"></a>
 
 ## Table of Contents
-  * [ Requirements ](#requirements)
-  * [ Notes ](#notes)
-  * [ Setup ](#setup)
-    * [ Setting up Termux ](#setting-up-termux)
-    * [ Install Proxmark3 package ](#install-proxmark3-package)
-  * [ PC-like method ](#pc-like-method)
-    * [ Specific requirements ](#specific-requirements)
-    * [ USB_ACM ](#usb_acm)
-      * [ Enable the driver ](#enable-the-driver)
-      * [ Building the kernel ](#building-the-kernel)
-      * [ Flashing the kernel ](#flashing-the-kernel)
-      * [ Testing ](#testing)
-      * [ Troubleshooting ](#troubleshooting)
-  * [ TCP bridge method ](#tcp-bridge-method)
-    * [ USB connection ](#usb-connection)
-      * [ USB-UART bridge application ](#usb-uart-bridge-application)
-    * [ Bluetooth connection ](#bluetooth-connection)
-      * [ BT-UART bridge application ](#bt-uart-bridge-application)
-    * [ TCP connection ](#tcp-connection)
-    * [Troubleshooting](#troubleshooting-1)
-      * [BTADDON Missing in Firmware of PM3](#btaddon-missing-in-firmware-of-pm3)
-  * [Compiling and Flashing a Proxmark3 Firmware from non-root Android](#compiling-and-flashing-a-proxmark3-firmware-from-non-root-android)
-    * [Compiling the Proxmark3 Firmware](#compiling-the-proxmark3-firmware)
-    * [Flashing the Proxmark3 Firmware](#flashing-the-proxmark3-firmware)
+- [Proxmark 3 on Android](#proxmark-3-on-android)
+  - [Table of Contents](#table-of-contents)
+  - [Requirements](#requirements)
+  - [Notes](#notes)
+  - [Setup](#setup)
+    - [Setting up Termux](#setting-up-termux)
+    - [Install Proxmark3 package which follows tagged releases](#install-proxmark3-package-which-follows-tagged-releases)
+    - [Optional: Install Proxmark3 package which offers a more up to date version from git `master` branch](#optional-install-proxmark3-package-which-offers-a-more-up-to-date-version-from-git-master-branch)
+    - [Optional: Building Proxmark3 client from source](#optional-building-proxmark3-client-from-source)
+  - [PC-like method](#pc-like-method)
+    - [Specific requirements](#specific-requirements)
+    - [USB\_ACM](#usb_acm)
+      - [Enable the driver](#enable-the-driver)
+      - [Building the kernel](#building-the-kernel)
+      - [Flashing the kernel](#flashing-the-kernel)
+      - [Testing](#testing)
+      - [Troubleshooting](#troubleshooting)
+  - [TCP/UDP bridge method](#tcpudp-bridge-method)
+    - [USB connection](#usb-connection)
+      - [USB-UART Bridge Application for TCP to USB bridging](#usb-uart-bridge-application-for-tcp-to-usb-bridging)
+      - [USB-UART Bridge Application for UDP to USB bridging](#usb-uart-bridge-application-for-udp-to-usb-bridging)
+    - [Bluetooth connection](#bluetooth-connection)
+      - [BT-UART Bridge Application for TCP to BT bridging](#bt-uart-bridge-application-for-tcp-to-bt-bridging)
+    - [TCP connection](#tcp-connection)
+    - [UDP connection](#udp-connection)
+    - [Troubleshooting](#troubleshooting-1)
+      - [BTADDON Missing in Firmware of PM3](#btaddon-missing-in-firmware-of-pm3)
+  - [Compiling and Flashing a Proxmark3 Firmware from non-root Android](#compiling-and-flashing-a-proxmark3-firmware-from-non-root-android)
+    - [Compiling the Proxmark3 Firmware](#compiling-the-proxmark3-firmware)
+    - [Flashing the Proxmark3 Firmware](#flashing-the-proxmark3-firmware)
 ## Requirements
 ^[Top](#top)
 
@@ -125,16 +131,20 @@ Everything should work just like if it was your PC!
 - `dmesg | grep usb` - useful debug info
 - `/proc/config.gz` - contains your kernel's build configuration. Look for `CONFIG_USB_ACM`, which should be enabled
 
-## TCP bridge method
+## TCP/UDP bridge method
 ^[Top](#top)
 
 Termux doesn't come with usb serial neither bluetooth serial drivers.
-However, it is fully integrated with phone's network, so we need to talk to the proxmark using serial to tcp sockets (carried out by android apps).
+However, it is fully integrated with phone's network, so we need to talk to the proxmark using serial to TCP/UDP sockets (carried out by other android apps).
+
+```
+|Client in Termux| <--TCP/UDP--> |Bridge App| <--USB/Bluetooth--> |Proxmark3| 
+```
 
 ### USB connection
 ^[Top](#top)
 
-#### USB-UART Bridge Application
+#### USB-UART Bridge Application for TCP to USB bridging
 ^[Top](#top)
 
 Install [this free TCPUART app](https://play.google.com/store/apps/details?id=com.hardcodedjoy.tcpuart) on the Play Store
@@ -150,10 +160,22 @@ Choose your registered PM3 device as 'Device B' -> 'Connect to USB device'.
 Ensure 'Retransmission' is set to 'both ways'.
 It is possible to record the config as autostart, cf 'Settings' -> 'Autostart setting'.
 
+#### USB-UART Bridge Application for UDP to USB bridging
+^[Top](#top)
+
+Install [this free SerialPipe app](https://f-droid.org/packages/io.github.wh201906.serialpipe/) on [F-Droid](https://f-droid.org/).
+You can download the apk on this website without installing F-Droid.
+
+The app lets you choose the baudrate. Default value (115 200 baud) is fine.
+Plug the PM3 in and click `Connect`.
+Choose a random port not used by system (e.g. 4321) and click `Start Server`.
+
+Note: This app uses foreground service to keep the connection alive, so you can safely put it in the background without suspending the transmission. However, you will see a dummy notification in the status bar which is required for foreground service.
+
 ### Bluetooth connection
 ^[Top](#top)
 
-#### BT-UART Bridge Application
+#### BT-UART Bridge Application for TCP to BT bridging
 ^[Top](#top)
 
 Install [this free app](https://play.google.com/store/apps/details?id=masar.bb) or [the paid version](https://play.google.com/store/apps/details?id=masar.bluetoothbridge.pro) (which includes usb bridge)
@@ -175,6 +197,42 @@ Alternatively, if you have made the client in the git repo:
 ```
 ./client/proxmark3 tcp:localhost:<chosenPort>
 ```
+If the last colon and the chosen port are missing, the client will use `18888` as the default port.
+
+### UDP connection
+^[Top](#top)
+
+Start a new session, then:
+```
+proxmark3 udp:localhost:<chosenPort>
+```
+Alternatively, if you have made the client in the git repo:
+```
+./client/proxmark3 udp:localhost:<chosenPort>
+```
+If the last colon and the chosen port are missing, the client will use `18888` as the default port.  
+
+You can also specify the outbound port for UDP connections, which might be required for some UDP to USB/BT bridge app as the target port of it.  
+The format is
+```
+proxmark3 udp:localhost:<chosenPort>,bind=:<outboundPort>
+```
+Some examples:
+```
+# The bridge app listens on Port 12345, and the client listens on Port 12355
+proxmark3 udp:localhost:12345,bind=:12355
+
+# 127.0.0.1 is also a valid local address
+proxmark3 udp:127.0.0.1:12345,bind=:12355
+
+# The bridge app listens on the default port 18888, and the client listens on Port 12355
+proxmark3 udp:127.0.0.1,bind=:12355
+
+# OutboundPort is randomly picked by the system, which requires the "UDP server" mode for the bridge app
+proxmark3 udp:localhost:12345
+```
+
+
 ### Troubleshooting
 ^[Top](#top)
 
@@ -195,7 +253,7 @@ $ proxmark3 tcp:localhost:4321
 
 Using UART port tcp:localhost:4321
 
-[!!] ERROR: cannot communicate with the Proxmark
+[!!] ERROR: cannot communicate with the Proxmark3
 ```
 Solution:  
 

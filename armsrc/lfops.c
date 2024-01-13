@@ -44,7 +44,7 @@
 Notes about EM4xxx timings.
 
 The timing values differs between cards,  we got EM410x,  EM43x5, EM445x  etc.
-We are trying to unify and enable the Proxmark to easily detect and select correct timings automatic.
+We are trying to unify and enable the Proxmark3 to easily detect and select correct timings automatic.
 The measures from datasheets doesn't always match correct the hardware features of RDV4 antenans and we still wanted to let other devices with other custom antennas
 still benefit from this repo.  This is why its configurable and we use to set these dynamic settings in device external flash memory.
 
@@ -287,7 +287,7 @@ void printT55xxConfig(void) {
     DbpString("");
 }
 
-void setT55xxConfig(uint8_t arg0, t55xx_configurations_t *c) {
+void setT55xxConfig(uint8_t arg0, const t55xx_configurations_t *c) {
     for (uint8_t i = 0; i < 4; i++) {
         if (c->m[i].start_gap != 0)
             T55xx_Timing.m[i].start_gap = c->m[i].start_gap;
@@ -391,6 +391,8 @@ void loadT55xxConfig(void) {
     if (isok == T55XX_CONFIG_LEN) {
         if (g_dbglevel > 1) DbpString("T55XX Config load success");
     }
+
+    BigBuf_free();
 #endif
 }
 
@@ -1009,7 +1011,7 @@ void CmdHIDsimTAG(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool 
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a FSK tag until the button is pressed
 // arg1 contains fcHigh and fcLow, arg2 contains STT marker and clock
-void CmdFSKsimTAGEx(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, uint8_t *bits, bool ledcontrol, int numcycles) {
+void CmdFSKsimTAGEx(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, const uint8_t *bits, bool ledcontrol, int numcycles) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
@@ -1045,7 +1047,7 @@ void CmdFSKsimTAGEx(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t cl
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a FSK tag until the button is pressed
 // arg1 contains fcHigh and fcLow, arg2 contains STT marker and clock
-void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, uint8_t *bits, bool ledcontrol) {
+void CmdFSKsimTAG(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t clk, uint16_t bitslen, const uint8_t *bits, bool ledcontrol) {
     CmdFSKsimTAGEx(fchigh, fclow, separator, clk, bitslen, bits, ledcontrol, -1);
     reply_ng(CMD_LF_FSK_SIMULATE, PM3_EOPABORTED, NULL, 0);
 }
@@ -1866,9 +1868,9 @@ void T55xxResetRead(uint8_t flags, bool ledcontrol) {
     if (ledcontrol) LED_A_OFF();
 }
 
-void T55xxDangerousRawTest(uint8_t *data, bool ledcontrol) {
+void T55xxDangerousRawTest(const uint8_t *data, bool ledcontrol) {
     // supports only default downlink mode
-    t55xx_test_block_t *c = (t55xx_test_block_t *)data;
+    const t55xx_test_block_t *c = (const t55xx_test_block_t *)data;
 
     uint8_t start_wait = 4;
     uint8_t bs[128 / 8];
@@ -2320,7 +2322,7 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
 }
 
 // clone viking tag to T55xx
-void CopyVikingtoT55xx(uint8_t *blocks, bool q5, bool em, bool ledcontrol) {
+void CopyVikingtoT55xx(const uint8_t *blocks, bool q5, bool em, bool ledcontrol) {
 
     uint32_t data[] = {T55x7_BITRATE_RF_32 | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT), 0, 0};
     if (q5) {

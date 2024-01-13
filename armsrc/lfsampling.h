@@ -52,6 +52,16 @@ void doT55x7Acquisition(size_t sample_size, bool ledcontrol);
 uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol);
 
 /**
+ * Do LF sampling and send samples to the USB
+ *
+ * Uses parameters in config. Only bits_per_sample = 8 is working now
+ *
+ * @param reader_field - true for reading tags, false for sniffing
+ * @return sampling result
+**/
+int ReadLF_realtime(bool reader_field);
+
+/**
 * Initializes the FPGA for sniff-mode (field off), and acquires the samples.
 * @return number of bits sampled
 **/
@@ -110,7 +120,7 @@ void LFSetupFPGAForADC(int divisor, bool reader_field);
  * @brief setSamplingConfig
  * @param sc
  */
-void setSamplingConfig(sample_config *sc);
+void setSamplingConfig(const sample_config *sc);
 void setDefaultSamplingConfig(void);
 sample_config *getSamplingConfig(void);
 

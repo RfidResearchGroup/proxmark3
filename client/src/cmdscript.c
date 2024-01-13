@@ -22,6 +22,7 @@
 #ifdef HAVE_PYTHON
 //#define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <ctype.h>
 #include <wchar.h>
 #endif
 

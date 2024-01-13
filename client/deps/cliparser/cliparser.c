@@ -147,6 +147,7 @@ enum ParserState {
     PS_FIRST,
     PS_ARGUMENT,
     PS_OPTION,
+    PS_QUOTE,
 };
 
 #define isSpace(c)(c == ' ' || c == '\t')
@@ -195,6 +196,10 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
             case PS_ARGUMENT:
                 if (state == PS_FIRST)
                     state = PS_ARGUMENT;
+                if (str[i] == '"') {
+                    state = PS_QUOTE;
+                    break;
+                }
                 if (isSpace(str[i])) {
                     spaceptr = bufptr;
                     state = PS_FIRST;
@@ -214,6 +219,16 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
 
                 *bufptr = str[i];
                 bufptr++;
+                break;
+            case PS_QUOTE:
+                if (str[i] == '"') {
+                    *bufptr++ = 0x00;
+                    state = PS_FIRST;
+                } else {
+                    if (isSpace(str[i]) == false) {
+                        *bufptr++ = str[i];
+                    }
+                }
                 break;
         }
         if (bufptr > bufptrend) {

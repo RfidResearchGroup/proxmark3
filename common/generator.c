@@ -173,7 +173,7 @@ uint32_t ul_ev1_pwdgenD(const uint8_t *uid) {
 
 // AIR purifier Xiaomi
 uint32_t ul_ev1_pwdgenE(const uint8_t *uid) {
-    uint8_t hash[20];
+    uint8_t hash[20] = {0};
     mbedtls_sha1(uid, 7, hash);
     uint32_t pwd = 0;
     pwd |= (hash[ hash[0] % 20 ]) << 24 ;
@@ -185,7 +185,7 @@ uint32_t ul_ev1_pwdgenE(const uint8_t *uid) {
 
 // NDEF tools format password generator
 uint32_t ul_ev1_pwdgenF(const uint8_t *uid) {
-    uint8_t hash[16];
+    uint8_t hash[16] = {0};;
     mbedtls_md5(uid, 7, hash);
     uint32_t pwd = 0;
     pwd |= hash[0] << 24;
@@ -193,6 +193,20 @@ uint32_t ul_ev1_pwdgenF(const uint8_t *uid) {
     pwd |= hash[2] << 8;
     pwd |= hash[3];
     return pwd;
+}
+
+// Solution from @atc1441
+// https://gist.github.com/atc1441/41af75048e4c22af1f5f0d4c1d94bb56
+// Philips Sonicare toothbrush NFC head
+uint32_t ul_ev1_pwdgenG(const uint8_t *uid, const uint8_t *mfg) {
+
+    init_table(CRC_PHILIPS);
+    // UID
+    uint32_t crc1 = crc16_philips(uid, 7);
+    // MFG string
+    uint32_t crc2 = crc16_fast(mfg, 10, crc1, false, false);
+
+    return (BSWAP_16(crc2) << 16 | BSWAP_16(crc1));
 }
 
 // pack generation for algo 1-3
@@ -224,11 +238,24 @@ uint16_t ul_ev1_packgenD(const uint8_t *uid) {
     p ^= 0x5555;
     return BSWAP_16(p & 0xFFFF);
 }
-
 uint16_t ul_ev1_packgenE(const uint8_t *uid) {
 
     uint32_t pwd = ul_ev1_pwdgenE(uid);
     return (0xAD << 8 | ((pwd >> 24) & 0xFF));
+}
+
+uint16_t ul_ev1_packgenG(const uint8_t *uid, const uint8_t *mfg) {
+    init_table(CRC_PHILIPS);
+    // UID
+    uint32_t crc1 = crc16_philips(uid, 7);
+    // MFG string
+    uint32_t crc2 = crc16_fast(mfg, 10, crc1, false, false);
+    // PWD
+    uint32_t pwd = (BSWAP_16(crc2) << 16 | BSWAP_16(crc1));
+
+    uint8_t pb[4];
+    num_to_bytes(pwd, 4, pb);
+    return BSWAP_16(crc16_fast(pb, 4, crc2, false, false));
 }
 
 
@@ -299,10 +326,41 @@ int mfc_algo_yale_all(uint8_t *uid, uint8_t *keys) {
 int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
     if (sector > 15) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
-    if (keytype > 2) return PM3_EINVARG;
-    *key = 0;
+
+    if (keytype == 0 && sector == 2) {
+        *key = 0xFFFFFFFFFFFF;
+        return PM3_SUCCESS;
+    }
+
+    if (keytype == 0 && sector == 1) {
+        *key = 0x2a2c13cc242a;
+        return PM3_SUCCESS;
+    }
+
+    if (keytype == 0) {
+        uint64_t lut[16] = {
+            0xf057b39ee3d8ULL, 0x969d954ac157ULL, 0x8f43580d2c9dULL, 0xffcce0050c43ULL,
+            0x341b15a690ccULL, 0x89585612e71bULL, 0xbb74b0953658ULL, 0xfb97f84b5b74ULL,
+            0xc9d188359f92ULL, 0x8f92e97f5897ULL, 0x166ca2b09fd1ULL, 0x27dd93101c6cULL,
+            0xda3e3fd649ddULL, 0x58dded078e3eULL, 0x5cd005cfd907ULL, 0x118dd00187d0ULL
+        };
+
+        uint8_t h = ((uid[3] >> 4) & 0xF);
+        h += ((uid[2] >> 4) & 0xF);
+        h += uid[0] & 0xF;
+
+        uint64_t m = lut[h & 0xF];
+
+        uint64_t id = (bytes_to_num(uid, 4) << 8);
+
+        *key = (h + (id + m + ((uint64_t)h << 40ULL))) & 0xFFFFFFFFFFFFULL;
+
+    } else {
+        *key = 0xFFFFFFFFFFFF;
+    }
     return PM3_SUCCESS;
 }
+
 int mfc_algo_saflok_all(uint8_t *uid, uint8_t *keys) {
     if (keys == NULL) return PM3_EINVARG;
 
@@ -522,7 +580,7 @@ int mfdes_kdf_input_gallagher(uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint3
 
 int mfc_generate4b_nuid(uint8_t *uid, uint8_t *nuid) {
     uint16_t crc;
-    uint8_t b1, b2;
+    uint8_t b1 = 0, b2 = 0;
 
     compute_crc(CRC_14443_A, uid, 3, &b1, &b2);
     nuid[0] = (b2 & 0xE0) | 0xF;
@@ -556,7 +614,7 @@ int mfc_algo_touch_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *
 
 int generator_selftest(void) {
 #ifndef ON_DEVICE
-#define NUM_OF_TEST     8
+#define NUM_OF_TEST     10
 
     PrintAndLogEx(INFO, "PWD / KEY generator selftest");
     PrintAndLogEx(INFO, "----------------------------");
@@ -569,64 +627,81 @@ int generator_selftest(void) {
     if (success)
         testresult++;
 
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid1, 7), pwd1, success ? "OK" : "->8432EB17<-");
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid1, 7), pwd1, success ?  _GREEN_("ok") : "->8432EB17<-");
 
     uint8_t uid2[] = {0x04, 0x1f, 0x98, 0xea, 0x1e, 0x3e, 0x81};
     uint32_t pwd2 = ul_ev1_pwdgenB(uid2);
     success = (pwd2 == 0x5fd37eca);
     if (success)
         testresult++;
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid2, 7), pwd2, success ? "OK" : "->5fd37eca<--");
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid2, 7), pwd2, success ?  _GREEN_("ok") : "->5fd37eca<--");
 
     uint8_t uid3[] = {0x04, 0x62, 0xB6, 0x8A, 0xB4, 0x42, 0x80};
     uint32_t pwd3 = ul_ev1_pwdgenC(uid3);
     success = (pwd3 == 0x5a349515);
     if (success)
         testresult++;
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid3, 7), pwd3, success ? "OK" : "->5a349515<--");
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid3, 7), pwd3, success ?  _GREEN_("ok") : "->5a349515<--");
 
     uint8_t uid4[] = {0x04, 0xC5, 0xDF, 0x4A, 0x6D, 0x51, 0x80};
     uint32_t pwd4 = ul_ev1_pwdgenD(uid4);
     success = (pwd4 == 0x72B1EC61);
     if (success)
         testresult++;
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid4, 7), pwd4, success ? "OK" : "->72B1EC61<--");
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid4, 7), pwd4, success ?  _GREEN_("ok") : "->72B1EC61<--");
 
     uint8_t uid5[] = {0x04, 0xA0, 0x3C, 0xAA, 0x1E, 0x70, 0x80};
     uint32_t pwd5 = ul_ev1_pwdgenE(uid5);
     success = (pwd5 == 0xCD91AFCC);
     if (success)
         testresult++;
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid5, 7), pwd5, success ? "OK" : "->CD91AFCC<--");
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid5, 7), pwd5, success ?  _GREEN_("ok") : "->CD91AFCC<--");
 
     uint8_t uid6[] = {0x04, 0x77, 0x42, 0xAB, 0xEF, 0x42, 0x70};
     uint32_t pwd6 = ul_ev1_pwdgenF(uid6);
     success = (pwd6 == 0xA9C4C3C0);
     if (success)
         testresult++;
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid6, 7), pwd6, success ? "OK" : "->A9C4C3C0<--");
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid6, 7), pwd6, success ?  _GREEN_("ok") : "->A9C4C3C0<--");
+
+    uint8_t uid7[] = {0x04, 0x0D, 0x4B, 0x5A, 0xC5, 0x71, 0x81};
+    uint8_t mfg[] = {0x32, 0x31, 0x30, 0x36, 0x32, 0x38, 0x20, 0x35, 0x32, 0x4D};
+    uint32_t pwd7 = ul_ev1_pwdgenG(uid7, mfg);
+    success = (pwd7 == 0xFBCFACC1);
+    if (success)
+        testresult++;
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid7, 7), pwd7, success ?  _GREEN_("ok") : "->FBCFACC1<--");
+
 
 //    uint8_t uid5[] = {0x11, 0x22, 0x33, 0x44};
 //    uint64_t key1 = mfc_algo_a(uid5);
 //    success = (key1 == 0xD1E2AA68E39A);
-//    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %"PRIx64" - %s", sprint_hex(uid5, 4), key1, success ? "OK" : "->D1E2AA68E39A<--");
+//    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %"PRIx64" - %s", sprint_hex(uid5, 4), key1, success ?  _GREEN_("ok") : "->D1E2AA68E39A<--");
 
-    uint8_t uid7[] = {0x74, 0x57, 0xCA, 0xA9};
-    uint64_t key7 = 0;
-    mfc_algo_sky_one(uid7, 15, 0, &key7);
-    success = (key7 == 0x82c7e64bc565);
+    uint8_t uid8[] = {0x74, 0x57, 0xCA, 0xA9};
+    uint64_t key8 = 0;
+    mfc_algo_sky_one(uid8, 15, 0, &key8);
+    success = (key8 == 0x82c7e64bc565);
     if (success)
         testresult++;
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s          | %"PRIx64" - %s", sprint_hex(uid7, 4), key7, success ? "OK" : "->82C7E64BC565<--");
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s          | %"PRIx64" - %s", sprint_hex(uid8, 4), key8, success ?  _GREEN_("ok") : "->82C7E64BC565<--");
 
+    // MFC SAFLOK
+    uint8_t uid9[] = {0x11, 0x22, 0x33, 0x44};
+    uint64_t key9 = 0;
+    mfc_algo_saflok_one(uid9, 0, 0, &key9);
+    success = (key9 == 0xD1E2AA68E39A);
+    if (success)
+        testresult++;
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s          | %"PRIX64" - %s", sprint_hex(uid9, 4), key9, success ? _GREEN_("ok") : _RED_(">> D1E2AA68E39A <<"));
 
     uint32_t lf_id = lf_t55xx_white_pwdgen(0x00000080);
     success = (lf_id == 0x00018383);
     if (success)
         testresult++;
-    PrintAndLogEx(success ? SUCCESS : WARNING, "ID  | 0x00000080            | %08"PRIx32 " - %s", lf_id, success ? "OK" : "->00018383<--");
+    PrintAndLogEx(success ? SUCCESS : WARNING, "ID  | 0x00000080            | %08"PRIx32 " - %s", lf_id, success ?  _GREEN_("ok") : "->00018383<--");
 
-    PrintAndLogEx(SUCCESS, "------------------- Selftest %s", (testresult == NUM_OF_TEST) ? "OK" : "fail");
+    PrintAndLogEx(SUCCESS, "------------------- Selftest %s", (testresult == NUM_OF_TEST) ? _GREEN_("ok") : _RED_("fail"));
 
 #endif
     return PM3_SUCCESS;

@@ -62,21 +62,19 @@ def build_arg_parser():
 
 
 def build_help_regex():
-    """The regex uses to parse the full text output of help data from the pm3 client."""
-    # Reads the divider followed by the command itself
     re_command = r'-{87}\n(?P<command>.+)\n'
     # Reads if the command is available offline
     re_offline = r'available offline: (?P<offline>yes|no)\n+'
     # Reads the description lines
-    re_description = r'(?P<description>(?:.+\n)+)\n+'
+    re_description = r'(?P<description>\n[\s\S]*?(?=usage:))'
     # Reads the usage string
     re_usage = r'(?:usage:\n(?P<usage>(?:.+\n)+)\n+)?'
     # Reads the options and there individual descriptions
     re_options = r'(?:options:\n(?P<options>(?:.+\n)+)\n+)?'
     # Reads the notes and examples
-    re_notes = r'(?:examples\/notes:\n(?P<notes>(?:.+\n)+)\n+)?'
+    re_notes = r'(?:examples\/notes:\n(?P<notes>[\s\S]*?(?=(===|---|\n\n))))'
     # Combine them into a single regex object
-    re_full = re.compile(re_command+re_offline+re_description+re_usage+re_options+re_notes, re.MULTILINE);
+    re_full = re.compile(re_command+re_offline+re_description+re_usage+re_options+re_notes, re.MULTILINE)
     return re_full
 
 

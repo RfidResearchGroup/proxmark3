@@ -112,7 +112,7 @@ static int CmdHfSeosInfo(const char *Cmd) {
 }
 
 static int CmdHfSeosList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf seos", "7816");
+    return CmdTraceListAlias(Cmd, "hf seos", "seos -c");
 }
 
 static command_t CommandTable[] = {

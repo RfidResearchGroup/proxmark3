@@ -31,15 +31,16 @@ pm3_device_t *pm3_open(const char *port) {
     pm3_init();
     OpenProxmark(&g_session.current_device, port, false, 20, false, USART_BAUD_RATE);
     if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
-        PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark\n");
+        PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark3\n");
         CloseProxmark(g_session.current_device);
     }
 
     if ((port != NULL) && (!g_session.pm3_present))
         exit(EXIT_FAILURE);
 
-    if (!g_session.pm3_present)
-        PrintAndLogEx(INFO, "Running in " _YELLOW_("OFFLINE") " mode");
+    if (!g_session.pm3_present) {
+        PrintAndLogEx(INFO, _RED_("OFFLINE") " mode");
+    }
     // For now, there is no real device context:
     return g_session.current_device;
 }

@@ -15,7 +15,7 @@ local reader15693 = require('read15')
 -- @return if successful: an table containing card info
 -- @return if unsuccessful : nil, error
 local function waitForTag()
-    print("Waiting for card... press Enter to quit")
+    print("Waiting for card... press <Enter> to quit")
     local readers = {reader14443A, reader14443B, reader15693}
     local i = 0;
     while not core.kbd_enter_pressed() do

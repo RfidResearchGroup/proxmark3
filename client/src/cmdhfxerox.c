@@ -383,8 +383,9 @@ static int switch_off_field(void) {
 
 static int findXerox(iso14b_card_select_t *card, bool disconnect) {
 
-    if (card == NULL)
+    if (card == NULL) {
         return PM3_EINVARG;
+    }
 
     int8_t retry = 3;
     while (retry--) {
@@ -399,10 +400,10 @@ static int findXerox(iso14b_card_select_t *card, bool disconnect) {
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
-            if (resp.oldarg[0] == 0) {
+            if (resp.status == PM3_SUCCESS) {
                 memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
             }
-            return resp.oldarg[0];
+            return resp.length;
         }
     } // retry
 
@@ -513,7 +514,7 @@ static int CmdHFXeroxInfo(const char *Cmd) {
         if (verbose) {
             PrintAndLogEx(FAILED, "Fuji/Xerox tag select failed");
         }
-        return PM3_ERFTRANS;
+        return status;
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -551,7 +552,7 @@ static int CmdHFXeroxInfo(const char *Cmd) {
             */
 
             // 14b raw command send data_len instead of status
-            if (/*resp.status != 0 ||*/ resp.length < 7) {
+            if (resp.length < 7) {
                 PrintAndLogEx(FAILED, "retrying one more time");
                 continue;
             }
@@ -611,9 +612,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-
     bool decrypt = arg_get_lit(ctx, 2);
-
     CLIParserFree(ctx);
 
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 11);
@@ -657,7 +656,8 @@ static int CmdHFXeroxDump(const char *Cmd) {
             resp.cmd, resp.length, resp.magic, resp.status, resp.crc, resp.oldarg[0], resp.oldarg[1], resp.oldarg[2],
             resp.data.asBytes[0], resp.data.asBytes[1], resp.data.asBytes[2], resp.ng ? 't' : 'f');
             */
-            if (/*resp.status != 0 ||*/ resp.length < 7) {  // 14b raw command send data_len instead of status
+    
+            if (resp.length < 7) {
                 PrintAndLogEx(FAILED, "retrying one more time");
                 continue;
             }
@@ -682,7 +682,6 @@ static int CmdHFXeroxDump(const char *Cmd) {
 
             PrintAndLogEx(NORMAL, "." NOLF);
             fflush(stdout);
-//            PrintAndLogEx(INPLACE, "blk %3d", blocknum);
         }
     }
 
@@ -692,8 +691,9 @@ static int CmdHFXeroxDump(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
 
-    if (blocknum != 0x100)
+    if (blocknum != 0x100) {
         PrintAndLogEx(FAILED, "dump failed at block %d", blocknum);
+    }
 
     if (decrypt) {
         PrintAndLogEx(INFO, "Decrypting secret blocks...");
@@ -747,12 +747,14 @@ static int CmdHFXeroxDump(const char *Cmd) {
             uint16_t cs, csd;
 
             // calc checksum
-            for (b = 0, cs = 0; b < sizeof(decr) - 2; b += 2)   cs += decr[b] | (decr[b + 1] << 8);
+            for (b = 0, cs = 0; b < sizeof(decr) - 2; b += 2) {
+                cs += decr[b] | (decr[b + 1] << 8);
+            }
             cs = ~cs;
             csd = (decr[7] << 8) | decr[6];
 
             if (cs != csd) {
-                PrintAndLogEx(FAILED, "secret block %02X checksum failed.", dadr);
+                PrintAndLogEx(FAILED, "Secret block %02X checksum " _RED_("failed"), dadr);
             }
         }
     }
@@ -773,23 +775,13 @@ static int CmdHFXeroxDump(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     if (0 == filename[0]) { // generate filename from uid
-        /*
-                PrintAndLogEx(INFO, "Using UID as filename");
-
-                sprintf(filename, "hf-xerox-%02X%02X%02X%02X%02X%02X%02X%02X-dump%s",
-                    card.uid[7],card.uid[6],card.uid[5],card.uid[4],card.uid[3],card.uid[2],card.uid[1],card.uid[0],
-                    decrypt ? "-dec" : "");
-        */
         char *fptr = filename;
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += snprintf(fptr, sizeof(filename), "hf-xerox-");
         FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), decrypt ? "-dump-dec" : "-dump", card.uidlen);
     }
 
-    size_t datalen = blocknum * 4;
-    saveFile(filename, ".bin", data, datalen);
-    saveFileEML(filename, data, datalen, 4);
-//    saveFileJSON(filename, jsf15, data, datalen, NULL);
+    pm3_save_dump(filename, data, blocknum * 4, jsf14b_v2);
     return PM3_SUCCESS;
 }
 

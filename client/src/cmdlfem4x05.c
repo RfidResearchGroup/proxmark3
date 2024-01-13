@@ -514,6 +514,7 @@ int CmdEM4x05Dump(const char *Cmd) {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "password (00000000)"),
         arg_str0("f", "file", "<fn>", "override filename prefix (optional).  Default is based on UID"),
+        arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -522,6 +523,7 @@ int CmdEM4x05Dump(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool nosave = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     uint8_t addr = 0;
@@ -693,6 +695,13 @@ int CmdEM4x05Dump(const char *Cmd) {
     } else {
     }
 
+    if (nosave) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Called with no save option");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
+    }
+
     // all ok save dump to file
     if (success == PM3_SUCCESS) {
 
@@ -709,9 +718,9 @@ int CmdEM4x05Dump(const char *Cmd) {
         }
         PrintAndLogEx(NORMAL, "");
         if (card_type == EM_4369 || card_type == EM_4469)
-            pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x69, 4);
+            pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x69);
         else
-            pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x05, 4);
+            pm3_save_dump(filename, (uint8_t *)data, sizeof(data), jsfEM4x05);
     }
     PrintAndLogEx(NORMAL, "");
     return success;
@@ -741,16 +750,16 @@ int CmdEM4x05Read(const char *Cmd) {
     bool use_pwd = false;
 
     if (addr > 15) {
-        PrintAndLogEx(ERR, "Address must be between 0 and 15");
+        PrintAndLogEx(ERR, "Address must be between 0 and 15, got " _RED_("%d"), addr);
         return PM3_EINVARG;
     }
 
     if (inputpwd == 0xFFFFFFFFFFFFFFFF) {
-        PrintAndLogEx(INFO, "Reading address %02u", addr);
+        PrintAndLogEx(INFO, "Reading address " _YELLOW_("%02u"), addr);
     } else {
         pwd = (inputpwd & 0xFFFFFFFF);
         use_pwd = true;
-        PrintAndLogEx(INFO, "Reading address %02u using password %08X", addr, pwd);
+        PrintAndLogEx(INFO, "Reading address " _YELLOW_("%02u") " using password " _YELLOW_("%08X"), addr, pwd);
     }
 
     uint32_t word = 0;
@@ -818,14 +827,14 @@ int CmdEM4x05Write(const char *Cmd) {
 
     if (use_pwd) {
         if (protect_operation)
-            PrintAndLogEx(INFO, "Writing protection words data %08X using password %08X", data, pwd);
+            PrintAndLogEx(INFO, "Writing protection words data " _YELLOW_("%08X") " using password " _YELLOW_("%08X"), data, pwd);
         else
-            PrintAndLogEx(INFO, "Writing address %d data %08X using password %08X", addr, data, pwd);
+            PrintAndLogEx(INFO, "Writing address " _YELLOW_("%d") " data " _YELLOW_("%08X") " using password " _YELLOW_("%08X"), addr, data, pwd);
     } else {
         if (protect_operation)
-            PrintAndLogEx(INFO, "Writing protection words data %08X", data);
+            PrintAndLogEx(INFO, "Writing protection words data " _YELLOW_("%08X"), data);
         else
-            PrintAndLogEx(INFO, "Writing address %d data %08X", addr, data);
+            PrintAndLogEx(INFO, "Writing address " _YELLOW_("%d") " data " _YELLOW_("%08X"), addr, data);
     }
 
     res = PM3_SUCCESS;
@@ -850,7 +859,7 @@ int CmdEM4x05Write(const char *Cmd) {
     if (status == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Data written and verified");
     else if (status == PM3_EFAILED)
-        PrintAndLogEx(ERR, "Tag denied %s operation", protect_operation ? "Protect" : "Write");
+        PrintAndLogEx(ERR, "Tag denied " _RED_("%s") " operation", protect_operation ? "Protect" : "Write");
     else
         PrintAndLogEx(DEBUG, "No answer from tag");
 
@@ -2020,7 +2029,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "-------+-------------+----------+-----+------------------------------------------------------------");
 
     smartbuf bits = { 0 };
-    bits.ptr = malloc(EM4X05_BITS_BUFSIZE);
+    bits.ptr = calloc(EM4X05_BITS_BUFSIZE, sizeof(uint8_t));
     bits.size = EM4X05_BITS_BUFSIZE;
     bits.idx = 0;
     size_t idx = 0;
@@ -2162,14 +2171,14 @@ static command_t CommandTable[] = {
     {"help",   CmdHelp,              AlwaysAvailable, "This help"},
     {"brute",  CmdEM4x05Brute,       IfPm3Lf,         "Bruteforce password"},
     {"chk",    CmdEM4x05Chk,         IfPm3Lf,         "Check passwords from dictionary"},
-    {"demod",  CmdEM4x05Demod,       AlwaysAvailable, "demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
-    {"dump",   CmdEM4x05Dump,        IfPm3Lf,         "dump EM4x05/EM4x69 tag"},
-    {"info",   CmdEM4x05Info,        IfPm3Lf,         "tag information EM4x05/EM4x69"},
-    {"read",   CmdEM4x05Read,        IfPm3Lf,         "read word data from EM4x05/EM4x69"},
+    {"demod",  CmdEM4x05Demod,       AlwaysAvailable, "Demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
+    {"dump",   CmdEM4x05Dump,        IfPm3Lf,         "Dump EM4x05/EM4x69 tag"},
+    {"info",   CmdEM4x05Info,        IfPm3Lf,         "Tag information"},
+    {"read",   CmdEM4x05Read,        IfPm3Lf,         "Read word data from EM4x05/EM4x69"},
     {"sniff",  CmdEM4x05Sniff,       AlwaysAvailable, "Attempt to recover em4x05 commands from sample buffer"},
-    {"unlock", CmdEM4x05Unlock,      IfPm3Lf,         "execute tear off against EM4x05/EM4x69"},
-    {"wipe",   CmdEM4x05Wipe,        IfPm3Lf,         "wipe EM4x05/EM4x69 tag"},
-    {"write",  CmdEM4x05Write,       IfPm3Lf,         "write word data to EM4x05/EM4x69"},
+    {"unlock", CmdEM4x05Unlock,      IfPm3Lf,         "Execute tear off against EM4x05/EM4x69"},
+    {"wipe",   CmdEM4x05Wipe,        IfPm3Lf,         "Wipe EM4x05/EM4x69 tag"},
+    {"write",  CmdEM4x05Write,       IfPm3Lf,         "Write word data to EM4x05/EM4x69"},
     {NULL, NULL, NULL, NULL}
 };
 

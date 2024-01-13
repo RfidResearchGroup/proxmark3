@@ -14,6 +14,7 @@ TESTNONCE2KEY=false
 TESTMFNONCEBRUTE=false
 TESTMFDAESBRUTE=false
 TESTHITAG2CRACK=false
+TESTCRYPTORF=false
 TESTFPGACOMPRESS=false
 TESTBOOTROM=false
 TESTARMSRC=false
@@ -27,7 +28,7 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|mfd_aes_brute|fpga_compress|bootrom|armsrc|client|recovery|common]
+Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|mfd_aes_brute|cryptorf|fpga_compress|bootrom|armsrc|client|recovery|common]
     --long:          Enable slow tests
     --opencl:        Enable tests requiring OpenCL (preferably a Nvidia GPU)
     --clientbin ...: Specify path to proxmark3 binary to test
@@ -51,6 +52,11 @@ Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|
         echo "Error: Argument for $1 is missing" >&2
         exit 1
       fi
+      ;;
+    cryptorf)
+      TESTALL=false
+      TESTCRYPTORF=true
+      shift
       ;;
     mfkey)
       TESTALL=false
@@ -190,11 +196,18 @@ function CheckExecute() {
     return $RESULT
   fi
 
+  start=$(date +%s)
+  TIMEINFO=""
   for I in $RETRY
   do
     RES=$(eval "$2")
+    end=$(date +%s)
+    delta=$(expr $end - $start)
+    if [ $delta -gt 2 ]; then
+      TIMEINFO="  ($delta s)"
+    fi
     if echo "$RES" | grep -E -q "$3"; then
-      echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+      echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK} $TIMEINFO"
       return $RESULT
     fi
     if [ ! $I == "e" ]; then echo "retry $I"; fi
@@ -202,11 +215,11 @@ function CheckExecute() {
 
   RESULT=1
   if $IGNOREFAILURE; then
-    echo -e "[ ${C_YELLOW}IGNORED${C_NC} ]"
+    echo -e "[ ${C_YELLOW}IGNORED${C_NC} ] $TIMEINFO"
     return 0
   fi
 
-  echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+  echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL} $TIMEINFO"
   echo -e "Execution trace:\n$RES"
   return $RESULT
 }
@@ -235,8 +248,8 @@ fi
 while true; do
     if $TESTALL || $TESTCOMMON; then
       echo -e "\n${C_BLUE}Testing common:${C_NC}"
-      if ! CheckFileExist "hardnested tables exists"       "$RESOURCEPATH/hardnested_tables/bitflip_0_001_states.bin.bz2"; then break; fi
-      if ! CheckFileExist "simmodule fw file exists"       "$RESOURCEPATH/sim013.bin"; then break; fi
+      if ! CheckFileExist "hardnested tables exists"       "$RESOURCEPATH/hardnested_tables/bitflip_0_001_states.bin.lz4"; then break; fi
+      if ! CheckFileExist "simmodule fw file exists"       "$RESOURCEPATH/sim014.bin"; then break; fi
       if ! CheckFileExist "iCLASS dictionary exists"       "$DICPATH/iclass_default_keys.dic"; then break; fi
       if ! CheckFileExist "MFC dictionary exists"          "$DICPATH/mfc_default_keys.dic"; then break; fi
       if ! CheckFileExist "MFDES dictionary exists"        "$DICPATH/mfdes_default_keys.dic"; then break; fi
@@ -250,7 +263,7 @@ while true; do
       if ! CheckExecute "findbits_test test"               "tools/findbits_test.py 2>&1" "OK"; then break; fi
       if ! CheckExecute "pm3_eml_mfd test"                 "tools/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
       if ! CheckExecute "recover_pk test"                  "tools/recover_pk.py selftests 2>&1" "Tests:.*\[OK\]"; then break; fi
-      if ! CheckExecute "mkversion sha256 test"            "tools/mkversion.sh" '"[0-9a-f]{9}"'; then break; fi
+      if ! CheckExecute "mkversion create test"            "tools/mkversion.sh --short" 'Iceman/'; then break; fi
     fi
     if $TESTALL || $TESTBOOTROM; then
       echo -e "\n${C_BLUE}Testing bootrom:${C_NC}"
@@ -270,13 +283,15 @@ while true; do
       if ! CheckFileExist "fpgacompress exists"            "$FPGACPMPRESSBIN"; then break; fi
     fi
     if $TESTALL || $TESTMFKEY; then
-      echo -e "\n${C_BLUE}Testing mfkey:${C_NC} ${MFKEY32V2BIN:=./tools/mfkey/mfkey32v2} ${MFKEY64BIN:=./tools/mfkey/mfkey64}"
+      echo -e "\n${C_BLUE}Testing mfkey:${C_NC} ${MFKEY32V2BIN:=./tools/mfkey/mfkey32v2} ${MFKEY64BIN:=./tools/mfkey/mfkey64}  ${STATICNESTEDBIN:=./tools/mfkey/staticnested}"
       if ! CheckFileExist "mfkey32v2 exists"               "$MFKEY32V2BIN"; then break; fi
       if ! CheckFileExist "mfkey64 exists"                 "$MFKEY64BIN"; then break; fi
+      if ! CheckFileExist "staticnested exists"            "$STATICNESTEDBIN"; then break; fi
       # Need a decent example for mfkey32...
       if ! CheckExecute "mfkey32v2 test"                   "$MFKEY32V2BIN 12345678 1AD8DF2B 1D316024 620EF048 30D6CB07 C52077E2 837AC61A" "Found Key: \[a0a1a2a3a4a5\]"; then break; fi
       if ! CheckExecute "mfkey64 test"                     "$MFKEY64BIN 9c599b32 82a4166c a1e458ce 6eea41e0 5cadf439" "Found Key: \[ffffffffffff\]"; then break; fi
       if ! CheckExecute "mfkey64 long trace test"          "$MFKEY64BIN 14579f69 ce844261 f8049ccb 0525c84f 9431cc40 7093df99 9972428ce2e8523f456b99c831e769dced09 8ca6827b ab797fd369e8b93a86776b40dae3ef686efd c3c381ba 49e2c9def4868d1777670e584c27230286f4 fbdcd7c1 4abd964b07d3563aa066ed0a2eac7f6312bf 9f9149ea" "Found Key: \[091e639cb715\]"; then break; fi
+      if ! CheckExecute "staticnested test"                "$STATICNESTEDBIN 461dce03 7eef3586 7fa28c7e 322bc14d 7f62b3d6" "\[ 2 \].*ffffffffff40.*"; then break; fi
     fi
     if $TESTALL || $TESTNONCE2KEY; then
       echo -e "\n${C_BLUE}Testing nonce2key:${C_NC} ${NONCE2KEYBIN:=./tools/nonce2key/nonce2key}"
@@ -288,12 +303,20 @@ while true; do
       if ! CheckFileExist "mf_nonce_brute exists"          "$MFNONCEBRUTEBIN"; then break; fi
       if ! CheckExecute slow "mf_nonce_brute test 1/2"         "$MFNONCEBRUTEBIN 9c599b32 5a920d85 1011 98d76b77 d6c6e870 0000 ca7e0b63 0111 3e709c8a" "Key found \[.*ffffffffffff.*\]"; then break; fi
       if ! CheckExecute slow "mf_nonce_brute test 2/2"         "$MFNONCEBRUTEBIN 96519578 d7e3c6ac 0011 cd311951 9da49e49 0010 2bb22e00 0100 a4f7f398" "Key found \[.*3b7e4fd575ad.*\]"; then break; fi
-    fi    
+    fi
     if $TESTALL || $TESTMFDAESBRUTE; then
       echo -e "\n${C_BLUE}Testing mfd_aes_brute:${C_NC} ${MFDASEBRUTEBIN:=./tools/mfd_aes_brute/mfd_aes_brute}"
       if ! CheckFileExist "mfd_aes_brute exists"          "$MFDASEBRUTEBIN"; then break; fi
-      if ! CheckExecute      "mfd_aes_brute test 1/2"         "$MFDASEBRUTEBIN 1605394800 bb6aea729414a5b1eff7b16328ce37fd 82f5f498dbc29f7570102397a2e5ef2b6dc14a864f665b3c54d11765af81e95c" "key.................... .*261C07A23F2BC8262F69F10A5BDF3764"; then break; fi
+      if ! CheckExecute      "mfd_aes_brute test 1/2"         "$MFDASEBRUTEBIN 1629394800 bb6aea729414a5b1eff7b16328ce37fd 82f5f498dbc29f7570102397a2e5ef2b6dc14a864f665b3c54d11765af81e95c" "key.................... .*261C07A23F2BC8262F69F10A5BDF3764"; then break; fi
       if ! CheckExecute slow "mfd_aes_brute test 2/2"         "$MFDASEBRUTEBIN 1546300800 3fda933e2953ca5e6cfbbf95d1b51ddf 97fe4b5de24188458d102959b888938c988e96fb98469ce7426f50f108eaa583" "key.................... .*E757178E13516A4F3171BC6EA85E165A"; then break; fi
+    fi
+
+    if $TESTALL || $TESTCRYPTORF; then
+      echo -e "\n${C_BLUE}Testing CryptoRF sma:${C_NC} ${CRYPTRFBRUTEBIN:=./tools/cryptorf/sma} ${CRYPTRF_MULTI_BRUTEBIN:=./tools/cryptorf/sma_multi}"
+      if ! CheckFileExist "sma exists"               "$CRYPTRFBRUTEBIN"; then break; fi
+      if ! CheckFileExist "sma_multi exists"         "$CRYPTRF_MULTI_BRUTEBIN"; then break; fi
+#      if ! CheckExecute slow  "sma test"             "$CRYPTRFBRUTEBIN ffffffffffffffff 1234567812345678 88c9d4466a501a87 dec2ee1b1c9276e9" "key found \[.*4f794a463ff81d81.*\]"; then break; fi
+      if ! CheckExecute slow  "sma_multi test"       "$CRYPTRF_MULTI_BRUTEBIN ffffffffffffffff 1234567812345678 88c9d4466a501a87 dec2ee1b1c9276e9" "key found \[.*4f794a463ff81d81.*\]"; then break; fi
     fi
     # hitag2crack not yet part of "all"
     # if $TESTALL || $TESTHITAG2CRACK; then
@@ -379,18 +402,20 @@ while true; do
       if ! CheckExecute "reveng readline test"    "$CLIENTBIN -c 'reveng -h;reveng -D'" "CRC-64/GO-ISO"; then break; fi
       if ! CheckExecute "reveng -g test"          "$CLIENTBIN -c 'reveng -g abda202c'" "CRC-16/ISO-IEC-14443-3-A"; then break; fi
       if ! CheckExecute "reveng -w test"          "$CLIENTBIN -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
-      if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen -t'" "Selftest OK"; then break; fi
+      if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen -t'" "Selftest ok"; then break; fi
       if ! CheckExecute "mfu keygen test"         "$CLIENTBIN -c 'hf mfu keygen --uid 11223344556677'" "80 B1 C2 71 D8 A0"; then break; fi
       if ! CheckExecute "jooki encode test"       "$CLIENTBIN -c 'hf jooki encode -t'" "04 28 F4 DA F0 4A 81  \( ok \)"; then break; fi
       if ! CheckExecute "trace load/list 14a"     "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -1 -t 14a;'" "READBLOCK\(8\)"; then break; fi
       if ! CheckExecute "trace load/list x"       "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -x1 -t 14a;'" "0.0101840425"; then break; fi
-      if ! CheckExecute "nfc decode test - oob"           "$CLIENTBIN -c 'nfc decode -d DA2010016170706C69636174696F6E2F766E642E626C7565746F6F74682E65702E6F6F62301000649201B96DFB0709466C65782032'" "Flex 2"; then break; fi
-      if ! CheckExecute "nfc decode test - device info"   "$CLIENTBIN -c 'nfc decode -d d1025744690004536f6e79010752432d533338300220426c61636b204e46432052656164657220636f6e6e656374656420746f2050430310123e4567e89b12d3a45642665544000004124e464320506f72742d3130302076312e3032'" "NFC Port-100 v1.02"; then break; fi
-      if ! CheckExecute "nfc decode test - vcard"         "$CLIENTBIN -c 'nfc decode -d d20ca3746578742f782d7643617264424547494e3a56434152440a56455253494f4e3a332e300a4e3a43687269733b4963656d616e3b3b3b0a464e3a476f7468656e627572670a5245563a323032312d30362d32345432303a31353a30385a0a6974656d322e582d4142444154453b747970653d707265663a323032302d30362d32340a4954454d322e582d41424c4142454c3a5f24213c416e6e69766572736172793e21245f0a454e443a56434152440a'" "END:VCARD"; then break; fi
-      if ! CheckExecute "nfc decode test - apple wallet"  "$CLIENTBIN -c 'nfc decode -d 031AD10116550077616C6C65743A2F2F61637469766174652F6E6663FE'" "activate/nfc"; then break; fi
-      if ! CheckExecute "nfc decode test - signature"  "$CLIENTBIN -c 'nfc decode -d 03FF010194113870696C65742E65653A656B616172743A3266195F26063132303832325904202020205F28033233335F2701316E1B5A13333038363439303039303030323636343030355304EBF2CE704103000000AC536967010200803A2448FCA7D354A654A81BD021150D1A152D1DF4D7A55D2B771F12F094EAB6E5E10F2617A2F8DAD4FD38AFF8EA39B71C19BD42618CDA86EE7E144636C8E0E7CFC4096E19C3680E09C78A0CDBC05DA2D698E551D5D709717655E56FE3676880B897D2C70DF5F06ECE07C71435255144F8EE41AF110E7B180DA0E6C22FB8FDEF61800025687474703A2F2F70696C65742E65652F6372742F33303836343930302D303030312E637274FE'" "30864900-0001.crt"; then break; fi
+      if ! CheckExecute "nfc decode test - oob"          "$CLIENTBIN -c 'nfc decode -d DA2010016170706C69636174696F6E2F766E642E626C7565746F6F74682E65702E6F6F62301000649201B96DFB0709466C65782032'" "Flex 2"; then break; fi
+      if ! CheckExecute "nfc decode test - device info"  "$CLIENTBIN -c 'nfc decode -d d1025744690004536f6e79010752432d533338300220426c61636b204e46432052656164657220636f6e6e656374656420746f2050430310123e4567e89b12d3a45642665544000004124e464320506f72742d3130302076312e3032'" "NFC Port-100 v1.02"; then break; fi
+      if ! CheckExecute "nfc decode test - vcard"        "$CLIENTBIN -c 'nfc decode -d d20ca3746578742f782d7643617264424547494e3a56434152440a56455253494f4e3a332e300a4e3a43687269733b4963656d616e3b3b3b0a464e3a476f7468656e627572670a5245563a323032312d30362d32345432303a31353a30385a0a6974656d322e582d4142444154453b747970653d707265663a323032302d30362d32340a4954454d322e582d41424c4142454c3a5f24213c416e6e69766572736172793e21245f0a454e443a56434152440a'" "END:VCARD"; then break; fi
+      if ! CheckExecute "nfc decode test - apple wallet" "$CLIENTBIN -c 'nfc decode -d 031AD10116550077616C6C65743A2F2F61637469766174652F6E6663FE'" "activate/nfc"; then break; fi
+      if ! CheckExecute "nfc decode test - signature"    "$CLIENTBIN -c 'nfc decode -d 03FF010194113870696C65742E65653A656B616172743A3266195F26063132303832325904202020205F28033233335F2701316E1B5A13333038363439303039303030323636343030355304EBF2CE704103000000AC536967010200803A2448FCA7D354A654A81BD021150D1A152D1DF4D7A55D2B771F12F094EAB6E5E10F2617A2F8DAD4FD38AFF8EA39B71C19BD42618CDA86EE7E144636C8E0E7CFC4096E19C3680E09C78A0CDBC05DA2D698E551D5D709717655E56FE3676880B897D2C70DF5F06ECE07C71435255144F8EE41AF110E7B180DA0E6C22FB8FDEF61800025687474703A2F2F70696C65742E65652F6372742F33303836343930302D303030312E637274FE'" "30864900-0001.crt"; then break; fi
 
       echo -e "\n${C_BLUE}Testing LF:${C_NC}"
+      if ! CheckExecute "lf cotag demod test"   "$CLIENTBIN -c 'data load -f traces/lf_cotag_220_8331.pm3; data norm; data cthreshold -u 50 -d -20; data envelope; data raw --ar -c 272; lf cotag demod'" \
+                                                                     "COTAG Found: FC 220, CN: 8331 Raw: FFB841170363FFFE00001E7F00000000"; then break; fi
       if ! CheckExecute "lf AWID test"          "$CLIENTBIN -c 'data load -f traces/lf_AWID-15-259.pm3;lf search -1'" "AWID ID found"; then break; fi
       if ! CheckExecute "lf EM410x test"        "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3;lf search -1'" "EM410x ID found"; then break; fi
       if ! CheckExecute "lf EM4x05 test"        "$CLIENTBIN -c 'data load -f traces/lf_EM4x05.pm3;lf search -1'" "FDX-B ID found"; then break; fi
@@ -420,10 +445,10 @@ while true; do
                                                                      "EM 410x ID 0F0368568B"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_animal test"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf search -1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_animal test2"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf fdxb demod'" \
-                                                                     "Animal ID          999-000000112233"; then break; fi
+                                                                     "Animal ID......... 999-000000112233"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_extended test"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_extended.pm3; lf search -1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_extended test2"        "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_extended.pm3; lf fdxb demod'" \
-                                                                     "temperature     95.2 F / 35.1 C"; then break; fi
+                                                                     "temperature... 95.2 F / 35.1 C"; then break; fi
       if ! CheckExecute slow "lf T55 gallagher test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf search -1'" "GALLAGHER ID found"; then break; fi
       if ! CheckExecute slow "lf T55 gallagher test2"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf gallagher demod'" \
                                                                      "GALLAGHER - Region: 1 Facility: 16640 Card No.: 201 Issue Level: 1"; then break; fi
@@ -437,8 +462,7 @@ while true; do
       if ! CheckExecute slow "lf T55 hid_48 test2"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_hid_48.pm3; lf hid demod'" \
                                                                      "HID Corporate 1000 48-bit"; then break; fi
       if ! CheckExecute slow "lf T55 indala_hedem test"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_hedem.pm3; lf search -1'" "Indala ID found"; then break; fi
-      if ! CheckExecute slow "lf T55 indala_hedem test2"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_hedem.pm3; lf indala demod'" \
-                                                                     "Heden-2L    \| 888"; then break; fi
+      if ! CheckExecute slow "lf T55 indala_hedem test2"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala_hedem.pm3; lf indala demod'" "Heden-2L...... 888"; then break; fi
       if ! CheckExecute slow "lf T55 indala test"                "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala.pm3; lf search -1'" "Indala ID found"; then break; fi
       if ! CheckExecute slow "lf T55 indala test2"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_indala.pm3; lf indala demod'" \
                                                                      "Fmt 26 FC: 123 Card: 1337 Parity: 11"; then break; fi
@@ -501,16 +525,17 @@ while true; do
                                                                      "Visa2000 - Card 112233, Raw: 564953320001B66900000183"; then break; fi
 
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
-      if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "at_enc"; then break; fi
+      if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "content from tag dump file"; then break; fi
       if ! CheckExecute slow retry ignore "hf mf hardnested long test"  "$CLIENTBIN -c 'hf mf hardnested -t --tk 000000000000'" "found:"; then break; fi
       if ! CheckExecute slow "hf iclass loclass long test" "$CLIENTBIN -c 'hf iclass loclass --long'" "verified \( ok \)"; then break; fi
       if ! CheckExecute slow "emv long test"               "$CLIENTBIN -c 'emv test -l'" "Test\(s\) \[ ok"; then break; fi
       if ! CheckExecute "hf iclass lookup test"            "$CLIENTBIN -c 'hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f $DICPATH/iclass_default_keys.dic'" \
-                                                                      "valid key AE A6 84 A6 DA B2 32 78"; then break; fi
+                                                                "valid key AE A6 84 A6 DA B2 32 78"; then break; fi
       if ! CheckExecute "hf iclass loclass test"         "$CLIENTBIN -c 'hf iclass loclass --test'" "key diversification \( ok \)"; then break; fi
       if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Test\(s\) \[ ok"; then break; fi
       if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \[ ok"; then break; fi
       if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \[ ok"; then break; fi
+      if ! CheckExecute "hf waveshare load"              "$CLIENTBIN -c 'hf waveshare load -m 6 -f tools/lena.bmp -s dither.bmp' && echo '34ff55fe7257876acf30dae00eb0e439 dither.bmp' | md5sum -c" "dither.bmp: OK"; then break; fi
     fi
   echo -e "\n------------------------------------------------------------"
   echo -e "Tests [ ${C_GREEN}OK${C_NC} ] ${C_OK}\n"

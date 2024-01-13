@@ -32,6 +32,10 @@
 #include "cryptolib.h"
 #include "util.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 using namespace std;
 
 #ifdef _MSC_VER
@@ -159,6 +163,10 @@ void print_cs(const char *text, pcs s) {
 }
 
 static inline uint8_t mod(uint8_t a, uint8_t m) {
+    if (m == 0) {
+        return 0; // Actually, divide by zero error
+    }
+
     // Just return the input when this is less or equal than the modular value
     if (a < m) return a;
 
@@ -663,13 +671,12 @@ static inline void search_gc_candidates_left(const uint64_t lstate_before_gc, co
 
 void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcstates, vector<uint64_t> *pgc_candidates) {
     vector<cs_t>::iterator itl, itr;
-    size_t pos, count;
+    size_t pos;
     uint64_t gc;
     bool valid;
 
     // Clean up the candidate list
     pgc_candidates->clear();
-    count = 0;
     for (itl = plcstates->begin(); itl != plcstates->end(); ++itl) {
         for (itr = prcstates->begin(); itr != prcstates->end(); ++itr) {
             valid = true;
@@ -692,7 +699,6 @@ void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcs
 //        printf("%09llx - ",itl->l);
 //        printf("%07llx\n",itr->r);
             }
-            count++;
         }
     }
     printf("Found a total of " _YELLOW_("%llu")" combinations, ", ((unsigned long long)plcstates->size()) * prcstates->size());
@@ -754,7 +760,7 @@ int main(int argc, const char *argv[]) {
             Q[pos] = rand();
         }
         sm_auth(Gc, Ci, Q, Ch, Ci_1, &ostate);
-        printf("  Gc: ");
+        printf("  Gc... ");
         print_bytes(Gc, 8);
     } else {
         sscanf(argv[1], "%016" SCNx64, &nCi);
@@ -765,7 +771,7 @@ int main(int argc, const char *argv[]) {
         num_to_bytes(nCh, 8, Ch);
         sscanf(argv[4], "%016" SCNx64, &nCi_1);
         num_to_bytes(nCi_1, 8, Ci_1);
-        printf("  Gc: unknown\n");
+        printf("  Gc... unknown\n");
     }
 
     for (pos = 0; pos < 8; pos++) {
@@ -773,16 +779,16 @@ int main(int argc, const char *argv[]) {
         ks[(2 * pos) + 1] = Ch[pos];
     }
 
-    printf("  Ci: ");
+    printf("  Ci... ");
     print_bytes(Ci, 8);
-    printf("   Q: ");
+    printf("   Q... ");
     print_bytes(Q, 8);
-    printf("  Ch: ");
+    printf("  Ch... ");
     print_bytes(Ch, 8);
-    printf("Ci+1: ");
+    printf("Ci+1... ");
     print_bytes(Ci_1, 8);
     printf("\n");
-    printf("  Ks: ");
+    printf("  Ks... ");
     print_bytes(ks, 16);
     printf("\n");
 
@@ -840,7 +846,7 @@ int main(int argc, const char *argv[]) {
             num_to_bytes(*itgc, 8, Gc_chk);
             sm_auth(Gc_chk, Ci, Q, Ch_chk, Ci_1_chk, &ostate);
             if ((memcmp(Ch_chk, Ch, 8) == 0) && (memcmp(Ci_1_chk, Ci_1, 8) == 0)) {
-                printf("\nFound valid key: " _GREEN_("%016" PRIx64)"\n\n", *itgc);
+                printf("\nValid key found [ " _GREEN_("%016" PRIx64)" ]\n\n", *itgc);
                 return 0;
             }
         }
@@ -848,3 +854,7 @@ int main(int argc, const char *argv[]) {
     }
     return 0;
 }
+
+#if defined(__cplusplus)
+}
+#endif

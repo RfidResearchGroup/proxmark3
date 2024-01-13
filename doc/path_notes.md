@@ -27,7 +27,7 @@
 
 With the recent (2019-09-01) changes and creation of `make install`  command it is easy to get lost.
 
-If you install the Proxmark tools with `make install`, they will go under the prefix `/usr/local/` but if you install the tools from your distro, there are chances the path is `/usr` so you'll have to adapt the paths presented here.
+If you install the Proxmark3 tools with `make install`, they will go under the prefix `/usr/local/` but if you install the tools from your distro, there are chances the path is `/usr` so you'll have to adapt the paths presented here.
 
 # Installed elements
 ^[Top](#top)
@@ -64,7 +64,7 @@ The recovery / firmware files will be copied to
 ```
 
 * Proxmark3 firmware: `bootrom.elf`, `fullimage.elf`, `proxmark3_recovery.bin` (used for JTAG)
-* SIM firmware: `sim013.bin`, `sim013.sha512.txt`
+* SIM firmware: `sim014.bin`, `sim014.sha512.txt`
 
 
 ## Traces

@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
     char op = '\0';
     bool lenient = false;
 
-    char c;
+    int c;
     while ((c = getopt(argc, argv, "edci:s:o:k:l")) != -1) {
         switch (c) {
             case 'e':

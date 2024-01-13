@@ -35,6 +35,8 @@ uint8_t *BigBuf_get_addr(void);
 uint32_t BigBuf_get_size(void);
 uint8_t *BigBuf_get_EM_addr(void);
 uint16_t BigBuf_max_traceLen(void);
+uint32_t BigBuf_get_hi(void);
+
 void BigBuf_initialize(void);
 void BigBuf_Clear(void);
 void BigBuf_Clear_ext(bool verbose);
@@ -51,11 +53,12 @@ void set_tracing(bool enable);
 void set_tracelen(uint32_t value);
 bool get_tracing(void);
 
-bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, uint8_t *parity, bool reader2tag);
+bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_start, uint32_t timestamp_end, const uint8_t *parity, bool reader2tag);
 bool RAMFUNC LogTraceBits(const uint8_t *btBytes, uint16_t bitLen, uint32_t timestamp_start, uint32_t timestamp_end, bool reader2tag);
-bool LogTrace_ISO15693(const uint8_t *bytes, uint16_t len, uint32_t ts_start, uint32_t ts_end, uint8_t *parity, bool reader2tag);
+bool LogTrace_ISO15693(const uint8_t *bytes, uint16_t len, uint32_t ts_start, uint32_t ts_end, const uint8_t *parity, bool reader2tag);
 
-uint8_t emlSet(uint8_t *data, uint32_t offset, uint32_t length);
+uint8_t emlSet(const uint8_t *data, uint32_t offset, uint32_t length);
+uint8_t emlGet(uint8_t *out, uint32_t offset, uint32_t length);
 
 typedef struct {
     int max;

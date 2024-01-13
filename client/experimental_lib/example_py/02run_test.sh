@@ -8,4 +8,4 @@
 #/usr/lib/python3/dist-packages/pm3.py
 
 # need access to pm3.py
-PYTHONPATH=../../src ./test.py
+PYTHONPATH=../../pyscripts ./test.py

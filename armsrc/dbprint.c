@@ -22,7 +22,7 @@
 #include "printf.h"
 
 #define DEBUG 1
-
+#define DEBUG_MAX_MSG_SIZE  200
 //=============================================================================
 // Debug print functions, to go out over USB, to the usual PC-side client.
 //=============================================================================
@@ -31,7 +31,7 @@ void DbpStringEx(uint32_t flags, const char *src, size_t srclen) {
 #if DEBUG
     struct {
         uint16_t flag;
-        uint8_t buf[PM3_CMD_DATA_SIZE - sizeof(uint16_t)];
+        uint8_t buf[DEBUG_MAX_MSG_SIZE];
     } PACKED data;
     data.flag = flags;
     uint16_t len = MIN(srclen, sizeof(data.buf));
@@ -49,7 +49,7 @@ void DbpString(const char *str) {
 void DbprintfEx(uint32_t flags, const char *fmt, ...) {
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
-    char s[PM3_CMD_DATA_SIZE] = {0x00};
+    char s[DEBUG_MAX_MSG_SIZE] = {0x00};
     va_list ap;
     va_start(ap, fmt);
     kvsprintf(fmt, s, 10, ap);
@@ -62,7 +62,7 @@ void DbprintfEx(uint32_t flags, const char *fmt, ...) {
 void Dbprintf(const char *fmt, ...) {
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
-    char output_string[PM3_CMD_DATA_SIZE] = {0x00};
+    char output_string[DEBUG_MAX_MSG_SIZE] = {0x00};
     va_list ap;
 
     va_start(ap, fmt);
@@ -74,13 +74,13 @@ void Dbprintf(const char *fmt, ...) {
 }
 
 // prints HEX & ASCII
-void Dbhexdump(int len, uint8_t *d, bool bAsci) {
+void Dbhexdump(int len, const uint8_t *d, bool bAsci) {
 #if DEBUG
-    char ascii[9];
+    char ascii[17];
 
     while (len > 0) {
 
-        int l = (len > 8) ? 8 : len;
+        int l = (len > 16) ? 16 : len;
 
         memcpy(ascii, d, l);
         ascii[l] = 0;
@@ -97,33 +97,41 @@ void Dbhexdump(int len, uint8_t *d, bool bAsci) {
         else
             Dbprintf("%*D", l, d, " ");
 
-        len -= 8;
-        d += 8;
+        len -= 16;
+        d += 16;
     }
 #endif
 }
 
-void print_result(const char *name, uint8_t *buf, size_t len) {
+void print_result(const char *name, const uint8_t *d, size_t n) {
 
-    uint8_t *p = buf;
-    uint16_t tmp = len & 0xFFF0;
+    const uint8_t *p = d;
+    uint16_t tmp = n & 0xFFF0;
 
-    for (; p - buf < tmp; p += 16) {
+    for (; p - d < tmp; p += 16) {
         Dbprintf("[%s: %02d/%02d] %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
                  name,
-                 p - buf,
-                 len,
+                 p - d,
+                 n,
                  p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]
                 );
     }
-    if (len % 16 != 0) {
+
+    if (n % 16 != 0) {
         char s[46] = {0};
         char *sp = s;
-        for (; p - buf < len; p++) {
+        for (; p - d < n; p++) {
             sprintf(sp, "%02x ", p[0]);
             sp += 3;
         }
-        Dbprintf("[%s: %02d/%02d] %s", name, p - buf, len, s);
+        Dbprintf("[%s: %02d/%02d] %s", name, p - d, n, s);
+    }
+}
+
+// Prints message and hexdump
+void print_dbg(char *msg, uint8_t *d, uint16_t n) {
+    if (g_dbglevel == DBG_DEBUG) {
+        print_result(msg, d, n);
     }
 }
 

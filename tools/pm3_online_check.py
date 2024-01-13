@@ -122,7 +122,7 @@ def pm3_lf_t55xx(child):
 def pm3_flash_sm(child):
     try:
         print("[+] Updating smart card fw")
-        child.sendline('smart upgrade -f sim013.bin')
+        child.sendline('smart upgrade -f sim014.bin')
         i = child.expect('pm3 --> ')
         msg = escape_ansi(str(child.before))
         print("================")
@@ -204,7 +204,7 @@ def main():
     flash_mem = "baudrate................24 mhz".lower()
 
     # check smartcard fw version
-    sm_version = "version.................v4.12".lower()
+    sm_version = "version................. v4.42".lower()
 
     # check LF
     lf_search = "valid hid prox id found!".lower()

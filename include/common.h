@@ -196,4 +196,21 @@ extern bool g_tearoff_enabled;
 #define CLEAR_BIT(data, i) *(data + (i / 8)) &= ~(1 << (7 - (i % 8)))
 #define FLIP_BIT(data, i)  *(data + (i / 8)) ^= (1 << (7 - (i % 8)))
 
+// time for decompressing and loading the image to the FPGA
+#define FPGA_LOAD_WAIT_TIME (1500)
+
+// GCC extension
+// from client/deps/tinycbor/compilersupport_p.h
+#ifdef __GNUC__
+#ifndef likely
+#  define likely(x)     __builtin_expect(!!(x), 1)
+#endif
+#ifndef unlikely
+#  define unlikely(x)   __builtin_expect(!!(x), 0)
+#endif
+#else
+#  define likely(x)     (x)
+#  define unlikely(x)   (x)
+#endif
+
 #endif

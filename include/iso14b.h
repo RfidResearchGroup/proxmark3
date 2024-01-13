@@ -64,14 +64,24 @@ typedef struct {
     uint8_t raw[];
 } PACKED iso14b_raw_cmd_t;
 
+typedef struct {
+    uint8_t response_byte;
+    uint16_t datalen;
+    uint8_t data[];
+} PACKED iso14b_raw_apdu_response_t;
 
-#define US_TO_SSP(x)   ( (uint32_t)((x) * 3.39) )
-#define SSP_TO_US(x)   ( (uint32_t)((x) / 3.39) )
+#define US_TO_SSP(x)   ( (int32_t) ((x) * 3.39) )
+#define SSP_TO_US(x)   ( (int32_t)((x) / 3.39) )
 
-#define ETU_TO_SSP(x)  ((uint32_t)((x) * 32))
-#define SSP_TO_ETU(x)  ((uint32_t)((x) / 32))
+#define HF14_ETU_TO_SSP(x)  ((x) << 5) // 1 ETU = 32 SSP
+#define HF14_SSP_TO_ETU(x)  ((x) >> 5) //
 
-#define ETU_TO_US(x)   ((uint32_t)((((x) * 9440000) / 1000000) + 0.5))
-#define US_TO_ETU(x)   ((uint32_t)(((x) * 1000000 / 9440000) + 0.5))
+#define HF14_ETU_TO_US(x)    ( (float)((x) * 9.4396) )
+#define HF14_ETU_TO_US_2(x)  ( (int32_t)( ((x) * 9439600) / 1000000) )
+
+// #define US_TO_ETU(x)   ( (int32_t)( ((x) * 1000000) / 9439600) )
+
+#define US_TO_ETU(x)   ( (float)((x) / 9.4396) )
 
 #endif // _ISO14B_H_
+

@@ -39,7 +39,7 @@ function print_config {
 function setup_serial_port {
 	if [ -z "$SerialPort" ]; then
 		pm3list=$($VSCODEPATH/../pm3 --list 2>/dev/null)
-		#Use first port listed 
+		#Use first port listed
 		export SerialPort=$(echo $pm3list | head -n 1 | cut -c 4-)
 		if [ -z "$SerialPort" ]; then
 			echo >&2 "[!!] No serial port found, please set SerialPort manually"
@@ -129,17 +129,17 @@ fi
 
 HOSTOS=$(uname | awk '{print toupper($0)}')
 if [ "$HOSTOS" = "LINUX" ]; then
-    if uname -a|grep -q Microsoft; then
+	if uname -a|grep -q Microsoft; then
 		setup_wsl
-    else
+	else
 		setup_linux
-    fi
+	fi
 elif [ "$HOSTOS" = "DARWIN" ]; then
 	echo >&2 "[!!] MacOS not supported, sorry!"
 	exit 1
 elif [[ "$HOSTOS" =~ MINGW(32|64)_NT* ]]; then
 	setup_ps
 else
-    echo >&2 "[!!] Host OS not recognized, abort: $HOSTOS"
-    exit 1
+	echo >&2 "[!!] Host OS not recognized, abort: $HOSTOS"
+	exit 1
 fi

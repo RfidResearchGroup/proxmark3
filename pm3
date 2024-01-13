@@ -27,13 +27,9 @@ if [ ! "$1" == "--list" ]; then
             echo >&2 "[!!] In devel workdir but no executable found, did you compile it?"
             exit 1
         fi
-        # Devel mode: point to workdir pm3.py module
-        EVALENV+=" PYTHONPATH=$PM3PATH/client/src"
     # try install dir
     elif [ -x "$PM3PATH/proxmark3" ]; then
         CLIENT="$PM3PATH/proxmark3"
-        EVALENV+=" PYTHONPATH=$PM3PATH/../share/proxmark3/pyscripts/"
-        #  or /usr/[local/]lib/python3/dist-packages/pm3.py ?
     else
     # hope it's installed somehow, still not sure where fw images and pm3.py are...
         CLIENT="proxmark3"
@@ -115,7 +111,7 @@ function get_pm3_list_Linux {
     if $FINDBTDIRECT; then
         # check if the MAC of a Proxmark3 was registered in the known devices
         for MAC in $(dbus-send --system --print-reply --type=method_call --dest='org.bluez' '/' org.freedesktop.DBus.ObjectManager.GetManagedObjects 2>/dev/null|\
-                         awk '/"Address"/{getline;gsub(/"/,"",$3);a=$3}/Name/{getline;if (/PM3_RDV4/) print a}'); do
+                         awk '/"Address"/{getline;gsub(/"/,"",$3);a=$3}/Name/{getline;if (/PM3_RDV4/ || /Proxmark3 SE/) print a}'); do
             PM3LIST+=("bt:$MAC")
         done
         # we don't probe the device so there is no guarantee the device is actually present
@@ -144,7 +140,8 @@ function get_pm3_list_Windows {
         DEV=${DEV/ */}
         #prevent soft bricking when using pm3-flash-all on an outdated bootloader
         if [ $(basename -- "$0") = "pm3-flash-all" ]; then
-            if [ ! $(wmic /locale:ms_409 path Win32_SerialPort Where "DeviceID='$DEV'" Get PNPDeviceID 2>/dev/null | awk -b '/^USB/{print $1}') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
+            line=$(wmic /locale:ms_409 path Win32_SerialPort Where "DeviceID='$DEV'" Get PNPDeviceID 2>/dev/null | awk -b '/^USB/{print $1}');
+            if [[ ! $line =~ ^"USB\VID_9AC4&PID_4B8F\ICEMAN" ]]; then
                 echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
                 exit 1
             fi
@@ -189,9 +186,11 @@ function get_pm3_list_WSL {
         DEV=$(echo $DEV | sed -nr 's#^COM([0-9]+)\b#/dev/ttyS\1#p')
         # ttyS counterpart takes some more time to appear
         if [ -e "$DEV" ]; then
+
             #prevent soft bricking when using pm3-flash-all on an outdated bootloader
             if [ $(basename -- "$0") = "pm3-flash-all" ]; then
-                if [ ! $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null | tr -dc '[:print:]') = "USB\VID_9AC4&PID_4B8F\ICEMAN" ]; then
+                line=$($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null | tr -dc '[:print:]');
+                if [[ ! $line =~ ^"USB\VID_9AC4&PID_4B8F\ICEMAN" ]]; then
                     echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
                     exit 1
                 fi

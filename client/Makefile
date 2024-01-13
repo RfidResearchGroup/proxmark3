@@ -40,7 +40,7 @@ ifeq ($(USE_BREW),1)
 	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/lib/pkgconfig:$(BREW_PREFIX)/opt/qt/lib/pkgconfig:$(BREW_PREFIX)/opt/qt5/lib/pkgconfig
 endif
 
-ifdef ($(USE_MACPORTS),1)
+ifeq ($(USE_MACPORTS),1)
 	INCLUDES += -I$(MACPORTS_PREFIX)/include
 	LDLIBS += -L$(MACPORTS_PREFIX)/lib
 	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(MACPORTS_PREFIX)/lib/pkgconfig
@@ -242,6 +242,9 @@ endif
 ## BZIP2
 LDLIBS += -lbz2
 
+## LZ4
+LDLIBS += -llz4
+
 ## Bluez (optional)
 ifneq ($(SKIPBT),1)
     BTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags bluez 2>/dev/null)
@@ -270,7 +273,7 @@ ifneq ($(SKIPPYTHON),1)
     PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3 2>/dev/null)
     ifneq ($(PYTHONLDLIBS),)
         PYTHONLIBLD = $(PYTHONLDLIBS)
-        PYTHONLIBINC = $(PYTHONINCLUDES)
+        PYTHONLIBINC = $(subst -I,-isystem ,$(PYTHONINCLUDES))
         PYTHON_FOUND = 1
     else
         # since python3.8, applications willing to embed python must use -embed:
@@ -278,7 +281,7 @@ ifneq ($(SKIPPYTHON),1)
         PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3-embed 2>/dev/null)
         ifneq ($(PYTHONLDLIBS),)
             PYTHONLIBLD = $(PYTHONLDLIBS)
-            PYTHONLIBINC = $(PYTHONINCLUDES)
+            PYTHONLIBINC = $(subst -I,-isystem ,$(PYTHONINCLUDES))
             PYTHON_FOUND = 1
         endif
     endif
@@ -329,6 +332,17 @@ endif
 LDLIBS += $(QTLDLIBS)
 CXXINCLUDES += $(QTINCLUDES)
 
+## GD (optional)
+ifneq ($(SKIPGD),1)
+    GDINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags gdlib 2>/dev/null)
+    GDLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs gdlib 2>/dev/null)
+    ifneq ($(GDLDLIBS),)
+        LDLIBS += $(GDLDLIBS)
+        PM3INCLUDES += $(GDINCLUDES)
+        GD_FOUND = 1
+    endif
+endif
+
 ## Readline
 ifneq ($(SKIPREADLINE),1)
     ifeq ($(USE_BREW),1)
@@ -368,12 +382,16 @@ ifeq ($(PYTHON_FOUND),1)
 endif
 
 #######################################################################################################
+# macOS doesn't like this params
+#MYCFLAGS += --param max-completely-peeled-insns=1000 --param max-completely-peel-times=10000
+MYCFLAGS += -O3
+
 CFLAGS ?= $(DEFCFLAGS)
 CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
 
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS)
-PM3CFLAGS += -g -I./src -I./include -I../include -I../common -I../common_fpga $(PM3INCLUDES) $(INCLUDES)
+PM3CFLAGS += -I./src -I./include -I../include -I../common -I../common_fpga $(PM3INCLUDES) $(INCLUDES)
 # WIP Testing
 #PM3CFLAGS += -std=c11 -pedantic
 
@@ -403,6 +421,10 @@ ifeq ($(PYTHON_FOUND),1)
     PM3CFLAGS += -DHAVE_PYTHON
 endif
 
+ifeq ($(GD_FOUND),1)
+    PM3CFLAGS += -DHAVE_GD
+endif
+
 ifeq ($(SWIG_LUA_FOUND),1)
     PM3CFLAGS += -DHAVE_LUA_SWIG
 endif
@@ -412,7 +434,7 @@ endif
 
 PM3CFLAGS += -DHAVE_SNPRINTF
 
-CXXFLAGS ?= -Wall -Werror -O3
+CXXFLAGS ?= -Wall -Werror
 CXXFLAGS += $(MYDEFS) $(MYCXXFLAGS) $(MYINCLUDES)
 
 PM3CXXFLAGS = $(CXXFLAGS)
@@ -434,7 +456,13 @@ LDFLAGS += $(MYLDFLAGS)
 
 PM3LDFLAGS = $(LDFLAGS)
 ifeq ($(platform),Darwin)
-    PM3LDFLAGS += -framework Foundation -framework AppKit
+    ifeq ($(shell uname -p),arm64)
+        # The platform is iOS
+        PM3LDFLAGS += -framework Foundation -framework UIKit
+    else
+        # M* macOS devices return arm
+        PM3LDFLAGS += -framework Foundation -framework AppKit
+    endif
 endif
 
 ###################
@@ -494,6 +522,16 @@ else
         $(info Python3 library:   Python3 v$(shell $(PKG_CONFIG_ENV) pkg-config --modversion python3) found, enabled)
     else
         $(info Python3 library:   Python3 not found, disabled)
+    endif
+endif
+
+ifeq ($(SKIPGD),1)
+    $(info GD library:        skipped)
+else
+    ifeq ($(GD_FOUND),1)
+        $(info GD library:        GD v$(shell $(PKG_CONFIG_ENV) pkg-config --modversion gdlib) found, enabled)
+    else
+        $(info GD library:        GD not found, disabled)
     endif
 endif
 
@@ -591,7 +629,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdhfthinfilm.c \
 		cmdhftopaz.c \
 		cmdhftexkom.c \
-		cmdhfwaveshare.c \
+		cmdhfvas.c \
 		cmdhfxerox.c \
 		cmdhw.c \
 		cmdlf.c \
@@ -671,6 +709,7 @@ SRCS =  mifare/aiddesfire.c \
 		generator.c \
 		graph.c \
 		jansson_path.c \
+		iso4217.c \
 		iso7816/apduinfo.c \
 		iso7816/iso7816core.c \
 		loclass/cipher.c \
@@ -688,6 +727,7 @@ SRCS =  mifare/aiddesfire.c \
 		mifare/mifare4.c \
 		mifare/mifaredefault.c \
 		mifare/mifarehost.c \
+		mifare/gen4.c \
 		nfc/ndef.c \
 		pm3.c \
 		pm3_binlib.c \
@@ -696,6 +736,8 @@ SRCS =  mifare/aiddesfire.c \
 		pm3line.c \
 		proxmark3.c \
 		scandir.c \
+		uart/ringbuffer.c \
+		uart/uart_common.c \
 		uart/uart_posix.c \
 		uart/uart_win32.c \
 		scripting.c \
@@ -719,6 +761,12 @@ SRCS += bucketsort.c \
 		legic_prng.c \
 		lfdemod.c \
 		util_posix.c
+
+ifeq ($(GD_FOUND),1)
+    # electronic shelf labels
+    SRCS += imgutils.c \
+	cmdhfwaveshare.c
+endif
 
 # swig
 
@@ -770,9 +818,13 @@ proxmark3: $(OBJS) $(STATICLIBS) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lu
 
 src/proxgui.cpp: src/ui/ui_overlays.h src/ui/ui_image.h
 
+src/proxguiqt.cpp: src/proxguiqt.h
+
 src/proxguiqt.moc.cpp: src/proxguiqt.h
 	$(info [-] MOC $@)
 	$(Q)$(MOC) -o$@ $^
+
+src/proxguiqt.h: src/ui/ui_overlays.h src/ui/ui_image.h
 
 src/ui/ui_overlays.h: src/ui/overlays.ui
 	$(info [-] UIC $@)
@@ -816,7 +868,6 @@ endif
 ifneq (,$(INSTALLSHARE))
 	    $(Q)$(INSTALLSUDO) $(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)
 	    $(Q)$(INSTALLSUDO) $(CP) $(INSTALLSHARE) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)
-	    $(Q)$(INSTALLSUDO) $(CP) src/pm3.py $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)/pyscripts
 endif
 	@true
 
@@ -903,10 +954,10 @@ src/pm3_pywrap.c: pm3.i
 
 .PHONY: all clean install uninstall tarbin .FORCE
 
-# version_pm3.c should be remade on every compilation
+# version_pm3.c should be checked on every compilation
 src/version_pm3.c: default_version_pm3.c .FORCE
-	$(info [=] GEN $@)
-	$(Q)$(SH) ../tools/mkversion.sh > $@ || $(CP) $< $@
+	$(info [=] CHECK $@)
+	$(Q)$(SH) ../tools/mkversion.sh $@ || $(CP) $< $@
 
 # easy printing of MAKE VARIABLES
 print-%: ; @echo $* = $($*)

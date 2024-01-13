@@ -78,33 +78,36 @@ static int CmdHFFidoInfo(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
     uint16_t sw = 0;
-    int res = FIDOSelect(true, true, buf, sizeof(buf), &len, &sw);
 
+    int res = FIDOSelect(true, true, buf, sizeof(buf), &len, &sw);
     if (res) {
         DropField();
         return res;
     }
 
     if (sw != ISO7816_OK) {
-        if (sw)
-            PrintAndLogEx(INFO, "Not a FIDO card! APDU response: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        else
-            PrintAndLogEx(ERR, "APDU exchange error. Card returns 0x0000.");
-
+        if (sw) {
+            PrintAndLogEx(INFO, "Not a FIDO card. APDU response: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        } else {
+            PrintAndLogEx(ERR, "APDU exchange error. Card returns 0x0000");
+        }
         DropField();
         return PM3_SUCCESS;
     }
 
-    if (!strncmp((char *)buf, "U2F_V2", 7)) {
-        if (!strncmp((char *)buf, "FIDO_2_0", 8)) {
-            PrintAndLogEx(INFO, "FIDO2 authenticator detected. Version: %.*s", (int)len, buf);
+    if (strncmp((char *)buf, "U2F_V2", 7) == 0) {
+        if (strncmp((char *)buf, "FIDO_2_0", 8) == 0) {
+            PrintAndLogEx(INFO, "FIDO2 authenticator");
+            PrintAndLogEx(INFO, "Version... " _YELLOW_("%.*s"), (int)len, buf);
         } else {
-            PrintAndLogEx(INFO, "FIDO authenticator detected (not standard U2F).");
-            PrintAndLogEx(INFO, "Non U2F authenticator version:");
+            PrintAndLogEx(INFO, "FIDO authenticator (not standard U2F)");
+            PrintAndLogEx(INFO, "Non U2F authenticator");
+            PrintAndLogEx(INFO, "version... ");
             print_buffer((const unsigned char *)buf, len, 1);
         }
     } else {
-        PrintAndLogEx(INFO, "FIDO U2F authenticator detected. Version: %.*s", (int)len, buf);
+        PrintAndLogEx(INFO, "FIDO U2F authenticator detected");
+        PrintAndLogEx(INFO, "Version... " _YELLOW_("%.*s"), (int)len, buf);
     }
 
     res = FIDO2GetInfo(buf, sizeof(buf), &len, &sw);
@@ -112,6 +115,7 @@ static int CmdHFFidoInfo(const char *Cmd) {
     if (res) {
         return res;
     }
+
     if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "FIDO2 version doesn't exist (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         return PM3_SUCCESS;
@@ -409,8 +413,8 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
                   "hf fido auth --kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with 2 parameters, filled 0x00 and key handle\n"
                   "hf fido auth \n"
                   "--kh 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f\n"
-                  "--cp 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f \n"
-                  "--ap 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters");
+                  "--cpx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f \n"
+                  "--apx 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f -> execute command with parameters");
 
     void *argtable[] = {
         arg_param_begin,
@@ -441,7 +445,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         controlByte = 0x07;
 
     uint8_t data[512] = {0};
-    uint8_t hdata[250] = {0};
+    uint8_t hdata[256] = {0};
     bool public_key_loaded = false;
     uint8_t public_key[65] = {0};
     int hdatalen = 0;

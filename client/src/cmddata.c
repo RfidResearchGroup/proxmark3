@@ -38,8 +38,9 @@
 #include "mbedtls/bignum.h"      // big num
 #include "mbedtls/entropy.h"     //
 #include "mbedtls/ctr_drbg.h"    // random generator
+#include "atrs.h"                // ATR lookup
 
-uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN];
+uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN] = { 0x00 };
 size_t g_DemodBufferLen = 0;
 int32_t g_DemodStartIdx = 0;
 int g_DemodClock = 0;
@@ -221,7 +222,7 @@ static int CmdSetDebugMode(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// max output to 512 bits if we have more
+// max output to MAX_DEMODULATION_BITS bits if we have more
 // doesn't take inconsideration where the demod offset or bitlen found.
 int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_hex) {
     size_t len = g_DemodBufferLen;
@@ -232,7 +233,7 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
 
     uint8_t *buf = calloc(len, sizeof(uint8_t));
     if (buf == NULL) {
-        PrintAndLogEx(WARNING, "dail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
     memcpy(buf, g_DemodBuffer, len);
@@ -256,8 +257,8 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
         len = (g_DemodBufferLen - offset);
     }
 
-    if (len > 512)  {
-        len = 512;
+    if (len > MAX_DEMODULATION_BITS)  {
+        len = MAX_DEMODULATION_BITS;
     }
 
     if (invert) {
@@ -274,8 +275,8 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
 
     if (print_hex) {
         p = (buf + offset);
-        char hex[512] = {0x00};
-        int num_bits = binarraytohex(hex, sizeof(hex), (char *)p, len);
+        char hex[MAX_DEMODULATION_BITS + 1] = {0x00};
+        int num_bits = binarray_2_hex(hex, sizeof(hex), (char *)p, len);
         if (num_bits == 0) {
             p = NULL;
             free(buf);
@@ -440,7 +441,7 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
         clk /= 2;
     }
     if (errCnt < 0 || bitlen < 16) { //if fatal error (or -1)
-        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, %s bitlen:%zu, clock:%d"
+        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) No data found errors:%d, %s bitlen:%zu, clock:%i"
                       , errCnt
                       , (invert) ? "inverted," : ""
                       , bitlen
@@ -451,7 +452,7 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
     }
 
     if (errCnt > maxErr) {
-        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%zu, clock:%d"
+        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) Too many errors found, errors:%d, bits:%zu, clock:%i"
                       , errCnt
                       , bitlen
                       , clk
@@ -461,7 +462,7 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
     }
 
     if (verbose) {
-        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) using clock:%d, %sbits found:%zu, start index %d"
+        PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) using clock:%i, %sbits found:%zu, start index %d"
                       , clk
                       , (invert) ? "inverted, " : ""
                       , bitlen
@@ -475,14 +476,14 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
 
     if (verbose) {
         if (errCnt > 0)
-            PrintAndLogEx(DEBUG, "# Errors during demoding (shown as 7 in bit stream): %d", errCnt);
+            PrintAndLogEx(DEBUG, "# Errors during demoding (shown as 7 in bit stream)... " _RED_("%d"), errCnt);
 
         if (askType) {
-            PrintAndLogEx(SUCCESS, _YELLOW_("ASK/Manchester") " - clock %d - decoded bitstream", clk);
-            PrintAndLogEx(INFO, "---------------------------------------------");
+            PrintAndLogEx(SUCCESS, _YELLOW_("ASK/Manchester") " - clock " _YELLOW_("%i") " - decoded bitstream", clk);
+            PrintAndLogEx(INFO, "-----------------------------------------------");
         } else {
-            PrintAndLogEx(SUCCESS, _YELLOW_("ASK/Raw") " - clock %d - decoded bitstream", clk);
-            PrintAndLogEx(INFO, "--------------------------------------");
+            PrintAndLogEx(SUCCESS, _YELLOW_("ASK/Raw") " - clock " _YELLOW_("%i") " - decoded bitstream", clk);
+            PrintAndLogEx(INFO, "----------------------------------------");
         }
 
         printDemodBuff(0, false, false, false);
@@ -527,7 +528,7 @@ static int Cmdaskmandemod(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool amplify = arg_get_lit(ctx, 1);
-    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 2, 0) & 0xFF;
+    uint16_t clk = (uint16_t)arg_get_int_def(ctx, 2, 0);
     bool invert = arg_get_lit(ctx, 3);
     bool st = arg_get_lit(ctx, 4);
     uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 5, 100) & 0xFF;
@@ -563,7 +564,11 @@ static int Cmdmandecoderaw(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t bits[MAX_DEMOD_BUF_LEN] = {0};
+    uint8_t *bits = calloc(MAX_DEMOD_BUF_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     // make sure its just binary data 0|1|7 in buffer
     int high = 0, low = 0;
@@ -578,6 +583,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
 
     if (high > 7 || low < 0) {
         PrintAndLogEx(ERR, "Error: please first raw demod then manchester raw decode");
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -586,6 +592,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     uint16_t err_cnt = manrawdecode(bits, &size, invert, &offset);
     if (err_cnt > max_err) {
         PrintAndLogEx(ERR, "Too many errors attempting to decode " _RED_("%i"), err_cnt);
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -610,6 +617,7 @@ static int Cmdmandecoderaw(const char *Cmd) {
     }
     setDemodBuff(bits, size, 0);
     setClockGrid(g_DemodClock * 2, g_DemodStartIdx);
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -650,17 +658,27 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t bits[MAX_DEMOD_BUF_LEN] = {0};
-    size_t size = sizeof(bits);
-    if (!getDemodBuff(bits, &size)) return PM3_ESOFT;
+    uint8_t *bits = calloc(MAX_DEMOD_BUF_LEN, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    size_t size = MAX_DEMOD_BUF_LEN;
+    if (!getDemodBuff(bits, &size)) {
+        free(bits);
+        return PM3_ESOFT;
+    }
 
     int err_cnt = BiphaseRawDecode(bits, &size, &offset, invert);
     if (err_cnt < 0) {
         PrintAndLogEx(ERR, "Error during decode " _RED_("%i"), err_cnt);
+        free(bits);
         return PM3_ESOFT;
     }
     if (err_cnt > max_err) {
         PrintAndLogEx(ERR, "Too many errors attempting to decode " _RED_("%i"), err_cnt);
+        free(bits);
         return PM3_ESOFT;
     }
 
@@ -673,6 +691,7 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
 
     setDemodBuff(bits, size, 0);
     setClockGrid(g_DemodClock * 2, g_DemodStartIdx + g_DemodClock * offset);
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -680,10 +699,16 @@ static int CmdBiphaseDecodeRaw(const char *Cmd) {
 int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     //ask raw demod g_GraphBuffer first
 
-    uint8_t bs[MAX_DEMOD_BUF_LEN];
-    size_t size = getFromGraphBuf(bs);
+    uint8_t *bs = calloc(MAX_DEMOD_BUF_LEN, sizeof(uint8_t));
+    if (bs == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    size_t size = getFromGraphBufEx(bs, MAX_DEMOD_BUF_LEN);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: no data in graphbuf");
+        free(bs);
         return PM3_ESOFT;
     }
     int startIdx = 0;
@@ -691,6 +716,7 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     int errCnt = askdemod_ext(bs, &size, &clk, &invert, maxErr, 0, 0, &startIdx);
     if (errCnt < 0 || errCnt > maxErr) {
         PrintAndLogEx(DEBUG, "DEBUG: no data or error found %d, clock: %d", errCnt, clk);
+        free(bs);
         return PM3_ESOFT;
     }
 
@@ -698,10 +724,12 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
     errCnt = BiphaseRawDecode(bs, &size, &offset, invert);
     if (errCnt < 0) {
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: Error BiphaseRawDecode: %d", errCnt);
+        free(bs);
         return PM3_ESOFT;
     }
     if (errCnt > maxErr) {
         if (g_debugMode || verbose) PrintAndLogEx(DEBUG, "DEBUG: Error BiphaseRawDecode too many errors: %d", errCnt);
+        free(bs);
         return PM3_ESOFT;
     }
 
@@ -715,6 +743,7 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
         PrintAndLogEx(DEBUG, "Biphase Decoded using offset %d | clock %d | #errors %d | start index %d\ndata\n", offset, clk, errCnt, (startIdx + clk * offset / 2));
         printDemodBuff(offset, false, false, false);
     }
+    free(bs);
     return PM3_SUCCESS;
 }
 
@@ -740,7 +769,7 @@ static int Cmdaskbiphdemod(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    uint16_t clk = (uint16_t)arg_get_int_def(ctx, 1, 0);
     bool invert = arg_get_lit(ctx, 2);
     int offset = arg_get_int_def(ctx, 3, 0);
     uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 4, 50) & 0xFF;
@@ -773,7 +802,7 @@ static int Cmdaskrawdemod(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool amplify = arg_get_lit(ctx, 1);
-    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 2, 0) & 0xFF;
+    uint16_t clk = (uint16_t)arg_get_int_def(ctx, 2, 0);
     bool invert = arg_get_lit(ctx, 3);
     bool st = arg_get_lit(ctx, 4);
     uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 5, 100) & 0xFF;
@@ -785,9 +814,9 @@ static int Cmdaskrawdemod(const char *Cmd) {
 
 int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveGrph, bool verbose) {
     // sanity check
-    if (window > len) window = len;
-
-    if (verbose) PrintAndLogEx(INFO, "performing " _YELLOW_("%zu") " correlations", g_GraphTraceLen - window);
+    if (window > len) {
+        window = len;
+    }
 
     //test
     double autocv = 0.0;    // Autocovariance value
@@ -800,6 +829,9 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     double variance = compute_variance(in, len);
 
     int *correl_buf = calloc(MAX_GRAPH_TRACE_LEN, sizeof(int));
+
+    uint8_t peak_cnt = 0;
+    size_t peaks[10] = {0};
 
     for (size_t i = 0; i < len - window; ++i) {
 
@@ -815,58 +847,55 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
         double ac_value = autocv / variance;
 
         // keep track of which distance is repeating.
-        if (ac_value > 1) {
+        // A value near 1.0 or more indicates a correlation in the signal
+        if (ac_value > 0.95f) {
             correlation = i - lastmax;
             lastmax = i;
+
+            if ((correlation > 1) && peak_cnt < ARRAYLEN(peaks)) {
+                peaks[peak_cnt++] = correlation;
+            }
         }
     }
 
-    //
-    int hi = 0, idx = 0;
-    int distance = 0, hi_1 = 0, idx_1 = 0;
-    for (size_t i = 0; i <= len; ++i) {
-        if (correl_buf[i] > hi) {
-            hi = correl_buf[i];
-            idx = i;
+    // Find shorts distance between peaks
+    int distance = -1;
+    for (size_t i = 0; i < ARRAYLEN(peaks); ++i) {
+
+        PrintAndLogEx(DEBUG, "%zu | %zu", i, peaks[i]);
+        if (peaks[i] < 128) {
+            continue;
+        }
+
+        if (distance == -1) {
+            distance = peaks[i];
+            continue;
+        }
+
+        if (peaks[i] < distance) {
+            distance = peaks[i];
         }
     }
 
-    for (size_t i = idx + 1; i <= window; ++i) {
-        if (correl_buf[i] > hi_1) {
-            hi_1 = correl_buf[i];
-            idx_1 = i;
+    if (distance > -1) {
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "Possible correlation at "_YELLOW_("%4d") " samples", distance);
         }
-    }
-
-    int foo = ABS(hi - hi_1);
-    int bar = (int)((int)((hi + hi_1) / 2) * 0.04);
-
-    if (verbose && foo < bar) {
-        distance = idx_1 - idx;
-        PrintAndLogEx(SUCCESS, "possible visible correlation "_YELLOW_("%4d") " samples", distance);
-    } else if (verbose && (correlation > 1)) {
-        PrintAndLogEx(SUCCESS, "possible correlation " _YELLOW_("%4zu") " samples", correlation);
     } else {
-        PrintAndLogEx(FAILED, "no repeating pattern found, try increasing window size");
+        PrintAndLogEx(HINT, "No repeating pattern found, try increasing window size");
+        // return value -1, indication to increase window size
+        return -1;
     }
 
-    int retval = correlation;
     if (SaveGrph) {
         //g_GraphTraceLen = g_GraphTraceLen - window;
         memcpy(out, correl_buf, len * sizeof(int));
-        if (distance > 0) {
-            setClockGrid(distance, idx);
-            retval = distance;
-        } else
-            setClockGrid(correlation, idx);
-
-        g_CursorCPos = idx_1;
-        g_CursorDPos = idx_1 + retval;
+        setClockGrid(distance, 0);
         g_DemodBufferLen = 0;
         RepaintGraphWindow();
     }
     free(correl_buf);
-    return retval;
+    return distance;
 }
 
 static int CmdAutoCorr(const char *Cmd) {
@@ -1010,7 +1039,11 @@ static int CmdUndecimate(const char *Cmd) {
     CLIParserFree(ctx);
 
     //We have memory, don't we?
-    int swap[MAX_GRAPH_TRACE_LEN] = {0};
+    int *swap = calloc(MAX_GRAPH_TRACE_LEN, sizeof(int));
+    if (swap == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     uint32_t g_index = 0, s_index = 0;
     while (g_index < g_GraphTraceLen && s_index + factor < MAX_GRAPH_TRACE_LEN) {
         int count = 0;
@@ -1027,6 +1060,7 @@ static int CmdUndecimate(const char *Cmd) {
     memcpy(g_GraphBuffer, swap, s_index * sizeof(int));
     g_GraphTraceLen = s_index;
     RepaintGraphWindow();
+    free(swap);
     return PM3_SUCCESS;
 }
 
@@ -1106,20 +1140,18 @@ static int CmdDetectClockRate(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data detectclock",
                   "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer",
-                  "data detectclock -A   --> detect clock of an ask wave in GraphBuffer\n"
-                  "data detectclock -F   --> detect clock of an fsk wave in GraphBuffer\n"
-                  "data detectclock -N   --> detect clock of an psk wave in GraphBuffer\n"
-                  "data detectclock -P   --> detect clock of an nrz/direct wave in GraphBuffer"
+                  "data detectclock --ask\n"
+                  "data detectclock --nzr   --> detect clock of an nrz/direct wave in GraphBuffer\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("A", "ASK", "specify ASK modulation clock detection"),
-        arg_lit0("F", "FSK", "specify FSK modulation clock detection"),
-        arg_lit0("N", "NZR", "specify NZR/DIRECT modulation clock detection"),
-        arg_lit0("P", "PSK", "specify PSK modulation clock detection"),
+        arg_lit0(NULL, "ask", "specify ASK modulation clock detection"),
+        arg_lit0(NULL, "fsk", "specify FSK modulation clock detection"),
+        arg_lit0(NULL, "nzr", "specify NZR/DIRECT modulation clock detection"),
+        arg_lit0(NULL, "psk", "specify PSK modulation clock detection"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool a = arg_get_lit(ctx, 1);
     bool f = arg_get_lit(ctx, 2);
     bool n = arg_get_lit(ctx, 3);
@@ -1130,6 +1162,25 @@ static int CmdDetectClockRate(const char *Cmd) {
     if (tmp > 1) {
         PrintAndLogEx(WARNING, "Only specify one modulation");
         return PM3_EINVARG;
+    } else if (tmp == 0) {
+
+        int clock = GetFskClock("", false);
+        if (clock > 0) {
+            PrintAndLogEx(SUCCESS, "FSK Clock... %d", clock);
+        }
+        clock = GetAskClock("", false);
+        if (clock > 0) {
+            PrintAndLogEx(SUCCESS, "ASK Clock... %d", clock);
+        }
+        clock = GetNrzClock("", false);
+        if (clock > 0) {
+            PrintAndLogEx(SUCCESS, "NRZ Clock... %d", clock);
+        }
+        clock = GetPskClock("", false);
+        if (clock > 0) {
+            PrintAndLogEx(SUCCESS, "PSK Clock... %d", clock);
+        }
+        return PM3_SUCCESS;
     }
 
     if (a)
@@ -1371,7 +1422,8 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
 
     if (errCnt > 0 && (verbose || g_debugMode)) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Errors during Demoding (shown as 7 in bit stream): %d", errCnt);
     if (verbose || g_debugMode) {
-        PrintAndLogEx(NORMAL, "NRZ demoded bitstream:");
+        PrintAndLogEx(SUCCESS, "NRZ demoded bitstream");
+        PrintAndLogEx(INFO, "---------------------");
         // Now output the bitstream to the scrollback by line of 16 bits
         printDemodBuff(0, false, invert, false);
     }
@@ -1399,7 +1451,7 @@ static int CmdNRZrawDemod(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    uint16_t clk = (uint16_t)arg_get_int_def(ctx, 1, 0);
     bool invert = arg_get_lit(ctx, 2);
     uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 3, 100) & 0xFF;
     CLIParserFree(ctx);
@@ -1429,7 +1481,7 @@ int CmdPSK1rawDemod(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    uint16_t clk = (uint16_t)arg_get_int_def(ctx, 1, 0);
     bool invert = arg_get_lit(ctx, 2);
     uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 3, 100) & 0xFF;
     CLIParserFree(ctx);
@@ -1603,7 +1655,8 @@ int CmdGrid(const char *Cmd) {
     g_PlotGridX = arg_get_dbl_def(ctx, 1, 0);
     g_PlotGridY = arg_get_dbl_def(ctx, 2, 0);
     CLIParserFree(ctx);
-    PrintAndLogEx(INFO, "Setting X %.0f  Y %.0f", g_PlotGridX, g_PlotGridY);
+
+    PrintAndLogEx(DEBUG, "Setting X %.0f  Y %.0f", g_PlotGridX, g_PlotGridY);
     g_PlotGridXdefault = g_PlotGridX;
     g_PlotGridYdefault = g_PlotGridY;
     RepaintGraphWindow();
@@ -1707,7 +1760,11 @@ int CmdHpf(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     removeSignalOffset(bits, size);
     // push it back to graph
@@ -1716,6 +1773,7 @@ int CmdHpf(const char *Cmd) {
     computeSignalProperties(bits, size);
 
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -1753,58 +1811,77 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
 
     uint32_t n = end - start;
 
-    if (n == 0 || n > g_pm3_capabilities.bigbuf_size - 1)
+    if (n == 0 || n > g_pm3_capabilities.bigbuf_size - 1) {
         n = g_pm3_capabilities.bigbuf_size - 1;
+    }
 
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(INFO, "Reading " _YELLOW_("%u") " bytes from device memory", n);
+    }
 
-    PacketResponseNG response;
-    if (!GetFromDevice(BIG_BUF, got, n, start, NULL, 0, &response, 10000, true)) {
+    PacketResponseNG resp;
+    if (GetFromDevice(BIG_BUF, got, n, start, NULL, 0, &resp, 10000, true) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }
 
-    if (verbose) PrintAndLogEx(SUCCESS, "Data fetched");
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Data fetched");
+    }
 
     uint8_t bits_per_sample = 8;
 
     // Old devices without this feature would send 0 at arg[0]
-    if (response.oldarg[0] > 0 && (ignore_lf_config == false)) {
-        sample_config *sc = (sample_config *) response.data.asBytes;
-        if (verbose) PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") " bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
+    if (resp.oldarg[0] > 0 && (ignore_lf_config == false)) {
+        sample_config *sc = (sample_config *) resp.data.asBytes;
+        if (verbose) {
+            PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") " bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
+        }
         bits_per_sample = sc->bits_per_sample;
     }
+
+    return getSamplesFromBufEx(got, n, bits_per_sample, verbose);;
+}
+
+int getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_sample, bool verbose) {
+
+    size_t max_num = MIN(sample_num, MAX_GRAPH_TRACE_LEN);
 
     if (bits_per_sample < 8) {
 
         if (verbose) PrintAndLogEx(INFO, "Unpacking...");
 
-        BitstreamOut_t bout = { got, bits_per_sample * n,  0};
-        uint32_t j = 0;
-        for (j = 0; j * bits_per_sample < n * 8 && j * bits_per_sample < MAX_GRAPH_TRACE_LEN * 8; j++) {
+        BitstreamOut_t bout = {data, bits_per_sample * sample_num,  0};
+        size_t j = 0;
+        for (j = 0; j < max_num; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
             g_GraphBuffer[j] = ((int) sample) - 127;
         }
         g_GraphTraceLen = j;
 
-        if (verbose) PrintAndLogEx(INFO, "Unpacked %d samples", j);
+        if (verbose) PrintAndLogEx(INFO, "Unpacked %zu samples", j);
 
     } else {
-        for (uint32_t j = 0; j < n; j++) {
-            g_GraphBuffer[j] = ((int)got[j]) - 127;
+        for (size_t j = 0; j < max_num; j++) {
+            g_GraphBuffer[j] = ((int)data[j]) - 127;
         }
-        g_GraphTraceLen = n;
+        g_GraphTraceLen = max_num;
     }
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
+    free(bits);
 
     setClockGrid(0, 0);
     g_DemodBufferLen = 0;
     RepaintGraphWindow();
+
     return PM3_SUCCESS;
 }
 
@@ -1901,16 +1978,16 @@ int CmdTuneSamples(const char *Cmd) {
     struct p *package = (struct p *)resp.data.asBytes;
 
     if (package->v_lf125 > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %.2f kHz", (package->v_lf125 * ANTENNA_ERROR) / 1000.0, LF_DIV2FREQ(LF_DIVISOR_125));
+        PrintAndLogEx(SUCCESS, "At %.2f kHz .......... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(LF_DIVISOR_125), (package->v_lf125 * ANTENNA_ERROR) / 1000.0);
 
     if (package->v_lf134 > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %.2f kHz", (package->v_lf134 * ANTENNA_ERROR) / 1000.0, LF_DIV2FREQ(LF_DIVISOR_134));
+        PrintAndLogEx(SUCCESS, "At %.2f kHz .......... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(LF_DIVISOR_134), (package->v_lf134 * ANTENNA_ERROR) / 1000.0);
 
     if (package->v_lfconf > NON_VOLTAGE && package->divisor > 0 && package->divisor != LF_DIVISOR_125 && package->divisor != LF_DIVISOR_134)
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %.2f kHz", (package->v_lfconf * ANTENNA_ERROR) / 1000.0, LF_DIV2FREQ(package->divisor));
+        PrintAndLogEx(SUCCESS, "At %.2f kHz .......... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(package->divisor), (package->v_lfconf * ANTENNA_ERROR) / 1000.0);
 
     if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
-        PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (package->peak_v * ANTENNA_ERROR) / 1000.0, LF_DIV2FREQ(package->peak_f));
+        PrintAndLogEx(SUCCESS, "At %.2f kHz optimal... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(package->peak_f), (package->peak_v * ANTENNA_ERROR) / 1000.0);
 
     // Empirical measures in mV
     const double vdd_rdv4 = 9000;
@@ -1931,6 +2008,9 @@ int CmdTuneSamples(const char *Cmd) {
                 break;
             }
         }
+
+        PrintAndLogEx(SUCCESS, "");
+        PrintAndLogEx(SUCCESS, "Approx. Q factor measurement (*)");
         double lfq1 = 0;
         if (s4 != 0) { // we got all our points of interest
             double a = package->results[s2 - 1];
@@ -1940,12 +2020,12 @@ int CmdTuneSamples(const char *Cmd) {
             double d = package->results[s4];
             double f2 = LF_DIV2FREQ(s4 - 1 + (c - v_3db_scaled) / (c - d));
             lfq1 = LF_DIV2FREQ(package->peak_f) / (f1 - f2);
-            PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by frequency bandwidth measurement", lfq1);
+            PrintAndLogEx(SUCCESS, "Frequency bandwidth..... " _YELLOW_("%.1lf"), lfq1);
         }
 
         // Q measure with Vlr=Q*(2*Vdd/pi)
         double lfq2 = (double)package->peak_v * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", lfq2);
+        PrintAndLogEx(SUCCESS, "Peak voltage............ " _YELLOW_("%.1lf") , lfq2);
         // cross-check results
         if (lfq1 > 3) {
             double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
@@ -1970,34 +2050,40 @@ int CmdTuneSamples(const char *Cmd) {
     memset(judgement, 0, sizeof(judgement));
     // LF evaluation
     if (package->peak_v < LF_UNUSABLE_V)
-        snprintf(judgement, sizeof(judgement), _RED_("UNUSABLE"));
+        snprintf(judgement, sizeof(judgement), _RED_("unusable"));
     else if (package->peak_v < LF_MARGINAL_V)
-        snprintf(judgement, sizeof(judgement), _YELLOW_("MARGINAL"));
+        snprintf(judgement, sizeof(judgement), _YELLOW_("marginal"));
     else
-        snprintf(judgement, sizeof(judgement), _GREEN_("OK"));
+        snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
 
-    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna is %s", judgement);
+    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna ( %s )", judgement);
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------- " _CYAN_("HF Antenna") " ----------");
     // HF evaluation
-    if (package->v_hf > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "HF antenna: %5.2f V - 13.56 MHz", (package->v_hf * ANTENNA_ERROR) / 1000.0);
+    if (package->v_hf > NON_VOLTAGE) {
+        PrintAndLogEx(SUCCESS, "13.56 MHz............... " _YELLOW_("%5.2f") " V", (package->v_hf * ANTENNA_ERROR) / 1000.0);
+    }
 
     memset(judgement, 0, sizeof(judgement));
+
+    PrintAndLogEx(SUCCESS, "");
+    PrintAndLogEx(SUCCESS, "Approx. Q factor measurement (*)");
 
     if (package->v_hf >= HF_UNUSABLE_V) {
         // Q measure with Vlr=Q*(2*Vdd/pi)
         double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", hfq);
+        PrintAndLogEx(SUCCESS, "peak voltage............ " _YELLOW_("%.1lf") , hfq);
     }
-    if (package->v_hf < HF_UNUSABLE_V)
-        snprintf(judgement, sizeof(judgement), _RED_("UNUSABLE"));
-    else if (package->v_hf < HF_MARGINAL_V)
-        snprintf(judgement, sizeof(judgement), _YELLOW_("MARGINAL"));
-    else
-        snprintf(judgement, sizeof(judgement), _GREEN_("OK"));
 
-    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna is %s", judgement);
+    if (package->v_hf < HF_UNUSABLE_V)
+        snprintf(judgement, sizeof(judgement), _RED_("unusable"));
+    else if (package->v_hf < HF_MARGINAL_V)
+        snprintf(judgement, sizeof(judgement), _YELLOW_("marginal"));
+    else
+        snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
+
+    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna ( %s )", judgement);
     PrintAndLogEx(NORMAL, "\n(*) Q factor must be measured without tag on the antenna");
 
     // graph LF measurements
@@ -2009,8 +2095,16 @@ int CmdTuneSamples(const char *Cmd) {
     }
 
     if (test1 > 0) {
-        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor %d (blue) is %.2f kHz, %d (red) is %.2f kHz.\n\n",
-                      LF_DIVISOR_134, LF_DIV2FREQ(LF_DIVISOR_134), LF_DIVISOR_125, LF_DIV2FREQ(LF_DIVISOR_125));
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "-------- " _CYAN_("LF tuning graph") " ---------");
+        PrintAndLogEx(SUCCESS, "Blue line  Divisor %d / %.2f kHz"
+                , LF_DIVISOR_134
+                , LF_DIV2FREQ(LF_DIVISOR_134)
+                );
+        PrintAndLogEx(SUCCESS, "Red line   Divisor %d / %.2f kHz\n\n"
+                , LF_DIVISOR_125
+                , LF_DIV2FREQ(LF_DIVISOR_125)
+                );
         g_GraphTraceLen = 256;
         g_CursorCPos = LF_DIVISOR_125;
         g_CursorDPos = LF_DIVISOR_134;
@@ -2094,12 +2188,17 @@ static int CmdLoad(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " samples", g_GraphTraceLen);
 
     if (nofix == false) {
-        uint8_t bits[g_GraphTraceLen];
+        uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+        if (bits == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate memory");
+            return PM3_EMALLOC;
+        }
         size_t size = getFromGraphBuf(bits);
 
         removeSignalOffset(bits, size);
         setGraphBuf(bits, size);
         computeSignalProperties(bits, size);
+        free(bits);
     }
 
     setClockGrid(0, 0);
@@ -2224,19 +2323,24 @@ int CmdNorm(const char *Cmd) {
         if (g_GraphBuffer[i] < min) min = g_GraphBuffer[i];
     }
 
-    if (max != min) {
+    if ((g_GraphTraceLen > 10) && (max != min)) {
         for (uint32_t i = 0; i < g_GraphTraceLen; ++i) {
             g_GraphBuffer[i] = ((long)(g_GraphBuffer[i] - ((max + min) / 2)) * 256) / (max - min);
             //marshmelow: adjusted *1000 to *256 to make +/- 128 so demod commands still work
         }
     }
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
 
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -2377,12 +2481,17 @@ static int CmdDirectionalThreshold(const char *Cmd) {
     directionalThreshold(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, up, down);
 
     // set signal properties low/high/mean/amplitude and isnoice detection
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
 
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -2420,11 +2529,16 @@ static int CmdZerocrossings(const char *Cmd) {
         }
     }
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -2733,11 +2847,16 @@ static int CmdDataIIR(const char *Cmd) {
 
     iceSimple_Filter(g_GraphBuffer, g_GraphTraceLen, k);
 
-    uint8_t bits[g_GraphTraceLen];
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     size_t size = getFromGraphBuf(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
     RepaintGraphWindow();
+    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -2911,14 +3030,19 @@ static int CmdAsn1Decoder(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("d", NULL, "<hex>", "ASN1 encoded byte array"),
+        arg_str0("d", NULL, "<hex>", "ASN1 encoded byte array"),
+        arg_lit0("t", "test", "perform selftest"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int dlen = 2048;
     uint8_t data[2048];
     CLIGetHexWithReturn(ctx, 1, data, &dlen);
+    bool selftest = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
+    if (selftest) {
+        return asn1_selftest();
+    }
 
     // print ASN1 decoded array in TLV view
     PrintAndLogEx(INFO, "---------------- " _CYAN_("ASN1 TLV") " -----------------");
@@ -2939,7 +3063,7 @@ static int CmdDiff(const char *Cmd) {
 //                    "data diff -a fileA --cb\n"
                   "data diff --fa fileA -b fileB\n"
                   "data diff --fa fileA --fb fileB\n"
-                  "data diff --ea --cb\n"
+//                  "data diff --ea --cb\n"
                  );
 
     void *argtable[] = {
@@ -3083,10 +3207,19 @@ static int CmdDiff(const char *Cmd) {
         PrintAndLogEx(INFO, "inB null");
 
     int hdr_sln = (width * 4) + 2;
+    char hdr0[300] = {0};
 
-    char hdr0[200] = " #  | " _CYAN_("a");
-    memset(hdr0 + strlen(hdr0), ' ', hdr_sln - 2);
-    strcat(hdr0 + strlen(hdr0), "| " _CYAN_("b"));
+    int max_fn_space = (width * 5);
+
+    if (fnlenA && fnlenB && (max_fn_space > fnlenA) && (max_fn_space > fnlenB)) {
+        snprintf(hdr0, sizeof(hdr0) - 1, " #  | " _CYAN_("%.*s"), max_fn_space, filenameA);
+        memset(hdr0 + strlen(hdr0), ' ', hdr_sln - strlen(filenameA) - 1);
+        snprintf(hdr0 + strlen(hdr0), sizeof(hdr0) - 1 - strlen(hdr0), "| " _CYAN_("%.*s"), max_fn_space, filenameB);
+    } else {
+        strcat(hdr0, " #  | " _CYAN_("a"));
+        memset(hdr0 + strlen(hdr0), ' ', hdr_sln - 2);
+        strcat(hdr0 + strlen(hdr0), "| " _CYAN_("b"));
+    }
 
     char hdr1[200] = "----+";
     memset(hdr1 + strlen(hdr1), '-', hdr_sln);
@@ -3191,6 +3324,7 @@ static int CmdNumCon(const char *Cmd) {
         arg_str0(NULL,  "hex", "<hex>", "hexadecimal value"),
         arg_str0(NULL,  "bin", "<bin>", "binary value"),
         arg_lit0("i",  NULL,  "print inverted value"),
+        arg_lit0("r",  NULL,  "print reversed value"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3204,14 +3338,15 @@ static int CmdNumCon(const char *Cmd) {
     int hlen = 256;
     char hex[256];
     memset(hex, 0, sizeof(hex));
-    res = CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)hex, sizeof(hex), &hlen);
+    res |= CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)hex, sizeof(hex), &hlen);
 
     int blen = 256;
     char bin[256];
     memset(bin, 0, sizeof(bin));
-    res = CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)bin, sizeof(bin), &blen);
+    res |= CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)bin, sizeof(bin), &blen);
 
     bool shall_invert = arg_get_lit(ctx, 4);
+    bool shall_reverse = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     // sanity checks
@@ -3222,6 +3357,7 @@ static int CmdNumCon(const char *Cmd) {
 
     // results for MPI actions
     bool ret = false;
+    (void) ret;
 
     // container of big number
     mbedtls_mpi N;
@@ -3252,11 +3388,6 @@ static int CmdNumCon(const char *Cmd) {
     mbedtls_mpi_init(&base);
     mbedtls_mpi_add_int(&base, &base, 10);
 
-    if (shall_invert) {
-        PrintAndLogEx(INFO, "should invert");
-        MBEDTLS_MPI_CHK(mbedtls_mpi_inv_mod(&N, &N, &base));
-    }
-
     // printing
     typedef struct {
         const char *desc;
@@ -3264,9 +3395,9 @@ static int CmdNumCon(const char *Cmd) {
     } radix_t;
 
     radix_t radix[] = {
-        {"dec..... ", 10},
-        {"hex..... 0x", 16},
-        {"bin..... 0b", 2}
+        {"dec... ", 10},
+        {"hex... ", 16},
+        {"bin... ", 2}
     };
 
     char s[600] = {0};
@@ -3274,10 +3405,52 @@ static int CmdNumCon(const char *Cmd) {
 
     for (uint8_t i = 0; i < ARRAYLEN(radix); i++) {
         MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, radix[i].radix, s, sizeof(s), &slen));
-        if (slen > 0) {
-            PrintAndLogEx(INFO, "%s%s", radix[i].desc, s);
+        if (slen) {
+            PrintAndLogEx(SUCCESS, "%s%s", radix[i].desc, s);
         }
     }
+
+    // reverse
+    if (shall_reverse) {
+        PrintAndLogEx(SUCCESS, _CYAN_("Reversed"));
+        for (uint8_t i = 0; i < ARRAYLEN(radix); i++) {
+            MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, radix[i].radix, s, sizeof(s), &slen));
+
+            str_reverse(s, strlen(s));
+
+            if (slen) {
+                PrintAndLogEx(SUCCESS, "%s%s", radix[i].desc, s);
+            }
+        }
+    }
+
+    // invert
+    if (shall_invert) {
+        PrintAndLogEx(SUCCESS, _CYAN_("Inverted"));
+        for (uint8_t i = 0; i < ARRAYLEN(radix); i++) {
+            MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, radix[i].radix, s, sizeof(s), &slen));
+            if (slen == 0) {
+                continue;
+            }
+
+            switch (i) {
+                case 0:
+//                    MBEDTLS_MPI_CHK(mbedtls_mpi_inv_mod(&N, &N, &base));
+                    break;
+                case 1:
+                    str_inverse_hex(s, strlen(s));
+                    PrintAndLogEx(SUCCESS, "%s%s", radix[i].desc, s);
+                    break;
+                case 2:
+                    str_inverse_bin(s, strlen(s));
+                    PrintAndLogEx(SUCCESS, "%s%s", radix[i].desc, s);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
 
     // check if number is a prime
     mbedtls_entropy_context entropy;
@@ -3300,6 +3473,218 @@ cleanup:
     return PM3_SUCCESS;
 }
 
+int centerThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down) {
+    if (len < 5) {
+        return PM3_EINVARG;
+    }
+
+    for (size_t i = 0; i < len; ++i) {
+        if ((in[i] <= up) && (in[i] >= down)) {
+            out[i] = 0;
+        }
+    }
+
+    // clean out spikes.
+    for (size_t i = 2; i < len - 2; ++i) {
+
+        int a = out[i - 2] + out[i - 1];
+        int b = out[i + 2] + out[i + 1];
+        if (a == 0 && b == 0) {
+            out[i] = 0;
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+static int CmdCenterThreshold(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data cthreshold",
+                  "Inverse of dirty threshold command,  all values between up and down will be average out",
+                  "data cthreshold -u 10 -d -10"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("d", "down", "<dec>", "threshold down"),
+        arg_int1("u", "up", "<dec>", "threshold up"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int8_t down = arg_get_int(ctx, 1);
+    int8_t up = arg_get_int(ctx, 2);
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "Applying up threshold: " _YELLOW_("%i") ", down threshold: " _YELLOW_("%i") "\n", up, down);
+
+    centerThreshold(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, up, down);
+
+    // set signal properties low/high/mean/amplitude and isnoice detection
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    size_t size = getFromGraphBuf(bits);
+    // set signal properties low/high/mean/amplitude and is_noice detection
+    computeSignalProperties(bits, size);
+    RepaintGraphWindow();
+    free(bits);
+    return PM3_SUCCESS;
+}
+
+static int envelope_square(const int *in, int *out, size_t len) {
+    if (len < 10) {
+        return PM3_EINVARG;
+    }
+
+
+    size_t i = 0;
+    while (i < len - 8) {
+
+        if (in[i] == 0 && in[i + 1] == 0 && in[i + 2] == 0 && in[i + 3] == 0 &&
+                in[i + 4] == 0 && in[i + 5] == 0 && in[i + 6] == 0 && in[i + 7] == 0) {
+
+            i += 8;
+            continue;
+        }
+
+        out[i] = 255;
+        i++;
+    }
+    return PM3_SUCCESS;
+}
+
+static int CmdEnvelope(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data envelop",
+                  "Create an square envelop of the samples",
+                  "data envelop"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    envelope_square(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen);
+
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    size_t size = getFromGraphBuf(bits);
+    // set signal properties low/high/mean/amplitude and is_noice detection
+    computeSignalProperties(bits, size);
+    RepaintGraphWindow();
+    free(bits);
+    return PM3_SUCCESS;
+}
+
+static int CmdAtrLookup(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data atr",
+                  "look up ATR record from bytearray\n"
+                  "",
+                  "data atr -d 3B6B00000031C064BE1B0100079000\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("d", NULL, "<hex>", "ASN1 encoded byte array"),
+//        arg_lit0("t", "test", "perform selftest"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int dlen = 128;
+    uint8_t data[128 + 1];
+    CLIGetStrWithReturn(ctx, 1, data, &dlen);
+
+//    bool selftest = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+//    if (selftest) {
+//        return atr_selftest();
+//    }
+    PrintAndLogEx(INFO, "ISO7816-3 ATR... " _YELLOW_("%s"), data);
+    PrintAndLogEx(INFO, "Fingerprint...");
+
+    char *copy = str_dup(getAtrInfo((char *)data));
+
+    char *token = strtok(copy, "\n");
+    while (token != NULL) {
+        PrintAndLogEx(INFO, "    %s", token);
+        token = strtok(NULL, "\n");
+    }
+    free(copy);
+    return PM3_SUCCESS;
+}
+
+static int CmdBinaryMap(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data bmap",
+                  "Breaks down a hex value to binary according a template\n"
+                  "   data bmap -d 16 -m 4,4\n"
+                  "This will give two rows each with four bits",
+                  "data bmap -d 3B\n"
+                  "data bmap -d 3B -m 2,5,1\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("d", NULL, "<hex>", "hex string"),
+        arg_str0("m", NULL, "<str>", "binary template"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int hlen = 5;
+    uint8_t hex[5 + 1];
+    CLIGetStrWithReturn(ctx, 1, hex, &hlen);
+
+    int tlen = 40;
+    uint8_t template[40 + 1];
+    CLIGetStrWithReturn(ctx, 2, template, &tlen);
+    CLIParserFree(ctx);
+
+    char bits[(8 * 4) + 1] = {0};
+    hextobinstring_n(bits, (char *)hex, hlen);
+
+    if (tlen == 0) {
+        template[0] = '8';
+        template[1] = 0;
+    }
+
+    char *token = strtok((char *)template, ",");
+
+    // header
+    PrintAndLogEx(INFO, "---+---------------------------");
+    PrintAndLogEx(INFO, "   | b0 b1 b2 b3 b4 b5 b6 b7");
+    PrintAndLogEx(INFO, "---+---------------------------");
+
+    uint8_t i = 0;
+    uint8_t cnt = 1;
+    int x = 0;
+    while (token != NULL) {
+        sscanf(token, "%d", &x);
+
+        PrintAndLogEx(INFO, " %d | %*.s" NOLF, cnt, i * 3, " ");
+
+        // incease with previous offset
+        x += i;
+
+        for (; i < (uint8_t)x; i++) {
+            PrintAndLogEx(NORMAL, "%c  " NOLF, bits[7 - i]);
+        }
+
+        PrintAndLogEx(NORMAL, "");
+        token = strtok(NULL, ",");
+        cnt++;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                 AlwaysAvailable,  "This help"},
 
@@ -3312,10 +3697,11 @@ static command_t CommandTable[] = {
     {"rawdemod",        CmdRawDemod,             AlwaysAvailable,  "Demodulate the data in the GraphBuffer and output binary"},
 
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Graph") "-------------------------"},
-    {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable,  "Adjust Graph for manual ASK demod using the length of sample differences to detect the edge of a wave"},
+    {"askedgedetect",   CmdAskEdgeDetect,        AlwaysAvailable,  "Adjust Graph for manual ASK demod"},
     {"autocorr",        CmdAutoCorr,             AlwaysAvailable,  "Autocorrelation over window"},
-    {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable,  "Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."},
+    {"dirthreshold",    CmdDirectionalThreshold, AlwaysAvailable,  "Max rising higher up-thres/ Min falling lower down-thres"},
     {"decimate",        CmdDecimate,             AlwaysAvailable,  "Decimate samples"},
+    {"envelope",        CmdEnvelope,             AlwaysAvailable,  "Generate square envelope of samples"},
     {"undecimate",      CmdUndecimate,           AlwaysAvailable,  "Un-decimate samples"},
     {"hide",            CmdHide,                 AlwaysAvailable,  "Hide graph window"},
     {"hpf",             CmdHpf,                  AlwaysAvailable,  "Remove DC offset from trace"},
@@ -3325,20 +3711,25 @@ static command_t CommandTable[] = {
     {"mtrim",           CmdMtrim,                AlwaysAvailable,  "Trim out samples from the specified start to the specified stop"},
     {"norm",            CmdNorm,                 AlwaysAvailable,  "Normalize max/min to +/-128"},
     {"plot",            CmdPlot,                 AlwaysAvailable,  "Show graph window"},
+
+    {"cthreshold",      CmdCenterThreshold,      AlwaysAvailable,  "Average out all values between"},
+
     {"rtrim",           CmdRtrim,                AlwaysAvailable,  "Trim samples from right of trace"},
     {"setgraphmarkers", CmdSetGraphMarkers,      AlwaysAvailable,  "Set blue and orange marker in graph window"},
     {"shiftgraphzero",  CmdGraphShiftZero,       AlwaysAvailable,  "Shift 0 for Graphed wave + or - shift value"},
-    {"timescale",       CmdTimeScale,            AlwaysAvailable,  "Set a timescale to get a differential reading between the yellow and purple markers as time duration"},
+    {"timescale",       CmdTimeScale,            AlwaysAvailable,  "Set cursor display timescale"},
     {"zerocrossings",   CmdZerocrossings,        AlwaysAvailable,  "Count time between zero-crossings"},
     {"convertbitstream", CmdConvertBitStream,    AlwaysAvailable,  "Convert GraphBuffer's 0/1 values to 127 / -127"},
     {"getbitstream",    CmdGetBitStream,         AlwaysAvailable,  "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
 
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
-    {"asn1",            CmdAsn1Decoder,          AlwaysAvailable,  "asn1 decoder"},
+    {"asn1",            CmdAsn1Decoder,          AlwaysAvailable,  "ASN1 decoder"},
+    {"atr",             CmdAtrLookup,            AlwaysAvailable,  "ATR lookup"},
     {"bin2hex",         Cmdbin2hex,              AlwaysAvailable,  "Converts binary to hexadecimal"},
     {"bitsamples",      CmdBitsamples,           IfPm3Present,     "Get raw samples as bitstring"},
+    {"bmap",            CmdBinaryMap,            AlwaysAvailable,  "Convert hex value according a binary template"},
     {"clear",           CmdBuffClear,            AlwaysAvailable,  "Clears bigbuf on deviceside and graph window"},
-    {"diff",            CmdDiff,                 AlwaysAvailable,  "diff of input files"},
+    {"diff",            CmdDiff,                 AlwaysAvailable,  "Diff of input files"},
     {"hexsamples",      CmdHexsamples,           IfPm3Present,     "Dump big buffer as hex bytes"},
     {"hex2bin",         Cmdhex2bin,              AlwaysAvailable,  "Converts hexadecimal to binary"},
     {"load",            CmdLoad,                 AlwaysAvailable,  "Load contents of file into graph window"},
@@ -3361,4 +3752,3 @@ int CmdData(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
