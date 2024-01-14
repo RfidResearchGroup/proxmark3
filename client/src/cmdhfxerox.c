@@ -5,7 +5,7 @@
 #include "cmdhfxerox.h"
 
 #include "fileutils.h"
-
+#include "cmdtrace.h"
 #include "cmdparser.h"      // command_t
 #include "cliparser.h"
 #include "comms.h"
@@ -406,7 +406,6 @@ static int xerox_select_card(iso14b_card_select_t *card) {
                 memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
             }
 
-            SetISODEPState(ISODEP_NFCB);
             return resp.length;
         }
     } // retry
@@ -534,15 +533,14 @@ int read_xerox_uid(bool loop, bool verbose) {
             if (status != PM3_SUCCESS) {
                 continue;
             }
+        } 
+        
+        if (status == PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, " UID..... %s", sprint_hex(card.uid, card.uidlen));
+            PrintAndLogEx(SUCCESS, " ATQB.... %s", sprint_hex(card.atqb, sizeof(card.atqb)));
         } else {
-
-            if (status == PM3_SUCCESS) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(SUCCESS, " UID..... %s", sprint_hex(card.uid, card.uidlen));
-                PrintAndLogEx(SUCCESS, " ATQB.... %s", sprint_hex(card.atqb, sizeof(card.atqb)));
-            } else {
-                return PM3_ESOFT;
-            }
+            return PM3_ESOFT;
         }
 
     } while (loop && kbd_enter_pressed() == false);
@@ -962,12 +960,18 @@ static int CmdHFXeroxView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFXeroxList(const char *Cmd) {
+    return CmdTraceListAlias(Cmd, "hf 14b", "14b -c");
+}
+
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,           AlwaysAvailable, "This help"},
-    {"info",    CmdHFXeroxInfo,    IfPm3Iso14443b,  "Short info on Fuji/Xerox tag"},
-    {"dump",    CmdHFXeroxDump,    IfPm3Iso14443b,  "Read all memory pages of an Fuji/Xerox tag, save to file"},
-    {"reader",  CmdHFXeroxReader,  IfPm3Iso14443b,  "Act like a Fuji/Xerox reader"},
-    {"view",    CmdHFXeroxView,    AlwaysAvailable, "Display content from tag dump file"},
+    {"help",      CmdHelp,           AlwaysAvailable, "This help"},
+    {"list",      CmdHFXeroxList,    AlwaysAvailable, "List ISO-14443B history"},
+    {"--------",  CmdHelp,           AlwaysAvailable, "----------------------- " _CYAN_("general") " -----------------------"},    
+    {"info",      CmdHFXeroxInfo,    IfPm3Iso14443b,  "Short info on Fuji/Xerox tag"},
+    {"dump",      CmdHFXeroxDump,    IfPm3Iso14443b,  "Read all memory pages of an Fuji/Xerox tag, save to file"},
+    {"reader",    CmdHFXeroxReader,  IfPm3Iso14443b,  "Act like a Fuji/Xerox reader"},
+    {"view",      CmdHFXeroxView,    AlwaysAvailable, "Display content from tag dump file"},
 //    {"rdbl",    CmdHFXeroxRdBl,  IfPm3Iso14443b,  "Read Fuji/Xerox block"},
 //    {"wrbl",    CmdHFXeroxWrBl,  IfPm3Iso14443b,  "Write Fuji/Xerox block"},
     {NULL, NULL, NULL, NULL}
