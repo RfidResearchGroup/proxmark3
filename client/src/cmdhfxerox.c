@@ -627,7 +627,7 @@ static int CmdHFXeroxInfo(const char *Cmd) {
 
     packet->rawlen++;
 
-    for (int retry = 0; (retry < 3 && blockno < sizeof(info_blocks)); retry++) {
+    for (int retry = 0; (retry < 2 && blockno < sizeof(info_blocks)); retry++) {
 
         // block to read
         packet->raw[10] = info_blocks[blockno];
@@ -705,7 +705,8 @@ static int CmdHFXeroxDump(const char *Cmd) {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "filename to save dump to"),
         arg_lit0("d", "decrypt", "decrypt secret blocks"),
-        arg_lit0(NULL, "ns", "no save to file"),        
+        arg_lit0(NULL, "ns", "no save to file"),
+        arg_lit0("v", "verbose", "verbose output"),        
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -714,13 +715,17 @@ static int CmdHFXeroxDump(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool decrypt = arg_get_lit(ctx, 2);
-    bool nosave = arg_get_lit(ctx, 3);    
+    bool nosave = arg_get_lit(ctx, 3);
+    bool verbose = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     iso14b_card_select_t card;
     int status = xerox_select_card(&card);
     if (status != PM3_SUCCESS) {
-        return PM3_ERFTRANS;
+        if (verbose) {
+            PrintAndLogEx(FAILED, "Fuji/Xerox tag select failed");
+        }
+        return status;
     }
 
     PrintAndLogEx(INFO, "Reading memory from tag UID " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
@@ -771,7 +776,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
             uint8_t *d = resp.data.asBytes;
 
             if (check_crc(CRC_14443_B, d, 7) == false) {
-                PrintAndLogEx(FAILED, "crc fail, retrying one more time");
+                PrintAndLogEx(FAILED, "retrying one more time, CRC ( " _RED_("fail") " )");
                 continue;
             }
 
