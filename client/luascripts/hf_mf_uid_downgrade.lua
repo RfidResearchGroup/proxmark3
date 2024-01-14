@@ -10,7 +10,10 @@ copyright = ''
 author = "Adam Foster (evildaemond)"
 version = 'v0.0.1'
 desc = [[
-Convert a facility code and card number to a Mifare Classic UID, which can be used as part of a downgrade attack.
+Convert a facility code and card number to a Mifare Classic UID, which can be used as part of a downgrade attack. 
+This abuses the fact that some controllers interpret the UID for Mifare Classic cards as a CN and FN, it requires the controller to interpret the wiegand payload in this way. 
+
+The example of FC 146 CN 5 would be read by the reader and send as a payload like 0920005, where 9200 is dec 146 and 05 is interpreted as 5
 
 Working on HID Readers with any of the following enabled
 - Generic 14333A
