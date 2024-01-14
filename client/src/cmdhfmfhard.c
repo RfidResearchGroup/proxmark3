@@ -1690,7 +1690,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         }
 
         if (acquisition_completed) {
-            field_off = true; // switch off field with next SendCommandOLD and then finish
+            field_off = true; // switch off field with next SendCommandMIX and then finish
         }
 
         if (initialize == false) {

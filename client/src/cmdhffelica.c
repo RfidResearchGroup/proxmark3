@@ -263,28 +263,32 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
  * @param verbose prints out the response received.
  */
 static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp, bool verbose) {
-    if (WaitForResponseTimeout(CMD_ACK, resp, 2000)) {
-        uint16_t len = iSelect ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
-        if (verbose) {
-            PrintAndLogEx(SUCCESS, "client received %i octets", len);
-            if (len == 0 || len == 1) {
-                PrintAndLogEx(ERR, "Could not receive data correctly!");
-                return false;
-            }
-            PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp->data.asBytes, len));
-            if (!check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2)) {
-                PrintAndLogEx(WARNING, "wrong or no CRC bytes");
-            }
-            if (resp->data.asBytes[0] != 0xB2 && resp->data.asBytes[1] != 0x4D) {
-                PrintAndLogEx(ERR, "received incorrect frame format!");
-                return false;
-            }
-        }
-        return true;
-    } else {
+    if (WaitForResponseTimeout(CMD_ACK, resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return false;
     }
-    return false;
+
+    uint16_t len = iSelect ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
+
+    if (verbose) {
+
+        if (len == 0 || len == 1) {
+            PrintAndLogEx(ERR, "Could not receive data correctly!");
+            return false;
+        }
+
+        PrintAndLogEx(SUCCESS, "(%u) %s", len, sprint_hex(resp->data.asBytes, len));
+
+        if (check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2) == false) {
+            PrintAndLogEx(WARNING, "CRC ( " _RED_("fail") " )");
+        }
+
+        if (resp->data.asBytes[0] != 0xB2 && resp->data.asBytes[1] != 0x4D) {
+            PrintAndLogEx(ERR, "received incorrect frame format!");
+            return false;
+        }
+    }
+    return true;
 }
 
 

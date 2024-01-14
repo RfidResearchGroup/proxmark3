@@ -1937,8 +1937,8 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
         *eof_time = start_time + 32 * ((8 * ts->max) - 4); // subtract the 4 padding bits after EOF
         LogTrace_ISO15693(send, sendlen, (start_time * 4), (*eof_time * 4), NULL, true);
         if (recv != NULL) {
-            bool fsk = send[0] & ISO15_REQ_SUBCARRIER_TWO;
-            bool recv_speed = send[0] & ISO15_REQ_DATARATE_HIGH;
+            bool fsk = ((send[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
+            bool recv_speed = ((send[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
             res = GetIso15693AnswerFromTag(recv, max_recv_len, timeout, eof_time, fsk, recv_speed, resp_len);
         }
         return res;
@@ -2087,7 +2087,7 @@ void ReaderIso15693(iso15_card_select_t *p_card) {
             reply_ng(CMD_HF_ISO15693_READER, PM3_SUCCESS, uid, sizeof(uid));
 
             if (g_dbglevel >= DBG_EXTENDED) {
-                Dbprintf("[+] %d octets read from IDENTIFY request:", recvlen);
+                Dbprintf("[+] %d bytes read from IDENTIFY request:", recvlen);
                 DbdecodeIso15693Answer(recvlen, answer);
                 Dbhexdump(recvlen, answer, true);
             }
@@ -2360,16 +2360,20 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
 // Since there is no standardized way of reading the AFI out of a tag, we will brute force it
 // (some manufactures offer a way to read the AFI, though)
-void BruteforceIso15693Afi(uint32_t speed) {
+void BruteforceIso15693Afi(uint32_t flags) {
 
-    uint8_t data[7] = {0};
-    uint8_t recv[ISO15693_MAX_RESPONSE_LENGTH];
+    clear_trace();
+
     Iso15693InitReader();
+
+    bool speed = ((flags & ISO15_HIGH_SPEED) == ISO15_HIGH_SPEED);
 
     // first without AFI
     // Tags should respond without AFI and with AFI=0 even when AFI is active
+    uint8_t data[7] = {0};
+    uint8_t recv[ISO15693_MAX_RESPONSE_LENGTH] = {0};
 
-    data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
+    data[0] = (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1);
     data[1] = ISO15693_INVENTORY;
     data[2] = 0; // AFI
     AddCrc15(data, 3);
@@ -2434,16 +2438,26 @@ void BruteforceIso15693Afi(uint32_t speed) {
 
 // Allows to directly send commands to the tag via the client
 // OBS:  doesn't turn off rf field afterwards.
-void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data) {
+void SendRawCommand15693(iso15_raw_cmd_t *packet) {
 
     LED_A_ON();
 
-    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
-    uint16_t timeout;
-    uint32_t eof_time = 0;
-    bool request_answer = false;
+    uint16_t timeout = ISO15693_READER_TIMEOUT;
+    if ((packet->flags & ISO15_LONG_WAIT) == ISO15_LONG_WAIT) {
+        timeout = ISO15693_READER_TIMEOUT_WRITE;
+    }
 
-    switch (data[1]) {
+    bool speed = ((packet->flags & ISO15_HIGH_SPEED) == ISO15_HIGH_SPEED);
+    bool keep_field_on = ((packet->flags & ISO15_NO_DISCONNECT) == ISO15_NO_DISCONNECT);
+    bool read_respone = ((packet->flags & ISO15_READ_RESPONSE) == ISO15_READ_RESPONSE);
+    bool init = ((packet->flags & ISO15_CONNECT) == ISO15_CONNECT);
+
+    // This isn't part of the RAW FLAGS from the client.
+    // This is part of ISO15693 protocol definitions where the following commands needs to request option.
+    bool request_answer = false;
+    switch (packet->raw[1]) {
+        case ISO15693_SET_PASSWORD:
+        case ISO15693_ENABLE_PRIVACY:
         case ISO15693_WRITEBLOCK:
         case ISO15693_LOCKBLOCK:
         case ISO15693_WRITE_MULTI_BLOCK:
@@ -2453,42 +2467,50 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
         case ISO15693_WRITE_PASSWORD:
         case ISO15693_PASSWORD_PROTECT_EAS:
         case ISO15693_LOCK_DSFID:
-            timeout = ISO15693_READER_TIMEOUT_WRITE;
-            request_answer = data[0] & ISO15_REQ_OPTION;
+            request_answer = ((packet->raw[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION);
             break;
         default:
-            timeout = ISO15693_READER_TIMEOUT;
+            break;
     }
 
+    uint32_t eof_time = 0;
     uint32_t start_time = 0;
     uint16_t recvlen = 0;
-    int res = SendDataTag(data, datalen, true, speed, (recv ? recvbuf : NULL), sizeof(recvbuf), start_time, timeout, &eof_time, &recvlen);
+
+    uint8_t buf[ISO15693_MAX_RESPONSE_LENGTH] = {0x00};
+
+    int res = SendDataTag(packet->raw, packet->rawlen, init, speed, (read_respone ? buf : NULL), sizeof(buf), start_time, timeout, &eof_time, &recvlen);
+
     if (res == PM3_ETEAROFF) { // tearoff occurred
         reply_ng(CMD_HF_ISO15693_COMMAND, res, NULL, 0);
     } else {
 
-        bool fsk = data[0] & ISO15_REQ_SUBCARRIER_TWO;
-        bool recv_speed = data[0] & ISO15_REQ_DATARATE_HIGH;
+        // looking at the first byte of the RAW bytes to determine Subcarrier, datarate, request option
+        bool fsk = packet->raw[0] & ISO15_REQ_SUBCARRIER_TWO;
+        bool recv_speed = packet->raw[0] & ISO15_REQ_DATARATE_HIGH;
 
         // send a single EOF to get the tag response
         if (request_answer) {
             start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
-            res = SendDataTagEOF((recv ? recvbuf : NULL), sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT, &eof_time, fsk, recv_speed, &recvlen);
+            res = SendDataTagEOF((read_respone ? buf : NULL), sizeof(buf), start_time, ISO15693_READER_TIMEOUT, &eof_time, fsk, recv_speed, &recvlen);
         }
 
-        if (recv) {
+        if (read_respone) {
             recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
-            reply_ng(CMD_HF_ISO15693_COMMAND, res, recvbuf, recvlen);
+            reply_ng(CMD_HF_ISO15693_COMMAND, res, buf, recvlen);
         } else {
             reply_ng(CMD_HF_ISO15693_COMMAND, PM3_SUCCESS, NULL, 0);
         }
     }
 
-
     // note: this prevents using hf 15 cmd with s option - which isn't implemented yet anyway
-    // also prevents hf 15 raw -k  keep_field on ...
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LED_D_OFF();
+
+    if (keep_field_on == false) {
+        switch_off(); // disconnect raw
+        SpinDelay(20);
+    }
+
+    LED_A_OFF();
 }
 
 /*
