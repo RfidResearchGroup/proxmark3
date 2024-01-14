@@ -540,12 +540,83 @@ int read_xerox_uid(bool loop, bool verbose) {
             PrintAndLogEx(SUCCESS, " UID..... %s", sprint_hex(card.uid, card.uidlen));
             PrintAndLogEx(SUCCESS, " ATQB.... %s", sprint_hex(card.atqb, sizeof(card.atqb)));
         } else {
+            if (verbose) {
+                PrintAndLogEx(WARNING, "no tag found");
+            }
             return PM3_ESOFT;
         }
 
     } while (loop && kbd_enter_pressed() == false);
 
     return PM3_SUCCESS;
+}
+
+static int read_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t *out) {
+
+    if (card == NULL || out == NULL) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t approx_len = (2 + card->uidlen + 1);
+    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + approx_len);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // set up the read command
+    packet->flags = (ISO14B_CONNECT | ISO14B_APPEND_CRC | ISO14B_RAW);
+    packet->raw[packet->rawlen++] = 0x02;
+    packet->raw[packet->rawlen++] = XEROX_READ_MEM;
+
+    // uid
+    memcpy(packet->raw + packet->rawlen, card->uid, card->uidlen);
+    packet->rawlen += card->uidlen;
+
+    // block to read
+    packet->raw[packet->rawlen++] = blockno;
+
+    int res = PM3_ESOFT;
+    // read loop
+    for (int retry = 0; retry < 2; retry++) {
+
+        if (retry) {
+            packet->flags = (ISO14B_APPEND_CRC | ISO14B_RAW);
+        }
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000) == false) {
+            continue;
+        }
+
+        // sanity checks
+        if (resp.length < 7) {
+            PrintAndLogEx(FAILED, "trying one more time, wrong length");
+            continue;
+        }
+
+        uint8_t *d = resp.data.asBytes;
+
+        if (check_crc(CRC_14443_B, d, 7) == false) {
+            PrintAndLogEx(FAILED, "trying one more time, CRC ( " _RED_("fail") " )");
+            continue;
+        }
+
+        if (d[0] != 2) {
+            PrintAndLogEx(FAILED, "Tag returned Error %x %x", d[0], d[1]);
+            res = PM3_ERFTRANS;
+            break;
+        }
+
+        memcpy(out + (blockno * XEROX_BLOCK_SIZE), d + 1, XEROX_BLOCK_SIZE);
+        res = PM3_SUCCESS;
+        break;
+    }
+
+    switch_off_field();
+    return res;
 }
 
 static int CmdHFXeroxReader(const char *Cmd) {
@@ -606,72 +677,19 @@ static int CmdHFXeroxInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, " UID..... %s", sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, " ATQB.... %s", sprint_hex(card.atqb, sizeof(card.atqb)));
 
-    uint8_t approx_len = (2 + 8 + 1);
-    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + approx_len);
-    if (packet == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
-        return PM3_EMALLOC;
-    }
 
-    int blockno = 0;
     uint8_t data[sizeof(info_blocks) * XEROX_BLOCK_SIZE] = {0};
 
-    // set up the read command
-    packet->flags = (ISO14B_CONNECT | ISO14B_APPEND_CRC | ISO14B_RAW);
-    packet->raw[packet->rawlen++] = 0x02;
-    packet->raw[packet->rawlen++] = XEROX_READ_MEM;      // set command: read mem
-    memcpy(packet->raw + packet->rawlen, card.uid, 8);   // store uid
-    packet->rawlen += 8;
+    for (int i = 0; i < sizeof(i); i++) {
 
-    packet->rawlen++;
-
-    for (int retry = 0; (retry < 2 && blockno < sizeof(info_blocks)); retry++) {
-
-        // block to read
-        packet->raw[10] = info_blocks[blockno];
-
-        clearCommandBuffer();
-        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
-        PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
-            /*
-            PrintAndLogEx(INFO, "%X %X %X %X %X %I64X %I64X %I64X %X %X %X %c",
-            resp.cmd, resp.length, resp.magic, resp.status, resp.crc, resp.oldarg[0], resp.oldarg[1], resp.oldarg[2],
-            resp.data.asBytes[0], resp.data.asBytes[1], resp.data.asBytes[2], resp.ng ? 't' : 'f');
-            */
-
-            // 14b raw command send data_len instead of status
-            if (resp.length < 7) {
-                PrintAndLogEx(FAILED, "retrying one more time, wrong length");
-                continue;
-            }
-
-            uint8_t *d = resp.data.asBytes;
-
-            if (check_crc(CRC_14443_B, d, 7) == false) {
-                PrintAndLogEx(FAILED, "retrying one more time, CRC ( " _RED_("fail") " )");
-                continue;
-            }
-
-            if (d[0] != 2) {
-                PrintAndLogEx(FAILED, "Tag returned Error %x %x", d[0], d[1]);
-                break;
-            }
-
-            memcpy(data + (blockno * XEROX_BLOCK_SIZE), d + 1, XEROX_BLOCK_SIZE);
-
-            retry = 0;
-            blockno++;
-        }
+        int res = read_xerox_block(&card, info_blocks[i], data + (i * XEROX_BLOCK_SIZE));
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Fuji/Xerox tag read failed");
+            break;
+        }       
     }
 
     switch_off_field();
-    free(packet);
-
-    if (blockno != sizeof(info_blocks)) {
-        PrintAndLogEx(FAILED, "Fuji/Xerox tag read failed");
-        return PM3_ERFTRANS;
-    }
 
     char pn[13];
     xerox_generate_partno(data, pn);
