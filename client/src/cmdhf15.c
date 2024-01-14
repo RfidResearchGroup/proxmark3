@@ -825,10 +825,10 @@ static int NxpSysInfo(uint8_t *uid) {
 
     packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
 
-    PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
     free(packet);
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
         PrintAndLogEx(DEBUG, "iso15693 timeout");
         return PM3_ETIMEOUT;
@@ -1610,10 +1610,10 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
         packet->flags |= ISO15_HIGH_SPEED;
     }
 
-    PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, sizeof(iso15_raw_cmd_t) + packet->rawlen);
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
     free(packet);
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
         PrintAndLogEx(DEBUG, "iso15693 timeout");
         return PM3_ETIMEOUT;
@@ -1756,10 +1756,9 @@ static int CmdHF15Dump(const char *Cmd) {
             AddCrc15(packet->raw, 3);
         }
 
-        PacketResponseNG resp;
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, sizeof(iso15_raw_cmd_t) + packet->rawlen);
-
+        SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
+        PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000)) {
 
             if (resp.length < 2) {
@@ -1947,12 +1946,12 @@ static int CmdHF15Raw(const char *Cmd) {
     packet->rawlen = datalen;
     memcpy(packet->raw, data, datalen);
 
-    PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(datalen));
     free(packet);
-
+    
     if (read_respone) {
+        PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000)) {
             if (resp.status == PM3_ETEAROFF) {
                 return resp.status;
@@ -2083,10 +2082,10 @@ static int CmdHF15Readmulti(const char *Cmd) {
         packet->flags |= ISO15_HIGH_SPEED;
     }
 
-    PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, sizeof(iso15_raw_cmd_t) + packet->rawlen);
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
     free(packet);
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
         PrintAndLogEx(FAILED, "iso15693 card timeout");
         return PM3_ETIMEOUT;
@@ -2227,10 +2226,10 @@ static int CmdHF15Readblock(const char *Cmd) {
         packet->flags |= ISO15_HIGH_SPEED;
     }
 
-    PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, sizeof(iso15_raw_cmd_t) + packet->rawlen);
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
     free(packet);
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
         PrintAndLogEx(ERR, "iso15693 timeout");
         return PM3_ETIMEOUT;
@@ -2289,7 +2288,7 @@ static int hf_15_write_blk(uint16_t flags, uint8_t *uid, bool fast, uint8_t bloc
     packet->rawlen += 2;
 
     // PM3 params
-    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT);
     if (fast) {
         packet->flags |= ISO15_HIGH_SPEED;
     }
