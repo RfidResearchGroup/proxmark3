@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf xerox info` - now prints some part info (@iceman1001)
+ - Added `hf xerox view` - view dump files of fuji/xerox tags (@iceman1001)
  - Changed `hf 15 findafi` - improved the params (@iceman1001)
  - Changed `hf 15 rdbl/rdmulti/dump` - should handle 4 vs 8 bytes block sizes in cards (@iceman1001)
  - Changed `hf 15 *` - all 15 commands now uses NG packets (@iceman1001)
