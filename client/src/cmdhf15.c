@@ -456,19 +456,20 @@ static const char *TagErrorStr(uint8_t error) {
 // returns 1 if succeeded
 static int getUID(bool loop, uint8_t *buf) {
 
-    uint8_t rawlen = 5;
-    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + rawlen);
+    uint8_t approxlen = 5;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
 
     // params
-    packet->rawlen = rawlen;
-    packet->raw[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
-    packet->raw[1] = ISO15693_INVENTORY;
-    packet->raw[2] = 0; // mask length
+    packet->raw[packet->rawlen++] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
+    packet->raw[packet->rawlen++] = ISO15693_INVENTORY;
+    packet->raw[packet->rawlen++] = 0; // mask length
+
     AddCrc15(packet->raw, 3);
+    packet->rawlen += 2;
 
     packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
 
@@ -700,8 +701,8 @@ static int NxpTestEAS(uint8_t *uid) {
         return PM3_EINVARG;
     }
 
-    uint8_t rawlen = 3 + 8 + 2;
-    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + rawlen);
+    uint8_t approxlen = 3 + 8 + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -748,8 +749,8 @@ static int NxpCheckSig(uint8_t *uid) {
         return PM3_EINVARG;
     }
     
-    uint8_t rawlen = 13;
-    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + rawlen);
+    uint8_t approxlen = 13;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -806,8 +807,8 @@ static int NxpSysInfo(uint8_t *uid) {
         return PM3_EINVARG;
     }
 
-    uint8_t rawlen = 13;
-    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + rawlen);
+    uint8_t approxlen = 13;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -944,9 +945,9 @@ static int CmdHF15Info(const char *Cmd) {
     // request to be sent to device/card
     // don't know if it has uid added or not.
     //               cmd uid crc
-    uint8_t rawlen = 2 + 8 + 2;
+    uint8_t approxlen = 2 + 8 + 2;
 
-    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + rawlen);
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -1541,9 +1542,10 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
                   "hf 15 writedsfid -u E011223344556677 --dsfid 12"
                  );
 
-    void *argtable[6 + 2] = {0};
+    void *argtable[6 + 3] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1(NULL, "dsfid", "<dec>", "DSFID number (0-255)");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1558,6 +1560,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
     bool add_option = arg_get_lit(ctx, 5);
 
     int dsfid = arg_get_int_def(ctx, 6, 0);
+    bool verbose = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     // sanity checks
@@ -1566,9 +1569,17 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    // enforcing add_option since we are writing.
+    if (add_option == false) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "Overriding OPTION param since we are writing (ENFORCE)");
+        }
+        add_option = true;
+    }
+
     // request to be sent to device/card
-    uint8_t rawlen = 2 + 8 + 1 + 2;
-    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + rawlen);
+    uint8_t approxlen = 2 + 8 + 1 + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -1576,9 +1587,6 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
 
     // params    
     packet->raw[packet->rawlen++] = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    // enforce, since we are writing
-    packet->raw[0] |= ISO15_REQ_OPTION;
-
     packet->raw[packet->rawlen++] = ISO15693_WRITE_DSFID;
 
     if (unaddressed == false) {
@@ -1683,8 +1691,8 @@ static int CmdHF15Dump(const char *Cmd) {
     }
 
     // request to be sent to device/card
-    uint8_t rawlen = 2 + 8 + 1 + 2;
-    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + rawlen);
+    uint8_t approxlen = 2 + 8 + 1 + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -1815,10 +1823,11 @@ static int CmdHF15Dump(const char *Cmd) {
     DropField();
 
     if (blklen != blocksize) {
+        PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, _YELLOW_("%u") " byte block length detected, called with " _YELLOW_("%d"), blklen, blocksize);
     }
 
-    PrintAndLogEx(NORMAL, "\n");
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "block#   | data         |lck| ascii");
     PrintAndLogEx(INFO, "---------+--------------+---+----------");
 
@@ -2034,8 +2043,8 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
 
     // request to be sent to device/card
-    uint8_t rawlen = 2 + 8 + 2 + 2;
-    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + rawlen);
+    uint8_t approxlen = 2 + 8 + 2 + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -2181,8 +2190,8 @@ static int CmdHF15Readblock(const char *Cmd) {
     }
 
     // request to be sent to device/card
-    uint8_t rawlen = 2 + 8 + 1 + 2;
-    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + rawlen);
+    uint8_t approxlen = 2 + 8 + 1 + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
@@ -2232,7 +2241,7 @@ static int CmdHF15Readblock(const char *Cmd) {
     free(packet);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-        PrintAndLogEx(ERR, "iso15693 timeout");
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
         return PM3_ETIMEOUT;
     }
 
@@ -2251,10 +2260,35 @@ static int CmdHF15Readblock(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
-    PrintAndLogEx(INFO, "------------+---+------");
-    PrintAndLogEx(INFO, "%s| %s | %s", sprint_hex(d + 2, resp.length - 4), lck, sprint_ascii(d + 2, resp.length - 4));
-    PrintAndLogEx(INFO, "------------+---+------");
+
+    uint8_t offset = 1;
+    if (add_option) {
+        offset = 2;
+    }
+
+    bool got_blocksize8 = (resp.length > 8);
+
+    if (got_blocksize8)  {
+        PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
+        PrintAndLogEx(INFO, "------------+---+------");
+        PrintAndLogEx(INFO, "%s| %s | %s"
+            , sprint_hex(d + offset, 8)
+            , lck
+            , sprint_ascii(d + offset, 8)
+        );
+        PrintAndLogEx(INFO, "------------+---+------");
+
+    } else {
+        PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
+        PrintAndLogEx(INFO, "------------+---+------");
+        PrintAndLogEx(INFO, "%s| %s | %s"
+            , sprint_hex(d + offset, 4)
+            , lck
+            , sprint_ascii(d + offset, 4)
+        );
+        PrintAndLogEx(INFO, "------------+---+------");
+    }
+
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -2263,8 +2297,8 @@ static int hf_15_write_blk(uint16_t flags, uint8_t *uid, bool fast, uint8_t bloc
 
     // request to be sent to device/card
     //   2 + 8 + 1 + (4|8) + 2
-    uint8_t rawlen = 21;
-    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + rawlen);
+    uint8_t approxlen = 21;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
