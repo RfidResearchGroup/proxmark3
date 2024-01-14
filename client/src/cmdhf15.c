@@ -2356,7 +2356,7 @@ static int CmdHF15Write(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (dlen != 4 || dlen != 8) {
+    if ((dlen != 4) && (dlen != 8)) {
         PrintAndLogEx(WARNING, "expected data, 4 or 8 bytes, got " _RED_("%d"), dlen);
         return PM3_EINVARG;
     }
