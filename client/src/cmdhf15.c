@@ -1893,7 +1893,7 @@ static int CmdHF15Raw(const char *Cmd) {
         arg_lit0("r", NULL, "do not read response"),
         arg_str1("d", "data", "<hex>", "raw bytes to send"),
         arg_lit0("w", "wait", "wait longer for response. For writes etc."),
-        arg_lit0("s", NULL, "activate field and select tag"),    
+        arg_lit0("a", NULL, "activate field"),    
         arg_param_end
     };
 
@@ -1909,7 +1909,7 @@ static int CmdHF15Raw(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 5, data, &datalen);
 
     bool wait = arg_get_lit(ctx, 6);
-    bool select = arg_get_lit(ctx, 7);
+    bool activate = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
@@ -1948,7 +1948,7 @@ static int CmdHF15Raw(const char *Cmd) {
         packet->flags |= ISO15_LONG_WAIT;
     }
 
-    if (select) {
+    if (activate) {
         packet->flags |= ISO15_CONNECT;
         SetISODEPState(ISODEP_NFCV);
     }
