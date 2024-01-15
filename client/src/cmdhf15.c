@@ -85,11 +85,12 @@
         return PM3_ECRC; \
     } \
  \
-    if (data[1] == 0x0F || data[1] == 0x10) { \
-        return PM3_EOUTOFBOUND; \
-    } \
- \
     if ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) { \
+ \
+        if (data[1] == 0x0F || data[1] == 0x10) { \
+            return PM3_EOUTOFBOUND; \
+        } \
+ \
         PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", d[0], TagErrorStr(d[0])); \
         return PM3_EWRONGANSWER; \
     } \
@@ -492,9 +493,9 @@ static int getUID(bool verbose, bool loop, uint8_t *buf) {
                 }
 
                 if (verbose) {
+                    PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%s"), iso15693_sprintUID(NULL, buf));
+                    PrintAndLogEx(SUCCESS, "TYPE... " _YELLOW_("%s"), getTagInfo_15(buf));
                     PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), iso15693_sprintUID(NULL, buf));
-                    PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("%s"), getTagInfo_15(buf));
                 }
                 res = PM3_SUCCESS;
 
@@ -978,8 +979,6 @@ static int CmdHF15Info(const char *Cmd) {
         packet->rawlen += uidlen;
     }
 
-    // PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
-
     AddCrc15(packet->raw,  packet->rawlen);
     packet->rawlen += 2;
 
@@ -1015,9 +1014,9 @@ static int CmdHF15Info(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(SUCCESS, "      TYPE: " _YELLOW_("%s"), getTagInfo_15(d + 2));
-    PrintAndLogEx(SUCCESS, "       UID: " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
-    PrintAndLogEx(SUCCESS, "   SYSINFO: %s", sprint_hex(d, resp.length - 2));
+    PrintAndLogEx(SUCCESS, "    TYPE... " _YELLOW_("%s"), getTagInfo_15(d + 2));
+    PrintAndLogEx(SUCCESS, "     UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
+    PrintAndLogEx(SUCCESS, " SYSINFO... %s", sprint_hex(d, resp.length - 2));
 
     // DSFID
     if (d[1] & 0x01)
@@ -1636,7 +1635,6 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
             memcpy(packet->raw + packet->rawlen, uid, uidlen);
             packet->rawlen += uidlen;
         }
-        // PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
     } else {
         PrintAndLogEx(SUCCESS, "Using unaddressed mode");
     }
@@ -1755,7 +1753,6 @@ static int CmdHF15Dump(const char *Cmd) {
         memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
         packet->rawlen += HF15_UID_LENGTH;
         used_uid = true;
-        // PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
     } else {
         PrintAndLogEx(SUCCESS, "Using unaddressed mode");
     }
@@ -2111,7 +2108,6 @@ static int CmdHF15Readmulti(const char *Cmd) {
         memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
         packet->rawlen += HF15_UID_LENGTH;
 
-        // PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
     } else {
         PrintAndLogEx(SUCCESS, "Using unaddressed mode");
     }
@@ -2264,7 +2260,6 @@ static int CmdHF15Readblock(const char *Cmd) {
         memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
         packet->rawlen += HF15_UID_LENGTH;
 
-        // PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
     } else {
         PrintAndLogEx(SUCCESS, "Using unaddressed mode");
     }
@@ -2456,7 +2451,6 @@ static int CmdHF15Write(const char *Cmd) {
         } else {
             reverse_array(uid, HF15_UID_LENGTH);
         }
-        // PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
     } else {
         PrintAndLogEx(SUCCESS, "Using unaddressed mode");
     }
@@ -2548,7 +2542,6 @@ static int CmdHF15Restore(const char *Cmd) {
         } else {
             reverse_array(uid, HF15_UID_LENGTH);
         }
-        //PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
     } else {
         PrintAndLogEx(SUCCESS, "Using unaddressed mode");
     }
@@ -2578,7 +2571,7 @@ static int CmdHF15Restore(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "restoring data blocks");
+    PrintAndLogEx(INFO, "Restoring data blocks");
 
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
 
@@ -2622,7 +2615,7 @@ static int CmdHF15Restore(const char *Cmd) {
         if (tried >= retries) {
             free(dump);
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(FAILED, "restore failed. Too many retries.");
+            PrintAndLogEx(FAILED, "Too many retries (" _RED_("fail") " )");
             DropField();
             return retval;
         }
@@ -2641,7 +2634,7 @@ static int CmdHF15Restore(const char *Cmd) {
     DropField();
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(HINT, "try `" _YELLOW_("hf 15 dump") "` to read your card to verify");
+    PrintAndLogEx(HINT, "try `" _YELLOW_("hf 15 dump --ns") "` to read your card to verify");
     PrintAndLogEx(INFO, "Done!");    
     return PM3_SUCCESS;
 }
