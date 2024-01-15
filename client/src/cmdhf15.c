@@ -968,6 +968,7 @@ static int CmdHF15Info(const char *Cmd) {
     if (scan) {
         if (getUID(true, false, uid) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "no tag found");
+            free(packet);
             return PM3_EINVARG;
         }
         uidlen = HF15_UID_LENGTH;
@@ -1625,6 +1626,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
         if (scan) {
             if (getUID(verbose, false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
+                free(packet);
                 return PM3_EINVARG;
             }
             uidlen = HF15_UID_LENGTH;
@@ -1743,6 +1745,7 @@ static int CmdHF15Dump(const char *Cmd) {
         // default fallback to scan for tag. Overriding unaddress parameter
         if (scan) {
             if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+                free(packet);
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }
@@ -2098,6 +2101,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     if (unaddressed == false) {
         if (scan) {
             if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+                free(packet);
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }
@@ -2250,6 +2254,7 @@ static int CmdHF15Readblock(const char *Cmd) {
         // default fallback to scan for tag. Overriding unaddress parameter
         if (scan) {
             if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+                free(packet);
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }

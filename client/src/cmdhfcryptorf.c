@@ -281,12 +281,12 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
     bool m512 = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
-    if (m512 + m64 > 1) {
+    if (m512 + m64 != 1) {
         PrintAndLogEx(INFO, "Select only one card memory size");
         return PM3_EINVARG;
     }
 
-    uint16_t cardsize = 0;
+    uint16_t cardsize;
     uint8_t blocks = 0;
     if (m64) {
         cardsize = (512 / 8) + 4;
@@ -550,4 +550,3 @@ int CmdHFCryptoRF(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
