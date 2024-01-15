@@ -85,12 +85,13 @@ static int uart_reconfigure_timeouts_polling(serial_port sp) {
 serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
     char acPortName[255] = {0};
     serial_port_windows_t *sp = calloc(sizeof(serial_port_windows_t), sizeof(uint8_t));
-    sp->hSocket = INVALID_SOCKET; // default: serial port
 
     if (sp == 0) {
         PrintAndLogEx(WARNING, "UART failed to allocate memory\n");
         return INVALID_SERIAL_PORT;
     }
+
+    sp->hSocket = INVALID_SOCKET; // default: serial port
 
     sp->udpBuffer = NULL;
     rx_empty_counter = 0;
