@@ -1352,11 +1352,12 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
 
 static int load_file_sanity(char *s, uint32_t datalen, int i, size_t len) {
     if (len == 0) {
-        PrintAndLogEx(WARNING, "WARNING: json %s block %d has zero-length data", s, i);
-        PrintAndLogEx(INFO, "file parsing stopped");
+        PrintAndLogEx(DEBUG, "WARNING: json %s block %d has zero-length data", s, i);
+        PrintAndLogEx(INFO, "File parsing stopped");
         return false;
     } else if (len != datalen) {
-        PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %zu bytes, expected %d (will fill with zero data)", s, i, len, datalen);
+        PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %zu bytes", s, i, len);
+        PrintAndLogEx(INFO, "Expected %d - padding with zeros", datalen);
     }
     return true;
 }
