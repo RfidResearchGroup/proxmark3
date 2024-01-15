@@ -2433,6 +2433,15 @@ static int CmdHF15Write(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Using unaddressed mode");
     }
 
+    // TI needs OPTION
+    PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), sprint_hex_inrow(uid, 8));
+    if (uid[7] == 0xE0 && uid[6] == 0x07) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "Overriding OPTION param, writing to TI tag");
+        }
+        add_option = true;
+    }
+
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
 
     int res = hf_15_write_blk(flags, ((unaddressed) ? NULL : uid), fast, (uint8_t)blockno, d, dlen);
