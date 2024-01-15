@@ -239,6 +239,22 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     return fileName;
 }
 
+// trunacate down a filename to LEN size
+void truncate_filename(char *fn, uint16_t maxlen) {
+    if (fn == NULL || maxlen < 5) {
+        return;
+    }
+
+    // Check if the filename is already shorter than or equal to the desired length
+    if (strlen(fn) <= maxlen) {
+        return;
+    }
+
+    // If there's no extension or it's too long, just truncate the filename
+    fn[maxlen - 3] = '\0';
+    strcat(fn, "...");
+}
+
 // --------- SAVE FILES
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen) {
 
