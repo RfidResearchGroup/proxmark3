@@ -1250,6 +1250,12 @@ static int CmdHF15ESave(const char *Cmd) {
     int count = arg_get_int_def(ctx, 3, -1);
     CLIParserFree(ctx);
 
+    // sanity checks
+    if (blocksize < 4) {
+        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
+        blocksize = 4;
+    }
+
     int bytes = CARD_MEMORY_SIZE;
     if (count > 0 && count * blocksize <= bytes) {
         bytes = count * blocksize;
@@ -1703,6 +1709,11 @@ static int CmdHF15Dump(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (blocksize < 4) {
+        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
+        blocksize = 4;
+    }
+
     // default fallback to scan for tag.
     // overriding unaddress parameter :)
     if (uidlen != HF15_UID_LENGTH) {
@@ -2054,6 +2065,11 @@ static int CmdHF15Readmulti(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (blocksize < 4) {
+        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
+        blocksize = 4;
+    }
+
     // enforcing add_option in order to get lock-info
     if (add_option == false) {
         if (verbose) {
@@ -2199,6 +2215,11 @@ static int CmdHF15Readblock(const char *Cmd) {
     if ((scan + unaddressed + uid_set) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
         return PM3_EINVARG;
+    }
+
+    if (blocksize < 4) {
+        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
+        blocksize = 4;
     }
 
     // enforcing add_option in order to get lock-info
@@ -2497,6 +2518,11 @@ static int CmdHF15Restore(const char *Cmd) {
     if (fnlen == 0) {
         PrintAndLogEx(WARNING, "please provide a filename");
         return PM3_EINVARG;
+    }
+
+    if (blocksize < 4) {
+        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
+        blocksize = 4;
     }
 
     // default fallback to scan for tag.
