@@ -2637,7 +2637,7 @@ static int CmdHF15Restore(const char *Cmd) {
     DropField();
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(HINT, "try `" _YELLOW_("hf 15 dump --ns") "` to read your card to verify");
+    PrintAndLogEx(HINT, "try `" _YELLOW_("hf 15 dump --ns") "` to verify");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }

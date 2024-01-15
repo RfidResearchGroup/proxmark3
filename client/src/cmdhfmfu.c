@@ -2743,7 +2743,6 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     if (is_partial) {
         PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
     }
-
     return PM3_SUCCESS;
 }
 
@@ -3108,7 +3107,8 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     DropField();
     free(dump);
-    PrintAndLogEx(INFO, "Restore finished");
+    PrintAndLogEx(HINT, "try `" _YELLOW_("hf mfu dump --ns") "` to verify");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 //
