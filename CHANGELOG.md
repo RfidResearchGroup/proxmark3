@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf_cardhopper` - Allow button presses to break, handle non-zero CID from reader by relaying RATS and improving PPS and WTX handling, more reliably cook ATS, ignore client packets on serial line (@nvx)
  - Fixed `data diff` - client no longer crashes when using short widths on long filenames (@iceman1001)
  - Added `hf 15 wipe` - fills card memory with zeros (@iceman1001)
  - Changed `hf xerox info` - now prints some part info (@iceman1001)
