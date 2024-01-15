@@ -30,6 +30,8 @@ uint8_t charset_uppercase[] = {
 
 smart_generator_t *smart_generators[] = {
     smart_generator_byte_repeat,
+    smart_generator_msb_byte_only,
+    smart_generator_nibble_sequence,
     NULL
 };
 
@@ -68,7 +70,7 @@ int bf_generate(generator_context_t *ctx) {
 
         case BF_MODE_SMART:
             return _bf_generate_mode_smart(ctx);
-        }
+    }
 
     return BF_GENERATOR_ERROR;
 }
@@ -106,16 +108,16 @@ int bf_array_increment(uint8_t *data, uint8_t data_len, uint8_t modulo) {
 }
 
 // get current key casted to 32 bit
-uint32_t bf_get_key32(generator_context_t *ctx){
+uint32_t bf_get_key32(generator_context_t *ctx) {
     return ctx->current_key & 0xFFFFFFFF;
 }
 
 // get current key casted to 48 bit
-uint64_t bf_get_key48(generator_context_t *ctx){
+uint64_t bf_get_key48(generator_context_t *ctx) {
     return ctx->current_key & 0xFFFFFFFFFFFF;
 }
 
-void bf_generator_clear(generator_context_t *ctx){
+void bf_generator_clear(generator_context_t *ctx) {
     ctx->flag1 = 0;
     ctx->flag2 = 0;
     ctx->flag3 = 0;
@@ -126,7 +128,7 @@ void bf_generator_clear(generator_context_t *ctx){
 int _bf_generate_mode_range(generator_context_t *ctx) {
 
     if (ctx->key_length != BF_KEY_SIZE_32 && ctx->key_length != BF_KEY_SIZE_48)
-            return BF_GENERATOR_ERROR;
+        return BF_GENERATOR_ERROR;
 
     if (ctx->current_key >= ctx->range_high) {
         return BF_GENERATOR_END;
@@ -146,7 +148,7 @@ int _bf_generate_mode_range(generator_context_t *ctx) {
 
 int _bf_generate_mode_charset(generator_context_t *ctx) {
 
-    if (ctx->key_length != BF_KEY_SIZE_32 && ctx->key_length != BF_KEY_SIZE_48){
+    if (ctx->key_length != BF_KEY_SIZE_32 && ctx->key_length != BF_KEY_SIZE_48) {
         return BF_GENERATOR_ERROR;
     }
 
@@ -156,9 +158,8 @@ int _bf_generate_mode_charset(generator_context_t *ctx) {
     uint8_t key_byte = 0;
     ctx->current_key = 0;
 
-    for (key_byte = 0; key_byte < ctx->key_length; key_byte++)
-    {
-        ctx->current_key |=  (uint64_t) ctx->charset[ctx->pos[key_byte]] << ((ctx->key_length - key_byte - 1) * 8);
+    for (key_byte = 0; key_byte < ctx->key_length; key_byte++) {
+        ctx->current_key |= (uint64_t) ctx->charset[ctx->pos[key_byte]] << ((ctx->key_length - key_byte - 1) * 8);
     }
 
     if (bf_array_increment(ctx->pos, ctx->key_length, ctx->charset_length) == -1)
@@ -168,17 +169,17 @@ int _bf_generate_mode_charset(generator_context_t *ctx) {
     return BF_GENERATOR_NEXT;
 }
 
-int _bf_generate_mode_smart(generator_context_t *ctx){
+int _bf_generate_mode_smart(generator_context_t *ctx) {
 
     int ret;
 
-    while(1){
+    while (1) {
         if (smart_generators[ctx->smart_mode_stage] == NULL)
-        return BF_GENERATOR_END;
+            return BF_GENERATOR_END;
 
         ret = smart_generators[ctx->smart_mode_stage](ctx);
 
-        switch (ret){
+        switch (ret) {
             case BF_GENERATOR_NEXT:
                 return ret;
             case BF_GENERATOR_ERROR:
@@ -192,7 +193,7 @@ int _bf_generate_mode_smart(generator_context_t *ctx){
 }
 
 
-int smart_generator_byte_repeat(generator_context_t *ctx){
+int smart_generator_byte_repeat(generator_context_t *ctx) {
     // key consists of repeated single byte
     uint32_t current_byte = ctx->counter1;
 
@@ -201,13 +202,59 @@ int smart_generator_byte_repeat(generator_context_t *ctx){
 
     ctx->current_key = 0;
 
-    for (uint8_t key_byte = 0; key_byte < ctx->key_length;key_byte++){
-        ctx->current_key |=  (uint64_t)current_byte << ((ctx->key_length - key_byte - 1) * 8);
+    for (uint8_t key_byte = 0; key_byte < ctx->key_length; key_byte++) {
+        ctx->current_key |= (uint64_t)current_byte << ((ctx->key_length - key_byte - 1) * 8);
     }
 
     ctx->counter1++;
     return BF_GENERATOR_NEXT;
 }
-int smart_generator_test2(generator_context_t *ctx){
-    return 0;
+int smart_generator_msb_byte_only(generator_context_t *ctx) {
+    // key of one byte (most significant one) and all others being zero
+    uint32_t current_byte = ctx->counter1;
+
+    if (current_byte > 0xFF)
+        return BF_GENERATOR_END;
+
+    ctx->current_key = (uint64_t)current_byte << ((ctx->key_length - 1) * 8);
+
+    ctx->counter1++;
+    return BF_GENERATOR_NEXT;
+}
+
+
+int smart_generator_nibble_sequence(generator_context_t *ctx) {
+    // patterns like A0A1A2A3...F0F1F2F3
+    // also with offsets - A1A2A3, A2A3A4, etc
+    // counter1 is high nibble (A, B, C), counter2 is low nibble (0,1, etc) 
+
+    if(ctx->counter1 == 0){ // init values on first generator call
+        ctx->counter1 = 0x0A;
+    }
+
+    uint8_t key_byte;
+    
+    // we substract %2 value because max_offset must be even number
+    uint8_t max_offset = 10 - (ctx->key_length / 2) - (ctx->key_length/2) % 2;
+
+    if(ctx->counter1 == 0x10){
+        return BF_GENERATOR_END;
+    }
+
+    ctx->current_key = 0;
+
+    for (key_byte = 0; key_byte < ctx->key_length; key_byte++) {
+        ctx->current_key |= (uint64_t) ctx->counter1 << (((ctx->key_length - key_byte - 1) * 8) + 4);
+        ctx->current_key |= (uint64_t) (key_byte + ctx->counter2) %10 << ((ctx->key_length - key_byte - 1) * 8);
+    }
+
+    // counter 2 is the offset
+    ctx->counter2++;
+
+    if(ctx->counter2 == max_offset){
+        ctx->counter2 = 0;
+        ctx->counter1++;
+    }
+
+    return BF_GENERATOR_NEXT;
 }

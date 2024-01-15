@@ -16,6 +16,7 @@
 // High frequency MIFARE commands
 //-----------------------------------------------------------------------------
 
+#include "bruteforce.h"
 #include "cmdhfmf.h"
 #include <ctype.h>
 #include "cmdparser.h"             // command_t
@@ -3299,6 +3300,216 @@ out:
     t1 = msclock() - t1;
     PrintAndLogEx(INFO, "time in checkkeys (fast) " _YELLOW_("%.1fs") "\n", (float)(t1 / 1000.0));
 
+    // check..
+    uint8_t found_keys = 0;
+    for (i = 0; i < sectorsCnt; ++i) {
+
+        if (e_sector[i].foundKey[0])
+            found_keys++;
+
+        if (e_sector[i].foundKey[1])
+            found_keys++;
+    }
+
+    if (found_keys == 0) {
+        PrintAndLogEx(WARNING, "No keys found");
+    } else {
+
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, _GREEN_("found keys:"));
+
+        printKeyTable(sectorsCnt, e_sector);
+
+        if (use_flashmemory && found_keys == (sectorsCnt << 1)) {
+            PrintAndLogEx(SUCCESS, "Card dumped as well. run " _YELLOW_("`%s %c`"),
+                          "hf mf esave",
+                          GetFormatFromSector(sectorsCnt)
+                         );
+        }
+
+        if (transferToEml) {
+            // fast push mode
+            g_conn.block_after_ACK = true;
+            uint8_t block[MFBLOCK_SIZE] = {0x00};
+            for (i = 0; i < sectorsCnt; ++i) {
+                uint8_t b = mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1;
+                mfEmlGetMem(block, b, 1);
+
+                if (e_sector[i].foundKey[0])
+                    num_to_bytes(e_sector[i].Key[0], MIFARE_KEY_SIZE, block);
+
+                if (e_sector[i].foundKey[1])
+                    num_to_bytes(e_sector[i].Key[1], MIFARE_KEY_SIZE, block + 10);
+
+                if (i == sectorsCnt - 1) {
+                    // Disable fast mode on last packet
+                    g_conn.block_after_ACK = false;
+                }
+                mfEmlSetMem(block, b, 1);
+            }
+            PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
+
+            if (found_keys == (sectorsCnt << 1)) {
+                FastDumpWithEcFill(sectorsCnt);
+            }
+        }
+
+        if (createDumpFile) {
+
+            char *fptr = GenerateFilename("hf-mf-", "-key.bin");
+            if (createMfcKeyDump(fptr, sectorsCnt, e_sector) != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to save keys to file");
+            }
+            free(fptr);
+        }
+    }
+
+    free(keyBlock);
+    free(e_sector);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14AMfSmartBrute(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf brute",
+                  "This is a smart bruteforce, exploiting common patterns, bugs and bad designs in key generators.",
+                  "hf mf brute --mini           --> Key recovery against MIFARE Mini\n"
+                  "hf mf brute --1k               --> Key recovery against MIFARE Classic 1k\n"
+                  "hf mf brute --2k                --> Key recovery against MIFARE 2k\n"
+                  "hf mf brute --4k                --> Key recovery against MIFARE 4k\n"
+                  "hf mf brute --1k --emu                          --> Target 1K, write keys to emulator memory\n"
+                  "hf mf brute --1k --dump                         --> Target 1K, write keys to file\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
+        arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
+        arg_lit0(NULL, "dump", "Dump found keys to binary file"),
+        arg_lit0(NULL, "mem", "Use dictionary from flashmemory"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+
+    bool m0 = arg_get_lit(ctx, 2);
+    bool m1 = arg_get_lit(ctx, 3);
+    bool m2 = arg_get_lit(ctx, 4);
+    bool m4 = arg_get_lit(ctx, 5);
+
+    bool transferToEml = arg_get_lit(ctx, 6);
+    bool createDumpFile = arg_get_lit(ctx, 7);
+    bool use_flashmemory = arg_get_lit(ctx, 8);
+
+    CLIParserFree(ctx);
+
+    //validations
+
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
+    }
+
+    uint8_t sectorsCnt = MIFARE_1K_MAXSECTOR;
+    if (m0) {
+        sectorsCnt = MIFARE_MINI_MAXSECTOR;
+    } else if (m1) {
+        sectorsCnt = MIFARE_1K_MAXSECTOR;
+    } else if (m2) {
+        sectorsCnt = MIFARE_2K_MAXSECTOR;
+    } else if (m4) {
+        sectorsCnt = MIFARE_4K_MAXSECTOR;
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;
+    }
+
+    uint32_t chunksize = 100 > (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) ? (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) : 100;
+    uint8_t *keyBlock = calloc(MIFARE_KEY_SIZE, chunksize);
+
+    if (keyBlock == NULL)
+        return PM3_EMALLOC;
+
+    // create/initialize key storage structure
+    sector_t *e_sector = NULL;
+    if (initSectorTable(&e_sector, sectorsCnt) != PM3_SUCCESS) {
+        free(keyBlock);
+        return PM3_EMALLOC;
+    }
+
+    // initialize bruteforce engine
+    generator_context_t bctx;
+    bf_generator_init(&bctx, BF_MODE_SMART, BF_KEY_SIZE_48);
+
+    int i = 0, ret;
+    int smart_mode_stage = -1;
+    uint64_t generator_key;
+
+    // time
+    uint64_t t0 = msclock();
+    uint64_t t1 = msclock();
+    uint64_t keys_checked = 0;
+    uint64_t total_keys_checked = 0;
+
+    uint32_t keycnt = 0;
+    bool firstChunk = true, lastChunk = false;
+
+    while (!lastChunk) {
+        keycnt = 0;
+
+        // generate block of keys from generator
+        memset(keyBlock, 0, MIFARE_KEY_SIZE * chunksize);
+        for (i = 0; i < chunksize; i++) {
+            ret = bf_generate(&bctx);
+            if (ret == BF_GENERATOR_ERROR) {
+                PrintAndLogEx(ERR, "Internal bruteforce generator error");
+                free(keyBlock);
+                return PM3_EFAILED;
+            } else if (ret == BF_GENERATOR_END) {
+                lastChunk = true;
+                break;
+            } else if (ret == BF_GENERATOR_NEXT) {
+                generator_key = bf_get_key48(&bctx);
+                num_to_bytes(generator_key, MIFARE_KEY_SIZE, keyBlock + (i * MIFARE_KEY_SIZE));
+                keycnt++;
+
+                if (smart_mode_stage != bctx.smart_mode_stage) {
+                    smart_mode_stage = bctx.smart_mode_stage;
+                    PrintAndLogEx(INFO, "Running bruteforce stage %d", smart_mode_stage);
+
+                    if (msclock() - t1 > 0 && keys_checked > 0) {
+                        PrintAndLogEx(INFO, "Current cracking speed (keys/s): %d",
+                                      keys_checked / ((msclock() - t1) / 1000));
+                    
+                        t1 = msclock();
+                        keys_checked = 0;
+                    }
+                }
+            }
+        }
+
+        int strategy = 2; // width first on all sectors
+        ret = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, keycnt, keyBlock, e_sector, false, false);
+
+        keys_checked += keycnt;
+        total_keys_checked += keycnt;
+
+        if (firstChunk)
+            firstChunk = false;
+
+        if (ret == PM3_SUCCESS || ret == 2)
+            goto out;
+
+    }
+
+out:
+    PrintAndLogEx(INFO, "Time in brute mode: " _YELLOW_("%.1fs") "\n", (float)((msclock() - t0) / 1000.0));
+    PrintAndLogEx(INFO, "Total keys checked: " _YELLOW_("%d") "\n", total_keys_checked);
     // check..
     uint8_t found_keys = 0;
     for (i = 0; i < sectorsCnt; ++i) {
@@ -9054,6 +9265,7 @@ static command_t CommandTable[] = {
     {"nested",      CmdHF14AMfNested,       IfPm3Iso14443a,  "Nested attack"},
     {"hardnested",  CmdHF14AMfNestedHard,   AlwaysAvailable, "Nested attack for hardened MIFARE Classic cards"},
     {"staticnested", CmdHF14AMfNestedStatic, IfPm3Iso14443a, "Nested attack against static nonce MIFARE Classic cards"},
+    {"brute",       CmdHF14AMfSmartBrute,   IfPm3Iso14443a,  "Smart bruteforce to exploit weak key generators"},
     {"autopwn",     CmdHF14AMfAutoPWN,      IfPm3Iso14443a,  "Automatic key recovery tool for MIFARE Classic"},
 //    {"keybrute",    CmdHF14AMfKeyBrute,     IfPm3Iso14443a,  "J_Run's 2nd phase of multiple sector nested authentication key recovery"},
     {"nack",        CmdHf14AMfNack,         IfPm3Iso14443a,  "Test for MIFARE NACK bug"},

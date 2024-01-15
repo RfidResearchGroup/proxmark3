@@ -749,6 +749,7 @@ SRCS =  mifare/aiddesfire.c \
 
 # common
 SRCS += bucketsort.c \
+		bruteforce.c \
 		cardhelper.c \
 		crapto1/crapto1.c \
 		crapto1/crypto1.c \

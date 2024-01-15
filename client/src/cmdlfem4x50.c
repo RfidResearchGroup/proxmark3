@@ -386,10 +386,9 @@ int CmdEM4x50Brute(const char *Cmd) {
         etd.bruteforce_mode = BF_MODE_RANGE;
     } else if (strcmp(mode, "charset") == 0) {
         etd.bruteforce_mode = BF_MODE_CHARSET;
-    } else if (strcmp(mode, "smart") == 0){
+    } else if (strcmp(mode, "smart") == 0) {
         etd.bruteforce_mode = BF_MODE_SMART;
-    } else
-    {
+    } else {
         PrintAndLogEx(FAILED, "Unknown bruteforce mode: %s", mode);
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -471,7 +470,7 @@ int CmdEM4x50Brute(const char *Cmd) {
 
     dur_s -= dur_h * 3600 + dur_m * 60;
 
-    if ( no_iter > 0 )
+    if (no_iter > 0)
         PrintAndLogEx(INFO, "Estimated duration: %ih %im %is", dur_h, dur_m, dur_s);
     else
         PrintAndLogEx(INFO, "Estimated duration: unknown");
