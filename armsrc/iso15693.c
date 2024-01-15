@@ -2452,9 +2452,14 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
     bool read_respone = ((packet->flags & ISO15_READ_RESPONSE) == ISO15_READ_RESPONSE);
     bool init = ((packet->flags & ISO15_CONNECT) == ISO15_CONNECT);
 
-    // This isn't part of the RAW FLAGS from the client.
     // This is part of ISO15693 protocol definitions where the following commands needs to request option.
+    // note:
+    //     it seem like previous we just guessed and never followed the fISO145_REQ_OPTION flag if it was set / not set from client side.
+    //     this is a problem.   Since without this the response from the tag is one byte shorter.   And a lot of client side functions has been 
+    //     hardcoded to assume for the extra byte in the response.
+
     bool request_answer = false;
+
     switch (packet->raw[1]) {
         case ISO15693_SET_PASSWORD:
         case ISO15693_ENABLE_PRIVACY:
@@ -2486,8 +2491,8 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
     } else {
 
         // looking at the first byte of the RAW bytes to determine Subcarrier, datarate, request option
-        bool fsk = packet->raw[0] & ISO15_REQ_SUBCARRIER_TWO;
-        bool recv_speed = packet->raw[0] & ISO15_REQ_DATARATE_HIGH;
+        bool fsk = ((packet->raw[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
+        bool recv_speed = ((packet->raw[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
 
         // send a single EOF to get the tag response
         if (request_answer) {
@@ -2502,8 +2507,6 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
             reply_ng(CMD_HF_ISO15693_COMMAND, PM3_SUCCESS, NULL, 0);
         }
     }
-
-    // note: this prevents using hf 15 cmd with s option - which isn't implemented yet anyway
 
     if (keep_field_on == false) {
         switch_off(); // disconnect raw
