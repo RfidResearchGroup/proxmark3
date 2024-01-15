@@ -829,9 +829,9 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
                     break;
             }
             PrintAndLogEx(INFO, "                mirror start page %02X | byte pos %02X - %s"
-                , mirror_page, mirror_byte
-                , (mirror_page >= 0x4 && ((mirror_user_mem_start_byte + bytes_required_for_mirror_data) <= 144)) ? _GREEN_("ok") : _YELLOW_("Invalid value")
-                );
+                          , mirror_page, mirror_byte
+                          , (mirror_page >= 0x4 && ((mirror_user_mem_start_byte + bytes_required_for_mirror_data) <= 144)) ? _GREEN_("ok") : _YELLOW_("Invalid value")
+                         );
         }
 
     } else if (tagtype & (MFU_TT_NTAG_213_F | MFU_TT_NTAG_216_F)) {

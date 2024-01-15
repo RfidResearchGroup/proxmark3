@@ -1265,7 +1265,7 @@ static int l_set_iso_dep_state(lua_State *L) {
 
     size_t state = luaL_checknumber(L, 1);
     switch (state) {
-        case 0: 
+        case 0:
             SetISODEPState(ISODEP_INACTIVE);
             break;
         case 1:

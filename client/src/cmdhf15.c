@@ -482,7 +482,7 @@ static int getUID(bool verbose, bool loop, uint8_t *buf) {
     int res = PM3_ESOFT;
     do {
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
+        SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000)) {
 
@@ -716,7 +716,7 @@ static int NxpTestEAS(uint8_t *uid) {
         return PM3_EMALLOC;
     }
 
-    // params    
+    // params
     packet->raw[packet->rawlen++] = (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS);
     packet->raw[packet->rawlen++] = ISO15693_EAS_ALARM;
     packet->raw[packet->rawlen++] = 0x04; // IC manufacturer code
@@ -730,7 +730,7 @@ static int NxpTestEAS(uint8_t *uid) {
     packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
     free(packet);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
@@ -756,7 +756,7 @@ static int NxpCheckSig(uint8_t *uid) {
     if (uid == NULL) {
         return PM3_EINVARG;
     }
-    
+
     uint8_t approxlen = 13;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
@@ -764,7 +764,7 @@ static int NxpCheckSig(uint8_t *uid) {
         return PM3_EMALLOC;
     }
 
-    // params    
+    // params
     // Check if we can also read the signature
     packet->raw[packet->rawlen++] = (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS);
     packet->raw[packet->rawlen++] = ISO15693_READ_SIGNATURE;
@@ -777,9 +777,9 @@ static int NxpCheckSig(uint8_t *uid) {
     packet->rawlen += 2;
 
     packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
-    
+
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
     free(packet);
     PacketResponseNG resp;
 
@@ -822,7 +822,7 @@ static int NxpSysInfo(uint8_t *uid) {
         return PM3_EMALLOC;
     }
 
-    // params    
+    // params
     packet->raw[packet->rawlen++] = (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS);
     packet->raw[packet->rawlen++] = ISO15693_GET_NXP_SYSTEM_INFO;
     packet->raw[packet->rawlen++] = 0x04; // IC manufacturer code
@@ -836,7 +836,7 @@ static int NxpSysInfo(uint8_t *uid) {
     packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
     free(packet);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
@@ -961,7 +961,7 @@ static int CmdHF15Info(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    // ISO15693 protocol params    
+    // ISO15693 protocol params
     packet->raw[packet->rawlen++] = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
     packet->raw[packet->rawlen++] = ISO15693_GET_SYSTEM_INFO;
 
@@ -989,7 +989,7 @@ static int CmdHF15Info(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
     free(packet);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
@@ -1617,7 +1617,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    // params    
+    // params
     packet->raw[packet->rawlen++] = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
     packet->raw[packet->rawlen++] = ISO15693_WRITE_DSFID;
 
@@ -1651,7 +1651,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
     free(packet);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
@@ -1684,9 +1684,9 @@ static int CmdHF15Dump(const char *Cmd) {
     void *argtable[6 + 5] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
-    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-    argtable[arglen++] = arg_lit0(NULL, "ns", "no save to file"),
-    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+                         argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
+                                              argtable[arglen++] = arg_lit0(NULL, "ns", "no save to file"),
+                                                      argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1801,7 +1801,7 @@ static int CmdHF15Dump(const char *Cmd) {
         }
 
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
+        SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000)) {
 
@@ -1846,7 +1846,7 @@ static int CmdHF15Dump(const char *Cmd) {
             // copy read data
             memcpy(mem[blocknum].block, d + 1 + offset, blklen);
             memcpy(data + (blocknum * 4), d + 1 + offset, 4);
-        
+
             retry = 0;
             blocknum++;
 
@@ -1930,7 +1930,7 @@ static int CmdHF15Raw(const char *Cmd) {
         arg_lit0("r", NULL, "do not read response"),
         arg_str1("d", "data", "<hex>", "raw bytes to send"),
         arg_lit0("w", "wait", "wait longer for response. For writes etc."),
-        arg_lit0("a", NULL, "activate field"),    
+        arg_lit0("a", NULL, "activate field"),
         arg_param_end
     };
 
@@ -1994,9 +1994,9 @@ static int CmdHF15Raw(const char *Cmd) {
     memcpy(packet->raw, data, datalen);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(datalen));
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(datalen));
     free(packet);
-    
+
     if (read_respone) {
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000)) {
@@ -2038,7 +2038,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     argtable[arglen++] = arg_int1("b", NULL, "<dec>", "first page number (0-255)");
     argtable[arglen++] = arg_int1(NULL, "cnt", "<dec>", "number of pages (1-6)");
     argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+                         argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2133,7 +2133,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
     free(packet);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
@@ -2194,7 +2194,7 @@ static int CmdHF15Readblock(const char *Cmd) {
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
     argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+                         argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2281,7 +2281,7 @@ static int CmdHF15Readblock(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
     free(packet);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
@@ -2313,20 +2313,20 @@ static int CmdHF15Readblock(const char *Cmd) {
         PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
         PrintAndLogEx(INFO, "------------+---+------");
         PrintAndLogEx(INFO, "%s| %s | %s"
-            , sprint_hex(d + offset, 8)
-            , lck
-            , sprint_ascii(d + offset, 8)
-        );
+                      , sprint_hex(d + offset, 8)
+                      , lck
+                      , sprint_ascii(d + offset, 8)
+                     );
         PrintAndLogEx(INFO, "------------+---+------");
 
     } else {
         PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
         PrintAndLogEx(INFO, "------------+---+------");
         PrintAndLogEx(INFO, "%s| %s | %s"
-            , sprint_hex(d + offset, 4)
-            , lck
-            , sprint_ascii(d + offset, 4)
-        );
+                      , sprint_hex(d + offset, 4)
+                      , lck
+                      , sprint_ascii(d + offset, 4)
+                     );
         PrintAndLogEx(INFO, "------------+---+------");
     }
 
@@ -2345,10 +2345,10 @@ static int hf_15_write_blk(uint8_t *pm3flags, uint16_t flags, uint8_t *uid, bool
         return PM3_EMALLOC;
     }
 
-    // ISO15693 protocol params    
+    // ISO15693 protocol params
     packet->raw[packet->rawlen++] = flags;
     packet->raw[packet->rawlen++] = ISO15693_WRITEBLOCK;
-    
+
     // add UID
     if (uid) {
         memcpy(packet->raw +  packet->rawlen, uid, HF15_UID_LENGTH);
@@ -2364,7 +2364,7 @@ static int hf_15_write_blk(uint8_t *pm3flags, uint16_t flags, uint8_t *uid, bool
     packet->rawlen += 2;
 
     // PM3 params
-    if (pm3flags ) {
+    if (pm3flags) {
         packet->flags = *pm3flags;
     } else {
         packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT);
@@ -2374,7 +2374,7 @@ static int hf_15_write_blk(uint8_t *pm3flags, uint16_t flags, uint8_t *uid, bool
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t*)packet, ISO15_RAW_LEN(packet->rawlen));
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
     free(packet);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
@@ -2487,9 +2487,9 @@ static int CmdHF15Restore(const char *Cmd) {
     void *argtable[6 + 5] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
-    argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)"),
-    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+                         argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)"),
+                                              argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
+                                                      argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
@@ -2584,7 +2584,7 @@ static int CmdHF15Restore(const char *Cmd) {
     size_t bytes = 0;
     uint16_t i = 0;
     while (bytes < bytes_read) {
-        
+
         uint8_t data[blocksize];
 
         // copy over the data to the request
@@ -2635,7 +2635,7 @@ static int CmdHF15Restore(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(HINT, "try `" _YELLOW_("hf 15 dump --ns") "` to read your card to verify");
-    PrintAndLogEx(INFO, "Done!");    
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -3224,7 +3224,7 @@ static int CmdHF15Wipe(const char *Cmd) {
     void *argtable[6 + 3] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+                         argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 

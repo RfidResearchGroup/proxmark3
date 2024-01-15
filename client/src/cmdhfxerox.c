@@ -441,23 +441,23 @@ static void xerox_generate_partno(const uint8_t *data, char *pn) {
 }
 
 static void xerox_print_hdr(void) {
-    PrintAndLogEx(NORMAL, "");    
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "block#   | data         | ascii");
     PrintAndLogEx(INFO, "---------+--------------+----------");
 }
 
 static void xerox_print(uint8_t *data, uint16_t datalen) {
 
-    uint16_t blockno = datalen / XEROX_BLOCK_SIZE;    
+    uint16_t blockno = datalen / XEROX_BLOCK_SIZE;
 
     for (int i = 0; i < blockno; i++) {
         PrintAndLogEx(INFO,
-                    "%3d/0x%02X | %s | %s",
-                    i,
-                    i,
-                    sprint_hex(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE),
-                    sprint_ascii(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE)
-                );
+                      "%3d/0x%02X | %s | %s",
+                      i,
+                      i,
+                      sprint_hex(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE),
+                      sprint_ascii(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE)
+                     );
     }
 }
 
@@ -477,43 +477,43 @@ typedef struct {
 
 // https://gist.github.com/JeroenSteen/4b45886b8d87fa0530af9b0364e6b277
 static const xerox_part_t xerox_part_mappings[] = {
-        {"cyan", "006R01532" , "DMO", "sold"},
-        {"cyan", "006R01660", "DMO", "sold"},
-        {"cyan", "006R01739", "DMO", "sold"},
-        {"cyan", "006R01524", "WW", "metered"},
-        {"cyan", "006R01528", "NA/ESG", "sold"},
-        {"cyan", "006R01656", "NA/ESG", "sold"},
-        {"cyan", "006R01735", "NA/ESG", "sold"},
+    {"cyan", "006R01532", "DMO", "sold"},
+    {"cyan", "006R01660", "DMO", "sold"},
+    {"cyan", "006R01739", "DMO", "sold"},
+    {"cyan", "006R01524", "WW", "metered"},
+    {"cyan", "006R01528", "NA/ESG", "sold"},
+    {"cyan", "006R01656", "NA/ESG", "sold"},
+    {"cyan", "006R01735", "NA/ESG", "sold"},
 
-        {"magenta", "006R01531", "DMO", "sold"},
-        {"magenta", "006R01661", "DMO", "sold"},
-        {"magenta", "006R01740", "DMO", "sold"},
-        {"magenta", "006R01523", "WW", "metered"},
-        {"magenta", "006R01527", "NA/ESG", "sold"},
-        {"magenta", "006R01657", "NA/ESG", "sold"},
-        {"magenta", "006R01736", "NA/ESG", "sold"},
+    {"magenta", "006R01531", "DMO", "sold"},
+    {"magenta", "006R01661", "DMO", "sold"},
+    {"magenta", "006R01740", "DMO", "sold"},
+    {"magenta", "006R01523", "WW", "metered"},
+    {"magenta", "006R01527", "NA/ESG", "sold"},
+    {"magenta", "006R01657", "NA/ESG", "sold"},
+    {"magenta", "006R01736", "NA/ESG", "sold"},
 
-        {"yellow", "006R01530", "DMO", "sold"},
-        {"yellow", "006R01662", "DMO", "sold"},
-        {"yellow", "006R01741", "DMO", "sold"},
-        {"yellow", "006R01522", "WW", "metered"},
-        {"yellow", "006R01526", "NA/ESG", "sold"},
-        {"yellow", "006R01658", "NA/ESG", "sold"},
-        {"yellow", "006R01737", "NA/ESG", "sold"},
+    {"yellow", "006R01530", "DMO", "sold"},
+    {"yellow", "006R01662", "DMO", "sold"},
+    {"yellow", "006R01741", "DMO", "sold"},
+    {"yellow", "006R01522", "WW", "metered"},
+    {"yellow", "006R01526", "NA/ESG", "sold"},
+    {"yellow", "006R01658", "NA/ESG", "sold"},
+    {"yellow", "006R01737", "NA/ESG", "sold"},
 
-        {"black", "006R01529", "DMO", "sold"},
-        {"black", "006R01659", "DMO", "sold"},
-        {"black", "006R01738", "DMO", "sold"},
-        {"black", "006R01521", "WW", "metered"},
-        {"black", "006R01525", "NA/ESG", "sold"},
-        {"black", "006R01655", "NA/ESG", "sold"},
-        {"black", "006R01734", "NA/ESG", "sold"},
-        {"", "", "", ""} // must be the last entry
+    {"black", "006R01529", "DMO", "sold"},
+    {"black", "006R01659", "DMO", "sold"},
+    {"black", "006R01738", "DMO", "sold"},
+    {"black", "006R01521", "WW", "metered"},
+    {"black", "006R01525", "NA/ESG", "sold"},
+    {"black", "006R01655", "NA/ESG", "sold"},
+    {"black", "006R01734", "NA/ESG", "sold"},
+    {"", "", "", ""} // must be the last entry
 };
 
 // get a product description based on the UID
 // returns description of the best match
-static const xerox_part_t *get_xerox_part_info(const char* pn) {
+static const xerox_part_t *get_xerox_part_info(const char *pn) {
     for (int i = 0; i < ARRAYLEN(xerox_part_mappings); ++i) {
         if (str_startswith(pn, xerox_part_mappings[i].partnumber) == 0) {
             return &xerox_part_mappings[i];
@@ -533,8 +533,8 @@ int read_xerox_uid(bool loop, bool verbose) {
             if (status != PM3_SUCCESS) {
                 continue;
             }
-        } 
-        
+        }
+
         if (status == PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, " UID..... %s", sprint_hex(card.uid, card.uidlen));
@@ -686,14 +686,14 @@ static int CmdHFXeroxInfo(const char *Cmd) {
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Fuji/Xerox tag read failed");
             break;
-        }       
+        }
     }
 
     switch_off_field();
 
     char pn[13];
     xerox_generate_partno(data, pn);
-    PrintAndLogEx(INFO, "-------- " _CYAN_("tag memory") " ---------");    
+    PrintAndLogEx(INFO, "-------- " _CYAN_("tag memory") " ---------");
     PrintAndLogEx(SUCCESS, " PartNo... %s", pn);
     PrintAndLogEx(SUCCESS, " Date..... %02d.%02d.%02d", data[8], data[9], data[10]);
     PrintAndLogEx(SUCCESS, " Serial... %d", (data[14] << 16) | (data[13] << 8) | data[12]);
@@ -704,7 +704,7 @@ static int CmdHFXeroxInfo(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Color..... %s", item->color);
         PrintAndLogEx(SUCCESS, "Region.... %s", item->region);
         PrintAndLogEx(SUCCESS, "M/s....... %s", item->ms);
-    } 
+    }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -722,7 +722,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
         arg_str0("f", "file", "<fn>", "filename to save dump to"),
         arg_lit0("d", "decrypt", "decrypt secret blocks"),
         arg_lit0(NULL, "ns", "no save to file"),
-        arg_lit0("v", "verbose", "verbose output"),        
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -757,7 +757,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
     uint8_t data[256 * XEROX_BLOCK_SIZE] = {0};
 
     // set up the read command
-    packet->flags = ( ISO14B_CONNECT | ISO14B_APPEND_CRC | ISO14B_RAW );
+    packet->flags = (ISO14B_CONNECT | ISO14B_APPEND_CRC | ISO14B_RAW);
     packet->raw[packet->rawlen++] = 0x02;
 
     // add one for command byte
@@ -783,7 +783,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
             resp.cmd, resp.length, resp.magic, resp.status, resp.crc, resp.oldarg[0], resp.oldarg[1], resp.oldarg[2],
             resp.data.asBytes[0], resp.data.asBytes[1], resp.data.asBytes[2], resp.ng ? 't' : 'f');
             */
-    
+
             if (resp.length < 7) {
                 PrintAndLogEx(FAILED, "retrying one more time");
                 continue;
@@ -902,10 +902,10 @@ static int CmdHFXeroxDump(const char *Cmd) {
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += snprintf(fptr, sizeof(filename), "hf-xerox-");
         FillFileNameByUID(fptr
-            , SwapEndian64(card.uid, card.uidlen, 8)
-            , (decrypt) ? "-dump-dec" : "-dump"
-            , card.uidlen
-        );
+                          , SwapEndian64(card.uid, card.uidlen, 8)
+                          , (decrypt) ? "-dump-dec" : "-dump"
+                          , card.uidlen
+                         );
     }
 
     pm3_save_dump(filename, data, blockno * XEROX_BLOCK_SIZE, jsf14b_v2);
@@ -956,7 +956,7 @@ static int CmdHFXeroxView(const char *Cmd) {
 
     char pn[13];
     xerox_generate_partno(tmp, pn);
-    
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------- " _CYAN_("tag memory") " ---------");
     PrintAndLogEx(SUCCESS, " PartNo... %s", pn);
@@ -969,9 +969,9 @@ static int CmdHFXeroxView(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Color..... %s", item->color);
         PrintAndLogEx(SUCCESS, "Region.... %s", item->region);
         PrintAndLogEx(SUCCESS, "M/s....... %s", item->ms);
-    } 
+    }
     xerox_print_hdr();
-    xerox_print(dump, bytes_read);   
+    xerox_print(dump, bytes_read);
     xerox_print_footer();
 
     free(dump);
@@ -985,7 +985,7 @@ static int CmdHFXeroxList(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",      CmdHelp,           AlwaysAvailable, "This help"},
     {"list",      CmdHFXeroxList,    AlwaysAvailable, "List ISO-14443B history"},
-    {"--------",  CmdHelp,           AlwaysAvailable, "----------------------- " _CYAN_("general") " -----------------------"},    
+    {"--------",  CmdHelp,           AlwaysAvailable, "----------------------- " _CYAN_("general") " -----------------------"},
     {"info",      CmdHFXeroxInfo,    IfPm3Iso14443b,  "Short info on Fuji/Xerox tag"},
     {"dump",      CmdHFXeroxDump,    IfPm3Iso14443b,  "Read all memory pages of an Fuji/Xerox tag, save to file"},
     {"reader",    CmdHFXeroxReader,  IfPm3Iso14443b,  "Act like a Fuji/Xerox reader"},

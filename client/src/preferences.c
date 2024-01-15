@@ -391,7 +391,7 @@ static const char *pref_show_status_msg(prefShowOpt_t opt) {
     }
 }
 
-static const char *pref_show_value(prefShowOpt_t opt, const char* msg) {
+static const char *pref_show_value(prefShowOpt_t opt, const char *msg) {
 
     static char s[128] = {0};
     switch (opt) {
@@ -403,7 +403,7 @@ static const char *pref_show_value(prefShowOpt_t opt, const char* msg) {
             sprintf(s, _GREEN_("%s"), msg);
             return s;
         case prefShowNone:
-            if ((strncmp(msg, "off", 3) == 0) || (strncmp(msg, "normal", 6) ==0)) {
+            if ((strncmp(msg, "off", 3) == 0) || (strncmp(msg, "normal", 6) == 0)) {
                 sprintf(s, _WHITE_("%s"), msg);
             } else {
                 sprintf(s, _GREEN_("%s"), msg);
@@ -446,9 +446,9 @@ static void showEmojiState(prefShowOpt_t opt) {
 
 static void showColorState(prefShowOpt_t opt) {
     PrintAndLogEx(INFO, "   %s color................... %s "
-        , pref_show_status_msg(opt)
-        , (g_session.supports_colors) ? pref_show_value(opt, "ansi") : pref_show_value(opt, "off")
-    );
+                  , pref_show_status_msg(opt)
+                  , (g_session.supports_colors) ? pref_show_value(opt, "ansi") : pref_show_value(opt, "off")
+                 );
 }
 
 static void showClientDebugState(prefShowOpt_t opt) {
@@ -461,7 +461,7 @@ static void showClientDebugState(prefShowOpt_t opt) {
             PrintAndLogEx(INFO, "   %s client debug............ %s", pref_show_status_msg(opt), pref_show_value(opt, "simple"));
             break;
         case cdbFULL:
-            PrintAndLogEx(INFO, "   %s client debug............ %s", pref_show_status_msg(opt), pref_show_value(opt,"full"));
+            PrintAndLogEx(INFO, "   %s client debug............ %s", pref_show_status_msg(opt), pref_show_value(opt, "full"));
             break;
         default:
             PrintAndLogEx(INFO, "   %s client debug............ %s", pref_show_status_msg(opt), pref_show_value(prefShowUnknown, "unknown"));
@@ -545,40 +545,40 @@ static void showOverlayPosState(void) {
 
 static void showHintsState(prefShowOpt_t opt) {
     PrintAndLogEx(INFO, "   %s hints................... %s"
-        , pref_show_status_msg(opt)
-        , (g_session.show_hints) ? pref_show_value(opt,"on") : pref_show_value(opt,"off")
-    );
+                  , pref_show_status_msg(opt)
+                  , (g_session.show_hints) ? pref_show_value(opt, "on") : pref_show_value(opt, "off")
+                 );
 }
 
 static void showPlotSliderState(prefShowOpt_t opt) {
     PrintAndLogEx(INFO, "   %s show plot sliders....... %s"
-        , pref_show_status_msg(opt)
-        , (g_session.overlay_sliders) ? pref_show_value(opt,"on") : pref_show_value(opt,"off")
-    );
+                  , pref_show_status_msg(opt)
+                  , (g_session.overlay_sliders) ? pref_show_value(opt, "on") : pref_show_value(opt, "off")
+                 );
 }
 
 static void showBarModeState(prefShowOpt_t opt) {
 
     switch (g_session.bar_mode) {
         case STYLE_BAR:
-            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(opt,"bar"));
+            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(opt, "bar"));
             break;
         case STYLE_MIXED:
-            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(opt,"mixed"));
+            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(opt, "mixed"));
             break;
         case STYLE_VALUE:
-            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(opt,"value"));
+            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(opt, "value"));
             break;
         default:
-            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(prefShowUnknown,"unknown"));
+            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(prefShowUnknown, "unknown"));
     }
 }
 
 static void showOutputState(prefShowOpt_t opt) {
     PrintAndLogEx(INFO, "   %s output.................. %s"
-        , pref_show_status_msg(opt)
-        , (g_session.dense_output) ? pref_show_value(opt,"dense") : pref_show_value(opt,"normal")
-    );
+                  , pref_show_status_msg(opt)
+                  , (g_session.dense_output) ? pref_show_value(opt, "dense") : pref_show_value(opt, "normal")
+                 );
 }
 
 static void showClientExeDelayState(void) {

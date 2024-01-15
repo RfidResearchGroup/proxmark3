@@ -2025,7 +2025,7 @@ int CmdTuneSamples(const char *Cmd) {
 
         // Q measure with Vlr=Q*(2*Vdd/pi)
         double lfq2 = (double)package->peak_v * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "Peak voltage............ " _YELLOW_("%.1lf") , lfq2);
+        PrintAndLogEx(SUCCESS, "Peak voltage............ " _YELLOW_("%.1lf"), lfq2);
         // cross-check results
         if (lfq1 > 3) {
             double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
@@ -2073,7 +2073,7 @@ int CmdTuneSamples(const char *Cmd) {
     if (package->v_hf >= HF_UNUSABLE_V) {
         // Q measure with Vlr=Q*(2*Vdd/pi)
         double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "peak voltage............ " _YELLOW_("%.1lf") , hfq);
+        PrintAndLogEx(SUCCESS, "peak voltage............ " _YELLOW_("%.1lf"), hfq);
     }
 
     if (package->v_hf < HF_UNUSABLE_V)
@@ -2098,13 +2098,13 @@ int CmdTuneSamples(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "-------- " _CYAN_("LF tuning graph") " ---------");
         PrintAndLogEx(SUCCESS, "Blue line  Divisor %d / %.2f kHz"
-                , LF_DIVISOR_134
-                , LF_DIV2FREQ(LF_DIVISOR_134)
-                );
+                      , LF_DIVISOR_134
+                      , LF_DIV2FREQ(LF_DIVISOR_134)
+                     );
         PrintAndLogEx(SUCCESS, "Red line   Divisor %d / %.2f kHz\n\n"
-                , LF_DIVISOR_125
-                , LF_DIV2FREQ(LF_DIVISOR_125)
-                );
+                      , LF_DIVISOR_125
+                      , LF_DIV2FREQ(LF_DIVISOR_125)
+                     );
         g_GraphTraceLen = 256;
         g_CursorCPos = LF_DIVISOR_125;
         g_CursorDPos = LF_DIVISOR_134;
@@ -3208,7 +3208,7 @@ static int CmdDiff(const char *Cmd) {
         PrintAndLogEx(INFO, "inB null");
     }
 
-    
+
     char hdr0[400] = {0};
 
     int hdr_sln = (width * 4) + 2;
@@ -3224,13 +3224,13 @@ static int CmdDiff(const char *Cmd) {
         fnlenB = strlen(filenameB);
     }
 
-    if (fnlenA && fnlenB ) {
-       
+    if (fnlenA && fnlenB) {
+
         snprintf(hdr0, sizeof(hdr0) - 1, " #  | " _CYAN_("%.*s"), max_fn_space, filenameA);
 
         // add space if needed
         int padding_len = (hdr_sln - fnlenA - 1);
-        if ( padding_len > 0 ) {
+        if (padding_len > 0) {
             memset(hdr0 + strlen(hdr0), ' ', padding_len);
         }
         snprintf(hdr0 + strlen(hdr0), sizeof(hdr0) - 1 - strlen(hdr0), "| " _CYAN_("%.*s"), max_fn_space, filenameB);

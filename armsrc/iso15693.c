@@ -2461,7 +2461,7 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
     // This is part of ISO15693 protocol definitions where the following commands needs to request option.
     // note:
     //     it seem like previous we just guessed and never followed the fISO145_REQ_OPTION flag if it was set / not set from client side.
-    //     this is a problem.   Since without this the response from the tag is one byte shorter.   And a lot of client side functions has been 
+    //     this is a problem.   Since without this the response from the tag is one byte shorter.   And a lot of client side functions has been
     //     hardcoded to assume for the extra byte in the response.
 
     bool request_answer = false;
