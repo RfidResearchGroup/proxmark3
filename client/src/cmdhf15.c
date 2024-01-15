@@ -698,6 +698,7 @@ static int CmdHF15Samples(const char *Cmd) {
     getSamples(0, true);
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 15 demod") "` to decode signal");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -1091,6 +1092,7 @@ static int CmdHF15Sniff(const char *Cmd) {
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 15 list") "` to view captured tracelog");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -1391,13 +1393,19 @@ static int CmdHF15Sim(const char *Cmd) {
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
     if (uidlen != HF15_UID_LENGTH) {
-        PrintAndLogEx(WARNING, "UID must include 16 HEX symbols");
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     payload.block_size = arg_get_int_def(ctx, 2, 4);
     CLIParserFree(ctx);
+
+    // santity checks
+    if (payload.block_size < 4) {
+        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
+        payload.block_size = 4;
+    }
 
     PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
     PrintAndLogEx(INFO, "Press " _YELLOW_("`pm3-button`") " to abort simulation");
@@ -1470,7 +1478,7 @@ static int CmdHF15FindAfi(const char *Cmd) {
     }
 
     DropField();
-    PrintAndLogEx(INFO, "Done");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -1547,11 +1555,11 @@ static int CmdHF15WriteAfi(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "error writing AFI");
+            PrintAndLogEx(WARNING, "Writing AFI ( " _RED_("fail") " )");
             break;
         }
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "Wrote AFI 0x%02X", payload.afi);
+            PrintAndLogEx(SUCCESS, "Wrote AFI 0x%02X ( " _GREEN_("ok") " )", payload.afi);
             break;
         }
     }
@@ -2633,8 +2641,8 @@ static int CmdHF15Restore(const char *Cmd) {
     DropField();
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "done");
     PrintAndLogEx(HINT, "try `" _YELLOW_("hf 15 dump") "` to read your card to verify");
+    PrintAndLogEx(INFO, "Done!");    
     return PM3_SUCCESS;
 }
 
@@ -2665,7 +2673,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (uidlen != HF15_UID_LENGTH) {
-        PrintAndLogEx(WARNING, "UID must include 16 HEX symbols, got " _RED_("%i"), uidlen);
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got " _RED_("%i"), uidlen);
         return PM3_EINVARG;
     }
 
@@ -2674,9 +2682,9 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "reverse input UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
+    PrintAndLogEx(SUCCESS, "Reverse input UID... " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
 
-    PrintAndLogEx(INFO, "getting current card details...");
+    PrintAndLogEx(INFO, "Getting current card details...");
 
     uint8_t carduid[HF15_UID_LENGTH] = {0x00};
     if (getUID(true, false, carduid) != PM3_SUCCESS) {
@@ -2684,7 +2692,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "updating tag uid...");
+    PrintAndLogEx(INFO, "Updating tag uid...");
 
     PacketResponseNG resp;
     clearCommandBuffer();
@@ -2695,7 +2703,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "verifying write...");
+    PrintAndLogEx(INFO, "Verifying write...");
 
     if (getUID(true, false, carduid) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "no tag found");
@@ -2707,11 +2715,11 @@ static int CmdHF15CSetUID(const char *Cmd) {
     reverse_array_copy(carduid, sizeof(carduid), revuid);
 
     if (memcmp(revuid, payload.uid, HF15_UID_LENGTH) == 0) {
-        PrintAndLogEx(SUCCESS, "setting new UID ( " _GREEN_("ok") " )");
+        PrintAndLogEx(SUCCESS, "Setting new UID ( " _GREEN_("ok") " )");
         return PM3_SUCCESS;;
     }
 
-    PrintAndLogEx(FAILED, "setting new UID ( " _RED_("fail") " )");
+    PrintAndLogEx(FAILED, "Setting new UID ( " _RED_("fail") " )");
     return PM3_ESOFT;
 }
 
@@ -2770,14 +2778,14 @@ static int CmdHF15SlixEASEnable(const char *Cmd) {
         }
         case PM3_EWRONGANSWER: {
             if (pwdlen > 0) {
-                PrintAndLogEx(WARNING, "the password provided was not accepted");
+                PrintAndLogEx(WARNING, "Password provided was not accepted ( " _RED_("fail") " )");
             } else {
-                PrintAndLogEx(WARNING, "either a password is required or EAS mode is locked");
+                PrintAndLogEx(WARNING, "Either password is required or EAS mode is locked ( " _RED_("fail") " )");
             }
             break;
         }
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "EAS mode is now enabled ( " _GREEN_("ok") " ) ");
+            PrintAndLogEx(SUCCESS, "EAS mode is enabled ( " _GREEN_("ok") " ) ");
             break;
         }
     }
@@ -2839,14 +2847,14 @@ static int CmdHF15SlixEASDisable(const char *Cmd) {
         }
         case PM3_EWRONGANSWER: {
             if (pwdlen > 0) {
-                PrintAndLogEx(WARNING, "the password provided was not accepted");
+                PrintAndLogEx(WARNING, "Password provided was not accepted ( " _RED_("fail") " )");
             } else {
-                PrintAndLogEx(WARNING, "either a password is required or EAS mode is locked");
+                PrintAndLogEx(WARNING, "Either password is required or EAS mode is locked ( " _RED_("fail") " )");
             }
             break;
         }
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "EAS mode is now disabled ( " _GREEN_("ok") " ) ");
+            PrintAndLogEx(SUCCESS, "EAS mode is disabled ( " _GREEN_("ok") " ) ");
             break;
         }
     }
@@ -2892,11 +2900,11 @@ static int CmdHF15SlixDisable(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "password was not accepted");
+            PrintAndLogEx(WARNING, "Password was not accepted ( " _RED_("fail") " )");
             break;
         }
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "privacy mode is now disabled ( " _GREEN_("ok") " ) ");
+            PrintAndLogEx(SUCCESS, "Privacy mode is disabled ( " _GREEN_("ok") " ) ");
             break;
         }
     }
@@ -2942,11 +2950,11 @@ static int CmdHF15SlixEnable(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "password was not accepted");
+            PrintAndLogEx(WARNING, "Password was not accepted ( " _RED_("fail") " )");
             break;
         }
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "privacy mode is now enabled ( " _GREEN_("ok") " ) ");
+            PrintAndLogEx(SUCCESS, "Privacy mode is enabled ( " _GREEN_("ok") " ) ");
             break;
         }
     }
@@ -3038,11 +3046,11 @@ static int CmdHF15SlixWritePassword(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "password was not accepted");
+            PrintAndLogEx(WARNING, "Password was not accepted ( " _RED_("fail") " )");
             break;
         }
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "password written ( " _GREEN_("ok") " ) ");
+            PrintAndLogEx(SUCCESS, "Password written ( " _GREEN_("ok") " ) ");
             break;
         }
     }
@@ -3103,7 +3111,7 @@ static int CmdHF15AFIPassProtect(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "error enabling AFI password protection");
+            PrintAndLogEx(WARNING, "Enabling AFI password protection ( " _RED_("fail") " )");
             break;
         }
         case PM3_SUCCESS: {
@@ -3169,7 +3177,7 @@ static int CmdHF15EASPassProtect(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "error enabling EAS password protection");
+            PrintAndLogEx(WARNING, "Enabling EAS password protection ( " _RED_("fail") " )");
             break;
         }
         case PM3_SUCCESS: {
@@ -3304,7 +3312,7 @@ static int CmdHF15Wipe(const char *Cmd) {
 
     DropField();
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "done");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
