@@ -97,8 +97,6 @@
 }
 #endif
 
-
-
 typedef struct {
     uint8_t lock;
     uint8_t block[8];
@@ -2680,9 +2678,9 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Reverse input UID... " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
+    PrintAndLogEx(DEBUG, "Reverse input UID... " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
 
-    PrintAndLogEx(INFO, "Getting current card details...");
+    PrintAndLogEx(INFO, "Get current tag");
 
     uint8_t carduid[HF15_UID_LENGTH] = {0x00};
     if (getUID(true, false, carduid) != PM3_SUCCESS) {
@@ -2690,8 +2688,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "Updating tag uid...");
-
+    PrintAndLogEx(INFO, "Writing...");
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_CSETUID, (uint8_t *)&payload, sizeof(payload));
@@ -2701,7 +2698,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "Verifying write...");
+    PrintAndLogEx(INFO, "Verifying...");
 
     if (getUID(true, false, carduid) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "no tag found");
@@ -2714,10 +2711,12 @@ static int CmdHF15CSetUID(const char *Cmd) {
 
     if (memcmp(revuid, payload.uid, HF15_UID_LENGTH) == 0) {
         PrintAndLogEx(SUCCESS, "Setting new UID ( " _GREEN_("ok") " )");
+        PrintAndLogEx(NORMAL, "");
         return PM3_SUCCESS;;
     }
 
     PrintAndLogEx(FAILED, "Setting new UID ( " _RED_("fail") " )");
+    PrintAndLogEx(NORMAL, "");
     return PM3_ESOFT;
 }
 

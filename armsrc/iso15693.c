@@ -2648,10 +2648,9 @@ void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
 void SetTag15693Uid(const uint8_t *uid) {
 
     LED_A_ON();
-
     uint8_t cmd[4][9] = {
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3e, 0x00, 0x00, 0x00, 0x00},
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3f, 0x69, 0x96, 0x00, 0x00},
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3e, 0x00, 0x00, 0x00, 0x00, 0xE9, 0x8F},
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3f, 0x69, 0x96, 0x00, 0x00, 0x8A, 0xBB},
         {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x38},
         {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x39}
     };
@@ -2668,29 +2667,31 @@ void SetTag15693Uid(const uint8_t *uid) {
     cmd[3][5] = uid[1];
     cmd[3][6] = uid[0];
 
-    AddCrc15(cmd[0], 7);
-    AddCrc15(cmd[1], 7);
     AddCrc15(cmd[2], 7);
     AddCrc15(cmd[3], 7);
 
-    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    uint8_t buf[ISO15693_MAX_RESPONSE_LENGTH] = {0x00};
 
     uint32_t start_time = 0;
     uint32_t eof_time = 0;
     uint16_t recvlen = 0;
+
     int res = PM3_SUCCESS;
+
     for (int i = 0; i < 4; i++) {
         res = SendDataTag(
-                  cmd[i],
-                  sizeof(cmd[i]),
-                  (i == 0) ? true : false,
-                  true,
-                  recvbuf,
-                  sizeof(recvbuf),
-                  start_time,
-                  ISO15693_READER_TIMEOUT_WRITE,
-                  &eof_time,
-                  &recvlen);
+                cmd[i],
+                sizeof(cmd[i]),
+                (i == 0) ? true : false,
+                true,
+                buf,
+                sizeof(buf),
+                start_time,
+                ISO15693_READER_TIMEOUT_WRITE,
+                &eof_time,
+                &recvlen
+        );
+
         start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
     }
 
