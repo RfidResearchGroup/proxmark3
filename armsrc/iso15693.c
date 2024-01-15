@@ -1739,7 +1739,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
         }
 
         // no need to try decoding reader data if the tag is sending
-        if (!tag_is_active) {
+        if (tag_is_active == false) {
 
             int extra_8s = 1;
             if (Handle15693SampleFromReader((sniffdata & 0x02) >> 1, &dreader) ||
@@ -1756,7 +1756,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
                     // sof/eof_times * 4 here to bring from ssp_clk freq to RF carrier freq
                     LogTrace_ISO15693(dreader.output, dreader.byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
 
-                    if (!iclass) { // Those flags don't exist in iClass
+                    if (iclass == false) { // Those flags don't exist in iClass
                         expect_fsk_answer = dreader.output[0] & ISO15_REQ_SUBCARRIER_TWO;
                         expect_fast_answer = dreader.output[0] & ISO15_REQ_DATARATE_HIGH;
                     }
@@ -1774,17 +1774,19 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
         }
 
         // no need to try decoding tag data if the reader is currently sending or no answer expected yet
-        if (!reader_is_active && expect_tag_answer) {
+        if ((reader_is_active == false) && expect_tag_answer) {
 
-            if (!expect_fsk_answer) {
+            if (expect_fsk_answer == false) {
                 // single subcarrier tag response
                 if (Handle15693SamplesFromTag((sniffdata >> 4) << 2, &dtag, expect_fast_answer)) {
 
                     // sof/eof_times are in ssp_clk, which is 13.56MHz / 4
                     uint32_t eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
+
                     if (dtag.lastBit == SOF_PART2) {
                         eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
                     }
+
                     uint32_t sof_time = eof_time
                                         - dtag.len * 1024 // time for byte transfers (4096/fc / 4)
                                         - 512             // time for SOF transfer (2048/fc / 4)
@@ -1802,18 +1804,22 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
                 } else {
                     tag_is_active = (dtag.state >= STATE_TAG_RECEIVING_DATA);
                 }
+
             } else {
                 // dual subcarrier tag response
-                if (FREQ_IS_0((sniffdata >> 2) & 0x3)) // tolerate 1 00
+                if (FREQ_IS_0((sniffdata >> 2) & 0x3))  { // tolerate 1 00
                     sniffdata = sniffdata_prev;
+                }
 
                 if (Handle15693FSKSamplesFromTag((sniffdata >> 2) & 0x3, &dtagfsk, expect_fast_answer)) {
                     if (dtagfsk.len > 0) {
                         // sof/eof_times are in ssp_clk, which is 13.56MHz / 4
                         uint32_t eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
+
                         if (dtagfsk.lastBit == SOF) {
                             eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
                         }
+
                         uint32_t sof_time = eof_time
                                             - dtagfsk.len * 1016 // time for byte transfers (4064/fc / 4) - FSK is slightly different
                                             - 512                // time for SOF transfer (2048/fc / 4)
@@ -2489,6 +2495,12 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
     if (res == PM3_ETEAROFF) { // tearoff occurred
         reply_ng(CMD_HF_ISO15693_COMMAND, res, NULL, 0);
     } else {
+
+        // if tag answers with an error code,  it don't care about EOF packet
+        if (recvlen) {
+            recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
+            reply_ng(CMD_HF_ISO15693_COMMAND, res, buf, recvlen);
+        }
 
         // looking at the first byte of the RAW bytes to determine Subcarrier, datarate, request option
         bool fsk = ((packet->raw[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);

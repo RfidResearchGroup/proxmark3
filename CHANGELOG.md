@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf 15 wipe` - fills card memory with zeros (@iceman1001)
  - Changed `hf xerox info` - now prints some part info (@iceman1001)
  - Added `hf xerox view` - view dump files of fuji/xerox tags (@iceman1001)
  - Changed `hf 15 findafi` - improved the params (@iceman1001)

@@ -82,8 +82,13 @@
 #define ISO15_ERROR_HANDLING_CARD_RESPONSE(data, len) { \
     if ((check_crc(CRC_15693, (data), (len))) == false) { \
         PrintAndLogEx(FAILED, "crc ( " _RED_("fail") " )"); \
-        return PM3_ESOFT; \
+        return PM3_ECRC; \
     } \
+ \
+    if (data[1] == 0x0F || data[1] == 0x10) { \
+        return PM3_EOUTOFBOUND; \
+    } \
+ \
     if ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) { \
         PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", d[0], TagErrorStr(d[0])); \
         return PM3_EWRONGANSWER; \
@@ -2305,7 +2310,7 @@ static int CmdHF15Readblock(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int hf_15_write_blk(uint16_t flags, uint8_t *uid, bool fast, uint8_t blockno, uint8_t *data, uint8_t dlen) {
+static int hf_15_write_blk(uint8_t *pm3flags, uint16_t flags, uint8_t *uid, bool fast, uint8_t blockno, uint8_t *data, uint8_t dlen) {
 
     // request to be sent to device/card
     //   2 + 8 + 1 + (4|8) + 2
@@ -2335,9 +2340,13 @@ static int hf_15_write_blk(uint16_t flags, uint8_t *uid, bool fast, uint8_t bloc
     packet->rawlen += 2;
 
     // PM3 params
-    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT);
-    if (fast) {
-        packet->flags |= ISO15_HIGH_SPEED;
+    if (pm3flags ) {
+        packet->flags = *pm3flags;
+    } else {
+        packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT);
+        if (fast) {
+            packet->flags |= ISO15_HIGH_SPEED;
+        }
     }
 
     clearCommandBuffer();
@@ -2407,16 +2416,6 @@ static int CmdHF15Write(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    // enforcing add_option since we are writing.
-    /*
-    if (add_option == false) {
-        if (verbose) {
-            PrintAndLogEx(INFO, "Overriding OPTION param since we are writing (ENFORCE)");
-        }
-        add_option = true;
-    }
-    */
-
     // default fallback to scan for tag.
     // overriding unaddress parameter :)
     if (unaddressed == false) {
@@ -2434,7 +2433,6 @@ static int CmdHF15Write(const char *Cmd) {
     }
 
     // TI needs OPTION
-    PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), sprint_hex_inrow(uid, 8));
     if (uid[7] == 0xE0 && uid[6] == 0x07) {
         if (verbose) {
             PrintAndLogEx(INFO, "Overriding OPTION param, writing to TI tag");
@@ -2444,7 +2442,7 @@ static int CmdHF15Write(const char *Cmd) {
 
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
 
-    int res = hf_15_write_blk(flags, ((unaddressed) ? NULL : uid), fast, (uint8_t)blockno, d, dlen);
+    int res = hf_15_write_blk(NULL, flags, ((unaddressed) ? NULL : uid), fast, (uint8_t)blockno, d, dlen);
 
     if (res == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Writing to page %02d (0x%02X) | %s  ( " _GREEN_("ok") " )", blockno, blockno, sprint_hex(d, dlen));
@@ -2507,14 +2505,6 @@ static int CmdHF15Restore(const char *Cmd) {
         scan = true;
     }
 
-    // enforcing add_option since we are writing.
-    if (add_option == false) {
-        if (verbose) {
-            PrintAndLogEx(INFO, "Overriding OPTION param since we are writing (ENFORCE)");
-        }
-        add_option = true;
-    }
-
     if (unaddressed == false) {
         if (scan) {
             if (getUID(verbose, false, uid) != PM3_SUCCESS) {
@@ -2530,6 +2520,14 @@ static int CmdHF15Restore(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Using block size... " _YELLOW_("%d"), blocksize);
+
+    // TI needs OPTION
+    if (uid[7] == 0xE0 && uid[6] == 0x07) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "Overriding OPTION param, writing to TI tag");
+        }
+        add_option = true;
+    }
 
     // read dump file
     uint8_t *dump = NULL;
@@ -2547,10 +2545,13 @@ static int CmdHF15Restore(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "restoring data blocks");
-    PrintAndLogEx(INFO, "." NOLF);
-    fflush(stdout);
 
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+
+    uint8_t pm3flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT | ISO15_NO_DISCONNECT);
+    if (fast) {
+        pm3flags |= ISO15_HIGH_SPEED;
+    }
 
     int retval = PM3_SUCCESS;
     size_t bytes = 0;
@@ -2565,10 +2566,21 @@ static int CmdHF15Restore(const char *Cmd) {
         uint32_t tried = 0;
         for (tried = 0; tried < retries; tried++) {
 
-            retval = hf_15_write_blk(flags, uid, fast, i, data, blocksize);
+            retval = hf_15_write_blk(&pm3flags, flags, uid, fast, i, data, blocksize);
             if (retval == PM3_SUCCESS) {
-                PrintAndLogEx(NORMAL, "." NOLF);
-                fflush(stdout);
+
+                PrintAndLogEx(INPLACE, "blk %3d", i);
+
+                if (i == 0) {
+                    pm3flags = (ISO15_READ_RESPONSE | ISO15_LONG_WAIT | ISO15_NO_DISCONNECT);
+                    if (fast) {
+                        pm3flags |= ISO15_HIGH_SPEED;
+                    }
+                }
+                break;
+            } else if (retval == PM3_EOUTOFBOUND) {
+                // we only get this when we reached end of tag memory
+                // break out of retry loop
                 break;
             }
         }
@@ -2577,12 +2589,22 @@ static int CmdHF15Restore(const char *Cmd) {
             free(dump);
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(FAILED, "restore failed. Too many retries.");
+            DropField();
             return retval;
         }
+
         bytes += blocksize;
         i++;
+
+        if (retval == PM3_EOUTOFBOUND) {
+            // we only get this when we reached end of tag memory
+            // break out of while loop
+            break;
+        }
     }
+
     free(dump);
+    DropField();
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "done");
@@ -3166,6 +3188,100 @@ static int CmdHF15View(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF15Wipe(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 wipe",
+                  "Wipe a ISO-15693 tag by filled memory with zeros",
+                  "hf 15 wipe\n"
+                 );
+    void *argtable[6 + 3] = {0};
+    uint8_t arglen = arg_add_default(argtable);
+    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_param_end;
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t uid[HF15_UID_LENGTH];
+    int uidlen = 0;
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    bool uid_set = (uidlen == HF15_UID_LENGTH) ? true : false;
+
+    bool unaddressed = arg_get_lit(ctx, 2);
+    bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; // Default fallback to scan for tag. Overriding unaddressed parameter.
+    bool fast = (arg_get_lit(ctx, 4) == false);
+    bool add_option = arg_get_lit(ctx, 5);
+
+    int blocksize = arg_get_int_def(ctx, 6, 4);
+    bool verbose = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    // sanity checks
+    if ((scan + unaddressed + uid_set) > 1) {
+        PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
+    }
+
+    if (blocksize < 4) {
+        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
+        blocksize = 4;
+    }
+
+    // default fallback to scan for tag.
+    // overriding unaddress parameter :)
+    if (unaddressed == false) {
+        if (scan) {
+            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "no tag found");
+                return PM3_EINVARG;
+            }
+        } else {
+            reverse_array(uid, HF15_UID_LENGTH);
+        }
+    } else {
+        PrintAndLogEx(SUCCESS, "Using unaddressed mode");
+    }
+
+    // TI needs OPTION
+    if (uid[7] == 0xE0 && uid[6] == 0x07) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "Overriding OPTION param, writing to TI tag");
+        }
+        add_option = true;
+    }
+
+    PrintAndLogEx(INFO, "Wiping tag...");
+
+    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+    uint8_t empty[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    uint8_t pm3flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT | ISO15_NO_DISCONNECT);
+    if (fast) {
+        pm3flags |= ISO15_HIGH_SPEED;
+    }
+
+    for (uint16_t i = 0; i < 0x100; i++) {
+
+        PrintAndLogEx(INPLACE, "blk %3d", i);
+
+        int res = hf_15_write_blk(&pm3flags, flags, ((unaddressed) ? NULL : uid), fast, i, empty, blocksize);
+        if (res == PM3_SUCCESS) {
+            if (i == 0) {
+                pm3flags = (ISO15_READ_RESPONSE | ISO15_LONG_WAIT | ISO15_NO_DISCONNECT);
+                if (fast) {
+                    pm3flags |= ISO15_HIGH_SPEED;
+                }
+            }
+        } else {
+            break;
+        }
+    }
+
+    DropField();
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "done");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",                CmdHF15Help,              AlwaysAvailable, "This help"},
     {"list",                CmdHF15List,              AlwaysAvailable, "List ISO-15693 history"},
@@ -3181,6 +3297,7 @@ static command_t CommandTable[] = {
     {"restore",             CmdHF15Restore,           IfPm3Iso15693,   "Restore from file to all memory pages of an ISO-15693 tag"},
     {"samples",             CmdHF15Samples,           IfPm3Iso15693,   "Acquire samples as reader (enables carrier, sends inquiry)"},
     {"view",                CmdHF15View,              AlwaysAvailable, "Display content from tag dump file"},
+    {"wipe",                CmdHF15Wipe,              IfPm3Iso15693,   "Wipe card to zeros"},
     {"wrbl",                CmdHF15Write,             IfPm3Iso15693,   "Write a block"},
     {"-----------",         CmdHF15Help,              IfPm3Iso15693,   "--------------------- " _CYAN_("simulation") " ----------------------"},
     {"sim",                 CmdHF15Sim,               IfPm3Iso15693,   "Fake an ISO-15693 tag"},
