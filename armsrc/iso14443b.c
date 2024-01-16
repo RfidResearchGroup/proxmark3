@@ -2138,7 +2138,7 @@ static int iso14443b_select_picopass_card(picopass_hdr_t *hdr) {
 
     // 0x0C
     // start_time = eof_time + ISO14B_TR2;
-    start_time = eof_time + US_TO_SSP(1000);    // 330ms before next cmd
+    start_time = eof_time + US_TO_SSP(330);    // 330ms before next cmd
     CodeAndTransmit14443bAsReader(identify, sizeof(identify), &start_time, &eof_time, true);
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
 
