@@ -1398,12 +1398,12 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         arg_lit0("r",  NULL,              "Do not read response"),
         arg_lit0("s",  NULL,              "Active signal field ON with select"),
         arg_int0("t",  "timeout", "<ms>", "Timeout in milliseconds"),
-        arg_int0("b",  NULL,      "<dec>","Number of bits to send. Useful for send partial byte"),
+        arg_int0("b",  NULL,      "<dec>", "Number of bits to send. Useful for send partial byte"),
         arg_lit0("v",  "verbose",         "Verbose output"),
         arg_lit0(NULL, "ecp",             "Use enhanced contactless polling"),
         arg_lit0(NULL, "mag",             "Use Apple magsafe polling"),
         arg_lit0(NULL, "topaz",           "Use Topaz protocol to send command"),
-        arg_strx1(NULL, NULL,     "<hex>","Raw bytes to send"),
+        arg_strx1(NULL, NULL,     "<hex>", "Raw bytes to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
