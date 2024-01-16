@@ -1254,12 +1254,6 @@ static bool iclass_send_cmd_with_retries(uint8_t *cmd, size_t cmdsize, uint8_t *
         if (res == PM3_SUCCESS && expected_size == resp_len) {
             return true;
         }
-
-        // Timed out waiting for the tag to reply, but perhaps the tag did hear the command and is attempting to reply
-        // So wait long enough for the tag to encode it's reply plus required frame delays on each side before retrying
-        // And then double it, because in practice it seems to make it much more likely to succeed
-        // Response time calculation from expected_size lifted from GetIso15693AnswerFromTag
-        *start_time = *eof_time + ((DELAY_ICLASS_VICC_TO_VCD_READER + DELAY_ISO15693_VCD_TO_VICC_READER + (expected_size * 8 * 8 * 16)) * 2);
     }
     return false;
 }
@@ -1745,7 +1739,7 @@ void iClass_Dump(uint8_t *msg) {
         } PACKED response;
 
         response.isOK = dumpsuccess;
-        response.block_cnt = i - cmd->start_block;
+        response.block_cnt = i;
         response.bb_offset = dataout - BigBuf_get_addr();
         reply_ng(CMD_HF_ICLASS_DUMP, PM3_SUCCESS, (uint8_t *)&response, sizeof(response));
     }

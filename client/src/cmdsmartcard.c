@@ -1091,7 +1091,6 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         if (json_is_object(data) == false) {
             PrintAndLogEx(ERR, "\ndata %d is not an object\n", i + 1);
             json_decref(root);
-            free(buf);
             return PM3_ESOFT;
         }
 
@@ -1099,7 +1098,6 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         if (json_is_string(jaid) == false) {
             PrintAndLogEx(ERR, "\nAID data [%d] is not a string", i + 1);
             json_decref(root);
-            free(buf);
             return PM3_ESOFT;
         }
 
@@ -1266,8 +1264,7 @@ static int CmdRelay(const char *Cmd) {
     mbedtls_net_context netCtx;
     mbedtls_net_init(&netCtx);
 
-    PrintAndLogEx(INFO, "Relaying PM3 to host OS pcsc daemon");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(INFO, "Relaying pm3 to host OS pcsc daemon. Press " _GREEN_("Enter") " to exit");
 
     uint8_t cmdbuf[512] = {0};
     iso14a_card_select_t selectedCard14a;
@@ -1315,7 +1312,7 @@ static int CmdRelay(const char *Cmd) {
                             continue;
                         }
                     } else if (cardType == ISODEP_NFCB) {
-                        if (exchange_14b_apdu(cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen, 0))    {
+                        if (exchange_14b_apdu(cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen, 0))	{
                             cardType = ISODEP_INACTIVE;
                             mbedtls_net_close(&netCtx);
                             continue;
@@ -1405,7 +1402,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
     int len = smart_responseEx(dataout, maxdataoutlen, verbose);
     if (len < 0) {
         free(payload);
-        return PM3_ESOFT;
+        return 1;
     }
 
     // retry
@@ -1420,15 +1417,11 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
         SendCommandNG(CMD_SMART_RAW, (uint8_t *)payload, sizeof(smart_card_raw_t) + 5);
         datain[4] = 0;
         len = smart_responseEx(dataout, maxdataoutlen, verbose);
-        if (len < 0) {
-            free(payload);
-            return PM3_ESOFT;
-        }
     }
 
     free(payload);
     *dataoutlen = len;
-    return PM3_SUCCESS;
+    return 0;
 }
 
 bool smart_select(bool verbose, smart_card_atr_t *atr) {
@@ -1461,3 +1454,5 @@ bool smart_select(bool verbose, smart_card_atr_t *atr) {
 
     return true;
 }
+
+

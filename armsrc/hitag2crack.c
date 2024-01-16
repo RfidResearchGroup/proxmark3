@@ -339,7 +339,7 @@ bool hitag2crack_read_page(uint8_t *responsestr, uint8_t pagenum, uint8_t *nrar,
             // decrypt response
             hitag2crack_xor(response, e_response, keybits + 10, 32);
             // convert to hexstring
-            binarray_2_hex(responsestr, response, 32);
+            binarraytohex(responsestr, response, 32);
             return true;
         } else {
             UserMessage("hitag2crack_read_page:\r\n hitag2crack_send_e_cmd returned ERROR_RESPONSE\r\n");
@@ -424,7 +424,7 @@ bool hitag2crack_tx_rx(uint8_t *responsestr, uint8_t *msg, int len, int state, b
         }
 
         // convert response to hexstring
-        binarray_2_hex(responsestr, tmp + 5, 32);
+        binarraytohex(responsestr, tmp + 5, 32);
         return true;
     } else {
 #ifdef RFIDLER_DEBUG
@@ -506,8 +506,8 @@ bool hitag2crack_decrypt_hex(uint8_t *response, uint8_t *hex) {
     binulong = hextoulong(hex);
 
     ulongtobinarray(bin, hitag2_crypt(binulong, 32), 32);
-    binarray_2_binstr(binstr, bin, 32);
-    binarray_2_hex(binhex, bin, 32);
+    binarraytobinstring(binstr, bin, 32);
+    binarraytohex(binhex, bin, 32);
 //    UserMessage("ar = %s\r\n", binstr);
 //    UserMessage("arhex = %s\r\n", binhex);
 
@@ -532,7 +532,7 @@ bool hitag2crack_decrypt_bin(uint8_t *response, uint8_t *e_binstr) {
     binulong = binarraytoulong(e_bin, len);
 
     ulongtobinarray(bin, hitag2_crypt(binulong, len), len);
-    binarray_2_binstr(binstr, bin, len);
+    binarraytobinstring(binstr, bin, len);
     strcpy(response, binstr);
     return true;
 }
@@ -646,7 +646,7 @@ bool hitag2_keystream(uint8_t *response, uint8_t *nrarhex) {
     }
 
     for (i = 0; i < 2048; i += 256) {
-        binarray_2_hex(keybitshex, keybits + i, 256);
+        binarraytohex(keybitshex, keybits + i, 256);
         UserMessage("%s\r\n", keybitshex);
     }
 

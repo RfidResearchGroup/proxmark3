@@ -32,7 +32,7 @@ endif
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.
 APP_CFLAGS = $(PLATFORM_DEFS) \
-             -ffunction-sections -fdata-sections -fno-common
+             -ffunction-sections -fdata-sections
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_HF = hfops.c
@@ -184,7 +184,7 @@ showinfo:
 # version_pm3.c should be checked on every time fullimage.stage1.elf should be remade
 version_pm3.c: default_version_pm3.c $(OBJDIR)/fpga_version_info.o $(OBJDIR)/fpga_all.o $(THUMBOBJ) $(ARMOBJ) .FORCE
 	$(info [-] CHECK $@)
-	$(Q)$(SH) ../tools/mkversion.sh $@ || $(CP) $< $@
+	$(Q)$(CP) $< $@
 
 fpga_version_info.c: $(FPGA_BITSTREAMS) $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)

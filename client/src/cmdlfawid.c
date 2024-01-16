@@ -132,7 +132,7 @@ static int CmdAWIDWatch(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(SUCCESS, "Watching for AWID cards - place tag on antenna");
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to stop reading cards");
+    PrintAndLogEx(INFO, "Press pm3-button to stop reading cards");
     clearCommandBuffer();
     SendCommandNG(CMD_LF_AWID_WATCH, NULL, 0);
     return lfsim_wait_check(CMD_LF_AWID_WATCH);
@@ -524,7 +524,7 @@ static int CmdAWIDBrute(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Bruteforceing AWID %d reader", fmtlen);
-    PrintAndLogEx(SUCCESS, "Press " _GREEN_("pm3 button") " to abort simulation or press " _GREEN_("<Enter>"));
+    PrintAndLogEx(SUCCESS, "Press pm3-button to abort simulation or press Enter");
 
     uint16_t up = cn;
     uint16_t down = cn;

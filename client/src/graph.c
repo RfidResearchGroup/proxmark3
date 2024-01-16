@@ -113,19 +113,12 @@ void setGraphBuf(const uint8_t *src, size_t size) {
     RepaintGraphWindow();
 }
 
-// This function assumes that the length of dest array >= g_GraphTraceLen.
-// If the length of dest array is less than g_GraphTraceLen, use getFromGraphBufEx(dest, maxLen) instead.
 size_t getFromGraphBuf(uint8_t *dest) {
-    return getFromGraphBufEx(dest, g_GraphTraceLen);
-}
-
-size_t getFromGraphBufEx(uint8_t *dest, size_t maxLen) {
     if (dest == NULL) return 0;
     if (g_GraphTraceLen == 0) return 0;
 
     size_t i;
-    maxLen = (maxLen < g_GraphTraceLen) ? maxLen : g_GraphTraceLen;
-    for (i = 0; i < maxLen; ++i) {
+    for (i = 0; i < g_GraphTraceLen; ++i) {
         //trim
         if (g_GraphBuffer[i] > 127) g_GraphBuffer[i] = 127;
         if (g_GraphBuffer[i] < -127) g_GraphBuffer[i] = -127;
@@ -394,3 +387,4 @@ bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
     }
     return true;
 }
+

@@ -29,9 +29,6 @@ Check there for details about data format and how commands are interpreted on th
 device-side.
 ]]
 
-local PM3_SUCCESS = 0
-
--- iceman, todo:  return payload from ISO14b APDU is a struct now. iso14b_raw_apdu_response_t
 local function calypso_parse(result)
     if result.Oldarg0 >= 0 then
         local len = result.Oldarg0 * 2
@@ -115,7 +112,9 @@ end
 local function calypso_send_cmd_raw(data, ignoreresponse )
 
     local flags = lib14b.ISO14B_COMMAND.ISO14B_APDU
-
+--    flags = lib14b.ISO14B_COMMAND.ISO14B_RAW +
+--            lib14b.ISO14B_COMMAND.ISO14B_APPEND_CRC
+    local flags = lib14b.ISO14B_COMMAND.ISO14B_APDU
     data = data or ""
     -- LEN of data, half the length of the ASCII-string hex string
     -- 2 bytes flags
@@ -130,7 +129,7 @@ local function calypso_send_cmd_raw(data, ignoreresponse )
     local c = Command:newNG{cmd = cmds.CMD_HF_ISO14443B_COMMAND, data = senddata}
     local result, err = c:sendNG(ignoreresponse, 2000)
     if result then
-        if result.status == PM3_SUCCESS then
+        if result.Oldarg0 >= 0 then
             return calypso_parse(result)
         else
             err = 'card response failed'
@@ -145,7 +144,7 @@ end
 -- writes it in the tree in decimal format.
 local function calypso_card_num(card)
     if not card then return end
-    local card_num = tonumber( card.uid:sub(1, 8), 16)
+    local card_num = tonumber( card.uid:sub(1,8),16 )
     print('')
     print('Card UID    ' ..ansicolors.green..card.uid:format('%x')..ansicolors.reset)
     print('Card Number ' ..ansicolors.green..string.format('%u', card_num)..ansicolors.reset)
@@ -157,7 +156,7 @@ local function calypso_apdu_status(apdu)
     -- last two is CRC
     -- next two is APDU status bytes.
     local mess = 'FAIL'
-    local sw = apdu:sub( #apdu - 7 , #apdu - 4)
+    local sw = apdu:sub( #apdu-7, #apdu-4)
     desc, err = iso7816.tostring(sw)
     --print ('SW', sw, desc, err )
     local status = ( sw == '9000' )
@@ -251,7 +250,7 @@ function main(args)
         for i, apdu in spairs(_calypso_cmds) do
             print('>> '..ansicolors.yellow..i..ansicolors.reset)
             apdu = apdu:gsub('%s+', '')
-            data, err = calypso_send_cmd_raw(apdu, false)
+            data, err = calypso_send_cmd_raw(apdu , false)
             if err then
                 print('<< '..err)
             else

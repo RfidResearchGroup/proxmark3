@@ -28,7 +28,31 @@
 #include "fileutils.h"
 #include "util_posix.h"     // msleep
 #include "cliparser.h"
-#include "imgutils.h"
+
+// Currently the largest pixel 880*528 only needs 58.08K bytes
+#define WSMAPSIZE 60000
+
+typedef struct {
+    uint8_t  B;
+    uint8_t  M;
+    uint32_t fsize;
+    uint16_t res1;
+    uint16_t res2;
+    uint32_t offset;
+    uint32_t Bit_Pixel;
+    uint32_t BMP_Width;
+    uint32_t BMP_Height;
+    uint16_t planes;
+    uint16_t bpp;
+    uint32_t ctype;
+    uint32_t dsize;
+    uint32_t hppm;
+    uint32_t vppm;
+    uint32_t colorsused;
+    uint32_t colorreq;
+    uint32_t Color_1;  //Color palette
+    uint32_t Color_2;
+} PACKED bmp_header_t;
 
 #define EPD_1IN54B     0
 #define EPD_1IN54C     1
@@ -81,24 +105,254 @@ static model_t models[] = {
 
 static int CmdHelp(const char *Cmd);
 
-static uint8_t *map8to1(gdImagePtr img, int color) {
-    // Calculate width rounding up
-    uint16_t width8 = (gdImageSX(img) + 7) / 8;
-
-    uint8_t *colormap8 = calloc(width8 * gdImageSY(img), sizeof(uint8_t));
-    if (!colormap8) {
-        return NULL;
+static int picture_bit_depth(const uint8_t *bmp, const size_t bmpsize, const uint8_t model_nr) {
+    if (bmpsize < sizeof(bmp_header_t)) {
+        return PM3_ESOFT;
     }
 
+    bmp_header_t *pbmpheader = (bmp_header_t *)bmp;
+    PrintAndLogEx(DEBUG, "colorsused = %d", pbmpheader->colorsused);
+    PrintAndLogEx(DEBUG, "pbmpheader->bpp = %d", pbmpheader->bpp);
+    if ((pbmpheader->BMP_Width != models[model_nr].width) || (pbmpheader->BMP_Height != models[model_nr].height)) {
+        PrintAndLogEx(WARNING, "Invalid BMP size, expected %ix%i, got %ix%i", models[model_nr].width, models[model_nr].height, pbmpheader->BMP_Width, pbmpheader->BMP_Height);
+    }
+    return pbmpheader->bpp;
+}
+
+static int read_bmp_bitmap(const uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, uint8_t **black, uint8_t **red) {
+    bmp_header_t *pbmpheader = (bmp_header_t *)bmp;
+    // check file is bitmap
+    if (pbmpheader->bpp != 1) {
+        return PM3_ESOFT;
+    }
+    if (pbmpheader->B == 'M' || pbmpheader->M == 'B') { //0x4d42
+        PrintAndLogEx(WARNING, "The file is not a BMP!");
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(DEBUG, "file size =  %d", pbmpheader->fsize);
+    PrintAndLogEx(DEBUG, "file offset =  %d", pbmpheader->offset);
+    if (pbmpheader->fsize > bmpsize) {
+        PrintAndLogEx(WARNING, "The file is truncated!");
+        return PM3_ESOFT;
+    }
+    uint8_t color_flag = pbmpheader->Color_1;
+    // Get BMP file data pointer
+    uint32_t offset = pbmpheader->offset;
+    uint16_t width = pbmpheader->BMP_Width;
+    uint16_t height = pbmpheader->BMP_Height;
+    if ((width + 8) * height > WSMAPSIZE * 8) {
+        PrintAndLogEx(WARNING, "The file is too large, aborting!");
+        return PM3_ESOFT;
+    }
+
+    uint16_t X, Y;
+    uint16_t Image_Width_Byte = (width % 8 == 0) ? (width / 8) : (width / 8 + 1);
+    uint16_t Bmp_Width_Byte = (Image_Width_Byte % 4 == 0) ? Image_Width_Byte : ((Image_Width_Byte / 4 + 1) * 4);
+
+    *black = calloc(WSMAPSIZE, sizeof(uint8_t));
+    if (*black == NULL) {
+        return PM3_EMALLOC;
+    }
+    // Write data into RAM
+    for (Y = 0; Y < height; Y++) { // columns
+        for (X = 0; X < Bmp_Width_Byte; X++) { // lines
+            if ((X < Image_Width_Byte) && ((X + (height - Y - 1) * Image_Width_Byte) < WSMAPSIZE)) {
+                (*black)[X + (height - Y - 1) * Image_Width_Byte] = color_flag ? bmp[offset] : ~bmp[offset];
+            }
+            offset++;
+        }
+    }
+    if ((model_nr == M1in54B) || (model_nr == M2in13B)) {
+        // for BW+Red screens:
+        *red = calloc(WSMAPSIZE, sizeof(uint8_t));
+        if (*red == NULL) {
+            free(*black);
+            return PM3_EMALLOC;
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+static void rgb_to_gray(const int16_t *chanR, const int16_t *chanG, const int16_t *chanB,
+                        uint16_t width, uint16_t height, int16_t *chanGrey) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
+            // greyscale conversion
+            float Clinear = 0.2126 * chanR[X + Y * width] + 0.7152 * chanG[X + Y * width] + 0.0722 * chanB[X + Y * width];
+            // Csrgb = 12.92 Clinear when Clinear <= 0.0031308
+            // Csrgb = 1.055 Clinear1/2.4 - 0.055 when Clinear > 0.0031308
+            chanGrey[X + Y * width] = Clinear;
+        }
+    }
+}
+
+// Floyd-Steinberg dithering
+static void dither_chan_inplace(int16_t *chan, uint16_t width, uint16_t height) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
+            int16_t oldp = chan[X + Y * width];
+            int16_t newp = oldp > 127 ? 255 : 0;
+            chan[X + Y * width] = newp;
+            int16_t err = oldp - newp;
+            const float m[] = {7, 3, 5, 1};
+            if (X < width - 1) {
+                chan[X + 1 +  Y      * width] = chan[X + 1 +  Y      * width] + m[0] / 16 * err;
+            }
+            if (Y < height - 1) {
+                chan[X - 1 + (Y + 1) * width] = chan[X - 1 + (Y + 1) * width] + m[1] / 16 * err;
+                chan[X     + (Y + 1) * width] = chan[X     + (Y + 1) * width] + m[2] / 16 * err;
+            }
+            if ((X < width - 1) && (Y < height - 1)) {
+                chan[X + 1 + (Y + 1) * width] = chan[X + 1 + (Y + 1) * width] + m[3] / 16 * err;
+            }
+        }
+    }
+}
+
+static uint32_t color_compare(int16_t r1, int16_t g1, int16_t b1, int16_t r2, int16_t g2, int16_t b2) {
+    // Compute (square of) distance from oldR/G/B to this color
+    int16_t inR = r1 - r2;
+    int16_t inG = g1 - g2;
+    int16_t inB = b1 - b2;
+    // use RGB-to-grey weighting
+    float dist =  0.2126 * inR * inR + 0.7152 * inG * inG + 0.0722 * inB * inB;
+    return dist;
+}
+
+static void nearest_color(int16_t oldR, int16_t oldG, int16_t oldB, const uint8_t *palette,
+                          uint16_t palettelen, uint8_t *newR, uint8_t *newG, uint8_t *newB) {
+    uint32_t bestdist = 0x7FFFFFFF;
+    for (uint16_t i = 0; i < palettelen; i++) {
+        uint8_t R = palette[i * 3 + 0];
+        uint8_t G = palette[i * 3 + 1];
+        uint8_t B = palette[i * 3 + 2];
+        uint32_t dist = color_compare(oldR, oldG, oldB, R, G, B);
+        if (dist < bestdist) {
+            bestdist = dist;
+            *newR = R;
+            *newG = G;
+            *newB = B;
+        }
+    }
+}
+
+static void dither_rgb_inplace(int16_t *chanR, int16_t *chanG, int16_t *chanB, uint16_t width, uint16_t height, uint8_t *palette, uint16_t palettelen) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
+            // scan odd lines in the opposite direction
+            uint16_t XX = X;
+            if (Y % 2) {
+                XX = width - X - 1;
+            }
+            int16_t oldR = chanR[XX + Y * width];
+            int16_t oldG = chanG[XX + Y * width];
+            int16_t oldB = chanB[XX + Y * width];
+            uint8_t newR = 0, newG = 0, newB = 0;
+            nearest_color(oldR, oldG, oldB, palette, palettelen, &newR, &newG, &newB);
+            chanR[XX + Y * width] = newR;
+            chanG[XX + Y * width] = newG;
+            chanB[XX + Y * width] = newB;
+            int16_t errR = oldR - newR;
+            int16_t errG = oldG - newG;
+            int16_t errB = oldB - newB;
+            const float m[] = {7, 3, 5, 1};
+            if (Y % 2) {
+                if (XX > 0) {
+                    chanR[XX - 1 +  Y      * width] = (chanR[XX - 1 +  Y      * width] + m[0] / 16 * errR);
+                    chanG[XX - 1 +  Y      * width] = (chanG[XX - 1 +  Y      * width] + m[0] / 16 * errG);
+                    chanB[XX - 1 +  Y      * width] = (chanB[XX - 1 +  Y      * width] + m[0] / 16 * errB);
+                }
+                if (Y < height - 1) {
+                    chanR[XX - 1 + (Y + 1) * width] = (chanR[XX - 1 + (Y + 1) * width] + m[3] / 16 * errR);
+                    chanG[XX - 1 + (Y + 1) * width] = (chanG[XX - 1 + (Y + 1) * width] + m[3] / 16 * errG);
+                    chanB[XX - 1 + (Y + 1) * width] = (chanB[XX - 1 + (Y + 1) * width] + m[3] / 16 * errB);
+                    chanR[XX     + (Y + 1) * width] = (chanR[XX     + (Y + 1) * width] + m[2] / 16 * errR);
+                    chanG[XX     + (Y + 1) * width] = (chanG[XX     + (Y + 1) * width] + m[2] / 16 * errG);
+                    chanB[XX     + (Y + 1) * width] = (chanB[XX     + (Y + 1) * width] + m[2] / 16 * errB);
+                }
+                if ((XX < width - 1) && (Y < height - 1)) {
+                    chanR[XX + 1 + (Y + 1) * width] = (chanR[XX + 1 + (Y + 1) * width] + m[1] / 16 * errR);
+                    chanG[XX + 1 + (Y + 1) * width] = (chanG[XX + 1 + (Y + 1) * width] + m[1] / 16 * errG);
+                    chanB[XX + 1 + (Y + 1) * width] = (chanB[XX + 1 + (Y + 1) * width] + m[1] / 16 * errB);
+                }
+            } else {
+                if (XX < width - 1) {
+                    chanR[XX + 1 +  Y      * width] = (chanR[XX + 1 +  Y      * width] + m[0] / 16 * errR);
+                    chanG[XX + 1 +  Y      * width] = (chanG[XX + 1 +  Y      * width] + m[0] / 16 * errG);
+                    chanB[XX + 1 +  Y      * width] = (chanB[XX + 1 +  Y      * width] + m[0] / 16 * errB);
+                }
+                if (Y < height - 1) {
+                    chanR[XX - 1 + (Y + 1) * width] = (chanR[XX - 1 + (Y + 1) * width] + m[1] / 16 * errR);
+                    chanG[XX - 1 + (Y + 1) * width] = (chanG[XX - 1 + (Y + 1) * width] + m[1] / 16 * errG);
+                    chanB[XX - 1 + (Y + 1) * width] = (chanB[XX - 1 + (Y + 1) * width] + m[1] / 16 * errB);
+                    chanR[XX     + (Y + 1) * width] = (chanR[XX     + (Y + 1) * width] + m[2] / 16 * errR);
+                    chanG[XX     + (Y + 1) * width] = (chanG[XX     + (Y + 1) * width] + m[2] / 16 * errG);
+                    chanB[XX     + (Y + 1) * width] = (chanB[XX     + (Y + 1) * width] + m[2] / 16 * errB);
+                }
+                if ((XX < width - 1) && (Y < height - 1)) {
+                    chanR[XX + 1 + (Y + 1) * width] = (chanR[XX + 1 + (Y + 1) * width] + m[3] / 16 * errR);
+                    chanG[XX + 1 + (Y + 1) * width] = (chanG[XX + 1 + (Y + 1) * width] + m[3] / 16 * errG);
+                    chanB[XX + 1 + (Y + 1) * width] = (chanB[XX + 1 + (Y + 1) * width] + m[3] / 16 * errB);
+                }
+            }
+        }
+    }
+}
+
+static void rgb_to_gray_red_inplace(int16_t *chanR, int16_t *chanG, int16_t *chanB, uint16_t width, uint16_t height) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
+            float Clinear = 0.2126 * chanR[X + Y * width] + 0.7152 * chanG[X + Y * width] + 0.0722 * chanB[X + Y * width];
+            if ((chanR[X + Y * width] < chanG[X + Y * width] && chanR[X + Y * width] < chanB[X + Y * width])) {
+                chanR[X + Y * width] = Clinear;
+                chanG[X + Y * width] = Clinear;
+                chanB[X + Y * width] = Clinear;
+            }
+        }
+    }
+}
+
+static void threshold_chan(const int16_t *colorchan, uint16_t width, uint16_t height, uint8_t threshold, uint8_t *colormap) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
+            colormap[X + Y * width] = colorchan[X + Y * width] < threshold;
+        }
+    }
+}
+
+static void threshold_rgb_black_red(const int16_t *chanR, const int16_t *chanG, const int16_t *chanB,
+                                    uint16_t width, uint16_t height, uint8_t threshold_black,
+                                    uint8_t threshold_red, uint8_t *blackmap, uint8_t *redmap) {
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
+            if ((chanR[X + Y * width] < threshold_black) && (chanG[X + Y * width] < threshold_black) && (chanB[X + Y * width] < threshold_black)) {
+                blackmap[X + Y * width] = 1;
+                redmap[X + Y * width] = 0;
+            } else if ((chanR[X + Y * width] > threshold_red) && (chanG[X + Y * width] < threshold_black) && (chanB[X + Y * width] < threshold_black)) {
+                blackmap[X + Y * width] = 0;
+                redmap[X + Y * width] = 1;
+            } else {
+                blackmap[X + Y * width] = 0;
+                redmap[X + Y * width] = 0;
+            }
+        }
+    }
+}
+
+static void map8to1(const uint8_t *colormap, uint16_t width, uint16_t height, uint8_t *colormap8) {
+    uint16_t width8;
+    if (width % 8 == 0) {
+        width8 = width / 8;
+    } else {
+        width8 = width / 8 + 1;
+    }
     uint8_t data = 0;
     uint8_t count = 0;
-    for (uint16_t Y = 0; Y < gdImageSY(img); Y++) {
-        for (uint16_t X = 0; X < gdImageSX(img); X++) {
-            if (gdImageGetPixel(img, X, Y) == color) {
-                data |= 1;
-            }
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
+            data = data | colormap[X + Y * width];
             count += 1;
-            if ((count >= 8) || (X == gdImageSX(img) - 1)) {
+            if ((count >= 8) || (X == width - 1)) {
                 colormap8[X / 8 + Y * width8] = (~data) & 0xFF;
                 count = 0;
                 data = 0;
@@ -106,8 +360,194 @@ static uint8_t *map8to1(gdImagePtr img, int color) {
             data = (data << 1) & 0xFF;
         }
     }
+}
 
-    return colormap8;
+static int read_bmp_rgb(uint8_t *bmp, const size_t bmpsize, uint8_t model_nr, uint8_t **black, uint8_t **red, char *filename, bool save_conversions) {
+    bmp_header_t *pbmpheader = (bmp_header_t *)bmp;
+    // check file is full color
+    if ((pbmpheader->bpp != 24) && (pbmpheader->bpp != 32)) {
+        return PM3_ESOFT;
+    }
+
+    if (pbmpheader->B == 'M' || pbmpheader->M == 'B') { //0x4d42
+        PrintAndLogEx(WARNING, "The file is not a BMP!");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(DEBUG, "file size =  %d", pbmpheader->fsize);
+    PrintAndLogEx(DEBUG, "file offset =  %d", pbmpheader->offset);
+    if (pbmpheader->fsize > bmpsize) {
+        PrintAndLogEx(WARNING, "The file is truncated!");
+        return PM3_ESOFT;
+    }
+
+    // Get BMP file data pointer
+    uint32_t offset = pbmpheader->offset;
+    uint16_t width = pbmpheader->BMP_Width;
+    uint16_t height = pbmpheader->BMP_Height;
+    if ((width + 8) * height > WSMAPSIZE * 8) {
+        PrintAndLogEx(WARNING, "The file is too large, aborting!");
+        return PM3_ESOFT;
+    }
+
+    int16_t *chanR = calloc(((size_t)width) * height, sizeof(int16_t));
+    if (chanR == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    int16_t *chanG = calloc(((size_t)width) * height, sizeof(int16_t));
+    if (chanG == NULL) {
+        free(chanR);
+        return PM3_EMALLOC;
+    }
+
+    int16_t *chanB = calloc(((size_t)width) * height, sizeof(int16_t));
+    if (chanB == NULL) {
+        free(chanR);
+        free(chanG);
+        return PM3_EMALLOC;
+    }
+
+    // Extracting BMP chans
+    for (uint16_t Y = 0; Y < height; Y++) {
+        for (uint16_t X = 0; X < width; X++) {
+            chanB[X + (height - Y - 1) * width] = bmp[offset++];
+            chanG[X + (height - Y - 1) * width] = bmp[offset++];
+            chanR[X + (height - Y - 1) * width] = bmp[offset++];
+            if (pbmpheader->bpp == 32) // Skip Alpha chan
+                offset++;
+        }
+        // Skip line padding
+        offset += width % 4;
+    }
+
+    if ((model_nr == M1in54B) || (model_nr == M2in13B)) {
+        // for BW+Red screens:
+        uint8_t *mapBlack = calloc(((size_t)width) * height, sizeof(uint8_t));
+        if (mapBlack == NULL) {
+            free(chanR);
+            free(chanG);
+            free(chanB);
+            return PM3_EMALLOC;
+        }
+        uint8_t *mapRed = calloc(((size_t)width) * height, sizeof(uint8_t));
+        if (mapRed == NULL) {
+            free(chanR);
+            free(chanG);
+            free(chanB);
+            free(mapBlack);
+            return PM3_EMALLOC;
+        }
+        rgb_to_gray_red_inplace(chanR, chanG, chanB, width, height);
+
+        uint8_t palette[] = {0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00}; // black, white, red
+        dither_rgb_inplace(chanR, chanG, chanB, width, height, palette, sizeof(palette) / 3);
+
+        threshold_rgb_black_red(chanR, chanG, chanB, width, height, 128, 128, mapBlack, mapRed);
+        if (save_conversions) {
+            // fill BMP chans
+            offset = pbmpheader->offset;
+            for (uint16_t Y = 0; Y < height; Y++) {
+                for (uint16_t X = 0; X < width; X++) {
+                    bmp[offset++] = chanB[X + (height - Y - 1) * width] & 0xFF;
+                    bmp[offset++] = chanG[X + (height - Y - 1) * width] & 0xFF;
+                    bmp[offset++] = chanR[X + (height - Y - 1) * width] & 0xFF;
+                    if (pbmpheader->bpp == 32) // Fill Alpha chan
+                        bmp[offset++] = 0xFF;
+                }
+                // Skip line padding
+                offset += width % 4;
+            }
+            PrintAndLogEx(INFO, "Saving red+black dithered version...");
+            if (saveFile(filename, ".bmp", bmp, offset) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Could not save file " _YELLOW_("%s"), filename);
+                free(chanR);
+                free(chanG);
+                free(chanB);
+                free(mapBlack);
+                free(mapRed);
+                return PM3_EIO;
+            }
+        }
+        free(chanR);
+        free(chanG);
+        free(chanB);
+        *black = calloc(WSMAPSIZE, sizeof(uint8_t));
+        if (*black == NULL) {
+            free(mapBlack);
+            free(mapRed);
+            return PM3_EMALLOC;
+        }
+        map8to1(mapBlack, width, height, *black);
+        free(mapBlack);
+        *red = calloc(WSMAPSIZE, sizeof(uint8_t));
+        if (*red == NULL) {
+            free(mapRed);
+            free(*black);
+            return PM3_EMALLOC;
+        }
+        map8to1(mapRed, width, height, *red);
+        free(mapRed);
+    } else {
+        // for BW-only screens:
+        int16_t *chanGrey = calloc(((size_t)width) * height, sizeof(int16_t));
+        if (chanGrey == NULL) {
+            free(chanR);
+            free(chanG);
+            free(chanB);
+            return PM3_EMALLOC;
+        }
+        rgb_to_gray(chanR, chanG, chanB, width, height, chanGrey);
+        dither_chan_inplace(chanGrey, width, height);
+
+        uint8_t *mapBlack = calloc(((size_t)width) * height, sizeof(uint8_t));
+        if (mapBlack == NULL) {
+            free(chanR);
+            free(chanG);
+            free(chanB);
+            free(chanGrey);
+            return PM3_EMALLOC;
+        }
+        threshold_chan(chanGrey, width, height, 128, mapBlack);
+
+        if (save_conversions) {
+            // fill BMP chans
+            offset = pbmpheader->offset;
+            for (uint16_t Y = 0; Y < height; Y++) {
+                for (uint16_t X = 0; X < width; X++) {
+                    bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
+                    bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
+                    bmp[offset++] = chanGrey[X + (height - Y - 1) * width] & 0xFF;
+                    if (pbmpheader->bpp == 32) // Fill Alpha chan
+                        bmp[offset++] = 0xFF;
+                }
+                // Skip line padding
+                offset += width % 4;
+            }
+            PrintAndLogEx(INFO, "Saving black dithered version...");
+            if (saveFile(filename, ".bmp", bmp, offset) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Could not save file " _YELLOW_("%s"), filename);
+                free(chanGrey);
+                free(chanR);
+                free(chanG);
+                free(chanB);
+                free(mapBlack);
+                return PM3_EIO;
+            }
+        }
+        free(chanGrey);
+        free(chanR);
+        free(chanG);
+        free(chanB);
+        *black = calloc(WSMAPSIZE, sizeof(uint8_t));
+        if (*black == NULL) {
+            free(mapBlack);
+            return PM3_EMALLOC;
+        }
+        map8to1(mapBlack, width, height, *black);
+        free(mapBlack);
+    }
+    return PM3_SUCCESS;
 }
 
 static void read_black(uint32_t i, uint8_t *l, uint8_t model_nr, const uint8_t *black) {
@@ -231,7 +671,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
     uint8_t step4[2] = {0xcd, 0x03};      // e-paper power on
     uint8_t step5[2] = {0xcd, 0x05};      // e-paper config2
     uint8_t step6[2] = {0xcd, 0x06};      // EDP load to main
-    uint8_t step7[3] = {0xcd, 0x07, 0};   // Data preparation
+    uint8_t step7[2] = {0xcd, 0x07};      // Data preparation
 
     uint8_t step8[123] = {0xcd, 0x08, 0x64};  // Data start command
     // 2.13inch(0x10:Send 16 data at a time)
@@ -385,7 +825,7 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
         }
         msleep(100);
         PrintAndLogEx(DEBUG, "Step7: Data preparation");
-        ret = transceive_blocking(step7, 3, rx, 20, actrxlen, true); // cd 07
+        ret = transceive_blocking(step7, 2, rx, 20, actrxlen, true); // cd 07
         if (ret != PM3_SUCCESS) {
             return ret;
         }
@@ -563,13 +1003,13 @@ static int start_drawing(uint8_t model_nr, uint8_t *black, uint8_t *red) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14AWSLoad(const char *Cmd) {
+static int CmdHF14AWSLoadBmp(const char *Cmd) {
 
     char desc[800] = {0};
     for (uint8_t i = 0; i < MEND; i++) {
         snprintf(desc + strlen(desc),
                  sizeof(desc) - strlen(desc),
-                 "hf waveshare load -f myfile -m %2u -> %s ( %u, %u )\n",
+                 "hf waveshare loadbmp -f myfile -m %2u -> %s ( %u, %u )\n",
                  i,
                  models[i].desc,
                  models[i].width,
@@ -578,8 +1018,8 @@ static int CmdHF14AWSLoad(const char *Cmd) {
     }
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf waveshare load",
-                  "Load image file to Waveshare NFC ePaper",
+    CLIParserInit(&ctx, "hf waveshare loadbmp",
+                  "Load BMP file to Waveshare NFC ePaper.",
                   desc
                  );
 
@@ -589,25 +1029,24 @@ static int CmdHF14AWSLoad(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int1("m", NULL, "<nr>", modeldesc),
-        arg_str1("f", "file", "<fn>", "specify image to upload to tag"),
-        arg_str0("s", "save", "<fn>", "save paletized version in file"),
+        arg_lit0("s", "save", "save dithered version in filename-[n].bmp, only for RGB BMP"),
+        arg_str1("f", "file", "<fn>", "specify filename[.bmp] to upload to tag"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int model_nr = arg_get_int_def(ctx, 1, -1);
+    bool save_conversions = arg_get_lit(ctx, 2);
 
-    int infilelen, outfilelen;
-    char infile[FILE_PATH_SIZE];
-    char outfile[FILE_PATH_SIZE];
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)infile, FILE_PATH_SIZE, &infilelen);
-    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)outfile, FILE_PATH_SIZE, &outfilelen);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     //Validations
-    if (infilelen < 1) {
-        PrintAndLogEx(WARNING, "Missing input file");
+    if (fnlen < 1) {
+        PrintAndLogEx(WARNING, "Missing filename");
         return PM3_EINVARG;
     }
     if (model_nr == -1) {
@@ -618,84 +1057,64 @@ static int CmdHF14AWSLoad(const char *Cmd) {
         PrintAndLogEx(WARNING, "Unknown model");
         return PM3_EINVARG;
     }
-    if (!g_session.pm3_present && !outfilelen) {
-        PrintAndLogEx(WARNING, "Offline - can only perform image conversion");
-        return PM3_ENOTTY;
-    }
 
-    bool model_has_red = model_nr == M1in54B || model_nr == M2in13B;
-
-    gdImagePtr rgb_img = gdImageCreateFromFile(infile);
-    if (!rgb_img) {
-        PrintAndLogEx(WARNING, "Could not load image from " _YELLOW_("%s"), infile);
+    uint8_t *bmp = NULL;
+    uint8_t *black = NULL;
+    uint8_t *red = NULL;
+    size_t bytes_read = 0;
+    if (loadFile_safe(filename, ".bmp", (void **)&bmp, &bytes_read) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Could not find file " _YELLOW_("%s"), filename);
         return PM3_EFILE;
     }
-
-    gdImagePtr scaled_img = img_crop_to_fit(rgb_img, models[model_nr].width, models[model_nr].height);
-    if (scaled_img == NULL) {
-        PrintAndLogEx(WARNING, "Failed to scale input image");
-        gdImageDestroy(rgb_img);
-        return PM3_EFILE;
-    }
-    gdImageDestroy(rgb_img);
-
-    int pal_len = 2;
-    int pal[3];
-    pal[0] = gdTrueColorAlpha(0xFF, 0xFF, 0xFF, 0); // White
-    pal[1] = gdTrueColorAlpha(0x00, 0x00, 0x00, 0); // Black
-    if (model_has_red) {
-        pal_len = 3;
-        pal[2] = gdTrueColorAlpha(0xFF, 0x00, 0x00, 0); // Red
-    }
-
-    gdImagePtr pal_img = img_palettize(scaled_img, pal, pal_len);
-    gdImageDestroy(scaled_img);
-
-    if (!pal_img) {
-        PrintAndLogEx(WARNING, "Could not convert image");
+    if (bmp == NULL) {
         return PM3_EMALLOC;
     }
+    if (bytes_read < sizeof(bmp_header_t)) {
+        free(bmp);
+        return PM3_ESOFT;
+    }
 
-    if (outfilelen) {
-        if (gdImageFile(pal_img, outfile)) {
-            PrintAndLogEx(INFO, "Save converted image to " _YELLOW_("%s"), outfile);
-            gdImageDestroy(pal_img);
-            return PM3_SUCCESS;
-        } else {
-            PrintAndLogEx(WARNING, "Could not save converted image", outfile);
-            gdImageDestroy(pal_img);
-            return PM3_EFILE;
+    int depth = picture_bit_depth(bmp, bytes_read, model_nr);
+    if (depth == PM3_ESOFT) {
+        PrintAndLogEx(ERR, "Error, BMP file is too small");
+        free(bmp);
+        return PM3_ESOFT;
+    } else if (depth == 1) {
+        PrintAndLogEx(DEBUG, "BMP file is a bitmap");
+        if (read_bmp_bitmap(bmp, bytes_read, model_nr, &black, &red) != PM3_SUCCESS) {
+            free(bmp);
+            return PM3_ESOFT;
         }
-    }
-
-    uint8_t *black_plane = map8to1(pal_img, 1);
-    if (!black_plane) {
-        PrintAndLogEx(WARNING, "Could not convert image to bit plane");
-        gdImageDestroy(pal_img);
-        return PM3_EMALLOC;
-    }
-
-    uint8_t *red_plane = NULL;
-    if (model_has_red) {
-        red_plane = map8to1(pal_img, 2);
-        if (!red_plane) {
-            PrintAndLogEx(WARNING, "Could not convert image to bit plane");
-            free(black_plane);
-            gdImageDestroy(pal_img);
-            return PM3_EMALLOC;
+    } else if (depth == 24) {
+        PrintAndLogEx(DEBUG, "BMP file is a RGB");
+        if (read_bmp_rgb(bmp, bytes_read, model_nr, &black, &red, filename, save_conversions) != PM3_SUCCESS) {
+            free(bmp);
+            return PM3_ESOFT;
         }
+    } else if (depth == 32) {
+        PrintAndLogEx(DEBUG, "BMP file is a RGBA, we will ignore the Alpha channel");
+        if (read_bmp_rgb(bmp, bytes_read, model_nr, &black, &red, filename, save_conversions) != PM3_SUCCESS) {
+            free(bmp);
+            return PM3_ESOFT;
+        }
+    } else {
+        PrintAndLogEx(ERR, "Error, BMP color depth %i not supported. Must be 1 (BW), 24 (RGB) or 32 (RGBA)", depth);
+        free(bmp);
+        return PM3_ESOFT;
     }
-    gdImageDestroy(pal_img);
+    free(bmp);
 
-    int res = start_drawing(model_nr, black_plane, red_plane);
-    free(black_plane);
-    free(red_plane);
-    return res;
+    start_drawing(model_nr, black, red);
+    free(black);
+    if ((model_nr == M1in54B) || (model_nr == M2in13B)) {
+        free(red);
+    }
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
-    {"load",        CmdHF14AWSLoad,       AlwaysAvailable, "Load image file to Waveshare NFC ePaper"},
+    {"loadbmp",     CmdHF14AWSLoadBmp,    IfPm3Iso14443a,  "Load BMP file to Waveshare NFC ePaper"},
     {NULL, NULL, NULL, NULL}
 };
 

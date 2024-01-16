@@ -91,7 +91,7 @@ void RunMod(void) {
                     continue;
                 }
 
-                Dbprintf("Starting simulation, press " _GREEN_("pm3 button") " to stop and go back to search state.");
+                Dbprintf("Starting simulation, press pm3-button to stop and go back to search state.");
                 if (card.sak == 0x08 && card.atqa[0] == 0x04 && card.atqa[1] == 0) {
                     DbpString("Mifare Classic 1k");
                     SimulateIso14443aTag(1, flags, card.uid, 0);

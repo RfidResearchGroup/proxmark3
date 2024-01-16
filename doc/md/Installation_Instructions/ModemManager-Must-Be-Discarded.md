@@ -141,7 +141,7 @@ Now there are two possibilities:
 ## Only the fullimage is damaged
 ^[Top](#top)
 
-If the flashing of the fullimage failed, you can still force the Proxmark3 to start in bootloader mode by keeping the button pressed while you're plugging it in and while you're attempting to flash it again.
+If the flashing of the fullimage failed, you can still force the Proxmark to start in bootloader mode by keeping the button pressed while you're plugging it in and while you're attempting to flash it again.
 
 In short:
 

@@ -30,7 +30,6 @@ Check there for details about data format and how commands are interpreted on th
 device-side.
 ]]
 
--- iceman, todo:  return payload from ISO14b APDU is a struct now. iso14b_raw_apdu_response_t
 local function mobib_parse(result)
     if result.Oldarg0 >= 0 then
         local len = result.Oldarg0 * 2
@@ -127,7 +126,7 @@ local function mobib_send_cmd_raw(data, ignoreresponse )
 
     local result, err = c:sendNG(ignoreresponse, 2000)
     if result then
-        if result.status == PM3_SUCCESS then
+        if result.Oldarg0 >= 0 then
             return mobib_parse(result)
         else
             err = 'card response failed'

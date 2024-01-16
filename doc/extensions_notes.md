@@ -6,7 +6,7 @@ The Proxmark3 client uses a wide range of files. Here is a brief recap to get yo
 |---|---|
 | .exe | windows executable |
 | .bin | binary file,  can be firmware or memory dump of a tag or keys dump of a tag|
-| .eml | text file, with memory dump of a tag (deprecated) |
+| .eml | text file, with memory dump of a tag |
 | .mfd | binary file, MIFARE file dump, name comes from NFC-Tools. Usually created with Mifare Classic Tool app (MCT) or NFC-Tools,  contains memory dump of tag. Very similar to .bin file |
 | .json | JSON file, usually settings file or it can also be a memory dump of a tag |
 | .dic | dictionary file. textual, with keys/passwords one line / key |

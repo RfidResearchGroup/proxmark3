@@ -115,12 +115,12 @@ static void init_opt_select_LUT(void) {
     print_result("", opt_select_LUT, 256);
 }
 ***********************************************************************************/
-/*
+
 #define opt__select(x,y,r)  (4 & (((r & (r << 2)) >> 5) ^ ((r & ~(r << 2)) >> 4) ^ ( (r | r << 2) >> 3)))\
     |(2 & (((r | r << 2) >> 6) ^ ( (r | r << 2) >> 1) ^ (r >> 5) ^ r ^ ((x^y) << 1)))\
     |(1 & (((r & ~(r << 2)) >> 4) ^ ((r & (r << 2)) >> 3) ^ r ^ x))
 
-
+/*
  * Some background on the expression above can be found here...
 uint8_t xopt__select(bool x, bool y, uint8_t r)
 {
@@ -201,9 +201,7 @@ static void opt_suc(const uint8_t *k, State_t *s, const uint8_t *in, uint8_t len
     }
     //For tag MAC, an additional 32 zeroes
     if (add32Zeroes) {
-        for (int i = 0; i < 8; i++) {
-            opt_successor(k, s, 0);
-            opt_successor(k, s, 0);
+        for (int i = 0; i < 16; i++) {
             opt_successor(k, s, 0);
             opt_successor(k, s, 0);
         }

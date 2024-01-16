@@ -52,7 +52,6 @@ char g_CursorScaleFactorUnit[11] = {0};
 double g_PlotGridX = 0, g_PlotGridY = 0, g_PlotGridXdefault = 64, g_PlotGridYdefault = 64;
 uint32_t g_CursorCPos = 0, g_CursorDPos = 0, g_GraphStop = 0;
 uint32_t g_GraphStart = 0; // Starting point/offset for the left side of the graph
-uint32_t g_GraphStart_old = 0;
 double g_GraphPixelsPerPoint = 1.f; // How many visual pixels are between each sample point (x axis)
 static bool flushAfterWrite = false;
 double g_GridOffset = 0;
@@ -119,7 +118,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
         pathlen += strlen(subdir);
         char *tmp = realloc(path, pathlen * sizeof(char));
         if (tmp == NULL) {
-            free(path);
+            //free(path);
             return PM3_EMALLOC;
         }
         path = tmp;
@@ -156,7 +155,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     pathlen += strlen(filename);
     char *tmp = realloc(path, pathlen * sizeof(char));
     if (tmp == NULL) {
-        free(path);
+        //free(path);
         return PM3_EMALLOC;
     }
 
@@ -317,13 +316,13 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     char buffer[MAX_PRINT_BUFFER] = {0};
     char buffer2[MAX_PRINT_BUFFER] = {0};
     char buffer3[MAX_PRINT_BUFFER] = {0};
-
+    // lock this section to avoid interlacing prints from different threads
+    pthread_mutex_lock(&g_print_lock);
     bool linefeed = true;
 
     if (logging && g_session.incognito) {
         logging = 0;
     }
-    // TODO log if callback ?
     if ((g_printAndLog & PRINTANDLOG_LOG) && logging && !logfile) {
         char *my_logfile_path = NULL;
         char filename[40];
@@ -353,8 +352,6 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         }
     }
 
-    // lock this section to avoid interlacing prints from different threads
-    pthread_mutex_lock(&g_print_lock);
 
 // If there is an incoming message from the hardware (eg: lf hid read) in
 // the background (while the prompt is displayed and accepting user input),
@@ -388,15 +385,6 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         fprintf(stream, "%s", buffer3);
         if (linefeed)
             fprintf(stream, "\n");
-        memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), session.emoji_mode);
-        if (linefeed && (strlen(buffer3) + 1 < sizeof(buffer3)))
-            buffer3[strlen(buffer3)]='\n';
-        bool doprint = true;
-        if (g_printCallback != NULL) {
-            doprint = g_printCallback(buffer3) != 0;
-        }
-        if (doprint)
-            fprintf(stream, "%s", buffer3);
     }
 
 #ifdef RL_STATE_READCMD

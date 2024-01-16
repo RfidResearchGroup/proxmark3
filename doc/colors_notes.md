@@ -16,7 +16,7 @@ The client should autodetect color support when starting.
 
 You can also use the command  `pref show` to see and set your personal setting.  
 
-Why use colors in the Proxmark3 client? When everything is white it is hard to extract the important information fast. You also need new-lines for extra space to be easier to read.
+Why use colors in the Proxmark client? When everything is white it is hard to extract the important information fast. You also need new-lines for extra space to be easier to read.
 We have gradually been introducing this color scheme into the client since we got decent color support on all systems: OSX, Linux, WSL, Proxspace.
 
 

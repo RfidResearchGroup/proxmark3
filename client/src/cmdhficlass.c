@@ -1349,7 +1349,7 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
     }
 
     uint8_t n = PICOPASS_BLOCK_SIZE - offset - 2;
-    bytes_2_binstr(binstr, d + offset + 2, n);
+    byte_2_binstr(binstr, d + offset + 2, n);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(d + offset + 2, n));
@@ -2067,15 +2067,17 @@ static int CmdHFiClassDump(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    if (pagemap != PICOPASS_NON_SECURE_PAGEMODE) {
+    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+        // all memory available
+        memcpy(tag_data + (8 * 3), tempbuf + (8 * 3), (blocks_read * 8));
+    } else {
         // div key KD
-        memcpy(tag_data + (PICOPASS_BLOCK_SIZE * 3),
-               tempbuf + (PICOPASS_BLOCK_SIZE * 3), PICOPASS_BLOCK_SIZE);
+        memcpy(tag_data + (8 * 3), tempbuf + (8 * 3), 8);
+        // AIA data
+        memcpy(tag_data + (8 * 5), tempbuf + (8 * 5), 8);
+        // AA1 data
+        memcpy(tag_data + (8 * 6), tempbuf + (8 * 6), ((blocks_read - 6) * 8));
     }
-    // all memory available
-    memcpy(tag_data + (PICOPASS_BLOCK_SIZE * payload.start_block),
-           tempbuf + (PICOPASS_BLOCK_SIZE * payload.start_block),
-           blocks_read * PICOPASS_BLOCK_SIZE);
 
     uint16_t bytes_got = (app_limit1 + 1) * 8;
 
@@ -2133,14 +2135,12 @@ static int CmdHFiClassDump(const char *Cmd) {
         }
 
         // div key KC
-        memcpy(tag_data + (PICOPASS_BLOCK_SIZE * 4), tempbuf + (PICOPASS_BLOCK_SIZE * 4), PICOPASS_BLOCK_SIZE);
+        memcpy(tag_data + (8 * 4), tempbuf + (8 * 4), 8);
 
         // AA2 data
-        memcpy(tag_data + (PICOPASS_BLOCK_SIZE * payload.start_block),
-               tempbuf + (PICOPASS_BLOCK_SIZE * payload.start_block),
-               blocks_read * PICOPASS_BLOCK_SIZE);
+        memcpy(tag_data + (8 * (app_limit1 + 1)), tempbuf + (8 * (app_limit1 + 1)), (blocks_read * 8));
 
-        bytes_got += (blocks_read * PICOPASS_BLOCK_SIZE);
+        bytes_got = (blocks_read * 8);
 
         aa2_success = true;
     }
@@ -3036,7 +3036,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     int sio_start_block = 0, sio_end_block = 0;
     if (sio_start && sio_length > 0) {
         sio_start_block = (sio_start - iclass_dump) / PICOPASS_BLOCK_SIZE;
-        sio_end_block = sio_start_block + ((sio_length + PICOPASS_BLOCK_SIZE - 1) / PICOPASS_BLOCK_SIZE) - 1;
+        sio_end_block = sio_start_block + (sio_length + PICOPASS_BLOCK_SIZE - 1) / PICOPASS_BLOCK_SIZE - 1;
     }
 
     int i = startblock;
@@ -3107,7 +3107,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 
             regular_print_block = true;
         } else {
-            const char *info_ks[] = {"CSN", "Config", "E-purse", "Debit", "Credit", "AIA", "User", "User AA2"};
+            const char *info_ks[] = {"CSN", "Config", "E-purse", "Debit", "Credit", "AIA", "User"};
 
             if (i >= 6 && i <= 9 && is_legacy) {
                 // legacy credential
@@ -3132,8 +3132,6 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
             } else {
                 if (i < 6) {
                     block_info = info_ks[i];
-                } else if (i > hdr->conf.app_limit) {
-                    block_info = info_ks[7];
                 } else {
                     block_info = info_ks[6];
                 }
@@ -3158,7 +3156,7 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
 
             if (in_repeated_block == false) {
                 PrintAndLogEx(INFO,
-                              "%3d/0x%02X | %s | %s | %s",
+                              "%3d/0x%02X | %s | %s | %s ",
                               i,
                               i,
                               sprint_hex_ascii(blk, 8),
@@ -4562,7 +4560,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    bytes_2_binstr(binstr, d + 3, n);
+    byte_2_binstr(binstr, d + 3, n);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(d + 2, resp.length - 2));

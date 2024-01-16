@@ -22,7 +22,7 @@
 #include "printf.h"
 
 #define DEBUG 1
-#define DEBUG_MAX_MSG_SIZE  200
+
 //=============================================================================
 // Debug print functions, to go out over USB, to the usual PC-side client.
 //=============================================================================
@@ -31,7 +31,7 @@ void DbpStringEx(uint32_t flags, const char *src, size_t srclen) {
 #if DEBUG
     struct {
         uint16_t flag;
-        uint8_t buf[DEBUG_MAX_MSG_SIZE];
+        uint8_t buf[PM3_CMD_DATA_SIZE - sizeof(uint16_t)];
     } PACKED data;
     data.flag = flags;
     uint16_t len = MIN(srclen, sizeof(data.buf));
@@ -49,7 +49,7 @@ void DbpString(const char *str) {
 void DbprintfEx(uint32_t flags, const char *fmt, ...) {
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
-    char s[DEBUG_MAX_MSG_SIZE] = {0x00};
+    char s[PM3_CMD_DATA_SIZE] = {0x00};
     va_list ap;
     va_start(ap, fmt);
     kvsprintf(fmt, s, 10, ap);
@@ -62,7 +62,7 @@ void DbprintfEx(uint32_t flags, const char *fmt, ...) {
 void Dbprintf(const char *fmt, ...) {
 #if DEBUG
     // should probably limit size here; oh well, let's just use a big buffer
-    char output_string[DEBUG_MAX_MSG_SIZE] = {0x00};
+    char output_string[PM3_CMD_DATA_SIZE] = {0x00};
     va_list ap;
 
     va_start(ap, fmt);

@@ -348,7 +348,7 @@ function main(args)
     -- commandString = AUTH_FIRST .. "0190" .. "00"
     -- response = sendRaw(commandString, true, true)
 
-    -- Power off the Proxmark3
+    -- Power off the Proxmark
     sendRaw(POWEROFF, false, false)
 
     lib14a.disconnect()

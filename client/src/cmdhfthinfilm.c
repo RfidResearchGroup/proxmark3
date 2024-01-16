@@ -182,7 +182,7 @@ int CmdHfThinFilmSim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_THINFILM_SIMULATE, (uint8_t *)&data, data_len);
     PacketResponseNG resp;
-    PrintAndLogEx(SUCCESS, "press " _GREEN_("pm3 button") " to abort simulation");
+    PrintAndLogEx(SUCCESS, "press pm3-button to abort simulation");
 
     int ret;
     while (!(ret = kbd_enter_pressed())) {

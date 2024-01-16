@@ -231,7 +231,7 @@ static int CmdDestronSim(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
     PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
-    return PM3_ENOTIMPL;
+    return PM3_SUCCESS;
 }
 
 static command_t CommandTable[] = {

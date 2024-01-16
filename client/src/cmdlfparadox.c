@@ -103,15 +103,10 @@ static uint8_t GetParadoxBits(const uint32_t fc, const uint32_t cn, unsigned int
 int demodParadox(bool verbose, bool oldChksum) {
     (void) verbose; // unused so far
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
-    uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
-    if (bits == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
-        return PM3_EMALLOC;
-    }
+    uint8_t bits[MAX_GRAPH_TRACE_LEN] = {0};
     size_t size = getFromGraphBuf(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox not enough samples");
-        free(bits);
         return PM3_ESOFT;
     }
 
@@ -130,7 +125,6 @@ int demodParadox(bool verbose, bool oldChksum) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox error demoding fsk %d", idx);
 
-        free(bits);
         return PM3_ESOFT;
     }
 
@@ -159,7 +153,7 @@ int demodParadox(bool verbose, bool oldChksum) {
 
         // not manchester data
         if (bits[i] == bits[i + 1]) {
-            PrintAndLogEx(DEBUG, "Error Manchester at %u", i);
+            PrintAndLogEx(WARNING, "Error Manchester at %u", i);
             errors++;
         }
 
@@ -173,7 +167,7 @@ int demodParadox(bool verbose, bool oldChksum) {
     }
 
     if (errors) {
-        PrintAndLogEx(DEBUG, "Total Manchester Errors... %u", errors);
+        PrintAndLogEx(WARNING, "Total Manchester Errors... %u", errors);
     }
 
     setDemodBuff(bits, size, idx);
@@ -181,7 +175,6 @@ int demodParadox(bool verbose, bool oldChksum) {
 
     if (hi2 == 0 && hi == 0 && lo == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Paradox no value found");
-        free(bits);
         return PM3_ESOFT;
     }
 
@@ -237,7 +230,6 @@ int demodParadox(bool verbose, bool oldChksum) {
         printDemodBuff(0, false, false, false);
     }
 
-    free(bits);
     return PM3_SUCCESS;
 }
 
@@ -508,3 +500,5 @@ int detectParadox(uint8_t *dest, size_t *size, int *wave_start_idx) {
 
     return (int)idx;
 }
+
+

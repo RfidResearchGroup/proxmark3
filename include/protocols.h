@@ -191,8 +191,6 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MIFARE_CMD_RESTORE          0xC2
 #define MIFARE_CMD_TRANSFER         0xB0
 
-#define MIFARE_MAGIC_GDM_WUPC1      0x20
-#define MIFARE_MAGIC_GDM_WUPC2      0x23
 #define MIFARE_MAGIC_GDM_AUTH_KEY   0x80
 #define MIFARE_MAGIC_GDM_READBLOCK  0x38
 #define MIFARE_MAGIC_GDM_WRITEBLOCK 0xA8
@@ -266,10 +264,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_NTAG21X       8
 #define MAGIC_GEN_3         9
 #define MAGIC_GEN_4GTU      10
-#define MAGIC_GDM_AUTH      11
+#define MAGIC_GEN_4GDM      11
 #define MAGIC_QL88          12
-#define MAGIC_GDM_WUP_20    13
-#define MAGIC_GDM_WUP_40    14
 
 
 // Commands for configuration of Gen4 GTU cards.
@@ -434,8 +430,6 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PROTO_CRYPTORF  15
 #define SEOS            16
 #define PROTO_MFPLUS    17
-#define PROTO_TEXKOM    18
-#define PROTO_XEROX     19
 
 // Picopass fuses
 #define FUSE_FPERS   0x80
@@ -925,9 +919,6 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // 0x0A = ACK
 // 0x05 = NACK
-
-// XEROX Commands
-#define XEROX_READ_MEM                  0x20
 
 #endif
 // PROTOCOLS_H

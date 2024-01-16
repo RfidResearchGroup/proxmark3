@@ -488,13 +488,12 @@ static const char *mapFDBX(uint16_t countryCode) {
 //see ASKDemod for what args are accepted
 //almost the same demod as cmddata.c/CmdFDXBdemodBI
 int demodFDXB(bool verbose) {
-    // Differential Biphase / di-phase (inverted biphase)
-    // get binary from ask wave
+    //Differential Biphase / di-phase (inverted biphase)
+    //get binary from ask wave
     if (ASKbiphaseDemod(0, 32, 1, 100, false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - FDX-B ASKbiphaseDemod failed");
         return PM3_ESOFT;
     }
-
     size_t size = g_DemodBufferLen;
     int preambleIndex = detectFDXB(g_DemodBuffer, &size);
     if (preambleIndex < 0) {
@@ -514,6 +513,7 @@ int demodFDXB(bool verbose) {
     setDemodBuff(g_DemodBuffer, 128, preambleIndex);
     setClockGrid(g_DemodClock, g_DemodStartIdx + (preambleIndex * g_DemodClock));
 
+
     // remove marker bits (1's every 9th digit after preamble) (pType = 2)
     size = removeParity(g_DemodBuffer, 11, 9, 2, 117);
     if (size != 104) {
@@ -521,7 +521,7 @@ int demodFDXB(bool verbose) {
         return PM3_ESOFT;
     }
 
-    // got a good demod
+    //got a good demod
     uint8_t offset;
     // ISO: bits 27..64
     uint64_t NationalCode = ((uint64_t)(bytebits_to_byteLSBF(g_DemodBuffer + 32, 6)) << 32) | bytebits_to_byteLSBF(g_DemodBuffer, 32);
@@ -559,35 +559,31 @@ int demodFDXB(bool verbose) {
     offset += 16;
     uint32_t extended = bytebits_to_byteLSBF(g_DemodBuffer + offset, 24);
 
-    uint8_t raw[13] = {0};
-    for (int i = 0; i < sizeof(raw); i++) {
-        raw[i] = bytebits_to_byte(g_DemodBuffer + (i * 8), 8);
-    }
+    uint64_t rawid = (uint64_t)(bytebits_to_byte(g_DemodBuffer, 32)) << 32 | bytebits_to_byte(g_DemodBuffer + 32, 32);
+    uint8_t raw[8];
+    num_to_bytes(rawid, 8, raw);
 
-    if (verbose == false) {
+    if (!verbose) {
         PROMPT_CLEARLINE;
-        PrintAndLogEx(SUCCESS, "Animal ID........... " _GREEN_("%04u-%012"PRIu64), countryCode, NationalCode);
+        PrintAndLogEx(SUCCESS, "Animal ID          " _GREEN_("%04u-%012"PRIu64), countryCode, NationalCode);
         return PM3_SUCCESS;
     }
+    PrintAndLogEx(SUCCESS, "FDX-B / ISO 11784/5 Animal");
+    PrintAndLogEx(SUCCESS, "Animal ID          " _GREEN_("%03u-%012"PRIu64), countryCode, NationalCode);
+    PrintAndLogEx(SUCCESS, "National Code      " _GREEN_("%012" PRIu64) " (0x%" PRIX64 ")", NationalCode, NationalCode);
+    PrintAndLogEx(SUCCESS, "Country Code       " _GREEN_("%03u") " - %s", countryCode, mapFDBX(countryCode));
+    PrintAndLogEx(SUCCESS, "Reserved/RFU       %u (0x%04X)", reservedCode,  reservedCode);
+    PrintAndLogEx(SUCCESS, "  Animal bit set?  %s", animalBit ? _YELLOW_("True") : "False");
+    PrintAndLogEx(SUCCESS, "      Data block?  %s  [value 0x%X]", dataBlockBit ? _YELLOW_("True") : "False", extended);
+    PrintAndLogEx(SUCCESS, "        RUDI bit?  %s", rudiBit ? _YELLOW_("True") " (advanced transponder)" : "False");
+    PrintAndLogEx(SUCCESS, "       User Info?  %u %s", userInfo, userInfo == 0 ? "(RFU)" : "");
+    PrintAndLogEx(SUCCESS, "  Replacement No?  %u %s", replacementNr, replacementNr == 0 ? "(RFU)" : "");
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, _CYAN_("FDX-B / ISO 11784/5 Animal"));
-    PrintAndLogEx(SUCCESS, "Animal ID......... " _GREEN_("%03u-%012"PRIu64), countryCode, NationalCode);
-    PrintAndLogEx(SUCCESS, "National Code..... " _GREEN_("%012" PRIu64) " ( 0x%" PRIX64 " )", NationalCode, NationalCode);
-    PrintAndLogEx(SUCCESS, "Country Code...... " _GREEN_("%03u") " - %s", countryCode, mapFDBX(countryCode));
-    PrintAndLogEx(SUCCESS, "Reserved/RFU...... %u (0x%04X)", reservedCode,  reservedCode);
-    PrintAndLogEx(SUCCESS, "Animal bit set?... %s", animalBit ? _YELLOW_("True") : "False");
-    PrintAndLogEx(SUCCESS, "Data block?....... %s  ( 0x%X )", dataBlockBit ? _YELLOW_("True") : "False", extended);
-    PrintAndLogEx(SUCCESS, "RUDI bit?......... %s", rudiBit ? _YELLOW_("True") " ( advanced transponder )" : "False");
-    PrintAndLogEx(SUCCESS, "User Info?........ %u %s", userInfo, (userInfo == 0) ? "( RFU )" : "");
-    PrintAndLogEx(SUCCESS, "Replacement No?... %u %s", replacementNr, replacementNr == 0 ? "( RFU )" : "");
-
-    // crc only calculated over NORMAL data (8 bytes)
     uint8_t c[] = {0, 0};
-    compute_crc(CRC_11784, raw, 8, &c[0], &c[1]);
-    PrintAndLogEx(SUCCESS, "CRC-16............ 0x%04X ( %s )", crc, (crc == (c[1] << 8 | c[0])) ? _GREEN_("ok") : _RED_("fail"));
+    compute_crc(CRC_11784, raw, sizeof(raw), &c[0], &c[1]);
+    PrintAndLogEx(SUCCESS, "CRC-16             0x%04X ( %s )", crc, (crc == (c[1] << 8 | c[0])) ? _GREEN_("ok") : _RED_("fail"));
     // iceman: crc doesn't protect the extended data?
-    PrintAndLogEx(SUCCESS, "Raw............... " _GREEN_("%s"), sprint_hex(raw, sizeof(raw)));
+    PrintAndLogEx(SUCCESS, "Raw                " _GREEN_("%s"), sprint_hex(raw, 8));
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %zu", preambleIndex, size);
@@ -605,13 +601,12 @@ int demodFDXB(bool verbose) {
         float bt_C = (bt_F - 32) / 1.8;
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "Bio-Thermo detected");
-        PrintAndLogEx(INFO,    "  temperature... " _GREEN_("%.1f")" F / " _GREEN_("%.1f") " C", bt_F, bt_C);
+        PrintAndLogEx(INFO, "   temperature     " _GREEN_("%.1f")" F / " _GREEN_("%.1f") " C", bt_F, bt_C);
     }
 
     // set block 0 for later
     //g_DemodConfig = T55x7_MODULATION_DIPHASE | T55x7_BITRATE_RF_32 | 4 << T55x7_MAXBLOCK_SHIFT;
 
-    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 

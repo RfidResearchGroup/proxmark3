@@ -26,7 +26,7 @@
 #define MAX_MIFARE_FRAME_SIZE   18  // biggest Mifare frame is answer to a read (one block = 16 Bytes) + 2 Bytes CRC
 #define MAX_MIFARE_PARITY_SIZE  3   // need 18 parity bits for the 18 Byte above. 3 Bytes are enough to store these
 #define CARD_MEMORY_SIZE        4096
-#define DMA_BUFFER_SIZE         (512 + 256)
+#define DMA_BUFFER_SIZE         512
 
 // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits
 #define TOSEND_BUFFER_SIZE (9 * MAX_FRAME_SIZE + 1 + 1 + 2)
@@ -35,8 +35,6 @@ uint8_t *BigBuf_get_addr(void);
 uint32_t BigBuf_get_size(void);
 uint8_t *BigBuf_get_EM_addr(void);
 uint16_t BigBuf_max_traceLen(void);
-uint32_t BigBuf_get_hi(void);
-
 void BigBuf_initialize(void);
 void BigBuf_Clear(void);
 void BigBuf_Clear_ext(bool verbose);

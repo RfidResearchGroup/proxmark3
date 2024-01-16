@@ -29,7 +29,7 @@ USB CDC (Communications Device Class) ACM (Abstract Control Model) is a way to e
 On the host, it appears as a virtual serial port, e.g. `/dev/ttyACM0`.
 
 This is the basic way to communicate with all versions of Proxmark3 (with fairly recent FW, it used to be USB-HID-based long time ago).
-On the Proxmark3 side, USB-CDC is provided by `common/usb_cdc.c`.
+On the Proxmark side, USB-CDC is provided by `common/usb_cdc.c`.
 
 In the USB CDC ACM descriptors, the Proxmark3 advertises a baudrate (USART_BAUD_RATE) but this is purely informative and has no real meaning.
 The real communication speed relates only to the USB link and is roughly about 7Mbps.
@@ -72,7 +72,7 @@ Some specific commands are available when you add `BTADDON` to `PLATFORM_EXTRAS`
 * `usart btpin`, to change the BT add-on PIN
 * `usart btfactory`, to guess the current BT add-on UART settings and to reset its configuration.
 
-`usart btfactory` changes several times the Proxmark3 USART baudrate and parity till it matches the BT add-on settings, then changes the baudrate and parity of the add-on to a default value, then changes the Proxmark3 USART to the same default values, so everything should be back in order. (`btfactory` does more but we're only interested in baudrate in this discussion)
+`usart btfactory` changes several times the Proxmark3 USART baudrate and parity till it matches the BT add-on settings, then changes the baudrate and parity of the add-on to a default value, then changes the Proxmark USART to the same default values, so everything should be back in order. (`btfactory` does more but we're only interested in baudrate in this discussion)
 
 Manual configuration is also possible with `usart txrx -d "AT+Px"` and `usart txrx -d "AT+BAUDx"`.
 

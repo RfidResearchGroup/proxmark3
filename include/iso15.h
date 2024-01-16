@@ -34,14 +34,8 @@ typedef enum ISO15_COMMAND {
     ISO15_RAW = (1 << 2),
     ISO15_APPEND_CRC = (1 << 3),
     ISO15_HIGH_SPEED = (1 << 4),
-    ISO15_READ_RESPONSE = (1 << 5),
-    ISO15_LONG_WAIT = (1 << 6),
+    ISO15_READ_RESPONSE = (1 << 5)
 } iso15_command_t;
 
-typedef struct {
-    uint8_t flags;      // PM3 Flags - see iso15_command_t
-    uint16_t rawlen;
-    uint8_t raw[];      // First byte in raw,  raw[0] is ISO15693 protocol flag byte
-} PACKED iso15_raw_cmd_t;
 
 #endif // _ISO15_H_

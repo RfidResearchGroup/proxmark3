@@ -57,7 +57,7 @@ int bitsLeft(BitstreamIn_t *stream);
 void push6bits(BitstreamOut_t *stream, uint8_t bits);
 void x_num_to_bytes(uint64_t n, size_t len, uint8_t *dest);
 uint64_t x_bytes_to_num(uint8_t *src, size_t len);
-uint8_t reversebyte(uint8_t b);
+uint8_t reversebytes(uint8_t b);
 void reverse_arraybytes(uint8_t *arr, size_t len);
 void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len);
 #endif // CIPHERUTILS_H

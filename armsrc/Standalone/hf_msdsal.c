@@ -37,11 +37,11 @@ void ModInfo(void) {
 /* This standalone implements two different modes: reading and emulating.
 *
 * The initial mode is reading with LED A as guide.
-* In this mode, the Proxmark3 expects a Visa Card,
+* In this mode, the Proxmark expects a Visa Card,
 * and will act as card reader. Trying to find track 2.
 *
-* If the Proxmark3 found a track 2, it will change to emulation mode (LED C) automatically.
-* During this mode the Proxmark3 will behave as card, emulating a Visa MSD transaction
+* If the Proxmark found a track 2, it will change to emulation mode (LED C) automatically.
+* During this mode the Proxmark will behave as card, emulating a Visa MSD transaction
 * using the pre-saved track2 from the previous reading.
 *
 * It is possible to jump from mode to another by simply pressing the button.

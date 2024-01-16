@@ -16,7 +16,6 @@
 // Proxmark3 RDV40 Flash memory commands
 //-----------------------------------------------------------------------------
 #include "cmdflashmemspiffs.h"
-#include "cmdtrace.h"
 #include <ctype.h>
 #include "cmdparser.h"  // command_t
 #include "pmflash.h"
@@ -370,19 +369,18 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
     CLIParserInit(&ctx, "mem spiffs dump",
                   "Dumps device SPIFFS file to a local file\n"
                   "Size is handled by first sending a STAT command against file to verify existence",
-                  "mem spiffs dump -s tag.bin           --> download binary file from device, saved as `tag.bin`\n"
-                  "mem spiffs dump -s tag.bin -d a001   --> download tag.bin, save as `a001.bin`\n"
-                  "mem spiffs dump -s tag.bin -t        --> download tag.bin into trace buffer"
+                  "mem spiffs dump -s tag.bin             --> download binary file from device\n"
+                  "mem spiffs dump -s tag.bin -d a001 -e   --> download tag.bin, save as `a001.bin`"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("s", "src", "<fn>", "SPIFFS file to save"),
         arg_str0("d", "dest", "<fn>", "file name to save to <w/o .bin>"),
-        arg_lit0("t", "trace", "download into trace buffer"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+
     int slen = 0;
     char src[32] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)src, 32, &slen);
@@ -391,7 +389,6 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
     char dest[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)dest, FILE_PATH_SIZE, &dlen);
 
-    bool to_trace = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     // get size from spiffs itself !
@@ -405,7 +402,7 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
 
     uint32_t len = resp.data.asDwords[0];
     uint8_t *dump = calloc(len, sizeof(uint8_t));
-    if (dump == NULL) {
+    if (!dump) {
         PrintAndLogEx(ERR, "error, cannot allocate memory ");
         return PM3_EMALLOC;
     }
@@ -413,38 +410,27 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
     // download from device
     uint32_t start_index = 0;
     PrintAndLogEx(INFO, "downloading "_YELLOW_("%u") " bytes from `" _YELLOW_("%s") "` (spiffs)", len, src);
-    if (GetFromDevice(SPIFFS, dump, len, start_index, (uint8_t *)src, slen, NULL, -1, true) == false) {
+    if (!GetFromDevice(SPIFFS, dump, len, start_index, (uint8_t *)src, slen, NULL, -1, true)) {
         PrintAndLogEx(FAILED, "error, downloading from spiffs");
         free(dump);
         return PM3_EFLASH;
     }
 
-    if (to_trace) {
-        // copy to client trace buffer
-        if (ImportTraceBuffer(dump, len) == false) {
-            PrintAndLogEx(FAILED, "error, copying to trace buffer");
-            free(dump);
-            return PM3_EMALLOC;
-        }
-        PrintAndLogEx(HINT, "Use 'trace list -1 -t ...' to view, 'trace save -f ...' to save");
+    // save to file
+    char fn[FILE_PATH_SIZE] = {0};
+    if (dlen == 0) {
+        strncpy(fn, src, slen);
     } else {
-
-        // save to file
-        char fn[FILE_PATH_SIZE] = {0};
-        if (dlen) {
-            strncpy(fn, dest, dlen);
-        } else {
-            strncpy(fn, src, slen);
-        }
-
-        // set file extension
-        char *suffix = strchr(fn, '.');
-        if (suffix) {
-            saveFile(fn, suffix, dump, len);
-        } else {
-            saveFile(fn, ".bin", dump, len);
-        }
+        strncpy(fn, dest, dlen);
     }
+
+    // set file extension
+    char *suffix = strchr(fn, '.');
+    if (suffix)
+        saveFile(fn, suffix, dump, len);
+    else
+        saveFile(fn, ".bin", dump, len); // default
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -527,7 +513,7 @@ static int CmdFlashMemSpiFFSView(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "mem spiffs view",
-                  "View a file on flash memory on device in console",
+                  "View a file on flash memory on devicer in console",
                   "mem spiffs view -f tag.bin"
                  );
 

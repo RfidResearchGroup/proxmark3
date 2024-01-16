@@ -263,32 +263,28 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
  * @param verbose prints out the response received.
  */
 static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp, bool verbose) {
-    if (WaitForResponseTimeout(CMD_ACK, resp, 2000) == false) {
+    if (WaitForResponseTimeout(CMD_ACK, resp, 2000)) {
+        uint16_t len = iSelect ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "client received %i octets", len);
+            if (len == 0 || len == 1) {
+                PrintAndLogEx(ERR, "Could not receive data correctly!");
+                return false;
+            }
+            PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp->data.asBytes, len));
+            if (!check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2)) {
+                PrintAndLogEx(WARNING, "wrong or no CRC bytes");
+            }
+            if (resp->data.asBytes[0] != 0xB2 && resp->data.asBytes[1] != 0x4D) {
+                PrintAndLogEx(ERR, "received incorrect frame format!");
+                return false;
+            }
+        }
+        return true;
+    } else {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-        return false;
     }
-
-    uint16_t len = iSelect ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
-
-    if (verbose) {
-
-        if (len == 0 || len == 1) {
-            PrintAndLogEx(ERR, "Could not receive data correctly!");
-            return false;
-        }
-
-        PrintAndLogEx(SUCCESS, "(%u) %s", len, sprint_hex(resp->data.asBytes, len));
-
-        if (check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2) == false) {
-            PrintAndLogEx(WARNING, "CRC ( " _RED_("fail") " )");
-        }
-
-        if (resp->data.asBytes[0] != 0xB2 && resp->data.asBytes[1] != 0x4D) {
-            PrintAndLogEx(ERR, "received incorrect frame format!");
-            return false;
-        }
-    }
-    return true;
+    return false;
 }
 
 
@@ -1787,7 +1783,7 @@ static int CmdHFFelicaSniff(const char *Cmd) {
 
 
     PrintAndLogEx(INFO, "Sniff Felica,  getting first %" PRIu32 " frames, skipping after %" PRIu32 " triggers", payload.samples,   payload.triggers);
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort sniffing");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort sniffing");
     clearCommandBuffer();
     SendCommandNG(CMD_HF_FELICA_SNIFF, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
@@ -1834,7 +1830,7 @@ static int CmdHFFelicaSimLite(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_FELICALITE_SIMULATE, payload.uid, sizeof(payload));
@@ -2039,7 +2035,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     SendCommandNG(CMD_HF_FELICALITE_DUMP, NULL, 0);
     PacketResponseNG resp;
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort dumping");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort dumping");
 
     uint8_t timeout = 0;
     while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
@@ -2190,13 +2186,13 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",            CmdHelp,                          AlwaysAvailable, "This help"},
-    {"list",            CmdHFFelicaList,                  AlwaysAvailable, "List ISO 18092/FeliCa history"},
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
+    {"list",            CmdHFFelicaList,                  AlwaysAvailable, "List ISO 18092/FeliCa history"},
+    {"reader",          CmdHFFelicaReader,                IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
     {"info",            CmdHFFelicaInfo,                  IfPm3Felica,     "Tag information"},
+    {"sniff",           CmdHFFelicaSniff,                 IfPm3Felica,     "Sniff ISO 18092/FeliCa traffic"},
     {"raw",             CmdHFFelicaCmdRaw,                IfPm3Felica,     "Send raw hex data to tag"},
     {"rdbl",            CmdHFFelicaReadPlain,             IfPm3Felica,     "read block data from authentication-not-required Service."},
-    {"reader",          CmdHFFelicaReader,                IfPm3Felica,     "Act like an ISO18092/FeliCa reader"},
-    {"sniff",           CmdHFFelicaSniff,                 IfPm3Felica,     "Sniff ISO 18092/FeliCa traffic"},
     {"wrbl",            CmdHFFelicaWritePlain,            IfPm3Felica,     "write block data to an authentication-not-required Service."},
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Standard") " -----------------------"},
     //{"dump",          CmdHFFelicaDump,                    IfPm3Felica,     "Wait for and try dumping FeliCa"},

@@ -122,7 +122,7 @@ int preferences_save(void) {
         PrintAndLogEx(INFO, "No preferences file will be saved");
         return PM3_SUCCESS;
     }
-    PrintAndLogEx(DEBUG, "Saving preferences...");
+    PrintAndLogEx(INFO, "Saving preferences...");
 
     char *fn = prefGetFilename();
     int fn_len = strlen(fn) + 5; // .bak\0
@@ -279,12 +279,6 @@ void preferences_load_callback(json_t *root) {
         if (strncmp(tempStr, "off", 3) == 0) g_session.client_debug_level = cdbOFF;
         if (strncmp(tempStr, "simple", 6) == 0) g_session.client_debug_level = cdbSIMPLE;
         if (strncmp(tempStr, "full", 4) == 0) g_session.client_debug_level = cdbFULL;
-
-        if (g_session.client_debug_level == cdbOFF) {
-            SetAPDULogging(false);
-        } else {
-            SetAPDULogging(true);
-        }
     }
 
     // default save path
@@ -374,97 +368,62 @@ void preferences_load_callback(json_t *root) {
 
 // Preference Processing Functions
 // typedef enum preferenceId {prefNONE,prefHELP,prefEMOJI,prefCOLOR,prefPLOT,prefOVERLAY,prefHINTS,prefCLIENTDEBUG} preferenceId_t;
-typedef enum prefShowOpt {prefShowNone, prefShowOLD, prefShowNEW, prefShowOff, prefShowUnknown} prefShowOpt_t;
+typedef enum prefShowOpt {prefShowNone, prefShowOLD, prefShowNEW} prefShowOpt_t;
 
-static const char *pref_show_status_msg(prefShowOpt_t opt) {
-    switch (opt) {
+static const char *prefShowMsg(prefShowOpt_t Opt) {
+    switch (Opt) {
         case prefShowOLD:
-            return "( " _CYAN_("old") " )";
+            return "( " _YELLOW_("old") " )";
         case prefShowNEW:
             return "( " _GREEN_("new") " )";
         case prefShowNone:
-        case prefShowOff:
-        case prefShowUnknown:
-        default:
-            return "";
-
-    }
-}
-
-static const char *pref_show_value(prefShowOpt_t opt, const char *msg) {
-
-    static char s[128] = {0};
-    switch (opt) {
-        case prefShowOLD:
-            sprintf(s, _CYAN_("%s"), msg);
-            return s;
-
-        case prefShowNEW:
-            sprintf(s, _GREEN_("%s"), msg);
-            return s;
-        case prefShowNone:
-            if ((strncmp(msg, "off", 3) == 0) || (strncmp(msg, "normal", 6) == 0)) {
-                sprintf(s, _WHITE_("%s"), msg);
-            } else {
-                sprintf(s, _GREEN_("%s"), msg);
-            }
-            return s;
-
-        case prefShowOff:
-            sprintf(s, _WHITE_("%s"), msg);
-            return s;
-
-        case prefShowUnknown:
-            sprintf(s, _RED_("%s"), msg);
-            return s;
-
-        default:
             return "";
     }
+    return "";
 }
-
 
 static void showEmojiState(prefShowOpt_t opt) {
 
     switch (g_session.emoji_mode) {
         case EMO_ALIAS:
-            PrintAndLogEx(INFO, "   %s emoji................... %s", pref_show_status_msg(opt), pref_show_value(opt, "alias"));
+            PrintAndLogEx(INFO, "   %s emoji................... "_GREEN_("alias"), prefShowMsg(opt));
             break;
         case EMO_EMOJI:
-            PrintAndLogEx(INFO, "   %s emoji................... %s", pref_show_status_msg(opt), pref_show_value(opt, "emoji"));
+            PrintAndLogEx(INFO, "   %s emoji................... "_GREEN_("emoji"), prefShowMsg(opt));
             break;
         case EMO_ALTTEXT:
-            PrintAndLogEx(INFO, "   %s emoji................... %s", pref_show_status_msg(opt), pref_show_value(opt, "alttext"));
+            PrintAndLogEx(INFO, "   %s emoji................... "_GREEN_("alttext"), prefShowMsg(opt));
             break;
         case EMO_NONE:
-            PrintAndLogEx(INFO, "   %s emoji................... %s", pref_show_status_msg(opt), pref_show_value(opt, "none"));
+            PrintAndLogEx(INFO, "   %s emoji................... "_GREEN_("none"), prefShowMsg(opt));
             break;
         default:
-            PrintAndLogEx(INFO, "   %s emoji................... %s", pref_show_status_msg(opt), pref_show_value(prefShowUnknown, "unknown"));
+            PrintAndLogEx(INFO, "   %s emoji................... "_RED_("unknown"), prefShowMsg(opt));
     }
 }
 
 static void showColorState(prefShowOpt_t opt) {
-    PrintAndLogEx(INFO, "   %s color................... %s "
-                  , pref_show_status_msg(opt)
-                  , (g_session.supports_colors) ? pref_show_value(opt, "ansi") : pref_show_value(opt, "off")
-                 );
+
+    if (g_session.supports_colors)
+        PrintAndLogEx(INFO, "   %s color................... "_GREEN_("ansi"), prefShowMsg(opt));
+    else
+        PrintAndLogEx(INFO, "   %s color................... "_WHITE_("off"), prefShowMsg(opt));
 }
 
 static void showClientDebugState(prefShowOpt_t opt) {
 
     switch (g_session.client_debug_level) {
         case cdbOFF:
-            PrintAndLogEx(INFO, "   %s client debug............ %s", pref_show_status_msg(opt), pref_show_value(opt, "off"));
+            PrintAndLogEx(INFO, "   %s client debug............ "_WHITE_("off"), prefShowMsg(opt));
             break;
         case cdbSIMPLE:
-            PrintAndLogEx(INFO, "   %s client debug............ %s", pref_show_status_msg(opt), pref_show_value(opt, "simple"));
+            PrintAndLogEx(INFO, "   %s client debug............ "_GREEN_("simple"), prefShowMsg(opt));
             break;
         case cdbFULL:
-            PrintAndLogEx(INFO, "   %s client debug............ %s", pref_show_status_msg(opt), pref_show_value(opt, "full"));
+            PrintAndLogEx(INFO, "   %s client debug............ "_GREEN_("full"), prefShowMsg(opt));
             break;
         default:
-            PrintAndLogEx(INFO, "   %s client debug............ %s", pref_show_status_msg(opt), pref_show_value(prefShowUnknown, "unknown"));
+            PrintAndLogEx(INFO, "   %s client debug............ "_RED_("unknown"), prefShowMsg(opt));
     }
 }
 /*
@@ -512,12 +471,12 @@ static void showSavePathState(savePaths_t path_index, prefShowOpt_t opt) {
     if (path_index < spItemCount) {
         if ((g_session.defaultPaths[path_index] == NULL) || (strcmp(g_session.defaultPaths[path_index], "") == 0)) {
             PrintAndLogEx(INFO, "   %s %s "_WHITE_("not set"),
-                          pref_show_status_msg(opt),
+                          prefShowMsg(opt),
                           s
                          );
         } else {
             PrintAndLogEx(INFO, "   %s %s "_GREEN_("%s"),
-                          pref_show_status_msg(opt),
+                          prefShowMsg(opt),
                           s,
                           g_session.defaultPaths[path_index]
                          );
@@ -544,41 +503,39 @@ static void showOverlayPosState(void) {
 }
 
 static void showHintsState(prefShowOpt_t opt) {
-    PrintAndLogEx(INFO, "   %s hints................... %s"
-                  , pref_show_status_msg(opt)
-                  , (g_session.show_hints) ? pref_show_value(opt, "on") : pref_show_value(opt, "off")
-                 );
+    if (g_session.show_hints)
+        PrintAndLogEx(INFO, "   %s hints................... "_GREEN_("on"), prefShowMsg(opt));
+    else
+        PrintAndLogEx(INFO, "   %s hints................... "_WHITE_("off"), prefShowMsg(opt));
 }
 
 static void showPlotSliderState(prefShowOpt_t opt) {
-    PrintAndLogEx(INFO, "   %s show plot sliders....... %s"
-                  , pref_show_status_msg(opt)
-                  , (g_session.overlay_sliders) ? pref_show_value(opt, "on") : pref_show_value(opt, "off")
-                 );
+    if (g_session.overlay_sliders)
+        PrintAndLogEx(INFO, "   %s show plot sliders....... "_GREEN_("on"), prefShowMsg(opt));
+    else
+        PrintAndLogEx(INFO, "   %s show plot sliders....... "_WHITE_("off"), prefShowMsg(opt));
 }
 
 static void showBarModeState(prefShowOpt_t opt) {
 
     switch (g_session.bar_mode) {
         case STYLE_BAR:
-            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(opt, "bar"));
+            PrintAndLogEx(INFO, "   %s barmode................. "_GREEN_("bar"), prefShowMsg(opt));
             break;
         case STYLE_MIXED:
-            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(opt, "mixed"));
+            PrintAndLogEx(INFO, "   %s barmode................. "_GREEN_("mixed"), prefShowMsg(opt));
             break;
         case STYLE_VALUE:
-            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(opt, "value"));
+            PrintAndLogEx(INFO, "   %s barmode................. "_GREEN_("value"), prefShowMsg(opt));
             break;
         default:
-            PrintAndLogEx(INFO, "   %s barmode................. %s", pref_show_status_msg(opt), pref_show_value(prefShowUnknown, "unknown"));
+            PrintAndLogEx(INFO, "   %s barmode................ "_RED_("unknown"), prefShowMsg(opt));
     }
 }
 
 static void showOutputState(prefShowOpt_t opt) {
-    PrintAndLogEx(INFO, "   %s output.................. %s"
-                  , pref_show_status_msg(opt)
-                  , (g_session.dense_output) ? pref_show_value(opt, "dense") : pref_show_value(opt, "normal")
-                 );
+    PrintAndLogEx(INFO, "   %s output.................. %s", prefShowMsg(opt),
+                  g_session.dense_output ? _GREEN_("dense") : _WHITE_("normal"));
 }
 
 static void showClientExeDelayState(void) {
@@ -717,11 +674,9 @@ static int setCmdDebug(const char *Cmd) {
     if (use_off) {
         new_value = cdbOFF;
     }
-
     if (use_simple) {
         new_value = cdbSIMPLE;
     }
-
     if (use_full) {
         new_value = cdbFULL;
     }
@@ -730,13 +685,6 @@ static int setCmdDebug(const char *Cmd) {
         showClientDebugState(prefShowOLD);
         g_session.client_debug_level = new_value;
         g_debugMode = new_value;
-
-        if (new_value == cdbOFF) {
-            SetAPDULogging(false);
-        } else {
-            SetAPDULogging(true);
-        }
-
         showClientDebugState(prefShowNEW);
         preferences_save();
     } else {
@@ -813,44 +761,6 @@ static int setCmdDeviceDebug (const char *Cmd)
     return PM3_SUCCESS;
 }
 */
-
-int getDeviceDebugLevel(uint8_t *debug_level) {
-    if (!g_session.pm3_present)
-        return PM3_EFAILED;
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_GET_DBGMODE, NULL, 0);
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_GET_DBGMODE, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "Failed to get current device debug level");
-        return PM3_ETIMEOUT;
-    }
-
-    if (debug_level)
-        *debug_level = resp.data.asBytes[0];
-
-    return PM3_SUCCESS;
-}
-
-int setDeviceDebugLevel(uint8_t debug_level, bool verbose) {
-    if (!g_session.pm3_present)
-        return PM3_EFAILED;
-
-    if (verbose)
-        PrintAndLogEx(INFO, "setting device debug loglevel to %u", debug_level);
-
-    uint8_t cdata[] = {debug_level, verbose};
-    clearCommandBuffer();
-    SendCommandNG(CMD_SET_DBGMODE, cdata, sizeof(cdata));
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_SET_DBGMODE, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "failed to set device debug loglevel");
-        return PM3_EFAILED;
-    }
-
-    return PM3_SUCCESS;
-}
-
 
 static int setCmdOutput(const char *Cmd) {
     CLIParserContext *ctx;

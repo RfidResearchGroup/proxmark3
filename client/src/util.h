@@ -31,8 +31,6 @@
 
 extern uint8_t g_debugMode;
 extern uint8_t g_printAndLog;
-typedef int (*print_cb_t)(char *s);
-extern print_cb_t g_printCallback;
 extern bool g_pendingPrompt;
 extern int g_numCPUs;
 
@@ -119,11 +117,11 @@ int hextobinarray_n(char *target, char *source, int sourcelen);
 int hextobinstring(char *target, char *source);
 int hextobinstring_n(char *target, char *source, int sourcelen);
 
-int binarray_2_hex(char *target, const size_t targetlen, const char *source, size_t srclen);
-void binarray_2_binstr(char *target,  char *source, int length);
-int binstr_2_binarray(uint8_t *target, char *source, int length);
+int binarraytohex(char *target, const size_t targetlen, const char *source, size_t srclen);
+void binarraytobinstring(char *target,  char *source, int length);
+int binstring2binarray(uint8_t *target, char *source, int length);
 
-void bytes_2_binstr(char *target,  const uint8_t *source, size_t sourcelen);
+void byte_2_binstr(char *target,  const uint8_t *source, size_t sourcelen);
 void binstr_2_bytes(uint8_t *target, size_t *targetlen, const char *src);
 
 uint8_t GetParity(const uint8_t *bits, uint8_t type, int length);
@@ -145,12 +143,8 @@ void strn_upper(char *s, size_t n);
 bool str_startswith(const char *s,  const char *pre);  // check for prefix in string
 bool str_endswith(const char *s,  const char *suffix);    // check for suffix in string
 void clean_ascii(unsigned char *buf, size_t len);
-void str_cleanrn(char *buf, size_t len);
-void str_creplace(char *buf, size_t len, char from, char to);
-void str_reverse(char *buf,  size_t len);
-void str_inverse_hex(char *buf, size_t len);
-void str_inverse_bin(char *buf, size_t len);
-
+void strcleanrn(char *buf, size_t len);
+void strcreplace(char *buf, size_t len, char from, char to);
 char *str_dup(const char *src);
 char *str_ndup(const char *src, size_t len);
 size_t str_nlen(const char *src, size_t maxlen);

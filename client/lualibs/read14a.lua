@@ -124,7 +124,7 @@ end
 -- @return if successful: an table containing card info
 -- @return if unsuccessful : nil, error
 local function waitFor14443a()
-    print('Waiting for card... press <Enter> to quit')
+    print('Waiting for card... press Enter to quit')
     while not core.kbd_enter_pressed() do
         res, err = read14443a()
         if res then return res end

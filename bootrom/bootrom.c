@@ -30,7 +30,7 @@
 common_area_t g_common_area __attribute__((section(".commonarea")));
 uint32_t start_addr, end_addr;
 bool bootrom_unlocked;
-extern uint32_t _bootrom_start[], _bootrom_end[], _flash_start[], _flash_end[], _osimage_entry[], __bss_start__[], __bss_end__[];
+extern uint32_t _bootrom_start[], _bootrom_end[], _flash_start[], _flash_end[], _osimage_entry[];
 
 static int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     PacketResponseOLD txcmd;
@@ -212,12 +212,6 @@ static void UsbPacketReceived(uint8_t *packet) {
         reply_old(CMD_ACK, arg0, 0, 0, 0, 0);
 }
 
-// delay_loop(1) = 3.07us
-static volatile uint32_t c;
-static void __attribute__((optimize("O0"))) delay_loop(uint32_t delay) {
-    for (c = delay * 2; c; c--) {};
-}
-
 static void flash_mode(void) {
     start_addr = 0;
     end_addr = 0;
@@ -240,7 +234,7 @@ static void flash_mode(void) {
     usb_enable();
 
     // wait for reset to be complete?
-    delay_loop(100000);
+    for (volatile size_t i = 0; i < 0x100000; i++) {};
 
     for (;;) {
         WDT_HIT();
@@ -252,17 +246,10 @@ static void flash_mode(void) {
             }
         }
 
-        bool button_state = BUTTON_PRESS();
-        // ~10ms, prevent jitter
-        delay_loop(3333);
-        if (button_state != BUTTON_PRESS()) {
-            // in jitter state, ignore
-            continue;
-        }
-        if (g_common_area.flags.button_pressed && button_state == false) {
+        if (g_common_area.flags.button_pressed && BUTTON_PRESS() == false) {
             g_common_area.flags.button_pressed = 0;
         }
-        if (!g_common_area.flags.button_pressed && button_state) {
+        if (!g_common_area.flags.button_pressed && BUTTON_PRESS()) {
             /* Perform a reset to leave flash mode */
             g_common_area.flags.button_pressed = 1;
             usb_disable();
@@ -275,10 +262,6 @@ static void flash_mode(void) {
 
 void BootROM(void);
 void BootROM(void) {
-    /* Set up (that is: clear) BSS. */
-    uint32_t *bss_dst = __bss_start__;
-    while (bss_dst < __bss_end__) *bss_dst++ = 0;
-
     //------------
     // First set up all the I/O pins; GPIOs configured directly, other ones
     // just need to be assigned to the appropriate peripheral.

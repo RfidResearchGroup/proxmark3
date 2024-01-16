@@ -61,7 +61,7 @@ These instructions will show how to setup the environment on OSX to the point wh
 2. Install dependencies:
 
     ```bash
-    sudo port install readline jansson lua52 python311 bzip2 lz4 openssl11 arm-none-eabi-gcc arm-none-eabi-binutils coreutils qt5 qt5-qtbase gd2 pkgconfig
+    sudo port install readline jansson lua52 python311 bzip2 lz4 openssl11 arm-none-eabi-gcc arm-none-eabi-binutils coreutils qt5 qt5-qtbase pkgconfig
     ```
 
 3. Clamp Python version for pkg-config

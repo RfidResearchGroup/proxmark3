@@ -365,13 +365,6 @@ int CommandReceived(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-int CommandReceivedCB(char *Cmd, print_cb_t callback) {
-    g_printCallback = callback;
-    int res = CmdsParse(CommandTable, Cmd);
-    g_printCallback = NULL;
-   return res;
-}
-
 command_t *getTopLevelCommandTable(void) {
     return CommandTable;
 }

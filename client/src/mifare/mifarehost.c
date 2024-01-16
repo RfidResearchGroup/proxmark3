@@ -52,7 +52,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
     // message
     PrintAndLogEx(INFO, "Expected execution time is about 25seconds on average");
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort");
+    PrintAndLogEx(INFO, "Press pm3-button to abort");
 
     while (true) {
         clearCommandBuffer();
@@ -222,7 +222,7 @@ int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keyc
 // 1 ==
 // 2 == Time-out, aborting
 int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
-                     uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory, bool verbose) {
+                     uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory) {
 
     uint64_t t2 = msclock();
 
@@ -256,9 +256,7 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
     // time to convert the returned data.
     uint8_t curr_keys = resp.oldarg[0];
 
-    if (verbose) {
-        PrintAndLogEx(INFO, "Chunk %.1fs | found %u/%u keys (%u)", (float)(t2 / 1000.0), curr_keys, (sectorsCnt << 1), size);
-    }
+    PrintAndLogEx(INFO, "Chunk %.1fs | found %u/%u keys (%u)", (float)(t2 / 1000.0), curr_keys, (sectorsCnt << 1), size);
 
     // all keys?
     if (curr_keys == sectorsCnt * 2 || lastChunk) {
@@ -270,19 +268,16 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         foo = bytes_to_num(resp.data.asBytes + 480, 8);
         bar = (resp.data.asBytes[489]  << 8 | resp.data.asBytes[488]);
 
-        for (uint8_t i = 0; i < 64; i++) {
+        for (uint8_t i = 0; i < 64; i++)
             arr[i] = (foo >> i) & 0x1;
-        }
 
-        for (uint8_t i = 0; i < 16; i++) {
+        for (uint8_t i = 0; i < 16; i++)
             arr[i + 64] = (bar >> i) & 0x1;
-        }
 
         // initialize storage for found keys
         icesector_t *tmp = calloc(sectorsCnt, sizeof(icesector_t));
-        if (tmp == NULL) {
+        if (tmp == NULL)
             return PM3_EMALLOC;
-        }
 
         memcpy(tmp, resp.data.asBytes, sectorsCnt * sizeof(icesector_t));
 
@@ -300,19 +295,10 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         }
         free(tmp);
 
-        // if all keys where found
-        if (curr_keys == sectorsCnt * 2) {
+        if (curr_keys == sectorsCnt * 2)
             return PM3_SUCCESS;
-        }
-
-        // if some keys was found
-        if (curr_keys > 0)  {
-            return PM3_EPARTIAL;
-        }
-
-        if (lastChunk) {
+        if (lastChunk)
             return PM3_ESOFT;
-        }
     }
     return PM3_ESOFT;
 }
@@ -612,7 +598,7 @@ int mfStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBl
 
     uint32_t uid;
     StateList_t statelists[2];
-    struct Crypto1State *p1, *p2, *p3, *p4;
+    struct Crypto1State *p1, * p2, * p3, * p4;
 
     struct {
         uint8_t block;
@@ -1194,9 +1180,8 @@ uint32_t cuid = 0;    // uid part used for crypto1.
 
 void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted) {
     if (len != 1) {
-        for (int i = 0; i < len; i++) {
+        for (int i = 0; i < len; i++)
             data[i] = crypto1_byte(pcs, 0x00, isEncrypted) ^ data[i];
-        }
     } else {
         uint8_t bt = 0;
         bt |= (crypto1_bit(pcs, 0, isEncrypted) ^ BIT(data[0], 0)) << 0;
@@ -1208,12 +1193,11 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
 }
 
 int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len) {
-
     PrintAndLogEx(SUCCESS, "encrypted data... %s", sprint_hex(data, len));
+    struct Crypto1State *s;
     uint32_t ks2 = ar_enc ^ prng_successor(nt, 64);
     uint32_t ks3 = at_enc ^ prng_successor(nt, 96);
-
-    struct Crypto1State *s = lfsr_recovery64(ks2, ks3);
+    s = lfsr_recovery64(ks2, ks3);
     mf_crypto1_decrypt(s, data, len, false);
     PrintAndLogEx(SUCCESS, "decrypted data... " _YELLOW_("%s"), sprint_hex(data, len));
     PrintAndLogEx(NORMAL, "");
@@ -1277,9 +1261,8 @@ int detect_classic_nackbug(bool verbose) {
 
     PrintAndLogEx(INFO, "Checking for NACK bug");
 
-    if (verbose) {
-        PrintAndLogEx(SUCCESS, "press " _GREEN_("pm3 button") " to abort both Proxmark3 and client\n");
-    }
+    if (verbose)
+        PrintAndLogEx(SUCCESS, "press pm3-button on the Proxmark3 device to abort both Proxmark3 and client.\n");
 
     PrintAndLogEx(INFO, "." NOLF);
 
@@ -1363,94 +1346,56 @@ int detect_classic_static_nonce(void) {
     return NONCE_FAIL;
 }
 
-/* Detect Mifare Classic static encrypted nonce
-detects special magic cards that has a static / fixed nonce
-returns:
-0  = nonce ok
-1  = has static/fixed nonce
-2  = cmd failed
-3  = has encrypted nonce
-*/
-int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, uint8_t *key) {
-    clearCommandBuffer();
-    uint8_t cdata[1 + 1 + MIFARE_KEY_SIZE] = { 0 };
-    cdata[0] = block_no;
-    cdata[1] = key_type;
-    memcpy(&cdata[2], key, MIFARE_KEY_SIZE);
-    SendCommandNG(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, cdata, sizeof(cdata));
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1000)) {
-
-        if (resp.status == PM3_ESOFT) {
-            return NONCE_FAIL;
-        }
-        return resp.data.asBytes[0];
-    }
-    return NONCE_FAIL;
-}
-
 /* try to see if card responses to "Chinese magic backdoor" commands. */
-int detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
+int detect_mf_magic(bool is_mfc) {
 
-    uint8_t isMagic = 0;
+    uint8_t isGeneration = 0;
     PacketResponseNG resp;
     clearCommandBuffer();
-    uint8_t payload[1 + 1 + MIFARE_KEY_SIZE] = { is_mfc, key_type };
-    num_to_bytes(key, MIFARE_KEY_SIZE, payload + 2);
-
+    uint8_t payload[] = { is_mfc };
     SendCommandNG(CMD_HF_MIFARE_CIDENT, payload, sizeof(payload));
     if (WaitForResponseTimeout(CMD_HF_MIFARE_CIDENT, &resp, 1500)) {
-        if (resp.status != PM3_SUCCESS) {
-            return 0;
-        }
+        if (resp.status == PM3_SUCCESS)
+            isGeneration = resp.data.asBytes[0];
     }
 
-    for (size_t i = 0; i < resp.length; i++) {
-        isMagic = 1;
-        switch (resp.data.asBytes[i]) {
-            case MAGIC_GEN_1A:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 1a"));
-                break;
-            case MAGIC_GEN_1B:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 1b"));
-                break;
-            case MAGIC_GEN_2:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 2 / CUID"));
-                break;
-            case MAGIC_GEN_3:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 3 / APDU") " ( possibly )");
-                break;
-            case MAGIC_GEN_4GTU:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GTU"));
-                break;
-            case MAGIC_GDM_AUTH:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Magic Auth )");
-                break;
-            case MAGIC_GDM_WUP_20:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Alt Magic Wakeup )");
-                break;
-            case MAGIC_GDM_WUP_40:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Gen1 Magic Wakeup )");
-                break;
-            case MAGIC_GEN_UNFUSED:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Write Once / FUID"));
-                break;
-            case MAGIC_SUPER_GEN1:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Super card ( ") _CYAN_("Gen 1") _GREEN_(" )"));
-                break;
-            case MAGIC_SUPER_GEN2:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Super card ( ") _CYAN_("Gen 2") _GREEN_(" )"));
-                break;
-            case MAGIC_NTAG21X:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("NTAG21x"));
-                break;
-            case MAGIC_QL88:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("QL88"));
-            default:
-                break;
-        }
+    switch (isGeneration) {
+        case MAGIC_GEN_1A:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 1a"));
+            break;
+        case MAGIC_GEN_1B:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 1b"));
+            break;
+        case MAGIC_GEN_2:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 2 / CUID"));
+            break;
+        case MAGIC_GEN_3:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : possibly " _GREEN_("Gen 3 / APDU"));
+            break;
+        case MAGIC_GEN_4GTU:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GTU"));
+            break;
+        case MAGIC_GEN_4GDM:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Gen 4 GDM"));
+            break;
+        case MAGIC_GEN_UNFUSED:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Write Once / FUID"));
+            break;
+        case MAGIC_SUPER_GEN1:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Super card (") _CYAN_("Gen 1") _GREEN_(")"));
+            break;
+        case MAGIC_SUPER_GEN2:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("Super card (") _CYAN_("Gen 2") _GREEN_(")"));
+            break;
+        case MAGIC_NTAG21X:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("NTAG21x"));
+            break;
+        case MAGIC_QL88:
+            PrintAndLogEx(SUCCESS, "Magic capabilities : " _GREEN_("QL88"));
+        default:
+            break;
     }
-    return isMagic;
+    return isGeneration;
 }
 
 bool detect_mfc_ev1_signature(void) {
@@ -1469,15 +1414,6 @@ int read_mfc_ev1_signature(uint8_t *signature) {
         res = mfReadBlock(70, MF_KEY_B, g_mifare_signature_key_b, sign + 16);
         if (res ==  PM3_SUCCESS) {
             memcpy(signature, sign, sizeof(sign));
-        }
-    } else {
-        // try QL88
-        res = mfReadBlock(69, MF_KEY_B, g_mifare_ql88_signature_key_b, sign);
-        if (res == PM3_SUCCESS) {
-            res = mfReadBlock(70, MF_KEY_B, g_mifare_ql88_signature_key_b, sign + 16);
-            if (res ==  PM3_SUCCESS) {
-                memcpy(signature, sign, sizeof(sign));
-            }
         }
     }
     return res;

@@ -36,19 +36,19 @@ void ModInfo(void) {
 /* This standalone implements four different modes: reading, simulating, dumping, & emulating.
 *
 * The initial mode is reading with LEDs A & D.
-* In this mode, the Proxmark3 is looking for an ST25TA card like those used by the IKEA Rothult,
+* In this mode, the Proxmark is looking for an ST25TA card like those used by the IKEA Rothult,
 * it will act as reader, and store the UID for simulation.
 *
-* If the Proxmark3 gets an ST25TA UID, it will change to simulation mode (LEDs A & C) automatically.
-* During this mode the Proxmark3 will pretend to be the IKEA Rothult ST25TA master key, upon presentation
-* to an IKEA Rothult the Proxmark3 will steal the 16 byte Read Protection key used to authenticate to the card.
+* If the Proxmark gets an ST25TA UID, it will change to simulation mode (LEDs A & C) automatically.
+* During this mode the Proxmark will pretend to be the IKEA Rothult ST25TA master key, upon presentation
+* to an IKEA Rothult the Proxmark will steal the 16 byte Read Protection key used to authenticate to the card.
 *
-* Once it gets the key, it will switch to dump mode (LEDs C & D) automatically. During this mode the Proxmark3
+* Once it gets the key, it will switch to dump mode (LEDs C & D) automatically. During this mode the Proxmark
 * will act as a reader once again, but now we know the Read Protection key to authenticate to the card to dump
 * it's contents so we can achieve full emulation.
 *
 * Once it dumps the contents of the card, it will switch to emulation mode (LED C) automatically.
-* During this mode the Proxmark3 should function as the original ST25TA IKEA Rothult Master Key
+* During this mode the Proxmark should function as the original ST25TA IKEA Rothult Master Key
 *
 * Keep pressing the button down will quit the standalone cycle.
 *

@@ -304,7 +304,7 @@ static int CmdHFFudanDump(const char *Cmd) {
 
             clearCommandBuffer();
             PacketResponseNG resp;
-            SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(cmd) | ((uint32_t)(numbits << 16)), argtimeout, cmd, sizeof(cmd));
+            SendCommandOLD(CMD_HF_ISO14443A_READER, flags, sizeof(cmd) | ((uint32_t)(numbits << 16)), argtimeout, cmd, sizeof(cmd));
 
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
                 if (resp.status == PM3_SUCCESS) {

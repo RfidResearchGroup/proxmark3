@@ -64,11 +64,6 @@ typedef struct {
     uint8_t raw[];
 } PACKED iso14b_raw_cmd_t;
 
-typedef struct {
-    uint8_t response_byte;
-    uint16_t datalen;
-    uint8_t data[];
-} PACKED iso14b_raw_apdu_response_t;
 
 #define US_TO_SSP(x)   ( (int32_t) ((x) * 3.39) )
 #define SSP_TO_US(x)   ( (int32_t)((x) / 3.39) )

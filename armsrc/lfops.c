@@ -44,7 +44,7 @@
 Notes about EM4xxx timings.
 
 The timing values differs between cards,  we got EM410x,  EM43x5, EM445x  etc.
-We are trying to unify and enable the Proxmark3 to easily detect and select correct timings automatic.
+We are trying to unify and enable the Proxmark to easily detect and select correct timings automatic.
 The measures from datasheets doesn't always match correct the hardware features of RDV4 antenans and we still wanted to let other devices with other custom antennas
 still benefit from this repo.  This is why its configurable and we use to set these dynamic settings in device external flash memory.
 
@@ -391,8 +391,6 @@ void loadT55xxConfig(void) {
     if (isok == T55XX_CONFIG_LEN) {
         if (g_dbglevel > 1) DbpString("T55XX Config load success");
     }
-
-    BigBuf_free();
 #endif
 }
 

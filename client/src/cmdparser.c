@@ -194,9 +194,6 @@ bool IfPm3Zx8211(void) {
 
 void CmdsHelp(const command_t Commands[]) {
     if (Commands[0].Name == NULL) return;
-
-    PrintAndLogEx(NORMAL, "");
-
     int i = 0;
     while (Commands[i].Name) {
         if (Commands[i].IsAvailable()) {

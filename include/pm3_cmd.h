@@ -274,18 +274,6 @@ typedef struct {
     uint8_t data[];
 } PACKED lf_hitag_t;
 
-// For CMD_LF_SNIFF_RAW_ADC and CMD_LF_ACQ_RAW_ADC
-#define LF_SAMPLES_BITS 30
-#define MAX_LF_SAMPLES ((((uint32_t)1u) << LF_SAMPLES_BITS) - 1)
-
-typedef struct {
-    // 64KB SRAM -> 524288 bits(max sample num) < 2^30
-uint32_t samples  :
-    LF_SAMPLES_BITS;
-    bool     realtime : 1;
-    bool     verbose  : 1;
-} PACKED lf_sample_payload_t;
-
 typedef struct {
     uint8_t blockno;
     uint8_t keytype;
@@ -675,7 +663,6 @@ typedef struct {
 
 #define CMD_HF_MIFARE_NACK_DETECT                                         0x0730
 #define CMD_HF_MIFARE_STATIC_NONCE                                        0x0731
-#define CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE                              0x0732
 
 // MFU OTP TearOff
 #define CMD_HF_MFU_OTP_TEAROFF                                            0x0740
@@ -741,10 +728,9 @@ typedef struct {
 #define MODE_FULLSIM        2
 
 // Static Nonce detection
-#define NONCE_FAIL       0x01
-#define NONCE_NORMAL     0x02
-#define NONCE_STATIC     0x03
-#define NONCE_STATIC_ENC 0x04
+#define NONCE_FAIL      0x01
+#define NONCE_NORMAL    0x02
+#define NONCE_STATIC    0x03
 
 // Dbprintf flags
 #define FLAG_RAWPRINT    0x00
@@ -820,9 +806,6 @@ typedef struct {
 // No PACS data                         pm3:  when using HID SAM to retried PACS data
 #define PM3_ENOPACS           -26
 
-// Got wrong length error               pm3: when received wrong length of data
-#define PM3_ELENGTH           -27
-
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program
@@ -845,18 +828,13 @@ typedef struct {
 // all zero's configure: no timeout for read/write used.
 // took settings from libnfc/buses/uart.c
 
-// uart_win32.c & uart_posix.c
+// uart_windows.c & uart_posix.c
 # define UART_FPC_CLIENT_RX_TIMEOUT_MS        200
 # define UART_USB_CLIENT_RX_TIMEOUT_MS        20
 # define UART_NET_CLIENT_RX_TIMEOUT_MS        500
 # define UART_TCP_LOCAL_CLIENT_RX_TIMEOUT_MS  40
 # define UART_UDP_LOCAL_CLIENT_RX_TIMEOUT_MS  20
 
-// definitions for multiple FPGA config files support
-#define FPGA_BITSTREAM_LF 1
-#define FPGA_BITSTREAM_HF 2
-#define FPGA_BITSTREAM_HF_FELICA 3
-#define FPGA_BITSTREAM_HF_15 4
 
 // CMD_DEVICE_INFO response packet has flags in arg[0], flag definitions:
 /* Whether a bootloader that understands the g_common_area is present */

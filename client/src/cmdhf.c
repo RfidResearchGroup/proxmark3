@@ -82,14 +82,11 @@ int CmdHFSearch(const char *Cmd) {
 
     int res = PM3_ESOFT;
 
-    uint8_t success[20] = {0};
-
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for ThinFilm tag...");
     if (IfPm3NfcBarcode()) {
         if (infoThinFilm(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
-            success[THINFILM] = true;
             res = PM3_SUCCESS;
         }
     }
@@ -99,7 +96,6 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443a()) {
         if (reader_lto(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LTO-CM tag") " found\n");
-            success[LTO] = true;
             res = PM3_SUCCESS;
         }
     }
@@ -110,7 +106,6 @@ int CmdHFSearch(const char *Cmd) {
         int sel_state = infoHF14A(false, false, false);
         if (sel_state > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-A tag") " found\n");
-            success[ISO_14443A] = true;
             res = PM3_SUCCESS;
 
             if (sel_state == 1)
@@ -123,7 +118,6 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Legicrf()) {
         if (readLegicUid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC Prime tag") " found\n");
-            success[LEGIC] = true;
             res = PM3_SUCCESS;
         }
     }
@@ -133,7 +127,6 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443a()) {
         if (readTopazUid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
-            success[TOPAZ] = true;
             res = PM3_SUCCESS;
         }
     }
@@ -143,7 +136,6 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, " Searching for TEXKOM tag...");
     if (read_texkom_uid(false, false) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("TEXKOM tag") " found\n");
-        success[PROTO_TEXKOM] = true;
         res = PM3_SUCCESS;
     }
 
@@ -153,7 +145,6 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443b()) {
         if (read_xerox_uid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fuji/Xerox tag") " found\n");
-            success[PROTO_XEROX] = true;
             res = PM3_SUCCESS;
         }
     }
@@ -164,7 +155,6 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443b()) {
         if (readHF14B(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-B tag") " found\n");
-            success[ISO_14443B] = true;
             res = PM3_SUCCESS;
         }
     }
@@ -176,7 +166,6 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso15693()) {
         if (readHF15Uid(false, false)) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 15693 tag") " found\n");
-            success[ISO_15693] = true;
             res = PM3_SUCCESS;
         }
     }
@@ -186,7 +175,6 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iclass()) {
         if (read_iclass_csn(false, false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iCLASS tag / PicoPass tag") " found\n");
-            success[ICLASS] = true;
             res = PM3_SUCCESS;
         }
     }
@@ -198,7 +186,6 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Felica()) {
         if (read_felica_uid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 18092 / FeliCa tag") " found\n");
-            success[FELICA] = true;
             res = PM3_SUCCESS;
         }
     }
@@ -209,7 +196,6 @@ int CmdHFSearch(const char *Cmd) {
     if (IfPm3Iso14443b()) {
         if (readHFCryptoRF(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") " found\n");
-            success[CRYPTORF] = true;
             res = PM3_SUCCESS;
         }
     }
@@ -219,53 +205,6 @@ int CmdHFSearch(const char *Cmd) {
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("No known/supported 13.56 MHz tags found"));
         res = PM3_ESOFT;
-    } else {
-
-        // no need to print 14A hints,  since it will print itself
-
-        if (success[THINFILM]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf thinfilm`") " commands\n");
-        }
-
-        if (success[LTO]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf lto`") " commands\n");
-        }
-
-        if (success[LEGIC]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf legic`") " commands\n");
-        }
-
-        if (success[TOPAZ]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz`") " commands\n");
-        }
-
-        if (success[PROTO_TEXKOM]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf texkom`") " commands\n");
-        }
-
-        if (success[PROTO_XEROX]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf xerox`") " commands\n");
-        }
-
-        if (success[ISO_14443B]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf 14b`") " commands\n");
-        }
-
-        if (success[ISO_15693]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf 15`") " commands\n");
-        }
-
-        if (success[ICLASS]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf iclass`") " commands\n");
-        }
-
-        if (success[FELICA]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf felica`") " commands\n");
-        }
-
-        if (success[PROTO_CRYPTORF]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf cryptorf`") " commands\n");
-        }
     }
 
     DropField();
@@ -277,7 +216,7 @@ int CmdHFTune(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf tune",
                   "Continuously measure HF antenna tuning.\n"
-                  "Press pm3 button or <Enter> to interrupt.",
+                  "Press button or <Enter> to interrupt.",
                   "hf tune\n"
                   "hf tune --mix"
                  );
@@ -310,8 +249,7 @@ int CmdHFTune(const char *Cmd) {
     if (is_value)
         style = STYLE_VALUE;
 
-    PrintAndLogEx(INFO, "Measuring HF antenna");
-    PrintAndLogEx(INFO, "click " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(INFO, "Measuring HF antenna, click " _GREEN_("pm3 button") " or press " _GREEN_("Enter") " to exit");
     PacketResponseNG resp;
     clearCommandBuffer();
 
@@ -566,9 +504,7 @@ static command_t CommandTable[] = {
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                   }"},
     {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...         }"},
     {"vas",         CmdHFVAS,         AlwaysAvailable, "{ Apple Value Added Service           }"},
-#ifdef HAVE_GD
     {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...             }"},
-#endif
     {"xerox",       CmdHFXerox,       AlwaysAvailable, "{ Fuji/Xerox cartridge RFIDs...       }"},
     {"-----------", CmdHelp,          AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},

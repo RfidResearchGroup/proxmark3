@@ -48,8 +48,8 @@ void AcquireRawAdcSamplesIso15693(void);
 void ReaderIso15693(iso15_card_select_t *p_card); // ISO15693 reader
 void EmlClearIso15693(void);
 void SimTagIso15693(uint8_t *uid, uint8_t block_size); // simulate an ISO15693 tag
-void BruteforceIso15693Afi(uint32_t flags); // find an AFI of a tag
-void SendRawCommand15693(iso15_raw_cmd_t *packet); // send arbitrary commands from CLI
+void BruteforceIso15693Afi(uint32_t speed); // find an AFI of a tag
+void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data); // send arbitrary commands from CLI
 
 void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass);
 

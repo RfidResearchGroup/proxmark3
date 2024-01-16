@@ -27,7 +27,7 @@
 
 With the recent (2019-09-01) changes and creation of `make install`  command it is easy to get lost.
 
-If you install the Proxmark3 tools with `make install`, they will go under the prefix `/usr/local/` but if you install the tools from your distro, there are chances the path is `/usr` so you'll have to adapt the paths presented here.
+If you install the Proxmark tools with `make install`, they will go under the prefix `/usr/local/` but if you install the tools from your distro, there are chances the path is `/usr` so you'll have to adapt the paths presented here.
 
 # Installed elements
 ^[Top](#top)

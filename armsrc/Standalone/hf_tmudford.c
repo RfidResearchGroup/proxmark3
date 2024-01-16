@@ -74,7 +74,7 @@ void RunMod(void) {
                 }
             } else if (state == STATE_EMUL) {
                 Iso15693InitTag();
-                Dbprintf("Starting simulation, press " _GREEN_("pm3 button") " to stop and go back to search state.");
+                Dbprintf("Starting simulation, press pm3-button to stop and go back to search state.");
                 // default block size is 4
                 SimTagIso15693(card.uid, 4);
 

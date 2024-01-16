@@ -377,14 +377,6 @@
         "Type": "payment system"
     },
     {
-        "AID": "78E127",
-        "Vendor": "Disney",
-        "Country": "US",
-        "Name": "Disney MagicBand",
-        "Description": "",
-        "Type": "payment system"
-    },
-    {
         "AID": "44434C",
         "Vendor": "Disney",
         "Country": "US",

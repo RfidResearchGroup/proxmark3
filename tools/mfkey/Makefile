@@ -9,11 +9,6 @@ INSTALLTOOLS = $(BINS)
 
 include ../../Makefile.host
 
-# nested_util.c needs pthread support.  Older glibc needs it externally
-ifneq ($(SKIPPTHREAD),1)
-    MYLDLIBS += -lpthread
-endif
-
 # checking platform can be done only after Makefile.host
 ifneq (,$(findstring MINGW,$(platform)))
     # Mingw uses by default Microsoft printf, we want the GNU printf (e.g. for %z)

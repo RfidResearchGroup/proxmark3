@@ -142,9 +142,9 @@ int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo,
     return mifare_classic_authex(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL, NULL);
 }
 int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing) {
-    return mifare_classic_authex_cmd(pcs, uid, blockNo, (keyType & 1) ? MIFARE_AUTH_KEYB : MIFARE_AUTH_KEYA, ui64Key, isNested, ntptr, NULL, timing);
+    return mifare_classic_authex_cmd(pcs, uid, blockNo, (keyType & 1) == 0 ? MIFARE_AUTH_KEYA : MIFARE_AUTH_KEYB, ui64Key, isNested, ntptr, timing);
 }
-int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t cmd, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *ntencptr, uint32_t *timing) {
+int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t cmd, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing) {
 
     // "random" reader nonce:
     uint8_t nr[4];
@@ -159,8 +159,6 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 
     // Save the tag nonce (nt)
     uint32_t nt = bytes_to_num(receivedAnswer, 4);
-    if (ntencptr)
-        *ntencptr = nt;
 
     //  ----------------------------- crypto1 create
     if (isNested)

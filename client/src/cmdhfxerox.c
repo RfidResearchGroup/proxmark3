@@ -5,16 +5,15 @@
 #include "cmdhfxerox.h"
 
 #include "fileutils.h"
-#include "cmdtrace.h"
-#include "cmdparser.h"      // command_t
+
+#include "cmdparser.h"    // command_t
 #include "cliparser.h"
 #include "comms.h"
 #include "iso14b.h"
 #include "crc16.h"
-#include "commonutil.h"     // ARRAYLEN
 
 #define TIMEOUT 2000
-#define XEROX_BLOCK_SIZE    4
+
 
 #define c2l(c,l)    (l = ((unsigned long)(*((c)++))), \
              l |= ((unsigned long)(*((c)++))) << 8L, \
@@ -382,46 +381,44 @@ static int switch_off_field(void) {
     return PM3_SUCCESS;
 }
 
-static int xerox_select_card(iso14b_card_select_t *card) {
+static int findXerox(iso14b_card_select_t *card, bool disconnect) {
 
-    if (card == NULL) {
+    if (card == NULL)
         return PM3_EINVARG;
-    }
 
-    int8_t retry = 2;
+    int8_t retry = 3;
     while (retry--) {
 
         iso14b_raw_cmd_t packet = {
-            .flags = (ISO14B_CONNECT | ISO14B_SELECT_XRX | ISO14B_DISCONNECT),
+            .flags = (ISO14B_CONNECT | ISO14B_SELECT_XRX | (disconnect ? ISO14B_DISCONNECT : 0)),
             .timeout = 0,
             .rawlen = 0,
         };
-
         clearCommandBuffer();
         SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT)) {
 
-            if (resp.status == PM3_SUCCESS) {
+            if (resp.oldarg[0] == 0) {
                 memcpy(card, (iso14b_card_select_t *)resp.data.asBytes, sizeof(iso14b_card_select_t));
             }
-
-            return resp.length;
+            return resp.oldarg[0];
         }
     } // retry
 
+//    switch_off_field();
     PrintAndLogEx(FAILED, "command execution timeout");
     return PM3_ESOFT;
 }
 
 static uint8_t info_blocks[] = { 0x15, 0x16, 0x17, 0x18, 0x22 };
-static const char *xerox_c_type[] = { "drum", "yellow", "magenta", "cyan", "black" };
+static const char *c_type[] = { "drum", "yellow", "magenta", "cyan", "black" };
 
 static inline char dec_digit(uint8_t dig) {
     return (dig <= 9) ? dig + '0' : '?';
 }
 
-static void xerox_generate_partno(const uint8_t *data, char *pn) {
+static void gen_pn(const uint8_t *data, char *pn) {
     pn[0]  = dec_digit(data[0] >> 4);
     pn[1]  = dec_digit(data[0] & 0xF);
     pn[2]  = dec_digit(data[1] >> 4);
@@ -440,110 +437,25 @@ static void xerox_generate_partno(const uint8_t *data, char *pn) {
     pn[12] = 0;
 }
 
-static void xerox_print_hdr(void) {
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "block#   | data         | ascii");
-    PrintAndLogEx(INFO, "---------+--------------+----------");
-}
-
-static void xerox_print(uint8_t *data, uint16_t datalen) {
-
-    uint16_t blockno = datalen / XEROX_BLOCK_SIZE;
-
-    for (int i = 0; i < blockno; i++) {
-        PrintAndLogEx(INFO,
-                      "%3d/0x%02X | %s | %s",
-                      i,
-                      i,
-                      sprint_hex(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE),
-                      sprint_ascii(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE)
-                     );
-    }
-}
-
-static void xerox_print_footer(void) {
-    PrintAndLogEx(INFO, "---------+--------------+----------");
-    PrintAndLogEx(NORMAL, "");
-}
-
-
-// structure and database for uid -> tagtype lookups
-typedef struct {
-    const char *color;
-    const char *partnumber;
-    const char *region;
-    const char *ms;
-} xerox_part_t;
-
-// https://gist.github.com/JeroenSteen/4b45886b8d87fa0530af9b0364e6b277
-static const xerox_part_t xerox_part_mappings[] = {
-    {"cyan", "006R01532", "DMO", "sold"},
-    {"cyan", "006R01660", "DMO", "sold"},
-    {"cyan", "006R01739", "DMO", "sold"},
-    {"cyan", "006R01524", "WW", "metered"},
-    {"cyan", "006R01528", "NA/ESG", "sold"},
-    {"cyan", "006R01656", "NA/ESG", "sold"},
-    {"cyan", "006R01735", "NA/ESG", "sold"},
-
-    {"magenta", "006R01531", "DMO", "sold"},
-    {"magenta", "006R01661", "DMO", "sold"},
-    {"magenta", "006R01740", "DMO", "sold"},
-    {"magenta", "006R01523", "WW", "metered"},
-    {"magenta", "006R01527", "NA/ESG", "sold"},
-    {"magenta", "006R01657", "NA/ESG", "sold"},
-    {"magenta", "006R01736", "NA/ESG", "sold"},
-
-    {"yellow", "006R01530", "DMO", "sold"},
-    {"yellow", "006R01662", "DMO", "sold"},
-    {"yellow", "006R01741", "DMO", "sold"},
-    {"yellow", "006R01522", "WW", "metered"},
-    {"yellow", "006R01526", "NA/ESG", "sold"},
-    {"yellow", "006R01658", "NA/ESG", "sold"},
-    {"yellow", "006R01737", "NA/ESG", "sold"},
-
-    {"black", "006R01529", "DMO", "sold"},
-    {"black", "006R01659", "DMO", "sold"},
-    {"black", "006R01738", "DMO", "sold"},
-    {"black", "006R01521", "WW", "metered"},
-    {"black", "006R01525", "NA/ESG", "sold"},
-    {"black", "006R01655", "NA/ESG", "sold"},
-    {"black", "006R01734", "NA/ESG", "sold"},
-    {"", "", "", ""} // must be the last entry
-};
-
-// get a product description based on the UID
-// returns description of the best match
-static const xerox_part_t *get_xerox_part_info(const char *pn) {
-    for (int i = 0; i < ARRAYLEN(xerox_part_mappings); ++i) {
-        if (str_startswith(pn, xerox_part_mappings[i].partnumber) == 0) {
-            return &xerox_part_mappings[i];
-        }
-    }
-    //No match, return default
-    return &xerox_part_mappings[ARRAYLEN(xerox_part_mappings) - 1];
-}
-
 int read_xerox_uid(bool loop, bool verbose) {
 
     do {
         iso14b_card_select_t card;
-        int status = xerox_select_card(&card);
+        int status = findXerox(&card, true);
 
         if (loop) {
             if (status != PM3_SUCCESS) {
                 continue;
             }
-        }
-
-        if (status == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, " UID..... %s", sprint_hex(card.uid, card.uidlen));
-            PrintAndLogEx(SUCCESS, " ATQB.... %s", sprint_hex(card.atqb, sizeof(card.atqb)));
         } else {
-            if (verbose) {
-                PrintAndLogEx(WARNING, "no tag found");
+
+            if (status == PM3_SUCCESS) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(SUCCESS, " UID    : %s", sprint_hex(card.uid, card.uidlen));
+                PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
+            } else {
+                return PM3_ESOFT;
             }
-            return PM3_ESOFT;
         }
 
     } while (loop && kbd_enter_pressed() == false);
@@ -551,80 +463,11 @@ int read_xerox_uid(bool loop, bool verbose) {
     return PM3_SUCCESS;
 }
 
-static int read_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t *out) {
-
-    if (card == NULL || out == NULL) {
-        return PM3_EINVARG;
-    }
-
-    uint8_t approx_len = (2 + card->uidlen + 1);
-    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + approx_len);
-    if (packet == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-
-    // set up the read command
-    packet->flags = (ISO14B_CONNECT | ISO14B_APPEND_CRC | ISO14B_RAW);
-    packet->raw[packet->rawlen++] = 0x02;
-    packet->raw[packet->rawlen++] = XEROX_READ_MEM;
-
-    // uid
-    memcpy(packet->raw + packet->rawlen, card->uid, card->uidlen);
-    packet->rawlen += card->uidlen;
-
-    // block to read
-    packet->raw[packet->rawlen++] = blockno;
-
-    int res = PM3_ESOFT;
-    // read loop
-    for (int retry = 0; retry < 2; retry++) {
-
-        if (retry) {
-            packet->flags = (ISO14B_APPEND_CRC | ISO14B_RAW);
-        }
-
-        clearCommandBuffer();
-        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
-        PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000) == false) {
-            continue;
-        }
-
-        // sanity checks
-        if (resp.length < 7) {
-            PrintAndLogEx(FAILED, "trying one more time, wrong length");
-            continue;
-        }
-
-        uint8_t *d = resp.data.asBytes;
-
-        if (check_crc(CRC_14443_B, d, 7) == false) {
-            PrintAndLogEx(FAILED, "trying one more time, CRC ( " _RED_("fail") " )");
-            continue;
-        }
-
-        if (d[0] != 2) {
-            PrintAndLogEx(FAILED, "Tag returned Error %x %x", d[0], d[1]);
-            res = PM3_ERFTRANS;
-            break;
-        }
-
-        memcpy(out + (blockno * XEROX_BLOCK_SIZE), d + 1, XEROX_BLOCK_SIZE);
-        res = PM3_SUCCESS;
-        break;
-    }
-
-    switch_off_field();
-    return res;
-}
-
 static int CmdHFXeroxReader(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf xerox reader",
-                  "Act as a 14443B reader to identify a Fuji Xerox based tag\n"
-                  "ISO/IEC 14443 type B based communications",
+                  "Act as a 14443B reader to identify a tag",
                   "hf xerox reader\n"
                   "hf xerox reader -@ \n"
                  );
@@ -650,8 +493,7 @@ static int CmdHFXeroxReader(const char *Cmd) {
 static int CmdHFXeroxInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf xerox info",
-                  "Tag information for Fuji Xerox based tags\n"
-                  "ISO/IEC 14443 type B based communications",
+                  "Tag information for ISO/IEC 14443 type B / XEROX based tags",
                   "hf xerox info"
                  );
 
@@ -665,114 +507,38 @@ static int CmdHFXeroxInfo(const char *Cmd) {
     CLIParserFree(ctx);
 
     iso14b_card_select_t card;
-    int status = xerox_select_card(&card);
+    int status = findXerox(&card, false);
     if (status != PM3_SUCCESS) {
+        switch_off_field();
         if (verbose) {
             PrintAndLogEx(FAILED, "Fuji/Xerox tag select failed");
         }
-        return status;
+        return PM3_ERFTRANS;
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, " UID..... %s", sprint_hex(card.uid, card.uidlen));
-    PrintAndLogEx(SUCCESS, " ATQB.... %s", sprint_hex(card.atqb, sizeof(card.atqb)));
+    PrintAndLogEx(SUCCESS, " UID    : %s", sprint_hex(card.uid, card.uidlen));
+    PrintAndLogEx(SUCCESS, " ATQB   : %s", sprint_hex(card.atqb, sizeof(card.atqb)));
 
-
-    uint8_t data[sizeof(info_blocks) * XEROX_BLOCK_SIZE] = {0};
-
-    for (int i = 0; i < sizeof(i); i++) {
-
-        int res = read_xerox_block(&card, info_blocks[i], data + (i * XEROX_BLOCK_SIZE));
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Fuji/Xerox tag read failed");
-            break;
-        }
-    }
-
-    switch_off_field();
-
-    char pn[13];
-    xerox_generate_partno(data, pn);
-    PrintAndLogEx(INFO, "-------- " _CYAN_("tag memory") " ---------");
-    PrintAndLogEx(SUCCESS, " PartNo... %s", pn);
-    PrintAndLogEx(SUCCESS, " Date..... %02d.%02d.%02d", data[8], data[9], data[10]);
-    PrintAndLogEx(SUCCESS, " Serial... %d", (data[14] << 16) | (data[13] << 8) | data[12]);
-    PrintAndLogEx(SUCCESS, " Type..... %s", (data[18] <= 4) ? xerox_c_type[data[18]] : "Unknown");
-
-    const xerox_part_t *item = get_xerox_part_info(pn);
-    if (strlen(item->partnumber) > 0) {
-        PrintAndLogEx(SUCCESS, "Color..... %s", item->color);
-        PrintAndLogEx(SUCCESS, "Region.... %s", item->region);
-        PrintAndLogEx(SUCCESS, "M/s....... %s", item->ms);
-    }
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
-static int CmdHFXeroxDump(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf xerox dump",
-                  "Dump all memory from a Fuji/Xerox tag\n"
-                  "ISO/IEC 14443 type B based communications",
-                  "hf xerox dump\n"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename to save dump to"),
-        arg_lit0("d", "decrypt", "decrypt secret blocks"),
-        arg_lit0(NULL, "ns", "no save to file"),
-        arg_lit0("v", "verbose", "verbose output"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    bool decrypt = arg_get_lit(ctx, 2);
-    bool nosave = arg_get_lit(ctx, 3);
-    bool verbose = arg_get_lit(ctx, 4);
-    CLIParserFree(ctx);
-
-    iso14b_card_select_t card;
-    int status = xerox_select_card(&card);
-    if (status != PM3_SUCCESS) {
-        if (verbose) {
-            PrintAndLogEx(FAILED, "Fuji/Xerox tag select failed");
-        }
-        return status;
-    }
-
-    PrintAndLogEx(INFO, "Reading memory from tag UID " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
-
-    uint8_t approx_len = (2 + 8 + 1);
-    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + approx_len);
+    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 11);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
 
-    int blockno = 1;           // block 0 all zeros
-    uint8_t data[256 * XEROX_BLOCK_SIZE] = {0};
+    int blocknum = 0;
+    uint8_t data[sizeof(info_blocks) * 4] = {0};
 
     // set up the read command
-    packet->flags = (ISO14B_CONNECT | ISO14B_APPEND_CRC | ISO14B_RAW);
-    packet->raw[packet->rawlen++] = 0x02;
+    packet->flags = (ISO14B_APPEND_CRC | ISO14B_RAW);
+    packet->rawlen = 11;
+    packet->raw[0] = 0x02;
+    packet->raw[1] = 0x20;          // set command: read mem
+    memcpy(packet->raw + 2, card.uid, 8);       // store uid
 
-    // add one for command byte
-    packet->rawlen++;
+    for (int retry = 0; (retry < 5 && blocknum < sizeof(info_blocks)); retry++) {
 
-    // store uid
-    memcpy(packet->raw + packet->rawlen, card.uid, 8);
-    packet->rawlen += 8;
-
-    PrintAndLogEx(INFO, "." NOLF);
-
-    for (int retry = 0; (retry < 2 && blockno < 0x100); retry++) {
-
-        packet->raw[1]  = (blockno < 12) ? 0x30 : 0x20;    // set command: read ext mem or read mem
-        packet->raw[10] = blockno & 0xFF;
+        packet->raw[10] = info_blocks[blocknum];
 
         PacketResponseNG resp;
         clearCommandBuffer();
@@ -784,28 +550,133 @@ static int CmdHFXeroxDump(const char *Cmd) {
             resp.data.asBytes[0], resp.data.asBytes[1], resp.data.asBytes[2], resp.ng ? 't' : 'f');
             */
 
-            if (resp.length < 7) {
+            // 14b raw command send data_len instead of status
+            if (/*resp.status != 0 ||*/ resp.length < 7) {
                 PrintAndLogEx(FAILED, "retrying one more time");
                 continue;
             }
 
-            uint8_t *d = resp.data.asBytes;
+            uint8_t *recv = resp.data.asBytes;
 
-            if (check_crc(CRC_14443_B, d, 7) == false) {
-                PrintAndLogEx(FAILED, "retrying one more time, CRC ( " _RED_("fail") " )");
+            if (check_crc(CRC_14443_B, recv, 7) == false) {
+                PrintAndLogEx(FAILED, "crc fail, retrying one more time");
                 continue;
             }
 
-            if (d[0] != 2) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(FAILED, "Tag returned Error %x %x", d[0], d[1]);
+            if (recv[0] != 2) {
+                PrintAndLogEx(FAILED, "Tag returned Error %x %x", recv[0], recv[1]);
                 break;
             }
 
-            memcpy(data + (blockno * XEROX_BLOCK_SIZE), resp.data.asBytes + 1, XEROX_BLOCK_SIZE);
+            memcpy(data + (blocknum * 4), resp.data.asBytes + 1, 4);
 
             retry = 0;
-            blockno++;
+            blocknum++;
+        }
+    }
+
+    switch_off_field();
+    free(packet);
+
+    if (blocknum != sizeof(info_blocks)) {
+        PrintAndLogEx(FAILED, "Fuji/Xerox tag read failed");
+        return PM3_ERFTRANS;
+    }
+
+    char pn[13];
+    gen_pn(data, pn);
+    PrintAndLogEx(SUCCESS, " PartNo : %s", pn);
+    PrintAndLogEx(SUCCESS, " Date   : %02d.%02d.%02d", data[8], data[9], data[10]);
+    PrintAndLogEx(SUCCESS, " Serial : %d", (data[14] << 16) | (data[13] << 8) | data[12]);
+    PrintAndLogEx(SUCCESS, " Type   : %s", (data[18] <= 4) ? c_type[data[18]] : "Unknown");
+
+    return PM3_SUCCESS;
+}
+
+static int CmdHFXeroxDump(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf xerox dump",
+                  "Dump all memory from a Fuji/Xerox tag",
+                  "hf xerox dump\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "filename to save dump to"),
+        arg_lit0("d", "decrypt", "decrypt secret blocks"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool decrypt = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 11);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    iso14b_card_select_t card;
+    int status = findXerox(&card, false);   // remain RF on
+    if (status != PM3_SUCCESS) {
+        free(packet);
+        switch_off_field();
+        return PM3_ERFTRANS;
+    }
+
+    PrintAndLogEx(INFO, "Reading memory from tag UID " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+
+    int blocknum = 1;           // block 0 all zeros
+    uint8_t data[256 * 4] = {0};
+
+    // set up the read command
+    packet->flags = (ISO14B_APPEND_CRC | ISO14B_RAW);
+    packet->rawlen = 11;
+    packet->raw[0] = 0x02;
+    memcpy(packet->raw + 2, card.uid, 8);       // store uid
+
+    PrintAndLogEx(INFO, "." NOLF);
+
+    for (int retry = 0; (retry < 5 && blocknum < 0x100); retry++) {
+
+        packet->raw[1]  = (blocknum < 12) ? 0x30 : 0x20;    // set command: read ext mem or read mem
+        packet->raw[10] = blocknum & 0xFF;
+
+        PacketResponseNG resp;
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
+        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
+            /*
+            PrintAndLogEx(INFO, "%X %X %X %X %X %I64X %I64X %I64X %X %X %X %c",
+            resp.cmd, resp.length, resp.magic, resp.status, resp.crc, resp.oldarg[0], resp.oldarg[1], resp.oldarg[2],
+            resp.data.asBytes[0], resp.data.asBytes[1], resp.data.asBytes[2], resp.ng ? 't' : 'f');
+            */
+            if (/*resp.status != 0 ||*/ resp.length < 7) {  // 14b raw command send data_len instead of status
+                PrintAndLogEx(FAILED, "retrying one more time");
+                continue;
+            }
+
+            uint8_t *recv = resp.data.asBytes;
+
+            if (check_crc(CRC_14443_B, recv, 7) == false) {
+                PrintAndLogEx(FAILED, "crc fail, retrying one more time");
+                continue;
+            }
+
+            if (recv[0] != 2) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(FAILED, "Tag returned Error %x %x", recv[0], recv[1]);
+                break;
+            }
+
+            memcpy(data + (blocknum * 4), resp.data.asBytes + 1, 4);
+
+            retry = 0;
+            blocknum++;
 
             PrintAndLogEx(NORMAL, "." NOLF);
             fflush(stdout);
@@ -818,9 +689,8 @@ static int CmdHFXeroxDump(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
 
-    if (blockno != 0x100) {
-        PrintAndLogEx(FAILED, "dump failed at block " _RED_("%d"), blockno);
-    }
+    if (blocknum != 0x100)
+        PrintAndLogEx(FAILED, "dump failed at block %d", blocknum);
 
     if (decrypt) {
         PrintAndLogEx(INFO, "Decrypting secret blocks...");
@@ -832,9 +702,9 @@ static int CmdHFXeroxDump(const char *Cmd) {
         k1[1] = data[5];
         k1[2] = data[6];
         k1[3] = data[7];
-        k1[4] = data[(0x18 * XEROX_BLOCK_SIZE) + 0];
-        k1[5] = data[(0x18 * XEROX_BLOCK_SIZE) + 1];
-        k1[6] = data[(0x22 * XEROX_BLOCK_SIZE) + 0];
+        k1[4] = data[0x18 * 4 + 0];
+        k1[5] = data[0x18 * 4 + 1];
+        k1[6] = data[0x22 * 4 + 0];
         k1[7] = 0;
 
         RC2_set_key(&exp_key, 8, k1, 64);
@@ -848,8 +718,8 @@ static int CmdHFXeroxDump(const char *Cmd) {
 
         memcpy(k1, k2, sizeof(k1));
 
-        k1[2] = k2[3] ^ data[(0x22 * XEROX_BLOCK_SIZE) + 0];
-        k1[3] = k2[4] ^ data[(0x22 * XEROX_BLOCK_SIZE) + 1]; // first_key[7];
+        k1[2] = k2[3] ^ data[0x22 * 4 + 0];
+        k1[3] = k2[4] ^ data[0x22 * 4 + 1]; // first_key[7];
         k1[5] = k2[1] ^ 0x01;       // 01 = crypto method? rfid[23][2]
 
         RC2_set_key(&exp_key, 8, k1, 64);
@@ -858,7 +728,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
 
             uint8_t dadr = var_list[n];
 
-            if (dadr + 1 >= blockno) {
+            if (dadr + 1 >= blocknum) {
                 PrintAndLogEx(INFO, "secret block %02X skipped.", dadr);
                 continue;
             }
@@ -866,130 +736,55 @@ static int CmdHFXeroxDump(const char *Cmd) {
             memset(iv, 0, sizeof(iv));
             iv[0] = dadr;
 
-            RC2_cbc_encrypt(&data[dadr * XEROX_BLOCK_SIZE], decr, 8, &exp_key, iv, RC2_DECRYPT);
+            RC2_cbc_encrypt(&data[dadr * 4], decr, 8, &exp_key, iv, RC2_DECRYPT);
 
-            memcpy(&data[dadr * XEROX_BLOCK_SIZE], decr, 8);
+            memcpy(&data[dadr * 4], decr, 8);
 
             int b;
             uint16_t cs, csd;
 
             // calc checksum
-            for (b = 0, cs = 0; b < sizeof(decr) - 2; b += 2) {
-                cs += decr[b] | (decr[b + 1] << 8);
-            }
-
+            for (b = 0, cs = 0; b < sizeof(decr) - 2; b += 2)   cs += decr[b] | (decr[b + 1] << 8);
             cs = ~cs;
             csd = (decr[7] << 8) | decr[6];
 
             if (cs != csd) {
-                PrintAndLogEx(FAILED, "Secret block %02X checksum " _RED_("failed"), dadr);
+                PrintAndLogEx(FAILED, "secret block %02X checksum failed.", dadr);
             }
         }
     }
 
-    xerox_print_hdr();
-    xerox_print(data, blockno * XEROX_BLOCK_SIZE);
-    xerox_print_footer();
+    PrintAndLogEx(INFO, "block#   | data         | ascii");
+    PrintAndLogEx(INFO, "---------+--------------+----------");
 
-    if (nosave) {
-        PrintAndLogEx(INFO, "Called with no save option");
-        PrintAndLogEx(NORMAL, "");
-        return PM3_SUCCESS;
+    for (int i = 0; i < blocknum; i++) {
+        PrintAndLogEx(INFO,
+                      "%3d/0x%02X | %s | %s",
+                      i,
+                      i,
+                      sprint_hex(data + (i * 4), 4),
+                      sprint_ascii(data + (i * 4), 4)
+                     );
     }
+    PrintAndLogEx(INFO, "---------+--------------+----------");
+    PrintAndLogEx(NORMAL, "");
 
     if (0 == filename[0]) { // generate filename from uid
         char *fptr = filename;
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += snprintf(fptr, sizeof(filename), "hf-xerox-");
-        FillFileNameByUID(fptr
-                          , SwapEndian64(card.uid, card.uidlen, 8)
-                          , (decrypt) ? "-dump-dec" : "-dump"
-                          , card.uidlen
-                         );
+        FillFileNameByUID(fptr, SwapEndian64(card.uid, card.uidlen, 8), decrypt ? "-dump-dec" : "-dump", card.uidlen);
     }
 
-    pm3_save_dump(filename, data, blockno * XEROX_BLOCK_SIZE, jsf14b_v2);
+    pm3_save_dump(filename, data, blocknum * 4, jsf14b_v2);
     return PM3_SUCCESS;
-}
-
-static int CmdHFXeroxView(const char *Cmd) {
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf xerox view",
-                  "Print a Fuji/Xerox dump file (bin/eml/json)\n"
-                  "note:\n"
-                  "  - command expects the filename to contain a UID\n"
-                  "    which is needed to determine card memory type",
-                  "hf xerox view -f hf-xerox-0102030405060708-dump.bin"
-                 );
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
-        arg_lit0("v", "verbose", "verbose output"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE];
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    bool verbose = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx);
-
-    // read dump file
-    uint8_t *dump = NULL;
-    size_t bytes_read = (XEROX_BLOCK_SIZE * 0x100);
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (XEROX_BLOCK_SIZE * 0x100));
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-
-    uint16_t blockno = bytes_read / XEROX_BLOCK_SIZE;
-
-    if (verbose) {
-        PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, blockno, blockno);
-    }
-
-    uint8_t tmp[5 * XEROX_BLOCK_SIZE] = {0};
-    for (uint8_t i = 0; i < ARRAYLEN(info_blocks); i++) {
-        memcpy(tmp + (i * XEROX_BLOCK_SIZE), dump + (info_blocks[i] * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE);
-    }
-
-    char pn[13];
-    xerox_generate_partno(tmp, pn);
-
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------- " _CYAN_("tag memory") " ---------");
-    PrintAndLogEx(SUCCESS, " PartNo... %s", pn);
-    PrintAndLogEx(SUCCESS, " Date..... %02d.%02d.%02d", tmp[8], tmp[9], tmp[10]);
-    PrintAndLogEx(SUCCESS, " Serial... %d", (tmp[14] << 16) | (tmp[13] << 8) | tmp[12]);
-    PrintAndLogEx(SUCCESS, " Type..... %s", (tmp[18] <= 4) ? xerox_c_type[tmp[18]] : "Unknown");
-
-    const xerox_part_t *item = get_xerox_part_info(pn);
-    if (strlen(item->partnumber) > 0) {
-        PrintAndLogEx(SUCCESS, "Color..... %s", item->color);
-        PrintAndLogEx(SUCCESS, "Region.... %s", item->region);
-        PrintAndLogEx(SUCCESS, "M/s....... %s", item->ms);
-    }
-    xerox_print_hdr();
-    xerox_print(dump, bytes_read);
-    xerox_print_footer();
-
-    free(dump);
-    return PM3_SUCCESS;
-}
-
-static int CmdHFXeroxList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf 14b", "14b -c");
 }
 
 static command_t CommandTable[] = {
-    {"help",      CmdHelp,           AlwaysAvailable, "This help"},
-    {"list",      CmdHFXeroxList,    AlwaysAvailable, "List ISO-14443B history"},
-    {"--------",  CmdHelp,           AlwaysAvailable, "----------------------- " _CYAN_("general") " -----------------------"},
-    {"info",      CmdHFXeroxInfo,    IfPm3Iso14443b,  "Short info on Fuji/Xerox tag"},
-    {"dump",      CmdHFXeroxDump,    IfPm3Iso14443b,  "Read all memory pages of an Fuji/Xerox tag, save to file"},
-    {"reader",    CmdHFXeroxReader,  IfPm3Iso14443b,  "Act like a Fuji/Xerox reader"},
-    {"view",      CmdHFXeroxView,    AlwaysAvailable, "Display content from tag dump file"},
+    {"help",    CmdHelp,           AlwaysAvailable, "This help"},
+    {"info",    CmdHFXeroxInfo,    IfPm3Iso14443b,  "Short info on Fuji/Xerox tag"},
+    {"reader",  CmdHFXeroxReader,  IfPm3Iso14443b,  "Act like a Fuji/Xerox reader"},
+    {"dump",    CmdHFXeroxDump,    IfPm3Iso14443b,  "Read all memory pages of an Fuji/Xerox tag, save to file"},
 //    {"rdbl",    CmdHFXeroxRdBl,  IfPm3Iso14443b,  "Read Fuji/Xerox block"},
 //    {"wrbl",    CmdHFXeroxWrBl,  IfPm3Iso14443b,  "Write Fuji/Xerox block"},
     {NULL, NULL, NULL, NULL}

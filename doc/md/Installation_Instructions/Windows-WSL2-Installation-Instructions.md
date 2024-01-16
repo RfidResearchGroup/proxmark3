@@ -56,7 +56,7 @@ This is *NOT* intended to be a full description of how to use USBIPD.
 Rather, this is intended only to give a starting point, as ***the values
 shown here are extremely likely to differ per machine***.
 
-It's presumed that you've already installed USBIPD.  Plug the Proxmark3
+It's presumed that you've already installed USBIPD.  Plug the Proxmark
 device into a USB port.  Then, from a `cmd.exe` or `wt.exe` ***launched
 with administrative permissions***:
 
@@ -108,14 +108,12 @@ then, install proxmark dependencies:
 sudo apt-get install --no-install-recommends \
   git ca-certificates build-essential pkg-config \
   libreadline-dev gcc-arm-none-eabi libnewlib-dev \
-  libbz2-dev liblz4-dev libpython3-dev qtbase5-dev \
-  libssl-dev libgd-dev
+  libbz2-dev liblz4-dev libpython3-dev qtbase5-dev libssl-dev
 ```
 
 _note_
 If you don't need the graphical components of the Proxmark3 client, you can skip the installation of `qtbase5-dev`.  
 If you don't need support for Python3 scripts in the Proxmark3 client, you can skip the installation of `libpython3-dev`.
-If you don't need support for NFC ePaper devices, you can skip the installation of `libgd-dev`.
 
 ## X Server Installation
 ^[Top](#top)

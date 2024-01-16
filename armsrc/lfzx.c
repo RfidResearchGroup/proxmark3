@@ -153,7 +153,7 @@ static void zx_get(bool ledcontrol) {
             volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             (void)sample;
 
-            // (RDV4) Test point 8 (TP8) can be used to trigger oscilloscope
+            // Test point 8 (TP8) can be used to trigger oscilloscope
             if (ledcontrol) LED_D_OFF();
 
         }

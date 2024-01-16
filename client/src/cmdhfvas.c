@@ -465,7 +465,7 @@ static int CmdVASReader(const char *Cmd) {
     PrintAndLogEx(INFO, "Requesting pass type id... " _GREEN_("%s"), sprint_ascii((uint8_t *) pid, pidlen));
 
     if (continuous) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+        PrintAndLogEx(INFO, "Press " _GREEN_("Enter") " to exit");
     }
 
     uint8_t pidhash[32] = {0};
