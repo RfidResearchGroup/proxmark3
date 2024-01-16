@@ -3,6 +3,17 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `nfc decode` - now supports Android Managed Provision NDEF message decoding (@iceman1001)
+ - Changed `hf_cardhopper` - Allow button presses to break, handle non-zero CID from reader by relaying RATS and improving PPS and WTX handling, more reliably cook ATS, ignore client packets on serial line (@nvx)
+ - Fixed `data diff` - client no longer crashes when using short widths on long filenames (@iceman1001)
+ - Added `hf 15 wipe` - fills card memory with zeros (@iceman1001)
+ - Changed `hf xerox info` - now prints some part info (@iceman1001)
+ - Added `hf xerox view` - view dump files of fuji/xerox tags (@iceman1001)
+ - Changed `hf 15 findafi` - improved the params (@iceman1001)
+ - Changed `hf 15 rdbl/rdmulti/dump` - should handle 4 vs 8 bytes block sizes in cards (@iceman1001)
+ - Changed `hf 15 *` - all 15 commands now uses NG packets (@iceman1001)
+ - Changed `hf 15 raw` - now supports "-k" keep field on and "-s" select (@iceman1001)
+ - Changed `prefs set client.debug` - now also toggles the client side APDU logging (@iceman1001)
  - Changed `hf 14b sriwrbl` - now supports --force to override block checks. Thanks @gentilkiwi for the idea! (@iceman1001)
  - Changed `hf 14b sriwrbl` - now tries to verify the write (@iceman1001)
  - Changed `hf 14b apdu` - now supports tearoff (@iceman1001)

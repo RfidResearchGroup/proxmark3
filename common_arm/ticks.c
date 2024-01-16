@@ -202,17 +202,22 @@ void ResetSspClk(void) {
     AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
     while (AT91C_BASE_TC2->TC_CV > 0);
 }
+
 uint32_t RAMFUNC GetCountSspClk(void) {
     uint32_t tmp_count = (AT91C_BASE_TC2->TC_CV << 16) | AT91C_BASE_TC0->TC_CV;
-    if ((tmp_count & 0x0000ffff) == 0)  //small chance that we may have missed an increment in TC2
+
+    // small chance that we may have missed an increment in TC2
+    if ((tmp_count & 0x0000ffff) == 0) {
         return (AT91C_BASE_TC2->TC_CV << 16);
+    }
     return tmp_count;
 }
 
 uint32_t RAMFUNC GetCountSspClkDelta(uint32_t start) {
     uint32_t stop = GetCountSspClk();
-    if (stop >= start)
+    if (stop >= start) {
         return stop - start;
+    }
     return (UINT32_MAX - start) + stop;
 }
 

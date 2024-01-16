@@ -292,6 +292,7 @@ int CmdLFCommandRead(const char *Cmd) {
     payload.samples = samples;
     payload.keep_field_on = keep_field_on;
     payload.verbose = verbose;
+    memset(payload.symbol_extra, 0, sizeof(payload.symbol_extra));
 
     if (add_crc_ht && (cmd_len <= 120)) {
         // Hitag 1, Hitag S, ZX8211
@@ -734,6 +735,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
         int result = set_fpga_mode(FPGA_BITSTREAM_LF);
         if (result != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "failed to load LF bitstream to FPGA");
+            free(realtimeBuf);
             return result;
         }
 
@@ -860,6 +862,7 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
         int result = set_fpga_mode(FPGA_BITSTREAM_LF);
         if (result != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "failed to load LF bitstream to FPGA");
+            free(realtimeBuf);
             return result;
         }
 

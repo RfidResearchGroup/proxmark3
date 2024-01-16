@@ -119,7 +119,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
         pathlen += strlen(subdir);
         char *tmp = realloc(path, pathlen * sizeof(char));
         if (tmp == NULL) {
-            //free(path);
+            free(path);
             return PM3_EMALLOC;
         }
         path = tmp;
@@ -156,7 +156,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     pathlen += strlen(filename);
     char *tmp = realloc(path, pathlen * sizeof(char));
     if (tmp == NULL) {
-        //free(path);
+        free(path);
         return PM3_EMALLOC;
     }
 

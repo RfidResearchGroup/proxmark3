@@ -830,14 +830,21 @@ static void PacketReceived(PacketCommandNG *packet) {
                 bool off;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
-            if (payload->on && payload->off)
+            if (payload->on && payload->off) {
                 reply_ng(CMD_SET_TEAROFF, PM3_EINVARG, NULL, 0);
-            if (payload->on)
+            }
+
+            if (payload->on) {
                 g_tearoff_enabled = true;
-            if (payload->off)
+            }
+
+            if (payload->off) {
                 g_tearoff_enabled = false;
-            if (payload->delay_us > 0)
+            }
+
+            if (payload->delay_us > 0) {
                 g_tearoff_delay_us = payload->delay_us;
+            }
             reply_ng(CMD_SET_TEAROFF, PM3_SUCCESS, NULL, 0);
             break;
         }
@@ -1284,11 +1291,16 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO15693_COMMAND: {
-            DirectTag15693Command(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            iso15_raw_cmd_t *payload = (iso15_raw_cmd_t *)packet->data.asBytes;
+            SendRawCommand15693(payload);
             break;
         }
         case CMD_HF_ISO15693_FINDAFI: {
-            BruteforceIso15693Afi(packet->oldarg[0]);
+            struct p {
+                uint32_t flags;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+            BruteforceIso15693Afi(payload->flags);
             break;
         }
         case CMD_HF_ISO15693_READER: {

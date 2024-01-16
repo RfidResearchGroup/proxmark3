@@ -200,9 +200,8 @@ static bool emrtd_exchange_commands(sAPDU_t apdu, bool include_le, uint16_t le, 
 }
 
 static int emrtd_exchange_commands_noout(sAPDU_t apdu, bool activate_field, bool keep_field_on) {
-    uint8_t response[PM3_CMD_DATA_SIZE];
+    uint8_t response[PM3_CMD_DATA_SIZE] = {0};
     size_t resplen = 0;
-
     return emrtd_exchange_commands(apdu, false, 0, response, 0, &resplen, activate_field, keep_field_on);
 }
 
@@ -1006,7 +1005,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     // Do Basic Access Control
     if (*BAC) {
         // If BAC isn't available, exit out and warn user.
-        if (!BAC_available) {
+        if (BAC_available == false) {
             PrintAndLogEx(ERR, "This eMRTD enforces authentication, but you didn't supply MRZ data. Cannot proceed.");
             PrintAndLogEx(HINT, "Check out hf emrtd info/dump --help, supply data with -n -d and -e.");
             return false;
@@ -1034,19 +1033,19 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Dump EF_CardAccess (if available)
-    if (!emrtd_dump_file(ks_enc, ks_mac, ssc, dg_table[EF_CardAccess].fileid, dg_table[EF_CardAccess].filename, BAC, path)) {
+    if (emrtd_dump_file(ks_enc, ks_mac, ssc, dg_table[EF_CardAccess].fileid, dg_table[EF_CardAccess].filename, BAC, path) == false) {
         PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE");
         PrintAndLogEx(HINT, "This is expected behavior for cards without PACE, and isn't something to be worried about");
     }
 
     // Authenticate with the eMRTD
-    if (!emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac)) {
+    if (emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac) == false) {
         DropField();
         return PM3_ESOFT;
     }
 
     // Select EF_COM
-    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC)) {
+    if (emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC) == false) {
         PrintAndLogEx(ERR, "Failed to read EF_COM");
         DropField();
         return PM3_ESOFT;
@@ -1884,10 +1883,10 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         DropField();
         return PM3_ESOFT;
     }
-    bool use14b = GetISODEPState() == ISODEP_NFCB;
+    bool use14b = (GetISODEPState() == ISODEP_NFCB);
 
     // Read EF_CardAccess
-    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_CardAccess].fileid, ks_enc, ks_mac, ssc, BAC)) {
+    if (emrtd_select_and_read(response, &resplen, dg_table[EF_CardAccess].fileid, ks_enc, ks_mac, ssc, BAC) == false) {
         PACE_available = false;
         PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE.");
     }
@@ -2044,6 +2043,7 @@ int infoHF_EMRTD_offline(const char *path) {
 
     // coverity scan CID 395630,
     if (data == NULL) {
+        free(filepath);
         return PM3_ESOFT;
     }
 

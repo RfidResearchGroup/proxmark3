@@ -205,11 +205,11 @@ static const manufactureName_t manufactureMapping[] = {
 // returns description of the best match
 const char *getTagInfo(uint8_t uid) {
 
-    int i;
-
-    for (i = 0; i < ARRAYLEN(manufactureMapping); ++i)
-        if (uid == manufactureMapping[i].uid)
+    for (int i = 0; i < ARRAYLEN(manufactureMapping); ++i) {
+        if (uid == manufactureMapping[i].uid) {
             return manufactureMapping[i].desc;
+        }
+    }
 
     //No match, return default
     return manufactureMapping[ARRAYLEN(manufactureMapping) - 1].desc;
@@ -832,7 +832,7 @@ int CmdHF14ASim(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));
-    PacketResponseNG resp;
+    PacketResponseNG resp = {0};
 
     sector_t *k_sector = NULL;
     size_t k_sectors_cnt = MIFARE_4K_MAXSECTOR;
@@ -1254,54 +1254,59 @@ int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool lea
 
 // ISO14443-4. 7. Half-duplex block transmission protocol
 static int CmdHF14AAPDU(const char *Cmd) {
-    uint8_t data[PM3_CMD_DATA_SIZE];
-    int datalen = 0;
-    uint8_t header[PM3_CMD_DATA_SIZE];
-    int headerlen = 0;
-    bool activateField = false;
-    bool leaveSignalON = false;
-    bool decodeTLV = false;
-    bool decodeAPDU = false;
-    bool makeAPDU = false;
-    bool extendedAPDU = false;
-    int le = 0;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a apdu",
-                  "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
-                  "hf 14a apdu -st 00A404000E325041592E5359532E444446303100\n"
-                  "hf 14a apdu -sd 00A404000E325041592E5359532E444446303100        -> decode apdu\n"
-                  "hf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -l 256    -> encode standard apdu\n"
-                  "hf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -el 65536 -> encode extended apdu\n");
+                  "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL).\n"
+                  "Works with all APDU types from ISO 7816-4:2013\n"
+                  "\n"
+				  "note:\n"
+				  "   `-m` and `-d` goes hand in hand\n"
+				  "   -m <CLA INS P1 P2> -d 325041592E5359532E4444463031\n"
+                  "\n"
+				  "  OR\n"
+                  "\n"
+				  "   use `-d` with complete APDU data\n"
+				  "   -d 00A404000E325041592E5359532E444446303100",
+                  "hf 14a apdu -st -d 00A404000E325041592E5359532E444446303100\n"
+                  "hf 14a apdu -sd -d 00A404000E325041592E5359532E444446303100        -> decode apdu\n"
+                  "hf 14a apdu -sm 00A40400 -d 325041592E5359532E4444463031 -l 256    -> encode standard apdu\n"
+                  "hf 14a apdu -sm 00A40400 -d 325041592E5359532E4444463031 -el 65536 -> encode extended apdu\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("s",  "select",   "activate field and select card"),
         arg_lit0("k",  "keep",     "keep signal field ON after receive"),
-        arg_lit0("t",  "tlv",      "executes TLV decoder if it possible"),
-        arg_lit0("d",  "decapdu",  "decode apdu request if it possible"),
-        arg_str0("m",  "make",     "<head (CLA INS P1 P2) hex>", "make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>"),
+        arg_lit0("t",  "tlv",      "decode TLV"),
+        arg_lit0("d",  "decapdu",  "decode APDU request"),
+        arg_str0("m",  "make",     "<hex>", "APDU header, 4 bytes <CLA INS P1 P2>"),
         arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
-        arg_int0("l",  "le",       "<Le (int)>", "Le apdu parameter if `m` parameter included"),
-        arg_strx1(NULL, NULL,       "<APDU (hex) | data (hex)>", "data if `m` parameter included"),
+        arg_int0("l",  "le",       "<dec>", "Le APDU parameter if `m` parameter included"),
+        arg_strx1("d", "data",     "<hex>", "full APDU package or data if `m` parameter included"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    activateField = arg_get_lit(ctx, 1);
-    leaveSignalON = arg_get_lit(ctx, 2);
-    decodeTLV = arg_get_lit(ctx, 3);
-    decodeAPDU = arg_get_lit(ctx, 4);
+    bool activateField = arg_get_lit(ctx, 1);
+    bool leaveSignalON = arg_get_lit(ctx, 2);
+    bool decodeTLV = arg_get_lit(ctx, 3);
+    bool decodeAPDU = arg_get_lit(ctx, 4);
 
+    uint8_t header[PM3_CMD_DATA_SIZE];
+    int headerlen = 0;
     CLIGetHexWithReturn(ctx, 5, header, &headerlen);
-    makeAPDU = headerlen > 0;
+
+    bool makeAPDU = (headerlen > 0);
+
     if (makeAPDU && headerlen != 4) {
         PrintAndLogEx(ERR, "header length must be 4 bytes instead of %d", headerlen);
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    extendedAPDU = arg_get_lit(ctx, 6);
-    le = arg_get_int_def(ctx, 7, 0);
+    bool extendedAPDU = arg_get_lit(ctx, 6);
+    int le = arg_get_int_def(ctx, 7, 0);
+
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    int datalen = 0;
 
     if (makeAPDU) {
         uint8_t apdudata[PM3_CMD_DATA_SIZE] = {0};

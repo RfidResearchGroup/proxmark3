@@ -241,6 +241,7 @@ Check column "offline" for their availability.
 |`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO-15693 tag`
 |`hf 15 samples          `|N       |`Acquire samples as reader (enables carrier, sends inquiry)`
 |`hf 15 view             `|Y       |`Display content from tag dump file`
+|`hf 15 wipe             `|N       |`Wipe card to zeros`
 |`hf 15 wrbl             `|N       |`Write a block`
 |`hf 15 sim              `|N       |`Fake an ISO-15693 tag`
 |`hf 15 eload            `|N       |`Load image file into emulator to be used by 'sim' command`
@@ -314,11 +315,11 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf felica help         `|Y       |`This help`
 |`hf felica list         `|Y       |`List ISO 18092/FeliCa history`
-|`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
 |`hf felica info         `|N       |`Tag information`
-|`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica raw          `|N       |`Send raw hex data to tag`
 |`hf felica rdbl         `|N       |`read block data from authentication-not-required Service.`
+|`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
+|`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
 |`hf felica rqservice    `|N       |`verify the existence of Area and Service, and to acquire Key Version.`
 |`hf felica rqresponse   `|N       |`verify the existence of a card and its Mode.`
@@ -761,7 +762,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf waveshare help      `|Y       |`This help`
-|`hf waveshare loadbmp   `|N       |`Load BMP file to Waveshare NFC ePaper`
+|`hf waveshare load      `|Y       |`Load image file to Waveshare NFC ePaper`
 
 
 ### hf xerox
@@ -771,9 +772,11 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf xerox help          `|Y       |`This help`
+|`hf xerox list          `|Y       |`List ISO-14443B history`
 |`hf xerox info          `|N       |`Short info on Fuji/Xerox tag`
-|`hf xerox reader        `|N       |`Act like a Fuji/Xerox reader`
 |`hf xerox dump          `|N       |`Read all memory pages of an Fuji/Xerox tag, save to file`
+|`hf xerox reader        `|N       |`Act like a Fuji/Xerox reader`
+|`hf xerox view          `|Y       |`Display content from tag dump file`
 
 
 ### hw

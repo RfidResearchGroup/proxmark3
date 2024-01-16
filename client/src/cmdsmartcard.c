@@ -1091,6 +1091,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         if (json_is_object(data) == false) {
             PrintAndLogEx(ERR, "\ndata %d is not an object\n", i + 1);
             json_decref(root);
+            free(buf);
             return PM3_ESOFT;
         }
 
@@ -1098,6 +1099,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         if (json_is_string(jaid) == false) {
             PrintAndLogEx(ERR, "\nAID data [%d] is not a string", i + 1);
             json_decref(root);
+            free(buf);
             return PM3_ESOFT;
         }
 
@@ -1459,5 +1461,3 @@ bool smart_select(bool verbose, smart_card_atr_t *atr) {
 
     return true;
 }
-
-

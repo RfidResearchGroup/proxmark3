@@ -81,11 +81,11 @@ static model_t models[] = {
 
 static int CmdHelp(const char *Cmd);
 
-static uint8_t * map8to1(gdImagePtr img, int color) {
+static uint8_t *map8to1(gdImagePtr img, int color) {
     // Calculate width rounding up
     uint16_t width8 = (gdImageSX(img) + 7) / 8;
 
-    uint8_t * colormap8 = calloc(width8 * gdImageSY(img), sizeof(uint8_t));
+    uint8_t *colormap8 = calloc(width8 * gdImageSY(img), sizeof(uint8_t));
     if (!colormap8) {
         return NULL;
     }
@@ -668,14 +668,14 @@ static int CmdHF14AWSLoad(const char *Cmd) {
         }
     }
 
-    uint8_t * black_plane = map8to1(pal_img, 1);
+    uint8_t *black_plane = map8to1(pal_img, 1);
     if (!black_plane) {
         PrintAndLogEx(WARNING, "Could not convert image to bit plane");
         gdImageDestroy(pal_img);
         return PM3_EMALLOC;
     }
 
-    uint8_t * red_plane = NULL;
+    uint8_t *red_plane = NULL;
     if (model_has_red) {
         red_plane = map8to1(pal_img, 2);
         if (!red_plane) {

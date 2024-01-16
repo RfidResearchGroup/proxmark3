@@ -926,5 +926,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 // 0x0A = ACK
 // 0x05 = NACK
 
+// XEROX Commands
+#define XEROX_READ_MEM                  0x20
+
 #endif
 // PROTOCOLS_H

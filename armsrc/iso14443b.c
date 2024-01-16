@@ -819,7 +819,7 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
         // WUP in HALTED state
         if (len == 5) {
             if ((receivedCmd[0] == ISO14443B_REQB && (receivedCmd[2] & 0x8) == 0x8 && cardSTATE == SIM_HALTED) ||
-                 receivedCmd[0] == ISO14443B_REQB) {
+                    receivedCmd[0] == ISO14443B_REQB) {
 
                 LogTrace(receivedCmd, len, 0, 0, NULL, true);
                 cardSTATE = SIM_SELECTING;
@@ -1653,7 +1653,7 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
 
             // retrieve the result again (with increased timeout)
             eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
-            
+
             if (Get14443bAnswerFromTag(rxdata, rxmaxlen, iso14b_timeout, &eof_time, &len) != PM3_SUCCESS) {
                 FpgaDisableTracing();
                 return PM3_ECARDEXCHANGE;
@@ -1670,8 +1670,8 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
         // current block number, toggle the current block number
 
         if ((len >= 3) &&                                                             // PCB + CRC = 3 bytes
-            (((data_bytes[0] & 0xC0) == 0) || (data_bytes[0] & 0xD0) == 0x80)  &&  // I-Block   OR   R-Block with ACK bit set to 0
-            ((data_bytes[0] & 0x01) == iso14b_pcb_blocknum)) {                     // equal block numbers
+                (((data_bytes[0] & 0xC0) == 0) || (data_bytes[0] & 0xD0) == 0x80)  &&  // I-Block   OR   R-Block with ACK bit set to 0
+                ((data_bytes[0] & 0x01) == iso14b_pcb_blocknum)) {                     // equal block numbers
 
             iso14b_pcb_blocknum ^= 1;
 
@@ -1725,7 +1725,7 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
     if (Get14443bAnswerFromTag(r, sizeof(r), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
         goto out;
     }
-    
+
     FpgaDisableTracing();
 
     if (retlen != 4) {
@@ -1803,7 +1803,7 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
     uint16_t retlen = 0;
     if (Get14443bAnswerFromTag(r_init, sizeof(r_init), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-        FpgaDisableTracing();    
+        FpgaDisableTracing();
         return PM3_ECARDEXCHANGE;
     }
     FpgaDisableTracing();
@@ -2526,12 +2526,12 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
         } else {
             responselen = MIN(responselen, PM3_CMD_DATA_SIZE);
 
-            iso14b_raw_apdu_response_t *payload = (iso14b_raw_apdu_response_t *)BigBuf_calloc( sizeof(iso14b_raw_apdu_response_t) + responselen);
+            iso14b_raw_apdu_response_t *payload = (iso14b_raw_apdu_response_t *)BigBuf_calloc(sizeof(iso14b_raw_apdu_response_t) + responselen);
             payload->response_byte = response_byte;
             payload->datalen = responselen;
             memcpy(payload->data, buf, payload->datalen);
 
-            reply_ng(CMD_HF_ISO14443B_COMMAND, status, (uint8_t*)payload, sizeof(iso14b_raw_apdu_response_t) + responselen);
+            reply_ng(CMD_HF_ISO14443B_COMMAND, status, (uint8_t *)payload, sizeof(iso14b_raw_apdu_response_t) + responselen);
             BigBuf_free_keep_EM();
         }
     }
