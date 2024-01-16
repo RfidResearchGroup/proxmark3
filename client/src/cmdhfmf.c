@@ -3482,7 +3482,7 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
                     PrintAndLogEx(INFO, "Running bruteforce stage %d", smart_mode_stage);
 
                     if (msclock() - t1 > 0 && keys_checked > 0) {
-                        PrintAndLogEx(INFO, "Current cracking speed (keys/s): %d",
+                        PrintAndLogEx(INFO, "Current cracking speed (keys/s): %u",
                                       keys_checked / ((msclock() - t1) / 1000));
                     
                         t1 = msclock();
@@ -3508,7 +3508,7 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
 
 out:
     PrintAndLogEx(INFO, "Time in brute mode: " _YELLOW_("%.1fs") "\n", (float)((msclock() - t0) / 1000.0));
-    PrintAndLogEx(INFO, "Total keys checked: " _YELLOW_("%d") "\n", total_keys_checked);
+    PrintAndLogEx(INFO, "Total keys checked: " _YELLOW_("%u") "\n", total_keys_checked);
     // check..
     uint8_t found_keys = 0;
     for (i = 0; i < sectorsCnt; ++i) {
