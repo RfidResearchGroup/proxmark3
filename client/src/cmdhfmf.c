@@ -3389,7 +3389,6 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
         arg_lit0(NULL, "dump", "Dump found keys to binary file"),
-        arg_lit0(NULL, "mem", "Use dictionary from flashmemory"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3402,7 +3401,6 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
 
     bool transferToEml = arg_get_lit(ctx, 6);
     bool createDumpFile = arg_get_lit(ctx, 7);
-    bool use_flashmemory = arg_get_lit(ctx, 8);
 
     CLIParserFree(ctx);
 
@@ -3531,13 +3529,6 @@ out:
 
         printKeyTable(sectorsCnt, e_sector);
 
-        if (use_flashmemory && found_keys == (sectorsCnt << 1)) {
-            PrintAndLogEx(SUCCESS, "Card dumped as well. run " _YELLOW_("`%s %c`"),
-                          "hf mf esave",
-                          GetFormatFromSector(sectorsCnt)
-                         );
-        }
-
         if (transferToEml) {
             // fast push mode
             g_conn.block_after_ACK = true;
@@ -3572,6 +3563,14 @@ out:
                 PrintAndLogEx(ERR, "Failed to save keys to file");
             }
             free(fptr);
+
+            if (found_keys == (sectorsCnt << 1)) {
+                PrintAndLogEx(SUCCESS, "Card dumped as well. run " _YELLOW_("`%s %c`"),
+                          "hf mf esave",
+                          GetFormatFromSector(sectorsCnt)
+                         );
+        }
+
         }
     }
 
@@ -6209,7 +6208,6 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     }
 
     uint8_t ndefkey[6] = {0};
-    printf("%d", keylen)
     memcpy(ndefkey, g_mifare_ndef_key, 6);
     if (keylen == 6) {
         memcpy(ndefkey, key, 6);
