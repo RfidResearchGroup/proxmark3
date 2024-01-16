@@ -1,3 +1,6 @@
 [submodule "c"]
 	path = c
 	url = git@github.com:rick423n/proxmark3.git
+[submodule "proxmark3"]
+	path = proxmark3
+	url = git@github.com:rick423n/proxmark3.git
