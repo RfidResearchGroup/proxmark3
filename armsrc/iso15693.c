@@ -2111,20 +2111,51 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
 
-    Iso15693InitTag();
+    iso15693_tag *tag = (iso15693_tag*) BigBuf_get_EM_addr();
+    if (tag == NULL) return;
+
+    if (uid != NULL) { // new tag (need initialization)
+        memcpy(tag->uid, uid, 8);
+        tag->dsfid = 0;
+        tag->dsfidLock = false;
+        tag->afi = 0;
+        tag->afiLock = false;
+        tag->bytesPerPage = 4;
+        tag->pagesCount = 64;
+        tag->ic = 0;
+        memset(tag->locks, 0, sizeof(tag->locks));
+        memset(tag->data, 0, sizeof(tag->data));
+    }
+    else { // tag is already set
+        if (tag->pagesCount > ISO15693_TAG_MAX_PAGES || \
+            tag->pagesCount * tag->bytesPerPage > ISO15693_TAG_MAX_SIZE) {
+            Dbprintf("Tag size error: pagesCount = %d, bytesPerPage=%d", tag->pagesCount, tag->bytesPerPage);
+            return;
+        }
+    }
+
+    Iso15693InitTag(); // init simulator
 
     LED_A_ON();
 
-    Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X block size %d", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7], block_size);
+    Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X  block size %d", tag->uid[0], tag->uid[1], tag->uid[2], tag->uid[3], tag->uid[4], tag->uid[5], tag->uid[6], tag->uid[7], tag->bytesPerPage);
 
     LED_C_ON();
-
-    enum { NO_FIELD, IDLE, ACTIVATED, SELECTED, HALTED } chip_state = NO_FIELD;
 
     bool button_pressed = false;
     int vHf; // in mV
 
     bool exit_loop = false;
+    uint8_t cmd[ISO15693_MAX_COMMAND_LENGTH] = {0};
+    uint8_t recv[ISO15693_MAX_RESPONSE_LENGTH] = {0};
+    uint8_t mask_len = 0;
+    uint8_t maskCpt = 0;
+    uint8_t cmdCpt = 0;
+    uint16_t recvLen = 0;
+    uint8_t error = 0;
+    uint8_t pageNum = 0;
+    uint8_t nbPages = 0;
+
     while (exit_loop == false) {
 
         button_pressed = BUTTON_PRESS();
@@ -2134,11 +2165,11 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         WDT_HIT();
 
         // find reader field
-        if (chip_state == NO_FIELD) {
+        if (tag->state == TAG_STATE_NO_FIELD) {
 
             vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
             if (vHf > MF_MINFIELDV) {
-                chip_state = IDLE;
+                tag->state = TAG_STATE_READY;
                 LED_A_ON();
             } else {
                 continue;
@@ -2146,7 +2177,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         }
 
         // Listen to reader
-        uint8_t cmd[ISO15693_MAX_COMMAND_LENGTH];
+        uint32_t reader_sof_time = GetCountSspClk() & 0xfffffff8;
         uint32_t reader_eof_time = 0;
         int cmd_len = GetIso15693CommandFromReader(cmd, sizeof(cmd), &reader_eof_time);
         if (cmd_len < 0) {
@@ -2154,6 +2185,330 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             break;
         }
 
+        if (cmd_len <= 3)
+            continue;
+
+        LogTrace_ISO15693(cmd, cmd_len, (reader_sof_time * 4), (reader_eof_time * 4), NULL, true);
+
+        // Shorten 0 terminated msgs
+        // (Some times received commands are prolonged with a random number of 0 bytes...)
+        while (cmd[cmd_len-1] == 0) {
+            cmd_len--;
+            if (cmd_len <= 3)
+                break;
+        }
+
+        if (g_dbglevel >= DBG_DEBUG) {
+            Dbprintf("%d bytes read from reader:", cmd_len);
+            Dbhexdump(cmd_len, cmd, false);
+        }
+
+        if (cmd_len < 3)
+            continue;
+
+        // Check CRC and drop received cmd with bad CRC
+        uint16_t crc = CalculateCrc15(cmd, cmd_len - 2);
+        if ((( crc & 0xff ) != cmd[cmd_len - 2]) || (( crc >> 8 ) != cmd[cmd_len - 1])) {
+            crc = CalculateCrc15(cmd, ++cmd_len - 2); // if crc end with 00
+            if ((( crc & 0xff ) != cmd[cmd_len - 2]) || (( crc >> 8 ) != cmd[cmd_len - 1])) {
+                crc = CalculateCrc15(cmd, ++cmd_len - 2); // if crc end with 00 00
+                if ((( crc & 0xff ) != cmd[cmd_len - 2]) || (( crc >> 8 ) != cmd[cmd_len - 1])) {
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("CrcFail!");
+                        continue;
+                }
+                else if (g_dbglevel >= DBG_DEBUG)
+                    Dbprintf("CrcOK");
+            }
+            else if (g_dbglevel >= DBG_DEBUG)
+                Dbprintf("CrcOK");
+        }
+        else if (g_dbglevel >= DBG_DEBUG)
+            Dbprintf("CrcOK");
+
+        cmd_len -= 2; // remove the CRC from the cmd
+        recvLen = 0;
+
+        tag->expectFast = cmd[0] & ISO15_REQ_DATARATE_HIGH;
+        tag->expectFsk = cmd[0] & ISO15_REQ_SUBCARRIER_TWO;
+
+        if (g_dbglevel >= DBG_DEBUG) {
+            if (tag->expectFsk)
+                Dbprintf("ISO15_REQ_SUBCARRIER_TWO support is currently experimental!");
+            if (cmd[0] & ISO15_REQ_PROTOCOL_EXT)
+                Dbprintf("ISO15_REQ_PROTOCOL_EXT not supported!");
+            if (cmd[0] & ISO15_REQ_OPTION)
+                Dbprintf("ISO15_REQ_OPTION not supported!");
+        }
+
+        if (cmd[0] & ISO15_REQ_INVENTORY && tag->state != TAG_STATE_SILENCED) {
+            // REQ_INVENTORY flaged requests are interpreted as a INVENTORY no matter
+            // what is the CMD (as observed from various actual tags)
+
+            // TODO: support colision avoidances
+
+            if (g_dbglevel >= DBG_DEBUG) {
+                Dbprintf("Inventory req");
+                if (cmd[0] & ISO15_REQINV_SLOT1)
+                    Dbprintf("ISO15_REQINV_SLOT1/SLOT16 not supported!");
+            }
+
+            cmdCpt = 2;
+
+            // Check AFI
+            if (cmd[0] & ISO15_REQINV_AFI) {
+                if (cmd[cmdCpt] != tag->afi && cmd[cmdCpt] != 0)
+                    continue; // bad AFI : drop request
+                cmdCpt++;
+            }
+
+            // Check mask
+            if (cmdCpt >= cmd_len)
+                continue; // mask is not present : drop request
+            mask_len = cmd[cmdCpt++];
+
+            maskCpt = 0;
+
+            while (mask_len >= 8 && cmdCpt < cmd_len && maskCpt < 8) { // Byte comparison
+                if (cmd[cmdCpt++] != tag->uid[maskCpt++]) {
+                    error++; // mask don't match : drop request
+                    break;
+                }
+                mask_len -= 8;
+            }
+
+            if (mask_len > 0 && cmdCpt >= cmd_len)
+                continue; // mask is shorter than declared mask lenght: drop request
+
+            while (mask_len > 0) { // Bit comparison
+                mask_len--;
+                if (((cmd[cmdCpt] >> mask_len) & 1) != ((tag->uid[maskCpt] >> mask_len) & 1)) {
+                    error++; // mask don't match : drop request
+                    break;
+                }
+            }
+
+            if (error > 0)
+                continue;
+
+            // No error: Answer
+            recv[0] = ISO15_NOERROR;
+            recv[1] = tag->dsfid;
+            memcpy(&recv[2], tag->uid, 8);
+            recvLen = 10;
+        }
+        else {
+            if (cmd[0]&ISO15_REQ_SELECT) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Selected Request");
+                if (tag->state != TAG_STATE_SELECTED)
+                    continue; // drop selected request if not selected
+                tag->state = TAG_STATE_READY; // Select flag set if already selected : unselect
+            }
+
+            cmdCpt = 2;
+            if (cmd[0]&ISO15_REQ_ADDRESS) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Addressed Request");
+                if (cmd_len <= cmdCpt+8)
+                    continue;
+                if (memcmp(&cmd[cmdCpt], tag->uid, 8) != 0)
+                {
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address don't match tag uid");
+                    if (cmd[1] == ISO15693_SELECT)
+                        tag->state = TAG_STATE_READY; // we are not anymore the selected TAG
+                    continue; // drop addressed request with other uid
+                }
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address match tag uid");
+                cmdCpt+=8;
+            }
+            else if (tag->state == TAG_STATE_SILENCED)
+            {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Unaddressed request in quiet state: drop");
+                continue; // drop unadressed request in quiet state
+            }
+
+            switch(cmd[1]) {
+            case ISO15693_INVENTORY:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Inventory cmd");
+                recv[0] = ISO15_NOERROR;
+                recv[1] = tag->dsfid;
+                memcpy(&recv[2], tag->uid, 8);
+                recvLen = 10;
+                break;
+            case ISO15693_STAYQUIET:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("StayQuiet cmd");
+                tag->state = TAG_STATE_SILENCED;
+                break;
+            case ISO15693_READBLOCK:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadBlock cmd");
+                pageNum = cmd[cmdCpt++];
+                if (pageNum >= tag->pagesCount)
+                    error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                else {
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                    if ((cmd[0] & ISO15_REQ_OPTION)) { // ask for lock status
+                        recv[1] = tag->locks[pageNum];
+                        recvLen++;
+                }
+                    for (uint8_t i = 0 ; i < tag->bytesPerPage ; i++)
+                        recv[recvLen+i] = tag->data[(pageNum * tag->bytesPerPage) + i];
+                    recvLen += tag->bytesPerPage;
+                }
+                break;
+            case ISO15693_WRITEBLOCK:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteBlock cmd");
+                pageNum = cmd[cmdCpt++];
+                if (pageNum >= tag->pagesCount)
+                    error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                else {
+                    for (uint8_t i = 0 ; i < tag->bytesPerPage ; i++)
+                        tag->data[(pageNum*tag->bytesPerPage) + i] = cmd[i + cmdCpt];
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                }
+                break;
+            case ISO15693_LOCKBLOCK:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockBlock cmd");
+                pageNum = cmd[cmdCpt++];
+                if (pageNum >= tag->pagesCount)
+                    error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                else if (tag->locks[pageNum])
+                    error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
+                else {
+                    tag->locks[pageNum] = 1;
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                }
+                break;
+            case ISO15693_READ_MULTI_BLOCK:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadMultiBlock cmd");
+                pageNum = cmd[cmdCpt++];
+                nbPages = cmd[cmdCpt++];
+                if (pageNum+nbPages >= tag->pagesCount)
+                error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                else {
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                    for (uint16_t i = 0 ; i < (nbPages + 1) * tag->bytesPerPage && \
+                             recvLen + 3 < ISO15693_MAX_RESPONSE_LENGTH ; i++) {
+                        if ((i % tag->bytesPerPage) == 0 && (cmd[0] & ISO15_REQ_OPTION))
+                            recv[recvLen++] = tag->locks[pageNum + (i / tag->bytesPerPage)];
+                        recv[recvLen++] = tag->data[(pageNum * tag->bytesPerPage) + i];
+                    }
+                    if (recvLen + 3 > ISO15693_MAX_RESPONSE_LENGTH) // limit response size
+                        recvLen = ISO15693_MAX_RESPONSE_LENGTH - 3; // to avoid overflow
+                }
+                break;
+            case ISO15693_WRITE_AFI:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteAFI cmd");
+                if (tag->afiLock)
+                    error = ISO15_ERROR_BLOCK_LOCKED;
+                else {
+                    tag->afi = cmd[cmdCpt++];
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                }
+                break;
+            case ISO15693_LOCK_AFI:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockAFI cmd");
+                if (tag->afiLock)
+                    error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
+                else {
+                    tag->afiLock = true;
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                }
+                break;
+            case ISO15693_WRITE_DSFID:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteDSFID cmd");
+                if (tag->dsfidLock)
+                    error = ISO15_ERROR_BLOCK_LOCKED;
+                else {
+                    tag->dsfid = cmd[cmdCpt++];
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                }
+                break;
+            case ISO15693_LOCK_DSFID:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockDSFID cmd");
+                if (tag->dsfidLock)
+                    error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
+                else {
+                    tag->dsfidLock = true;
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                }
+                break;
+            case ISO15693_SELECT:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Select cmd");
+                tag->state = TAG_STATE_SELECTED;
+                recv[0] = ISO15_NOERROR;
+                recvLen = 1;
+                break;
+            case ISO15693_RESET_TO_READY:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ResetToReady cmd");
+                tag->state = TAG_STATE_READY;
+                recv[0] = ISO15_NOERROR;
+                recvLen = 1;
+                break;
+            case ISO15693_GET_SYSTEM_INFO:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("GetSystemInfo cmd");
+                recv[0] = ISO15_NOERROR;
+                recv[1] = 0x0f; // sysinfo contain all info
+                memcpy(&recv[2], tag->uid, 8);
+                recv[10] = tag->dsfid;
+                recv[11] = tag->afi;
+                recv[12] = tag->pagesCount - 1;
+                recv[13] = tag->bytesPerPage - 1;
+                recv[14] = tag->ic;
+                recvLen = 15;
+                break;
+            case ISO15693_READ_MULTI_SECSTATUS:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadMultiSecStatus cmd");
+                pageNum = cmd[cmdCpt++];
+                nbPages = cmd[cmdCpt++];
+                if (pageNum + nbPages >= tag->pagesCount)
+                    error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                else {
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                    for (uint8_t i = 0 ; i < nbPages + 1 ; i++)
+                        recv[recvLen++] = tag->locks[pageNum + i];
+                }
+                break;
+            default:
+                if (g_dbglevel >= DBG_DEBUG)
+                    Dbprintf("ISO15693 CMD 0x%2X not supported", cmd[1]);
+
+                error = ISO15_ERROR_CMD_NOT_SUP;
+                break;
+            }
+
+            if (error != 0) { // Error happened
+                recv[0] = ISO15_RES_ERROR;
+                recv[1] = error;
+                recvLen = 2;
+                if (g_dbglevel >= DBG_DEBUG)
+                    Dbprintf("ERROR 0x%2X in received request", error);
+            }
+        }
+
+        if (recvLen > 0) { // We need to answer
+            AddCrc15(recv, recvLen);
+            recvLen += 2;
+            CodeIso15693AsTag(recv, recvLen);
+            tosend_t *ts = get_tosend();
+            uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
+
+            if (tag->expectFsk) { // Not suppoted yet
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("%ERROR: FSK answers are not supported yet");
+                //TransmitTo15693ReaderFSK(ts->buf,ts->max, &response_time, 0, !tag->expectFast);
+            }
+            else
+                TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, !tag->expectFast);
+
+            LogTrace_ISO15693(recv, recvLen, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
+        }
+/*
         // TODO: check more flags
         if ((cmd_len >= 5) && (cmd[0] & ISO15_REQ_INVENTORY) && (cmd[1] == ISO15693_INVENTORY)) {
             bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
@@ -2166,14 +2521,14 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             resp_inv[1] = 0; // DSFID (data storage format identifier).  0x00 = not supported
 
             // 64-bit UID
-            resp_inv[2] = uid[7];
-            resp_inv[3] = uid[6];
-            resp_inv[4] = uid[5];
-            resp_inv[5] = uid[4];
-            resp_inv[6] = uid[3];
-            resp_inv[7] = uid[2];
-            resp_inv[8] = uid[1];
-            resp_inv[9] = uid[0];
+            resp_inv[2] = tag->uid[7];
+            resp_inv[3] = tag->uid[6];
+            resp_inv[4] = tag->uid[5];
+            resp_inv[5] = tag->uid[4];
+            resp_inv[6] = tag->uid[3];
+            resp_inv[7] = tag->uid[2];
+            resp_inv[8] = tag->uid[1];
+            resp_inv[9] = tag->uid[0];
 
             // CRC
             AddCrc15(resp_inv, 10);
@@ -2184,7 +2539,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
             LogTrace_ISO15693(resp_inv, CMD_INV_RESP, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
 
-            chip_state = SELECTED;
+            tag->state = TAG_STATE_SELECTED;
         }
 
         // GET_SYSTEM_INFO
@@ -2199,14 +2554,14 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             resp_sysinfo[1] = 0x0F; // Information flags (0x0F - DSFID, AFI, Mem size, IC)
 
             // 64-bit UID
-            resp_sysinfo[2] = uid[7];
-            resp_sysinfo[3] = uid[6];
-            resp_sysinfo[4] = uid[5];
-            resp_sysinfo[5] = uid[4];
-            resp_sysinfo[6] = uid[3];
-            resp_sysinfo[7] = uid[2];
-            resp_sysinfo[8] = uid[1];
-            resp_sysinfo[9] = uid[0];
+            resp_sysinfo[2] = tag->uid[7];
+            resp_sysinfo[3] = tag->uid[6];
+            resp_sysinfo[4] = tag->uid[5];
+            resp_sysinfo[5] = tag->uid[4];
+            resp_sysinfo[6] = tag->uid[3];
+            resp_sysinfo[7] = tag->uid[2];
+            resp_sysinfo[8] = tag->uid[1];
+            resp_sysinfo[9] = tag->uid[0];
 
             resp_sysinfo[10] = 0;    // DSFID
             resp_sysinfo[11] = 0;    // AFI
@@ -2320,6 +2675,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
             LogTrace_ISO15693(resp_writeblock, response_length, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
         }
+*/
     }
 
     switch_off();
