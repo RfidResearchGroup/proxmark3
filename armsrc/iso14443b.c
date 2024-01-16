@@ -34,6 +34,7 @@
 #include "dbprint.h"
 #include "ticks.h"
 #include "iso14b.h"       // defines for ETU conversions
+#include "iclass.h"       // picopass buffer defines
 
 /*
 * Current timing issues with ISO14443-b implementation
@@ -195,6 +196,8 @@ static void iso14b_set_fwt(uint8_t fwt);
 static uint8_t s_iso14b_pcb_blocknum = 0;
 static uint8_t s_iso14b_fwt = 9;
 static uint32_t s_iso14b_timeout = MAX_14B_TIMEOUT;
+
+static bool s_field_on = false;
 
 /*
 * ISO 14443-B communications
@@ -2115,6 +2118,132 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
     return PM3_SUCCESS;
 }
 
+static int iso14443b_select_picopass_card(picopass_hdr_t *hdr) {
+
+    static uint8_t act_all[] = { ICLASS_CMD_ACTALL };
+    static uint8_t identify[] = { ICLASS_CMD_READ_OR_IDENTIFY };
+    static uint8_t read_conf[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x01, 0xfa, 0x22 };
+    uint8_t select[] = { 0x80 | ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t read_aia[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
+    uint8_t read_check_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
+    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
+
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
+    uint16_t retlen = 0;
+
+    // first, wake up the tag  0x0A
+    CodeAndTransmit14443bAsReader(act_all, sizeof(act_all), &start_time, &eof_time, true);    
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+
+    // 0x0C
+    // start_time = eof_time + ISO14B_TR2;
+    start_time = eof_time + US_TO_SSP(1000);    // 330ms before next cmd
+    CodeAndTransmit14443bAsReader(identify, sizeof(identify), &start_time, &eof_time, true);
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+
+    // expect a 10-byte response here, 8 byte anticollision-CSN and 2 byte CRC
+    if (Get14443bAnswerFromTag(resp, sizeof(resp), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
+    }
+    if (retlen != 10) {
+        return PM3_ELENGTH;
+    }
+
+    // copy the Anti-collision CSN to our select-packet
+    memcpy(&select[1], resp, 8);
+
+    // select the card
+    start_time = eof_time + ISO14B_TR2;
+    CodeAndTransmit14443bAsReader(select, sizeof(select), &start_time, &eof_time, true);
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+
+    // expect a 10-byte response here, 8 byte CSN and 2 byte CRC
+    if (Get14443bAnswerFromTag(resp, sizeof(resp), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
+    }
+    if (retlen != 10) {
+        return PM3_ELENGTH;
+    }
+
+    // save CSN
+    memcpy(hdr->csn, resp, sizeof(hdr->csn));
+
+    // card selected, now read config (block1) (only 8 bytes no CRC)
+    start_time = eof_time + ISO14B_TR2;
+    CodeAndTransmit14443bAsReader(read_conf, sizeof(read_conf), &start_time, &eof_time, true);
+    eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+
+    // expect a 10-byte response here, 8 bytes CONFIGURATION and 2 byte CRC)
+    if (Get14443bAnswerFromTag(resp, sizeof(resp), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
+    }
+    if (retlen != 10) {
+        return PM3_ELENGTH;
+    }
+
+    // save CONF
+    memcpy((uint8_t *)&hdr->conf, resp, sizeof(hdr->conf));
+
+    uint8_t pagemap = get_pagemap(hdr);
+    if (pagemap != PICOPASS_NON_SECURE_PAGEMODE) {
+
+        // read App Issuer Area block 5
+        start_time = eof_time + ISO14B_TR2;
+        CodeAndTransmit14443bAsReader(read_aia, sizeof(read_aia), &start_time, &eof_time, true);
+        eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+
+        // expect AIA, a 10-byte response here
+        if (Get14443bAnswerFromTag(resp, sizeof(resp), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+            return PM3_ECARDEXCHANGE;
+        }
+        if (retlen != 10) {
+            return PM3_ELENGTH;
+        }
+
+        memcpy(hdr->app_issuer_area, resp, sizeof(hdr->app_issuer_area));
+
+        // card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
+        start_time = eof_time + ISO14B_TR2;        
+        CodeAndTransmit14443bAsReader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, true);
+        eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+
+        // expect EPURSE, a 8 byte response here
+        if (Get14443bAnswerFromTag(resp, sizeof(resp), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+            return PM3_ECARDEXCHANGE;
+        }
+        if (retlen != 8) {
+            return PM3_ELENGTH;
+        }
+
+        memcpy(hdr->epurse, resp, sizeof(hdr->epurse));
+
+    }  else {
+
+        // on NON_SECURE_PAGEMODE cards, AIA is on block2..
+
+        // read App Issuer Area block 2
+        read_aia[1] = 0x02;
+        read_aia[2] = 0x61;
+        read_aia[3] = 0x10;
+
+        start_time = eof_time + ISO14B_TR2;
+        CodeAndTransmit14443bAsReader(read_aia, sizeof(read_aia), &start_time, &eof_time, true);
+        eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+
+        // expect AIA, a 10-byte response here
+        if (Get14443bAnswerFromTag(resp, sizeof(resp), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+            return PM3_ECARDEXCHANGE;
+        }
+        if (retlen != 10) {
+            return PM3_ELENGTH;
+        }
+
+        memcpy(hdr->epurse, resp, sizeof(hdr->epurse));
+    }
+    return PM3_SUCCESS;
+}
+
 // Set up ISO 14443 Type B communication (similar to iso14443a_setup)
 // field is setup for "Sending as Reader"
 void iso14443b_setup(void) {
@@ -2151,6 +2280,8 @@ void iso14443b_setup(void) {
 
     // reset timeout
     iso14b_set_fwt(8);
+
+    s_field_on = true;
 
     LED_D_ON();
 }
@@ -2471,7 +2602,23 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
         sendlen = sizeof(iso14b_cts_card_select_t);
         status = iso14443b_select_cts_card(cts);
         reply_ng(CMD_HF_ISO14443B_COMMAND, status, (uint8_t *)cts, sendlen);
-        if (status > PM3_SUCCESS) goto out;
+        if (status != PM3_SUCCESS) goto out;
+    }
+    
+    if ((p->flags & ISO14B_SELECT_PICOPASS) == ISO14B_SELECT_PICOPASS) {
+        picopass_hdr_t *hdr = (picopass_hdr_t *)buf;
+        memset(hdr, 0, sizeof(picopass_hdr_t));
+        sendlen = sizeof(picopass_hdr_t);
+        status = iso14443b_select_picopass_card(hdr);
+        reply_ng(CMD_HF_ISO14443B_COMMAND, status, (uint8_t *)hdr, sendlen);
+        if (status != PM3_SUCCESS) goto out;
+    }
+
+    // if field is off...
+    if (s_field_on == false) {
+        DbpString("Field is off");
+        reply_ng(CMD_HF_ISO14443B_COMMAND, PM3_ERFTRANS, NULL, 0);
+        goto out;        
     }
 
     if ((p->flags & ISO14B_APDU) == ISO14B_APDU) {
@@ -2533,5 +2680,6 @@ out:
         switch_off(); // disconnect raw
         SpinDelay(20);
         BigBuf_free_keep_EM();
+        s_field_on = false;
     }
 }

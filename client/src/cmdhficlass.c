@@ -1009,7 +1009,7 @@ int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
             } else {
 
                 if (r->status == FLAG_ICLASS_NULL || resp.status == PM3_ERFTRANS) {
-                    if (verbose) PrintAndLogEx(WARNING, "iCLASS / Picopass card select failed ( %d )", r->status);
+                    if (verbose) PrintAndLogEx(WARNING, "iCLASS / Picopass card select failed ( %d , %d)", r->status, resp.status);
                     res = PM3_EOPABORTED;
                     break;
                 }
@@ -1059,7 +1059,7 @@ static int CmdHFiClassReader(const char *Cmd) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
-    return read_iclass_csn(cm, true, shallow_mod);
+    return read_iclass_csn(cm, false, shallow_mod);
 }
 
 static int CmdHFiClassELoad(const char *Cmd) {

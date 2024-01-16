@@ -20,19 +20,20 @@
 #include <ctype.h>
 #include "iso14b.h"
 #include "fileutils.h"
-#include "cmdparser.h"     // command_t
-#include "commonutil.h"    // ARRAYLEN
-#include "comms.h"         // clearCommandBuffer
-#include "emv/emvcore.h"   // TLVPrintFromBuffer
+#include "cmdparser.h"          // command_t
+#include "commonutil.h"         // ARRAYLEN
+#include "comms.h"              // clearCommandBuffer
+#include "emv/emvcore.h"        // TLVPrintFromBuffer
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "crc16.h"
 #include "cmdhf14a.h"
-#include "protocols.h"     // definitions of ISO14B/7816 protocol
-#include "iso7816/apduinfo.h"  // GetAPDUCodeDescription
-#include "nfc/ndef.h"   // NDEFRecordsDecodeAndPrint
+#include "protocols.h"          // definitions of ISO14B/7816 protocol
+#include "iso7816/apduinfo.h"   // GetAPDUCodeDescription
+#include "nfc/ndef.h"           // NDEFRecordsDecodeAndPrint
 #include "aidsearch.h"
-#include "fileutils.h"     // saveFile
+#include "fileutils.h"          // saveFile
+#include "iclass_cmd.h"         // picopass defines
 
 #define MAX_14B_TIMEOUT_MS (4949U)
 
@@ -849,7 +850,7 @@ static int CmdHF14BSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14BCmdRaw(const char *Cmd) {
+static int CmdHF14BRaw(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b raw",
                   "Sends raw bytes to card. Activates field by default",
@@ -872,10 +873,9 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         arg_lit0(NULL, "sr", "use SRx ST select"),
         arg_lit0(NULL, "cts", "use ASK C-ticket select"),
         arg_lit0(NULL, "xrx", "use Fuji/Xerox select"),
+        arg_lit0(NULL, "pico", "use Picopass select"),
 
         arg_lit0("v", "verbose", "verbose output"),
-
-
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -894,7 +894,8 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
     bool select_sr = arg_get_lit(ctx, 8);
     bool select_cts = arg_get_lit(ctx, 9);
     bool select_xrx = arg_get_lit(ctx, 10);
-    bool verbose = arg_get_lit(ctx, 11);
+    bool select_pico = arg_get_lit(ctx, 11);
+    bool verbose = arg_get_lit(ctx, 12);
     CLIParserFree(ctx);
 
     // FLAGS for device side
@@ -927,6 +928,11 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         flags |= (ISO14B_CONNECT | ISO14B_SELECT_XRX | ISO14B_CLEARTRACE);
         if (verbose) {
             PrintAndLogEx(INFO, "using Fuji/Xerox select");
+        }
+    } else if (select_pico) {
+        flags |= (ISO14B_CONNECT | ISO14B_SELECT_PICOPASS | ISO14B_CLEARTRACE);
+        if (verbose) {
+            PrintAndLogEx(INFO, "using Picopass select");
         }
     }
 
@@ -1005,6 +1011,13 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
         success = wait_cmd_14b(verbose, true, user_timeout);
         if (verbose && success) {
             PrintAndLogEx(SUCCESS, "Got response for Fuji/Xerox select");
+        }
+    }
+
+    if (select_pico) {
+        success = wait_cmd_14b(verbose, true, user_timeout);
+        if (verbose && success) {
+            PrintAndLogEx(SUCCESS, "Got response for Picopass select");
         }
     }
 
@@ -1309,6 +1322,53 @@ static bool HF14B_ask_ct_reader(bool verbose) {
         }
         default: {
             if (verbose) PrintAndLogEx(FAILED, "ISO 14443-b CTS select failed");
+            break;
+        }
+    }
+    return false;
+}
+
+static bool HF14B_picopass_reader(bool verbose) {
+
+    iso14b_raw_cmd_t packet = {
+        .flags = (ISO14B_CONNECT | ISO14B_SELECT_PICOPASS | ISO14B_DISCONNECT),
+        .timeout = 0,
+        .rawlen = 0,
+    };
+
+    // 14b get and print UID only (general info)
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
+    if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
+        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return false;
+    }
+
+    switch (resp.status) {
+        case PM3_SUCCESS: {
+
+            picopass_hdr_t *card = calloc(1, sizeof(picopass_hdr_t));
+            if (card == NULL) {
+                PrintAndLogEx(FAILED, "failed to allocate memory");
+                return false;
+            }
+            memcpy(card, resp.data.asBytes, sizeof(picopass_hdr_t));
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, "iCLASS / Picopass CSN: " _GREEN_("%s"), sprint_hex(card->csn, sizeof(card->csn)));
+            free(card);
+            return true;
+        }
+        case PM3_ELENGTH: {
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 wrong length");
+            break;
+        }
+        case PM3_ECRC: {
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-3 CRC fail");
+            break;
+        }
+        default: {
+            if (verbose) PrintAndLogEx(FAILED, "ISO 14443-b Picopass select failed");
             break;
         }
     }
@@ -2422,7 +2482,7 @@ static command_t CommandTable[] = {
     {"dump",      CmdHF14BDump,     IfPm3Iso14443b,  "Read all memory pages of an ISO-14443-B tag, save to file"},
     {"info",      CmdHF14Binfo,     IfPm3Iso14443b,  "Tag information"},
     {"ndefread",  CmdHF14BNdefRead, IfPm3Iso14443b,  "Read NDEF file on tag"},
-    {"raw",       CmdHF14BCmdRaw,   IfPm3Iso14443b,  "Send raw hex data to tag"},
+    {"raw",       CmdHF14BRaw,      IfPm3Iso14443b,  "Send raw hex data to tag"},
     {"rdbl",      CmdHF14BSriRdBl,  IfPm3Iso14443b,  "Read SRI512/SRIX4 block"},
     {"reader",    CmdHF14BReader,   IfPm3Iso14443b,  "Act as a ISO-14443-B reader to identify a tag"},
 //    {"restore",     CmdHF14BRestore,     IfPm3Iso14443b,   "Restore from file to all memory pages of an ISO-14443-B tag"},
@@ -2492,6 +2552,13 @@ int readHF14B(bool loop, bool verbose) {
         // try unknown 14b read commands (to be identified later)
         // could be read of calypso, CEPAS, moneo, or pico pass.
         found |= HF14B_other_reader(verbose);
+        if (found && loop)
+            continue;
+        else if (found)
+            return PM3_SUCCESS;
+
+        // Picopass 
+        found |= HF14B_picopass_reader(verbose) ;
         if (found && loop)
             continue;
         else if (found)
