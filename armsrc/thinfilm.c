@@ -101,7 +101,7 @@ static int EmSendCmdThinfilmRaw(const uint8_t *resp, uint16_t respLen) {
         }
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint16_t)(AT91C_BASE_SSC->SSC_RHR);
+            b = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
             (void)b;
         }
         if (BUTTON_PRESS()) break;
@@ -121,12 +121,11 @@ static int EmSendCmdThinfilmRaw(const uint8_t *resp, uint16_t respLen) {
 }
 
 void SimulateThinFilm(uint8_t *data, size_t len) {
-    Dbprintf("Simulate %i-bit Thinfilm tag", len * 8);
-    Dbhexdump(len, data, true);
-    int16_t status = PM3_SUCCESS;
-    CodeThinfilmAsTag(data, len);
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    Dbprintf("Simulate " _YELLOW_("%i-bit Thinfilm") " tag", len * 8);
+    Dbhexdump(len, data, true);
 
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
@@ -136,29 +135,38 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD);
     SpinDelay(100);
+    // Start the timer
+    StartCountSspClk();
 
     uint16_t hf_baseline = ReadReaderField();
 
-    tosend_t *ts = get_tosend();
+    int16_t status = PM3_SUCCESS;
+    CodeThinfilmAsTag(data, len);
 
-    // Start the timer
-    StartCountSspClk();
+    tosend_t *ts = get_tosend();
 
     bool reader_detected = false;
     LED_A_ON();
     for (;;) {
+
         WDT_HIT();
+
         if (BUTTON_PRESS() || data_available()) {
             status = PM3_EOPABORTED;
             break;
         }
+
         uint16_t hf_av = ReadReaderField();
-        if (hf_av < hf_baseline)
+
+        if (hf_av < hf_baseline) {
             hf_baseline = hf_av;
+        }
+
         if (hf_av > hf_baseline + 10) {
 
             EmSendCmdThinfilmRaw(ts->buf, ts->max);
-            if (!reader_detected) {
+
+            if (reader_detected == false) {
                 LED_B_ON();
                 //Dbprintf("Reader detected, start beaming data");
                 reader_detected = true;
@@ -166,7 +174,7 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
         } else {
             if (reader_detected) {
                 LED_B_OFF();
-                //Dbprintf("Reader gone, stop beaming data");
+                // Dbprintf("Reader gone, stop beaming data");
                 reader_detected = false;
             }
         }

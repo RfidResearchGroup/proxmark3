@@ -828,7 +828,10 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
                 default:
                     break;
             }
-            PrintAndLogEx(INFO, "                mirror start page %02X | byte pos %02X - %s", mirror_page, mirror_byte, (mirror_page >= 0x4 && ((mirror_user_mem_start_byte + bytes_required_for_mirror_data) <= 144)) ? _GREEN_("OK") : _YELLOW_("Invalid value"));
+            PrintAndLogEx(INFO, "                mirror start page %02X | byte pos %02X - %s"
+                          , mirror_page, mirror_byte
+                          , (mirror_page >= 0x4 && ((mirror_user_mem_start_byte + bytes_required_for_mirror_data) <= 144)) ? _GREEN_("ok") : _YELLOW_("Invalid value")
+                         );
         }
 
     } else if (tagtype & (MFU_TT_NTAG_213_F | MFU_TT_NTAG_216_F)) {
@@ -1029,13 +1032,13 @@ static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signat
     // ref: AN11350 NTAG 21x Originality Signature Validation
     // ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
     const ecdsa_publickey_t nxp_mfu_public_keys[] = {
-        {"NXP MIFARE Classic MFC1C14_x",          "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
-        {"Manufacturer MIFARE Classic MFC1C14_x", "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
-        {"NXP ICODE DNA, ICODE SLIX2",            "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
-        {"NXP Public key",                        "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
-        {"NXP Ultralight Ev1",                    "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
-        {"NXP NTAG21x (2013)",                    "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MIKRON Public key",                     "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
+        {"NXP MIFARE Classic MFC1C14_x",       "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
+        {"Manufacturer MIFARE Classic / QL88", "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
+        {"NXP ICODE DNA, ICODE SLIX2",         "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
+        {"NXP Public key",                     "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
+        {"NXP Ultralight Ev1",                 "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
+        {"NXP NTAG21x (2013)",                 "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
+        {"MIKRON Public key",                  "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
     };
 
     // https://www.nxp.com/docs/en/application-note/AN13452.pdf
@@ -2740,7 +2743,6 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     if (is_partial) {
         PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
     }
-
     return PM3_SUCCESS;
 }
 
@@ -3105,7 +3107,8 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     DropField();
     free(dump);
-    PrintAndLogEx(INFO, "Restore finished");
+    PrintAndLogEx(HINT, "try `" _YELLOW_("hf mfu dump --ns") "` to verify");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 //
@@ -3700,7 +3703,9 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "--------------------+----------+-----");
     PrintAndLogEx(INFO, " Vingcard algo");
-    PrintAndLogEx(INFO, " Saflok algo");
+    uint64_t key = 0;
+    mfc_algo_saflok_one(uid, 0, 0, &key);
+    PrintAndLogEx(INFO, " Saflok algo        | %012" PRIX64, key);
     PrintAndLogEx(INFO, " SALTO algo");
     PrintAndLogEx(INFO, " Dorma Kaba algo");
     PrintAndLogEx(INFO, " STiD algo");

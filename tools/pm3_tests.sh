@@ -402,7 +402,7 @@ while true; do
       if ! CheckExecute "reveng readline test"    "$CLIENTBIN -c 'reveng -h;reveng -D'" "CRC-64/GO-ISO"; then break; fi
       if ! CheckExecute "reveng -g test"          "$CLIENTBIN -c 'reveng -g abda202c'" "CRC-16/ISO-IEC-14443-3-A"; then break; fi
       if ! CheckExecute "reveng -w test"          "$CLIENTBIN -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
-      if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen -t'" "Selftest OK"; then break; fi
+      if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen -t'" "Selftest ok"; then break; fi
       if ! CheckExecute "mfu keygen test"         "$CLIENTBIN -c 'hf mfu keygen --uid 11223344556677'" "80 B1 C2 71 D8 A0"; then break; fi
       if ! CheckExecute "jooki encode test"       "$CLIENTBIN -c 'hf jooki encode -t'" "04 28 F4 DA F0 4A 81  \( ok \)"; then break; fi
       if ! CheckExecute "trace load/list 14a"     "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -1 -t 14a;'" "READBLOCK\(8\)"; then break; fi
@@ -445,10 +445,10 @@ while true; do
                                                                      "EM 410x ID 0F0368568B"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_animal test"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf search -1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_animal test2"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf fdxb demod'" \
-                                                                     "Animal ID          999-000000112233"; then break; fi
+                                                                     "Animal ID......... 999-000000112233"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_extended test"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_extended.pm3; lf search -1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute slow "lf T55 fdxb_extended test2"        "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_extended.pm3; lf fdxb demod'" \
-                                                                     "temperature     95.2 F / 35.1 C"; then break; fi
+                                                                     "temperature... 95.2 F / 35.1 C"; then break; fi
       if ! CheckExecute slow "lf T55 gallagher test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf search -1'" "GALLAGHER ID found"; then break; fi
       if ! CheckExecute slow "lf T55 gallagher test2"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf gallagher demod'" \
                                                                      "GALLAGHER - Region: 1 Facility: 16640 Card No.: 201 Issue Level: 1"; then break; fi
@@ -535,6 +535,7 @@ while true; do
       if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Test\(s\) \[ ok"; then break; fi
       if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \[ ok"; then break; fi
       if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \[ ok"; then break; fi
+      if ! CheckExecute "hf waveshare load"              "$CLIENTBIN -c 'hf waveshare load -m 6 -f tools/lena.bmp -s dither.bmp' && echo '34ff55fe7257876acf30dae00eb0e439 dither.bmp' | md5sum -c" "dither.bmp: OK"; then break; fi
     fi
   echo -e "\n------------------------------------------------------------"
   echo -e "Tests [ ${C_GREEN}OK${C_NC} ] ${C_OK}\n"

@@ -24,8 +24,10 @@ Always use the latest repository commits from *master* branch. There are always 
   - [WSL](#wsl)
   - [Troubles with running the Proxmark3 client](#troubles-with-running-the-proxmark3-client)
   - [libQt5Core.so.5 not found](#libqt5coreso5-not-found)
+  - [bzlib.h: No such file or directory](#bzlibh-no-such-file-or-directory)
   - [target attribute is not supported on this machine](#target-attribute-is-not-supported-on-this-machine)
   - [Qt Session management error](#qt-session-management-error)
+  - [found architecture x86_64 required architecture arm64 error](#found-architecture-x86_64-required-architecture-arm64-error)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -225,10 +227,33 @@ Try running it with
 ^[Top](#top)
 
 On WSL1 / updated to Ubuntu 20.04 and 22.04,  there is a slight chance you experience problems when compiling the repo with QT5.
-The following steps is needed to make the development environment happy again.   
+The following steps are needed to make the development environment happy again.   
 ```
 sudo apt reinstall qtbase5-dev
 sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5
+```
+
+## bzlib.h: No such file or directory
+^[Top](#top)
+
+This particular issue occurs on Debian/Kali Linux when dependencies aren't installed appropriately; you need to install bzip2 developer (libbz2-dev on Debian-alike) package. Note that the name depends on the distro you're using. Review the [installation guide](https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Installation_Instructions/Linux-Installation-Instructions.md#on-debian--ubuntu--kali--parrotos--raspbian) for further instructions on how to set up your environment.
+
+Sample error output:
+```                                                                                          
+[-] CC src/cmdhfmfhard.c                                   
+src/cmdhfmfhard.c:34:10: fatal error: bzlib.h: No such file or directory                                                                                                                                                                     
+   34 | #include <bzlib.h>                                 
+      |          ^~~~~~~~~                                 
+compilation terminated.                                    
+make[1]: *** [Makefile:946: obj/cmdhfmfhard.o] Error 1                                                                
+make: *** [Makefile:177: client/all] Error 2                          
+```
+
+The following dependencies are currently needed to make the development environment compile:   
+```
+sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev \
+libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev
 ```
 
 ## target attribute is not supported on this machine
@@ -282,4 +307,29 @@ Try running the client without the SESSION_MANAGER environment variable.
 
 ```
 env -u SESSION_MANAGER ./pm3
+```
+
+## found architecture 'x86_64' required architecture 'arm64' error
+^[Top](#top)
+
+If you get the message  
+
+```
+warning: ignoring file '/usr/local/Cellar/jansson/2.14/lib/libjansson.4.dylib': found architecture 'x86_64', required architecture 'arm64'
+```
+
+when running
+```make clean && make -j```
+
+then it likely means you are on an ARM device, possibly an Apple ARM computer.
+
+Solution:
+
+```
+brew install jansson
+```
+Then run this again
+
+```
+make clean && make -j
 ```

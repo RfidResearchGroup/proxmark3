@@ -69,6 +69,7 @@ struct timeval timeout = {
 
 static uint32_t newtimeout_value = 0;
 static bool newtimeout_pending = false;
+static uint8_t rx_empty_counter = 0;
 
 int uart_reconfigure_timeouts(uint32_t value) {
     newtimeout_value = value;
@@ -80,7 +81,7 @@ uint32_t uart_get_timeouts(void) {
     return newtimeout_value;
 }
 
-serial_port uart_open(const char *pcPortName, uint32_t speed) {
+serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
     serial_port_unix_t_t *sp = calloc(sizeof(serial_port_unix_t_t), sizeof(uint8_t));
 
     if (sp == 0) {
@@ -89,6 +90,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     }
 
     sp->udpBuffer = NULL;
+    rx_empty_counter = 0;
     // init timeouts
     timeout.tv_usec = UART_FPC_CLIENT_RX_TIMEOUT_MS * 1000;
     g_conn.send_via_local_ip = false;
@@ -96,25 +98,34 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
     char *prefix = str_dup(pcPortName);
     if (prefix == NULL) {
-        PrintAndLogEx(ERR, "error:  string duplication");
+        PrintAndLogEx(ERR, "error: string duplication");
         free(sp);
         return INVALID_SERIAL_PORT;
     }
     str_lower(prefix);
 
-    if (memcmp(prefix, "tcp:", 4) == 0) {
-        free(prefix);
+    bool isTCP = false;
+    bool isUDP = false;
+    bool isBluetooth = false;
+    bool isUnixSocket = false;
+    if (strlen(prefix) > 4) {
+        isTCP = (memcmp(prefix, "tcp:", 4) == 0);
+        isUDP = (memcmp(prefix, "udp:", 4) == 0);
+    }
+    if (strlen(prefix) > 3) {
+        isBluetooth = (memcmp(prefix, "bt:", 3) == 0);
+    }
+    if (strlen(prefix) > 7) {
+        isUnixSocket = (memcmp(prefix, "socket:", 7) == 0);
+    }
 
-        if (strlen(pcPortName) <= 4) {
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
+    if (isTCP || isUDP) {
+
+        free(prefix);
 
         struct addrinfo *addr = NULL, *rp;
 
         char *addrPortStr = str_dup(pcPortName + 4);
-        char *addrstr = addrPortStr;
-        const char *portstr;
         if (addrPortStr == NULL) {
             PrintAndLogEx(ERR, "error: string duplication");
             free(sp);
@@ -125,125 +136,70 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
 
         // find the "bind" option
         char *bindAddrPortStr = strstr(addrPortStr, ",bind=");
-        char *bindAddrStr = NULL;
-        char *bindPortStr = NULL;
-        bool isBindingIPv6 = false; // Assume v4
+        const char *bindAddrStr = NULL;
+        const char *bindPortStr = NULL;
+        bool isBindingIPv6 = false;
+
         if (bindAddrPortStr != NULL) {
             *bindAddrPortStr = '\0'; // as the end of target address (and port)
-            bindAddrPortStr += 6;
-            bindAddrStr = bindAddrPortStr;
+            bindAddrPortStr += 6; // strlen(",bind=")
 
-            // find the start of the bind address
-            char *endBracket = strrchr(bindAddrPortStr, ']');
-            if (bindAddrPortStr[0] == '[') {
-                bindAddrStr += 1;
-                if (endBracket == NULL) {
+            int result = uart_parse_address_port(bindAddrPortStr, &bindAddrStr, &bindPortStr, &isBindingIPv6);
+            if (result != PM3_SUCCESS) {
+                if (result == PM3_ESOFT) {
                     PrintAndLogEx(ERR, "error: wrong address: [] unmatched in bind option");
-                    free(addrPortStr);
-                    free(sp);
-                    return INVALID_SERIAL_PORT;
-                }
-            }
-
-            // find the bind port
-            char *lColon = strchr(bindAddrPortStr, ':');
-            char *rColon = strrchr(bindAddrPortStr, ':');
-            if (rColon == NULL) {
-                // no colon
-                // ",bind=<ipv4 address>", ",bind=[<ipv4 address>]"
-                bindPortStr = NULL;
-            } else if (lColon == rColon) {
-                // only one colon
-                // ",bind=<ipv4 address>:<port>", ",bind=[<ipv4 address>]:<port>"
-                bindPortStr = rColon + 1;
-            } else {
-                // two or more colon, IPv6 address
-                // ",bind=[<ipv6 address>]:<port>"
-                // ",bind=<ipv6 address>", ",bind=[<ipv6 address>]"
-                if (endBracket != NULL && rColon == endBracket + 1) {
-                    bindPortStr = rColon + 1;
                 } else {
-                    bindPortStr = NULL;
+                    PrintAndLogEx(ERR, "error: failed to parse address and port in bind option");
                 }
-                isBindingIPv6 = true;
-            }
-
-            // handle the end of the bind address
-            if (endBracket != NULL) {
-                *endBracket = '\0';
-            } else if (rColon != NULL && lColon == rColon) {
-                *rColon = '\0';
-            }
-
-            // for bind option, it's possible to only specify address or port
-            if (strlen(bindAddrStr) == 0)
-                bindAddrStr = NULL;
-            if (bindPortStr != NULL && strlen(bindPortStr) == 0)
-                bindPortStr = NULL;
-        }
-
-        // find the start of the address
-        char *endBracket = strrchr(addrPortStr, ']');
-        if (addrPortStr[0] == '[') {
-            addrstr += 1;
-            if (endBracket == NULL) {
-                PrintAndLogEx(ERR, "error: wrong address: [] unmatched");
                 free(addrPortStr);
                 free(sp);
                 return INVALID_SERIAL_PORT;
             }
-        }
 
-
-        // assume v4
-        g_conn.send_via_ip = PM3_TCPv4;
-
-        // find the port
-        char *lColon = strchr(addrPortStr, ':');
-        char *rColon = strrchr(addrPortStr, ':');
-        if (rColon == NULL) {
-            // no colon
-            // "tcp:<ipv4 address>", "tcp:[<ipv4 address>]"
-            portstr = "18888";
-        } else if (lColon == rColon) {
-            // only one colon
-            // "tcp:<ipv4 address>:<port>", "tcp:[<ipv4 address>]:<port>"
-            portstr = rColon + 1;
-        } else {
-            // two or more colon, IPv6 address
-            // "tcp:[<ipv6 address>]:<port>"
-            // "tcp:<ipv6 address>", "tcp:[<ipv6 address>]"
-            if (endBracket != NULL && rColon == endBracket + 1) {
-                portstr = rColon + 1;
-            } else {
-                portstr = "18888";
+            // for bind option, it's possible to only specify address or port
+            if (strlen(bindAddrStr) == 0) {
+                bindAddrStr = NULL;
             }
-            g_conn.send_via_ip = PM3_TCPv6;
+            if (bindPortStr != NULL && strlen(bindPortStr) == 0) {
+                bindPortStr = NULL;
+            }
         }
 
-        // handle the end of the address
-        if (endBracket != NULL) {
-            *endBracket = '\0';
-        } else if (rColon != NULL && lColon == rColon) {
-            *rColon = '\0';
+        const char *addrStr = NULL;
+        const char *portStr = NULL;
+        bool isIPv6 = false;
+
+        int result = uart_parse_address_port(addrPortStr, &addrStr, &portStr, &isIPv6);
+        if (result != PM3_SUCCESS) {
+            if (result == PM3_ESOFT) {
+                PrintAndLogEx(ERR, "error: wrong address: [] unmatched");
+            } else {
+                PrintAndLogEx(ERR, "error: failed to parse address and port");
+            }
+            free(addrPortStr);
+            free(sp);
+            return INVALID_SERIAL_PORT;
         }
+
+        g_conn.send_via_ip = isIPv6 ? (isTCP ? PM3_TCPv6 : PM3_UDPv6) : (isTCP ? PM3_TCPv4 : PM3_UDPv4);
+        portStr = (portStr == NULL) ? "18888" : portStr;
 
         struct addrinfo info;
 
         memset(&info, 0, sizeof(info));
 
         info.ai_family = PF_UNSPEC;
-        info.ai_socktype = SOCK_STREAM;
+        info.ai_socktype = isTCP ? SOCK_STREAM : SOCK_DGRAM;
 
-        if ((strstr(addrstr, "localhost") != NULL) ||
-                (strstr(addrstr, "127.0.0.1") != NULL) ||
-                (strstr(addrstr, "::1") != NULL)) {
+        if ((strstr(addrStr, "localhost") != NULL) ||
+                (strstr(addrStr, "127.0.0.1") != NULL) ||
+                (strstr(addrStr, "::1") != NULL)) {
             g_conn.send_via_local_ip = true;
         }
 
-        int s = getaddrinfo(addrstr, portstr, &info, &addr);
+        int s = getaddrinfo(addrStr, portStr, &info, &addr);
         if (s != 0) {
-            PrintAndLogEx(ERR, "error: getaddrinfo: %s", gai_strerror(s));
+            PrintAndLogEx(ERR, "error: getaddrinfo: %d: %s", s, gai_strerror(s));
             freeaddrinfo(addr);
             free(addrPortStr);
             free(sp);
@@ -254,8 +210,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         for (rp = addr; rp != NULL; rp = rp->ai_next) {
             sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 
-            if (sfd == -1)
+            if (sfd == -1) {
                 continue;
+            }
 
             if (!uart_bind(&sfd, bindAddrStr, bindPortStr, isBindingIPv6)) {
                 PrintAndLogEx(ERR, "error: Could not bind. errno: %d", errno);
@@ -266,8 +223,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
                 return INVALID_SERIAL_PORT;
             }
 
-            if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1)
+            if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1) {
                 break;
+            }
 
             close(sfd);
         }
@@ -276,212 +234,35 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         free(addrPortStr);
 
         if (rp == NULL) {               /* No address succeeded */
-            PrintAndLogEx(ERR, "error: Could not connect");
+            if (slient == false) {
+                PrintAndLogEx(ERR, "error: Could not connect");
+            }
             free(sp);
             return INVALID_SERIAL_PORT;
         }
 
         sp->fd = sfd;
 
-        int one = 1;
-        int res = setsockopt(sp->fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
-        if (res != 0) {
-            free(sp);
-            return INVALID_SERIAL_PORT;
+        if (isTCP) {
+            int one = 1;
+            int res = setsockopt(sp->fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
+            if (res != 0) {
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+        } else if (isUDP) {
+            sp->udpBuffer = RingBuf_create(MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 30);
         }
 
         return sp;
     }
 
-    if (memcmp(prefix, "udp:", 4) == 0) {
-        free(prefix);
-
-        if (strlen(pcPortName) <= 4) {
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
-
-        struct addrinfo *addr = NULL, *rp;
-
-        char *addrPortStr = str_dup(pcPortName + 4);
-        char *addrstr = addrPortStr;
-        const char *portstr;
-        if (addrPortStr == NULL) {
-            PrintAndLogEx(ERR, "error: string duplication");
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
-
-        timeout.tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000;
-
-        // find the "bind" option
-        char *bindAddrPortStr = strstr(addrPortStr, ",bind=");
-        char *bindAddrStr = NULL;
-        char *bindPortStr = NULL;
-        bool isBindingIPv6 = false; // Assume v4
-        if (bindAddrPortStr != NULL) {
-            *bindAddrPortStr = '\0'; // as the end of target address (and port)
-            bindAddrPortStr += 6;
-            bindAddrStr = bindAddrPortStr;
-
-            // find the start of the bind address
-            char *endBracket = strrchr(bindAddrPortStr, ']');
-            if (bindAddrPortStr[0] == '[') {
-                bindAddrStr += 1;
-                if (endBracket == NULL) {
-                    PrintAndLogEx(ERR, "error: wrong address: [] unmatched in bind option");
-                    free(addrPortStr);
-                    free(sp);
-                    return INVALID_SERIAL_PORT;
-                }
-            }
-
-            // find the bind port
-            char *lColon = strchr(bindAddrPortStr, ':');
-            char *rColon = strrchr(bindAddrPortStr, ':');
-            if (rColon == NULL) {
-                // no colon
-                // ",bind=<ipv4 address>", ",bind=[<ipv4 address>]"
-                bindPortStr = NULL;
-            } else if (lColon == rColon) {
-                // only one colon
-                // ",bind=<ipv4 address>:<port>", ",bind=[<ipv4 address>]:<port>"
-                bindPortStr = rColon + 1;
-            } else {
-                // two or more colon, IPv6 address
-                // ",bind=[<ipv6 address>]:<port>"
-                // ",bind=<ipv6 address>", ",bind=[<ipv6 address>]"
-                if (endBracket != NULL && rColon == endBracket + 1) {
-                    bindPortStr = rColon + 1;
-                } else {
-                    bindPortStr = NULL;
-                }
-                isBindingIPv6 = true;
-            }
-
-            // handle the end of the bind address
-            if (endBracket != NULL) {
-                *endBracket = '\0';
-            } else if (rColon != NULL && lColon == rColon) {
-                *rColon = '\0';
-            }
-
-            // for bind option, it's possible to only specify address or port
-            if (strlen(bindAddrStr) == 0)
-                bindAddrStr = NULL;
-            if (bindPortStr != NULL && strlen(bindPortStr) == 0)
-                bindPortStr = NULL;
-        }
-
-        // find the start of the address
-        char *endBracket = strrchr(addrPortStr, ']');
-        if (addrPortStr[0] == '[') {
-            addrstr += 1;
-            if (endBracket == NULL) {
-                PrintAndLogEx(ERR, "error: wrong address: [] unmatched");
-                free(addrPortStr);
-                free(sp);
-                return INVALID_SERIAL_PORT;
-            }
-        }
-
-        // Assume v4
-        g_conn.send_via_ip = PM3_UDPv4;
-
-        // find the port
-        char *lColon = strchr(addrPortStr, ':');
-        char *rColon = strrchr(addrPortStr, ':');
-        if (rColon == NULL) {
-            // no colon
-            // "udp:<ipv4 address>", "udp:[<ipv4 address>]"
-            portstr = "18888";
-        } else if (lColon == rColon) {
-            // only one colon
-            // "udp:<ipv4 address>:<port>", "udp:[<ipv4 address>]:<port>"
-            portstr = rColon + 1;
-        } else {
-            // two or more colon, IPv6 address
-            // "udp:[<ipv6 address>]:<port>"
-            // "udp:<ipv6 address>", "udp:[<ipv6 address>]"
-            if (endBracket != NULL && rColon == endBracket + 1) {
-                portstr = rColon + 1;
-            } else {
-                portstr = "18888";
-            }
-            g_conn.send_via_ip = PM3_UDPv6;
-        }
-
-        // handle the end of the address
-        if (endBracket != NULL) {
-            *endBracket = '\0';
-        } else if (rColon != NULL && lColon == rColon) {
-            *rColon = '\0';
-        }
-
-        struct addrinfo info;
-
-        memset(&info, 0, sizeof(info));
-
-        info.ai_family = PF_UNSPEC;
-        info.ai_socktype = SOCK_DGRAM;
-
-        if ((strstr(addrstr, "localhost") != NULL) ||
-                (strstr(addrstr, "127.0.0.1") != NULL) ||
-                (strstr(addrstr, "::1") != NULL)) {
-            g_conn.send_via_local_ip = true;
-        }
-
-        int s = getaddrinfo(addrstr, portstr, &info, &addr);
-        if (s != 0) {
-            PrintAndLogEx(ERR, "error: getaddrinfo: %s", gai_strerror(s));
-            freeaddrinfo(addr);
-            free(addrPortStr);
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
-
-        int sfd;
-        for (rp = addr; rp != NULL; rp = rp->ai_next) {
-            sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-
-            if (sfd == -1)
-                continue;
-
-            if (!uart_bind(&sfd, bindAddrStr, bindPortStr, isBindingIPv6)) {
-                PrintAndLogEx(ERR, "error: Could not bind. errno: %d", errno);
-                close(sfd);
-                freeaddrinfo(addr);
-                free(addrPortStr);
-                free(sp);
-                return INVALID_SERIAL_PORT;
-            }
-
-            if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1)
-                break;
-
-            close(sfd);
-        }
-
-        freeaddrinfo(addr);
-        free(addrPortStr);
-
-        if (rp == NULL) {               /* No address succeeded */
-            PrintAndLogEx(ERR, "error: Could not connect");
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
-
-        sp->fd = sfd;
-        sp->udpBuffer = RingBuf_create(MAX(sizeof(PacketResponseNGRaw), sizeof(PacketResponseOLD)) * 30);
-        return sp;
-    }
-
-
-    if (memcmp(prefix, "bt:", 3) == 0) {
+    if (isBluetooth) {
         free(prefix);
 
 #ifdef HAVE_BLUEZ
         if (strlen(pcPortName) != 20) {
+            PrintAndLogEx(ERR, "Error: wrong Bluetooth MAC address length");
             free(sp);
             return INVALID_SERIAL_PORT;
         }
@@ -512,7 +293,9 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
         }
 
         if (connect(sfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-            PrintAndLogEx(ERR, "Error: cannot connect device " _YELLOW_("%s") " over Bluetooth", addrstr);
+            if (slient == false) {
+                PrintAndLogEx(ERR, "Error: cannot connect device " _YELLOW_("%s") " over Bluetooth", addrstr);
+            }
             close(sfd);
             free(addrstr);
             free(sp);
@@ -533,13 +316,8 @@ serial_port uart_open(const char *pcPortName, uint32_t speed) {
     // Is local socket buffer, not a TCP or any net connection!
     // so, you can't connect with address like: 127.0.0.1, or any IP
     // see http://man7.org/linux/man-pages/man7/unix.7.html
-    if (memcmp(prefix, "socket:", 7) == 0) {
+    if (isUnixSocket) {
         free(prefix);
-
-        if (strlen(pcPortName) <= 7) {
-            free(sp);
-            return INVALID_SERIAL_PORT;
-        }
 
         // we must use max timeout!
         timeout.tv_usec = UART_NET_CLIENT_RX_TIMEOUT_MS * 1000;
@@ -727,7 +505,21 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
         // Retrieve the count of the incoming bytes
         res = ioctl(spu->fd, FIONREAD, &byteCount);
 //        PrintAndLogEx(ERR, "UART:: RX ioctl res %d byteCount %u", res, byteCount);
-        if (res < 0) return PM3_ENOTTY;
+        if (res < 0) {
+            // error occurred (maybe disconnected)
+            // This happens when USB-CDC connection is lost
+            return PM3_ENOTTY;
+        } else if (byteCount == 0) {
+            // select() > 0 && byteCount > 0 ===> data available
+            // select() > 0 && byteCount always equals to 0 ===> maybe disconnected
+            // This happens when TCP connection is lost
+            rx_empty_counter++;
+            if (rx_empty_counter > 3) {
+                return PM3_ENOTTY;
+            }
+        } else {
+            rx_empty_counter = 0;
+        }
 
         // For UDP connection, put the incoming data into the buffer and handle them in the next round
         if (spu->udpBuffer != NULL) {
@@ -994,38 +786,6 @@ uint32_t uart_get_speed(const serial_port sp) {
             return 0;
     };
     return uiPortSpeed;
-}
-
-bool uart_bind(void *socket, char *bindAddrStr, char *bindPortStr, bool isBindingIPv6) {
-    if (bindAddrStr == NULL && bindPortStr == NULL)
-        return true; // no need to bind
-
-    struct sockaddr_storage bindSockaddr;
-    memset(&bindSockaddr, 0, sizeof(bindSockaddr));
-    int bindPort = 0; // 0: port unspecified
-    if (bindPortStr != NULL)
-        bindPort = atoi(bindPortStr);
-
-    if (!isBindingIPv6) {
-        struct sockaddr_in *bindSockaddr4 = (struct sockaddr_in *)&bindSockaddr;
-        bindSockaddr4->sin_family = AF_INET;
-        bindSockaddr4->sin_port = htons(bindPort);
-        if (bindAddrStr == NULL)
-            bindSockaddr4->sin_addr.s_addr = INADDR_ANY;
-        else
-            bindSockaddr4->sin_addr.s_addr = inet_addr(bindAddrStr);
-    } else {
-        struct sockaddr_in6 *bindSockaddr6 = (struct sockaddr_in6 *)&bindSockaddr;
-        bindSockaddr6->sin6_family = AF_INET6;
-        bindSockaddr6->sin6_port = htons(bindPort);
-        if (bindAddrStr == NULL)
-            bindSockaddr6->sin6_addr = in6addr_any;
-        else
-            inet_pton(AF_INET6, bindAddrStr, &(bindSockaddr6->sin6_addr));
-    }
-
-    int res = bind(*(int *)socket, (struct sockaddr *)&bindSockaddr, sizeof(bindSockaddr));
-    return (res >= 0);
 }
 
 #endif

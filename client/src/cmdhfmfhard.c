@@ -1690,7 +1690,7 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
         }
 
         if (acquisition_completed) {
-            field_off = true; // switch off field with next SendCommandOLD and then finish
+            field_off = true; // switch off field with next SendCommandMIX and then finish
         }
 
         if (initialize == false) {
@@ -1930,7 +1930,7 @@ static void add_matching_states(statelist_t *cands, uint8_t part_sum_a0, uint8_t
 
     const uint32_t worstcase_size = 1 << 20;
 
-    cands->states[odd_even] = (uint32_t *)malloc(sizeof(uint32_t) * worstcase_size);
+    cands->states[odd_even] = (uint32_t *)calloc(sizeof(uint32_t) * worstcase_size, sizeof(uint8_t));
     if (cands->states[odd_even] == NULL) {
         PrintAndLogEx(ERR, "Out of memory error in add_matching_states() - statelist.\n");
         exit(4);

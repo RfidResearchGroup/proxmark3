@@ -2,7 +2,7 @@
 <a id="top"></a>
 
 # Table of Contents
-- [Notes on ARM & FPGA communications](#notes-on-arm--fpga-communications)
+- [Notes on ARM \& FPGA communications](#notes-on-arm--fpga-communications)
 - [Table of Contents](#table-of-contents)
 - [INTERFACE FROM THE ARM TO THE FPGA](#interface-from-the-arm-to-the-fpga)
   - [FPGA](#fpga)
@@ -68,6 +68,15 @@ The FPGA images is precompiled and located inside the /fpga folder.
 There is very rarely changes to the images so there is no need to setup a fpga tool chain to compile it yourself.
 Since the FPGA is very old,  the Xilinx WebPack ISE 10.1  is the last working tool chain.  You can download this legacy development on Xilinx and register for a free product installation id.
 Or use mine  `11LTAJ5ZJK3PXTUBMF0C0J6C4`    The package to download is about 7Gb and linux based.   Though I recently managed to install it on WSL for Windows 10.
+
+There is a docker image with webpack installed which has been built which you can use to easily compile the images:
+
+```
+docker pull nhutton/prox-container:webp_image_complete
+docker run -v <LOCAL_PATH>/proxmark3:/tmp --rm -it nhutton/prox-container:webp_image_complete bash
+$ cd /tmp/proxmark/fpga
+$ make all
+```
 
 In order to save space,  these fpga images are LZ4 compressed and included in the fullimage.elf file when compiling the ARM SRC.  `make armsrc`
 This means we save some precious space on the ARM but its a bit more complex when flashing to fpga since it has to decompress on the fly.  
@@ -185,7 +194,7 @@ communicating this to the FPGA.
 The microcontroller (ARM) implements the transport layer. First it decodes the samples received from
 the FPGA. These samples are stored in a Direct Memory Access (DMA) buffer. The samples are binary
 sequences that represent whether the signal was high or low. The software on the ARM tries to decode
-these samples. When the Proxmark is in sniffing mode this is done for both the Manchester and Modified
+these samples. When the Proxmark3 is in sniffing mode this is done for both the Manchester and Modified
 Miller at the same time. Whenever one of the decoding procedures returns a valid message, this message
 is stored in another buffer (BigBuf) and both decoding procedures are set to an un-synced state. The
 BigBuf is limited to the available memory on the ARM. The current firmware has 2 KB of memory

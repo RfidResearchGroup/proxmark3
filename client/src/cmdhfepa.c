@@ -148,7 +148,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
     // Proxmark response
     PacketResponseNG resp;
 
-    // transfer the APDUs to the Proxmark
+    // transfer the APDUs to the Proxmark3
     uint8_t data[PM3_CMD_DATA_SIZE];
     // fast push mode
     g_conn.block_after_ACK = true;
@@ -172,7 +172,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
             clearCommandBuffer();
             // arg0: APDU number
             // arg1: offset into the APDU
-            SendCommandOLD(CMD_HF_EPA_REPLAY, i + 1, j * sizeof(data), packet_length, data, packet_length);
+            SendCommandMIX(CMD_HF_EPA_REPLAY, i + 1, j * sizeof(data), packet_length, data, packet_length);
             if (WaitForResponseTimeout(CMD_HF_EPA_REPLAY, &resp, 2500) == false) {
                 PrintAndLogEx(WARNING, "command time out");
                 return PM3_ETIMEOUT;

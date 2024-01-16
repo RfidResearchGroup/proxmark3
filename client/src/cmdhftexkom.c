@@ -638,7 +638,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("1", NULL, "Use data from Graphbuffer"),
+        arg_lit0("1", NULL, "Use data from Graphbuffer (offline mode)"),
         arg_lit0("v",  "verbose",  "Verbose scan and output"),
         arg_lit0("@", NULL, "optional - continuous reader mode"),
         arg_param_end

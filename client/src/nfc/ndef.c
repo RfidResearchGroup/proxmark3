@@ -42,6 +42,8 @@
 #define NDEF_BLUEAPPL_LE        "application/vnd.bluetooth.le.oob"
 #define NDEF_BLUEAPPL_SECURE_LE "application/vnd.bluetooth.secure.le.oob"
 
+#define NDEF_ANDROID_PROVISION   "application/com.android.managedprovisioning"
+
 
 static const char *TypeNameFormat_s[] = {
     "Empty Record",
@@ -592,7 +594,6 @@ static int ndefDecodePayloadSmartPoster(uint8_t *ndef, size_t ndeflen, bool prin
     return PM3_SUCCESS;
 }
 
-
 typedef struct ndef_wifi_type_s {
     const char *description;
     uint8_t bytes[2];
@@ -943,6 +944,17 @@ static int ndefDecodeMime_bt(NDEFHeader_t *ndef) {
     return PM3_SUCCESS;
 }
 
+static int ndefDecodeMime_android_provision(NDEFHeader_t *ndef) {
+    if (ndef->PayloadLen == 0) {
+        PrintAndLogEx(INFO, "no payload");
+        return PM3_SUCCESS;
+    }
+    PrintAndLogEx(INFO, _CYAN_("Android Managed Provision"));
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "%.*s", (int)ndef->PayloadLen, ndef->Payload);
+    return PM3_SUCCESS;
+}
+
 // https://raw.githubusercontent.com/haldean/ndef/master/docs/NFCForum-TS-RTD_1.0.pdf
 static int ndefDecodeExternal_record(NDEFHeader_t *ndef) {
 
@@ -1077,6 +1089,10 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
 
             if (str_startswith(begin, NDEF_JSONAPPL)) {
                 ndefDecodeMime_json(ndef);
+            }
+
+            if (str_startswith(begin, NDEF_ANDROID_PROVISION)) {
+                ndefDecodeMime_android_provision(ndef);
             }
 
             free(begin);
@@ -1296,7 +1312,6 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
     }
     return PM3_SUCCESS;
 }
-
 
 int NDEFGetTotalLength(uint8_t *ndef, size_t ndeflen, size_t *outlen) {
 

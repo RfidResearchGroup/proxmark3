@@ -69,8 +69,6 @@ static dmabuf8_t dma_8 = {
     .buf = NULL
 };
 
-
-
 // trace related variables
 static uint32_t trace_len = 0;
 static bool tracing = true;
@@ -94,11 +92,16 @@ uint32_t BigBuf_get_size(void) {
 // get the address of the emulator memory. Allocate part of Bigbuf for it, if not yet done
 uint8_t *BigBuf_get_EM_addr(void) {
     // not yet allocated
-    if (emulator_memory == NULL)
-        emulator_memory = BigBuf_malloc(CARD_MEMORY_SIZE);
-
+    if (emulator_memory == NULL) {
+        emulator_memory = BigBuf_calloc(CARD_MEMORY_SIZE);
+    }
     return emulator_memory;
 }
+
+uint32_t BigBuf_get_hi(void) {
+    return s_bigbuf_hi;
+}
+
 /*
 uint32_t BigBuf_get_EM_size(void) {
     return CARD_MEMORY_SIZE;
@@ -129,7 +132,7 @@ void BigBuf_Clear_keep_EM(void) {
 // allocate a chunk of memory from BigBuf. We allocate high memory first. The unallocated memory
 // at the beginning of BigBuf is always for traces/samples
 uint8_t *BigBuf_malloc(uint16_t chunksize) {
-    if (s_bigbuf_hi < chunksize)
+    if (s_bigbuf_hi < (chunksize + 3))
         return NULL; // no memory left
 
     chunksize = (chunksize + 3) & 0xfffc; // round to next multiple of 4
@@ -142,7 +145,7 @@ uint8_t *BigBuf_malloc(uint16_t chunksize) {
 uint8_t *BigBuf_calloc(uint16_t chunksize) {
     uint8_t *mem = BigBuf_malloc(chunksize);
     if (mem != NULL) {
-        memset(mem, 0x00, chunksize);
+        memset(mem, 0x00, ((chunksize + 3) & 0xfffc)); // round to next multiple of 4
     }
     return mem;
 }
@@ -328,9 +331,9 @@ uint8_t emlGet(uint8_t *out, uint32_t offset, uint32_t length) {
 // get the address of the ToSend buffer. Allocate part of Bigbuf for it, if not yet done
 tosend_t *get_tosend(void) {
 
-    if (toSend.buf == NULL)
+    if (toSend.buf == NULL) {
         toSend.buf = BigBuf_malloc(TOSEND_BUFFER_SIZE);
-
+    }
     return &toSend;
 }
 
@@ -363,8 +366,9 @@ void tosend_stuffbit(int b) {
 }
 
 dmabuf16_t *get_dma16(void) {
-    if (dma_16.buf == NULL)
+    if (dma_16.buf == NULL) {
         dma_16.buf = (uint16_t *)BigBuf_malloc(DMA_BUFFER_SIZE * sizeof(uint16_t));
+    }
 
     return &dma_16;
 }

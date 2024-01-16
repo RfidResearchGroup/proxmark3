@@ -452,7 +452,7 @@ int main(int argc, char *argv[]) {
     void *status;
 
     // make the table of tables
-    t = (struct table *)malloc(sizeof(struct table) * 65536);
+    t = (struct table *)calloc(sizeof(struct table) * 65536, sizeof(uint8_t));
     if (!t) {
         printf("malloc failed\n");
         exit(1);

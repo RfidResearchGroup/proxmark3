@@ -1677,7 +1677,7 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    int bs_len = binstring2binarray(ng.data, (char *)bin, bin_len);
+    int bs_len = binstr_2_binarray(ng.data, (char *)bin, bin_len);
     if (bs_len == 0) {
         return PM3_EINVARG;
     }
@@ -1853,7 +1853,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         ct = localtime_r(&now, &tm_buf);
 #endif
 
-        if (data.year > ct->tm_year - 110)
+        if (ct != NULL && (data.year > ct->tm_year - 110))
             data.year += 2000;
         else
             data.year += 2010;
@@ -4419,4 +4419,3 @@ int CmdLFT55XX(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-

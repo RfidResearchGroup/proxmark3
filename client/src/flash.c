@@ -427,7 +427,7 @@ static int get_proxmark_state(uint32_t *state) {
 }
 
 // Enter the bootloader to be able to start flashing
-static int enter_bootloader(char *serial_port_name) {
+static int enter_bootloader(char *serial_port_name, bool wait_appear) {
     uint32_t state;
     int ret;
 
@@ -452,12 +452,14 @@ static int enter_bootloader(char *serial_port_name) {
             SendCommandBL(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
             PrintAndLogEx(SUCCESS, "Press and hold down button NOW if your bootloader requires it.");
         }
-        msleep(100);
+        msleep(200);
         CloseProxmark(g_session.current_device);
         // Let time to OS to make the port disappear
         msleep(1000);
 
-        if (OpenProxmark(&g_session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
+        if (wait_appear == false) {
+            return PM3_SUCCESS;
+        } else if (OpenProxmark(&g_session.current_device, serial_port_name, true, 60, true, FLASHMODE_SPEED)) {
             PrintAndLogEx(NORMAL, _GREEN_(" found"));
             return PM3_SUCCESS;
         } else {
@@ -512,7 +514,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
     uint32_t chipinfo = 0;
     int ret;
 
-    ret = enter_bootloader(serial_port_name);
+    ret = enter_bootloader(serial_port_name, true);
     if (ret != PM3_SUCCESS)
         return ret;
 
@@ -601,8 +603,8 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t 
 }
 
 // Reboot into bootloader
-int flash_reboot_bootloader(char *serial_port_name) {
-    return enter_bootloader(serial_port_name);
+int flash_reboot_bootloader(char *serial_port_name, bool wait_appear) {
+    return enter_bootloader(serial_port_name, wait_appear);
 }
 
 static int write_block(uint32_t address, uint8_t *data, uint32_t length) {

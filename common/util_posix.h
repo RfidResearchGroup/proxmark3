@@ -21,6 +21,10 @@
 
 #include "common.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef _WIN32
 # include <windows.h>
 # define sleep(n) Sleep(1000 *(n))
@@ -31,4 +35,7 @@ void msleep(uint32_t n); // sleep n milliseconds
 
 uint64_t msclock(void);      // a milliseconds clock
 
+#ifdef __cplusplus
+}
+#endif
 #endif

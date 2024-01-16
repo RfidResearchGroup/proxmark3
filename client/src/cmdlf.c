@@ -21,6 +21,7 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
+#include <math.h>
 #include "cmdparser.h"      // command_t
 #include "comms.h"
 #include "commonutil.h"     // ARRAYLEN
@@ -30,6 +31,7 @@
 #include "cliparser.h"      // args parsing
 #include "graph.h"          // for graph data
 #include "cmddata.h"        // for `lf search`
+#include "cmdhw.h"          // for setting FPGA image
 #include "cmdlfawid.h"      // for awid menu
 #include "cmdlfem.h"        // for em menu
 #include "cmdlfem410x.h"      // for em4x menu
@@ -66,8 +68,6 @@
 #include "crc.h"
 #include "pm3_cmd.h"        // for LF_CMDREAD_MAX_EXTRA_SYMBOLS
 
-static bool gs_lf_threshold_set = false;
-
 static int CmdHelp(const char *Cmd);
 
 // Informative user function.
@@ -75,7 +75,7 @@ static int CmdHelp(const char *Cmd);
 // if key event, send break loop cmd to Pm3
 int lfsim_wait_check(uint32_t cmd) {
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
 
     for (;;) {
         if (kbd_enter_pressed()) {
@@ -160,7 +160,8 @@ static int CmdLFTune(const char *Cmd) {
     if (is_value)
         style = STYLE_VALUE;
 
-    PrintAndLogEx(INFO, "Measuring LF antenna at " _YELLOW_("%.2f") " kHz, click " _GREEN_("pm3 button") " or press " _GREEN_("Enter") " to exit", LF_DIV2FREQ(divisor));
+    PrintAndLogEx(INFO, "Measuring LF antenna at " _YELLOW_("%.2f") " kHz", LF_DIV2FREQ(divisor));
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to exit");
 
     uint8_t params[] = {1, 0};
     params[1] = divisor;
@@ -291,6 +292,7 @@ int CmdLFCommandRead(const char *Cmd) {
     payload.samples = samples;
     payload.keep_field_on = keep_field_on;
     payload.verbose = verbose;
+    memset(payload.symbol_extra, 0, sizeof(payload.symbol_extra));
 
     if (add_crc_ht && (cmd_len <= 120)) {
         // Hitag 1, Hitag S, ZX8211
@@ -433,7 +435,11 @@ int CmdFlexdemod(const char *Cmd) {
 #endif
     int i, j, start, bit, sum;
 
-    int data[g_GraphTraceLen];
+    int *data = calloc(g_GraphTraceLen, sizeof(int));
+    if (data == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     memcpy(data, g_GraphBuffer, g_GraphTraceLen);
 
     size_t size = g_GraphTraceLen;
@@ -454,6 +460,7 @@ int CmdFlexdemod(const char *Cmd) {
 
     if (start == size - LONG_WAIT) {
         PrintAndLogEx(WARNING, "nothing to wait for");
+        free(data);
         return PM3_ENODATA;
     }
 
@@ -497,6 +504,7 @@ int CmdFlexdemod(const char *Cmd) {
         }
     }
     RepaintGraphWindow();
+    free(data);
     return PM3_SUCCESS;
 }
 
@@ -637,16 +645,6 @@ int CmdLFConfig(const char *Cmd) {
         .verbose = true
     };
 
-    if (reset) {
-        config.decimation = 1;
-        config.bits_per_sample = 8;
-        config.averaging = 1,
-        config.divisor = LF_DIVISOR_125;
-        config.samples_to_skip = 0;
-        config.trigger_threshold = 0;
-        gs_lf_threshold_set = false;
-    }
-
     if (use_125)
         config.divisor = LF_DIVISOR_125;
 
@@ -689,41 +687,97 @@ int CmdLFConfig(const char *Cmd) {
 
     if (trigg > -1) {
         config.trigger_threshold = trigg;
-        gs_lf_threshold_set = (config.trigger_threshold > 0);
     }
 
     config.samples_to_skip = skip;
+
+    if (reset) {
+        config.decimation = 1;
+        config.bits_per_sample = 8;
+        config.averaging = 1,
+        config.divisor = LF_DIVISOR_125;
+        config.samples_to_skip = 0;
+        config.trigger_threshold = 0;
+    }
+
     return lf_config(&config);
 }
 
-int lf_read(bool verbose, uint32_t samples) {
+static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
-    struct p {
-        uint32_t samples : 31;
-        bool     verbose : 1;
-    } PACKED;
-
-    struct p payload;
+    lf_sample_payload_t payload = {0};
+    payload.realtime = realtime;
     payload.verbose = verbose;
-    payload.samples = samples;
 
+    sample_config current_config;
+    int retval = lf_getconfig(&current_config);
+    if (retval != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to get current device config");
+        return retval;
+    }
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-    PacketResponseNG resp;
-    if (gs_lf_threshold_set) {
-        WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
-    } else {
-        if (!WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500)) {
-            PrintAndLogEx(WARNING, "(lf_read) command execution time out");
-            return PM3_ETIMEOUT;
+    const uint8_t bits_per_sample = current_config.bits_per_sample;
+    const bool is_trigger_threshold_set = (current_config.trigger_threshold > 0);
+
+    if (realtime) {
+        uint8_t *realtimeBuf = calloc(samples, sizeof(uint8_t));
+        if (realtimeBuf == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate memory");
+            return PM3_EMALLOC;
         }
+
+        size_t sample_bytes = samples * bits_per_sample;
+        sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
+
+        // In real-time mode, the LF bitstream should be loaded before receiving raw data.
+        // Otherwise, the first batch of raw data might contain the response of CMD_WTX.
+        int result = set_fpga_mode(FPGA_BITSTREAM_LF);
+        if (result != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "failed to load LF bitstream to FPGA");
+            free(realtimeBuf);
+            return result;
+        }
+
+        SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+        if (is_trigger_threshold_set) {
+            size_t first_receive_len = 32;
+            // Wait until a bunch of data arrives
+            first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false);
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000, true);
+            sample_bytes += first_receive_len;
+        } else {
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true);
+        }
+        samples = sample_bytes * 8 / bits_per_sample;
+        PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
+        if (samples != 0) {
+            getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
+        }
+
+        free(realtimeBuf);
+    } else {
+        payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
+        SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+        PacketResponseNG resp;
+        if (is_trigger_threshold_set) {
+            WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
+        } else {
+            if (!WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500)) {
+                PrintAndLogEx(WARNING, "(lf_read) command execution time out");
+                return PM3_ETIMEOUT;
+            }
+        }
+        // response is number of bits read
+        uint32_t size = (resp.data.asDwords[0] / bits_per_sample);
+        getSamples(size, verbose);
     }
 
-    // response is number of bits read
-    uint32_t size = (resp.data.asDwords[0] / 8);
-    getSamples(size, verbose);
     return PM3_SUCCESS;
+}
+
+int lf_read(bool verbose, uint64_t samples) {
+    return lf_read_internal(false, verbose, samples);
 }
 
 int CmdLFRead(const char *Cmd) {
@@ -731,7 +785,9 @@ int CmdLFRead(const char *Cmd) {
     CLIParserInit(&ctx, "lf read",
                   "Sniff low frequency signal.\n"
                   " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters.\n")
-                  _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at it"),
+                  _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at it.\n")
+                  _CYAN_("If the number of samples is more than the device memory limit (40000 now), ")
+                  _CYAN_("it will try to use the real-time sampling mode."),
                   "lf read -v -s 12000   --> collect 12000 samples\n"
                   "lf read -s 3000 -@    --> oscilloscope style \n"
                  );
@@ -744,50 +800,106 @@ int CmdLFRead(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t samples = arg_get_u32_def(ctx, 1, 0);
+    uint64_t samples = arg_get_u64_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
     bool cm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
+    // the 40000 there should be the result of BigBuf_max_traceLen(),
+    // but IDK how to get it.
+    bool realtime = samples > 40000;
+
     if (g_session.pm3_present == false)
         return PM3_ENOTTY;
 
-    if (cm) {
+    if (cm || realtime) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
     int ret = PM3_SUCCESS;
     do {
-        ret = lf_read(verbose, samples);
+        ret = lf_read_internal(realtime, verbose, samples);
     } while (cm && kbd_enter_pressed() == false);
+
+    if (ret == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Got " _YELLOW_("%zu") " samples", g_GraphTraceLen);
+
+        if (getSignalProperties()->isnoise) {
+            PrintAndLogEx(INFO, "signal looks like noise");
+        }
+    }
     return ret;
 }
 
-int lf_sniff(bool verbose, uint32_t samples) {
+int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
-    struct p {
-        uint32_t samples : 31;
-        bool     verbose : 1;
-    } PACKED payload;
-
-    payload.samples = (samples & 0xFFFF);
+    lf_sample_payload_t payload = {0};
+    payload.realtime = realtime;
     payload.verbose = verbose;
 
+    sample_config current_config;
+    int retval = lf_getconfig(&current_config);
+    if (retval != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to get current device config");
+        return retval;
+    }
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-    PacketResponseNG resp;
-    if (gs_lf_threshold_set) {
-        WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp);
-    } else {
-        if (WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500) == false) {
-            PrintAndLogEx(WARNING, "(lf_read) command execution time out");
-            return PM3_ETIMEOUT;
+    const uint8_t bits_per_sample = current_config.bits_per_sample;
+    const bool is_trigger_threshold_set = (current_config.trigger_threshold > 0);
+
+    if (realtime) {
+        uint8_t *realtimeBuf = calloc(samples, sizeof(uint8_t));
+        if (realtimeBuf == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate memory");
+            return PM3_EMALLOC;
         }
+
+        size_t sample_bytes = samples * bits_per_sample;
+        sample_bytes = (sample_bytes / 8) + (sample_bytes % 8 != 0);
+
+        // In real-time mode, the LF bitstream should be loaded before receiving raw data.
+        // Otherwise, the first batch of raw data might contain the response of CMD_WTX.
+        int result = set_fpga_mode(FPGA_BITSTREAM_LF);
+        if (result != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "failed to load LF bitstream to FPGA");
+            free(realtimeBuf);
+            return result;
+        }
+
+        SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+        if (is_trigger_threshold_set) {
+            size_t first_receive_len = 32;
+            // Wait until a bunch of data arrives
+            first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false);
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000, true);
+            sample_bytes += first_receive_len;
+        } else {
+            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true);
+        }
+        samples = sample_bytes * 8 / bits_per_sample;
+        PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
+        if (samples != 0) {
+            getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
+        }
+
+        free(realtimeBuf);
+    } else {
+        payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
+        SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+        PacketResponseNG resp;
+        if (is_trigger_threshold_set) {
+            WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp);
+        } else {
+            if (WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500) == false) {
+                PrintAndLogEx(WARNING, "(lf_read) command execution time out");
+                return PM3_ETIMEOUT;
+            }
+        }
+        // response is number of bits read
+        uint32_t size = (resp.data.asDwords[0] / bits_per_sample);
+        getSamples(size, verbose);
     }
 
-    // response is number of bits read
-    uint32_t size = (resp.data.asDwords[0] / 8);
-    getSamples(size, verbose);
     return PM3_SUCCESS;
 }
 
@@ -799,7 +911,9 @@ int CmdLFSniff(const char *Cmd) {
                   "\n"
                   " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters.\n")
                   _CYAN_(" - use ") _YELLOW_("`data plot`") _CYAN_(" to look at sniff signal.\n")
-                  _CYAN_(" - use ") _YELLOW_("`lf search -1`") _CYAN_(" to see if signal can be automatic decoded\n"),
+                  _CYAN_(" - use ") _YELLOW_("`lf search -1`") _CYAN_(" to see if signal can be automatic decoded.\n")
+                  _CYAN_("If the number of samples is more than the device memory limit (40000 now), ")
+                  _CYAN_("it will try to use the real-time sampling mode."),
                   "lf sniff -v\n"
                   "lf sniff -s 3000 -@    --> oscilloscope style \n"
                  );
@@ -812,21 +926,25 @@ int CmdLFSniff(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t samples = (arg_get_u32_def(ctx, 1, 0) & 0xFFFF);
+    uint64_t samples = arg_get_u64_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
     bool cm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
+    // the 40000 there should be the result of BigBuf_max_traceLen(),
+    // but IDK how to get it.
+    bool realtime = samples > 40000;
+
     if (g_session.pm3_present == false)
         return PM3_ENOTTY;
 
-    if (cm) {
+    if (cm || realtime) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
     int ret = PM3_SUCCESS;
     do {
-        ret = lf_sniff(verbose, samples);
-    } while (cm && !kbd_enter_pressed());
+        ret = lf_sniff(realtime, verbose, samples);
+    } while (cm && kbd_enter_pressed() == false);
     return ret;
 }
 
@@ -1391,7 +1509,7 @@ int CmdVchDemod(const char *Cmd) {
 }
 */
 
-static bool CheckChipType(bool getDeviceData) {
+static bool check_chiptype(bool getDeviceData) {
 
     bool retval = false;
 
@@ -1442,22 +1560,61 @@ out:
     return retval;
 }
 
+static int check_autocorrelate(const char *prefix, int clock) {
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, _CYAN_("%s - auto correlations"), prefix);
+    for (int win = 2000; win < 30000; win += 2000) {
+        int samples = AutoCorrelate(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, win, false, false);
+        if (samples == -1) {
+            continue;
+        }
+
+        if ((samples > 1) && (clock > 0)) {
+
+            // If we got a field clock / bit rate from before
+            // we can use it for predict number of repeating bytes within
+
+            int bytes = (samples / (8 * clock));
+            int mod = (bytes % 4);
+            if (mod)
+                bytes++;
+
+            int blocks = (bytes / 4);
+            PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " samples / 8 bits / " _YELLOW_("%d") " clock", samples, clock);
+            PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " bytes repeating", bytes);
+
+            if (blocks < 7) {
+                PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " block%c", blocks, (blocks == 1) ? ' ' : 's');
+                PrintAndLogEx(NORMAL, "");
+                return PM3_SUCCESS;
+            } else {
+                PrintAndLogEx(INFO, "   " _YELLOW_("%d") " blocks  ( too large for T5577 )", blocks);
+                PrintAndLogEx(NORMAL, "");
+                return PM3_EFAILED;
+            }
+        }
+    }
+    PrintAndLogEx(NORMAL, "");
+    return PM3_EFAILED;
+}
+
 int CmdLFfind(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf search",
                   "Read and search for valid known tag. For offline mode, you can `data load` first then search.",
                   "lf search       -> try reading data from tag & search for known tag\n"
-                  "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
                   "lf search -u    -> try reading data from tag & search for known and unknown tag\n"
-                  "lf search -1u   -> use data from the GraphBuffer & search for known and unknown tag\n"
+                  "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
+                  "lf search -1uc  -> use data from the GraphBuffer & search for known and unknown tag\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("1", NULL, "Use data from Graphbuffer to search"),
-        arg_lit0("c", NULL, "Continue searching even after a first hit"),
-        arg_lit0("u", NULL, "Search for unknown tags. If not set, reads only known tags"),
+        arg_lit0("1", NULL, "Use data from Graphbuffer to search (offline mode)"),
+        arg_lit0("c", NULL, "Continue searching after successful match"),
+        arg_lit0("u", NULL, "Search for unknown tags"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1477,15 +1634,13 @@ int CmdLFfind(const char *Cmd) {
     }
 
     if (search_cont) {
-        PrintAndLogEx(INFO, "Continuous search enabled");
+        PrintAndLogEx(INFO, "Continue searching after successful match");
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "NOTE: some demods output possible binary");
-    PrintAndLogEx(INFO, "if it finds something that looks like a tag");
-    PrintAndLogEx(INFO, "False Positives " _YELLOW_("ARE") " possible");
+    PrintAndLogEx(INFO, "Note: False Positives " _YELLOW_("ARE") " possible");
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "Checking for known tags...");
+    PrintAndLogEx(INFO, _CYAN_("Checking for known tags..."));
     PrintAndLogEx(INFO, "");
 
     // only run these tests if device is online
@@ -1759,54 +1914,97 @@ int CmdLFfind(const char *Cmd) {
     }
 
     if (search_unk) {
-        //test unknown tag formats (raw mode)
-        PrintAndLogEx(INFO, "\nChecking for unknown tags:\n");
-        int ans = AutoCorrelate(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, 8000, false, false);
-        if (ans > 0) {
 
-            PrintAndLogEx(INFO, "Possible auto correlation of %d repeating samples", ans);
+        // test unknown tag formats (raw mode)
+        PrintAndLogEx(INFO, _CYAN_("Checking for unknown tags...") "\n");
 
-            if (ans % 8 == 0)
-                PrintAndLogEx(INFO, "Possible %d bytes", (ans / 8));
+        uint8_t ones[] = {
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        };
+
+        // FSK
+        PrintAndLogEx(INFO, "FSK clock.......... " NOLF);
+        int clock = GetFskClock("", false);
+        if (clock) {
+            PrintAndLogEx(NORMAL, _GREEN_("detected"));
+            if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
+                check_autocorrelate("FSK", clock);
+                found++;
+            } else {
+                PrintAndLogEx(INFO, "FSK demodulation... " _RED_("failed"));
+            }
+        } else {
+            PrintAndLogEx(NORMAL, _RED_("no"));
         }
 
-        //fsk
-        if (GetFskClock("", false)) {
-            if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
-                PrintAndLogEx(INFO, "Unknown FSK Modulated Tag found!");
-                if (search_cont) {
+        // ASK
+        PrintAndLogEx(INFO, "ASK clock.......... " NOLF);
+        clock = GetAskClock("", false);
+        if (clock && clock > 8) {
+            PrintAndLogEx(NORMAL, _GREEN_("detected"));
+            bool st = true;
+            if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(INFO, _GREEN_("ASK") " modulation / Manchester encoding detected!");
+                PrintAndLogEx(INFO, "   could also be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
+                check_autocorrelate("ASK", clock);
+                found++;
+            } else {
+                PrintAndLogEx(INFO, "ASK demodulation... " _RED_("failed"));
+            }
+        } else {
+            PrintAndLogEx(NORMAL, _RED_("no"));
+        }
+
+        // NZR
+        PrintAndLogEx(INFO, "NRZ clock.......... " NOLF);
+        clock = GetNrzClock("", false);
+        if (clock && clock > 8) {
+            PrintAndLogEx(NORMAL, _GREEN_("detected"));
+            if (NRZrawDemod(0, 0, 0, true) == PM3_SUCCESS) {
+
+                int min = MIN(g_DemodBufferLen, sizeof(ones));
+                // if demodulated binary is only 1,  skip autocorrect
+                if (memcmp(g_DemodBuffer, ones, min) != 0) {
+                    check_autocorrelate("NRZ", clock);
                     found++;
                 } else {
-                    goto out;
+                    PrintAndLogEx(INFO, "NRZ ............... " _RED_("false positive"));
+                    PrintAndLogEx(NORMAL, "");
                 }
+            } else {
+                PrintAndLogEx(INFO, "NRZ demodulation... " _RED_("failed"));
             }
+        } else {
+            PrintAndLogEx(NORMAL, _RED_("no"));
         }
 
-        bool st = true;
-        if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Unknown ASK Modulated and Manchester encoded Tag found!");
-            PrintAndLogEx(INFO, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
-            if (search_cont) {
+        // PSK
+        PrintAndLogEx(INFO, "PSK clock.......... " NOLF);
+        clock = GetPskClock("", false);
+        if (clock) {
+            PrintAndLogEx(NORMAL, _GREEN_("detected"));
+            if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
+                PrintAndLogEx(INFO, "Possible " _GREEN_("PSK1") " modulation detected!");
+                PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod --p2'"));
+                PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
+                PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod --nr"));
+                check_autocorrelate("PSK", clock);
                 found++;
             } else {
-                goto out;
+                PrintAndLogEx(INFO, "PSK demodulation... " _RED_("failed"));
             }
-        }
-
-        if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Possible unknown PSK1 Modulated Tag found above!");
-            PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod --p2'"));
-            PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
-            PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod --nr"));
-            if (search_cont) {
-                found++;
-            } else {
-                goto out;
-            }
+        } else {
+            PrintAndLogEx(NORMAL, _RED_("no"));
         }
 
         if (found == 0) {
-            PrintAndLogEx(FAILED, _RED_("No data found!"));
+            PrintAndLogEx(FAILED, _RED_("Failed to demodulated signal"));
         }
     }
 
@@ -1816,7 +2014,7 @@ int CmdLFfind(const char *Cmd) {
 
 out:
     // identify chipset
-    if (CheckChipType(is_online) == false) {
+    if (check_chiptype(is_online) == false) {
         PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
     }
     return retval;

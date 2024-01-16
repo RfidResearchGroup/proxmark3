@@ -91,6 +91,23 @@ static uint8_t calc_pos(const uint8_t *d) {
     return pos;
 }
 
+// Copy an existing buffer into client trace buffer
+// I think this is cleaner than further globalizing gs_trace, and may lend itself to more modularity later?
+bool ImportTraceBuffer(uint8_t *trace_src, uint16_t trace_len) {
+    if (trace_len == 0 || trace_src == NULL) return (false);
+    if (gs_trace) {
+        free(gs_trace);
+        gs_traceLen = 0;
+    }
+    gs_trace = calloc(trace_len, sizeof(uint8_t));
+    if (gs_trace == NULL) {
+        return (false);
+    }
+    memcpy(gs_trace, trace_src, trace_len);
+    gs_traceLen = trace_len;
+    return (true);
+}
+
 static uint8_t extract_uid[10] = {0};
 static uint8_t extract_uidlen = 0;
 static uint8_t extract_epurse[8] = {0};
@@ -743,6 +760,8 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     if (prev_eot)
         *prev_eot = end_of_transmission_timestamp;
 
+
+
     // Always annotate these protocols both reader/tag messages
     switch (protocol) {
         case ISO_14443A:
@@ -818,6 +837,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         str_padder = 72;
 
         if (j == 0) {
+
 
             uint32_t time1 = hdr->timestamp - first_hdr->timestamp;
             uint32_t time2 = end_of_transmission_timestamp - first_hdr->timestamp;
@@ -912,22 +932,32 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         size_t mfDataLen = 0;
         if (DecodeMifareData(frame, data_len, parityBytes, hdr->isResponse, mfData, &mfDataLen, mfDicKeys, mfDicKeysCount)) {
             memset(explanation, 0x00, sizeof(explanation));
-            annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen, hdr->isResponse);
+
+            if (protocol == PROTO_MFPLUS) {
+                annotateMfPlus(explanation, sizeof(explanation), mfData, mfDataLen);
+            } else {
+                annotateIso14443a(explanation, sizeof(explanation), mfData, mfDataLen, hdr->isResponse);
+            }
             uint8_t crcc = iso14443A_CRC_check(hdr->isResponse, mfData, mfDataLen);
 
-            //iceman: colorise crc bytes here will need a refactor of code from above.
-            if (hdr->isResponse) {
-                PrintAndLogEx(NORMAL, "            |            |  *  |%-*s | %-4s| %s",
-                              str_padder,
-                              sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
-                              (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
-                              explanation);
-            } else {
-                PrintAndLogEx(NORMAL, "            |            |  *  |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
-                              str_padder,
-                              sprint_hex_inrow_spaces(mfData, mfDataLen, 2),
-                              (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
-                              explanation);
+            // iceman: colorise crc bytes here will need a refactor of code from above.
+            for (int j = 0; j < mfDataLen; j += TRACE_MAX_HEX_BYTES) {
+
+                int plen = MIN((mfDataLen - j), TRACE_MAX_HEX_BYTES);
+
+                if (hdr->isResponse) {
+                    PrintAndLogEx(NORMAL, "            |            |  *  |%-*s | %-4s| %s",
+                                  str_padder,
+                                  sprint_hex_inrow_spaces(mfData + j, plen, 2),
+                                  (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
+                                  explanation);
+                } else {
+                    PrintAndLogEx(NORMAL, "            |            |  *  |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                                  str_padder,
+                                  sprint_hex_inrow_spaces(mfData + j, plen, 2),
+                                  (crcc == 0 ? _RED_(" !! ") : (crcc == 1 ? _GREEN_(" ok ") : "    ")),
+                                  explanation);
+                }
             }
         }
     }
@@ -968,13 +998,14 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 static int download_trace(void) {
 
     if (IfPm3Present() == false) {
-        PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter '-1' for working from Tracebuffer");
+        PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter `" _YELLOW_("-1") "` for working from Tracebuffer");
         return PM3_EINVARG;
     }
 
     // reserve some space.
-    if (gs_trace)
+    if (gs_trace) {
         free(gs_trace);
+    }
 
     gs_traceLen = 0;
 
@@ -984,7 +1015,7 @@ static int download_trace(void) {
         return PM3_EMALLOC;
     }
 
-    PrintAndLogEx(INFO, "downloading tracelog data from device");
+    PrintAndLogEx(DEBUG, "downloading tracelog data from device");
 
     // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
     PacketResponseNG resp;
@@ -1051,11 +1082,11 @@ static int CmdTraceExtract(const char *Cmd) {
         download_trace();
     } else if (gs_traceLen == 0) {
         PrintAndLogEx(FAILED, "You requested a trace list in offline mode but there is no trace.");
-        PrintAndLogEx(FAILED, "Consider using " _YELLOW_("`trace load`") " or removing parameter " _YELLOW_("`-1`"));
+        PrintAndLogEx(FAILED, "Consider using `" _YELLOW_("trace load") "` or removing parameter `" _YELLOW_("-1") "`");
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%u") " bytes)", gs_traceLen);
+    PrintAndLogEx(SUCCESS, "Recorded activity ( " _YELLOW_("%u") " bytes )" , gs_traceLen);
     if (gs_traceLen == 0) {
         return PM3_SUCCESS;
     }
@@ -1065,10 +1096,10 @@ static int CmdTraceExtract(const char *Cmd) {
     while (tracepos < gs_traceLen) {
         tracepos = extractChallenges(tracepos, gs_traceLen, gs_trace);
 
-        if (kbd_enter_pressed())
+        if (kbd_enter_pressed()) {
             break;
+        }
     }
-
     return PM3_SUCCESS;
 }
 
@@ -1094,8 +1125,9 @@ static int CmdTraceLoad(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (gs_trace) {
-        free(gs_trace);
+        free(gs_trace); // maybe better to not clobber this until we have successful load?
         gs_trace = NULL;
+        gs_traceLen = 0;
     }
 
     size_t len = 0;
@@ -1282,13 +1314,13 @@ int CmdTraceList(const char *Cmd) {
 
     if (use_buffer == false) {
         download_trace();
-    } else if (gs_traceLen == 0) {
+    } else if (gs_traceLen == 0 || gs_trace == NULL) {
         PrintAndLogEx(FAILED, "You requested a trace list in offline mode but there is no trace.");
-        PrintAndLogEx(FAILED, "Consider using " _YELLOW_("`trace load`") " or removing parameter " _YELLOW_("`-1`"));
+        PrintAndLogEx(FAILED, "Consider using `" _YELLOW_("trace load") "` or removing parameter `" _YELLOW_("-1") "`");
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded activity (trace len = " _YELLOW_("%u") " bytes)", gs_traceLen);
+    PrintAndLogEx(SUCCESS,  "Recorded activity ( " _YELLOW_("%u") " bytes )" , gs_traceLen);
     if (gs_traceLen == 0) {
         return PM3_SUCCESS;
     }
@@ -1307,9 +1339,9 @@ int CmdTraceList(const char *Cmd) {
     } else {
 
         if (use_relative) {
-            PrintAndLogEx(INFO, _YELLOW_("gap") " = time between transfers. " _YELLOW_("duration") " = duration of data transfer. " _YELLOW_("src") " = source of transfer");
+            PrintAndLogEx(INFO, _YELLOW_("gap") " = time between transfers. " _YELLOW_("duration") " = duration of data transfer. " _YELLOW_("src") " = source of transfer.");
         } else {
-            PrintAndLogEx(INFO, _YELLOW_("start") " = start of start frame " _YELLOW_("end") " = end of frame. " _YELLOW_("src") " = source of transfer");
+            PrintAndLogEx(INFO, _YELLOW_("start") " = start of start frame. " _YELLOW_("end") " = end of frame. " _YELLOW_("src") " = source of transfer.");
         }
 
         if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == MFDES || protocol == PROTO_MFPLUS || protocol == TOPAZ || protocol == LTO) {

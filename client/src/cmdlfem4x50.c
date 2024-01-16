@@ -169,15 +169,15 @@ static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
     PrintAndLogEx(INFO, "." NOLF);
     // fast push mode
     g_conn.block_after_ACK = true;
-    for (size_t i = offset; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
+    for (size_t i = offset; i < numofbytes; i += PM3_CMD_DATA_SIZE_MIX) {
 
-        size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
+        size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE_MIX);
         if (len == numofbytes - i) {
             // Disable fast mode on last packet
             g_conn.block_after_ACK = false;
         }
         clearCommandBuffer();
-        SendCommandOLD(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);
+        SendCommandMIX(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
     }
@@ -1231,7 +1231,7 @@ int CmdEM4x50Sim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&password, sizeof(password));
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " or pm3-button to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
 
     PacketResponseNG resp;
     // init to ZERO

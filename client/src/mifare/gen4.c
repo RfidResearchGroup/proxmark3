@@ -58,7 +58,7 @@ static int mfG4ExCommand(uint8_t cmd, uint8_t *pwd, uint8_t *data, size_t datale
     int resplen = 0;
 
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_RAW | ISO14A_NO_RATS | ISO14A_APPEND_CRC, 6 + datalen, 0, (uint8_t *)&payload, 6 + datalen);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_RAW | ISO14A_NO_RATS | ISO14A_APPEND_CRC, 6 + datalen, 0, (uint8_t *)&payload, 6 + datalen);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {

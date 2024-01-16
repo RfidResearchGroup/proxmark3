@@ -68,6 +68,7 @@ luac
 tools/fpga_compress/fpga_compress
 tools/mfkey/mfkey32
 tools/mfkey/mfkey64
+tools/mfkey/staticnested
 tools/nonce2key/nonce2key
 tools/cryptorf/cm
 tools/cryptorf/sm
@@ -79,6 +80,7 @@ tools/jtag_openocd/openocd_configuration
 tools/mfd_aes_brute/mfd_aes_brute
 tools/mfd_aes_brute/mfd_multi_brute
 tools/mfd_aes_brute/brute_key
+!tools/lena.bmp
 
 fpga/__build*
 

@@ -35,7 +35,7 @@ jobs:
         run: brew tap RfidResearchGroup/proxmark3
 
       - name: Install dependencies
-        run: brew install readline coreutils qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl
+        run: brew install readline coreutils qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl gd
         continue-on-error: true
 
       - name: Install Python dependencies
@@ -75,7 +75,7 @@ jobs:
         run: brew tap RfidResearchGroup/proxmark3
 
       - name: Install dependencies
-        run: brew install readline coreutils qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl
+        run: brew install readline coreutils qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl gd
         continue-on-error: true
 
       - name: Install Python dependencies
@@ -116,7 +116,7 @@ jobs:
         run: brew tap RfidResearchGroup/proxmark3
 
       - name: Install dependencies
-        run: brew install readline coreutils qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl
+        run: brew install readline coreutils qt5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl gd
         continue-on-error: true
 
       - name: Install Python dependencies

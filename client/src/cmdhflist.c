@@ -1331,8 +1331,56 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 case MFP_AUTHENTICATEFIRST_VARIANT:
                     if (data_size > 1) {
                         // key : uint16_t uKeyNum = 0x4000 + sectorNum * 2 + (keyB ? 1 : 0);
-                        uint16_t uKeyNum = MemLeToUint2byte(data) ;
-                        snprintf(exp, size, "FIRST AUTH (Keynr 0x%04X: %c sector %d)", uKeyNum, uKeyNum & 0x0001 ? 'B' : 'A', (uKeyNum - 0x4000) / 2);
+                        uint16_t uKeyNum = MemLeToUint2byte(data);
+                        switch (uKeyNum & 0xf000) {
+                                const char *stringdata;
+                            default:
+                                stringdata = "FIRST AUTH (Keynr 0x%04X: Key not identified)";
+                                snprintf(exp, strlen(stringdata) + 1, stringdata, uKeyNum);
+                                break;
+                            case 0x4000:
+                                snprintf(exp, size, "FIRST AUTH (Keynr 0x%04X: %c sector %d)", uKeyNum, uKeyNum & 0x0001 ? 'B' : 'A', (uKeyNum - 0x4000) / 2);
+                                break;
+                            case 0xA000: // There are virtual card encryption and MACing keys, but this is NOT their place!
+                                stringdata = "FIRST AUTH(Keynr 0x%04X: Proximity Check Key)";
+                                snprintf(exp, strlen(stringdata) + 1, stringdata, uKeyNum);
+                                break;
+                            case 0x9000:
+                                switch (uKeyNum & 0xf) {
+                                    case 0x0:
+                                        stringdata = "FIRST AUTH (Keynr 0x%04X: Card Master Key)";
+                                        snprintf(exp, strlen(stringdata) + 1, stringdata, uKeyNum);
+                                        break;
+                                    case 0x1:
+                                        stringdata = "FIRST AUTH (Keynr 0x%04X: Card Configuration Key)";
+                                        snprintf(exp, strlen(stringdata) + 1, stringdata, uKeyNum);
+                                        break;
+                                    case 0x2:
+                                        stringdata = "FIRST AUTH(Keynr 0x%04X: SL2 Switch Key)";
+                                        snprintf(exp, strlen(stringdata) + 1, stringdata, uKeyNum);
+                                        break;
+                                    case 0x3:
+                                        stringdata = "FIRST AUTH(Keynr 0x%04X: SL3 Switch Key)";
+                                        snprintf(exp, strlen(stringdata) + 1, stringdata, uKeyNum);
+                                        break;
+                                    case 0x4:
+                                        stringdata = "FIRST AUTH(Keynr 0x%04X: SL1 Additional Key)";
+                                        snprintf(exp, strlen(stringdata) + 1, stringdata, uKeyNum);
+                                        break;
+                                    case 0x6:
+                                        stringdata = "FIRST AUTH(Keynr 0x%04X: SL3 Sector Switch Key)";
+                                        snprintf(exp, strlen(stringdata) + 1, stringdata, uKeyNum);
+                                        break;
+                                    case 0x7:
+                                        stringdata = "FIRST AUTH(Keynr 0x%04X: SL1SL3Mix Sector Switch Key)";
+                                        snprintf(exp, strlen(stringdata) + 1, stringdata, uKeyNum);
+                                        break;
+                                    default:
+                                        stringdata = "FIRST AUTH(Keynr 0x%04X: Management Key not identified)";
+                                        snprintf(exp, strlen(stringdata) + 1, stringdata, uKeyNum);
+                                        break;
+                                }
+                        }
                     } else {
                         snprintf(exp, size, "FIRST AUTH") ;
                     }
@@ -1341,7 +1389,7 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 case MFP_WRITEPERSO:
                     if (data_size > 1) {
                         uint16_t uKeyNum = MemLeToUint2byte(data) ;
-                        snprintf(exp, size, "WRITE PERSO (Keynr 0x%04X)", uKeyNum);
+                        snprintf(exp, size, "WRITE PERSO (Addr 0x%04X)", uKeyNum);
                     } else {
                         snprintf(exp, size, "WRITE PERSO");
                     }
@@ -1381,8 +1429,82 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                     const char *responseMaced = mfpGetResponseMacedForCode(opcode) ;
 
                     if (data_size > 1) {
-                        uint16_t uBlockNum = MemLeToUint2byte(data) ;
-                        snprintf(exp, size, "WRITE %s(%u) %s", encrypted, uBlockNum, responseMaced);
+                        uint16_t uBlockNum = MemLeToUint2byte(data);
+                        switch (uBlockNum & 0xF000) {
+                                const char *stringdata;
+                            default:
+                                stringdata = "WRITE %s(%u) %s";
+                                snprintf(exp, size, stringdata, encrypted, uBlockNum, responseMaced);
+                                break;
+                            case 0x4000:
+                                snprintf(exp, size, "WRITE (Keynr 0x%04X: %c sector %d)", uBlockNum, uBlockNum & 0x0001 ? 'B' : 'A', (uBlockNum - 0x4000) / 2);
+                                break;
+                            case 0xA000: // There are virtual card encryption and MACing keys, but this is NOT their place!
+                                stringdata = "WRITE(Keynr 0x%04X: Proximity Check Key)";
+                                snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                break;
+                            case 0xB000:
+                            case 0x9000:
+                                if ((uBlockNum & 0x2000) == 0x2000) {
+                                    switch (uBlockNum & 0xf) {
+                                        default:
+                                            stringdata = "WRITE(Config %04X: Unidentified)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                        case 0x0:
+                                            stringdata = "WRITE(Config %04X: Config)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                        case 0x1:
+                                            stringdata = "WRITE(Config %04X: Virtual Card Installation ID)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                        case 0x2:
+                                            stringdata = "WRITE(Config %04X: ATS)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                        case 0x3:
+                                            stringdata = "WRITE(Config %04X: Field configuration)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                    }
+                                } else {
+                                    switch (uBlockNum & 0xf) {
+                                        default:
+                                            stringdata = "WRITE(Keynr 0x%04X: Management Key not identified)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                        case 0x0:
+                                            stringdata = "WRITE(Keynr 0x%04X: Card Master Key)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                        case 0x1:
+                                            stringdata = "WRITE(Keynr 0x%04X: Card Configuration Key)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                        case 0x2:
+                                            stringdata = "WRITE(Keynr 0x%04X: SL2 Switch Key)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                        case 0x3:
+                                            stringdata = "WRITE(Keynr 0x%04X: SL3 Switch Key)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                        case 0x4:
+                                            stringdata = "WRITE(Keynr 0x%04X: SL1 Additional Key)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                        case 0x6:
+                                            stringdata = "WRITE(Keynr 0x%04X: SL3 Sector Switch Key)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                        case 0x7:
+                                            stringdata = "WRITE(Keynr 0x%04X: SL1SL3Mix Sector Switch Key)";
+                                            snprintf(exp, strlen(stringdata) + 1, stringdata, uBlockNum);
+                                            break;
+                                    }
+                                }
+                        }
                     } else {
                         snprintf(exp, size, "WRITE %s %s ?", encrypted, responseMaced);
                     }
@@ -1563,10 +1685,39 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     // it's basically a ISO14443a tag, so try annotation from there
     if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
 
-//        switch (cmd[0]) {
-//            default:
-//                break;
-//        };
+        int pos = 0;
+        switch (cmd[0]) {
+            case 2:
+            case 3:
+                pos = 2;
+                break;
+            case 0:
+                pos = 1;
+                break;
+            default:
+                pos = 2;
+                break;
+        }
+
+        if (memcmp(cmd + pos, "\x00\xa4\x04\x00\x0a", 5) == 0) {
+            snprintf(exp, size, "SELECT AID");
+        }
+
+        if (memcmp(cmd + pos, "\x80\xA5\x04\x00", 4) == 0) {
+            snprintf(exp, size, "SELECT ADF / OID");
+        }
+
+        if (memcmp(cmd + pos, "\x00\x87\x00\x01\x04\x7c\x02\x81\x00", 9) == 0) {
+            snprintf(exp, size, "GET CHALLENGE");
+        }
+
+        if (memcmp(cmd + pos, "\x00\x87\x00\x01\x2c", 5) == 0) {
+            snprintf(exp, size, "MUTUAL AUTHENTICATION");
+        }
+
+        if (memcmp(cmd + pos, "\x0c\xcb\x3f\xff", 4) == 0) {
+            snprintf(exp, size, "GET DATA");
+        }
 
         // apply ISO7816 annotations?
 //        if (annotateIso7816(exp, size, cmd, cmdsize) == 0) {

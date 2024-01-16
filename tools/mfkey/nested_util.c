@@ -36,9 +36,10 @@ typedef struct {
     uint32_t endPos;
 } RecPar;
 
-
-static int compar_int(const void *a, const void *b) {
-    return (*(uint64_t *)b - * (uint64_t *)a);
+inline static int compar_int(const void *a, const void *b) {
+    if (*(uint64_t *)b == *(uint64_t *)a) return 0;
+    if (*(uint64_t *)b < * (uint64_t *)a) return 1;
+    return -1;
 }
 
 // Compare countKeys structure

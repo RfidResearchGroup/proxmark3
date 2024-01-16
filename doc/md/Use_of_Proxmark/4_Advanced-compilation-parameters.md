@@ -82,13 +82,21 @@ Known issues:
 
 Here are the supported values you can assign to `PLATFORM_EXTRAS` in `Makefile.platform`:
 
-| PLATFORM_EXTRAS | DESCRIPTION                            |
-|-----------------|----------------------------------------|
-| BTADDON         | Proxmark3 rdv4 BT add-on               |
+| PLATFORM_EXTRAS | DESCRIPTION                             |
+|-----------------|-----------------------------------------|
+| BTADDON         | Proxmark3 rdv4 BT add-on                |
+| FLASH           | Flash modding for generic Proxmark3     |
+| SMARTCARD       | Smartcard modding for generic Proxmark3 |
 
 By default `PLATFORM_EXTRAS=`.
 
-If you have installed a Blue Shark add-on on your RDV4, define `PLATFORM_EXTRAS=BTADDON` in your `Makefile.platform`.
+If you have installed a Blue Shark add-on on your RDV4, define `PLATFORM_EXTRAS=BTADDON` in your `Makefile.platform` to enable it.
+
+If you did some modding on the `PM3GENERIC` platform, you can define `FLASH` and `SMARTCARD` to enable these features, like
+`PLATFORM_EXTRAS=FLASH`
+
+You can also define multiple options like
+`PLATFORM_EXTRAS=FLASH SMARTCARD`
 
 
 ## STANDALONE
@@ -133,6 +141,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_REBLAY       | 14A relay over BT  - Salvador Mendoza
 | HF_TCPRST       | IKEA Rothult ST25TA, Standalone Master Key Dump/Emulation - Nick Draffen
 | HF_TMUDFORD     | Read and emulate ISO15693 card UID - Tim Mudford
+| HF_UNISNIFF     | Combined 14a/14b/15 sniffer with runtime selection & extra save options
 | HF_YOUNG        | Mifare sniff/simulation - Craig Young
 | DANKARMULTI     | Standalone mode that bakes together multiple other standalone modes. - dankar
 
