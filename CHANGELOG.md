@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mf cload` - now supports specifying tag size (@augustozanellato)
  - Added `hf 14b raw --pico` - now supports picopass anticollision over ISO14443-B (@iceman1001)
  - Changed `hf 14b *` - worked apdu and comms. Improved output. Uses NG packets (@iceman1001)
  - Fixed `data manrawdecode` - now copy to demodbuf even if em4100 decode fails (@iceman1001)
