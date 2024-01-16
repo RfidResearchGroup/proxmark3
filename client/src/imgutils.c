@@ -8,7 +8,7 @@ struct ycbcr_t {
     int cr;
 };
 
-static void rgb_to_ycbcr(int rgb, struct ycbcr_t *ycbcr) {
+static void rgb_to_ycbcr(int rgb, struct ycbcr_t * ycbcr) {
     int r = gdTrueColorGetRed(rgb);
     int g = gdTrueColorGetGreen(rgb);
     int b = gdTrueColorGetBlue(rgb);
@@ -25,7 +25,7 @@ static void rgb_to_ycbcr(int rgb, struct ycbcr_t *ycbcr) {
     ycbcr->cr = (r *  32768 + g * -27439 + b * -5329) / 65536 + 128;
 }
 
-static inline void cap_comp(int *x) {
+static inline void cap_comp(int * x) {
     if (*x < 0) {
         *x = 0;
     } else if (*x > 255) {
@@ -33,7 +33,7 @@ static inline void cap_comp(int *x) {
     }
 }
 
-gdImagePtr img_palettize(gdImagePtr rgb, int *palette, int palette_size) {
+gdImagePtr img_palettize(gdImagePtr rgb, int * palette, int palette_size) {
     assert(rgb != NULL);
     assert(palette != NULL);
     assert(palette_size >= 2 && palette_size < 256);
@@ -45,7 +45,7 @@ gdImagePtr img_palettize(gdImagePtr rgb, int *palette, int palette_size) {
     }
 
     // Allocate space for palette in YCbCr
-    struct ycbcr_t *pal_ycbcr = calloc(palette_size, sizeof(struct ycbcr_t));
+    struct ycbcr_t * pal_ycbcr = calloc(palette_size, sizeof(struct ycbcr_t));
     if (!pal_ycbcr) {
         gdImageDestroy(res);
         return NULL;
@@ -60,7 +60,7 @@ gdImagePtr img_palettize(gdImagePtr rgb, int *palette, int palette_size) {
      * To reduce shifts and increase accuracy, each entry is stored with 16x times the error,
      * and gets divided by that amount when it is read.
      */
-    struct ycbcr_t *forward = calloc(gdImageSX(rgb) + 2, sizeof(struct ycbcr_t));
+    struct ycbcr_t * forward = calloc(gdImageSX(rgb) + 2, sizeof(struct ycbcr_t));
     if (!forward) {
         free(pal_ycbcr);
         gdImageDestroy(res);
@@ -108,10 +108,10 @@ gdImagePtr img_palettize(gdImagePtr rgb, int *palette, int palette_size) {
                 };
 
                 int can_score = (
-                                    can_err.y  * can_err.y  +
-                                    can_err.cb * can_err.cb +
-                                    can_err.cr * can_err.cr
-                                );
+                    can_err.y  * can_err.y  +
+                    can_err.cb * can_err.cb +
+                    can_err.cr * can_err.cr
+                );
 
                 if (can_score < best_score) {
                     best_idx   = can_idx;

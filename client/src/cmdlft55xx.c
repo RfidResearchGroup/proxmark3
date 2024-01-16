@@ -1853,7 +1853,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         ct = localtime_r(&now, &tm_buf);
 #endif
 
-        if (ct != NULL && (data.year > ct->tm_year - 110))
+        if (data.year > ct->tm_year - 110)
             data.year += 2000;
         else
             data.year += 2010;
@@ -4419,3 +4419,4 @@ int CmdLFT55XX(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
+

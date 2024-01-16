@@ -28,7 +28,7 @@
  *
  * A comparison can be found at https://twitter.com/Socram4x8/status/1733157380097995205/photo/1.
  */
-gdImagePtr img_palettize(gdImagePtr rgb, int *palette, int palette_size);
+gdImagePtr img_palettize(gdImagePtr rgb, int * palette, int palette_size);
 
 /*
  * This function scales and crops the image to the given size.

@@ -2025,7 +2025,7 @@ int CmdTuneSamples(const char *Cmd) {
 
         // Q measure with Vlr=Q*(2*Vdd/pi)
         double lfq2 = (double)package->peak_v * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "Peak voltage............ " _YELLOW_("%.1lf"), lfq2);
+        PrintAndLogEx(SUCCESS, "Peak voltage............ " _YELLOW_("%.1lf") , lfq2);
         // cross-check results
         if (lfq1 > 3) {
             double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
@@ -2073,7 +2073,7 @@ int CmdTuneSamples(const char *Cmd) {
     if (package->v_hf >= HF_UNUSABLE_V) {
         // Q measure with Vlr=Q*(2*Vdd/pi)
         double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "peak voltage............ " _YELLOW_("%.1lf"), hfq);
+        PrintAndLogEx(SUCCESS, "peak voltage............ " _YELLOW_("%.1lf") , hfq);
     }
 
     if (package->v_hf < HF_UNUSABLE_V)
@@ -2098,13 +2098,13 @@ int CmdTuneSamples(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "-------- " _CYAN_("LF tuning graph") " ---------");
         PrintAndLogEx(SUCCESS, "Blue line  Divisor %d / %.2f kHz"
-                      , LF_DIVISOR_134
-                      , LF_DIV2FREQ(LF_DIVISOR_134)
-                     );
+                , LF_DIVISOR_134
+                , LF_DIV2FREQ(LF_DIVISOR_134)
+                );
         PrintAndLogEx(SUCCESS, "Red line   Divisor %d / %.2f kHz\n\n"
-                      , LF_DIVISOR_125
-                      , LF_DIV2FREQ(LF_DIVISOR_125)
-                     );
+                , LF_DIVISOR_125
+                , LF_DIV2FREQ(LF_DIVISOR_125)
+                );
         g_GraphTraceLen = 256;
         g_CursorCPos = LF_DIVISOR_125;
         g_CursorDPos = LF_DIVISOR_134;
@@ -3192,7 +3192,7 @@ static int CmdDiff(const char *Cmd) {
     // dump magic card memory
     /*
     if (use_c) {
-        PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+        PrintAndLogEx(WARNING, "not implemented yet, feel free to contribute!");
         return PM3_ENOTIMPL;
     }
     */
@@ -3200,41 +3200,21 @@ static int CmdDiff(const char *Cmd) {
     size_t biggest = (datalenA > datalenB) ? datalenA : datalenB;
     PrintAndLogEx(DEBUG, "data len:  %zu   A %zu  B %zu", biggest, datalenA, datalenB);
 
-    if (inA == NULL) {
+    if (inA == NULL)
         PrintAndLogEx(INFO, "inA null");
-    }
 
-    if (inB == NULL) {
+    if (inB == NULL)
         PrintAndLogEx(INFO, "inB null");
-    }
-
-
-    char hdr0[400] = {0};
 
     int hdr_sln = (width * 4) + 2;
-    int max_fn_space = (width * 4);
+    char hdr0[300] = {0};
 
-    if (max_fn_space < fnlenA) {
-        truncate_filename(filenameA, max_fn_space);
-        fnlenA = strlen(filenameA);
-    }
+    int max_fn_space = (width * 5);
 
-    if (max_fn_space < fnlenB) {
-        truncate_filename(filenameB, max_fn_space);
-        fnlenB = strlen(filenameB);
-    }
-
-    if (fnlenA && fnlenB) {
-
+    if (fnlenA && fnlenB && (max_fn_space > fnlenA) && (max_fn_space > fnlenB)) {
         snprintf(hdr0, sizeof(hdr0) - 1, " #  | " _CYAN_("%.*s"), max_fn_space, filenameA);
-
-        // add space if needed
-        int padding_len = (hdr_sln - fnlenA - 1);
-        if (padding_len > 0) {
-            memset(hdr0 + strlen(hdr0), ' ', padding_len);
-        }
+        memset(hdr0 + strlen(hdr0), ' ', hdr_sln - strlen(filenameA) - 1);
         snprintf(hdr0 + strlen(hdr0), sizeof(hdr0) - 1 - strlen(hdr0), "| " _CYAN_("%.*s"), max_fn_space, filenameB);
-
     } else {
         strcat(hdr0, " #  | " _CYAN_("a"));
         memset(hdr0 + strlen(hdr0), ' ', hdr_sln - 2);
@@ -3354,6 +3334,7 @@ static int CmdNumCon(const char *Cmd) {
     memset(dec, 0, sizeof(dec));
     int res = CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)dec, sizeof(dec), &dlen);
 
+
     int hlen = 256;
     char hex[256];
     memset(hex, 0, sizeof(hex));
@@ -3382,13 +3363,13 @@ static int CmdNumCon(const char *Cmd) {
     mbedtls_mpi N;
     mbedtls_mpi_init(&N);
 
+
     // hex
     if (hlen > 0) {
         if (data_verify_hex((uint8_t *)hex, hlen) == false) {
             return PM3_EINVARG;
         }
         MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&N, 16, hex));
-        PrintAndLogEx(INFO, "Input hex len... %d", hlen);
     }
 
     // decimal
@@ -3401,7 +3382,6 @@ static int CmdNumCon(const char *Cmd) {
     if (blen > 0) {
         // should have bianry string check here too
         MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&N, 2, bin));
-        PrintAndLogEx(INFO, "Input bin len... %d", blen);
     }
 
     mbedtls_mpi base;

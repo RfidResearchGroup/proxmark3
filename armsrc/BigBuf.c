@@ -92,9 +92,9 @@ uint32_t BigBuf_get_size(void) {
 // get the address of the emulator memory. Allocate part of Bigbuf for it, if not yet done
 uint8_t *BigBuf_get_EM_addr(void) {
     // not yet allocated
-    if (emulator_memory == NULL) {
-        emulator_memory = BigBuf_calloc(CARD_MEMORY_SIZE);
-    }
+    if (emulator_memory == NULL)
+        emulator_memory = BigBuf_malloc(CARD_MEMORY_SIZE);
+
     return emulator_memory;
 }
 
@@ -366,9 +366,8 @@ void tosend_stuffbit(int b) {
 }
 
 dmabuf16_t *get_dma16(void) {
-    if (dma_16.buf == NULL) {
+    if (dma_16.buf == NULL)
         dma_16.buf = (uint16_t *)BigBuf_malloc(DMA_BUFFER_SIZE * sizeof(uint16_t));
-    }
 
     return &dma_16;
 }
