@@ -2566,6 +2566,7 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
         clear_trace();
         BigBuf_Clear_ext(false);
     }
+
     set_tracing(true);
 
     // receive buffer
@@ -2615,10 +2616,15 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
     }
 
     // if field is off...
-    if (s_field_on == false) {
-        DbpString("Field is off");
-        reply_ng(CMD_HF_ISO14443B_COMMAND, PM3_ERFTRANS, NULL, 0);
-        goto out;        
+    if (
+        ((p->flags & ISO14B_APDU) == ISO14B_APDU) ||
+        ((p->flags & ISO14B_RAW) == ISO14B_RAW)
+        ) {
+        if (s_field_on == false) {
+            DbpString("Field is off");
+            reply_ng(CMD_HF_ISO14443B_COMMAND, PM3_ERFTRANS, NULL, 0);
+            goto out;        
+        }
     }
 
     if ((p->flags & ISO14B_APDU) == ISO14B_APDU) {

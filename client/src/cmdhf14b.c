@@ -1963,14 +1963,14 @@ int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
     PacketResponseNG resp;
     SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
-        PrintAndLogEx(INFO, "Trying 14B Select SRx");
 
+        PrintAndLogEx(INFO, "Trying 14B Select SRx");
         // Anticollision + SELECT SR card
         packet.flags = (ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_CLEARTRACE);
         SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
-            PrintAndLogEx(INFO, "Trying 14B Select CTS");
 
+            PrintAndLogEx(INFO, "Trying 14B Select CTS");
             // Anticollision + SELECT ASK C-Ticket card
             packet.flags = (ISO14B_CONNECT | ISO14B_SELECT_CTS | ISO14B_CLEARTRACE);
             SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
@@ -2118,7 +2118,6 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field,
     if (apdu_in_framing_enable &&
             ((apdu_frame_length && (datainlen > apdu_frame_length - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
 
-        PrintAndLogEx(INFO, "ONE");
         int clen = 0;
         bool v_activate_field = activate_field;
 
