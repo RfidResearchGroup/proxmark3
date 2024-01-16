@@ -3469,6 +3469,7 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
             if (ret == BF_GENERATOR_ERROR) {
                 PrintAndLogEx(ERR, "Internal bruteforce generator error");
                 free(keyBlock);
+                free(e_sector);
                 return PM3_EFAILED;
             } else if (ret == BF_GENERATOR_END) {
                 lastChunk = true;
@@ -6208,6 +6209,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     }
 
     uint8_t ndefkey[6] = {0};
+    printf("%d", keylen)
     memcpy(ndefkey, g_mifare_ndef_key, 6);
     if (keylen == 6) {
         memcpy(ndefkey, key, 6);

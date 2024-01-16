@@ -2338,7 +2338,7 @@ EA0CA627FD06
 CE0F4F15E909
 D60DE9436219
 
-# ATM Arena de Girona, spanish transport card
+# ATM Area de Girona, spanish transport card
 
 A00000000000
 A01000000000
@@ -2373,3 +2373,9 @@ B12000000000
 B13000000000
 B14000000000
 B15000000000
+
+# TAM - Transporte Alicante Metropolitano (spanish transport card)
+# Sectors 9-15
+
+C0C1C2C3C4C5
+B0B1B2B3B4B5
