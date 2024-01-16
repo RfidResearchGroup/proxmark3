@@ -274,6 +274,14 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
 
     str_lower(cmd_name);
 
+    // iceman:  I mistyped "list" so many times with "lsit".  No more.
+    char *lsit = strstr(cmd_name, "lsit");
+    if (lsit) {
+        lsit[1] = lsit[2] ^ lsit[1];
+        lsit[2] = lsit[1] ^ lsit[2];
+        lsit[1] = lsit[2] ^ lsit[1];
+    }
+
     // Comment
     if (cmd_name[0] == '#')
         return PM3_SUCCESS;
