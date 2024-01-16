@@ -3564,13 +3564,6 @@ out:
             }
             free(fptr);
 
-            if (found_keys == (sectorsCnt << 1)) {
-                PrintAndLogEx(SUCCESS, "Card dumped as well. run " _YELLOW_("`%s %c`"),
-                          "hf mf esave",
-                          GetFormatFromSector(sectorsCnt)
-                         );
-        }
-
         }
     }
 
