@@ -74,6 +74,17 @@ static int switch_off_field_14b(void) {
     return PM3_SUCCESS;
 }
 
+static int clear_trace_14b(void) {
+    iso14b_raw_cmd_t packet = {
+        .flags = ISO14B_CLEARTRACE,
+        .timeout = 0,
+        .rawlen = 0,
+    };
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
+    return PM3_SUCCESS;
+}
+
 static void hf14b_aid_search(bool verbose) {
 
     json_t *root = AIDSearchInit(verbose);
@@ -1454,6 +1465,8 @@ static int CmdHF14BReader(const char *Cmd) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
+    clear_trace_14b();
+
     return readHF14B(cm, verbose);
 }
 
@@ -2541,6 +2554,13 @@ int readHF14B(bool loop, bool verbose) {
         else if (found)
             return PM3_SUCCESS;
 
+        // Picopass 
+        found |= HF14B_picopass_reader(verbose) ;
+        if (found && loop)
+            continue;
+        else if (found)
+            return PM3_SUCCESS;
+
         // try ASK CT 14b
         found |= HF14B_ask_ct_reader(verbose);
         if (found && loop)
@@ -2551,13 +2571,6 @@ int readHF14B(bool loop, bool verbose) {
         // try unknown 14b read commands (to be identified later)
         // could be read of calypso, CEPAS, moneo, or pico pass.
         found |= HF14B_other_reader(verbose);
-        if (found && loop)
-            continue;
-        else if (found)
-            return PM3_SUCCESS;
-
-        // Picopass 
-        found |= HF14B_picopass_reader(verbose) ;
         if (found && loop)
             continue;
         else if (found)
