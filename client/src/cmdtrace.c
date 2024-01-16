@@ -1086,7 +1086,7 @@ static int CmdTraceExtract(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Recorded activity ( " _YELLOW_("%u") " bytes )" , gs_traceLen);
+    PrintAndLogEx(SUCCESS, "Recorded activity ( " _YELLOW_("%u") " bytes )", gs_traceLen);
     if (gs_traceLen == 0) {
         return PM3_SUCCESS;
     }
@@ -1320,7 +1320,7 @@ int CmdTraceList(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS,  "Recorded activity ( " _YELLOW_("%u") " bytes )" , gs_traceLen);
+    PrintAndLogEx(SUCCESS,  "Recorded activity ( " _YELLOW_("%u") " bytes )", gs_traceLen);
     if (gs_traceLen == 0) {
         return PM3_SUCCESS;
     }

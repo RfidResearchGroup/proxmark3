@@ -1112,26 +1112,26 @@
         },
         "hf 14a apdu": {
             "command": "hf 14a apdu",
-            "description": "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
+            "description": "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). Works with all APDU types from ISO 7816-4:2013 note: `-m` and `-d` goes hand in hand -m <CLA INS P1 P2> -d 325041592E5359532E4444463031 OR use `-d` with complete APDU data -d 00A404000E325041592E5359532E444446303100",
             "notes": [
-                "hf 14a apdu -st 00A404000E325041592E5359532E444446303100",
-                "hf 14a apdu -sd 00A404000E325041592E5359532E444446303100 -> decode apdu",
-                "hf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -l 256 -> encode standard apdu",
-                "hf 14a apdu -sm 00A40400 325041592E5359532E4444463031 -el 65536 -> encode extended apdu"
+                "hf 14a apdu -st -d 00A404000E325041592E5359532E444446303100",
+                "hf 14a apdu -sd -d 00A404000E325041592E5359532E444446303100 -> decode apdu",
+                "hf 14a apdu -sm 00A40400 -d 325041592E5359532E4444463031 -l 256 -> encode standard apdu",
+                "hf 14a apdu -sm 00A40400 -d 325041592E5359532E4444463031 -el 65536 -> encode extended apdu"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-s, --select activate field and select card",
                 "-k, --keep keep signal field ON after receive",
-                "-t, --tlv executes TLV decoder if it possible",
-                "-d, --decapdu decode apdu request if it possible",
-                "-m, --make <head (CLA INS P1 P2) hex> make apdu with head from this field and data from data field. Must be 4 bytes length: <CLA INS P1 P2>",
+                "-t, --tlv decode TLV",
+                "-d, --decapdu decode APDU request",
+                "-m, --make <hex> APDU header, 4 bytes <CLA INS P1 P2>",
                 "-e, --extended make extended length apdu if `m` parameter included",
-                "-l, --le <Le (int)> Le apdu parameter if `m` parameter included",
-                "<APDU (hex) | data (hex)> data if `m` parameter included"
+                "-l, --le <dec> Le APDU parameter if `m` parameter included",
+                "-d, --data <hex> full APDU package or data if `m` parameter included"
             ],
-            "usage": "hf 14a apdu [-hsktde] [-m <head (CLA INS P1 P2) hex>] [-l <Le (int)>] <APDU (hex) | data (hex)> [<APDU (hex) | data (hex)>]..."
+            "usage": "hf 14a apdu [-hsktde] [-m <hex>] [-l <dec>] -d <hex> [-d <hex>]..."
         },
         "hf 14a apdufind": {
             "command": "hf 14a apdufind",
@@ -1358,6 +1358,31 @@
             ],
             "usage": "hf 14a sniff [-hcr]"
         },
+        "hf 14b apdu": {
+            "command": "hf 14b apdu",
+            "description": "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
+            "notes": [
+                "hf 14b apdu -s -d 94a40800043f000002",
+                "hf 14b apdu -s --decode -d 00A404000E325041592E5359532E444446303100 -> decode apdu",
+                "hf 14b apdu -sm 00A40400 -l 256 -d 325041592E5359532E4444463031 -> encode standard apdu",
+                "hf 14b apdu -sm 00A40400 -el 65536 -d 325041592E5359532E4444463031 -> encode extended apdu"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-s, --select activate field and select card",
+                "-k, --keep leave the signal field ON after receive response",
+                "-t, --tlv executes TLV decoder if it possible",
+                "--decode decode apdu request if it possible",
+                "-m, --make <hex> make apdu with head from this field and data from data field.",
+                "must be 4 bytes: <CLA INS P1 P2>",
+                "-e, --extended make extended length apdu if `m` parameter included",
+                "-l, --le <int> Le apdu parameter if `m` parameter included",
+                "-d, --data <hex> <APDU | data> if `m` parameter included",
+                "--timeout <dec> timeout in ms"
+            ],
+            "usage": "hf 14b apdu [-hskte] [--decode] [-m <hex>] [-l <int>] -d <hex> [--timeout <dec>]"
+        },
         "hf 14b dump": {
             "command": "hf 14b dump",
             "description": "This command dumps the contents of a ISO-14443-B tag and save it to file Tries to autodetect cardtype, memory size defaults to SRI4K",
@@ -1375,46 +1400,7 @@
         },
         "hf 14b help": {
             "command": "hf 14b help",
-            "description": "help This help list List ISO-14443-B history view Display content from tag dump file --------------------------------------------------------------------------------------- hf 14b apdu available offline: no Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL). works with all apdu types from ISO 7816-4:2013",
-            "notes": [
-                "hf 14b apdu -s -d 94a40800043f000002",
-                "hf 14b apdu -s --decode -d 00A404000E325041592E5359532E444446303100 -> decode apdu",
-                "hf 14b apdu -sm 00A40400 -l 256 -d 325041592E5359532E4444463031 -> encode standard apdu",
-                "hf 14b apdu -sm 00A40400 -el 65536 -d 325041592E5359532E4444463031 -> encode extended apdu"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help This help",
-                "-s, --select activate field and select card",
-                "-k, --keep leave the signal field ON after receive response",
-                "-t, --tlv executes TLV decoder if it possible",
-                "--decode decode apdu request if it possible",
-                "-m, --make <hex> make apdu with head from this field and data from data field.",
-                "must be 4 bytes: <CLA INS P1 P2>",
-                "-e, --extended make extended length apdu if `m` parameter included",
-                "-l, --le <int> Le apdu parameter if `m` parameter included",
-                "-d, --data <hex> <APDU | data> if `m` parameter included",
-                "--timeout <dec> timeout in ms"
-            ],
-            "usage": "hf 14b apdu [-hskte] [--decode] [-m <hex>] [-l <int>] -d <hex> [--timeout <dec>]"
-        },
-        "hf 14b info": {
-            "command": "hf 14b info",
-            "description": "Tag information for ISO/IEC 14443 type B based tags",
-            "notes": [
-                "hf 14b info"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-s, --aidsearch checks if AIDs from aidlist.json is present on the card and prints information about found AIDs",
-                "-v, --verbose verbose output"
-            ],
-            "usage": "hf 14b info [-hsv]"
-        },
-        "hf 14b list": {
-            "command": "hf 14b list",
-            "description": "Alias of `trace list -t 14b -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List ISO-14443-B history --------- ----------------------- general ----------------------- view Display content from tag dump file valid SRIX4 checksum test --------------------------------------------------------------------------------------- hf 14b list available offline: yes Alias of `trace list -t 14b -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 14b list --frame -> show frame delay times",
                 "hf 14b list -1 -> use trace buffer"
@@ -1432,6 +1418,20 @@
                 "-f, --file <fn> filename of dictionary"
             ],
             "usage": "hf 14b list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "hf 14b info": {
+            "command": "hf 14b info",
+            "description": "Tag information for ISO/IEC 14443 type B based tags",
+            "notes": [
+                "hf 14b info"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-s, --aidsearch checks if AIDs from aidlist.json is present on the card and prints information about found AIDs",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "hf 14b info [-hsv]"
         },
         "hf 14b ndefread": {
             "command": "hf 14b ndefread",
@@ -1525,26 +1525,17 @@
             ],
             "usage": "hf 14b sniff [-h]"
         },
-        "hf 14b sriwrite": {
-            "command": "hf 14b sriwrite",
-            "description": "Write data to a SRI512 or SRIX4K block If writing to a block out-of-range, use --force to override checks",
+        "hf 14b valid": {
+            "command": "hf 14b valid",
+            "description": "SRIX checksum test",
             "notes": [
-                "hf 14b sriwrite --4k -b 100 -d 11223344",
-                "hf 14b sriwrite --4k --sb -d 11223344 -> special block write",
-                "hf 14b sriwrite --512 -b 15 -d 11223344",
-                "hf 14b sriwrite --512 --sb -d 11223344 -> special block write"
+                "hf 14b valid"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
-                "-h, --help This help",
-                "-b, --block <dec> block number",
-                "-d, --data <hex> 4 hex bytes",
-                "--512 target SRI 512 tag",
-                "--4k target SRIX 4k tag",
-                "--sb special block write at end of memory (0xFF)",
-                "--force overrides block range checks"
+                "-h, --help This help"
             ],
-            "usage": "hf 14b sriwrite [-h] [-b <dec>] -d <hex> [--512] [--4k] [--sb] [--force]"
+            "usage": "hf 14b valid [-h]"
         },
         "hf 14b view": {
             "command": "hf 14b view",
@@ -1559,6 +1550,27 @@
                 "-v, --verbose verbose output"
             ],
             "usage": "hf 14b view [-hv] -f <fn>"
+        },
+        "hf 14b wrbl": {
+            "command": "hf 14b wrbl",
+            "description": "Write data to a SRI512 or SRIX4K block If writing to a block out-of-range, use `--force` to override checks Special block at end denots OTP and lock bits among others",
+            "notes": [
+                "hf 14b wrbl --4k -b 100 -d 11223344",
+                "hf 14b wrbl --4k --sb -d 11223344 -> special block write",
+                "hf 14b wrbl --512 -b 15 -d 11223344",
+                "hf 14b wrbl --512 --sb -d 11223344 -> special block write"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-b, --block <dec> block number",
+                "-d, --data <hex> 4 hex bytes",
+                "--512 target SRI 512 tag",
+                "--4k target SRIX 4k tag",
+                "--sb special block write at end of memory (0xFF)",
+                "--force overrides block range checks"
+            ],
+            "usage": "hf 14b wrbl [-h] [-b <dec>] -d <hex> [--512] [--4k] [--sb] [--force]"
         },
         "hf 15 csetuid": {
             "command": "hf 15 csetuid",
@@ -12228,8 +12240,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 706,
+        "commands_extracted": 707,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-01-15T12:04:30"
+        "extracted_on": "2024-01-16T10:52:42"
     }
 }

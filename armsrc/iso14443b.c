@@ -466,7 +466,7 @@ static void iso14b_set_fwt(uint8_t fwt) {
     s_iso14b_fwt = fwt;
     if (g_dbglevel >= DBG_DEBUG) {
         Dbprintf("ISO14443B FWT Timeout set to %ld fwt", s_iso14b_fwt);
-    }    
+    }
     iso14b_set_timeout(32 << fwt);
 }
 
@@ -1412,7 +1412,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
                                 (Demod.len * (8 + 2)) // time for byte transfers
                                 + (10 + 2)  // time for SOF transfer
                                 + (10)                // time for EOF transfer
-                                )
+                            )
                             ;
         LogTrace(Demod.output, Demod.len, sof_time, *eof_time, NULL, false);
     }
@@ -1672,7 +1672,7 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
 
         if ((len >= 3) &&                                                             // PCB + CRC = 3 bytes
                 (((data_bytes[0] & 0xC0) == 0) || (data_bytes[0] & 0xD0) == 0x80)  &&  // I-Block   OR   R-Block with ACK bit set to 0
-            ((data_bytes[0] & 0x01) == s_iso14b_pcb_blocknum)) {                     // equal block numbers
+                ((data_bytes[0] & 0x01) == s_iso14b_pcb_blocknum)) {                     // equal block numbers
 
             s_iso14b_pcb_blocknum ^= 1;
 
@@ -1689,7 +1689,7 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
         }
     }
 
-        // cut frame byte
+    // cut frame byte
     if (len) {
         len -= 1;
 

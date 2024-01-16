@@ -369,7 +369,7 @@ static void cook_ats(packet_t *ats, uint8_t fwi, uint8_t sfgi) {
     }
 
     packet_t cooked_ats = { 0 };
-    cooked_ats.len = 5+historical_len;
+    cooked_ats.len = 5 + historical_len;
     cooked_ats.dat[0] = cooked_ats.len;
     cooked_ats.dat[1] = t0;
     cooked_ats.dat[2] = ta;
@@ -377,7 +377,7 @@ static void cook_ats(packet_t *ats, uint8_t fwi, uint8_t sfgi) {
     cooked_ats.dat[4] = tc;
 
     if (historical_len > 0) {
-        memcpy(cooked_ats.dat+5, historical_bytes, historical_len);
+        memcpy(cooked_ats.dat + 5, historical_bytes, historical_len);
     }
 
     memcpy(ats, &cooked_ats, sizeof(packet_t));
@@ -479,7 +479,7 @@ static void read_packet(packet_t *packet) {
             DbpString(_CYAN_("[@]") " PM3 NG packet recieved - ignoring");
 
             // clear any remaining buffered data
-            while(cardhopper_data_available()) {
+            while (cardhopper_data_available()) {
                 cardhopper_read(packet->dat, 255);
             }
 

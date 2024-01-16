@@ -1333,7 +1333,7 @@ static int l_cwd(lua_State *L) {
     while (GetCurrentDir(cwd, path_len) == NULL) {
         if (errno == ERANGE) {  // Need bigger buffer
             path_len += 10;      // if buffer was too small add 10 characters and try again
-            char* cwdNew = realloc(cwd, path_len);
+            char *cwdNew = realloc(cwd, path_len);
             if (cwdNew == NULL) {
                 free(cwd);
                 return returnToLuaWithError(L, "Failed to allocate memory");

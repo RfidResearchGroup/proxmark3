@@ -208,18 +208,19 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf 14b help            `|Y       |`This help`
+|`hf 14b list            `|Y       |`List ISO-14443-B history`
 |`hf 14b apdu            `|N       |`Send ISO 14443-4 APDU to tag`
 |`hf 14b dump            `|N       |`Read all memory pages of an ISO-14443-B tag, save to file`
 |`hf 14b info            `|N       |`Tag information`
-|`hf 14b list            `|Y       |`List ISO-14443-B history`
 |`hf 14b ndefread        `|N       |`Read NDEF file on tag`
 |`hf 14b raw             `|N       |`Send raw hex data to tag`
+|`hf 14b rdbl            `|N       |`Read SRI512/SRIX4 block`
 |`hf 14b reader          `|N       |`Act as a ISO-14443-B reader to identify a tag`
 |`hf 14b sim             `|N       |`Fake ISO ISO-14443-B tag`
 |`hf 14b sniff           `|N       |`Eavesdrop ISO-14443-B`
-|`hf 14b rdbl            `|N       |`Read SRI512/SRIX4x block`
-|`hf 14b sriwrite        `|N       |`Write data to a SRI512 or SRIX4K tag`
+|`hf 14b wrbl            `|N       |`Write data to a SRI512/SRIX4 tag`
 |`hf 14b view            `|Y       |`Display content from tag dump file`
+|`hf 14b valid           `|Y       |`SRIX4 checksum test`
 
 
 ### hf 15

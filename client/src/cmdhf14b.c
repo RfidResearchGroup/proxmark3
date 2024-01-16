@@ -1840,11 +1840,11 @@ static uint32_t srix4k_get_magicbytes(uint64_t uid, uint32_t block6, uint32_t bl
 }
 
 static int CmdSRIX4kValid(const char *Cmd) {
-   CLIParserContext *ctx;
+    CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b valid",
                   "SRIX checksum test",
                   "hf 14b valid\n"
-            );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2220,10 +2220,10 @@ static int CmdHF14BAPDU(const char *Cmd) {
 
     PrintAndLogEx(INFO, "<<<< %s", sprint_hex(data, datalen));
     PrintAndLogEx(SUCCESS, "APDU response: " _YELLOW_("%02x %02x") " - %s"
-        , data[datalen - 2]
-        , data[datalen - 1]
-        , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
-    );
+                  , data[datalen - 2]
+                  , data[datalen - 1]
+                  , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
+                 );
 
     // TLV decoder
     if (decode_TLV && datalen > 4) {

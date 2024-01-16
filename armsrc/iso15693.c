@@ -2680,17 +2680,17 @@ void SetTag15693Uid(const uint8_t *uid) {
 
     for (int i = 0; i < 4; i++) {
         res = SendDataTag(
-                cmd[i],
-                sizeof(cmd[i]),
-                (i == 0) ? true : false,
-                true,
-                buf,
-                sizeof(buf),
-                start_time,
-                ISO15693_READER_TIMEOUT_WRITE,
-                &eof_time,
-                &recvlen
-        );
+                  cmd[i],
+                  sizeof(cmd[i]),
+                  (i == 0) ? true : false,
+                  true,
+                  buf,
+                  sizeof(buf),
+                  start_time,
+                  ISO15693_READER_TIMEOUT_WRITE,
+                  &eof_time,
+                  &recvlen
+              );
 
         start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
     }

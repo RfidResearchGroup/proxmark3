@@ -35,7 +35,7 @@
 #endif
 
 void iso14443b_setup(void);
-int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *res, uint16_t * responselen);
+int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *res, uint16_t *responselen);
 
 int iso14443b_select_card(iso14b_card_select_t *card);
 
