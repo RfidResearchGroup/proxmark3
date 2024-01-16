@@ -48,6 +48,7 @@ typedef enum ISO14B_COMMAND {
     ISO14B_SELECT_CTS = (1 << 10),
     ISO14B_CLEARTRACE = (1 << 11),
     ISO14B_SELECT_XRX = (1 << 12),
+    ISO14B_SELECT_PICOPASS = (1 << 13),
 } iso14b_command_t;
 
 typedef enum ISO14B_TYPE {
