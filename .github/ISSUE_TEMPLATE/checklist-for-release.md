@@ -1,11 +1,11 @@
----
+—
 name: Checklist for release
 about: A template when making a release (usage reserved to repo maintainers)
-title: "[RELEASE 4.x] Checklist"
+title: “[RELEASE 4.x] Checklist”
 labels: Release
 assignees: doegox, iceman1001
 
----
+—
 
 # Checklist
 
