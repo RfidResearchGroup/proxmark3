@@ -4890,6 +4890,10 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "emu", "from emulator memory"),
         arg_param_end
     };
@@ -4899,16 +4903,48 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    bool fill_from_emulator = arg_get_lit(ctx, 2);
+    bool m0 = arg_get_lit(ctx, 2);
+    bool m1 = arg_get_lit(ctx, 3);
+    bool m2 = arg_get_lit(ctx, 4);
+    bool m4 = arg_get_lit(ctx, 5);
+    bool fill_from_emulator = arg_get_lit(ctx, 6);
 
     CLIParserFree(ctx);
+
+    if ((m0 + m1 + m2 + m4) > 1) {
+        PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
+        return PM3_EINVARG;
+    } else if ((m0 + m1 + m2 + m4) == 0) {
+        m1 = true;
+    }
+
+    char s[6];
+    memset(s, 0, sizeof(s));
+    uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
+    if (m0) {
+        block_cnt = MIFARE_MINI_MAXBLOCK;
+        strncpy(s, "Mini", 5);
+    } else if (m1) {
+        block_cnt = MIFARE_1K_MAXBLOCK;
+        strncpy(s, "1K", 3);
+    } else if (m2) {
+        block_cnt = MIFARE_2K_MAXBLOCK;
+        strncpy(s, "2K", 3);
+    } else if (m4) {
+        block_cnt = MIFARE_4K_MAXBLOCK;
+        strncpy(s, "4K", 3);
+    } else {
+        PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
+        return PM3_EINVARG;
+    }
+
 
     if (fill_from_emulator) {
 
         PrintAndLogEx(INFO, "Start upload to emulator memory");
         PrintAndLogEx(INFO, "." NOLF);
 
-        for (int b = 0; b < MIFARE_1K_MAXBLOCK; b++) {
+        for (int b = 0; b < block_cnt; b++) {
             int flags = 0;
             uint8_t buf8[MFBLOCK_SIZE] = {0x00};
 
@@ -4929,7 +4965,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
             }
 
             // Done. Magic Halt and switch off field.
-            if (b == ((MFBLOCK_SIZE * 4) - 1)) {
+            if (b == (block_cnt - 1)) {
                 flags = MAGIC_HALT + MAGIC_OFF;
             }
 
@@ -4948,14 +4984,12 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
     // reserve memory
     uint8_t *data = NULL;
     size_t bytes_read = 0;
-    int res = pm3_load_dump(filename, (void **)&data, &bytes_read, (MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK));
+    int res = pm3_load_dump(filename, (void **)&data, &bytes_read, (MFBLOCK_SIZE * block_cnt));
     if (res != PM3_SUCCESS) {
         return res;
     }
 
-    // 64 or 256blocks.
-    if (bytes_read != (MIFARE_1K_MAXBLOCK * MFBLOCK_SIZE) &&
-            bytes_read != (MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE)) {
+    if (bytes_read != (block_cnt * MFBLOCK_SIZE)) {
         PrintAndLogEx(ERR, "File content error. Read %zu bytes", bytes_read);
         free(data);
         return PM3_EFILE;
@@ -4979,7 +5013,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         }
 
         // switch off field
-        if (blockno == MFBLOCK_SIZE * 4 - 1) {
+        if (blockno == (block_cnt - 1)) {
             flags = MAGIC_HALT + MAGIC_OFF;
         }
 
@@ -4996,24 +5030,19 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
         blockno++;
 
-        // magic card type - mifare 1K
-        if (blockno >= MIFARE_1K_MAXBLOCK) break;
+        if (blockno >= block_cnt) break;
     }
     PrintAndLogEx(NORMAL, "\n");
 
     free(data);
 
-    // confirm number written blocks. Must be 64 or 256 blocks
-    if (blockno != MIFARE_1K_MAXBLOCK) {
-        if (blockno != MIFARE_4K_MAXBLOCK) {
-            PrintAndLogEx(ERR, "File content error. There must be %u blocks", MIFARE_4K_MAXBLOCK);
-            return PM3_EFILE;
-        }
-        PrintAndLogEx(ERR, "File content error. There must be %d blocks", MIFARE_1K_MAXBLOCK);
+    // confirm number written blocks. Must be 20, 64 or 256 blocks
+    if (blockno != block_cnt) {
+        PrintAndLogEx(ERR, "File content error. There must be %d blocks", block_cnt);
         return PM3_EFILE;
     }
 
-    PrintAndLogEx(SUCCESS, "Card loaded " _YELLOW_("%d") " blocks from file", blockno);
+    PrintAndLogEx(SUCCESS, "Card loaded " _YELLOW_("%d") " blocks from file", block_cnt);
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
