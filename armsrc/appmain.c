@@ -1455,7 +1455,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_ISO14443B_COMMAND: {
             iso14b_raw_cmd_t *payload = (iso14b_raw_cmd_t *)packet->data.asBytes;
-            SendRawCommand14443B_Ex(payload);
+            SendRawCommand14443B(payload);
             break;
         }
         case CMD_HF_CRYPTORF_SIM : {

@@ -111,9 +111,6 @@
 *
 */
 
-
-
-
 #ifndef MAX_14B_TIMEOUT
 // FWT(max) = 4949 ms or 4.95 seconds.
 // SSP_CLK = 4949000 * 3.39 = 16777120
@@ -195,9 +192,9 @@ static void iso14b_set_maxframesize(uint16_t size);
 static void iso14b_set_fwt(uint8_t fwt);
 
 // the block number for the ISO14443-4 PCB  (used with APDUs)
-static uint8_t iso14b_pcb_blocknum = 0;
-static uint8_t iso14b_fwt = 9;
-static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
+static uint8_t s_iso14b_pcb_blocknum = 0;
+static uint8_t s_iso14b_fwt = 9;
+static uint32_t s_iso14b_timeout = MAX_14B_TIMEOUT;
 
 /*
 * ISO 14443-B communications
@@ -350,7 +347,6 @@ static uint32_t iso14b_timeout = FWT_TIMEOUT_14B;
 // them yet, just leaves them ready to send in ToSend[].
 //-----------------------------------------------------------------------------
 static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
-    int i;
 
     tosend_reset();
 
@@ -362,6 +358,7 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
     // 80/fs < TR1 < 200/fs
     // 10 ETU < TR1 < 24 ETU
 
+    int i;
     // Send TR1.
     // 10-11 ETU * 4times samples ONES
     for (i = 0; i < 10; i++) {
@@ -458,15 +455,18 @@ static void iso14b_set_timeout(uint32_t timeout_etu) {
         ssp = MAX_14B_TIMEOUT;
     }
 
-    iso14b_timeout = ssp;
+    s_iso14b_timeout = ssp;
     if (g_dbglevel >= DBG_DEBUG) {
-        Dbprintf("ISO14443B Timeout set to %ld fwt", iso14b_timeout);
+        Dbprintf("ISO14443B Timeout set to %ld fwt", s_iso14b_timeout);
     }
 }
 
 // keep track of FWT,  also updates the timeout
 static void iso14b_set_fwt(uint8_t fwt) {
-    iso14b_fwt = fwt;
+    s_iso14b_fwt = fwt;
+    if (g_dbglevel >= DBG_DEBUG) {
+        Dbprintf("ISO14443B FWT Timeout set to %ld fwt", s_iso14b_fwt);
+    }    
     iso14b_set_timeout(32 << fwt);
 }
 
@@ -1323,6 +1323,9 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
 
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf16_t *dma = get_dma16();
+    if (dma == NULL) {
+        return PM3_EMALLOC;
+    }
 
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
         if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
@@ -1407,9 +1410,10 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
     if (Demod.len > 0) {
         uint32_t sof_time = *eof_time - HF14_ETU_TO_SSP(
                                 (Demod.len * (8 + 2)) // time for byte transfers
-//                                              + (10)      // time for TR1
                                 + (10 + 2)  // time for SOF transfer
-                                + (10));    // time for EOF transfer
+                                + (10)                // time for EOF transfer
+                                )
+                            ;
         LogTrace(Demod.output, Demod.len, sof_time, *eof_time, NULL, false);
     }
 
@@ -1583,7 +1587,7 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t 
 /* Sends an APDU to the tag
  * TODO: check CRC and preamble
  */
-int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *res, int *reponselen) {
+int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *response_byte, uint16_t *reponselen) {
 
     uint8_t real_cmd[msg_len + 4];
 
@@ -1596,12 +1600,12 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
         }
 
         // put block number into the PCB
-        real_cmd[0] |= iso14b_pcb_blocknum;
+        real_cmd[0] |= s_iso14b_pcb_blocknum;
         memcpy(real_cmd + 1, msg, msg_len);
     } else {
         // R-block. ACK
         real_cmd[0] = 0xA2; // r-block + ACK
-        real_cmd[0] |= iso14b_pcb_blocknum;
+        real_cmd[0] |= s_iso14b_pcb_blocknum;
     }
 
     AddCrc14B(real_cmd, msg_len + 1);
@@ -1618,11 +1622,10 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
     // SSP_CLK =  4833 µS * 3.39 = 16384
 
     uint16_t len = 0;
-    if (Get14443bAnswerFromTag(rxdata, rxmaxlen, iso14b_timeout, &eof_time, &len) != PM3_SUCCESS) {
-        return PM3_ECARDEXCHANGE;
+    int status = Get14443bAnswerFromTag(rxdata, rxmaxlen, s_iso14b_timeout, &eof_time, &len);
+    if (status != PM3_SUCCESS) {
+        return status;
     }
-
-    FpgaDisableTracing();
 
     uint8_t *data_bytes = (uint8_t *) rxdata;
 
@@ -1630,14 +1633,14 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
         // S-Block WTX
         while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
 
-            uint32_t save_iso14b_timeout_spp = iso14b_timeout;
+            uint32_t save_iso14b_timeout_spp = s_iso14b_timeout;
 
             // 2 high bits mandatory set to 0b
             // byte1 - WTXM [1..59].
             uint8_t wtxm = data_bytes[1] & 0x3F;
 
             // command FWT = FWT * WTXM
-            uint32_t fwt_temp = iso14b_fwt * wtxm;
+            uint32_t fwt_temp = (s_iso14b_fwt * wtxm);
 
             // temporarily increase timeout
             iso14b_set_timeout((32 << fwt_temp));
@@ -1654,16 +1657,14 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
             // retrieve the result again (with increased timeout)
             eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
 
-            if (Get14443bAnswerFromTag(rxdata, rxmaxlen, iso14b_timeout, &eof_time, &len) != PM3_SUCCESS) {
-                FpgaDisableTracing();
+            if (Get14443bAnswerFromTag(rxdata, rxmaxlen, s_iso14b_timeout, &eof_time, &len) != PM3_SUCCESS) {
                 return PM3_ECARDEXCHANGE;
             }
-            FpgaDisableTracing();
 
             data_bytes = rxdata;
 
             // restore timeout
-            iso14b_timeout = save_iso14b_timeout_spp;
+            s_iso14b_timeout = save_iso14b_timeout_spp;
         }
 
         // if we received an I- or R(ACK)-Block with a block number equal to the
@@ -1671,23 +1672,25 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
 
         if ((len >= 3) &&                                                             // PCB + CRC = 3 bytes
                 (((data_bytes[0] & 0xC0) == 0) || (data_bytes[0] & 0xD0) == 0x80)  &&  // I-Block   OR   R-Block with ACK bit set to 0
-                ((data_bytes[0] & 0x01) == iso14b_pcb_blocknum)) {                     // equal block numbers
+            ((data_bytes[0] & 0x01) == s_iso14b_pcb_blocknum)) {                     // equal block numbers
 
-            iso14b_pcb_blocknum ^= 1;
+            s_iso14b_pcb_blocknum ^= 1;
 
         }
 
         // if we received I-block with chaining we need to send ACK and receive another block of data
-        if (res) {
-            *res = data_bytes[0];
+        if (response_byte) {
+            *response_byte = data_bytes[0];
         }
 
         // crc check
         if (len >= 3 && (check_crc(CRC_14443_B, data_bytes, len) == false)) {
             return PM3_ECRC;
         }
+    }
 
         // cut frame byte
+    if (len) {
         len -= 1;
 
         for (int i = 0; i < len; i++) {
@@ -1722,11 +1725,9 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
     uint16_t retlen = 0;
-    if (Get14443bAnswerFromTag(r, sizeof(r), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-        goto out;
+    if (Get14443bAnswerFromTag(r, sizeof(r), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
     }
-
-    FpgaDisableTracing();
 
     if (retlen != 4) {
         return PM3_ELENGTH;
@@ -1745,10 +1746,9 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
     CodeAndTransmit14443bAsReader(cmdMSBUID, sizeof(cmdMSBUID), &start_time, &eof_time, true);
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
-    if (Get14443bAnswerFromTag(r, sizeof(r), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-        goto out;
+    if (Get14443bAnswerFromTag(r, sizeof(r), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
     }
-    FpgaDisableTracing();
 
     if (retlen != 4) {
         return PM3_ELENGTH;
@@ -1765,10 +1765,9 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
     CodeAndTransmit14443bAsReader(cmdLSBUID, sizeof(cmdLSBUID), &start_time, &eof_time, true);
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
-    if (Get14443bAnswerFromTag(r, sizeof(r), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-        goto out;
+    if (Get14443bAnswerFromTag(r, sizeof(r), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
     }
-    FpgaDisableTracing();
 
     if (retlen != 4) {
         return PM3_ELENGTH;
@@ -1782,9 +1781,6 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
     }
 
     return PM3_SUCCESS;
-out:
-    FpgaDisableTracing();
-    return PM3_ECARDEXCHANGE;
 }
 /**
 * SRx Initialise.
@@ -1802,11 +1798,9 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
     uint16_t retlen = 0;
-    if (Get14443bAnswerFromTag(r_init, sizeof(r_init), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-        FpgaDisableTracing();
+    if (Get14443bAnswerFromTag(r_init, sizeof(r_init), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
         return PM3_ECARDEXCHANGE;
     }
-    FpgaDisableTracing();
 
     // Randomly generated Chip ID
     if (card) {
@@ -1823,11 +1817,9 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     CodeAndTransmit14443bAsReader(select_srx, sizeof(select_srx), &start_time, &eof_time, true);
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
-    if (Get14443bAnswerFromTag(r_select, sizeof(r_select), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-        goto out;
+    if (Get14443bAnswerFromTag(r_select, sizeof(r_select), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
     }
-
-    FpgaDisableTracing();
 
     if (retlen != 3) {
         return PM3_ELENGTH;
@@ -1850,11 +1842,9 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     CodeAndTransmit14443bAsReader(select_srx, 3, &start_time, &eof_time, true); // Only first three bytes for this one
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
-    if (Get14443bAnswerFromTag(r_papid, sizeof(r_papid), iso14b_timeout, &eof_time, & retlen) != PM3_SUCCESS) {
-        goto out;
+    if (Get14443bAnswerFromTag(r_papid, sizeof(r_papid), s_iso14b_timeout, &eof_time, & retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
     }
-
-    FpgaDisableTracing();
 
     if (retlen != 10) {
         return PM3_ELENGTH;
@@ -1869,9 +1859,6 @@ static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
         memcpy(card->uid, r_papid, 8);
     }
     return PM3_SUCCESS;
-out:
-    FpgaDisableTracing();
-    return PM3_ECARDEXCHANGE;
 }
 
 // Xerox tag connect function: wup, anticoll, attrib, password
@@ -1907,12 +1894,11 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
         for (slot = 0; slot < 4; slot++) {
             start_time = eof_time + HF14_ETU_TO_SSP(30); //(24); // next slot after 24 ETU
 
-            if (Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+            if (Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
                 if (retlen > 0) {
                     Dbprintf("unexpected data %d", retlen);
-                    Dbprintf("crc %s", check_crc(CRC_14443_B, x_atqb, retlen) ? "OK" : "BAD");
                 }
-                goto out;
+                return PM3_ECARDEXCHANGE;
             }
 
             // tx unframed slot-marker
@@ -1930,8 +1916,6 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
         }
 
         if (4 == slot) {
-            FpgaDisableTracing();
-
             if (g_dbglevel >= DBG_DEBUG) {
                 DbpString("no answer to anticollision");
             }
@@ -1939,8 +1923,8 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
         }
     }
 
-    if (Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-        goto out;
+    if (Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
     }
 
     if (g_dbglevel >= DBG_DEBUG) {
@@ -1984,10 +1968,9 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
     CodeAndTransmit14443bAsReader(txbuf + 1, 15, &start_time, &eof_time, true);
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
-    if (Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-        goto out;
+    if (Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
     }
-    FpgaDisableTracing();
 
     if (retlen < 3) {
         return PM3_ELENGTH;
@@ -2018,8 +2001,8 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
     CodeAndTransmit14443bAsReader(txbuf, 17, &start_time, &eof_time, true);
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
-    if (Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-        goto out;
+    if (Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
     }
 
     if (retlen < 4) {
@@ -2035,10 +2018,6 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
     }
 
     return PM3_SUCCESS;
-
-out:
-    FpgaDisableTracing();
-    return PM3_ECARDEXCHANGE;
 }
 
 /* Perform the ISO 14443 B Card Selection procedure
@@ -2066,11 +2045,9 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
     uint16_t retlen = 0;
-    if (Get14443bAnswerFromTag(r_pupid, sizeof(r_pupid), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-        goto out;
+    if (Get14443bAnswerFromTag(r_pupid, sizeof(r_pupid), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
     }
-
-    FpgaDisableTracing();
 
     // ATQB too short?
     if (retlen < 14) {
@@ -2098,10 +2075,9 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
     CodeAndTransmit14443bAsReader(attrib, sizeof(attrib), &start_time, &eof_time, true);
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
-    if (Get14443bAnswerFromTag(r_attrib, sizeof(r_attrib), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-        goto out;
+    if (Get14443bAnswerFromTag(r_attrib, sizeof(r_attrib), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+        return PM3_ECARDEXCHANGE;
     }
-    FpgaDisableTracing();
 
     // Answer to ATTRIB too short?
     if (retlen < 3) {
@@ -2135,12 +2111,8 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
         }
     }
     // reset PCB block number
-    iso14b_pcb_blocknum = 0;
+    s_iso14b_pcb_blocknum = 0;
     return PM3_SUCCESS;
-
-out:
-    FpgaDisableTracing();
-    return PM3_ECARDEXCHANGE;
 }
 
 // Set up ISO 14443 Type B communication (similar to iso14443a_setup)
@@ -2194,7 +2166,6 @@ void iso14443b_setup(void) {
 //-----------------------------------------------------------------------------
 static int read_14b_srx_block(uint8_t blocknr, uint8_t *block) {
 
-// iceman:  todo add static CRC
     uint8_t cmd[] = {ISO14443B_READ_BLK, blocknr, 0x00, 0x00};
     AddCrc14B(cmd, 2);
 
@@ -2206,33 +2177,21 @@ static int read_14b_srx_block(uint8_t blocknr, uint8_t *block) {
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
     uint16_t retlen = 0;
-    if (Get14443bAnswerFromTag(r_block, sizeof(r_block), iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-        FpgaDisableTracing();
+    if (Get14443bAnswerFromTag(r_block, sizeof(r_block), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
         return PM3_ECARDEXCHANGE;
     }
-    FpgaDisableTracing();
 
     // Check if we got an answer from the tag
     if (retlen != 6) {
-        Dbprintf("expected 6 bytes from tag, got %u", retlen);
         return PM3_EWRONGANSWER;
     }
     // The check the CRC of the answer
     if (check_crc(CRC_14443_B, r_block, retlen) == false) {
-        DbpString("CRC fail");
         return PM3_ECRC;
     }
 
     if (block) {
         memcpy(block, r_block, ISO14B_BLOCK_SIZE);
-    }
-
-    if (g_dbglevel >= DBG_DEBUG) {
-        Dbprintf("Address=%02x, Contents=%08x, CRC=%04x",
-                 blocknr,
-                 (r_block[3] << 24) + (r_block[2] << 16) + (r_block[1] << 8) + r_block[0],
-                 (r_block[4] << 8) + r_block[5]
-                );
     }
 
     return PM3_SUCCESS;
@@ -2457,7 +2416,7 @@ static void iso14b_set_trigger(bool enable) {
     g_trigger = enable;
 }
 
-void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
+void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
 
     // turn on trigger (LED_A)
     if ((p->flags & ISO14B_REQUEST_TRIGGER) == ISO14B_REQUEST_TRIGGER) {
@@ -2517,46 +2476,42 @@ void SendRawCommand14443B_Ex(iso14b_raw_cmd_t *p) {
 
     if ((p->flags & ISO14B_APDU) == ISO14B_APDU) {
 
-        int responselen = 0;
+        uint16_t responselen = 0;
         uint8_t response_byte = 0;
-        status = iso14443b_apdu(p->raw, p->rawlen, (p->flags & ISO14B_SEND_CHAINING), buf, sizeof(buf), &response_byte, &responselen);
+        bool chaining = ((p->flags & ISO14B_SEND_CHAINING) == ISO14B_SEND_CHAINING);
+        status = iso14443b_apdu(p->raw, p->rawlen, chaining, buf, sizeof(buf), &response_byte, &responselen);
 
         if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             reply_ng(CMD_HF_ISO14443B_COMMAND, PM3_ETEAROFF, NULL, 0);
         } else {
-            responselen = MIN(responselen, PM3_CMD_DATA_SIZE);
-
-            iso14b_raw_apdu_response_t *payload = (iso14b_raw_apdu_response_t *)BigBuf_calloc(sizeof(iso14b_raw_apdu_response_t) + responselen);
+            uint8_t packet[responselen + 1 + 2];
+            iso14b_raw_apdu_response_t *payload = (iso14b_raw_apdu_response_t *)packet;
             payload->response_byte = response_byte;
             payload->datalen = responselen;
             memcpy(payload->data, buf, payload->datalen);
-
-            reply_ng(CMD_HF_ISO14443B_COMMAND, status, (uint8_t *)payload, sizeof(iso14b_raw_apdu_response_t) + responselen);
-            BigBuf_free_keep_EM();
+            reply_ng(CMD_HF_ISO14443B_COMMAND, status, packet, sizeof(packet));
         }
     }
 
     if ((p->flags & ISO14B_RAW) == ISO14B_RAW) {
 
-        uint8_t *raw = BigBuf_calloc(p->rawlen + 2);
-        memcpy(raw, p->raw, p->rawlen);
-        if (
-            ((p->flags & ISO14B_APPEND_CRC) == ISO14B_APPEND_CRC) && (p->rawlen)) {
-            AddCrc14B(raw, p->rawlen);
+        if (((p->flags & ISO14B_APPEND_CRC) == ISO14B_APPEND_CRC) && (p->rawlen)) {
+            AddCrc14B(p->raw, p->rawlen);
             p->rawlen += 2;
         }
 
         uint32_t start_time = 0;
         uint32_t eof_time = 0;
-        CodeAndTransmit14443bAsReader(raw, p->rawlen, &start_time, &eof_time, true);
+        CodeAndTransmit14443bAsReader(p->raw, p->rawlen, &start_time, &eof_time, true);
 
-        FpgaDisableTracing();
         if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
             reply_ng(CMD_HF_ISO14443B_COMMAND, PM3_ETEAROFF, NULL, 0);
         } else {
+
             eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
+
             uint16_t retlen = 0;
-            status = Get14443bAnswerFromTag(buf, sizeof(buf), iso14b_timeout, &eof_time, &retlen);
+            status = Get14443bAnswerFromTag(buf, sizeof(buf), s_iso14b_timeout, &eof_time, &retlen);
             if (status == PM3_SUCCESS) {
                 sendlen = MIN(retlen, PM3_CMD_DATA_SIZE);
                 reply_ng(CMD_HF_ISO14443B_COMMAND, status, Demod.output, sendlen);

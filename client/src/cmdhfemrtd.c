@@ -986,7 +986,8 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     // Select EF_COM
     if (emrtd_select_file_by_ef(dg_table[EF_COM].fileid) == false) {
         *BAC = true;
-        PrintAndLogEx(INFO, "Authentication is enforced. Will attempt external authentication.");
+        PrintAndLogEx(INFO, "Authentication is enforced");
+        PrintAndLogEx(INFO, "Switching to external authentication...");
     } else {
         *BAC = false;
         // Select EF_DG1
@@ -996,7 +997,8 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
         uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
         if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false) == false) {
             *BAC = true;
-            PrintAndLogEx(INFO, "Authentication is enforced. Will attempt external authentication.");
+            PrintAndLogEx(INFO, "Authentication is enforced");
+            PrintAndLogEx(INFO, "Switching to external authentication...");
         } else {
             *BAC = false;
         }
@@ -1007,7 +1009,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
         // If BAC isn't available, exit out and warn user.
         if (BAC_available == false) {
             PrintAndLogEx(ERR, "This eMRTD enforces authentication, but you didn't supply MRZ data. Cannot proceed.");
-            PrintAndLogEx(HINT, "Check out hf emrtd info/dump --help, supply data with -n -d and -e.");
+            PrintAndLogEx(HINT, "Check out `hf emrtd info/dump --h`, supply data with `-n` `-d` and `-e`");
             return false;
         }
 

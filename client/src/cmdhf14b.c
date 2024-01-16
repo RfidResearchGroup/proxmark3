@@ -295,226 +295,6 @@ static bool wait_cmd_14b(bool verbose, bool is_select, uint32_t timeout) {
     return true;
 }
 
-static int CmdHF14BList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf 14b", "14b -c");
-}
-
-static int CmdHF14BSim(const char *Cmd) {
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf 14b sim",
-                  "Simulate a ISO/IEC 14443 type B tag with 4 byte UID / PUPI",
-                  "hf 14b sim -u 11AA33BB"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str1("u", "uid", "hex", "4byte UID/PUPI"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-
-    uint8_t pupi[4];
-    int n = 0;
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), pupi, sizeof(pupi), &n);
-    CLIParserFree(ctx);
-
-    if (res) {
-        PrintAndLogEx(FAILED, "failed to read pupi");
-        return PM3_EINVARG;
-    }
-
-    PrintAndLogEx(INFO, "Simulate with PUPI : " _GREEN_("%s"), sprint_hex_inrow(pupi, sizeof(pupi)));
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443B_SIMULATE, pupi, sizeof(pupi));
-    return PM3_SUCCESS;
-}
-
-static int CmdHF14BSniff(const char *Cmd) {
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf 14b sniff",
-                  "Sniff the communication reader and tag",
-                  "hf 14b sniff"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443B_SNIFF, NULL, 0);
-
-    WaitForResponse(CMD_HF_ISO14443B_SNIFF, &resp);
-
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14b list") "` to view captured tracelog");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
-    return PM3_SUCCESS;
-}
-
-static int CmdHF14BCmdRaw(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf 14b raw",
-                  "Sends raw bytes to card",
-                  "hf 14b raw -cks      --data 0200a40400    -> standard select, apdu 0200a4000 (7816)\n"
-                  "hf 14b raw -ck --sr  --data 0200a40400    -> SRx select\n"
-                  "hf 14b raw -ck --cts --data 0200a40400    -> C-ticket select\n"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_lit0("k", "keep", "leave the signal field ON after receive response"),
-        arg_lit0("s", "std", "activate field, use ISO14B select"),
-        arg_lit0(NULL, "sr", "activate field, use SRx ST select"),
-        arg_lit0(NULL, "cts", "activate field, use ASK C-ticket select"),
-        arg_lit0(NULL, "xrx", "activate field, use Fuji/Xerox select"),
-        arg_lit0("c", "crc", "calculate and append CRC"),
-        arg_lit0("r", NULL, "do not read response from card"),
-        arg_int0("t", "timeout", "<dec>", "timeout in ms"),
-        arg_lit0("v", "verbose", "verbose output"),
-        arg_str0("d", "data", "<hex>", "data, bytes to send"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-
-    bool keep_field_on = arg_get_lit(ctx, 1);
-    bool select_std = arg_get_lit(ctx, 2);
-    bool select_sr = arg_get_lit(ctx, 3);
-    bool select_cts = arg_get_lit(ctx, 4);
-    bool select_xrx = arg_get_lit(ctx, 5);
-    bool add_crc = arg_get_lit(ctx, 6);
-    bool read_reply = (arg_get_lit(ctx, 7) == false);
-    int user_timeout = arg_get_int_def(ctx, 8, -1);
-    bool verbose = arg_get_lit(ctx, 9);
-
-    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
-    int datalen = 0;
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 10), data, sizeof(data), &datalen);
-    if (res && verbose) {
-        PrintAndLogEx(INFO, "called with no raw bytes");
-    }
-    CLIParserFree(ctx);
-
-    // FLAGS for device side
-    uint32_t flags = ISO14B_CONNECT;
-    if (add_crc) {
-        flags |= ISO14B_APPEND_CRC;
-    }
-
-    if (select_std) {
-        flags |= (ISO14B_SELECT_STD | ISO14B_CLEARTRACE);
-        if (verbose) {
-            PrintAndLogEx(INFO, "using ISO14443-B select");
-        }
-    } else if (select_sr) {
-        flags |= (ISO14B_SELECT_SR | ISO14B_CLEARTRACE);
-        if (verbose) {
-            PrintAndLogEx(INFO, "using ST/SRx select");
-        }
-    } else if (select_cts) {
-        flags |= (ISO14B_SELECT_CTS | ISO14B_CLEARTRACE);
-        if (verbose) {
-            PrintAndLogEx(INFO, "using ASK/C-ticket select");
-        }
-    } else if (select_xrx) {
-        flags |= (ISO14B_SELECT_XRX | ISO14B_CLEARTRACE);
-        if (verbose) {
-            PrintAndLogEx(INFO, "using Fuji/Xerox select");
-        }
-    }
-
-    uint32_t time_wait = 0;
-    if (user_timeout > 0) {
-
-        flags |= ISO14B_SET_TIMEOUT;
-
-        if (user_timeout > MAX_14B_TIMEOUT_MS) {
-            user_timeout = MAX_14B_TIMEOUT_MS;
-            PrintAndLogEx(INFO, "set timeout to 4.9 seconds. The max we can wait for response");
-        }
-
-        // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
-        time_wait = (uint32_t)((13560 / 128) * user_timeout);
-        if (verbose)
-            PrintAndLogEx(INFO, " new raw timeout :  %u ETU  ( %u ms )", time_wait, user_timeout);
-    }
-
-    if (keep_field_on == false) {
-        flags |= ISO14B_DISCONNECT;
-    }
-
-    if (datalen > 0) {
-        flags |= ISO14B_RAW;
-    }
-
-    // Max buffer is PM3_CMD_DATA_SIZE
-    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
-
-
-    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + datalen);
-    if (packet == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-
-    packet->flags = flags;
-    packet->timeout = time_wait;
-    packet->rawlen = datalen;
-    memcpy(packet->raw, data, datalen);
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
-    free(packet);
-
-    if (read_reply == false) {
-        clearCommandBuffer();
-        return PM3_SUCCESS;
-    }
-
-    bool success = true;
-
-    // Select, device will send back iso14b_card_select_t, don't print it.
-    if (select_std) {
-        success = wait_cmd_14b(verbose, true, user_timeout);
-        if (verbose && success) {
-            PrintAndLogEx(SUCCESS, "Got response for standard select");
-        }
-    }
-
-    if (select_sr) {
-        success = wait_cmd_14b(verbose, true, user_timeout);
-        if (verbose && success) {
-            PrintAndLogEx(SUCCESS, "Got response for ST/SRx select");
-        }
-    }
-
-    if (select_cts) {
-        success = wait_cmd_14b(verbose, true, user_timeout);
-        if (verbose && success) {
-            PrintAndLogEx(SUCCESS, "Got response for ASK/C-ticket select");
-        }
-    }
-
-    if (select_xrx) {
-        success = wait_cmd_14b(verbose, true, user_timeout);
-        if (verbose && success) {
-            PrintAndLogEx(SUCCESS, "Got response for Fuji/Xerox select");
-        }
-    }
-
-    // get back response from the raw bytes you sent.
-    if (success && datalen > 0) {
-        wait_cmd_14b(true, false, user_timeout);
-    }
-
-    return PM3_SUCCESS;
-}
-
 static bool get_14b_UID(uint8_t *d, iso14b_type_t *found_type) {
 
     // sanity checks
@@ -577,6 +357,30 @@ static bool get_14b_UID(uint8_t *d, iso14b_type_t *found_type) {
 
     PrintAndLogEx(WARNING, "timeout while waiting for reply");
     return false;
+}
+
+/* extract uid from filename
+ * filename must match '^hf-14b-[0-9A-F]{16}'
+ */
+uint8_t *get_uid_from_filename(const char *filename) {
+    static uint8_t uid[8]  ;
+    memset(uid, 0, 8) ;
+    char uidinhex[17] ;
+    if (strlen(filename) < 23 || strncmp(filename, "hf-14b-", 7)) {
+        PrintAndLogEx(ERR, "can't get uid from filename '%s'. Expected format is hf-14b-<uid>...", filename);
+        return uid ;
+    }
+    // extract uid part from filename
+    strncpy(uidinhex, filename + 7, 16) ;
+    uidinhex[16] = '\0' ;
+    int len = hex_to_bytes(uidinhex, uid, 8);
+    if (len == 8)
+        return SwapEndian64(uid, 8, 8);
+    else {
+        PrintAndLogEx(ERR, "get_uid_from_filename failed: hex_to_bytes returned %d", len);
+        memset(uid, 0, 8);
+    }
+    return uid ;
 }
 
 // print full atqb info
@@ -978,6 +782,225 @@ static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid) {
 // 0200a404000cd2760001354b414e4d30310000 (resp 02 6a 82 [4b 4c])
 // 0200a404000ca000000063504b43532d313500 (resp 02 6a 82 [4b 4c])
 // 0200a4040010a000000018300301000000000000000000 (resp 02 6a 82 [4b 4c])
+
+static int CmdHF14BList(const char *Cmd) {
+    return CmdTraceListAlias(Cmd, "hf 14b", "14b -c");
+}
+
+static int CmdHF14BSim(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b sim",
+                  "Simulate a ISO/IEC 14443 type B tag with 4 byte UID / PUPI",
+                  "hf 14b sim -u 11AA33BB"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("u", "uid", "hex", "4byte UID/PUPI"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t pupi[4];
+    int n = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), pupi, sizeof(pupi), &n);
+    CLIParserFree(ctx);
+
+    if (res) {
+        PrintAndLogEx(FAILED, "failed to read pupi");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "Simulate with PUPI : " _GREEN_("%s"), sprint_hex_inrow(pupi, sizeof(pupi)));
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443B_SIMULATE, pupi, sizeof(pupi));
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14BSniff(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b sniff",
+                  "Sniff the communication reader and tag",
+                  "hf 14b sniff"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443B_SNIFF, NULL, 0);
+
+    WaitForResponse(CMD_HF_ISO14443B_SNIFF, &resp);
+
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14b list") "` to view captured tracelog");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14BCmdRaw(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b raw",
+                  "Sends raw bytes to card",
+                  "hf 14b raw -cks      --data 0200a40400    -> standard select, apdu 0200a4000 (7816)\n"
+                  "hf 14b raw -ck --sr  --data 0200a40400    -> SRx select\n"
+                  "hf 14b raw -ck --cts --data 0200a40400    -> C-ticket select\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("k", "keep", "leave the signal field ON after receive response"),
+        arg_lit0("s", "std", "activate field, use ISO14B select"),
+        arg_lit0(NULL, "sr", "activate field, use SRx ST select"),
+        arg_lit0(NULL, "cts", "activate field, use ASK C-ticket select"),
+        arg_lit0(NULL, "xrx", "activate field, use Fuji/Xerox select"),
+        arg_lit0("c", "crc", "calculate and append CRC"),
+        arg_lit0("r", NULL, "do not read response from card"),
+        arg_int0("t", "timeout", "<dec>", "timeout in ms"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_str0("d", "data", "<hex>", "data, bytes to send"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool keep_field_on = arg_get_lit(ctx, 1);
+    bool select_std = arg_get_lit(ctx, 2);
+    bool select_sr = arg_get_lit(ctx, 3);
+    bool select_cts = arg_get_lit(ctx, 4);
+    bool select_xrx = arg_get_lit(ctx, 5);
+    bool add_crc = arg_get_lit(ctx, 6);
+    bool read_reply = (arg_get_lit(ctx, 7) == false);
+    int user_timeout = arg_get_int_def(ctx, 8, -1);
+    bool verbose = arg_get_lit(ctx, 9);
+
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
+    int datalen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 10), data, sizeof(data), &datalen);
+    if (res && verbose) {
+        PrintAndLogEx(INFO, "called with no raw bytes");
+    }
+    CLIParserFree(ctx);
+
+    // FLAGS for device side
+    uint32_t flags = ISO14B_CONNECT;
+    if (add_crc) {
+        flags |= ISO14B_APPEND_CRC;
+    }
+
+    if (select_std) {
+        flags |= (ISO14B_SELECT_STD | ISO14B_CLEARTRACE);
+        if (verbose) {
+            PrintAndLogEx(INFO, "using ISO14443-B select");
+        }
+    } else if (select_sr) {
+        flags |= (ISO14B_SELECT_SR | ISO14B_CLEARTRACE);
+        if (verbose) {
+            PrintAndLogEx(INFO, "using ST/SRx select");
+        }
+    } else if (select_cts) {
+        flags |= (ISO14B_SELECT_CTS | ISO14B_CLEARTRACE);
+        if (verbose) {
+            PrintAndLogEx(INFO, "using ASK/C-ticket select");
+        }
+    } else if (select_xrx) {
+        flags |= (ISO14B_SELECT_XRX | ISO14B_CLEARTRACE);
+        if (verbose) {
+            PrintAndLogEx(INFO, "using Fuji/Xerox select");
+        }
+    }
+
+    uint32_t time_wait = 0;
+    if (user_timeout > 0) {
+
+        flags |= ISO14B_SET_TIMEOUT;
+
+        if (user_timeout > MAX_14B_TIMEOUT_MS) {
+            user_timeout = MAX_14B_TIMEOUT_MS;
+            PrintAndLogEx(INFO, "set timeout to 4.9 seconds. The max we can wait for response");
+        }
+
+        // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+        time_wait = (uint32_t)((13560 / 128) * user_timeout);
+        if (verbose)
+            PrintAndLogEx(INFO, " new raw timeout :  %u ETU  ( %u ms )", time_wait, user_timeout);
+    }
+
+    if (keep_field_on == false) {
+        flags |= ISO14B_DISCONNECT;
+    }
+
+    if (datalen > 0) {
+        flags |= ISO14B_RAW;
+    }
+
+    // Max buffer is PM3_CMD_DATA_SIZE
+    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
+
+    iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + datalen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    packet->flags = flags;
+    packet->timeout = time_wait;
+    packet->rawlen = datalen;
+    memcpy(packet->raw, data, datalen);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
+    free(packet);
+
+    if (read_reply == false) {
+        clearCommandBuffer();
+        return PM3_SUCCESS;
+    }
+
+    bool success = true;
+
+    // Select, device will send back iso14b_card_select_t, don't print it.
+    if (select_std) {
+        success = wait_cmd_14b(verbose, true, user_timeout);
+        if (verbose && success) {
+            PrintAndLogEx(SUCCESS, "Got response for standard select");
+        }
+    }
+
+    if (select_sr) {
+        success = wait_cmd_14b(verbose, true, user_timeout);
+        if (verbose && success) {
+            PrintAndLogEx(SUCCESS, "Got response for ST/SRx select");
+        }
+    }
+
+    if (select_cts) {
+        success = wait_cmd_14b(verbose, true, user_timeout);
+        if (verbose && success) {
+            PrintAndLogEx(SUCCESS, "Got response for ASK/C-ticket select");
+        }
+    }
+
+    if (select_xrx) {
+        success = wait_cmd_14b(verbose, true, user_timeout);
+        if (verbose && success) {
+            PrintAndLogEx(SUCCESS, "Got response for Fuji/Xerox select");
+        }
+    }
+
+    // get back response from the raw bytes you sent.
+    if (success && datalen > 0) {
+        wait_cmd_14b(true, false, user_timeout);
+    }
+
+    return PM3_SUCCESS;
+}
 
 // 14b get and print Full Info (as much as we know)
 static bool HF14B_Std_Info(bool verbose, bool do_aid_search) {
@@ -1419,13 +1442,14 @@ static int CmdHF14BWriteSri(const char *Cmd) {
      */
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf 14b sriwrite",
+    CLIParserInit(&ctx, "hf 14b wrbl",
                   "Write data to a SRI512 or SRIX4K block\n"
-                  "If writing to a block out-of-range,  use --force to override checks",
-                  "hf 14b sriwrite --4k -b 100 -d 11223344\n"
-                  "hf 14b sriwrite --4k --sb -d 11223344    --> special block write\n"
-                  "hf 14b sriwrite --512 -b 15 -d 11223344\n"
-                  "hf 14b sriwrite --512 --sb -d 11223344    --> special block write\n"
+                  "If writing to a block out-of-range,  use `--force` to override checks\n"
+                  "Special block at end denots OTP and lock bits among others",
+                  "hf 14b wrbl --4k -b 100 -d 11223344\n"
+                  "hf 14b wrbl --4k --sb -d 11223344    --> special block write\n"
+                  "hf 14b wrbl --512 -b 15 -d 11223344\n"
+                  "hf 14b wrbl --512 --sb -d 11223344    --> special block write\n"
                  );
 
     void *argtable[] = {
@@ -1713,16 +1737,38 @@ static uint32_t srix4kEncode(uint32_t value) {
     uint8_t block = (value & 0xFF);
     uint8_t i = 0;
     uint8_t valuebytes[] = {0, 0, 0};
+    Uint3byteToMemBe(valuebytes, value >> 8);
 
-    num_to_bytes(value, 3, valuebytes);
+    uint32_t value_x = (value >> 8);
+    PrintAndLogEx(INFO, "value...... %08x  %06x", value, value_x);
+    PrintAndLogEx(INFO, "3b value... %s", sprint_hex_inrow(valuebytes, sizeof(valuebytes)));
+    PrintAndLogEx(INFO, "block no... %02x", block);
 
     // Scrambled part
     // Crumb swapping of value.
-    uint8_t temp[] = {0, 0};
-    temp[0] = (CRUMB(value, 22) << 4 | CRUMB(value, 14) << 2 | CRUMB(value, 6)) << 4;
-    temp[0] |= CRUMB(value, 20) << 4 | CRUMB(value, 12) << 2 | CRUMB(value, 4);
-    temp[1] = (CRUMB(value, 18) << 4 | CRUMB(value, 10) << 2 | CRUMB(value, 2)) << 4;
-    temp[1] |= CRUMB(value, 16) << 4 | CRUMB(value, 8) << 2 | CRUMB(value, 0);
+    uint32_t foo = 0;
+    foo |= CRUMB(value_x, 22) << 28;
+    foo |= CRUMB(value_x, 14) << 26;
+    foo |= CRUMB(value_x, 6) << 24;
+
+    foo |= CRUMB(value_x, 20) << 20;
+    foo |= CRUMB(value_x, 12) << 18;
+    foo |= CRUMB(value_x, 4) << 16;
+
+    foo |= CRUMB(value_x, 18) << 12;
+    foo |= CRUMB(value_x, 10) << 10;
+    foo |= CRUMB(value_x, 2) << 8;
+
+    foo |= CRUMB(value_x, 16) << 4;
+    foo |= CRUMB(value_x, 8) << 2;
+    foo |= CRUMB(value_x, 0) << 0;
+
+    PrintAndLogEx(INFO, "hex........ %02x %02x %02x", CRUMB(value_x, 22), CRUMB(value_x, 14), CRUMB(value_x, 6));
+    PrintAndLogEx(INFO, "hex........ %02x %02x %02x", CRUMB(value_x, 20), CRUMB(value_x, 12), CRUMB(value_x, 4));
+    PrintAndLogEx(INFO, "hex........ %02x %02x %02x", CRUMB(value_x, 18), CRUMB(value_x, 10), CRUMB(value_x, 2));
+    PrintAndLogEx(INFO, "hex........ %02x %02x %02x", CRUMB(value_x, 16), CRUMB(value_x, 8), CRUMB(value_x, 0));
+
+    PrintAndLogEx(INFO, "hex........ %08x", foo);
 
     // chksum part
     uint32_t chksum = 0xFF - block;
@@ -1740,9 +1786,11 @@ static uint32_t srix4kEncode(uint32_t value) {
         base4[i--] = (chksum % 4 << 2);
         chksum /= 4;
     }
+    PrintAndLogEx(INFO, "%s", sprint_hex_inrow(base4, sizeof(base4)));
 
     // merge scambled and chksum parts
-    uint32_t encvalue =
+    uint32_t encvalue = 0;
+
         (NIBBLE_LOW(base4[0]) << 28) |
         (NIBBLE_HIGH(temp[0])  << 24) |
 
@@ -1758,7 +1806,14 @@ static uint32_t srix4kEncode(uint32_t value) {
     PrintAndLogEx(NORMAL, "ICE encoded | %08X -> %08X", value, encvalue);
     return encvalue;
 }
+*/
 
+static uint32_t srix4k_decode_counter(uint32_t num) {
+    uint32_t value = ~num;
+    ++value;
+    return value;
+}
+/*
 static uint32_t srix4kDecode(uint32_t value) {
     switch (value) {
         case 0xC04F42C5:
@@ -1770,19 +1825,16 @@ static uint32_t srix4kDecode(uint32_t value) {
     }
     return 0;
 }
+*/
 
-static uint32_t srix4kDecodeCounter(uint32_t num) {
-    uint32_t value = ~num;
-    ++value;
-    return value;
-}
-
-static uint32_t srix4kGetMagicbytes(uint64_t uid, uint32_t block6, uint32_t block18, uint32_t block19) {
+static uint32_t srix4k_get_magicbytes(uint64_t uid, uint32_t block6, uint32_t block18, uint32_t block19) {
 #define MASK 0xFFFFFFFF;
     uint32_t uid32 = uid & MASK;
-    uint32_t counter = srix4kDecodeCounter(block6);
-    uint32_t decodedBlock18 = srix4kDecode(block18);
-    uint32_t decodedBlock19 = srix4kDecode(block19);
+    uint32_t counter = srix4k_decode_counter(block6);
+    uint32_t decodedBlock18 = 0;
+    uint32_t decodedBlock19 = 0;
+//    uint32_t decodedBlock18 = srix4kDecode(block18);
+//    uint32_t decodedBlock19 = srix4kDecode(block19);
     uint32_t doubleBlock = (decodedBlock18 << 16 | decodedBlock19) + 1;
 
     uint32_t result = (uid32 * doubleBlock * counter) & MASK;
@@ -1790,8 +1842,19 @@ static uint32_t srix4kGetMagicbytes(uint64_t uid, uint32_t block6, uint32_t bloc
     return result;
 }
 
-static int srix4kValid(const char *Cmd) {
-    (void)Cmd; // Cmd is not used so far
+static int CmdSRIX4kValid(const char *Cmd) {
+   CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b valid",
+                  "SRIX checksum test",
+                  "hf 14b valid\n"
+            );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIParserFree(ctx);
 
     uint64_t uid = 0xD00202501A4532F9;
     uint32_t block6 = 0xFFFFFFFF;
@@ -1799,23 +1862,22 @@ static int srix4kValid(const char *Cmd) {
     uint32_t block19 = 0xC1484807;
     uint32_t block21 = 0xD1BCABA4;
 
-    uint32_t test_b18 = 0x00313918;
-    uint32_t test_b18_enc = srix4kEncode(test_b18);
-    //uint32_t test_b18_dec = srix4kDecode(test_b18_enc);
+    uint32_t test_b18 = 0x001A2001; // 0x00313918;
+    uint32_t test_b18_enc = 0;
+    // uint32_t test_b18_enc = srix4kEncode(test_b18);
+    // uint32_t test_b18_dec = srix4kDecode(test_b18_enc);
     PrintAndLogEx(SUCCESS, "ENCODE & CHECKSUM |  %08X -> %08X (%s)", test_b18, test_b18_enc, "");
 
-    uint32_t magic = srix4kGetMagicbytes(uid, block6, block18, block19);
+    uint32_t magic = srix4k_get_magicbytes(uid, block6, block18, block19);
     PrintAndLogEx(SUCCESS, "BLOCK 21 |  %08X -> %08X (no XOR)", block21, magic ^ block21);
-    return 0;
+    return PM3_SUCCESS;
 }
-*/
 
 int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
     if (card) {
         memset(card, 0, sizeof(iso14b_card_select_t));
     }
 
-    SetAPDULogging(true);
     switch_off_field_14b();
 
     iso14b_raw_cmd_t packet = {
@@ -1891,7 +1953,7 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen,
         PrintAndLogEx(FAILED, "APDU: failed to allocate memory");
         return PM3_EMALLOC;
     }
-    packet->flags = (ISO14B_CONNECT | ISO14B_APDU);
+    packet->flags = (ISO14B_APDU);
     packet->timeout = 0;
     packet->rawlen = 0;
 
@@ -1982,6 +2044,7 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field,
     if (apdu_in_framing_enable &&
             ((apdu_frame_length && (datainlen > apdu_frame_length - 3)) || (datainlen > PM3_CMD_DATA_SIZE - 3))) {
 
+        PrintAndLogEx(INFO, "ONE");
         int clen = 0;
         bool v_activate_field = activate_field;
 
@@ -2020,7 +2083,6 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field,
         } while (clen < datainlen);
 
     } else {
-
         res = handle_14b_apdu(false, datain, datainlen, activate_field, dataout, maxdataoutlen, dataoutlen, &chaining, user_timeout);
         if (res != PM3_SUCCESS) {
             if (leave_signal_on == false) {
@@ -2050,18 +2112,6 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field,
 
 // ISO14443-4. 7. Half-duplex block transmission protocol
 static int CmdHF14BAPDU(const char *Cmd) {
-    uint8_t data[PM3_CMD_DATA_SIZE];
-    int datalen = 0;
-    uint8_t header[PM3_CMD_DATA_SIZE];
-    int headerlen = 0;
-    bool activate_field = false;
-    bool leave_signal_on = false;
-    bool decode_TLV = false;
-    bool decode_APDU = false;
-    bool make_APDU = false;
-    bool extended_APDU = false;
-    int le = 0;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b apdu",
                   "Sends an ISO 7816-4 APDU via ISO 14443-4 block transmission protocol (T=CL).\n"
@@ -2087,21 +2137,27 @@ static int CmdHF14BAPDU(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    activate_field = arg_get_lit(ctx, 1);
-    leave_signal_on = arg_get_lit(ctx, 2);
-    decode_TLV = arg_get_lit(ctx, 3);
-    decode_APDU = arg_get_lit(ctx, 4);
+    bool activate_field = arg_get_lit(ctx, 1);
+    bool leave_signal_on = arg_get_lit(ctx, 2);
+    bool decode_TLV = arg_get_lit(ctx, 3);
+    bool decode_APDU = arg_get_lit(ctx, 4);
 
+    uint8_t header[PM3_CMD_DATA_SIZE] = {0x00};
+    int headerlen = 0;
     CLIGetHexWithReturn(ctx, 5, header, &headerlen);
-    make_APDU = headerlen > 0;
+
+    bool make_APDU = (headerlen > 0);
     if (make_APDU && headerlen != 4) {
-        PrintAndLogEx(ERR, "header length must be 4 bytes instead of %d", headerlen);
+        PrintAndLogEx(ERR, "header length must be 4 bytes, got " _RED_("%d"), headerlen);
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    extended_APDU = arg_get_lit(ctx, 6);
-    le = arg_get_int_def(ctx, 7, 0);
+    bool extended_APDU = arg_get_lit(ctx, 6);
+    int le = arg_get_int_def(ctx, 7, 0);
+
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
+    int datalen = 0;
 
     if (make_APDU) {
         uint8_t apdudata[PM3_CMD_DATA_SIZE] = {0};
@@ -2145,10 +2201,10 @@ static int CmdHF14BAPDU(const char *Cmd) {
     int user_timeout = arg_get_int_def(ctx, 9, -1);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(NORMAL, ">>>>[%s%s%s] %s",
+    PrintAndLogEx(INFO, ">>>> %s%s%s >>>> " _YELLOW_("%s"),
                   activate_field ? "sel" : "",
-                  leave_signal_on ? " keep" : "",
-                  decode_TLV ? " TLV" : "",
+                  leave_signal_on ? "| keep" : "",
+                  decode_TLV ? "| TLV" : "",
                   sprint_hex(data, datalen)
                  );
 
@@ -2165,8 +2221,12 @@ static int CmdHF14BAPDU(const char *Cmd) {
         return res;
     }
 
-    PrintAndLogEx(NORMAL, "<<<< %s", sprint_hex(data, datalen));
-    PrintAndLogEx(SUCCESS, "APDU response: " _YELLOW_("%02x %02x") " - %s", data[datalen - 2], data[datalen - 1], GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1]));
+    PrintAndLogEx(INFO, "<<<< %s", sprint_hex(data, datalen));
+    PrintAndLogEx(SUCCESS, "APDU response: " _YELLOW_("%02x %02x") " - %s"
+        , data[datalen - 2]
+        , data[datalen - 1]
+        , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
+    );
 
     // TLV decoder
     if (decode_TLV && datalen > 4) {
@@ -2293,30 +2353,6 @@ out:
     return res;
 }
 
-/* extract uid from filename
- * filename must match '^hf-14b-[0-9A-F]{16}'
- */
-uint8_t *get_uid_from_filename(const char *filename) {
-    static uint8_t uid[8]  ;
-    memset(uid, 0, 8) ;
-    char uidinhex[17] ;
-    if (strlen(filename) < 23 || strncmp(filename, "hf-14b-", 7)) {
-        PrintAndLogEx(ERR, "can't get uid from filename '%s'. Expected format is hf-14b-<uid>...", filename);
-        return uid ;
-    }
-    // extract uid part from filename
-    strncpy(uidinhex, filename + 7, 16) ;
-    uidinhex[16] = '\0' ;
-    int len = hex_to_bytes(uidinhex, uid, 8);
-    if (len == 8)
-        return SwapEndian64(uid, 8, 8);
-    else {
-        PrintAndLogEx(ERR, "get_uid_from_filename failed: hex_to_bytes returned %d", len);
-        memset(uid, 0, 8);
-    }
-    return uid ;
-}
-
 static int CmdHF14BView(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -2342,8 +2378,8 @@ static int CmdHF14BView(const char *Cmd) {
 
     // read dump file
     uint8_t *dump = NULL;
-    size_t bytes_read = 0;
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (ST25TB_SR_BLOCK_SIZE * 0xFF));
+    size_t bytes_read = (ST25TB_SR_BLOCK_SIZE * 0x100);
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (ST25TB_SR_BLOCK_SIZE * 0x100));
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -2351,7 +2387,6 @@ static int CmdHF14BView(const char *Cmd) {
     uint16_t block_cnt = bytes_read / ST25TB_SR_BLOCK_SIZE;
 
     if (verbose) {
-        PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
     }
 
@@ -2366,21 +2401,23 @@ static int CmdHF14BView(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",        CmdHelp,          AlwaysAvailable, "This help"},
-    {"apdu",        CmdHF14BAPDU,     IfPm3Iso14443b,  "Send ISO 14443-4 APDU to tag"},
-    {"dump",        CmdHF14BDump,     IfPm3Iso14443b,  "Read all memory pages of an ISO-14443-B tag, save to file"},
-    {"info",        CmdHF14Binfo,     IfPm3Iso14443b,  "Tag information"},
-    {"list",        CmdHF14BList,     AlwaysAvailable, "List ISO-14443-B history"},
-    {"ndefread",    CmdHF14BNdefRead, IfPm3Iso14443b,  "Read NDEF file on tag"},
-    {"raw",         CmdHF14BCmdRaw,   IfPm3Iso14443b,  "Send raw hex data to tag"},
-    {"reader",      CmdHF14BReader,   IfPm3Iso14443b,  "Act as a ISO-14443-B reader to identify a tag"},
+    {"help",      CmdHelp,          AlwaysAvailable, "This help"},
+    {"list",      CmdHF14BList,     AlwaysAvailable, "List ISO-14443-B history"},
+    {"---------", CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("general") " -----------------------"},
+    {"apdu",      CmdHF14BAPDU,     IfPm3Iso14443b,  "Send ISO 14443-4 APDU to tag"},
+    {"dump",      CmdHF14BDump,     IfPm3Iso14443b,  "Read all memory pages of an ISO-14443-B tag, save to file"},
+    {"info",      CmdHF14Binfo,     IfPm3Iso14443b,  "Tag information"},
+    {"ndefread",  CmdHF14BNdefRead, IfPm3Iso14443b,  "Read NDEF file on tag"},
+    {"raw",       CmdHF14BCmdRaw,   IfPm3Iso14443b,  "Send raw hex data to tag"},
+    {"reader",    CmdHF14BReader,   IfPm3Iso14443b,  "Act as a ISO-14443-B reader to identify a tag"},
+    {"view",      CmdHF14BView,     AlwaysAvailable, "Display content from tag dump file"},    
 //    {"restore",     CmdHF14BRestore,     IfPm3Iso14443b,   "Restore from file to all memory pages of an ISO-14443-B tag"},
-    {"sim",         CmdHF14BSim,      IfPm3Iso14443b,  "Fake ISO ISO-14443-B tag"},
-    {"sniff",       CmdHF14BSniff,    IfPm3Iso14443b,  "Eavesdrop ISO-14443-B"},
-    {"rdbl",        CmdHF14BSriRdBl,  IfPm3Iso14443b,  "Read SRI512/SRIX4x block"},
-    {"sriwrite",    CmdHF14BWriteSri, IfPm3Iso14443b,  "Write data to a SRI512 or SRIX4K tag"},
-    {"view",        CmdHF14BView,     AlwaysAvailable, "Display content from tag dump file"},
-// {"valid",     srix4kValid,      AlwaysAvailable, "srix4k checksum test"},
+    {"sim",       CmdHF14BSim,      IfPm3Iso14443b,  "Fake ISO ISO-14443-B tag"},
+    {"sniff",     CmdHF14BSniff,    IfPm3Iso14443b,  "Eavesdrop ISO-14443-B"},
+    {"rdbl",      CmdHF14BSriRdBl,  IfPm3Iso14443b,  "Read SRI512/SRIX4x block"},
+    {"sriwrite",  CmdHF14BWriteSri, IfPm3Iso14443b,  "Write data to a SRI512 or SRIX4K tag"},
+    {"view",      CmdHF14BView,     AlwaysAvailable, "Display content from tag dump file"},
+    {"valid",     CmdSRIX4kValid,   AlwaysAvailable, "SRIX4k checksum test"},
     {NULL, NULL, NULL, NULL}
 };
 
