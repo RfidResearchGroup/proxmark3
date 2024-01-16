@@ -469,53 +469,57 @@ static void xerox_print_footer(void) {
 
 // structure and database for uid -> tagtype lookups
 typedef struct {
-    const char *color;
+    const char *color; // cyan, magenta, gold, silver, clear, white, fluo
     const char *partnumber;
-    const char *region;
-    const char *ms;
+    const char *region; // DMO, WW, NA/ESG (NA - North America, MNA - Metred North America, DMO - Developing Markets, XE - Europe)
+    const char *ms; // sold, metered
+    const char *consumable_type; // toner, drum
 } xerox_part_t;
 
+// Additional data based on model DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)
 // https://gist.github.com/JeroenSteen/4b45886b8d87fa0530af9b0364e6b277
+// Todo: import data as actual JSON-file
 static const xerox_part_t xerox_part_mappings[] = {
-    {"cyan", "006R01532", "DMO", "sold"},
-    {"cyan", "006R01660", "DMO", "sold"},
-    {"cyan", "006R01739", "DMO", "sold"},
-    {"cyan", "006R01524", "WW", "metered"},
-    {"cyan", "006R01528", "NA/ESG", "sold"},
-    {"cyan", "006R01656", "NA/ESG", "sold"},
-    {"cyan", "006R01735", "NA/ESG", "sold"},
+    {"cyan", "006R01532", "DMO", "sold", "toner"},
+    {"cyan", "006R01660", "DMO", "sold", "toner"},
+    {"cyan", "006R01739", "DMO", "sold", "toner"},
+    {"cyan", "006R01524", "WW", "metered", "toner"},
+    {"cyan", "006R01528", "NA/ESG", "sold", "toner"},
+    {"cyan", "006R01656", "NA/ESG", "sold", "toner"},
+    {"cyan", "006R01735", "NA/ESG", "sold", "toner"},
 
-    {"magenta", "006R01531", "DMO", "sold"},
-    {"magenta", "006R01661", "DMO", "sold"},
-    {"magenta", "006R01740", "DMO", "sold"},
-    {"magenta", "006R01523", "WW", "metered"},
-    {"magenta", "006R01527", "NA/ESG", "sold"},
-    {"magenta", "006R01657", "NA/ESG", "sold"},
-    {"magenta", "006R01736", "NA/ESG", "sold"},
+    {"magenta", "006R01531", "DMO", "sold", "toner"},
+    {"magenta", "006R01661", "DMO", "sold", "toner"},
+    {"magenta", "006R01740", "DMO", "sold", "toner"},
+    {"magenta", "006R01523", "WW", "metered", "toner"},
+    {"magenta", "006R01527", "NA/ESG", "sold", "toner"},
+    {"magenta", "006R01657", "NA/ESG", "sold", "toner"},
+    {"magenta", "006R01736", "NA/ESG", "sold", "toner"},
 
-    {"yellow", "006R01530", "DMO", "sold"},
-    {"yellow", "006R01662", "DMO", "sold"},
-    {"yellow", "006R01741", "DMO", "sold"},
-    {"yellow", "006R01522", "WW", "metered"},
-    {"yellow", "006R01526", "NA/ESG", "sold"},
-    {"yellow", "006R01658", "NA/ESG", "sold"},
-    {"yellow", "006R01737", "NA/ESG", "sold"},
+    {"yellow", "006R01530", "DMO", "sold", "toner"},
+    {"yellow", "006R01662", "DMO", "sold", "toner"},
+    {"yellow", "006R01741", "DMO", "sold", "toner"},
+    {"yellow", "006R01522", "WW", "metered", "toner"},
+    {"yellow", "006R01526", "NA/ESG", "sold", "toner"},
+    {"yellow", "006R01658", "NA/ESG", "sold", "toner"},
+    {"yellow", "006R01737", "NA/ESG", "sold", "toner"},
 
-    {"black", "006R01529", "DMO", "sold"},
-    {"black", "006R01659", "DMO", "sold"},
-    {"black", "006R01738", "DMO", "sold"},
-    {"black", "006R01521", "WW", "metered"},
-    {"black", "006R01525", "NA/ESG", "sold"},
-    {"black", "006R01655", "NA/ESG", "sold"},
-    {"black", "006R01734", "NA/ESG", "sold"},
-    {"", "", "", ""} // must be the last entry
+    {"black", "006R01529", "DMO", "sold", "toner"},
+    {"black", "006R01659", "DMO", "sold", "toner"},
+    {"black", "006R01738", "DMO", "sold", "toner"},
+    {"black", "006R01521", "WW", "metered", "toner"},
+    {"black", "006R01525", "NA/ESG", "sold", "toner"},
+    {"black", "006R01655", "NA/ESG", "sold", "toner"},
+    {"black", "006R01734", "NA/ESG", "sold", "toner"},
+    {"", "", "", "", ""} // must be the last entry
 };
 
 // get a product description based on the UID
 // returns description of the best match
 static const xerox_part_t *get_xerox_part_info(const char *pn) {
-    for (int i = 0; i < ARRAYLEN(xerox_part_mappings); ++i) {
-        if (str_startswith(pn, xerox_part_mappings[i].partnumber) == 0) {
+    for (int i = 0; i < ARRAYLEN(xerox_part_mappings); i++) {
+        // Todo: make str_startswith, accept additional "Maximum number of characters to compare"
+        if(strncmp(pn, xerox_part_mappings[i].partnumber, strlen(pn)-3) == 0){
             return &xerox_part_mappings[i];
         }
     }
@@ -962,11 +966,12 @@ static int CmdHFXeroxView(const char *Cmd) {
     PrintAndLogEx(SUCCESS, " PartNo... %s", pn);
     PrintAndLogEx(SUCCESS, " Date..... %02d.%02d.%02d", tmp[8], tmp[9], tmp[10]);
     PrintAndLogEx(SUCCESS, " Serial... %d", (tmp[14] << 16) | (tmp[13] << 8) | tmp[12]);
-    PrintAndLogEx(SUCCESS, " Type..... %s", (tmp[18] <= 4) ? xerox_c_type[tmp[18]] : "Unknown");
+    PrintAndLogEx(SUCCESS, " Color..... %s", (tmp[18] <= 4) ? xerox_c_type[tmp[18]] : "Unknown");
 
     const xerox_part_t *item = get_xerox_part_info(pn);
     if (strlen(item->partnumber) > 0) {
-        PrintAndLogEx(SUCCESS, "Color..... %s", item->color);
+        PrintAndLogEx(INFO, "-------- " _CYAN_("additional data") " ---------");
+        PrintAndLogEx(SUCCESS, "Consumable Type..... %s", item->consumable_type);
         PrintAndLogEx(SUCCESS, "Region.... %s", item->region);
         PrintAndLogEx(SUCCESS, "M/s....... %s", item->ms);
     }
