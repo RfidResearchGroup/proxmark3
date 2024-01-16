@@ -2643,7 +2643,14 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
     if ((p->flags & ISO14B_RAW) == ISO14B_RAW) {
 
         if (((p->flags & ISO14B_APPEND_CRC) == ISO14B_APPEND_CRC) && (p->rawlen)) {
-            AddCrc14B(p->raw, p->rawlen);
+
+            // Picopass uses different CRC algo
+            // it also excludes the first instruction byte
+            if ((p->flags & ISO14B_SELECT_PICOPASS) == ISO14B_SELECT_PICOPASS) {
+                AddCrc15(p->raw + 1, p->rawlen - 1);
+            } else {
+                AddCrc14B(p->raw, p->rawlen);
+            }
             p->rawlen += 2;
         }
 

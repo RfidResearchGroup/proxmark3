@@ -34,6 +34,10 @@
 # define AddCrc14B(data, len) compute_crc(CRC_14443_B, (data), (len), (data)+(len), (data)+(len)+1)
 #endif
 
+#ifndef AddCrc15
+#define AddCrc15(data, len) compute_crc(CRC_ICLASS, (data), (len), (data)+(len), (data)+(len)+1)
+#endif
+
 void iso14443b_setup(void);
 int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *res, uint16_t *responselen);
 
