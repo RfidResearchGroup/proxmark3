@@ -255,8 +255,14 @@ static bool wait_cmd_14b(bool verbose, bool is_select, uint32_t timeout) {
     }
 
     if (is_select) {
+        if (resp.status == PM3_ECARDEXCHANGE) {
+            PrintAndLogEx(INFO, "no response from tag");
+            return false;
+        }
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "failed status value... %d",  resp.status);
+            if (verbose) {
+                PrintAndLogEx(INFO, "failed status value... %d",  resp.status);
+            }
             return false;
         }
     }
@@ -659,6 +665,7 @@ static uint8_t get_st_cardsize(const uint8_t *uid) {
 }
 
 /*
+
 static uint8_t get_st25_cardsize(const uint8_t *uid) {
     uint8_t chipid = get_st25_chipid(uid);
     switch (chipid) {
@@ -845,7 +852,7 @@ static int CmdHF14BSniff(const char *Cmd) {
 static int CmdHF14BCmdRaw(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b raw",
-                  "Sends raw bytes to card",
+                  "Sends raw bytes to card. Activates field by default",
                   "hf 14b raw -cks      --data 0200a40400    -> standard select, apdu 0200a4000 (7816)\n"
                   "hf 14b raw -ck --sr  --data 0200a40400    -> SRx select\n"
                   "hf 14b raw -ck --cts --data 0200a40400    -> C-ticket select\n"
@@ -853,61 +860,71 @@ static int CmdHF14BCmdRaw(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("k", "keep", "leave the signal field ON after receive response"),
-        arg_lit0("s", "std", "activate field, use ISO14B select"),
-        arg_lit0(NULL, "sr", "activate field, use SRx ST select"),
-        arg_lit0(NULL, "cts", "activate field, use ASK C-ticket select"),
-        arg_lit0(NULL, "xrx", "activate field, use Fuji/Xerox select"),
+        arg_lit0("a",  NULL, "active signal field ON without select"),
         arg_lit0("c", "crc", "calculate and append CRC"),
+        arg_lit0("k", "keep", "leave the signal field ON after receive response"),
+
+        arg_str0("d", "data", "<hex>", "data, bytes to send"),
         arg_lit0("r", NULL, "do not read response from card"),
         arg_int0("t", "timeout", "<dec>", "timeout in ms"),
+
+        arg_lit0("s", "std", "use ISO14B select"),
+        arg_lit0(NULL, "sr", "use SRx ST select"),
+        arg_lit0(NULL, "cts", "use ASK C-ticket select"),
+        arg_lit0(NULL, "xrx", "use Fuji/Xerox select"),
+
         arg_lit0("v", "verbose", "verbose output"),
-        arg_str0("d", "data", "<hex>", "data, bytes to send"),
+
+
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool keep_field_on = arg_get_lit(ctx, 1);
-    bool select_std = arg_get_lit(ctx, 2);
-    bool select_sr = arg_get_lit(ctx, 3);
-    bool select_cts = arg_get_lit(ctx, 4);
-    bool select_xrx = arg_get_lit(ctx, 5);
-    bool add_crc = arg_get_lit(ctx, 6);
-    bool read_reply = (arg_get_lit(ctx, 7) == false);
-    int user_timeout = arg_get_int_def(ctx, 8, -1);
-    bool verbose = arg_get_lit(ctx, 9);
+    bool activate_field = arg_get_lit(ctx, 1);
+    bool add_crc = arg_get_lit(ctx, 2);
+    bool keep_field_on = arg_get_lit(ctx, 3);
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
     int datalen = 0;
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 10), data, sizeof(data), &datalen);
-    if (res && verbose) {
-        PrintAndLogEx(INFO, "called with no raw bytes");
-    }
+    CLIParamHexToBuf(arg_get_str(ctx, 4), data, sizeof(data), &datalen);
+
+    bool read_reply = (arg_get_lit(ctx, 5) == false);
+    int user_timeout = arg_get_int_def(ctx, 6, -1);
+    bool select_std = arg_get_lit(ctx, 7);
+    bool select_sr = arg_get_lit(ctx, 8);
+    bool select_cts = arg_get_lit(ctx, 9);
+    bool select_xrx = arg_get_lit(ctx, 10);
+    bool verbose = arg_get_lit(ctx, 11);
     CLIParserFree(ctx);
 
     // FLAGS for device side
-    uint32_t flags = ISO14B_CONNECT;
+    uint32_t flags = 0;
+
+    if (activate_field) {
+        flags |= ISO14B_CONNECT;
+    }
+
     if (add_crc) {
         flags |= ISO14B_APPEND_CRC;
     }
 
     if (select_std) {
-        flags |= (ISO14B_SELECT_STD | ISO14B_CLEARTRACE);
+        flags |= (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_CLEARTRACE);
         if (verbose) {
             PrintAndLogEx(INFO, "using ISO14443-B select");
         }
     } else if (select_sr) {
-        flags |= (ISO14B_SELECT_SR | ISO14B_CLEARTRACE);
+        flags |= (ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_CLEARTRACE);
         if (verbose) {
             PrintAndLogEx(INFO, "using ST/SRx select");
         }
     } else if (select_cts) {
-        flags |= (ISO14B_SELECT_CTS | ISO14B_CLEARTRACE);
+        flags |= (ISO14B_CONNECT | ISO14B_SELECT_CTS | ISO14B_CLEARTRACE);
         if (verbose) {
             PrintAndLogEx(INFO, "using ASK/C-ticket select");
         }
     } else if (select_xrx) {
-        flags |= (ISO14B_SELECT_XRX | ISO14B_CLEARTRACE);
+        flags |= (ISO14B_CONNECT | ISO14B_SELECT_XRX | ISO14B_CLEARTRACE);
         if (verbose) {
             PrintAndLogEx(INFO, "using Fuji/Xerox select");
         }

@@ -1919,35 +1919,35 @@ static int CmdHF15Raw(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 raw",
                   "Sends raw bytes over ISO-15693 to card",
-                  "hf 15 raw -sc -d 260100    --> add crc\n"
-                  "hf 15 raw -skrc -d 260100  --> add crc, keep field on, skip response"
+                  "hf 15 raw -ac -d 260100    --> activate, add crc\n"
+                  "hf 15 raw -akrc -d 260100  --> activate, add crc, keep field on, skip response"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("2", NULL, "use slower '1 out of 256' mode"),
+        arg_lit0("a", NULL, "activate field"),
         arg_lit0("c", "crc", "calculate and append CRC"),
         arg_lit0("k", NULL, "keep signal field ON after receive"),
+        arg_lit0("2", NULL, "use slower '1 out of 256' mode"),
         arg_lit0("r", NULL, "do not read response"),
         arg_str1("d", "data", "<hex>", "raw bytes to send"),
         arg_lit0("w", "wait", "wait longer for response. For writes etc."),
-        arg_lit0("a", NULL, "activate field"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool fast = (arg_get_lit(ctx, 1) == false);
+    bool activate = arg_get_lit(ctx, 1);
     bool crc = arg_get_lit(ctx, 2);
     bool keep_field_on = arg_get_lit(ctx, 3);
-    bool read_respone = (arg_get_lit(ctx, 4) == false);
+    bool fast = (arg_get_lit(ctx, 4) == false);
+    bool read_respone = (arg_get_lit(ctx, 5) == false);
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE] = { 0x00 };
-    CLIGetHexWithReturn(ctx, 5, data, &datalen);
+    CLIGetHexWithReturn(ctx, 6, data, &datalen);
 
-    bool wait = arg_get_lit(ctx, 6);
-    bool activate = arg_get_lit(ctx, 7);
+    bool wait = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;

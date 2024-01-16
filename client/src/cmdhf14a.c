@@ -1391,35 +1391,35 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("a",  NULL, "active signal field ON without select"),
-        arg_int0("b",  NULL, "<dec>", "number of bits to send. Useful for send partial byte"),
-        arg_lit0("c",  NULL, "calculate and append CRC"),
-        arg_lit0("k",  NULL, "keep signal field ON after receive"),
-        arg_lit0("3",  NULL, "ISO14443-3 select only (skip RATS)"),
-        arg_lit0("r",  NULL, "do not read response"),
-        arg_lit0("s",  NULL, "active signal field ON with select"),
-        arg_int0("t",  "timeout", "<ms>", "timeout in milliseconds"),
-        arg_lit0("v",  "verbose", "Verbose output"),
-        arg_lit0(NULL, "topaz", "use Topaz protocol to send command"),
-        arg_lit0(NULL, "ecp", "use enhanced contactless polling"),
-        arg_lit0(NULL, "mag", "use Apple magsafe polling"),
-        arg_strx1(NULL, NULL, "<hex>", "raw bytes to send"),
+        arg_lit0("a",  NULL,              "Active signal field ON without select"),
+        arg_lit0("c",  NULL,              "Calculate and append CRC"),
+        arg_lit0("k",  NULL,              "Keep signal field ON after receive"),
+        arg_lit0("3",  NULL,              "ISO14443-3 select only (skip RATS)"),
+        arg_lit0("r",  NULL,              "Do not read response"),
+        arg_lit0("s",  NULL,              "Active signal field ON with select"),
+        arg_int0("t",  "timeout", "<ms>", "Timeout in milliseconds"),
+        arg_int0("b",  NULL,      "<dec>","Number of bits to send. Useful for send partial byte"),
+        arg_lit0("v",  "verbose",         "Verbose output"),
+        arg_lit0(NULL, "ecp",             "Use enhanced contactless polling"),
+        arg_lit0(NULL, "mag",             "Use Apple magsafe polling"),
+        arg_lit0(NULL, "topaz",           "Use Topaz protocol to send command"),
+        arg_strx1(NULL, NULL,     "<hex>","Raw bytes to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     bool active = arg_get_lit(ctx, 1);
-    uint16_t numbits = (uint16_t)arg_get_int_def(ctx, 2, 0);
-    bool crc = arg_get_lit(ctx, 3);
-    bool keep_field_on = arg_get_lit(ctx, 4);
-    bool no_rats =  arg_get_lit(ctx, 5);
-    bool reply = (arg_get_lit(ctx, 6) == false);
-    bool active_select = arg_get_lit(ctx, 7);
-    uint32_t timeout = (uint32_t)arg_get_int_def(ctx, 8, 0);
+    bool crc = arg_get_lit(ctx, 2);
+    bool keep_field_on = arg_get_lit(ctx, 3);
+    bool no_rats =  arg_get_lit(ctx, 4);
+    bool reply = (arg_get_lit(ctx, 5) == false);
+    bool active_select = arg_get_lit(ctx, 6);
+    uint32_t timeout = (uint32_t)arg_get_int_def(ctx, 7, 0);
+    uint16_t numbits = (uint16_t)arg_get_int_def(ctx, 8, 0);
     bool verbose = arg_get_lit(ctx, 9);
-    bool topazmode = arg_get_lit(ctx, 10);
-    bool use_ecp = arg_get_lit(ctx, 11);
-    bool use_magsafe = arg_get_lit(ctx, 12);
+    bool use_ecp = arg_get_lit(ctx, 10);
+    bool use_magsafe = arg_get_lit(ctx, 11);
+    bool topazmode = arg_get_lit(ctx, 12);
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE_MIX] = {0};
