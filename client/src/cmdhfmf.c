@@ -819,7 +819,6 @@ static int mfLoadKeys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, 
             *pkeycnt += loaded_numKeys;
             free(keyBlock_tmp);
         }
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%u") " keys from dictionary", loaded_numKeys);
     }
     return PM3_SUCCESS;
 }
@@ -1563,6 +1562,7 @@ out:
     free(keyB);
     PrintAndLogEx(INFO, "-----+-------------------------------------------------+----------------");
     PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf dump --ns") "` to verify");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }

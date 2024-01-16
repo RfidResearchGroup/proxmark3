@@ -107,6 +107,8 @@ bool setDefaultPath(savePaths_t pathIndex, const char *path);
 
 char *newfilenamemcopy(const char *preferredName, const char *suffix);
 char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePaths_t save_path);
+void truncate_filename(char *fn,  uint16_t len);
+
 
 /**
  * @brief Utility function to save data to a binary file. This method takes a preferred name, but if that

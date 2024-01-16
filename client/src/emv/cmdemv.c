@@ -2890,7 +2890,7 @@ static int CmdEMVReader(const char *Cmd) {
     } while (continuous);
 
     DropFieldEx(channel);
- 
+
     SetAPDULogging(old_logging);
     return PM3_SUCCESS;
 }

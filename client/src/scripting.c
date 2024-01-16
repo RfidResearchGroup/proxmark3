@@ -46,6 +46,7 @@
 #include "cmdlfem4x05.h"  // read 4305
 #include "cmdlfem4x50.h"  // read 4350
 #include "em4x50.h"       // 4x50 structs
+#include "iso7816/iso7816core.h"  // ISODEPSTATE
 
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
     char buffer[200];
@@ -1188,14 +1189,11 @@ static int l_em4x50_read(lua_State *L) {
                         words[etd.addresses & 0xFF].byte[3]
                     );
     lua_pushinteger(L, word);
-
     return 1;
 }
 
 //
 static int l_ndefparse(lua_State *L) {
-
-    size_t size;
 
     //Check number of arguments
     int n = lua_gettop(L);
@@ -1212,6 +1210,7 @@ static int l_ndefparse(lua_State *L) {
     }
 
     // data
+    size_t size;
     const char *p_data = luaL_checklstring(L, 3, &size);
     if (size) {
         if (size > (datalen << 1))
@@ -1256,11 +1255,39 @@ static int l_remark(lua_State *L) {
     return 1;
 }
 
+static int l_set_iso_dep_state(lua_State *L) {
+
+    //Check number of arguments
+    int n = lua_gettop(L);
+    if (n != 1)  {
+        return returnToLuaWithError(L, "Only one value allowed");
+    }
+
+    size_t state = luaL_checknumber(L, 1);
+    switch (state) {
+        case 0:
+            SetISODEPState(ISODEP_INACTIVE);
+            break;
+        case 1:
+            SetISODEPState(ISODEP_NFCA);
+            break;
+        case 2:
+            SetISODEPState(ISODEP_NFCB);
+            break;
+        case 3:
+            SetISODEPState(ISODEP_NFCV);
+            break;
+        default:
+            return returnToLuaWithError(L, "Wrong ISODEP STATE value");
+    }
+    return 1;
+}
+
 // 1. filename
 // 2. extension
 // output: full search path to file
 static int l_searchfile(lua_State *L) {
-    //Check number of arguments
+    // Check number of arguments
     int n = lua_gettop(L);
     if (n != 2)  {
         return returnToLuaWithError(L, "Only filename and extension");
@@ -1306,11 +1333,12 @@ static int l_cwd(lua_State *L) {
     while (GetCurrentDir(cwd, path_len) == NULL) {
         if (errno == ERANGE) {  // Need bigger buffer
             path_len += 10;      // if buffer was too small add 10 characters and try again
-            cwd = realloc(cwd, path_len);
-            if (cwd == NULL) {
+            char *cwdNew = realloc(cwd, path_len);
+            if (cwdNew == NULL) {
                 free(cwd);
                 return returnToLuaWithError(L, "Failed to allocate memory");
             }
+            cwd = cwdNew;
         } else {
             free(cwd);
             return returnToLuaWithError(L, "Failed to get current working directory");
@@ -1402,6 +1430,7 @@ int set_pm3_libraries(lua_State *L) {
         {"em4x05_read",                 l_em4x05_read},
         {"em4x50_read",                 l_em4x50_read},
         {"ul_read_uid",                 l_ul_read_uid},
+        {"set_isodepstate",             l_set_iso_dep_state},
         {NULL, NULL}
     };
 

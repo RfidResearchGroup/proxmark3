@@ -1739,7 +1739,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
         }
 
         // no need to try decoding reader data if the tag is sending
-        if (!tag_is_active) {
+        if (tag_is_active == false) {
 
             int extra_8s = 1;
             if (Handle15693SampleFromReader((sniffdata & 0x02) >> 1, &dreader) ||
@@ -1756,7 +1756,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
                     // sof/eof_times * 4 here to bring from ssp_clk freq to RF carrier freq
                     LogTrace_ISO15693(dreader.output, dreader.byteCount, (sof_time * 4), (eof_time * 4), NULL, true);
 
-                    if (!iclass) { // Those flags don't exist in iClass
+                    if (iclass == false) { // Those flags don't exist in iClass
                         expect_fsk_answer = dreader.output[0] & ISO15_REQ_SUBCARRIER_TWO;
                         expect_fast_answer = dreader.output[0] & ISO15_REQ_DATARATE_HIGH;
                     }
@@ -1774,17 +1774,19 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
         }
 
         // no need to try decoding tag data if the reader is currently sending or no answer expected yet
-        if (!reader_is_active && expect_tag_answer) {
+        if ((reader_is_active == false) && expect_tag_answer) {
 
-            if (!expect_fsk_answer) {
+            if (expect_fsk_answer == false) {
                 // single subcarrier tag response
                 if (Handle15693SamplesFromTag((sniffdata >> 4) << 2, &dtag, expect_fast_answer)) {
 
                     // sof/eof_times are in ssp_clk, which is 13.56MHz / 4
                     uint32_t eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
+
                     if (dtag.lastBit == SOF_PART2) {
                         eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
                     }
+
                     uint32_t sof_time = eof_time
                                         - dtag.len * 1024 // time for byte transfers (4096/fc / 4)
                                         - 512             // time for SOF transfer (2048/fc / 4)
@@ -1802,18 +1804,22 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
                 } else {
                     tag_is_active = (dtag.state >= STATE_TAG_RECEIVING_DATA);
                 }
+
             } else {
                 // dual subcarrier tag response
-                if (FREQ_IS_0((sniffdata >> 2) & 0x3)) // tolerate 1 00
+                if (FREQ_IS_0((sniffdata >> 2) & 0x3))  { // tolerate 1 00
                     sniffdata = sniffdata_prev;
+                }
 
                 if (Handle15693FSKSamplesFromTag((sniffdata >> 2) & 0x3, &dtagfsk, expect_fast_answer)) {
                     if (dtagfsk.len > 0) {
                         // sof/eof_times are in ssp_clk, which is 13.56MHz / 4
                         uint32_t eof_time = dma_start_time + (samples * 16) - DELAY_TAG_TO_ARM_SNIFF; // end of EOF
+
                         if (dtagfsk.lastBit == SOF) {
                             eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
                         }
+
                         uint32_t sof_time = eof_time
                                             - dtagfsk.len * 1016 // time for byte transfers (4064/fc / 4) - FSK is slightly different
                                             - 512                // time for SOF transfer (2048/fc / 4)
@@ -1937,8 +1943,8 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
         *eof_time = start_time + 32 * ((8 * ts->max) - 4); // subtract the 4 padding bits after EOF
         LogTrace_ISO15693(send, sendlen, (start_time * 4), (*eof_time * 4), NULL, true);
         if (recv != NULL) {
-            bool fsk = send[0] & ISO15_REQ_SUBCARRIER_TWO;
-            bool recv_speed = send[0] & ISO15_REQ_DATARATE_HIGH;
+            bool fsk = ((send[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
+            bool recv_speed = ((send[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
             res = GetIso15693AnswerFromTag(recv, max_recv_len, timeout, eof_time, fsk, recv_speed, resp_len);
         }
         return res;
@@ -2087,7 +2093,7 @@ void ReaderIso15693(iso15_card_select_t *p_card) {
             reply_ng(CMD_HF_ISO15693_READER, PM3_SUCCESS, uid, sizeof(uid));
 
             if (g_dbglevel >= DBG_EXTENDED) {
-                Dbprintf("[+] %d octets read from IDENTIFY request:", recvlen);
+                Dbprintf("[+] %d bytes read from IDENTIFY request:", recvlen);
                 DbdecodeIso15693Answer(recvlen, answer);
                 Dbhexdump(recvlen, answer, true);
             }
@@ -2360,16 +2366,20 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
 // Since there is no standardized way of reading the AFI out of a tag, we will brute force it
 // (some manufactures offer a way to read the AFI, though)
-void BruteforceIso15693Afi(uint32_t speed) {
+void BruteforceIso15693Afi(uint32_t flags) {
 
-    uint8_t data[7] = {0};
-    uint8_t recv[ISO15693_MAX_RESPONSE_LENGTH];
+    clear_trace();
+
     Iso15693InitReader();
+
+    bool speed = ((flags & ISO15_HIGH_SPEED) == ISO15_HIGH_SPEED);
 
     // first without AFI
     // Tags should respond without AFI and with AFI=0 even when AFI is active
+    uint8_t data[7] = {0};
+    uint8_t recv[ISO15693_MAX_RESPONSE_LENGTH] = {0};
 
-    data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
+    data[0] = (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1);
     data[1] = ISO15693_INVENTORY;
     data[2] = 0; // AFI
     AddCrc15(data, 3);
@@ -2434,16 +2444,31 @@ void BruteforceIso15693Afi(uint32_t speed) {
 
 // Allows to directly send commands to the tag via the client
 // OBS:  doesn't turn off rf field afterwards.
-void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint8_t *data) {
+void SendRawCommand15693(iso15_raw_cmd_t *packet) {
 
     LED_A_ON();
 
-    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
-    uint16_t timeout;
-    uint32_t eof_time = 0;
+    uint16_t timeout = ISO15693_READER_TIMEOUT;
+    if ((packet->flags & ISO15_LONG_WAIT) == ISO15_LONG_WAIT) {
+        timeout = ISO15693_READER_TIMEOUT_WRITE;
+    }
+
+    bool speed = ((packet->flags & ISO15_HIGH_SPEED) == ISO15_HIGH_SPEED);
+    bool keep_field_on = ((packet->flags & ISO15_NO_DISCONNECT) == ISO15_NO_DISCONNECT);
+    bool read_respone = ((packet->flags & ISO15_READ_RESPONSE) == ISO15_READ_RESPONSE);
+    bool init = ((packet->flags & ISO15_CONNECT) == ISO15_CONNECT);
+
+    // This is part of ISO15693 protocol definitions where the following commands needs to request option.
+    // note:
+    //     it seem like previous we just guessed and never followed the fISO145_REQ_OPTION flag if it was set / not set from client side.
+    //     this is a problem.   Since without this the response from the tag is one byte shorter.   And a lot of client side functions has been
+    //     hardcoded to assume for the extra byte in the response.
+
     bool request_answer = false;
 
-    switch (data[1]) {
+    switch (packet->raw[1]) {
+        case ISO15693_SET_PASSWORD:
+        case ISO15693_ENABLE_PRIVACY:
         case ISO15693_WRITEBLOCK:
         case ISO15693_LOCKBLOCK:
         case ISO15693_WRITE_MULTI_BLOCK:
@@ -2453,42 +2478,54 @@ void DirectTag15693Command(uint32_t datalen, uint32_t speed, uint32_t recv, uint
         case ISO15693_WRITE_PASSWORD:
         case ISO15693_PASSWORD_PROTECT_EAS:
         case ISO15693_LOCK_DSFID:
-            timeout = ISO15693_READER_TIMEOUT_WRITE;
-            request_answer = data[0] & ISO15_REQ_OPTION;
+            request_answer = ((packet->raw[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION);
             break;
         default:
-            timeout = ISO15693_READER_TIMEOUT;
+            break;
     }
 
+    uint32_t eof_time = 0;
     uint32_t start_time = 0;
     uint16_t recvlen = 0;
-    int res = SendDataTag(data, datalen, true, speed, (recv ? recvbuf : NULL), sizeof(recvbuf), start_time, timeout, &eof_time, &recvlen);
+
+    uint8_t buf[ISO15693_MAX_RESPONSE_LENGTH] = {0x00};
+
+    int res = SendDataTag(packet->raw, packet->rawlen, init, speed, (read_respone ? buf : NULL), sizeof(buf), start_time, timeout, &eof_time, &recvlen);
+
     if (res == PM3_ETEAROFF) { // tearoff occurred
         reply_ng(CMD_HF_ISO15693_COMMAND, res, NULL, 0);
     } else {
 
-        bool fsk = data[0] & ISO15_REQ_SUBCARRIER_TWO;
-        bool recv_speed = data[0] & ISO15_REQ_DATARATE_HIGH;
+        // if tag answers with an error code,  it don't care about EOF packet
+        if (recvlen) {
+            recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
+            reply_ng(CMD_HF_ISO15693_COMMAND, res, buf, recvlen);
+        }
+
+        // looking at the first byte of the RAW bytes to determine Subcarrier, datarate, request option
+        bool fsk = ((packet->raw[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
+        bool recv_speed = ((packet->raw[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
 
         // send a single EOF to get the tag response
         if (request_answer) {
             start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
-            res = SendDataTagEOF((recv ? recvbuf : NULL), sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT, &eof_time, fsk, recv_speed, &recvlen);
+            res = SendDataTagEOF((read_respone ? buf : NULL), sizeof(buf), start_time, ISO15693_READER_TIMEOUT, &eof_time, fsk, recv_speed, &recvlen);
         }
 
-        if (recv) {
+        if (read_respone) {
             recvlen = MIN(recvlen, ISO15693_MAX_RESPONSE_LENGTH);
-            reply_ng(CMD_HF_ISO15693_COMMAND, res, recvbuf, recvlen);
+            reply_ng(CMD_HF_ISO15693_COMMAND, res, buf, recvlen);
         } else {
             reply_ng(CMD_HF_ISO15693_COMMAND, PM3_SUCCESS, NULL, 0);
         }
     }
 
+    if (keep_field_on == false) {
+        switch_off(); // disconnect raw
+        SpinDelay(20);
+    }
 
-    // note: this prevents using hf 15 cmd with s option - which isn't implemented yet anyway
-    // also prevents hf 15 raw -k  keep_field on ...
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    LED_D_OFF();
+    LED_A_OFF();
 }
 
 /*
@@ -2611,10 +2648,9 @@ void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
 void SetTag15693Uid(const uint8_t *uid) {
 
     LED_A_ON();
-
     uint8_t cmd[4][9] = {
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3e, 0x00, 0x00, 0x00, 0x00},
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3f, 0x69, 0x96, 0x00, 0x00},
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3e, 0x00, 0x00, 0x00, 0x00, 0xE9, 0x8F},
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3f, 0x69, 0x96, 0x00, 0x00, 0x8A, 0xBB},
         {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x38},
         {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x39}
     };
@@ -2631,29 +2667,31 @@ void SetTag15693Uid(const uint8_t *uid) {
     cmd[3][5] = uid[1];
     cmd[3][6] = uid[0];
 
-    AddCrc15(cmd[0], 7);
-    AddCrc15(cmd[1], 7);
     AddCrc15(cmd[2], 7);
     AddCrc15(cmd[3], 7);
 
-    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    uint8_t buf[ISO15693_MAX_RESPONSE_LENGTH] = {0x00};
 
     uint32_t start_time = 0;
     uint32_t eof_time = 0;
     uint16_t recvlen = 0;
+
     int res = PM3_SUCCESS;
+
     for (int i = 0; i < 4; i++) {
         res = SendDataTag(
                   cmd[i],
                   sizeof(cmd[i]),
                   (i == 0) ? true : false,
                   true,
-                  recvbuf,
-                  sizeof(recvbuf),
+                  buf,
+                  sizeof(buf),
                   start_time,
                   ISO15693_READER_TIMEOUT_WRITE,
                   &eof_time,
-                  &recvlen);
+                  &recvlen
+              );
+
         start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
     }
 

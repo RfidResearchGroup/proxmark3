@@ -36,6 +36,13 @@
 #define ICLASS_READER_TIMEOUT_UPDATE    3390 // 16000us, nominal 4-15ms
 #define ICLASS_READER_TIMEOUT_OTHERS      80 // 380us, nominal 330us
 
+// The length of a received command will in most cases be no more than 18 bytes.
+// we expect max 34 (32+2) bytes as tag answer (response to READ4)
+#ifndef ICLASS_BUFFER_SIZE
+#define ICLASS_BUFFER_SIZE     34 + 2
+#endif
+
+
 #define AddCrc(data, len) compute_crc(CRC_ICLASS, (data), (len), (data)+(len), (data)+(len)+1)
 
 void SniffIClass(uint8_t jam_search_len, uint8_t *jam_search_string);

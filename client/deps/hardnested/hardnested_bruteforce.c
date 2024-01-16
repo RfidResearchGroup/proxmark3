@@ -493,6 +493,8 @@ float brute_force_benchmark(void) {
 
     if (!read_bench_data(test_candidates)) {
         PrintAndLogEx(NORMAL, "Couldn't read benchmark data. Assuming brute force rate of %1.0f states per second", DEFAULT_BRUTE_FORCE_RATE);
+        free(test_candidates[0].states[ODD_STATE]);
+        free(test_candidates[0].states[EVEN_STATE]);
         return DEFAULT_BRUTE_FORCE_RATE;
     }
 
@@ -515,5 +517,3 @@ float brute_force_benchmark(void) {
     test_candidates[0].len[EVEN_STATE] = 0;
     return bf_rate;
 }
-
-

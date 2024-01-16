@@ -30,6 +30,7 @@ typedef enum {
     ISODEP_INACTIVE = 0,
     ISODEP_NFCA,
     ISODEP_NFCB,
+    ISODEP_NFCV,
 } isodep_state_t;
 
 typedef enum {
