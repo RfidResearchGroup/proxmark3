@@ -144,6 +144,9 @@ static const uint8_t lut[256] = {
 
 static const uint8_t var_list[] = {0x1c, 0x1e, 0x20, 0x26, 0x28, 0x2a, 0x2c, 0x2e};
 
+static uint8_t info_blocks[] = { 0x15, 0x16, 0x17, 0x18, 0x22 }; //Used for partnumber
+static const char *xerox_c_type[] = { "drum", "yellow", "magenta", "cyan", "black" };
+
 
 static int CmdHelp(const char *Cmd);
 void RC2_set_key(RC2_KEY *key, int len, const unsigned char *data, int bits);
@@ -413,9 +416,6 @@ static int xerox_select_card(iso14b_card_select_t *card) {
     PrintAndLogEx(FAILED, "command execution timeout");
     return PM3_ESOFT;
 }
-
-static uint8_t info_blocks[] = { 0x15, 0x16, 0x17, 0x18, 0x22 };
-static const char *xerox_c_type[] = { "drum", "yellow", "magenta", "cyan", "black" };
 
 static inline char dec_digit(uint8_t dig) {
     return (dig <= 9) ? dig + '0' : '?';
