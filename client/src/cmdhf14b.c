@@ -54,9 +54,6 @@
 #define ST25_SIZE_2K     4
 #define ST25_SIZE_4K     5
 
-
-
-
 // iso14b apdu input frame length
 static uint16_t apdu_frame_length = 0;
 //static uint16_t ats_fsc[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
@@ -1429,7 +1426,7 @@ static int CmdHF14BSriRdBl(const char *Cmd) {
 }
 
 // New command to write a SRI512/SRIX4K tag.
-static int CmdHF14BWriteSri(const char *Cmd) {
+static int CmdHF14BSriWrbl(const char *Cmd) {
     /*
      * For SRIX4K  blocks 00 - 7F
      * hf 14b raw --sr -c --data [09 $srix4kwblock $srix4kwdata
@@ -2409,15 +2406,14 @@ static command_t CommandTable[] = {
     {"info",      CmdHF14Binfo,     IfPm3Iso14443b,  "Tag information"},
     {"ndefread",  CmdHF14BNdefRead, IfPm3Iso14443b,  "Read NDEF file on tag"},
     {"raw",       CmdHF14BCmdRaw,   IfPm3Iso14443b,  "Send raw hex data to tag"},
+    {"rdbl",      CmdHF14BSriRdBl,  IfPm3Iso14443b,  "Read SRI512/SRIX4 block"},
     {"reader",    CmdHF14BReader,   IfPm3Iso14443b,  "Act as a ISO-14443-B reader to identify a tag"},
-    {"view",      CmdHF14BView,     AlwaysAvailable, "Display content from tag dump file"},    
 //    {"restore",     CmdHF14BRestore,     IfPm3Iso14443b,   "Restore from file to all memory pages of an ISO-14443-B tag"},
     {"sim",       CmdHF14BSim,      IfPm3Iso14443b,  "Fake ISO ISO-14443-B tag"},
     {"sniff",     CmdHF14BSniff,    IfPm3Iso14443b,  "Eavesdrop ISO-14443-B"},
-    {"rdbl",      CmdHF14BSriRdBl,  IfPm3Iso14443b,  "Read SRI512/SRIX4x block"},
-    {"sriwrite",  CmdHF14BWriteSri, IfPm3Iso14443b,  "Write data to a SRI512 or SRIX4K tag"},
+    {"wrbl",      CmdHF14BSriWrbl,  IfPm3Iso14443b,  "Write data to a SRI512/SRIX4 tag"},
     {"view",      CmdHF14BView,     AlwaysAvailable, "Display content from tag dump file"},
-    {"valid",     CmdSRIX4kValid,   AlwaysAvailable, "SRIX4k checksum test"},
+    {"valid",     CmdSRIX4kValid,   AlwaysAvailable, "SRIX4 checksum test"},
     {NULL, NULL, NULL, NULL}
 };
 
