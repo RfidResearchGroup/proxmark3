@@ -329,6 +329,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mf nested" },
     { 1, "hf mf hardnested" },
     { 0, "hf mf staticnested" },
+    { 0, "hf mf brute" },
     { 0, "hf mf autopwn" },
     { 0, "hf mf nack" },
     { 0, "hf mf chk" },

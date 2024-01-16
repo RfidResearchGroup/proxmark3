@@ -492,6 +492,7 @@ Check column "offline" for their availability.
 |`hf mf nested           `|N       |`Nested attack`
 |`hf mf hardnested       `|Y       |`Nested attack for hardened MIFARE Classic cards`
 |`hf mf staticnested     `|N       |`Nested attack against static nonce MIFARE Classic cards`
+|`hf mf brute            `|N       |`Smart bruteforce to exploit weak key generators`
 |`hf mf autopwn          `|N       |`Automatic key recovery tool for MIFARE Classic`
 |`hf mf nack             `|N       |`Test for MIFARE NACK bug`
 |`hf mf chk              `|N       |`Check keys`
