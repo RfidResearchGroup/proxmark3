@@ -1,0 +1,6 @@
+[submodule "proxmark3"]
+	path = proxmark3
+	url = https://rick423n@github.com/rick423n/proxmark3
+[submodule "proxmark"]
+	path = proxmark
+	url = https://rick423n@github.com/rick423n/proxmark
