@@ -1291,8 +1291,7 @@ static void print_hrule(int blocksize) {
 }
 
 // for emaulator and dump files we don't have lock info byte available.
-static void print_blocks_15693(uint8_t *data, uint16_t bytes, int blocksize) {
-    int blocks = bytes / blocksize;
+static void print_blocks_15693(uint8_t *data, uint16_t bytes, int blocksize, bool dense_output) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "----------- " _CYAN_("Tag Memory") " ---------------");
@@ -1303,15 +1302,52 @@ static void print_blocks_15693(uint8_t *data, uint16_t bytes, int blocksize) {
     char spaces[] = "                                                            ";
     PrintAndLogEx(INFO, " blk | data %.*s| ascii", MAX(0, 3 * blocksize - 5), spaces);
     print_hrule(blocksize);
+
+    bool in_repeated_block = false;
+    int blocks = (bytes / blocksize);
+
     for (int i = 0; i < blocks; i++) {
-        PrintAndLogEx(INFO, "%4d | %s ", i, sprint_hex_ascii(data + (i * blocksize), blocksize));
+
+        uint8_t *blk = data + (i * blocksize);
+
+        // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
+        // but the blocks in between are replaced with a single line of "......" if dense_output is enabled
+        if ( dense_output && 
+             (i > 6) &&
+             (i < (blocks - 1)) && 
+             (in_repeated_block == false) && 
+             (memcmp(blk, blk - blocksize, blocksize) == 0) &&
+             (memcmp(blk, blk + blocksize, blocksize) == 0) && 
+             (memcmp(blk, blk + (blocksize * 2), blocksize) == 0)
+            ) {
+            // we're in a user block that isn't the first user block nor last two user blocks,
+            // and the current block data is the same as the previous and next two block
+            in_repeated_block = true;
+            PrintAndLogEx(INFO, "  ......");
+        } else if (in_repeated_block && 
+            (memcmp(blk, blk + blocksize, blocksize) || i == blocks)
+            ) {
+            // in a repeating block, but the next block doesn't match anymore, or we're at the end block
+            in_repeated_block = false;
+        }
+
+        if (in_repeated_block == false) {
+            PrintAndLogEx(INFO, "%4d | %s "
+                    , i
+                    , sprint_hex_ascii(blk, blocksize)
+                    , blocksize
+                );
+        }
     }
 
     if (bytes % blocksize != 0)  {
         // If there is something left over print it too
         // This will have a broken layout, but should not happen anyway
-        PrintAndLogEx(INFO, "%4d | %s ", blocks, sprint_hex_ascii(data + (blocks * blocksize),
-                                                                  bytes % blocksize));
+        PrintAndLogEx(INFO, "%4d | %s "
+                , blocks
+                , sprint_hex_ascii(data + (blocks * blocksize)
+                , bytes % blocksize)
+            );
     }
 
     print_hrule(blocksize);
@@ -1330,11 +1366,13 @@ static int CmdHF15EView(const char *Cmd) {
         arg_param_begin,
         arg_int0("b", "blocksize", "<dec>", "block size (def 4)"),
         arg_int0("c", "count", "<dec>", "number of blocks to display (def all)"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int blocksize = arg_get_int_def(ctx, 1, 4);
     int count = arg_get_int_def(ctx, 2, -1);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 3));    
     CLIParserFree(ctx);
 
     // santity checks
@@ -1361,7 +1399,7 @@ static int CmdHF15EView(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    print_blocks_15693(dump, bytes, blocksize);
+    print_blocks_15693(dump, bytes, blocksize, dense_output);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -2196,7 +2234,7 @@ static int CmdHF15Readblock(const char *Cmd) {
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
     argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-                         argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3194,7 +3232,7 @@ static int CmdHF15View(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>",  "Specify a filename for dump file"),
-//        arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3202,7 +3240,7 @@ static int CmdHF15View(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-//    bool dense_output = g_session.dense_output || arg_get_lit(ctx, 2);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 2));
     CLIParserFree(ctx);
 
     // read dump file
@@ -3213,7 +3251,7 @@ static int CmdHF15View(const char *Cmd) {
         return res;
     }
 
-    print_blocks_15693(dump, bytes_read, 4);
+    print_blocks_15693(dump, bytes_read, 4, dense_output);
 
     free(dump);
     return PM3_SUCCESS;
