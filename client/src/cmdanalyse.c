@@ -394,7 +394,7 @@ static int CmdAnalyseCHKSUM(const char *Cmd) {
         arg_param_begin,
         arg_str1("d", "data", "<hex>", "bytes to calc checksum"),
         arg_str0("m", "mask", "<hex>", "bit mask to limit the output (4 hex bytes max)"),
-        arg_lit0("v", "verbose", "verbose"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
