@@ -25,7 +25,7 @@
                 "-h, --help This help",
                 "-d, --data <hex> bytes to calc checksum",
                 "-m, --mask <hex> bit mask to limit the output (4 hex bytes max)",
-                "-v, --verbose verbose"
+                "-v, --verbose verbose output"
             ],
             "usage": "analyse chksum [-hv] -d <hex> [-m <hex>]"
         },
@@ -954,7 +954,7 @@
             "options": [
                 "-h, --help This help",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
-                "-v, --verbose verbose",
+                "-v, --verbose Verbose output",
                 "-@ continuous reader mode"
             ],
             "usage": "emv reader [-hwv@]"
@@ -1125,13 +1125,13 @@
                 "-s, --select activate field and select card",
                 "-k, --keep keep signal field ON after receive",
                 "-t, --tlv decode TLV",
-                "-d, --decapdu decode APDU request",
+                "--decode decode APDU request",
                 "-m, --make <hex> APDU header, 4 bytes <CLA INS P1 P2>",
                 "-e, --extended make extended length apdu if `m` parameter included",
                 "-l, --le <dec> Le APDU parameter if `m` parameter included",
                 "-d, --data <hex> full APDU package or data if `m` parameter included"
             ],
-            "usage": "hf 14a apdu [-hsktde] [-m <hex>] [-l <dec>] -d <hex> [-d <hex>]..."
+            "usage": "hf 14a apdu [-hskte] [--decode] [-m <hex>] [-l <dec>] -d <hex> [-d <hex>]..."
         },
         "hf 14a apdufind": {
             "command": "hf 14a apdufind",
@@ -1214,7 +1214,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose adds some information to results",
+                "-v, --verbose verbose output",
                 "-n, --nacktest test for nack bug",
                 "-s, --aidsearch checks if AIDs from aidlist.json is present on the card and prints information about found AIDs"
             ],
@@ -1229,7 +1229,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose show technical data"
+                "-v, --verbose verbose output"
             ],
             "usage": "hf 14a ndefformat [-hv]"
         },
@@ -1244,7 +1244,7 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> save raw NDEF to file",
-                "-v, --verbose show technical data"
+                "-v, --verbose verbose output"
             ],
             "usage": "hf 14a ndefread [-hv] [-f <fn>]"
         },
@@ -1443,8 +1443,8 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> save raw NDEF to file",
-                "-v, --verbose show technical data"
+                "-f, --file <fn> Save raw NDEF to file",
+                "-v, --verbose Verbose output"
             ],
             "usage": "hf 14b ndefread [-hv] [-f <fn>]"
         },
@@ -2750,7 +2750,7 @@
         },
         "hf fido assert": {
             "command": "hf fido assert",
-            "description": "Execute a FIDO2 Get Assertion command. Needs json file with parameters. Sample file `fido2_defparams.json` in `client/resources/`. - Needs if `rk` option is `false` (authenticator doesn't store credential to its memory) - for yubikey there must be only one option `\"up\": true` or false",
+            "description": "Execute a FIDO2 Get Assertion command. Needs json file with parameters. Sample file `fido2_defparams.json` in `client/resources/`. - Needs if `rk` option is `false` (authenticator doesn't store credential to its memory) - for yubikey there must be only one option `\"up\": true` or false note: `-vv` shows full certificates data",
             "notes": [
                 "hf fido assert -> default parameters file `fido2_defparams.json`",
                 "hf fido assert -f test.json -l -> use parameters file `text.json` and add to request CredentialId"
@@ -2759,7 +2759,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode. vv - show full certificates data",
+                "-v, --verbose Verbose output",
                 "-c, --cbor Show CBOR decoded data",
                 "-l, --list Add CredentialId from json to allowList",
                 "-f, --file <fn> Parameter JSON file name"
@@ -2780,7 +2780,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "default mode: dont-enforce-user-presence-and-sign",
                 "-u, --user mode: enforce-user-presence-and-sign",
                 "-c, --check mode: check-only",
@@ -2829,7 +2829,7 @@
         },
         "hf fido make": {
             "command": "hf fido make",
-            "description": "Execute a FIDO2 Make Credential command. Needs json file with parameters. Sample file `fido2_defparams.json` in `client/resources/`. - for yubikey there must be only one option `\"rk\": true` or false",
+            "description": "Execute a FIDO2 Make Credential command. Needs json file with parameters. Sample file `fido2_defparams.json` in `client/resources/`. - for yubikey there must be only one option `\"rk\": true` or false note: `-vv` shows full certificates data",
             "notes": [
                 "hf fido make -> use default parameters file `fido2_defparams.json`",
                 "hf fido make -f test.json -> use parameters file `text.json`"
@@ -2838,7 +2838,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode. vv - show full certificates data",
+                "-v, --verbose Verbose output",
                 "-t, --tlv Show DER certificate contents in TLV representation",
                 "-c, --cbor Show CBOR decoded data",
                 "-f, --file <fn> Parameter JSON file name"
@@ -2847,7 +2847,7 @@
         },
         "hf fido reg": {
             "command": "hf fido reg",
-            "description": "Initiate a U2F token registration. Needs two 32-byte hash numbers. challenge parameter (32b) and application parameter (32b). The default config filename is `fido2_defparams.json`",
+            "description": "Initiate a U2F token registration. Needs two 32-byte hash numbers. challenge parameter (32b) and application parameter (32b). The default config filename is `fido2_defparams.json` note: `-vv` shows full certificates data",
             "notes": [
                 "hf fido reg -> execute command with 2 parameters, filled 0x00",
                 "hf fido reg --cp s0 --ap s1 -> execute command with plain parameters",
@@ -2858,7 +2858,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode. vv - show full certificates data",
+                "-v, --verbose Verbose output",
                 "-t, --tlv Show DER certificate contents in TLV representation",
                 "-f, --file <fn> JSON input file name for parameters",
                 "--cp <str> Challenge parameter (1..16 chars)",
@@ -2962,7 +2962,7 @@
                 "--nocadupdate Don't modify the Card Application Directory (only creates the app)",
                 "--noappcreate Don't create the application (only modifies the CAD)",
                 "--apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode"
+                "-v, --verbose Verbose output"
             ],
             "usage": "hf gallagher clone [-hv] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] --rc <dec> --fc <dec> --cn <dec> --il <dec> [--aid <hex>] [--sitekey <hex>] [--cadkey <hex>] [--nocadupdate] [--noappcreate] [--apdu]"
         },
@@ -2994,7 +2994,7 @@
                 "--nocadupdate Don't modify the Card Application Directory (only deletes the app)",
                 "--noappdelete Don't delete the application (only modifies the CAD)",
                 "--apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode"
+                "-v, --verbose Verbose output"
             ],
             "usage": "hf gallagher delete [-hv] --aid <hex> [--sitekey <hex>] [--cadkey <hex>] [--nocadupdate] [--noappdelete] [--apdu]"
         },
@@ -3029,7 +3029,7 @@
                 "--sitekey <hex> Site key to compute diversified keys (16 bytes)",
                 "-@, --continuous Continuous reader mode",
                 "--apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode"
+                "-v, --verbose Verbose output"
             ],
             "usage": "hf gallagher reader [-h@v] [--aid <hex>] [--sitekey <hex>] [--apdu]"
         },
@@ -4074,7 +4074,7 @@
                 "-f, --file <fn> filename of dictionary",
                 "--slow Slower acquisition (required by some non standard cards)",
                 "-l, --legacy legacy mode (use the slow `hf mf chk`)",
-                "-v, --verbose verbose output (statistics)",
+                "-v, --verbose verbose output",
                 "--mini MIFARE Classic Mini / S20",
                 "--1k MIFARE Classic 1k / S50 (default)",
                 "--2k MIFARE Classic/Plus 2k",
@@ -4832,7 +4832,7 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose show technical data",
+                "-v, --verbose verbose output",
                 "--aid <hex> print all sectors with specified aid",
                 "-k, --key <hex> key for printing sectors",
                 "-b, --keyb use key B for access printing sectors (by default: key A)",
@@ -4886,7 +4886,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose show technical data",
+                "-v, --verbose Verbose output",
                 "--aid <aid> replace default aid for NDEF",
                 "-k, --key <key> replace default key for NDEF",
                 "-b, --keyb use key B for access sectors (by default: key A)",
@@ -5212,7 +5212,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5261,7 +5261,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5294,7 +5294,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5337,7 +5337,7 @@
                 "--pattern2b Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)",
                 "--startp2b <pattern> Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)",
                 "-j, --json <fn> Json file name to save keys",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "--kdf <0|1|2> Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)",
                 "-i, --kdfi <hex> KDF input (1-31 hex bytes)",
                 "-a, --apdu Show APDU requests and responses"
@@ -5355,7 +5355,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5380,7 +5380,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5437,7 +5437,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5475,7 +5475,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5519,7 +5519,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5557,7 +5557,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5596,7 +5596,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5651,7 +5651,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5675,7 +5675,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5705,7 +5705,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5731,7 +5731,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5757,7 +5757,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5780,7 +5780,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5803,7 +5803,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5826,7 +5826,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5850,7 +5850,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5878,7 +5878,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5905,7 +5905,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5932,7 +5932,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5958,7 +5958,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number for authentication",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -5986,7 +5986,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -6044,7 +6044,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -6070,7 +6070,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -6100,7 +6100,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -6136,7 +6136,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -6172,7 +6172,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -6216,7 +6216,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -6258,7 +6258,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -6300,7 +6300,7 @@
             "options": [
                 "-h, --help This help",
                 "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
                 "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
@@ -6335,7 +6335,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "--ki <hex> Key number, 2 hex bytes",
                 "--key <hex> Key, 16 hex bytes"
             ],
@@ -6358,7 +6358,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "--nmr Do not expect MAC in response",
                 "-c, --conf <hex> Config block number, 0-3",
                 "-k, --key <hex> Card key, 16 hex bytes",
@@ -6390,7 +6390,7 @@
                 "--pattern2b Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)",
                 "--startp2b <pattern> Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)",
                 "--dump Dump found keys to JSON file",
-                "-v, --verbose Verbose mode"
+                "-v, --verbose Verbose output"
             ],
             "usage": "hf mfp chk [-habv] [-s <0..255>] [-e <0..255>] [-k <hex>] [-d <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [--dump]"
         },
@@ -6405,7 +6405,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "--nmr Do not expect MAC in response",
                 "--ki <hex> Key Index, 2 hex bytes",
                 "-k, --key <hex> Current sector key, 16 hex bytes",
@@ -6423,7 +6423,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose mode"
+                "-v, --verbose Verbose output"
             ],
             "usage": "hf mfp commitp [-hv]"
         },
@@ -6438,11 +6438,9 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Specify a filename for dump file",
-                "-k, --keys <fn> Specify a filename for keys file",
-                "--ns no save to file",
-                "-v, --verbose Verbose mode"
+                "-k, --keys <fn> Specify a filename for keys file"
             ],
-            "usage": "hf mfp dump [-hv] [-f <fn>] [-k <fn>] [--ns]"
+            "usage": "hf mfp dump [-h] [-f <fn>] [-k <fn>]"
         },
         "hf mfp help": {
             "command": "hf mfp help",
@@ -6487,7 +6485,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-k, --key <hex> Key, 16 hex bytes"
             ],
             "usage": "hf mfp initp [-hv] [-k <hex>]"
@@ -6502,7 +6500,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Show technical data",
+                "-v, --verbose Verbose output",
                 "--aid <hex> Print all sectors with aid",
                 "-k, --key <hex> Key for printing sectors",
                 "-b, --keyb Use key B for access printing sectors (def: key A)",
@@ -6537,7 +6535,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose show technical data",
+                "-v, --verbose verbose output",
                 "--aid <aid> replace default aid for NDEF",
                 "-k, --key <key> replace default key for NDEF",
                 "-b, --keyb use key B for access sectors (by default: key A)",
@@ -6573,7 +6571,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-n, --count <dec> Blocks count (def: 1)",
                 "-b, --keyb Use key B (def: keyA)",
                 "-p, --plain Do not use encrypted communication mode between reader and card",
@@ -6594,7 +6592,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-b, --keyb Use key B (def: keyA)",
                 "-p, --plain Do not use encrypted communication mode between reader and card",
                 "--nmc Do not append MAC to command",
@@ -6614,7 +6612,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose mode",
+                "-v, --verbose Verbose output",
                 "-b, --keyb Use key B (def: keyA)",
                 "--blk <0..255> Block number",
                 "-p, --plain Do not use encrypted transmission",
@@ -6799,7 +6797,7 @@
                 "-h, --help This help",
                 "-l Swap entered key's endianness",
                 "-f, --file <fn> Save raw NDEF to file",
-                "-v, --verbose show technical data"
+                "-v, --verbose Verbose output"
             ],
             "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>]"
         },
@@ -6878,7 +6876,7 @@
                 "-s enable special write UID -MAGIC TAG ONLY-",
                 "-e enable special write version/signature -MAGIC NTAG 21* ONLY-",
                 "-r use password found in dumpfile to configure tag. Requires '-e' parameter to work",
-                "-v, --verbose verbose"
+                "-v, --verbose verbose output"
             ],
             "usage": "hf mfu restore [-hlserv] -f <fn> [-k <hex>]"
         },
@@ -7236,7 +7234,7 @@
                 "-h, --help This help",
                 "-p, --pwd <hex> 16 byte read password",
                 "-f, --file <fn> save raw NDEF to file",
-                "-v, --verbose show technical data"
+                "-v, --verbose verbose output"
             ],
             "usage": "hf st25ta ndefread [-hv] [-p <hex>] [-f <fn>]"
         },
@@ -7332,7 +7330,7 @@
             "options": [
                 "-h, --help This help",
                 "-1 Use data from Graphbuffer (offline mode)",
-                "-v, --verbose Verbose scan and output",
+                "-v, --verbose Verbose output",
                 "-@ optional - continuous reader mode"
             ],
             "usage": "hf texkom reader [-h1v@]"
@@ -7350,7 +7348,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose Verbose work",
+                "-v, --verbose Verbose output",
                 "-t, --tk17 Use TK-17 modulation (TK-13 by default)",
                 "--raw <hex 8 bytes> Raw data for texkom card, 8 bytes. Manual modulation select.",
                 "--id <hex 4 bytes> Raw data for texkom card, 8 bytes. Manual modulation select.",
@@ -7559,9 +7557,10 @@
                 "-n, --iter <dec> number of iterations (default: 0=infinite)",
                 "--bar bar style",
                 "--mix mixed style",
-                "--value values style"
+                "--value values style",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf tune [-h] [-n <dec>] [--bar] [--mix] [--value]"
+            "usage": "hf tune [-hv] [-n <dec>] [--bar] [--mix] [--value]"
         },
         "hf vas decrypt": {
             "command": "hf vas decrypt",
@@ -7592,7 +7591,7 @@
                 "-f, --file <fn> path to terminal private key file",
                 "--url <str> a URL to provide to the mobile device",
                 "-@ continuous mode",
-                "-v, --verbose log additional information"
+                "-v, --verbose Verbose output"
             ],
             "usage": "hf vas reader [-h@v] [--pid <str>] [-f <fn>] [--url <str>]"
         },
@@ -10902,9 +10901,10 @@
                 "-f, --freq <float> Frequency in kHz",
                 "--bar bar style",
                 "--mix mixed style",
-                "--value values style"
+                "--value values style",
+                "-v, --verbose verbose output"
             ],
-            "usage": "lf tune [-h] [-n <dec>] [-q <dec>] [-f <float>] [--bar] [--mix] [--value]"
+            "usage": "lf tune [-hv] [-n <dec>] [-q <dec>] [-f <float>] [--bar] [--mix] [--value]"
         },
         "lf viking clone": {
             "command": "lf viking clone",
@@ -11327,7 +11327,7 @@
                 "-h, --help This help",
                 "-d, --data <hex> NDEF data to decode",
                 "-f, --file <fn> file to load",
-                "-v, --verbose verbose mode"
+                "-v, --verbose verbose output"
             ],
             "usage": "nfc decode [-hv] [-d <hex>] [-f <fn>]"
         },
@@ -11343,7 +11343,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose show technical data",
+                "-v, --verbose Verbose output",
                 "--aid <aid> replace default aid for NDEF",
                 "-k, --key <key> replace default key for NDEF",
                 "-b, --keyb use key B for access sectors (by default: key A)",
@@ -11397,7 +11397,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose show technical data",
+                "-v, --verbose verbose output",
                 "--aid <aid> replace default aid for NDEF",
                 "-k, --key <key> replace default key for NDEF",
                 "-b, --keyb use key B for access sectors (by default: key A)",
@@ -11418,7 +11418,7 @@
                 "-h, --help This help",
                 "-l Swap entered key's endianness",
                 "-f, --file <fn> Save raw NDEF to file",
-                "-v, --verbose show technical data"
+                "-v, --verbose Verbose output"
             ],
             "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>]"
         },
@@ -11446,7 +11446,7 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose show technical data"
+                "-v, --verbose verbose output"
             ],
             "usage": "hf 14a ndefformat [-hv]"
         },
@@ -11460,8 +11460,8 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> save raw NDEF to file",
-                "-v, --verbose show technical data"
+                "-f, --file <fn> Save raw NDEF to file",
+                "-v, --verbose Verbose output"
             ],
             "usage": "hf 14b ndefread [-hv] [-f <fn>]"
         },
@@ -11476,7 +11476,7 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> save raw NDEF to file",
-                "-v, --verbose show technical data"
+                "-v, --verbose verbose output"
             ],
             "usage": "hf 14a ndefread [-hv] [-f <fn>]"
         },
@@ -11492,7 +11492,7 @@
                 "-h, --help This help",
                 "-p, --pwd <hex> 16 byte read password",
                 "-f, --file <fn> save raw NDEF to file",
-                "-v, --verbose show technical data"
+                "-v, --verbose verbose output"
             ],
             "usage": "hf st25ta ndefread [-hv] [-p <hex>] [-f <fn>]"
         },
@@ -12032,14 +12032,17 @@
             "command": "smart relay",
             "description": "Make pm3 available to host OS smartcard driver via vpcd to enable use with other software such as GlobalPlatform Pro",
             "notes": [
-                "Requires the virtual smartcard daemon to be installed and running, see https://frankmorgner.github.io/vsmartcard/virtualsmartcard/README.html"
+                "Requires the virtual smartcard daemon to be installed and running",
+                "see https://frankmorgner.github.io/vsmartcard/virtualsmartcard/README.html",
+                "note:",
+                "`-v` shows APDU transactions between OS and card"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--host <str> vpcd socket host (default: localhost)",
-                "-p, --port <int> vpcd socket port (default: 35963)",
-                "-v, --verbose display APDU transactions between OS and card"
+                "--host <str> VPCD socket host (default: localhost)",
+                "-p, --port <int> VPCD socket port (default: 35963)",
+                "-v, --verbose Verbose output"
             ],
             "usage": "smart relay [-hv] [--host <str>] [-p <int>]"
         },
@@ -12304,6 +12307,6 @@
     "metadata": {
         "commands_extracted": 710,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-01-18T16:03:58"
+        "extracted_on": "2024-01-18T18:49:32"
     }
 }
