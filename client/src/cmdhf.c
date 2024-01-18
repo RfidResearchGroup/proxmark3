@@ -376,8 +376,8 @@ int CmdHFTune(const char *Cmd) {
     PrintAndLogEx(NORMAL, "\x1b%c[2K\r", 30);
     PrintAndLogEx(INFO, "Done.");
     if (stat_on) {
-        PrintAndLogEx(INFO, "Min:%zu mV", v_min);
-        PrintAndLogEx(INFO, "Max:%zu mV", v_max);
+        PrintAndLogEx(INFO, "Min:%u mV", v_min);
+        PrintAndLogEx(INFO, "Max:%u mV", v_max);
         PrintAndLogEx(INFO, "Average:%.3lf mV", v_sum / (double)v_count);
     }
     return PM3_SUCCESS;
