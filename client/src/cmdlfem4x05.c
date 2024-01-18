@@ -2527,11 +2527,57 @@ static int CmdEM4x05View(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdEM4x05Config(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em ex05 config",
+                  "Create common configuration blocks",
+                  "lf em 4x05 config"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "Default....... %08X", EM4305_DEFAULT_CONFIG_BLOCK);
+    PrintAndLogEx(INFO, "EM / UNIQUE... %08X", EM4305_EM_UNIQUE_CONFIG_BLOCK); 
+    PrintAndLogEx(INFO, "PAXTON........ %08X", EM4305_PAXTON_CONFIG_BLOCK);    
+    PrintAndLogEx(INFO, "VISA2000...... %08X", EM4305_VISA2000_CONFIG_BLOCK);  
+    PrintAndLogEx(INFO, "VIKING........ %08X", EM4305_VIKING_CONFIG_BLOCK);    
+    PrintAndLogEx(INFO, "NORALSY....... %08X", EM4305_NORALSY_CONFIG_BLOCK);   
+    PrintAndLogEx(INFO, "PRESCO........ %08X", EM4305_PRESCO_CONFIG_BLOCK);    
+    PrintAndLogEx(INFO, "SECURA KEY.... %08X", EM4305_SECURAKEY_CONFIG_BLOCK);
+    PrintAndLogEx(INFO, "GALLAGHER..... %08X", EM4305_GALLAGHER_CONFIG_BLOCK); 
+    PrintAndLogEx(INFO, "DESTRON....... %08X", EM4305_DESTRON_CONFIG_BLOCK);   
+    PrintAndLogEx(INFO, "HID-26........ %08X", EM4305_HID_26_CONFIG_BLOCK);    
+    PrintAndLogEx(INFO, "PARADOX....... %08X", EM4305_PARADOX_CONFIG_BLOCK);   
+    PrintAndLogEx(INFO, "AWID.......... %08X", EM4305_AWID_CONFIG_BLOCK);      
+    PrintAndLogEx(INFO, "PYRAMID....... %08X", EM4305_PYRAMID_CONFIG_BLOCK);   
+    PrintAndLogEx(INFO, "IO PROX....... %08X", EM4305_IOPROX_CONFIG_BLOCK);    
+    PrintAndLogEx(INFO, "INDALA 64..... %08X", EM4305_INDALA_64_CONFIG_BLOCK);
+    PrintAndLogEx(INFO, "INDALA 224.... %08X", EM4305_INDALA_224_CONFIG_BLOCK);
+    PrintAndLogEx(INFO, "MOTOROLA...... %08X", EM4305_MOTOROLA_CONFIG_BLOCK);  
+    PrintAndLogEx(INFO, "NEXWATCH...... %08X", EM4305_NEXWATCH_CONFIG_BLOCK);
+    PrintAndLogEx(INFO, "KERI.......... %08X", EM4305_KERI_CONFIG_BLOCK);      
+    PrintAndLogEx(INFO, "IDTECK........ %08X", EM4305_IDTECK_CONFIG_BLOCK);    
+    PrintAndLogEx(INFO, "JABLOTRON..... %08X", EM4305_JABLOTRON_CONFIG_BLOCK); 
+    PrintAndLogEx(INFO, "G-PROX II..... %08X", EM4305_GUARDPROXII_CONFIG_BLOCK);
+    PrintAndLogEx(INFO, "NEDAP 64...... %08X", EM4305_NEDAP_64_CONFIG_BLOCK);  
+    PrintAndLogEx(INFO, "NEDAP 128..... %08X", EM4305_NEDAP_128_CONFIG_BLOCK); 
+    PrintAndLogEx(INFO, "FDXB.......... %08X", EM4305_FDXB_CONFIG_BLOCK);      
+    PrintAndLogEx(INFO, "PAC........... %08X", EM4305_PAC_CONFIG_BLOCK);       
+    PrintAndLogEx(INFO, "VERICHIP...... %08X", EM4305_VERICHIP_CONFIG_BLOCK);  
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
     {"-----------", CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("general") " -----------------------"},
     {"brute",       CmdEM4x05Brute,   IfPm3Lf,         "Bruteforce password"},
     {"chk",         CmdEM4x05Chk,     IfPm3Lf,         "Check passwords from dictionary"},
+    {"config",      CmdEM4x05Config,  AlwaysAvailable, "Create common configuration words"},
     {"demod",       CmdEM4x05Demod,   AlwaysAvailable, "Demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
     {"dump",        CmdEM4x05Dump,    IfPm3Lf,         "Dump EM4x05/EM4x69 tag"},
     {"info",        CmdEM4x05Info,    IfPm3Lf,         "Tag information"},
