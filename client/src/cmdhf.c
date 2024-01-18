@@ -288,6 +288,7 @@ int CmdHFTune(const char *Cmd) {
         arg_lit0(NULL, "bar", "bar style"),
         arg_lit0(NULL, "mix", "mixed style"),
         arg_lit0(NULL, "value", "values style"),
+        arg_lit0(NULL, "stat", "show statistical data after tuning"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -295,6 +296,7 @@ int CmdHFTune(const char *Cmd) {
     bool is_bar = arg_get_lit(ctx, 2);
     bool is_mix = arg_get_lit(ctx, 3);
     bool is_value = arg_get_lit(ctx, 4);
+    bool stat_on = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     if ((is_bar + is_mix + is_value) > 1) {
@@ -324,10 +326,13 @@ int CmdHFTune(const char *Cmd) {
 
     mode[0] = 2;
 
-    uint32_t max = 0xFFFF;
+    uint32_t v_max = 0xFFFF;
+    uint32_t v_min = 0xFFFF;
+    uint64_t v_sum = 0;
+    uint64_t v_count = 0;
     bool first = true;
 
-    print_progress(0, max, style);
+    print_progress(0, v_max, style);
 
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint32_t i = 0; iter == 0 || i < iter; i++) {
@@ -349,13 +354,17 @@ int CmdHFTune(const char *Cmd) {
 
         uint16_t volt = resp.data.asDwords[0] & 0xFFFF;
         if (first) {
-            max = (volt * 1.03);
+            v_max = volt;
+            v_min = volt;
             first = false;
         }
-        if (volt > max) {
-            max = (volt * 1.03);
+        v_max = (volt > v_max) ? volt : v_max;
+        if (stat_on) {
+            v_min = (volt < v_min) ? volt : v_min;
+            v_sum += volt;
+            v_count++;
         }
-        print_progress(volt, max, style);
+        print_progress(volt, v_max, style);
     }
     mode[0] = 3;
 
@@ -366,6 +375,11 @@ int CmdHFTune(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "\x1b%c[2K\r", 30);
     PrintAndLogEx(INFO, "Done.");
+    if (stat_on) {
+        PrintAndLogEx(INFO, "Min:%zu mV", v_min);
+        PrintAndLogEx(INFO, "Max:%zu mV", v_max);
+        PrintAndLogEx(INFO, "Average:%.3lf mV", v_sum / (double)v_count);
+    }
     return PM3_SUCCESS;
 }
 

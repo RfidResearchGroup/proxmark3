@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf tune` and `lf tune` - Added an option to show statistical data after tuning (@wh201906)
  - Changed `lf idteck demod --raw` - now supports raw hex string to decode (@iceman1001)
  - Changed `lf em 410x demod --bin` - now supports a raw binary string to demodulate. (@iceman1001)
  - Changed `lf em 4x05 info` - use `-v` verbose flag to see protection bits (@iceman1001)
