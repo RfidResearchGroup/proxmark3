@@ -903,6 +903,7 @@ Check column "offline" for their availability.
 |`lf em 4x05 help        `|Y       |`This help`
 |`lf em 4x05 brute       `|N       |`Bruteforce password`
 |`lf em 4x05 chk         `|N       |`Check passwords from dictionary`
+|`lf em 4x05 config      `|Y       |`Create common configuration words`
 |`lf em 4x05 demod       `|Y       |`Demodulate a EM4x05/EM4x69 tag from the GraphBuffer`
 |`lf em 4x05 dump        `|N       |`Dump EM4x05/EM4x69 tag`
 |`lf em 4x05 info        `|N       |`Tag information`

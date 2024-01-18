@@ -8304,6 +8304,18 @@
             ],
             "usage": "lf em 4x05 chk [-h] [-f <fn>] [-e <EM4100>]"
         },
+        "lf em 4x05 config": {
+            "command": "lf em 4x05 config",
+            "description": "Create common configuration blocks",
+            "notes": [
+                "lf em 4x05 config"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "lf em ex05 config [-h]"
+        },
         "lf em 4x05 demod": {
             "command": "lf em 4x05 demod",
             "description": "Try to find EM 4x05 preamble, if found decode / descramble data",
@@ -8335,7 +8347,7 @@
         },
         "lf em 4x05 help": {
             "command": "lf em 4x05 help",
-            "description": "help This help ----------- ----------------------- general ----------------------- demod Demodulate a EM4x05/EM4x69 tag from the GraphBuffer sniff Attempt to recover em4x05 commands from sample buffer view Display content from tag dump file --------------------------------------------------------------------------------------- lf em 4x05 brute available offline: no This command tries to bruteforce the password of a EM4205/4305/4469/4569 The loop is running on device side, press Proxmark3 button to abort",
+            "description": "help This help ----------- ----------------------- general ----------------------- config Create common configuration words demod Demodulate a EM4x05/EM4x69 tag from the GraphBuffer sniff Attempt to recover em4x05 commands from sample buffer view Display content from tag dump file --------------------------------------------------------------------------------------- lf em 4x05 brute available offline: no This command tries to bruteforce the password of a EM4205/4305/4469/4569 The loop is running on device side, press Proxmark3 button to abort",
             "notes": [
                 "Note: if you get many false positives, change position on the antennalf em 4x05 brute",
                 "lf em 4x05 brute -n 1 -> stop after first candidate found",
@@ -12290,8 +12302,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 709,
+        "commands_extracted": 710,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-01-18T15:39:50"
+        "extracted_on": "2024-01-18T16:03:58"
     }
 }

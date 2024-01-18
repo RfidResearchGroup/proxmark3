@@ -572,6 +572,7 @@ const static vocabulary_t vocabulary[] = {
     { 1, "lf em 4x05 help" },
     { 0, "lf em 4x05 brute" },
     { 0, "lf em 4x05 chk" },
+    { 1, "lf em 4x05 config" },
     { 1, "lf em 4x05 demod" },
     { 0, "lf em 4x05 dump" },
     { 0, "lf em 4x05 info" },
