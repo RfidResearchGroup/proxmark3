@@ -901,16 +901,17 @@ static int CmdHFXeroxDump(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    if (0 == filename[0]) { // generate filename from uid
+    // generate filename from uid
+    if (0 == filename[0]) {
         char *fptr = filename;
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += snprintf(fptr, sizeof(filename), "hf-xerox-");
         FillFileNameByUID(fptr
-                          , SwapEndian64(card.uid, card.uidlen, 8)
-                          , (decrypt) ? "-dump-dec" : "-dump"
-                          , card.uidlen
-                         );
-    }
+                        , SwapEndian64(card.uid, card.uidlen, 8)
+                        , (decrypt) ? "-dump-dec" : "-dump"
+                        , card.uidlen
+                    );
+}
 
     pm3_save_dump(filename, data, blockno * XEROX_BLOCK_SIZE, jsf14b_v2);
     return PM3_SUCCESS;
