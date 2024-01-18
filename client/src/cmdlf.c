@@ -116,6 +116,7 @@ static int CmdLFTune(const char *Cmd) {
         arg_lit0(NULL, "bar", "bar style"),
         arg_lit0(NULL, "mix", "mixed style"),
         arg_lit0(NULL, "value", "values style"),
+        arg_lit0(NULL, "stat", "show statistical data after tuning"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -126,6 +127,7 @@ static int CmdLFTune(const char *Cmd) {
     bool is_bar = arg_get_lit(ctx, 4);
     bool is_mix = arg_get_lit(ctx, 5);
     bool is_value = arg_get_lit(ctx, 6);
+    bool stat_on = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     if (divisor < 19) {
@@ -177,10 +179,13 @@ static int CmdLFTune(const char *Cmd) {
     params[0] = 2;
 
 //    #define MAX_ADC_LF_VOLTAGE 140800
-    uint32_t max = 71000;
+    uint32_t v_max = 71000;
+    uint32_t v_min = 71000;
+    uint64_t v_sum = 0;
+    uint64_t v_count = 0;
     bool first = true;
 
-    print_progress(0, max, style);
+    print_progress(0, v_max, style);
 
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint32_t i = 0; iter == 0 || i < iter; i++) {
@@ -202,13 +207,17 @@ static int CmdLFTune(const char *Cmd) {
 
         uint32_t volt = resp.data.asDwords[0];
         if (first) {
-            max = (volt * 1.03);
+            v_max = volt;
+            v_min = volt;
             first = false;
         }
-        if (volt > max) {
-            max = (volt * 1.03);
+        v_max = (volt > v_max) ? volt : v_max;
+        if (stat_on) {
+            v_min = (volt < v_min) ? volt : v_min;
+            v_sum += volt;
+            v_count++;
         }
-        print_progress(volt, max, style);
+        print_progress(volt, v_max, style);
     }
 
     params[0] = 3;
@@ -219,6 +228,11 @@ static int CmdLFTune(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "\x1b%c[2K\r", 30);
     PrintAndLogEx(INFO, "Done.");
+    if (stat_on) {
+        PrintAndLogEx(INFO, "Min:%u mV", v_min);
+        PrintAndLogEx(INFO, "Max:%u mV", v_max);
+        PrintAndLogEx(INFO, "Average:%.3lf mV", v_sum / (double)v_count);
+    }
     return PM3_SUCCESS;
 }
 
