@@ -32,18 +32,19 @@
 #include "cmdlfem4x05.h" // EM defines
 #include "protocols.h"   // T55x7 defines
 #include "cmdlft55xx.h"  // verifywrite
+#include "generator.h"
+#include "wiegand_formats.h"
 
 static int CmdHelp(const char *Cmd);
 
-int demodIdteck(bool verbose) {
-    (void) verbose; // unused so far
+static int demod_idteck_signal(void) {
     if (PSKDemod(0, 0, 100, false) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Idteck PSKDemod failed");
         return PM3_ESOFT;
     }
     size_t size = g_DemodBufferLen;
 
-    //get binary from PSK1 wave
+    // get binary from PSK1 wave
     int idx = detectIdteck(g_DemodBuffer, &size);
     if (idx < 0) {
 
@@ -81,17 +82,67 @@ int demodIdteck(bool verbose) {
         }
     }
     setDemodBuff(g_DemodBuffer, 64, idx);
+    return PM3_SUCCESS; 
+}
 
-    //got a good demod
+int demodIdteck(uint8_t *raw, bool verbose) {
+    (void) verbose; // unused so far
+
+    uint32_t raw1 = 0;
+    uint32_t raw2 = 0;
+
+    if (raw == NULL) {
+        // get binary from PSK1 wave
+        int ret = demod_idteck_signal();
+        if (ret != PM3_SUCCESS) {
+            return ret;
+        }
+        raw1 = bytebits_to_byte(g_DemodBuffer, 32);
+        raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
+    } else {
+        raw1 = bytes_to_num(raw, 4);
+        raw2 = bytes_to_num(raw + 4, 4);
+    }
+
+    // got a good demod
     uint32_t id = 0;
-    uint32_t raw1 = bytebits_to_byte(g_DemodBuffer, 32);
-    uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
 
-    //parity check (TBD)
-    //checksum check (TBD)
+    if (raw1 != 0x4944544B) {
+        PrintAndLogEx(FAILED, "No genuine IDTECK found");
+    }
+   
+    // parity check (TBD)
 
-    //output
-    PrintAndLogEx(SUCCESS, "IDTECK Tag Found: Card ID %u ,  Raw: %08X%08X", id, raw1, raw2);
+    uint32_t tmp = raw2;
+    lf_idteck_decrypt((uint16_t*)&tmp);
+
+    // checksum check (TBD)
+    // 351FBE4B  ->  90370752   Card Code  [523707]  CUSUM = 52+37+07=90
+    // So, first byte is Csum
+    uint8_t chksum = ((tmp >> 24) & 0xFF);
+    uint8_t calc = ((tmp >> 16) & 0xFF) +
+        ((tmp >> 8) & 0xFF) +
+        (tmp & 0xFF);
+    
+    id = ((tmp >> 16) & 0xFF) | ((tmp >> 8) & 0xFF) << 8 | (tmp & 0xFF) << 16;
+
+    // output
+    PrintAndLogEx(SUCCESS, "IDTECK Tag Found: Card ID " _GREEN_("%u") " ( 0x%06X ) Raw: %08X%08X  chksum 0x%02X ( %s )", 
+        id,
+        id,
+        raw1,
+        raw2,
+        chksum,
+        (chksum == calc) ? _GREEN_("ok") : _RED_("fail")
+    );
+
+    wiegand_message_t packed = {
+        .Bot = id,
+        .Mid = 0,
+        .Top = 0,
+        .Length = 26
+    };
+    HIDUnpack(0, &packed);
     return PM3_SUCCESS;
 }
 
@@ -99,16 +150,21 @@ static int CmdIdteckDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf idteck demod",
                   "Try to find Idteck preamble, if found decode / descramble data",
-                  "lf idteck demod"
+                  "lf idteck demod\n"
+                  "lf idteck demod --raw 4944544B351FBE4B"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str0("r", "raw", "<hex>", "raw bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int raw_len = 0;
+    uint8_t raw[8] = {0};
+    CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
     CLIParserFree(ctx);
-    return demodIdteck(true);
+    return demodIdteck(raw, true);
 }
 
 static int CmdIdteckClone(const char *Cmd) {
@@ -258,7 +314,7 @@ static int CmdIdteckReader(const char *Cmd) {
 
     do {
         lf_read(false, 5000);
-        demodIdteck(!cm);
+        demodIdteck(NULL, !cm);
     } while (cm && !kbd_enter_pressed());
 
     return PM3_SUCCESS;

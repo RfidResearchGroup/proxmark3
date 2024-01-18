@@ -1859,7 +1859,7 @@ int CmdLFfind(const char *Cmd) {
     }
 
     // psk
-    if (demodIdteck(true) == PM3_SUCCESS) {
+    if (demodIdteck(NULL, true) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!");
         if (search_cont) {
             found++;
