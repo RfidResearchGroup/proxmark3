@@ -2482,7 +2482,7 @@ static int CmdEM4x05View(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
-        arg_lit0("v", "verbose", "Verbose output"),
+        arg_litn("v",  "verbose",  0, 2, "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2490,6 +2490,7 @@ static int CmdEM4x05View(const char *Cmd) {
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
+    bool verbose2 = arg_get_lit(ctx, 2) > 1;
     CLIParserFree(ctx);
 
     // read dump file
@@ -2514,7 +2515,10 @@ static int CmdEM4x05View(const char *Cmd) {
         uint32_t serial = bytes_to_num(dump + EM4X05_BLOCK_SIZE, EM4X05_BLOCK_SIZE);
         uint32_t config = bytes_to_num(dump + (EM_CONFIG_BLOCK * EM4X05_BLOCK_SIZE), EM4X05_BLOCK_SIZE);
         printEM4x05info(block0, serial);
-        printEM4x05config(cardtype, config);
+
+        if (verbose2) {
+            printEM4x05config(cardtype, config);
+        }
     }
 
     em4x05_print_hdr();
