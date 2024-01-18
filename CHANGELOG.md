@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
- - Change `lf em 4x05 info` - use `-v` verbose flag to see protection bits (@iceman1001)
+ - Changed `lf em 410x demod --bin` - now supports a raw binary string to demodulate. (@iceman1001)
+ - Changed `lf em 4x05 info` - use `-v` verbose flag to see protection bits (@iceman1001)
  - Changed `lf em 4x05 info` - output now shows detailed bits (@iceman1001)
  - Added `lf em 4x05 view` - now supports viewing of dump files (@iceman1001)
  - Changed `hf 15 eview/view` - now supports the `-z` flag for dense output (@iceman1001)

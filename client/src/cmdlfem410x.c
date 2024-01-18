@@ -234,6 +234,39 @@ void printEM410x(uint32_t hi, uint64_t id, bool verbose, int type) {
         PrintAndLogEx(INFO, "------------------------------------------------");
     }
 }
+
+// takes 1s and 0s and searches for EM410x format - output EM ID
+static int ask_em410x_binary_decode(bool verbose, uint32_t *hi, uint64_t *lo, uint8_t *bits, size_t *size, size_t *idx) {
+
+    int ans = Em410xDecode(bits, size, idx, hi, lo);
+    if (ans < 0) {
+        if (ans == -2)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x not enough samples after demod");
+        else if (ans == -4)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x preamble not found");
+        else if (ans == -5)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x Size not correct: %zu", size);
+        else if (ans == -6)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x parity failed");
+
+        return PM3_ESOFT;
+    }
+
+    if (!lo && !hi) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x decoded to all zeros");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(DEBUG, "DEBUG: Em410x idx: %zu, Len: %zu, Printing DemodBuffer:", *idx, *size);
+    if (g_debugMode) {
+        printDemodBuff(0, false, false, true);
+    }
+
+    printEM410x(*hi, *lo, verbose, ans);
+    gs_em410xid = *lo;
+    return PM3_SUCCESS;
+}
+
 /* Read the ID of an EM410x tag.
  * Format:
  *   1111 1111 1           <-- standard non-repeatable header
@@ -251,37 +284,14 @@ int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo) {
         return PM3_ESOFT;
     }
 
-    int ans = Em410xDecode(bits, &size, &idx, hi, lo);
-    if (ans < 0) {
+    int ret = ask_em410x_binary_decode(verbose, hi, lo, bits, &size, &idx);
 
-        if (ans == -2)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x not enough samples after demod");
-        else if (ans == -4)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x preamble not found");
-        else if (ans == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x Size not correct: %zu", size);
-        else if (ans == -6)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x parity failed");
-
-        return PM3_ESOFT;
+    if (ret == PM3_SUCCESS) {
+        // set g_GraphBuffer for clone or sim command
+        setDemodBuff(g_DemodBuffer, (size == 40) ? 64 : 128, idx + 1);
+        setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 1)*g_DemodClock));
     }
-    if (!lo && !hi) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x decoded to all zeros");
-        return PM3_ESOFT;
-    }
-
-    //set g_GraphBuffer for clone or sim command
-    setDemodBuff(g_DemodBuffer, (size == 40) ? 64 : 128, idx + 1);
-    setClockGrid(g_DemodClock, g_DemodStartIdx + ((idx + 1)*g_DemodClock));
-
-    PrintAndLogEx(DEBUG, "DEBUG: Em410x idx: %zu, Len: %zu, Printing DemodBuffer:", idx, size);
-    if (g_debugMode) {
-        printDemodBuff(0, false, false, true);
-    }
-
-    printEM410x(*hi, *lo, verbose, ans);
-    gs_em410xid = *lo;
-    return PM3_SUCCESS;
+    return ret;
 }
 
 int AskEm410xDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify, uint32_t *hi, uint64_t *lo, bool verbose) {
@@ -291,8 +301,9 @@ int AskEm410xDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify,
     if (isGraphBitstream()) {
         convertGraphFromBitstream();
     }
-    if (ASKDemod_ext(clk, invert, maxErr, maxLen, amplify, false, false, 1, &st) != PM3_SUCCESS)
+    if (ASKDemod_ext(clk, invert, maxErr, maxLen, amplify, false, false, 1, &st) != PM3_SUCCESS) {
         return PM3_ESOFT;
+    }
     return AskEm410xDecode(verbose, hi, lo);
 }
 
@@ -348,6 +359,7 @@ static int CmdEM410xDemod(const char *Cmd) {
         arg_u64_0(NULL, "len", "<dec>", "maximum length"),
         arg_lit0("i", "invert", "invert output"),
         arg_lit0("a", "amp", "amplify signal"),
+        arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -357,12 +369,26 @@ static int CmdEM410xDemod(const char *Cmd) {
     size_t max_len = arg_get_u32_def(ctx, 3, 0);
     bool invert = arg_get_lit(ctx, 4);
     bool amplify = arg_get_lit(ctx, 5);
+    int bin_len = 512;
+    uint8_t bin[512] = {0};
+    CLIGetStrWithReturn(ctx, 6, bin, &bin_len);
     CLIParserFree(ctx);
 
     uint32_t hi = 0;
     uint64_t lo = 0;
-    if (AskEm410xDemod(clk, invert, max_err, max_len, amplify, &hi, &lo, true) != PM3_SUCCESS)
+
+    if (bin_len) {
+        // 111111111011110010010100001110010101001101110001100100000010010011111100001111
+        size_t demodlen = bin_len;
+        size_t start_idx = 0;
+        uint8_t arr[258];
+        binstr_2_binarray(arr, (char *)bin, bin_len);
+        return ask_em410x_binary_decode(true, &hi, &lo, arr, &demodlen, &start_idx);
+    }
+
+    if (AskEm410xDemod(clk, invert, max_err, max_len, amplify, &hi, &lo, true) != PM3_SUCCESS) {
         return PM3_ESOFT;
+    }
 
     return PM3_SUCCESS;
 }
