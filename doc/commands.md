@@ -909,6 +909,7 @@ Check column "offline" for their availability.
 |`lf em 4x05 read        `|N       |`Read word data from EM4x05/EM4x69`
 |`lf em 4x05 sniff       `|Y       |`Attempt to recover em4x05 commands from sample buffer`
 |`lf em 4x05 unlock      `|N       |`Execute tear off against EM4x05/EM4x69`
+|`lf em 4x05 view        `|Y       |`Display content from tag dump file`
 |`lf em 4x05 wipe        `|N       |`Wipe EM4x05/EM4x69 tag`
 |`lf em 4x05 write       `|N       |`Write word data to EM4x05/EM4x69`
 

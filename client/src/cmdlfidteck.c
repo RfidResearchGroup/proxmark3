@@ -82,7 +82,7 @@ static int demod_idteck_signal(void) {
         }
     }
     setDemodBuff(g_DemodBuffer, 64, idx);
-    return PM3_SUCCESS; 
+    return PM3_SUCCESS;
 }
 
 int demodIdteck(uint8_t *raw, bool verbose) {
@@ -110,7 +110,7 @@ int demodIdteck(uint8_t *raw, bool verbose) {
     if (raw1 != 0x4944544B) {
         PrintAndLogEx(FAILED, "No genuine IDTECK found");
     }
-   
+
     // parity check (TBD)
 
     uint32_t tmp = raw2;
@@ -120,20 +120,20 @@ int demodIdteck(uint8_t *raw, bool verbose) {
     // So, first byte is Csum
     uint8_t chksum = ((tmp >> 24) & 0xFF);
     uint8_t calc = ((tmp >> 16) & 0xFF) +
-        ((tmp >> 8) & 0xFF) +
-        (tmp & 0xFF);
-    
+                   ((tmp >> 8) & 0xFF) +
+                   (tmp & 0xFF);
+
     id = ((tmp >> 16) & 0xFF) | ((tmp >> 8) & 0xFF) << 8 | (tmp & 0xFF) << 16;
 
     // output
-    PrintAndLogEx(SUCCESS, "IDTECK Tag Found: Card ID " _GREEN_("%u") " ( 0x%06X ) Raw: %08X%08X  chksum 0x%02X ( %s )", 
-        id,
-        id,
-        raw1,
-        raw2,
-        chksum,
-        (chksum == calc) ? _GREEN_("ok") : _RED_("fail")
-    );
+    PrintAndLogEx(SUCCESS, "IDTECK Tag Found: Card ID " _GREEN_("%u") " ( 0x%06X ) Raw: %08X%08X  chksum 0x%02X ( %s )",
+                  id,
+                  id,
+                  raw1,
+                  raw2,
+                  chksum,
+                  (chksum == calc) ? _GREEN_("ok") : _RED_("fail")
+                 );
 
     wiegand_message_t packed = {
         .Bot = id,

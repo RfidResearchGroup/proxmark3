@@ -88,7 +88,7 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len);
 char *sprint_ascii(const uint8_t *data, const size_t len);
 char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_str_len);
 
-char *sprint_breakdown_bin(color_t color, const char* bs, int width, int padn, int bits, const char* msg);
+char *sprint_breakdown_bin(color_t color, const char *bs, int width, int padn, int bits, const char *msg);
 
 void print_buffer_with_offset(const uint8_t *data, const size_t len, int offset, bool print_header);
 void print_buffer(const uint8_t *data, const size_t len, int level);

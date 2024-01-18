@@ -37,7 +37,7 @@ static void CONSTRUCTOR init_lut(void) {
 
     for (uint32_t i = 0; i < 1 << 20; ++i) {
         filterlut[i] = filter(i);
-}
+    }
 
     for (uint32_t i = 0; i < 0x10E100A; i++) {
         uc_evenparity32_lut[i] = evenparity32(i);
@@ -45,9 +45,9 @@ static void CONSTRUCTOR init_lut(void) {
 }
 
 // MSVC
-#if defined _MSC_VER 
+#if defined _MSC_VER
 
-typedef void(__cdecl* PF)(void);
+typedef void(__cdecl *PF)(void);
 #pragma section(".CRT$XCG", read)
 __declspec(allocate(".CRT$XCG")) PF f[] = { init_lut };
 
@@ -79,16 +79,14 @@ static inline void extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, 
             *tbl |= tbl_filter ^ bit;
             update_contribution(tbl, m1, m2);
             *tbl ^= in;
-        }
-        else if (tbl_filter == bit) {
+        } else if (tbl_filter == bit) {
             *++*end = tbl[1];
             tbl[1] = tbl[0] | 1;
             update_contribution(tbl, m1, m2);
             *tbl++ ^= in;
             update_contribution(tbl, m1, m2);
             *tbl ^= in;
-        }
-        else
+        } else
             *tbl-- = *(*end)--;
     }
 }
@@ -102,12 +100,10 @@ static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit) {
         tbl_filter = filter(*tbl);
         if (tbl_filter ^ filter(*tbl | 1)) { // replace
             *tbl |= tbl_filter ^ bit;
-        }
-        else if (tbl_filter == bit) {     // insert
+        } else if (tbl_filter == bit) {   // insert
             *++*end = *++tbl;
             *tbl = tbl[-1] | 1;
-        }
-        else {                              // drop
+        } else {                            // drop
             *tbl-- = *(*end)--;
         }
     }

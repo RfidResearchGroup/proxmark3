@@ -3484,7 +3484,7 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
                     if (msclock() - t1 > 0 && keys_checked > 0) {
                         PrintAndLogEx(INFO, "Current cracking speed (keys/s): %lu",
                                       keys_checked / ((msclock() - t1) / 1000));
-                    
+
                         t1 = msclock();
                         keys_checked = 0;
                     }

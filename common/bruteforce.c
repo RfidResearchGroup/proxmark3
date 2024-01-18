@@ -226,18 +226,18 @@ int smart_generator_msb_byte_only(generator_context_t *ctx) {
 int smart_generator_nibble_sequence(generator_context_t *ctx) {
     // patterns like A0A1A2A3...F0F1F2F3
     // also with offsets - A1A2A3, A2A3A4, etc
-    // counter1 is high nibble (A, B, C), counter2 is low nibble (0,1, etc) 
+    // counter1 is high nibble (A, B, C), counter2 is low nibble (0,1, etc)
 
-    if(ctx->counter1 == 0){ // init values on first generator call
+    if (ctx->counter1 == 0) { // init values on first generator call
         ctx->counter1 = 0x0A;
     }
 
     uint8_t key_byte;
-    
-    // we substract %2 value because max_offset must be even number
-    uint8_t max_offset = 10 - (ctx->key_length / 2) - (ctx->key_length/2) % 2;
 
-    if(ctx->counter1 == 0x10){
+    // we substract %2 value because max_offset must be even number
+    uint8_t max_offset = 10 - (ctx->key_length / 2) - (ctx->key_length / 2) % 2;
+
+    if (ctx->counter1 == 0x10) {
         return BF_GENERATOR_END;
     }
 
@@ -245,13 +245,13 @@ int smart_generator_nibble_sequence(generator_context_t *ctx) {
 
     for (key_byte = 0; key_byte < ctx->key_length; key_byte++) {
         ctx->current_key |= (uint64_t) ctx->counter1 << (((ctx->key_length - key_byte - 1) * 8) + 4);
-        ctx->current_key |= (uint64_t) (key_byte + ctx->counter2) %10 << ((ctx->key_length - key_byte - 1) * 8);
+        ctx->current_key |= (uint64_t)(key_byte + ctx->counter2) % 10 << ((ctx->key_length - key_byte - 1) * 8);
     }
 
     // counter 2 is the offset
     ctx->counter2++;
 
-    if(ctx->counter2 == max_offset){
+    if (ctx->counter2 == max_offset) {
         ctx->counter2 = 0;
         ctx->counter1++;
     }

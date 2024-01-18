@@ -1277,21 +1277,21 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-a active signal field ON without select",
-                "-b <dec> number of bits to send. Useful for send partial byte",
-                "-c calculate and append CRC",
-                "-k keep signal field ON after receive",
+                "-a Active signal field ON without select",
+                "-c Calculate and append CRC",
+                "-k Keep signal field ON after receive",
                 "-3 ISO14443-3 select only (skip RATS)",
-                "-r do not read response",
-                "-s active signal field ON with select",
-                "-t, --timeout <ms> timeout in milliseconds",
+                "-r Do not read response",
+                "-s Active signal field ON with select",
+                "-t, --timeout <ms> Timeout in milliseconds",
+                "-b <dec> Number of bits to send. Useful for send partial byte",
                 "-v, --verbose Verbose output",
-                "--topaz use Topaz protocol to send command",
-                "--ecp use enhanced contactless polling",
-                "--mag use Apple magsafe polling",
-                "<hex> raw bytes to send"
+                "--ecp Use enhanced contactless polling",
+                "--mag Use Apple magsafe polling",
+                "--topaz Use Topaz protocol to send command",
+                "<hex> Raw bytes to send"
             ],
-            "usage": "hf 14a raw [-hack3rsv] [-b <dec>] [-t <ms>] [--topaz] [--ecp] [--mag] <hex> [<hex>]..."
+            "usage": "hf 14a raw [-hack3rsv] [-t <ms>] [-b <dec>] [--ecp] [--mag] [--topaz] <hex> [<hex>]..."
         },
         "hf 14a reader": {
             "command": "hf 14a reader",
@@ -1450,7 +1450,7 @@
         },
         "hf 14b raw": {
             "command": "hf 14b raw",
-            "description": "Sends raw bytes to card",
+            "description": "Sends raw bytes to card. Activates field by default",
             "notes": [
                 "hf 14b raw -cks --data 0200a40400 -> standard select, apdu 0200a4000 (7816)",
                 "hf 14b raw -ck --sr --data 0200a40400 -> SRx select",
@@ -1459,18 +1459,20 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, --keep leave the signal field ON after receive response",
-                "-s, --std activate field, use ISO14B select",
-                "--sr activate field, use SRx ST select",
-                "--cts activate field, use ASK C-ticket select",
-                "--xrx activate field, use Fuji/Xerox select",
+                "-a active signal field ON without select",
                 "-c, --crc calculate and append CRC",
+                "-k, --keep leave the signal field ON after receive response",
+                "-d, --data <hex> data, bytes to send",
                 "-r do not read response from card",
                 "-t, --timeout <dec> timeout in ms",
-                "-v, --verbose verbose output",
-                "-d, --data <hex> data, bytes to send"
+                "-s, --std use ISO14B select",
+                "--sr use SRx ST select",
+                "--cts use ASK C-ticket select",
+                "--xrx use Fuji/Xerox select",
+                "--pico use Picopass select",
+                "-v, --verbose verbose output"
             ],
-            "usage": "hf 14b raw [-hkscrv] [--sr] [--cts] [--xrx] [-t <dec>] [-d <hex>]"
+            "usage": "hf 14b raw [-hackrsv] [-d <hex>] [-t <dec>] [--sr] [--cts] [--xrx] [--pico]"
         },
         "hf 14b rdbl": {
             "command": "hf 14b rdbl",
@@ -1659,9 +1661,10 @@
             "options": [
                 "-h, --help This help",
                 "-b, --blocksize <dec> block size (def 4)",
-                "-c, --count <dec> number of blocks to display (def all)"
+                "-c, --count <dec> number of blocks to display (def all)",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf 15 eview [-h] [-b <dec>] [-c <dec>]"
+            "usage": "hf 15 eview [-hz] [-b <dec>] [-c <dec>]"
         },
         "hf 15 findafi": {
             "command": "hf 15 findafi",
@@ -1748,21 +1751,21 @@
             "command": "hf 15 raw",
             "description": "Sends raw bytes over ISO-15693 to card",
             "notes": [
-                "hf 15 raw -sc -d 260100 -> add crc",
-                "hf 15 raw -skrc -d 260100 -> add crc, keep field on, skip response"
+                "hf 15 raw -ac -d 260100 -> activate, add crc",
+                "hf 15 raw -akrc -d 260100 -> activate, add crc, keep field on, skip response"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-2 use slower '1 out of 256' mode",
+                "-a activate field",
                 "-c, --crc calculate and append CRC",
                 "-k keep signal field ON after receive",
+                "-2 use slower '1 out of 256' mode",
                 "-r do not read response",
                 "-d, --data <hex> raw bytes to send",
-                "-w, --wait wait longer for response. For writes etc.",
-                "-a activate field"
+                "-w, --wait wait longer for response. For writes etc."
             ],
-            "usage": "hf 15 raw [-h2ckrwa] -d <hex>"
+            "usage": "hf 15 raw [-hack2rw] -d <hex>"
         },
         "hf 15 rdbl": {
             "command": "hf 15 rdbl",
@@ -1958,9 +1961,10 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> Specify a filename for dump file"
+                "-f, --file <fn> Specify a filename for dump file",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf 15 view [-h] -f <fn>"
+            "usage": "hf 15 view [-hz] -f <fn>"
         },
         "hf 15 wipe": {
             "command": "hf 15 wipe",
@@ -4084,6 +4088,29 @@
             ],
             "usage": "hf mf autopwn [-hablv] [-k <hex>]... [-s <dec>] [-f <fn>] [--slow] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
         },
+        "hf mf brute": {
+            "command": "hf mf brute",
+            "description": "This is a smart bruteforce, exploiting common patterns, bugs and bad designs in key generators.",
+            "notes": [
+                "hf mf brute --mini -> Key recovery against MIFARE Mini",
+                "hf mf brute --1k -> Key recovery against MIFARE Classic 1k",
+                "hf mf brute --2k -> Key recovery against MIFARE 2k",
+                "hf mf brute --4k -> Key recovery against MIFARE 4k",
+                "hf mf brute --1k --emu -> Target 1K, write keys to emulator memory",
+                "hf mf brute --1k --dump -> Target 1K, write keys to file"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--mini MIFARE Classic Mini / S20",
+                "--1k MIFARE Classic 1k / S50 (default)",
+                "--2k MIFARE Classic/Plus 2k",
+                "--4k MIFARE Classic 4k / S70",
+                "--emu Fill simulator keys from found keys",
+                "--dump Dump found keys to binary file"
+            ],
+            "usage": "hf mf brute [-h] [--mini] [--1k] [--2k] [--4k] [--emu] [--dump]"
+        },
         "hf mf cgetblk": {
             "command": "hf mf cgetblk",
             "description": "Get block data from magic Chinese card. Only works with magic gen1a cards",
@@ -4154,9 +4181,13 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Specify a filename for dump file",
+                "--mini MIFARE Classic Mini / S20",
+                "--1k MIFARE Classic 1k / S50 (def)",
+                "--2k MIFARE Classic/Plus 2k",
+                "--4k MIFARE Classic 4k / S70",
                 "--emu from emulator memory"
             ],
-            "usage": "hf mf cload [-h] [-f <fn>] [--emu]"
+            "usage": "hf mf cload [-h] [-f <fn>] [--mini] [--1k] [--2k] [--4k] [--emu]"
         },
         "hf mf csave": {
             "command": "hf mf csave",
@@ -8304,7 +8335,7 @@
         },
         "lf em 4x05 help": {
             "command": "lf em 4x05 help",
-            "description": "help This help demod Demodulate a EM4x05/EM4x69 tag from the GraphBuffer sniff Attempt to recover em4x05 commands from sample buffer --------------------------------------------------------------------------------------- lf em 4x05 brute available offline: no This command tries to bruteforce the password of a EM4205/4305/4469/4569 The loop is running on device side, press Proxmark3 button to abort",
+            "description": "help This help ----------- ----------------------- general ----------------------- demod Demodulate a EM4x05/EM4x69 tag from the GraphBuffer sniff Attempt to recover em4x05 commands from sample buffer view Display content from tag dump file --------------------------------------------------------------------------------------- lf em 4x05 brute available offline: no This command tries to bruteforce the password of a EM4205/4305/4469/4569 The loop is running on device side, press Proxmark3 button to abort",
             "notes": [
                 "Note: if you get many false positives, change position on the antennalf em 4x05 brute",
                 "lf em 4x05 brute -n 1 -> stop after first candidate found",
@@ -8328,9 +8359,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-p, --pwd <hex> optional - password, 4 hex bytes"
+                "-p, --pwd <hex> optional - password, 4 hex bytes",
+                "-v, --verbose Verbose output"
             ],
-            "usage": "lf em 4x05 info [-h] [-p <hex>]"
+            "usage": "lf em 4x05 info [-hv] [-p <hex>]"
         },
         "lf em 4x05 read": {
             "command": "lf em 4x05 read",
@@ -8381,6 +8413,20 @@
                 "-v, --verbose verbose output"
             ],
             "usage": "lf em 4x05 unlock [-hv] [-n <int>] [-s <us>] [-e <us>] [-p <hex>]"
+        },
+        "lf em 4x05 view": {
+            "command": "lf em 4x05 view",
+            "description": "Print a EM4205/4305/4369/4469 dump file (bin/eml/json) note: We don't track if password is known in current dump file formats. All zeros password block might be filler data",
+            "notes": [
+                "lf em 4x05 view -f lf-4x05-01020304-dump.json"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> Specify a filename for dump file",
+                "-v, --verbose Verbose output"
+            ],
+            "usage": "lf em ex05 view [-hv] -f <fn>"
         },
         "lf em 4x05 wipe": {
             "command": "lf em 4x05 wipe",
@@ -8494,12 +8540,13 @@
             "description": "help This help ----------- --------------------- operations --------------------- ----------- --------------------- simulation --------------------- --------------------------------------------------------------------------------------- lf em 4x50 brute available offline: no Tries to bruteforce the password of a EM4x50 card. Function can be stopped by pressing pm3 button.",
             "notes": [
                 "lf em 4x50 brute --mode range --begin 12330000 --end 12340000 -> tries pwds from 0x12330000 to 0x12340000",
-                "lf em 4x50 brute --mode charset --digits --uppercase -> tries all combinations of ASCII codes for digits and uppercase letters"
+                "lf em 4x50 brute --mode charset --digits --uppercase -> tries all combinations of ASCII codes for digits and uppercase letters",
+                "lf em 4x50 brute --mode smart -> enable 'smart' pattern key cracking"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "--mode <str> Bruteforce mode (range|charset)",
+                "--mode <str> Bruteforce mode (range|charset|smart)",
                 "--begin <hex> Range mode - start of the key range",
                 "--end <hex> Range mode - end of the key range",
                 "--digits Charset mode - include ASCII codes for digits",
@@ -8763,9 +8810,10 @@
                 "--err <dec> maximum allowed errors (default 100)",
                 "--len <dec> maximum length",
                 "-i, --invert invert output",
-                "-a, --amp amplify signal"
+                "-a, --amp amplify signal",
+                "--bin <bin> Binary string i.e 0001001001"
             ],
-            "usage": "lf em 410x demod [-hia] [--clk <dec>] [--err <dec>] [--len <dec>]"
+            "usage": "lf em 410x demod [-hia] [--clk <dec>] [--err <dec>] [--len <dec>] [--bin <bin>]"
         },
         "lf fdxb clone": {
             "command": "lf fdxb clone",
@@ -9304,13 +9352,15 @@
             "command": "lf idteck help",
             "description": "help This help demod demodulate an Idteck tag from the GraphBuffer --------------------------------------------------------------------------------------- lf idteck demod available offline: yes Try to find Idteck preamble, if found decode / descramble data",
             "notes": [
-                "lf idteck demod"
+                "lf idteck demod",
+                "lf idteck demod --raw 4944544B351FBE4B"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-r, --raw <hex> raw bytes"
             ],
-            "usage": "lf idteck demod [-h]"
+            "usage": "lf idteck demod [-h] [-r <hex>]"
         },
         "lf idteck reader": {
             "command": "lf idteck reader",
@@ -12240,8 +12290,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 707,
+        "commands_extracted": 709,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-01-16T12:52:56"
+        "extracted_on": "2024-01-18T15:39:50"
     }
 }

@@ -558,7 +558,7 @@ char *sprint_ascii(const uint8_t *data, const size_t len) {
     return sprint_ascii_ex(data, len, 0);
 }
 
-char *sprint_breakdown_bin(color_t color, const char* bs, int width, int padn, int bits, const char* msg) {
+char *sprint_breakdown_bin(color_t color, const char *bs, int width, int padn, int bits, const char *msg) {
 
     if (bs == NULL || width > 32) {
         return NULL;
@@ -577,39 +577,39 @@ char *sprint_breakdown_bin(color_t color, const char* bs, int width, int padn, i
     switch (color) {
         case C_GREEN: {
             snprintf(buf, sizeof(buf), "%.*s" _GREEN_("%.*s") "%.*s - " _GREEN_("%s")
-                    , padn, prepad
-                    , bits, bs + padn
-                    , end, postmarker
-                    , msg
-                );
+                     , padn, prepad
+                     , bits, bs + padn
+                     , end, postmarker
+                     , msg
+                    );
             break;
         }
         case C_RED: {
             snprintf(buf, sizeof(buf), "%.*s" _RED_("%.*s") "%.*s - " _RED_("%s")
-                    , padn, prepad
-                    , bits, bs + padn
-                    , end, postmarker
-                    , msg
-                );
+                     , padn, prepad
+                     , bits, bs + padn
+                     , end, postmarker
+                     , msg
+                    );
             break;
         }
         case C_YELLOW: {
             snprintf(buf, sizeof(buf), "%.*s" _YELLOW_("%.*s") "%.*s - " _YELLOW_("%s")
-                    , padn, prepad
-                    , bits, bs + padn
-                    , end, postmarker
-                    , msg
-                );
+                     , padn, prepad
+                     , bits, bs + padn
+                     , end, postmarker
+                     , msg
+                    );
             break;
         }
         case C_NONE:
         default: {
             snprintf(buf, sizeof(buf), "%.*s%.*s%.*s - %s"
-                    , padn, prepad
-                    , bits, bs + padn
-                    , end, postmarker
-                    , msg
-                );
+                     , padn, prepad
+                     , bits, bs + padn
+                     , end, postmarker
+                     , msg
+                    );
             break;
         }
     }

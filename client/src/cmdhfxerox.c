@@ -519,7 +519,7 @@ static const xerox_part_t xerox_part_mappings[] = {
 static const xerox_part_t *get_xerox_part_info(const char *pn) {
     for (int i = 0; i < ARRAYLEN(xerox_part_mappings); i++) {
         // Todo: make str_startswith, accept additional "Maximum number of characters to compare"
-        if(strncmp(pn, xerox_part_mappings[i].partnumber, strlen(pn)-3) == 0){
+        if (strncmp(pn, xerox_part_mappings[i].partnumber, strlen(pn) - 3) == 0) {
             return &xerox_part_mappings[i];
         }
     }
@@ -907,11 +907,11 @@ static int CmdHFXeroxDump(const char *Cmd) {
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += snprintf(fptr, sizeof(filename), "hf-xerox-");
         FillFileNameByUID(fptr
-                        , SwapEndian64(card.uid, card.uidlen, 8)
-                        , (decrypt) ? "-dump-dec" : "-dump"
-                        , card.uidlen
-                    );
-}
+                          , SwapEndian64(card.uid, card.uidlen, 8)
+                          , (decrypt) ? "-dump-dec" : "-dump"
+                          , card.uidlen
+                         );
+    }
 
     pm3_save_dump(filename, data, blockno * XEROX_BLOCK_SIZE, jsf14b_v2);
     return PM3_SUCCESS;

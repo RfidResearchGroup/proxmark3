@@ -578,6 +578,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "lf em 4x05 read" },
     { 1, "lf em 4x05 sniff" },
     { 0, "lf em 4x05 unlock" },
+    { 1, "lf em 4x05 view" },
     { 0, "lf em 4x05 wipe" },
     { 0, "lf em 4x05 write" },
     { 1, "lf em 4x50 help" },

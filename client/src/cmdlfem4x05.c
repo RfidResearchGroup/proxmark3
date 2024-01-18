@@ -674,7 +674,7 @@ static void printEM4x05config(em_tech_type_t card_type, uint32_t wordData) {
     PrintAndLogEx(INFO, "Default read..... " _YELLOW_("%u") " blocks", numblks);
     PrintAndLogEx(INFO, "Last word read... " _YELLOW_("%u") " th block", LWR);
 
-    uint8_t bits[32+1] = {0};
+    uint8_t bits[32 + 1] = {0};
     num_to_bytebitsLSBF(wordData, 32, bits);
     const char *bs = sprint_bytebits_bin(bits, 32);
 
@@ -693,13 +693,13 @@ static void printEM4x05config(em_tech_type_t card_type, uint32_t wordData) {
     if (card_type == EM_4369 || card_type == EM_4469) {
         PrintAndLogEx(INFO, "%s", sprint_breakdown_bin(C_NONE, bs, 32, 10, 2, cf));
     } else {
-        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin( (PSKcf) ? C_RED : C_NONE, bs, 32, 10, 2, "Must be 0"));
+        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin((PSKcf) ? C_RED : C_NONE, bs, 32, 10, 2, "Must be 0"));
     }
 
     if (card_type == EM_4305) {
         PrintAndLogEx(INFO, "%s", sprint_breakdown_bin(C_NONE, bs, 32, 12, 2, "Delayed ON"));
     } else {
-        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin( (delay) ? C_RED : C_NONE, bs, 32, 12, 2, "Must be 0"));
+        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin((delay) ? C_RED : C_NONE, bs, 32, 12, 2, "Must be 0"));
     }
 
     PrintAndLogEx(INFO, "%s", sprint_breakdown_bin(C_NONE, bs, 32, 14, 4, "LWR, Last default read word "));
@@ -717,7 +717,7 @@ static void printEM4x05config(em_tech_type_t card_type, uint32_t wordData) {
             PrintAndLogEx(INFO, "%s", sprint_breakdown_bin(C_GREEN, bs, 32, 19, 1, "Read HK, not required"));
         }
     } else {
-        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin( (readHKL) ? C_RED : C_NONE, bs, 32, 19, 1, "Must be 0"));
+        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin((readHKL) ? C_RED : C_NONE, bs, 32, 19, 1, "Must be 0"));
     }
 
     if (writeLogin) {
@@ -733,7 +733,7 @@ static void printEM4x05config(em_tech_type_t card_type, uint32_t wordData) {
             PrintAndLogEx(INFO, "%s", sprint_breakdown_bin(C_NONE, bs, 32, 21, 1, "Write HK, login not required"));
         }
     } else {
-        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin( (writeHKL) ? C_RED : C_NONE, bs, 32, 21, 1, "Must be 0"));
+        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin((writeHKL) ? C_RED : C_NONE, bs, 32, 21, 1, "Must be 0"));
     }
 
     if (card_type == EM_4369 || card_type == EM_4469) {
@@ -743,7 +743,7 @@ static void printEM4x05config(em_tech_type_t card_type, uint32_t wordData) {
             PrintAndLogEx(INFO, "%s", sprint_breakdown_bin(C_NONE, bs, 32, 22, 1, "Read after write is OFF"));
         }
     } else {
-        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin( (raw) ? C_RED : C_NONE, bs, 32, 22, 1, "Must be 0"));
+        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin((raw) ? C_RED : C_NONE, bs, 32, 22, 1, "Must be 0"));
     }
 
     if (disable) {
@@ -765,7 +765,7 @@ static void printEM4x05config(em_tech_type_t card_type, uint32_t wordData) {
             PrintAndLogEx(INFO, "%s", sprint_breakdown_bin(C_NONE, bs, 32, 25, 1, "Invert data? no"));
         }
     } else {
-        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin( (invert) ? C_RED : C_NONE, bs, 32, 25, 1, "Must be 0"));
+        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin((invert) ? C_RED : C_NONE, bs, 32, 25, 1, "Must be 0"));
     }
 
     if (card_type == EM_4305) {
@@ -775,7 +775,7 @@ static void printEM4x05config(em_tech_type_t card_type, uint32_t wordData) {
             PrintAndLogEx(INFO, "%s", sprint_breakdown_bin(C_NONE, bs, 32, 26, 1, "Pigeon mode disabled"));
         }
     } else {
-        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin( (pigeon) ? C_RED : C_NONE, bs, 32, 26, 1, "Must be 0"));
+        PrintAndLogEx(INFO, "%s", sprint_breakdown_bin((pigeon) ? C_RED : C_NONE, bs, 32, 26, 1, "Must be 0"));
     }
 
     PrintAndLogEx(INFO, "%s", sprint_breakdown_bin(C_NONE, bs, 32, 27, 5, "RFU, Reserved for future use"));
@@ -865,7 +865,7 @@ static bool is_cancelled(void) {
     return false;
 }
 
-static void em4x05_print_hdr(void) {    
+static void em4x05_print_hdr(void) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Addr | data     | ascii |lck| info");
     PrintAndLogEx(INFO, "-----+----------+-------+---+-----");
@@ -873,7 +873,7 @@ static void em4x05_print_hdr(void) {
 
 static void em4x05_print_footer(void) {
     PrintAndLogEx(INFO, "-----+----------+-------+---+-----");
-    PrintAndLogEx(NORMAL, "");    
+    PrintAndLogEx(NORMAL, "");
 }
 
 static void em4x05_print_blocks(uint32_t cardtype, uint8_t *data, uint8_t dlen) {
@@ -883,10 +883,10 @@ static void em4x05_print_blocks(uint32_t cardtype, uint8_t *data, uint8_t dlen) 
         return;
     }
 
-    uint32_t *d = (uint32_t*)data;
+    uint32_t *d = (uint32_t *)data;
 
     uint8_t i;
-    for (i = 0; i< (dlen >> 2); i++) {
+    for (i = 0; i < (dlen >> 2); i++) {
         d[i] = BSWAP_32(d[i]);
     }
     i = 0;
@@ -903,7 +903,7 @@ static void em4x05_print_blocks(uint32_t cardtype, uint8_t *data, uint8_t dlen) 
         if ((d[EM4305_PROT1_BLOCK] & 0x00008000) != 0x00) {
             got_lock_bits = true;
             lock = d[EM4305_PROT1_BLOCK];
-        } else if  ((d[EM4305_PROT2_BLOCK] & 0x00008000) != 0x00) {
+        } else if ((d[EM4305_PROT2_BLOCK] & 0x00008000) != 0x00) {
             // assume block 15 is the current lock block
             p15_active = true;
             got_lock_bits = true;
@@ -917,32 +917,32 @@ static void em4x05_print_blocks(uint32_t cardtype, uint8_t *data, uint8_t dlen) 
 
             // hack: since sprint_ascii doesnt handle MSB/LSB swaps
             reverse_array_copy(data + (i * EM4X05_BLOCK_SIZE), EM4X05_BLOCK_SIZE, rev);
-            
+
             if (i == EM_SERIAL_BLOCK) {
                 PrintAndLogEx(INFO, "  %02u | " _GREEN_("%08X") " | %s  | %s | " _GREEN_("%s")
-                    , i
-                    , d[i]
-                    , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                    , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                    , em4x05_annotation[i]
-                );
-            } else if ( i == EM_CONFIG_BLOCK) {
+                              , i
+                              , d[i]
+                              , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                              , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                              , em4x05_annotation[i]
+                             );
+            } else if (i == EM_CONFIG_BLOCK) {
                 PrintAndLogEx(INFO, "  %02u | " _YELLOW_("%08X") " | %s  | %s | " _YELLOW_("%s")
-                    , i
-                    , d[i]
-                    , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                    , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                    , em4x05_annotation[i]
-                );
+                              , i
+                              , d[i]
+                              , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                              , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                              , em4x05_annotation[i]
+                             );
             } else {
 
                 PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s"
-                    , i
-                    , d[i]
-                    , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                    , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                    , em4x05_annotation[i]
-                );
+                              , i
+                              , d[i]
+                              , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                              , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                              , em4x05_annotation[i]
+                             );
             }
         }
 
@@ -955,22 +955,22 @@ static void em4x05_print_blocks(uint32_t cardtype, uint8_t *data, uint8_t dlen) 
 
         if (p15_active) {
             PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %-10s %s"
-                    , i
-                    , d[i]
-                    , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                    , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                    , em4x05_annotation[i]
-                    , ""
-                );
+                          , i
+                          , d[i]
+                          , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                          , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                          , em4x05_annotation[i]
+                          , ""
+                         );
         } else {
             PrintAndLogEx(INFO, "  %02u | " _GREEN_("%08X") " | %s  | %s | %-10s %s"
-                , i
-                , d[i]
-                , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                , em4x05_annotation[i]
-                , _GREEN_("active")
-            );
+                          , i
+                          , d[i]
+                          , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                          , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                          , em4x05_annotation[i]
+                          , _GREEN_("active")
+                         );
         }
 
         i = 15;
@@ -980,22 +980,22 @@ static void em4x05_print_blocks(uint32_t cardtype, uint8_t *data, uint8_t dlen) 
 
         if (p15_active) {
             PrintAndLogEx(INFO, "  %02u | " _GREEN_("%08X") " | %s  | %s | %-10s %s"
-                    , i
-                    , d[i]
-                    , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                    , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                    , em4x05_annotation[i]
-                    , _GREEN_("active")
-                );
+                          , i
+                          , d[i]
+                          , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                          , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                          , em4x05_annotation[i]
+                          , _GREEN_("active")
+                         );
         } else {
             PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %-10s %s"
-                    , i
-                    , d[i]
-                    , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                    , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                    , em4x05_annotation[i]
-                    , ""
-                );
+                          , i
+                          , d[i]
+                          , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                          , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                          , em4x05_annotation[i]
+                          , ""
+                         );
         }
     }
 
@@ -1011,28 +1011,28 @@ static void em4x05_print_blocks(uint32_t cardtype, uint8_t *data, uint8_t dlen) 
 
             if (i == EM_SERIAL_BLOCK) {
                 PrintAndLogEx(INFO, "  %02u | " _GREEN_("%08X") " | %s  | %s | " _GREEN_("%s")
-                    , i
-                    , d[i]
-                    , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                    , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                    , em4x69_annotation[i]
-                );
-            } else if ( i == EM_CONFIG_BLOCK) {
+                              , i
+                              , d[i]
+                              , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                              , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                              , em4x69_annotation[i]
+                             );
+            } else if (i == EM_CONFIG_BLOCK) {
                 PrintAndLogEx(INFO, "  %02u | " _YELLOW_("%08X") " | %s  | %s | " _YELLOW_("%s")
-                    , i
-                    , d[i]
-                    , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                    , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                    , em4x69_annotation[i]
-                );
+                              , i
+                              , d[i]
+                              , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                              , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                              , em4x69_annotation[i]
+                             );
             } else {
                 PrintAndLogEx(INFO, "  %02u | %08X | %s  | %s | %s"
-                    , i
-                    , d[i]
-                    , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
-                    , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
-                    , em4x69_annotation[i]
-                );
+                              , i
+                              , d[i]
+                              , sprint_ascii(rev, EM4X05_BLOCK_SIZE)
+                              , (got_lock_bits) ? (lockbit ? _RED_("x") : " ") : _YELLOW_("?")
+                              , em4x69_annotation[i]
+                             );
             }
         }
     }
@@ -2473,12 +2473,12 @@ int CmdEM4x05Sniff(const char *Cmd) {
 static int CmdEM4x05View(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em ex05 view",
-                "Print a EM4205/4305/4369/4469 dump file (bin/eml/json)\n"
-                "note:\n"
-                "We don't track if password is known in current dump file formats.\n"
-                "All zeros password block might be filler data",
-                "lf em 4x05 view -f lf-4x05-01020304-dump.json"
-            );
+                  "Print a EM4205/4305/4369/4469 dump file (bin/eml/json)\n"
+                  "note:\n"
+                  "We don't track if password is known in current dump file formats.\n"
+                  "All zeros password block might be filler data",
+                  "lf em 4x05 view -f lf-4x05-01020304-dump.json"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),

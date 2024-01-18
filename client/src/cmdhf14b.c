@@ -2554,7 +2554,7 @@ int readHF14B(bool loop, bool verbose) {
         else if (found)
             return PM3_SUCCESS;
 
-        // Picopass 
+        // Picopass
         found |= HF14B_picopass_reader(verbose) ;
         if (found && loop)
             continue;

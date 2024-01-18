@@ -2133,7 +2133,7 @@ static int iso14443b_select_picopass_card(picopass_hdr_t *hdr) {
     uint16_t retlen = 0;
 
     // first, wake up the tag  0x0A
-    CodeAndTransmit14443bAsReader(act_all, sizeof(act_all), &start_time, &eof_time, true);    
+    CodeAndTransmit14443bAsReader(act_all, sizeof(act_all), &start_time, &eof_time, true);
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
 
     // 0x0C
@@ -2204,7 +2204,7 @@ static int iso14443b_select_picopass_card(picopass_hdr_t *hdr) {
         memcpy(hdr->app_issuer_area, resp, sizeof(hdr->app_issuer_area));
 
         // card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
-        start_time = eof_time + ISO14B_TR2;        
+        start_time = eof_time + ISO14B_TR2;
         CodeAndTransmit14443bAsReader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, true);
         eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
 
@@ -2605,7 +2605,7 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
         reply_ng(CMD_HF_ISO14443B_COMMAND, status, (uint8_t *)cts, sendlen);
         if (status != PM3_SUCCESS) goto out;
     }
-    
+
     if ((p->flags & ISO14B_SELECT_PICOPASS) == ISO14B_SELECT_PICOPASS) {
         picopass_hdr_t *hdr = (picopass_hdr_t *)buf;
         memset(hdr, 0, sizeof(picopass_hdr_t));
@@ -2619,11 +2619,11 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
     if (
         ((p->flags & ISO14B_APDU) == ISO14B_APDU) ||
         ((p->flags & ISO14B_RAW) == ISO14B_RAW)
-        ) {
+    ) {
         if (s_field_on == false) {
             DbpString("Field is off");
             reply_ng(CMD_HF_ISO14443B_COMMAND, PM3_ERFTRANS, NULL, 0);
-            goto out;        
+            goto out;
         }
     }
 
