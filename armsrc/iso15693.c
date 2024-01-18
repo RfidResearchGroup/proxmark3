@@ -1104,37 +1104,9 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
     if (fsk) {
         sof_time -= (dtf->len * 8 * 8 * 16) // time for byte transfers
                     + (dtf->lastBit != SOF ? (32 * 16) : 0); // time for EOF transfer
-
-        if (g_dbglevel >= DBG_EXTENDED) {
-            Dbprintf("samples = %d, ret = %d, FSK Decoder: state = %d, lastBit = %d, len = %d, bitCount = %d, count = %d, maxlen = %u",
-                     samples,
-                     ret,
-                     dtf->state,
-                     dtf->lastBit,
-                     dtf->len,
-                     dtf->bitCount,
-                     dtf->count,
-                     dtf->max_len
-                    );
-            Dbprintf("timing: sof_time = %d, eof_time = %d", (sof_time * 4), (*eof_time * 4));
-        }
     } else {
         sof_time -= (dt->len * 8 * 8 * 16) // time for byte transfers
                     + (dt->lastBit != SOF_PART2 ? (32 * 16) : 0); // time for EOF transfer
-
-        if (g_dbglevel >= DBG_EXTENDED) {
-            Dbprintf("samples = %d, ret = %d, Decoder: state = %d, lastBit = %d, len = %d, bitCount = %d, posCount = %d, maxlen = %u",
-                     samples,
-                     ret,
-                     dt->state,
-                     dt->lastBit,
-                     dt->len,
-                     dt->bitCount,
-                     dt->posCount,
-                     dt->max_len
-                    );
-            Dbprintf("timing: sof_time = %d, eof_time = %d", (sof_time * 4), (*eof_time * 4));
-        }
     }
 
     if (ret != PM3_SUCCESS) {
@@ -1558,12 +1530,6 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     }
 
     FpgaDisableSscDma();
-
-    if (g_dbglevel >= DBG_EXTENDED) {
-        Dbprintf("samples = %d, gotFrame = %d, Decoder: state = %d, len = %d, bitCount = %d, posCount = %d",
-                 samples, gotFrame, dr->state, dr->byteCount,
-                 dr->bitCount, dr->posCount);
-    }
 
     if (dr->byteCount >= 0) {
         uint32_t sof_time = *eof_time
