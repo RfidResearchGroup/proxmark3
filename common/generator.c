@@ -327,13 +327,19 @@ int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t 
     if (sector > 15) return PM3_EINVARG;
     if (key == NULL) return PM3_EINVARG;
 
-    if (keytype == 0 && sector == 2) {
+    //
+    if (keytype == 1) {
         *key = 0xFFFFFFFFFFFF;
         return PM3_SUCCESS;
     }
 
     if (keytype == 0 && sector == 1) {
         *key = 0x2a2c13cc242a;
+        return PM3_SUCCESS;
+    }
+
+    if (((sector == 2) || (sector == 3)) && (keytype == 0)) {
+        *key = 0xFFFFFFFFFFFF;
         return PM3_SUCCESS;
     }
 
@@ -354,9 +360,6 @@ int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t 
         uint64_t id = (bytes_to_num(uid, 4) << 8);
 
         *key = (h + (id + m + ((uint64_t)h << 40ULL))) & 0xFFFFFFFFFFFFULL;
-
-    } else {
-        *key = 0xFFFFFFFFFFFF;
     }
     return PM3_SUCCESS;
 }

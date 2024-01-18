@@ -114,7 +114,6 @@ int demodIdteck(uint8_t *raw, bool verbose) {
     // parity check (TBD)
 
     uint32_t tmp = raw2;
-    lf_idteck_decrypt((uint16_t*)&tmp);
 
     // checksum check (TBD)
     // 351FBE4B  ->  90370752   Card Code  [523707]  CUSUM = 52+37+07=90
