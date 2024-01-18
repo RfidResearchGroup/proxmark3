@@ -22,7 +22,7 @@
 
 int CmdLFIdteck(const char *Cmd);
 
-int demodIdteck(bool verbose);
+int demodIdteck(uint8_t *raw, bool verbose);
 int detectIdteck(uint8_t *dest, size_t *size);
 
 #endif
