@@ -646,8 +646,9 @@ void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
     }
 }
 
-void print_progress(size_t count, uint64_t max, barMode_t style) {
+void print_progress(uint64_t count, uint64_t max, barMode_t style) {
     int cols = 100 + 35;
+    max = (count > max) ? count : max;
 #if defined(HAVE_READLINE)
     static int prev_cols = 0;
     int rows;
@@ -698,13 +699,15 @@ void print_progress(size_t count, uint64_t max, barMode_t style) {
     for (; i < unit * value; i += unit) {
         memcpy(bar + i, block[mode], unit);
     }
-    // add last block
-    if (mode == 1) {
-        memcpy(bar + i, smoothtable[PERCENTAGEFRAC(count, max)], unit);
-    } else {
-        memcpy(bar + i, space[mode], unit);
+    if (i < unit * width) {
+        // add last block
+        if (mode == 1) {
+            memcpy(bar + i, smoothtable[PERCENTAGEFRAC(count, max)], unit);
+        } else {
+            memcpy(bar + i, space[mode], unit);
+        }
+        i += unit;
     }
-    i += unit;
     // add spaces
     for (; i < unit * width; i += unit) {
         memcpy(bar + i, space[mode], unit);

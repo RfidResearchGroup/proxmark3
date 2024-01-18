@@ -84,7 +84,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
 
 extern pthread_mutex_t g_print_lock;
 
-void print_progress(size_t count, uint64_t max, barMode_t style);
+void print_progress(uint64_t count, uint64_t max, barMode_t style);
 
 void iceIIR_Butterworth(int *data, const size_t len);
 void iceSimple_Filter(int *data, const size_t len, uint8_t k);
