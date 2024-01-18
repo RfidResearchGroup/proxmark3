@@ -565,18 +565,18 @@ char *sprint_breakdown_bin(color_t color, const char* bs, int width, int padn, i
     }
 
     const char *prepad     = "                                ";
-    const char *postmarker = "................................";
+    const char *postmarker = " ................................";
     static char buf[32 + 120] = {0};
     memset(buf, 0, sizeof(buf));
 
-    int8_t end = (width - padn - 1 - bits);
+    int8_t end = (width - padn - bits);
     if (end < 0) {
         end = 0;
     }
 
     switch (color) {
         case C_GREEN: {
-            snprintf(buf, sizeof(buf), "%.*s" _GREEN_("%.*s") " %.*s - " _GREEN_("%s")
+            snprintf(buf, sizeof(buf), "%.*s" _GREEN_("%.*s") "%.*s - " _GREEN_("%s")
                     , padn, prepad
                     , bits, bs + padn
                     , end, postmarker
@@ -585,7 +585,7 @@ char *sprint_breakdown_bin(color_t color, const char* bs, int width, int padn, i
             break;
         }
         case C_RED: {
-            snprintf(buf, sizeof(buf), "%.*s" _RED_("%.*s") " %.*s - " _RED_("%s")
+            snprintf(buf, sizeof(buf), "%.*s" _RED_("%.*s") "%.*s - " _RED_("%s")
                     , padn, prepad
                     , bits, bs + padn
                     , end, postmarker
@@ -594,7 +594,7 @@ char *sprint_breakdown_bin(color_t color, const char* bs, int width, int padn, i
             break;
         }
         case C_YELLOW: {
-            snprintf(buf, sizeof(buf), "%.*s" _YELLOW_("%.*s") " %.*s - " _YELLOW_("%s")
+            snprintf(buf, sizeof(buf), "%.*s" _YELLOW_("%.*s") "%.*s - " _YELLOW_("%s")
                     , padn, prepad
                     , bits, bs + padn
                     , end, postmarker
@@ -604,7 +604,7 @@ char *sprint_breakdown_bin(color_t color, const char* bs, int width, int padn, i
         }
         case C_NONE:
         default: {
-            snprintf(buf, sizeof(buf), "%.*s%.*s %.*s - %s"
+            snprintf(buf, sizeof(buf), "%.*s%.*s%.*s - %s"
                     , padn, prepad
                     , bits, bs + padn
                     , end, postmarker
