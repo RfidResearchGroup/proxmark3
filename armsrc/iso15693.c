@@ -107,7 +107,7 @@
 ///////////////////////////////////////////////////////////////////////
 
 // buffers
-#define ISO15693_MAX_RESPONSE_LENGTH     36 // allows read single block with the maximum block size of 256bits. Read multiple blocks not supported yet
+#define ISO15693_MAX_RESPONSE_LENGTH     2116 // allows read multiple block with the maximum block size of 256bits and a maximum block number of 64 with REQ_OPTION (lock status for each block
 #define ISO15693_MAX_COMMAND_LENGTH      45 // allows write single block with the maximum block size of 256bits. Write multiple blocks not supported yet
 
 // 32 + 2 crc + 1
@@ -120,6 +120,7 @@
 //#define Crc(data, len)        Crc(CRC_15693, (data), (len))
 #define CheckCrc15(data, len)   check_crc(CRC_15693, (data), (len))
 #define AddCrc15(data, len)     compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
+#define CalculateCrc15(data, len)  Crc16ex(CRC_15693, (data), (len) + 2)
 
 static void BuildIdentifyRequest(uint8_t *cmd);
 
@@ -2522,174 +2523,6 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
             LogTrace_ISO15693(recv, recvLen, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
         }
-/*
-        // TODO: check more flags
-        if ((cmd_len >= 5) && (cmd[0] & ISO15_REQ_INVENTORY) && (cmd[1] == ISO15693_INVENTORY)) {
-            bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
-            uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
-
-            // Build INVENTORY command
-            uint8_t resp_inv[CMD_INV_RESP] = {0};
-
-            resp_inv[0] = 0; // No error, no protocol format extension
-            resp_inv[1] = 0; // DSFID (data storage format identifier).  0x00 = not supported
-
-            // 64-bit UID
-            resp_inv[2] = tag->uid[7];
-            resp_inv[3] = tag->uid[6];
-            resp_inv[4] = tag->uid[5];
-            resp_inv[5] = tag->uid[4];
-            resp_inv[6] = tag->uid[3];
-            resp_inv[7] = tag->uid[2];
-            resp_inv[8] = tag->uid[1];
-            resp_inv[9] = tag->uid[0];
-
-            // CRC
-            AddCrc15(resp_inv, 10);
-            CodeIso15693AsTag(resp_inv, CMD_INV_RESP);
-
-            tosend_t *ts = get_tosend();
-
-            TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
-            LogTrace_ISO15693(resp_inv, CMD_INV_RESP, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
-
-            tag->state = TAG_STATE_SELECTED;
-        }
-
-        // GET_SYSTEM_INFO
-        if ((cmd[1] == ISO15693_GET_SYSTEM_INFO)) {
-            bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
-            uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
-
-            // Build GET_SYSTEM_INFO response
-            uint8_t resp_sysinfo[CMD_SYSINFO_RESP] = {0};
-
-            resp_sysinfo[0] = 0;    // Response flags.
-            resp_sysinfo[1] = 0x0F; // Information flags (0x0F - DSFID, AFI, Mem size, IC)
-
-            // 64-bit UID
-            resp_sysinfo[2] = tag->uid[7];
-            resp_sysinfo[3] = tag->uid[6];
-            resp_sysinfo[4] = tag->uid[5];
-            resp_sysinfo[5] = tag->uid[4];
-            resp_sysinfo[6] = tag->uid[3];
-            resp_sysinfo[7] = tag->uid[2];
-            resp_sysinfo[8] = tag->uid[1];
-            resp_sysinfo[9] = tag->uid[0];
-
-            resp_sysinfo[10] = 0;    // DSFID
-            resp_sysinfo[11] = 0;    // AFI
-
-            resp_sysinfo[12] = 0x1F; // Block count
-            resp_sysinfo[13] = block_size - 1; // Block size.
-            resp_sysinfo[14] = 0x01; // IC reference.
-
-            // CRC
-            AddCrc15(resp_sysinfo, 15);
-            CodeIso15693AsTag(resp_sysinfo, CMD_SYSINFO_RESP);
-
-            tosend_t *ts = get_tosend();
-
-            TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
-            LogTrace_ISO15693(resp_sysinfo, CMD_SYSINFO_RESP, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
-        }
-
-        // READ_BLOCK and READ_MULTI_BLOCK
-        if ((cmd[1] == ISO15693_READBLOCK) || (cmd[1] == ISO15693_READ_MULTI_BLOCK)) {
-            bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
-            bool addressed = cmd[0] & ISO15_REQ_ADDRESS;
-            bool option = cmd[0] & ISO15_REQ_OPTION;
-            uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
-
-            uint8_t address_offset = 0;
-            if (addressed) {
-                address_offset = 8;
-            }
-
-            uint8_t block_idx = cmd[2 + address_offset];
-            uint8_t block_count = 1;
-            if (cmd[1] == ISO15693_READ_MULTI_BLOCK) {
-                block_count = cmd[3 + address_offset] + 1;
-            }
-
-            // Build READ_(MULTI_)BLOCK response
-            int response_length = 3 + block_size * block_count;
-            int security_offset = 0;
-            if (option) {
-                response_length += block_count;
-                security_offset = 1;
-            }
-            uint8_t resp_readblock[response_length];
-            memset(resp_readblock, 0, response_length);
-
-            resp_readblock[0] = 0;    // Response flags
-            for (int j = 0; j < block_count; j++) {
-                // where to put the data of the current block
-                int work_offset = 1 + j * (block_size + security_offset);
-                if (option) {
-                    resp_readblock[work_offset] = 0;    // Security status
-                }
-                // Block data
-                if (block_size * (block_idx + j + 1) <= CARD_MEMORY_SIZE) {
-                    emlGet(
-                        resp_readblock + (work_offset + security_offset),
-                        block_size * (block_idx + j),
-                        block_size
-                    );
-                } else {
-                    memset(resp_readblock + work_offset + security_offset, 0, block_size);
-                }
-            }
-
-            // CRC
-            AddCrc15(resp_readblock, response_length - 2);
-            CodeIso15693AsTag(resp_readblock, response_length);
-
-            tosend_t *ts = get_tosend();
-
-            TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
-            LogTrace_ISO15693(resp_readblock, response_length, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
-        }
-
-        // WRITE_BLOCK and WRITE_MULTI_BLOCK
-        if ((cmd[1] == ISO15693_WRITEBLOCK) || (cmd[1] == ISO15693_WRITE_MULTI_BLOCK)) {
-            bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
-            bool addressed = cmd[0] & ISO15_REQ_ADDRESS;
-            uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
-
-            uint8_t address_offset = 0;
-            if (addressed) {
-                address_offset = 8;
-            }
-
-            uint8_t block_idx = cmd[2 + address_offset];
-            uint8_t block_count = 1;
-            uint8_t multi_offset = 0;
-            if (cmd[1] == ISO15693_WRITE_MULTI_BLOCK) {
-                block_count = cmd[3 + address_offset] + 1;
-                multi_offset = 1;
-            }
-            uint8_t *data = cmd + 3 + address_offset + multi_offset;
-
-            // write data
-            emlSet(data, (block_idx * block_size), (block_count * block_size));
-
-            // Build WRITE_(MULTI_)BLOCK response
-            int response_length = 3;
-            uint8_t resp_writeblock[response_length];
-            memset(resp_writeblock, 0, response_length);
-            resp_writeblock[0] = 0;    // Response flags
-
-            // CRC
-            AddCrc15(resp_writeblock, response_length - 2);
-            CodeIso15693AsTag(resp_writeblock, response_length);
-
-            tosend_t *ts = get_tosend();
-
-            TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
-            LogTrace_ISO15693(resp_writeblock, response_length, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
-        }
-*/
     }
 
     switch_off();
