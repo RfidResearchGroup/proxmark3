@@ -54,6 +54,13 @@ extern int g_numCPUs;
 #define PM3_RET_IF_ERR_WITH_MSG(res, ...)            if (res != PM3_SUCCESS) {              PrintAndLogEx(ERR, __VA_ARGS__); return res; }
 #define PM3_RET_IF_ERR_MAYBE_MSG(res, verbose, ...)  if (res != PM3_SUCCESS) { if (verbose) PrintAndLogEx(ERR, __VA_ARGS__); return res; }
 
+typedef enum {
+    C_NONE,
+    C_GREEN,
+    C_RED,
+    C_YELLOW,
+} color_t;
+
 int kbd_enter_pressed(void);
 void FillFileNameByUID(char *filenamePrefix, const uint8_t *uid, const char *ext, const int uidlen);
 // fill buffer from structure [{uint8_t data, size_t length},...]
@@ -80,6 +87,8 @@ char *sprint_bytebits_bin_break(const uint8_t *data, const size_t len, const uin
 char *sprint_hex_ascii(const uint8_t *data, const size_t len);
 char *sprint_ascii(const uint8_t *data, const size_t len);
 char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_str_len);
+
+char *sprint_breakdown_bin(color_t color, const char* bs, int width, int padn, int bits, const char* msg);
 
 void print_buffer_with_offset(const uint8_t *data, const size_t len, int offset, bool print_header);
 void print_buffer(const uint8_t *data, const size_t len, int level);
