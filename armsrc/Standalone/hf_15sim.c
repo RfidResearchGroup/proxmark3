@@ -62,6 +62,8 @@ void RunMod(void) {
     rdv40_spiffs_lazy_mount();
 #endif
 
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+
     iso15693_tag *tag = (iso15693_tag*) BigBuf_get_EM_addr();
     if (tag == NULL) return;
 
@@ -78,7 +80,7 @@ void RunMod(void) {
 
     LED_B_ON();
 
-    Dbprintf("Start dumping tag");
+    Dbprintf("Wait for a dumpable tag");
 
     while (1) {
         SpinDelay(200);
@@ -86,18 +88,33 @@ void RunMod(void) {
         if (BUTTON_HELD(500) > 0)
         {
             LEDsoff();
+            Dbprintf("Quiting");
             return;
         }
         start_time = 0;//eof_time;
-        res = SendDataTag(cmd, 4, true, 1, recv, sizeof(recv), start_time, ISO15693_READER_TIMEOUT, &eof_time, &recvLen);
+        res = SendDataTag(cmd, 4, true, true, recv, sizeof(recv), start_time, ISO15693_READER_TIMEOUT, &eof_time, &recvLen);
         if (res < 0)
+        {
+            Dbprintf("res < 0");
             continue;
+        }
         if (recvLen<10) // error: recv too short
+        {
+            Dbprintf("recvLen<10");
             continue;
-        if (CheckCrc15(recv,recvLen)) // error crc not valid
+        }
+        if (!CheckCrc15(recv,recvLen)) // error crc not valid
+        {
+            Dbprintf("crc failed");
             continue;
+        }
         if (recv[0] & ISO15_RES_ERROR) // received error from tag
+        {
+            Dbprintf("error received");
             continue;
+        }
+
+        Dbprintf("Start dumping tag");
 
         memset(tag, 0, sizeof(iso15693_tag));
         memcpy(tag->uid, &recv[2], 8);
@@ -136,16 +153,28 @@ void RunMod(void) {
         AddCrc15(cmd, 3);
 
         start_time = eof_time;
-        res = SendDataTag(cmd, 5, false, 1, recv, sizeof(recv), start_time, ISO15693_READER_TIMEOUT, &eof_time, &recvLen);
+        res = SendDataTag(cmd, 5, false, true, recv, sizeof(recv), start_time, ISO15693_READER_TIMEOUT, &eof_time, &recvLen);
 
         if (res < 0)
+        {
+            Dbprintf("res < 0");
             continue;
+        }
         if (recvLen < 4 + tag->bytesPerPage) // error: recv too short
+        {
+            Dbprintf("recvLen < 4 + tag->bytesPerPage");
             continue;
-        if (CheckCrc15(recv,recvLen)) // error crc not valid
+        }
+        if (!CheckCrc15(recv,recvLen)) // error crc not valid
+        {
+            Dbprintf("crc failed");
             continue;
+        }
         if (recv[0] & ISO15_RES_ERROR) // received error from tag
+        {
+            Dbprintf("error received");
             continue;
+        }
 
         tag->locks[blocknum] = recv[1];
         memcpy(&tag->data[blocknum * tag->bytesPerPage], recv + 2, tag->bytesPerPage);
@@ -155,7 +184,11 @@ void RunMod(void) {
 
     LEDsoff();
     if (retry >= 8)
+    {
+        Dbprintf("Max retry attemps exeeded");
+        Dbprintf("-=[ exit ]=-");
         return;
+    }
 
     Dbprintf("Tag dumpped");
     Dbprintf("Start simulation");
