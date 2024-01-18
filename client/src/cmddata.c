@@ -3680,9 +3680,9 @@ static int CmdBinaryMap(const char *Cmd) {
     char *token = strtok((char *)template, ",");
 
     // header
-    PrintAndLogEx(INFO, "---+---------------------------");
+    PrintAndLogEx(INFO, "---+-------------------------");
     PrintAndLogEx(INFO, "   | b0 b1 b2 b3 b4 b5 b6 b7");
-    PrintAndLogEx(INFO, "---+---------------------------");
+    PrintAndLogEx(INFO, "---+-------------------------");
 
     uint8_t i = 0;
     uint8_t cnt = 1;
@@ -3690,7 +3690,7 @@ static int CmdBinaryMap(const char *Cmd) {
     while (token != NULL) {
         sscanf(token, "%d", &x);
 
-        PrintAndLogEx(INFO, " %d | %*.s" NOLF, cnt, i * 3, " ");
+        PrintAndLogEx(INFO, " %d | %.*s" NOLF, cnt, i * 3, "                         ");
 
         // incease with previous offset
         x += i;
