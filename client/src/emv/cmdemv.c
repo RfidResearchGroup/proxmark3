@@ -2699,7 +2699,7 @@ static int CmdEMVReader(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("w", "wired", "Send data via contact (iso7816) interface. (def: Contactless interface)"),
-        arg_lit0("v", "verbose", "verbose"),
+        arg_lit0("v", "verbose", "Verbose output"),
         arg_lit0("@",  NULL,   "continuous reader mode"),
         arg_param_end
     };

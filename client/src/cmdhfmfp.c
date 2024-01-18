@@ -532,7 +532,7 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_litn("v",  "verbose", 0, 2, "Verbose mode"),
+        arg_litn("v",  "verbose", 0, 2, "Verbose output"),
         arg_str0("k", "key", "<hex>", "Key, 16 hex bytes"),
         arg_param_end
     };
@@ -610,7 +610,7 @@ static int CmdHFMFPCommitPerso(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
 //        arg_int0(NULL,  "sl", "<dec>", "SL mode"),
         arg_param_end
     };
@@ -657,7 +657,7 @@ static int CmdHFMFPAuth(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_str1(NULL, "ki", "<hex>", "Key number, 2 hex bytes"),
         arg_str1(NULL, "key", "<hex>", "Key, 16 hex bytes"),
         arg_param_end
@@ -713,7 +713,7 @@ static int CmdHFMFPRdbl(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "count", "<dec>", "Blocks count (def: 1)"),
         arg_lit0("b",  "keyb", "Use key B (def: keyA)"),
         arg_lit0("p", "plain", "Do not use encrypted communication mode between reader and card"),
@@ -831,7 +831,7 @@ static int CmdHFMFPRdsc(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_lit0("b",  "keyb",    "Use key B (def: keyA)"),
         arg_lit0("p", "plain", "Do not use encrypted communication mode between reader and card"),
         arg_lit0(NULL, "nmc", "Do not append MAC to command"),
@@ -938,7 +938,7 @@ static int CmdHFMFPWrbl(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_lit0("b",  "keyb",    "Use key B (def: keyA)"),
         arg_int1(NULL, "blk",     "<0..255>", "Block number"),
         arg_lit0("p", "plain", "Do not use encrypted transmission"),
@@ -1049,7 +1049,7 @@ static int CmdHFMFPChKey(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_lit0(NULL, "nmr", "Do not expect MAC in response"),
         arg_str1(NULL, "ki", "<hex>", "Key Index, 2 hex bytes"),
         arg_str0("k", "key",      "<hex>", "Current sector key, 16 hex bytes"),
@@ -1165,7 +1165,7 @@ static int CmdHFMFPChConf(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_lit0(NULL, "nmr", "Do not expect MAC in response"),
         arg_int1("c", "conf", "<hex>", "Config block number, 0-3"),
         arg_str0("k", "key",      "<hex>", "Card key, 16 hex bytes"),
@@ -1387,7 +1387,7 @@ static int CmdHFMFPChk(const char *Cmd) {
         arg_lit0(NULL, "pattern2b", "Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
         arg_str0(NULL, "startp2b",  "<pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
         arg_lit0(NULL, "dump",      "Dump found keys to JSON file"),
-        arg_lit0("v",  "verbose",   "Verbose mode"),
+        arg_lit0("v",  "verbose",   "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1661,8 +1661,8 @@ static int CmdHFMFPDump(const char *Cmd) {
         arg_param_begin,
         arg_str0("f",  "file", "<fn>", "Specify a filename for dump file"),
         arg_str0("k",  "keys", "<fn>", "Specify a filename for keys file"),
-        arg_lit0(NULL, "ns", "no save to file"),
-        arg_lit0("v",  "verbose",   "Verbose mode"),
+//        arg_lit0(NULL, "ns", "no save to file"),
+//        arg_lit0("v",  "verbose",   "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1735,7 +1735,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose",  "Show technical data"),
+        arg_lit0("v",  "verbose",  "Verbose output"),
         arg_str0(NULL, "aid",      "<hex>", "Print all sectors with aid"),
         arg_str0("k",  "key",      "<hex>", "Key for printing sectors"),
         arg_lit0("b",  "keyb",     "Use key B for access printing sectors (def: key A)"),
@@ -1906,7 +1906,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_litn("v",  "verbose",  0, 2, "show technical data"),
+        arg_litn("v",  "verbose",  0, 2, "verbose output"),
         arg_str0(NULL, "aid",      "<aid>", "replace default aid for NDEF"),
         arg_str0("k",  "key",      "<key>", "replace default key for NDEF"),
         arg_lit0("b",  "keyb",     "use key B for access sectors (by default: key A)"),

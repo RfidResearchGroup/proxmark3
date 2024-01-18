@@ -83,7 +83,7 @@ static int CmdNfcDecode(const char *Cmd) {
         arg_param_begin,
         arg_str0("d",  "data", "<hex>", "NDEF data to decode"),
         arg_str0("f", "file", "<fn>", "file to load"),
-        arg_lit0("v",  "verbose", "verbose mode"),
+        arg_lit0("v",  "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

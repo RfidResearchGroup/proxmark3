@@ -288,7 +288,7 @@ int CmdHFST25TANdefRead(const char *Cmd) {
         arg_param_begin,
         arg_str0("p", "pwd", "<hex>", "16 byte read password"),
         arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
-        arg_litn("v",  "verbose",  0, 2, "show technical data"),
+        arg_lit0("v",  "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

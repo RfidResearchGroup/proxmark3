@@ -299,7 +299,8 @@ static int CmdHf14AConfig(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a config",
-                  "Configure 14a settings (use with caution)",
+                  "Configure 14a settings (use with caution)\n"
+                  "   `-v` also prints examples for reviving Gen2 cards",
                   "hf 14a config              -> Print current configuration\n"
                   "hf 14a config --std        -> Reset default configuration (follow standard)\n"
                   "hf 14a config --atqa std   -> Follow standard\n"
@@ -326,7 +327,7 @@ static int CmdHf14AConfig(const char *Cmd) {
         arg_str0(NULL, "cl3", "<std|force|skip>", "Configure SAK<>CL3 behavior"),
         arg_str0(NULL, "rats", "<std|force|skip>", "Configure RATS behavior"),
         arg_lit0(NULL, "std", "Reset default configuration: follow all standard"),
-        arg_lit0("v", "verbose", "verbose output, also prints examples for reviving Gen2 cards"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -665,7 +666,7 @@ static int CmdHF14AInfo(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose",   "adds some information to results"),
+        arg_lit0("v",  "verbose",   "verbose output"),
         arg_lit0("n",  "nacktest",   "test for nack bug"),
         arg_lit0("s",  "aidsearch", "checks if AIDs from aidlist.json is present on the card and prints information about found AIDs"),
         arg_param_end
@@ -1277,7 +1278,7 @@ static int CmdHF14AAPDU(const char *Cmd) {
         arg_lit0("s",  "select",   "activate field and select card"),
         arg_lit0("k",  "keep",     "keep signal field ON after receive"),
         arg_lit0("t",  "tlv",      "decode TLV"),
-        arg_lit0("d",  "decapdu",  "decode APDU request"),
+        arg_lit0(NULL, "decode",   "decode APDU request"),
         arg_str0("m",  "make",     "<hex>", "APDU header, 4 bytes <CLA INS P1 P2>"),
         arg_lit0("e",  "extended", "make extended length apdu if `m` parameter included"),
         arg_int0("l",  "le",       "<dec>", "Le APDU parameter if `m` parameter included"),
@@ -2807,7 +2808,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
-        arg_litn("v",  "verbose",  0, 2, "show technical data"),
+        arg_litn("v",  "verbose",  0, 2, "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3034,7 +3035,7 @@ int CmdHF14ANdefFormat(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_litn("v",  "verbose",  0, 2, "show technical data"),
+        arg_lit0("v",  "verbose",  "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

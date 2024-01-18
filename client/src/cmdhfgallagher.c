@@ -891,7 +891,7 @@ static int CmdGallagherReader(const char *cmd) {
         arg_str0(NULL, "sitekey",    "<hex>", "Site key to compute diversified keys (16 bytes)"),
         arg_lit0("@",  "continuous",          "Continuous reader mode"),
         arg_lit0(NULL, "apdu",                "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose",             "Verbose mode"),
+        arg_lit0("v",  "verbose",             "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
@@ -960,7 +960,7 @@ static int CmdGallagherClone(const char *cmd) {
         arg_lit0(NULL,  "nocadupdate",      "Don't modify the Card Application Directory (only creates the app)"),
         arg_lit0(NULL,  "noappcreate",      "Don't create the application (only modifies the CAD)"),
         arg_lit0(NULL,  "apdu",             "Show APDU requests and responses"),
-        arg_lit0("v",   "verbose",          "Verbose mode"),
+        arg_lit0("v",   "verbose",          "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, false);
@@ -1109,7 +1109,7 @@ static int CmdGallagherDelete(const char *cmd) {
         arg_lit0(NULL, "nocadupdate",      "Don't modify the Card Application Directory (only deletes the app)"),
         arg_lit0(NULL, "noappdelete",      "Don't delete the application (only modifies the CAD)"),
         arg_lit0(NULL, "apdu",             "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose",          "Verbose mode"),
+        arg_lit0("v",  "verbose",          "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, false);

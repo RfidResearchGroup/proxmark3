@@ -288,7 +288,7 @@ int CmdHFTune(const char *Cmd) {
         arg_lit0(NULL, "bar", "bar style"),
         arg_lit0(NULL, "mix", "mixed style"),
         arg_lit0(NULL, "value", "values style"),
-        arg_lit0(NULL, "stat", "show statistical data after tuning"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -296,7 +296,7 @@ int CmdHFTune(const char *Cmd) {
     bool is_bar = arg_get_lit(ctx, 2);
     bool is_mix = arg_get_lit(ctx, 3);
     bool is_value = arg_get_lit(ctx, 4);
-    bool stat_on = arg_get_lit(ctx, 5);
+    bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     if ((is_bar + is_mix + is_value) > 1) {
@@ -319,7 +319,7 @@ int CmdHFTune(const char *Cmd) {
 
     uint8_t mode[] = {1};
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
-    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
+    if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000) == false) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF initialization, aborting");
         return PM3_ETIMEOUT;
     }
@@ -341,7 +341,7 @@ int CmdHFTune(const char *Cmd) {
         }
 
         SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
-        if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
+        if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000) == false) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF measure, aborting");
             break;
@@ -359,7 +359,7 @@ int CmdHFTune(const char *Cmd) {
             first = false;
         }
         v_max = (volt > v_max) ? volt : v_max;
-        if (stat_on) {
+        if (verbose) {
             v_min = (volt < v_min) ? volt : v_min;
             v_sum += volt;
             v_count++;
@@ -369,17 +369,19 @@ int CmdHFTune(const char *Cmd) {
     mode[0] = 3;
 
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
-    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000)) {
+    if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000) == false) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark HF shutdown, aborting");
         return PM3_ETIMEOUT;
     }
     PrintAndLogEx(NORMAL, "\x1b%c[2K\r", 30);
-    PrintAndLogEx(INFO, "Done.");
-    if (stat_on) {
-        PrintAndLogEx(INFO, "Min:%u mV", v_min);
-        PrintAndLogEx(INFO, "Max:%u mV", v_max);
-        PrintAndLogEx(INFO, "Average:%.3lf mV", v_sum / (double)v_count);
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Min....... %u mV", v_min);
+        PrintAndLogEx(INFO, "Max....... %u mV", v_max);
+        PrintAndLogEx(INFO, "Average... %.3lf mV", v_sum / (double)v_count);
     }
+
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 

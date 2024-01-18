@@ -141,6 +141,8 @@ static int CmdHFFidoRegister(const char *cmd) {
                   "Initiate a U2F token registration. Needs two 32-byte hash numbers.\n"
                   "challenge parameter (32b) and application parameter (32b).\n"
                   "The default config filename is  `fido2_defparams.json`\n"
+                  "note:\n"
+                  "   `-vv` shows  full certificates data\n"
                   "\n",
                   "hf fido reg                   -> execute command with 2 parameters, filled 0x00\n"
                   "hf fido reg --cp s0 --ap s1   -> execute command with plain parameters\n"
@@ -151,7 +153,7 @@ static int CmdHFFidoRegister(const char *cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu", "Show APDU requests and responses"),
-        arg_litn("v",  "verbose",  0, 2, "Verbose mode. vv - show full certificates data"),
+        arg_litn("v",  "verbose",  0, 2, "Verbose output"),
         arg_lit0("t",  "tlv",  "Show DER certificate contents in TLV representation"),
         arg_str0("f",  "file", "<fn>",  "JSON input file name for parameters"),
         arg_str0(NULL, "cp",   "<str>", "Challenge parameter (1..16 chars)"),
@@ -419,7 +421,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",      "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose",   "Verbose mode"),
+        arg_lit0("v",  "verbose",   "Verbose output"),
         arg_rem("default mode:",    "dont-enforce-user-presence-and-sign"),
         arg_lit0("u",  "user",      "mode: enforce-user-presence-and-sign"),
         arg_lit0("c",  "check",     "mode: check-only"),
@@ -672,8 +674,9 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     CLIParserInit(&ctx, "hf fido make",
                   "Execute a FIDO2 Make Credential command. Needs json file with parameters.\n"
                   "Sample file `fido2_defparams.json` in `client/resources/`.\n"
-                  "- for yubikey there must be only one option `\"rk\": true` or false"
-                  ,
+                  "- for yubikey there must be only one option `\"rk\": true` or false\n"
+                  "note:\n"
+                  "   `-vv` shows  full certificates data\n",
                   "hf fido make               --> use default parameters file `fido2_defparams.json`\n"
                   "hf fido make -f test.json  --> use parameters file `text.json`"
                  );
@@ -681,7 +684,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a", "apdu", "Show APDU requests and responses"),
-        arg_litn("v", "verbose", 0, 2, "Verbose mode. vv - show full certificates data"),
+        arg_litn("v", "verbose", 0, 2, "Verbose output"),
         arg_lit0("t", "tlv",  "Show DER certificate contents in TLV representation"),
         arg_lit0("c", "cbor", "Show CBOR decoded data"),
         arg_str0("f", "file", "<fn>", "Parameter JSON file name"),
@@ -792,15 +795,16 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
                   "Execute a FIDO2 Get Assertion command. Needs json file with parameters.\n"
                   "Sample file `fido2_defparams.json` in `client/resources/`.\n"
                   "- Needs if `rk` option is `false` (authenticator doesn't store credential to its memory)\n"
-                  "- for yubikey there must be only one option `\"up\": true` or false"
-                  ,
+                  "- for yubikey there must be only one option `\"up\": true` or false\n"
+                  "note:\n"
+                  "   `-vv` shows  full certificates data\n",
                   "hf fido assert                  --> default parameters file `fido2_defparams.json`\n"
                   "hf fido assert -f test.json -l  --> use parameters file `text.json` and add to request CredentialId");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a", "apdu", "Show APDU requests and responses"),
-        arg_litn("v", "verbose", 0, 2, "Verbose mode. vv - show full certificates data"),
+        arg_litn("v", "verbose", 0, 2, "Verbose output"),
         arg_lit0("c", "cbor", "Show CBOR decoded data"),
         arg_lit0("l", "list", "Add CredentialId from json to allowList"),
         arg_str0("f", "file", "<fn>", "Parameter JSON file name"),

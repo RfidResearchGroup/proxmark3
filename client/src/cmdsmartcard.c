@@ -1233,14 +1233,17 @@ static int CmdRelay(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart relay",
                   "Make pm3 available to host OS smartcard driver via vpcd to enable use with other software such as GlobalPlatform Pro",
-                  "Requires the virtual smartcard daemon to be installed and running, see https://frankmorgner.github.io/vsmartcard/virtualsmartcard/README.html"
+                  "Requires the virtual smartcard daemon to be installed and running\n"
+                  "  see https://frankmorgner.github.io/vsmartcard/virtualsmartcard/README.html\n"
+                  "note:\n"
+                  "  `-v` shows APDU transactions between OS and card\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "host", "<str>", "vpcd socket host (default: localhost)"),
-        arg_str0("p", "port", "<int>", "vpcd socket port (default: 35963)"),
-        arg_lit0("v", "verbose", "display APDU transactions between OS and card"),
+        arg_str0(NULL, "host", "<str>", "VPCD socket host (default: localhost)"),
+        arg_str0("p", "port", "<int>", "VPCD socket port (default: 35963)"),
+        arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

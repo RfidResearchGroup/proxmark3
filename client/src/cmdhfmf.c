@@ -2407,7 +2407,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         arg_str0("f", "file",    "<fn>",  "filename of dictionary"),
         arg_lit0(NULL,  "slow",            "Slower acquisition (required by some non standard cards)"),
         arg_lit0("l",  "legacy",          "legacy mode (use the slow `hf mf chk`)"),
-        arg_lit0("v",  "verbose",         "verbose output (statistics)"),
+        arg_lit0("v",  "verbose",         "verbose output"),
 
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
@@ -5907,7 +5907,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose",  "show technical data"),
+        arg_lit0("v",  "verbose",  "verbose output"),
         arg_str0(NULL, "aid",      "<hex>", "print all sectors with specified aid"),
         arg_str0("k",  "key",      "<hex>", "key for printing sectors"),
         arg_lit0("b",  "keyb",     "use key B for access printing sectors (by default: key A)"),
@@ -6197,7 +6197,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_litn("v",  "verbose",  0, 2, "show technical data"),
+        arg_litn("v",  "verbose",  0, 2, "Verbose output"),
         arg_str0(NULL, "aid",      "<aid>", "replace default aid for NDEF"),
         arg_str0("k",  "key",      "<key>", "replace default key for NDEF"),
         arg_lit0("b",  "keyb",     "use key B for access sectors (by default: key A)"),
