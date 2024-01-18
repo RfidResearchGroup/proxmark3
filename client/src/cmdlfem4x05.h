@@ -21,13 +21,14 @@
 
 #include "common.h"
 
-#define EM_SERIAL_BLOCK 1
-#define EM_CONFIG_BLOCK 4
-#define EM4305_PROT1_BLOCK 14
-#define EM4305_PROT2_BLOCK 15
-#define EM4469_PROT_BLOCK 3
+#define EM_SERIAL_BLOCK     1
+#define EM_CONFIG_BLOCK     4
+#define EM4305_PROT1_BLOCK  14
+#define EM4305_PROT2_BLOCK  15
+#define EM4469_PROT_BLOCK   3
 
 #define EM4X05_BITS_BUFSIZE 128
+#define EM4X05_BLOCK_SIZE   4
 
 // config blocks
 #define EM4305_DEFAULT_CONFIG_BLOCK      (EM4x05_SET_BITRATE(32) | EM4x05_MODULATION_MANCHESTER | EM4x05_SET_NUM_BLOCKS(4) ) // ASK/MAN , data rate 32, 4 data blocks
