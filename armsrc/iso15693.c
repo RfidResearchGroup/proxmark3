@@ -2475,6 +2475,20 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                         recv[recvLen++] = tag->locks[pageNum + i];
                 }
                 break;
+            case ISO15693_GET_RANDOM_NUMBER:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("GetRandomNumber cmd");
+                recv[0] = ISO15_NOERROR;
+                recv[1] = 0x42; // perfectly random numbers generated
+                recv[2] = 0x42; //  using fair dice rolls
+                recvLen = 3;
+                break;
+            case ISO15693_ENABLE_PRIVACY:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("EnablePrivacy cmd");
+                // not realy entering privacy mode
+                // just return NOERROR
+                recv[0] = ISO15_NOERROR;
+                recvLen = 1;
+                break;
             default:
                 if (g_dbglevel >= DBG_DEBUG)
                     Dbprintf("ISO15693 CMD 0x%2X not supported", cmd[1]);
