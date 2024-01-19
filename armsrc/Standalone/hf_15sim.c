@@ -154,7 +154,6 @@ void RunMod(void) {
 
         if (res < 0)
         {
-            Dbprintf("res < 0");
             SpinDelay(100);
             continue;
         }
@@ -188,7 +187,7 @@ void RunMod(void) {
         return;
     }
 
-    Dbprintf("Tag dumpped");
+    Dbprintf("Tag dumped");
     Dbprintf("Start simulation");
 
     SimTagIso15693(0, 0);
