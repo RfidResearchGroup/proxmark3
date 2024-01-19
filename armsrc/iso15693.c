@@ -120,7 +120,7 @@
 //#define Crc(data, len)        Crc(CRC_15693, (data), (len))
 #define CheckCrc15(data, len)   check_crc(CRC_15693, (data), (len))
 #define AddCrc15(data, len)     compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
-#define CalculateCrc15(data, len)  Crc16ex(CRC_15693, (data), (len) + 2)
+#define CalculateCrc15(data, len)  Crc16ex(CRC_15693, (data), (len))
 
 static void BuildIdentifyRequest(uint8_t *cmd);
 
