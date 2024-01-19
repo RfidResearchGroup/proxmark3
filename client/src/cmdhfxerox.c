@@ -469,48 +469,60 @@ static void xerox_print_footer(void) {
 
 // structure and database for uid -> tagtype lookups
 typedef struct {
-    const char *color; // cyan, magenta, gold, silver, clear, white, fluo
+    //General details
     const char *partnumber;
-    const char *region; // DMO, WW, NA/ESG (NA - North America, MNA - Metred North America, DMO - Developing Markets, XE - Europe)
+
+    //Toner related details
+    const char *color; // cyan, magenta, gold, silver, clear, white, fluo
+    
+    const char *region; // DMO, WW, NA/ESG (NA - North America, MNA - Metred North America, DMO - Developing Markets, XE - Europe
     const char *ms; // sold, metered
-    const char *consumable_type; // toner, drum
+
+    //Drum related details
+    const char *r; // Interchangeability with drumtray(s): color, black, both
 } xerox_part_t;
 
 // Additional data based on model DCP 550/560/570/C60/C70, PrimeLink C9065/C9070, WC 7965/7975 (Color)
 // https://gist.github.com/JeroenSteen/4b45886b8d87fa0530af9b0364e6b277
-// Todo: import data as actual JSON-file
+// Todo: import data as actual JSON-file, and find a way to seperate toner/drums (with inheritance of consumable as type)
 static const xerox_part_t xerox_part_mappings[] = {
-    {"cyan", "006R01532", "DMO", "sold", "toner"},
-    {"cyan", "006R01660", "DMO", "sold", "toner"},
-    {"cyan", "006R01739", "DMO", "sold", "toner"},
-    {"cyan", "006R01524", "WW", "metered", "toner"},
-    {"cyan", "006R01528", "NA/ESG", "sold", "toner"},
-    {"cyan", "006R01656", "NA/ESG", "sold", "toner"},
-    {"cyan", "006R01735", "NA/ESG", "sold", "toner"},
+    //Toner items
+    {"006R01532", "cyan", "DMO", "sold", ""},
+    {"006R01660", "cyan", "DMO", "sold", ""},
+    {"006R01739", "cyan", "DMO", "sold", ""},
+    {"006R01524", "cyan", "WW", "metered", ""},
+    {"006R01528", "cyan", "NA/ESG", "sold", ""},
+    {"006R01656", "cyan", "NA/ESG", "sold", ""},
+    {"006R01735", "cyan", "NA/ESG", "sold", ""},
 
-    {"magenta", "006R01531", "DMO", "sold", "toner"},
-    {"magenta", "006R01661", "DMO", "sold", "toner"},
-    {"magenta", "006R01740", "DMO", "sold", "toner"},
-    {"magenta", "006R01523", "WW", "metered", "toner"},
-    {"magenta", "006R01527", "NA/ESG", "sold", "toner"},
-    {"magenta", "006R01657", "NA/ESG", "sold", "toner"},
-    {"magenta", "006R01736", "NA/ESG", "sold", "toner"},
+    {"006R01531", "magenta", "DMO", "sold", ""},
+    {"006R01661", "magenta", "DMO", "sold", ""},
+    {"006R01740", "magenta", "DMO", "sold", ""},
+    {"006R01523", "magenta", "WW", "metered", ""},
+    {"006R01527", "magenta", "NA/ESG", "sold", ""},
+    {"006R01657", "magenta", "NA/ESG", "sold", ""},
+    {"006R01736", "magenta", "NA/ESG", "sold", ""},
 
-    {"yellow", "006R01530", "DMO", "sold", "toner"},
-    {"yellow", "006R01662", "DMO", "sold", "toner"},
-    {"yellow", "006R01741", "DMO", "sold", "toner"},
-    {"yellow", "006R01522", "WW", "metered", "toner"},
-    {"yellow", "006R01526", "NA/ESG", "sold", "toner"},
-    {"yellow", "006R01658", "NA/ESG", "sold", "toner"},
-    {"yellow", "006R01737", "NA/ESG", "sold", "toner"},
+    {"006R01530", "yellow", "DMO", "sold", ""},
+    {"006R01662", "yellow", "DMO", "sold", ""},
+    {"006R01741", "yellow", "DMO", "sold", ""},
+    {"006R01522", "yellow", "WW", "metered", ""},
+    {"006R01526", "yellow", "NA/ESG", "sold", ""},
+    {"006R01658", "yellow", "NA/ESG", "sold", ""},
+    {"006R01737", "yellow", "NA/ESG", "sold", ""},
 
-    {"black", "006R01529", "DMO", "sold", "toner"},
-    {"black", "006R01659", "DMO", "sold", "toner"},
-    {"black", "006R01738", "DMO", "sold", "toner"},
-    {"black", "006R01521", "WW", "metered", "toner"},
-    {"black", "006R01525", "NA/ESG", "sold", "toner"},
-    {"black", "006R01655", "NA/ESG", "sold", "toner"},
-    {"black", "006R01734", "NA/ESG", "sold", "toner"},
+    {"006R01529", "black", "DMO", "sold", ""},
+    {"006R01659", "black", "DMO", "sold", ""},
+    {"006R01738", "black", "DMO", "sold", ""},
+    {"006R01521", "black", "WW", "metered", ""},
+    {"006R01525", "black", "NA/ESG", "sold", ""},
+    {"006R01655", "black", "NA/ESG", "sold", ""},
+    {"006R01734", "black", "NA/ESG", "sold", ""},
+
+    //Drum items
+    {"013R00663", "", "", "", "black"},
+    {"013R00664", "", "", "", "color"},
+
     {"", "", "", "", ""} // must be the last entry
 };
 
@@ -519,7 +531,7 @@ static const xerox_part_t xerox_part_mappings[] = {
 static const xerox_part_t *get_xerox_part_info(const char *pn) {
     for (int i = 0; i < ARRAYLEN(xerox_part_mappings); i++) {
         // Todo: make str_startswith, accept additional "Maximum number of characters to compare"
-        if (strncmp(pn, xerox_part_mappings[i].partnumber, strlen(pn) - 3) == 0) {
+        if(strncmp(pn, xerox_part_mappings[i].partnumber, strlen(pn)-3) == 0){
             return &xerox_part_mappings[i];
         }
     }
@@ -705,11 +717,23 @@ static int CmdHFXeroxInfo(const char *Cmd) {
 
     const xerox_part_t *item = get_xerox_part_info(pn);
     if (strlen(item->partnumber) > 0) {
-        PrintAndLogEx(SUCCESS, "Color..... %s", item->color);
-        PrintAndLogEx(SUCCESS, "Region.... %s", item->region);
-        PrintAndLogEx(SUCCESS, "M/s....... %s", item->ms);
+        PrintAndLogEx(INFO, "-------- " _CYAN_("additional data") " ---------");
+
+        char d[] = "drum";
+        char t[] = "toner";
+
+        //Current item is drum
+        if(strcmp(xerox_c_type[data[18]], d) == 0) {
+            PrintAndLogEx(SUCCESS, "Slots.... %s", item->r); //Interchangeability
+        } else {
+            //Current item is toner
+            PrintAndLogEx(SUCCESS, "Consumable Type..... %s", t);
+            PrintAndLogEx(SUCCESS, "Region....... %s", item->region);            
+            PrintAndLogEx(SUCCESS, "M/s....... %s", item->ms);
+        } 
+
+        PrintAndLogEx(NORMAL, "");
     }
-    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -901,8 +925,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    // generate filename from uid
-    if (0 == filename[0]) {
+    if (0 == filename[0]) { // generate filename from uid
         char *fptr = filename;
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += snprintf(fptr, sizeof(filename), "hf-xerox-");
@@ -967,14 +990,24 @@ static int CmdHFXeroxView(const char *Cmd) {
     PrintAndLogEx(SUCCESS, " PartNo... %s", pn);
     PrintAndLogEx(SUCCESS, " Date..... %02d.%02d.%02d", tmp[8], tmp[9], tmp[10]);
     PrintAndLogEx(SUCCESS, " Serial... %d", (tmp[14] << 16) | (tmp[13] << 8) | tmp[12]);
-    PrintAndLogEx(SUCCESS, " Color..... %s", (tmp[18] <= 4) ? xerox_c_type[tmp[18]] : "Unknown");
+    PrintAndLogEx(SUCCESS, " Type..... %s", (tmp[18] <= 4) ? xerox_c_type[tmp[18]] : "Unknown");
 
     const xerox_part_t *item = get_xerox_part_info(pn);
     if (strlen(item->partnumber) > 0) {
         PrintAndLogEx(INFO, "-------- " _CYAN_("additional data") " ---------");
-        PrintAndLogEx(SUCCESS, "Consumable Type..... %s", item->consumable_type);
-        PrintAndLogEx(SUCCESS, "Region.... %s", item->region);
-        PrintAndLogEx(SUCCESS, "M/s....... %s", item->ms);
+
+        char d[] = "drum";
+        char t[] = "toner";
+
+        //Current item is drum
+        if(strcmp(xerox_c_type[tmp[18]], d) == 0) {
+            PrintAndLogEx(SUCCESS, "Slots.... %s", item->r); //Interchangeability
+        } else {
+            //Current item is toner
+            PrintAndLogEx(SUCCESS, "Consumable Type..... %s", t);
+            PrintAndLogEx(SUCCESS, "Region....... %s", item->region);            
+            PrintAndLogEx(SUCCESS, "M/s....... %s", item->ms);
+        }
     }
     xerox_print_hdr();
     xerox_print(dump, bytes_read);
