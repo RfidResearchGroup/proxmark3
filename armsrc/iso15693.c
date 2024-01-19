@@ -2159,7 +2159,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
     LED_A_ON();
 
-    Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X  block size %d", tag->uid[0], tag->uid[1], tag->uid[2], tag->uid[3], tag->uid[4], tag->uid[5], tag->uid[6], tag->uid[7], tag->bytesPerPage);
+    Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X,  %u bytes/blocks x %u blocks", tag->uid[7], tag->uid[6], tag->uid[5], tag->uid[4], tag->uid[3], tag->uid[2], tag->uid[1], tag->uid[0], tag->bytesPerPage, tag->pagesCount);
 
     LED_C_ON();
 
