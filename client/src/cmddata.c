@@ -3642,6 +3642,119 @@ static int CmdAtrLookup(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdCryptography(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data crypto",
+                  "Encrypt data, right here, right now. Or decrypt.",
+                  "Supply data, key, IV (needed for des MAC or aes), and cryptography action.\n"
+                  "To calculate a MAC for FMCOS, supply challenge as IV, data as data, and session/line protection key as key.\n"
+                  "To calculate a MAC for FeliCa, supply first RC as IV, BLE+data as data and session key as key.\n"
+                  "data crypto -d 04D6850E06AABB80 -k FFFFFFFFFFFFFFFF --iv 9EA0401A00000000 --des  -> Calculate a MAC for FMCOS chip. The result should be ED3A0133\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "Data to process"),
+        arg_str1("k", "key", "<hex>", "Key to use"),
+        arg_lit0("r", "rev", "Decrypt, not encrypt"),
+        arg_lit0(NULL, "des", "Cipher with DES, not AES"),
+        arg_lit0(NULL, "mac", "Calculate AES CMAC/FeliCa Lite MAC"),
+        arg_str0(NULL, "iv", "<hex>", "IV value if needed"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint8_t dati[250] = {0};
+    uint8_t dato[250] = {0};
+    int datilen = 0;
+    CLIGetHexWithReturn(ctx, 1, dati, &datilen);
+    uint8_t key[25] = {0};
+    int keylen = 0;
+    CLIGetHexWithReturn(ctx, 2, key, &keylen);
+    int type = 0;
+    if (arg_get_lit(ctx, 3)) type ^= 8;
+    if (arg_get_lit(ctx, 4)) type ^= 4;
+    if (arg_get_lit(ctx, 5)) type ^= 2;
+    uint8_t iv[250] = {0};
+    int ivlen = 0;
+    CLIGetHexWithReturn(ctx, 6, iv, &ivlen);
+    CLIParserFree(ctx);
+
+    // Do data length check
+    if ((type & 0x4) >> 2) { // Use AES(0) or DES(1)?
+        if (datilen % 8 != 0) {
+            PrintAndLogEx(ERR, "<data> length must be a multiple of 8. Got %d", datilen);
+            return PM3_EINVARG;
+        }
+        if (keylen != 8 && keylen != 16 && keylen != 24) {
+            PrintAndLogEx(ERR, "<key> must be 8, 16 or 24 bytes. Got %d", keylen);
+            return PM3_EINVARG;
+        }
+    } else {
+        if (datilen % 16 != 0 && ((type & 0x2) >>1==0)) {
+            PrintAndLogEx(ERR, "<data> length must be a multiple of 16. Got %d", datilen);
+            return PM3_EINVARG;
+        }
+        if (keylen != 16) {
+            PrintAndLogEx(ERR, "<key> must be 16 bytes. Got %d", keylen);
+            return PM3_EINVARG;
+        }
+    }
+    if ((type & 0x8) >> 3) { // Encrypt(0) or decrypt(1)?
+        if ((type & 0x4) >> 2) { // AES or DES?
+            if (keylen > 8) {PrintAndLogEx(INFO, "Called 3DES decrypt"); des3_decrypt(dato, dati, key, keylen / 8);}
+            else {
+                PrintAndLogEx(INFO, "Called DES decrypt");
+                if (!ivlen) {des_decrypt_ecb(dato, dati, datilen, key);} // If there's an IV, use CBC
+                else {des_decrypt_cbc(dato, dati, datilen, key, iv);}
+            }
+        } else {PrintAndLogEx(INFO, "Called AES decrypt"); aes_decode(iv, key, dati, dato, datilen);}
+    } else {
+        if (type & 0x4) { // AES or DES?
+            if (type & 0x02) { // If we will calculate a MAC
+                /*PrintAndLogEx(INFO, "Called FeliCa MAC");
+                	// For DES all I know useful is the felica and fudan MAC algorithm.This is just des-cbc, but felica needs it in its way.
+                	for (int i = 0; i < datilen; i+=8){ // For all 8 byte sequences
+                		reverser(dati, &dati[i], 8, i);
+                		if (i){ // If IV is processed
+                			for (int n = 0; n < 8; ++n){
+                				dato[n] ^= dati[i+n]; // XOR with Dx
+                			}
+                			des_encrypt_ecb(dato, dato, 8, key); // Cipher itself
+                		} else { // If we didn't start with IV
+                			for (int n = 0; n < 8; ++n){
+                				dato[n] = iv[n]; // Feed data into output
+                				dato[n] ^= dati[i+n]; // XOR with D1
+                			}
+                			des_encrypt_ecb(dato, dato, 8, key); // Cipher itself
+                		}
+                	}
+                	PrintAndLogEx(SUCCESS, "MAC: %s", sprint_hex_inrow(dato, 8));*/
+                PrintAndLogEx(INFO, "Not implemented yet - feel free to contribute!");
+                return PM3_SUCCESS;
+            } else {
+                if (keylen > 8) {
+                    PrintAndLogEx(INFO, "Called 3DES encrypt keysize: %i", keylen / 8);
+                    des3_encrypt(dato, dati, key, keylen / 8);
+                } else {
+                    PrintAndLogEx(INFO, "Called DES encrypt");
+                    if (!ivlen) {des_encrypt_ecb(dato, dati, datilen, key);} // If there's an IV, use ECB
+                    else {
+                        des_encrypt_cbc(dato, dati, datilen, key, iv);
+                        char pad[250];
+                        memset(pad, ' ', 4 + 8 + (datilen - 8) * 3);
+                        pad[4 + 8 + (datilen - 8) * 3] = 0; // Make a padding to insert FMCOS macing algorithm guide
+                        PrintAndLogEx(NONE, "%sVV VV VV VV FMCOS MAC", pad);
+                    }
+                }
+            }
+        } else {
+            if (type & 0x02) {PrintAndLogEx(INFO, "Called AES CMAC"); aes_cmac8(iv, key, dati, dato, datilen);} // If we will calculate a MAC
+            else {PrintAndLogEx(INFO, "Called AES encrypt"); aes_encode(iv, key, dati, dato, datilen);}
+        }
+    }
+    PrintAndLogEx(SUCCESS, "Result: %s", sprint_hex(dato, datilen));
+    return PM3_SUCCESS;
+}
+
 static int CmdBinaryMap(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data bmap",
@@ -3752,6 +3865,7 @@ static command_t CommandTable[] = {
     {"bitsamples",      CmdBitsamples,           IfPm3Present,     "Get raw samples as bitstring"},
     {"bmap",            CmdBinaryMap,            AlwaysAvailable,  "Convert hex value according a binary template"},
     {"clear",           CmdBuffClear,            AlwaysAvailable,  "Clears bigbuf on deviceside and graph window"},
+    {"crypto",          CmdCryptography,         AlwaysAvailable,  "Encrypt and decrypt data"},
     {"diff",            CmdDiff,                 AlwaysAvailable,  "Diff of input files"},
     {"hexsamples",      CmdHexsamples,           IfPm3Present,     "Dump big buffer as hex bytes"},
     {"hex2bin",         Cmdhex2bin,              AlwaysAvailable,  "Converts hexadecimal to binary"},
