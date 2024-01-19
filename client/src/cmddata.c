@@ -39,6 +39,7 @@
 #include "mbedtls/entropy.h"     //
 #include "mbedtls/ctr_drbg.h"    // random generator
 #include "atrs.h"                // ATR lookup
+#include "crypto/libpcrypto.h"   // Cryptography
 
 uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN] = { 0x00 };
 size_t g_DemodBufferLen = 0;
