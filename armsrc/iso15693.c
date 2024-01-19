@@ -2209,8 +2209,6 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         if (cmd_len <= 3)
             continue;
 
-        LogTrace_ISO15693(cmd, cmd_len, (reader_sof_time * 4), (reader_eof_time * 4), NULL, true);
-
         // Shorten 0 terminated msgs
         // (Some times received commands are prolonged with a random number of 0 bytes...)
         while (cmd[cmd_len-1] == 0) {
