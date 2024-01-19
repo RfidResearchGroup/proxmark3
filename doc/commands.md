@@ -128,6 +128,7 @@ Check column "offline" for their availability.
 |`data bitsamples        `|N       |`Get raw samples as bitstring`
 |`data bmap              `|Y       |`Convert hex value according a binary template`
 |`data clear             `|Y       |`Clears bigbuf on deviceside and graph window`
+|`data crypto            `|Y       |`Encrypt and decrypt data`
 |`data diff              `|Y       |`Diff of input files`
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`
 |`data hex2bin           `|Y       |`Converts hexadecimal to binary`
