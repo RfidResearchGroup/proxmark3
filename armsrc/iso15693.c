@@ -2176,6 +2176,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
     uint8_t error = 0;
     uint8_t pageNum = 0;
     uint8_t nbPages = 0;
+    uint8_t pwdId = 0;
 
     while (exit_loop == false) {
 
@@ -2495,10 +2496,28 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 break;
             case ISO15693_GET_RANDOM_NUMBER:
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("GetRandomNumber cmd");
+                tag->random[0] = (uint8_t)(reader_eof_time) ^ 0xFF; // poor random number
+                tag->random[1] = (uint8_t)(reader_eof_time >> 8) ^ 0xFF;
                 recv[0] = ISO15_NOERROR;
-                recv[1] = (uint8_t)(reader_eof_time) ^ 0xFF; // poor random number
-                recv[2] = (uint8_t)(reader_eof_time >> 8) ^ 0xFF;
+                recv[1] = tag->random[0]; // poor random number
+                recv[2] = tag->random[1];
                 recvLen = 3;
+                break;
+            case ISO15693_SET_PASSWORD:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("SetPassword cmd");
+                if (cmd[cmdCpt++] == tag->ic)
+                {
+                    pwdId = cmd[cmdCpt++];
+                    if (pwdId == 4) // Privacy password
+                    {
+                        tag->privacyPasswd[0] = cmd[cmdCpt] ^ tag->random[0];
+                        tag->privacyPasswd[1] = cmd[cmdCpt+1] ^ tag->random[1];
+                        tag->privacyPasswd[2] = cmd[cmdCpt+2] ^ tag->random[0];
+                        tag->privacyPasswd[3] = cmd[cmdCpt+3] ^ tag->random[1];
+                    }
+                }
+                recv[0] = ISO15_NOERROR;
+                recvLen = 1;
                 break;
             case ISO15693_ENABLE_PRIVACY:
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("EnablePrivacy cmd");

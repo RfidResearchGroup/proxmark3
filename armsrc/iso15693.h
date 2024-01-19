@@ -47,6 +47,8 @@ typedef struct iso15693_tag {
     uint8_t ic;
     uint8_t locks[ISO15693_TAG_MAX_PAGES];
     uint8_t data[ISO15693_TAG_MAX_SIZE];
+    uint8_t random[2];
+    uint8_t privacyPasswd[4];
     enum {
         TAG_STATE_NO_FIELD,
         TAG_STATE_READY,
