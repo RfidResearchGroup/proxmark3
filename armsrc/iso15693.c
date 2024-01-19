@@ -2328,7 +2328,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             cmdCpt = 2;
             if ((cmd[0] & ISO15_REQ_ADDRESS) == ISO15_REQ_ADDRESS) {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Addressed Request");
-                if (cmd_len <= cmdCpt+8)
+                if (cmd_len < cmdCpt+8)
                     continue;
                 if (memcmp(&cmd[cmdCpt], tag->uid, 8) != 0)
                 {
