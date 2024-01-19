@@ -2519,6 +2519,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 recv[0] = ISO15_RES_ERROR;
                 recv[1] = error;
                 recvLen = 2;
+                error = 0;
                 if (g_dbglevel >= DBG_DEBUG)
                     Dbprintf("ERROR 0x%2X in received request", error);
             }
