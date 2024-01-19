@@ -43,10 +43,15 @@
 
 static void DownloadTraceInstructions(void) {
     Dbprintf("");
+#ifndef WITH_FLASH
     Dbprintf("To get the trace from flash and display it:");
     Dbprintf("1. mem spiffs dump -s "HF_15693SIM_LOGFILE" -d hf_15693sim.trace");
     Dbprintf("2. trace load -f hf_15693sim.trace");
     Dbprintf("3. trace list -t 15 -1");
+#else
+    Dbprintf("To get the trace from PM3 memory:");
+    Dbprintf("trace list -t 15");
+#endif
 }
 
 void ModInfo(void) {
