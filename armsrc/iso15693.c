@@ -2234,7 +2234,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             if ((( crc & 0xff ) != cmd[cmd_len - 2]) || (( crc >> 8 ) != cmd[cmd_len - 1])) {
                 crc = CalculateCrc15(cmd, ++cmd_len - 2); // if crc end with 00 00
                 if ((( crc & 0xff ) != cmd[cmd_len - 2]) || (( crc >> 8 ) != cmd[cmd_len - 1])) {
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("CrcFail!");
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("CrcFail!, expected CRC=%02X%02X", crc & 0xff, crc >> 8);
                         continue;
                 }
                 else if (g_dbglevel >= DBG_DEBUG)
@@ -2249,19 +2249,19 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         cmd_len -= 2; // remove the CRC from the cmd
         recvLen = 0;
 
-        tag->expectFast = cmd[0] & ISO15_REQ_DATARATE_HIGH;
-        tag->expectFsk = cmd[0] & ISO15_REQ_SUBCARRIER_TWO;
+        tag->expectFast = ((cmd[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
+        tag->expectFsk = ((cmd[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
 
         if (g_dbglevel >= DBG_DEBUG) {
             if (tag->expectFsk)
                 Dbprintf("ISO15_REQ_SUBCARRIER_TWO support is currently experimental!");
-            if (cmd[0] & ISO15_REQ_PROTOCOL_EXT)
+            if ((cmd[0] & ISO15_REQ_PROTOCOL_EXT) == ISO15_REQ_PROTOCOL_EXT)
                 Dbprintf("ISO15_REQ_PROTOCOL_EXT not supported!");
-            if (cmd[0] & ISO15_REQ_OPTION)
+            if ((cmd[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION)
                 Dbprintf("ISO15_REQ_OPTION not supported!");
         }
 
-        if (cmd[0] & ISO15_REQ_INVENTORY && tag->state != TAG_STATE_SILENCED) {
+        if (((cmd[0] & ISO15_REQ_INVENTORY) == ISO15_REQ_INVENTORY) && tag->state != TAG_STATE_SILENCED) {
             // REQ_INVENTORY flaged requests are interpreted as a INVENTORY no matter
             // what is the CMD (as observed from various actual tags)
 
@@ -2269,14 +2269,14 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
             if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("Inventory req");
-                if (cmd[0] & ISO15_REQINV_SLOT1)
+                if ((cmd[0] & ISO15_REQINV_SLOT1) == ISO15_REQINV_SLOT1)
                     Dbprintf("ISO15_REQINV_SLOT1/SLOT16 not supported!");
             }
 
             cmdCpt = 2;
 
             // Check AFI
-            if (cmd[0] & ISO15_REQINV_AFI) {
+            if ((cmd[0] & ISO15_REQINV_AFI) == ISO15_REQINV_AFI) {
                 if (cmd[cmdCpt] != tag->afi && cmd[cmdCpt] != 0)
                     continue; // bad AFI : drop request
                 cmdCpt++;
@@ -2318,7 +2318,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             recvLen = 10;
         }
         else {
-            if (cmd[0]&ISO15_REQ_SELECT) {
+            if ((cmd[0] & ISO15_REQ_SELECT) == ISO15_REQ_SELECT) {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Selected Request");
                 if (tag->state != TAG_STATE_SELECTED)
                     continue; // drop selected request if not selected
@@ -2326,7 +2326,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             }
 
             cmdCpt = 2;
-            if (cmd[0]&ISO15_REQ_ADDRESS) {
+            if ((cmd[0] & ISO15_REQ_ADDRESS) == ISO15_REQ_ADDRESS) {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Addressed Request");
                 if (cmd_len <= cmdCpt+8)
                     continue;
@@ -2366,7 +2366,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 else {
                     recv[0] = ISO15_NOERROR;
                     recvLen = 1;
-                    if ((cmd[0] & ISO15_REQ_OPTION)) { // ask for lock status
+                    if ((cmd[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION) { // ask for lock status
                         recv[1] = tag->locks[pageNum];
                         recvLen++;
                 }
