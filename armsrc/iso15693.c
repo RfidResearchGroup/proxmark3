@@ -2496,8 +2496,8 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             case ISO15693_GET_RANDOM_NUMBER:
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("GetRandomNumber cmd");
                 recv[0] = ISO15_NOERROR;
-                recv[1] = (uint8_t)(reader_eof_time >> 24) ^ 0xFF; // poor random number
-                recv[2] = (uint8_t)(reader_eof_time >> 16) ^ 0xFF;
+                recv[1] = (uint8_t)(reader_eof_time) ^ 0xFF; // poor random number
+                recv[2] = (uint8_t)(reader_eof_time >> 8) ^ 0xFF;
                 recvLen = 3;
                 break;
             case ISO15693_ENABLE_PRIVACY:
