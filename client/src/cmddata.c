@@ -3742,8 +3742,8 @@ static int CmdCryptography(const char *Cmd) {
                         des_encrypt_cbc(dato, dati, datilen, key, iv);
                         char pad[250];
                         memset(pad, ' ', 4 + 8 + (datilen - 8) * 3);
-                        pad[4 + 8 + (datilen - 8) * 3] = 0; // Make a padding to insert FMCOS macing algorithm guide
-                        PrintAndLogEx(NONE, "%sVV VV VV VV FMCOS MAC", pad);
+                        pad[8 + (datilen - 8) * 3] = 0; // Make a padding to insert FMCOS macing algorithm guide
+                        PrintAndLogEx(INFO, "%sVV VV VV VV FMCOS MAC", pad);
                     }
                 }
             }
