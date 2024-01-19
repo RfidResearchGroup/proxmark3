@@ -2330,10 +2330,14 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                     continue;
                 if (memcmp(&cmd[cmdCpt], tag->uid, 8) != 0)
                 {
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address don't match tag uid");
-                    if (cmd[1] == ISO15693_SELECT)
-                        tag->state = TAG_STATE_READY; // we are not anymore the selected TAG
-                    continue; // drop addressed request with other uid
+                    if (cmd[cmdCpt] != tag->ic || cmd_len < cmdCpt+9 \
+                        ||  memcmp(&cmd[cmdCpt+1], tag->uid, 8) != 0)
+                    { // check uid even if IC is present
+                        if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address don't match tag uid");
+                        if (cmd[1] == ISO15693_SELECT)
+                            tag->state = TAG_STATE_READY; // we are not anymore the selected TAG
+                        continue; // drop addressed request with other uid
+                    }
                 }
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address match tag uid");
                 cmdCpt+=8;
