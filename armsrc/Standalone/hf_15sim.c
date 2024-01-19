@@ -94,10 +94,7 @@ void RunMod(void) {
         start_time = 0;//eof_time;
         res = SendDataTag(cmd, 4, true, true, recv, sizeof(recv), start_time, ISO15693_READER_TIMEOUT, &eof_time, &recvLen);
         if (res < 0)
-        {
-            Dbprintf("res < 0");
             continue;
-        }
         if (recvLen<10) // error: recv too short
         {
             Dbprintf("recvLen<10");
@@ -158,6 +155,7 @@ void RunMod(void) {
         if (res < 0)
         {
             Dbprintf("res < 0");
+            SpinDelay(100);
             continue;
         }
         if (recvLen < 4 + tag->bytesPerPage) // error: recv too short
