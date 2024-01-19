@@ -2198,7 +2198,6 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         }
 
         // Listen to reader
-        uint32_t reader_sof_time = GetCountSspClk() & 0xfffffff8;
         uint32_t reader_eof_time = 0;
         int cmd_len = GetIso15693CommandFromReader(cmd, sizeof(cmd), &reader_eof_time);
         if (cmd_len < 0) {
