@@ -751,7 +751,7 @@ static void print_ct_blocks(uint8_t *data, size_t len) {
 }
 */
 
-static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid) {
+static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid, bool dense_output) {
 
     size_t blocks = (len / ST25TB_SR_BLOCK_SIZE) - 1 ;
     uint8_t *systemblock = data + blocks * ST25TB_SR_BLOCK_SIZE ;
@@ -764,25 +764,53 @@ static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid) {
 
     print_hdr();
 
+    bool in_repeated_block = false;
+
+
     for (int i = 0; i < blocks; i++) {
-        PrintAndLogEx(INFO,
-                      "%3d/0x%02X | %s| %s | %s",
-                      i,
-                      i,
-                      sprint_hex(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE),
-                      get_st_lock_info(chipid, systemblock, i),
-                      sprint_ascii(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE)
-                     );
+
+        // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
+        // but the blocks in between are replaced with a single line of "......" if dense_output is enabled
+        uint8_t *blk = data + (i * ST25TB_SR_BLOCK_SIZE);
+        if (dense_output &&
+                (i > 3) &&
+                (i < (blocks - 1)) &&
+                (in_repeated_block == false) &&
+                (memcmp(blk, blk - ST25TB_SR_BLOCK_SIZE, ST25TB_SR_BLOCK_SIZE) == 0) &&
+                (memcmp(blk, blk + ST25TB_SR_BLOCK_SIZE, ST25TB_SR_BLOCK_SIZE) == 0) &&
+                (memcmp(blk, blk + (ST25TB_SR_BLOCK_SIZE * 2), ST25TB_SR_BLOCK_SIZE) == 0)
+           ) {
+            // we're in a user block that isn't the first user block nor last two user blocks,
+            // and the current block data is the same as the previous and next two block
+            in_repeated_block = true;
+            PrintAndLogEx(INFO, "  ......");
+        } else if (in_repeated_block &&
+                   (memcmp(blk, blk + ST25TB_SR_BLOCK_SIZE, ST25TB_SR_BLOCK_SIZE) || i == blocks)
+                  ) {
+            // in a repeating block, but the next block doesn't match anymore, or we're at the end block
+            in_repeated_block = false;
+        }
+
+        if (in_repeated_block == false) {
+            PrintAndLogEx(INFO,
+                        "%3d/0x%02X | %s| %s | %s",
+                        i,
+                        i,
+                        sprint_hex(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE),
+                        get_st_lock_info(chipid, systemblock, i),
+                        sprint_ascii(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE)
+                    );
+        }
     }
 
     PrintAndLogEx(INFO,
-                  "%3d/0x%02X | %s| %s | %s",
-                  0xFF,
-                  0xFF,
-                  sprint_hex(systemblock, ST25TB_SR_BLOCK_SIZE),
-                  get_st_lock_info(chipid, systemblock, 0xFF),
-                  sprint_ascii(systemblock, ST25TB_SR_BLOCK_SIZE)
-                 );
+                "%3d/0x%02X | %s| %s | %s",
+                0xFF,
+                0xFF,
+                sprint_hex(systemblock, ST25TB_SR_BLOCK_SIZE),
+                get_st_lock_info(chipid, systemblock, 0xFF),
+                sprint_ascii(systemblock, ST25TB_SR_BLOCK_SIZE)
+            );
 
     print_footer();
 }
@@ -1642,6 +1670,7 @@ static int CmdHF14BDump(const char *Cmd) {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "(optional) filename,  if no <name> UID will be used as filename"),
         arg_lit0(NULL, "ns", "no save to file"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1650,6 +1679,7 @@ static int CmdHF14BDump(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool nosave = arg_get_lit(ctx, 2);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 3));
     CLIParserFree(ctx);
 
 
@@ -1792,7 +1822,7 @@ static int CmdHF14BDump(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        print_sr_blocks(data, cardsize, card.uid);
+        print_sr_blocks(data, cardsize, card.uid, dense_output);
 
         if (nosave) {
             PrintAndLogEx(INFO, "Called with no save option");
@@ -2453,6 +2483,7 @@ static int CmdHF14BView(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2460,6 +2491,7 @@ static int CmdHF14BView(const char *Cmd) {
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 3));
     CLIParserFree(ctx);
 
     // read dump file
@@ -2478,7 +2510,7 @@ static int CmdHF14BView(const char *Cmd) {
 
     // figure out a way to identify the different dump files.
     // STD/SR/CT is difference
-    print_sr_blocks(dump, bytes_read, get_uid_from_filename(filename));
+    print_sr_blocks(dump, bytes_read, get_uid_from_filename(filename), dense_output);
     //print_std_blocks(dump, bytes_read);
     //print_ct_blocks(dump, bytes_read);
 
