@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mfu dump/view/eview` - now supports `-z` flag for dense output (@iceman1001)
  - Added `data crypto` to encrypt and decrypt data in the proxmark client using built-in methods (@team-orangeBlue)
  - Changed `hf tune` and `lf tune` - Added an option to show statistical data after tuning (@wh201906)
  - Changed `lf idteck demod --raw` - now supports raw hex string to decode (@iceman1001)
@@ -10,7 +11,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `lf em 4x05 info` - use `-v` verbose flag to see protection bits (@iceman1001)
  - Changed `lf em 4x05 info` - output now shows detailed bits (@iceman1001)
  - Added `lf em 4x05 view` - now supports viewing of dump files (@iceman1001)
- - Changed `hf 15 eview/view` - now supports the `-z` flag for dense output (@iceman1001)
+ - Changed `hf 15 eview/view` - now supports `-z` flag for dense output (@iceman1001)
  - Changed `hf mf cload` - now supports specifying tag size (@augustozanellato)
  - Added `hf 14b raw --pico` - now supports picopass anticollision over ISO14443-B (@iceman1001)
  - Changed `hf 14b *` - worked apdu and comms. Improved output. Uses NG packets (@iceman1001)

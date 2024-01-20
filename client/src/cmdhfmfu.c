@@ -2328,7 +2328,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
+void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool dense_output) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _CYAN_("MFU dump file information"));
@@ -2376,6 +2376,8 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
         }
         PrintAndLogEx(INFO, "DYNAMIC LOCK: %s", sprint_hex(lockbytes_dyn, 3));
     }
+
+    bool in_repeated_block = false;
 
     for (uint16_t i = 0; i < pages; ++i) {
         if (i < 3) {
@@ -2478,7 +2480,40 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
             default:
                 break;
         }
-        PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s", i + startpage, i + startpage, sprint_hex(data + i * 4, 4), (lckbit) ? _RED_("1") : "0", sprint_ascii(data + i * 4, 4));
+
+
+        // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
+        // but the blocks in between are replaced with a single line of "......" if dense_output is enabled
+        uint8_t *blk = data + (i * MFU_BLOCK_SIZE);
+        if (dense_output &&
+                (i > 3) &&
+                (i < (pages - 1)) &&
+                (in_repeated_block == false) &&
+                (memcmp(blk, blk - MFU_BLOCK_SIZE, MFU_BLOCK_SIZE) == 0) &&
+                (memcmp(blk, blk + MFU_BLOCK_SIZE, MFU_BLOCK_SIZE) == 0) &&
+                (memcmp(blk, blk + (MFU_BLOCK_SIZE * 2), MFU_BLOCK_SIZE) == 0)
+           ) {
+            // we're in a user block that isn't the first user block nor last two user blocks,
+            // and the current block data is the same as the previous and next two block
+            in_repeated_block = true;
+            PrintAndLogEx(INFO, "  ......");
+        } else if (in_repeated_block &&
+                   (memcmp(blk, blk + MFU_BLOCK_SIZE, MFU_BLOCK_SIZE) || i == pages)
+                  ) {
+            // in a repeating block, but the next block doesn't match anymore, or we're at the end block
+            in_repeated_block = false;
+        }
+
+
+        if (in_repeated_block == false) {
+            PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s"
+                    , i + startpage
+                    , i + startpage
+                    , sprint_hex(data + i * 4, 4)
+                    , (lckbit) ? _RED_("1") : "0"
+                    , sprint_ascii(data + i * 4, 4)
+                );
+        }
     }
     PrintAndLogEx(INFO, "---------------------------------");
 }
@@ -2510,6 +2545,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         arg_int0("p", "page", "<dec>", "Manually set start page number to start from"),
         arg_int0("q", "qty", "<dec>", "Manually set number of pages to dump"),
         arg_lit0(NULL, "ns", "no save to file"),
+        arg_lit0("z", "dense", "dense dump output style"),   
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2526,6 +2562,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     int start_page = arg_get_int_def(ctx, 4, 0);
     int pages = arg_get_int_def(ctx, 5, 16);
     bool nosave = arg_get_lit(ctx, 6);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 7));
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -2719,7 +2756,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     memcpy(dump_file_data.counter_tearing, get_counter_tearing, sizeof(dump_file_data.counter_tearing));
     memcpy(dump_file_data.data, data, pages * 4);
 
-    printMFUdumpEx(&dump_file_data, pages, start_page);
+    printMFUdumpEx(&dump_file_data, pages, start_page, dense_output);
 
     if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
@@ -2914,6 +2951,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         arg_lit0("e", NULL, "enable special write version/signature -MAGIC NTAG 21* ONLY-"),
         arg_lit0("r", NULL, "use password found in dumpfile to configure tag. Requires " _YELLOW_("'-e'") " parameter to work"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("z", "dense", "dense dump output style"),   
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2932,8 +2970,8 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     bool write_extra = arg_get_lit(ctx, 5);
     bool read_key = arg_get_lit(ctx, 6);
     bool verbose = arg_get_lit(ctx, 7);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 8));
     CLIParserFree(ctx);
-
 
     bool has_key = false;
     if (ak_len > 0) {
@@ -2989,7 +3027,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
 
     // print dump
-    printMFUdumpEx(mem, pages, 0);
+    printMFUdumpEx(mem, pages, 0, dense_output);
 
     // Swap endianness
     if (swap_endian && has_key) {
@@ -4591,11 +4629,13 @@ static int CmdHF14AMfuEView(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0("e", "end", "<dec>", "index of last block"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int end = arg_get_int_def(ctx, 1, -1);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 2));
     CLIParserFree(ctx);
 
     bool override_end = (end != -1) ;
@@ -4617,7 +4657,7 @@ static int CmdHF14AMfuEView(const char *Cmd) {
         end = dump->pages ;
     }
 
-    printMFUdumpEx(dump, end, 0);
+    printMFUdumpEx(dump, end, 0, dense_output);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -4698,6 +4738,7 @@ static int CmdHF14AMfuView(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "Verbose output"),
+        arg_lit0("z", "dense", "dense dump output style"),        
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4705,6 +4746,7 @@ static int CmdHF14AMfuView(const char *Cmd) {
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 3));
     CLIParserFree(ctx);
 
     // read dump file
@@ -4735,7 +4777,7 @@ static int CmdHF14AMfuView(const char *Cmd) {
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
     }
 
-    printMFUdumpEx((mfu_dump_t *)dump, block_cnt, 0);
+    printMFUdumpEx((mfu_dump_t *)dump, block_cnt, 0, dense_output);
     free(dump);
     return PM3_SUCCESS;
 }
