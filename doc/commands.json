@@ -273,6 +273,27 @@
             ],
             "usage": "data clear [-h]"
         },
+        "data crypto": {
+            "command": "data crypto",
+            "description": "Encrypt and decrypt data",
+            "notes": [
+                "Supply data, key, IV (needed for des MAC or aes), and cryptography action.",
+                "To calculate a MAC for FMCOS, supply challenge as IV, data as data, and session/line protection key as key.",
+                "To calculate a MAC for FeliCa, supply first RC as IV, BLE+data as data and session key as key.",
+                "data crypto -d 04D6850E06AABB80 -k FFFFFFFFFFFFFFFF --iv 9EA0401A00000000 --des -> Calculate a MAC for FMCOS chip. The result should be ED3A0133"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-d, --data <hex> Data to process",
+                "-k, --key <hex> Key to use",
+                "-r, --rev Decrypt, not encrypt",
+                "--des Cipher with DES, not AES",
+                "--mac Calculate AES CMAC/FeliCa Lite MAC",
+                "--iv <hex> IV value if needed"
+            ],
+            "usage": "data crypto [-hr] -d <hex> -k <hex> [--des] [--mac] [--iv <hex>]"
+        },
         "data convertbitstream": {
             "command": "data convertbitstream",
             "description": "Convert GraphBuffer's 0|1 values to 127|-127",
