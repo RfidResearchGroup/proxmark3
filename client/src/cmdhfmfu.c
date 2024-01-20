@@ -2545,7 +2545,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         arg_int0("p", "page", "<dec>", "Manually set start page number to start from"),
         arg_int0("q", "qty", "<dec>", "Manually set number of pages to dump"),
         arg_lit0(NULL, "ns", "no save to file"),
-        arg_lit0("z", "dense", "dense dump output style"),   
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
