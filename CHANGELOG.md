@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf xerox dump/view` - now supports `z` flag for dense output (@iceman1001)
  - Changed `hf mfu dump/view/eview` - now supports `-z` flag for dense output (@iceman1001)
  - Added `data crypto` to encrypt and decrypt data in the proxmark client using built-in methods (@team-orangeBlue)
  - Changed `hf tune` and `lf tune` - Added an option to show statistical data after tuning (@wh201906)

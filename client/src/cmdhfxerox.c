@@ -442,22 +442,51 @@ static void xerox_generate_partno(const uint8_t *data, char *pn) {
 
 static void xerox_print_hdr(void) {
     PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("tag memory") " ---------");
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "block#   | data         | ascii");
     PrintAndLogEx(INFO, "---------+--------------+----------");
 }
 
-static void xerox_print(uint8_t *data, uint16_t datalen) {
+static void xerox_print(uint8_t *data, uint16_t datalen, bool dense_output) {
 
     uint16_t blockno = datalen / XEROX_BLOCK_SIZE;
 
+    bool in_repeated_block = false;
+
+
     for (int i = 0; i < blockno; i++) {
-        PrintAndLogEx(INFO,
-                      "%3d/0x%02X | %s | %s",
-                      i,
-                      i,
-                      sprint_hex(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE),
-                      sprint_ascii(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE)
-                     );
+        // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
+        // but the blocks in between are replaced with a single line of "......" if dense_output is enabled
+        uint8_t *blk = data + (i * XEROX_BLOCK_SIZE);
+        if (dense_output &&
+                (i > 3) &&
+                (i < (blockno - 1)) &&
+                (in_repeated_block == false) &&
+                (memcmp(blk, blk - XEROX_BLOCK_SIZE, XEROX_BLOCK_SIZE) == 0) &&
+                (memcmp(blk, blk + XEROX_BLOCK_SIZE, XEROX_BLOCK_SIZE) == 0) &&
+                (memcmp(blk, blk + (XEROX_BLOCK_SIZE * 2), XEROX_BLOCK_SIZE) == 0)
+            ) {
+            // we're in a user block that isn't the first user block nor last two user blocks,
+            // and the current block data is the same as the previous and next two block
+            in_repeated_block = true;
+            PrintAndLogEx(INFO, "  ......");
+        } else if (in_repeated_block &&
+                    (memcmp(blk, blk + XEROX_BLOCK_SIZE, XEROX_BLOCK_SIZE) || i == blockno)
+                    ) {
+            // in a repeating block, but the next block doesn't match anymore, or we're at the end block
+            in_repeated_block = false;
+        }
+
+        if (in_repeated_block == false) {
+            PrintAndLogEx(INFO,
+                        "%3d/0x%02X | %s | %s",
+                        i,
+                        i,
+                        sprint_hex(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE),
+                        sprint_ascii(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE)
+                        );
+        }
     }
 }
 
@@ -571,8 +600,9 @@ static void xerox_print_info(uint8_t *d) {
 
     char pn[13];
     xerox_generate_partno(d, pn);
-    PrintAndLogEx(INFO, "-------- " _CYAN_("tag memory") " ---------");
-    PrintAndLogEx(SUCCESS, " PartNo....... %s", pn);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("tag info") " -----------");
+    PrintAndLogEx(SUCCESS, " PartNo....... " _YELLOW_("%s"), pn);
     PrintAndLogEx(SUCCESS, " Date......... %02d.%02d.%02d", d[8], d[9], d[10]);
     PrintAndLogEx(SUCCESS, " Serial....... %d", (d[14] << 16) | (d[13] << 8) | d[12]);
     PrintAndLogEx(SUCCESS, " Type......... %s", (d[18] <= 4) ? xerox_c_type[d[18]] : "Unknown");    
@@ -589,7 +619,6 @@ static void xerox_print_info(uint8_t *d) {
             PrintAndLogEx(SUCCESS, " Region....... %s", item->region);            
             PrintAndLogEx(SUCCESS, " M/s.......... %s", item->ms);
         } 
-        PrintAndLogEx(NORMAL, "");
     }
 }
 
@@ -749,6 +778,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
         arg_lit0("d", "decrypt", "decrypt secret blocks"),
         arg_lit0(NULL, "ns", "no save to file"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("z", "dense", "dense dump output style"),        
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -759,6 +789,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
     bool decrypt = arg_get_lit(ctx, 2);
     bool nosave = arg_get_lit(ctx, 3);
     bool verbose = arg_get_lit(ctx, 4);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 3));
     CLIParserFree(ctx);
 
     iso14b_card_select_t card;
@@ -914,7 +945,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
     }
 
     xerox_print_hdr();
-    xerox_print(data, blockno * XEROX_BLOCK_SIZE);
+    xerox_print(data, blockno * XEROX_BLOCK_SIZE, dense_output);
     xerox_print_footer();
 
     if (nosave) {
@@ -952,6 +983,7 @@ static int CmdHFXeroxView(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -959,6 +991,7 @@ static int CmdHFXeroxView(const char *Cmd) {
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 3));
     CLIParserFree(ctx);
 
     // read dump file
@@ -983,7 +1016,7 @@ static int CmdHFXeroxView(const char *Cmd) {
     xerox_print_info(tmp);
 
     xerox_print_hdr();
-    xerox_print(dump, bytes_read);
+    xerox_print(dump, bytes_read, dense_output);
     xerox_print_footer();
 
     free(dump);
