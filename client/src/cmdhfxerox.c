@@ -635,6 +635,34 @@ static int read_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t
     return res;
 }
 
+static void printlog_xerox_info(const char *pn, const uint8_t *data) {
+    PrintAndLogEx(INFO, "-------- " _CYAN_("tag memory") " ---------");
+    PrintAndLogEx(SUCCESS, " PartNo... %s", pn);
+    PrintAndLogEx(SUCCESS, " Date..... %02d.%02d.%02d", data[8], data[9], data[10]);
+    PrintAndLogEx(SUCCESS, " Serial... %d", (data[14] << 16) | (data[13] << 8) | data[12]);
+    PrintAndLogEx(SUCCESS, " Type..... %s", (data[18] <= 4) ? xerox_c_type[data[18]] : "Unknown");
+
+    const xerox_part_t *item = get_xerox_part_info(pn);
+    if (strlen(item->partnumber) > 0) {
+        PrintAndLogEx(INFO, "-------- " _CYAN_("additional data") " ---------");
+
+        char d[] = "drum";
+        char t[] = "toner";
+
+        //Current item is drum
+        if(strcmp(xerox_c_type[data[18]], d) == 0) {
+            PrintAndLogEx(SUCCESS, "Slots.... %s", item->r); //Interchangeability
+        } else {
+            //Current item is toner
+            PrintAndLogEx(SUCCESS, "Consumable Type..... %s", t);
+            PrintAndLogEx(SUCCESS, "Region....... %s", item->region);            
+            PrintAndLogEx(SUCCESS, "M/s....... %s", item->ms);
+        } 
+
+        PrintAndLogEx(NORMAL, "");
+    }
+}
+
 static int CmdHFXeroxReader(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -693,7 +721,6 @@ static int CmdHFXeroxInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, " UID..... %s", sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, " ATQB.... %s", sprint_hex(card.atqb, sizeof(card.atqb)));
 
-
     uint8_t data[sizeof(info_blocks) * XEROX_BLOCK_SIZE] = {0};
 
     for (int i = 0; i < sizeof(i); i++) {
@@ -709,31 +736,9 @@ static int CmdHFXeroxInfo(const char *Cmd) {
 
     char pn[13];
     xerox_generate_partno(data, pn);
-    PrintAndLogEx(INFO, "-------- " _CYAN_("tag memory") " ---------");
-    PrintAndLogEx(SUCCESS, " PartNo... %s", pn);
-    PrintAndLogEx(SUCCESS, " Date..... %02d.%02d.%02d", data[8], data[9], data[10]);
-    PrintAndLogEx(SUCCESS, " Serial... %d", (data[14] << 16) | (data[13] << 8) | data[12]);
-    PrintAndLogEx(SUCCESS, " Type..... %s", (data[18] <= 4) ? xerox_c_type[data[18]] : "Unknown");
 
-    const xerox_part_t *item = get_xerox_part_info(pn);
-    if (strlen(item->partnumber) > 0) {
-        PrintAndLogEx(INFO, "-------- " _CYAN_("additional data") " ---------");
-
-        char d[] = "drum";
-        char t[] = "toner";
-
-        //Current item is drum
-        if(strcmp(xerox_c_type[data[18]], d) == 0) {
-            PrintAndLogEx(SUCCESS, "Slots.... %s", item->r); //Interchangeability
-        } else {
-            //Current item is toner
-            PrintAndLogEx(SUCCESS, "Consumable Type..... %s", t);
-            PrintAndLogEx(SUCCESS, "Region....... %s", item->region);            
-            PrintAndLogEx(SUCCESS, "M/s....... %s", item->ms);
-        } 
-
-        PrintAndLogEx(NORMAL, "");
-    }
+    printlog_xerox_info(pn, data);
+   
     return PM3_SUCCESS;
 }
 
@@ -985,30 +990,8 @@ static int CmdHFXeroxView(const char *Cmd) {
     char pn[13];
     xerox_generate_partno(tmp, pn);
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------- " _CYAN_("tag memory") " ---------");
-    PrintAndLogEx(SUCCESS, " PartNo... %s", pn);
-    PrintAndLogEx(SUCCESS, " Date..... %02d.%02d.%02d", tmp[8], tmp[9], tmp[10]);
-    PrintAndLogEx(SUCCESS, " Serial... %d", (tmp[14] << 16) | (tmp[13] << 8) | tmp[12]);
-    PrintAndLogEx(SUCCESS, " Type..... %s", (tmp[18] <= 4) ? xerox_c_type[tmp[18]] : "Unknown");
+    printlog_xerox_info(pn, tmp);
 
-    const xerox_part_t *item = get_xerox_part_info(pn);
-    if (strlen(item->partnumber) > 0) {
-        PrintAndLogEx(INFO, "-------- " _CYAN_("additional data") " ---------");
-
-        char d[] = "drum";
-        char t[] = "toner";
-
-        //Current item is drum
-        if(strcmp(xerox_c_type[tmp[18]], d) == 0) {
-            PrintAndLogEx(SUCCESS, "Slots.... %s", item->r); //Interchangeability
-        } else {
-            //Current item is toner
-            PrintAndLogEx(SUCCESS, "Consumable Type..... %s", t);
-            PrintAndLogEx(SUCCESS, "Region....... %s", item->region);            
-            PrintAndLogEx(SUCCESS, "M/s....... %s", item->ms);
-        }
-    }
     xerox_print_hdr();
     xerox_print(dump, bytes_read);
     xerox_print_footer();
