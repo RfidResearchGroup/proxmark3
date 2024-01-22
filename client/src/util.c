@@ -564,7 +564,7 @@ char *sprint_breakdown_bin(color_t color, const char *bs, int width, int padn, i
         return NULL;
     }
 
-    const char *prepad     = "                                ";
+    const char *prepad     = "................................";
     const char *postmarker = " ................................";
     static char buf[32 + 120] = {0};
     memset(buf, 0, sizeof(buf));
