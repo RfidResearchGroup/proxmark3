@@ -683,17 +683,13 @@ static int dumpmem_to_file(const char *filename, uint32_t addr, uint32_t len, bo
     }
 
     if (res == PM3_SUCCESS) {
-        FILE *fd = fopen(filename, "wb");
-        if (!fd) {
-            PrintAndLogEx(ERR, _RED_("Could not open file") " %s  >>> ", filename);
+        PrintAndLogEx(INFO, "saving to "_YELLOW_("%s"), filename);
+        if (saveFile(filename, ".bin", buffer, read) != 0) {
+            PrintAndLogEx(ERR, "error writing to file "_YELLOW_("%s"), filename);
             res = PM3_EFILE;
-            goto fail2;
         }
-        fwrite(buffer, 1, read, fd);
-        fclose(fd);
     }
 
-fail2:
     free(buffer);
 fail:
     return res;
