@@ -321,3 +321,34 @@ bool data_available_fast(void) {
     return usb_available_length();
 #endif
 }
+
+uint32_t flash_size_from_cidr(uint32_t cidr) {
+    uint8_t nvpsiz = (cidr & 0xF00) >> 8;
+    switch (nvpsiz) {
+        case 0:
+            return 0;
+        case 1:
+            return 8*1024;
+        case 2:
+            return 16*1024;
+        case 3:
+            return 32*1024;
+        case 5:
+            return 64*1024;
+        case 7:
+            return 128*1024;
+        case 9:
+            return 256*1024;
+        case 10:
+            return 512*1024;
+        case 12:
+            return 1024*1024;
+        case 14:
+        default: // for 'reserved' values, guess 2MB
+            return 2048*1024;
+    }
+}
+
+uint32_t get_flash_size(void) {
+    return flash_size_from_cidr(*AT91C_DBGU_CIDR);
+}

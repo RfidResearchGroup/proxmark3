@@ -103,4 +103,7 @@ int BUTTON_HELD(int ms);
 bool data_available(void);
 bool data_available_fast(void);
 
+uint32_t flash_size_from_cidr(uint32_t cidr);
+uint32_t get_flash_size(void);
+
 #endif

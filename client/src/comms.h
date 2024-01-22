@@ -54,6 +54,8 @@ typedef enum {
     SIM_MEM,
     SPIFFS,
     FPGA_MEM,
+    MCU_FLASH,
+    MCU_MEM,
 } DeviceMemType_t;
 
 typedef enum {

@@ -798,7 +798,7 @@ Check column "offline" for their availability.
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
-|`hw readmem             `|N       |`Read memory at decimal address from flash`
+|`hw readmem             `|N       |`Read from processor flash`
 |`hw reset               `|N       |`Reset the Proxmark3`
 |`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
 |`hw setmux              `|N       |`Set the ADC mux to a specific value`

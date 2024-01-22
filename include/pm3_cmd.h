@@ -379,7 +379,9 @@ typedef struct {
 #define CMD_LCD_RESET                                                     0x0103
 #define CMD_LCD                                                           0x0104
 #define CMD_BUFF_CLEAR                                                    0x0105
-#define CMD_READ_MEM                                                      0x0106
+#define CMD_READ_MEM                                                      0x0106 // legacy
+#define CMD_READ_MEM_DOWNLOAD                                             0x010A
+#define CMD_READ_MEM_DOWNLOADED                                           0x010B
 #define CMD_VERSION                                                       0x0107
 #define CMD_STATUS                                                        0x0108
 #define CMD_PING                                                          0x0109
@@ -880,6 +882,9 @@ typedef struct {
 /* Set if this device understands the version command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_VERSION         (1<<6)
 
+/* Set if this device understands the read memory command */
+#define DEVICE_INFO_FLAG_UNDERSTANDS_READ_MEM        (1<<7)
+
 #define BL_VERSION_MAJOR(version) ((uint32_t)(version) >> 22)
 #define BL_VERSION_MINOR(version) (((uint32_t)(version) >> 12) & 0x3ff)
 #define BL_VERSION_PATCH(version) ((uint32_t)(version) & 0xfff)
@@ -891,6 +896,8 @@ typedef struct {
 // Different versions here. Each version should increase the numbers
 #define BL_VERSION_1_0_0    BL_MAKE_VERSION(1, 0, 0)
 
+/* CMD_READ_MEM_DOWNLOAD flags */
+#define CMD_READ_MEM_DOWNLOAD_RAW                    (1<<0)
 
 /* CMD_START_FLASH may have three arguments: start of area to flash,
    end of area to flash, optional magic.

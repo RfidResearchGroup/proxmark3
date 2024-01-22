@@ -2364,6 +2364,52 @@ static void PacketReceived(PacketCommandNG *packet) {
             ReadMem(packet->data.asDwords[0]);
             break;
         }
+        case CMD_READ_MEM_DOWNLOAD: {
+            LED_B_ON();
+
+            size_t offset = packet->oldarg[0];
+            size_t count = packet->oldarg[1];
+            uint32_t flags = packet->oldarg[2];
+
+            bool isok = true;
+            uint8_t *base = NULL;
+
+            bool raw_address_mode = (flags & CMD_READ_MEM_DOWNLOAD_RAW) != 0;
+            if (!raw_address_mode) {
+
+                base = (uint8_t *) _flash_start;
+
+                size_t flash_size = get_flash_size();
+
+                // Boundary check the offset.
+                if (offset > flash_size) {
+                    isok = false;
+                    Dbprintf("reading mcu flash failed ::  | out of bounds, offset %u count %u", offset, count);
+                }
+
+                // Clip the length if it goes past the end of the flash memory.
+                count = MIN(count, flash_size - offset);
+
+            } else {
+                // Allow reading from any memory address and length in special 'raw' mode.
+                base = NULL;
+            }
+
+            if (isok) {
+                for (size_t pos = 0; pos < count; pos += PM3_CMD_DATA_SIZE) {
+                    size_t len = MIN((count - pos), PM3_CMD_DATA_SIZE);
+                    isok = 0 == reply_old(CMD_READ_MEM_DOWNLOADED, pos, len, 0, &base[offset + pos], len);
+                    if (!isok) {
+                        Dbprintf("transfer to client failed ::  | pos %u len %u", pos, len);
+                        break;
+                    }
+                }
+            }
+
+            reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            LED_B_OFF();
+            break;
+        }
 #ifdef WITH_FLASH
         case CMD_SPIFFS_TEST: {
             test_spiffs();
