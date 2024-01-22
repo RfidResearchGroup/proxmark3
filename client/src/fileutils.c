@@ -1902,8 +1902,6 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     }
 
 out:
-
-
     if (callback != NULL) {
         (*callback)(root);
     }
@@ -2202,6 +2200,12 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose) {
     bcc0 = ct ^ new->data[0] ^ new->data[1] ^ new->data[2];
     bcc1 = new->data[4] ^ new->data[5] ^ new->data[6] ^ new->data[7];
     if (bcc0 == new->data[3] && bcc1 == new->data[8]) {
+        retval = MFU_DF_NEWBIN;
+    }
+
+    // Memory layout is different for NTAG I2C 1K/2K plus 
+    // Sak 00, atqa 44 00
+    if (0 ==  new->data[7] &&  0x44 == new->data[8] &&  0x00 == new->data[9] ) {
         retval = MFU_DF_NEWBIN;
     }
 

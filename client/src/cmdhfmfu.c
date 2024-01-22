@@ -542,9 +542,11 @@ static int ndef_get_maxsize(const uint8_t *data) {
 }
 
 static int ndef_print_CC(uint8_t *data) {
+
     // no NDEF message
-    if (data[0] != 0xE1)
+    if (data[0] != 0xE1 && data[0] != 0xF1) {
         return PM3_ESOFT;
+    }
 
 //NFC Forum Type 1,2,3,4
 //
@@ -623,12 +625,41 @@ static int ndef_print_CC(uint8_t *data) {
     uint8_t mbread = (data[3] & 0x01);
 
     PrintAndLogEx(SUCCESS, "  %02X: Additional feature information", data[3]);
-    PrintAndLogEx(SUCCESS, "  %s", sprint_bin(&data[3], 1));
-    PrintAndLogEx(SUCCESS, "  xxx..... - %02X: RFU ( %s )", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
-    PrintAndLogEx(SUCCESS, "  ...x.... - %02X: %s special frame", sf, (sf) ? "support" : "don\'t support");
-    PrintAndLogEx(SUCCESS, "  ....x... - %02X: %s lock block", lb, (lb) ? "support" : "don\'t support");
-    PrintAndLogEx(SUCCESS, "  .....xx. - %02X: RFU ( %s )", mlrule, (mlrule == 0) ? _GREEN_("ok") : _RED_("fail"));
-    PrintAndLogEx(SUCCESS, "  .......x - %02X: IC %s multiple block reads", mbread, (mbread) ? "support" : "don\'t support");
+
+    uint8_t bits[8 + 1] = {0};
+    num_to_bytebits(data[3], 8, bits);
+    const char *bs = sprint_bytebits_bin(bits, 8);
+
+    PrintAndLogEx(SUCCESS, "  %s", bs);
+    if (msb3 == 0) {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 0, 3, "RFU"));
+    } else {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_RED, bs, 8, 0, 3, "RFU"));
+    }
+
+    if (sf) {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 3, 1, "Support special frame"));
+    } else {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 3, 1, "Don\'t support special frame"));
+    }
+
+    if (lb) {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 4, 1, "Support lock block"));
+    } else {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 4, 1, "Don\'t support lock block"));
+    }
+
+    if (mlrule == 0) {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 5, 2, "RFU"));
+    } else {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_RED, bs, 8, 5, 2, "RFU"));
+    }
+
+    if (mbread) {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 7, 1, "IC support multiple block reads"));
+    } else {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 7, 1, "IC don\'t support multiple block reads"));
+    }
     return PM3_SUCCESS;
 }
 
@@ -1428,6 +1459,12 @@ static mfu_identify_t mfu_ident_table[] = {
         ul_ev1_pwdgenB, ul_ev1_packgenB,
         "hf mfu dump -k %08x"
     },
+    {
+        "Amiibo - Power Up band", "0004040502021303",
+        8, 10, "44000FE0F110FFEEA500",
+        ul_ev1_pwdgenB, ul_ev1_packgenB,
+        "hf mfu dump -k %08x"
+    },
     /*
     {
         "Xiaomi AIR Purifier", "0004040201000F03",
@@ -1509,6 +1546,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
 
     uint8_t *data = NULL;
     int res = PM3_SUCCESS;
+    PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "------------------------ " _CYAN_("Fingerprint") " -----------------------");
     uint8_t maxbytes = mfu_max_len();
     if (maxbytes == 0) {
@@ -1517,7 +1555,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
         goto out;
     }
 
-    maxbytes = ((maxbytes / 4) + 1) * 4;
+    maxbytes = ((maxbytes / MFU_BLOCK_SIZE) + 1) * MFU_BLOCK_SIZE;
     data = calloc(maxbytes, sizeof(uint8_t));
     if (data == NULL) {
         PrintAndLogEx(ERR, "failed to allocate memory");
@@ -1525,7 +1563,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
         goto out;
     }
 
-    uint8_t pages = (maxbytes / 4);
+    uint8_t pages = (maxbytes / MFU_BLOCK_SIZE);
     PrintAndLogEx(INFO, "Reading tag memory...");
 
     uint8_t keytype = 0;
@@ -1539,7 +1577,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
     SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, authkey, ak_len);
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "Command execute time-out");
         res = PM3_ETIMEOUT;
         goto out;
@@ -1559,11 +1597,12 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
         buffer_size = maxbytes;
     }
 
-    if (!GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         res = PM3_ETIMEOUT;
         goto out;
     }
+
 
     uint8_t version[8] = {0};
     uint8_t uid[7] = {0};
@@ -1843,7 +1882,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     }
 
     bool locked = false;
-    // read pages 0,1,2,3 (should read 4pages)
+    // read pages 0,1,2,3 (should read 4 pages)
     status = ul_read(0, data, sizeof(data));
     if (status == -1) {
         DropField();
@@ -1940,7 +1979,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             DropField();
             return PM3_ESOFT;
         }
-        if (status == 32) {
+        if (status == 32 || status == 34) {
             ulev1_print_signature(tagtype, card.uid, ulev1_signature, 32);
         } else if (status == 48) {
             ulev1_print_signature(tagtype, card.uid, ulev1_signature, 48);
@@ -2009,7 +2048,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenA(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found default password " _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                has_auth_key = true;
+                ak_len = 4;
+                memcpy(authenticationkey, key, 4);
+                PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -2021,7 +2063,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenB(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found default password " _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                has_auth_key = true;
+                ak_len = 4;
+                memcpy(authenticationkey, key, 4);                
+                PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -2033,7 +2078,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenC(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found default password " _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                has_auth_key = true;
+                ak_len = 4;
+                memcpy(authenticationkey, key, 4);                
+                PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -2045,7 +2093,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenD(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found default password" _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                has_auth_key = true;
+                ak_len = 4;
+                memcpy(authenticationkey, key, 4);                
+                PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -2057,7 +2108,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 key = default_pwd_pack[i];
                 len = ulev1_requestAuthentication(key, pack, sizeof(pack));
                 if (len > -1) {
-                    PrintAndLogEx(SUCCESS, "Found default password " _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                    has_auth_key = true;
+                    ak_len = 4;
+                    memcpy(authenticationkey, key, 4);                    
+                    PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                     break;
                 } else {
                     if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
@@ -2070,13 +2124,18 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
             }
         } else {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+
+            if (locked) {
+                PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+            }
         }
     }
 
-    mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
-
 out:
+    if (has_auth_key) {
+        mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
+    }
+
     DropField();
     if (locked) {
         PrintAndLogEx(INFO, "\nTag appears to be locked, try using a key to get more info");
