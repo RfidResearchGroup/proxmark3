@@ -2330,14 +2330,14 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                     continue;
                 if (memcmp(&cmd[cmdCpt], tag->uid, 8) != 0)
                 {
-                    if (cmd[cmdCpt] != tag->ic || cmd_len < cmdCpt+9 \
-                        ||  memcmp(&cmd[cmdCpt+1], tag->uid, 8) != 0)
-                    { // check uid even if IC is present
+                    if (cmd_len < cmdCpt+9 ||  memcmp(&cmd[cmdCpt+1], tag->uid, 8) != 0)
+                    { // check uid even if manifacturer byte is present
                         if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address don't match tag uid");
                         if (cmd[1] == ISO15693_SELECT)
                             tag->state = TAG_STATE_READY; // we are not anymore the selected TAG
                         continue; // drop addressed request with other uid
                     }
+                    cmdCpt++;
                 }
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address match tag uid");
                 cmdCpt+=8;
@@ -2509,7 +2509,9 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 break;
             case ISO15693_SET_PASSWORD:
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("SetPassword cmd");
-                if (cmd[cmdCpt++] == tag->ic)
+                if (cmdLen > cmdCpt+5)
+                    cmdCpt++: // skip manifacturer code
+                if (cmdLen > cmdCpt+4)
                 {
                     pwdId = cmd[cmdCpt++];
                     if (pwdId == 4) // Privacy password
