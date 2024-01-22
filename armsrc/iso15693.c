@@ -2509,9 +2509,9 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 break;
             case ISO15693_SET_PASSWORD:
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("SetPassword cmd");
-                if (cmdLen > cmdCpt+5)
-                    cmdCpt++: // skip manifacturer code
-                if (cmdLen > cmdCpt+4)
+                if (cmd_len > cmdCpt+5)
+                    cmdCpt++; // skip manifacturer code
+                if (cmd_len > cmdCpt+4)
                 {
                     pwdId = cmd[cmdCpt++];
                     if (pwdId == 4) // Privacy password
