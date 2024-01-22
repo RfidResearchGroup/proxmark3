@@ -89,6 +89,37 @@ static void Fatal(void) {
     for (;;) {};
 }
 
+static uint32_t flash_size_from_cidr(uint32_t cidr) {
+    uint8_t nvpsiz = (cidr & 0xF00) >> 8;
+    switch (nvpsiz) {
+        case 0:
+            return 0;
+        case 1:
+            return 8*1024;
+        case 2:
+            return 16*1024;
+        case 3:
+            return 32*1024;
+        case 5:
+            return 64*1024;
+        case 7:
+            return 128*1024;
+        case 9:
+            return 256*1024;
+        case 10:
+            return 512*1024;
+        case 12:
+            return 1024*1024;
+        case 14:
+        default: // for 'reserved' values, guess 2MB
+            return 2048*1024;
+    }
+}
+
+static uint32_t get_flash_size(void) {
+    return flash_size_from_cidr(*AT91C_DBGU_CIDR);
+}
+
 static void UsbPacketReceived(uint8_t *packet) {
     bool ack = true;
     PacketCommandOLD *c = (PacketCommandOLD *)packet;
@@ -104,7 +135,8 @@ static void UsbPacketReceived(uint8_t *packet) {
                    DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
                    DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH |
                    DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO |
-                   DEVICE_INFO_FLAG_UNDERSTANDS_VERSION;
+                   DEVICE_INFO_FLAG_UNDERSTANDS_VERSION |
+                   DEVICE_INFO_FLAG_UNDERSTANDS_READ_MEM;
             if (g_common_area.flags.osimage_present)
                 arg0 |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
 
@@ -125,6 +157,54 @@ static void UsbPacketReceived(uint8_t *packet) {
             reply_old(CMD_BL_VERSION, arg0, 0, 0, 0, 0);
         }
         break;
+
+        case CMD_READ_MEM_DOWNLOAD: {
+            ack = false;
+            LED_B_ON();
+
+            size_t offset = (size_t) c->arg[0];
+            size_t count = (size_t) c->arg[1];
+            uint32_t flags = (uint32_t) c->arg[2];
+
+            bool isok = true;
+            uint8_t *base = NULL;
+
+            bool raw_address_mode = (flags & CMD_READ_MEM_DOWNLOAD_RAW) != 0;
+            if (!raw_address_mode) {
+
+                base = (uint8_t *) _flash_start;
+
+                size_t flash_size = get_flash_size();
+
+                // Boundary check the offset.
+                if (offset > flash_size)
+                    isok = false;
+
+                // Clip the length if it goes past the end of the flash memory.
+                count = MIN(count, flash_size - offset);
+
+            } else {
+                // Allow reading from any memory address and length in special 'raw' mode.
+                base = NULL;
+            }
+
+            if (isok) {
+                for (size_t pos = 0; pos < count; pos += PM3_CMD_DATA_SIZE) {
+                    size_t len = MIN((count - pos), PM3_CMD_DATA_SIZE);
+                    isok = 0 == reply_old(CMD_READ_MEM_DOWNLOADED, pos, len, 0, &base[offset + pos], len);
+                    if (!isok)
+                        break;
+                }
+            }
+
+            if (isok)
+                reply_old(CMD_ACK, 1, 0, 0, 0, 0);
+            else
+                reply_old(CMD_NACK, 0, 0, 0, 0, 0);
+
+            LED_B_OFF();
+            break;
+        }
 
         case CMD_FINISH_WRITE: {
 #if defined ICOPYX
