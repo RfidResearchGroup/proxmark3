@@ -22,6 +22,9 @@
 #include "pm3_cmd.h"
 #include "util.h" // nbytes
 
+#define BIGBUF_ALIGN_BYTES (4)
+#define BIGBUF_ALIGN_MASK (0xFFFF+1-BIGBUF_ALIGN_BYTES)
+
 extern uint32_t _stack_start[], __bss_end__[];
 
 // BigBuf is the large multi-purpose buffer, typically used to hold A/D samples or traces.
@@ -132,10 +135,11 @@ void BigBuf_Clear_keep_EM(void) {
 // allocate a chunk of memory from BigBuf. We allocate high memory first. The unallocated memory
 // at the beginning of BigBuf is always for traces/samples
 uint8_t *BigBuf_malloc(uint16_t chunksize) {
-    if (s_bigbuf_hi < (chunksize + 3))
+    chunksize = (chunksize + BIGBUF_ALIGN_BYTES - 1) & BIGBUF_ALIGN_MASK; // round up to next multiple of 4
+
+    if (s_bigbuf_hi < chunksize)
         return NULL; // no memory left
 
-    chunksize = (chunksize + 3) & 0xfffc; // round to next multiple of 4
     s_bigbuf_hi -= chunksize;  // aligned to 4 Byte boundary
     return (uint8_t *)BigBuf + s_bigbuf_hi;
 }
@@ -145,7 +149,7 @@ uint8_t *BigBuf_malloc(uint16_t chunksize) {
 uint8_t *BigBuf_calloc(uint16_t chunksize) {
     uint8_t *mem = BigBuf_malloc(chunksize);
     if (mem != NULL) {
-        memset(mem, 0x00, ((chunksize + 3) & 0xfffc)); // round to next multiple of 4
+        memset(mem, 0x00, ((chunksize + BIGBUF_ALIGN_BYTES - 1) & BIGBUF_ALIGN_MASK)); // round up to next multiple of 4
     }
     return mem;
 }
@@ -203,7 +207,7 @@ void BigBuf_print_status(void) {
 
 // return the maximum trace length (i.e. the unallocated size of BigBuf)
 uint16_t BigBuf_max_traceLen(void) {
-    return s_bigbuf_hi;
+    return s_bigbuf_hi & BIGBUF_ALIGN_MASK;
 }
 
 void clear_trace(void) {
@@ -379,4 +383,3 @@ dmabuf8_t *get_dma8(void) {
 
     return &dma_8;
 }
-

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf sniff` broken since 17ab86c52 (@nvx)
  - Added `--dumpmem` to proxmark3 client for memory dumping to file (@martian01010)
  - Changed `hw readmem` to allow larger reads, write to file and better hex viewer (@martian01010)
  - Added `CMD_READ_MEM_DOWNLOAD` and `CMD_READ_MEM_DOWNLOADED` to osimage and bootloader (@martian01010)
