@@ -683,7 +683,6 @@ static int dumpmem_to_file(const char *filename, uint32_t addr, uint32_t len, bo
     }
 
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "saving to "_YELLOW_("%s"), filename);
         if (saveFile(filename, ".bin", buffer, read) != 0) {
             PrintAndLogEx(ERR, "error writing to file "_YELLOW_("%s"), filename);
             res = PM3_EFILE;

@@ -682,7 +682,6 @@ static int CmdReadmem(const char *Cmd) {
     }
 
     if (save_to_file) {
-        PrintAndLogEx(INFO, "saving to "_YELLOW_("%s"), filename);
         saveFile(filename, ".bin", buffer, len);
     } else {
         PrintAndLogEx(INFO, "---- " _CYAN_("processor%s memory") " ----", flash_str);
