@@ -724,16 +724,15 @@ static int dumpmem_pm3(char *serial_port_name, const char *filename, uint32_t ad
     if (in_bootloader) {
         if ((dev_info & DEVICE_INFO_FLAG_UNDERSTANDS_READ_MEM) != 0) {
             PrintAndLogEx(INFO, "Device is running the bootloader.");
-        }
-        else {
+        } else {
             PrintAndLogEx(ERR, "Device is running the bootloader, but the bootloader"
-                " doesn't understand the READ MEM command.");
+                          " doesn't understand the READ MEM command.");
             goto finish2;
         }
     }
 
-    PrintAndLogEx(SUCCESS,"Dump requested from address "_YELLOW_("%u")", length "_YELLOW_("%u")"%s.",
-        addr, len, raw ? ", in raw address mode" : "");
+    PrintAndLogEx(SUCCESS, "Dump requested from address "_YELLOW_("%u")", length "_YELLOW_("%u")"%s.",
+                  addr, len, raw ? ", in raw address mode" : "");
 
     PrintAndLogEx(SUCCESS, _CYAN_("Memory dumping to file..."));
     ret = dumpmem_to_file(filename, addr, len, raw, in_bootloader);
@@ -918,7 +917,7 @@ int main(int argc, char *argv[]) {
     bool dumpmem_mode = false;
     const char *dumpmem_filename = NULL;
     uint32_t dumpmem_addr = 0;
-    uint32_t dumpmem_len = 512*1024;
+    uint32_t dumpmem_len = 512 * 1024;
     bool dumpmem_raw = false;
 
     // color management:

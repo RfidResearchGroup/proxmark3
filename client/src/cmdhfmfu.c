@@ -2065,7 +2065,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             if (len > -1) {
                 has_auth_key = true;
                 ak_len = 4;
-                memcpy(authenticationkey, key, 4);                
+                memcpy(authenticationkey, key, 4);
                 PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
@@ -2080,7 +2080,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             if (len > -1) {
                 has_auth_key = true;
                 ak_len = 4;
-                memcpy(authenticationkey, key, 4);                
+                memcpy(authenticationkey, key, 4);
                 PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
@@ -2095,7 +2095,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             if (len > -1) {
                 has_auth_key = true;
                 ak_len = 4;
-                memcpy(authenticationkey, key, 4);                
+                memcpy(authenticationkey, key, 4);
                 PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
@@ -2110,7 +2110,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 if (len > -1) {
                     has_auth_key = true;
                     ak_len = 4;
-                    memcpy(authenticationkey, key, 4);                    
+                    memcpy(authenticationkey, key, 4);
                     PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                     break;
                 } else {
@@ -2566,12 +2566,12 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
 
         if (in_repeated_block == false) {
             PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s"
-                    , i + startpage
-                    , i + startpage
-                    , sprint_hex(data + i * 4, 4)
-                    , (lckbit) ? _RED_("1") : "0"
-                    , sprint_ascii(data + i * 4, 4)
-                );
+                          , i + startpage
+                          , i + startpage
+                          , sprint_hex(data + i * 4, 4)
+                          , (lckbit) ? _RED_("1") : "0"
+                          , sprint_ascii(data + i * 4, 4)
+                         );
         }
     }
     PrintAndLogEx(INFO, "---------------------------------");
@@ -3010,7 +3010,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         arg_lit0("e", NULL, "enable special write version/signature -MAGIC NTAG 21* ONLY-"),
         arg_lit0("r", NULL, "use password found in dumpfile to configure tag. Requires " _YELLOW_("'-e'") " parameter to work"),
         arg_lit0("v", "verbose", "verbose output"),
-        arg_lit0("z", "dense", "dense dump output style"),   
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4797,7 +4797,7 @@ static int CmdHF14AMfuView(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "Verbose output"),
-        arg_lit0("z", "dense", "dense dump output style"),        
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

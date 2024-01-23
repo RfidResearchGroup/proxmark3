@@ -793,24 +793,24 @@ static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid, bool 
 
         if (in_repeated_block == false) {
             PrintAndLogEx(INFO,
-                        "%3d/0x%02X | %s| %s | %s",
-                        i,
-                        i,
-                        sprint_hex(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE),
-                        get_st_lock_info(chipid, systemblock, i),
-                        sprint_ascii(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE)
-                    );
+                          "%3d/0x%02X | %s| %s | %s",
+                          i,
+                          i,
+                          sprint_hex(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE),
+                          get_st_lock_info(chipid, systemblock, i),
+                          sprint_ascii(data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE)
+                         );
         }
     }
 
     PrintAndLogEx(INFO,
-                "%3d/0x%02X | %s| %s | %s",
-                0xFF,
-                0xFF,
-                sprint_hex(systemblock, ST25TB_SR_BLOCK_SIZE),
-                get_st_lock_info(chipid, systemblock, 0xFF),
-                sprint_ascii(systemblock, ST25TB_SR_BLOCK_SIZE)
-            );
+                  "%3d/0x%02X | %s| %s | %s",
+                  0xFF,
+                  0xFF,
+                  sprint_hex(systemblock, ST25TB_SR_BLOCK_SIZE),
+                  get_st_lock_info(chipid, systemblock, 0xFF),
+                  sprint_ascii(systemblock, ST25TB_SR_BLOCK_SIZE)
+                 );
 
     print_footer();
 }

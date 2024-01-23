@@ -656,7 +656,7 @@ static int CmdReadmem(const char *Cmd) {
     bool save_to_file = fnlen > 0;
 
     // default len to 512KB when saving to file, to 32 bytes when viewing on the console.
-    uint32_t default_len = save_to_file ? 512*1024 : 32;
+    uint32_t default_len = save_to_file ? 512 * 1024 : 32;
 
     uint32_t address = arg_get_u32_def(ctx, 1, 0);
     uint32_t len = arg_get_u32_def(ctx, 2, default_len);
@@ -672,7 +672,7 @@ static int CmdReadmem(const char *Cmd) {
 
     const char *flash_str = raw ? "" : " flash";
     PrintAndLogEx(INFO, "reading "_YELLOW_("%u")" bytes from processor%s memory",
-        len, flash_str);
+                  len, flash_str);
 
     DeviceMemType_t type = raw ? MCU_MEM : MCU_FLASH;
     if (!GetFromDevice(type, buffer, len, address, NULL, 0, NULL, -1, true)) {

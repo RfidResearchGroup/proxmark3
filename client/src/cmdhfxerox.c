@@ -466,26 +466,26 @@ static void xerox_print(uint8_t *data, uint16_t datalen, bool dense_output) {
                 (memcmp(blk, blk - XEROX_BLOCK_SIZE, XEROX_BLOCK_SIZE) == 0) &&
                 (memcmp(blk, blk + XEROX_BLOCK_SIZE, XEROX_BLOCK_SIZE) == 0) &&
                 (memcmp(blk, blk + (XEROX_BLOCK_SIZE * 2), XEROX_BLOCK_SIZE) == 0)
-            ) {
+           ) {
             // we're in a user block that isn't the first user block nor last two user blocks,
             // and the current block data is the same as the previous and next two block
             in_repeated_block = true;
             PrintAndLogEx(INFO, "  ......");
         } else if (in_repeated_block &&
-                    (memcmp(blk, blk + XEROX_BLOCK_SIZE, XEROX_BLOCK_SIZE) || i == blockno)
-                    ) {
+                   (memcmp(blk, blk + XEROX_BLOCK_SIZE, XEROX_BLOCK_SIZE) || i == blockno)
+                  ) {
             // in a repeating block, but the next block doesn't match anymore, or we're at the end block
             in_repeated_block = false;
         }
 
         if (in_repeated_block == false) {
             PrintAndLogEx(INFO,
-                        "%3d/0x%02X | %s | %s",
-                        i,
-                        i,
-                        sprint_hex(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE),
-                        sprint_ascii(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE)
-                        );
+                          "%3d/0x%02X | %s | %s",
+                          i,
+                          i,
+                          sprint_hex(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE),
+                          sprint_ascii(data + (i * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE)
+                         );
         }
     }
 }
@@ -503,7 +503,7 @@ typedef struct {
 
     //Toner related details
     const char *color; // cyan, magenta, gold, silver, clear, white, fluo
-    
+
     const char *region; // DMO, WW, NA/ESG (NA - North America, MNA - Metred North America, DMO - Developing Markets, XE - Europe
     const char *ms; // sold, metered
 
@@ -560,7 +560,7 @@ static const xerox_part_t xerox_part_mappings[] = {
 static const xerox_part_t *get_xerox_part_info(const char *pn) {
     for (int i = 0; i < ARRAYLEN(xerox_part_mappings); i++) {
         // Todo: make str_startswith, accept additional "Maximum number of characters to compare"
-        if(strncmp(pn, xerox_part_mappings[i].partnumber, strlen(pn)-3) == 0){
+        if (strncmp(pn, xerox_part_mappings[i].partnumber, strlen(pn) - 3) == 0) {
             return &xerox_part_mappings[i];
         }
     }
@@ -605,20 +605,20 @@ static void xerox_print_info(uint8_t *d) {
     PrintAndLogEx(SUCCESS, " PartNo....... " _YELLOW_("%s"), pn);
     PrintAndLogEx(SUCCESS, " Date......... %02d.%02d.%02d", d[8], d[9], d[10]);
     PrintAndLogEx(SUCCESS, " Serial....... %d", (d[14] << 16) | (d[13] << 8) | d[12]);
-    PrintAndLogEx(SUCCESS, " Type......... %s", (d[18] <= 4) ? xerox_c_type[d[18]] : "Unknown");    
+    PrintAndLogEx(SUCCESS, " Type......... %s", (d[18] <= 4) ? xerox_c_type[d[18]] : "Unknown");
 
     const xerox_part_t *item = get_xerox_part_info(pn);
     if (strlen(item->partnumber) > 0) {
 
-        if(strcmp(xerox_c_type[d[18]], "drum") == 0) {
+        if (strcmp(xerox_c_type[d[18]], "drum") == 0) {
 
             PrintAndLogEx(SUCCESS, " Consumable... drum");
             PrintAndLogEx(SUCCESS, " Slots........ %s", item->r); // Interchangeability
         } else {
             PrintAndLogEx(SUCCESS, " Consumable... toner");
-            PrintAndLogEx(SUCCESS, " Region....... %s", item->region);            
+            PrintAndLogEx(SUCCESS, " Region....... %s", item->region);
             PrintAndLogEx(SUCCESS, " M/s.......... %s", item->ms);
-        } 
+        }
     }
 }
 
@@ -778,7 +778,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
         arg_lit0("d", "decrypt", "decrypt secret blocks"),
         arg_lit0(NULL, "ns", "no save to file"),
         arg_lit0("v", "verbose", "verbose output"),
-        arg_lit0("z", "dense", "dense dump output style"),        
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

@@ -2395,7 +2395,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 base = NULL;
                 // Boundary check against end of addressable space.
                 if (offset > 0)
-                    count=MIN(count, -offset);
+                    count = MIN(count, -offset);
             }
 
             if (isok) {

@@ -273,9 +273,21 @@
             ],
             "usage": "data clear [-h]"
         },
+        "data convertbitstream": {
+            "command": "data convertbitstream",
+            "description": "Convert GraphBuffer's 0|1 values to 127|-127",
+            "notes": [
+                "data convertbitstream"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "data convertbitstream [-h]"
+        },
         "data crypto": {
             "command": "data crypto",
-            "description": "Encrypt and decrypt data",
+            "description": "Encrypt data, right here, right now. Or decrypt.",
             "notes": [
                 "Supply data, key, IV (needed for des MAC or aes), and cryptography action.",
                 "To calculate a MAC for FMCOS, supply challenge as IV, data as data, and session/line protection key as key.",
@@ -293,18 +305,6 @@
                 "--iv <hex> IV value if needed"
             ],
             "usage": "data crypto [-hr] -d <hex> -k <hex> [--des] [--mac] [--iv <hex>]"
-        },
-        "data convertbitstream": {
-            "command": "data convertbitstream",
-            "description": "Convert GraphBuffer's 0|1 values to 127|-127",
-            "notes": [
-                "data convertbitstream"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help This help"
-            ],
-            "usage": "data convertbitstream [-h]"
         },
         "data cthreshold": {
             "command": "data cthreshold",
@@ -444,7 +444,7 @@
         },
         "data help": {
             "command": "data help",
-            "description": "help This help ----------- ------------------------- Modulation------------------------- biphaserawdecode Biphase decode bin stream in DemodBuffer detectclock Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer fsktonrz Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode Manchester decode binary stream in DemodBuffer modulation Identify LF signal for clock and modulation rawdemod Demodulate the data in the GraphBuffer and output binary ----------- ------------------------- Graph------------------------- askedgedetect Adjust Graph for manual ASK demod autocorr Autocorrelation over window dirthreshold Max rising higher up-thres/ Min falling lower down-thres decimate Decimate samples envelope Generate square envelope of samples undecimate Un-decimate samples hide Hide graph window hpf Remove DC offset from trace iir Apply IIR buttersworth filter on plot data grid overlay grid on graph window ltrim Trim samples from left of trace mtrim Trim out samples from the specified start to the specified stop norm Normalize max/min to +/-128 plot Show graph window cthreshold Average out all values between rtrim Trim samples from right of trace setgraphmarkers Set blue and orange marker in graph window shiftgraphzero Shift 0 for Graphed wave + or - shift value timescale Set cursor display timescale zerocrossings Count time between zero-crossings convertbitstream Convert GraphBuffer's 0/1 values to 127 / -127 getbitstream Convert GraphBuffer's >=1 values to 1 and <1 to 0 ----------- ------------------------- General------------------------- asn1 ASN1 decoder atr ATR lookup bin2hex Converts binary to hexadecimal bmap Convert hex value according a binary template clear Clears bigbuf on deviceside and graph window diff Diff of input files hex2bin Converts hexadecimal to binary load Load contents of file into graph window num Converts dec/hex/bin print Print the data in the DemodBuffer save Save signal trace data (from graph window) setdebugmode Set Debugging Level on client side --------------------------------------------------------------------------------------- data biphaserawdecode available offline: yes Biphase decode binary stream in DemodBuffer Converts 10 or 01 -> 1 and 11 or 00 -> 0 - must have binary sequence in DemodBuffer (run `data rawdemod --ar` before) - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
+            "description": "help This help ----------- ------------------------- Modulation------------------------- biphaserawdecode Biphase decode bin stream in DemodBuffer detectclock Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer fsktonrz Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode Manchester decode binary stream in DemodBuffer modulation Identify LF signal for clock and modulation rawdemod Demodulate the data in the GraphBuffer and output binary ----------- ------------------------- Graph------------------------- askedgedetect Adjust Graph for manual ASK demod autocorr Autocorrelation over window dirthreshold Max rising higher up-thres/ Min falling lower down-thres decimate Decimate samples envelope Generate square envelope of samples undecimate Un-decimate samples hide Hide graph window hpf Remove DC offset from trace iir Apply IIR buttersworth filter on plot data grid overlay grid on graph window ltrim Trim samples from left of trace mtrim Trim out samples from the specified start to the specified stop norm Normalize max/min to +/-128 plot Show graph window cthreshold Average out all values between rtrim Trim samples from right of trace setgraphmarkers Set blue and orange marker in graph window shiftgraphzero Shift 0 for Graphed wave + or - shift value timescale Set cursor display timescale zerocrossings Count time between zero-crossings convertbitstream Convert GraphBuffer's 0/1 values to 127 / -127 getbitstream Convert GraphBuffer's >=1 values to 1 and <1 to 0 ----------- ------------------------- General------------------------- asn1 ASN1 decoder atr ATR lookup bin2hex Converts binary to hexadecimal bmap Convert hex value according a binary template clear Clears bigbuf on deviceside and graph window crypto Encrypt and decrypt data diff Diff of input files hex2bin Converts hexadecimal to binary load Load contents of file into graph window num Converts dec/hex/bin print Print the data in the DemodBuffer save Save signal trace data (from graph window) setdebugmode Set Debugging Level on client side --------------------------------------------------------------------------------------- data biphaserawdecode available offline: yes Biphase decode binary stream in DemodBuffer Converts 10 or 01 -> 1 and 11 or 00 -> 0 - must have binary sequence in DemodBuffer (run `data rawdemod --ar` before) - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
             "notes": [
                 "data biphaserawdecode -> decode biphase bitstream from the DemodBuffer",
                 "data biphaserawdecode -oi -> decode biphase bitstream from the DemodBuffer, adjust offset, and invert output"
@@ -1415,9 +1415,10 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> (optional) filename, if no <name> UID will be used as filename",
-                "--ns no save to file"
+                "--ns no save to file",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf 14b dump [-h] [-f <fn>] [--ns]"
+            "usage": "hf 14b dump [-hz] [-f <fn>] [--ns]"
         },
         "hf 14b help": {
             "command": "hf 14b help",
@@ -1570,9 +1571,10 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Specify a filename for dump file",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf 14b view [-hv] -f <fn>"
+            "usage": "hf 14b view [-hvz] -f <fn>"
         },
         "hf 14b wrbl": {
             "command": "hf 14b wrbl",
@@ -6703,9 +6705,10 @@
                 "-l Swap entered key's endianness",
                 "-p, --page <dec> Manually set start page number to start from",
                 "-q, --qty <dec> Manually set number of pages to dump",
-                "--ns no save to file"
+                "--ns no save to file",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf mfu dump [-hl] [-f <fn>] [-k <hex>] [-p <dec>] [-q <dec>] [--ns]"
+            "usage": "hf mfu dump [-hlz] [-f <fn>] [-k <hex>] [-p <dec>] [-q <dec>] [--ns]"
         },
         "hf mfu eload": {
             "command": "hf mfu eload",
@@ -6749,9 +6752,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-e, --end <dec> index of last block"
+                "-e, --end <dec> index of last block",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf mfu eview [-h] [-e <dec>]"
+            "usage": "hf mfu eview [-hz] [-e <dec>]"
         },
         "hf mfu help": {
             "command": "hf mfu help",
@@ -6897,9 +6901,10 @@
                 "-s enable special write UID -MAGIC TAG ONLY-",
                 "-e enable special write version/signature -MAGIC NTAG 21* ONLY-",
                 "-r use password found in dumpfile to configure tag. Requires '-e' parameter to work",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf mfu restore [-hlserv] -f <fn> [-k <hex>]"
+            "usage": "hf mfu restore [-hlservz] -f <fn> [-k <hex>]"
         },
         "hf mfu setpwd": {
             "command": "hf mfu setpwd",
@@ -6974,9 +6979,10 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Specify a filename for dump file",
-                "-v, --verbose Verbose output"
+                "-v, --verbose Verbose output",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf mfu view [-hv] -f <fn>"
+            "usage": "hf mfu view [-hvz] -f <fn>"
         },
         "hf mfu wrbl": {
             "command": "hf mfu wrbl",
@@ -7650,9 +7656,10 @@
                 "-f, --file <fn> filename to save dump to",
                 "-d, --decrypt decrypt secret blocks",
                 "--ns no save to file",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf xerox dump [-hdv] [-f <fn>] [--ns]"
+            "usage": "hf xerox dump [-hdvz] [-f <fn>] [--ns]"
         },
         "hf xerox help": {
             "command": "hf xerox help",
@@ -7713,9 +7720,10 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Specify a filename for dump file",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf xerox view [-hv] -f <fn>"
+            "usage": "hf xerox view [-hvz] -f <fn>"
         },
         "hints": {
             "command": "hints",
@@ -7857,16 +7865,21 @@
         },
         "hw readmem": {
             "command": "hw readmem",
-            "description": "Read memory at decimal address from ARM chip flash.",
+            "description": "Reads processor flash memory into a file or views on console",
             "notes": [
-                "hw readmem -a 10000"
+                "hw readmem -f myfile -> save 512KB processor flash memory to file",
+                "hw readmem -a 8192 -l 512 -> display 512 bytes from offset 8192"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-a, --adr <dec> address to read"
+                "-a, --adr <dec> flash address to start reading from",
+                "-l, --len <dec> length (default 32 or 512KB)",
+                "-f, --file <fn> save to file",
+                "-c, --cols <dec> column breaks",
+                "-r, --raw use raw address mode: read from anywhere, not just flash"
             ],
-            "usage": "hw readmem [-h] -a <dec>"
+            "usage": "hw readmem [-hr] [-a <dec>] [-l <dec>] [-f <fn>] [-c <dec>]"
         },
         "hw reset": {
             "command": "hw reset",
@@ -12326,8 +12339,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 710,
+        "commands_extracted": 711,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-01-18T18:49:32"
+        "extracted_on": "2024-01-23T14:27:27"
     }
 }

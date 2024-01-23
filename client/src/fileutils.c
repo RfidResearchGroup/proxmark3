@@ -2203,9 +2203,9 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose) {
         retval = MFU_DF_NEWBIN;
     }
 
-    // Memory layout is different for NTAG I2C 1K/2K plus 
+    // Memory layout is different for NTAG I2C 1K/2K plus
     // Sak 00, atqa 44 00
-    if (0 ==  new->data[7] &&  0x44 == new->data[8] &&  0x00 == new->data[9] ) {
+    if (0 ==  new->data[7] &&  0x44 == new->data[8] &&  0x00 == new->data[9]) {
         retval = MFU_DF_NEWBIN;
     }
 

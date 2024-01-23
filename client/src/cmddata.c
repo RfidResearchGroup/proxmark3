@@ -3690,7 +3690,7 @@ static int CmdCryptography(const char *Cmd) {
             return PM3_EINVARG;
         }
     } else {
-        if (datilen % 16 != 0 && ((type & 0x2) >>1==0)) {
+        if (datilen % 16 != 0 && ((type & 0x2) >> 1 == 0)) {
             PrintAndLogEx(ERR, "<data> length must be a multiple of 16. Got %d", datilen);
             return PM3_EINVARG;
         }
