@@ -640,10 +640,10 @@ static int CmdReadmem(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("a", "adr", "<dec>", "flash address to start reading from"),
-        arg_int0("l", "len", "<dec>", "length (default 32 or 512KB)"),
+        arg_u64_0("a", "adr", "<dec>", "flash address to start reading from"),
+        arg_u64_0("l", "len", "<dec>", "length (default 32 or 512KB)"),
         arg_str0("f", "file", "<fn>", "save to file"),
-        arg_int0("c", "cols", "<dec>", "column breaks"),
+        arg_u64_0("c", "cols", "<dec>", "column breaks"),
         arg_lit0("r", "raw", "use raw address mode: read from anywhere, not just flash"),
         arg_param_end
     };

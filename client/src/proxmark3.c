@@ -1139,7 +1139,7 @@ int main(int argc, char *argv[]) {
                 show_help(false, exec_name);
                 return 1;
             }
-            uint32_t tmpaddr = strtol(argv[i + 1], NULL, 10);
+            uint32_t tmpaddr = strtoul(argv[i + 1], NULL, 0);
             dumpmem_addr = tmpaddr;
             i++;
             continue;
@@ -1150,7 +1150,7 @@ int main(int argc, char *argv[]) {
                 show_help(false, exec_name);
                 return 1;
             }
-            uint32_t tmplen = strtol(argv[i + 1], NULL, 10);
+            uint32_t tmplen = strtoul(argv[i + 1], NULL, 0);
             dumpmem_len = tmplen;
             i++;
             continue;
