@@ -853,8 +853,6 @@ void felica_dump_lite_s(void) {
 
                 //TransmitFor18092_AsReader(frameSpace, frameSpace[2]+4, GetCountSspClk()+512, 1, 0);
 
-
-
                 TransmitFor18092_AsReader(frameSpace, frameSpace[2] + 4, NULL, 1, 0);
                 // read block
                 if (WaitForFelicaReply(1024) && FelicaFrame.framebytes[3] == FELICA_RDBLK_ACK) {
@@ -867,15 +865,16 @@ void felica_dump_lite_s(void) {
 
                     //memcpy(dest+cnt, FelicaFrame.framebytes + 15, 16);
                     //cnt += 16;
-                    for (uint8_t j = 0; j < 16; j++)
+                    for (uint8_t j = 0; j < 16; j++) {
                         dest[cnt++] = fb[15 + j];
+                    }
 
                     blknum++;
                     cntfails = 0;
 
                     // // print raw log.
                     // Dbprintf("LEN %u | Dump bytes count %u ", FelicaFrame.len, cnt);
-                    Dbhexdump(FelicaFrame.len, FelicaFrame.framebytes + 15, 0);
+                    // Dbhexdump(FelicaFrame.len, FelicaFrame.framebytes + 15, 0);
                 } else {
                     cntfails++;
                     if (cntfails > 12) {
@@ -891,10 +890,11 @@ void felica_dump_lite_s(void) {
     }
     switch_off();
 
-    //Resetting Frame mode (First set in fpgaloader.c)
+    // Resetting Frame mode (First set in fpgaloader.c)
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
 
-    //setting tracelen - important!  it was set by buffer overflow before
+    // setting tracelen - important!  it was set by buffer overflow before
+    // iceman:  is this still needed?!?
     set_tracelen(cnt);
     reply_mix(CMD_ACK, isOK, cnt, 0, 0, 0);
 }
