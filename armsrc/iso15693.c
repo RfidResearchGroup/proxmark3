@@ -2132,7 +2132,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
 
-    iso15693_tag *tag = (iso15693_tag*) BigBuf_get_EM_addr();
+    iso15_tag_t *tag = (iso15_tag_t*) BigBuf_get_EM_addr();
     if (tag == NULL) return;
 
     if (uid != NULL) { // new tag (need initialization)

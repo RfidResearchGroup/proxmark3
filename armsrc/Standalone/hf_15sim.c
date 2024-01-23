@@ -69,7 +69,7 @@ void RunMod(void) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
 
-    iso15693_tag *tag = (iso15693_tag*) BigBuf_get_EM_addr();
+    iso15_tag_t *tag = (iso15_tag_t*) BigBuf_get_EM_addr();
     if (tag == NULL) return;
 
     uint8_t cmd[8] = {0};
@@ -118,7 +118,7 @@ void RunMod(void) {
 
         Dbprintf("Start dumping tag");
 
-        memset(tag, 0, sizeof(iso15693_tag));
+        memset(tag, 0, sizeof(iso15_tag_t));
         memcpy(tag->uid, &recv[2], 8);
 
         i=10;

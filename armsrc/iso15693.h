@@ -33,33 +33,6 @@
 #define DELAY_ISO15693_VCD_TO_VICC_READER 1056 // 1056/3,39MHz = 311.5us from end of command EOF to start of tag response
 #define DELAY_ISO15693_VICC_TO_VCD_READER 1024 // 1024/3.39MHz = 302.1us between end of tag response and next reader command
 
-#define ISO15693_TAG_MAX_PAGES 64 // in page
-#define ISO15693_TAG_MAX_SIZE 2048 // in byte (64 pages of 256 bits)
-
-typedef struct iso15693_tag {
-    uint8_t uid[8];
-    uint8_t dsfid;
-    bool dsfidLock;
-    uint8_t afi;
-    bool afiLock;
-    uint8_t bytesPerPage;
-    uint8_t pagesCount;
-    uint8_t ic;
-    uint8_t locks[ISO15693_TAG_MAX_PAGES];
-    uint8_t data[ISO15693_TAG_MAX_SIZE];
-    uint8_t random[2];
-    uint8_t privacyPasswd[4];
-    enum {
-        TAG_STATE_NO_FIELD,
-        TAG_STATE_READY,
-        TAG_STATE_ACTIVATED, // useless ?
-        TAG_STATE_SELECTED,
-        TAG_STATE_SILENCED
-    } state;
-    bool expectFast;
-    bool expectFsk;
-} iso15693_tag;
-
 void Iso15693InitReader(void);
 void Iso15693InitTag(void);
 void CodeIso15693AsReader(const uint8_t *cmd, int n);
