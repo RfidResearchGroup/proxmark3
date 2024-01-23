@@ -106,7 +106,7 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SNIFF);
     SpinDelay(100);
 
-    *len = (BigBuf_max_traceLen() & 0xFFFE);
+    *len = BigBuf_max_traceLen();
     uint8_t *mem = BigBuf_malloc(*len);
 
     uint32_t trigger_cnt = 0;
