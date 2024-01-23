@@ -23,7 +23,7 @@
 #include "util.h" // nbytes
 
 #define BIGBUF_ALIGN_BYTES (4)
-#define BIGBUF_ALIGN_MASK (0xFFFF+1-BIGBUF_ALIGN_BYTES)
+#define BIGBUF_ALIGN_MASK  (0xFFFF + 1 - BIGBUF_ALIGN_BYTES)
 
 extern uint32_t _stack_start[], __bss_end__[];
 
@@ -120,8 +120,9 @@ void BigBuf_Clear(void) {
 void BigBuf_Clear_ext(bool verbose) {
     memset(BigBuf, 0, s_bigbuf_size);
     clear_trace();
-    if (verbose)
+    if (verbose) {
         Dbprintf("Buffer cleared (%i bytes)", s_bigbuf_size);
+    }
 }
 
 void BigBuf_Clear_EM(void) {
@@ -137,8 +138,9 @@ void BigBuf_Clear_keep_EM(void) {
 uint8_t *BigBuf_malloc(uint16_t chunksize) {
     chunksize = (chunksize + BIGBUF_ALIGN_BYTES - 1) & BIGBUF_ALIGN_MASK; // round up to next multiple of 4
 
-    if (s_bigbuf_hi < chunksize)
+    if (s_bigbuf_hi < chunksize) {
         return NULL; // no memory left
+    }
 
     s_bigbuf_hi -= chunksize;  // aligned to 4 Byte boundary
     return (uint8_t *)BigBuf + s_bigbuf_hi;
@@ -248,7 +250,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
     uint8_t *trace = BigBuf_get_addr();
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + trace_len);
 
-    uint32_t num_paritybytes = (iLen - 1) / 8 + 1; // number of valid paritybytes in *parity
+    uint16_t num_paritybytes = (iLen - 1) / 8 + 1; // number of valid paritybytes in *parity
 
     // Return when trace is full
     if (TRACELOG_HDR_LEN + iLen + num_paritybytes >= BigBuf_max_traceLen() - trace_len) {
@@ -269,7 +271,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
             Dbprintf("Error in LogTrace: duration too long for 16 bits encoding: 0x%08x   start: 0x%08x end: 0x%08x", duration, timestamp_start, timestamp_end);
         }
         */
-        duration = 0;
+        duration = 0xFFFF;
     }
 
     hdr->timestamp = timestamp_start;
@@ -319,6 +321,7 @@ uint8_t emlSet(const uint8_t *data, uint32_t offset, uint32_t length) {
         memcpy(mem + offset, data, length);
         return 0;
     }
+
     Dbprintf("Error, trying to set memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
     return 1;
 }
@@ -328,6 +331,7 @@ uint8_t emlGet(uint8_t *out, uint32_t offset, uint32_t length) {
         memcpy(out, mem + offset, length);
         return 0;
     }
+
     Dbprintf("Error, trying to read memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
     return 1;
 }
