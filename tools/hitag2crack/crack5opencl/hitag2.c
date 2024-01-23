@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "ht2crack5opencl.h"
 #include "hitag2.h"
 
