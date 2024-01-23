@@ -7,7 +7,7 @@
 - [Table of Contents](#table-of-contents)
 - [External resources](#external-resources)
 - [Install the required dependencies](#install-the-required-dependencies)
-  - [On Debian / Ubuntu / Kali / ParrotOS / Raspbian](#on-debian--ubuntu--kali--parrotos--raspbian)
+  - [On Debian / Ubuntu / Kali / ParrotOS / Raspbian / DragonOS](#on-debian--ubuntu--kali--parrotos--raspbian--dragonos)
     - [If you don't need...](#if-you-dont-need)
     - [Failed to load module...](#failed-to-load-module)
   - [On ArchLinux](#on-archlinux)
@@ -42,7 +42,7 @@ You might want to follow one of these external resources to get an overview, but
 # Install the required dependencies
 ^[Top](#top)
 
-## On Debian / Ubuntu / Kali / ParrotOS / Raspbian
+## On Debian / Ubuntu / Kali / ParrotOS / Raspbian / DragonOS
 ^[Top](#top)
 
 First what we want to do is get an update for the system. If you need to apply updates do this **before** installing the Proxmark3 software.  
