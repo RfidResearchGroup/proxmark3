@@ -38,10 +38,10 @@ License: GNU General Public License v3 or any later version (see LICENSE.txt)
             free (freeList[t]); \
             freeList[t] = NULL; \
         }\
-        if (freeList != NULL) { \
-            free (freeList); \
-            freeList = NULL; \
-        } \
+    } \
+    if (freeList != NULL) { \
+        free (freeList); \
+        freeList = NULL; \
     } \
 }
 
