@@ -186,6 +186,9 @@ static void UsbPacketReceived(uint8_t *packet) {
             } else {
                 // Allow reading from any memory address and length in special 'raw' mode.
                 base = NULL;
+                // Boundary check against end of addressable space.
+                if (offset > 0)
+                    count=MIN(count, -offset);
             }
 
             if (isok) {
