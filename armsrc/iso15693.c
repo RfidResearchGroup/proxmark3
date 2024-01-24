@@ -2133,8 +2133,6 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
     BigBuf_free_keep_EM();
 
     iso15_tag_t *tag = (iso15_tag_t*) BigBuf_get_EM_addr();
-    if (tag == NULL) return;
-
     if (uid != NULL) { // new tag (need initialization)
         memcpy(tag->uid, uid, 8);
         tag->dsfid = 0;
@@ -2146,13 +2144,20 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         tag->ic = 0;
         memset(tag->locks, 0, sizeof(tag->locks));
         memset(tag->data, 0, sizeof(tag->data));
+    if (tag == NULL)
+    {
+        Dbprintf("Can't allocate emulator memory");
+        reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EFAILED, NULL, 0);
+        return;
     }
-    else { // tag is already set
-        if (tag->pagesCount > ISO15693_TAG_MAX_PAGES || \
-            tag->pagesCount * tag->bytesPerPage > ISO15693_TAG_MAX_SIZE) {
-            Dbprintf("Tag size error: pagesCount = %d, bytesPerPage=%d", tag->pagesCount, tag->bytesPerPage);
-            return;
         }
+    }
+    if (tag->pagesCount > ISO15693_TAG_MAX_PAGES ||                     \
+        tag->pagesCount * tag->bytesPerPage > ISO15693_TAG_MAX_SIZE ||
+        tag->pagesCount == 0 || tag->bytesPerPage == 0) {
+        Dbprintf("Tag size error: pagesCount = %d, bytesPerPage=%d", tag->pagesCount, tag->bytesPerPage);
+        reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EOPABORTED, NULL, 0);
+        return;
     }
 
     Iso15693InitTag(); // init simulator
