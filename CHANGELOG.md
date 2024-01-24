@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `HF_15SIM` standalone mode that dump then simulate iso15 tags (@lnv42)
+ - Changed `iso15 simulation`, reworked, added support for lot of features (@lnv42)
+ - Changed `hf 15 sniff` quality while low signal (@lnv42)
  - Fixed `hf sniff` broken since 17ab86c52 (@nvx)
  - Added `--dumpmem` to proxmark3 client for memory dumping to file (@martian01010)
  - Changed `hw readmem` to allow larger reads, write to file and better hex viewer (@martian01010)
