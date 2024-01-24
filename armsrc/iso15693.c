@@ -2137,11 +2137,21 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EFAILED, NULL, 0);
         return;
     }
-    if (uid != NULL) { // new tag (need initialization)
-        uint8_t nullUid[8] = { 0 };
-        if (memcmp(uid, nullUid, 8) != 0) {
+
+    // new tag (need initialization)
+    if (uid != NULL) {
+        uint8_t empty[8] = { 0 };
+        if (memcmp(uid, empty, 8) != 0) {
             // simulate a new tag bazed on client parameters
-            memcpy(tag->uid, uid, 8);
+            tag->uid[0] = uid[7]; // always E0
+            tag->uid[1] = uid[6]; // IC Manufacturer code
+            tag->uid[2] = uid[5];
+            tag->uid[3] = uid[4];
+            tag->uid[4] = uid[3];
+            tag->uid[5] = uid[2];
+            tag->uid[6] = uid[1];
+            tag->uid[7] = uid[0];
+
             tag->dsfid = 0;
             tag->dsfidLock = false;
             tag->afi = 0;
@@ -2153,6 +2163,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             memset(tag->data, 0, sizeof(tag->data));
         }
     }
+
     if (tag->pagesCount > ISO15693_TAG_MAX_PAGES ||                     \
             tag->pagesCount * tag->bytesPerPage > ISO15693_TAG_MAX_SIZE ||
             tag->pagesCount == 0 || tag->bytesPerPage == 0) {
