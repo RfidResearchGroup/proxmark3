@@ -69,7 +69,7 @@ void RunMod(void) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
 
-    iso15_tag_t *tag = (iso15_tag_t*) BigBuf_get_EM_addr();
+    iso15_tag_t *tag = (iso15_tag_t *) BigBuf_get_EM_addr();
     if (tag == NULL) return;
 
     uint8_t cmd[8] = {0};
@@ -90,8 +90,7 @@ void RunMod(void) {
     while (1) {
         SpinDelay(200);
         LED_B_OFF();
-        if (BUTTON_HELD(500) > 0)
-        {
+        if (BUTTON_HELD(500) > 0) {
             LEDsoff();
             Dbprintf("Quiting");
             return;
@@ -100,18 +99,15 @@ void RunMod(void) {
         res = SendDataTag(cmd, 4, true, true, recv, sizeof(recv), start_time, ISO15693_READER_TIMEOUT, &eof_time, &recvLen);
         if (res < 0)
             continue;
-        if (recvLen<10) // error: recv too short
-        {
+        if (recvLen < 10) { // error: recv too short
             Dbprintf("recvLen<10");
             continue;
         }
-        if (!CheckCrc15(recv,recvLen)) // error crc not valid
-        {
+        if (!CheckCrc15(recv, recvLen)) { // error crc not valid
             Dbprintf("crc failed");
             continue;
         }
-        if (recv[0] & ISO15_RES_ERROR) // received error from tag
-        {
+        if (recv[0] & ISO15_RES_ERROR) { // received error from tag
             Dbprintf("error received");
             continue;
         }
@@ -121,18 +117,16 @@ void RunMod(void) {
         memset(tag, 0, sizeof(iso15_tag_t));
         memcpy(tag->uid, &recv[2], 8);
 
-        i=10;
+        i = 10;
         if (recv[1] & 0x01)
             tag->dsfid = recv[i++];
         if (recv[1] & 0x02)
             tag->afi = recv[i++];
-        if (recv[1] & 0x04)
-        {
-            tag->pagesCount = recv[i++]+1;
-            tag->bytesPerPage = recv[i++]+1;
-        }
-        else
-        { // Set default tag values (if can't be readed in SYSINFO)
+        if (recv[1] & 0x04) {
+            tag->pagesCount = recv[i++] + 1;
+            tag->bytesPerPage = recv[i++] + 1;
+        } else {
+            // Set default tag values (if can't be readed in SYSINFO)
             tag->bytesPerPage = 4;
             tag->pagesCount = 128;
         }
@@ -144,7 +138,7 @@ void RunMod(void) {
     cmd[0] = ISO15_REQ_DATARATE_HIGH | ISO15_REQ_OPTION;
     cmd[1] = ISO15693_READBLOCK;
 
-	uint8_t blocknum = 0;
+    uint8_t blocknum = 0;
     int retry;
 
     for (retry = 0; retry < 8; retry++) {
@@ -157,23 +151,19 @@ void RunMod(void) {
         start_time = eof_time;
         res = SendDataTag(cmd, 5, false, true, recv, sizeof(recv), start_time, ISO15693_READER_TIMEOUT, &eof_time, &recvLen);
 
-        if (res < 0)
-        {
+        if (res < 0) {
             SpinDelay(100);
             continue;
         }
-        if (recvLen < 4 + tag->bytesPerPage) // error: recv too short
-        {
+        if (recvLen < 4 + tag->bytesPerPage) { // error: recv too short
             Dbprintf("recvLen < 4 + tag->bytesPerPage");
             continue;
         }
-        if (!CheckCrc15(recv,recvLen)) // error crc not valid
-        {
+        if (!CheckCrc15(recv, recvLen)) { // error crc not valid
             Dbprintf("crc failed");
             continue;
         }
-        if (recv[0] & ISO15_RES_ERROR) // received error from tag
-        {
+        if (recv[0] & ISO15_RES_ERROR) { // received error from tag
             Dbprintf("error received");
             continue;
         }
@@ -185,8 +175,7 @@ void RunMod(void) {
     }
 
     LEDsoff();
-    if (retry >= 8)
-    {
+    if (retry >= 8) {
         Dbprintf("Max retry attemps exeeded");
         Dbprintf("-=[ exit ]=-");
         return;

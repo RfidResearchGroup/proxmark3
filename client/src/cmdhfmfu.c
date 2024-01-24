@@ -2132,7 +2132,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     }
 
 out:
-        mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
+    mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
 
     DropField();
     if (locked) {

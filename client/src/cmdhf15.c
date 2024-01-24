@@ -532,12 +532,11 @@ static uint8_t arg_add_default(void *at[]) {
 }
 static uint16_t arg_get_raw_flag(uint8_t uidlen, bool unaddressed, bool scan, bool add_option) {
     uint16_t flags = 0;
-;
+    ;
     if (uidlen == 8 || scan || unaddressed) {
         flags = (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY);
     }
-    if ((!unaddressed) || scan)
-    {
+    if ((!unaddressed) || scan) {
         flags |= ISO15_REQ_ADDRESS;
     }
     if (add_option) {
@@ -1278,10 +1277,9 @@ static void print_blocks_15693(uint8_t *data, uint16_t bytes, int blocksize, boo
 
     PrintAndLogEx(NORMAL, "");
 
-    if (blocksize == 0 || bytes == 0)
-    {
-         PrintAndLogEx(INFO, "Tag is empty!");
-         return;
+    if (blocksize == 0 || bytes == 0) {
+        PrintAndLogEx(INFO, "Tag is empty!");
+        return;
     }
 
     print_hrule(blocksize);
@@ -1432,8 +1430,7 @@ static int CmdHF15Sim(const char *Cmd) {
     }
     CLIParserFree(ctx);
 
-    if (uidlen == 0) // get UID from emulator
-    {
+    if (uidlen == 0) { // get UID from emulator
         // reserve memory
         iso15_tag_t *tag = calloc(1, sizeof(iso15_tag_t));
         if (tag == NULL) {
@@ -1441,7 +1438,7 @@ static int CmdHF15Sim(const char *Cmd) {
             return PM3_EMALLOC;
         }
 
-        if (GetFromDevice(BIG_BUF_EML, (uint8_t*)tag, sizeof(iso15_tag_t), 0, NULL, 0, NULL, 2500, false) == false) {
+        if (GetFromDevice(BIG_BUF_EML, (uint8_t *)tag, sizeof(iso15_tag_t), 0, NULL, 0, NULL, 2500, false) == false) {
             PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
             free(tag);
             return PM3_ETIMEOUT;
@@ -1729,8 +1726,8 @@ static int CmdHF15Dump(const char *Cmd) {
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
                          argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-                         argtable[arglen++] = arg_lit0(NULL, "ns", "no save to file"),
-                         argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+                                              argtable[arglen++] = arg_lit0(NULL, "ns", "no save to file"),
+                                                      argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1847,21 +1844,18 @@ static int CmdHF15Dump(const char *Cmd) {
         tag->dsfid = d[dCpt++];
     if (d[1] & 0x02)
         tag->afi = d[dCpt++];
-    if (d[1] & 0x04)
-    {
-        tag->pagesCount = d[dCpt++]+1;
-        tag->bytesPerPage = d[dCpt++]+1;
-    }
-    else
-    { // Set tag memory layout values (if can't be readed in SYSINFO)
+    if (d[1] & 0x04) {
+        tag->pagesCount = d[dCpt++] + 1;
+        tag->bytesPerPage = d[dCpt++] + 1;
+    } else {
+        // Set tag memory layout values (if can't be readed in SYSINFO)
         tag->bytesPerPage = blocksize;
         tag->pagesCount = 128;
     }
     if (d[1] & 0x08)
         tag->ic = d[dCpt++];
 
-    if (verbose)
-    {
+    if (verbose) {
         print_emltag_info_15693(tag);
     }
 
@@ -1957,9 +1951,9 @@ static int CmdHF15Dump(const char *Cmd) {
         PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s"
                       , i
                       , i
-                      , sprint_hex(&tag->data[i*tag->bytesPerPage], tag->bytesPerPage)
+                      , sprint_hex(&tag->data[i * tag->bytesPerPage], tag->bytesPerPage)
                       , lck
-                      , sprint_ascii(&tag->data[i*tag->bytesPerPage], tag->bytesPerPage)
+                      , sprint_ascii(&tag->data[i * tag->bytesPerPage], tag->bytesPerPage)
                      );
     }
     PrintAndLogEx(INFO, "---------+-------------+---+-------");
@@ -1979,7 +1973,7 @@ static int CmdHF15Dump(const char *Cmd) {
         FillFileNameByUID(fptr, SwapEndian64(uid, sizeof(uid), 8), "-dump", sizeof(uid));
     }
 
-    pm3_save_dump(filename, (uint8_t*)tag, sizeof(iso15_tag_t), jsf15_v4);
+    pm3_save_dump(filename, (uint8_t *)tag, sizeof(iso15_tag_t), jsf15_v4);
 
     return PM3_SUCCESS;
 }

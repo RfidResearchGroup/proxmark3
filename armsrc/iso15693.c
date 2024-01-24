@@ -1332,8 +1332,7 @@ static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader)
                         reader->posCount = -4;
                     }
 
-                    if (reader->bitCount == 8)
-                    {
+                    if (reader->bitCount == 8) {
                         reader->output[reader->byteCount++] = reader->shiftReg;
                         if (reader->byteCount > reader->byteCountMax) {
                             // buffer overflow, give up
@@ -1344,11 +1343,11 @@ static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader)
                         reader->bitCount = 0;
                         reader->shiftReg = 0;
                         if (reader->byteCount == reader->jam_search_len) {
-                          if (!memcmp(reader->output, reader->jam_search_string, reader->jam_search_len)) {
-                          LED_D_ON();
-                          FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_JAM);
-                          reader->state = STATE_READER_RECEIVE_JAMMING;
-                          }
+                            if (!memcmp(reader->output, reader->jam_search_string, reader->jam_search_len)) {
+                                LED_D_ON();
+                                FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_JAM);
+                                reader->state = STATE_READER_RECEIVE_JAMMING;
+                            }
                         }
                     }
                 } else if (reader->sum1 > 6) { // too long low bit
@@ -2132,17 +2131,16 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
 
-    iso15_tag_t *tag = (iso15_tag_t*) BigBuf_get_EM_addr();
-    if (tag == NULL)
-    {
+    iso15_tag_t *tag = (iso15_tag_t *) BigBuf_get_EM_addr();
+    if (tag == NULL) {
         Dbprintf("Can't allocate emulator memory");
         reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EFAILED, NULL, 0);
         return;
     }
     if (uid != NULL) { // new tag (need initialization)
         uint8_t nullUid[8] = { 0 };
-        if (memcmp(uid, nullUid, 8) != 0)
-        {  // simulate a new tag bazed on client parameters
+        if (memcmp(uid, nullUid, 8) != 0) {
+            // simulate a new tag bazed on client parameters
             memcpy(tag->uid, uid, 8);
             tag->dsfid = 0;
             tag->dsfidLock = false;
@@ -2156,8 +2154,8 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         }
     }
     if (tag->pagesCount > ISO15693_TAG_MAX_PAGES ||                     \
-        tag->pagesCount * tag->bytesPerPage > ISO15693_TAG_MAX_SIZE ||
-        tag->pagesCount == 0 || tag->bytesPerPage == 0) {
+            tag->pagesCount * tag->bytesPerPage > ISO15693_TAG_MAX_SIZE ||
+            tag->pagesCount == 0 || tag->bytesPerPage == 0) {
         Dbprintf("Tag size error: pagesCount = %d, bytesPerPage=%d", tag->pagesCount, tag->bytesPerPage);
         reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EOPABORTED, NULL, 0);
         return;
@@ -2220,7 +2218,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
         // Shorten 0 terminated msgs
         // (Some times received commands are prolonged with a random number of 0 bytes...)
-        while (cmd[cmd_len-1] == 0) {
+        while (cmd[cmd_len - 1] == 0) {
             cmd_len--;
             if (cmd_len <= 3)
                 break;
@@ -2236,21 +2234,18 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
         // Check CRC and drop received cmd with bad CRC
         uint16_t crc = CalculateCrc15(cmd, cmd_len - 2);
-        if ((( crc & 0xff ) != cmd[cmd_len - 2]) || (( crc >> 8 ) != cmd[cmd_len - 1])) {
+        if (((crc & 0xff) != cmd[cmd_len - 2]) || ((crc >> 8) != cmd[cmd_len - 1])) {
             crc = CalculateCrc15(cmd, ++cmd_len - 2); // if crc end with 00
-            if ((( crc & 0xff ) != cmd[cmd_len - 2]) || (( crc >> 8 ) != cmd[cmd_len - 1])) {
+            if (((crc & 0xff) != cmd[cmd_len - 2]) || ((crc >> 8) != cmd[cmd_len - 1])) {
                 crc = CalculateCrc15(cmd, ++cmd_len - 2); // if crc end with 00 00
-                if ((( crc & 0xff ) != cmd[cmd_len - 2]) || (( crc >> 8 ) != cmd[cmd_len - 1])) {
+                if (((crc & 0xff) != cmd[cmd_len - 2]) || ((crc >> 8) != cmd[cmd_len - 1])) {
                     if (g_dbglevel >= DBG_DEBUG) Dbprintf("CrcFail!, expected CRC=%02X%02X", crc & 0xff, crc >> 8);
-                        continue;
-                }
-                else if (g_dbglevel >= DBG_DEBUG)
+                    continue;
+                } else if (g_dbglevel >= DBG_DEBUG)
                     Dbprintf("CrcOK");
-            }
-            else if (g_dbglevel >= DBG_DEBUG)
+            } else if (g_dbglevel >= DBG_DEBUG)
                 Dbprintf("CrcOK");
-        }
-        else if (g_dbglevel >= DBG_DEBUG)
+        } else if (g_dbglevel >= DBG_DEBUG)
             Dbprintf("CrcOK");
 
         cmd_len -= 2; // remove the CRC from the cmd
@@ -2323,8 +2318,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             recv[1] = tag->dsfid;
             memcpy(&recv[2], tag->uid, 8);
             recvLen = 10;
-        }
-        else {
+        } else {
             if ((cmd[0] & ISO15_REQ_SELECT) == ISO15_REQ_SELECT) {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Selected Request");
                 if (tag->state != TAG_STATE_SELECTED)
@@ -2335,12 +2329,11 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             cmdCpt = 2;
             if ((cmd[0] & ISO15_REQ_ADDRESS) == ISO15_REQ_ADDRESS) {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Addressed Request");
-                if (cmd_len < cmdCpt+8)
+                if (cmd_len < cmdCpt + 8)
                     continue;
-                if (memcmp(&cmd[cmdCpt], tag->uid, 8) != 0)
-                {
-                    if (cmd_len < cmdCpt+9 ||  memcmp(&cmd[cmdCpt+1], tag->uid, 8) != 0)
-                    { // check uid even if manifacturer byte is present
+                if (memcmp(&cmd[cmdCpt], tag->uid, 8) != 0) {
+                    if (cmd_len < cmdCpt + 9 ||  memcmp(&cmd[cmdCpt + 1], tag->uid, 8) != 0) {
+                        // check uid even if manifacturer byte is present
                         if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address don't match tag uid");
                         if (cmd[1] == ISO15693_SELECT)
                             tag->state = TAG_STATE_READY; // we are not anymore the selected TAG
@@ -2349,204 +2342,200 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                     cmdCpt++;
                 }
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address match tag uid");
-                cmdCpt+=8;
-            }
-            else if (tag->state == TAG_STATE_SILENCED)
-            {
+                cmdCpt += 8;
+            } else if (tag->state == TAG_STATE_SILENCED) {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Unaddressed request in quiet state: drop");
                 continue; // drop unadressed request in quiet state
             }
 
-            switch(cmd[1]) {
-            case ISO15693_INVENTORY:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Inventory cmd");
-                recv[0] = ISO15_NOERROR;
-                recv[1] = tag->dsfid;
-                memcpy(&recv[2], tag->uid, 8);
-                recvLen = 10;
-                break;
-            case ISO15693_STAYQUIET:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("StayQuiet cmd");
-                tag->state = TAG_STATE_SILENCED;
-                break;
-            case ISO15693_READBLOCK:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadBlock cmd");
-                pageNum = cmd[cmdCpt++];
-                if (pageNum >= tag->pagesCount)
-                    error = ISO15_ERROR_BLOCK_UNAVAILABLE;
-                else {
+            switch (cmd[1]) {
+                case ISO15693_INVENTORY:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("Inventory cmd");
                     recv[0] = ISO15_NOERROR;
-                    recvLen = 1;
-                    if ((cmd[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION) { // ask for lock status
-                        recv[1] = tag->locks[pageNum];
-                        recvLen++;
-                }
-                    for (uint8_t i = 0 ; i < tag->bytesPerPage ; i++)
-                        recv[recvLen+i] = tag->data[(pageNum * tag->bytesPerPage) + i];
-                    recvLen += tag->bytesPerPage;
-                }
-                break;
-            case ISO15693_WRITEBLOCK:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteBlock cmd");
-                pageNum = cmd[cmdCpt++];
-                if (pageNum >= tag->pagesCount)
-                    error = ISO15_ERROR_BLOCK_UNAVAILABLE;
-                else {
-                    for (uint8_t i = 0 ; i < tag->bytesPerPage ; i++)
-                        tag->data[(pageNum*tag->bytesPerPage) + i] = cmd[i + cmdCpt];
-                    recv[0] = ISO15_NOERROR;
-                    recvLen = 1;
-                }
-                break;
-            case ISO15693_LOCKBLOCK:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockBlock cmd");
-                pageNum = cmd[cmdCpt++];
-                if (pageNum >= tag->pagesCount)
-                    error = ISO15_ERROR_BLOCK_UNAVAILABLE;
-                else if (tag->locks[pageNum])
-                    error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
-                else {
-                    tag->locks[pageNum] = 1;
-                    recv[0] = ISO15_NOERROR;
-                    recvLen = 1;
-                }
-                break;
-            case ISO15693_READ_MULTI_BLOCK:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadMultiBlock cmd");
-                pageNum = cmd[cmdCpt++];
-                nbPages = cmd[cmdCpt++];
-                if (pageNum+nbPages >= tag->pagesCount)
-                error = ISO15_ERROR_BLOCK_UNAVAILABLE;
-                else {
-                    recv[0] = ISO15_NOERROR;
-                    recvLen = 1;
-                    for (int i = 0 ; i < (nbPages + 1) * tag->bytesPerPage && \
-                             recvLen + 3 < ISO15693_MAX_RESPONSE_LENGTH ; i++) {
-                        if ((i % tag->bytesPerPage) == 0 && (cmd[0] & ISO15_REQ_OPTION))
-                            recv[recvLen++] = tag->locks[pageNum + (i / tag->bytesPerPage)];
-                        recv[recvLen++] = tag->data[(pageNum * tag->bytesPerPage) + i];
+                    recv[1] = tag->dsfid;
+                    memcpy(&recv[2], tag->uid, 8);
+                    recvLen = 10;
+                    break;
+                case ISO15693_STAYQUIET:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("StayQuiet cmd");
+                    tag->state = TAG_STATE_SILENCED;
+                    break;
+                case ISO15693_READBLOCK:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadBlock cmd");
+                    pageNum = cmd[cmdCpt++];
+                    if (pageNum >= tag->pagesCount)
+                        error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                    else {
+                        recv[0] = ISO15_NOERROR;
+                        recvLen = 1;
+                        if ((cmd[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION) { // ask for lock status
+                            recv[1] = tag->locks[pageNum];
+                            recvLen++;
+                        }
+                        for (uint8_t i = 0 ; i < tag->bytesPerPage ; i++)
+                            recv[recvLen + i] = tag->data[(pageNum * tag->bytesPerPage) + i];
+                        recvLen += tag->bytesPerPage;
                     }
-                    if (recvLen + 3 > ISO15693_MAX_RESPONSE_LENGTH) // limit response size
-                        recvLen = ISO15693_MAX_RESPONSE_LENGTH - 3; // to avoid overflow
-                }
-                break;
-            case ISO15693_WRITE_AFI:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteAFI cmd");
-                if (tag->afiLock)
-                    error = ISO15_ERROR_BLOCK_LOCKED;
-                else {
-                    tag->afi = cmd[cmdCpt++];
-                    recv[0] = ISO15_NOERROR;
-                    recvLen = 1;
-                }
-                break;
-            case ISO15693_LOCK_AFI:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockAFI cmd");
-                if (tag->afiLock)
-                    error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
-                else {
-                    tag->afiLock = true;
-                    recv[0] = ISO15_NOERROR;
-                    recvLen = 1;
-                }
-                break;
-            case ISO15693_WRITE_DSFID:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteDSFID cmd");
-                if (tag->dsfidLock)
-                    error = ISO15_ERROR_BLOCK_LOCKED;
-                else {
-                    tag->dsfid = cmd[cmdCpt++];
-                    recv[0] = ISO15_NOERROR;
-                    recvLen = 1;
-                }
-                break;
-            case ISO15693_LOCK_DSFID:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockDSFID cmd");
-                if (tag->dsfidLock)
-                    error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
-                else {
-                    tag->dsfidLock = true;
-                    recv[0] = ISO15_NOERROR;
-                    recvLen = 1;
-                }
-                break;
-            case ISO15693_SELECT:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Select cmd");
-                tag->state = TAG_STATE_SELECTED;
-                recv[0] = ISO15_NOERROR;
-                recvLen = 1;
-                break;
-            case ISO15693_RESET_TO_READY:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ResetToReady cmd");
-                tag->state = TAG_STATE_READY;
-                recv[0] = ISO15_NOERROR;
-                recvLen = 1;
-                break;
-            case ISO15693_GET_SYSTEM_INFO:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("GetSystemInfo cmd");
-                recv[0] = ISO15_NOERROR;
-                recv[1] = 0x0f; // sysinfo contain all info
-                memcpy(&recv[2], tag->uid, 8);
-                recv[10] = tag->dsfid;
-                recv[11] = tag->afi;
-                recv[12] = tag->pagesCount - 1;
-                recv[13] = tag->bytesPerPage - 1;
-                recv[14] = tag->ic;
-                recvLen = 15;
-                break;
-            case ISO15693_READ_MULTI_SECSTATUS:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadMultiSecStatus cmd");
-                pageNum = cmd[cmdCpt++];
-                nbPages = cmd[cmdCpt++];
-                if (pageNum + nbPages >= tag->pagesCount)
-                    error = ISO15_ERROR_BLOCK_UNAVAILABLE;
-                else {
-                    recv[0] = ISO15_NOERROR;
-                    recvLen = 1;
-                    for (uint8_t i = 0 ; i < nbPages + 1 ; i++)
-                        recv[recvLen++] = tag->locks[pageNum + i];
-                }
-                break;
-            case ISO15693_GET_RANDOM_NUMBER:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("GetRandomNumber cmd");
-                tag->random[0] = (uint8_t)(reader_eof_time) ^ 0xFF; // poor random number
-                tag->random[1] = (uint8_t)(reader_eof_time >> 8) ^ 0xFF;
-                recv[0] = ISO15_NOERROR;
-                recv[1] = tag->random[0]; // poor random number
-                recv[2] = tag->random[1];
-                recvLen = 3;
-                break;
-            case ISO15693_SET_PASSWORD:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("SetPassword cmd");
-                if (cmd_len > cmdCpt+5)
-                    cmdCpt++; // skip manifacturer code
-                if (cmd_len > cmdCpt+4)
-                {
-                    pwdId = cmd[cmdCpt++];
-                    if (pwdId == 4) // Privacy password
-                    {
-                        tag->privacyPasswd[0] = cmd[cmdCpt] ^ tag->random[0];
-                        tag->privacyPasswd[1] = cmd[cmdCpt+1] ^ tag->random[1];
-                        tag->privacyPasswd[2] = cmd[cmdCpt+2] ^ tag->random[0];
-                        tag->privacyPasswd[3] = cmd[cmdCpt+3] ^ tag->random[1];
+                    break;
+                case ISO15693_WRITEBLOCK:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteBlock cmd");
+                    pageNum = cmd[cmdCpt++];
+                    if (pageNum >= tag->pagesCount)
+                        error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                    else {
+                        for (uint8_t i = 0 ; i < tag->bytesPerPage ; i++)
+                            tag->data[(pageNum * tag->bytesPerPage) + i] = cmd[i + cmdCpt];
+                        recv[0] = ISO15_NOERROR;
+                        recvLen = 1;
                     }
-                }
-                recv[0] = ISO15_NOERROR;
-                recvLen = 1;
-                break;
-            case ISO15693_ENABLE_PRIVACY:
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("EnablePrivacy cmd");
-                // not realy entering privacy mode
-                // just return NOERROR
-                recv[0] = ISO15_NOERROR;
-                recvLen = 1;
-                break;
-            default:
-                if (g_dbglevel >= DBG_DEBUG)
-                    Dbprintf("ISO15693 CMD 0x%2X not supported", cmd[1]);
+                    break;
+                case ISO15693_LOCKBLOCK:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockBlock cmd");
+                    pageNum = cmd[cmdCpt++];
+                    if (pageNum >= tag->pagesCount)
+                        error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                    else if (tag->locks[pageNum])
+                        error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
+                    else {
+                        tag->locks[pageNum] = 1;
+                        recv[0] = ISO15_NOERROR;
+                        recvLen = 1;
+                    }
+                    break;
+                case ISO15693_READ_MULTI_BLOCK:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadMultiBlock cmd");
+                    pageNum = cmd[cmdCpt++];
+                    nbPages = cmd[cmdCpt++];
+                    if (pageNum + nbPages >= tag->pagesCount)
+                        error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                    else {
+                        recv[0] = ISO15_NOERROR;
+                        recvLen = 1;
+                        for (int i = 0 ; i < (nbPages + 1) * tag->bytesPerPage && \
+                                recvLen + 3 < ISO15693_MAX_RESPONSE_LENGTH ; i++) {
+                            if ((i % tag->bytesPerPage) == 0 && (cmd[0] & ISO15_REQ_OPTION))
+                                recv[recvLen++] = tag->locks[pageNum + (i / tag->bytesPerPage)];
+                            recv[recvLen++] = tag->data[(pageNum * tag->bytesPerPage) + i];
+                        }
+                        if (recvLen + 3 > ISO15693_MAX_RESPONSE_LENGTH) // limit response size
+                            recvLen = ISO15693_MAX_RESPONSE_LENGTH - 3; // to avoid overflow
+                    }
+                    break;
+                case ISO15693_WRITE_AFI:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteAFI cmd");
+                    if (tag->afiLock)
+                        error = ISO15_ERROR_BLOCK_LOCKED;
+                    else {
+                        tag->afi = cmd[cmdCpt++];
+                        recv[0] = ISO15_NOERROR;
+                        recvLen = 1;
+                    }
+                    break;
+                case ISO15693_LOCK_AFI:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockAFI cmd");
+                    if (tag->afiLock)
+                        error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
+                    else {
+                        tag->afiLock = true;
+                        recv[0] = ISO15_NOERROR;
+                        recvLen = 1;
+                    }
+                    break;
+                case ISO15693_WRITE_DSFID:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteDSFID cmd");
+                    if (tag->dsfidLock)
+                        error = ISO15_ERROR_BLOCK_LOCKED;
+                    else {
+                        tag->dsfid = cmd[cmdCpt++];
+                        recv[0] = ISO15_NOERROR;
+                        recvLen = 1;
+                    }
+                    break;
+                case ISO15693_LOCK_DSFID:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockDSFID cmd");
+                    if (tag->dsfidLock)
+                        error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
+                    else {
+                        tag->dsfidLock = true;
+                        recv[0] = ISO15_NOERROR;
+                        recvLen = 1;
+                    }
+                    break;
+                case ISO15693_SELECT:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("Select cmd");
+                    tag->state = TAG_STATE_SELECTED;
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                    break;
+                case ISO15693_RESET_TO_READY:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ResetToReady cmd");
+                    tag->state = TAG_STATE_READY;
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                    break;
+                case ISO15693_GET_SYSTEM_INFO:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("GetSystemInfo cmd");
+                    recv[0] = ISO15_NOERROR;
+                    recv[1] = 0x0f; // sysinfo contain all info
+                    memcpy(&recv[2], tag->uid, 8);
+                    recv[10] = tag->dsfid;
+                    recv[11] = tag->afi;
+                    recv[12] = tag->pagesCount - 1;
+                    recv[13] = tag->bytesPerPage - 1;
+                    recv[14] = tag->ic;
+                    recvLen = 15;
+                    break;
+                case ISO15693_READ_MULTI_SECSTATUS:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadMultiSecStatus cmd");
+                    pageNum = cmd[cmdCpt++];
+                    nbPages = cmd[cmdCpt++];
+                    if (pageNum + nbPages >= tag->pagesCount)
+                        error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                    else {
+                        recv[0] = ISO15_NOERROR;
+                        recvLen = 1;
+                        for (uint8_t i = 0 ; i < nbPages + 1 ; i++)
+                            recv[recvLen++] = tag->locks[pageNum + i];
+                    }
+                    break;
+                case ISO15693_GET_RANDOM_NUMBER:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("GetRandomNumber cmd");
+                    tag->random[0] = (uint8_t)(reader_eof_time) ^ 0xFF; // poor random number
+                    tag->random[1] = (uint8_t)(reader_eof_time >> 8) ^ 0xFF;
+                    recv[0] = ISO15_NOERROR;
+                    recv[1] = tag->random[0]; // poor random number
+                    recv[2] = tag->random[1];
+                    recvLen = 3;
+                    break;
+                case ISO15693_SET_PASSWORD:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("SetPassword cmd");
+                    if (cmd_len > cmdCpt + 5)
+                        cmdCpt++; // skip manifacturer code
+                    if (cmd_len > cmdCpt + 4) {
+                        pwdId = cmd[cmdCpt++];
+                        if (pwdId == 4) { // Privacy password
+                            tag->privacyPasswd[0] = cmd[cmdCpt] ^ tag->random[0];
+                            tag->privacyPasswd[1] = cmd[cmdCpt + 1] ^ tag->random[1];
+                            tag->privacyPasswd[2] = cmd[cmdCpt + 2] ^ tag->random[0];
+                            tag->privacyPasswd[3] = cmd[cmdCpt + 3] ^ tag->random[1];
+                        }
+                    }
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                    break;
+                case ISO15693_ENABLE_PRIVACY:
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("EnablePrivacy cmd");
+                    // not realy entering privacy mode
+                    // just return NOERROR
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                    break;
+                default:
+                    if (g_dbglevel >= DBG_DEBUG)
+                        Dbprintf("ISO15693 CMD 0x%2X not supported", cmd[1]);
 
-                error = ISO15_ERROR_CMD_NOT_SUP;
-                break;
+                    error = ISO15_ERROR_CMD_NOT_SUP;
+                    break;
             }
 
             if (error != 0) { // Error happened
@@ -2569,8 +2558,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             if (tag->expectFsk) { // Not suppoted yet
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("%ERROR: FSK answers are not supported yet");
                 //TransmitTo15693ReaderFSK(ts->buf,ts->max, &response_time, 0, !tag->expectFast);
-            }
-            else
+            } else
                 TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, !tag->expectFast);
 
             LogTrace_ISO15693(recv, recvLen, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);

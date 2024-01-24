@@ -1662,32 +1662,28 @@
             "command": "hf 15 esave",
             "description": "Save emulator memory into two files (bin/json)",
             "notes": [
-                "hf 15 esave -f hf-15-01020304hf 15 esave -b 8 -c 42 -f hf-15-01020304"
+                "hf 15 esave -f hf-15-01020304"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> Specify a filename for dump file",
-                "--bsize <dec> block size (def 4)",
-                "-c, --count <dec> number of blocks to export (def all)"
+                "-f, --file <fn> Specify a filename for dump file"
             ],
-            "usage": "hf 15 esave [-h] -f <fn> [--bsize <dec>] [-c <dec>]"
+            "usage": "hf 15 esave [-h] -f <fn>"
         },
         "hf 15 eview": {
             "command": "hf 15 eview",
             "description": "It displays emulator memory",
             "notes": [
                 "hf 15 eview",
-                "hf 15 eview -b 8 -c 60"
+                "hf 15 eview -z"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-b, --blocksize <dec> block size (def 4)",
-                "-c, --count <dec> number of blocks to display (def all)",
                 "-z, --dense dense dump output style"
             ],
-            "usage": "hf 15 eview [-hz] [-b <dec>] [-c <dec>]"
+            "usage": "hf 15 eview [-hz]"
         },
         "hf 15 findafi": {
             "command": "hf 15 findafi",
@@ -1886,6 +1882,7 @@
             "command": "hf 15 sim",
             "description": "Simulate a ISO-15693 tag",
             "notes": [
+                "hf 15 sim",
                 "hf 15 sim -u E011223344556677"
             ],
             "offline": false,
@@ -1894,7 +1891,7 @@
                 "-u, --uid <hex> UID, 8 hex bytes",
                 "-b, --blocksize <dec> block size (def 4)"
             ],
-            "usage": "hf 15 sim [-h] -u <hex> [-b <dec>]"
+            "usage": "hf 15 sim [-h] [-u <hex>] [-b <dec>]"
         },
         "hf 15 slixeasdisable": {
             "command": "hf 15 slixeasdisable",
@@ -12341,6 +12338,6 @@
     "metadata": {
         "commands_extracted": 711,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-01-23T14:27:27"
+        "extracted_on": "2024-01-24T17:12:09"
     }
 }
