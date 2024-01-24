@@ -1136,7 +1136,7 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
         }
         case MCU_FLASH:
         case MCU_MEM: {
-            uint32_t flags = memtype == MCU_MEM ? CMD_READ_MEM_DOWNLOAD_RAW : 0;
+            uint32_t flags = (memtype == MCU_MEM) ? READ_MEM_DOWNLOAD_FLAG_RAW : 0;
             SendCommandBL(CMD_READ_MEM_DOWNLOAD, start_index, bytes, flags, NULL, 0);
             return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_READ_MEM_DOWNLOADED);
         }
