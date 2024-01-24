@@ -1176,7 +1176,7 @@ static int CmdHF15ELoad(const char *Cmd) {
         return res;
     }
 
-    if (bytes_read > CARD_MEMORY_SIZE) {
+    if (bytes_read > CARD_MEMORY_SIZE || bytes_read > sizeof(iso15_tag_t)) {
         PrintAndLogEx(FAILED, "Memory image too large.");
         free(data);
         return PM3_EINVARG;
@@ -1232,13 +1232,10 @@ static int CmdHF15ESave(const char *Cmd) {
     CLIParserInit(&ctx, "hf 15 esave",
                   "Save emulator memory into two files (bin/json) ",
                   "hf 15 esave -f hf-15-01020304"
-                  "hf 15 esave -b 8 -c 42 -f hf-15-01020304"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
-        arg_int0(NULL, "bsize", "<dec>", "block size (def 4)"),
-        arg_int0("c", "count", "<dec>", "number of blocks to export (def all)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1246,20 +1243,9 @@ static int CmdHF15ESave(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    int blocksize = arg_get_int_def(ctx, 2, 4);
-    int count = arg_get_int_def(ctx, 3, -1);
     CLIParserFree(ctx);
 
-    // sanity checks
-    if (blocksize < 4) {
-        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
-        blocksize = 4;
-    }
-
-    int bytes = CARD_MEMORY_SIZE;
-    if (count > 0 && count * blocksize <= bytes) {
-        bytes = count * blocksize;
-    }
+    int bytes = sizeof(iso15_tag_t);
 
     // reserve memory
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
@@ -1275,11 +1261,7 @@ static int CmdHF15ESave(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    if (blocksize == 8) {
-        pm3_save_dump(filename, dump, bytes, jsf15_v3);
-    } else {
-        pm3_save_dump(filename, dump, bytes, jsf15_v2);
-    }
+    pm3_save_dump(filename, dump, bytes, jsf15_v4);
 
     free(dump);
     return PM3_SUCCESS;
