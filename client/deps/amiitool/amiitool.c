@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    nfc3d_amiibo_keys amiiboKeys = {0};
+    nfc3d_amiibo_keys_t amiiboKeys = {0};
     if (! LoadAmiikey(amiiboKeys, keyfile))
         return 5;
 
