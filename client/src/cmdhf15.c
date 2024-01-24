@@ -532,15 +532,13 @@ static uint8_t arg_add_default(void *at[]) {
 }
 static uint16_t arg_get_raw_flag(uint8_t uidlen, bool unaddressed, bool scan, bool add_option) {
     uint16_t flags = 0;
-    if (unaddressed) {
-        // unaddressed mode may not be supported by all vendors
-        flags |= (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY);
+;
+    if (uidlen == 8 || scan || unaddressed) {
+        flags = (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY);
     }
-    if (uidlen == 8) {
-        flags |= (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS);
-    }
-    if (scan) {
-        flags |= (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS);
+    if ((!unaddressed) || scan)
+    {
+        flags |= ISO15_REQ_ADDRESS;
     }
     if (add_option) {
         flags |= (ISO15_REQ_OPTION);
