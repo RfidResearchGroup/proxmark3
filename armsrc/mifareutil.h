@@ -117,10 +117,9 @@ uint8_t SectorTrailer(uint8_t blockNo);
 void emlClearMem(void);
 void emlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int block_width);
 void emlGetMem(uint8_t *data, int blockNum, int blocksCount);
-void emlGetMemBt(uint8_t *data, int offset, int byteCount);
 uint64_t emlGetKey(int sectorNum, int keyType);
 int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum);
-int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum);
-int emlCheckValBl(int blockNum);
+void emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum);
+bool emlCheckValBl(int blockNum);
 
 #endif

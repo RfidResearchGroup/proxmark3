@@ -629,56 +629,50 @@ void emlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int block_width)
 }
 
 void emlGetMem(uint8_t *data, int blockNum, int blocksCount) {
-    uint8_t *mem = BigBuf_get_EM_addr();
-    memcpy(data, mem + blockNum * 16, blocksCount * 16);
+    emlGet(data, (blockNum * 16), (blocksCount * 16));
 }
 
-void emlGetMemBt(uint8_t *data, int offset, int byteCount) {
+bool emlCheckValBl(int blockNum) {
     uint8_t *mem = BigBuf_get_EM_addr();
-    memcpy(data, mem + offset, byteCount);
-}
+    uint8_t *d = mem + (blockNum * 16);
 
-int emlCheckValBl(int blockNum) {
-    uint8_t *mem = BigBuf_get_EM_addr();
-    uint8_t *data = mem + blockNum * 16;
-
-    if ((data[0] != (data[4] ^ 0xff)) || (data[0] != data[8]) ||
-            (data[1] != (data[5] ^ 0xff)) || (data[1] != data[9]) ||
-            (data[2] != (data[6] ^ 0xff)) || (data[2] != data[10]) ||
-            (data[3] != (data[7] ^ 0xff)) || (data[3] != data[11]) ||
-            (data[12] != (data[13] ^ 0xff)) || (data[12] != data[14]) ||
-            (data[12] != (data[15] ^ 0xff))
-       )
-        return 1;
-    return 0;
+    if ((d[0] != (d[4] ^ 0xff)) || (d[0] != d[8]) ||
+        (d[1] != (d[5] ^ 0xff)) || (d[1] != d[9]) ||
+        (d[2] != (d[6] ^ 0xff)) || (d[2] != d[10]) ||
+        (d[3] != (d[7] ^ 0xff)) || (d[3] != d[11]) ||
+        (d[12] != (d[13] ^ 0xff)) || (d[12] != d[14]) ||
+        (d[12] != (d[15] ^ 0xff))) {
+        return false;
+    }
+    return true;
 }
 
 int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum) {
     uint8_t *mem = BigBuf_get_EM_addr();
-    uint8_t *data = mem + blockNum * 16;
+    uint8_t *d = mem + blockNum * 16;
 
-    if (emlCheckValBl(blockNum))
-        return 1;
+    if (emlCheckValBl(blockNum) == false) {
+        return PM3_ESOFT;
+    }
 
-    memcpy(blReg, data, 4);
-    *blBlock = data[12];
-    return 0;
+    memcpy(blReg, d, 4);
+    *blBlock = d[12];
+    return PM3_SUCCESS;
 }
 
-int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum) {
+void emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum) {
     uint8_t *mem = BigBuf_get_EM_addr();
-    uint8_t *data = mem + blockNum * 16;
+    uint8_t *d = mem + blockNum * 16;
 
-    memcpy(data + 0, &blReg, 4);
-    memcpy(data + 8, &blReg, 4);
-    blReg = blReg ^ 0xffffffff;
-    memcpy(data + 4, &blReg, 4);
+    memcpy(d + 0, &blReg, 4);
+    memcpy(d + 8, &blReg, 4);
+    blReg = blReg ^ 0xFFFFFFFF;
+    memcpy(d + 4, &blReg, 4);
 
-    data[12] = blBlock;
-    data[13] = blBlock ^ 0xff;
-    data[14] = blBlock;
-    data[15] = blBlock ^ 0xff;
-    return 0;
+    d[12] = blBlock;
+    d[13] = blBlock ^ 0xFF;
+    d[14] = blBlock;
+    d[15] = blBlock ^ 0xFF;
 }
 
 uint64_t emlGetKey(int sectorNum, int keyType) {

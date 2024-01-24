@@ -315,26 +315,28 @@ bool RAMFUNC LogTraceBits(const uint8_t *btBytes, uint16_t bitLen, uint32_t time
 }
 
 // Emulator memory
-uint8_t emlSet(const uint8_t *data, uint32_t offset, uint32_t length) {
+int emlSet(const uint8_t *data, uint32_t offset, uint32_t length) {
     uint8_t *mem = BigBuf_get_EM_addr();
     if (offset + length <= CARD_MEMORY_SIZE) {
         memcpy(mem + offset, data, length);
-        return 0;
+        return PM3_SUCCESS;
     }
 
     Dbprintf("Error, trying to set memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
-    return 1;
+    return PM3_EOUTOFBOUND;
 }
-uint8_t emlGet(uint8_t *out, uint32_t offset, uint32_t length) {
+
+int emlGet(uint8_t *out, uint32_t offset, uint32_t length) {
     uint8_t *mem = BigBuf_get_EM_addr();
     if (offset + length <= CARD_MEMORY_SIZE) {
         memcpy(out, mem + offset, length);
-        return 0;
+        return PM3_SUCCESS;
     }
 
     Dbprintf("Error, trying to read memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
-    return 1;
+    return PM3_EOUTOFBOUND;
 }
+
 
 // get the address of the ToSend buffer. Allocate part of Bigbuf for it, if not yet done
 tosend_t *get_tosend(void) {
