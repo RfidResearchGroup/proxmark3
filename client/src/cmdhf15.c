@@ -1279,6 +1279,13 @@ static void print_blocks_15693(uint8_t *data, uint16_t bytes, int blocksize, boo
     PrintAndLogEx(INFO, "----------- " _CYAN_("Tag Memory") " ---------------");
 
     PrintAndLogEx(NORMAL, "");
+
+    if (blocksize == 0 || bytes == 0)
+    {
+         PrintAndLogEx(INFO, "Tag is empty!");
+         return;
+    }
+
     print_hrule(blocksize);
 
     char spaces[] = "                                                            ";
@@ -1336,38 +1343,46 @@ static void print_blocks_15693(uint8_t *data, uint16_t bytes, int blocksize, boo
     PrintAndLogEx(NORMAL, "");
 }
 
+static void print_emltag_info_15693(iso15_tag_t *tag) {
+    PrintAndLogEx(SUCCESS, "    TYPE... " _YELLOW_("%s"), getTagInfo_15(tag->uid));
+    PrintAndLogEx(SUCCESS, "     UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, tag->uid));
+    PrintAndLogEx(SUCCESS, "     - DSFID         [0x%02X]", tag->dsfid);
+    PrintAndLogEx(SUCCESS, "     - AFI           [0x%02X]", tag->afi);
+    PrintAndLogEx(SUCCESS, "     - IC reference  [0x%02X]", tag->ic);
+    PrintAndLogEx(SUCCESS, "     - Tag memory layout");
+    PrintAndLogEx(SUCCESS, "           %u bytes/blocks x %u blocks", tag->bytesPerPage, tag->pagesCount);
+}
+
+static void print_emltag_15693(iso15_tag_t *tag, bool dense_output) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Emulator Tag Information") " ---------------------------");
+
+    print_emltag_info_15693(tag);
+
+    print_blocks_15693(tag->data, (tag->pagesCount * tag->bytesPerPage),
+                       tag->bytesPerPage, dense_output);
+}
+
 static int CmdHF15EView(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 eview",
                   "It displays emulator memory",
                   "hf 15 eview\n"
-                  "hf 15 eview -b 8 -c 60\n"
+                  "hf 15 eview -z\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("b", "blocksize", "<dec>", "block size (def 4)"),
-        arg_int0("c", "count", "<dec>", "number of blocks to display (def all)"),
         arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    int blocksize = arg_get_int_def(ctx, 1, 4);
-    int count = arg_get_int_def(ctx, 2, -1);
-    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 3));
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 1));
     CLIParserFree(ctx);
 
-    // santity checks
-    if (blocksize < 4) {
-        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
-        blocksize = 4;
-    }
+    int bytes = sizeof(iso15_tag_t);
 
-    int bytes = CARD_MEMORY_SIZE;
-    if (count > 0 && count * blocksize <= bytes) {
-        bytes = count * blocksize;
-    }
-
+    // reserve memory
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
@@ -1381,7 +1396,8 @@ static int CmdHF15EView(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    print_blocks_15693(dump, bytes, blocksize, dense_output);
+    print_emltag_15693((iso15_tag_t *)dump, dense_output);
+
     free(dump);
     return PM3_SUCCESS;
 }
