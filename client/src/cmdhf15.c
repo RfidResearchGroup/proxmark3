@@ -1721,8 +1721,8 @@ static int CmdHF15Dump(const char *Cmd) {
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
                          argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-                                              argtable[arglen++] = arg_lit0(NULL, "ns", "no save to file"),
-                                                      argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+                         argtable[arglen++] = arg_lit0(NULL, "ns", "no save to file"),
+                         argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1770,9 +1770,16 @@ static int CmdHF15Dump(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
+    iso15_tag_t *tag = (iso15_tag_t *)calloc(1, sizeof(iso15_tag_t));
+
+    if (tag == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    };
+
     // ISO15693 Protocol params
     packet->raw[packet->rawlen++] = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    packet->raw[packet->rawlen++] = ISO15693_READBLOCK;
+    packet->raw[packet->rawlen++] = ISO15693_GET_SYSTEM_INFO;
 
     bool used_uid = false;
     if (unaddressed == false) {
@@ -1794,9 +1801,8 @@ static int CmdHF15Dump(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Using unaddressed mode");
     }
 
-    if (verbose) {
-        PrintAndLogEx(INFO, "Using block size... " _YELLOW_("%d"), blocksize);
-    }
+    AddCrc15(packet->raw,  packet->rawlen);
+    packet->rawlen += 2;
 
     // PM3 params
     packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
@@ -1804,31 +1810,69 @@ static int CmdHF15Dump(const char *Cmd) {
         packet->flags |= ISO15_HIGH_SPEED;
     }
 
-    // add CRC length (2) to packet and blockno (1)
-    packet->rawlen += 3;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_ETEAROFF) {
+        return resp.status;
+    }
+
+    if (resp.length < 2) {
+        PrintAndLogEx(WARNING, "iso15693 card doesn't answer to systeminfo command (%d)", resp.length);
+        PrintAndLogEx(WARNING, "%%d)", resp.length);
+        return PM3_EWRONGANSWER;
+    }
+
+    uint8_t *d = resp.data.asBytes;
+    uint8_t dCpt = 10;
+
+    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length);
+
+    memcpy(tag->uid, &d[2], 8);
+
+    if (d[1] & 0x01)
+        tag->dsfid = d[dCpt++];
+    if (d[1] & 0x02)
+        tag->afi = d[dCpt++];
+    if (d[1] & 0x04)
+    {
+        tag->pagesCount = d[dCpt++]+1;
+        tag->bytesPerPage = d[dCpt++]+1;
+    }
+    else
+    { // Set tag memory layout values (if can't be readed in SYSINFO)
+        tag->bytesPerPage = blocksize;
+        tag->pagesCount = 128;
+    }
+    if (d[1] & 0x08)
+        tag->ic = d[dCpt++];
+
+    if (verbose)
+    {
+        print_emltag_info_15693(tag);
+    }
+
+    // add lenght for blockno (1)
+    packet->rawlen++;
+    packet->raw[0] |= ISO15_REQ_OPTION; // Add option to dump lock status
+    packet->raw[1] = ISO15693_READBLOCK;
+
+    packet->flags = (ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
 
     PrintAndLogEx(SUCCESS, "Reading memory");
 
     int blocknum = 0;
-    // memory.
-    t15memory_t mem[256];
 
-    uint8_t data[256 * 4];
-    memset(data, 0, sizeof(data));
-
-    // keep track of which block length tag returned?
-    uint8_t blklen = blocksize;
-
-
-    for (int retry = 0; (retry < 2 && blocknum < 0x100); retry++) {
-
-        if (blocknum > 0) {
-            packet->flags = (ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
-            if (fast) {
-                packet->flags |= ISO15_HIGH_SPEED;
-            }
-        }
-
+    for (int retry = 0; (retry < 2 && blocknum < tag->pagesCount); retry++) {
         if (used_uid) {
             packet->raw[10] = (uint8_t)blocknum & 0xFF;
             AddCrc15(packet->raw, 11);
@@ -1839,7 +1883,7 @@ static int CmdHF15Dump(const char *Cmd) {
 
         clearCommandBuffer();
         SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
-        PacketResponseNG resp;
+
         if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000)) {
 
             if (resp.length < 2) {
@@ -1848,7 +1892,7 @@ static int CmdHF15Dump(const char *Cmd) {
                 continue;
             }
 
-            uint8_t *d = resp.data.asBytes;
+            d = resp.data.asBytes;
 
             if (CheckCrc15(d, resp.length) == false) {
                 PrintAndLogEx(NORMAL, "");
@@ -1868,21 +1912,10 @@ static int CmdHF15Dump(const char *Cmd) {
                 break;
             }
 
-            // is tag responding with 4 or 8 bytes?
-            if (resp.length > 8) {
-                blklen = 8;
-            }
-
-            uint8_t offset = 0;
-            if (add_option) {
-                offset = 1;
-            }
-            // lock byte value
-            mem[blocknum].lock = d[0 + offset];
+            tag->locks[blocknum] = d[1];
 
             // copy read data
-            memcpy(mem[blocknum].block, d + 1 + offset, blklen);
-            memcpy(data + (blocknum * 4), d + 1 + offset, 4);
+            memcpy(&tag->data[blocknum * tag->bytesPerPage], d + 2, tag->bytesPerPage);
 
             retry = 0;
             blocknum++;
@@ -1894,9 +1927,9 @@ static int CmdHF15Dump(const char *Cmd) {
     free(packet);
     DropField();
 
-    if (blklen != blocksize) {
+    if (tag->bytesPerPage != blocksize) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, _YELLOW_("%u") " byte block length detected, called with " _YELLOW_("%d"), blklen, blocksize);
+        PrintAndLogEx(INFO, _YELLOW_("%u") " byte block length detected, called with " _YELLOW_("%d"), tag->bytesPerPage, blocksize);
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -1908,18 +1941,18 @@ static int CmdHF15Dump(const char *Cmd) {
     for (int i = 0; i < blocknum; i++) {
 
         char lck[16] = {0};
-        if (mem[i].lock) {
-            snprintf(lck, sizeof(lck), _RED_("%d"), mem[i].lock);
+        if (tag->locks[i]) {
+            snprintf(lck, sizeof(lck), _RED_("%d"), tag->locks[i]);
         } else {
-            snprintf(lck, sizeof(lck), "%d", mem[i].lock);
+            snprintf(lck, sizeof(lck), "%d", tag->locks[i]);
         }
 
         PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s"
                       , i
                       , i
-                      , sprint_hex(mem[i].block, blklen)
+                      , sprint_hex(&tag->data[i*tag->bytesPerPage], tag->bytesPerPage)
                       , lck
-                      , sprint_ascii(mem[i].block, blklen)
+                      , sprint_ascii(&tag->data[i*tag->bytesPerPage], tag->bytesPerPage)
                      );
     }
     PrintAndLogEx(INFO, "---------+-------------+---+-------");
@@ -1939,11 +1972,8 @@ static int CmdHF15Dump(const char *Cmd) {
         FillFileNameByUID(fptr, SwapEndian64(uid, sizeof(uid), 8), "-dump", sizeof(uid));
     }
 
-    if (blklen == 8) {
-        pm3_save_dump(filename, data, (size_t)(blocknum * blklen), jsf15_v3);
-    } else {
-        pm3_save_dump(filename, data, (size_t)(blocknum * blklen), jsf15_v2);
-    }
+    pm3_save_dump(filename, (uint8_t*)tag, sizeof(iso15_tag_t), jsf15_v4);
+
     return PM3_SUCCESS;
 }
 
