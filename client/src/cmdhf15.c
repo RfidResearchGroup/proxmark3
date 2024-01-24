@@ -1744,7 +1744,7 @@ static int CmdHF15Dump(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
-    if ((scan + unaddressed + uidlen) > 1) {
+    if ((scan + unaddressed + (uidlen > 0)) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
         return PM3_EINVARG;
     }
@@ -1755,8 +1755,7 @@ static int CmdHF15Dump(const char *Cmd) {
     }
 
     // default fallback to scan for tag.
-    // overriding unaddress parameter :)
-    if (uidlen != HF15_UID_LENGTH) {
+    if (uidlen != HF15_UID_LENGTH && !unaddressed) {
         scan = true;
     }
 
