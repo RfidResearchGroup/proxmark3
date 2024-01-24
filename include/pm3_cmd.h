@@ -550,6 +550,7 @@ typedef struct {
 #define CMD_HF_TEXKOM_SIMULATE                                            0x0320
 #define CMD_HF_ISO15693_EML_CLEAR                                         0x0330
 #define CMD_HF_ISO15693_EML_SETMEM                                        0x0331
+#define CMD_HF_ISO15693_EML_GETMEM                                        0x0332
 
 #define CMD_LF_SNIFF_RAW_ADC                                              0x0360
 

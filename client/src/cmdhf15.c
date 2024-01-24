@@ -1421,33 +1421,45 @@ static int CmdHF15Sim(const char *Cmd) {
 
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
-    if (uidlen != 0 && uidlen != HF15_UID_LENGTH) {
-        PrintAndLogEx(WARNING, "UID must include 8 hex bytes");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
+    payload.block_size = arg_get_int_def(ctx, 2, 4);
     CLIParserFree(ctx);
 
-    if (uidlen == 0) { // get UID from emulator
-        // reserve memory
-        iso15_tag_t *tag = calloc(1, sizeof(iso15_tag_t));
-        if (tag == NULL) {
-            PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
-            return PM3_EMALLOC;
-        }
+    // sanity checks
+    if (uidlen != 0 && uidlen != HF15_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
+        return PM3_EINVARG;
+    }
 
-        if (GetFromDevice(BIG_BUF_EML, (uint8_t *)tag, sizeof(iso15_tag_t), 0, NULL, 0, NULL, 2500, false) == false) {
-            PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
-            free(tag);
+    PacketResponseNG resp;
+
+    // get UID from emulator,  for printing??
+    // iceman:  downloading 2200 bytes just to get a 8 byte UID is overkill
+    if (uidlen == 0) {
+
+        struct {
+            uint32_t offset;
+            uint16_t length;
+        } PACKED payload_mem;
+
+        payload_mem.offset = 0;
+        payload_mem.length = 8;
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ISO15693_EML_GETMEM, (uint8_t *)&payload_mem, sizeof(payload_mem));
+        if (WaitForResponseTimeout(CMD_HF_ISO15693_EML_GETMEM, &resp, 2000) == false) {
+            PrintAndLogEx(DEBUG, "iso15693 timeout");
             return PM3_ETIMEOUT;
         }
 
-        PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, tag->uid));
-        free(tag);
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Failed to get UID from emulator memory");
+            return resp.status;
+        }
+        PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, resp.data.asBytes));
     }
+
     PrintAndLogEx(INFO, "Press " _YELLOW_("`pm3-button`") " to abort simulation");
 
-    PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     WaitForResponse(CMD_HF_ISO15693_SIMULATE, &resp);

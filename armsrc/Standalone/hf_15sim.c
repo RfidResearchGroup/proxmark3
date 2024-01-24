@@ -184,7 +184,7 @@ void RunMod(void) {
     Dbprintf("Tag dumped");
     Dbprintf("Start simulation");
 
-    SimTagIso15693(0, 0);
+    SimTagIso15693(NULL, 0);
 
     Dbprintf("Simulation stopped");
     SpinDelay(200);

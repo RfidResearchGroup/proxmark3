@@ -1317,6 +1317,27 @@ static void PacketReceived(PacketCommandNG *packet) {
             emlSet(payload->data, payload->offset, payload->count);
             break;
         }
+        case CMD_HF_ISO15693_EML_GETMEM: {
+            FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+            struct p {
+                uint32_t offset;
+                uint16_t length;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;            
+
+            if (payload->length > PM3_CMD_DATA_SIZE) {
+                reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_EMALLOC, NULL, 0);
+                return;
+            }
+
+            uint8_t *buf = BigBuf_malloc(payload->length);           
+            emlGet(buf, payload->offset, payload->length);
+            LED_B_ON();
+            reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_SUCCESS, buf, payload->length);
+            LED_B_OFF();
+            BigBuf_free_keep_EM();                
+            break;
+        }
         case CMD_HF_ISO15693_SIMULATE: {
             struct p {
                 uint8_t uid[8];
