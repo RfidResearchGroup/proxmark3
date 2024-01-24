@@ -1407,39 +1407,49 @@ static int CmdHF15Sim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 sim",
                   "Simulate a ISO-15693 tag\n",
+                  "hf 15 sim\n"
                   "hf 15 sim -u E011223344556677");
-
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("u", "uid", "<hex>", "UID, 8 hex bytes"),
+        arg_str0("u", "uid", "<hex>", "UID, 8 hex bytes"),
         arg_int0("b", "blocksize", "<dec>", "block size (def 4)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     struct {
         uint8_t uid[HF15_UID_LENGTH];
         uint8_t block_size;
     } PACKED payload;
+    memset(&payload, 0, sizeof(payload));
 
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
-    if (uidlen != HF15_UID_LENGTH) {
+    if (uidlen != 0 && uidlen != HF15_UID_LENGTH) {
         PrintAndLogEx(WARNING, "UID must include 8 hex bytes");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-
-    payload.block_size = arg_get_int_def(ctx, 2, 4);
     CLIParserFree(ctx);
 
-    // santity checks
-    if (payload.block_size < 4) {
-        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
-        payload.block_size = 4;
-    }
+    if (uidlen == 0) // get UID from emulator
+    {
+        // reserve memory
+        iso15_tag_t *tag = calloc(1, sizeof(iso15_tag_t));
+        if (tag == NULL) {
+            PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+            return PM3_EMALLOC;
+        }
 
-    PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
+        if (GetFromDevice(BIG_BUF_EML, (uint8_t*)tag, sizeof(iso15_tag_t), 0, NULL, 0, NULL, 2500, false) == false) {
+            PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+            free(tag);
+            return PM3_ETIMEOUT;
+        }
+
+        PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, tag->uid));
+        free(tag);
+    }
     PrintAndLogEx(INFO, "Press " _YELLOW_("`pm3-button`") " to abort simulation");
 
     PacketResponseNG resp;
