@@ -2296,7 +2296,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
             maskCpt = 0;
 
-            while (mask_len >= 8 && cmdCpt < cmd_len && maskCpt < 8) { // Byte comparison
+            while (mask_len >= 8 && cmdCpt < (uint8_t)cmd_len && maskCpt < 8) { // Byte comparison
                 if (cmd[cmdCpt++] != tag->uid[maskCpt++]) {
                     error++; // mask don't match : drop request
                     break;
@@ -2420,7 +2420,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
                 else {
                     recv[0] = ISO15_NOERROR;
                     recvLen = 1;
-                    for (uint16_t i = 0 ; i < (nbPages + 1) * tag->bytesPerPage && \
+                    for (int i = 0 ; i < (nbPages + 1) * tag->bytesPerPage && \
                              recvLen + 3 < ISO15693_MAX_RESPONSE_LENGTH ; i++) {
                         if ((i % tag->bytesPerPage) == 0 && (cmd[0] & ISO15_REQ_OPTION))
                             recv[recvLen++] = tag->locks[pageNum + (i / tag->bytesPerPage)];
