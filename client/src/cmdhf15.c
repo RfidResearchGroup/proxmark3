@@ -1114,32 +1114,30 @@ static int CmdHF15Reader(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int hf15EmlClear(void) {
+static void hf15EmlClear(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_EML_CLEAR, NULL, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_HF_ISO15693_EML_CLEAR, &resp);
-    return PM3_SUCCESS;
 }
 
-static int hf15EmlSetMem(uint8_t *data, uint8_t count, size_t offset) {
+static int hf15EmlSetMem(uint8_t *data, uint16_t count, size_t offset) {
     struct p {
         uint32_t offset;
-        uint8_t count;
+        uint16_t count;
         uint8_t data[];
     } PACKED;
 
-    size_t size = count;
-    if (size > (PM3_CMD_DATA_SIZE - sizeof(struct p))) {
+    if (count > (PM3_CMD_DATA_SIZE - sizeof(struct p))) {
         return PM3_ESOFT;
     }
 
-    size_t paylen = sizeof(struct p) + size;
+    size_t paylen = sizeof(struct p) + count;
     struct p *payload = calloc(1, paylen);
 
     payload->offset = offset;
     payload->count = count;
-    memcpy(payload->data, data, size);
+    memcpy(payload->data, data, count);
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_EML_SETMEM, (uint8_t *)payload, paylen);
@@ -1194,7 +1192,7 @@ static int CmdHF15ELoad(const char *Cmd) {
     // fast push mode
     g_conn.block_after_ACK = true;
 
-    int chuncksize = 64;
+    size_t chuncksize = 256;
     size_t offset = 0;
 
     while (bytes_read > 0) {
@@ -1203,8 +1201,8 @@ static int CmdHF15ELoad(const char *Cmd) {
             g_conn.block_after_ACK = false;
         }
 
-        int tosend = MIN(chuncksize, bytes_read);
-        if (hf15EmlSetMem(data + offset, tosend, offset) != PM3_SUCCESS) {
+        uint16_t bytestosend = MIN(chuncksize, bytes_read);
+        if (hf15EmlSetMem(data + offset, bytestosend, offset) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Can't set emulator memory at offest: %zu / 0x%zx", offset, offset);
             free(data);
             return PM3_ESOFT;
@@ -1212,8 +1210,8 @@ static int CmdHF15ELoad(const char *Cmd) {
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
 
-        offset += tosend;
-        bytes_read -= tosend;
+        offset += bytestosend;
+        bytes_read -= bytestosend;
     }
     free(data);
     PrintAndLogEx(NORMAL, "");
