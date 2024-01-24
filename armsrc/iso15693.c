@@ -2133,23 +2133,26 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
     BigBuf_free_keep_EM();
 
     iso15_tag_t *tag = (iso15_tag_t*) BigBuf_get_EM_addr();
-    if (uid != NULL) { // new tag (need initialization)
-        memcpy(tag->uid, uid, 8);
-        tag->dsfid = 0;
-        tag->dsfidLock = false;
-        tag->afi = 0;
-        tag->afiLock = false;
-        tag->bytesPerPage = 4;
-        tag->pagesCount = 64;
-        tag->ic = 0;
-        memset(tag->locks, 0, sizeof(tag->locks));
-        memset(tag->data, 0, sizeof(tag->data));
     if (tag == NULL)
     {
         Dbprintf("Can't allocate emulator memory");
         reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EFAILED, NULL, 0);
         return;
     }
+    if (uid != NULL) { // new tag (need initialization)
+        uint8_t nullUid[8] = { 0 };
+        if (memcmp(uid, nullUid, 8) != 0)
+        {  // simulate a new tag bazed on client parameters
+            memcpy(tag->uid, uid, 8);
+            tag->dsfid = 0;
+            tag->dsfidLock = false;
+            tag->afi = 0;
+            tag->afiLock = false;
+            tag->bytesPerPage = (block_size > 0) ? block_size : 4;
+            tag->pagesCount = 64;
+            tag->ic = 0;
+            memset(tag->locks, 0, sizeof(tag->locks));
+            memset(tag->data, 0, sizeof(tag->data));
         }
     }
     if (tag->pagesCount > ISO15693_TAG_MAX_PAGES ||                     \
@@ -2164,7 +2167,8 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
     LED_A_ON();
 
-    Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X,  %u bytes/blocks x %u blocks", tag->uid[7], tag->uid[6], tag->uid[5], tag->uid[4], tag->uid[3], tag->uid[2], tag->uid[1], tag->uid[0], tag->bytesPerPage, tag->pagesCount);
+    if (g_dbglevel >= DBG_DEBUG)
+        Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X,  %u bytes/blocks x %u blocks", tag->uid[7], tag->uid[6], tag->uid[5], tag->uid[4], tag->uid[3], tag->uid[2], tag->uid[1], tag->uid[0], tag->bytesPerPage, tag->pagesCount);
 
     LED_C_ON();
 
