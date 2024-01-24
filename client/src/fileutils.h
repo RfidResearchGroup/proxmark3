@@ -55,6 +55,7 @@ typedef enum {
     jsf15,
     jsf15_v2,
     jsf15_v3,
+    jsf15_v4,
     jsfLegic,
     jsfLegic_v2,
     jsfT55x7,

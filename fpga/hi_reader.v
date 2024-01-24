@@ -44,8 +44,13 @@ reg after_hysteresis, after_hysteresis_prev, after_hysteresis_prev_prev;
 reg [11:0] has_been_low_for;
 always @(negedge adc_clk)
 begin
+`ifdef WITH_HF_15_LOWSIGNAL
+    if (& adc_d[7:4]) after_hysteresis <= 1'b1;
+    else if (~(| adc_d[7:6])) after_hysteresis <= 1'b0;
+`else
     if (& adc_d[7:0]) after_hysteresis <= 1'b1;
     else if (~(| adc_d[7:0])) after_hysteresis <= 1'b0;
+`endif
 
     if (after_hysteresis)
     begin

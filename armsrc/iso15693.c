@@ -107,7 +107,7 @@
 ///////////////////////////////////////////////////////////////////////
 
 // buffers
-#define ISO15693_MAX_RESPONSE_LENGTH     36 // allows read single block with the maximum block size of 256bits. Read multiple blocks not supported yet
+#define ISO15693_MAX_RESPONSE_LENGTH     2116 // allows read multiple block with the maximum block size of 256bits and a maximum block number of 64 with REQ_OPTION (lock status for each block).
 #define ISO15693_MAX_COMMAND_LENGTH      45 // allows write single block with the maximum block size of 256bits. Write multiple blocks not supported yet
 
 // 32 + 2 crc + 1
@@ -120,6 +120,7 @@
 //#define Crc(data, len)        Crc(CRC_15693, (data), (len))
 #define CheckCrc15(data, len)   check_crc(CRC_15693, (data), (len))
 #define AddCrc15(data, len)     compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
+#define CalculateCrc15(data, len)  Crc16ex(CRC_15693, (data), (len))
 
 static void BuildIdentifyRequest(uint8_t *cmd);
 
@@ -1200,42 +1201,39 @@ static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader)
             break;
 
         case STATE_READER_AWAIT_1ST_RISING_EDGE_OF_SOF:
-            reader->posCount++;
             if (bit) { // detected rising edge
-                if (reader->posCount < 4) { // rising edge too early (nominally expected at 5)
+                if (reader->posCount < 2) { // rising edge too early (nominally expected at 4)
                     reader->state = STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF;
                 } else { // SOF
                     reader->state = STATE_READER_AWAIT_2ND_FALLING_EDGE_OF_SOF;
+                    reader->posCount = 1;
                 }
             } else {
-                if (reader->posCount > 5) { // stayed low for too long
+                reader->posCount++;
+                if (reader->posCount > 6) { // stayed low for too long
                     DecodeReaderReset(reader);
-                } else {
-                    // do nothing, keep waiting
                 }
             }
             break;
 
         case STATE_READER_AWAIT_2ND_FALLING_EDGE_OF_SOF:
-
-            reader->posCount++;
-
-            if (bit == false) { // detected a falling edge
-
-                if (reader->posCount < 20) {         // falling edge too early (nominally expected at 21 earliest)
+            if (!bit) { // detected a falling edge
+                if (reader->posCount < 14) {         // falling edge too early (nominally expected at 16 earliest)
                     DecodeReaderReset(reader);
-                } else if (reader->posCount < 23) {  // SOF for 1 out of 4 coding
+                } else if (reader->posCount <= 18) {  // SOF for 1 out of 4 coding
                     reader->Coding = CODING_1_OUT_OF_4;
                     reader->state = STATE_READER_AWAIT_2ND_RISING_EDGE_OF_SOF;
-                } else if (reader->posCount < 28) {  // falling edge too early (nominally expected at 29 latest)
+                    reader->posCount = 1;
+                } else if (reader->posCount < 22) {  // falling edge too early (nominally expected at 24 latest)
                     DecodeReaderReset(reader);
-                } else {                                   // SOF for 1 out of 256 coding
+                } else {                             // SOF for 1 out of 256 coding
                     reader->Coding = CODING_1_OUT_OF_256;
                     reader->state = STATE_READER_AWAIT_2ND_RISING_EDGE_OF_SOF;
+                    reader->posCount = 1;
                 }
-
             } else {
-                if (reader->posCount > 29) { // stayed high for too long
+                reader->posCount++;
+                if (reader->posCount > 26) { // stayed high for too long
                     reader->state = STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF;
                 } else {
                     // do nothing, keep waiting
@@ -1244,60 +1242,42 @@ static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader)
             break;
 
         case STATE_READER_AWAIT_2ND_RISING_EDGE_OF_SOF:
-
-            reader->posCount++;
-
             if (bit) { // detected rising edge
-                if (reader->Coding == CODING_1_OUT_OF_256) {
-                    if (reader->posCount < 32) { // rising edge too early (nominally expected at 33)
-                        reader->state = STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF;
-                    } else {
-                        reader->posCount = 1;
-                        reader->bitCount = 0;
+                if (reader->posCount < 2) { // rising edge too early (nominally expected at 8)
+                    reader->state = STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF;
+                } else {
+                    reader->posCount = 1;
+                    if (reader->Coding == CODING_1_OUT_OF_256) {
+                        reader->bitCount = 1;
                         reader->byteCount = 0;
                         reader->sum1 = 1;
-                        reader->state = STATE_READER_RECEIVE_DATA_1_OUT_OF_256;
                         LED_B_ON();
-                    }
-                } else { // CODING_1_OUT_OF_4
-                    if (reader->posCount < 24) { // rising edge too early (nominally expected at 25)
-                        reader->state = STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF;
-                    } else {
-                        reader->posCount = 1;
+                        reader->state = STATE_READER_RECEIVE_DATA_1_OUT_OF_256;
+                    } else { // CODING_1_OUT_OF_4
                         reader->state = STATE_READER_AWAIT_END_OF_SOF_1_OUT_OF_4;
                     }
                 }
             } else {
-                if (reader->Coding == CODING_1_OUT_OF_256) {
-                    if (reader->posCount > 34) { // signal stayed low for too long
-                        DecodeReaderReset(reader);
-                    } else {
-                        // do nothing, keep waiting
-                    }
-                } else { // CODING_1_OUT_OF_4
-                    if (reader->posCount > 26) { // signal stayed low for too long
-                        DecodeReaderReset(reader);
-                    } else {
-                        // do nothing, keep waiting
-                    }
+                reader->posCount++;
+                if (reader->posCount > 6) { // signal stayed low for too long
+                    DecodeReaderReset(reader);
+                } else {
+                    // do nothing, keep waiting
                 }
             }
             break;
 
         case STATE_READER_AWAIT_END_OF_SOF_1_OUT_OF_4:
-
-            reader->posCount++;
-
             if (bit) {
-                if (reader->posCount == 9) {
-                    reader->posCount = 1;
+                reader->posCount++;
+
+                if (reader->posCount == 8) {
+                    reader->posCount = 0;
                     reader->bitCount = 0;
                     reader->byteCount = 0;
-                    reader->sum1 = 1;
+                    reader->sum1 = 0;
                     reader->state = STATE_READER_RECEIVE_DATA_1_OUT_OF_4;
                     LED_B_ON();
-                } else {
-                    // do nothing, keep waiting
                 }
             } else { // unexpected falling edge
                 DecodeReaderReset(reader);
@@ -1305,62 +1285,103 @@ static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader)
             break;
 
         case STATE_READER_RECEIVE_DATA_1_OUT_OF_4:
-
-            reader->posCount++;
-
-            if (reader->posCount == 1) {
-
-                reader->sum1 = bit ? 1 : 0;
-
-            } else if (reader->posCount <= 4) {
-
-                if (bit)
-                    reader->sum1++;
-
-            } else if (reader->posCount == 5) {
-
-                reader->sum2 = bit ? 1 : 0;
-
-            } else {
-                if (bit)
-                    reader->sum2++;
-            }
-
-            if (reader->posCount == 8) {
-                reader->posCount = 0;
-                if (reader->sum1 <= 1 && reader->sum2 >= 3) { // EOF
-                    LED_B_OFF(); // Finished receiving
-                    DecodeReaderReset(reader);
-                    if (reader->byteCount != 0) {
-                        return true;
-                    }
-
-                } else if (reader->sum1 >= 3 && reader->sum2 <= 1) { // detected a 2bit position
-                    reader->shiftReg >>= 2;
-                    reader->shiftReg |= (reader->bitCount << 6);
-                }
-
-                if (reader->bitCount == 15) { // we have a full byte
-
-                    reader->output[reader->byteCount++] = reader->shiftReg;
-                    if (reader->byteCount > reader->byteCountMax) {
-                        // buffer overflow, give up
-                        LED_B_OFF();
+            if (!bit) {
+                reader->sum1++;
+                if (reader->sum1 == 1) { // first low bit
+                    if (reader->posCount <= 6) { // bits : 00
+                        reader->shiftReg >>= 2;
+                        //reader->shiftReg |= (0 << 6);
+                        reader->bitCount += 2;
+                        reader->posCount = -28;
+                    } else if (reader->posCount <= 9) { // EOF
+                        LED_B_OFF(); // Finished receiving
                         DecodeReaderReset(reader);
+                        if (reader->byteCount > 0) {
+                            return true;
+                        }
+                    } else if (reader->posCount <= 14) { // bits : 01
+                        reader->shiftReg >>= 2;
+                        reader->shiftReg |= (1 << 6);
+                        reader->bitCount += 2;
+                        reader->posCount = -20;
+                    } else if (reader->posCount < 18) { // unexpected falling edge
+                        DecodeReaderReset(reader);
+                        if (reader->byteCount >= 0) {
+                            reader->output[reader->byteCount++] = reader->posCount;
+                            reader->output[reader->byteCount++] = reader->bitCount;
+                            reader->output[reader->byteCount++] = 0x42;
+                            return true;
+                        }
+                    } else if (reader->posCount <= 22) { // bits : 10
+                        reader->shiftReg >>= 2;
+                        reader->shiftReg |= (2 << 6);
+                        reader->bitCount += 2;
+                        reader->posCount = -12;
+                    } else if (reader->posCount < 26) { // unexpected falling edge
+                        DecodeReaderReset(reader);
+                        if (reader->byteCount >= 0) {
+                            reader->output[reader->byteCount++] = reader->posCount;
+                            reader->output[reader->byteCount++] = reader->bitCount;
+                            reader->output[reader->byteCount++] = 0x43;
+                            return true;
+                        }
+                    } else { // bits : 11
+                        reader->shiftReg >>= 2;
+                        reader->shiftReg |= (3 << 6);
+                        reader->bitCount += 2;
+                        reader->posCount = -4;
                     }
 
-                    reader->bitCount = 0;
-                    reader->shiftReg = 0;
-                    if (reader->byteCount == reader->jam_search_len) {
-                        if (!memcmp(reader->output, reader->jam_search_string, reader->jam_search_len)) {
-                            LED_D_ON();
-                            FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_JAM);
-                            reader->state = STATE_READER_RECEIVE_JAMMING;
+                    if (reader->bitCount == 8)
+                    {
+                        reader->output[reader->byteCount++] = reader->shiftReg;
+                        if (reader->byteCount > reader->byteCountMax) {
+                            // buffer overflow, give up
+                            LED_B_OFF();
+                            DecodeReaderReset(reader);
+                        }
+
+                        reader->bitCount = 0;
+                        reader->shiftReg = 0;
+                        if (reader->byteCount == reader->jam_search_len) {
+                          if (!memcmp(reader->output, reader->jam_search_string, reader->jam_search_len)) {
+                          LED_D_ON();
+                          FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_JAM);
+                          reader->state = STATE_READER_RECEIVE_JAMMING;
+                          }
                         }
                     }
-
-                } else {
-                    reader->bitCount++;
+                } else if (reader->sum1 > 6) { // too long low bit
+                    DecodeReaderReset(reader);
+                    if (reader->byteCount >= 0) {
+                        reader->output[reader->byteCount++] = reader->posCount;
+                        reader->output[reader->byteCount++] = reader->bitCount;
+                        reader->output[reader->byteCount++] = 0x44;
+                        return true;
+                    }
+                }
+            } else {
+                reader->posCount++;
+                if (reader->posCount > 30) {
+                    reader->state = STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF;
+                    if (reader->byteCount >= 0) {
+                        reader->output[reader->byteCount++] = reader->posCount;
+                        reader->output[reader->byteCount++] = reader->bitCount;
+                        reader->output[reader->byteCount++] = 0x45;
+                        return true;
+                    }
+                }
+                if (reader->sum1 == 1) {
+                    reader->state = STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF;
+                    if (reader->byteCount >= 0) {
+                        reader->output[reader->byteCount++] = reader->posCount;
+                        reader->output[reader->byteCount++] = reader->bitCount;
+                        reader->output[reader->byteCount++] = 0x46;
+                        return true;
+                    }
+                } else if (reader->sum1 > 1) {
+                    reader->posCount += reader->sum1;
+                    reader->sum1 = 0;
                 }
             }
             break;
@@ -2111,20 +2132,61 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
 
-    Iso15693InitTag();
+    iso15_tag_t *tag = (iso15_tag_t*) BigBuf_get_EM_addr();
+    if (tag == NULL)
+    {
+        Dbprintf("Can't allocate emulator memory");
+        reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EFAILED, NULL, 0);
+        return;
+    }
+    if (uid != NULL) { // new tag (need initialization)
+        uint8_t nullUid[8] = { 0 };
+        if (memcmp(uid, nullUid, 8) != 0)
+        {  // simulate a new tag bazed on client parameters
+            memcpy(tag->uid, uid, 8);
+            tag->dsfid = 0;
+            tag->dsfidLock = false;
+            tag->afi = 0;
+            tag->afiLock = false;
+            tag->bytesPerPage = (block_size > 0) ? block_size : 4;
+            tag->pagesCount = 64;
+            tag->ic = 0;
+            memset(tag->locks, 0, sizeof(tag->locks));
+            memset(tag->data, 0, sizeof(tag->data));
+        }
+    }
+    if (tag->pagesCount > ISO15693_TAG_MAX_PAGES ||                     \
+        tag->pagesCount * tag->bytesPerPage > ISO15693_TAG_MAX_SIZE ||
+        tag->pagesCount == 0 || tag->bytesPerPage == 0) {
+        Dbprintf("Tag size error: pagesCount = %d, bytesPerPage=%d", tag->pagesCount, tag->bytesPerPage);
+        reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EOPABORTED, NULL, 0);
+        return;
+    }
+
+    Iso15693InitTag(); // init simulator
 
     LED_A_ON();
 
-    Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X block size %d", uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7], block_size);
+    if (g_dbglevel >= DBG_DEBUG)
+        Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X,  %u bytes/blocks x %u blocks", tag->uid[7], tag->uid[6], tag->uid[5], tag->uid[4], tag->uid[3], tag->uid[2], tag->uid[1], tag->uid[0], tag->bytesPerPage, tag->pagesCount);
 
     LED_C_ON();
-
-    enum { NO_FIELD, IDLE, ACTIVATED, SELECTED, HALTED } chip_state = NO_FIELD;
 
     bool button_pressed = false;
     int vHf; // in mV
 
     bool exit_loop = false;
+    uint8_t cmd[ISO15693_MAX_COMMAND_LENGTH] = {0};
+    uint8_t recv[ISO15693_MAX_RESPONSE_LENGTH] = {0};
+    uint8_t mask_len = 0;
+    uint8_t maskCpt = 0;
+    uint8_t cmdCpt = 0;
+    uint16_t recvLen = 0;
+    uint8_t error = 0;
+    uint8_t pageNum = 0;
+    uint8_t nbPages = 0;
+    uint8_t pwdId = 0;
+
     while (exit_loop == false) {
 
         button_pressed = BUTTON_PRESS();
@@ -2134,11 +2196,11 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         WDT_HIT();
 
         // find reader field
-        if (chip_state == NO_FIELD) {
+        if (tag->state == TAG_STATE_NO_FIELD) {
 
             vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
             if (vHf > MF_MINFIELDV) {
-                chip_state = IDLE;
+                tag->state = TAG_STATE_READY;
                 LED_A_ON();
             } else {
                 continue;
@@ -2146,7 +2208,6 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         }
 
         // Listen to reader
-        uint8_t cmd[ISO15693_MAX_COMMAND_LENGTH];
         uint32_t reader_eof_time = 0;
         int cmd_len = GetIso15693CommandFromReader(cmd, sizeof(cmd), &reader_eof_time);
         if (cmd_len < 0) {
@@ -2154,171 +2215,365 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
             break;
         }
 
-        // TODO: check more flags
-        if ((cmd_len >= 5) && (cmd[0] & ISO15_REQ_INVENTORY) && (cmd[1] == ISO15693_INVENTORY)) {
-            bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
-            uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
+        if (cmd_len <= 3)
+            continue;
 
-            // Build INVENTORY command
-            uint8_t resp_inv[CMD_INV_RESP] = {0};
-
-            resp_inv[0] = 0; // No error, no protocol format extension
-            resp_inv[1] = 0; // DSFID (data storage format identifier).  0x00 = not supported
-
-            // 64-bit UID
-            resp_inv[2] = uid[7];
-            resp_inv[3] = uid[6];
-            resp_inv[4] = uid[5];
-            resp_inv[5] = uid[4];
-            resp_inv[6] = uid[3];
-            resp_inv[7] = uid[2];
-            resp_inv[8] = uid[1];
-            resp_inv[9] = uid[0];
-
-            // CRC
-            AddCrc15(resp_inv, 10);
-            CodeIso15693AsTag(resp_inv, CMD_INV_RESP);
-
-            tosend_t *ts = get_tosend();
-
-            TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
-            LogTrace_ISO15693(resp_inv, CMD_INV_RESP, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
-
-            chip_state = SELECTED;
+        // Shorten 0 terminated msgs
+        // (Some times received commands are prolonged with a random number of 0 bytes...)
+        while (cmd[cmd_len-1] == 0) {
+            cmd_len--;
+            if (cmd_len <= 3)
+                break;
         }
 
-        // GET_SYSTEM_INFO
-        if ((cmd[1] == ISO15693_GET_SYSTEM_INFO)) {
-            bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
-            uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
-
-            // Build GET_SYSTEM_INFO response
-            uint8_t resp_sysinfo[CMD_SYSINFO_RESP] = {0};
-
-            resp_sysinfo[0] = 0;    // Response flags.
-            resp_sysinfo[1] = 0x0F; // Information flags (0x0F - DSFID, AFI, Mem size, IC)
-
-            // 64-bit UID
-            resp_sysinfo[2] = uid[7];
-            resp_sysinfo[3] = uid[6];
-            resp_sysinfo[4] = uid[5];
-            resp_sysinfo[5] = uid[4];
-            resp_sysinfo[6] = uid[3];
-            resp_sysinfo[7] = uid[2];
-            resp_sysinfo[8] = uid[1];
-            resp_sysinfo[9] = uid[0];
-
-            resp_sysinfo[10] = 0;    // DSFID
-            resp_sysinfo[11] = 0;    // AFI
-
-            resp_sysinfo[12] = 0x1F; // Block count
-            resp_sysinfo[13] = block_size - 1; // Block size.
-            resp_sysinfo[14] = 0x01; // IC reference.
-
-            // CRC
-            AddCrc15(resp_sysinfo, 15);
-            CodeIso15693AsTag(resp_sysinfo, CMD_SYSINFO_RESP);
-
-            tosend_t *ts = get_tosend();
-
-            TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
-            LogTrace_ISO15693(resp_sysinfo, CMD_SYSINFO_RESP, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
+        if (g_dbglevel >= DBG_DEBUG) {
+            Dbprintf("%d bytes read from reader:", cmd_len);
+            Dbhexdump(cmd_len, cmd, false);
         }
 
-        // READ_BLOCK and READ_MULTI_BLOCK
-        if ((cmd[1] == ISO15693_READBLOCK) || (cmd[1] == ISO15693_READ_MULTI_BLOCK)) {
-            bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
-            bool addressed = cmd[0] & ISO15_REQ_ADDRESS;
-            bool option = cmd[0] & ISO15_REQ_OPTION;
-            uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
+        if (cmd_len < 3)
+            continue;
 
-            uint8_t address_offset = 0;
-            if (addressed) {
-                address_offset = 8;
-            }
-
-            uint8_t block_idx = cmd[2 + address_offset];
-            uint8_t block_count = 1;
-            if (cmd[1] == ISO15693_READ_MULTI_BLOCK) {
-                block_count = cmd[3 + address_offset] + 1;
-            }
-
-            // Build READ_(MULTI_)BLOCK response
-            int response_length = 3 + block_size * block_count;
-            int security_offset = 0;
-            if (option) {
-                response_length += block_count;
-                security_offset = 1;
-            }
-            uint8_t resp_readblock[response_length];
-            memset(resp_readblock, 0, response_length);
-
-            resp_readblock[0] = 0;    // Response flags
-            for (int j = 0; j < block_count; j++) {
-                // where to put the data of the current block
-                int work_offset = 1 + j * (block_size + security_offset);
-                if (option) {
-                    resp_readblock[work_offset] = 0;    // Security status
+        // Check CRC and drop received cmd with bad CRC
+        uint16_t crc = CalculateCrc15(cmd, cmd_len - 2);
+        if ((( crc & 0xff ) != cmd[cmd_len - 2]) || (( crc >> 8 ) != cmd[cmd_len - 1])) {
+            crc = CalculateCrc15(cmd, ++cmd_len - 2); // if crc end with 00
+            if ((( crc & 0xff ) != cmd[cmd_len - 2]) || (( crc >> 8 ) != cmd[cmd_len - 1])) {
+                crc = CalculateCrc15(cmd, ++cmd_len - 2); // if crc end with 00 00
+                if ((( crc & 0xff ) != cmd[cmd_len - 2]) || (( crc >> 8 ) != cmd[cmd_len - 1])) {
+                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("CrcFail!, expected CRC=%02X%02X", crc & 0xff, crc >> 8);
+                        continue;
                 }
-                // Block data
-                if (block_size * (block_idx + j + 1) <= CARD_MEMORY_SIZE) {
-                    emlGet(
-                        resp_readblock + (work_offset + security_offset),
-                        block_size * (block_idx + j),
-                        block_size
-                    );
-                } else {
-                    memset(resp_readblock + work_offset + security_offset, 0, block_size);
+                else if (g_dbglevel >= DBG_DEBUG)
+                    Dbprintf("CrcOK");
+            }
+            else if (g_dbglevel >= DBG_DEBUG)
+                Dbprintf("CrcOK");
+        }
+        else if (g_dbglevel >= DBG_DEBUG)
+            Dbprintf("CrcOK");
+
+        cmd_len -= 2; // remove the CRC from the cmd
+        recvLen = 0;
+
+        tag->expectFast = ((cmd[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
+        tag->expectFsk = ((cmd[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
+
+        if (g_dbglevel >= DBG_DEBUG) {
+            if (tag->expectFsk)
+                Dbprintf("ISO15_REQ_SUBCARRIER_TWO support is currently experimental!");
+            if ((cmd[0] & ISO15_REQ_PROTOCOL_EXT) == ISO15_REQ_PROTOCOL_EXT)
+                Dbprintf("ISO15_REQ_PROTOCOL_EXT not supported!");
+            if ((cmd[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION)
+                Dbprintf("ISO15_REQ_OPTION not supported!");
+        }
+
+        if (((cmd[0] & ISO15_REQ_INVENTORY) == ISO15_REQ_INVENTORY) && tag->state != TAG_STATE_SILENCED) {
+            // REQ_INVENTORY flaged requests are interpreted as a INVENTORY no matter
+            // what is the CMD (as observed from various actual tags)
+
+            // TODO: support colision avoidances
+
+            if (g_dbglevel >= DBG_DEBUG) {
+                Dbprintf("Inventory req");
+                if ((cmd[0] & ISO15_REQINV_SLOT1) == ISO15_REQINV_SLOT1)
+                    Dbprintf("ISO15_REQINV_SLOT1/SLOT16 not supported!");
+            }
+
+            cmdCpt = 2;
+
+            // Check AFI
+            if ((cmd[0] & ISO15_REQINV_AFI) == ISO15_REQINV_AFI) {
+                if (cmd[cmdCpt] != tag->afi && cmd[cmdCpt] != 0)
+                    continue; // bad AFI : drop request
+                cmdCpt++;
+            }
+
+            // Check mask
+            if (cmdCpt >= cmd_len)
+                continue; // mask is not present : drop request
+            mask_len = cmd[cmdCpt++];
+
+            maskCpt = 0;
+
+            while (mask_len >= 8 && cmdCpt < (uint8_t)cmd_len && maskCpt < 8) { // Byte comparison
+                if (cmd[cmdCpt++] != tag->uid[maskCpt++]) {
+                    error++; // mask don't match : drop request
+                    break;
+                }
+                mask_len -= 8;
+            }
+
+            if (mask_len > 0 && cmdCpt >= cmd_len)
+                continue; // mask is shorter than declared mask lenght: drop request
+
+            while (mask_len > 0) { // Bit comparison
+                mask_len--;
+                if (((cmd[cmdCpt] >> mask_len) & 1) != ((tag->uid[maskCpt] >> mask_len) & 1)) {
+                    error++; // mask don't match : drop request
+                    break;
                 }
             }
 
-            // CRC
-            AddCrc15(resp_readblock, response_length - 2);
-            CodeIso15693AsTag(resp_readblock, response_length);
+            if (error > 0)
+                continue;
 
-            tosend_t *ts = get_tosend();
+            // No error: Answer
+            recv[0] = ISO15_NOERROR;
+            recv[1] = tag->dsfid;
+            memcpy(&recv[2], tag->uid, 8);
+            recvLen = 10;
+        }
+        else {
+            if ((cmd[0] & ISO15_REQ_SELECT) == ISO15_REQ_SELECT) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Selected Request");
+                if (tag->state != TAG_STATE_SELECTED)
+                    continue; // drop selected request if not selected
+                tag->state = TAG_STATE_READY; // Select flag set if already selected : unselect
+            }
 
-            TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
-            LogTrace_ISO15693(resp_readblock, response_length, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
+            cmdCpt = 2;
+            if ((cmd[0] & ISO15_REQ_ADDRESS) == ISO15_REQ_ADDRESS) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Addressed Request");
+                if (cmd_len < cmdCpt+8)
+                    continue;
+                if (memcmp(&cmd[cmdCpt], tag->uid, 8) != 0)
+                {
+                    if (cmd_len < cmdCpt+9 ||  memcmp(&cmd[cmdCpt+1], tag->uid, 8) != 0)
+                    { // check uid even if manifacturer byte is present
+                        if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address don't match tag uid");
+                        if (cmd[1] == ISO15693_SELECT)
+                            tag->state = TAG_STATE_READY; // we are not anymore the selected TAG
+                        continue; // drop addressed request with other uid
+                    }
+                    cmdCpt++;
+                }
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Address match tag uid");
+                cmdCpt+=8;
+            }
+            else if (tag->state == TAG_STATE_SILENCED)
+            {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Unaddressed request in quiet state: drop");
+                continue; // drop unadressed request in quiet state
+            }
+
+            switch(cmd[1]) {
+            case ISO15693_INVENTORY:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Inventory cmd");
+                recv[0] = ISO15_NOERROR;
+                recv[1] = tag->dsfid;
+                memcpy(&recv[2], tag->uid, 8);
+                recvLen = 10;
+                break;
+            case ISO15693_STAYQUIET:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("StayQuiet cmd");
+                tag->state = TAG_STATE_SILENCED;
+                break;
+            case ISO15693_READBLOCK:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadBlock cmd");
+                pageNum = cmd[cmdCpt++];
+                if (pageNum >= tag->pagesCount)
+                    error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                else {
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                    if ((cmd[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION) { // ask for lock status
+                        recv[1] = tag->locks[pageNum];
+                        recvLen++;
+                }
+                    for (uint8_t i = 0 ; i < tag->bytesPerPage ; i++)
+                        recv[recvLen+i] = tag->data[(pageNum * tag->bytesPerPage) + i];
+                    recvLen += tag->bytesPerPage;
+                }
+                break;
+            case ISO15693_WRITEBLOCK:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteBlock cmd");
+                pageNum = cmd[cmdCpt++];
+                if (pageNum >= tag->pagesCount)
+                    error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                else {
+                    for (uint8_t i = 0 ; i < tag->bytesPerPage ; i++)
+                        tag->data[(pageNum*tag->bytesPerPage) + i] = cmd[i + cmdCpt];
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                }
+                break;
+            case ISO15693_LOCKBLOCK:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockBlock cmd");
+                pageNum = cmd[cmdCpt++];
+                if (pageNum >= tag->pagesCount)
+                    error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                else if (tag->locks[pageNum])
+                    error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
+                else {
+                    tag->locks[pageNum] = 1;
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                }
+                break;
+            case ISO15693_READ_MULTI_BLOCK:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadMultiBlock cmd");
+                pageNum = cmd[cmdCpt++];
+                nbPages = cmd[cmdCpt++];
+                if (pageNum+nbPages >= tag->pagesCount)
+                error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                else {
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                    for (int i = 0 ; i < (nbPages + 1) * tag->bytesPerPage && \
+                             recvLen + 3 < ISO15693_MAX_RESPONSE_LENGTH ; i++) {
+                        if ((i % tag->bytesPerPage) == 0 && (cmd[0] & ISO15_REQ_OPTION))
+                            recv[recvLen++] = tag->locks[pageNum + (i / tag->bytesPerPage)];
+                        recv[recvLen++] = tag->data[(pageNum * tag->bytesPerPage) + i];
+                    }
+                    if (recvLen + 3 > ISO15693_MAX_RESPONSE_LENGTH) // limit response size
+                        recvLen = ISO15693_MAX_RESPONSE_LENGTH - 3; // to avoid overflow
+                }
+                break;
+            case ISO15693_WRITE_AFI:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteAFI cmd");
+                if (tag->afiLock)
+                    error = ISO15_ERROR_BLOCK_LOCKED;
+                else {
+                    tag->afi = cmd[cmdCpt++];
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                }
+                break;
+            case ISO15693_LOCK_AFI:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockAFI cmd");
+                if (tag->afiLock)
+                    error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
+                else {
+                    tag->afiLock = true;
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                }
+                break;
+            case ISO15693_WRITE_DSFID:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("WriteDSFID cmd");
+                if (tag->dsfidLock)
+                    error = ISO15_ERROR_BLOCK_LOCKED;
+                else {
+                    tag->dsfid = cmd[cmdCpt++];
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                }
+                break;
+            case ISO15693_LOCK_DSFID:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("LockDSFID cmd");
+                if (tag->dsfidLock)
+                    error = ISO15_ERROR_BLOCK_LOCKED_ALREADY;
+                else {
+                    tag->dsfidLock = true;
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                }
+                break;
+            case ISO15693_SELECT:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Select cmd");
+                tag->state = TAG_STATE_SELECTED;
+                recv[0] = ISO15_NOERROR;
+                recvLen = 1;
+                break;
+            case ISO15693_RESET_TO_READY:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ResetToReady cmd");
+                tag->state = TAG_STATE_READY;
+                recv[0] = ISO15_NOERROR;
+                recvLen = 1;
+                break;
+            case ISO15693_GET_SYSTEM_INFO:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("GetSystemInfo cmd");
+                recv[0] = ISO15_NOERROR;
+                recv[1] = 0x0f; // sysinfo contain all info
+                memcpy(&recv[2], tag->uid, 8);
+                recv[10] = tag->dsfid;
+                recv[11] = tag->afi;
+                recv[12] = tag->pagesCount - 1;
+                recv[13] = tag->bytesPerPage - 1;
+                recv[14] = tag->ic;
+                recvLen = 15;
+                break;
+            case ISO15693_READ_MULTI_SECSTATUS:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ReadMultiSecStatus cmd");
+                pageNum = cmd[cmdCpt++];
+                nbPages = cmd[cmdCpt++];
+                if (pageNum + nbPages >= tag->pagesCount)
+                    error = ISO15_ERROR_BLOCK_UNAVAILABLE;
+                else {
+                    recv[0] = ISO15_NOERROR;
+                    recvLen = 1;
+                    for (uint8_t i = 0 ; i < nbPages + 1 ; i++)
+                        recv[recvLen++] = tag->locks[pageNum + i];
+                }
+                break;
+            case ISO15693_GET_RANDOM_NUMBER:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("GetRandomNumber cmd");
+                tag->random[0] = (uint8_t)(reader_eof_time) ^ 0xFF; // poor random number
+                tag->random[1] = (uint8_t)(reader_eof_time >> 8) ^ 0xFF;
+                recv[0] = ISO15_NOERROR;
+                recv[1] = tag->random[0]; // poor random number
+                recv[2] = tag->random[1];
+                recvLen = 3;
+                break;
+            case ISO15693_SET_PASSWORD:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("SetPassword cmd");
+                if (cmd_len > cmdCpt+5)
+                    cmdCpt++; // skip manifacturer code
+                if (cmd_len > cmdCpt+4)
+                {
+                    pwdId = cmd[cmdCpt++];
+                    if (pwdId == 4) // Privacy password
+                    {
+                        tag->privacyPasswd[0] = cmd[cmdCpt] ^ tag->random[0];
+                        tag->privacyPasswd[1] = cmd[cmdCpt+1] ^ tag->random[1];
+                        tag->privacyPasswd[2] = cmd[cmdCpt+2] ^ tag->random[0];
+                        tag->privacyPasswd[3] = cmd[cmdCpt+3] ^ tag->random[1];
+                    }
+                }
+                recv[0] = ISO15_NOERROR;
+                recvLen = 1;
+                break;
+            case ISO15693_ENABLE_PRIVACY:
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("EnablePrivacy cmd");
+                // not realy entering privacy mode
+                // just return NOERROR
+                recv[0] = ISO15_NOERROR;
+                recvLen = 1;
+                break;
+            default:
+                if (g_dbglevel >= DBG_DEBUG)
+                    Dbprintf("ISO15693 CMD 0x%2X not supported", cmd[1]);
+
+                error = ISO15_ERROR_CMD_NOT_SUP;
+                break;
+            }
+
+            if (error != 0) { // Error happened
+                recv[0] = ISO15_RES_ERROR;
+                recv[1] = error;
+                recvLen = 2;
+                error = 0;
+                if (g_dbglevel >= DBG_DEBUG)
+                    Dbprintf("ERROR 0x%2X in received request", error);
+            }
         }
 
-        // WRITE_BLOCK and WRITE_MULTI_BLOCK
-        if ((cmd[1] == ISO15693_WRITEBLOCK) || (cmd[1] == ISO15693_WRITE_MULTI_BLOCK)) {
-            bool slow = !(cmd[0] & ISO15_REQ_DATARATE_HIGH);
-            bool addressed = cmd[0] & ISO15_REQ_ADDRESS;
+        if (recvLen > 0) { // We need to answer
+            AddCrc15(recv, recvLen);
+            recvLen += 2;
+            CodeIso15693AsTag(recv, recvLen);
+            tosend_t *ts = get_tosend();
             uint32_t response_time = reader_eof_time + DELAY_ISO15693_VCD_TO_VICC_SIM;
 
-            uint8_t address_offset = 0;
-            if (addressed) {
-                address_offset = 8;
+            if (tag->expectFsk) { // Not suppoted yet
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("%ERROR: FSK answers are not supported yet");
+                //TransmitTo15693ReaderFSK(ts->buf,ts->max, &response_time, 0, !tag->expectFast);
             }
+            else
+                TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, !tag->expectFast);
 
-            uint8_t block_idx = cmd[2 + address_offset];
-            uint8_t block_count = 1;
-            uint8_t multi_offset = 0;
-            if (cmd[1] == ISO15693_WRITE_MULTI_BLOCK) {
-                block_count = cmd[3 + address_offset] + 1;
-                multi_offset = 1;
-            }
-            uint8_t *data = cmd + 3 + address_offset + multi_offset;
-
-            // write data
-            emlSet(data, (block_idx * block_size), (block_count * block_size));
-
-            // Build WRITE_(MULTI_)BLOCK response
-            int response_length = 3;
-            uint8_t resp_writeblock[response_length];
-            memset(resp_writeblock, 0, response_length);
-            resp_writeblock[0] = 0;    // Response flags
-
-            // CRC
-            AddCrc15(resp_writeblock, response_length - 2);
-            CodeIso15693AsTag(resp_writeblock, response_length);
-
-            tosend_t *ts = get_tosend();
-
-            TransmitTo15693Reader(ts->buf, ts->max, &response_time, 0, slow);
-            LogTrace_ISO15693(resp_writeblock, response_length, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
+            LogTrace_ISO15693(recv, recvLen, response_time * 32, (response_time * 32) + (ts->max * 32 * 64), NULL, false);
         }
     }
 

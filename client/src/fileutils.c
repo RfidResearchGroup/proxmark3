@@ -28,6 +28,7 @@
 #include "util.h"
 #include "cmdhficlass.h"  // pagemap
 #include "iclass_cmd.h"
+#include "iso15.h"
 
 #ifdef _WIN32
 #include "scandir.h"
@@ -515,6 +516,33 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             for (size_t i = 0; i < datalen / 8; i++) {
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
                 JsonSaveBufAsHexCompact(root, path, &data[i * 8], 8);
+            }
+            break;
+        }
+        // handles ISO15693 in iso15_tag_t format
+        case jsf15_v4: {
+            JsonSaveStr(root, "FileType", "15693 v4");
+            iso15_tag_t *tag = (iso15_tag_t *)data;
+            JsonSaveBufAsHexCompact(root, "$.Card.uid", tag->uid, 8);
+            JsonSaveBufAsHexCompact(root, "$.Card.dsfid", &tag->dsfid, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.dsfidLock", (uint8_t*)&tag->dsfidLock, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.afi", &tag->afi, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.afiLock", (uint8_t*)&tag->afiLock, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.bytesPerPage", &tag->bytesPerPage, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.pagesCount", &tag->pagesCount, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.IC", &tag->ic, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.locks", tag->locks, tag->pagesCount);
+            JsonSaveBufAsHexCompact(root, "$.Card.random", tag->random, 2);
+            JsonSaveBufAsHexCompact(root, "$.Card.privacyPasswd", tag->privacyPasswd, 4);
+            JsonSaveBufAsHexCompact(root, "$.Card.state", (uint8_t*)&tag->state, 1);
+
+            for (size_t i = 0 ; i < tag->pagesCount ; i++) {
+                if (((i+1) * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE)
+                    break;
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path,
+                                        &tag->data[i * tag->bytesPerPage],
+                                        tag->bytesPerPage);
             }
             break;
         }
@@ -1664,6 +1692,41 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
             JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 8, &len);
             if (load_file_sanity(ctype, 8, i, len) == false) {
+                break;
+            }
+            sptr += len;
+        }
+
+        *datalen = sptr;
+        goto out;
+    }
+
+    if (!strcmp(ctype, "15693 v4")) {
+        iso15_tag_t *tag = (iso15_tag_t *)udata.bytes;
+        JsonLoadBufAsHex(root, "$.Card.UID", tag->uid, 8, datalen);
+        JsonLoadBufAsHex(root, "$.Card.dsfid", &tag->dsfid, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.dsfidLock", (uint8_t*)&tag->dsfidLock, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.afi", &tag->afi, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.afiLock", (uint8_t*)&tag->afiLock, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.bytesPerPage", &tag->bytesPerPage, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.pagesCount", &tag->pagesCount, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.IC", &tag->ic, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.locks", tag->locks, tag->pagesCount, datalen);
+        JsonLoadBufAsHex(root, "$.Card.random", tag->random, 2, datalen);
+        JsonLoadBufAsHex(root, "$.Card.privacyPasswd", tag->privacyPasswd, 4, datalen);
+        JsonLoadBufAsHex(root, "$.Card.state", (uint8_t*)&tag->state, 1, datalen);
+
+        size_t sptr = 0;
+        for (int i = 0; i < tag->pagesCount ; i++) {
+            if (((i+1) * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &tag->data[sptr], tag->bytesPerPage, &len);
+            if (load_file_sanity(ctype, tag->bytesPerPage, i, len) == false) {
                 break;
             }
             sptr += len;
