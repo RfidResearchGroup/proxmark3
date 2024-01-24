@@ -2374,7 +2374,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             bool isok = true;
             uint8_t *base = NULL;
 
-            bool raw_address_mode = (flags & READ_MEM_DOWNLOAD_FLAG_RAW) != 0;
+            bool raw_address_mode = (flags & READ_MEM_DOWNLOAD_FLAG_RAW) == READ_MEM_DOWNLOAD_FLAG_RAW;
             if (!raw_address_mode) {
 
                 base = (uint8_t *) _flash_start;
