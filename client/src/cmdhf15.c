@@ -1306,7 +1306,7 @@ static void print_blocks_15693(uint8_t *data, uint16_t bytes, int blocksize, boo
         // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
         // but the blocks in between are replaced with a single line of "......" if dense_output is enabled
         if (dense_output &&
-                (i > 6) &&
+                (i > 3) &&
                 (i < (blocks - 1)) &&
                 (in_repeated_block == false) &&
                 (memcmp(blk, blk - blocksize, blocksize) == 0) &&
@@ -1363,8 +1363,11 @@ static void print_emltag_15693(iso15_tag_t *tag, bool dense_output) {
 
     print_emltag_info_15693(tag);
 
-    print_blocks_15693(tag->data, (tag->pagesCount * tag->bytesPerPage),
-                       tag->bytesPerPage, dense_output);
+    print_blocks_15693(tag->data
+        , (tag->pagesCount * tag->bytesPerPage)
+        , tag->bytesPerPage
+        , dense_output
+    );
 }
 
 static int CmdHF15EView(const char *Cmd) {
@@ -1733,12 +1736,13 @@ static int CmdHF15Dump(const char *Cmd) {
                   "hf 15 dump -u E011223344556677 -f hf-15-my-dump.bin"
                  );
 
-    void *argtable[6 + 5] = {0};
+    void *argtable[6 + 6] = {0};
     uint8_t arglen = arg_add_default(argtable);
-    argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
-                         argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-                                              argtable[arglen++] = arg_lit0(NULL, "ns", "no save to file"),
-                                                      argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file");
+    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)");
+    argtable[arglen++] = arg_lit0(NULL, "ns", "no save to file");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_lit0("z", "dense", "dense dump output style");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1759,6 +1763,7 @@ static int CmdHF15Dump(const char *Cmd) {
     int blocksize = arg_get_int_def(ctx, 7, 4);
     bool no_save = arg_get_lit(ctx, 8);
     bool verbose = arg_get_lit(ctx, 9);
+    bool dense_output = arg_get_lit(ctx, 10);
     CLIParserFree(ctx);
 
     // sanity checks
@@ -1945,6 +1950,9 @@ static int CmdHF15Dump(const char *Cmd) {
     free(packet);
     DropField();
 
+
+   print_emltag_15693(tag, dense_output);
+
     if (tag->bytesPerPage != blocksize) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, _YELLOW_("%u") " byte block length detected, called with " _YELLOW_("%d"), tag->bytesPerPage, blocksize);
@@ -2122,7 +2130,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", NULL, "<dec>", "first page number (0-255)");
     argtable[arglen++] = arg_int1(NULL, "cnt", "<dec>", "number of pages (1-6)");
-    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
+    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)");
                          argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
@@ -2279,7 +2287,7 @@ static int CmdHF15Readblock(const char *Cmd) {
     void *argtable[6 + 4] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
-    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
+    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)");
                          argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
@@ -2573,8 +2581,8 @@ static int CmdHF15Restore(const char *Cmd) {
 
     void *argtable[6 + 5] = {0};
     uint8_t arglen = arg_add_default(argtable);
-    argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
-                         argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)"),
+    argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file");
+    argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)");
                                               argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, true);
