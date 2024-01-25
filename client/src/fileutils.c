@@ -1688,7 +1688,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
         for (uint32_t i = 0; i < (maxdatalen / 4) ; i++) {
             if (((i + 1) * 4) > ISO15693_TAG_MAX_SIZE) {
-                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%u (%04x) -- exceeded maxdatalen"
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
                               , maxdatalen
                               , maxdatalen
                               , i
