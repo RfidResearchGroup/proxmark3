@@ -2575,8 +2575,7 @@ static int CmdHF15Restore(const char *Cmd) {
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
                          argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)"),
-                                              argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-                                                      argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+                                              argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
@@ -2594,8 +2593,7 @@ static int CmdHF15Restore(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     uint32_t retries = arg_get_u32_def(ctx, 7, 3);
-    int blocksize = arg_get_int_def(ctx, 8, 4);
-    bool verbose = arg_get_lit(ctx, 9);
+    bool verbose = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     // sanity checks
@@ -2607,11 +2605,6 @@ static int CmdHF15Restore(const char *Cmd) {
     if (fnlen == 0) {
         PrintAndLogEx(WARNING, "please provide a filename");
         return PM3_EINVARG;
-    }
-
-    if (blocksize < 4) {
-        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
-        blocksize = 4;
     }
 
     // default fallback to scan for tag.
@@ -2633,8 +2626,6 @@ static int CmdHF15Restore(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Using unaddressed mode");
     }
 
-    PrintAndLogEx(INFO, "Using block size... " _YELLOW_("%d"), blocksize);
-
     // TI needs OPTION
     if (uid[7] == 0xE0 && uid[6] == 0x07) {
         if (verbose) {
@@ -2644,18 +2635,33 @@ static int CmdHF15Restore(const char *Cmd) {
     }
 
     // read dump file
-    uint8_t *dump = NULL;
+    iso15_tag_t *tag = NULL;
     size_t bytes_read = 0;
     // blocksize bytes * 256 blocks.  Should be enough
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (blocksize * 256));
+    int res = pm3_load_dump(filename, (void **)&tag, &bytes_read, sizeof(iso15_tag_t));
     if (res != PM3_SUCCESS) {
         return res;
     }
 
-    if ((bytes_read % blocksize) != 0) {
-        PrintAndLogEx(WARNING, "datalen %zu isn't dividable with blocksize %d", bytes_read, blocksize);
-        free(dump);
-        return PM3_ESOFT;
+        if (bytes_read != sizeof(iso15_tag_t)) {
+        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
+        free(tag);
+        return PM3_EINVARG;
+    }
+    if (bytes_read == 0) {
+        PrintAndLogEx(FAILED, "Memory image empty.");
+        free(tag);
+        return PM3_EINVARG;
+    }
+
+    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+        ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+        (tag->pagesCount == 0) ||
+        (tag->bytesPerPage == 0)) {
+        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
+                      tag->pagesCount, tag->bytesPerPage);
+        free(tag);
+        return PM3_EINVARG;
     }
 
     PrintAndLogEx(INFO, "Restoring data blocks");
@@ -2670,19 +2676,18 @@ static int CmdHF15Restore(const char *Cmd) {
     int retval = PM3_SUCCESS;
     size_t bytes = 0;
     uint16_t i = 0;
-    while (bytes < bytes_read) {
-
-        uint8_t data[blocksize];
+    uint8_t *data = calloc(tag->bytesPerPage, sizeof(uint8_t));
+    uint32_t tried = 0;
+    while (bytes < (tag->pagesCount * tag->bytesPerPage)) {
 
         // copy over the data to the request
-        memcpy(data, dump + bytes, blocksize);
+        memcpy(data, &tag->data[bytes], tag->bytesPerPage);
 
-        uint32_t tried = 0;
         for (tried = 0; tried < retries; tried++) {
 
-            retval = hf_15_write_blk(&pm3flags, flags, uid, fast, i, data, blocksize);
+            retval = hf_15_write_blk(&pm3flags, flags, uid, fast
+                                     , i, data, tag->bytesPerPage);
             if (retval == PM3_SUCCESS) {
-
                 PrintAndLogEx(INPLACE, "blk %3d", i);
 
                 if (i == 0) {
@@ -2700,24 +2705,20 @@ static int CmdHF15Restore(const char *Cmd) {
         }
 
         if (tried >= retries) {
-            free(dump);
+            free(data);
+            free(tag);
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(FAILED, "Too many retries (" _RED_("fail") " )");
             DropField();
             return retval;
         }
 
-        bytes += blocksize;
+        bytes += tag->bytesPerPage;
         i++;
-
-        if (retval == PM3_EOUTOFBOUND) {
-            // we only get this when we reached end of tag memory
-            // break out of while loop
-            break;
-        }
     }
 
-    free(dump);
+    free(data);
+    free(tag);
     DropField();
 
     PrintAndLogEx(NORMAL, "");
@@ -3289,17 +3290,37 @@ static int CmdHF15View(const char *Cmd) {
     bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 2));
     CLIParserFree(ctx);
 
-    // read dump file
-    uint8_t *dump = NULL;
-    size_t bytes_read = CARD_MEMORY_SIZE;
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, CARD_MEMORY_SIZE);
+    iso15_tag_t *tag = NULL;
+    size_t bytes_read = 0;
+    int res = pm3_load_dump(filename, (void **)&tag, &bytes_read, sizeof(iso15_tag_t));
     if (res != PM3_SUCCESS) {
         return res;
     }
 
-    print_blocks_15693(dump, bytes_read, 4, dense_output);
+    if (bytes_read != sizeof(iso15_tag_t)) {
+        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
+        free(tag);
+        return PM3_EINVARG;
+    }
+    if (bytes_read == 0) {
+        PrintAndLogEx(FAILED, "Memory image empty.");
+        free(tag);
+        return PM3_EINVARG;
+    }
 
-    free(dump);
+    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+        ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+        (tag->pagesCount == 0) ||
+        (tag->bytesPerPage == 0)) {
+        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
+                      tag->pagesCount, tag->bytesPerPage);
+        free(tag);
+        return PM3_EINVARG;
+    }
+
+    print_emltag_15693(tag, dense_output);
+
+    free(tag);
     return PM3_SUCCESS;
 }
 
