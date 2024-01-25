@@ -2706,11 +2706,11 @@ OUT:
 void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *key) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
+    LEDsoff();
     clear_trace();
     set_tracing(true);
 
     int retval = PM3_SUCCESS;
-    uint8_t *uid = BigBuf_calloc(10);
 
     uint64_t ui64key = bytes_to_num(key, 6);
     uint8_t data[1] = { NONCE_FAIL };
@@ -2722,7 +2722,7 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     uint32_t cuid = 0;
-    if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+    if (iso14443a_select_card(NULL, NULL, &cuid, true, 0, true) == false) {
         retval = PM3_ESOFT;
         goto OUT;
     }
@@ -2745,13 +2745,15 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
             goto OUT;
         };
 
-        if (g_dbglevel >= DBG_INFO)
+        if (g_dbglevel >= DBG_INFO) {
             Dbprintf("nt: %x, nt encoded: %x", nt, ntenc);
+        }
 
-        if (oldntenc == 0)
+        if (oldntenc == 0) {
             oldntenc = ntenc;
-        else if (ntenc == oldntenc)
+        } else if (ntenc == oldntenc) {
             enc_counter++;
+    }
     }
 
     if (enc_counter) {

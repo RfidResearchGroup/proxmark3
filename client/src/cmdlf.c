@@ -75,7 +75,7 @@ static int CmdHelp(const char *Cmd);
 // if key event, send break loop cmd to Pm3
 int lfsim_wait_check(uint32_t cmd) {
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
 
     for (;;) {
         if (kbd_enter_pressed()) {
@@ -163,7 +163,7 @@ static int CmdLFTune(const char *Cmd) {
         style = STYLE_VALUE;
 
     PrintAndLogEx(INFO, "Measuring LF antenna at " _YELLOW_("%.2f") " kHz", LF_DIV2FREQ(divisor));
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to exit");
 
     uint8_t params[] = {1, 0};
     params[1] = divisor;
