@@ -1290,31 +1290,16 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
     return fptr;
 }
 
-//------------------------------------
-/*
-static int mfu_decrypt_amiibo(uint8_t *encrypted, uint16_t elen, uint8_t *decrypted, uint16_t *dlen) {
-
-    if (elen < NFC3D_AMIIBO_SIZE / 4) {
-        PrintAndLogEx(ERR, "ERR,  data wrong length, got %zu , expected %zu", elen,  (NFC3D_AMIIBO_SIZE / 4));
-        return PM3_ESOFT;
-    }
-
-    nfc3d_amiibo_keys amiibo_keys = {0};
-    if (nfc3d_amiibo_load_keys(&amiibo_keys) == false) {
-        return PM3_ESOFT;
-    }
-
-    if (nfc3d_amiibo_unpack(&amiibo_keys, encrypted, decrypted) == false) {
-        PrintAndLogEx(ERR, "WARNING, Tag signature was NOT valid");
-    }
-
-    *dlen = NFC3D_AMIIBO_SIZE;
-    return PM3_SUCCESS;
-}
 static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
 
+    // read uid
+    iso14a_card_select_t card;
+    if (ul_select(&card) == false) {
+        return PM3_ECARDEXCHANGE;
+    }
+
     int res = PM3_SUCCESS;
-    uint16_t maxbytes = (pages * 4);
+    uint16_t maxbytes = (pages * MFU_BLOCK_SIZE);
 
     *pdata = calloc(maxbytes, sizeof(uint8_t));
     if (*pdata == NULL) {
@@ -1323,8 +1308,14 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
         goto out;
     }
 
+    // UL_EV1/NTAG auth
+    uint8_t keytype = 2; 
+    // generate PWD
+    uint8_t key[4] = {0};
+    num_to_bytes(ul_ev1_pwdgenB(card.uid), 4, key);
+          
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, key, 4);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "Command execute time-out");
@@ -1348,20 +1339,21 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
         buffer_size = maxbytes;
     }
 
-    if (!GetFromDevice(BIG_BUF, *pdata, buffer_size, startindex, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF, *pdata, buffer_size, startindex, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(*pdata);
         res = PM3_ETIMEOUT;
         goto out;
     }
 
-    if (len)
+    if (len) {
         *len = buffer_size;
+    }
 
 out:
     return res;
 }
-*/
+
 /*
 Lego Dimensions,
   Version: 00 04 04 02 01 00 0F 03
@@ -2385,7 +2377,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool dense_output) {
+void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool dense_output) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _CYAN_("MFU dump file information"));
@@ -2700,7 +2692,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         buffer_size = sizeof(data);
     }
 
-    if (!GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
@@ -2813,7 +2805,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     memcpy(dump_file_data.counter_tearing, get_counter_tearing, sizeof(dump_file_data.counter_tearing));
     memcpy(dump_file_data.data, data, pages * 4);
 
-    printMFUdumpEx(&dump_file_data, pages, start_page, dense_output);
+    mfu_print_dump(&dump_file_data, pages, start_page, dense_output);
 
     if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
@@ -3083,8 +3075,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
 
-    // print dump
-    printMFUdumpEx(mem, pages, 0, dense_output);
+    mfu_print_dump(mem, pages, 0, dense_output);
 
     // Swap endianness
     if (swap_endian && has_key) {
@@ -4714,7 +4705,7 @@ static int CmdHF14AMfuEView(const char *Cmd) {
         end = dump->pages ;
     }
 
-    printMFUdumpEx(dump, end, 0, dense_output);
+    mfu_print_dump(dump, end, 0, dense_output);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -4834,7 +4825,7 @@ static int CmdHF14AMfuView(const char *Cmd) {
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
     }
 
-    printMFUdumpEx((mfu_dump_t *)dump, block_cnt, 0, dense_output);
+    mfu_print_dump((mfu_dump_t *)dump, block_cnt, 0, dense_output);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -4843,50 +4834,131 @@ static int CmdHF14AMfuList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf 14a", "14a -c");
 }
 
-
-/*
-static int CmdHF14AMfUCDecryptAmiibo(const char *Cmd){
+static int CmdHF14AAmiibo(const char *Cmd){
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfu decrypt",
+    CLIParserInit(&ctx, "hf mfu amiibo",
                   "Tries to read all memory from amiibo tag and decrypt it",
-                  "hf mfu decrypt"
+                  "hf mfu amiiboo --dec -f hf-mfu-04579DB27C4880-dump.bin  --> decrypt file\n"
+                  "hf mfu amiiboo -v --dec                                 --> decrypt tag"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0(NULL, "dec", "Decrypt memory"),
+        arg_lit0(NULL, "enc", "Encrypt memory"),
+        arg_str0("i", "in", "<fn>", "Specify a filename for input dump file"),
+        arg_str0("o", "out", "<fn>", "Specify a filename for output dump file"),
+        arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool shall_decrypt = arg_get_lit(ctx, 1);
+    bool shall_encrypt = arg_get_lit(ctx, 2);
+
+    int infnlen = 0;
+    char infilename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)infilename, FILE_PATH_SIZE, &infnlen);
+
+    int outfnlen = 0;
+    char outfilename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)outfilename, FILE_PATH_SIZE, &outfnlen);
+
+    bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
-    uint16_t elen = 0, dlen = 0;
-    uint8_t *encrypted = NULL;
+    // sanity checks
+    if ((shall_decrypt + shall_encrypt) > 1) {
+        PrintAndLogEx(WARNING, "Only specify decrypt or encrypt");
+        return PM3_EINVARG;
+    }
 
-    int res = mfu_dump_tag( MAX_NTAG_215, (void **)&encrypted, &elen);
-    if (res == PM3_SUCCESS) {
+    // load keys
+    nfc3d_amiibo_keys_t amiibo_keys;
+    if (nfc3d_amiibo_load_keys(&amiibo_keys) == false) {
+        PrintAndLogEx(INFO, "loading key file ( " _RED_("fail") " )");
+        return PM3_EFILE;
+    }
 
-        PrintAndLogEx(INFO, "32 first bytes of tag dump");
-        PrintAndLogEx(INFO, "%s", sprint_hex(encrypted, 32));
-        PrintAndLogEx(INFO, "-----------------------");
+    int res = PM3_ESOFT;
+
+    uint8_t original[NFC3D_AMIIBO_SIZE] = {0};
+
+    // load dump file if available
+    if (infnlen > 0) {
+        uint8_t *dump = NULL;
+        size_t dumplen = 0; 
+        res = loadFile_safe(infilename, "", (void **)&dump, &dumplen);
+        if (res != PM3_SUCCESS) {
+            free(dump);
+            return PM3_EFILE;
+        }
+
+        if (dumplen < MFU_DUMP_PREFIX_LENGTH) {
+            PrintAndLogEx(ERR, "Error, dump file is too small");
+            free(dump);
+            return PM3_ESOFT;
+        }
+
+        res = convert_mfu_dump_format(&dump, &dumplen, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
+            free(dump);
+            return res;
+        }
+
+        mfu_dump_t *d = (mfu_dump_t *)dump;
+        memcpy(original, d->data, sizeof(original));
+        free(dump);
+    } else {
+        uint16_t dlen = 0;
+        uint8_t *dump = NULL;
+        res = mfu_dump_tag( MAX_NTAG_215, (void **)&dump, &dlen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Failed to dump memory from tag");
+            free(dump);
+            return res;
+        }
+        memcpy(original, dump, sizeof(original));
+        free(dump);
+    }
+
 
         uint8_t decrypted[NFC3D_AMIIBO_SIZE] = {0};
-        res = mfu_decrypt_amiibo(encrypted, elen, decrypted, &dlen);
-        if ( res == PM3_SUCCESS) {
-
-            for (uint8_t i = 0; i < dlen/16; i++ ) {
+    if (shall_decrypt) {
+        if (nfc3d_amiibo_unpack(&amiibo_keys, original, decrypted) == false) {
+            PrintAndLogEx(INFO, "Tag signature ( " _RED_("fail") " )");
+            return PM3_ESOFT;
+        }
+        // print
+        if (verbose) {
+            for (uint8_t i = 0; i < (NFC3D_AMIIBO_SIZE / 16); i++ ) {
                 PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex_ascii(decrypted + (i * 16), 16));
             }
         }
-        free(encrypted);
     }
+
+    if (shall_encrypt) {
+        uint8_t encrypted[NFC3D_AMIIBO_SIZE] = {0};
+        nfc3d_amiibo_pack(&amiibo_keys, decrypted, encrypted);
+        // print
+        if (verbose) {
+            for (uint8_t i = 0; i < (NFC3D_AMIIBO_SIZE / 16); i++ ) {
+                PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex_ascii(encrypted + (i * 16), 16));
+            }
+        }
+    }
+
+    if (outfnlen) {
+        // save dump. Last block contains PACK + RFU
+//        uint16_t datalen = MFU_BLOCK_SIZE + MFU_DUMP_PREFIX_LENGTH;
+//        res = pm3_save_dump(outfilename, (uint8_t *)dump, datalen, jsfMfuMemory);
+    }
+
     return PM3_SUCCESS;
 }
-*/
 
-//------------------------------------
-// Menu Stuff
-//------------------------------------
 static command_t CommandTable[] = {
     {"help",     CmdHelp,                   AlwaysAvailable, "This help"},
     {"list",     CmdHF14AMfuList,           AlwaysAvailable, "List MIFARE Ultralight / NTAG history"},
@@ -4905,16 +4977,16 @@ static command_t CommandTable[] = {
     {"view",     CmdHF14AMfuView,           AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",     CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
     {"tamper",   CmdHF14MfUTamper,          IfPm3Iso14443a,  "Configure the tamper feature on an NTAG 213TT"},
-    {"---------", CmdHelp,                  IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
     {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "Load Ultralight dump file into emulator memory"},
     {"esave",    CmdHF14AMfuESave,          IfPm3Iso14443a,  "Save Ultralight dump file from emulator memory"},
     {"eview",    CmdHF14AMfuEView,          IfPm3Iso14443a,  "View emulator memory"},
     {"sim",      CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate MIFARE Ultralight from emulator memory"},
-    {"---------", CmdHelp,                  IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},
     {"setpwd",   CmdHF14AMfUCSetPwd,        IfPm3Iso14443a,  "Set 3DES key - Ultralight-C"},
     {"setuid",   CmdHF14AMfUCSetUid,        IfPm3Iso14443a,  "Set UID - MAGIC tags only"},
-//    {"---------", CmdHelp,                 IfPm3Iso14443a,  "----------------------- " _CYAN_("amiibo") " ----------------------------"},
-//    {"decrypt",  CmdHF14AMfUCDecryptAmiibo, IfPm3Iso14443a, "Decrypt a amiibo tag"},
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("amiibo") " ----------------------------"},
+    {"amiibo",   CmdHF14AAmiibo,            IfPm3Iso14443a,  "Amiibo tag operations"},
     {NULL, NULL, NULL, NULL}
 };
 

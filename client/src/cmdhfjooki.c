@@ -521,7 +521,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     mfu_dump->counter_tearing[2][3] = 0xBD;
     mfu_dump->pages = 0x2c;
 
-    printMFUdumpEx(mfu_dump, mfu_dump->pages + 1, 0, false);
+    mfu_print_dump(mfu_dump, mfu_dump->pages + 1, 0, false);
 
     // upload to emulator memory
     PrintAndLogEx(INFO, "Uploading to emulator memory");

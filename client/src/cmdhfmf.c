@@ -4514,7 +4514,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
         if (verbose) {
             mfu_dump_t *mfu_dump = (mfu_dump_t *)data;
-            printMFUdumpEx(mfu_dump, mfu_dump->pages + 1, 0, false);
+            mfu_print_dump(mfu_dump, mfu_dump->pages + 1, 0, false);
         }
 
         // update expected blocks to match converted data.
