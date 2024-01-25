@@ -3298,17 +3298,37 @@ static int CmdHF15View(const char *Cmd) {
     bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 2));
     CLIParserFree(ctx);
 
-    // read dump file
-    uint8_t *dump = NULL;
-    size_t bytes_read = CARD_MEMORY_SIZE;
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, CARD_MEMORY_SIZE);
+    iso15_tag_t *tag = NULL;
+    size_t bytes_read = 0;
+    int res = pm3_load_dump(filename, (void **)&tag, &bytes_read, sizeof(iso15_tag_t));
     if (res != PM3_SUCCESS) {
         return res;
     }
 
-    print_blocks_15693(dump, bytes_read, 4, dense_output);
+    if (bytes_read != sizeof(iso15_tag_t)) {
+        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
+        free(tag);
+        return PM3_EINVARG;
+    }
+    if (bytes_read == 0) {
+        PrintAndLogEx(FAILED, "Memory image empty.");
+        free(tag);
+        return PM3_EINVARG;
+    }
 
-    free(dump);
+    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+        ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+        (tag->pagesCount == 0) ||
+        (tag->bytesPerPage == 0)) {
+        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
+                      tag->pagesCount, tag->bytesPerPage);
+        free(tag);
+        return PM3_EINVARG;
+    }
+
+    print_emltag_15693(tag, dense_output);
+
+    free(tag);
     return PM3_SUCCESS;
 }
 
