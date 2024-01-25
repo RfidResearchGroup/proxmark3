@@ -1642,38 +1642,52 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     // depricated
     if (!strcmp(ctype, "15693")) {
-        JsonLoadBufAsHex(root, "$.raw", udata.bytes, maxdatalen, datalen);
-        goto out;
-    }
+        PrintAndLogEx(WARNING, "loadFileJSONex: loading deprecated 15693 format");
+        // will set every metadata to 0 except 1st UID byte to E0 and memory layout
+        iso15_tag_t *tag = (iso15_tag_t *)udata.bytes;
+        tag->uid[7] = 0xE0;
+        tag->bytesPerPage = 4;
+        JsonLoadBufAsHex(root, "$.raw", tag->data
+                         , MIN(maxdatalen, ISO15693_TAG_MAX_SIZE)
+                         , datalen
+                        );
 
-    // handles ISO15693 w blocksize of 4 bytes.
-    if (!strcmp(ctype, "15693 v2")) {
-        size_t sptr = 0;
-        for (int i = 0; i < (maxdatalen / 4); i++) {
-            if (sptr + 4 > maxdatalen) {
-                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
-                retval = PM3_EMALLOC;
-                goto out;
-            }
-
-            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
-            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
-            if (load_file_sanity(ctype, 4, i, len) == false) {
-                break;
-            }
-
-            sptr += len;
+        if (*datalen > ISO15693_TAG_MAX_SIZE) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   sptr=%zu (%04zx) -- exceeded maxdatalen"
+                          , ISO15693_TAG_MAX_SIZE
+                          , ISO15693_TAG_MAX_SIZE
+                          , *datalen
+                          , *datalen
+                         );
+            retval = PM3_EMALLOC;
+            goto out;
         }
-
-        *datalen = sptr;
+        tag->pagesCount = *datalen / 4;
+        if (tag->pagesCount > ISO15693_TAG_MAX_PAGES) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%zu (%04zx)   pagecount=%zu (%04zx) -- exceeded maxpagecount"
+                          , ISO15693_TAG_MAX_PAGES
+                          , ISO15693_TAG_MAX_PAGES
+                          , tag->pagesCount
+                          , tag->pagesCount
+                         );
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+        *datalen = sizeof(iso15_tag_t);
         goto out;
     }
-    // handles ISO15693 w blocksize of 8 bytes.
-    if (!strcmp(ctype, "15693 v3")) {
-        size_t sptr = 0;
-        for (int i = 0; i < (maxdatalen / 8); i++) {
 
-            if (sptr + 8 > maxdatalen) {
+    // depricated: handles ISO15693 w blocksize of 4 bytes.
+    if (!strcmp(ctype, "15693 v2")) {
+        PrintAndLogEx(WARNING, "loadFileJSONex: loading deprecated 15693 v2 format");
+        // will set every metadata to 0 except 1st UID byte to E0 and memory layout
+        iso15_tag_t *tag = (iso15_tag_t *)udata.bytes;
+        tag->uid[7] = 0xE0;
+        tag->bytesPerPage = 4;
+        size_t sptr = 0;
+
+        for (uint8_t i = 0; i < (maxdatalen / 4) ; i++) {
+            if (((i + 1) * 4) > ISO15693_TAG_MAX_SIZE) {
                 PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
                               , maxdatalen
                               , maxdatalen
@@ -1688,14 +1702,73 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             }
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
-            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 8, &len);
-            if (load_file_sanity(ctype, 8, i, len) == false) {
+            JsonLoadBufAsHex(root, blocks, &tag->data[sptr], 4, &len);
+            if (load_file_sanity(ctype, tag->bytesPerPage, i, len) == false) {
                 break;
             }
             sptr += len;
         }
 
-        *datalen = sptr;
+        tag->pagesCount = sptr / 4;
+        if (tag->pagesCount > ISO15693_TAG_MAX_PAGES) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%zu (%04zx)   pagecount=%zu (%04zx) -- exceeded maxpagecount"
+                          , ISO15693_TAG_MAX_PAGES
+                          , ISO15693_TAG_MAX_PAGES
+                          , tag->pagesCount
+                          , tag->pagesCount
+                         );
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
+        *datalen = sizeof(iso15_tag_t);
+        goto out;
+    }
+    // depricated: handles ISO15693 w blocksize of 8 bytes.
+    if (!strcmp(ctype, "15693 v3")) {
+        PrintAndLogEx(WARNING, "loadFileJSONex: loading deprecated 15693 v3 format");
+        // will set every metadata to 0 except 1st UID byte to E0 and memory layout
+        iso15_tag_t *tag = (iso15_tag_t *)udata.bytes;
+        tag->uid[7] = 0xE0;
+        tag->bytesPerPage = 8;
+        size_t sptr = 0;
+
+        for (uint8_t i = 0; i < (maxdatalen / 8) ; i++) {
+            if (((i + 1) * 8) > ISO15693_TAG_MAX_SIZE) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
+                              , maxdatalen
+                              , maxdatalen
+                              , i
+                              , i
+                              , sptr
+                              , sptr
+                             );
+
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &tag->data[sptr], 8, &len);
+            if (load_file_sanity(ctype, tag->bytesPerPage, i, len) == false) {
+                break;
+            }
+            sptr += len;
+        }
+
+        tag->pagesCount = sptr / 8;
+        if (tag->pagesCount > ISO15693_TAG_MAX_PAGES) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%zu (%04zx)   pagecount=%zu (%04zx) -- exceeded maxpagecount"
+                          , ISO15693_TAG_MAX_PAGES
+                          , ISO15693_TAG_MAX_PAGES
+                          , tag->pagesCount
+                          , tag->pagesCount
+                         );
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
+        *datalen = sizeof(iso15_tag_t);
         goto out;
     }
 
@@ -1708,6 +1781,21 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         JsonLoadBufAsHex(root, "$.Card.afilock", (uint8_t *)&tag->afiLock, 1, datalen);
         JsonLoadBufAsHex(root, "$.Card.bytesperpage", &tag->bytesPerPage, 1, datalen);
         JsonLoadBufAsHex(root, "$.Card.pagescount", &tag->pagesCount, 1, datalen);
+
+        if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+            (tag->pagesCount == 0) ||
+            (tag->bytesPerPage == 0)) {
+            PrintAndLogEx(ERR, "loadFileJSONex: pagesCount=%zu (%04zx)    bytesPerPage=%zu (%04zx) -- invalid tag memory layout"
+                          , tag->pagesCount
+                          , tag->pagesCount
+                          , tag->bytesPerPage
+                          , tag->bytesPerPage
+                         );
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
         JsonLoadBufAsHex(root, "$.Card.ic", &tag->ic, 1, datalen);
         JsonLoadBufAsHex(root, "$.Card.locks", tag->locks, tag->pagesCount, datalen);
         JsonLoadBufAsHex(root, "$.Card.random", tag->random, 2, datalen);
