@@ -86,25 +86,25 @@ bool nfc3d_amiibo_unpack(const nfc3d_amiibo_keys_t *amiiboKeys, const uint8_t *t
     nfc3d_amiibo_cipher(&dataKeys, internal, plain);
 
     // Regenerate tag HMAC. Note: order matters, data HMAC depends on tag HMAC!
-    mbedtls_md_hmac( mbedtls_md_info_from_type(MBEDTLS_MD_SHA256)
-            , tagKeys.hmacKey
-            , sizeof(tagKeys.hmacKey)
-            , plain + 0x1D4
-            , 0x34
-            , plain + HMAC_POS_TAG
-        );
+    mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256)
+                    , tagKeys.hmacKey
+                    , sizeof(tagKeys.hmacKey)
+                    , plain + 0x1D4
+                    , 0x34
+                    , plain + HMAC_POS_TAG
+                   );
 
     // Regenerate data HMAC
     mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256)
-            , dataKeys.hmacKey
-            , sizeof(dataKeys.hmacKey)
-            , plain + 0x029
-            , 0x1DF
-            , plain + HMAC_POS_DATA
-        );
+                    , dataKeys.hmacKey
+                    , sizeof(dataKeys.hmacKey)
+                    , plain + 0x029
+                    , 0x1DF
+                    , plain + HMAC_POS_DATA
+                   );
 
     return ((memcmp(plain + HMAC_POS_DATA, internal + HMAC_POS_DATA, 32) == 0) &&
-                (memcmp(plain + HMAC_POS_TAG, internal + HMAC_POS_TAG, 32) == 0));
+            (memcmp(plain + HMAC_POS_TAG, internal + HMAC_POS_TAG, 32) == 0));
 }
 
 void nfc3d_amiibo_pack(const nfc3d_amiibo_keys_t *amiiboKeys, const uint8_t *plain, uint8_t *tag) {
@@ -118,12 +118,12 @@ void nfc3d_amiibo_pack(const nfc3d_amiibo_keys_t *amiiboKeys, const uint8_t *pla
 
     // Generate tag HMAC
     mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256)
-                , tagKeys.hmacKey
-                , sizeof(tagKeys.hmacKey)
-                , plain + 0x1D4
-                , 0x34
-                , cipher + HMAC_POS_TAG
-            );
+                    , tagKeys.hmacKey
+                    , sizeof(tagKeys.hmacKey)
+                    , plain + 0x1D4
+                    , 0x34
+                    , cipher + HMAC_POS_TAG
+                   );
 
     // Init mbedtls HMAC context
     mbedtls_md_context_t ctx;

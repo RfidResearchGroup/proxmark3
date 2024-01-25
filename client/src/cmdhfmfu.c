@@ -1309,11 +1309,11 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
     }
 
     // UL_EV1/NTAG auth
-    uint8_t keytype = 2; 
+    uint8_t keytype = 2;
     // generate PWD
     uint8_t key[4] = {0};
     num_to_bytes(ul_ev1_pwdgenB(card.uid), 4, key);
-          
+
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, key, 4);
     PacketResponseNG resp;
@@ -4834,7 +4834,7 @@ static int CmdHF14AMfuList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf 14a", "14a -c");
 }
 
-static int CmdHF14AAmiibo(const char *Cmd){
+static int CmdHF14AAmiibo(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu amiibo",
@@ -4888,7 +4888,7 @@ static int CmdHF14AAmiibo(const char *Cmd){
     // load dump file if available
     if (infnlen > 0) {
         uint8_t *dump = NULL;
-        size_t dumplen = 0; 
+        size_t dumplen = 0;
         res = loadFile_safe(infilename, "", (void **)&dump, &dumplen);
         if (res != PM3_SUCCESS) {
             free(dump);
@@ -4914,7 +4914,7 @@ static int CmdHF14AAmiibo(const char *Cmd){
     } else {
         uint16_t dlen = 0;
         uint8_t *dump = NULL;
-        res = mfu_dump_tag( MAX_NTAG_215, (void **)&dump, &dlen);
+        res = mfu_dump_tag(MAX_NTAG_215, (void **)&dump, &dlen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Failed to dump memory from tag");
             free(dump);
@@ -4925,7 +4925,7 @@ static int CmdHF14AAmiibo(const char *Cmd){
     }
 
 
-        uint8_t decrypted[NFC3D_AMIIBO_SIZE] = {0};
+    uint8_t decrypted[NFC3D_AMIIBO_SIZE] = {0};
     if (shall_decrypt) {
         if (nfc3d_amiibo_unpack(&amiibo_keys, original, decrypted) == false) {
             PrintAndLogEx(INFO, "Tag signature ( " _RED_("fail") " )");
@@ -4933,7 +4933,7 @@ static int CmdHF14AAmiibo(const char *Cmd){
         }
         // print
         if (verbose) {
-            for (uint8_t i = 0; i < (NFC3D_AMIIBO_SIZE / 16); i++ ) {
+            for (uint8_t i = 0; i < (NFC3D_AMIIBO_SIZE / 16); i++) {
                 PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex_ascii(decrypted + (i * 16), 16));
             }
         }
@@ -4944,7 +4944,7 @@ static int CmdHF14AAmiibo(const char *Cmd){
         nfc3d_amiibo_pack(&amiibo_keys, decrypted, encrypted);
         // print
         if (verbose) {
-            for (uint8_t i = 0; i < (NFC3D_AMIIBO_SIZE / 16); i++ ) {
+            for (uint8_t i = 0; i < (NFC3D_AMIIBO_SIZE / 16); i++) {
                 PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex_ascii(encrypted + (i * 16), 16));
             }
         }

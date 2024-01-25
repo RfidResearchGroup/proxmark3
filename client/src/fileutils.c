@@ -544,10 +544,10 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
 
                 snprintf(path, sizeof(path), "$.blocks.%u", i);
                 JsonSaveBufAsHexCompact(root
-                        , path
-                        , &tag->data[i * tag->bytesPerPage]
-                        , tag->bytesPerPage
-                    );
+                                        , path
+                                        , &tag->data[i * tag->bytesPerPage]
+                                        , tag->bytesPerPage
+                                       );
             }
             break;
         }
@@ -1691,13 +1691,13 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             if (sptr + 8 > maxdatalen) {
                 PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
-                        , maxdatalen
-                        , maxdatalen
-                        , i
-                        , i
-                        , sptr
-                        , sptr
-                    );
+                              , maxdatalen
+                              , maxdatalen
+                              , i
+                              , i
+                              , sptr
+                              , sptr
+                             );
 
                 retval = PM3_EMALLOC;
                 goto out;
@@ -1735,13 +1735,13 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
             if (((i + 1) * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) {
                 PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
-                        , maxdatalen
-                        , maxdatalen
-                        , i
-                        , i
-                        , sptr
-                        , sptr
-                    );
+                              , maxdatalen
+                              , maxdatalen
+                              , i
+                              , i
+                              , sptr
+                              , sptr
+                             );
 
                 retval = PM3_EMALLOC;
                 goto out;

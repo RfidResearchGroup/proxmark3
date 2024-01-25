@@ -602,6 +602,7 @@ Check column "offline" for their availability.
 |`hf mfu sim             `|N       |`Simulate MIFARE Ultralight from emulator memory`
 |`hf mfu setpwd          `|N       |`Set 3DES key - Ultralight-C`
 |`hf mfu setuid          `|N       |`Set UID - MAGIC tags only`
+|`hf mfu amiibo          `|N       |`Amiibo tag operations`
 
 
 ### hf mfdes

@@ -423,6 +423,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mfu sim" },
     { 0, "hf mfu setpwd" },
     { 0, "hf mfu setuid" },
+    { 0, "hf mfu amiibo" },
     { 1, "hf mfdes help" },
     { 0, "hf mfdes info" },
     { 0, "hf mfdes getuid" },

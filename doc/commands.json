@@ -6668,6 +6668,24 @@
             ],
             "usage": "hf mfp wrp [-hv] -a <hex> [-d <hex>]"
         },
+        "hf mfu amiibo": {
+            "command": "hf mfu amiibo",
+            "description": "Tries to read all memory from amiibo tag and decrypt it",
+            "notes": [
+                "hf mfu amiiboo --dec -f hf-mfu-04579DB27C4880-dump.bin -> decrypt file",
+                "hf mfu amiiboo -v --dec -> decrypt tag"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--dec Decrypt memory",
+                "--enc Encrypt memory",
+                "-i, --in <fn> Specify a filename for input dump file",
+                "-o, --out <fn> Specify a filename for output dump file",
+                "-v, --verbose Verbose output"
+            ],
+            "usage": "hf mfu amiibo [-hv] [--dec] [--enc] [-i <fn>] [-o <fn>]"
+        },
         "hf mfu cauth": {
             "command": "hf mfu cauth",
             "description": "Tests 3DES password on Mifare Ultralight-C tag. If password is not specified, a set of known defaults will be tested.",
@@ -12336,8 +12354,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 711,
+        "commands_extracted": 712,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-01-24T17:12:09"
+        "extracted_on": "2024-01-25T00:53:56"
     }
 }

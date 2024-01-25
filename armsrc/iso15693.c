@@ -2139,7 +2139,7 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
     }
 
     if (uid != NULL) {
- 
+
         uint8_t empty[8] = { 0 };
 
         // User supplied not empty?
@@ -2168,9 +2168,9 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
     }
 
     if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
-        ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-        (tag->pagesCount == 0) || 
-        (tag->bytesPerPage == 0)) {
+            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+            (tag->pagesCount == 0) ||
+            (tag->bytesPerPage == 0)) {
         Dbprintf("Tag size error: pagesCount = %d, bytesPerPage=%d", tag->pagesCount, tag->bytesPerPage);
         reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EOPABORTED, NULL, 0);
         return;
@@ -2182,17 +2182,17 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
     if (g_dbglevel >= DBG_DEBUG) {
         Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X,  %u bytes/blocks x %u blocks"
-            , tag->uid[7]
-            , tag->uid[6]
-            , tag->uid[5]
-            , tag->uid[4]
-            , tag->uid[3]
-            , tag->uid[2]
-            , tag->uid[1]
-            , tag->uid[0]
-            , tag->bytesPerPage
-            , tag->pagesCount
-        );
+                 , tag->uid[7]
+                 , tag->uid[6]
+                 , tag->uid[5]
+                 , tag->uid[4]
+                 , tag->uid[3]
+                 , tag->uid[2]
+                 , tag->uid[1]
+                 , tag->uid[0]
+                 , tag->bytesPerPage
+                 , tag->pagesCount
+                );
     }
 
     LED_C_ON();
