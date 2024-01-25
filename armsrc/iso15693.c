@@ -2130,6 +2130,9 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
     // free eventually allocated BigBuf memory
     BigBuf_free_keep_EM();
+    // Init early to be sure FPGA is loaded before any EML operation
+    // usefull when eml memory is empty (UID supplied)
+    Iso15693InitTag(); // to be sure FPGA is loaded before any EML operation 
 
     iso15_tag_t *tag = (iso15_tag_t *) BigBuf_get_EM_addr();
     if (tag == NULL) {
@@ -2175,8 +2178,6 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EOPABORTED, NULL, 0);
         return;
     }
-
-    Iso15693InitTag();
 
     LED_A_ON();
 
