@@ -1015,7 +1015,7 @@ static int CmdIndalaBrute(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Started brute-forcing INDALA Prox reader");
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
     PrintAndLogEx(NORMAL, "");
 
     // main loop

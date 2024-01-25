@@ -1633,8 +1633,9 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
 
-    DbpString("Starting to sniff. Press <PM3 button> to stop");
-
+    if (g_dbglevel >= DBG_ERROR) {
+        DbpString("Press " _GREEN_("pm3 button") " to abort sniffing");
+    }
     BigBuf_free();
     clear_trace();
     set_tracing(true);

@@ -1495,7 +1495,7 @@ static int CmdHF15FindAfi(const char *Cmd) {
     bool fast = (arg_get_lit(ctx, 1) == false);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to exit");
 
     struct p {
         uint32_t flags;

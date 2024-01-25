@@ -313,7 +313,7 @@ int CmdHFTune(const char *Cmd) {
         style = STYLE_VALUE;
 
     PrintAndLogEx(INFO, "Measuring HF antenna");
-    PrintAndLogEx(INFO, "click " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to exit");
     PacketResponseNG resp;
     clearCommandBuffer();
 

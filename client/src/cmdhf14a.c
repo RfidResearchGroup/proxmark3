@@ -877,13 +877,14 @@ int CmdHF14ASniff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a sniff",
                   "Collect data from the field and save into command buffer.\n"
-                  "Buffer accessible from command 'hf 14a list'",
+                  "Buffer accessible from command `hf 14a list`\n",
                   " hf 14a sniff -c -r");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("c", "card", "triggered by first data from card"),
-        arg_lit0("r", "reader", "triggered by first 7-bit request from reader (REQ,WUP,...)"),
+        arg_lit0("r", "reader", "triggered by first 7-bit request from reader (REQ, WUP)"),
+        arg_lit0("i", "interactive", "Console will not be returned until sniff finishes or is aborted"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -898,10 +899,18 @@ int CmdHF14ASniff(const char *Cmd) {
         param |= 0x02;
     }
 
+    bool interactive = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443A_SNIFF, (uint8_t *)&param, sizeof(uint8_t));
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
+    if (interactive) {
+        PacketResponseNG resp;
+        WaitForResponse(CMD_HF_ISO14443A_SNIFF, &resp);
+        PrintAndLogEx(INFO, "Done!");
+    }
     return PM3_SUCCESS;
 }
 

@@ -575,7 +575,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Starting simulating");
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
     for (;;) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);

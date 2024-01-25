@@ -554,7 +554,7 @@ static int CmdDetectReader(const char *Cmd) {
     else if (hf)
         arg = 2;
 
-    PrintAndLogEx(INFO, "press pm3 button to change modes and finally exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to change modes and exit");
     clearCommandBuffer();
     SendCommandNG(CMD_LISTEN_READER_FIELD, (uint8_t *)&arg, sizeof(arg));
     return PM3_SUCCESS;

@@ -556,7 +556,7 @@ static int CmdLegicSim(const char *Cmd) {
     SendCommandNG(CMD_HF_LEGIC_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
     for (;;) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);

@@ -1237,7 +1237,7 @@ int CmdEM4x50Sim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&password, sizeof(password));
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
 
     PacketResponseNG resp;
     // init to ZERO

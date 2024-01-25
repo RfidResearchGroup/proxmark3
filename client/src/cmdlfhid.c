@@ -592,7 +592,7 @@ static int CmdHIDBrute(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Started bruteforcing HID Prox reader");
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
     PrintAndLogEx(NORMAL, "");
     // copy values to low.
     card_low = card_hi;

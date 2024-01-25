@@ -282,7 +282,7 @@ int CmdEM4x70Brute(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to exit");
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_LF_EM4X70_BRUTE, (uint8_t *)&etd, sizeof(etd));
