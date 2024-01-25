@@ -501,24 +501,6 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             break;
         }
-        // handles ISO15693 w blocksize of 4 bytes
-        case jsf15_v2: {
-            JsonSaveStr(root, "FileType", "15693 v2");
-            for (size_t i = 0; i < datalen / 4; i++) {
-                snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &data[i * 4], 4);
-            }
-            break;
-        }
-        // handles ISO15693 w blocksize of 8 bytes
-        case jsf15_v3: {
-            JsonSaveStr(root, "FileType", "15693 v3");
-            for (size_t i = 0; i < datalen / 8; i++) {
-                snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &data[i * 8], 8);
-            }
-            break;
-        }
         // handles ISO15693 in iso15_tag_t format
         case jsf15_v4: {
             JsonSaveStr(root, "FileType", "15693 v4");
@@ -734,6 +716,8 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
         case jsfCardMemory:
         case jsf14b:
         case jsf15:
+        case jsf15_v2:
+        case jsf15_v3:
         case jsfLegic:
         default:
             break;
