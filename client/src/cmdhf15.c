@@ -1432,8 +1432,7 @@ static int CmdHF15Sim(const char *Cmd) {
 
     PacketResponseNG resp;
 
-    // get UID from emulator,  for printing??
-    // iceman:  downloading 2200 bytes just to get a 8 byte UID is overkill
+    // get UID from emulator for printing
     if (uidlen == 0) {
 
         struct {
@@ -1455,7 +1454,7 @@ static int CmdHF15Sim(const char *Cmd) {
             PrintAndLogEx(WARNING, "Failed to get UID from emulator memory");
             return resp.status;
         }
-        PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, resp.data.asBytes));
+        PrintAndLogEx(SUCCESS, "Start simulating UID... " _YELLOW_("%s"), iso15693_sprintUID(NULL, resp.data.asBytes));
     }
 
     PrintAndLogEx(INFO, "Press " _YELLOW_("`pm3-button`") " to abort simulation");
@@ -1850,10 +1849,14 @@ static int CmdHF15Dump(const char *Cmd) {
 
     memcpy(tag->uid, &d[2], 8);
 
-    if (d[1] & 0x01)
+    if (d[1] & 0x01) {
         tag->dsfid = d[dCpt++];
-    if (d[1] & 0x02)
+    }
+
+    if (d[1] & 0x02) {
         tag->afi = d[dCpt++];
+    }
+
     if (d[1] & 0x04) {
         tag->pagesCount = d[dCpt++] + 1;
         tag->bytesPerPage = d[dCpt++] + 1;
@@ -1862,8 +1865,10 @@ static int CmdHF15Dump(const char *Cmd) {
         tag->bytesPerPage = blocksize;
         tag->pagesCount = 128;
     }
-    if (d[1] & 0x08)
+
+    if (d[1] & 0x08) {
         tag->ic = d[dCpt++];
+    }
 
     if (verbose) {
         print_emltag_info_15693(tag);

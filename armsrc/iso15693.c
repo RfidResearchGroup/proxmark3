@@ -2138,11 +2138,14 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         return;
     }
 
-    // new tag (need initialization)
     if (uid != NULL) {
+ 
         uint8_t empty[8] = { 0 };
-        if (memcmp(uid, empty, 8) != 0) {
-            // simulate a new tag bazed on client parameters
+
+        // User supplied not empty?
+        if (memcmp(uid, empty, 8)) {
+            // Set default values if user supplied a UID.
+            // Assume emulator memory is empty
             tag->uid[0] = uid[7]; // always E0
             tag->uid[1] = uid[6]; // IC Manufacturer code
             tag->uid[2] = uid[5];
@@ -2164,20 +2167,33 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
         }
     }
 
-    if (tag->pagesCount > ISO15693_TAG_MAX_PAGES ||                     \
-            tag->pagesCount * tag->bytesPerPage > ISO15693_TAG_MAX_SIZE ||
-            tag->pagesCount == 0 || tag->bytesPerPage == 0) {
+    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+        ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+        (tag->pagesCount == 0) || 
+        (tag->bytesPerPage == 0)) {
         Dbprintf("Tag size error: pagesCount = %d, bytesPerPage=%d", tag->pagesCount, tag->bytesPerPage);
         reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EOPABORTED, NULL, 0);
         return;
     }
 
-    Iso15693InitTag(); // init simulator
+    Iso15693InitTag();
 
     LED_A_ON();
 
-    if (g_dbglevel >= DBG_DEBUG)
-        Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X,  %u bytes/blocks x %u blocks", tag->uid[7], tag->uid[6], tag->uid[5], tag->uid[4], tag->uid[3], tag->uid[2], tag->uid[1], tag->uid[0], tag->bytesPerPage, tag->pagesCount);
+    if (g_dbglevel >= DBG_DEBUG) {
+        Dbprintf("ISO-15963 Simulating uid: %02X%02X%02X%02X%02X%02X%02X%02X,  %u bytes/blocks x %u blocks"
+            , tag->uid[7]
+            , tag->uid[6]
+            , tag->uid[5]
+            , tag->uid[4]
+            , tag->uid[3]
+            , tag->uid[2]
+            , tag->uid[1]
+            , tag->uid[0]
+            , tag->bytesPerPage
+            , tag->pagesCount
+        );
+    }
 
     LED_C_ON();
 
@@ -2578,8 +2594,9 @@ void SimTagIso15693(uint8_t *uid, uint8_t block_size) {
 
     switch_off();
 
-    if (button_pressed)
+    if (button_pressed) {
         DbpString("button pressed");
+    }
 
     reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_SUCCESS, NULL, 0);
 }
