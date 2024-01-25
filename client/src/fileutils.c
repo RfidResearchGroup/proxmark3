@@ -1686,7 +1686,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         tag->bytesPerPage = 4;
         size_t sptr = 0;
 
-        for (uint8_t i = 0; i < (maxdatalen / 4) ; i++) {
+        for (uint32_t i = 0; i < (maxdatalen / 4) ; i++) {
             if (((i + 1) * 4) > ISO15693_TAG_MAX_SIZE) {
                 PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
                               , maxdatalen
@@ -1733,7 +1733,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         tag->bytesPerPage = 8;
         size_t sptr = 0;
 
-        for (uint8_t i = 0; i < (maxdatalen / 8) ; i++) {
+        for (uint32_t i = 0; i < (maxdatalen / 8) ; i++) {
             if (((i + 1) * 8) > ISO15693_TAG_MAX_SIZE) {
                 PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
                               , maxdatalen
