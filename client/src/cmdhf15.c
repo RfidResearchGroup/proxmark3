@@ -1164,21 +1164,31 @@ static int CmdHF15ELoad(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
-    uint8_t *data = NULL;
+    iso15_tag_t *tag = NULL;
     size_t bytes_read = 0;
-    int res = pm3_load_dump(filename, (void **)&data, &bytes_read, CARD_MEMORY_SIZE);
+    int res = pm3_load_dump(filename, (void **)&tag, &bytes_read, sizeof(iso15_tag_t));
     if (res != PM3_SUCCESS) {
         return res;
     }
 
-    if (bytes_read > CARD_MEMORY_SIZE || bytes_read > sizeof(iso15_tag_t)) {
-        PrintAndLogEx(FAILED, "Memory image too large.");
-        free(data);
+    if (bytes_read != sizeof(iso15_tag_t)) {
+        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
+        free(tag);
         return PM3_EINVARG;
     }
     if (bytes_read == 0) {
         PrintAndLogEx(FAILED, "Memory image empty.");
-        free(data);
+        free(tag);
+        return PM3_EINVARG;
+    }
+
+    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+        ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+        (tag->pagesCount == 0) ||
+        (tag->bytesPerPage == 0)) {
+        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
+                      tag->pagesCount, tag->bytesPerPage);
+        free(tag);
         return PM3_EINVARG;
     }
 
@@ -1202,9 +1212,9 @@ static int CmdHF15ELoad(const char *Cmd) {
         }
 
         uint16_t bytestosend = MIN(chuncksize, bytes_read);
-        if (hf15EmlSetMem(data + offset, bytestosend, offset) != PM3_SUCCESS) {
+        if (hf15EmlSetMem((uint8_t*)tag + offset, bytestosend, offset) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Can't set emulator memory at offest: %zu / 0x%zx", offset, offset);
-            free(data);
+            free(tag);
             return PM3_ESOFT;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
@@ -1213,7 +1223,7 @@ static int CmdHF15ELoad(const char *Cmd) {
         offset += bytestosend;
         bytes_read -= bytestosend;
     }
-    free(data);
+    free(tag);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%zu") " bytes to emulator memory", offset);
 
