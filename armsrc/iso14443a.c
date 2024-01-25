@@ -683,7 +683,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     // Set up the demodulator for the reader -> tag commands
     Uart14aInit(receivedCmd, receivedCmdPar);
 
-    if (g_dbglevel >= DBG_ERROR) {
+    if (g_dbglevel >= DBG_INFO) {
         DbpString("Press " _GREEN_("pm3 button") " to abort sniffing");
     }
 

@@ -2375,7 +2375,7 @@ void SniffIso14443b(void) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
-    if (g_dbglevel >= DBG_ERROR) {
+    if (g_dbglevel >= DBG_INFO) {
         DbpString("Press " _GREEN_("pm3 button") " to abort sniffing");
     }
 
