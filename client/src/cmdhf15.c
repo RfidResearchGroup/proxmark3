@@ -1108,7 +1108,7 @@ static int CmdHF15Reader(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (cm) {
-        PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
     readHF15Uid(cm, true);
     return PM3_SUCCESS;
@@ -1470,7 +1470,7 @@ static int CmdHF15Sim(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Start simulating UID... " _YELLOW_("%s"), iso15693_sprintUID(NULL, resp.data.asBytes));
     }
 
-    PrintAndLogEx(INFO, "Press " _YELLOW_("`pm3-button`") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_SIMULATE, (uint8_t *)&payload, sizeof(payload));

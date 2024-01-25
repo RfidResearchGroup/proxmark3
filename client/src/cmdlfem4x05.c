@@ -1698,7 +1698,7 @@ int CmdEM4x05Chk(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
         for (uint32_t c = 0; c < keycount; ++c) {
 
@@ -1955,7 +1955,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
     PrintAndLogEx(INFO, "----------------------------------------------------------------------------\n");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "press " _GREEN_("<Enter>'") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>'") " to exit");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------------\n");
 
