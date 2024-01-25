@@ -1755,7 +1755,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             sptr += len;
         }
 
-        *datalen = sptr;
+        *datalen = sizeof(iso15_tag_t);
         goto out;
     }
 
