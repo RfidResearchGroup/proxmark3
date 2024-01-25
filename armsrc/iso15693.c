@@ -3069,7 +3069,6 @@ static uint32_t disable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, 
     return PM3_SUCCESS;
 }
 
-
 static uint32_t enable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, const uint8_t *password, bool usepwd) {
 
     uint8_t uid[8];
@@ -3312,7 +3311,6 @@ void WriteAFIIso15693(const uint8_t *password, bool use_pwd, uint8_t *uid, bool 
     StartCountSspClk();
     uint32_t start_time = 0, eof_time = 0;
     int res = write_afi_15693(start_time, &eof_time, password, use_pwd, uid, use_uid, afi);
-    //int res = PM3_SUCCESS;
     reply_ng(CMD_HF_ISO15693_WRITE_AFI, res, NULL, 0);
     switch_off();
 }
