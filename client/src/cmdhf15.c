@@ -1660,14 +1660,6 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    // enforcing add_option since we are writing.
-    if (add_option == false) {
-        if (verbose) {
-            PrintAndLogEx(INFO, "Overriding OPTION param since we are writing (ENFORCE)");
-        }
-        add_option = true;
-    }
-
     // request to be sent to device/card
     uint8_t approxlen = 2 + 8 + 1 + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
@@ -1705,7 +1697,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
     AddCrc15(packet->raw,  packet->rawlen);
     packet->rawlen += 2;
 
-    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT);
     if (fast) {
         packet->flags |= ISO15_HIGH_SPEED;
     }
