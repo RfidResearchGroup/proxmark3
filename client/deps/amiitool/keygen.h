@@ -27,7 +27,7 @@ typedef struct {
     const uint8_t aesIV[16];
     const uint8_t hmacKey[16];
 } nfc3d_keygen_derivedkeys_t;
-#pragma pack(0)
+#pragma pack()
 
 void nfc3d_keygen(const nfc3d_keygen_masterkeys_t *baseKeys, const uint8_t *baseSeed, nfc3d_keygen_derivedkeys_t *derivedKeys);
 
