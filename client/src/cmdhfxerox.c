@@ -385,7 +385,7 @@ static int switch_off_field(void) {
     return PM3_SUCCESS;
 }
 
-static int xerox_select_card(iso14b_card_select_t *card) {
+static int xerox_select_card(iso14b_card_select_t *card, bool disconnect) {
 
     if (card == NULL) {
         return PM3_EINVARG;
@@ -395,10 +395,14 @@ static int xerox_select_card(iso14b_card_select_t *card) {
     while (retry--) {
 
         iso14b_raw_cmd_t packet = {
-            .flags = (ISO14B_CONNECT | ISO14B_SELECT_XRX | ISO14B_DISCONNECT),
+            .flags = (ISO14B_CONNECT | ISO14B_SELECT_XRX ),
             .timeout = 0,
             .rawlen = 0,
         };
+
+        if (disconnect) {
+            packet.flags |= ISO14B_DISCONNECT;
+        }
 
         clearCommandBuffer();
         SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)&packet, sizeof(iso14b_raw_cmd_t));
@@ -572,7 +576,7 @@ int read_xerox_uid(bool loop, bool verbose) {
 
     do {
         iso14b_card_select_t card;
-        int status = xerox_select_card(&card);
+        int status = xerox_select_card(&card, true);
 
         if (loop) {
             if (status != PM3_SUCCESS) {
@@ -636,7 +640,7 @@ static int read_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t
     }
 
     // set up the read command
-    packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_XRX | ISO14B_APPEND_CRC | ISO14B_RAW);
+    packet->flags = (ISO14B_CONNECT | ISO14B_APPEND_CRC | ISO14B_RAW);
     packet->raw[packet->rawlen++] = 0x02;
     packet->raw[packet->rawlen++] = ISO14443B_XEROX_READ_BLK;
 
@@ -740,7 +744,7 @@ static int CmdHFXeroxInfo(const char *Cmd) {
     CLIParserFree(ctx);
 
     iso14b_card_select_t card;
-    int status = xerox_select_card(&card);
+    int status = xerox_select_card(&card, false);
     if (status != PM3_SUCCESS) {
         if (verbose) {
             PrintAndLogEx(FAILED, "Fuji/Xerox tag select failed");
@@ -797,7 +801,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
     CLIParserFree(ctx);
 
     iso14b_card_select_t card;
-    int status = xerox_select_card(&card);
+    int status = xerox_select_card(&card, false);
     if (status != PM3_SUCCESS) {
         if (verbose) {
             PrintAndLogEx(FAILED, "Fuji/Xerox tag select failed");
@@ -832,45 +836,46 @@ static int CmdHFXeroxDump(const char *Cmd) {
 
     for (int retry = 0; (retry < 2 && blockno < 0x100); retry++) {
 
-        packet->raw[1]  = (blockno < 12) ? 0x30 : 0x20;    // set command: read ext mem or read mem
+        // set command: read ext mem or read mem
+        packet->raw[1]  = (blockno < 12) ? ISO14443B_XEROX_READ_BLK : ISO14443B_XEROX_EXT_READ_BLK;
         packet->raw[10] = blockno & 0xFF;
 
         PacketResponseNG resp;
         clearCommandBuffer();
         SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
-        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000)) {
-            /*
-            PrintAndLogEx(INFO, "%X %X %X %X %X %I64X %I64X %I64X %X %X %X %c",
-            resp.cmd, resp.length, resp.magic, resp.status, resp.crc, resp.oldarg[0], resp.oldarg[1], resp.oldarg[2],
-            resp.data.asBytes[0], resp.data.asBytes[1], resp.data.asBytes[2], resp.ng ? 't' : 'f');
-            */
-
-            if (resp.length < 7) {
-                PrintAndLogEx(FAILED, "retrying one more time");
-                continue;
-            }
-
-            uint8_t *d = resp.data.asBytes;
-
-            if (check_crc(CRC_14443_B, d, 7) == false) {
-                PrintAndLogEx(FAILED, "retrying one more time, CRC ( " _RED_("fail") " )");
-                continue;
-            }
-
-            if (d[0] != 2) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(FAILED, "Tag returned Error %x %x", d[0], d[1]);
-                break;
-            }
-
-            memcpy(data + (blockno * XEROX_BLOCK_SIZE), resp.data.asBytes + 1, XEROX_BLOCK_SIZE);
-
-            retry = 0;
-            blockno++;
-
-            PrintAndLogEx(NORMAL, "." NOLF);
-            fflush(stdout);
+        if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000) == false) {
+            continue;
         }
+
+        if (resp.status != PM3_SUCCESS) {
+            continue;
+        }
+
+        if (resp.length < 7) {
+            PrintAndLogEx(FAILED, "retrying one more time");
+            continue;
+        }
+
+        uint8_t *d = resp.data.asBytes;
+
+        if (check_crc(CRC_14443_B, d, 7) == false) {
+            PrintAndLogEx(FAILED, "retrying one more time, CRC ( " _RED_("fail") " )");
+            continue;
+        }
+
+        if (d[0] != 0x02) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "Tag returned Error %x %x", d[0], d[1]);
+            break;
+        }
+
+        memcpy(data + (blockno * XEROX_BLOCK_SIZE), resp.data.asBytes + 1, XEROX_BLOCK_SIZE);
+
+        retry = 0;
+        blockno++;
+
+        PrintAndLogEx(NORMAL, "." NOLF);
+        fflush(stdout);
     }
 
     switch_off_field();
