@@ -849,25 +849,47 @@ static int NxpSysInfo(uint8_t *uid) {
 
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("NXP Sysinfo"));
-    PrintAndLogEx(INFO, "  raw... %s", sprint_hex(d, 8));
-    PrintAndLogEx(INFO, "    " _CYAN_("Password protection configuration:"));
-    PrintAndLogEx(INFO, "      * Page L read%s password protected", ((d[2] & 0x01) ? "" : _GREEN_(" not")));
-    PrintAndLogEx(INFO, "      * Page L write%s password protected", ((d[2] & 0x02) ? "" : _GREEN_(" not")));
-    PrintAndLogEx(INFO, "      * Page H read%s password protected", ((d[2] & 0x10) ? "" : _GREEN_(" not")));
-    PrintAndLogEx(INFO, "      * Page H write%s password protected", ((d[2] & 0x20) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "RAW... %s", sprint_hex(d, 8));
+
+    PrintAndLogEx(INFO, "    " _CYAN_("Password protection configuration"));
+
+    PrintAndLogEx(INFO, "      * Page L read.... ( %s )"
+        , (d[2] & 0x01) ?  _RED_("password") : _GREEN_("no password")
+    );
+
+    PrintAndLogEx(INFO, "      * Page L write... ( %s )"
+        , (d[2] & 0x02) ?  _RED_("password") : _GREEN_("no password")
+    );
+
+    PrintAndLogEx(INFO, "      * Page H read.... ( %s )"
+        , (d[2] & 0x10) ?  _RED_("password") : _GREEN_("no password")
+    );
+
+    PrintAndLogEx(INFO, "      * Page H write... ( %s )"
+        , (d[2] & 0x20) ?  _RED_("password") : _GREEN_("no password")
+    );
 
     PrintAndLogEx(INFO, "    " _CYAN_("Lock bits"));
+
     // AFI lock bit
-    PrintAndLogEx(INFO, "      * AFI%s locked", ((d[3] & 0x01) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "      * AFI..... ( %s )"
+        , (d[3] & 0x01) ? _RED_("locked") : _GREEN_("unlocked")
+    );
 
     // EAS lock bit
-    PrintAndLogEx(INFO, "      * EAS%s locked", ((d[3] & 0x02) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "      * EAS..... ( %s )"
+        ,(d[3] & 0x02) ? _RED_("locked") : _GREEN_("unlocked")
+    );
 
     // DSFID lock bit
-    PrintAndLogEx(INFO, "      * DSFID%s locked", ((d[3] & 0x03) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "      * DSFID... ( %s )"
+        , (d[3] & 0x03) ? _RED_("locked") : _GREEN_("unlocked")
+    );
 
     // Password protection pointer address and access conditions lock bit
-    PrintAndLogEx(INFO, "      * Password protection configuration%s locked", ((d[3] & 0x04) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "      * Password protection configuration... ( %s )"
+        , (d[3] & 0x04) ? _RED_("locked") : _GREEN_("unlocked")
+    );
 
     PrintAndLogEx(INFO, "    " _CYAN_("Features"));
     PrintAndLogEx(INFO, "      * User memory password protection%s supported", ((d[4] & 0x01) ? "" : " not"));
