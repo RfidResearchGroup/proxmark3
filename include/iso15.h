@@ -44,7 +44,7 @@ typedef struct {
     uint8_t raw[];      // First byte in raw,  raw[0] is ISO15693 protocol flag byte
 } PACKED iso15_raw_cmd_t;
 
-#define ISO15693_TAG_MAX_PAGES 64 // in page
+#define ISO15693_TAG_MAX_PAGES 160 // in pages  (0xA0)
 #define ISO15693_TAG_MAX_SIZE 2048 // in byte (64 pages of 256 bits)
 
 typedef struct {
