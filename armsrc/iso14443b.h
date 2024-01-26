@@ -44,7 +44,6 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
 int iso14443b_select_card(iso14b_card_select_t *card);
 
 void SimulateIso14443bTag(const uint8_t *pupi);
-void AcquireRawAdcSamplesIso14443b(uint32_t parameter);
 void read_14b_st_block(uint8_t blocknr);
 void SniffIso14443b(void);
 void SendRawCommand14443B(iso14b_raw_cmd_t *p);
