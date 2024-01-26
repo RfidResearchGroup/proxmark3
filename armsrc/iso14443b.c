@@ -1991,10 +1991,10 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
 
     // apply PASSWORD command
 
-    txbuf[0]  = 2;
+    txbuf[0]  = 0x02;
     txbuf[1]  = 0x38;
     // uid from previous command used
-    txbuf[10] = 3;
+    txbuf[10] = 0x03;
     txbuf[11] = 0x4e;
     txbuf[12] = 0x4b;
     txbuf[13] = 0x53;
@@ -2018,7 +2018,7 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
         return PM3_ECRC;
     }
 
-    if (x_atqb[0] != 2 || x_atqb[1] != 0) {
+    if (x_atqb[0] != 0x02 || x_atqb[1] != 0x00) {
         return PM3_EWRONGANSWER;
     }
 
