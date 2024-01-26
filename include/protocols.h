@@ -314,9 +314,12 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443B_PING         0xBA
 #define ISO14443B_PONG         0xAB
 
-#define ISO14443B_XEROX_PWD    0x02
-#define ISO14443B_XEROX_WUP1   0x0D
-#define ISO14443B_XEROX_WUP2   0x5D
+// XEROX Commands
+#define ISO14443B_XEROX_PWD         0x38
+#define ISO14443B_XEROX_WUP1        0x0D
+#define ISO14443B_XEROX_WUP2        0x5D
+#define ISO14443B_XEROX_READ_BLK    0x20
+
 
 // ASK C-ticket
 #define ASK_REQT               0x10
@@ -929,9 +932,6 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // 0x0A = ACK
 // 0x05 = NACK
-
-// XEROX Commands
-#define XEROX_READ_MEM                  0x20
 
 #endif
 // PROTOCOLS_H

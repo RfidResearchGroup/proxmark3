@@ -636,7 +636,7 @@ static int read_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t
     // set up the read command
     packet->flags = (ISO14B_CONNECT | ISO14B_APPEND_CRC | ISO14B_RAW);
     packet->raw[packet->rawlen++] = 0x02;
-    packet->raw[packet->rawlen++] = XEROX_READ_MEM;
+    packet->raw[packet->rawlen++] = ISO14443B_XEROX_READ_BLK;
 
     // uid
     memcpy(packet->raw + packet->rawlen, card->uid, card->uidlen);
