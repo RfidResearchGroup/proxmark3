@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf xerox rdbl` - read block of a Fuji/Xerox tag (@iceman1001)
  - Added a xerox trace file,  thanks @jeroenSteen,  (@iceman1001)
  - Fixed `lf em 4x05 view` - now loads JSON files properl (@iceman1001)
  - Added `hf mf gdmparsecfg` command to decode the GDM/USCUID config block (@nvx)

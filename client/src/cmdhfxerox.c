@@ -757,8 +757,8 @@ static int CmdHFXeroxInfo(const char *Cmd) {
     // special blocks to read.
     for (int i = 0; i < sizeof(i); i++) {
 
-        int res = read_xerox_block(&card, info_blocks[i], data + (i * XEROX_BLOCK_SIZE));
-        if (res != PM3_SUCCESS) {
+        status = read_xerox_block(&card, info_blocks[i], data + (i * XEROX_BLOCK_SIZE));
+        if (status != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Fuji/Xerox tag read failed");
             break;
         }
@@ -766,7 +766,7 @@ static int CmdHFXeroxInfo(const char *Cmd) {
 
     switch_off_field();
     xerox_print_info(data);
-    return PM3_SUCCESS;
+    return status;
 }
 
 static int CmdHFXeroxDump(const char *Cmd) {
@@ -979,6 +979,40 @@ static int CmdHFXeroxList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf 14b", "14b -c");
 }
 
+static int CmdHFXeroxRdBl(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf xerox rdbl",
+                  "Read a Fuji/Xerox tag block\n",
+                  "hf xerox rdbl -b 1"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b", "blk", "<dec>", "page number (0-255)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int blockno = arg_get_int_def(ctx, 1, 0);
+    CLIParserFree(ctx);
+
+    iso14b_card_select_t card;
+    int status = xerox_select_card(&card, false);
+    if (status != PM3_SUCCESS) {
+        switch_off_field();
+        return status;
+    }
+
+    uint8_t block[XEROX_BLOCK_SIZE] = {0};
+    status = read_xerox_block(&card, (uint8_t)blockno, block);
+    switch_off_field();
+
+    if (status == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "%i | %s", blockno, sprint_hex_ascii(block, sizeof(block)));
+    } else {
+        PrintAndLogEx(FAILED, "Fuji/Xerox tag read failed");
+    }
+    return status;
+}
+
 static command_t CommandTable[] = {
     {"help",      CmdHelp,           AlwaysAvailable, "This help"},
     {"list",      CmdHFXeroxList,    AlwaysAvailable, "List ISO-14443B history"},
@@ -987,7 +1021,7 @@ static command_t CommandTable[] = {
     {"dump",      CmdHFXeroxDump,    IfPm3Iso14443b,  "Read all memory pages of an Fuji/Xerox tag, save to file"},
     {"reader",    CmdHFXeroxReader,  IfPm3Iso14443b,  "Act like a Fuji/Xerox reader"},
     {"view",      CmdHFXeroxView,    AlwaysAvailable, "Display content from tag dump file"},
-//    {"rdbl",    CmdHFXeroxRdBl,  IfPm3Iso14443b,  "Read Fuji/Xerox block"},
+    {"rdbl",      CmdHFXeroxRdBl,    IfPm3Iso14443b,  "Read Fuji/Xerox block"},
 //    {"wrbl",    CmdHFXeroxWrBl,  IfPm3Iso14443b,  "Write Fuji/Xerox block"},
     {NULL, NULL, NULL, NULL}
 };
