@@ -1394,7 +1394,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
             *eof_time = GetCountSspClkDelta(dma_start_time) - DELAY_TAG_TO_ARM;  // end of EOF
 
             if (Demod.len > Demod.max_len) {
-                ret = PM3_EOVFLOW; // overflow
+                ret = PM3_EOVFLOW;
             }
             break;
         }
@@ -1410,13 +1410,15 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
         return ret;
     }
 
-    if (Demod.len > 0) {
-        uint32_t sof_time = *eof_time - HF14_ETU_TO_SSP(
-                                (Demod.len * (8 + 2)) // time for byte transfers
-                                + (10 + 2)  // time for SOF transfer
-                                + (10)                // time for EOF transfer
-                            )
-                            ;
+    if (Demod.len) {
+
+        // 3 * 10  + 20 + 10 == 60,    60 << 5  = 1920
+
+        // We are counting backwards here from EOF
+        // tranfers time (in ETU) for
+        //                         bytes            SOF      EOF
+        uint32_t deduct = (Demod.len * (8 + 2)) + (10 + 2) + 10;
+        uint32_t sof_time = *eof_time - HF14_ETU_TO_SSP(deduct);
         LogTrace(Demod.output, Demod.len, sof_time, *eof_time, NULL, false);
     }
 
@@ -1878,34 +1880,34 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
     uint32_t start_time = 0;
     uint32_t eof_time = 0;
 
-    iso14b_set_timeout(24); // wait for carrier
+    // wait for carrier
+    iso14b_set_timeout(24);
 
     // wup1
-    CodeAndTransmit14443bAsReader(x_wup1, sizeof(x_wup1), &start_time, &eof_time, false);
+    CodeAndTransmit14443bAsReader(x_wup1, sizeof(x_wup1), &start_time, &eof_time, true);
 
-    start_time = eof_time + US_TO_SSP(9000);    // 9ms before next cmd
+    start_time = eof_time + US_TO_SSP(9000);    // 9ms before next cmd ( 30510 )
 
     // wup2
-    CodeAndTransmit14443bAsReader(x_wup2, sizeof(x_wup2), &start_time, &eof_time, false);
+    CodeAndTransmit14443bAsReader(x_wup2, sizeof(x_wup2), &start_time, &eof_time, true);
 
     uint64_t uid = 0;
     uint16_t retlen = 0;
 
-    for (int uid_pos = 0; uid_pos < 64; uid_pos += 2) {
-        int slot;
+    for (uint8_t uid_pos = 0; uid_pos < 64; uid_pos += 2) {
 
+        uint8_t slot;
         for (slot = 0; slot < 4; slot++) {
-            start_time = eof_time + HF14_ETU_TO_SSP(30); //(24); // next slot after 24 ETU
 
-            if (Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
-                if (retlen > 0) {
-                    Dbprintf("unexpected data %d", retlen);
-                }
+            // next slot after 24 ETU  (786)
+            start_time = eof_time + HF14_ETU_TO_SSP(30);
+            Get14443bAnswerFromTag(x_atqb, sizeof(x_atqb), s_iso14b_timeout, &eof_time, &retlen);
+            if (retlen > 0) {
+                Dbprintf("unexpected data %d", retlen);
                 return PM3_ECARDEXCHANGE;
             }
 
             // tx unframed slot-marker
-
             if (Demod.posCount) {   // no rx, but subcarrier burst detected
                 uid |= (uint64_t)slot << uid_pos;
 
