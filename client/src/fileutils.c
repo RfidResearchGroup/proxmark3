@@ -1370,7 +1370,7 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
 static int load_file_sanity(char *s, uint32_t datalen, int i, size_t len) {
     if (len == 0) {
         PrintAndLogEx(DEBUG, "WARNING: json %s block %d has zero-length data", s, i);
-        PrintAndLogEx(INFO, "File parsing stopped");
+        PrintAndLogEx(DEBUG, "File parsing stopped");
         return false;
     } else if (len != datalen) {
         PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %zu bytes", s, i, len);
@@ -1391,7 +1391,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".json", false);
-    if (res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS) {        
         return PM3_EFILE;
     }
 
@@ -1618,7 +1618,49 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         *datalen = sptr;
         goto out;
     }
+   
+    if (!strcmp(ctype, "EM4205/EM4305")) {
+        size_t sptr = 0;
+        for (int i = 0; i < (maxdatalen / 4); i++) {
+            if (sptr + 4 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
+                retval = PM3_EMALLOC;
+                goto out;
+            }
 
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
+            if (load_file_sanity(ctype, 4, i, len) == false) {
+                break;
+            }
+
+            sptr += len;
+        }
+        *datalen = sptr;
+        goto out;
+    }
+    
+    if (!strcmp(ctype, "EM4469/EM4569")) {
+        size_t sptr = 0;
+        for (int i = 0; i < (maxdatalen / 4); i++) {
+            if (sptr + 4 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
+            if (load_file_sanity(ctype, 4, i, len) == false) {
+                break;
+            }
+
+            sptr += len;
+        }
+        *datalen = sptr;
+        goto out;
+    }
+    
     if (!strcmp(ctype, "EM4X50")) {
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {
@@ -2914,16 +2956,10 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
     switch (dftype) {
         case BIN: {
             res = loadFile_safe(fn, ".bin", pdump, dumplen);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "File IO failed");
-            }
             break;
         }
         case EML: {
             res = loadFileEML_safe(fn, pdump, dumplen);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "File IO failed");
-            }
             break;
         }
         case JSON: {
