@@ -1517,8 +1517,8 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len, bool framing) {
     int i;
     tosend_reset();
 
-    // add framing enable flag. xerox chips use unframed commands during anticollision
-
+    // add framing enable flag. 
+    // xerox chips use unframed commands during anticollision
     if (framing) {
         // Send SOF
         // 10-11 ETUs of ZERO
@@ -1881,12 +1881,12 @@ static int iso14443b_select_xrx_card(iso14b_card_select_t *card) {
     iso14b_set_timeout(24); // wait for carrier
 
     // wup1
-    CodeAndTransmit14443bAsReader(x_wup1, sizeof(x_wup1), &start_time, &eof_time, true);
+    CodeAndTransmit14443bAsReader(x_wup1, sizeof(x_wup1), &start_time, &eof_time, false);
 
     start_time = eof_time + US_TO_SSP(9000);    // 9ms before next cmd
 
     // wup2
-    CodeAndTransmit14443bAsReader(x_wup2, sizeof(x_wup2), &start_time, &eof_time, true);
+    CodeAndTransmit14443bAsReader(x_wup2, sizeof(x_wup2), &start_time, &eof_time, false);
 
     uint64_t uid = 0;
     uint16_t retlen = 0;
