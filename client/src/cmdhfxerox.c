@@ -752,10 +752,10 @@ static int CmdHFXeroxInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, " UID..... %s", sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, " ATQB.... %s", sprint_hex(card.atqb, sizeof(card.atqb)));
 
-    uint8_t data[sizeof(info_blocks) * XEROX_BLOCK_SIZE] = {0};
+    uint8_t data[ARRAYLEN(info_blocks) * XEROX_BLOCK_SIZE] = {0};
 
     // special blocks to read.
-    for (int i = 0; i < sizeof(i); i++) {
+    for (int i = 0; i < ARRAYLEN(info_blocks); i++) {
 
         status = read_xerox_block(&card, info_blocks[i], data + (i * XEROX_BLOCK_SIZE));
         if (status != PM3_SUCCESS) {
@@ -960,13 +960,12 @@ static int CmdHFXeroxView(const char *Cmd) {
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, blockno, blockno);
     }
 
-    // 5 different blocks is used
-    uint8_t tmp[5 * XEROX_BLOCK_SIZE] = {0};
+    uint8_t tmp[ARRAYLEN(info_blocks) * XEROX_BLOCK_SIZE] = {0};
     for (uint8_t i = 0; i < ARRAYLEN(info_blocks); i++) {
         memcpy(tmp + (i * XEROX_BLOCK_SIZE), dump + (info_blocks[i] * XEROX_BLOCK_SIZE), XEROX_BLOCK_SIZE);
     }
-    xerox_print_info(tmp);
 
+    xerox_print_info(tmp);
     xerox_print_hdr();
     xerox_print(dump, bytes_read, dense_output);
     xerox_print_footer();
