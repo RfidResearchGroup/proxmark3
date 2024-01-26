@@ -952,19 +952,24 @@ static int CmdHF15Info(const char *Cmd) {
     packet->raw[packet->rawlen++] = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
     packet->raw[packet->rawlen++] = ISO15693_GET_SYSTEM_INFO;
 
-    if (scan) {
-        if (getUID(true, false, uid) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "no tag found");
-            free(packet);
-            return PM3_EINVARG;
+    if (unaddressed == false) {
+        if (scan) {
+            PrintAndLogEx(INFO, "Using scan mode");
+            if (getUID(false, false, uid) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "no tag found");
+                free(packet);
+                return PM3_EINVARG;
+            }
+            uidlen = HF15_UID_LENGTH;
         }
-        uidlen = HF15_UID_LENGTH;
-    }
 
-    if (uidlen == HF15_UID_LENGTH) {
-        // add UID (scan, uid)
-        memcpy(packet->raw + packet->rawlen, uid, uidlen);
-        packet->rawlen += uidlen;
+        if (uidlen == HF15_UID_LENGTH) {
+            // add UID (scan, uid)
+            memcpy(packet->raw + packet->rawlen, uid, uidlen);
+            packet->rawlen += uidlen;
+        }
+    } else {
+        PrintAndLogEx(INFO, "Using unaddressed mode");
     }
 
     AddCrc15(packet->raw,  packet->rawlen);
@@ -998,36 +1003,36 @@ static int CmdHF15Info(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(SUCCESS, "TYPE...... " _YELLOW_("%s"), getTagInfo_15(d + 2));
     PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
+    PrintAndLogEx(SUCCESS, "TYPE...... " _YELLOW_("%s"), getTagInfo_15(d + 2));
     PrintAndLogEx(SUCCESS, "SYSINFO... %s", sprint_hex(d, resp.length - 2));
 
     // DSFID
     if (d[1] & 0x01)
-        PrintAndLogEx(SUCCESS, "   - DSFID supported        [0x%02X]", d[10]);
+        PrintAndLogEx(SUCCESS, "   - DSFID.......... 0x%02X", d[10]);
     else
         PrintAndLogEx(SUCCESS, "   - DSFID not supported");
 
     // AFI
     if (d[1] & 0x02)
-        PrintAndLogEx(SUCCESS, "   - AFI   supported        [0x%02X]", d[11]);
+        PrintAndLogEx(SUCCESS, "   - AFI............ 0x%02X", d[11]);
     else
-        PrintAndLogEx(SUCCESS, "   - AFI   not supported");
+        PrintAndLogEx(SUCCESS, "   - AFI not supported");
 
     // IC reference
     if (d[1] & 0x08)
-        PrintAndLogEx(SUCCESS, "   - IC reference supported [0x%02X]", d[14]);
+        PrintAndLogEx(SUCCESS, "   - IC reference... 0x%02X", d[14]);
     else
         PrintAndLogEx(SUCCESS, "   - IC reference not supported");
 
     // memory
     if (d[1] & 0x04) {
-        PrintAndLogEx(SUCCESS, "   - Tag provides info on memory layout (vendor dependent)");
+        PrintAndLogEx(SUCCESS, "   - Tag memory layout (vendor dependent)");
         uint8_t blocks = d[12] + 1;
         uint8_t size = (d[13] & 0x1F);
-        PrintAndLogEx(SUCCESS, "        %u (or %u) bytes/blocks x %u blocks", size + 1, size, blocks);
+        PrintAndLogEx(SUCCESS, "        " _YELLOW_("%u") " ( or " _YELLOW_("%u") " ) bytes/blocks x " _YELLOW_("%u") " blocks", size + 1, size, blocks);
     } else {
-        PrintAndLogEx(SUCCESS, "   - Tag does not provide information on memory layout");
+        PrintAndLogEx(SUCCESS, "   - N/A");
     }
 
     // Check if SLIX2 and attempt to get NXP System Information
@@ -1325,34 +1330,16 @@ static void print_blocks_15693(iso15_tag_t *tag, bool dense_output) {
 }
 
 static void print_tag_15693(iso15_tag_t *tag, bool dense_output, bool verbose) {
-
-/*
-
-[=] --- Tag Information ------------------------
-[+] UID... E0 16 78 01 10 20 67 E1
-[+] TYPE.. EM-Marin SA (Skidata); EM4425 Echo V (du
-[+]   - DSFID.......... 0x00
-[+]   - AFI............ 0x00
-[+]   - IC reference... 0x1E
-[+]   - Tag memory layout
-[+]        8 bytes/blocks x 98 blocks
-
-[=] ----------- Tag Memory ---------------
-
-[=] -----+-------------------------+---+----------
-*/
-
-
     if (verbose) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " --%.*s", (tag->bytesPerPage * 3), dashes);
         PrintAndLogEx(SUCCESS, "UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, tag->uid));
         PrintAndLogEx(SUCCESS, "TYPE.. " _YELLOW_("%s"), getTagInfo_15(tag->uid));
-        PrintAndLogEx(SUCCESS, "  - DSFID.......... 0x%02X", tag->dsfid);
-        PrintAndLogEx(SUCCESS, "  - AFI............ 0x%02X", tag->afi);
-        PrintAndLogEx(SUCCESS, "  - IC reference... 0x%02X", tag->ic);
-        PrintAndLogEx(SUCCESS, "  - Tag memory layout");
-        PrintAndLogEx(SUCCESS, "       " _YELLOW_("%u") " bytes/blocks x " _YELLOW_("%u") " blocks", tag->bytesPerPage, tag->pagesCount);
+        PrintAndLogEx(SUCCESS, "   - DSFID.......... 0x%02X", tag->dsfid);
+        PrintAndLogEx(SUCCESS, "   - AFI............ 0x%02X", tag->afi);
+        PrintAndLogEx(SUCCESS, "   - IC reference... 0x%02X", tag->ic);
+        PrintAndLogEx(SUCCESS, "   - Tag memory layout (vendor dependent)");
+        PrintAndLogEx(SUCCESS, "        " _YELLOW_("%u") " bytes/blocks x " _YELLOW_("%u") " blocks", tag->bytesPerPage, tag->pagesCount);
     }
 
     PrintAndLogEx(NORMAL, "");
