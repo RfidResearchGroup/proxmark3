@@ -8447,7 +8447,7 @@ static int CmdHF14AGen4ChangePwd(const char *Cmd) {
 static void parse_gdm_cfg(const uint8_t *d) {
     PrintAndLogEx(SUCCESS, "Config... " _YELLOW_("%s"), sprint_hex(d, MFBLOCK_SIZE));
     PrintAndLogEx(SUCCESS, "          " _YELLOW_("%02X %02X") " .......................................... %s %s", d[0], d[1], (d[0] == 0x85 && d[1] == 0x00) ? "Magic wakeup disabled" : _GREEN_("Magic wakeup enabled"), (d[0] == 0x85 && d[1] == 0x00) ? "" : ((d[0] == 0x7A && d[1] == 0xFF) ? _GREEN_("with GDM config block access") : _RED_("without GDM config block access")));
-    PrintAndLogEx(SUCCESS, "                " _YELLOW_("%02X") " ....................................... Magic wakeup style %s", d[2], ((d[2] == 0x85) ? "GDM 20(7)/23": "Gen1a 40(7)/43"));
+    PrintAndLogEx(SUCCESS, "                " _YELLOW_("%02X") " ....................................... Magic wakeup style %s", d[2], ((d[2] == 0x85) ? "GDM 20(7)/23" : "Gen1a 40(7)/43"));
     PrintAndLogEx(SUCCESS, "                   " _YELLOW_("%02X %02X %02X") " .............................. Unknown", d[3], d[4], d[5]);
     PrintAndLogEx(SUCCESS, "                            " _YELLOW_("%02X") " ........................... %s", d[6], (d[6] == 0x5A) ? "Key B use blocked when readable by ACL" : "Key B use allowed when readable by ACL");
     PrintAndLogEx(SUCCESS, "                               " _YELLOW_("%02X") " ........................ %s", d[7], (d[7] == 0x5A) ? _GREEN_("Block 0 Direct Write Enabled (CUID)") : "Block 0 Direct Write Disabled (CUID)");

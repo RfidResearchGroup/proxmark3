@@ -448,7 +448,7 @@ int detectGProxII(uint8_t *bits, size_t *size) {
         return (int) startIdx;
     }
 
-     // spacer bits not found - not a valid gproxII
+    // spacer bits not found - not a valid gproxII
     return -5;
 }
 

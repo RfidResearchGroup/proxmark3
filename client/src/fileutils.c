@@ -795,14 +795,14 @@ int saveFileWAVE(const char *preferredName, const int *data, size_t datalen) {
         .type = "WAVE",
         .format.tag = "fmt ",
         .format.size = sizeof(wave_info.format) - sizeof(wave_info.format.tag) - sizeof(wave_info.format.size),
-        .format.codec = 1, // PCM
-        .format.nb_channel = 1,
-        .format.sample_per_sec = 125000,  // TODO update for other tag types
-        .format.byte_per_sec = 125000,    // TODO update for other tag types
-        .format.block_align = 1,
-        .format.bit_per_sample = 8,
-        .audio_data.tag = "data",
-        .audio_data.size = datalen,
+               .format.codec = 1, // PCM
+               .format.nb_channel = 1,
+               .format.sample_per_sec = 125000,  // TODO update for other tag types
+               .format.byte_per_sec = 125000,    // TODO update for other tag types
+               .format.block_align = 1,
+               .format.bit_per_sample = 8,
+               .audio_data.tag = "data",
+               .audio_data.size = datalen,
     };
 
     FILE *wave_file = fopen(fileName, "wb");
@@ -1783,9 +1783,9 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         JsonLoadBufAsHex(root, "$.Card.pagescount", &tag->pagesCount, 1, datalen);
 
         if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
-            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-            (tag->pagesCount == 0) ||
-            (tag->bytesPerPage == 0)) {
+                ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+                (tag->pagesCount == 0) ||
+                (tag->bytesPerPage == 0)) {
             PrintAndLogEx(ERR, "loadFileJSONex: pagesCount=%u (%04x)    bytesPerPage=%u (%04x) -- invalid tag memory layout"
                           , tag->pagesCount
                           , tag->pagesCount
