@@ -1367,7 +1367,7 @@
         },
         "hf 14a sniff": {
             "command": "hf 14a sniff",
-            "description": "Collect data from the field and save into command buffer. Buffer accessible from command 'hf 14a list'",
+            "description": "Collect data from the field and save into command buffer. Buffer accessible from command `hf 14a list`",
             "notes": [
                 "hf 14a sniff -c -r"
             ],
@@ -1375,9 +1375,10 @@
             "options": [
                 "-h, --help This help",
                 "-c, --card triggered by first data from card",
-                "-r, --reader triggered by first 7-bit request from reader (REQ,WUP,...)"
+                "-r, --reader triggered by first 7-bit request from reader (REQ, WUP)",
+                "-i, --interactive Console will not be returned until sniff finishes or is aborted"
             ],
-            "usage": "hf 14a sniff [-hcr]"
+            "usage": "hf 14a sniff [-hcri]"
         },
         "hf 14b apdu": {
             "command": "hf 14b apdu",
@@ -1641,9 +1642,10 @@
                 "-f, --file <fn> Specify a filename for dump file",
                 "--bs <dec> block size (def 4)",
                 "--ns no save to file",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "-z, --dense dense dump output style"
             ],
-            "usage": "hf 15 dump [-h*2ov] [-u <hex>] [--ua] [-f <fn>] [--bs <dec>] [--ns]"
+            "usage": "hf 15 dump [-h*2ovz] [-u <hex>] [--ua] [-f <fn>] [--bs <dec>] [--ns]"
         },
         "hf 15 eload": {
             "command": "hf 15 eload",
@@ -1861,10 +1863,9 @@
                 "-o, --opt set OPTION Flag (needed for TI)",
                 "-f, --file <fn> Specify a filename for dump file",
                 "-r, --retry <dec> number of retries (def 3)",
-                "--bs <dec> block size (def 4)",
                 "-v, --verbose verbose output"
             ],
-            "usage": "hf 15 restore [-h*2ov] [-u <hex>] [--ua] [-f <fn>] [-r <dec>] [--bs <dec>]"
+            "usage": "hf 15 restore [-h*2ov] [-u <hex>] [--ua] [-f <fn>] [-r <dec>]"
         },
         "hf 15 samples": {
             "command": "hf 15 samples",
@@ -4573,9 +4574,24 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, --key <hex> key 6 bytes"
+                "-k, --key <hex> key 6 bytes (only for regular wakeup)",
+                "--gen1a use gen1a (40/43) magic wakeup",
+                "--gdm use gdm alt (20/23) magic wakeup"
             ],
-            "usage": "hf mf gdmcfg [-h] [-k <hex>]"
+            "usage": "hf mf gdmcfg [-h] [-k <hex>] [--gen1a] [--gdm]"
+        },
+        "hf mf gdmparsecfg": {
+            "command": "hf mf gdmparsecfg",
+            "description": "Parse configuration data on a magic gen4 GDM card",
+            "notes": [
+                "hf mf gdmparsecfg -d 850000000000000000005A5A00000008"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-d, --data <hex> bytes to write, 16 hex bytes"
+            ],
+            "usage": "hf mf gdmparsecfg [-h] -d <hex>"
         },
         "hf mf gdmsetblk": {
             "command": "hf mf gdmsetblk",
@@ -4602,9 +4618,12 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-d, --data <hex> bytes to write, 16 hex bytes"
+                "-d, --data <hex> bytes to write, 16 hex bytes",
+                "-k, --key <hex> key 6 bytes (only for regular wakeup)",
+                "--gen1a use gen1a (40/43) magic wakeup",
+                "--gdm use gdm alt (20/23) magic wakeup"
             ],
-            "usage": "hf mf gdmsetcfg [-h] -d <hex>"
+            "usage": "hf mf gdmsetcfg [-h] -d <hex> [-k <hex>] [--gen1a] [--gdm]"
         },
         "hf mf gen3blk": {
             "command": "hf mf gen3blk",
@@ -4803,7 +4822,7 @@
         },
         "hf mf help": {
             "command": "hf mf help",
-            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt Decrypt Crypto1 data from sniff or trace acl Decode and print MIFARE Classic access rights bytes mad Checks and prints MAD value Value blocks view Display content from tag dump file --------------------------------------------------------------------------------------- hf mf list available offline: yes Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt Decrypt Crypto1 data from sniff or trace acl Decode and print MIFARE Classic access rights bytes mad Checks and prints MAD value Value blocks view Display content from tag dump file gdmparsecfg Parse config block to card --------------------------------------------------------------------------------------- hf mf list available offline: yes Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mf list --frame -> show frame delay times",
                 "hf mf list -1 -> use trace buffer"
@@ -12354,8 +12373,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 712,
+        "commands_extracted": 713,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-01-25T00:53:56"
+        "extracted_on": "2024-01-26T08:13:47"
     }
 }

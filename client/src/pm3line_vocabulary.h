@@ -380,6 +380,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mf gchpwd" },
     { 0, "hf mf gdmcfg" },
     { 0, "hf mf gdmsetcfg" },
+    { 1, "hf mf gdmparsecfg" },
     { 0, "hf mf gdmsetblk" },
     { 0, "hf mf ndefformat" },
     { 0, "hf mf ndefread" },

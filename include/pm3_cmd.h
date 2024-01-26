@@ -292,6 +292,32 @@ typedef struct {
     uint8_t key[6];
 } PACKED mf_readblock_t;
 
+typedef enum {
+    MF_WAKE_NONE,
+    MF_WAKE_WUPA, // 52(7) + anticoll
+    MF_WAKE_REQA, // 26(7) + anticoll
+    MF_WAKE_GEN1A, // 40(7)/43
+    MF_WAKE_GEN1B, // 40(7)
+    MF_WAKE_GDM_ALT, // 20(7)/23
+} PACKED MifareWakeupType;
+
+typedef struct {
+    MifareWakeupType wakeup;
+    uint8_t auth_cmd;
+    uint8_t key[6];
+    uint8_t read_cmd;
+    uint8_t block_no;
+} PACKED mf_readblock_ex_t;
+
+typedef struct {
+    MifareWakeupType wakeup;
+    uint8_t auth_cmd;
+    uint8_t key[6];
+    uint8_t write_cmd;
+    uint8_t block_no;
+    uint8_t block_data[16];
+} PACKED mf_writeblock_ex_t;
+
 typedef struct {
     uint8_t sectorcnt;
     uint8_t keytype;
@@ -645,10 +671,12 @@ typedef struct {
 #define CMD_HF_MIFARE_STATIC_ENC                                          0x0616
 
 #define CMD_HF_MIFARE_READBL                                              0x0620
+#define CMD_HF_MIFARE_READBL_EX                                           0x0628
 #define CMD_HF_MIFAREU_READBL                                             0x0720
 #define CMD_HF_MIFARE_READSC                                              0x0621
 #define CMD_HF_MIFAREU_READCARD                                           0x0721
 #define CMD_HF_MIFARE_WRITEBL                                             0x0622
+#define CMD_HF_MIFARE_WRITEBL_EX                                          0x0629
 #define CMD_HF_MIFARE_VALUE                                               0x0627
 #define CMD_HF_MIFAREU_WRITEBL                                            0x0722
 #define CMD_HF_MIFAREU_WRITEBL_COMPAT                                     0x0723
@@ -713,8 +741,6 @@ typedef struct {
 // Gen 4 GDM magic cards
 #define CMD_HF_MIFARE_G4_GDM_RDBL                                         0x0870
 #define CMD_HF_MIFARE_G4_GDM_WRBL                                         0x0871
-#define CMD_HF_MIFARE_G4_GDM_CONFIG                                       0x0872
-#define CMD_HF_MIFARE_G4_GDM_WRCFG                                        0x0873
 
 // HID SAM
 #define CMD_HF_SAM_PICOPASS                                               0x0900

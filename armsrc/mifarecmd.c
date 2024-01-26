@@ -56,45 +56,107 @@
 
 static uint8_t dummy_answer = 0;
 
-//-----------------------------------------------------------------------------
-// Select, Authenticate, Read a MIFARE tag.
-// key_auth_cmd is one of MIFARE_AUTH_KEYA, MIFARE_AUTH_KEYB, or MIFARE_MAGIC_GDM_AUTH_KEY
-// read_cmd is one of ISO14443A_CMD_READBLOCK, MIFARE_MAGIC_GDM_READBLOCK, or MIFARE_MAGIC_GDM_READ_CFG
-// block_data must be 16*count bytes large
-// block_no through block_no+count-1 normally needs to be within the same sector
-//-----------------------------------------------------------------------------
-int16_t mifare_cmd_readblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t read_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data) {
+// magic uid card generation 1 commands
+static uint8_t wupC1[] = { MIFARE_MAGICWUPC1 };
+static uint8_t wupC2[] = { MIFARE_MAGICWUPC2 };
+static uint8_t wipeC[] = { MIFARE_MAGICWIPEC };
+// GDM alt magic wakeup
+static uint8_t wupGDM1[] = { MIFARE_MAGIC_GDM_WUPC1 };
+static uint8_t wupGDM2[] = { MIFARE_MAGIC_GDM_WUPC2 };
 
-    uint64_t ui64key = bytes_to_num(key, 6);
-
-    uint8_t uid[10] = {0x00};
+static bool mifare_wakeup_auth(struct Crypto1State *pcs, MifareWakeupType wakeup, uint8_t key_auth_cmd, uint8_t *key, uint8_t block_no) {
     uint32_t cuid = 0;
-    struct Crypto1State mpcs = {0, 0};
-    struct Crypto1State *pcs = &mpcs;
+    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+    uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
     clear_trace();
     set_tracing(true);
-
-    uint32_t timeout = iso14a_get_timeout();
 
     LED_A_ON();
     LED_B_OFF();
     LED_C_OFF();
 
+    switch (wakeup) {
+        case MF_WAKE_NONE:
+            break;
+        case MF_WAKE_WUPA:
+            if (!iso14443a_select_cardEx(NULL, NULL, &cuid, true, 0, true, &WUPA_POLLING_PARAMETERS)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
+                return false;
+            };
+            break;
+        case MF_WAKE_REQA:
+            if (!iso14443a_select_cardEx(NULL, NULL, &cuid, true, 0, true, &REQA_POLLING_PARAMETERS)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
+                return false;
+            };
+            break;
+        case MF_WAKE_GEN1A:
+            ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupC1 error");
+                return false;
+            }
+
+            ReaderTransmit(wupC2, sizeof(wupC2), NULL);
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_INFO) Dbprintf("Assuming Magic Gen 1B tag. [wupC2 failed]");
+            }
+            break;
+        case MF_WAKE_GEN1B:
+            ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupC1 error");
+                return false;
+            }
+            break;
+        case MF_WAKE_GDM_ALT:
+            ReaderTransmitBitsPar(wupGDM1, 7, NULL, NULL);
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM1 error");
+                return false;
+            }
+            ReaderTransmit(wupGDM2, sizeof(wupGDM2), NULL);
+            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_INFO) Dbprintf("wupGDM2 error");
+                // maybe this is fine on some tags?
+            }
+            break;
+    }
+
+    if (key_auth_cmd != 0) {
+        uint64_t ui64key = bytes_to_num(key, 6);
+        if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, NULL, NULL, NULL)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+//-----------------------------------------------------------------------------
+// Select, Authenticate, Read a MIFARE tag.
+// wakeup determines the type of wakeup
+// key_auth_cmd is usually one of MIFARE_AUTH_KEYA, MIFARE_AUTH_KEYB, MIFARE_MAGIC_GDM_AUTH_KEY or 0 to disable auth
+// read_cmd is usually one of ISO14443A_CMD_READBLOCK, MIFARE_MAGIC_GDM_READBLOCK, or MIFARE_MAGIC_GDM_READ_CFG
+// block_data must be 16*count bytes large
+// block_no through block_no+count-1 normally needs to be within the same sector
+//-----------------------------------------------------------------------------
+int16_t mifare_cmd_readblocks(MifareWakeupType wakeup, uint8_t key_auth_cmd, uint8_t *key, uint8_t read_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data) {
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs = (key_auth_cmd == 0) ? NULL : &mpcs;;
+
+    uint32_t timeout = iso14a_get_timeout();
+
     int retval = PM3_SUCCESS;
 
-    if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == false) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
+    if (mifare_wakeup_auth(pcs, wakeup, key_auth_cmd, key, block_no) == false) {
         retval = PM3_ESOFT;
         goto OUT;
     }
-
-    if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, NULL, NULL, NULL)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
-        retval = PM3_ESOFT;
-        goto OUT;
-    };
 
     // frame waiting time (FWT) in 1/fc
     uint32_t fwt = 256 * 16 * (1 << 7);
@@ -127,42 +189,22 @@ OUT:
 
 //-----------------------------------------------------------------------------
 // Select, Authenticate, Write a MIFARE tag.
-// key_auth_cmd is one of MIFARE_AUTH_KEYA, MIFARE_AUTH_KEYB, or MIFARE_MAGIC_GDM_AUTH_KEY
-// write_cmd is one of ISO14443A_CMD_WRITEBLOCK, MIFARE_MAGIC_GDM_WRITEBLOCK, or MIFARE_MAGIC_GDM_WRITE_CFG
+// wakeup determines the type of wakeup
+// key_auth_cmd is usually one of MIFARE_AUTH_KEYA, MIFARE_AUTH_KEYB, MIFARE_MAGIC_GDM_AUTH_KEY or 0 to disable auth
+// write_cmd is usually one of ISO14443A_CMD_WRITEBLOCK, MIFARE_MAGIC_GDM_WRITEBLOCK, or MIFARE_MAGIC_GDM_WRITE_CFG
 // block_data must be 16*count bytes large
 // block_no through block_no+count-1 normally needs to be within the same sector
 //-----------------------------------------------------------------------------
-int16_t mifare_cmd_writeblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t write_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data) {
-
-    uint64_t ui64key = bytes_to_num(key, 6);
-
-    uint8_t uid[10] = {0x00};
-    uint32_t cuid = 0;
+int16_t mifare_cmd_writeblocks(MifareWakeupType wakeup, uint8_t key_auth_cmd, uint8_t *key, uint8_t write_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data) {
     struct Crypto1State mpcs = {0, 0};
-    struct Crypto1State *pcs = &mpcs;
-
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-
-    clear_trace();
-    set_tracing(true);
-
-    LED_A_ON();
-    LED_B_OFF();
-    LED_C_OFF();
+    struct Crypto1State *pcs = (key_auth_cmd == 0) ? NULL : &mpcs;;
 
     int retval = PM3_SUCCESS;
 
-    if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
+    if (mifare_wakeup_auth(pcs, wakeup, key_auth_cmd, key, block_no) == false) {
         retval = PM3_ESOFT;
         goto OUT;
-    };
-
-    if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, NULL, NULL, NULL)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
-        retval = PM3_ESOFT;
-        goto OUT;
-    };
+    }
 
     for (uint8_t i = 0; i < count; i++) {
         int res = mifare_classic_writeblock_ex(pcs, block_no + i, block_data + (i * 16), write_cmd);
@@ -202,7 +244,7 @@ void MifareReadSector(uint8_t sector_no, uint8_t key_type, uint8_t *key) {
     uint8_t num_blocks = NumBlocksPerSector(sector_no);
 
     uint8_t outbuf[16 * 16];
-    int16_t retval = mifare_cmd_readblocks(MIFARE_AUTH_KEYA + (key_type & 1), key, ISO14443A_CMD_READBLOCK, block_no, num_blocks, outbuf);
+    int16_t retval = mifare_cmd_readblocks(MF_WAKE_WUPA, MIFARE_AUTH_KEYA + (key_type & 1), key, ISO14443A_CMD_READBLOCK, block_no, num_blocks, outbuf);
 
     reply_old(CMD_ACK, retval == PM3_SUCCESS, 0, 0, outbuf, 16 * num_blocks);
 }
@@ -2204,13 +2246,6 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
 // bit 5 - need to set datain instead of issuing USB reply (called via ARM for StandAloneMode14a)
 // bit 6 - wipe tag.
 //-----------------------------------------------------------------------------
-// magic uid card generation 1 commands
-static uint8_t wupC1[] = { MIFARE_MAGICWUPC1 };
-static uint8_t wupC2[] = { MIFARE_MAGICWUPC2 };
-static uint8_t wipeC[] = { MIFARE_MAGICWIPEC };
-// GDM alt magic wakeup
-static uint8_t wupGDM1[] = { MIFARE_MAGIC_GDM_WUPC1 };
-//static uint8_t wupGDM2[] = { MIFARE_MAGIC_GDM_WUPC2 };
 
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
 
@@ -2422,8 +2457,8 @@ static void mf_reset_card(void) {
 
 void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     // variables
-    uint8_t rec[1] = {0x00};
-    uint8_t recpar[1] = {0x00};
+    uint8_t rec[MAX_MIFARE_PARITY_SIZE] = {0x00};
+    uint8_t recpar[MAX_MIFARE_PARITY_SIZE] = {0x00};
     uint8_t rats[4] = {ISO14443A_CMD_RATS, 0x80, 0x31, 0x73};
     uint8_t rdblf0[4] = {ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
     uint8_t rdbl00[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
@@ -2622,7 +2657,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
         data[data_off++] = MAGIC_GDM_WUP_40;
     }
 
-    // GEM alt magic wakeup (20)
+    // GDM alt magic wakeup (20)
     ReaderTransmitBitsPar(wupGDM1, 7, NULL, NULL);
     if (ReaderReceive(rec, recpar) && (rec[0] == 0x0a)) {
         data[data_off++] = MAGIC_GDM_WUP_20;
@@ -2753,7 +2788,7 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
             oldntenc = ntenc;
         } else if (ntenc == oldntenc) {
             enc_counter++;
-    }
+        }
     }
 
     if (enc_counter) {

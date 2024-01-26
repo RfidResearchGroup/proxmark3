@@ -1615,8 +1615,15 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_MIFARE_READBL: {
             mf_readblock_t *payload = (mf_readblock_t *)packet->data.asBytes;
             uint8_t outbuf[16];
-            int16_t retval = mifare_cmd_readblocks(MIFARE_AUTH_KEYA + (payload->keytype & 1), payload->key, ISO14443A_CMD_READBLOCK, payload->blockno, 1, outbuf);
+            int16_t retval = mifare_cmd_readblocks(MF_WAKE_WUPA, MIFARE_AUTH_KEYA + (payload->keytype & 1), payload->key, ISO14443A_CMD_READBLOCK, payload->blockno, 1, outbuf);
             reply_ng(CMD_HF_MIFARE_READBL, retval, outbuf, sizeof(outbuf));
+            break;
+        }
+        case CMD_HF_MIFARE_READBL_EX: {
+            mf_readblock_ex_t *payload = (mf_readblock_ex_t *)packet->data.asBytes;
+            uint8_t outbuf[16];
+            int16_t retval = mifare_cmd_readblocks(payload->wakeup, payload->auth_cmd, payload->key, payload->read_cmd, payload->block_no, 1, outbuf);
+            reply_ng(CMD_HF_MIFARE_READBL_EX, retval, outbuf, sizeof(outbuf));
             break;
         }
         case CMD_HF_MIFAREU_READBL: {
@@ -1645,7 +1652,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t *key = packet->data.asBytes;
             uint8_t *block_data = packet->data.asBytes + 10;
 
-            int16_t retval = mifare_cmd_writeblocks(MIFARE_AUTH_KEYA + (key_type & 1), key, ISO14443A_CMD_WRITEBLOCK, block_no, 1, block_data);
+            int16_t retval = mifare_cmd_writeblocks(MF_WAKE_WUPA, MIFARE_AUTH_KEYA + (key_type & 1), key, ISO14443A_CMD_WRITEBLOCK, block_no, 1, block_data);
 
             // convert ng style retval to old status
             if (retval >= 0) {
@@ -1653,6 +1660,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
 
             reply_mix(CMD_ACK, retval, 0, 0, 0, 0);
+            break;
+        }
+        case CMD_HF_MIFARE_WRITEBL_EX: {
+            mf_writeblock_ex_t *payload = (mf_writeblock_ex_t *)packet->data.asBytes;
+            int16_t retval = mifare_cmd_writeblocks(payload->wakeup, payload->auth_cmd, payload->key, payload->write_cmd, payload->block_no, 1, payload->block_data);
+            reply_ng(CMD_HF_MIFARE_WRITEBL_EX, retval, NULL, 0);
             break;
         }
         case CMD_HF_MIFARE_VALUE: {
@@ -1822,26 +1835,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareG4WriteBlk(payload->blockno, payload->pwd, payload->data, payload->workFlags);
             break;
         }
-        case CMD_HF_MIFARE_G4_GDM_CONFIG: {
-            struct p {
-                uint8_t key[6];
-            } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;
-            uint8_t outbuf[16];
-            int16_t retval = mifare_cmd_readblocks(MIFARE_MAGIC_GDM_AUTH_KEY, payload->key, MIFARE_MAGIC_GDM_READ_CFG, 0, 1, outbuf);
-            reply_ng(CMD_HF_MIFARE_G4_GDM_CONFIG, retval, outbuf, sizeof(outbuf));
-            break;
-        }
-        case CMD_HF_MIFARE_G4_GDM_WRCFG: {
-            struct p {
-                uint8_t data[16];
-            } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;
-            uint8_t key[6] = {0, 0, 0, 0, 0, 0};
-            int16_t retval = mifare_cmd_writeblocks(MIFARE_MAGIC_GDM_AUTH_KEY, key, MIFARE_MAGIC_GDM_WRITE_CFG, 0, 1, payload->data);
-            reply_ng(CMD_HF_MIFARE_G4_GDM_WRCFG, retval, NULL, 0);
-            break;
-        }
         case CMD_HF_MIFARE_G4_GDM_WRBL: {
             struct p {
                 uint8_t blockno;
@@ -1849,7 +1842,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t data[16]; // data to be written
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            int16_t retval = mifare_cmd_writeblocks(MIFARE_MAGIC_GDM_AUTH_KEY, payload->key, MIFARE_MAGIC_GDM_WRITEBLOCK, payload->blockno, 1, payload->data);
+            int16_t retval = mifare_cmd_writeblocks(MF_WAKE_WUPA, MIFARE_MAGIC_GDM_AUTH_KEY, payload->key, MIFARE_MAGIC_GDM_WRITEBLOCK, payload->blockno, 1, payload->data);
             reply_ng(CMD_HF_MIFARE_G4_GDM_WRBL, retval, NULL, 0);
             break;
         }

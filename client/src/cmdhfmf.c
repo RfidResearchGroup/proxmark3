@@ -8444,57 +8444,51 @@ static int CmdHF14AGen4ChangePwd(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14AGen4_GDM_Cfg(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mf gdmcfg",
-                  "Get configuration data from magic gen4 GDM card.",
-                  "hf mf gdmcfg\n"
-                 );
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str0("k", "key", "<hex>", "key 6 bytes"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+static void parse_gdm_cfg(const uint8_t *d) {
+    PrintAndLogEx(SUCCESS, "Config... " _YELLOW_("%s"), sprint_hex(d, MFBLOCK_SIZE));
+    PrintAndLogEx(SUCCESS, "          " _YELLOW_("%02X %02X") " .......................................... %s %s", d[0], d[1], (d[0] == 0x85 && d[1] == 0x00) ? "Magic wakeup disabled" : _GREEN_("Magic wakeup enabled"), (d[0] == 0x85 && d[1] == 0x00) ? "" : ((d[0] == 0x7A && d[1] == 0xFF) ? _GREEN_("with GDM config block access") : _RED_("without GDM config block access")));
+    PrintAndLogEx(SUCCESS, "                " _YELLOW_("%02X") " ....................................... Magic wakeup style %s", d[2], ((d[2] == 0x85) ? "GDM 20(7)/23": "Gen1a 40(7)/43"));
+    PrintAndLogEx(SUCCESS, "                   " _YELLOW_("%02X %02X %02X") " .............................. Unknown", d[3], d[4], d[5]);
+    PrintAndLogEx(SUCCESS, "                            " _YELLOW_("%02X") " ........................... %s", d[6], (d[6] == 0x5A) ? "Key B use blocked when readable by ACL" : "Key B use allowed when readable by ACL");
+    PrintAndLogEx(SUCCESS, "                               " _YELLOW_("%02X") " ........................ %s", d[7], (d[7] == 0x5A) ? _GREEN_("Block 0 Direct Write Enabled (CUID)") : "Block 0 Direct Write Disabled (CUID)");
+    PrintAndLogEx(SUCCESS, "                                  " _YELLOW_("%02X") " ..................... Unknown", d[8]);
 
-    int keylen = 0;
-    uint8_t key[6] = {0};
-    CLIGetHexWithReturn(ctx, 1, key, &keylen);
-    CLIParserFree(ctx);
-
-    // validate args
-    if (keylen != 6 && keylen != 0) {
-        PrintAndLogEx(FAILED, "Must specify 6 bytes, got " _YELLOW_("%u"), keylen);
-        return PM3_EINVARG;
+    const char *pers;
+    switch (d[9]) {
+        case 0x5A:
+            pers = _YELLOW_("Unfused");
+            break;
+        case 0xC3:
+            pers = _CYAN_("UIDFO, double size UID");
+            break;
+        case 0xA5:
+            pers = _CYAN_("UIDF1, double size UID, optional usage of selection process shortcut");
+            break;
+        case 0x87:
+            pers = _GREEN_("UIDF2, single size random ID");
+            break;
+        case 0x69:
+            pers = _GREEN_("UIDF3, single size NUID");
+            break;
+        default:
+            pers = "4B UID from Block 0";
+            break;
     }
+    PrintAndLogEx(SUCCESS, "                                     " _YELLOW_("%02X") " .................. MFC EV1 personalization: %s", d[9], pers);
 
-    struct p {
-        uint8_t key[6];
-    } PACKED payload;
-    memcpy(payload.key, key, sizeof(payload.key));
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_G4_GDM_CONFIG, (uint8_t *)&payload, sizeof(payload));
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_GDM_CONFIG, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "command execute timeout");
-        return PM3_ETIMEOUT;
-    }
-
-    if (resp.status == PM3_SUCCESS) {
-        uint8_t *d = resp.data.asBytes;
-        PrintAndLogEx(SUCCESS, "config... %s", sprint_hex(d, resp.length));
-        PrintAndLogEx(NORMAL, "");
-    }
-
-    return resp.status;
+    PrintAndLogEx(SUCCESS, "                                        " _YELLOW_("%02X") " ............... %s", d[10], (d[10] == 0x5A) ? _GREEN_("Shadow mode enabled") : "Shadow mode disabled");
+    PrintAndLogEx(SUCCESS, "                                          " _YELLOW_("%02X") " ............. %s", d[11], (d[11] == 0x5A) ? _GREEN_("Magic auth enabled") : "Magic auth disabled");
+    PrintAndLogEx(SUCCESS, "                                            " _YELLOW_("%02X") " ........... %s", d[12], (d[12] == 0x5A) ? _GREEN_("Static encrypted nonce enabled") : "Static encrypted nonce disabled");
+    PrintAndLogEx(SUCCESS, "                                              " _YELLOW_("%02X") " ......... %s", d[13], (d[13] == 0x5A) ? _GREEN_("MFC EV1 signature enabled") : "MFC EV1 signature disabled");
+    PrintAndLogEx(SUCCESS, "                                                 " _YELLOW_("%02X") " ...... Unknown", d[14]);
+    PrintAndLogEx(SUCCESS, "                                                    " _YELLOW_("%02X") " ... SAK", d[15]);
 }
 
-static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
+static int CmdHF14AGen4_GDM_ParseCfg(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mf gdmsetcfg",
-                  "Set configuration data on a magic gen4 GDM card",
-                  "hf mf gdmsetcfg -d 850000000000000000005A5A00000008"
+    CLIParserInit(&ctx, "hf mf gdmparsecfg",
+                  "Parse configuration data on a magic gen4 GDM card",
+                  "hf mf gdmparsecfg -d 850000000000000000005A5A00000008"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -8513,16 +8507,151 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    struct p {
-        uint8_t data[MFBLOCK_SIZE];
-    } PACKED payload;
+    parse_gdm_cfg(block);
 
-    memcpy(payload.data, block, sizeof(payload.data));
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14AGen4_GDM_Cfg(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf gdmcfg",
+                  "Get configuration data from magic gen4 GDM card.",
+                  "hf mf gdmcfg\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "key", "<hex>", "key 6 bytes (only for regular wakeup)"),
+        arg_lit0(NULL, "gen1a", "use gen1a (40/43) magic wakeup"),
+        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 1, key, &keylen);
+    bool gen1a = arg_get_lit(ctx, 2);
+    bool gdm = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    // validate args
+    if (keylen != 6 && keylen != 0) {
+        PrintAndLogEx(FAILED, "Must specify 6 bytes, got " _YELLOW_("%u"), keylen);
+        return PM3_EINVARG;
+    }
+
+    if (gen1a && gdm) {
+        PrintAndLogEx(FAILED, "Can only specify a single magic wakeup command");
+        return PM3_EINVARG;
+    }
+
+    if ((gen1a || gdm) && keylen != 0) {
+        PrintAndLogEx(FAILED, "Cannot use a key in combination with a magic wakeup");
+        return PM3_EINVARG;
+    }
+
+    mf_readblock_ex_t payload = {
+        .read_cmd = MIFARE_MAGIC_GDM_READ_CFG,
+        .block_no = 0,
+    };
+    memcpy(payload.key, key, sizeof(payload.key));
+
+    if (gen1a) {
+        payload.wakeup = MF_WAKE_GEN1A;
+        payload.auth_cmd = 0;
+    } else if (gdm) {
+        payload.wakeup = MF_WAKE_GDM_ALT;
+        payload.auth_cmd = 0;
+    } else {
+        payload.wakeup = MF_WAKE_WUPA;
+        payload.auth_cmd = MIFARE_MAGIC_GDM_AUTH_KEY;
+    }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_G4_GDM_WRCFG, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFARE_READBL_EX, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_GDM_WRCFG, &resp, 1500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL_EX, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_SUCCESS && resp.length == MFBLOCK_SIZE) {
+        parse_gdm_cfg(resp.data.asBytes);
+
+        PrintAndLogEx(NORMAL, "");
+    }
+
+    return resp.status;
+}
+
+static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf gdmsetcfg",
+                  "Set configuration data on a magic gen4 GDM card",
+                  "hf mf gdmsetcfg -d 850000000000000000005A5A00000008"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
+        arg_str0("k", "key", "<hex>", "key 6 bytes (only for regular wakeup)"),
+        arg_lit0(NULL, "gen1a", "use gen1a (40/43) magic wakeup"),
+        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t block[MFBLOCK_SIZE] = {0x00};
+    int blen = 0;
+    CLIGetHexWithReturn(ctx, 1, block, &blen);
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 2, key, &keylen);
+    bool gen1a = arg_get_lit(ctx, 3);
+    bool gdm = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if (blen != MFBLOCK_SIZE) {
+        PrintAndLogEx(WARNING, "expected %u HEX bytes. got %i", MFBLOCK_SIZE, blen);
+        return PM3_EINVARG;
+    }
+
+    if (keylen != 6 && keylen != 0) {
+        PrintAndLogEx(FAILED, "Must specify 6 bytes, got " _YELLOW_("%u"), keylen);
+        return PM3_EINVARG;
+    }
+
+    if (gen1a && gdm) {
+        PrintAndLogEx(FAILED, "Can only specify a single magic wakeup command");
+        return PM3_EINVARG;
+    }
+
+    if ((gen1a || gdm) && keylen != 0) {
+        PrintAndLogEx(FAILED, "Cannot use a key in combination with a magic wakeup");
+        return PM3_EINVARG;
+    }
+
+    mf_writeblock_ex_t payload = {
+        .write_cmd = MIFARE_MAGIC_GDM_WRITE_CFG,
+        .block_no = 0,
+    };
+    memcpy(payload.block_data, block, sizeof(payload.block_data));
+    memcpy(payload.key, key, sizeof(payload.key));
+
+    if (gen1a) {
+        payload.wakeup = MF_WAKE_GEN1A;
+        payload.auth_cmd = 0;
+    } else if (gdm) {
+        payload.wakeup = MF_WAKE_GDM_ALT;
+        payload.auth_cmd = 0;
+    } else {
+        payload.wakeup = MF_WAKE_WUPA;
+        payload.auth_cmd = MIFARE_MAGIC_GDM_AUTH_KEY;
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
     }
@@ -9344,6 +9473,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GDM") " --------------------------"},
     {"gdmcfg",      CmdHF14AGen4_GDM_Cfg,   IfPm3Iso14443a,  "Read config block from card"},
     {"gdmsetcfg",   CmdHF14AGen4_GDM_SetCfg, IfPm3Iso14443a, "Write config block to card"},
+    {"gdmparsecfg",   CmdHF14AGen4_GDM_ParseCfg, AlwaysAvailable, "Parse config block to card"},
     {"gdmsetblk",   CmdHF14AGen4_GDM_SetBlk, IfPm3Iso14443a, "Write block to card"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("ndef") " -----------------------"},
 //    {"ice",         CmdHF14AMfice,          IfPm3Iso14443a,  "collect MIFARE Classic nonces to file"},
