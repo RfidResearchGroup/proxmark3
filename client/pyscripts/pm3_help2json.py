@@ -47,6 +47,7 @@ def main():
         'commands': command_data,
     }
     json.dump(output_data, args.output_file, indent=4, sort_keys=True)
+    args.output_file.write("\n") # add trailing newline as json.dump does not
     logging.info(f'{get_version()} completed!')
 
 

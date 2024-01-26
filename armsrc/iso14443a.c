@@ -144,8 +144,13 @@ static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
 
 
 // Polling frames and configurations
-static iso14a_polling_parameters_t WUPA_POLLING_PARAMETERS = {
-    .frames = { {{ 0x52 }, 1, 7, 0} },
+iso14a_polling_parameters_t WUPA_POLLING_PARAMETERS = {
+    .frames = { {{ ISO14443A_CMD_WUPA }, 1, 7, 0} },
+    .frame_count = 1,
+    .extra_timeout = 0,
+};
+iso14a_polling_parameters_t REQA_POLLING_PARAMETERS = {
+    .frames = { {{ ISO14443A_CMD_REQA }, 1, 7, 0} },
     .frame_count = 1,
     .extra_timeout = 0,
 };

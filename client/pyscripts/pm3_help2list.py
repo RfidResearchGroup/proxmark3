@@ -96,7 +96,8 @@ const static vocabulary_t vocabulary[] = {\n""")
 }
 #endif
 
-#endif""")
+#endif
+""")
 
     logging.info(f'{get_version()} completed!')
 

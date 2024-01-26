@@ -543,6 +543,7 @@ Check column "offline" for their availability.
 |`hf mf gchpwd           `|N       |`Change card access password. Warning!`
 |`hf mf gdmcfg           `|N       |`Read config block from card`
 |`hf mf gdmsetcfg        `|N       |`Write config block to card`
+|`hf mf gdmparsecfg      `|Y       |`Parse config block to card`
 |`hf mf gdmsetblk        `|N       |`Write block to card`
 |`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
 |`hf mf ndefread         `|N       |`Read and print NDEF records from card`

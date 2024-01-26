@@ -1183,9 +1183,9 @@ static int CmdHF15ELoad(const char *Cmd) {
     }
 
     if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
-        ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-        (tag->pagesCount == 0) ||
-        (tag->bytesPerPage == 0)) {
+            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+            (tag->pagesCount == 0) ||
+            (tag->bytesPerPage == 0)) {
         PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
                       tag->pagesCount, tag->bytesPerPage);
         free(tag);
@@ -1212,7 +1212,7 @@ static int CmdHF15ELoad(const char *Cmd) {
         }
 
         uint16_t bytestosend = MIN(chuncksize, bytes_read);
-        if (hf15EmlSetMem((uint8_t*)tag + offset, bytestosend, offset) != PM3_SUCCESS) {
+        if (hf15EmlSetMem((uint8_t *)tag + offset, bytestosend, offset) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Can't set emulator memory at offest: %zu / 0x%zx", offset, offset);
             free(tag);
             return PM3_ESOFT;
@@ -1364,10 +1364,10 @@ static void print_emltag_15693(iso15_tag_t *tag, bool dense_output) {
     print_emltag_info_15693(tag);
 
     print_blocks_15693(tag->data
-        , (tag->pagesCount * tag->bytesPerPage)
-        , tag->bytesPerPage
-        , dense_output
-    );
+                       , (tag->pagesCount * tag->bytesPerPage)
+                       , tag->bytesPerPage
+                       , dense_output
+                      );
 }
 
 static int CmdHF15EView(const char *Cmd) {
@@ -1951,7 +1951,7 @@ static int CmdHF15Dump(const char *Cmd) {
     DropField();
 
 
-   print_emltag_15693(tag, dense_output);
+    print_emltag_15693(tag, dense_output);
 
     if (tag->bytesPerPage != blocksize) {
         PrintAndLogEx(NORMAL, "");
@@ -2131,7 +2131,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     argtable[arglen++] = arg_int1("b", NULL, "<dec>", "first page number (0-255)");
     argtable[arglen++] = arg_int1(NULL, "cnt", "<dec>", "number of pages (1-6)");
     argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)");
-                         argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2288,7 +2288,7 @@ static int CmdHF15Readblock(const char *Cmd) {
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
     argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)");
-                         argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2583,7 +2583,7 @@ static int CmdHF15Restore(const char *Cmd) {
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file");
     argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)");
-                                              argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
@@ -2651,7 +2651,7 @@ static int CmdHF15Restore(const char *Cmd) {
         return res;
     }
 
-        if (bytes_read != sizeof(iso15_tag_t)) {
+    if (bytes_read != sizeof(iso15_tag_t)) {
         PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
         free(tag);
         return PM3_EINVARG;
@@ -2663,9 +2663,9 @@ static int CmdHF15Restore(const char *Cmd) {
     }
 
     if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
-        ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-        (tag->pagesCount == 0) ||
-        (tag->bytesPerPage == 0)) {
+            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+            (tag->pagesCount == 0) ||
+            (tag->bytesPerPage == 0)) {
         PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
                       tag->pagesCount, tag->bytesPerPage);
         free(tag);
@@ -3317,9 +3317,9 @@ static int CmdHF15View(const char *Cmd) {
     }
 
     if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
-        ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-        (tag->pagesCount == 0) ||
-        (tag->bytesPerPage == 0)) {
+            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+            (tag->pagesCount == 0) ||
+            (tag->bytesPerPage == 0)) {
         PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
                       tag->pagesCount, tag->bytesPerPage);
         free(tag);

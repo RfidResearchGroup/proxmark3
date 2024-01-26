@@ -18,9 +18,10 @@
 #define __MIFARECMD_H
 
 #include "common.h"
+#include "pm3_cmd.h"
 
-int16_t mifare_cmd_readblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t read_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data);
-int16_t mifare_cmd_writeblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t write_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data);
+int16_t mifare_cmd_readblocks(MifareWakeupType wakeup, uint8_t key_auth_cmd, uint8_t *key, uint8_t read_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data);
+int16_t mifare_cmd_writeblocks(MifareWakeupType wakeup, uint8_t key_auth_cmd, uint8_t *key, uint8_t write_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data);
 void MifareReadSector(uint8_t sector_no, uint8_t key_type, uint8_t *key);
 void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 

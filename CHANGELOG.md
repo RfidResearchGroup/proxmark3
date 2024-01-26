@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `hf mf gdmparsecfg` command to decode the GDM/USCUID config block and made `hf mf gdmcfg` show the parsed config on read (@nvx)
+ - Changed `hf mf gdmcfg/gdmsetcfg` commands to support Gen1a and GDM Alt magic wakeups (@nvx)
  - Fixed `hf 15 writedsfid` - long wait after write and dont force -o flag (@iceman1001)
  - Changed `hf 14a sniff -i` - now supports the interactive flag (@iceman1001)
  - Added `HF_15SIM` standalone mode that dump then simulate iso15 tags (@lnv42)
