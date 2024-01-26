@@ -314,6 +314,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443B_PING         0xBA
 #define ISO14443B_PONG         0xAB
 
+#define ISO14443B_XEROX_PWD    0x02
+
 // ASK C-ticket
 #define ASK_REQT               0x10
 #define ASK_IDENTIFY           0x0F

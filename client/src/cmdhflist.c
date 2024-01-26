@@ -1572,6 +1572,41 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 0A 11 22 33 44 55 66 = Authenticate (11 22 33 44 55 66 = data to authenticate)
 **/
 void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+    // xerox anti collison loop / slot select for uid bytes...
+    if (cmdsize == 1) {        
+        switch (cmd[0]) {
+            case 0xB1:
+                snprintf(exp, size, "Slot 0 ACK");
+                return;                
+            case 0xB3:
+                snprintf(exp, size, "Slot 1 ACK");
+                return;                
+            case 0xB5:
+                snprintf(exp, size, "Slot 2 ACK");
+                return;
+            case 0xB7:  {
+                snprintf(exp, size, "Slot 3 ACK");
+                return;
+            }
+            case 0xA1:
+                snprintf(exp, size, "Slot 0 NACK");
+                return;
+            case 0xA3:
+                snprintf(exp, size, "Slot 1 NACK");
+                return;
+            case 0xA5:
+                snprintf(exp, size, "Slot 2 NACK");
+                return;
+            case 0xA7:  {
+                snprintf(exp, size, "Slot 0 NACK");
+                return;
+            }
+            default:
+                break;
+        }
+    }
+
     switch (cmd[0]) {
         case ISO14443B_REQB : {
 
@@ -1634,7 +1669,12 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case ISO14443B_PONG:
             snprintf(exp, size, "PONG");
             break;
-        default:
+        case ISO14443B_XEROX_PWD:
+            if (cmdsize == 17 && cmd[1] == 0x38) {
+                snprintf(exp, size, "XEROX PWD");
+            }
+            break;
+        default:        
             snprintf(exp, size, "?");
             break;
     }
