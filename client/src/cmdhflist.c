@@ -1672,8 +1672,18 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case ISO14443B_XEROX_PWD:
             if (cmdsize == 17 && cmd[1] == 0x38) {
                 snprintf(exp, size, "XEROX PWD");
+                break;
             }
-            break;
+        case ISO14443B_XEROX_WUP1:
+            if (cmdsize == 5) {
+                snprintf(exp, size, "XEROX WUP1");
+                break;
+            }
+        case ISO14443B_XEROX_WUP2:
+            if (cmdsize == 5) {
+                snprintf(exp, size, "XEROX WUP1");
+                break;
+            }
         default:        
             snprintf(exp, size, "?");
             break;
