@@ -636,7 +636,7 @@ static int read_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t
     }
 
     // set up the read command
-    packet->flags = (ISO14B_CONNECT | ISO14B_APPEND_CRC | ISO14B_RAW);
+    packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_XRX | ISO14B_APPEND_CRC | ISO14B_RAW);
     packet->raw[packet->rawlen++] = 0x02;
     packet->raw[packet->rawlen++] = ISO14443B_XEROX_READ_BLK;
 
@@ -662,6 +662,11 @@ static int read_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t
             continue;
         }
 
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "trying one more time");
+            continue;
+        }
+
         // sanity checks
         if (resp.length < 7) {
             PrintAndLogEx(FAILED, "trying one more time, wrong length");
@@ -669,13 +674,12 @@ static int read_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t
         }
 
         uint8_t *d = resp.data.asBytes;
-
         if (check_crc(CRC_14443_B, d, 7) == false) {
             PrintAndLogEx(FAILED, "trying one more time, CRC ( " _RED_("fail") " )");
             continue;
         }
 
-        if (d[0] != 2) {
+        if (d[0] != 0x02) {
             PrintAndLogEx(FAILED, "Tag returned Error %x %x", d[0], d[1]);
             res = PM3_ERFTRANS;
             break;
