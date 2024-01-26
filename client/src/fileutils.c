@@ -795,14 +795,14 @@ int saveFileWAVE(const char *preferredName, const int *data, size_t datalen) {
         .type = "WAVE",
         .format.tag = "fmt ",
         .format.size = sizeof(wave_info.format) - sizeof(wave_info.format.tag) - sizeof(wave_info.format.size),
-               .format.codec = 1, // PCM
-               .format.nb_channel = 1,
-               .format.sample_per_sec = 125000,  // TODO update for other tag types
-               .format.byte_per_sec = 125000,    // TODO update for other tag types
-               .format.block_align = 1,
-               .format.bit_per_sample = 8,
-               .audio_data.tag = "data",
-               .audio_data.size = datalen,
+        .format.codec = 1, // PCM
+        .format.nb_channel = 1,
+        .format.sample_per_sec = 125000,  // TODO update for other tag types
+        .format.byte_per_sec = 125000,    // TODO update for other tag types
+        .format.block_align = 1,
+        .format.bit_per_sample = 8,
+        .audio_data.tag = "data",
+        .audio_data.size = datalen,
     };
 
     FILE *wave_file = fopen(fileName, "wb");
