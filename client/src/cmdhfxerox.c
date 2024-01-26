@@ -687,7 +687,7 @@ static int read_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t
             break;
         }
 
-        memcpy(out + (blockno * XEROX_BLOCK_SIZE), d + 1, XEROX_BLOCK_SIZE);
+        memcpy(out, d + 1, XEROX_BLOCK_SIZE);
         res = PM3_SUCCESS;
         break;
     }
