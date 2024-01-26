@@ -704,7 +704,7 @@ static int NxpTestEAS(uint8_t *uid) {
         return PM3_EINVARG;
     }
 
-    uint8_t approxlen = 3 + 8 + 2;
+    uint8_t approxlen = 3 + HF15_UID_LENGTH + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
@@ -732,16 +732,23 @@ static int NxpTestEAS(uint8_t *uid) {
         PrintAndLogEx(DEBUG, "iso15693 timeout");
         return PM3_ETIMEOUT;
     }
+    if (resp.length < 2) {    
+        return PM3_EWRONGANSWER;
+    }
+
+    uint8_t *d = resp.data.asBytes;
+
+    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
 
     PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_(" EAS"));
     if (resp.length < 2) {
-        PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is not active");
+        PrintAndLogEx(INFO, "    EAS (Electronic Article Surveillance) is not active");
     } else {
-        uint8_t *d = resp.data.asBytes;
-        if ((d[0] & ISO15_RES_ERROR) != ISO15_RES_ERROR) {
-            PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is active.");
-            PrintAndLogEx(INFO, "  EAS sequence: %s", sprint_hex(d + 1, 32));
-        }
+        PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is active.");
+        PrintAndLogEx(INFO, "  EAS sequence...");
+        PrintAndLogEx(INFO, "  %s", sprint_hex(d + 1, 16));
+        PrintAndLogEx(INFO, "  %s", sprint_hex(d + 1 + 16, 16));
     }
     return PM3_SUCCESS;
 }
@@ -752,7 +759,7 @@ static int NxpCheckSig(uint8_t *uid) {
         return PM3_EINVARG;
     }
 
-    uint8_t approxlen = 13;
+    uint8_t approxlen = 3 + HF15_UID_LENGTH + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
@@ -765,7 +772,7 @@ static int NxpCheckSig(uint8_t *uid) {
     packet->raw[packet->rawlen++] = ISO15693_READ_SIGNATURE;
     packet->raw[packet->rawlen++] = 0x04; // IC manufacturer code
 
-    memcpy(packet->raw + 3, uid, HF15_UID_LENGTH); // add UID
+    memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH); // add UID
     packet->rawlen += HF15_UID_LENGTH;
 
     AddCrc15(packet->raw,  packet->rawlen);
@@ -849,62 +856,64 @@ static int NxpSysInfo(uint8_t *uid) {
 
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("NXP Sysinfo"));
-    PrintAndLogEx(INFO, "RAW... %s", sprint_hex(d, 8));
+    PrintAndLogEx(INFO, "    Raw............ %s", sprint_hex(d, 8));
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_(" Password protection configuration"));
 
-    PrintAndLogEx(INFO, "    " _CYAN_("Password protection configuration"));
-
-    PrintAndLogEx(INFO, "      * Page L read.... ( %s )"
+    PrintAndLogEx(INFO, "    Page L read.... %s"
         , (d[2] & 0x01) ?  _RED_("password") : _GREEN_("no password")
     );
 
-    PrintAndLogEx(INFO, "      * Page L write... ( %s )"
+    PrintAndLogEx(INFO, "    Page L write... %s"
         , (d[2] & 0x02) ?  _RED_("password") : _GREEN_("no password")
     );
 
-    PrintAndLogEx(INFO, "      * Page H read.... ( %s )"
+    PrintAndLogEx(INFO, "    Page H read.... %s"
         , (d[2] & 0x10) ?  _RED_("password") : _GREEN_("no password")
     );
 
-    PrintAndLogEx(INFO, "      * Page H write... ( %s )"
+    PrintAndLogEx(INFO, "    Page H write... %s"
         , (d[2] & 0x20) ?  _RED_("password") : _GREEN_("no password")
     );
 
-    PrintAndLogEx(INFO, "    " _CYAN_("Lock bits"));
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_(" Lock bits"));
 
     // AFI lock bit
-    PrintAndLogEx(INFO, "      * AFI..... ( %s )"
+    PrintAndLogEx(INFO, "    AFI............ %s"
         , (d[3] & 0x01) ? _RED_("locked") : _GREEN_("unlocked")
     );
 
     // EAS lock bit
-    PrintAndLogEx(INFO, "      * EAS..... ( %s )"
+    PrintAndLogEx(INFO, "    EAS............ %s"
         ,(d[3] & 0x02) ? _RED_("locked") : _GREEN_("unlocked")
     );
 
     // DSFID lock bit
-    PrintAndLogEx(INFO, "      * DSFID... ( %s )"
+    PrintAndLogEx(INFO, "    DSFID.......... %s"
         , (d[3] & 0x03) ? _RED_("locked") : _GREEN_("unlocked")
     );
 
     // Password protection pointer address and access conditions lock bit
-    PrintAndLogEx(INFO, "      * Password protection configuration... ( %s )"
+    PrintAndLogEx(INFO, "    Password protection configuration... %s"
         , (d[3] & 0x04) ? _RED_("locked") : _GREEN_("unlocked")
     );
 
-    PrintAndLogEx(INFO, "    " _CYAN_("Features"));
-    PrintAndLogEx(INFO, "      * User memory password protection%s supported", ((d[4] & 0x01) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * Counter feature%s supported", ((d[4] & 0x02) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * EAS ID%s supported by EAS ALARM command", support_easmode ? "" : " not");
-    PrintAndLogEx(INFO, "      * EAS password protection%s supported", ((d[4] & 0x08) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * AFI password protection%s supported", ((d[4] & 0x10) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * Extended mode%s supported by INVENTORY READ command", ((d[4] & 0x20) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * EAS selection%s supported by extended mode in INVENTORY READ command", ((d[4] & 0x40) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * READ SIGNATURE command%s supported", support_signature ? "" : " not");
-    PrintAndLogEx(INFO, "      * Password protection for READ SIGNATURE command%s supported", ((d[5] & 0x02) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * STAY QUIET PERSISTENT command%s supported", ((d[5] & 0x04) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * ENABLE PRIVACY command%s supported", ((d[5] & 0x10) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * DESTROY command%s supported", ((d[5] & 0x20) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * Additional 32 bits feature flags are%s transmitted", ((d[7] & 0x80) ? "" : " not"));
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_(" Features"));
+    PrintAndLogEx(INFO, "    User memory password protection%s supported", ((d[4] & 0x01) ? "" : " not"));
+    PrintAndLogEx(INFO, "    Counter feature%s supported", ((d[4] & 0x02) ? "" : " not"));
+    PrintAndLogEx(INFO, "    EAS ID%s supported by EAS ALARM command", support_easmode ? "" : " not");
+    PrintAndLogEx(INFO, "    EAS password protection%s supported", ((d[4] & 0x08) ? "" : " not"));
+    PrintAndLogEx(INFO, "    AFI password protection%s supported", ((d[4] & 0x10) ? "" : " not"));
+    PrintAndLogEx(INFO, "    Extended mode%s supported by INVENTORY READ command", ((d[4] & 0x20) ? "" : " not"));
+    PrintAndLogEx(INFO, "    EAS selection%s supported by extended mode in INVENTORY READ command", ((d[4] & 0x40) ? "" : " not"));
+    PrintAndLogEx(INFO, "    READ SIGNATURE command%s supported", support_signature ? "" : " not");
+    PrintAndLogEx(INFO, "    Password protection for READ SIGNATURE command%s supported", ((d[5] & 0x02) ? "" : " not"));
+    PrintAndLogEx(INFO, "    STAY QUIET PERSISTENT command%s supported", ((d[5] & 0x04) ? "" : " not"));
+    PrintAndLogEx(INFO, "    ENABLE PRIVACY command%s supported", ((d[5] & 0x10) ? "" : " not"));
+    PrintAndLogEx(INFO, "    DESTROY command%s supported", ((d[5] & 0x20) ? "" : " not"));
+    PrintAndLogEx(INFO, "    Additional 32 bits feature flags are%s transmitted", ((d[7] & 0x80) ? "" : " not"));
 
     if (support_easmode) {
         NxpTestEAS(uid);
@@ -1031,30 +1040,31 @@ static int CmdHF15Info(const char *Cmd) {
 
     // DSFID
     if (d[1] & 0x01)
-        PrintAndLogEx(SUCCESS, "   - DSFID.......... 0x%02X", d[10]);
+        PrintAndLogEx(SUCCESS, "DSFID..... 0x%02X", d[10]);
     else
-        PrintAndLogEx(SUCCESS, "   - DSFID not supported");
+        PrintAndLogEx(SUCCESS, "DSFID not supported");
 
     // AFI
     if (d[1] & 0x02)
-        PrintAndLogEx(SUCCESS, "   - AFI............ 0x%02X", d[11]);
+        PrintAndLogEx(SUCCESS, "AFI....... 0x%02X", d[11]);
     else
-        PrintAndLogEx(SUCCESS, "   - AFI not supported");
+        PrintAndLogEx(SUCCESS, "AFI not supported");
 
     // IC reference
     if (d[1] & 0x08)
-        PrintAndLogEx(SUCCESS, "   - IC reference... 0x%02X", d[14]);
+        PrintAndLogEx(SUCCESS, "IC ref.... 0x%02X", d[14]);
     else
-        PrintAndLogEx(SUCCESS, "   - IC reference not supported");
+        PrintAndLogEx(SUCCESS, "IC ref not supported");
 
     // memory
     if (d[1] & 0x04) {
-        PrintAndLogEx(SUCCESS, "   - Tag memory layout (vendor dependent)");
+        PrintAndLogEx(SUCCESS, "Tag memory layout (vendor dependent)");
         uint8_t blocks = d[12] + 1;
         uint8_t size = (d[13] & 0x1F);
-        PrintAndLogEx(SUCCESS, "        " _YELLOW_("%u") " ( or " _YELLOW_("%u") " ) bytes/blocks x " _YELLOW_("%u") " blocks", size + 1, size, blocks);
+        PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " ( or " _YELLOW_("%u") " ) bytes/blocks x " _YELLOW_("%u") " blocks", size + 1, size, blocks);
+        PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " total bytes", ((size + 1) * blocks));
     } else {
-        PrintAndLogEx(SUCCESS, "   - N/A");
+        PrintAndLogEx(SUCCESS, "    N/A");
     }
 
     // Check if SLIX2 and attempt to get NXP System Information
@@ -1355,13 +1365,14 @@ static void print_tag_15693(iso15_tag_t *tag, bool dense_output, bool verbose) {
     if (verbose) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " --%.*s", (tag->bytesPerPage * 3), dashes);
-        PrintAndLogEx(SUCCESS, "UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, tag->uid));
-        PrintAndLogEx(SUCCESS, "TYPE.. " _YELLOW_("%s"), getTagInfo_15(tag->uid));
-        PrintAndLogEx(SUCCESS, "   - DSFID.......... 0x%02X", tag->dsfid);
-        PrintAndLogEx(SUCCESS, "   - AFI............ 0x%02X", tag->afi);
-        PrintAndLogEx(SUCCESS, "   - IC reference... 0x%02X", tag->ic);
-        PrintAndLogEx(SUCCESS, "   - Tag memory layout (vendor dependent)");
-        PrintAndLogEx(SUCCESS, "        " _YELLOW_("%u") " bytes/blocks x " _YELLOW_("%u") " blocks", tag->bytesPerPage, tag->pagesCount);
+        PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%s"), iso15693_sprintUID(NULL, tag->uid));
+        PrintAndLogEx(SUCCESS, "TYPE...... " _YELLOW_("%s"), getTagInfo_15(tag->uid));
+        PrintAndLogEx(SUCCESS, "DSFID..... 0x%02X", tag->dsfid);
+        PrintAndLogEx(SUCCESS, "AFI....... 0x%02X", tag->afi);
+        PrintAndLogEx(SUCCESS, "IC ref.... 0x%02X", tag->ic);
+        PrintAndLogEx(SUCCESS, "Tag memory layout (vendor dependent)");
+        PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " bytes / blocks x " _YELLOW_("%u") " blocks", tag->bytesPerPage, tag->pagesCount);
+        PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " total bytes", (tag->bytesPerPage * tag->pagesCount));
     }
 
     PrintAndLogEx(NORMAL, "");
