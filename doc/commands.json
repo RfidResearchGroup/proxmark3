@@ -7729,6 +7729,19 @@
             ],
             "usage": "hf xerox info [-hv]"
         },
+        "hf xerox rdbl": {
+            "command": "hf xerox rdbl",
+            "description": "Read a Fuji/Xerox tag block",
+            "notes": [
+                "hf xerox rdbl -b 1"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-b, --blk <dec> page number (0-255)"
+            ],
+            "usage": "hf xerox rdbl [-h] -b <dec>"
+        },
         "hf xerox reader": {
             "command": "hf xerox reader",
             "description": "Act as a 14443B reader to identify a Fuji Xerox based tag ISO/IEC 14443 type B based communications",
@@ -12373,8 +12386,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 713,
+        "commands_extracted": 714,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-01-26T11:38:54"
+        "extracted_on": "2024-01-28T10:16:20"
     }
 }

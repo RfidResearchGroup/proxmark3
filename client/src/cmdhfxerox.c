@@ -395,7 +395,7 @@ static int xerox_select_card(iso14b_card_select_t *card, bool disconnect) {
     while (retry--) {
 
         iso14b_raw_cmd_t packet = {
-            .flags = (ISO14B_CONNECT | ISO14B_SELECT_XRX ),
+            .flags = (ISO14B_CONNECT | ISO14B_SELECT_XRX),
             .timeout = 0,
             .rawlen = 0,
         };

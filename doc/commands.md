@@ -782,6 +782,7 @@ Check column "offline" for their availability.
 |`hf xerox dump          `|N       |`Read all memory pages of an Fuji/Xerox tag, save to file`
 |`hf xerox reader        `|N       |`Act like a Fuji/Xerox reader`
 |`hf xerox view          `|Y       |`Display content from tag dump file`
+|`hf xerox rdbl          `|N       |`Read Fuji/Xerox block`
 
 
 ### hw

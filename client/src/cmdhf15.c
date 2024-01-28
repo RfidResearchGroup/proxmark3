@@ -732,7 +732,7 @@ static int NxpTestEAS(uint8_t *uid) {
         PrintAndLogEx(DEBUG, "iso15693 timeout");
         return PM3_ETIMEOUT;
     }
-    if (resp.length < 2) {    
+    if (resp.length < 2) {
         return PM3_EWRONGANSWER;
     }
 
@@ -861,43 +861,43 @@ static int NxpSysInfo(uint8_t *uid) {
     PrintAndLogEx(INFO, _CYAN_(" Password protection configuration"));
 
     PrintAndLogEx(INFO, "    Page L read.... %s"
-        , (d[2] & 0x01) ?  _RED_("password") : _GREEN_("no password")
-    );
+                  , (d[2] & 0x01) ?  _RED_("password") : _GREEN_("no password")
+                 );
 
     PrintAndLogEx(INFO, "    Page L write... %s"
-        , (d[2] & 0x02) ?  _RED_("password") : _GREEN_("no password")
-    );
+                  , (d[2] & 0x02) ?  _RED_("password") : _GREEN_("no password")
+                 );
 
     PrintAndLogEx(INFO, "    Page H read.... %s"
-        , (d[2] & 0x10) ?  _RED_("password") : _GREEN_("no password")
-    );
+                  , (d[2] & 0x10) ?  _RED_("password") : _GREEN_("no password")
+                 );
 
     PrintAndLogEx(INFO, "    Page H write... %s"
-        , (d[2] & 0x20) ?  _RED_("password") : _GREEN_("no password")
-    );
+                  , (d[2] & 0x20) ?  _RED_("password") : _GREEN_("no password")
+                 );
 
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, _CYAN_(" Lock bits"));
 
     // AFI lock bit
     PrintAndLogEx(INFO, "    AFI............ %s"
-        , (d[3] & 0x01) ? _RED_("locked") : _GREEN_("unlocked")
-    );
+                  , (d[3] & 0x01) ? _RED_("locked") : _GREEN_("unlocked")
+                 );
 
     // EAS lock bit
     PrintAndLogEx(INFO, "    EAS............ %s"
-        ,(d[3] & 0x02) ? _RED_("locked") : _GREEN_("unlocked")
-    );
+                  , (d[3] & 0x02) ? _RED_("locked") : _GREEN_("unlocked")
+                 );
 
     // DSFID lock bit
     PrintAndLogEx(INFO, "    DSFID.......... %s"
-        , (d[3] & 0x03) ? _RED_("locked") : _GREEN_("unlocked")
-    );
+                  , (d[3] & 0x03) ? _RED_("locked") : _GREEN_("unlocked")
+                 );
 
     // Password protection pointer address and access conditions lock bit
     PrintAndLogEx(INFO, "    Password protection configuration... %s"
-        , (d[3] & 0x04) ? _RED_("locked") : _GREEN_("unlocked")
-    );
+                  , (d[3] & 0x04) ? _RED_("locked") : _GREEN_("unlocked")
+                 );
 
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, _CYAN_(" Features"));
@@ -1353,9 +1353,9 @@ static void print_blocks_15693(iso15_tag_t *tag, bool dense_output) {
 
             PrintAndLogEx(INFO, "%4d | %s| %s | %s"
                           , i
-                      , sprint_hex(&tag->data[i * tag->bytesPerPage], tag->bytesPerPage)
-                      , lck
-                      , sprint_ascii(&tag->data[i * tag->bytesPerPage], tag->bytesPerPage)
+                          , sprint_hex(&tag->data[i * tag->bytesPerPage], tag->bytesPerPage)
+                          , lck
+                          , sprint_ascii(&tag->data[i * tag->bytesPerPage], tag->bytesPerPage)
                          );
         }
     }
@@ -1382,7 +1382,7 @@ static void print_tag_15693(iso15_tag_t *tag, bool dense_output, bool verbose) {
         return;
     }
 
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Memory") " -------%.*s", (tag->bytesPerPage *3), dashes);
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Memory") " -------%.*s", (tag->bytesPerPage * 3), dashes);
     PrintAndLogEx(NORMAL, "");
     print_blocks_15693(tag, dense_output);
     print_hrule(tag->bytesPerPage);

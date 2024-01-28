@@ -1391,7 +1391,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".json", false);
-    if (res != PM3_SUCCESS) {        
+    if (res != PM3_SUCCESS) {
         return PM3_EFILE;
     }
 
@@ -1618,7 +1618,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         *datalen = sptr;
         goto out;
     }
-   
+
     if (!strcmp(ctype, "EM4205/EM4305")) {
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {
@@ -1639,7 +1639,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         *datalen = sptr;
         goto out;
     }
-    
+
     if (!strcmp(ctype, "EM4469/EM4569")) {
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {
@@ -1660,7 +1660,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         *datalen = sptr;
         goto out;
     }
-    
+
     if (!strcmp(ctype, "EM4X50")) {
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {

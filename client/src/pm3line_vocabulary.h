@@ -515,6 +515,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf xerox dump" },
     { 0, "hf xerox reader" },
     { 1, "hf xerox view" },
+    { 0, "hf xerox rdbl" },
     { 1, "hw help" },
     { 0, "hw break" },
     { 0, "hw bootloader" },

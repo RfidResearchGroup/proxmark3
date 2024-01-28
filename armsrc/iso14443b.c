@@ -1519,7 +1519,7 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len, bool framing) {
     int i;
     tosend_reset();
 
-    // add framing enable flag. 
+    // add framing enable flag.
     // xerox chips use unframed commands during anticollision
     if (framing) {
         // Send SOF

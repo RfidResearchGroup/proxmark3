@@ -1574,14 +1574,14 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     // xerox anti collison loop / slot select for uid bytes...
-    if (cmdsize == 1) {        
+    if (cmdsize == 1) {
         switch (cmd[0]) {
             case 0xB1:
                 snprintf(exp, size, "Slot 0 ACK");
-                return;                
+                return;
             case 0xB3:
                 snprintf(exp, size, "Slot 1 ACK");
-                return;                
+                return;
             case 0xB5:
                 snprintf(exp, size, "Slot 2 ACK");
                 return;
@@ -1675,11 +1675,11 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 break;
             }
             if (cmdsize == 13 && cmd[1] == ISO14443B_XEROX_READ_BLK) {
-                snprintf(exp, size, "XEROX READ_BLK(%u)", cmd[2+8]);
+                snprintf(exp, size, "XEROX READ_BLK(%u)", cmd[2 + 8]);
                 break;
             }
             if (cmdsize == 13 && cmd[1] == ISO14443B_XEROX_EXT_READ_BLK) {
-                snprintf(exp, size, "XEROX EXT_READ_BLK(%u)", cmd[2+8]);
+                snprintf(exp, size, "XEROX EXT_READ_BLK(%u)", cmd[2 + 8]);
                 break;
             }
 
@@ -1693,7 +1693,7 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 snprintf(exp, size, "XEROX WUP1");
                 break;
             }
-        default:        
+        default:
             snprintf(exp, size, "?");
             break;
     }
