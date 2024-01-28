@@ -56,7 +56,6 @@ typedef struct {
 static const char *em4x05_annotation[] = {"Info/User", "UID", "Password", "User", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "Lock", "Lock"};
 static const char *em4x69_annotation [] = {"Info", "UID", "Password", "Lock", "Config", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User", "User"};
 
-
 static int CmdHelp(const char *Cmd);
 
 // 1 = EM4x69
@@ -74,6 +73,31 @@ static em_tech_type_t em_get_card_type(uint32_t config) {
             return EM_4369;
     }
     return EM_UNKNOWN;
+}
+
+static void em4x05_print_type(em_tech_type_t ct) {
+    switch(ct) {
+        case EM_4469: {
+            PrintAndLogEx(INFO, "Identified... " _GREEN_("EM 4469"));
+            break;
+        }
+        case EM_4369: {
+            PrintAndLogEx(INFO, "Identified... " _GREEN_("EM 4369"));
+            break;
+        }
+        case EM_4205: {
+            PrintAndLogEx(INFO, "Identified... " _GREEN_("EM 4205"));
+            break;
+        }
+        case EM_4305: {
+            PrintAndLogEx(INFO, "Identified... " _GREEN_("EM 4305"));
+            break;
+        }
+        case EM_UNKNOWN:
+        default:
+            PrintAndLogEx(FAILED, "Unknown card type");
+            break;
+    }
 }
 
 static const char *em_get_card_str(uint32_t config) {
@@ -876,7 +900,7 @@ static void em4x05_print_footer(void) {
     PrintAndLogEx(NORMAL, "");
 }
 
-static void em4x05_print_blocks(uint32_t cardtype, uint8_t *data, uint8_t dlen) {
+static void em4x05_print_blocks(em_tech_type_t cardtype, uint8_t *data, uint8_t dlen) {
 
     // must have 4 byte alignment
     if ((data == NULL) || (dlen % EM4X05_BLOCK_SIZE) != 0) {
@@ -2501,17 +2525,11 @@ static int CmdEM4x05View(const char *Cmd) {
         return res;
     }
 
-    uint8_t cardtype = EM_UNKNOWN;
-    if (strstr(filename, "4369")) {
-        cardtype = EM_4369;
-    } else if (strstr(filename, "4469")) {
-        cardtype = EM_4469;
-    } else if (strstr(filename, "4x05")) {
-        cardtype = EM_4305;
-    }
+    uint32_t block0 = bytes_to_num(dump, EM4X05_BLOCK_SIZE);
+    em_tech_type_t cardtype = em_get_card_type(block0);
+    em4x05_print_type(cardtype);
 
     if (verbose) {
-        uint32_t block0 = bytes_to_num(dump, EM4X05_BLOCK_SIZE);
         uint32_t serial = bytes_to_num(dump + EM4X05_BLOCK_SIZE, EM4X05_BLOCK_SIZE);
         uint32_t config = bytes_to_num(dump + (EM_CONFIG_BLOCK * EM4X05_BLOCK_SIZE), EM4X05_BLOCK_SIZE);
         printEM4x05info(block0, serial);
