@@ -2351,7 +2351,6 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
         free(path);
         return PM3_EFILE;
     }
-    free(path);
 
     // get filesize in order to malloc memory
     fseek(f, 0, SEEK_END);
@@ -2361,6 +2360,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     if (fsize <= 0) {
         PrintAndLogEx(FAILED, "error, when getting filesize");
         fclose(f);
+        free(path);
         return PM3_EFILE;
     }
 
@@ -2371,6 +2371,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     if (*keya == NULL) {
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
         fclose(f);
+        free(path);
         return PM3_EMALLOC;
     }
 
@@ -2381,6 +2382,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
         fclose(f);
         free(*keya);
+        free(path);
         return PM3_EMALLOC;
     }
 
@@ -2388,6 +2390,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     fclose(f);
 
     PrintAndLogEx(SUCCESS, "loaded binary key file `" _YELLOW_("%s") "`", path);
+    free(path);
     return PM3_SUCCESS;
 }
 
