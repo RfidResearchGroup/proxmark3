@@ -722,15 +722,33 @@ static void TransmitFor14443b_AsTag(const uint8_t *response, uint16_t len) {
 //-----------------------------------------------------------------------------
 void SimulateIso14443bTag(const uint8_t *pupi) {
 
-    LED_A_ON();
+/*
     // the only commands we understand is WUPB, AFI=0, Select All, N=1:
-//    static const uint8_t cmdWUPB[] = { ISO14443B_REQB, 0x00, 0x08, 0x39, 0x73 }; // WUPB
+    static const uint8_t cmdWUPB[] = { ISO14443B_REQB, 0x00, 0x08, 0x39, 0x73 };
     // ... and REQB, AFI=0, Normal Request, N=1:
-//    static const uint8_t cmdREQB[] = { ISO14443B_REQB, 0x00, 0x00, 0x71, 0xFF }; // REQB
+    static const uint8_t cmdREQB[] = { ISO14443B_REQB, 0x00, 0x00, 0x71, 0xFF };
     // ... and HLTB
-//  static const uint8_t cmdHLTB[] = { 0x50, 0xff, 0xff, 0xff, 0xff }; // HLTB
+    static const uint8_t cmdHLTB[] = { 0x50, 0xff, 0xff, 0xff, 0xff };
     // ... and ATTRIB
-//    static const uint8_t cmdATTRIB[] = { ISO14443B_ATTRIB, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; // ATTRIB
+    static const uint8_t cmdATTRIB[] = { ISO14443B_ATTRIB, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+*/ 
+    LED_A_ON();
+
+    // setup device.
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    // connect Demodulated Signal to ADC:
+    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+
+    // Set up the synchronous serial port
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
+
+    // allocate command receive buffer
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
+
+    clear_trace();
+    set_tracing(true);
 
     // ... if not PUPI/UID is supplied we always respond with ATQB, PUPI = 820de174, Application Data = 0x20381922,
     // supports only 106kBit/s in both directions, max frame size = 32Bytes,
@@ -751,21 +769,6 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
 
     // response to HLTB and ATTRIB
     static const uint8_t respOK[] = {0x00, 0x78, 0xF0};
-
-    // setup device.
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
-    // connect Demodulated Signal to ADC:
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-
-    // Set up the synchronous serial port
-    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
-
-    // allocate command receive buffer
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
-    clear_trace();
-    set_tracing(true);
 
     uint16_t len, cmdsReceived = 0;
     int cardSTATE = SIM_NOFIELD;
@@ -821,12 +824,11 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
         // REQ or WUP request in ANY state
         // WUP in HALTED state
         if (len == 5) {
-            if ((receivedCmd[0] == ISO14443B_REQB && (receivedCmd[2] & 0x8) == 0x8 && cardSTATE == SIM_HALTED) ||
-                    receivedCmd[0] == ISO14443B_REQB) {
+            if ( ((receivedCmd[0] == ISO14443B_REQB) && ((receivedCmd[2] & 0x08) == 0x08) && (cardSTATE == SIM_HALTED)) ||
+                  (receivedCmd[0] == ISO14443B_REQB)) {
 
                 LogTrace(receivedCmd, len, 0, 0, NULL, true);
                 cardSTATE = SIM_SELECTING;
-
             }
         }
 
@@ -879,34 +881,22 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
                         Dbprintf("new cmd from reader: len=%d, cmdsRecvd=%d", len, cmdsReceived);
                     }
 
-                    // CRC Check, if long enough
-                    if (len >= 3) {
-
-                        if (check_crc(CRC_14443_B, receivedCmd, len) == false) {
-                            if (g_dbglevel >= DBG_DEBUG) {
-                                DbpString("CRC fail");
-                            }
-                        }
-                    } else {
-                        if (g_dbglevel >= DBG_DEBUG) {
-                            DbpString("CRC ok");
-                        }
-                    }
                     cardSTATE = SIM_IDLE;
                 }
                 break;
             }
-            default:
+            default: {
                 break;
+            }
         }
 
         ++cmdsReceived;
     }
 
-    if (g_dbglevel >= DBG_DEBUG)
+    switch_off();
+    if (g_dbglevel >= DBG_DEBUG) {
         Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
-
-    switch_off(); //simulate
+    }
 }
 
 /*
