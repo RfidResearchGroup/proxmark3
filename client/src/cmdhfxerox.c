@@ -416,8 +416,6 @@ static int xerox_select_card(iso14b_card_select_t *card, bool disconnect) {
             return resp.status;
         }
     } // retry
-
-    PrintAndLogEx(FAILED, "command execution timeout");
     return PM3_ESOFT;
 }
 
