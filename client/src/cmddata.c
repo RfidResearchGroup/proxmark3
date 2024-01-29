@@ -3132,10 +3132,13 @@ static int CmdDiff(const char *Cmd) {
     int res = PM3_SUCCESS;
     uint8_t *inA = NULL, *inB = NULL;
     size_t datalenA = 0, datalenB = 0;
+
+
+
     // read file A
     if (fnlenA) {
         // read dump file
-        res = pm3_load_dump(filenameA, (void **)&inA, &datalenA, 2048);
+        res = pm3_load_dump(filenameA, (void **)&inA, &datalenA, MIFARE_4K_MAX_BYTES);
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -3144,7 +3147,7 @@ static int CmdDiff(const char *Cmd) {
     // read file B
     if (fnlenB) {
         // read dump file
-        res = pm3_load_dump(filenameB, (void **)&inB, &datalenB, 2048);
+        res = pm3_load_dump(filenameB, (void **)&inB, &datalenB, MIFARE_4K_MAX_BYTES);
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -3169,14 +3172,14 @@ static int CmdDiff(const char *Cmd) {
     // download emulator memory
     if (use_e) {
 
-        uint8_t *d = calloc(4096, sizeof(uint8_t));
+        uint8_t *d = calloc(MIFARE_4K_MAX_BYTES, sizeof(uint8_t));
         if (d == NULL) {
             PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
             return PM3_EMALLOC;
         }
 
         PrintAndLogEx(INFO, "downloading from emulator memory");
-        if (GetFromDevice(BIG_BUF_EML, d, 4096, 0, NULL, 0, NULL, 2500, false) == false) {
+        if (GetFromDevice(BIG_BUF_EML, d, MIFARE_4K_MAX_BYTES, 0, NULL, 0, NULL, 2500, false) == false) {
             PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
             free(inA);
             free(inB);
@@ -3185,10 +3188,10 @@ static int CmdDiff(const char *Cmd) {
         }
 
         if (fnlenA) {
-            datalenB = 4096;
+            datalenB = MIFARE_4K_MAX_BYTES;
             inB = d;
         } else {
-            datalenA = 4096;
+            datalenA = MIFARE_4K_MAX_BYTES;
             inA = d;
         }
     }
