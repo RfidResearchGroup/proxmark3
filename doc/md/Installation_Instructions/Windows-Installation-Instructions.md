@@ -16,8 +16,7 @@
   - [Done!](#done)
 - [Installing pre-compiled binaries with ProxSpace](#installing-pre-compiled-binaries-with-proxspace)
 - [Installing dev-environment with WSL 1](#installing-dev-environment-with-wsl-1)
-    - [Stay away from WSL 2](#stay-away-from-wsl-2)
-    - [More about WSL](#more-about-wsl)
+    - [More about WSL 1](#more-about-wsl-1)
   - [X Server Installation](#x-server-installation)
   - [Windows Terminal Installation](#windows-terminal-installation)
   - [Dependencies](#dependencies)
@@ -26,10 +25,11 @@
   - [Done!](#done-1)
 
 
-There are two ways to install, build and use Proxmark3 on Windows:
+There are three ways to install, build and use Proxmark3 on Windows:
 
 * Using Gator96100 **ProxSpace**, a package to assist in your Windows installation of MinGW
 * Using native **WSL 1**, if you're running a Windows 10 version recent enough (FCU 1709 or later)
+* Using native **WSL 2**, if you're running Windows 11 (Build 22000 or later), and has its [own readme](Windows-WSL2-Installation-Instructions.md).
 
 We have listed three ways to use these two setups  (dev environment vs pre-compiled binaries)
 
@@ -47,7 +47,7 @@ _note:  this video is out-of-date but still informative_
 ## Driver Installation ( Windows 7 )
 ^[Top](#top)
 
-_note: for Windows 7 you will this step.  On a later Windows edition skip this._
+_note: for Windows 7 you will need this step.  On a later Windows edition skip this._
 
 Install required drivers for your Windows installation. You may need admin privileges to do this.  
 Step by step guides are online such as [RyscCorps](https://store.ryscc.com/blogs/news/how-to-install-a-proxmark3-driver-on-windows-10).
@@ -122,19 +122,14 @@ It has excellent instructions to follow.
 
 WSL 1 requires to run on Windows 10 version 1709 or above. Previous windows versions didn't have support for COM ports.
 
-### Stay away from WSL 2
-^[Top](#top)
-
-*Microsoft introduced WSL 2 starting on Windows 10 version 2004 with Hyper-V powering its virtualization; As of 2020-08-13, WSL 2 does not support USB and Serial.*
-
-### More about WSL
+### More about WSL 1
 ^[Top](#top)
 
 Install WSL 1 with e.g. the standard Ubuntu. You can follow the guide on [Microsoft Docs](https://docs.microsoft.com/en-us/windows/wsl/install-win10) but be careful to follow WSL 1 specific instructions! When they recommend you to restart, you must restart.
 
-For WSL configuration, see [Manage and configure Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/wsl-config).
+For WSL 1 configuration, see [Manage and configure Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/wsl-config).
 
-Make sure your WSL can launch Windows processes to get the `pm3` scripts working (cf `interop` in the WSL settings).
+Make sure your WSL 1 can launch Windows processes to get the `pm3` scripts working (cf `interop` in the WSL settings).
 
 ## X Server Installation
 ^[Top](#top)
