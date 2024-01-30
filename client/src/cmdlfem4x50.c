@@ -1293,9 +1293,9 @@ static command_t CommandTable[] = {
     {"wrpwd",   CmdEM4x50WritePwd,   IfPm3EM4x50,     "Change EM4x50 password"},
     {"wipe",    CmdEM4x50Wipe,       IfPm3EM4x50,     "Wipe EM4x50 tag"},
     {"-----------", CmdHelp,         AlwaysAvailable, "--------------------- " _CYAN_("simulation") " ---------------------"},
-    {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "Upload EM4x50 dump to emulator memory"},
+    {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "Upload file into emulator memory"},
     {"esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "Save emulator memory to file"},
-    {"eview",  CmdEM4x50EView,       IfPm3EM4x50,     "View EM4x50 content in emulator memory"},
+    {"eview",  CmdEM4x50EView,       IfPm3EM4x50,     "View emulator memory"},
     {"sim",    CmdEM4x50Sim,         IfPm3EM4x50,     "Simulate EM4x50 tag"},
     {NULL, NULL, NULL, NULL}
 };

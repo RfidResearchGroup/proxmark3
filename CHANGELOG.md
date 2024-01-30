@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `lf hitag eview` - now supports viewing of emulator memory (@iceman1001)
  - Added `lf hitag view` - now supports viewing of dump files (@iceman1001)
  - Changed `lf hitag dump --ns` - now support nosave flag (@iceman1001)
  - Added `hf xerox rdbl` - read block of a Fuji/Xerox tag (@iceman1001)

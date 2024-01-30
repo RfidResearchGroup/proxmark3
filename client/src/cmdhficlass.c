@@ -4648,7 +4648,7 @@ static command_t CommandTable[] = {
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
     {"-----------", CmdHelp,                    IfPm3Iclass,     "-------------------- " _CYAN_("simulation") " -------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
-    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Load Picopass / iCLASS dump file into emulator memory"},
+    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Upload file into emulator memory"},
     {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "Save emulator memory to file"},
     {"esetblk",     CmdHFiClassESetBlk,         IfPm3Iclass,     "Set emulator memory block data"},
     {"eview",       CmdHFiClassEView,           IfPm3Iclass,     "View emulator memory"},

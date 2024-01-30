@@ -535,8 +535,8 @@ static command_t CommandTable[] = {
     {"reader",  CmdHFCryptoRFReader,  IfPm3Iso14443b,  "Act as a CryptoRF reader to identify a tag"},
     {"sim",     CmdHFCryptoRFSim,     IfPm3Iso14443b,  "Fake CryptoRF tag"},
     {"sniff",   CmdHFCryptoRFSniff,   IfPm3Iso14443b,  "Eavesdrop CryptoRF"},
-    {"eload",   CmdHFCryptoRFELoad,   AlwaysAvailable, "Load binary dump to emulator memory"},
-    {"esave",   CmdHFCryptoRFESave,   AlwaysAvailable, "Save emulator memory to binary file"},
+    {"eload",   CmdHFCryptoRFELoad,   AlwaysAvailable, "Upload file into emulator memory"},
+    {"esave",   CmdHFCryptoRFESave,   AlwaysAvailable, "Save emulator memory to file"},
     {NULL, NULL, NULL, NULL}
 };
 
