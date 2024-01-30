@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `lf hitag view` - now supports viewing of dump files (@iceman1001)
  - Changed `lf hitag dump --ns` - now support nosave flag (@iceman1001)
  - Added `hf xerox rdbl` - read block of a Fuji/Xerox tag (@iceman1001)
  - Added a xerox trace file,  thanks @jeroenSteen,  (@iceman1001)
@@ -20,8 +21,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hw readmem` to allow larger reads, write to file and better hex viewer (@martian01010)
  - Added `CMD_READ_MEM_DOWNLOAD` and `CMD_READ_MEM_DOWNLOADED` to osimage and bootloader (@martian01010)
  - Changed `hf mfu info` - now correctly identifies NTAG I2C tags (@icemann1001)
- - Changed `hf 14b dump/view` - now supports `z` flag for dense output (@iceman1001)
- - Changed `hf xerox dump/view` - now supports `z` flag for dense output (@iceman1001)
+ - Changed `hf 14b dump/view` - now supports `-z` flag for dense output (@iceman1001)
+ - Changed `hf xerox dump/view` - now supports `-z` flag for dense output (@iceman1001)
  - Changed `hf mfu dump/view/eview` - now supports `-z` flag for dense output (@iceman1001)
  - Added `data crypto` to encrypt and decrypt data in the proxmark client using built-in methods (@team-orangeBlue)
  - Changed `hf tune` and `lf tune` - Added an option to show statistical data after tuning (@wh201906)
@@ -44,9 +45,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf 15 findafi` - improved the params (@iceman1001)
  - Changed `hf 15 rdbl/rdmulti/dump` - should handle 4 vs 8 bytes block sizes in cards (@iceman1001)
  - Changed `hf 15 *` - all 15 commands now uses NG packets (@iceman1001)
- - Changed `hf 15 raw` - now supports "-k" keep field on and "-s" select (@iceman1001)
+ - Changed `hf 15 raw` - now supports `-k` keep field on and `-s` select (@iceman1001)
  - Changed `prefs set client.debug` - now also toggles the client side APDU logging (@iceman1001)
- - Changed `hf 14b sriwrbl` - now supports --force to override block checks. Thanks @gentilkiwi for the idea! (@iceman1001)
+ - Changed `hf 14b sriwrbl` - now supports `--force` to override block checks. Thanks @gentilkiwi for the idea! (@iceman1001)
  - Changed `hf 14b sriwrbl` - now tries to verify the write (@iceman1001)
  - Changed `hf 14b apdu` - now supports tearoff (@iceman1001)
  - Fixed `hf 14b raw` - fixed a potential write out of bounds. (@iceman1001)
