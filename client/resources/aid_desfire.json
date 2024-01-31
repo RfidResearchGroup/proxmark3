@@ -544,4 +544,12 @@
         "Description": "used by AT HOP, Nol, ORCA",
         "Type": "transport"
     }
+    {
+        "AID": "F52310",
+        "Vendor": "ICT Access credential",
+        "Country": "NZ",
+        "Name": "ICT Access credential",
+        "Description": "",
+        "Type": "pacs"
+    },
 ]
