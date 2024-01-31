@@ -923,14 +923,16 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         // select with no disconnect and set gs_frame_len
         int selres = SelectCard14443A_4(false, !silentMode, NULL);
         gs_frames_num = 0;
-        if (selres != PM3_SUCCESS)
+        if (selres != PM3_SUCCESS) {
             return selres;
+        }
     }
 
-    if (leaveSignalON)
+    if (leaveSignalON)  {
         cmdc |= ISO14A_NO_DISCONNECT;
+    }
 
-    uint8_t data[PM3_CMD_DATA_SIZE] = { 0x0a | gs_frames_num, 0x00};
+    uint8_t data[PM3_CMD_DATA_SIZE] = { 0x0a | gs_frames_num, 0x00 };
     gs_frames_num ^= 1;
 
     int min = MIN((PM3_CMD_DATA_SIZE - 2), (datainlen & 0x1FF));
@@ -939,44 +941,54 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
 
     uint8_t *recv;
     PacketResponseNG resp;
-
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         recv = resp.data.asBytes;
         int iLen = resp.oldarg[0];
 
-        if (!iLen) {
-            if (!silentMode) PrintAndLogEx(ERR, "No card response.");
-            return 1;
+        if (iLen == 0) {
+            if (silentMode == false) {
+                PrintAndLogEx(ERR, "No card response");
+            }
+            return PM3_ECARDEXCHANGE;
         }
 
         *dataoutlen = iLen - 2;
-        if (*dataoutlen < 0)
+        if (*dataoutlen < 0) {
             *dataoutlen = 0;
+        }
 
         if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
-            if (!silentMode) PrintAndLogEx(ERR, "Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
-            return 2;
+            if (silentMode == false) {
+                PrintAndLogEx(ERR, "Buffer too small(%d). Needs %d bytes", *dataoutlen, maxdataoutlen);
+            }
+            return PM3_ELENGTH;
         }
 
         if (recv[0] != data[0]) {
-            if (!silentMode) PrintAndLogEx(ERR, "iso14443-4 framing error. Card send %2x must be %2x", recv[0], data[0]);
-            return 2;
+            if (silentMode == false) {
+                PrintAndLogEx(ERR, "iso14443-4 framing error. Card send %2x must be %2x", recv[0], data[0]);
+            }
+            return PM3_ELENGTH;
         }
 
         memcpy(dataout, &recv[2], *dataoutlen);
 
         // CRC Check
         if (iLen == -1) {
-            if (!silentMode) PrintAndLogEx(ERR, "ISO 14443A CRC error.");
-            return 3;
+            if (silentMode == false) {
+                PrintAndLogEx(ERR, "ISO 14443A CRC error.");
+            }
+            return PM3_ECRC;
         }
 
     } else {
-        if (!silentMode) PrintAndLogEx(ERR, "Reply timeout.");
-        return 4;
+        if (silentMode == false) {
+            PrintAndLogEx(ERR, "Reply timeout.");
+        }
+        return PM3_ETIMEOUT;
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card_select_t *card, iso14a_polling_parameters_t *polling_parameters) {

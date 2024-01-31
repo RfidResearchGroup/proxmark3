@@ -382,6 +382,12 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
                 int res = ExchangeRAW14a(cmd, sizeof(cmd), true, false, data, sizeof(data), &datalen, false);
 
+                if (res != PM3_SUCCESS) {
+                    PrintAndLogEx(INFO, "identification failed");
+                    PrintAndLogEx(NORMAL, "");
+                    DropField();
+                    return PM3_SUCCESS;
+                }
                 // DESFire answers 0x1C or 67 00
                 // Plus answers 0x0B, 0x09, 0x06
                 // 6D00 is "INS code not supported" in APDU
@@ -413,11 +419,13 @@ static int CmdHFMFPInfo(const char *Cmd) {
                     PrintAndLogEx(INFO, "  result.... " _GREEN_("MIFARE Plus SL0/SL3"));
                 }
 
-                if (!res && datalen > 1 && data[0] == 0x09) {
+                if ((datalen > 1) && 
+                    (data[0] == 0x09)) {
                     SLmode = 0;
                 }
             }
         }
+
 
         if (isPlus) {
             // How do we detect SL0 / SL1 / SL2 / SL3 modes?!?
@@ -446,7 +454,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
             }
         }
     } else {
-        PrintAndLogEx(INFO, "\tMifare Plus info not available.");
+        PrintAndLogEx(INFO, "   Mifare Plus info not available");
     }
     PrintAndLogEx(NORMAL, "");
     DropField();
@@ -1729,7 +1737,6 @@ static int CmdHFMFPDump(const char *Cmd) {
         return PM3_SUCCESS;
     */
 }
-
 
 static int CmdHFMFPMAD(const char *Cmd) {
 

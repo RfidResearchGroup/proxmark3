@@ -232,9 +232,9 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
     PacketResponseNG resp;
 
     uint32_t timeout = 0;
-    while (!WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+    while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
 
-        PrintAndLogEx((timeout == 0) ? INFO : NORMAL, "." NOLF);
+        PrintAndLogEx((timeout) ? NORMAL : INFO, "." NOLF);
         fflush(stdout);
 
         timeout++;
