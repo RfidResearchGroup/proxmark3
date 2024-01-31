@@ -97,6 +97,8 @@ static const uint64_t g_mifare_default_keys[] = {
     0x11496F97752A, // HID
     0x3E65E4FB65B3, // Gym
     0x000000000000, // Blank key
+    0x9C28A60F7249, // ICT
+    0xC9826AF02794, // ICT
     0x010203040506,
     0x1a2b3c4d5e6f,
     0x123456789abc,
