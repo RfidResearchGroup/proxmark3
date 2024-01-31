@@ -543,13 +543,21 @@
         "Name": "Reserved for future use",
         "Description": "used by AT HOP, Nol, ORCA",
         "Type": "transport"
-    }
+    },
     {
         "AID": "F52310",
-        "Vendor": "ICT Access credential",
+        "Vendor": "Integrated Control Technology Limited (ICT)",
         "Country": "NZ",
         "Name": "ICT Access credential",
         "Description": "",
         "Type": "pacs"
     },
+    {
+        "AID": "F48EF1",
+        "Vendor": "SALTO Access credential",
+        "Country": "ES",
+        "Name": "SALTO Access credential",
+        "Description": "",
+        "Type": "pacs"
+    },    
 ]

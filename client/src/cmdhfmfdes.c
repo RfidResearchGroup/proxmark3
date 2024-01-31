@@ -1755,13 +1755,17 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     AppListS AppList = {{0}};
     DesfireFillAppList(&dctx, &PICCInfo, AppList, false, false, false); // no deep scan, no scan files
 
-    if (PICCInfo.freemem == 0xffffffff)
-        PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _YELLOW_("n/a"), PICCInfo.appCount);
-    else
-        PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d") " bytes", PICCInfo.appCount, PICCInfo.freemem);
+    PrintAndLogEx(SUCCESS, "# Applications... " _GREEN_("%zu"), PICCInfo.appCount);
+    if (PICCInfo.freemem == 0xffffffff) {
+        PrintAndLogEx(SUCCESS, "Free memory...... " _YELLOW_("n/a"));
+    } else {
+        PrintAndLogEx(SUCCESS, "Free memory...... " _GREEN_("%d") " bytes", PICCInfo.freemem);
+    }
 
-    if ((PICCInfo.keySettings & (1 << 1)) == 0)
-        PrintAndLogEx(WARNING, "Directory list access with CMK : " _RED_("Enabled") ". Try to read mad with Card Master Key(");
+    if ((PICCInfo.keySettings & (1 << 1)) == 0) {
+        PrintAndLogEx(WARNING, "Directory list access with CMK... ( " _RED_("Enabled") " )");
+        PrintAndLogEx(HINT, "Try to read MAD with Card Master Key (CMK)");
+    }
 
     PrintAndLogEx(SUCCESS, "----------------------------------------- " _CYAN_("MAD") " ------------------------------------------");
     bool foundFFFFFF = false;
