@@ -25,30 +25,31 @@
 #include "cmdhf14a.h"       // ISO14443-A
 #include "cmdhf14b.h"       // ISO14443-B
 #include "cmdhf15.h"        // ISO15693
-#include "cmdhfepa.h"
+#include "cmdhfcipurse.h"   // CIPURSE transport cards
+#include "cmdhfcryptorf.h"  // CryptoRF
+#include "cmdhfepa.h"       // German Identification Card
 #include "cmdhfemrtd.h"     // eMRTD
-#include "cmdhflegic.h"     // LEGIC
+#include "cmdhffelica.h"    // ISO18092 / FeliCa
+#include "cmdhffido.h"      // FIDO authenticators
+#include "cmdhffudan.h"     // Fudan cards
+#include "cmdhfgallagher.h" // Gallagher DESFire cards
 #include "cmdhficlass.h"    // ICLASS
+#include "cmdhfict.h"       // ICT MFC / DESfire cards
 #include "cmdhfjooki.h"     // MFU based Jooki
+#include "cmdhfksx6924.h"   // KS X 6924
+#include "cmdhflegic.h"     // LEGIC
+#include "cmdhflto.h"       // LTO-CM
 #include "cmdhfmf.h"        // CLASSIC
 #include "cmdhfmfu.h"       // ULTRALIGHT/NTAG etc
 #include "cmdhfmfp.h"       // Mifare Plus
 #include "cmdhfmfdes.h"     // DESFIRE
 #include "cmdhfntag424.h"   // NTAG 424 DNA
-#include "cmdhftopaz.h"     // TOPAZ
-#include "cmdhffelica.h"    // ISO18092 / FeliCa
-#include "cmdhffido.h"      // FIDO authenticators
-#include "cmdhffudan.h"     // Fudan cards
-#include "cmdhfgallagher.h" // Gallagher DESFire cards
-#include "cmdhfksx6924.h"   // KS X 6924
-#include "cmdhfcipurse.h"   // CIPURSE transport cards
-#include "cmdhfthinfilm.h"  // Thinfilm
-#include "cmdhflto.h"       // LTO-CM
-#include "cmdhfcryptorf.h"  // CryptoRF
 #include "cmdhfseos.h"      // SEOS
 #include "cmdhfst25ta.h"    // ST25TA
 #include "cmdhftesla.h"     // Tesla
 #include "cmdhftexkom.h"    // Texkom
+#include "cmdhfthinfilm.h"  // Thinfilm
+#include "cmdhftopaz.h"     // TOPAZ
 #include "cmdhfvas.h"       // Value added services
 #include "cmdhfwaveshare.h" // Waveshare
 #include "cmdhfxerox.h"     // Xerox
@@ -108,6 +109,19 @@ int CmdHFSearch(const char *Cmd) {
     PrintAndLogEx(INPLACE, " Searching for ISO14443-A tag...");
     if (IfPm3Iso14443a()) {
         int sel_state = infoHF14A(false, false, false);
+        if (sel_state > 0) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-A tag") " found\n");
+            success[ISO_14443A] = true;
+            res = PM3_SUCCESS;
+
+            if (sel_state == 1)
+                infoHF14A4Applications(verbose);
+        }
+    }
+
+    // ICT
+    if (IfPm3Iso14443a()) {
+                int sel_state = infoHF14A(false, false, false);
         if (sel_state > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-A tag") " found\n");
             success[ISO_14443A] = true;
@@ -565,9 +579,10 @@ static command_t CommandTable[] = {
     {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators...    }"},
     {"fudan",       CmdHFFudan,       AlwaysAvailable, "{ Fudan RFIDs...                      }"},
     {"gallagher",   CmdHFGallagher,   AlwaysAvailable, "{ Gallagher DESFire RFIDs...          }"},
-    {"ksx6924",     CmdHFKSX6924,     AlwaysAvailable, "{ KS X 6924 (T-Money, Snapper+) RFIDs }"},
-    {"jooki",       CmdHF_Jooki,      AlwaysAvailable, "{ Jooki RFIDs...                      }"},
     {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                     }"},
+    {"ict",         CmdHFICT,         AlwaysAvailable, "{ ICT MFC/DESfire RFIDs...            }"},
+    {"jooki",       CmdHF_Jooki,      AlwaysAvailable, "{ Jooki RFIDs...                      }"},
+    {"ksx6924",     CmdHFKSX6924,     AlwaysAvailable, "{ KS X 6924 (T-Money, Snapper+) RFIDs }"},
     {"legic",       CmdHFLegic,       AlwaysAvailable, "{ LEGIC RFIDs...                      }"},
     {"lto",         CmdHFLTO,         AlwaysAvailable, "{ LTO Cartridge Memory RFIDs...       }"},
     {"mf",          CmdHFMF,          AlwaysAvailable, "{ MIFARE RFIDs...                     }"},
