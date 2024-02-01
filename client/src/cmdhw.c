@@ -747,20 +747,22 @@ static int CmdSetHFThreshold(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw sethfthresh",
-                  "Set thresholds in HF/14a mode.",
-                  "hw sethfthresh -i 20 -t 7"
+                  "Set thresholds in HF/14a and Legic mode.",
+                  "hw sethfthresh -t 7 -i 20 -l 8"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("i", "high", "<dec>", "high threshold, used in sniff mode (def 20)"),
-        arg_int0("t", "thresh", "<dec>", "threshold, used in reader mode (def 7)"),
+        arg_int0("t", "thresh", "<dec>", "threshold, used in 14a reader mode (def 7)"),
+        arg_int0("i", "high", "<dec>", "high threshold, used in 14a sniff mode (def 20)"),
+        arg_int0("l", "legic", "<dec>", "threshold used in Legic mode (def 8)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint8_t params[2];
-    params[1] = arg_get_int_def(ctx, 1, 20);
-    params[0] = arg_get_int_def(ctx, 2, 7);
+    uint8_t params[3];
+    params[0] = arg_get_int_def(ctx, 1, 7);
+    params[1] = arg_get_int_def(ctx, 2, 20);
+    params[2] = arg_get_int_def(ctx, 3, 8);
     CLIParserFree(ctx);
 
     if ((params[0]<1) || (params[0]>63) || (params[1]<1) || (params[1]>63)) {

@@ -1563,6 +1563,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_ISO14443A_SET_THRESHOLDS: {
             FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
             FpgaSendCommand(FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, (packet->data.asBytes[0] & 0x3f) | ((packet->data.asBytes[1] & 0x3f) << 6));
+            LegicRfSetThreshold((uint32_t)packet->data.asBytes[2]);
             break;
         }
         case CMD_HF_ISO14443A_SNIFF: {

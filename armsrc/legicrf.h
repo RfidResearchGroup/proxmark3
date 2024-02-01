@@ -26,6 +26,7 @@ void LegicRfInfo(void);
 int LegicRfReaderEx(uint16_t offset, uint16_t len, uint8_t iv);
 void LegicRfReader(uint16_t offset, uint16_t len, uint8_t iv);
 void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, const uint8_t *data);
+void LegicRfSetThreshold(uint32_t threshold);
 
 legic_card_select_t *getLegicCardInfo(void);
 #endif /* __LEGICRF_H */

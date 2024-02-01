@@ -64,7 +64,7 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 #define LEGIC_CARD_MEMSIZE 1024 /* The largest Legic Prime card is 1k */
 #define WRITE_LOWERLIMIT      4 /* UID and MCC are not writable */
 
-#define INPUT_THRESHOLD       8 /* heuristically determined, lower values */
+static uint32_t input_threshold = 8; /* heuristically determined, lower values */
 /* lead to detecting false ack during write */
 
 //-----------------------------------------------------------------------------
@@ -129,7 +129,7 @@ static bool rx_bit(void) {
     int32_t power = (MAX(ABS(sum_ci), ABS(sum_cq)) + (MIN(ABS(sum_ci), ABS(sum_cq)) >> 1));
 
     // compare average (power / 8) to threshold
-    return ((power >> 3) > INPUT_THRESHOLD);
+    return ((power >> 3) > input_threshold);
 }
 
 //-----------------------------------------------------------------------------
@@ -565,4 +565,9 @@ void LegicRfWriter(uint16_t offset, uint16_t len, uint8_t iv, const uint8_t *dat
 OUT:
     switch_off();
     StopTicks();
+}
+
+void LegicRfSetThreshold(uint32_t threshold)
+{
+    input_threshold = threshold;
 }
