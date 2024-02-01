@@ -743,6 +743,37 @@ static int CmdSetDivisor(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdSetHFThreshold(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw sethfthresh",
+                  "Set thresholds in HF/14a mode.",
+                  "hw sethfthresh -i 20 -t 7"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("i", "high", "<dec>", "high threshold, used in sniff mode (def 20)"),
+        arg_int0("t", "thresh", "<dec>", "threshold, used in reader mode (def 7)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint8_t params[2];
+    params[1] = arg_get_int_def(ctx, 1, 20);
+    params[0] = arg_get_int_def(ctx, 2, 7);
+    CLIParserFree(ctx);
+
+    if ((params[0]<1) || (params[0]>63) || (params[1]<1) || (params[1]>63)) {
+        PrintAndLogEx(ERR, "Thresholds must be between " _YELLOW_("1") " and " _YELLOW_("63"));
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443A_SET_THRESHOLDS, (uint8_t *)&params, sizeof(params));
+    PrintAndLogEx(SUCCESS, "Thresholds set.");
+    return PM3_SUCCESS;
+}
+
 static int CmdSetMux(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -1195,6 +1226,7 @@ static command_t CommandTable[] = {
     {"readmem",       CmdReadmem,      IfPm3Present,    "Read from processor flash"},
     {"reset",         CmdReset,        IfPm3Present,    "Reset the Proxmark3"},
     {"setlfdivisor",  CmdSetDivisor,   IfPm3Present,    "Drive LF antenna at 12MHz / (divisor + 1)"},
+    {"sethfthresh",   CmdSetHFThreshold,IfPm3Present,   "Set thresholds in HF/14a mode"},
     {"setmux",        CmdSetMux,       IfPm3Present,    "Set the ADC mux to a specific value"},
     {"standalone",    CmdStandalone,   IfPm3Present,    "Jump to the standalone mode"},
     {"status",        CmdStatus,       IfPm3Present,    "Show runtime status information about the connected Proxmark3"},

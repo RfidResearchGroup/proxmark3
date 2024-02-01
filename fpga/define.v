@@ -39,7 +39,8 @@
 +-------------------------------------------------+
 |  C  C  C  C           M  M  M  P  P  P  P  P  P | C = FPGA_CMD_SET_CONFREG, M = FPGA_MAJOR_MODE_*, P = FPGA_LF_* or FPGA_HF_* parameter
 |  C  C  C  C              D  D  D  D  D  D  D  D | C = FPGA_CMD_SET_DIVISOR, D = divisor
-|  C  C  C  C              T  T  T  T  T  T  T  T | C = FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, T = threshold
+|  C  C  C  C              T  T  T  T  T  T  T  T | C = FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, T = threshold (in LF mode)
+|  C  C  C  C  H  H  H  H  H  H  T  T  T  T  T  T | C = FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, H = threshold_high, T = threshold (in HF/14a mode)
 |  C  C  C  C                                   E | C = FPGA_CMD_TRACE_ENABLE, E=0 off, E=1 on
 +-------------------------------------------------+
 
