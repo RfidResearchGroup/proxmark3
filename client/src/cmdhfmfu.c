@@ -467,17 +467,23 @@ static int ulev1_readSignature(uint8_t *response, uint16_t responseLength) {
 // make sure field is off before calling this function
 static int ul_fudan_check(void) {
     iso14a_card_select_t card;
-    if (!ul_select(&card))
+    if (ul_select(&card) == false) {
         return MFU_TT_UL_ERROR;
+    }
 
     uint8_t cmd[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa7}; //wrong crc on purpose  should be 0xa8
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return MFU_TT_UL_ERROR;
-    if (resp.oldarg[0] != 1) return MFU_TT_UL_ERROR;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        return MFU_TT_UL_ERROR;
+    }
+    if (resp.oldarg[0] != 1) {
+        return MFU_TT_UL_ERROR;
+    }
 
-    return (!resp.data.asBytes[0]) ? MFU_TT_FUDAN_UL : MFU_TT_UL; //if response == 0x00 then Fudan, else Genuine NXP
+    return (resp.data.asBytes[0] == 0) 
+        ? MFU_TT_FUDAN_UL : MFU_TT_UL; //if response == 0x00 then Fudan, else Genuine NXP
 }
 
 static int ul_print_default(uint8_t *data, uint8_t *real_uid) {
@@ -776,7 +782,8 @@ static int ulc_print_configuration(uint8_t *data) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("UL-C Configuration") " --------------------------");
-    PrintAndLogEx(INFO, "Available memory... " _YELLOW_("%u") " bytes", 0x2F * 4);
+    PrintAndLogEx(INFO, "Total memory....... " _YELLOW_("%u") " bytes", MAX_ULC_BLOCKS * 4);
+    PrintAndLogEx(INFO, "Available memory... " _YELLOW_("%u") " bytes", (MAX_ULC_BLOCKS - 4) * 4);
     PrintAndLogEx(INFO, "40 / 0x28 | %s - %s Higher lockbits", sprint_hex(data, 4), sprint_bin(data, 2));
     PrintAndLogEx(INFO, "41 / 0x29 | %s - %s Counter", sprint_hex(data + 4, 4), sprint_bin(data + 4, 2));
 
@@ -1271,35 +1278,41 @@ static int ul_magic_test(void) {
     // 2) make a wrong length write to page0, and see if tag answers with ACK/NACK:
 
     iso14a_card_select_t card;
-    if (ul_select(&card) == false)
+    if (ul_select(&card) == false) {
         return MFU_TT_UL_ERROR;
+    }
 
     int status = ul_comp_write(0, NULL, 0);
     DropField();
-    if (status == 0)
+    if (status == 0) {
         return MFU_TT_MAGIC;
+    }
 
     // check for GEN1A, GEN1B and NTAG21x
-    uint8_t is_generation = 0;
     PacketResponseNG resp;
     clearCommandBuffer();
     uint8_t payload[] = { 0 };
     SendCommandNG(CMD_HF_MIFARE_CIDENT, payload, sizeof(payload));
+
+    uint16_t is_generation = MAGIC_FLAG_NONE;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_CIDENT, &resp, 1500)) {
-        if (resp.status == PM3_SUCCESS)
-            is_generation = resp.data.asBytes[0];
+        if ((resp.status == PM3_SUCCESS) && resp.length == sizeof(uint16_t)) {
+            is_generation = resp.data.asDwords[0] & 0xFFFF;
+        }
     }
-    switch (is_generation) {
-        case MAGIC_GEN_1A:
-            return MFU_TT_MAGIC_1A;
-        case MAGIC_GEN_1B:
-            return MFU_TT_MAGIC_1B;
-        case MAGIC_NTAG21X:
-            return MFU_TT_MAGIC_NTAG;
-        default:
-            break;
+
+    if ((is_generation & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) {
+        return MFU_TT_MAGIC_1A;
     }
-    return 0;
+
+    if ((is_generation & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B) {
+        return MFU_TT_MAGIC_1B;
+    }
+    if ((is_generation & MAGIC_FLAG_NTAG21X) == MAGIC_FLAG_NTAG21X) {
+        return MFU_TT_MAGIC_NTAG;
+    }
+
+    return MFU_TT_UNKNOWN;
 }
 
 static char *GenerateFilename(const char *prefix, const char *suffix) {

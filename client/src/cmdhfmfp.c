@@ -381,7 +381,6 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 // https://github.com/Proxmark/proxmark3/blob/master/client/luascripts/mifarePlus.lua#L161
                 uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
                 int res = ExchangeRAW14a(cmd, sizeof(cmd), true, false, data, sizeof(data), &datalen, false);
-
                 if (res != PM3_SUCCESS) {
                     PrintAndLogEx(INFO, "identification failed");
                     PrintAndLogEx(NORMAL, "");

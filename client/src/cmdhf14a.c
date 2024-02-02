@@ -2487,34 +2487,40 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         return PM3_EFAILED;
     }
 
-    int isMagic = 0;
+    uint16_t isMagic = 0;
     if (isMifareClassic) {
         isMagic = detect_mf_magic(true, MF_KEY_B, 0xFFFFFFFFFFFF);
     }
+
     if (isMifareUltralight) {
-        isMagic = (detect_mf_magic(false, MF_KEY_A, 0) == MAGIC_NTAG21X);
+        isMagic = ((detect_mf_magic(false, MF_KEY_A, 0) & MAGIC_FLAG_NTAG21X) == MAGIC_FLAG_NTAG21X);
     }
+
     if (isMifareClassic) {
         int res = detect_classic_static_nonce();
-        if (res == NONCE_STATIC)
+        if (res == NONCE_STATIC) {
             PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
+        }
 
-        if (res == NONCE_FAIL && verbose)
+        if (res == NONCE_FAIL && verbose) {
             PrintAndLogEx(SUCCESS, "Static nonce......... " _RED_("read failed"));
+        }
 
         if (res == NONCE_NORMAL) {
 
             // not static
             res = detect_classic_prng();
-            if (res == 1)
+            if (res == 1) {
                 PrintAndLogEx(SUCCESS, "Prng detection....... " _GREEN_("weak"));
-            else if (res == 0)
+            } else if (res == 0) {
                 PrintAndLogEx(SUCCESS, "Prng detection....... " _YELLOW_("hard"));
-            else
+            } else {
                 PrintAndLogEx(FAILED, "Prng detection........ " _RED_("fail"));
+            }
 
-            if (do_nack_test)
+            if (do_nack_test) {
                 detect_classic_nackbug(false);
+            }
         }
 
         uint8_t signature[32] = {0};
@@ -2522,7 +2528,6 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if (res == PM3_SUCCESS) {
             mfc_ev1_print_signature(card.uid, card.uidlen, signature, sizeof(signature));
         }
-
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf`") " commands");
     }
 
@@ -2530,20 +2535,25 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         return PM3_EFAILED;
     }
 
-    if (isMifareUltralight)
+    if (isMifareUltralight) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfu info") "`");
+    }
 
-    if (isMifarePlus && isMagic == 0 && isEMV == false)
+    if (isMifarePlus && (isMagic == MAGIC_FLAG_NONE) && isEMV == false) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfp info") "`");
+    }
 
-    if (isMifareDESFire && isMagic == 0 && isEMV == false)
+    if (isMifareDESFire && (isMagic == MAGIC_FLAG_NONE) && isEMV == false) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfdes info") "`");
+    }
 
-    if (isST)
+    if (isST) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf st info") "`");
+    }
 
-    if (isEMV)
+    if (isEMV) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("emv reader") "`");
+    }
 
     if (isFUDAN) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf fudan dump") "`");
@@ -2564,6 +2574,35 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf ntag424 info") "`");
     }
 
+    if (isMifareClassic &&
+        (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B))
+        ) {
+        PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf c*") "` commands when interacting");
+    }
+
+    if (isMifareClassic &&
+        ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2)
+        ) {
+        PrintAndLogEx(HINT, "Hint: Use normal `" _YELLOW_("hf mf") "` commands when interacting");
+    }
+
+    if (isMifareClassic &&
+        ((isMagic & MAGIC_FLAG_GEN_3) == MAGIC_FLAG_GEN_3)
+        ) {
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gen3*") "` commands when interacting");
+    }
+
+    if (isMifareClassic &&
+        ((isMagic & MAGIC_FLAG_GEN_4GTU) == MAGIC_FLAG_GEN_4GTU)
+        ) {
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf g*") "` commands when interacting");
+    }
+
+    if (isMifareClassic &&
+        ((isMagic & MAGIC_FLAG_GDM_AUTH) == MAGIC_FLAG_GDM_AUTH)
+        ) {
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gdm*") "` commands when interacting");
+    }
 
     PrintAndLogEx(NORMAL, "");
     DropField();

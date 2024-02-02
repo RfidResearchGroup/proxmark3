@@ -9341,12 +9341,11 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Magic Tag Information"));
-    if (detect_mf_magic(true, MF_KEY_B, e_sector[0].Key[MF_KEY_B]) == 0) {
-        if (detect_mf_magic(true, MF_KEY_A, e_sector[0].Key[MF_KEY_A]) == 0) {
+    if (detect_mf_magic(true, MF_KEY_B, e_sector[0].Key[MF_KEY_B]) == MAGIC_FLAG_NONE) {
+        if (detect_mf_magic(true, MF_KEY_A, e_sector[0].Key[MF_KEY_A]) == MAGIC_FLAG_NONE) {
             PrintAndLogEx(INFO, "<N/A>");
         }
     }
-
 
     free(keyBlock);
     free(e_sector);

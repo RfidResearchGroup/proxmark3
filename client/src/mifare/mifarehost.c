@@ -1389,10 +1389,10 @@ int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, ui
     return NONCE_FAIL;
 }
 
-/* try to see if card responses to "Chinese magic backdoor" commands. */
-int detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
+// try to see if card responses to "Chinese magic backdoor" commands.
+// returns flag 
+uint16_t detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
 
-    uint8_t isMagic = 0;
     PacketResponseNG resp;
     clearCommandBuffer();
     uint8_t payload[1 + 1 + MIFARE_KEY_SIZE] = { is_mfc, key_type };
@@ -1401,54 +1401,67 @@ int detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
     SendCommandNG(CMD_HF_MIFARE_CIDENT, payload, sizeof(payload));
     if (WaitForResponseTimeout(CMD_HF_MIFARE_CIDENT, &resp, 1500)) {
         if (resp.status != PM3_SUCCESS) {
-            return 0;
+            return MAGIC_FLAG_NONE;
         }
     }
 
-    for (size_t i = 0; i < resp.length; i++) {
-        isMagic = 1;
-        switch (resp.data.asBytes[i]) {
-            case MAGIC_GEN_1A:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 1a"));
-                break;
-            case MAGIC_GEN_1B:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 1b"));
-                break;
-            case MAGIC_GEN_2:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 2 / CUID"));
-                break;
-            case MAGIC_GEN_3:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 3 / APDU") " ( possibly )");
-                break;
-            case MAGIC_GEN_4GTU:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GTU"));
-                break;
-            case MAGIC_GDM_AUTH:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Magic Auth )");
-                break;
-            case MAGIC_GDM_WUP_20:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Alt Magic Wakeup )");
-                break;
-            case MAGIC_GDM_WUP_40:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Gen1 Magic Wakeup )");
-                break;
-            case MAGIC_GEN_UNFUSED:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Write Once / FUID"));
-                break;
-            case MAGIC_SUPER_GEN1:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Super card ( ") _CYAN_("Gen 1") _GREEN_(" )"));
-                break;
-            case MAGIC_SUPER_GEN2:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Super card ( ") _CYAN_("Gen 2") _GREEN_(" )"));
-                break;
-            case MAGIC_NTAG21X:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("NTAG21x"));
-                break;
-            case MAGIC_QL88:
-                PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("QL88"));
-            default:
-                break;
-        }
+    uint16_t isMagic = MAGIC_FLAG_NONE;
+    if ((resp.status == PM3_SUCCESS) && resp.length == sizeof(uint16_t)) {
+        isMagic = resp.data.asDwords[0] & 0xFFFF;
+    }
+
+    PrintAndLogEx(INFO, "...%04x", isMagic);
+
+    if ((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 1a"));
+    }
+
+    if ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 1b"));
+    }
+
+    if ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 2 / CUID"));
+    }
+
+    if ((isMagic & MAGIC_FLAG_GEN_3) == MAGIC_FLAG_GEN_3) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 3 / APDU") " ( possibly )");
+    }
+
+    if ((isMagic & MAGIC_FLAG_GEN_4GTU) == MAGIC_FLAG_GEN_4GTU) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GTU"));
+    }
+
+    if ((isMagic & MAGIC_FLAG_GDM_AUTH) == MAGIC_FLAG_GDM_AUTH) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Magic Auth )");
+    }
+
+    if ((isMagic & MAGIC_FLAG_GDM_WUP_20) == MAGIC_FLAG_GDM_WUP_20) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Alt Magic Wakeup )");
+    }
+
+    if ((isMagic & MAGIC_FLAG_GDM_WUP_40) == MAGIC_FLAG_GDM_WUP_40) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Gen1 Magic Wakeup )");
+    }
+
+    if ((isMagic & MAGIC_FLAG_GEN_UNFUSED) == MAGIC_FLAG_GEN_UNFUSED) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Write Once / FUID"));
+    }
+
+    if ((isMagic & MAGIC_FLAG_SUPER_GEN1) == MAGIC_FLAG_SUPER_GEN1) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Super card ( ") _CYAN_("Gen 1") _GREEN_(" )"));
+    }
+
+    if ((isMagic & MAGIC_FLAG_SUPER_GEN2) == MAGIC_FLAG_SUPER_GEN2) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Super card ( ") _CYAN_("Gen 2") _GREEN_(" )"));
+    }
+
+    if ((isMagic & MAGIC_FLAG_NTAG21X) == MAGIC_FLAG_NTAG21X) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("NTAG21x"));
+    }
+
+    if ((isMagic & MAGIC_FLAG_QL88) == MAGIC_FLAG_QL88) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("QL88"));
     }
     return isMagic;
 }

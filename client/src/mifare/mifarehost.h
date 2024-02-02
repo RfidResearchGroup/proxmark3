@@ -101,7 +101,7 @@ int tryDecryptWord(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data,
 
 int detect_classic_prng(void);
 int detect_classic_nackbug(bool verbose);
-int detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key);
+uint16_t detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key);
 int detect_classic_static_nonce(void);
 int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, uint8_t *key);
 bool detect_mfc_ev1_signature(void);

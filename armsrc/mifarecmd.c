@@ -2457,8 +2457,8 @@ static void mf_reset_card(void) {
 
 void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     // variables
-    uint8_t rec[MAX_MIFARE_PARITY_SIZE] = {0x00};
-    uint8_t recpar[MAX_MIFARE_PARITY_SIZE] = {0x00};
+    uint8_t rec[1] = {0x00};
+    uint8_t recpar[1] = {0x00};
     uint8_t rats[4] = {ISO14443A_CMD_RATS, 0x80, 0x31, 0x73};
     uint8_t rdblf0[4] = {ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
     uint8_t rdbl00[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
@@ -2467,39 +2467,36 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     uint8_t gen4GetConf[8] = {GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
     uint8_t superGen1[9] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10, 0x14, 0x1D};
     bool isGen2 = false;
-    bool isGen1AGdm = false;
 
     uint8_t *par = BigBuf_calloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_calloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_calloc(10);
-    uint8_t *data = BigBuf_calloc(16);
-
+    uint16_t flag = MAGIC_FLAG_NONE;
     uint32_t cuid = 0;
-    size_t data_off = 0;
+    int res = 0;
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     // Generation 1 test
     ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
-    if (ReaderReceive(rec, recpar) && (rec[0] == 0x0a)) {
-        uint8_t isGen = MAGIC_GEN_1A;
+    if (ReaderReceive(rec, recpar) && (rec[0] == 0x0A)) {
+        flag = MAGIC_FLAG_GEN_1A;
         ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-        if (!ReaderReceive(rec, recpar) || (rec[0] != 0x0a)) {
-            isGen = MAGIC_GEN_1B;
-        };
-        data[data_off++] = isGen;
+        if (ReaderReceive(rec, recpar) && (rec[0] != 0x0A)) {
+            flag = MAGIC_FLAG_GEN_1B;
+        }
 
         // check for GDM config
         ReaderTransmit(gen4gdmGetConf, sizeof(gen4gdmGetConf), NULL);
-        int res = ReaderReceive(buf, par);
+        res = ReaderReceive(buf, par);
         if (res > 1) {
-            isGen1AGdm = true;
+            flag |= MAGIC_FLAG_GDM_WUP_40;
         }
     }
 
     mf_reset_card();
 
-    int res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+    res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
     if (res) {
         // Check for Magic Gen4 GTU with default password:
         // Get config should return 30 or 32 bytes
@@ -2507,7 +2504,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
         ReaderTransmit(gen4GetConf, sizeof(gen4GetConf), NULL);
         res = ReaderReceive(buf, par);
         if (res == 32 || res == 34) {
-            data[data_off++] = MAGIC_GEN_4GTU;
+            flag |= MAGIC_FLAG_GEN_4GTU;
         }
     }
 
@@ -2517,7 +2514,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     res = iso14443a_select_card(uid, NULL, &cuid, true, 0, false);
     if (res) {
         if (cuid == 0xAA55C396) {
-            data[data_off++] = MAGIC_GEN_UNFUSED;
+            flag |= MAGIC_FLAG_GEN_UNFUSED;
         }
 
         ReaderTransmit(rats, sizeof(rats), NULL);
@@ -2527,38 +2524,38 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
             if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10", 9) == 0) {
                 // test for some MFC gen2
                 isGen2 = true;
-                data[data_off++] = MAGIC_GEN_2;
+                flag |= MAGIC_FLAG_GEN_2;
             } else if (memcmp(buf, "\x0D\x78\x00\x71\x02\x88\x49\xA1\x30\x20\x15\x06\x08\x56\x3D", 15) == 0) {
                 // test for some MFC 7b gen2
                 isGen2 = true;
-                data[data_off++] = MAGIC_GEN_2;
+                flag |= MAGIC_FLAG_GEN_2;
             } else if (memcmp(buf, "\x0A\x78\x00\x81\x02\xDB\xA0\xC1\x19\x40\x2A\xB5", 12) == 0) {
                 // test for Ultralight magic gen2
                 isGen2 = true;
-                data[data_off++] = MAGIC_GEN_2;
+                flag |= MAGIC_FLAG_GEN_2;
             } else if (memcmp(buf, "\x85\x00\x00\xA0\x00\x00\x0A\xC3\x00\x04\x03\x01\x01\x00\x0B\x03\x41\xDF", 18) == 0) {
                 // test for Ultralight EV1 magic gen2
                 isGen2 = true;
-                data[data_off++] = MAGIC_GEN_2;
+                flag |= MAGIC_FLAG_GEN_2;
             } else if (memcmp(buf, "\x85\x00\x00\xA0\x0A\x00\x0A\xC3\x00\x04\x03\x01\x01\x00\x0B\x03\x16\xD7", 18) == 0) {
                 // test for some other Ultralight EV1 magic gen2
                 isGen2 = true;
-                data[data_off++] = MAGIC_GEN_2;
+                flag |= MAGIC_FLAG_GEN_2;
             } else if (memcmp(buf, "\x85\x00\x00\xA0\x0A\x00\x0A\xB0\x00\x00\x00\x00\x00\x00\x00\x00\x18\x4D", 18) == 0) {
                 // test for some other Ultralight magic gen2
                 isGen2 = true;
-                data[data_off++] = MAGIC_GEN_2;
+                flag |= MAGIC_FLAG_GEN_2;
             } else if (memcmp(buf, "\x85\x00\x00\xA0\x00\x00\x0A\xA5\x00\x04\x04\x02\x01\x00\x0F\x03\x79\x0C", 18) == 0) {
                 // test for NTAG213 magic gen2
                 isGen2 = true;
-                data[data_off++] = MAGIC_GEN_2;
+                flag |= MAGIC_FLAG_GEN_2;
             }
 
             // test for super card
             ReaderTransmit(superGen1, sizeof(superGen1), NULL);
             res = ReaderReceive(buf, par);
             if (res == 22) {
-                uint8_t isGen = MAGIC_SUPER_GEN1;
+                uint8_t isGen = MAGIC_FLAG_SUPER_GEN1;
 
                 // check for super card gen2
                 // not available after RATS, reset card before executing
@@ -2568,10 +2565,10 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
                 ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
                 res = ReaderReceive(buf, par);
                 if (res == 18) {
-                    isGen = MAGIC_SUPER_GEN2;
+                    isGen = MAGIC_FLAG_SUPER_GEN2;
                 }
 
-                data[data_off++] = isGen;
+                flag |= isGen;
             }
         }
 
@@ -2584,7 +2581,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
                 ReaderTransmit(rdblf0, sizeof(rdblf0), NULL);
                 res = ReaderReceive(buf, par);
                 if (res == 18) {
-                    data[data_off++] = MAGIC_NTAG21X;
+                    flag |= MAGIC_FLAG_NTAG21X;
                 }
             }
         } else {
@@ -2597,7 +2594,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
             // regular cards will NAK the WRITEBLOCK(0) command, while DirectWrite will ACK it
             // if we do get an ACK, we immediately abort to ensure nothing is ever actually written
             // only perform test if we haven't already identified Gen2.  No need test if we have a positive identification already
-            if (!isGen2) {
+            if (isGen2 == false) {
                 mf_reset_card();
 
                 res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
@@ -2607,7 +2604,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
                     if (mifare_classic_authex(pcs, cuid, 0, keytype, tmpkey, AUTH_FIRST, NULL, NULL) == 0) {
 
                         if ((mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, 0, buf, par, NULL) == 1) && (buf[0] == 0x0A)) {
-                            data[data_off++] = MAGIC_GEN_2;
+                            flag |= MAGIC_FLAG_GEN_2;
                             // turn off immediately to ensure nothing ever accidentally writes to the block
                             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
                         }
@@ -2624,7 +2621,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
                 ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
                 res = ReaderReceive(buf, par);
                 if (res == 18) {
-                    data[data_off++] = MAGIC_GEN_3;
+                    flag |= MAGIC_FLAG_GEN_3;
                 }
             }
 
@@ -2636,7 +2633,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
                 ReaderTransmit(gen4gdmAuth, sizeof(gen4gdmAuth), NULL);
                 res = ReaderReceive(buf, par);
                 if (res == 4) {
-                    data[data_off++] = MAGIC_GDM_AUTH;
+                    flag |= MAGIC_FLAG_GDM_AUTH;
                 }
             }
 
@@ -2646,24 +2643,20 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
             res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
             if (res) {
                 if (mifare_classic_authex(pcs, cuid, 68, MF_KEY_B, 0x707B11FC1481, AUTH_FIRST, NULL, NULL) == 0) {
-                    data[data_off++] = MAGIC_QL88;
+                    flag |= MAGIC_FLAG_QL88;
                 }
                 crypto1_deinit(pcs);
             }
         }
     };
 
-    if (isGen1AGdm == true) {
-        data[data_off++] = MAGIC_GDM_WUP_40;
-    }
-
     // GDM alt magic wakeup (20)
     ReaderTransmitBitsPar(wupGDM1, 7, NULL, NULL);
     if (ReaderReceive(rec, recpar) && (rec[0] == 0x0a)) {
-        data[data_off++] = MAGIC_GDM_WUP_20;
+        flag |= MAGIC_FLAG_GDM_WUP_20;
     }
 
-    reply_ng(CMD_HF_MIFARE_CIDENT, PM3_SUCCESS, data, data_off);
+    reply_ng(CMD_HF_MIFARE_CIDENT, PM3_SUCCESS, (uint8_t *)&flag, sizeof(uint16_t));
     // turns off
     OnSuccessMagic();
     BigBuf_free();
