@@ -531,9 +531,9 @@ static int DESFIRESendRaw(bool activate_field, uint8_t *data, size_t datalen, ui
     memmove(&result[0], &result[1], *result_len);
 
     if (rcode != MFDES_S_OPERATION_OK &&
-        rcode != MFDES_S_SIGNATURE &&
-        rcode != MFDES_S_ADDITIONAL_FRAME &&
-        rcode != MFDES_S_NO_CHANGES) {
+            rcode != MFDES_S_SIGNATURE &&
+            rcode != MFDES_S_ADDITIONAL_FRAME &&
+            rcode != MFDES_S_NO_CHANGES) {
 
         if (GetAPDULogging()) {
             PrintAndLogEx(ERR, "Command (%02x) ERROR: 0x%02x", data[0], rcode);
@@ -621,7 +621,7 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
 
     if (enable_chaining == false) {
         if (rcode == MFDES_S_OPERATION_OK ||
-            rcode == MFDES_ADDITIONAL_FRAME) {
+                rcode == MFDES_ADDITIONAL_FRAME) {
 
             if (resplen) {
                 *resplen = pos;
@@ -656,7 +656,7 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
         }
         pos += buflen;
 
-        if (rcode != MFDES_ADDITIONAL_FRAME) 
+        if (rcode != MFDES_ADDITIONAL_FRAME)
             break;
     }
 
@@ -741,7 +741,7 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
     pos += buflen;
     if (enable_chaining == false) {
         if (sw == DESFIRE_GET_ISO_STATUS(MFDES_S_OPERATION_OK) ||
-            sw == DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
+                sw == DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
 
             if (resplen) {
                 *resplen = pos;

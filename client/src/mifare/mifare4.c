@@ -368,7 +368,7 @@ static int intExchangeRAW14aPlus(uint8_t *datain, int datainlen, bool activateFi
     }
 
     int res = ExchangeRAW14a(datain, datainlen, activateField, leaveSignalON, dataout, maxdataoutlen, dataoutlen, false);
-    
+
     if (g_verbose_mode) {
         PrintAndLogEx(INFO, "<<< %s", sprint_hex(dataout, *dataoutlen));
     }
@@ -437,7 +437,7 @@ int MFPWriteBlock(mf4Session_t *mf4session, bool plain, bool nomacres, uint8_t b
     if (nomacres) {
         cmdb = cmdb ^ 0x01; // If we do not want MAC in reply, remove 0x01
     }
-        
+
     if (plain) {
         cmdb = cmdb ^ 0x02; // If we do not need an encrypted transmission, add 0x02
     }

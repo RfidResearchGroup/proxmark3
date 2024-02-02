@@ -722,16 +722,16 @@ static void TransmitFor14443b_AsTag(const uint8_t *response, uint16_t len) {
 //-----------------------------------------------------------------------------
 void SimulateIso14443bTag(const uint8_t *pupi) {
 
-/*
-    // the only commands we understand is WUPB, AFI=0, Select All, N=1:
-    static const uint8_t cmdWUPB[] = { ISO14443B_REQB, 0x00, 0x08, 0x39, 0x73 };
-    // ... and REQB, AFI=0, Normal Request, N=1:
-    static const uint8_t cmdREQB[] = { ISO14443B_REQB, 0x00, 0x00, 0x71, 0xFF };
-    // ... and HLTB
-    static const uint8_t cmdHLTB[] = { 0x50, 0xff, 0xff, 0xff, 0xff };
-    // ... and ATTRIB
-    static const uint8_t cmdATTRIB[] = { ISO14443B_ATTRIB, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-*/ 
+    /*
+        // the only commands we understand is WUPB, AFI=0, Select All, N=1:
+        static const uint8_t cmdWUPB[] = { ISO14443B_REQB, 0x00, 0x08, 0x39, 0x73 };
+        // ... and REQB, AFI=0, Normal Request, N=1:
+        static const uint8_t cmdREQB[] = { ISO14443B_REQB, 0x00, 0x00, 0x71, 0xFF };
+        // ... and HLTB
+        static const uint8_t cmdHLTB[] = { 0x50, 0xff, 0xff, 0xff, 0xff };
+        // ... and ATTRIB
+        static const uint8_t cmdATTRIB[] = { ISO14443B_ATTRIB, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    */
     LED_A_ON();
 
     // setup device.
@@ -824,8 +824,8 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
         // REQ or WUP request in ANY state
         // WUP in HALTED state
         if (len == 5) {
-            if ( ((receivedCmd[0] == ISO14443B_REQB) && ((receivedCmd[2] & 0x08) == 0x08) && (cardSTATE == SIM_HALTED)) ||
-                  (receivedCmd[0] == ISO14443B_REQB)) {
+            if (((receivedCmd[0] == ISO14443B_REQB) && ((receivedCmd[2] & 0x08) == 0x08) && (cardSTATE == SIM_HALTED)) ||
+                    (receivedCmd[0] == ISO14443B_REQB)) {
 
                 LogTrace(receivedCmd, len, 0, 0, NULL, true);
                 cardSTATE = SIM_SELECTING;

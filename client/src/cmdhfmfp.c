@@ -391,10 +391,10 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 // Plus answers 0x0B, 0x09, 0x06
                 // 6D00 is "INS code not supported" in APDU
                 if (
-                    data[0] != 0x0B && 
-                    data[0] != 0x09 && 
-                    data[0] != 0x1C && 
-                    data[0] != 0x67 && 
+                    data[0] != 0x0B &&
+                    data[0] != 0x09 &&
+                    data[0] != 0x1C &&
+                    data[0] != 0x67 &&
                     data[0] != 0x6D &&
                     data[0] != 0x6E) {
 
@@ -403,7 +403,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 }
 
                 if ((memcmp(data, "\x67\x00", 2) == 0) ||   // wrong length
-                    (memcmp(data, "\x1C\x83\x0C", 3) == 0)  // desfire answers
+                        (memcmp(data, "\x1C\x83\x0C", 3) == 0)  // desfire answers
                    ) {
                     PrintAndLogEx(INFO, "  result.... " _RED_("MIFARE DESFire"));
                     PrintAndLogEx(HINT, "Hint:  Try " _YELLOW_("`hf mfdes info`"));
@@ -418,8 +418,8 @@ static int CmdHFMFPInfo(const char *Cmd) {
                     PrintAndLogEx(INFO, "  result.... " _GREEN_("MIFARE Plus SL0/SL3"));
                 }
 
-                if ((datalen > 1) && 
-                    (data[0] == 0x09)) {
+                if ((datalen > 1) &&
+                        (data[0] == 0x09)) {
                     SLmode = 0;
                 }
             }

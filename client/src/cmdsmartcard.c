@@ -1306,13 +1306,13 @@ static int CmdPCSC(const char *Cmd) {
                     if (cardType == CC_CONTACT) {
                         memcpy(atr, selectedCardContact.atr, selectedCardContact.atr_len);
                         atrLen = selectedCardContact.atr_len;
-                    } else if (cardType == CC_CONTACTLESS) { 
-											if (contactlessProto == ISODEP_NFCA) {
-                          atsToEmulatedAtr(selectedCard14a.ats, atr, &atrLen);
-											} else if (contactlessProto == ISODEP_NFCB) {
-													atqbToEmulatedAtr(selectedCard14b.atqb, selectedCard14b.cid, atr, &atrLen);
-											}
-										}
+                    } else if (cardType == CC_CONTACTLESS) {
+                        if (contactlessProto == ISODEP_NFCA) {
+                            atsToEmulatedAtr(selectedCard14a.ats, atr, &atrLen);
+                        } else if (contactlessProto == ISODEP_NFCB) {
+                            atqbToEmulatedAtr(selectedCard14b.atqb, selectedCard14b.cid, atr, &atrLen);
+                        }
+                    }
 
                     uint8_t res[22] = {0};
                     res[1] = atrLen;
