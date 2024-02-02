@@ -34,6 +34,7 @@
 #include "base64.h"
 #include "fileutils.h"      // saveFile
 #include "cmdtrace.h"       // trace list
+#include "preferences.h"    // setDeviceDebugLevel
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2F
@@ -360,15 +361,31 @@ int trace_mfuc_try_default_3des_keys(uint8_t **correct_key, int state, uint8_t (
 }
 
 static int try_default_3des_keys(uint8_t **correct_key) {
+
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    int res = PM3_ESOFT;
     PrintAndLogEx(INFO, "Trying some default 3des keys");
     for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
         uint8_t *key = default_3des_keys[i];
         if (ulc_authentication(key, true)) {
             *correct_key = key;
-            return PM3_SUCCESS;
+            res = PM3_SUCCESS;
+            break;
         }
     }
-    return PM3_ESOFT;
+
+    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
+        return res;
+    }
+    return res;
 }
 
 static int ulev1_requestAuthentication(uint8_t *pwd, uint8_t *pack, uint16_t packLength) {
@@ -757,24 +774,32 @@ static int ulc_print_3deskey(uint8_t *data) {
 
 static int ulc_print_configuration(uint8_t *data) {
 
-    PrintAndLogEx(NORMAL, "\n--- " _CYAN_("UL-C Configuration"));
-    PrintAndLogEx(NORMAL, " Higher Lockbits [40/0x28]: %s - %s", sprint_hex(data, 4), sprint_bin(data, 2));
-    PrintAndLogEx(NORMAL, "         Counter [41/0x29]: %s - %s", sprint_hex(data + 4, 4), sprint_bin(data + 4, 2));
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("UL-C Configuration") " --------------------------");
+    PrintAndLogEx(INFO, "Available memory... " _YELLOW_("%u") " bytes", 0x2F * 4);
+    PrintAndLogEx(INFO, "40 / 0x28 | %s - %s Higher lockbits", sprint_hex(data, 4), sprint_bin(data, 2));
+    PrintAndLogEx(INFO, "41 / 0x29 | %s - %s Counter", sprint_hex(data + 4, 4), sprint_bin(data + 4, 2));
 
-    bool validAuth = (data[8] >= 0x03 && data[8] <= 0x30);
+    bool validAuth = (data[8] >= 0x03 && data[8] < 0x30);
     if (validAuth)
-        PrintAndLogEx(NORMAL, "           Auth0 [42/0x2A]: %s page %d/0x%02X and above need authentication", sprint_hex(data + 8, 4), data[8], data[8]);
+        PrintAndLogEx(INFO, "42 / 0x2A |  Auth0, %s Page " _YELLOW_("%d") "/" _YELLOW_("0x%02X") " and above need authentication"
+            , sprint_hex(data + 8, 4)
+            , data[8]
+            , data[8]
+            );
     else {
         if (data[8] == 0) {
-            PrintAndLogEx(NORMAL, "           Auth0 [42/0x2A]: %s default", sprint_hex(data + 8, 4));
+            PrintAndLogEx(INFO, "42 / 0x2A | %s Auth0 default", sprint_hex(data + 8, 4));
+        } else if (data[8] == 0x30) {
+            PrintAndLogEx(INFO, "42 / 0x2A | %s Auth0 " _GREEN_("unlocked"), sprint_hex(data + 8, 4));
         } else {
-            PrintAndLogEx(NORMAL, "           Auth0 [42/0x2A]: %s auth byte is out-of-range", sprint_hex(data + 8, 4));
+            PrintAndLogEx(INFO, "42 / 0x2A | %s Auth0 " _RED_("byte is out-of-range"), sprint_hex(data + 8, 4));
         }
     }
-    PrintAndLogEx(NORMAL, "           Auth1 [43/0x2B]: %s %s",
-                  sprint_hex(data + 12, 4),
-                  (data[12] & 1) ? "write access restricted" : "read and write access restricted"
-                 );
+    PrintAndLogEx(INFO, "43 / 0x2B | %s Auth1 %s",
+                sprint_hex(data + 12, 4),
+                (data[12] & 1) ? "write access restricted" : _RED_("R/W access restricted")
+            );
     return PM3_SUCCESS;
 }
 
@@ -1932,6 +1957,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 memcpy(keySwap, SwapEndian64(key, 16, 8), 16);
                 ulc_print_3deskey(keySwap);
             }
+            PrintAndLogEx(INFO, "Done!");
             return PM3_SUCCESS;
         }
     }
