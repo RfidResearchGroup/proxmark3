@@ -1410,8 +1410,6 @@ uint16_t detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
         isMagic = resp.data.asDwords[0] & 0xFFFF;
     }
 
-    PrintAndLogEx(INFO, "...%04x", isMagic);
-
     if ((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) {
         PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 1a"));
     }
