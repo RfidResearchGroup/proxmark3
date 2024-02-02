@@ -567,7 +567,6 @@ OUT:
     StopTicks();
 }
 
-void LegicRfSetThreshold(uint32_t threshold)
-{
+void LegicRfSetThreshold(uint32_t threshold) {
     input_threshold = threshold;
 }
