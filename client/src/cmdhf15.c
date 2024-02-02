@@ -29,19 +29,20 @@
 // variant, but offers the possibility to analyze the waveforms directly.
 #include "cmdhf15.h"
 #include <ctype.h>
-#include "cmdparser.h"         // command_t
-#include "commonutil.h"        // ARRAYLEN
-#include "comms.h"             // clearCommandBuffer
+#include "cmdparser.h"          // command_t
+#include "commonutil.h"         // ARRAYLEN
+#include "comms.h"              // clearCommandBuffer
 #include "cmdtrace.h"
-#include "iso15693tools.h"     // ISO15693 error codes etc
-#include "protocols.h"         // ISO15693 command set
+#include "iso15693tools.h"      // ISO15693 error codes etc
+#include "protocols.h"          // ISO15693 command set
 #include "crypto/libpcrypto.h"
 #include "graph.h"
-#include "crc16.h"             // iso15 crc
-#include "cmddata.h"           // getsamples
-#include "fileutils.h"         // pm3_save_dump
+#include "crc16.h"              // iso15 crc
+#include "cmddata.h"            // getsamples
+#include "fileutils.h"          // pm3_save_dump
 #include "cliparser.h"
-#include "util_posix.h"        // msleep
+#include "util_posix.h"         // msleep
+#include "iso15.h"              // typedef structs / enum
 
 #define FrameSOF                Iso15693FrameSOF
 #define Logic0                  Iso15693Logic0
@@ -58,6 +59,42 @@
 #endif
 #ifndef AddCrc15
 #define AddCrc15(data, len)     compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
+#endif
+
+#ifndef ISO15_RAW_LEN
+#define ISO15_RAW_LEN(x)  (sizeof(iso15_raw_cmd_t) + (x))
+#endif
+
+
+#ifndef ISO15_ERROR_HANDLING_RESPONSE
+#define ISO15_ERROR_HANDLING_RESPONSE { \
+    if (resp.status == PM3_ETEAROFF) { \
+        return resp.status; \
+    } \
+    if (resp.length < 2) { \
+        PrintAndLogEx(ERR, "iso15693 command failed"); \
+        return PM3_EWRONGANSWER; \
+    } \
+}
+#endif
+
+#ifndef ISO15_ERROR_HANDLING_CARD_RESPONSE
+#define ISO15_ERROR_HANDLING_CARD_RESPONSE(data, len) { \
+    if ((check_crc(CRC_15693, (data), (len))) == false) { \
+        PrintAndLogEx(FAILED, "crc ( " _RED_("fail") " )"); \
+        return PM3_ECRC; \
+    } \
+ \
+    if ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) { \
+ \
+        if (data[1] == 0x0F || data[1] == 0x10) { \
+            return PM3_EOUTOFBOUND; \
+        } \
+ \
+        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", d[0], TagErrorStr(d[0])); \
+        return PM3_EWRONGANSWER; \
+    } \
+}
 #endif
 
 typedef struct {
@@ -99,15 +136,15 @@ static const productName_t uidmapping[] = {
     //I-Code SLI-L         [IC id = 03 + bit36 set to 0]
     //I-Code SLIX-L        [IC id = 03 + bit36 set to 1]
     { 0xE004000000000000LL, 16, "NXP Semiconductors Germany (Philips)" },
-    { 0xE004010000000000LL, 24, "NXP(Philips); IC SL2 ICS20/ICS21(SLI) ICS2002/ICS2102(SLIX) ICS2602(SLIX2)" },
-    { 0xE004011800000000LL, 0xFFFFFF1800000000LL, "NXP(Philips); IC NTP53x2/NTP5210/NTA5332(NTAG 5)" },
-    { 0xE004010000000000LL, 0xFFFFFF1800000000LL, "NXP(Philips); IC SL2 ICS20/ICS21(SLI)" },
-    { 0xE004011000000000LL, 0xFFFFFF1800000000LL, "NXP(Philips); IC SL2 ICS2002/ICS2102(SLIX)" },
-    { 0xE004010800000000LL, 0xFFFFFF1800000000LL, "NXP(Philips); IC SL2 ICS2602(SLIX2)" },
-    { 0xE004020000000000LL, 0xFFFFFF1000000000LL, "NXP(Philips); IC SL2 ICS53/ICS54(SLI-S)" },
-    { 0xE004021000000000LL, 0xFFFFFF1000000000LL, "NXP(Philips); ICS5302/ICS5402(SLIX-S)" },
-    { 0xE004030000000000LL, 0xFFFFFF1000000000LL, "NXP(Philips); IC SL2 ICS50/ICS51(SLI-L)" },
-    { 0xE004031000000000LL, 0xFFFFFF1000000000LL, "NXP(Philips); ICS5002/ICS5102(SLIX-L)" },
+    { 0xE004010000000000LL, 24, "NXP (Philips); IC SL2 ICS20/ICS21 (SLI) ICS2002/ICS2102 (SLIX) ICS2602 (SLIX2)" },
+    { 0xE004011800000000LL, 0xFFFFFF1800000000LL, "NXP (Philips); IC NTP53x2/NTP5210/NTA5332 " AEND "( " _CYAN_("NTAG 5") " )" },
+    { 0xE004010000000000LL, 0xFFFFFF1800000000LL, "NXP (Philips); IC SL2 ICS20/ICS21 " AEND "( " _CYAN_("SLI") " )" },
+    { 0xE004011000000000LL, 0xFFFFFF1800000000LL, "NXP (Philips); IC SL2 ICS2002/ICS2102 " AEND "( " _CYAN_("SLIX") " )" },
+    { 0xE004010800000000LL, 0xFFFFFF1800000000LL, "NXP (Philips); IC SL2 ICS2602 " AEND "( " _CYAN_("SLIX2") " )" },
+    { 0xE004020000000000LL, 0xFFFFFF1000000000LL, "NXP (Philips); IC SL2 ICS53/ICS54 " AEND "( " _CYAN_("SLI-S") " )" },
+    { 0xE004021000000000LL, 0xFFFFFF1000000000LL, "NXP (Philips); ICS5302/ICS5402 " AEND "( " _CYAN_("SLIX-S") " )" },
+    { 0xE004030000000000LL, 0xFFFFFF1000000000LL, "NXP (Philips); IC SL2 ICS50/ICS51 " AEND "( " _CYAN_("SLI-L") " )" },
+    { 0xE004031000000000LL, 0xFFFFFF1000000000LL, "NXP (Philips); ICS5002/ICS5102 " AEND "( " _CYAN_("SLIX-L") " )" },
 
     // E0 05 XX .. .. ..
     //   05 = Manufacturer code (Infineon)
@@ -115,10 +152,10 @@ static const productName_t uidmapping[] = {
     { 0xE005000000000000LL, 16, "Infineon Technologies AG Germany" },
     { 0xE005A10000000000LL, 24, "Infineon; SRF55V01P [IC id = 161] plain mode 1kBit"},
     { 0xE005A80000000000LL, 24, "Infineon; SRF55V01P [IC id = 168] pilot series 1kBit"},
-    { 0xE005400000000000LL, 24, "Infineon; SRF55V02P [IC id = 64]  plain mode 2kBit"},
-    { 0xE005000000000000LL, 24, "Infineon; SRF55V10P [IC id = 00]  plain mode 10KBit"},
-    { 0xE005500000000000LL, 24, "Infineon; SRF55V02S [IC id = 80]  secure mode 2kBit"},
-    { 0xE005100000000000LL, 24, "Infineon; SRF55V10S [IC id = 16]  secure mode 10KBit"},
+    { 0xE005400000000000LL, 24, "Infineon; SRF55V02P [IC id = 64] plain mode 2kBit"},
+    { 0xE005000000000000LL, 24, "Infineon; SRF55V10P [IC id = 00] plain mode 10KBit"},
+    { 0xE005500000000000LL, 24, "Infineon; SRF55V02S [IC id = 80] secure mode 2kBit"},
+    { 0xE005100000000000LL, 24, "Infineon; SRF55V10S [IC id = 16] secure mode 10KBit"},
     { 0xE0051E0000000000LL, 23, "Infineon; SLE66r01P [IC id = 3x = My-d Move or My-d move NFC]"},
     { 0xE005200000000000LL, 21, "Infineon; SLE66r01P [IC id = 3x = My-d Move or My-d move NFC]"},
 
@@ -168,6 +205,7 @@ static const productName_t uidmapping[] = {
     { 0xE016240000000000LL, 24, "EM-Marin SA (Skidata); EM4233 [IC id = 09] 23,5pF CustomerID-102"},
     { 0xE016280000000000LL, 24, "EM-Marin SA (Skidata); EM4233 SLIC [IC id = 10] 23,5pF (1Kb flash memory - not provide High Security mode and QuietStorage feature)" },
     { 0xE0163C0000000000LL, 24, "EM-Marin SA (Skidata); EM4237 [IC id = 15] 23,5pF"},
+    { 0xE016780000000000LL, 24, "EM-Marin SA (Skidata); EM4425 Echo V (dual tech)"},
     { 0xE0167C0000000000LL, 24, "EM-Marin SA (Skidata); EM4233 [IC id = 31] 95pF"},
     { 0xE016940000000000LL, 24, "EM-Marin SA (Skidata); EM4036 [IC id = 37] 95pF  51x64bit "},
     { 0xE0169c0000000000LL, 24, "EM-Marin SA (Skidata); EM4133 [IC id = 39] 95pF (Read/Write)" },
@@ -278,7 +316,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
         };
     */
 
-    uint8_t revuid[8] = {0};
+    uint8_t revuid[HF15_UID_LENGTH] = {0};
     reverse_array_copy(uid, sizeof(revuid), revuid);
 
     uint8_t revsign[32] = {0};
@@ -420,24 +458,29 @@ static const char *TagErrorStr(uint8_t error) {
 // fast method to just read the UID of a tag (collision detection not supported)
 //  *buf should be large enough to fit the 64bit uid
 // returns 1 if succeeded
-static int getUID(bool loop, uint8_t *buf) {
+static int getUID(bool verbose, bool loop, uint8_t *buf) {
 
-    uint8_t data[5];
-    data[0] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
-    data[1] = ISO15693_INVENTORY;
-    data[2] = 0; // mask length
-
-    AddCrc15(data, 3);
+    uint8_t approxlen = 5;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     // params
-    uint8_t fast = 1;
-    uint8_t reply = 1;
+    packet->raw[packet->rawlen++] = ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_INVENTORY | ISO15_REQINV_SLOT1;
+    packet->raw[packet->rawlen++] = ISO15693_INVENTORY;
+    packet->raw[packet->rawlen++] = 0; // mask length
+
+    AddCrc15(packet->raw, 3);
+    packet->rawlen += 2;
+
+    packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
 
     int res = PM3_ESOFT;
-
     do {
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO15693_COMMAND, sizeof(data), fast, reply, data, sizeof(data));
+        SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000)) {
 
@@ -447,12 +490,11 @@ static int getUID(bool loop, uint8_t *buf) {
                     memcpy(buf, resp.data.asBytes + 2, 8);
                 }
 
-                DropField();
-
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), iso15693_sprintUID(NULL, buf));
-                PrintAndLogEx(SUCCESS, "TYPE: " _YELLOW_("%s"), getTagInfo_15(buf));
-
+                if (verbose) {
+                    PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%s"), iso15693_sprintUID(NULL, buf));
+                    PrintAndLogEx(SUCCESS, "TYPE... " _YELLOW_("%s"), getTagInfo_15(buf));
+                    PrintAndLogEx(NORMAL, "");
+                }
                 res = PM3_SUCCESS;
 
                 if (loop == false) {
@@ -462,15 +504,17 @@ static int getUID(bool loop, uint8_t *buf) {
         }
     } while (loop && kbd_enter_pressed() == false);
 
-    DropField();
+    free(packet);
     return res;
 }
 
 // used with 'hf search'
 bool readHF15Uid(bool loop, bool verbose) {
-    uint8_t uid[8] = {0};
-    if (getUID(loop, uid) != PM3_SUCCESS) {
-        if (verbose) PrintAndLogEx(WARNING, "no tag found");
+    uint8_t uid[HF15_UID_LENGTH] = {0};
+    if (getUID(verbose, loop, uid) != PM3_SUCCESS) {
+        if (verbose) {
+            PrintAndLogEx(WARNING, "no tag found");
+        }
         return false;
     }
     return true;
@@ -479,7 +523,7 @@ bool readHF15Uid(bool loop, bool verbose) {
 // adds 6
 static uint8_t arg_add_default(void *at[]) {
     at[0] = arg_param_begin;
-    at[1] = arg_str0("u", "uid", "<hex>", "full UID, 8 bytes");
+    at[1] = arg_str0("u", "uid", "<hex>", "full UID (8 hex bytes)");
     at[2] = arg_lit0(NULL, "ua", "unaddressed mode");
     at[3] = arg_lit0("*", NULL, "scan for tag");
     at[4] = arg_lit0("2", NULL, "use slower '1 out of 256' mode");
@@ -488,15 +532,12 @@ static uint8_t arg_add_default(void *at[]) {
 }
 static uint16_t arg_get_raw_flag(uint8_t uidlen, bool unaddressed, bool scan, bool add_option) {
     uint16_t flags = 0;
-    if (unaddressed) {
-        // unaddressed mode may not be supported by all vendors
-        flags |= (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY);
+    ;
+    if (uidlen == 8 || scan || unaddressed) {
+        flags = (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY);
     }
-    if (uidlen == 8) {
-        flags |= (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS);
-    }
-    if (scan) {
-        flags |= (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS);
+    if ((!unaddressed) || scan) {
+        flags |= ISO15_REQ_ADDRESS;
     }
     if (add_option) {
         flags |= (ISO15_REQ_OPTION);
@@ -526,7 +567,7 @@ static int CmdHF15Demod(const char *Cmd) {
     int skip = 4;
 
     if (g_GraphTraceLen < 1000) {
-        PrintAndLogEx(FAILED, "Too few samples in GraphBuffer. Need more than 1000");
+        PrintAndLogEx(FAILED, "Too few samples in GraphBuffer");
         PrintAndLogEx(HINT, "Run " _YELLOW_("`hf 15 samples`") " to collect and download data");
         return PM3_ESOFT;
     }
@@ -547,17 +588,22 @@ static int CmdHF15Demod(const char *Cmd) {
 
     i = maxPos + ARRAYLEN(FrameSOF) / skip;
     int k = 0;
+    uint8_t mask = 0x01;
+
     uint8_t outBuf[2048] = {0};
     memset(outBuf, 0, sizeof(outBuf));
-    uint8_t mask = 0x01;
+
     for (;;) {
+
         int corr0 = 0, corr1 = 0, corrEOF = 0;
         for (j = 0; j < ARRAYLEN(Logic0); j += skip) {
             corr0 += Logic0[j] * g_GraphBuffer[i + (j / skip)];
         }
+
         for (j = 0; j < ARRAYLEN(Logic1); j += skip) {
             corr1 += Logic1[j] * g_GraphBuffer[i + (j / skip)];
         }
+
         for (j = 0; j < ARRAYLEN(FrameEOF); j += skip) {
             corrEOF += FrameEOF[j] * g_GraphBuffer[i + (j / skip)];
         }
@@ -593,7 +639,7 @@ static int CmdHF15Demod(const char *Cmd) {
     }
 
     if (mask != 0x01) {
-        PrintAndLogEx(WARNING, "Warning, uneven octet! (discard extra bits!)");
+        PrintAndLogEx(WARNING, "Warning, discarding extra bits!");
         PrintAndLogEx(INFO, "   mask = %02x", mask);
     }
 
@@ -603,7 +649,7 @@ static int CmdHF15Demod(const char *Cmd) {
 
     i = 0;
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Got %d octets, decoded as following", k);
+    PrintAndLogEx(INFO, "Got %d bytes, decoded as following", k);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, " idx | data");
     PrintAndLogEx(SUCCESS, "-----+-------------------------------------------------");
@@ -648,88 +694,113 @@ static int CmdHF15Samples(const char *Cmd) {
     getSamples(0, true);
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 15 demod") "` to decode signal");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
 static int NxpTestEAS(uint8_t *uid) {
-    uint8_t fast = 1;
-    uint8_t reply = 1;
-    PacketResponseNG resp;
-    uint16_t reqlen = 0;
-    uint8_t req[PM3_CMD_DATA_SIZE] = {0};
 
-    req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-    req[reqlen++] = ISO15693_EAS_ALARM;
-    req[reqlen++] = 0x04; // IC manufacturer code
-    memcpy(req + 3, uid, 8); // add UID
-    reqlen += 8;
+    if (uid == NULL) {
+        return PM3_EINVARG;
+    }
 
-    AddCrc15(req,  reqlen);
-    reqlen += 2;
+    uint8_t approxlen = 3 + HF15_UID_LENGTH + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // params
+    packet->raw[packet->rawlen++] = (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS);
+    packet->raw[packet->rawlen++] = ISO15693_EAS_ALARM;
+    packet->raw[packet->rawlen++] = 0x04; // IC manufacturer code
+
+    memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH); // add UID
+    packet->rawlen += HF15_UID_LENGTH;
+
+    AddCrc15(packet->raw,  packet->rawlen);
+    packet->rawlen += 2;
+
+    packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
-
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    free(packet);
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
         PrintAndLogEx(DEBUG, "iso15693 timeout");
-    } else {
-        PrintAndLogEx(INFO, "");
-        if (resp.length < 2) {
-            PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is not active");
-        } else {
-            uint8_t *recv = resp.data.asBytes;
+        return PM3_ETIMEOUT;
+    }
+    if (resp.length < 2) {
+        return PM3_EWRONGANSWER;
+    }
 
-            if (!(recv[0] & ISO15_RES_ERROR)) {
-                PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is active.");
-                PrintAndLogEx(INFO, "  EAS sequence: %s", sprint_hex(recv + 1, 32));
-            }
-        }
+    uint8_t *d = resp.data.asBytes;
+
+    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_(" EAS"));
+    if (resp.length < 2) {
+        PrintAndLogEx(INFO, "    EAS (Electronic Article Surveillance) is not active");
+    } else {
+        PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is active.");
+        PrintAndLogEx(INFO, "  EAS sequence...");
+        PrintAndLogEx(INFO, "  %s", sprint_hex(d + 1, 16));
+        PrintAndLogEx(INFO, "  %s", sprint_hex(d + 1 + 16, 16));
     }
     return PM3_SUCCESS;
 }
 
 static int NxpCheckSig(uint8_t *uid) {
-    uint8_t fast = 1;
-    uint8_t reply = 1;
-    PacketResponseNG resp;
-    uint16_t reqlen = 0;
-    uint8_t req[PM3_CMD_DATA_SIZE] = {0};
 
+    if (uid == NULL) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t approxlen = 3 + HF15_UID_LENGTH + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // params
     // Check if we can also read the signature
-    req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-    req[reqlen++] = ISO15693_READ_SIGNATURE;
-    req[reqlen++] = 0x04; // IC manufacturer code
-    memcpy(req + 3, uid, 8); // add UID
-    reqlen += 8;
+    packet->raw[packet->rawlen++] = (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS);
+    packet->raw[packet->rawlen++] = ISO15693_READ_SIGNATURE;
+    packet->raw[packet->rawlen++] = 0x04; // IC manufacturer code
 
-    AddCrc15(req,  reqlen);
-    reqlen += 2;
+    memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH); // add UID
+    packet->rawlen += HF15_UID_LENGTH;
+
+    AddCrc15(packet->raw,  packet->rawlen);
+    packet->rawlen += 2;
+
+    packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    free(packet);
+    PacketResponseNG resp;
 
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
         PrintAndLogEx(DEBUG, "iso15693 timeout");
-        DropField();
         return PM3_ETIMEOUT;
     }
-
-    DropField();
 
     if (resp.length < 2) {
         PrintAndLogEx(WARNING, "iso15693 card doesn't answer to READ SIGNATURE command");
         return PM3_EWRONGANSWER;
     }
 
-    uint8_t *recv = resp.data.asBytes;
+    uint8_t *d = resp.data.asBytes;
 
-    if ((recv[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
-        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSWER;
-    }
+    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
 
     uint8_t signature[32] = {0x00};
-    memcpy(signature, recv + 1, sizeof(signature));
+    memcpy(signature, d + 1, sizeof(signature));
 
     nxp_15693_print_signature(uid, signature);
     return PM3_SUCCESS;
@@ -742,33 +813,33 @@ static int NxpSysInfo(uint8_t *uid) {
         return PM3_EINVARG;
     }
 
-    uint8_t req[PM3_CMD_DATA_SIZE] = {0};
-    uint8_t fast = 1;
-    uint8_t reply = 1;
-    uint16_t reqlen = 0;
-
-    req[reqlen++] |= ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS;
-    req[reqlen++] = ISO15693_GET_NXP_SYSTEM_INFO;
-    req[reqlen++] = 0x04; // IC manufacturer code
-    memcpy(req + 3, uid, 8); // add UID
-    reqlen += 8;
-
-    AddCrc15(req,  reqlen);
-    reqlen += 2;
-
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, reply, req, reqlen);
-    if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-        PrintAndLogEx(DEBUG, "iso15693 timeout");
-        DropField();
-        return PM3_ETIMEOUT;
+    uint8_t approxlen = 13;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
     }
 
-    DropField();
+    // params
+    packet->raw[packet->rawlen++] = (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS);
+    packet->raw[packet->rawlen++] = ISO15693_GET_NXP_SYSTEM_INFO;
+    packet->raw[packet->rawlen++] = 0x04; // IC manufacturer code
 
-    if (resp.status == PM3_ETEAROFF) {
-        return resp.status;
+    memcpy(packet->raw + 3, uid, 8); // add UID
+    packet->rawlen += HF15_UID_LENGTH;
+
+    AddCrc15(packet->raw,  packet->rawlen);
+    packet->rawlen += 2;
+
+    packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    free(packet);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
+        return PM3_ETIMEOUT;
     }
 
     if (resp.length < 2) {
@@ -776,52 +847,73 @@ static int NxpSysInfo(uint8_t *uid) {
         return PM3_EWRONGANSWER;
     }
 
-    uint8_t *recv = resp.data.asBytes;
+    uint8_t *d = resp.data.asBytes;
 
-    if ((recv[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
-        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        return PM3_EWRONGANSWER;
-    }
+    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
 
-    bool support_signature = (recv[5] & 0x01);
-    bool support_easmode = (recv[4] & 0x04);
+    bool support_signature = (d[5] & 0x01);
+    bool support_easmode = (d[4] & 0x04);
 
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("NXP Sysinfo"));
-    PrintAndLogEx(INFO, "  raw... %s", sprint_hex(recv, 8));
-    PrintAndLogEx(INFO, "    " _CYAN_("Password protection configuration:"));
-    PrintAndLogEx(INFO, "      * Page L read%s password protected", ((recv[2] & 0x01) ? "" : _GREEN_(" not")));
-    PrintAndLogEx(INFO, "      * Page L write%s password protected", ((recv[2] & 0x02) ? "" : _GREEN_(" not")));
-    PrintAndLogEx(INFO, "      * Page H read%s password protected", ((recv[2] & 0x10) ? "" : _GREEN_(" not")));
-    PrintAndLogEx(INFO, "      * Page H write%s password protected", ((recv[2] & 0x20) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "    Raw............ %s", sprint_hex(d, 8));
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_(" Password protection configuration"));
 
-    PrintAndLogEx(INFO, "    " _CYAN_("Lock bits:"));
+    PrintAndLogEx(INFO, "    Page L read.... %s"
+                  , (d[2] & 0x01) ?  _RED_("password") : _GREEN_("no password")
+                 );
+
+    PrintAndLogEx(INFO, "    Page L write... %s"
+                  , (d[2] & 0x02) ?  _RED_("password") : _GREEN_("no password")
+                 );
+
+    PrintAndLogEx(INFO, "    Page H read.... %s"
+                  , (d[2] & 0x10) ?  _RED_("password") : _GREEN_("no password")
+                 );
+
+    PrintAndLogEx(INFO, "    Page H write... %s"
+                  , (d[2] & 0x20) ?  _RED_("password") : _GREEN_("no password")
+                 );
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_(" Lock bits"));
+
     // AFI lock bit
-    PrintAndLogEx(INFO, "      * AFI%s locked", ((recv[3] & 0x01) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "    AFI............ %s"
+                  , (d[3] & 0x01) ? _RED_("locked") : _GREEN_("unlocked")
+                 );
 
     // EAS lock bit
-    PrintAndLogEx(INFO, "      * EAS%s locked", ((recv[3] & 0x02) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "    EAS............ %s"
+                  , (d[3] & 0x02) ? _RED_("locked") : _GREEN_("unlocked")
+                 );
 
     // DSFID lock bit
-    PrintAndLogEx(INFO, "      * DSFID%s locked", ((recv[3] & 0x03) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "    DSFID.......... %s"
+                  , (d[3] & 0x03) ? _RED_("locked") : _GREEN_("unlocked")
+                 );
 
     // Password protection pointer address and access conditions lock bit
-    PrintAndLogEx(INFO, "      * Password protection configuration%s locked", ((recv[3] & 0x04) ? "" : _GREEN_(" not")));
+    PrintAndLogEx(INFO, "    Password protection configuration... %s"
+                  , (d[3] & 0x04) ? _RED_("locked") : _GREEN_("unlocked")
+                 );
 
-    PrintAndLogEx(INFO, "    " _CYAN_("Features:"));
-    PrintAndLogEx(INFO, "      * User memory password protection%s supported", ((recv[4] & 0x01) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * Counter feature%s supported", ((recv[4] & 0x02) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * EAS ID%s supported by EAS ALARM command", support_easmode ? "" : " not");
-    PrintAndLogEx(INFO, "      * EAS password protection%s supported", ((recv[4] & 0x08) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * AFI password protection%s supported", ((recv[4] & 0x10) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * Extended mode%s supported by INVENTORY READ command", ((recv[4] & 0x20) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * EAS selection%s supported by extended mode in INVENTORY READ command", ((recv[4] & 0x40) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * READ SIGNATURE command%s supported", support_signature ? "" : " not");
-    PrintAndLogEx(INFO, "      * Password protection for READ SIGNATURE command%s supported", ((recv[5] & 0x02) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * STAY QUIET PERSISTENT command%s supported", ((recv[5] & 0x04) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * ENABLE PRIVACY command%s supported", ((recv[5] & 0x10) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * DESTROY command%s supported", ((recv[5] & 0x20) ? "" : " not"));
-    PrintAndLogEx(INFO, "      * Additional 32 bits feature flags are%s transmitted", ((recv[7] & 0x80) ? "" : " not"));
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_(" Features"));
+    PrintAndLogEx(INFO, "    User memory password protection%s supported", ((d[4] & 0x01) ? "" : " not"));
+    PrintAndLogEx(INFO, "    Counter feature%s supported", ((d[4] & 0x02) ? "" : " not"));
+    PrintAndLogEx(INFO, "    EAS ID%s supported by EAS ALARM command", support_easmode ? "" : " not");
+    PrintAndLogEx(INFO, "    EAS password protection%s supported", ((d[4] & 0x08) ? "" : " not"));
+    PrintAndLogEx(INFO, "    AFI password protection%s supported", ((d[4] & 0x10) ? "" : " not"));
+    PrintAndLogEx(INFO, "    Extended mode%s supported by INVENTORY READ command", ((d[4] & 0x20) ? "" : " not"));
+    PrintAndLogEx(INFO, "    EAS selection%s supported by extended mode in INVENTORY READ command", ((d[4] & 0x40) ? "" : " not"));
+    PrintAndLogEx(INFO, "    READ SIGNATURE command%s supported", support_signature ? "" : " not");
+    PrintAndLogEx(INFO, "    Password protection for READ SIGNATURE command%s supported", ((d[5] & 0x02) ? "" : " not"));
+    PrintAndLogEx(INFO, "    STAY QUIET PERSISTENT command%s supported", ((d[5] & 0x04) ? "" : " not"));
+    PrintAndLogEx(INFO, "    ENABLE PRIVACY command%s supported", ((d[5] & 0x10) ? "" : " not"));
+    PrintAndLogEx(INFO, "    DESTROY command%s supported", ((d[5] & 0x20) ? "" : " not"));
+    PrintAndLogEx(INFO, "    Additional 32 bits feature flags are%s transmitted", ((d[7] & 0x80) ? "" : " not"));
 
     if (support_easmode) {
         NxpTestEAS(uid);
@@ -855,125 +947,141 @@ static int CmdHF15Info(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t uid[8];
+    uint8_t uid[HF15_UID_LENGTH];
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
     bool unaddressed = arg_get_lit(ctx, 2);
     bool scan = arg_get_lit(ctx, 3);
-    int fast = (arg_get_lit(ctx, 4) == false);
+    bool fast = (arg_get_lit(ctx, 4) == false);
     bool add_option = arg_get_lit(ctx, 5);
 
     CLIParserFree(ctx);
 
     // sanity checks
-    if ((scan + unaddressed + uidlen) > 1) {
+    if ((scan + unaddressed + (uidlen > 0)) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
         return PM3_EINVARG;
     }
 
     // default fallback to scan for tag.
-    if (unaddressed == false && uidlen != 8) {
+    if (unaddressed == false && uidlen != HF15_UID_LENGTH) {
         scan = true;
     }
 
     // request to be sent to device/card
-    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15693_GET_SYSTEM_INFO};
-    uint16_t reqlen = 2;
+    // don't know if it has uid added or not.
+    //               cmd uid crc
+    uint8_t approxlen = 2 + 8 + 2;
 
-    if (scan) {
-        if (getUID(false, uid) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "no tag found");
-            return PM3_EINVARG;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // ISO15693 protocol params
+    packet->raw[packet->rawlen++] = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+    packet->raw[packet->rawlen++] = ISO15693_GET_SYSTEM_INFO;
+
+    if (unaddressed == false) {
+        if (scan) {
+            PrintAndLogEx(INFO, "Using scan mode");
+            if (getUID(false, false, uid) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "no tag found");
+                free(packet);
+                return PM3_EINVARG;
+            }
+            uidlen = HF15_UID_LENGTH;
         }
-        uidlen = 8;
+
+        if (uidlen == HF15_UID_LENGTH) {
+            // add UID (scan, uid)
+            memcpy(packet->raw + packet->rawlen, uid, uidlen);
+            packet->rawlen += uidlen;
+        }
+    } else {
+        PrintAndLogEx(INFO, "Using unaddressed mode");
     }
 
-    if (uidlen == 8) {
-        // add UID (scan, uid)
-        memcpy(req + reqlen, uid, sizeof(uid));
-        reqlen += sizeof(uid);
+    AddCrc15(packet->raw,  packet->rawlen);
+    packet->rawlen += 2;
+
+    // PM3 flags
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
     }
-    PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
 
-
-    AddCrc15(req,  reqlen);
-    reqlen += 2;
-
-    uint8_t read_response = 1;
-    PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_response, req, reqlen);
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    free(packet);
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "iso15693 timeout");
-        DropField();
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
         return PM3_ETIMEOUT;
     }
 
-    DropField();
-
-    if (resp.status == PM3_ETEAROFF) {
-        return resp.status;
-    }
     if (resp.length < 2) {
         PrintAndLogEx(WARNING, "iso15693 card doesn't answer to systeminfo command (%d)", resp.length);
         return PM3_EWRONGANSWER;
     }
 
-    uint8_t *data = resp.data.asBytes;
+    uint8_t *d = resp.data.asBytes;
 
-    if ((data[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
-        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", data[0], TagErrorStr(data[0]));
-        return PM3_EWRONGANSWER;
-    }
+    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
 
-    memcpy(uid, data + 2, sizeof(uid));
+    memcpy(uid, d + 2, sizeof(uid));
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(SUCCESS, "      TYPE: " _YELLOW_("%s"), getTagInfo_15(data + 2));
-    PrintAndLogEx(SUCCESS, "       UID: " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
-    PrintAndLogEx(SUCCESS, "   SYSINFO: %s", sprint_hex(data, resp.length - 2));
+    PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
+    PrintAndLogEx(SUCCESS, "TYPE...... " _YELLOW_("%s"), getTagInfo_15(d + 2));
+    PrintAndLogEx(SUCCESS, "SYSINFO... %s", sprint_hex(d, resp.length - 2));
 
     // DSFID
-    if (data[1] & 0x01)
-        PrintAndLogEx(SUCCESS, "     - DSFID supported        [0x%02X]", data[10]);
+    if (d[1] & 0x01)
+        PrintAndLogEx(SUCCESS, "DSFID..... 0x%02X", d[10]);
     else
-        PrintAndLogEx(SUCCESS, "     - DSFID not supported");
+        PrintAndLogEx(SUCCESS, "DSFID not supported");
 
     // AFI
-    if (data[1] & 0x02)
-        PrintAndLogEx(SUCCESS, "     - AFI   supported        [0x%02X]", data[11]);
+    if (d[1] & 0x02)
+        PrintAndLogEx(SUCCESS, "AFI....... 0x%02X", d[11]);
     else
-        PrintAndLogEx(SUCCESS, "     - AFI   not supported");
+        PrintAndLogEx(SUCCESS, "AFI not supported");
 
     // IC reference
-    if (data[1] & 0x08)
-        PrintAndLogEx(SUCCESS, "     - IC reference supported [0x%02X]", data[14]);
+    if (d[1] & 0x08)
+        PrintAndLogEx(SUCCESS, "IC ref.... 0x%02X", d[14]);
     else
-        PrintAndLogEx(SUCCESS, "     - IC reference not supported");
+        PrintAndLogEx(SUCCESS, "IC ref not supported");
 
     // memory
-    if (data[1] & 0x04) {
-        PrintAndLogEx(SUCCESS, "     - Tag provides info on memory layout (vendor dependent)");
-        uint8_t blocks = data[12] + 1;
-        uint8_t size = (data[13] & 0x1F);
-        PrintAndLogEx(SUCCESS, "           %u (or %u) bytes/blocks x %u blocks", size + 1, size, blocks);
+    if (d[1] & 0x04) {
+        PrintAndLogEx(SUCCESS, "Tag memory layout (vendor dependent)");
+        uint8_t blocks = d[12] + 1;
+        uint8_t size = (d[13] & 0x1F);
+        PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " ( or " _YELLOW_("%u") " ) bytes/blocks x " _YELLOW_("%u") " blocks", size + 1, size, blocks);
+        PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " total bytes", ((size + 1) * blocks));
     } else {
-        PrintAndLogEx(SUCCESS, "     - Tag does not provide information on memory layout");
+        PrintAndLogEx(SUCCESS, "    N/A");
     }
 
     // Check if SLIX2 and attempt to get NXP System Information
-    PrintAndLogEx(DEBUG, "Byte 6 :: %02x   Byte 7 :: %02x   Byte 8 :: %02x", data[6], data[7], data[8]);
-    // SLIX2 uses xxx0 1xxx format on data[6] of UID
-    uint8_t nxp_version = data[6] & 0x18;
+    PrintAndLogEx(DEBUG, "Byte 6 :: %02x   Byte 7 :: %02x   Byte 8 :: %02x", d[6], d[7], d[8]);
+    // SLIX2 uses xxx0 1xxx format on d[6] of UID
+    uint8_t nxp_version = d[6] & 0x18;
     PrintAndLogEx(DEBUG, "NXP Version: %02x", nxp_version);
-    if (data[8] == 0x04 && data[7] == 0x01 && nxp_version == 0x08) {
+
+    if (d[8] == 0x04 && d[7] == 0x01 && nxp_version == 0x08) {
         PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
         return NxpSysInfo(uid);
-    } else if (data[8] == 0x04 && data[7] == 0x01 && nxp_version == 0x18) { //If it is an NTAG 5
+
+    } else if (d[8] == 0x04 && d[7] == 0x01 && nxp_version == 0x18) { // If it is an NTAG 5
         PrintAndLogEx(DEBUG, "NTAG 5 Detected, getting NXP System Info");
         return NxpSysInfo(uid);
-    } else if (data[8] == 0x04 && (data[7] == 0x01 || data[7] == 0x02 || data[7] == 0x03)) { //If SLI, SLIX, SLIX-l, or SLIX-S check EAS status
+
+    } else if (d[8] == 0x04 && (d[7] == 0x01 || d[7] == 0x02 || d[7] == 0x03)) { // If SLI, SLIX, SLIX-l, or SLIX-S check EAS status
         PrintAndLogEx(DEBUG, "SLI, SLIX, SLIX-L, or SLIX-S Detected checking EAS status");
         return NxpTestEAS(uid);
     }
@@ -1004,6 +1112,7 @@ static int CmdHF15Sniff(const char *Cmd) {
 
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 15 list") "` to view captured tracelog");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -1024,38 +1133,36 @@ static int CmdHF15Reader(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (cm) {
-        PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
     readHF15Uid(cm, true);
     return PM3_SUCCESS;
 }
 
-static int hf15EmlClear(void) {
+static void hf15EmlClear(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_EML_CLEAR, NULL, 0);
     PacketResponseNG resp;
     WaitForResponse(CMD_HF_ISO15693_EML_CLEAR, &resp);
-    return PM3_SUCCESS;
 }
 
-static int hf15EmlSetMem(uint8_t *data, uint8_t count, size_t offset) {
+static int hf15EmlSetMem(uint8_t *data, uint16_t count, size_t offset) {
     struct p {
         uint32_t offset;
-        uint8_t count;
+        uint16_t count;
         uint8_t data[];
     } PACKED;
 
-    size_t size = count;
-    if (size > (PM3_CMD_DATA_SIZE - sizeof(struct p))) {
+    if (count > (PM3_CMD_DATA_SIZE - sizeof(struct p))) {
         return PM3_ESOFT;
     }
 
-    size_t paylen = sizeof(struct p) + size;
+    size_t paylen = sizeof(struct p) + count;
     struct p *payload = calloc(1, paylen);
 
     payload->offset = offset;
     payload->count = count;
-    memcpy(payload->data, data, size);
+    memcpy(payload->data, data, count);
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_EML_SETMEM, (uint8_t *)payload, paylen);
@@ -1067,12 +1174,12 @@ static int CmdHF15ELoad(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 eload",
-                  "Load memory image from file to be used with 'hf 15 sim'",
+                  "Load memory dump from file to be used with 'hf 15 sim'",
                   "hf 15 eload -f hf-15-01020304.bin\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "filename of image"),
+        arg_str1("f", "file", "<fn>", "filename of dump"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1082,21 +1189,31 @@ static int CmdHF15ELoad(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
-    uint8_t *data = NULL;
+    iso15_tag_t *tag = NULL;
     size_t bytes_read = 0;
-    int res = pm3_load_dump(filename, (void **)&data, &bytes_read, CARD_MEMORY_SIZE);
+    int res = pm3_load_dump(filename, (void **)&tag, &bytes_read, sizeof(iso15_tag_t));
     if (res != PM3_SUCCESS) {
         return res;
     }
 
-    if (bytes_read > CARD_MEMORY_SIZE) {
-        PrintAndLogEx(FAILED, "Memory image too large.");
-        free(data);
+    if (bytes_read != sizeof(iso15_tag_t)) {
+        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
+        free(tag);
         return PM3_EINVARG;
     }
     if (bytes_read == 0) {
         PrintAndLogEx(FAILED, "Memory image empty.");
-        free(data);
+        free(tag);
+        return PM3_EINVARG;
+    }
+
+    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+            (tag->pagesCount == 0) ||
+            (tag->bytesPerPage == 0)) {
+        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
+                      tag->pagesCount, tag->bytesPerPage);
+        free(tag);
         return PM3_EINVARG;
     }
 
@@ -1110,7 +1227,7 @@ static int CmdHF15ELoad(const char *Cmd) {
     // fast push mode
     g_conn.block_after_ACK = true;
 
-    int chuncksize = 64;
+    size_t chuncksize = 256;
     size_t offset = 0;
 
     while (bytes_read > 0) {
@@ -1119,19 +1236,19 @@ static int CmdHF15ELoad(const char *Cmd) {
             g_conn.block_after_ACK = false;
         }
 
-        int tosend = MIN(chuncksize, bytes_read);
-        if (hf15EmlSetMem(data + offset, tosend, offset) != PM3_SUCCESS) {
+        uint16_t bytestosend = MIN(chuncksize, bytes_read);
+        if (hf15EmlSetMem((uint8_t *)tag + offset, bytestosend, offset) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Can't set emulator memory at offest: %zu / 0x%zx", offset, offset);
-            free(data);
+            free(tag);
             return PM3_ESOFT;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
 
-        offset += tosend;
-        bytes_read -= tosend;
+        offset += bytestosend;
+        bytes_read -= bytestosend;
     }
-    free(data);
+    free(tag);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%zu") " bytes to emulator memory", offset);
 
@@ -1145,13 +1262,10 @@ static int CmdHF15ESave(const char *Cmd) {
     CLIParserInit(&ctx, "hf 15 esave",
                   "Save emulator memory into two files (bin/json) ",
                   "hf 15 esave -f hf-15-01020304"
-                  "hf 15 esave -b 8 -c 42 -f hf-15-01020304"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
-        arg_int0(NULL, "bsize", "<dec>", "block size, defaults to 4"),
-        arg_int0("c", "count", "<dec>", "number of blocks to export, defaults to all"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1159,14 +1273,9 @@ static int CmdHF15ESave(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    int blocksize = arg_get_int_def(ctx, 2, 4);
-    int count = arg_get_int_def(ctx, 3, -1);
     CLIParserFree(ctx);
 
-    int bytes = CARD_MEMORY_SIZE;
-    if (count > 0 && count * blocksize <= bytes) {
-        bytes = count * blocksize;
-    }
+    int bytes = sizeof(iso15_tag_t);
 
     // reserve memory
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
@@ -1182,39 +1291,101 @@ static int CmdHF15ESave(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    if (blocksize == 8) {
-        pm3_save_dump(filename, dump, bytes, jsf15_v3);
-    } else {
-        pm3_save_dump(filename, dump, bytes, jsf15_v2);
-    }
+    pm3_save_dump(filename, dump, bytes, jsf15_v4);
 
     free(dump);
     return PM3_SUCCESS;
 }
 
+static const char dashes[] = "------------------------------------------------------------";
 static void print_hrule(int blocksize) {
-    char dashes[] = "------------------------------------------------------------";
-    PrintAndLogEx(INFO, "-----+%.*s-+-%.*s-", 3 * blocksize, dashes, blocksize, dashes);
+
+    int len = MAX(0, 3 * blocksize);
+    PrintAndLogEx(INFO, "-----+-%.*s+---+-%.*s-", len, dashes, blocksize, dashes);
 }
 
-static void print_blocks_15693(uint8_t *data, uint16_t bytes, int blocksize) {
-    int blocks = bytes / blocksize;
-    PrintAndLogEx(NORMAL, "");
-    print_hrule(blocksize);
-    char spaces[] = "                                                            ";
-    PrintAndLogEx(INFO, " blk | data %.*s| ascii", MAX(0, 3 * blocksize - 5), spaces);
-    print_hrule(blocksize);
-    for (int i = 0; i < blocks; i++) {
-        PrintAndLogEx(INFO, "%4d | %s ", i, sprint_hex_ascii(data + (i * blocksize), blocksize));
+// for emaulator and dump files we don't have lock info byte available.
+static void print_blocks_15693(iso15_tag_t *tag, bool dense_output) {
+    uint8_t *d = tag->data;
+    int blocksize = tag->bytesPerPage;
 
-    }
-    if (bytes % blocksize != 0)  {
-        // If there is something left over print it too
-        // This will have a broken layout, but should not happen anyway
-        PrintAndLogEx(INFO, "%4d | %s ", blocks, sprint_hex_ascii(data + (blocks * blocksize),
-                                                                  bytes % blocksize));
-    }
     print_hrule(blocksize);
+
+    char spaces[] = "                                                            ";
+    PrintAndLogEx(INFO, " blk | data %.*s|lck| ascii", MAX(0, 3 * blocksize - 5), spaces);
+    print_hrule(blocksize);
+
+    bool in_repeated_block = false;
+
+    for (int i = 0; i < tag->pagesCount; i++) {
+
+        uint8_t *blk = d + (i * blocksize);
+
+        // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
+        // but the blocks in between are replaced with a single line of "......" if dense_output is enabled
+        if (dense_output &&
+                (i > 3) &&
+                (i < (tag->pagesCount - 1)) &&
+                (in_repeated_block == false) &&
+                (memcmp(blk, blk - blocksize, blocksize) == 0) &&
+                (memcmp(blk, blk + blocksize, blocksize) == 0) &&
+                (memcmp(blk, blk + (blocksize * 2), blocksize) == 0)
+           ) {
+            // we're in a user block that isn't the first user block nor last two user blocks,
+            // and the current block data is the same as the previous and next two block
+            in_repeated_block = true;
+            PrintAndLogEx(INFO, "  ......");
+        } else if (in_repeated_block &&
+                   (memcmp(blk, blk + blocksize, blocksize) || i == tag->pagesCount)
+                  ) {
+            // in a repeating block, but the next block doesn't match anymore, or we're at the end block
+            in_repeated_block = false;
+        }
+
+        if (in_repeated_block == false) {
+
+            char lck[16] = {0};
+            if (tag->locks[i]) {
+                snprintf(lck, sizeof(lck), _RED_("%d"), tag->locks[i]);
+            } else {
+                snprintf(lck, sizeof(lck), "%d", tag->locks[i]);
+            }
+
+            PrintAndLogEx(INFO, "%4d | %s| %s | %s"
+                          , i
+                          , sprint_hex(&tag->data[i * tag->bytesPerPage], tag->bytesPerPage)
+                          , lck
+                          , sprint_ascii(&tag->data[i * tag->bytesPerPage], tag->bytesPerPage)
+                         );
+        }
+    }
+}
+
+static void print_tag_15693(iso15_tag_t *tag, bool dense_output, bool verbose) {
+    if (verbose) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " --%.*s", (tag->bytesPerPage * 3), dashes);
+        PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%s"), iso15693_sprintUID(NULL, tag->uid));
+        PrintAndLogEx(SUCCESS, "TYPE...... " _YELLOW_("%s"), getTagInfo_15(tag->uid));
+        PrintAndLogEx(SUCCESS, "DSFID..... 0x%02X", tag->dsfid);
+        PrintAndLogEx(SUCCESS, "AFI....... 0x%02X", tag->afi);
+        PrintAndLogEx(SUCCESS, "IC ref.... 0x%02X", tag->ic);
+        PrintAndLogEx(SUCCESS, "Tag memory layout (vendor dependent)");
+        PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " bytes / blocks x " _YELLOW_("%u") " blocks", tag->bytesPerPage, tag->pagesCount);
+        PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " total bytes", (tag->bytesPerPage * tag->pagesCount));
+    }
+
+    PrintAndLogEx(NORMAL, "");
+
+    if ((tag->bytesPerPage == 0) || (tag->pagesCount == 0)) {
+        PrintAndLogEx(INFO, "Tag is empty!");
+        return;
+    }
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Memory") " -------%.*s", (tag->bytesPerPage * 3), dashes);
+    PrintAndLogEx(NORMAL, "");
+    print_blocks_15693(tag, dense_output);
+    print_hrule(tag->bytesPerPage);
     PrintAndLogEx(NORMAL, "");
 }
 
@@ -1224,38 +1395,35 @@ static int CmdHF15EView(const char *Cmd) {
     CLIParserInit(&ctx, "hf 15 eview",
                   "It displays emulator memory",
                   "hf 15 eview\n"
-                  "hf 15 eview -b 8 -c 60\n"
+                  "hf 15 eview -z\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("b", "blocksize", "<dec>", "block size, defaults to 4"),
-        arg_int0("c", "count", "<dec>", "number of blocks to display, defaults to all"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    int blocksize = arg_get_int_def(ctx, 1, 4);
-    int count = arg_get_int_def(ctx, 2, -1);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 1));
     CLIParserFree(ctx);
 
-    int bytes = CARD_MEMORY_SIZE;
-    if (count > 0 && count * blocksize <= bytes) {
-        bytes = count * blocksize;
-    }
+    int bytes = sizeof(iso15_tag_t);
 
+    // reserve memory
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
         PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
 
-    PrintAndLogEx(INFO, "Downloading %u bytes from emulator memory", bytes);
+    PrintAndLogEx(INFO, "Downloading " _YELLOW_("%u") " bytes from emulator memory...", bytes);
     if (GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
         return PM3_ETIMEOUT;
     }
 
-    print_blocks_15693(dump, bytes, blocksize);
+    print_tag_15693((iso15_tag_t *)dump, dense_output, true);
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -1267,36 +1435,62 @@ static int CmdHF15Sim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 sim",
                   "Simulate a ISO-15693 tag\n",
+                  "hf 15 sim\n"
                   "hf 15 sim -u E011223344556677");
-
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("u", "uid", "<8b hex>", "UID eg E011223344556677"),
-        arg_int0("b", "blocksize", "<dec>", "block size, defaults to 4"),
+        arg_str0("u", "uid", "<hex>", "UID, 8 hex bytes"),
+        arg_int0("b", "blocksize", "<dec>", "block size (def 4)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     struct {
-        uint8_t uid[8];
+        uint8_t uid[HF15_UID_LENGTH];
         uint8_t block_size;
     } PACKED payload;
+    memset(&payload, 0, sizeof(payload));
 
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
-    if (uidlen != 8) {
-        PrintAndLogEx(WARNING, "UID must include 16 HEX symbols");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
     payload.block_size = arg_get_int_def(ctx, 2, 4);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(SUCCESS, "Starting simulating UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
-    PrintAndLogEx(INFO, "Press " _YELLOW_("`pm3-button`") " to abort simulation");
+    // sanity checks
+    if (uidlen != 0 && uidlen != HF15_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
+        return PM3_EINVARG;
+    }
 
     PacketResponseNG resp;
+
+    // get UID from emulator for printing
+    if (uidlen == 0) {
+
+        struct {
+            uint32_t offset;
+            uint16_t length;
+        } PACKED payload_mem;
+
+        payload_mem.offset = 0;
+        payload_mem.length = 8;
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ISO15693_EML_GETMEM, (uint8_t *)&payload_mem, sizeof(payload_mem));
+        if (WaitForResponseTimeout(CMD_HF_ISO15693_EML_GETMEM, &resp, 2000) == false) {
+            PrintAndLogEx(DEBUG, "iso15693 timeout");
+            return PM3_ETIMEOUT;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Failed to get UID from emulator memory");
+            return resp.status;
+        }
+        PrintAndLogEx(SUCCESS, "Start simulating UID... " _YELLOW_("%s"), iso15693_sprintUID(NULL, resp.data.asBytes));
+    }
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     WaitForResponse(CMD_HF_ISO15693_SIMULATE, &resp);
@@ -1316,15 +1510,27 @@ static int CmdHF15FindAfi(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("2", NULL, "use slower '1 out of 256' mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool fast = (arg_get_lit(ctx, 1) == false);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to exit");
+
+    struct p {
+        uint32_t flags;
+    } PACKED packet;
+
+    packet.flags = 0;
+    if (fast) {
+        packet.flags |= ISO15_HIGH_SPEED;
+    }
+
     clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_FINDAFI, (uint8_t *)&packet, sizeof(struct p));
     PacketResponseNG resp;
-    SendCommandMIX(CMD_HF_ISO15693_FINDAFI, strtol(Cmd, NULL, 0), 0, 0, NULL, 0);
 
     uint32_t timeout = 0;
     for (;;) {
@@ -1352,7 +1558,7 @@ static int CmdHF15FindAfi(const char *Cmd) {
     }
 
     DropField();
-    PrintAndLogEx(INFO, "Done");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -1367,7 +1573,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("u", "uid", "<hex>", "full UID, 8 bytes"),
+        arg_str0("u", "uid", "<hex>", "full UID, 8 hex bytes"),
         arg_int1(NULL, "afi", "<dec>", "AFI number (0-255)"),
         arg_str0("p", "pwd", "<hex>", "optional AFI/EAS password"),
         arg_param_end
@@ -1378,7 +1584,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     struct {
         uint8_t pwd[4];
         bool use_pwd;
-        uint8_t uid[8];
+        uint8_t uid[HF15_UID_LENGTH];
         bool use_uid;
         uint8_t afi;
     } PACKED payload;
@@ -1399,13 +1605,13 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     }
 
     payload.use_uid = false;
-    if (uidlen == 8) {
+    if (uidlen == HF15_UID_LENGTH) {
         payload.use_uid = true;
     }
 
     // sanity checks
     if (uidlen != 0 && uidlen != 8) {
-        PrintAndLogEx(WARNING, "uid must be 8 hex bytes if provided");
+        PrintAndLogEx(WARNING, "uid must be 8 hex bytes, got ( " _RED_("%d") " )", uidlen);
         return PM3_EINVARG;
     }
 
@@ -1429,11 +1635,11 @@ static int CmdHF15WriteAfi(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "error writing AFI");
+            PrintAndLogEx(WARNING, "Writing AFI ( " _RED_("fail") " )");
             break;
         }
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "Wrote AFI 0x%02X", payload.afi);
+            PrintAndLogEx(SUCCESS, "Wrote AFI 0x%02X ( " _GREEN_("ok") " )", payload.afi);
             break;
         }
     }
@@ -1449,92 +1655,93 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
                   "hf 15 writedsfid -u E011223344556677 --dsfid 12"
                  );
 
-    void *argtable[6 + 2] = {0};
+    void *argtable[6 + 3] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1(NULL, "dsfid", "<dec>", "DSFID number (0-255)");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t uid[8];
+    uint8_t uid[HF15_UID_LENGTH] = {0};
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+
     bool unaddressed = arg_get_lit(ctx, 2);
     bool scan = arg_get_lit(ctx, 3);
-    int fast = (arg_get_lit(ctx, 4) == false);
+    bool fast = (arg_get_lit(ctx, 4) == false);
     bool add_option = arg_get_lit(ctx, 5);
 
     int dsfid = arg_get_int_def(ctx, 6, 0);
+    bool verbose = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     // sanity checks
-    if ((scan + unaddressed + uidlen) > 1) {
+    if ((scan + unaddressed + (uidlen > 0)) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
         return PM3_EINVARG;
     }
 
     // request to be sent to device/card
-    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[16] = {flags, ISO15693_WRITE_DSFID};
-    // enforce, since we are writing
-    req[0] |= ISO15_REQ_OPTION;
-    uint16_t reqlen = 2;
+    uint8_t approxlen = 2 + 8 + 1 + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // params
+    packet->raw[packet->rawlen++] = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+    packet->raw[packet->rawlen++] = ISO15693_WRITE_DSFID;
 
     if (unaddressed == false) {
         if (scan) {
-            if (getUID(false, uid) != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Using scan mode");
+            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
+                free(packet);
                 return PM3_EINVARG;
             }
-            uidlen = 8;
+            uidlen = HF15_UID_LENGTH;
         }
 
-        if (uidlen == 8) {
+        if (uidlen == HF15_UID_LENGTH) {
             // add UID (scan, uid)
-            memcpy(req + reqlen, uid, sizeof(uid));
-            reqlen += sizeof(uid);
+            memcpy(packet->raw + packet->rawlen, uid, uidlen);
+            packet->rawlen += uidlen;
         }
-        PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
+    } else {
+        PrintAndLogEx(INFO, "Using unaddressed mode");
     }
 
     // dsfid
-    req[reqlen++] = (uint8_t)dsfid;
+    packet->raw[packet->rawlen++] = (uint8_t)dsfid;
 
-    AddCrc15(req, reqlen);
-    reqlen += 2;
+    AddCrc15(packet->raw,  packet->rawlen);
+    packet->rawlen += 2;
 
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT);
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
 
-    // arg: len, speed, recv?
-    // arg0 (datalen,  cmd len?  .arg0 == crc?)
-    // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
-    // arg2 (recv == 1 == expect a response)
-    uint8_t read_respone = 1;
-
-    PrintAndLogEx(DEBUG, "cmd %s", sprint_hex(req, reqlen));
-    PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_respone, req, reqlen);
-
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    free(packet);
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-        PrintAndLogEx(ERR, "iso15693 timeout");
-        DropField();
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
         return PM3_ETIMEOUT;
     }
 
-    DropField();
-    if (resp.status == PM3_ETEAROFF) {
-        return resp.status;
-    }
+    ISO15_ERROR_HANDLING_RESPONSE
 
-    uint8_t *data = resp.data.asBytes;
+    uint8_t *d = resp.data.asBytes;
 
-    if ((data[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
-        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", data[0], TagErrorStr(data[0]));
-        return PM3_EWRONGANSWER;
-    }
+    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Wrote DSFID 0x%02X", dsfid);
+    PrintAndLogEx(SUCCESS, "Wrote DSFID 0x%02X ( " _GREEN_("ok") " )", dsfid);
     return PM3_SUCCESS;
 }
 
@@ -1549,121 +1756,201 @@ static int CmdHF15Dump(const char *Cmd) {
                   "hf 15 dump -u E011223344556677 -f hf-15-my-dump.bin"
                  );
 
-    void *argtable[6 + 2] = {0};
+    void *argtable[6 + 6] = {0};
     uint8_t arglen = arg_add_default(argtable);
-    argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
-                         argtable[arglen++] = arg_param_end;
+    argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file");
+    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)");
+    argtable[arglen++] = arg_lit0(NULL, "ns", "no save to file");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_lit0("z", "dense", "dense dump output style");
+    argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t uid[8];
+    uint8_t uid[HF15_UID_LENGTH] = {0};
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+
     bool unaddressed = arg_get_lit(ctx, 2);
     bool scan = arg_get_lit(ctx, 3);
-    int fast = (arg_get_lit(ctx, 4) == false);
+    bool fast = (arg_get_lit(ctx, 4) == false);
     bool add_option = arg_get_lit(ctx, 5);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
+    int blocksize = arg_get_int_def(ctx, 7, 4);
+    bool no_save = arg_get_lit(ctx, 8);
+    bool verbose = arg_get_lit(ctx, 9);
+    bool dense_output = arg_get_lit(ctx, 10);
     CLIParserFree(ctx);
 
     // sanity checks
-    if ((scan + unaddressed + uidlen) > 1) {
+    if ((scan + unaddressed + (uidlen > 0)) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
         return PM3_EINVARG;
     }
 
+    if (blocksize < 4) {
+        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
+        blocksize = 4;
+    }
+
     // default fallback to scan for tag.
-    // overriding unaddress parameter :)
-    if (uidlen != 8) {
+    if (uidlen != HF15_UID_LENGTH && !unaddressed) {
         scan = true;
     }
 
     // request to be sent to device/card
-    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[13] = {flags, ISO15693_READBLOCK};
-    uint16_t reqlen = 2;
+    uint8_t approxlen = 2 + 8 + 1 + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
-    if (scan) {
-        if (getUID(false, uid) != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "no tag found");
-            return PM3_EINVARG;
+    // struct of ISO15693 tag memory (new file format)
+    iso15_tag_t *tag = (iso15_tag_t *)calloc(1, sizeof(iso15_tag_t));
+    if (tag == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    };
+
+    // ISO15693 Protocol params
+    packet->raw[packet->rawlen++] = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+    packet->raw[packet->rawlen++] = ISO15693_GET_SYSTEM_INFO;
+
+    bool used_uid = false;
+    if (unaddressed == false) {
+        // default fallback to scan for tag. Overriding unaddress parameter
+        if (scan) {
+            PrintAndLogEx(INFO, "Using scan mode");
+            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+                free(packet);
+                PrintAndLogEx(WARNING, "no tag found");
+                return PM3_EINVARG;
+            }
+        } else {
+            reverse_array(uid, HF15_UID_LENGTH);
         }
-        uidlen = 8;
-    }
-
-    if (uidlen == 8) {
         // add UID (scan, uid)
-        memcpy(req + reqlen, uid, sizeof(uid));
-        reqlen += sizeof(uid);
+        memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
+        packet->rawlen += HF15_UID_LENGTH;
+        used_uid = true;
+    } else {
+        PrintAndLogEx(INFO, "Using unaddressed mode");
     }
-    PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
 
-    // detect blocksize from card :)
+    AddCrc15(packet->raw,  packet->rawlen);
+    packet->rawlen += 2;
 
-    PrintAndLogEx(SUCCESS, "Reading memory from tag UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, uid));
+    // PM3 params
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.length < 2) {
+        PrintAndLogEx(WARNING, "iso15693 card doesn't answer to systeminfo command (%d)", resp.length);
+        return PM3_EWRONGANSWER;
+    }
+
+    uint8_t *d = resp.data.asBytes;
+    uint8_t dCpt = 10;
+
+    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length);
+
+    memcpy(tag->uid, &d[2], 8);
+
+    if (d[1] & 0x01) {
+        tag->dsfid = d[dCpt++];
+    }
+
+    if (d[1] & 0x02) {
+        tag->afi = d[dCpt++];
+    }
+
+    if (d[1] & 0x04) {
+        tag->pagesCount = d[dCpt++] + 1;
+        tag->bytesPerPage = d[dCpt++] + 1;
+    } else {
+        // Set tag memory layout values (if can't be readed in SYSINFO)
+        tag->bytesPerPage = blocksize;
+        tag->pagesCount = 128;
+    }
+
+    if (d[1] & 0x08) {
+        tag->ic = d[dCpt++];
+    }
+
+    // add lenght for blockno (1)
+    packet->rawlen++;
+    packet->raw[0] |= ISO15_REQ_OPTION; // Add option to dump lock status
+    packet->raw[1] = ISO15693_READBLOCK;
+
+    packet->flags = (ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
+
+    PrintAndLogEx(SUCCESS, "Reading memory");
 
     int blocknum = 0;
-    // memory.
-    t15memory_t mem[256];
 
-    uint8_t data[256 * 8] = {0};
-    memset(data, 0, sizeof(data));
+    for (int retry = 0; (retry < 2 && blocknum < tag->pagesCount); retry++) {
+        if (used_uid) {
+            packet->raw[10] = (uint8_t)blocknum & 0xFF;
+            AddCrc15(packet->raw, 11);
+        } else {
+            packet->raw[2] = (uint8_t)blocknum & 0xFF;
+            AddCrc15(packet->raw, 3);
+        }
 
-    // keep track of which block length tag returned?
-    uint8_t blklen = 4;
-
-    for (int retry = 0; (retry < 5 && blocknum < 0x100); retry++) {
-
-        req[10] = blocknum;
-        AddCrc15(req, 11);
-
-        // arg: len, speed, recv?
-        // arg0 (datalen,  cmd len?  .arg0 == crc?)
-        // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
-        // arg2 (recv == 1 == expect a response)
-        uint8_t read_respone = 1;
-        PacketResponseNG resp;
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO15693_COMMAND, sizeof(req), fast, read_respone, req, sizeof(req));
+        SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
 
         if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000)) {
 
-            if (resp.status == PM3_ETEAROFF) {
-                continue;
-            }
             if (resp.length < 2) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(FAILED, "iso15693 command failed");
                 continue;
             }
 
-            uint8_t *recv = resp.data.asBytes;
+            d = resp.data.asBytes;
 
-            if (CheckCrc15(recv, resp.length) == false) {
+            if (CheckCrc15(d, resp.length) == false) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(FAILED, "crc ( " _RED_("fail") " )");
                 continue;
             }
 
-            if ((recv[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
+            if ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
+
+                // heuristic determine end of available memory
+                if (d[1] == 0x0F || d[1] == 0x10) {
+                    break;
+                }
+
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(FAILED, "Tag returned Error %i: %s", recv[1], TagErrorStr(recv[1]));
+                PrintAndLogEx(FAILED, "Tag returned Error %i: %s", d[1], TagErrorStr(d[1]));
                 break;
             }
 
-            // lock byte value
-            mem[blocknum].lock = resp.data.asBytes[0];
+            tag->locks[blocknum] = d[1];
 
-            // is tag responding with 4 or 8 bytes?
-            if (resp.length == 11) {
-                blklen = 8;
-            }
-            memcpy(mem[blocknum].block, resp.data.asBytes + 1, blklen);
-            memcpy(data + (blocknum * 4), resp.data.asBytes + 1, blklen);
+            // copy read data
+            memcpy(&tag->data[blocknum * tag->bytesPerPage], d + 2, tag->bytesPerPage);
 
             retry = 0;
             blocknum++;
@@ -1672,31 +1959,24 @@ static int CmdHF15Dump(const char *Cmd) {
         }
     }
 
+    free(packet);
     DropField();
 
-    if (blklen == 8) {
-        PrintAndLogEx(INFO, "8 byte block length detected");
+    // done reading tag memory
+
+    if (tag->bytesPerPage != blocksize) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, _YELLOW_("%u") " bytes block length detected, called with " _YELLOW_("%d"), tag->bytesPerPage, blocksize);
+        PrintAndLogEx(INFO, "Using %u ...", tag->bytesPerPage);
     }
 
-    PrintAndLogEx(NORMAL, "\n");
-    PrintAndLogEx(INFO, "block#   | data         |lck| ascii");
-    PrintAndLogEx(INFO, "---------+--------------+---+----------");
-    for (int i = 0; i < blocknum; i++) {
-        char lck[16] = {0};
-        if (mem[i].lock) {
-            snprintf(lck, sizeof(lck), _RED_("%d"), mem[i].lock);
-        } else {
-            snprintf(lck, sizeof(lck), "%d", mem[i].lock);
-        }
-        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s"
-                      , i
-                      , i
-                      , sprint_hex(mem[i].block, blklen)
-                      , lck
-                      , sprint_ascii(mem[i].block, blklen)
-                     );
+    print_tag_15693(tag, dense_output, verbose);
+
+    if (no_save) {
+        PrintAndLogEx(INFO, "Called with no save option");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
     }
-    PrintAndLogEx(NORMAL, "");
 
     // user supplied filename ?
     if (strlen(filename) < 1) {
@@ -1706,70 +1986,112 @@ static int CmdHF15Dump(const char *Cmd) {
         FillFileNameByUID(fptr, SwapEndian64(uid, sizeof(uid), 8), "-dump", sizeof(uid));
     }
 
-    if (blklen == 8) {
-        pm3_save_dump(filename, data, (size_t)(blocknum * blklen), jsf15_v3);
-    } else {
-        pm3_save_dump(filename, data, (size_t)(blocknum * blklen), jsf15_v2);
-    }
+    pm3_save_dump(filename, (uint8_t *)tag, sizeof(iso15_tag_t), jsf15_v4);
+
     return PM3_SUCCESS;
 }
 
 static int CmdHF15List(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "hf 15", "15");
+    return CmdTraceListAlias(Cmd, "hf 15", "15 -c");
 }
 
 static int CmdHF15Raw(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 raw",
                   "Sends raw bytes over ISO-15693 to card",
-                  "hf 15 raw -c -d 260100    --> add crc\n"
-                  "hf 15 raw -krc -d 260100  --> add crc, keep field on, skip response"
+                  "hf 15 raw -ac -d 260100    --> activate, add crc\n"
+                  "hf 15 raw -akrc -d 260100  --> activate, add crc, keep field on, skip response"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("a", NULL, "activate field"),
+        arg_lit0("c", "crc", "calculate and append CRC"),
+        arg_lit0("k", NULL, "keep signal field ON after receive"),
         arg_lit0("2", NULL, "use slower '1 out of 256' mode"),
-        arg_lit0("c",  "crc", "calculate and append CRC"),
-        arg_lit0("k",  NULL, "keep signal field ON after receive"),
-        arg_lit0("r",  NULL, "do not read response"),
+        arg_lit0("r", NULL, "do not read response"),
         arg_str1("d", "data", "<hex>", "raw bytes to send"),
+        arg_lit0("w", "wait", "wait longer for response. For writes etc."),
         arg_param_end
     };
+
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fast = (arg_get_lit(ctx, 1) == false);
+
+    bool activate = arg_get_lit(ctx, 1);
     bool crc = arg_get_lit(ctx, 2);
     bool keep_field_on = arg_get_lit(ctx, 3);
-    bool read_respone = (arg_get_lit(ctx, 4) == false);
+    bool fast = (arg_get_lit(ctx, 4) == false);
+    bool read_respone = (arg_get_lit(ctx, 5) == false);
+
     int datalen = 0;
-    uint8_t data[300];
-    CLIGetHexWithReturn(ctx, 5, data, &datalen);
+    uint8_t data[PM3_CMD_DATA_SIZE] = { 0x00 };
+    CLIGetHexWithReturn(ctx, 6, data, &datalen);
+
+    bool wait = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
+    datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
+
     if (crc) {
-        AddCrc15(data, datalen);
-        datalen += 2;
+
+        if ((datalen - 2) < PM3_CMD_DATA_SIZE) {
+            AddCrc15(data, datalen);
+            datalen += 2;
+        } else {
+            PrintAndLogEx(FAILED, "raw data too long to add CRC.");
+            return PM3_ECRC;
+        }
     }
 
-    // arg: len, speed, recv?
-    // arg0 (datalen,  cmd len?  .arg0 == crc?)
-    // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
-    // arg2 (recv == 1 == expect a response)
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, datalen, fast, read_respone, data, datalen);
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + datalen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
+
+    // track that RF field is UP.
+    if (keep_field_on) {
+        packet->flags |= ISO15_NO_DISCONNECT;
+    }
 
     if (read_respone) {
+        packet->flags |= ISO15_READ_RESPONSE;
+    }
+
+    if (wait) {
+        packet->flags |= ISO15_LONG_WAIT;
+    }
+
+    if (activate) {
+        packet->flags |= ISO15_CONNECT;
+        SetISODEPState(ISODEP_NFCV);
+    }
+
+    packet->rawlen = datalen;
+    memcpy(packet->raw, data, datalen);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(datalen));
+    free(packet);
+
+    if (read_respone) {
+        PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000)) {
             if (resp.status == PM3_ETEAROFF) {
-                DropField();
+                PrintAndLogEx(INFO, "Tear off triggered");
                 return resp.status;
             }
+
             if (resp.length < 2) {
                 PrintAndLogEx(WARNING, "command failed");
             } else {
-                PrintAndLogEx(SUCCESS, "received %i octets", resp.length);
-                PrintAndLogEx(SUCCESS, "%s", sprint_hex(resp.data.asBytes, resp.length));
+                PrintAndLogEx(SUCCESS, "(%u) %s", resp.length, sprint_hex(resp.data.asBytes, resp.length));
             }
+
         } else {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
         }
@@ -1793,32 +2115,35 @@ static int CmdHF15Readmulti(const char *Cmd) {
                   "hf 15 rdmulti -u E011223344556677 -b 12 --cnt 3 -> read three blocks"
                  );
 
-    void *argtable[6 + 3] = {0};
+    void *argtable[6 + 5] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", NULL, "<dec>", "first page number (0-255)");
     argtable[arglen++] = arg_int1(NULL, "cnt", "<dec>", "number of pages (1-6)");
+    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t uid[HF15_UID_LENGTH];
+    uint8_t uid[HF15_UID_LENGTH] = {0x00};
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
     bool uid_set = (uidlen == HF15_UID_LENGTH) ? true : false;
 
     bool unaddressed = arg_get_lit(ctx, 2);
     bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; //Default fallback to scan for tag. Overriding unaddressed parameter.
-    int fast = (arg_get_lit(ctx, 4) == false);
+    bool fast = (arg_get_lit(ctx, 4) == false);
     bool add_option = arg_get_lit(ctx, 5);
 
-    int block = arg_get_int_def(ctx, 6, 0);
+    int blockno = arg_get_int_def(ctx, 6, 0);
     int blockcnt = arg_get_int_def(ctx, 7, 0);
-
+    int blocksize = arg_get_int_def(ctx, 8, 4);
+    bool verbose = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     // sanity checks
     if (blockcnt > 6) {
-        PrintAndLogEx(WARNING, "Page count must be 6 or less (%d)", blockcnt);
+        PrintAndLogEx(WARNING, "Page count must be 6 or less, got ( " _RED_("%d") " )", blockcnt);
         return PM3_EINVARG;
     }
 
@@ -1827,14 +2152,36 @@ static int CmdHF15Readmulti(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (blocksize < 4) {
+        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
+        blocksize = 4;
+    }
+
+    // enforcing add_option in order to get lock-info
+    if (add_option == false) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "Overriding OPTION param in order to get lock-info response (ENFORCE)");
+        }
+        add_option = true;
+    }
+
     // request to be sent to device/card
-    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15693_READ_MULTI_BLOCK};
-    uint16_t reqlen = 2;
+    uint8_t approxlen = 2 + 8 + 2 + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // ISO15693 Protocol params
+    packet->raw[packet->rawlen++] = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+    packet->raw[packet->rawlen++] = ISO15693_READ_MULTI_BLOCK;
 
     if (unaddressed == false) {
         if (scan) {
-            if (getUID(false, uid) != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Using scan mode");
+            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+                free(packet);
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }
@@ -1842,75 +2189,73 @@ static int CmdHF15Readmulti(const char *Cmd) {
             reverse_array(uid, HF15_UID_LENGTH);
         }
         // add UID (scan, uid)
-        memcpy(req + reqlen, uid, HF15_UID_LENGTH);
-        reqlen += HF15_UID_LENGTH;
+        memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
+        packet->rawlen += HF15_UID_LENGTH;
 
-        PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
+    } else {
+        PrintAndLogEx(INFO, "Using unaddressed mode");
     }
-    // add OPTION flag, in order to get lock-info
-    req[0] |= ISO15_REQ_OPTION;
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Using block size... " _YELLOW_("%d"), blocksize);
+    }
 
     // 0 means 1 page,
     // 1 means 2 pages, ...
     if (blockcnt > 0) blockcnt--;
 
-    req[reqlen++] = block;
-    req[reqlen++] = blockcnt;
+    packet->raw[packet->rawlen++] = blockno;
+    packet->raw[packet->rawlen++] = blockcnt;
 
-    AddCrc15(req, reqlen);
-    reqlen += 2;
+    // crc
+    AddCrc15(packet->raw,  packet->rawlen);
+    packet->rawlen += 2;
 
-    uint8_t read_respone = 1;
-    PacketResponseNG resp;
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_respone, req, reqlen);
-
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    free(packet);
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
         PrintAndLogEx(FAILED, "iso15693 card timeout");
-        DropField();
         return PM3_ETIMEOUT;
     }
 
-    DropField();
+    ISO15_ERROR_HANDLING_RESPONSE
 
-    if (resp.status == PM3_ETEAROFF) {
-        return resp.status;
-    }
+    uint8_t *d = resp.data.asBytes;
 
-    if (resp.length < 2) {
-        PrintAndLogEx(FAILED, "iso15693 card readmulti failed");
-        return PM3_EWRONGANSWER;
-    }
+    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
 
-    uint8_t *data = resp.data.asBytes;
-
-    if (CheckCrc15(data, resp.length) == false) {
-        PrintAndLogEx(FAILED, "crc ( " _RED_("fail") " )");
-        return PM3_ESOFT;
-    }
-
-    if ((data[0] & ISO15_RES_ERROR) ==  ISO15_RES_ERROR) {
-        PrintAndLogEx(FAILED, "iso15693 card returned error %i: %s", data[0], TagErrorStr(data[0]));
-        return PM3_EWRONGANSWER;
+    // 1 byte cmd,  1 lock byte,  4 / 8 bytes block size,  2 crc
+    if (resp.length > (1 + (blockcnt * (blocksize + 1)) + 2)) {
+        PrintAndLogEx(WARNING, "got longer response. Check block size!");
     }
 
     // skip status byte
     int start = 1;
-    int stop = (blockcnt + 1) * 5;
-    int currblock = block;
+    int stop = ((blockcnt + 1) * (blocksize + 1));
+    int currblock = blockno;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, " #       | data         |lck| ascii");
     PrintAndLogEx(INFO, "---------+--------------+---+----------");
 
-    for (int i = start; i < stop; i += 5) {
+    for (int i = start; i < stop; i += (blocksize + 1)) {
+
         char lck[16] = {0};
-        if (data[i]) {
-            snprintf(lck, sizeof(lck), _RED_("%d"), data[i]);
+        if (d[i]) {
+            snprintf(lck, sizeof(lck), _RED_("%d"), d[i]);
         } else {
-            snprintf(lck, sizeof(lck), "%d", data[i]);
+            snprintf(lck, sizeof(lck), "%d", d[i]);
         }
-        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s", currblock, currblock, sprint_hex(data + i + 1, 4), lck, sprint_ascii(data + i + 1, 4));
+
+        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s", currblock, currblock, sprint_hex(d + i + 1, blocksize), lck, sprint_ascii(d + i + 1, blocksize));
+
         currblock++;
     }
     PrintAndLogEx(NORMAL, "");
@@ -1929,9 +2274,11 @@ static int CmdHF15Readblock(const char *Cmd) {
                   "hf 15 rdbl -u E011223344556677 -b 12"
                  );
 
-    void *argtable[6 + 2] = {0};
+    void *argtable[6 + 4] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
+    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1942,11 +2289,14 @@ static int CmdHF15Readblock(const char *Cmd) {
     bool uid_set = (uidlen == HF15_UID_LENGTH) ? true : false;
 
     bool unaddressed = arg_get_lit(ctx, 2);
-    bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; //Default fallback to scan for tag. Overriding unaddressed parameter.
-    int fast = (arg_get_lit(ctx, 4) == false);
+    bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; // Default fallback to scan for tag. Overriding unaddressed parameter.
+    bool fast = (arg_get_lit(ctx, 4) == false);
     bool add_option = arg_get_lit(ctx, 5);
 
-    int block = arg_get_int_def(ctx, 6, 0);
+    int blockno = arg_get_int_def(ctx, 6, 0);
+    int blocksize = arg_get_int_def(ctx, 7, 4);
+
+    bool verbose = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     // sanity checks
@@ -1955,16 +2305,37 @@ static int CmdHF15Readblock(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (blocksize < 4) {
+        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
+        blocksize = 4;
+    }
+
+    // enforcing add_option in order to get lock-info
+    if (add_option == false) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "Overriding OPTION param in order to get lock-info response (ENFORCE)");
+        }
+        add_option = true;
+    }
+
     // request to be sent to device/card
-    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[PM3_CMD_DATA_SIZE] = {flags, ISO15693_READBLOCK};
-    uint16_t reqlen = 2;
+    uint8_t approxlen = 2 + 8 + 1 + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // ISO15693 Protocol params
+    packet->raw[packet->rawlen++] = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+    packet->raw[packet->rawlen++] = ISO15693_READBLOCK;
 
     if (unaddressed == false) {
-        // default fallback to scan for tag.
-        // overriding unaddress parameter :)
+        // default fallback to scan for tag. Overriding unaddress parameter
         if (scan) {
-            if (getUID(false, uid) != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Using scan mode");
+            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+                free(packet);
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }
@@ -1972,110 +2343,137 @@ static int CmdHF15Readblock(const char *Cmd) {
             reverse_array(uid, HF15_UID_LENGTH);
         }
         // add UID (scan, uid)
-        memcpy(req + reqlen, uid, HF15_UID_LENGTH);
-        reqlen += HF15_UID_LENGTH;
+        memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
+        packet->rawlen += HF15_UID_LENGTH;
 
-        PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
+    } else {
+        PrintAndLogEx(INFO, "Using unaddressed mode");
     }
-    // add OPTION flag, in order to get lock-info
-    req[0] |= ISO15_REQ_OPTION;
 
-    req[reqlen++] = (uint8_t)block;
+    if (verbose) {
+        PrintAndLogEx(INFO, "Using block size... " _YELLOW_("%d"), blocksize);
+    }
 
-    AddCrc15(req, reqlen);
-    reqlen += 2;
+    // block no
+    packet->raw[packet->rawlen++] = (uint8_t)blockno;
 
-    // arg: len, speed, recv?
-    // arg0 (datalen,  cmd len?  .arg0 == crc?)
-    // arg1 (speed == 0 == 1 of 256,  == 1 == 1 of 4 )
-    // arg2 (recv == 1 == expect a response)
-    uint8_t read_respone = 1;
-    PacketResponseNG resp;
+    // crc
+    AddCrc15(packet->raw,  packet->rawlen);
+    packet->rawlen += 2;
+
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_respone, req, reqlen);
-
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    free(packet);
+    PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-        PrintAndLogEx(ERR, "iso15693 timeout");
-        DropField();
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
         return PM3_ETIMEOUT;
     }
 
-    DropField();
+    ISO15_ERROR_HANDLING_RESPONSE
 
-    if (resp.status == PM3_ETEAROFF) {
-        return resp.status;
-    }
-    if (resp.length < 2) {
-        PrintAndLogEx(ERR, "iso15693 command failed");
-        return PM3_EWRONGANSWER;
-    }
+    uint8_t *d = resp.data.asBytes;
 
-    uint8_t *data = resp.data.asBytes;
-
-    if (CheckCrc15(data, resp.length) == false) {
-        PrintAndLogEx(FAILED, "crc ( " _RED_("fail") " )");
-        return PM3_ESOFT;
-    }
-
-    if ((data[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
-        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", data[0], TagErrorStr(data[0]));
-        return PM3_EWRONGANSWER;
-    }
-
+    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
 
     // print response
     char lck[16] = {0};
-    if (data[1]) {
-        snprintf(lck, sizeof(lck), _RED_("%02X"), data[1]);
+    if (d[1]) {
+        snprintf(lck, sizeof(lck), _RED_("%d"), d[1]);
     } else {
-        snprintf(lck, sizeof(lck), "%02X", data[1]);
+        snprintf(lck, sizeof(lck), "%d", d[1]);
     }
+
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "#%3d        |lck| ascii", block);
-    PrintAndLogEx(INFO, "------------+---+------");
-    PrintAndLogEx(INFO, "%s| %s | %s", sprint_hex(data + 2, resp.length - 4), lck, sprint_ascii(data + 2, resp.length - 4));
+
+    uint8_t offset = 2;
+
+    bool got_blocksize8 = (resp.length > 8);
+
+    if (got_blocksize8)  {
+        PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
+        PrintAndLogEx(INFO, "------------+---+------");
+        PrintAndLogEx(INFO, "%s| %s | %s"
+                      , sprint_hex(d + offset, 8)
+                      , lck
+                      , sprint_ascii(d + offset, 8)
+                     );
+        PrintAndLogEx(INFO, "------------+---+------");
+
+    } else {
+        PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
+        PrintAndLogEx(INFO, "------------+---+------");
+        PrintAndLogEx(INFO, "%s| %s | %s"
+                      , sprint_hex(d + offset, 4)
+                      , lck
+                      , sprint_ascii(d + offset, 4)
+                     );
+        PrintAndLogEx(INFO, "------------+---+------");
+    }
+
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
-static int hf_15_write_blk(bool verbose, bool fast, uint8_t *req, uint8_t reqlen) {
+static int hf_15_write_blk(uint8_t *pm3flags, uint16_t flags, uint8_t *uid, bool fast, uint8_t blockno, uint8_t *data, uint8_t dlen) {
 
-    uint8_t read_response = 1;
+    // request to be sent to device/card
+    //   2 + 8 + 1 + (4|8) + 2
+    uint8_t approxlen = 21;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // ISO15693 protocol params
+    packet->raw[packet->rawlen++] = flags;
+    packet->raw[packet->rawlen++] = ISO15693_WRITEBLOCK;
+
+    // add UID
+    if (uid) {
+        memcpy(packet->raw +  packet->rawlen, uid, HF15_UID_LENGTH);
+        packet->rawlen += HF15_UID_LENGTH;
+    }
+
+    packet->raw[packet->rawlen++] = blockno;
+
+    memcpy(packet->raw + packet->rawlen, data, dlen);
+    packet->rawlen += dlen;
+
+    AddCrc15(packet->raw, packet->rawlen);
+    packet->rawlen += 2;
+
+    // PM3 params
+    if (pm3flags) {
+        packet->flags = *pm3flags;
+    } else {
+        packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT);
+        if (fast) {
+            packet->flags |= ISO15_HIGH_SPEED;
+        }
+    }
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO15693_COMMAND, reqlen, fast, read_response, req, reqlen);
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    free(packet);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
         PrintAndLogEx(FAILED, "iso15693 card timeout, data may be written anyway");
-        DropField();
         return PM3_ETIMEOUT;
     }
 
-    DropField();
-    if (resp.status == PM3_ETEAROFF) {
-        return resp.status;
-    }
+    ISO15_ERROR_HANDLING_RESPONSE
 
-    if (resp.length < 2) {
-        if (verbose) {
-            PrintAndLogEx(FAILED, "iso15693 command failed");
-        }
-        return PM3_EWRONGANSWER;
-    }
+    uint8_t *d = resp.data.asBytes;
 
-    uint8_t *recv = resp.data.asBytes;
-    if (CheckCrc15(recv, resp.length) == false) {
-        if (verbose) {
-            PrintAndLogEx(FAILED, "crc ( " _RED_("fail") " )");
-        }
-        return PM3_ESOFT;
-    }
+    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
 
-    if ((recv[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
-        if (verbose) {
-            PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", recv[0], TagErrorStr(recv[0]));
-        }
-        return PM3_EWRONGANSWER;
-    }
     return PM3_SUCCESS;
 }
 
@@ -2105,12 +2503,12 @@ static int CmdHF15Write(const char *Cmd) {
     bool uid_set = (uidlen == HF15_UID_LENGTH) ? true : false;
 
     bool unaddressed = arg_get_lit(ctx, 2);
-    bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; //Default fallback to scan for tag. Overriding unaddressed parameter.
-    int fast = (arg_get_lit(ctx, 4) == false);
+    bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; // Default fallback to scan for tag. Overriding unaddressed parameter.
+    bool fast = (arg_get_lit(ctx, 4) == false);
     bool add_option = arg_get_lit(ctx, 5);
 
-    int block = arg_get_int_def(ctx, 6, 0);
-    uint8_t d[4];
+    int blockno = arg_get_int_def(ctx, 6, 0);
+    uint8_t d[8];
     int dlen = 0;
     CLIGetHexWithReturn(ctx, 7, d, &dlen);
 
@@ -2123,54 +2521,45 @@ static int CmdHF15Write(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (dlen != 4) {
-        PrintAndLogEx(WARNING, "expected data, 4 bytes, got %d", dlen);
+    if ((dlen != 4) && (dlen != 8)) {
+        PrintAndLogEx(WARNING, "expected data, 4 or 8 bytes, got " _RED_("%d"), dlen);
         return PM3_EINVARG;
     }
 
     // default fallback to scan for tag.
     // overriding unaddress parameter :)
-
-    // request to be sent to device/card
-    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[17] = {flags, ISO15693_WRITEBLOCK};
-
-    // enforce, since we are writing
-    req[0] |= ISO15_REQ_OPTION;
-    uint16_t reqlen = 2;
-
     if (unaddressed == false) {
         if (scan) {
-            if (getUID(false, uid) != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Using scan mode");
+            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }
         } else {
             reverse_array(uid, HF15_UID_LENGTH);
         }
-        // add UID (scan, uid)
-        memcpy(req + reqlen, uid, HF15_UID_LENGTH);
-        reqlen += HF15_UID_LENGTH;
-
-        PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
+    } else {
+        PrintAndLogEx(INFO, "Using unaddressed mode");
     }
 
-    req[reqlen++] = (uint8_t)block;
-    memcpy(req + reqlen, d, sizeof(d));
-    reqlen += sizeof(d);
+    // TI needs OPTION
+    if (uid[7] == 0xE0 && uid[6] == 0x07) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "Overriding OPTION param, writing to TI tag");
+        }
+        add_option = true;
+    }
 
-    AddCrc15(req, reqlen);
-    reqlen += 2;
+    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
 
-    PrintAndLogEx(INFO, "iso15693 writing to page %02d (0x%02X) | data [ %s ] ", block, block, sprint_hex(req, reqlen));
+    int res = hf_15_write_blk(NULL, flags, ((unaddressed) ? NULL : uid), fast, (uint8_t)blockno, d, dlen);
 
-    int res = hf_15_write_blk(verbose, fast, req, reqlen);
     if (res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
+        PrintAndLogEx(SUCCESS, "Writing to page %02d (0x%02X) | %s  ( " _GREEN_("ok") " )", blockno, blockno, sprint_hex(d, dlen));
     else
-        PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
+        PrintAndLogEx(FAILED, "Writing to page %02d (0x%02X) | %s  ( " _RED_("fail") " )", blockno, blockno, sprint_hex(d, dlen));
 
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int CmdHF15Restore(const char *Cmd) {
@@ -2184,34 +2573,35 @@ static int CmdHF15Restore(const char *Cmd) {
 
     void *argtable[6 + 5] = {0};
     uint8_t arglen = arg_add_default(argtable);
-    argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
-                         argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)"),
-                                              argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-                                                      argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file");
+    argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t uid[8];
+    uint8_t uid[HF15_UID_LENGTH];
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+
     bool unaddressed = arg_get_lit(ctx, 2);
     bool scan = arg_get_lit(ctx, 3);
-    int fast = (arg_get_lit(ctx, 4) == false);
+    bool fast = (arg_get_lit(ctx, 4) == false);
     bool add_option = arg_get_lit(ctx, 5);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
     uint32_t retries = arg_get_u32_def(ctx, 7, 3);
-    int blocksize = arg_get_int_def(ctx, 8, 4);
-    bool verbose = arg_get_lit(ctx, 9);
+    bool verbose = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     // sanity checks
-    if ((scan + unaddressed + uidlen) > 1) {
+    if ((scan + unaddressed + (uidlen > 0)) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
         return PM3_EINVARG;
     }
+
     if (fnlen == 0) {
         PrintAndLogEx(WARNING, "please provide a filename");
         return PM3_EINVARG;
@@ -2219,92 +2609,122 @@ static int CmdHF15Restore(const char *Cmd) {
 
     // default fallback to scan for tag.
     // overriding unaddress parameter :)
-    if (uidlen != 8) {
+    if (uidlen != HF15_UID_LENGTH) {
         scan = true;
     }
 
-    // request to be sent to device/card
-    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t req[17] = {flags, ISO15693_WRITEBLOCK};
-    // enforce, since we are writing
-    req[0] |= ISO15_REQ_OPTION;
-    uint16_t reqlen = 2;
-
     if (unaddressed == false) {
         if (scan) {
-            if (getUID(false, uid) != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Using scan mode");
+            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }
-            uidlen = 8;
+        } else {
+            reverse_array(uid, HF15_UID_LENGTH);
         }
-
-        if (uidlen == 8) {
-            // add UID (scan, uid)
-            memcpy(req + reqlen, uid, sizeof(uid));
-            reqlen += sizeof(uid);
-        }
-        PrintAndLogEx(SUCCESS, "Using UID... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
     } else {
-        PrintAndLogEx(SUCCESS, "Using unaddressed mode");
+        PrintAndLogEx(INFO, "Using unaddressed mode");
     }
-    PrintAndLogEx(INFO, "Using block size... %d", blocksize);
 
+    // TI needs OPTION
+    if (uid[7] == 0xE0 && uid[6] == 0x07) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "Overriding OPTION param, writing to TI tag");
+        }
+        add_option = true;
+    }
 
     // read dump file
-    uint8_t *dump = NULL;
+    iso15_tag_t *tag = NULL;
     size_t bytes_read = 0;
-    // 4bytes * 256 blocks.  Should be enough..
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (4 * 256));
+    // blocksize bytes * 256 blocks.  Should be enough
+    int res = pm3_load_dump(filename, (void **)&tag, &bytes_read, sizeof(iso15_tag_t));
     if (res != PM3_SUCCESS) {
         return res;
     }
 
-    if ((bytes_read % blocksize) != 0) {
-        PrintAndLogEx(WARNING, "datalen %zu isn't dividable with blocksize %d", bytes_read, blocksize);
-        free(dump);
-        return PM3_ESOFT;
+    if (bytes_read != sizeof(iso15_tag_t)) {
+        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
+        free(tag);
+        return PM3_EINVARG;
+    }
+    if (bytes_read == 0) {
+        PrintAndLogEx(FAILED, "Memory image empty.");
+        free(tag);
+        return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "restoring data blocks");
-    PrintAndLogEx(INFO, "." NOLF);
-    fflush(stdout);
+    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+            (tag->pagesCount == 0) ||
+            (tag->bytesPerPage == 0)) {
+        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
+                      tag->pagesCount, tag->bytesPerPage);
+        free(tag);
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "Restoring data blocks");
+
+    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+
+    uint8_t pm3flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT | ISO15_NO_DISCONNECT);
+    if (fast) {
+        pm3flags |= ISO15_HIGH_SPEED;
+    }
 
     int retval = PM3_SUCCESS;
     size_t bytes = 0;
     uint16_t i = 0;
-    while (bytes < bytes_read) {
+    uint8_t *data = calloc(tag->bytesPerPage, sizeof(uint8_t));
+    uint32_t tried = 0;
+    while (bytes < (tag->pagesCount * tag->bytesPerPage)) {
 
-        req[reqlen] = i;
         // copy over the data to the request
-        memcpy(req + reqlen + 1, dump + bytes, blocksize);
-        AddCrc15(req, reqlen + 1 + blocksize);
+        memcpy(data, &tag->data[bytes], tag->bytesPerPage);
 
-        uint32_t tried = 0;
         for (tried = 0; tried < retries; tried++) {
 
-            retval = hf_15_write_blk(verbose, fast, req, (reqlen + 1 + blocksize + 2));
+            retval = hf_15_write_blk(&pm3flags, flags, uid, fast
+                                     , i, data, tag->bytesPerPage);
             if (retval == PM3_SUCCESS) {
-                PrintAndLogEx(NORMAL, "." NOLF);
-                fflush(stdout);
+                PrintAndLogEx(INPLACE, "blk %3d", i);
+
+                if (i == 0) {
+                    pm3flags = (ISO15_READ_RESPONSE | ISO15_LONG_WAIT | ISO15_NO_DISCONNECT);
+                    if (fast) {
+                        pm3flags |= ISO15_HIGH_SPEED;
+                    }
+                }
+                break;
+            } else if (retval == PM3_EOUTOFBOUND) {
+                // we only get this when we reached end of tag memory
+                // break out of retry loop
                 break;
             }
         }
 
         if (tried >= retries) {
-            free(dump);
+            free(data);
+            free(tag);
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(FAILED, "restore failed. Too many retries.");
+            PrintAndLogEx(FAILED, "Too many retries (" _RED_("fail") " )");
+            DropField();
             return retval;
         }
-        bytes += blocksize;
+
+        bytes += tag->bytesPerPage;
         i++;
     }
-    free(dump);
+
+    free(data);
+    free(tag);
+    DropField();
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "done");
-    PrintAndLogEx(HINT, "try `" _YELLOW_("hf 15 dump") "` to read your card to verify");
+    PrintAndLogEx(HINT, "try `" _YELLOW_("hf 15 dump --ns") "` to verify");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -2321,21 +2741,21 @@ static int CmdHF15CSetUID(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("u", "uid", "<8b hex>", "UID eg E011223344556677"),
+        arg_str1("u", "uid", "<hex>", "UID, 8 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     struct {
-        uint8_t uid[8];
+        uint8_t uid[HF15_UID_LENGTH];
     } PACKED payload;
 
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
     CLIParserFree(ctx);
 
-    if (uidlen != 8) {
-        PrintAndLogEx(WARNING, "UID must include 16 HEX symbols got ");
+    if (uidlen != HF15_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got " _RED_("%i"), uidlen);
         return PM3_EINVARG;
     }
 
@@ -2344,17 +2764,17 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "reverse input UID " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
+    PrintAndLogEx(DEBUG, "Reverse input UID... " _YELLOW_("%s"), iso15693_sprintUID(NULL, payload.uid));
 
-    PrintAndLogEx(INFO, "getting current card details...");
-    uint8_t carduid[8] = {0x00};
-    if (getUID(false, carduid) != PM3_SUCCESS) {
+    PrintAndLogEx(INFO, "Get current tag");
+
+    uint8_t carduid[HF15_UID_LENGTH] = {0x00};
+    if (getUID(true, false, carduid) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "no tag found");
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "updating tag uid...");
-
+    PrintAndLogEx(INFO, "Writing...");
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_CSETUID, (uint8_t *)&payload, sizeof(payload));
@@ -2364,24 +2784,26 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(INFO, "getting updated card details...");
+    PrintAndLogEx(INFO, "Verifying...");
 
-    if (getUID(false, carduid) != PM3_SUCCESS) {
+    if (getUID(true, false, carduid) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "no tag found");
         return PM3_ESOFT;
     }
 
     // reverse cardUID to compare
-    uint8_t revuid[8] = {0};
+    uint8_t revuid[HF15_UID_LENGTH] = {0};
     reverse_array_copy(carduid, sizeof(carduid), revuid);
 
-    if (memcmp(revuid, payload.uid, 8) != 0) {
-        PrintAndLogEx(FAILED, "setting new UID ( " _RED_("fail") " )");
-        return PM3_ESOFT;
-    } else {
-        PrintAndLogEx(SUCCESS, "setting new UID ( " _GREEN_("ok") " )");
-        return PM3_SUCCESS;
+    if (memcmp(revuid, payload.uid, HF15_UID_LENGTH) == 0) {
+        PrintAndLogEx(SUCCESS, "Setting new UID ( " _GREEN_("ok") " )");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;;
     }
+
+    PrintAndLogEx(FAILED, "Setting new UID ( " _RED_("fail") " )");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_ESOFT;
 }
 
 static int CmdHF15SlixEASEnable(const char *Cmd) {
@@ -2393,7 +2815,7 @@ static int CmdHF15SlixEASEnable(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("p", "pwd", "<hex>", "optional password, 8 hex bytes"),
+        arg_str0("p", "pwd", "<hex>", "optional password, 4 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2439,14 +2861,14 @@ static int CmdHF15SlixEASEnable(const char *Cmd) {
         }
         case PM3_EWRONGANSWER: {
             if (pwdlen > 0) {
-                PrintAndLogEx(WARNING, "the password provided was not accepted");
+                PrintAndLogEx(WARNING, "Password provided was not accepted ( " _RED_("fail") " )");
             } else {
-                PrintAndLogEx(WARNING, "either a password is required or EAS mode is locked");
+                PrintAndLogEx(WARNING, "Either password is required or EAS mode is locked ( " _RED_("fail") " )");
             }
             break;
         }
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "EAS mode is now enabled ( " _GREEN_("ok") " ) ");
+            PrintAndLogEx(SUCCESS, "EAS mode is enabled ( " _GREEN_("ok") " ) ");
             break;
         }
     }
@@ -2462,7 +2884,7 @@ static int CmdHF15SlixEASDisable(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("p", "pwd", "<hex>", "optional password, 8 hex bytes"),
+        arg_str0("p", "pwd", "<hex>", "optional password, 4 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2508,14 +2930,14 @@ static int CmdHF15SlixEASDisable(const char *Cmd) {
         }
         case PM3_EWRONGANSWER: {
             if (pwdlen > 0) {
-                PrintAndLogEx(WARNING, "the password provided was not accepted");
+                PrintAndLogEx(WARNING, "Password provided was not accepted ( " _RED_("fail") " )");
             } else {
-                PrintAndLogEx(WARNING, "either a password is required or EAS mode is locked");
+                PrintAndLogEx(WARNING, "Either password is required or EAS mode is locked ( " _RED_("fail") " )");
             }
             break;
         }
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "EAS mode is now disabled ( " _GREEN_("ok") " ) ");
+            PrintAndLogEx(SUCCESS, "EAS mode is disabled ( " _GREEN_("ok") " ) ");
             break;
         }
     }
@@ -2527,11 +2949,11 @@ static int CmdHF15SlixDisable(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 slixprivacydisable",
                   "Disable privacy mode on SLIX ISO-15693 tag",
-                  "hf 15 slixdisable -p 0F0F0F0F");
+                  "hf 15 slixprivacydisable -p 0F0F0F0F");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("p", "pwd", "<hex>", "password, 8 hex bytes"),
+        arg_str1("p", "pwd", "<hex>", "password, 4 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2561,11 +2983,11 @@ static int CmdHF15SlixDisable(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "password was not accepted");
+            PrintAndLogEx(WARNING, "Password was not accepted ( " _RED_("fail") " )");
             break;
         }
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "privacy mode is now disabled ( " _GREEN_("ok") " ) ");
+            PrintAndLogEx(SUCCESS, "Privacy mode is disabled ( " _GREEN_("ok") " ) ");
             break;
         }
     }
@@ -2577,11 +2999,11 @@ static int CmdHF15SlixEnable(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 slixprivacyenable",
                   "Enable privacy mode on SLIX ISO-15693 tag",
-                  "hf 15 slixenable -p 0F0F0F0F");
+                  "hf 15 slixprivacyenable -p 0F0F0F0F");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("p", "pwd", "<hex>", "password, 8 hex bytes"),
+        arg_str1("p", "pwd", "<hex>", "password, 4 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2611,11 +3033,11 @@ static int CmdHF15SlixEnable(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "password was not accepted");
+            PrintAndLogEx(WARNING, "Password was not accepted ( " _RED_("fail") " )");
             break;
         }
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "privacy mode is now enabled ( " _GREEN_("ok") " ) ");
+            PrintAndLogEx(SUCCESS, "Privacy mode is enabled ( " _GREEN_("ok") " ) ");
             break;
         }
     }
@@ -2632,8 +3054,8 @@ static int CmdHF15SlixWritePassword(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("t", "type", "<read|write|privacy|destroy|easafi>", "which password field to write to"),
-        arg_str0("o", "old", "<hex>", "old password (if present), 8 hex bytes"),
-        arg_str1("n", "new", "<hex>", "new password, 8 hex bytes"),
+        arg_str0("o", "old", "<hex>", "old password (if present), 4 hex bytes"),
+        arg_str1("n", "new", "<hex>", "new password, 4 hex bytes"),
         arg_param_end
     };
 
@@ -2707,11 +3129,11 @@ static int CmdHF15SlixWritePassword(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "password was not accepted");
+            PrintAndLogEx(WARNING, "Password was not accepted ( " _RED_("fail") " )");
             break;
         }
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "password written ( " _GREEN_("ok") " ) ");
+            PrintAndLogEx(SUCCESS, "Password written ( " _GREEN_("ok") " ) ");
             break;
         }
     }
@@ -2728,7 +3150,7 @@ static int CmdHF15AFIPassProtect(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("p", "pwd", "<hex>", "EAS/AFI password, 8 hex bytes"),
+        arg_str1("p", "pwd", "<hex>", "EAS/AFI password, 4 hex bytes"),
         arg_lit0(NULL, "force", "Force execution of command (irreversible) "),
         arg_param_end
     };
@@ -2772,7 +3194,7 @@ static int CmdHF15AFIPassProtect(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "error enabling AFI password protection");
+            PrintAndLogEx(WARNING, "Enabling AFI password protection ( " _RED_("fail") " )");
             break;
         }
         case PM3_SUCCESS: {
@@ -2794,7 +3216,7 @@ static int CmdHF15EASPassProtect(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("p", "pwd", "<hex>", "EAS/AFI password, 8 hex bytes"),
+        arg_str1("p", "pwd", "<hex>", "EAS/AFI password, 4 hex bytes"),
         arg_lit0(NULL, "force", "Force execution of command (irreversible) "),
         arg_param_end
     };
@@ -2838,7 +3260,7 @@ static int CmdHF15EASPassProtect(const char *Cmd) {
             break;
         }
         case PM3_EWRONGANSWER: {
-            PrintAndLogEx(WARNING, "error enabling EAS password protection");
+            PrintAndLogEx(WARNING, "Enabling EAS password protection ( " _RED_("fail") " )");
             break;
         }
         case PM3_SUCCESS: {
@@ -2858,7 +3280,7 @@ static int CmdHF15View(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>",  "Specify a filename for dump file"),
-//        arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2866,21 +3288,135 @@ static int CmdHF15View(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-//    bool dense_output = g_session.dense_output || arg_get_lit(ctx, 2);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 2));
     CLIParserFree(ctx);
 
-    // read dump file
-    uint8_t *dump = NULL;
-    size_t bytes_read = CARD_MEMORY_SIZE;
-    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, CARD_MEMORY_SIZE);
+    iso15_tag_t *tag = NULL;
+    size_t bytes_read = 0;
+    int res = pm3_load_dump(filename, (void **)&tag, &bytes_read, sizeof(iso15_tag_t));
     if (res != PM3_SUCCESS) {
         return res;
     }
 
-    PrintAndLogEx(NORMAL, "");
-    print_blocks_15693(dump, bytes_read, 4);
+    if (bytes_read != sizeof(iso15_tag_t)) {
+        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
+        free(tag);
+        return PM3_EINVARG;
+    }
+    if (bytes_read == 0) {
+        PrintAndLogEx(FAILED, "Memory image empty.");
+        free(tag);
+        return PM3_EINVARG;
+    }
 
-    free(dump);
+    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+            (tag->pagesCount == 0) ||
+            (tag->bytesPerPage == 0)) {
+        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
+                      tag->pagesCount, tag->bytesPerPage);
+        free(tag);
+        return PM3_EINVARG;
+    }
+
+    print_tag_15693(tag, dense_output, true);
+
+    free(tag);
+    return PM3_SUCCESS;
+}
+
+static int CmdHF15Wipe(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 wipe",
+                  "Wipe a ISO-15693 tag by filled memory with zeros",
+                  "hf 15 wipe\n"
+                 );
+    void *argtable[6 + 3] = {0};
+    uint8_t arglen = arg_add_default(argtable);
+    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
+                         argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_param_end;
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t uid[HF15_UID_LENGTH];
+    int uidlen = 0;
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    bool uid_set = (uidlen == HF15_UID_LENGTH) ? true : false;
+
+    bool unaddressed = arg_get_lit(ctx, 2);
+    bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; // Default fallback to scan for tag. Overriding unaddressed parameter.
+    bool fast = (arg_get_lit(ctx, 4) == false);
+    bool add_option = arg_get_lit(ctx, 5);
+
+    int blocksize = arg_get_int_def(ctx, 6, 4);
+    bool verbose = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    // sanity checks
+    if ((scan + unaddressed + uid_set) > 1) {
+        PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
+    }
+
+    if (blocksize < 4) {
+        PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
+        blocksize = 4;
+    }
+
+    // default fallback to scan for tag.
+    // overriding unaddress parameter :)
+    if (unaddressed == false) {
+        if (scan) {
+            PrintAndLogEx(INFO, "Using scan mode");
+            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "no tag found");
+                return PM3_EINVARG;
+            }
+        } else {
+            reverse_array(uid, HF15_UID_LENGTH);
+        }
+    } else {
+        PrintAndLogEx(INFO, "Using unaddressed mode");
+    }
+
+    // TI needs OPTION
+    if (uid[7] == 0xE0 && uid[6] == 0x07) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "Overriding OPTION param, writing to TI tag");
+        }
+        add_option = true;
+    }
+
+    PrintAndLogEx(INFO, "Wiping tag...");
+
+    uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+    uint8_t empty[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    uint8_t pm3flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT | ISO15_NO_DISCONNECT);
+    if (fast) {
+        pm3flags |= ISO15_HIGH_SPEED;
+    }
+
+    for (uint16_t i = 0; i < 0x100; i++) {
+
+        PrintAndLogEx(INPLACE, "blk %3d", i);
+
+        int res = hf_15_write_blk(&pm3flags, flags, ((unaddressed) ? NULL : uid), fast, i, empty, blocksize);
+        if (res == PM3_SUCCESS) {
+            if (i == 0) {
+                pm3flags = (ISO15_READ_RESPONSE | ISO15_LONG_WAIT | ISO15_NO_DISCONNECT);
+                if (fast) {
+                    pm3flags |= ISO15_HIGH_SPEED;
+                }
+            }
+        } else {
+            break;
+        }
+    }
+
+    DropField();
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -2899,11 +3435,12 @@ static command_t CommandTable[] = {
     {"restore",             CmdHF15Restore,           IfPm3Iso15693,   "Restore from file to all memory pages of an ISO-15693 tag"},
     {"samples",             CmdHF15Samples,           IfPm3Iso15693,   "Acquire samples as reader (enables carrier, sends inquiry)"},
     {"view",                CmdHF15View,              AlwaysAvailable, "Display content from tag dump file"},
+    {"wipe",                CmdHF15Wipe,              IfPm3Iso15693,   "Wipe card to zeros"},
     {"wrbl",                CmdHF15Write,             IfPm3Iso15693,   "Write a block"},
     {"-----------",         CmdHF15Help,              IfPm3Iso15693,   "--------------------- " _CYAN_("simulation") " ----------------------"},
     {"sim",                 CmdHF15Sim,               IfPm3Iso15693,   "Fake an ISO-15693 tag"},
-    {"eload",               CmdHF15ELoad,             IfPm3Iso15693,   "Load image file into emulator to be used by 'sim' command"},
-    {"esave",               CmdHF15ESave,             IfPm3Iso15693,   "Save emulator memory into image file"},
+    {"eload",               CmdHF15ELoad,             IfPm3Iso15693,   "Upload file into emulator memory"},
+    {"esave",               CmdHF15ESave,             IfPm3Iso15693,   "Save emulator memory to file"},
     {"eview",               CmdHF15EView,             IfPm3Iso15693,   "View emulator memory"},
     {"-----------",         CmdHF15Help,              IfPm3Iso15693,   "------------------------ " _CYAN_("SLIX") " -------------------------"},
     {"slixwritepwd",        CmdHF15SlixWritePassword, IfPm3Iso15693,   "Writes a password on a SLIX ISO-15693 tag"},

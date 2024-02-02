@@ -55,6 +55,7 @@ typedef enum {
     jsf15,
     jsf15_v2,
     jsf15_v3,
+    jsf15_v4,
     jsfLegic,
     jsfLegic_v2,
     jsfT55x7,
@@ -107,6 +108,8 @@ bool setDefaultPath(savePaths_t pathIndex, const char *path);
 
 char *newfilenamemcopy(const char *preferredName, const char *suffix);
 char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePaths_t save_path);
+void truncate_filename(char *fn,  uint16_t len);
+
 
 /**
  * @brief Utility function to save data to a binary file. This method takes a preferred name, but if that

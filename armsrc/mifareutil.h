@@ -30,22 +30,24 @@
 #define AUTH_FIRST    0
 #define AUTH_NESTED   2
 
-#define AUTHENTICATION_TIMEOUT 848      // card times out 1ms after wrong authentication (according to NXP documentation)
+#define AUTHENTICATION_TIMEOUT      848 // card times out 1ms after wrong authentication (according to NXP documentation)
 #define PRE_AUTHENTICATION_LEADTIME 400 // some (non standard) cards need a pause after select before they are ready for first authentication
 
 // reader voltage field detector
-#define MF_MINFIELDV      4000
+#define MF_MINFIELDV            4000
 
 // Mifare 4k/2k/1k/mini Max Block / Max Sector
-#define MIFARE_4K_MAXBLOCK 256
-#define MIFARE_2K_MAXBLOCK 128
-#define MIFARE_1K_MAXBLOCK 64
-#define MIFARE_MINI_MAXBLOCK 20
+#define MIFARE_4K_MAXBLOCK      256
+#define MIFARE_2K_MAXBLOCK      128
+#define MIFARE_1K_MAXBLOCK      64
+#define MIFARE_MINI_MAXBLOCK    20
 
-#define MIFARE_MINI_MAXSECTOR 5
-#define MIFARE_1K_MAXSECTOR 16
-#define MIFARE_2K_MAXSECTOR 32
-#define MIFARE_4K_MAXSECTOR 40
+#define MIFARE_MINI_MAXSECTOR   5
+#define MIFARE_1K_MAXSECTOR     16
+#define MIFARE_2K_MAXSECTOR     32
+#define MIFARE_4K_MAXSECTOR     40
+
+#define MIFARE_BLOCK_SIZE       16
 
 //mifare emulator states
 #define MFEMUL_NOFIELD      0
@@ -115,10 +117,9 @@ uint8_t SectorTrailer(uint8_t blockNo);
 void emlClearMem(void);
 void emlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int block_width);
 void emlGetMem(uint8_t *data, int blockNum, int blocksCount);
-void emlGetMemBt(uint8_t *data, int offset, int byteCount);
 uint64_t emlGetKey(int sectorNum, int keyType);
 int emlGetValBl(uint32_t *blReg, uint8_t *blBlock, int blockNum);
-int emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum);
-int emlCheckValBl(int blockNum);
+void emlSetValBl(uint32_t blReg, uint8_t blBlock, int blockNum);
+bool emlCheckValBl(int blockNum);
 
 #endif

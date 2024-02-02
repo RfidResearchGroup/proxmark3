@@ -134,7 +134,7 @@ int demodGuard(bool verbose) {
     memcpy(bits_no_spacer, g_DemodBuffer + startIdx, 90);
 
     // remove the 18 (90/5=18) parity bits (down to 72 bits (96-6-18=72))
-    size_t len = removeParity(bits_no_spacer, 0, 5, 3, 90); //source, startloc, paritylen, ptype, length_to_run
+    size_t len = removeParity(bits_no_spacer, 0, 5, 3, 90); // source, startloc, paritylen, ptype, length_to_run
     if (len != 72) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - gProxII spacer removal did not produce 72 bits: %zu, start: %zu", len, startIdx);
         return PM3_ESOFT;
@@ -434,19 +434,22 @@ int detectGProxII(uint8_t *bits, size_t *size) {
     // sanity check
     if (*size < sizeof(preamble)) return -1;
 
+    // preamble not found
     if (!preambleSearch(bits, preamble, sizeof(preamble), size, &startIdx))
-        return -2; //preamble not found
+        return -2;
 
-    //gProxII should be 96 bits
+    // gProxII should be 96 bits
     if (*size != 96) return -3;
 
-    //check first 6 spacer bits to verify format
+    // check first 6 spacer bits to verify format
     if (!bits[startIdx + 5] && !bits[startIdx + 10] && !bits[startIdx + 15] && !bits[startIdx + 20] && !bits[startIdx + 25] && !bits[startIdx + 30]) {
         //confirmed proper separator bits found
         //return start position
         return (int) startIdx;
     }
-    return -5; //spacer bits not found - not a valid gproxII
+
+    // spacer bits not found - not a valid gproxII
+    return -5;
 }
 
 // Works for 26bits.

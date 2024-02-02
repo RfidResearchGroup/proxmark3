@@ -37,6 +37,7 @@
 #include "cmdflashmem.h"  // get_signature..
 #include "uart/uart.h" // configure timeout
 #include "util_posix.h"
+#include "flash.h" // reboot to bootloader mode
 
 static int CmdHelp(const char *Cmd);
 
@@ -553,7 +554,7 @@ static int CmdDetectReader(const char *Cmd) {
     else if (hf)
         arg = 2;
 
-    PrintAndLogEx(INFO, "press pm3 button to change modes and finally exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to change modes and exit");
     clearCommandBuffer();
     SendCommandNG(CMD_LISTEN_READER_FIELD, (uint8_t *)&arg, sizeof(arg));
     return PM3_SUCCESS;
@@ -632,20 +633,62 @@ static int CmdLCDReset(const char *Cmd) {
 static int CmdReadmem(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw readmem",
-                  "Read memory at decimal address from ARM chip flash.",
-                  "hw readmem -a 10000"
+                  "Reads processor flash memory into a file or views on console",
+                  "hw readmem -f myfile                    -> save 512KB processor flash memory to file\n"
+                  "hw readmem -a 8192 -l 512               -> display 512 bytes from offset 8192\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_1("a", "adr", "<dec>", "address to read"),
+        arg_u64_0("a", "adr", "<dec>", "flash address to start reading from"),
+        arg_u64_0("l", "len", "<dec>", "length (default 32 or 512KB)"),
+        arg_str0("f", "file", "<fn>", "save to file"),
+        arg_u64_0("c", "cols", "<dec>", "column breaks"),
+        arg_lit0("r", "raw", "use raw address mode: read from anywhere, not just flash"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t address = arg_get_u32(ctx, 1);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    // check for -file option first to determine the output mode
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool save_to_file = fnlen > 0;
+
+    // default len to 512KB when saving to file, to 32 bytes when viewing on the console.
+    uint32_t default_len = save_to_file ? 512 * 1024 : 32;
+
+    uint32_t address = arg_get_u32_def(ctx, 1, 0);
+    uint32_t len = arg_get_u32_def(ctx, 2, default_len);
+    int breaks = arg_get_int_def(ctx, 4, 32);
+    bool raw = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
-    clearCommandBuffer();
-    SendCommandNG(CMD_READ_MEM, (uint8_t *)&address, sizeof(address));
+
+    uint8_t *buffer = calloc(len, sizeof(uint8_t));
+    if (!buffer) {
+        PrintAndLogEx(ERR, "error, cannot allocate memory ");
+        return PM3_EMALLOC;
+    }
+
+    const char *flash_str = raw ? "" : " flash";
+    PrintAndLogEx(INFO, "reading "_YELLOW_("%u")" bytes from processor%s memory",
+                  len, flash_str);
+
+    DeviceMemType_t type = raw ? MCU_MEM : MCU_FLASH;
+    if (!GetFromDevice(type, buffer, len, address, NULL, 0, NULL, -1, true)) {
+        PrintAndLogEx(FAILED, "ERROR; reading from MCU flash memory");
+        free(buffer);
+        return PM3_EFLASH;
+    }
+
+    if (save_to_file) {
+        saveFile(filename, ".bin", buffer, len);
+    } else {
+        PrintAndLogEx(INFO, "---- " _CYAN_("processor%s memory") " ----", flash_str);
+        print_hex_break(buffer, len, breaks);
+    }
+
+    free(buffer);
     return PM3_SUCCESS;
 }
 
@@ -1100,6 +1143,25 @@ static int CmdBreak(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdBootloader(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bootloader",
+                  "Reboot Proxmark3 into bootloader mode",
+                  "hw bootloader\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    clearCommandBuffer();
+    flash_reboot_bootloader(g_conn.serial_port_name, false);
+    return PM3_SUCCESS;
+}
+
 int set_fpga_mode(uint8_t mode) {
     if (mode < FPGA_BITSTREAM_LF || mode > FPGA_BITSTREAM_HF_15) {
         return PM3_EINVARG;
@@ -1122,6 +1184,7 @@ static command_t CommandTable[] = {
     {"-------------", CmdHelp,         AlwaysAvailable, "----------------------- " _CYAN_("Hardware") " -----------------------"},
     {"help",          CmdHelp,         AlwaysAvailable, "This help"},
     {"break",         CmdBreak,        IfPm3Present,    "Send break loop usb command"},
+    {"bootloader",    CmdBootloader,   IfPm3Present,    "Reboot Proxmark3 into bootloader mode"},
     {"connect",       CmdConnect,      AlwaysAvailable, "Connect Proxmark3 to serial port"},
     {"dbg",           CmdDbg,          IfPm3Present,    "Set Proxmark3 debug level"},
     {"detectreader",  CmdDetectReader, IfPm3Present,    "Detect external reader field"},
@@ -1129,7 +1192,7 @@ static command_t CommandTable[] = {
     {"lcd",           CmdLCD,          IfPm3Lcd,        "Send command/data to LCD"},
     {"lcdreset",      CmdLCDReset,     IfPm3Lcd,        "Hardware reset LCD"},
     {"ping",          CmdPing,         IfPm3Present,    "Test if the Proxmark3 is responsive"},
-    {"readmem",       CmdReadmem,      IfPm3Present,    "Read memory at decimal address from flash"},
+    {"readmem",       CmdReadmem,      IfPm3Present,    "Read from processor flash"},
     {"reset",         CmdReset,        IfPm3Present,    "Reset the Proxmark3"},
     {"setlfdivisor",  CmdSetDivisor,   IfPm3Present,    "Drive LF antenna at 12MHz / (divisor + 1)"},
     {"setmux",        CmdSetMux,       IfPm3Present,    "Set the ADC mux to a specific value"},

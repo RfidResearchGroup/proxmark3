@@ -193,7 +193,7 @@ int CmdHfThinFilmSim(const char *Cmd) {
         PrintAndLogEx(INFO, "Client side interrupted");
         PrintAndLogEx(WARNING, "Simulation still running on Proxmark3 till next command or button press");
     } else {
-        PrintAndLogEx(INFO, "Done");
+        PrintAndLogEx(INFO, "Done!");
     }
     return PM3_SUCCESS;
 }

@@ -641,13 +641,17 @@ static bool brute(const em4x50_data_t *etd, uint32_t *pwd) {
     int generator_ret = 0;
     int cnt = 0;
 
-    bf_generator_init(&ctx, etd->bruteforce_mode);
+    bf_generator_init(&ctx, etd->bruteforce_mode, BF_KEY_SIZE_32);
 
-    if (etd->bruteforce_mode == BRUTEFORCE_MODE_CHARSET)
+    if (etd->bruteforce_mode == BF_MODE_CHARSET) {
         bf_generator_set_charset(&ctx, etd->bruteforce_charset);
+    } else if (etd->bruteforce_mode == BF_MODE_RANGE) {
+        ctx.range_low = etd->password1;
+        ctx.range_high = etd->password2;
+    }
 
-    while ((generator_ret = bf_generate32(&ctx)) == GENERATOR_NEXT) {
-        *pwd = ctx.current_key32;
+    while ((generator_ret = bf_generate(&ctx)) == BF_GENERATOR_NEXT) {
+        *pwd = bf_get_key32(&ctx);
 
         WDT_HIT();
 

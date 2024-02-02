@@ -1091,6 +1091,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         if (json_is_object(data) == false) {
             PrintAndLogEx(ERR, "\ndata %d is not an object\n", i + 1);
             json_decref(root);
+            free(buf);
             return PM3_ESOFT;
         }
 
@@ -1098,6 +1099,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         if (json_is_string(jaid) == false) {
             PrintAndLogEx(ERR, "\nAID data [%d] is not a string", i + 1);
             json_decref(root);
+            free(buf);
             return PM3_ESOFT;
         }
 
@@ -1231,7 +1233,10 @@ static int CmdPCSC(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart pcsc",
                   "Make pm3 available to host OS smartcard driver via vpcd to enable use with other software such as GlobalPlatform Pro",
-                  "Requires the virtual smartcard daemon to be installed and running, see https://frankmorgner.github.io/vsmartcard/virtualsmartcard/README.html"
+                  "Requires the virtual smartcard daemon to be installed and running\n"
+                  "  see https://frankmorgner.github.io/vsmartcard/virtualsmartcard/README.html\n"
+                  "note:\n"
+                  "  `-v` shows APDU transactions between OS and card\n"
                  );
 
     void *argtable[] = {
@@ -1491,5 +1496,3 @@ bool smart_select(bool verbose, smart_card_atr_t *atr) {
 
     return true;
 }
-
-

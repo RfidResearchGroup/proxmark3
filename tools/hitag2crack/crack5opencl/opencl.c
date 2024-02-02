@@ -54,7 +54,7 @@ unsigned int get_smallest_profile(compute_platform_ctx_t *cd_ctx, size_t ocl_pla
             if (!cd_ctx[x].device[y].selected) continue;
 
 #if DEBUGME > 1
-            printf("[debug] Initial profile for device %zu: %d\n", z, cd_ctx[x].device[y].profile);
+            printf("[debug] Initial profile for device %zu: %d\n", y, cd_ctx[x].device[y].profile);
 #endif
 
             // with same devices will be selected the best

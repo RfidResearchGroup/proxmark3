@@ -191,6 +191,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MIFARE_CMD_RESTORE          0xC2
 #define MIFARE_CMD_TRANSFER         0xB0
 
+#define MIFARE_MAGIC_GDM_WUPC1      0x20
+#define MIFARE_MAGIC_GDM_WUPC2      0x23
 #define MIFARE_MAGIC_GDM_AUTH_KEY   0x80
 #define MIFARE_MAGIC_GDM_READBLOCK  0x38
 #define MIFARE_MAGIC_GDM_WRITEBLOCK 0xA8
@@ -254,18 +256,21 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_WIPE                  0x40
 #define MAGIC_SINGLE                (MAGIC_WUPC | MAGIC_HALT | MAGIC_INIT | MAGIC_OFF) //0x1E
 
-// by CMD_HF_MIFARE_CIDENT
-#define MAGIC_GEN_1A        1
-#define MAGIC_GEN_1B        2
-#define MAGIC_GEN_2         4
-#define MAGIC_GEN_UNFUSED   5
-#define MAGIC_SUPER_GEN1    6
-#define MAGIC_SUPER_GEN2    7
-#define MAGIC_NTAG21X       8
-#define MAGIC_GEN_3         9
-#define MAGIC_GEN_4GTU      10
-#define MAGIC_GEN_4GDM      11
-#define MAGIC_QL88          12
+// by CMD_HF_MIFARE_CIDENT / Flags
+#define MAGIC_FLAG_NONE          0x0000
+#define MAGIC_FLAG_GEN_1A        0x0001
+#define MAGIC_FLAG_GEN_1B        0x0002
+#define MAGIC_FLAG_GEN_2         0x0004
+#define MAGIC_FLAG_GEN_UNFUSED   0x0008
+#define MAGIC_FLAG_SUPER_GEN1    0x0010
+#define MAGIC_FLAG_SUPER_GEN2    0x0020
+#define MAGIC_FLAG_NTAG21X       0x0040
+#define MAGIC_FLAG_GEN_3         0x0080
+#define MAGIC_FLAG_GEN_4GTU      0x0100
+#define MAGIC_FLAG_GDM_AUTH      0x0200
+#define MAGIC_FLAG_QL88          0x0400
+#define MAGIC_FLAG_GDM_WUP_20    0x0800
+#define MAGIC_FLAG_GDM_WUP_40    0x1000
 
 
 // Commands for configuration of Gen4 GTU cards.
@@ -309,6 +314,13 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443B_AUTHENTICATE 0x0A
 #define ISO14443B_PING         0xBA
 #define ISO14443B_PONG         0xAB
+
+// XEROX Commands
+#define ISO14443B_XEROX_PWD             0x38
+#define ISO14443B_XEROX_WUP1            0x0D
+#define ISO14443B_XEROX_WUP2            0x5D
+#define ISO14443B_XEROX_EXT_READ_BLK    0x20
+#define ISO14443B_XEROX_READ_BLK        0x30
 
 // ASK C-ticket
 #define ASK_REQT               0x10
@@ -430,6 +442,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PROTO_CRYPTORF  15
 #define SEOS            16
 #define PROTO_MFPLUS    17
+#define PROTO_TEXKOM    18
+#define PROTO_XEROX     19
 
 // Picopass fuses
 #define FUSE_FPERS   0x80

@@ -638,8 +638,8 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("1", NULL, "Use data from Graphbuffer"),
-        arg_lit0("v",  "verbose",  "Verbose scan and output"),
+        arg_lit0("1", NULL, "Use data from Graphbuffer (offline mode)"),
+        arg_lit0("v",  "verbose",  "Verbose output"),
         arg_lit0("@", NULL, "optional - continuous reader mode"),
         arg_param_end
     };
@@ -858,7 +858,7 @@ static int CmdHFTexkomSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose",  "Verbose work"),
+        arg_lit0("v",  "verbose",  "Verbose output"),
         arg_lit0("t",  "tk17",     "Use TK-17 modulation (TK-13 by default)"),
         arg_str0(NULL, "raw",      "<hex 8 bytes>", "Raw data for texkom card, 8 bytes. Manual modulation select."),
         arg_str0(NULL, "id",       "<hex 4 bytes>", "Raw data for texkom card, 8 bytes. Manual modulation select."),

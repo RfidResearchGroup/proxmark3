@@ -48,6 +48,7 @@ typedef enum ISO14B_COMMAND {
     ISO14B_SELECT_CTS = (1 << 10),
     ISO14B_CLEARTRACE = (1 << 11),
     ISO14B_SELECT_XRX = (1 << 12),
+    ISO14B_SELECT_PICOPASS = (1 << 13),
 } iso14b_command_t;
 
 typedef enum ISO14B_TYPE {
@@ -64,6 +65,11 @@ typedef struct {
     uint8_t raw[];
 } PACKED iso14b_raw_cmd_t;
 
+typedef struct {
+    uint8_t response_byte;
+    uint16_t datalen;
+    uint8_t data[];
+} PACKED iso14b_raw_apdu_response_t;
 
 #define US_TO_SSP(x)   ( (int32_t) ((x) * 3.39) )
 #define SSP_TO_US(x)   ( (int32_t)((x) / 3.39) )

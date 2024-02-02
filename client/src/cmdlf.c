@@ -21,6 +21,7 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
+#include <math.h>
 #include "cmdparser.h"      // command_t
 #include "comms.h"
 #include "commonutil.h"     // ARRAYLEN
@@ -74,7 +75,7 @@ static int CmdHelp(const char *Cmd);
 // if key event, send break loop cmd to Pm3
 int lfsim_wait_check(uint32_t cmd) {
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
 
     for (;;) {
         if (kbd_enter_pressed()) {
@@ -115,6 +116,7 @@ static int CmdLFTune(const char *Cmd) {
         arg_lit0(NULL, "bar", "bar style"),
         arg_lit0(NULL, "mix", "mixed style"),
         arg_lit0(NULL, "value", "values style"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -125,6 +127,7 @@ static int CmdLFTune(const char *Cmd) {
     bool is_bar = arg_get_lit(ctx, 4);
     bool is_mix = arg_get_lit(ctx, 5);
     bool is_value = arg_get_lit(ctx, 6);
+    bool verbose = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     if (divisor < 19) {
@@ -160,7 +163,7 @@ static int CmdLFTune(const char *Cmd) {
         style = STYLE_VALUE;
 
     PrintAndLogEx(INFO, "Measuring LF antenna at " _YELLOW_("%.2f") " kHz", LF_DIV2FREQ(divisor));
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to exit");
 
     uint8_t params[] = {1, 0};
     params[1] = divisor;
@@ -168,7 +171,7 @@ static int CmdLFTune(const char *Cmd) {
     clearCommandBuffer();
 
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
-    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
+    if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000) == false) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF initialization, aborting");
         return PM3_ETIMEOUT;
     }
@@ -176,10 +179,13 @@ static int CmdLFTune(const char *Cmd) {
     params[0] = 2;
 
 //    #define MAX_ADC_LF_VOLTAGE 140800
-    uint32_t max = 71000;
+    uint32_t v_max = 71000;
+    uint32_t v_min = 71000;
+    uint64_t v_sum = 0;
+    uint64_t v_count = 0;
     bool first = true;
 
-    print_progress(0, max, style);
+    print_progress(0, v_max, style);
 
     // loop forever (till button pressed) if iter = 0 (default)
     for (uint32_t i = 0; iter == 0 || i < iter; i++) {
@@ -188,7 +194,7 @@ static int CmdLFTune(const char *Cmd) {
         }
 
         SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
-        if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
+        if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000) == false) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF measure, aborting");
             break;
@@ -201,13 +207,17 @@ static int CmdLFTune(const char *Cmd) {
 
         uint32_t volt = resp.data.asDwords[0];
         if (first) {
-            max = (volt * 1.03);
+            v_max = volt;
+            v_min = volt;
             first = false;
         }
-        if (volt > max) {
-            max = (volt * 1.03);
+        v_max = (volt > v_max) ? volt : v_max;
+        if (verbose) {
+            v_min = (volt < v_min) ? volt : v_min;
+            v_sum += volt;
+            v_count++;
         }
-        print_progress(volt, max, style);
+        print_progress(volt, v_max, style);
     }
 
     params[0] = 3;
@@ -217,7 +227,12 @@ static int CmdLFTune(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
     PrintAndLogEx(NORMAL, "\x1b%c[2K\r", 30);
-    PrintAndLogEx(INFO, "Done.");
+    if (verbose) {
+        PrintAndLogEx(INFO, "Min....... %u mV", v_min);
+        PrintAndLogEx(INFO, "Max....... %u mV", v_max);
+        PrintAndLogEx(INFO, "Average... %.3lf mV", v_sum / (double)v_count);
+    }
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -291,6 +306,7 @@ int CmdLFCommandRead(const char *Cmd) {
     payload.samples = samples;
     payload.keep_field_on = keep_field_on;
     payload.verbose = verbose;
+    memset(payload.symbol_extra, 0, sizeof(payload.symbol_extra));
 
     if (add_crc_ht && (cmd_len <= 120)) {
         // Hitag 1, Hitag S, ZX8211
@@ -643,15 +659,6 @@ int CmdLFConfig(const char *Cmd) {
         .verbose = true
     };
 
-    if (reset) {
-        config.decimation = 1;
-        config.bits_per_sample = 8;
-        config.averaging = 1,
-        config.divisor = LF_DIVISOR_125;
-        config.samples_to_skip = 0;
-        config.trigger_threshold = 0;
-    }
-
     if (use_125)
         config.divisor = LF_DIVISOR_125;
 
@@ -697,6 +704,16 @@ int CmdLFConfig(const char *Cmd) {
     }
 
     config.samples_to_skip = skip;
+
+    if (reset) {
+        config.decimation = 1;
+        config.bits_per_sample = 8;
+        config.averaging = 1,
+        config.divisor = LF_DIVISOR_125;
+        config.samples_to_skip = 0;
+        config.trigger_threshold = 0;
+    }
+
     return lf_config(&config);
 }
 
@@ -732,6 +749,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
         int result = set_fpga_mode(FPGA_BITSTREAM_LF);
         if (result != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "failed to load LF bitstream to FPGA");
+            free(realtimeBuf);
             return result;
         }
 
@@ -858,6 +876,7 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
         int result = set_fpga_mode(FPGA_BITSTREAM_LF);
         if (result != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "failed to load LF bitstream to FPGA");
+            free(realtimeBuf);
             return result;
         }
 
@@ -1504,7 +1523,7 @@ int CmdVchDemod(const char *Cmd) {
 }
 */
 
-static bool CheckChipType(bool getDeviceData) {
+static bool check_chiptype(bool getDeviceData) {
 
     bool retval = false;
 
@@ -1555,22 +1574,61 @@ out:
     return retval;
 }
 
+static int check_autocorrelate(const char *prefix, int clock) {
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, _CYAN_("%s - auto correlations"), prefix);
+    for (int win = 2000; win < 30000; win += 2000) {
+        int samples = AutoCorrelate(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, win, false, false);
+        if (samples == -1) {
+            continue;
+        }
+
+        if ((samples > 1) && (clock > 0)) {
+
+            // If we got a field clock / bit rate from before
+            // we can use it for predict number of repeating bytes within
+
+            int bytes = (samples / (8 * clock));
+            int mod = (bytes % 4);
+            if (mod)
+                bytes++;
+
+            int blocks = (bytes / 4);
+            PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " samples / 8 bits / " _YELLOW_("%d") " clock", samples, clock);
+            PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " bytes repeating", bytes);
+
+            if (blocks < 7) {
+                PrintAndLogEx(SUCCESS, "   " _YELLOW_("%d") " block%c", blocks, (blocks == 1) ? ' ' : 's');
+                PrintAndLogEx(NORMAL, "");
+                return PM3_SUCCESS;
+            } else {
+                PrintAndLogEx(INFO, "   " _YELLOW_("%d") " blocks  ( too large for T5577 )", blocks);
+                PrintAndLogEx(NORMAL, "");
+                return PM3_EFAILED;
+            }
+        }
+    }
+    PrintAndLogEx(NORMAL, "");
+    return PM3_EFAILED;
+}
+
 int CmdLFfind(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf search",
                   "Read and search for valid known tag. For offline mode, you can `data load` first then search.",
                   "lf search       -> try reading data from tag & search for known tag\n"
-                  "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
                   "lf search -u    -> try reading data from tag & search for known and unknown tag\n"
-                  "lf search -1u   -> use data from the GraphBuffer & search for known and unknown tag\n"
+                  "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
+                  "lf search -1uc  -> use data from the GraphBuffer & search for known and unknown tag\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("1", NULL, "Use data from Graphbuffer to search"),
-        arg_lit0("c", NULL, "Continue searching even after a first hit"),
-        arg_lit0("u", NULL, "Search for unknown tags. If not set, reads only known tags"),
+        arg_lit0("1", NULL, "Use data from Graphbuffer to search (offline mode)"),
+        arg_lit0("c", NULL, "Continue searching after successful match"),
+        arg_lit0("u", NULL, "Search for unknown tags"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1590,15 +1648,13 @@ int CmdLFfind(const char *Cmd) {
     }
 
     if (search_cont) {
-        PrintAndLogEx(INFO, "Continuous search enabled");
+        PrintAndLogEx(INFO, "Continue searching after successful match");
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "NOTE: some demods output possible binary");
-    PrintAndLogEx(INFO, "if it finds something that looks like a tag");
-    PrintAndLogEx(INFO, "False Positives " _YELLOW_("ARE") " possible");
+    PrintAndLogEx(INFO, "Note: False Positives " _YELLOW_("ARE") " possible");
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "Checking for known tags...");
+    PrintAndLogEx(INFO, _CYAN_("Checking for known tags..."));
     PrintAndLogEx(INFO, "");
 
     // only run these tests if device is online
@@ -1817,7 +1873,7 @@ int CmdLFfind(const char *Cmd) {
     }
 
     // psk
-    if (demodIdteck(true) == PM3_SUCCESS) {
+    if (demodIdteck(NULL, true) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Idteck ID") " found!");
         if (search_cont) {
             found++;
@@ -1872,54 +1928,97 @@ int CmdLFfind(const char *Cmd) {
     }
 
     if (search_unk) {
-        //test unknown tag formats (raw mode)
-        PrintAndLogEx(INFO, "\nChecking for unknown tags:\n");
-        int ans = AutoCorrelate(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, 8000, false, false);
-        if (ans > 0) {
 
-            PrintAndLogEx(INFO, "Possible auto correlation of %d repeating samples", ans);
+        // test unknown tag formats (raw mode)
+        PrintAndLogEx(INFO, _CYAN_("Checking for unknown tags...") "\n");
 
-            if (ans % 8 == 0)
-                PrintAndLogEx(INFO, "Possible %d bytes", (ans / 8));
+        uint8_t ones[] = {
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        };
+
+        // FSK
+        PrintAndLogEx(INFO, "FSK clock.......... " NOLF);
+        int clock = GetFskClock("", false);
+        if (clock) {
+            PrintAndLogEx(NORMAL, _GREEN_("detected"));
+            if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
+                check_autocorrelate("FSK", clock);
+                found++;
+            } else {
+                PrintAndLogEx(INFO, "FSK demodulation... " _RED_("failed"));
+            }
+        } else {
+            PrintAndLogEx(NORMAL, _RED_("no"));
         }
 
-        //fsk
-        if (GetFskClock("", false)) {
-            if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
-                PrintAndLogEx(INFO, "Unknown FSK Modulated Tag found!");
-                if (search_cont) {
+        // ASK
+        PrintAndLogEx(INFO, "ASK clock.......... " NOLF);
+        clock = GetAskClock("", false);
+        if (clock && clock > 8) {
+            PrintAndLogEx(NORMAL, _GREEN_("detected"));
+            bool st = true;
+            if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(INFO, _GREEN_("ASK") " modulation / Manchester encoding detected!");
+                PrintAndLogEx(INFO, "   could also be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
+                check_autocorrelate("ASK", clock);
+                found++;
+            } else {
+                PrintAndLogEx(INFO, "ASK demodulation... " _RED_("failed"));
+            }
+        } else {
+            PrintAndLogEx(NORMAL, _RED_("no"));
+        }
+
+        // NZR
+        PrintAndLogEx(INFO, "NRZ clock.......... " NOLF);
+        clock = GetNrzClock("", false);
+        if (clock && clock > 8) {
+            PrintAndLogEx(NORMAL, _GREEN_("detected"));
+            if (NRZrawDemod(0, 0, 0, true) == PM3_SUCCESS) {
+
+                int min = MIN(g_DemodBufferLen, sizeof(ones));
+                // if demodulated binary is only 1,  skip autocorrect
+                if (memcmp(g_DemodBuffer, ones, min) != 0) {
+                    check_autocorrelate("NRZ", clock);
                     found++;
                 } else {
-                    goto out;
+                    PrintAndLogEx(INFO, "NRZ ............... " _RED_("false positive"));
+                    PrintAndLogEx(NORMAL, "");
                 }
+            } else {
+                PrintAndLogEx(INFO, "NRZ demodulation... " _RED_("failed"));
             }
+        } else {
+            PrintAndLogEx(NORMAL, _RED_("no"));
         }
 
-        bool st = true;
-        if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Unknown ASK Modulated and Manchester encoded Tag found!");
-            PrintAndLogEx(INFO, "if it does not look right it could instead be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
-            if (search_cont) {
+        // PSK
+        PrintAndLogEx(INFO, "PSK clock.......... " NOLF);
+        clock = GetPskClock("", false);
+        if (clock) {
+            PrintAndLogEx(NORMAL, _GREEN_("detected"));
+            if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
+                PrintAndLogEx(INFO, "Possible " _GREEN_("PSK1") " modulation detected!");
+                PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod --p2'"));
+                PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
+                PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod --nr"));
+                check_autocorrelate("PSK", clock);
                 found++;
             } else {
-                goto out;
+                PrintAndLogEx(INFO, "PSK demodulation... " _RED_("failed"));
             }
-        }
-
-        if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Possible unknown PSK1 Modulated Tag found above!");
-            PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod --p2'"));
-            PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
-            PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod --nr"));
-            if (search_cont) {
-                found++;
-            } else {
-                goto out;
-            }
+        } else {
+            PrintAndLogEx(NORMAL, _RED_("no"));
         }
 
         if (found == 0) {
-            PrintAndLogEx(FAILED, _RED_("No data found!"));
+            PrintAndLogEx(FAILED, _RED_("Failed to demodulated signal"));
         }
     }
 
@@ -1929,7 +2028,7 @@ int CmdLFfind(const char *Cmd) {
 
 out:
     // identify chipset
-    if (CheckChipType(is_online) == false) {
+    if (check_chiptype(is_online) == false) {
         PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
     }
     return retval;

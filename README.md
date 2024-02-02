@@ -79,7 +79,10 @@ We define generic Proxmark3 platforms as following devices.
   - Ryscorp green PCB version
   - Radiowar black PCB version
   - numerous Chinese adapted versions of the RDV3 easy (kkmoon, PiSwords etc)
-  - Proxmark3 SE  (Second edition)  (BLE enabled)
+  - Proxmark3 SE  (Special Edition)  (BLE enabled)
+  - Proxmark3 X
+    - **Note**: Community tested
+    - **Note**: unknown device hw
 
 **Not supported**
  - ⚠  Proxmark Evolution (EVO) 
@@ -87,15 +90,15 @@ We define generic Proxmark3 platforms as following devices.
  - ⚠  Ryscorp Proxmark3 Pro 
    - **Note**: device has different fpga and unknown pin assignments.
    - **Note**: Company have disappeared, leaving their customers in the dark.
+
+**Experimental support**
  - ⚠  iCopy-X
-   - **Note**: experimental support, currently incompatible with iCopy-X GUI as Proxmark client commands are now using cliparser.
+   - **Note**: currently incompatible with iCopy-X GUI as Proxmark client commands using different syntax
    - **Note**: see also [icopyx-community repos](https://github.com/iCopy-X-Community/) for upstream sources, reversed hw etc.
    - **Note**: Uses DRM to lock down tags, ignores the open source licences. Use on your own risk. 
 
 **Unknown support status**
  - ⚠  VX
-   - **Note**: unknown device hw
--  ⚠ Proxmark3 X 
    - **Note**: unknown device hw
 -  ⚠ Proxmark3 Ultimate
    - **Note**: unknown device hw

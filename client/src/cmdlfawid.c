@@ -524,7 +524,7 @@ static int CmdAWIDBrute(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Bruteforceing AWID %d reader", fmtlen);
-    PrintAndLogEx(SUCCESS, "Press " _GREEN_("pm3 button") " to abort simulation or press " _GREEN_("<Enter>"));
+    PrintAndLogEx(SUCCESS, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
 
     uint16_t up = cn;
     uint16_t down = cn;

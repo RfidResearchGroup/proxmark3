@@ -39,6 +39,7 @@
 #include "mbedtls/entropy.h"     //
 #include "mbedtls/ctr_drbg.h"    // random generator
 #include "atrs.h"                // ATR lookup
+#include "crypto/libpcrypto.h"   // Cryptography
 
 uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN] = { 0x00 };
 size_t g_DemodBufferLen = 0;
@@ -233,7 +234,7 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
 
     uint8_t *buf = calloc(len, sizeof(uint8_t));
     if (buf == NULL) {
-        PrintAndLogEx(WARNING, "dail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "fail, cannot allocate memory");
         return PM3_EMALLOC;
     }
     memcpy(buf, g_DemodBuffer, len);
@@ -608,11 +609,14 @@ static int Cmdmandecoderaw(const char *Cmd) {
         uint64_t id = 0;
         uint32_t hi = 0;
         size_t idx = 0;
-        int res = Em410xDecode(bits, &size, &idx, &hi, &id);
+        size_t tmpsize = 0;
+        int res = Em410xDecode(bits, &tmpsize, &idx, &hi, &id);
         if (res > 0) {
             //need to adjust to set bitstream back to manchester encoded data
             //setDemodBuff(bits, size, idx);
             printEM410x(hi, id, false, res);
+
+            size = tmpsize;
         }
     }
     setDemodBuff(bits, size, 0);
@@ -814,9 +818,9 @@ static int Cmdaskrawdemod(const char *Cmd) {
 
 int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveGrph, bool verbose) {
     // sanity check
-    if (window > len) window = len;
-
-    if (verbose) PrintAndLogEx(INFO, "performing " _YELLOW_("%zu") " correlations", g_GraphTraceLen - window);
+    if (window > len) {
+        window = len;
+    }
 
     //test
     double autocv = 0.0;    // Autocovariance value
@@ -829,6 +833,9 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
     double variance = compute_variance(in, len);
 
     int *correl_buf = calloc(MAX_GRAPH_TRACE_LEN, sizeof(int));
+
+    uint8_t peak_cnt = 0;
+    size_t peaks[10] = {0};
 
     for (size_t i = 0; i < len - window; ++i) {
 
@@ -844,58 +851,55 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
         double ac_value = autocv / variance;
 
         // keep track of which distance is repeating.
-        if (ac_value > 1) {
+        // A value near 1.0 or more indicates a correlation in the signal
+        if (ac_value > 0.95f) {
             correlation = i - lastmax;
             lastmax = i;
+
+            if ((correlation > 1) && peak_cnt < ARRAYLEN(peaks)) {
+                peaks[peak_cnt++] = correlation;
+            }
         }
     }
 
-    //
-    int hi = 0, idx = 0;
-    int distance = 0, hi_1 = 0, idx_1 = 0;
-    for (size_t i = 0; i <= len; ++i) {
-        if (correl_buf[i] > hi) {
-            hi = correl_buf[i];
-            idx = i;
+    // Find shorts distance between peaks
+    int distance = -1;
+    for (size_t i = 0; i < ARRAYLEN(peaks); ++i) {
+
+        PrintAndLogEx(DEBUG, "%zu | %zu", i, peaks[i]);
+        if (peaks[i] < 128) {
+            continue;
+        }
+
+        if (distance == -1) {
+            distance = peaks[i];
+            continue;
+        }
+
+        if (peaks[i] < distance) {
+            distance = peaks[i];
         }
     }
 
-    for (size_t i = idx + 1; i <= window; ++i) {
-        if (correl_buf[i] > hi_1) {
-            hi_1 = correl_buf[i];
-            idx_1 = i;
+    if (distance > -1) {
+        if (verbose) {
+            PrintAndLogEx(SUCCESS, "Possible correlation at "_YELLOW_("%4d") " samples", distance);
         }
-    }
-
-    int foo = ABS(hi - hi_1);
-    int bar = (int)((int)((hi + hi_1) / 2) * 0.04);
-
-    if (verbose && foo < bar) {
-        distance = idx_1 - idx;
-        PrintAndLogEx(SUCCESS, "possible visible correlation "_YELLOW_("%4d") " samples", distance);
-    } else if (verbose && (correlation > 1)) {
-        PrintAndLogEx(SUCCESS, "possible correlation " _YELLOW_("%4zu") " samples", correlation);
     } else {
-        PrintAndLogEx(FAILED, "no repeating pattern found, try increasing window size");
+        PrintAndLogEx(HINT, "No repeating pattern found, try increasing window size");
+        // return value -1, indication to increase window size
+        return -1;
     }
 
-    int retval = correlation;
     if (SaveGrph) {
         //g_GraphTraceLen = g_GraphTraceLen - window;
         memcpy(out, correl_buf, len * sizeof(int));
-        if (distance > 0) {
-            setClockGrid(distance, idx);
-            retval = distance;
-        } else
-            setClockGrid(correlation, idx);
-
-        g_CursorCPos = idx_1;
-        g_CursorDPos = idx_1 + retval;
+        setClockGrid(distance, 0);
         g_DemodBufferLen = 0;
         RepaintGraphWindow();
     }
     free(correl_buf);
-    return retval;
+    return distance;
 }
 
 static int CmdAutoCorr(const char *Cmd) {
@@ -1151,7 +1155,7 @@ static int CmdDetectClockRate(const char *Cmd) {
         arg_lit0(NULL, "psk", "specify PSK modulation clock detection"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool a = arg_get_lit(ctx, 1);
     bool f = arg_get_lit(ctx, 2);
     bool n = arg_get_lit(ctx, 3);
@@ -1162,6 +1166,25 @@ static int CmdDetectClockRate(const char *Cmd) {
     if (tmp > 1) {
         PrintAndLogEx(WARNING, "Only specify one modulation");
         return PM3_EINVARG;
+    } else if (tmp == 0) {
+
+        int clock = GetFskClock("", false);
+        if (clock > 0) {
+            PrintAndLogEx(SUCCESS, "FSK Clock... %d", clock);
+        }
+        clock = GetAskClock("", false);
+        if (clock > 0) {
+            PrintAndLogEx(SUCCESS, "ASK Clock... %d", clock);
+        }
+        clock = GetNrzClock("", false);
+        if (clock > 0) {
+            PrintAndLogEx(SUCCESS, "NRZ Clock... %d", clock);
+        }
+        clock = GetPskClock("", false);
+        if (clock > 0) {
+            PrintAndLogEx(SUCCESS, "PSK Clock... %d", clock);
+        }
+        return PM3_SUCCESS;
     }
 
     if (a)
@@ -1403,7 +1426,8 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
 
     if (errCnt > 0 && (verbose || g_debugMode)) PrintAndLogEx(DEBUG, "DEBUG: (NRZrawDemod) Errors during Demoding (shown as 7 in bit stream): %d", errCnt);
     if (verbose || g_debugMode) {
-        PrintAndLogEx(SUCCESS, "NRZ demoded bitstream:");
+        PrintAndLogEx(SUCCESS, "NRZ demoded bitstream");
+        PrintAndLogEx(INFO, "---------------------");
         // Now output the bitstream to the scrollback by line of 16 bits
         printDemodBuff(0, false, invert, false);
     }
@@ -1958,16 +1982,16 @@ int CmdTuneSamples(const char *Cmd) {
     struct p *package = (struct p *)resp.data.asBytes;
 
     if (package->v_lf125 > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %.2f kHz", (package->v_lf125 * ANTENNA_ERROR) / 1000.0, LF_DIV2FREQ(LF_DIVISOR_125));
+        PrintAndLogEx(SUCCESS, "At %.2f kHz .......... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(LF_DIVISOR_125), (package->v_lf125 * ANTENNA_ERROR) / 1000.0);
 
     if (package->v_lf134 > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %.2f kHz", (package->v_lf134 * ANTENNA_ERROR) / 1000.0, LF_DIV2FREQ(LF_DIVISOR_134));
+        PrintAndLogEx(SUCCESS, "At %.2f kHz .......... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(LF_DIVISOR_134), (package->v_lf134 * ANTENNA_ERROR) / 1000.0);
 
     if (package->v_lfconf > NON_VOLTAGE && package->divisor > 0 && package->divisor != LF_DIVISOR_125 && package->divisor != LF_DIVISOR_134)
-        PrintAndLogEx(SUCCESS, "LF antenna: %5.2f V - %.2f kHz", (package->v_lfconf * ANTENNA_ERROR) / 1000.0, LF_DIV2FREQ(package->divisor));
+        PrintAndLogEx(SUCCESS, "At %.2f kHz .......... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(package->divisor), (package->v_lfconf * ANTENNA_ERROR) / 1000.0);
 
     if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
-        PrintAndLogEx(SUCCESS, "LF optimal: %5.2f V - %6.2f kHz", (package->peak_v * ANTENNA_ERROR) / 1000.0, LF_DIV2FREQ(package->peak_f));
+        PrintAndLogEx(SUCCESS, "At %.2f kHz optimal... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(package->peak_f), (package->peak_v * ANTENNA_ERROR) / 1000.0);
 
     // Empirical measures in mV
     const double vdd_rdv4 = 9000;
@@ -1988,6 +2012,9 @@ int CmdTuneSamples(const char *Cmd) {
                 break;
             }
         }
+
+        PrintAndLogEx(SUCCESS, "");
+        PrintAndLogEx(SUCCESS, "Approx. Q factor measurement (*)");
         double lfq1 = 0;
         if (s4 != 0) { // we got all our points of interest
             double a = package->results[s2 - 1];
@@ -1997,12 +2024,12 @@ int CmdTuneSamples(const char *Cmd) {
             double d = package->results[s4];
             double f2 = LF_DIV2FREQ(s4 - 1 + (c - v_3db_scaled) / (c - d));
             lfq1 = LF_DIV2FREQ(package->peak_f) / (f1 - f2);
-            PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by frequency bandwidth measurement", lfq1);
+            PrintAndLogEx(SUCCESS, "Frequency bandwidth..... " _YELLOW_("%.1lf"), lfq1);
         }
 
         // Q measure with Vlr=Q*(2*Vdd/pi)
         double lfq2 = (double)package->peak_v * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", lfq2);
+        PrintAndLogEx(SUCCESS, "Peak voltage............ " _YELLOW_("%.1lf"), lfq2);
         // cross-check results
         if (lfq1 > 3) {
             double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
@@ -2027,34 +2054,40 @@ int CmdTuneSamples(const char *Cmd) {
     memset(judgement, 0, sizeof(judgement));
     // LF evaluation
     if (package->peak_v < LF_UNUSABLE_V)
-        snprintf(judgement, sizeof(judgement), _RED_("UNUSABLE"));
+        snprintf(judgement, sizeof(judgement), _RED_("unusable"));
     else if (package->peak_v < LF_MARGINAL_V)
-        snprintf(judgement, sizeof(judgement), _YELLOW_("MARGINAL"));
+        snprintf(judgement, sizeof(judgement), _YELLOW_("marginal"));
     else
-        snprintf(judgement, sizeof(judgement), _GREEN_("OK"));
+        snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
 
-    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna is %s", judgement);
+    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna ( %s )", judgement);
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------- " _CYAN_("HF Antenna") " ----------");
     // HF evaluation
-    if (package->v_hf > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "HF antenna: %5.2f V - 13.56 MHz", (package->v_hf * ANTENNA_ERROR) / 1000.0);
+    if (package->v_hf > NON_VOLTAGE) {
+        PrintAndLogEx(SUCCESS, "13.56 MHz............... " _YELLOW_("%5.2f") " V", (package->v_hf * ANTENNA_ERROR) / 1000.0);
+    }
 
     memset(judgement, 0, sizeof(judgement));
+
+    PrintAndLogEx(SUCCESS, "");
+    PrintAndLogEx(SUCCESS, "Approx. Q factor measurement (*)");
 
     if (package->v_hf >= HF_UNUSABLE_V) {
         // Q measure with Vlr=Q*(2*Vdd/pi)
         double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "Approx. Q factor (*): %.1lf by peak voltage measurement", hfq);
+        PrintAndLogEx(SUCCESS, "peak voltage............ " _YELLOW_("%.1lf"), hfq);
     }
-    if (package->v_hf < HF_UNUSABLE_V)
-        snprintf(judgement, sizeof(judgement), _RED_("UNUSABLE"));
-    else if (package->v_hf < HF_MARGINAL_V)
-        snprintf(judgement, sizeof(judgement), _YELLOW_("MARGINAL"));
-    else
-        snprintf(judgement, sizeof(judgement), _GREEN_("OK"));
 
-    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna is %s", judgement);
+    if (package->v_hf < HF_UNUSABLE_V)
+        snprintf(judgement, sizeof(judgement), _RED_("unusable"));
+    else if (package->v_hf < HF_MARGINAL_V)
+        snprintf(judgement, sizeof(judgement), _YELLOW_("marginal"));
+    else
+        snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
+
+    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna ( %s )", judgement);
     PrintAndLogEx(NORMAL, "\n(*) Q factor must be measured without tag on the antenna");
 
     // graph LF measurements
@@ -2066,8 +2099,16 @@ int CmdTuneSamples(const char *Cmd) {
     }
 
     if (test1 > 0) {
-        PrintAndLogEx(SUCCESS, "\nDisplaying LF tuning graph. Divisor %d (blue) is %.2f kHz, %d (red) is %.2f kHz.\n\n",
-                      LF_DIVISOR_134, LF_DIV2FREQ(LF_DIVISOR_134), LF_DIVISOR_125, LF_DIV2FREQ(LF_DIVISOR_125));
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "-------- " _CYAN_("LF tuning graph") " ---------");
+        PrintAndLogEx(SUCCESS, "Blue line  Divisor %d / %.2f kHz"
+                      , LF_DIVISOR_134
+                      , LF_DIV2FREQ(LF_DIVISOR_134)
+                     );
+        PrintAndLogEx(SUCCESS, "Red line   Divisor %d / %.2f kHz\n\n"
+                      , LF_DIVISOR_125
+                      , LF_DIV2FREQ(LF_DIVISOR_125)
+                     );
         g_GraphTraceLen = 256;
         g_CursorCPos = LF_DIVISOR_125;
         g_CursorDPos = LF_DIVISOR_134;
@@ -3091,10 +3132,13 @@ static int CmdDiff(const char *Cmd) {
     int res = PM3_SUCCESS;
     uint8_t *inA = NULL, *inB = NULL;
     size_t datalenA = 0, datalenB = 0;
+
+
+
     // read file A
     if (fnlenA) {
         // read dump file
-        res = pm3_load_dump(filenameA, (void **)&inA, &datalenA, 2048);
+        res = pm3_load_dump(filenameA, (void **)&inA, &datalenA, MIFARE_4K_MAX_BYTES);
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -3103,7 +3147,7 @@ static int CmdDiff(const char *Cmd) {
     // read file B
     if (fnlenB) {
         // read dump file
-        res = pm3_load_dump(filenameB, (void **)&inB, &datalenB, 2048);
+        res = pm3_load_dump(filenameB, (void **)&inB, &datalenB, MIFARE_4K_MAX_BYTES);
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -3128,14 +3172,14 @@ static int CmdDiff(const char *Cmd) {
     // download emulator memory
     if (use_e) {
 
-        uint8_t *d = calloc(4096, sizeof(uint8_t));
+        uint8_t *d = calloc(MIFARE_4K_MAX_BYTES, sizeof(uint8_t));
         if (d == NULL) {
             PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
             return PM3_EMALLOC;
         }
 
         PrintAndLogEx(INFO, "downloading from emulator memory");
-        if (GetFromDevice(BIG_BUF_EML, d, 4096, 0, NULL, 0, NULL, 2500, false) == false) {
+        if (GetFromDevice(BIG_BUF_EML, d, MIFARE_4K_MAX_BYTES, 0, NULL, 0, NULL, 2500, false) == false) {
             PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
             free(inA);
             free(inB);
@@ -3144,10 +3188,10 @@ static int CmdDiff(const char *Cmd) {
         }
 
         if (fnlenA) {
-            datalenB = 4096;
+            datalenB = MIFARE_4K_MAX_BYTES;
             inB = d;
         } else {
-            datalenA = 4096;
+            datalenA = MIFARE_4K_MAX_BYTES;
             inA = d;
         }
     }
@@ -3155,7 +3199,7 @@ static int CmdDiff(const char *Cmd) {
     // dump magic card memory
     /*
     if (use_c) {
-        PrintAndLogEx(WARNING, "not implemented yet, feel free to contribute!");
+        PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
         return PM3_ENOTIMPL;
     }
     */
@@ -3163,21 +3207,41 @@ static int CmdDiff(const char *Cmd) {
     size_t biggest = (datalenA > datalenB) ? datalenA : datalenB;
     PrintAndLogEx(DEBUG, "data len:  %zu   A %zu  B %zu", biggest, datalenA, datalenB);
 
-    if (inA == NULL)
+    if (inA == NULL) {
         PrintAndLogEx(INFO, "inA null");
+    }
 
-    if (inB == NULL)
+    if (inB == NULL) {
         PrintAndLogEx(INFO, "inB null");
+    }
+
+
+    char hdr0[400] = {0};
 
     int hdr_sln = (width * 4) + 2;
-    char hdr0[300] = {0};
+    int max_fn_space = (width * 4);
 
-    int max_fn_space = (width * 5);
+    if (max_fn_space < fnlenA) {
+        truncate_filename(filenameA, max_fn_space);
+        fnlenA = strlen(filenameA);
+    }
 
-    if (fnlenA && fnlenB && (max_fn_space > fnlenA) && (max_fn_space > fnlenB)) {
+    if (max_fn_space < fnlenB) {
+        truncate_filename(filenameB, max_fn_space);
+        fnlenB = strlen(filenameB);
+    }
+
+    if (fnlenA && fnlenB) {
+
         snprintf(hdr0, sizeof(hdr0) - 1, " #  | " _CYAN_("%.*s"), max_fn_space, filenameA);
-        memset(hdr0 + strlen(hdr0), ' ', hdr_sln - strlen(filenameA) - 1);
+
+        // add space if needed
+        int padding_len = (hdr_sln - fnlenA - 1);
+        if (padding_len > 0) {
+            memset(hdr0 + strlen(hdr0), ' ', padding_len);
+        }
         snprintf(hdr0 + strlen(hdr0), sizeof(hdr0) - 1 - strlen(hdr0), "| " _CYAN_("%.*s"), max_fn_space, filenameB);
+
     } else {
         strcat(hdr0, " #  | " _CYAN_("a"));
         memset(hdr0 + strlen(hdr0), ' ', hdr_sln - 2);
@@ -3297,7 +3361,6 @@ static int CmdNumCon(const char *Cmd) {
     memset(dec, 0, sizeof(dec));
     int res = CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)dec, sizeof(dec), &dlen);
 
-
     int hlen = 256;
     char hex[256];
     memset(hex, 0, sizeof(hex));
@@ -3326,13 +3389,13 @@ static int CmdNumCon(const char *Cmd) {
     mbedtls_mpi N;
     mbedtls_mpi_init(&N);
 
-
     // hex
     if (hlen > 0) {
         if (data_verify_hex((uint8_t *)hex, hlen) == false) {
             return PM3_EINVARG;
         }
         MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&N, 16, hex));
+        PrintAndLogEx(INFO, "Input hex len... %d", hlen);
     }
 
     // decimal
@@ -3345,6 +3408,7 @@ static int CmdNumCon(const char *Cmd) {
     if (blen > 0) {
         // should have bianry string check here too
         MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&N, 2, bin));
+        PrintAndLogEx(INFO, "Input bin len... %d", blen);
     }
 
     mbedtls_mpi base;
@@ -3582,6 +3646,119 @@ static int CmdAtrLookup(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdCryptography(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data crypto",
+                  "Encrypt data, right here, right now. Or decrypt.",
+                  "Supply data, key, IV (needed for des MAC or aes), and cryptography action.\n"
+                  "To calculate a MAC for FMCOS, supply challenge as IV, data as data, and session/line protection key as key.\n"
+                  "To calculate a MAC for FeliCa, supply first RC as IV, BLE+data as data and session key as key.\n"
+                  "data crypto -d 04D6850E06AABB80 -k FFFFFFFFFFFFFFFF --iv 9EA0401A00000000 --des  -> Calculate a MAC for FMCOS chip. The result should be ED3A0133\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "Data to process"),
+        arg_str1("k", "key", "<hex>", "Key to use"),
+        arg_lit0("r", "rev", "Decrypt, not encrypt"),
+        arg_lit0(NULL, "des", "Cipher with DES, not AES"),
+        arg_lit0(NULL, "mac", "Calculate AES CMAC/FeliCa Lite MAC"),
+        arg_str0(NULL, "iv", "<hex>", "IV value if needed"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint8_t dati[250] = {0};
+    uint8_t dato[250] = {0};
+    int datilen = 0;
+    CLIGetHexWithReturn(ctx, 1, dati, &datilen);
+    uint8_t key[25] = {0};
+    int keylen = 0;
+    CLIGetHexWithReturn(ctx, 2, key, &keylen);
+    int type = 0;
+    if (arg_get_lit(ctx, 3)) type ^= 8;
+    if (arg_get_lit(ctx, 4)) type ^= 4;
+    if (arg_get_lit(ctx, 5)) type ^= 2;
+    uint8_t iv[250] = {0};
+    int ivlen = 0;
+    CLIGetHexWithReturn(ctx, 6, iv, &ivlen);
+    CLIParserFree(ctx);
+
+    // Do data length check
+    if ((type & 0x4) >> 2) { // Use AES(0) or DES(1)?
+        if (datilen % 8 != 0) {
+            PrintAndLogEx(ERR, "<data> length must be a multiple of 8. Got %d", datilen);
+            return PM3_EINVARG;
+        }
+        if (keylen != 8 && keylen != 16 && keylen != 24) {
+            PrintAndLogEx(ERR, "<key> must be 8, 16 or 24 bytes. Got %d", keylen);
+            return PM3_EINVARG;
+        }
+    } else {
+        if (datilen % 16 != 0 && ((type & 0x2) >> 1 == 0)) {
+            PrintAndLogEx(ERR, "<data> length must be a multiple of 16. Got %d", datilen);
+            return PM3_EINVARG;
+        }
+        if (keylen != 16) {
+            PrintAndLogEx(ERR, "<key> must be 16 bytes. Got %d", keylen);
+            return PM3_EINVARG;
+        }
+    }
+    if ((type & 0x8) >> 3) { // Encrypt(0) or decrypt(1)?
+        if ((type & 0x4) >> 2) { // AES or DES?
+            if (keylen > 8) {PrintAndLogEx(INFO, "Called 3DES decrypt"); des3_decrypt(dato, dati, key, keylen / 8);}
+            else {
+                PrintAndLogEx(INFO, "Called DES decrypt");
+                if (!ivlen) {des_decrypt_ecb(dato, dati, datilen, key);} // If there's an IV, use CBC
+                else {des_decrypt_cbc(dato, dati, datilen, key, iv);}
+            }
+        } else {PrintAndLogEx(INFO, "Called AES decrypt"); aes_decode(iv, key, dati, dato, datilen);}
+    } else {
+        if (type & 0x4) { // AES or DES?
+            if (type & 0x02) { // If we will calculate a MAC
+                /*PrintAndLogEx(INFO, "Called FeliCa MAC");
+                	// For DES all I know useful is the felica and fudan MAC algorithm.This is just des-cbc, but felica needs it in its way.
+                	for (int i = 0; i < datilen; i+=8){ // For all 8 byte sequences
+                		reverser(dati, &dati[i], 8, i);
+                		if (i){ // If IV is processed
+                			for (int n = 0; n < 8; ++n){
+                				dato[n] ^= dati[i+n]; // XOR with Dx
+                			}
+                			des_encrypt_ecb(dato, dato, 8, key); // Cipher itself
+                		} else { // If we didn't start with IV
+                			for (int n = 0; n < 8; ++n){
+                				dato[n] = iv[n]; // Feed data into output
+                				dato[n] ^= dati[i+n]; // XOR with D1
+                			}
+                			des_encrypt_ecb(dato, dato, 8, key); // Cipher itself
+                		}
+                	}
+                	PrintAndLogEx(SUCCESS, "MAC: %s", sprint_hex_inrow(dato, 8));*/
+                PrintAndLogEx(INFO, "Not implemented yet - feel free to contribute!");
+                return PM3_SUCCESS;
+            } else {
+                if (keylen > 8) {
+                    PrintAndLogEx(INFO, "Called 3DES encrypt keysize: %i", keylen / 8);
+                    des3_encrypt(dato, dati, key, keylen / 8);
+                } else {
+                    PrintAndLogEx(INFO, "Called DES encrypt");
+                    if (!ivlen) {des_encrypt_ecb(dato, dati, datilen, key);} // If there's an IV, use ECB
+                    else {
+                        des_encrypt_cbc(dato, dati, datilen, key, iv);
+                        char pad[250];
+                        memset(pad, ' ', 4 + 8 + (datilen - 8) * 3);
+                        pad[8 + (datilen - 8) * 3] = 0; // Make a padding to insert FMCOS macing algorithm guide
+                        PrintAndLogEx(INFO, "%sVV VV VV VV FMCOS MAC", pad);
+                    }
+                }
+            }
+        } else {
+            if (type & 0x02) {PrintAndLogEx(INFO, "Called AES CMAC"); aes_cmac8(iv, key, dati, dato, datilen);} // If we will calculate a MAC
+            else {PrintAndLogEx(INFO, "Called AES encrypt"); aes_encode(iv, key, dati, dato, datilen);}
+        }
+    }
+    PrintAndLogEx(SUCCESS, "Result: %s", sprint_hex(dato, datilen));
+    return PM3_SUCCESS;
+}
+
 static int CmdBinaryMap(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data bmap",
@@ -3620,9 +3797,9 @@ static int CmdBinaryMap(const char *Cmd) {
     char *token = strtok((char *)template, ",");
 
     // header
-    PrintAndLogEx(INFO, "---+---------------------------");
+    PrintAndLogEx(INFO, "---+-------------------------");
     PrintAndLogEx(INFO, "   | b0 b1 b2 b3 b4 b5 b6 b7");
-    PrintAndLogEx(INFO, "---+---------------------------");
+    PrintAndLogEx(INFO, "---+-------------------------");
 
     uint8_t i = 0;
     uint8_t cnt = 1;
@@ -3630,7 +3807,7 @@ static int CmdBinaryMap(const char *Cmd) {
     while (token != NULL) {
         sscanf(token, "%d", &x);
 
-        PrintAndLogEx(INFO, " %d | %*.s" NOLF, cnt, i * 3, " ");
+        PrintAndLogEx(INFO, " %d | %.*s" NOLF, cnt, i * 3, "                         ");
 
         // incease with previous offset
         x += i;
@@ -3692,6 +3869,7 @@ static command_t CommandTable[] = {
     {"bitsamples",      CmdBitsamples,           IfPm3Present,     "Get raw samples as bitstring"},
     {"bmap",            CmdBinaryMap,            AlwaysAvailable,  "Convert hex value according a binary template"},
     {"clear",           CmdBuffClear,            AlwaysAvailable,  "Clears bigbuf on deviceside and graph window"},
+    {"crypto",          CmdCryptography,         AlwaysAvailable,  "Encrypt and decrypt data"},
     {"diff",            CmdDiff,                 AlwaysAvailable,  "Diff of input files"},
     {"hexsamples",      CmdHexsamples,           IfPm3Present,     "Dump big buffer as hex bytes"},
     {"hex2bin",         Cmdhex2bin,              AlwaysAvailable,  "Converts hexadecimal to binary"},

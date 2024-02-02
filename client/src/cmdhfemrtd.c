@@ -49,6 +49,8 @@
 // App IDs
 #define EMRTD_AID_MRTD {0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01}
 
+#define EMRTD_KMAC_LEN              16
+
 // DESKey Types
 static const uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
 static const uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
@@ -198,9 +200,8 @@ static bool emrtd_exchange_commands(sAPDU_t apdu, bool include_le, uint16_t le, 
 }
 
 static int emrtd_exchange_commands_noout(sAPDU_t apdu, bool activate_field, bool keep_field_on) {
-    uint8_t response[PM3_CMD_DATA_SIZE];
+    uint8_t response[PM3_CMD_DATA_SIZE] = {0};
     size_t resplen = 0;
-
     return emrtd_exchange_commands(apdu, false, 0, response, 0, &resplen, activate_field, keep_field_on);
 }
 
@@ -511,7 +512,7 @@ static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, i
     uint8_t data[21] = { 0x00 };
     uint8_t temp[8] = {0x0c, 0xb0};
 
-    PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, 20));
+    PrintAndLogEx(DEBUG, "kmac: %s", sprint_hex_inrow(kmac, EMRTD_KMAC_LEN));
 
     // Set p1 and p2
     temp[2] = (uint8_t)(offset >> 8);
@@ -531,15 +532,15 @@ static bool _emrtd_secure_read_binary(uint8_t *kmac, uint8_t *ssc, int offset, i
     uint8_t n[19] = { 0x00 };
     memcpy(n, ssc, 8);
     memcpy(n + 8, m, 11);
-    PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, 19));
+    PrintAndLogEx(DEBUG, "n: %s", sprint_hex_inrow(n, sizeof(n)));
 
     uint8_t cc[8] = { 0x00 };
     retail_mac(kmac, n, 19, cc);
-    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, 8));
+    PrintAndLogEx(DEBUG, "cc: %s", sprint_hex_inrow(cc, sizeof(cc)));
 
     uint8_t do8e[10] = {0x8E, 0x08};
     memcpy(do8e + 2, cc, 8);
-    PrintAndLogEx(DEBUG, "do8e: %s", sprint_hex_inrow(do8e, 10));
+    PrintAndLogEx(DEBUG, "do8e: %s", sprint_hex_inrow(do8e, sizeof(do8e)));
 
     int lc = 13;
     PrintAndLogEx(DEBUG, "lc: %i", lc);
@@ -985,7 +986,8 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     // Select EF_COM
     if (emrtd_select_file_by_ef(dg_table[EF_COM].fileid) == false) {
         *BAC = true;
-        PrintAndLogEx(INFO, "Authentication is enforced. Will attempt external authentication.");
+        PrintAndLogEx(INFO, "Authentication is enforced");
+        PrintAndLogEx(INFO, "Switching to external authentication...");
     } else {
         *BAC = false;
         // Select EF_DG1
@@ -995,7 +997,8 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
         uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
         if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false) == false) {
             *BAC = true;
-            PrintAndLogEx(INFO, "Authentication is enforced. Will attempt external authentication.");
+            PrintAndLogEx(INFO, "Authentication is enforced");
+            PrintAndLogEx(INFO, "Switching to external authentication...");
         } else {
             *BAC = false;
         }
@@ -1004,9 +1007,9 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     // Do Basic Access Control
     if (*BAC) {
         // If BAC isn't available, exit out and warn user.
-        if (!BAC_available) {
+        if (BAC_available == false) {
             PrintAndLogEx(ERR, "This eMRTD enforces authentication, but you didn't supply MRZ data. Cannot proceed.");
-            PrintAndLogEx(HINT, "Check out hf emrtd info/dump --help, supply data with -n -d and -e.");
+            PrintAndLogEx(HINT, "Check out `hf emrtd info/dump --h`, supply data with `-n` `-d` and `-e`");
             return false;
         }
 
@@ -1021,8 +1024,8 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     uint8_t response[EMRTD_MAX_FILE_SIZE] = { 0x00 };
     size_t resplen = 0;
     uint8_t ssc[8] = { 0x00 };
-    uint8_t ks_enc[16] = { 0x00 };
-    uint8_t ks_mac[16] = { 0x00 };
+    uint8_t ks_enc[EMRTD_KMAC_LEN] = { 0x00 };
+    uint8_t ks_mac[EMRTD_KMAC_LEN] = { 0x00 };
     bool BAC = false;
 
     // Select the eMRTD
@@ -1032,19 +1035,19 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     }
 
     // Dump EF_CardAccess (if available)
-    if (!emrtd_dump_file(ks_enc, ks_mac, ssc, dg_table[EF_CardAccess].fileid, dg_table[EF_CardAccess].filename, BAC, path)) {
+    if (emrtd_dump_file(ks_enc, ks_mac, ssc, dg_table[EF_CardAccess].fileid, dg_table[EF_CardAccess].filename, BAC, path) == false) {
         PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE");
         PrintAndLogEx(HINT, "This is expected behavior for cards without PACE, and isn't something to be worried about");
     }
 
     // Authenticate with the eMRTD
-    if (!emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac)) {
+    if (emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac) == false) {
         DropField();
         return PM3_ESOFT;
     }
 
     // Select EF_COM
-    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC)) {
+    if (emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC) == false) {
         PrintAndLogEx(ERR, "Failed to read EF_COM");
         DropField();
         return PM3_ESOFT;
@@ -1282,18 +1285,40 @@ static void emrtd_print_issuance(char *data, bool ascii) {
     PrintAndLogEx(SUCCESS, "Date of issue.........: " _YELLOW_("%s"), final_date);
 }
 
-static void emrtd_print_personalization_timestamp(uint8_t *data) {
+static void emrtd_print_personalization_timestamp(uint8_t *data, size_t datalen) {
+    if (datalen < 7) {
+        return;
+    }
+
     char str_date[0x0F] = { 0x00 };
     strncpy(str_date, sprint_hex_inrow(data, 0x07), sizeof(str_date) - 1);
+
     char final_date[20] = { 0x00 };
-    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", str_date, str_date + 4, str_date + 6, str_date + 8, str_date + 10, str_date + 12);
+    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s"
+             , str_date
+             , str_date + 4
+             , str_date + 6
+             , str_date + 8
+             , str_date + 10
+             , str_date + 12
+            );
 
     PrintAndLogEx(SUCCESS, "Personalization at....: " _YELLOW_("%s"), final_date);
 }
 
-static void emrtd_print_unknown_timestamp_5f85(uint8_t *data) {
+static void emrtd_print_unknown_timestamp_5f85(uint8_t *data, size_t datalen) {
+    if (datalen < 14) {
+        return;
+    }
     char final_date[20] = { 0x00 };
-    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s", data, data + 4, data + 6, data + 8, data + 10, data + 12);
+    snprintf(final_date, sizeof(final_date), "%.4s-%.2s-%.2s %.2s:%.2s:%.2s"
+             , data
+             , data + 4
+             , data + 6
+             , data + 8
+             , data + 10
+             , data + 12
+            );
 
     PrintAndLogEx(SUCCESS, "Unknown timestamp 5F85: " _YELLOW_("%s"), final_date);
     PrintAndLogEx(HINT, "This is very likely the personalization timestamp, but it is using an undocumented tag.");
@@ -1588,13 +1613,13 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
                     saveFile("BackOfDocument", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x55:
-                    emrtd_print_personalization_timestamp(tagdata);
+                    emrtd_print_personalization_timestamp(tagdata, tagdatalen);
                     break;
                 case 0x56:
                     PrintAndLogEx(SUCCESS, "Serial of Personalization System: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x85:
-                    emrtd_print_unknown_timestamp_5f85(tagdata);
+                    emrtd_print_unknown_timestamp_5f85(tagdata, tagdatalen);
                     break;
                 default:
                     PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....: %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
@@ -1860,10 +1885,10 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         DropField();
         return PM3_ESOFT;
     }
-    bool use14b = GetISODEPState() == ISODEP_NFCB;
+    bool use14b = (GetISODEPState() == ISODEP_NFCB);
 
     // Read EF_CardAccess
-    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_CardAccess].fileid, ks_enc, ks_mac, ssc, BAC)) {
+    if (emrtd_select_and_read(response, &resplen, dg_table[EF_CardAccess].fileid, ks_enc, ks_mac, ssc, BAC) == false) {
         PACE_available = false;
         PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE.");
     }
@@ -2020,6 +2045,7 @@ int infoHF_EMRTD_offline(const char *path) {
 
     // coverity scan CID 395630,
     if (data == NULL) {
+        free(filepath);
         return PM3_ESOFT;
     }
 
@@ -2087,13 +2113,13 @@ static int CmdHFeMRTDDump(const char *Cmd) {
                   "Dump all files on an eMRTD",
                   "hf emrtd dump\n"
                   "hf emrtd dump --dir ../dump\n"
-                  "hf emrtd dump -n 123456789 -d 19890101 -e 20250401"
+                  "hf emrtd dump -n 123456789 -d 890101 -e 250401"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
-        arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
+        arg_str0("n", "doc", "<alphanum>", "document number, up to 9 chars"),
+        arg_str0("d", "date", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars"),
         arg_str0(NULL, "dir", "<str>", "save dump to the given dirpath"),
@@ -2187,14 +2213,14 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
                   "Display info about an eMRTD",
                   "hf emrtd info\n"
                   "hf emrtd info --dir ../dumps\n"
-                  "hf emrtd info -n 123456789 -d 19890101 -e 20250401\n"
-                  "hf emrtd info -n 123456789 -d 19890101 -e 20250401 -i"
+                  "hf emrtd info -n 123456789 -d 890101 -e 250401\n"
+                  "hf emrtd info -n 123456789 -d 890101 -e 250401 -i"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("n", "documentnumber", "<alphanum>", "document number, up to 9 chars"),
-        arg_str0("d", "dateofbirth", "<YYMMDD>", "date of birth in YYMMDD format"),
+        arg_str0("n", "doc", "<alphanum>", "document number, up to 9 chars"),
+        arg_str0("d", "date", "<YYMMDD>", "date of birth in YYMMDD format"),
         arg_str0("e", "expiry", "<YYMMDD>", "expiry in YYMMDD format"),
         arg_str0("m", "mrz", "<[0-9A-Z<]>", "2nd line of MRZ, 44 chars (passports only)"),
         arg_str0(NULL, "dir", "<str>", "display info from offline dump stored in dirpath"),

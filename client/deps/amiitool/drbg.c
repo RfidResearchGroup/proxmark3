@@ -57,7 +57,7 @@ void nfc3d_drbg_cleanup(nfc3d_drbg_ctx *ctx) {
 }
 
 void nfc3d_drbg_generate_bytes(const uint8_t *hmacKey, size_t hmacKeySize, const uint8_t *seed, size_t seedSize, uint8_t *output, size_t outputSize) {
-    uint8_t temp[NFC3D_DRBG_OUTPUT_SIZE];
+    uint8_t temp[NFC3D_DRBG_OUTPUT_SIZE] = {0};
 
     nfc3d_drbg_ctx rngCtx;
     nfc3d_drbg_init(&rngCtx, hmacKey, hmacKeySize, seed, seedSize);

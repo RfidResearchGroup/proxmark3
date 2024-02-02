@@ -66,7 +66,7 @@ For commands being sent to the Proxmark3:
 * `data`:   variable length payload
 * `crc`:    either an actual CRC (crc14a) or a Magic placeholder (`a3`)
 
-For responses from the Proxmark:
+For responses from the Proxmark3:
 
     uint32_t magic;
     uint16_t length : 15;

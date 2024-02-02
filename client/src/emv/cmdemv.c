@@ -2699,7 +2699,7 @@ static int CmdEMVReader(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("w", "wired", "Send data via contact (iso7816) interface. (def: Contactless interface)"),
-        arg_lit0("v", "verbose", "verbose"),
+        arg_lit0("v", "verbose", "Verbose output"),
         arg_lit0("@",  NULL,   "continuous reader mode"),
         arg_param_end
     };
@@ -2718,6 +2718,9 @@ static int CmdEMVReader(const char *Cmd) {
     if (continuous) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
+
+    bool old_logging = GetAPDULogging();
+    SetAPDULogging(verbose);
 
     uint8_t AID[APDU_AID_LEN] = {0};
     size_t AIDlen = 0;
@@ -2887,6 +2890,8 @@ static int CmdEMVReader(const char *Cmd) {
     } while (continuous);
 
     DropFieldEx(channel);
+
+    SetAPDULogging(old_logging);
     return PM3_SUCCESS;
 }
 
@@ -2910,11 +2915,11 @@ static command_t CommandTable[] =  {
     {"select",      CmdEMVSelect,                   IfPm3Iso14443,   "Select applet"},
     /*
     {"-----------", CmdHelp,                        IfPm3Iso14443a,  "---------------------- " _CYAN_("simulation") " ---------------------"},
-    {"getrng",      CmdEMVGetrng,                   IfPm3Iso14443,   "get random number from terminal"},
-    {"eload",       CmdEmvELoad,                    IfPm3Iso14443,   "load EMV tag into device"},
-    {"dump",        CmdEmvDump,                     IfPm3Iso14443,   "dump EMV tag values"},
-    {"sim",         CmdEmvSim,                      IfPm3Iso14443,   "simulate EMV tag"},
-    {"clone",       CmdEmvClone,                    IfPm3Iso14443,   "clone an EMV tag"},
+    {"getrng",      CmdEMVGetrng,                   IfPm3Iso14443,   "Get random number from terminal"},
+    {"eload",       CmdEmvELoad,                    IfPm3Iso14443,   "Load EMV tag into device"},
+    {"dump",        CmdEmvDump,                     IfPm3Iso14443,   "Dump EMV tag values"},
+    {"sim",         CmdEmvSim,                      IfPm3Iso14443,   "Simulate EMV tag"},
+    {"clone",       CmdEmvClone,                    IfPm3Iso14443,   "Cone an EMV tag"},
     */
     {NULL, NULL, NULL, NULL}
 };

@@ -43,11 +43,6 @@ uint8_t get_pagemap(const picopass_hdr_t *hdr) {
     return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
 }
 
-// The length of a received command will in most cases be no more than 18 bytes.
-// we expect max 34 (32+2) bytes as tag answer (response to READ4)
-#ifndef ICLASS_BUFFER_SIZE
-#define ICLASS_BUFFER_SIZE     34 + 2
-#endif
 
 #ifndef ICLASS_16KS_SIZE
 #define ICLASS_16KS_SIZE       0x100 * 8

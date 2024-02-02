@@ -292,6 +292,32 @@ typedef struct {
     uint8_t key[6];
 } PACKED mf_readblock_t;
 
+typedef enum {
+    MF_WAKE_NONE,
+    MF_WAKE_WUPA, // 52(7) + anticoll
+    MF_WAKE_REQA, // 26(7) + anticoll
+    MF_WAKE_GEN1A, // 40(7)/43
+    MF_WAKE_GEN1B, // 40(7)
+    MF_WAKE_GDM_ALT, // 20(7)/23
+} PACKED MifareWakeupType;
+
+typedef struct {
+    MifareWakeupType wakeup;
+    uint8_t auth_cmd;
+    uint8_t key[6];
+    uint8_t read_cmd;
+    uint8_t block_no;
+} PACKED mf_readblock_ex_t;
+
+typedef struct {
+    MifareWakeupType wakeup;
+    uint8_t auth_cmd;
+    uint8_t key[6];
+    uint8_t write_cmd;
+    uint8_t block_no;
+    uint8_t block_data[16];
+} PACKED mf_writeblock_ex_t;
+
 typedef struct {
     uint8_t sectorcnt;
     uint8_t keytype;
@@ -379,7 +405,9 @@ typedef struct {
 #define CMD_LCD_RESET                                                     0x0103
 #define CMD_LCD                                                           0x0104
 #define CMD_BUFF_CLEAR                                                    0x0105
-#define CMD_READ_MEM                                                      0x0106
+#define CMD_READ_MEM                                                      0x0106 // legacy
+#define CMD_READ_MEM_DOWNLOAD                                             0x010A
+#define CMD_READ_MEM_DOWNLOADED                                           0x010B
 #define CMD_VERSION                                                       0x0107
 #define CMD_STATUS                                                        0x0108
 #define CMD_PING                                                          0x0109
@@ -548,6 +576,7 @@ typedef struct {
 #define CMD_HF_TEXKOM_SIMULATE                                            0x0320
 #define CMD_HF_ISO15693_EML_CLEAR                                         0x0330
 #define CMD_HF_ISO15693_EML_SETMEM                                        0x0331
+#define CMD_HF_ISO15693_EML_GETMEM                                        0x0332
 
 #define CMD_LF_SNIFF_RAW_ADC                                              0x0360
 
@@ -642,10 +671,12 @@ typedef struct {
 #define CMD_HF_MIFARE_STATIC_ENC                                          0x0616
 
 #define CMD_HF_MIFARE_READBL                                              0x0620
+#define CMD_HF_MIFARE_READBL_EX                                           0x0628
 #define CMD_HF_MIFAREU_READBL                                             0x0720
 #define CMD_HF_MIFARE_READSC                                              0x0621
 #define CMD_HF_MIFAREU_READCARD                                           0x0721
 #define CMD_HF_MIFARE_WRITEBL                                             0x0622
+#define CMD_HF_MIFARE_WRITEBL_EX                                          0x0629
 #define CMD_HF_MIFARE_VALUE                                               0x0627
 #define CMD_HF_MIFAREU_WRITEBL                                            0x0722
 #define CMD_HF_MIFAREU_WRITEBL_COMPAT                                     0x0723
@@ -710,8 +741,6 @@ typedef struct {
 // Gen 4 GDM magic cards
 #define CMD_HF_MIFARE_G4_GDM_RDBL                                         0x0870
 #define CMD_HF_MIFARE_G4_GDM_WRBL                                         0x0871
-#define CMD_HF_MIFARE_G4_GDM_CONFIG                                       0x0872
-#define CMD_HF_MIFARE_G4_GDM_WRCFG                                        0x0873
 
 // HID SAM
 #define CMD_HF_SAM_PICOPASS                                               0x0900
@@ -820,6 +849,9 @@ typedef struct {
 // No PACS data                         pm3:  when using HID SAM to retried PACS data
 #define PM3_ENOPACS           -26
 
+// Got wrong length error               pm3: when received wrong length of data
+#define PM3_ELENGTH           -27
+
 // No data                              pm3:        no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program
@@ -842,7 +874,7 @@ typedef struct {
 // all zero's configure: no timeout for read/write used.
 // took settings from libnfc/buses/uart.c
 
-// uart_windows.c & uart_posix.c
+// uart_win32.c & uart_posix.c
 # define UART_FPC_CLIENT_RX_TIMEOUT_MS        200
 # define UART_USB_CLIENT_RX_TIMEOUT_MS        20
 # define UART_NET_CLIENT_RX_TIMEOUT_MS        500
@@ -877,6 +909,9 @@ typedef struct {
 /* Set if this device understands the version command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_VERSION         (1<<6)
 
+/* Set if this device understands the read memory command */
+#define DEVICE_INFO_FLAG_UNDERSTANDS_READ_MEM        (1<<7)
+
 #define BL_VERSION_MAJOR(version) ((uint32_t)(version) >> 22)
 #define BL_VERSION_MINOR(version) (((uint32_t)(version) >> 12) & 0x3ff)
 #define BL_VERSION_PATCH(version) ((uint32_t)(version) & 0xfff)
@@ -888,6 +923,8 @@ typedef struct {
 // Different versions here. Each version should increase the numbers
 #define BL_VERSION_1_0_0    BL_MAKE_VERSION(1, 0, 0)
 
+/* CMD_READ_MEM_DOWNLOAD flags */
+#define READ_MEM_DOWNLOAD_FLAG_RAW                   (1<<0)
 
 /* CMD_START_FLASH may have three arguments: start of area to flash,
    end of area to flash, optional magic.

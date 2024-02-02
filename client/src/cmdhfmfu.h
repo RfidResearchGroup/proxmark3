@@ -44,7 +44,7 @@ typedef struct {
 
 uint32_t GetHF14AMfU_Type(void);
 int ul_print_type(uint64_t tagtype, uint8_t spaces);
-void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage);
+void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool dense_output);
 int ul_read_uid(uint8_t *uid);
 int trace_mfuc_try_default_3des_keys(uint8_t **correct_key, int state, uint8_t (*authdata)[16]);
 

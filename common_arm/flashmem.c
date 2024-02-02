@@ -339,10 +339,10 @@ void Flashmem_print_status(void) {
     Dbprintf("  Baudrate................ " _GREEN_("%d MHz"), FLASHMEM_SPIBAUDRATE / 1000000);
 
     if (!FlashInit()) {
-        DbpString("  Init.................... " _RED_("FAILED"));
+        DbpString("  Init.................... " _RED_("failed"));
         return;
     }
-    DbpString("  Init.................... " _GREEN_("OK"));
+    DbpString("  Init.................... " _GREEN_("ok"));
 
     // NOTE: It would likely be more useful to use JDEC ID command 9F,
     //       as it provides a third byte indicative of capacity.

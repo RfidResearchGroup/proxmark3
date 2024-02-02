@@ -1853,7 +1853,7 @@ static int CmdT55xxReadTrace(const char *Cmd) {
         ct = localtime_r(&now, &tm_buf);
 #endif
 
-        if (data.year > ct->tm_year - 110)
+        if (ct != NULL && (data.year > ct->tm_year - 110))
             data.year += 2000;
         else
             data.year += 2010;
@@ -3094,7 +3094,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         snprintf(filename, sizeof(filename), "t55xx_default_pwds");
     }
 
-    PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(NORMAL, "");
     /*
     // block 7,  page1 = false, usepwd = false, override = false, pwd = 00000000
@@ -3190,7 +3190,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
         for (uint32_t c = 0; c < keycount && found == false; ++c) {
 
@@ -3304,7 +3304,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(INFO, "Search password range [%08X -> %08X]", start_password, end_password);
 
     uint64_t t1 = msclock();
@@ -3415,7 +3415,7 @@ static int CmdT55xxRecoverPW(const char *Cmd) {
     else if (r3)
         downlink_mode = ref1of4;
 
-    PrintAndLogEx(INFO, "press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
     int bit = 0;
     uint32_t curr_password = 0x0;
@@ -4419,4 +4419,3 @@ int CmdLFT55XX(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-

@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static void nfc3d_keygen_prepare_seed(const nfc3d_keygen_masterkeys *baseKeys, const uint8_t *baseSeed, uint8_t *output, size_t *outputSize) {
+static void nfc3d_keygen_prepare_seed(const nfc3d_keygen_masterkeys_t *baseKeys, const uint8_t *baseSeed, uint8_t *output, size_t *outputSize) {
     assert(baseKeys != NULL);
     assert(baseSeed != NULL);
     assert(output != NULL);
@@ -19,7 +19,8 @@ static void nfc3d_keygen_prepare_seed(const nfc3d_keygen_masterkeys *baseKeys, c
     uint8_t *start = output;
 
     // 1: Copy whole type string
-    output = (uint8_t *)strcpy((char *)output, baseKeys->typeString);
+    // output = (uint8_t *)strcpy((char *)output, baseKeys->typeString);
+    output = memccpy(output, baseKeys->typeString, '\0', sizeof(baseKeys->typeString));
 
     // 2: Append (16 - magicBytesSize) from the input seed
     size_t leadingSeedBytes = 16 - baseKeys->magicBytesSize;
@@ -44,7 +45,7 @@ static void nfc3d_keygen_prepare_seed(const nfc3d_keygen_masterkeys *baseKeys, c
     *outputSize = output - start;
 }
 
-void nfc3d_keygen(const nfc3d_keygen_masterkeys *baseKeys, const uint8_t *baseSeed, nfc3d_keygen_derivedkeys *derivedKeys) {
+void nfc3d_keygen(const nfc3d_keygen_masterkeys_t *baseKeys, const uint8_t *baseSeed, nfc3d_keygen_derivedkeys_t *derivedKeys) {
     uint8_t preparedSeed[NFC3D_DRBG_MAX_SEED_SIZE];
     size_t preparedSeedSize;
 

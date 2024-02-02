@@ -21,59 +21,84 @@
 
 #include "common.h"
 
-typedef uint8_t bruteforce_mode_t;
+#define BF_KEY_SIZE_32 4
+#define BF_KEY_SIZE_48 6
+
 // bruteforcing all keys sequentially between X and Y
-#define BRUTEFORCE_MODE_RANGE 1
+#define BF_MODE_RANGE 1
 
 // try keys based on limited charset/passphrases
 // some payment systems use user-provided passphrase as system key
-#define BRUTEFORCE_MODE_CHARSET 2
+#define BF_MODE_CHARSET 2
 
 // "smart" mode - try some predictable patterns
-#define BRUTEFORCE_MODE_SMART 3
+#define BF_MODE_SMART 3
 
 
-typedef uint8_t bruteforce_charset_t;
 // bit flags - can be used together using logical OR
-#define CHARSET_DIGITS 1
-#define CHARSET_UPPERCASE 2
+#define BF_CHARSET_DIGITS 1
+#define BF_CHARSET_UPPERCASE 2
 
-#define GENERATOR_END 0
-#define GENERATOR_NEXT 1
-#define GENERATOR_ERROR 2
+#define BF_GENERATOR_END 0
+#define BF_GENERATOR_NEXT 1
+#define BF_GENERATOR_ERROR 2
 
-#define CHARSET_DIGITS_SIZE 10
-#define CHARSET_UPPERCASE_SIZE 25
+#define BF_CHARSET_DIGITS_SIZE 10
+#define BF_CHARSET_UPPERCASE_SIZE 25
 
 extern uint8_t charset_digits[];
 extern uint8_t charset_uppercase[];
 
+typedef uint8_t bruteforce_charset_t;
+typedef uint8_t bruteforce_mode_t;
+
 // structure to hold key generator temporary data
 typedef struct {
-    // position of each of 4 bytes in 32 bit key in charset mode
+    // position of each of bytes in charset mode - used to iterate over alphabets
     // add more bytes to support larger keys
     // pos[0] is most significant byte - all maths avoid relying on little/big endian memory layout
-    uint8_t pos[4];
-    uint32_t current_key32;
+    uint8_t pos[6]; // max supported key is now 48 bit
+
+    uint8_t key_length; // bytes
+    uint64_t current_key; // Use 64 bit and truncate when needed.
     uint8_t mode;
     uint8_t charset[
-     CHARSET_DIGITS_SIZE
-     + CHARSET_UPPERCASE_SIZE
+     BF_CHARSET_DIGITS_SIZE
+     + BF_CHARSET_UPPERCASE_SIZE
     ];
     uint8_t charset_length;
 
     uint32_t range_low;
     uint32_t range_high;
+    uint16_t smart_mode_stage;
     // flags to use internally by generators as they wish
     bool flag1, flag2, flag3;
+    // counters to use internally by generators as they wish
+    uint32_t counter1, counter2;
 
 } generator_context_t;
 
-void bf_generator_init(generator_context_t *ctx, uint8_t mode);
+
+void bf_generator_init(generator_context_t *ctx, uint8_t mode, uint8_t key_size);
+void bf_generator_clear(generator_context_t *ctx); // clear flags and counters used by generators
 int bf_generator_set_charset(generator_context_t *ctx, uint8_t charsets);
-int bf_generate32(generator_context_t *ctx);
-int _bf_generate_mode_range32(generator_context_t *ctx);
-int _bf_generate_mode_charset32(generator_context_t *ctx);
-int _bf_generate_mode_smart32(generator_context_t *ctx);
+int bf_generate(generator_context_t *ctx);
+int _bf_generate_mode_range(generator_context_t *ctx);
+int _bf_generate_mode_charset(generator_context_t *ctx);
+int _bf_generate_mode_smart(generator_context_t *ctx);
 int bf_array_increment(uint8_t *data, uint8_t data_len, uint8_t modulo);
+uint32_t bf_get_key32(generator_context_t *ctx);
+uint64_t bf_get_key48(generator_context_t *ctx);
+
+// smart mode
+typedef int (smart_generator_t)(generator_context_t *ctx);
+
+int bf_generate_mode_smart(generator_context_t *ctx);
+
+int smart_generator_byte_repeat(generator_context_t *ctx);
+int smart_generator_msb_byte_only(generator_context_t *ctx);
+int smart_generator_nibble_sequence(generator_context_t *ctx);
+
+extern smart_generator_t *smart_generators[]; // array of smart cracking functions
+
 #endif // BRUTEFORCE_H__

@@ -21,24 +21,49 @@
 #include <stdlib.h>
 #include "parity.h"
 
-#if !defined LOWMEM && defined __GNUC__
-static uint8_t filterlut[1 << 20];
-static void __attribute__((constructor)) fill_lut(void) {
-    uint32_t i;
-    for (i = 0; i < 1 << 20; ++i)
-        filterlut[i] = filter(i);
-}
-#define filter(x) (filterlut[(x) & 0xfffff])
+
+#if !defined LOWMEM
+#define CONSTRUCTOR
+static uint8_t filterlut[0x100000];
+static uint8_t uc_evenparity32_lut[0x10E100A];
+
+// GUNC
+#if defined __GNUC__
+#undef CONSTRUCTOR
+#define CONSTRUCTOR __attribute__((constructor))
 #endif
 
-/** update_contribution
- * helper, calculates the partial linear feedback contributions and puts in MSB
+static void CONSTRUCTOR init_lut(void) {
+
+    for (uint32_t i = 0; i < 1 << 20; ++i) {
+        filterlut[i] = filter(i);
+    }
+
+    for (uint32_t i = 0; i < 0x10E100A; i++) {
+        uc_evenparity32_lut[i] = evenparity32(i);
+    }
+}
+
+// MSVC
+#if defined _MSC_VER
+
+typedef void(__cdecl *PF)(void);
+#pragma section(".CRT$XCG", read)
+__declspec(allocate(".CRT$XCG")) PF f[] = { init_lut };
+
+#endif
+
+#define filter(x) (filterlut[(x) & 0xfffff])
+#define even32(x) (uc_evenparity32_lut[(x)])
+#endif
+
+/** update_contribution helper,
+ *  calculates the partial linear feedback contributions and puts in MSB
  */
 static inline void update_contribution(uint32_t *item, const uint32_t mask1, const uint32_t mask2) {
     uint32_t p = *item >> 25;
-
-    p = p << 1 | (evenparity32(*item & mask1));
-    p = p << 1 | (evenparity32(*item & mask2));
+    p = p << 1 | (even32(*item & mask1));
+    p = p << 1 | (even32(*item & mask2));
     *item = p << 24 | (*item & 0xffffff);
 }
 
@@ -46,13 +71,15 @@ static inline void update_contribution(uint32_t *item, const uint32_t mask1, con
  * using a bit of the keystream extend the table of possible lfsr states
  */
 static inline void extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, int m2, uint32_t in) {
+    register uint8_t tbl_filter;
     in <<= 24;
-    for (*tbl <<= 1; tbl <= *end; *++tbl <<= 1)
-        if (filter(*tbl) ^ filter(*tbl | 1)) {
-            *tbl |= filter(*tbl) ^ bit;
+    for (*tbl <<= 1; tbl <= *end; *++tbl <<= 1) {
+        tbl_filter = filter(*tbl);
+        if (tbl_filter ^ filter(*tbl | 1)) {
+            *tbl |= tbl_filter ^ bit;
             update_contribution(tbl, m1, m2);
             *tbl ^= in;
-        } else if (filter(*tbl) == bit) {
+        } else if (tbl_filter == bit) {
             *++*end = tbl[1];
             tbl[1] = tbl[0] | 1;
             update_contribution(tbl, m1, m2);
@@ -61,18 +88,22 @@ static inline void extend_table(uint32_t *tbl, uint32_t **end, int bit, int m1, 
             *tbl ^= in;
         } else
             *tbl-- = *(*end)--;
+    }
 }
+
 /** extend_table_simple
  * using a bit of the keystream extend the table of possible lfsr states
  */
 static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit) {
+    register uint8_t tbl_filter;
     for (*tbl <<= 1; tbl <= *end; *++tbl <<= 1) {
-        if (filter(*tbl) ^ filter(*tbl | 1)) { // replace
-            *tbl |= filter(*tbl) ^ bit;
-        } else if (filter(*tbl) == bit) {     // insert
+        tbl_filter = filter(*tbl);
+        if (tbl_filter ^ filter(*tbl | 1)) { // replace
+            *tbl |= tbl_filter ^ bit;
+        } else if (tbl_filter == bit) {   // insert
             *++*end = *++tbl;
             *tbl = tbl[-1] | 1;
-        } else {                              // drop
+        } else {                            // drop
             *tbl-- = *(*end)--;
         }
     }
@@ -88,10 +119,10 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
 
     if (rem == -1) {
         for (uint32_t *e = e_head; e <= e_tail; ++e) {
-            *e = *e << 1 ^ (evenparity32(*e & LF_POLY_EVEN)) ^ (!!(in & 4));
+            *e = *e << 1 ^ (even32(*e & LF_POLY_EVEN)) ^ (!!(in & 4));
             for (uint32_t *o = o_head; o <= o_tail; ++o, ++sl) {
                 sl->even = *o;
-                sl->odd = *e ^ (evenparity32(*o & LF_POLY_ODD));
+                sl->odd = *e ^ (even32(*o & LF_POLY_ODD));
                 sl[1].odd = sl[1].even = 0;
             }
         }
@@ -133,7 +164,7 @@ struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in) {
     struct Crypto1State *statelist;
     uint32_t *odd_head = 0, *odd_tail = 0, oks = 0;
     uint32_t *even_head = 0, *even_tail = 0, eks = 0;
-    int i;
+    register int i;
 
     // split the keystream into an odd and even part
     for (i = 31; i >= 0; i -= 2)
@@ -165,10 +196,14 @@ struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in) {
     }
 
     // initialize statelists: add all possible states which would result into the rightmost 2 bits of the keystream
+    uint8_t oks_b1 = oks & 1;
+    uint8_t eks_b1 = eks & 1;
+    register uint8_t tbl_filter;
     for (i = 1 << 20; i >= 0; --i) {
-        if (filter(i) == (oks & 1))
+        tbl_filter = filter(i);
+        if (tbl_filter == oks_b1)
             *++odd_tail = i;
-        if (filter(i) == (eks & 1))
+        if (tbl_filter == eks_b1)
             *++even_tail = i;
     }
 

@@ -89,6 +89,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_15SNIFF,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_15sniff.c
 endif
+# WITH_STANDALONE_HF_15SIM
+ifneq (,$(findstring WITH_STANDALONE_HF_15SIM,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_15sim.c
+endif
 # WITH_STANDALONE_HF_AVEFUL
 ifneq (,$(findstring WITH_STANDALONE_HF_AVEFUL,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_aveful.c

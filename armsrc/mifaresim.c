@@ -238,7 +238,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, uint16_t atqa, uint8_
     // Get UID, SAK, ATQA from EMUL
     if ((flags & FLAG_UID_IN_EMUL) == FLAG_UID_IN_EMUL) {
         uint8_t block0[16];
-        emlGetMemBt(block0, 0, 16);
+        emlGet(block0, 0, 16);
 
         // If uid size defined, copy only uid from EMUL to use, backward compatibility for 'hf_colin.c', 'hf_mattyrun.c'
         if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) != 0) {
@@ -1020,7 +1020,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                 if (receivedCmd_len == 4 && (receivedCmd_dec[0] == MIFARE_CMD_INC || receivedCmd_dec[0] == MIFARE_CMD_DEC || receivedCmd_dec[0] == MIFARE_CMD_RESTORE)) {
                     blockNo = receivedCmd_dec[1];
                     if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] RECV 0x%02x inc(0xC1)/dec(0xC0)/restore(0xC2) block %d (%02x)", receivedCmd_dec[0], blockNo, blockNo);
-                    if (emlCheckValBl(blockNo)) {
+                    if (emlCheckValBl(blockNo) == false) {
                         if (g_dbglevel >= DBG_ERROR) Dbprintf("[MFEMUL_WORK] Reader tried to operate on block, but emlCheckValBl failed, nacking");
                         EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
                         FpgaDisableTracing();
@@ -1056,11 +1056,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                 if (receivedCmd_len == 4 && receivedCmd_dec[0] == MIFARE_CMD_TRANSFER) {
                     blockNo = receivedCmd_dec[1];
                     if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] RECV 0x%02x transfer block %d (%02x)", receivedCmd_dec[0], blockNo, blockNo);
-                    if (emlSetValBl(cardINTREG, cardINTBLOCK, receivedCmd_dec[1]))
-                        EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-                    else
-                        EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
-
+                    emlSetValBl(cardINTREG, cardINTBLOCK, receivedCmd_dec[1]);
+                    EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_ACK));
                     FpgaDisableTracing();
                     break;
                 }
@@ -1072,8 +1069,9 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                     LED_C_OFF();
                     cardSTATE = MFEMUL_HALTED;
                     cardAUTHKEY = AUTHKEYNONE;
-                    if (g_dbglevel >= DBG_EXTENDED)
+                    if (g_dbglevel >= DBG_EXTENDED) {
                         Dbprintf("[MFEMUL_WORK] cardSTATE = MFEMUL_HALTED");
+                    }
                     break;
                 }
 
@@ -1291,7 +1289,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
             case MFEMUL_INTREG_INC: {
                 if (receivedCmd_len == 6) {
                     mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, (uint8_t *)&ans);
-                    if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL)) {
+                    if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL) != PM3_SUCCESS) {
                         EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
                         FpgaDisableTracing();
 
@@ -1312,7 +1310,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                 if (receivedCmd_len == 6) {  //  Data is encrypted
                     // Decrypted cmd
                     mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, (uint8_t *)&ans);
-                    if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL)) {
+                    if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL) != PM3_SUCCESS) {
                         EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
                         FpgaDisableTracing();
 
@@ -1330,7 +1328,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
             // REST
             case MFEMUL_INTREG_REST: {
                 mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, (uint8_t *)&ans);
-                if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL)) {
+                if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL) != PM3_SUCCESS) {
                     EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
                     FpgaDisableTracing();
 

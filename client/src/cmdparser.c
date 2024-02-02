@@ -194,6 +194,9 @@ bool IfPm3Zx8211(void) {
 
 void CmdsHelp(const command_t Commands[]) {
     if (Commands[0].Name == NULL) return;
+
+    PrintAndLogEx(NORMAL, "");
+
     int i = 0;
     while (Commands[i].Name) {
         if (Commands[i].IsAvailable()) {
@@ -270,6 +273,14 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     sscanf(Cmd, "%127s%n", cmd_name, &len);
 
     str_lower(cmd_name);
+
+    // iceman:  I mistyped "list" so many times with "lsit".  No more.
+    char *lsit = strstr(cmd_name, "lsit");
+    if (lsit) {
+        lsit[1] = lsit[2] ^ lsit[1];
+        lsit[2] = lsit[1] ^ lsit[2];
+        lsit[1] = lsit[2] ^ lsit[1];
+    }
 
     // Comment
     if (cmd_name[0] == '#')

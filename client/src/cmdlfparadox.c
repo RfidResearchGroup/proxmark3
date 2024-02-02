@@ -159,7 +159,7 @@ int demodParadox(bool verbose, bool oldChksum) {
 
         // not manchester data
         if (bits[i] == bits[i + 1]) {
-            PrintAndLogEx(WARNING, "Error Manchester at %u", i);
+            PrintAndLogEx(DEBUG, "Error Manchester at %u", i);
             errors++;
         }
 
@@ -173,7 +173,7 @@ int demodParadox(bool verbose, bool oldChksum) {
     }
 
     if (errors) {
-        PrintAndLogEx(WARNING, "Total Manchester Errors... %u", errors);
+        PrintAndLogEx(DEBUG, "Total Manchester Errors... %u", errors);
     }
 
     setDemodBuff(bits, size, idx);

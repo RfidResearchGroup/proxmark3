@@ -34,6 +34,7 @@
 #include "base64.h"
 #include "fileutils.h"      // saveFile
 #include "cmdtrace.h"       // trace list
+#include "preferences.h"    // setDeviceDebugLevel
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2F
@@ -360,15 +361,31 @@ int trace_mfuc_try_default_3des_keys(uint8_t **correct_key, int state, uint8_t (
 }
 
 static int try_default_3des_keys(uint8_t **correct_key) {
+
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    int res = PM3_ESOFT;
     PrintAndLogEx(INFO, "Trying some default 3des keys");
     for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
         uint8_t *key = default_3des_keys[i];
         if (ulc_authentication(key, true)) {
             *correct_key = key;
-            return PM3_SUCCESS;
+            res = PM3_SUCCESS;
+            break;
         }
     }
-    return PM3_ESOFT;
+
+    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
+        return res;
+    }
+    return res;
 }
 
 static int ulev1_requestAuthentication(uint8_t *pwd, uint8_t *pack, uint16_t packLength) {
@@ -450,17 +467,23 @@ static int ulev1_readSignature(uint8_t *response, uint16_t responseLength) {
 // make sure field is off before calling this function
 static int ul_fudan_check(void) {
     iso14a_card_select_t card;
-    if (!ul_select(&card))
+    if (ul_select(&card) == false) {
         return MFU_TT_UL_ERROR;
+    }
 
     uint8_t cmd[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa7}; //wrong crc on purpose  should be 0xa8
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return MFU_TT_UL_ERROR;
-    if (resp.oldarg[0] != 1) return MFU_TT_UL_ERROR;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        return MFU_TT_UL_ERROR;
+    }
+    if (resp.oldarg[0] != 1) {
+        return MFU_TT_UL_ERROR;
+    }
 
-    return (!resp.data.asBytes[0]) ? MFU_TT_FUDAN_UL : MFU_TT_UL; //if response == 0x00 then Fudan, else Genuine NXP
+    return (resp.data.asBytes[0] == 0) 
+        ? MFU_TT_FUDAN_UL : MFU_TT_UL; //if response == 0x00 then Fudan, else Genuine NXP
 }
 
 static int ul_print_default(uint8_t *data, uint8_t *real_uid) {
@@ -542,9 +565,11 @@ static int ndef_get_maxsize(const uint8_t *data) {
 }
 
 static int ndef_print_CC(uint8_t *data) {
+
     // no NDEF message
-    if (data[0] != 0xE1)
+    if (data[0] != 0xE1 && data[0] != 0xF1) {
         return PM3_ESOFT;
+    }
 
 //NFC Forum Type 1,2,3,4
 //
@@ -623,12 +648,41 @@ static int ndef_print_CC(uint8_t *data) {
     uint8_t mbread = (data[3] & 0x01);
 
     PrintAndLogEx(SUCCESS, "  %02X: Additional feature information", data[3]);
-    PrintAndLogEx(SUCCESS, "  %s", sprint_bin(&data[3], 1));
-    PrintAndLogEx(SUCCESS, "  xxx..... - %02X: RFU ( %s )", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
-    PrintAndLogEx(SUCCESS, "  ...x.... - %02X: %s special frame", sf, (sf) ? "support" : "don\'t support");
-    PrintAndLogEx(SUCCESS, "  ....x... - %02X: %s lock block", lb, (lb) ? "support" : "don\'t support");
-    PrintAndLogEx(SUCCESS, "  .....xx. - %02X: RFU ( %s )", mlrule, (mlrule == 0) ? _GREEN_("ok") : _RED_("fail"));
-    PrintAndLogEx(SUCCESS, "  .......x - %02X: IC %s multiple block reads", mbread, (mbread) ? "support" : "don\'t support");
+
+    uint8_t bits[8 + 1] = {0};
+    num_to_bytebits(data[3], 8, bits);
+    const char *bs = sprint_bytebits_bin(bits, 8);
+
+    PrintAndLogEx(SUCCESS, "  %s", bs);
+    if (msb3 == 0) {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 0, 3, "RFU"));
+    } else {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_RED, bs, 8, 0, 3, "RFU"));
+    }
+
+    if (sf) {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 3, 1, "Support special frame"));
+    } else {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 3, 1, "Don\'t support special frame"));
+    }
+
+    if (lb) {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 4, 1, "Support lock block"));
+    } else {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 4, 1, "Don\'t support lock block"));
+    }
+
+    if (mlrule == 0) {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 5, 2, "RFU"));
+    } else {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_RED, bs, 8, 5, 2, "RFU"));
+    }
+
+    if (mbread) {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 7, 1, "IC support multiple block reads"));
+    } else {
+        PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 7, 1, "IC don\'t support multiple block reads"));
+    }
     return PM3_SUCCESS;
 }
 
@@ -726,24 +780,33 @@ static int ulc_print_3deskey(uint8_t *data) {
 
 static int ulc_print_configuration(uint8_t *data) {
 
-    PrintAndLogEx(NORMAL, "\n--- " _CYAN_("UL-C Configuration"));
-    PrintAndLogEx(NORMAL, " Higher Lockbits [40/0x28]: %s - %s", sprint_hex(data, 4), sprint_bin(data, 2));
-    PrintAndLogEx(NORMAL, "         Counter [41/0x29]: %s - %s", sprint_hex(data + 4, 4), sprint_bin(data + 4, 2));
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("UL-C Configuration") " --------------------------");
+    PrintAndLogEx(INFO, "Total memory....... " _YELLOW_("%u") " bytes", MAX_ULC_BLOCKS * 4);
+    PrintAndLogEx(INFO, "Available memory... " _YELLOW_("%u") " bytes", (MAX_ULC_BLOCKS - 4) * 4);
+    PrintAndLogEx(INFO, "40 / 0x28 | %s - %s Higher lockbits", sprint_hex(data, 4), sprint_bin(data, 2));
+    PrintAndLogEx(INFO, "41 / 0x29 | %s - %s Counter", sprint_hex(data + 4, 4), sprint_bin(data + 4, 2));
 
-    bool validAuth = (data[8] >= 0x03 && data[8] <= 0x30);
+    bool validAuth = (data[8] >= 0x03 && data[8] < 0x30);
     if (validAuth)
-        PrintAndLogEx(NORMAL, "           Auth0 [42/0x2A]: %s page %d/0x%02X and above need authentication", sprint_hex(data + 8, 4), data[8], data[8]);
+        PrintAndLogEx(INFO, "42 / 0x2A |  Auth0, %s Page " _YELLOW_("%d") "/" _YELLOW_("0x%02X") " and above need authentication"
+            , sprint_hex(data + 8, 4)
+            , data[8]
+            , data[8]
+            );
     else {
         if (data[8] == 0) {
-            PrintAndLogEx(NORMAL, "           Auth0 [42/0x2A]: %s default", sprint_hex(data + 8, 4));
+            PrintAndLogEx(INFO, "42 / 0x2A | %s Auth0 default", sprint_hex(data + 8, 4));
+        } else if (data[8] == 0x30) {
+            PrintAndLogEx(INFO, "42 / 0x2A | %s Auth0 " _GREEN_("unlocked"), sprint_hex(data + 8, 4));
         } else {
-            PrintAndLogEx(NORMAL, "           Auth0 [42/0x2A]: %s auth byte is out-of-range", sprint_hex(data + 8, 4));
+            PrintAndLogEx(INFO, "42 / 0x2A | %s Auth0 " _RED_("byte is out-of-range"), sprint_hex(data + 8, 4));
         }
     }
-    PrintAndLogEx(NORMAL, "           Auth1 [43/0x2B]: %s %s",
-                  sprint_hex(data + 12, 4),
-                  (data[12] & 1) ? "write access restricted" : "read and write access restricted"
-                 );
+    PrintAndLogEx(INFO, "43 / 0x2B | %s Auth1 %s",
+                sprint_hex(data + 12, 4),
+                (data[12] & 1) ? "write access restricted" : _RED_("R/W access restricted")
+            );
     return PM3_SUCCESS;
 }
 
@@ -828,7 +891,10 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
                 default:
                     break;
             }
-            PrintAndLogEx(INFO, "                mirror start page %02X | byte pos %02X - %s", mirror_page, mirror_byte, (mirror_page >= 0x4 && ((mirror_user_mem_start_byte + bytes_required_for_mirror_data) <= 144)) ? _GREEN_("OK") : _YELLOW_("Invalid value"));
+            PrintAndLogEx(INFO, "                mirror start page %02X | byte pos %02X - %s"
+                          , mirror_page, mirror_byte
+                          , (mirror_page >= 0x4 && ((mirror_user_mem_start_byte + bytes_required_for_mirror_data) <= 144)) ? _GREEN_("ok") : _YELLOW_("Invalid value")
+                         );
         }
 
     } else if (tagtype & (MFU_TT_NTAG_213_F | MFU_TT_NTAG_216_F)) {
@@ -1212,35 +1278,41 @@ static int ul_magic_test(void) {
     // 2) make a wrong length write to page0, and see if tag answers with ACK/NACK:
 
     iso14a_card_select_t card;
-    if (ul_select(&card) == false)
+    if (ul_select(&card) == false) {
         return MFU_TT_UL_ERROR;
+    }
 
     int status = ul_comp_write(0, NULL, 0);
     DropField();
-    if (status == 0)
+    if (status == 0) {
         return MFU_TT_MAGIC;
+    }
 
     // check for GEN1A, GEN1B and NTAG21x
-    uint8_t is_generation = 0;
     PacketResponseNG resp;
     clearCommandBuffer();
     uint8_t payload[] = { 0 };
     SendCommandNG(CMD_HF_MIFARE_CIDENT, payload, sizeof(payload));
+
+    uint16_t is_generation = MAGIC_FLAG_NONE;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_CIDENT, &resp, 1500)) {
-        if (resp.status == PM3_SUCCESS)
-            is_generation = resp.data.asBytes[0];
+        if ((resp.status == PM3_SUCCESS) && resp.length == sizeof(uint16_t)) {
+            is_generation = resp.data.asDwords[0] & 0xFFFF;
+        }
     }
-    switch (is_generation) {
-        case MAGIC_GEN_1A:
-            return MFU_TT_MAGIC_1A;
-        case MAGIC_GEN_1B:
-            return MFU_TT_MAGIC_1B;
-        case MAGIC_NTAG21X:
-            return MFU_TT_MAGIC_NTAG;
-        default:
-            break;
+
+    if ((is_generation & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) {
+        return MFU_TT_MAGIC_1A;
     }
-    return 0;
+
+    if ((is_generation & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B) {
+        return MFU_TT_MAGIC_1B;
+    }
+    if ((is_generation & MAGIC_FLAG_NTAG21X) == MAGIC_FLAG_NTAG21X) {
+        return MFU_TT_MAGIC_NTAG;
+    }
+
+    return MFU_TT_UNKNOWN;
 }
 
 static char *GenerateFilename(const char *prefix, const char *suffix) {
@@ -1256,31 +1328,16 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
     return fptr;
 }
 
-//------------------------------------
-/*
-static int mfu_decrypt_amiibo(uint8_t *encrypted, uint16_t elen, uint8_t *decrypted, uint16_t *dlen) {
-
-    if (elen < NFC3D_AMIIBO_SIZE / 4) {
-        PrintAndLogEx(ERR, "ERR,  data wrong length, got %zu , expected %zu", elen,  (NFC3D_AMIIBO_SIZE / 4));
-        return PM3_ESOFT;
-    }
-
-    nfc3d_amiibo_keys amiibo_keys = {0};
-    if (nfc3d_amiibo_load_keys(&amiibo_keys) == false) {
-        return PM3_ESOFT;
-    }
-
-    if (nfc3d_amiibo_unpack(&amiibo_keys, encrypted, decrypted) == false) {
-        PrintAndLogEx(ERR, "WARNING, Tag signature was NOT valid");
-    }
-
-    *dlen = NFC3D_AMIIBO_SIZE;
-    return PM3_SUCCESS;
-}
 static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
 
+    // read uid
+    iso14a_card_select_t card;
+    if (ul_select(&card) == false) {
+        return PM3_ECARDEXCHANGE;
+    }
+
     int res = PM3_SUCCESS;
-    uint16_t maxbytes = (pages * 4);
+    uint16_t maxbytes = (pages * MFU_BLOCK_SIZE);
 
     *pdata = calloc(maxbytes, sizeof(uint8_t));
     if (*pdata == NULL) {
@@ -1289,8 +1346,14 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
         goto out;
     }
 
+    // UL_EV1/NTAG auth
+    uint8_t keytype = 2;
+    // generate PWD
+    uint8_t key[4] = {0};
+    num_to_bytes(ul_ev1_pwdgenB(card.uid), 4, key);
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, key, 4);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "Command execute time-out");
@@ -1314,20 +1377,21 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
         buffer_size = maxbytes;
     }
 
-    if (!GetFromDevice(BIG_BUF, *pdata, buffer_size, startindex, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF, *pdata, buffer_size, startindex, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(*pdata);
         res = PM3_ETIMEOUT;
         goto out;
     }
 
-    if (len)
+    if (len) {
         *len = buffer_size;
+    }
 
 out:
     return res;
 }
-*/
+
 /*
 Lego Dimensions,
   Version: 00 04 04 02 01 00 0F 03
@@ -1425,6 +1489,12 @@ static mfu_identify_t mfu_ident_table[] = {
         ul_ev1_pwdgenB, ul_ev1_packgenB,
         "hf mfu dump -k %08x"
     },
+    {
+        "Amiibo - Power Up band", "0004040502021303",
+        8, 10, "44000FE0F110FFEEA500",
+        ul_ev1_pwdgenB, ul_ev1_packgenB,
+        "hf mfu dump -k %08x"
+    },
     /*
     {
         "Xiaomi AIR Purifier", "0004040201000F03",
@@ -1506,6 +1576,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
 
     uint8_t *data = NULL;
     int res = PM3_SUCCESS;
+    PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "------------------------ " _CYAN_("Fingerprint") " -----------------------");
     uint8_t maxbytes = mfu_max_len();
     if (maxbytes == 0) {
@@ -1514,7 +1585,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
         goto out;
     }
 
-    maxbytes = ((maxbytes / 4) + 1) * 4;
+    maxbytes = ((maxbytes / MFU_BLOCK_SIZE) + 1) * MFU_BLOCK_SIZE;
     data = calloc(maxbytes, sizeof(uint8_t));
     if (data == NULL) {
         PrintAndLogEx(ERR, "failed to allocate memory");
@@ -1522,7 +1593,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
         goto out;
     }
 
-    uint8_t pages = (maxbytes / 4);
+    uint8_t pages = (maxbytes / MFU_BLOCK_SIZE);
     PrintAndLogEx(INFO, "Reading tag memory...");
 
     uint8_t keytype = 0;
@@ -1536,7 +1607,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
     SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, authkey, ak_len);
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "Command execute time-out");
         res = PM3_ETIMEOUT;
         goto out;
@@ -1556,11 +1627,12 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
         buffer_size = maxbytes;
     }
 
-    if (!GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         res = PM3_ETIMEOUT;
         goto out;
     }
+
 
     uint8_t version[8] = {0};
     uint8_t uid[7] = {0};
@@ -1840,7 +1912,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     }
 
     bool locked = false;
-    // read pages 0,1,2,3 (should read 4pages)
+    // read pages 0,1,2,3 (should read 4 pages)
     status = ul_read(0, data, sizeof(data));
     if (status == -1) {
         DropField();
@@ -1898,6 +1970,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 memcpy(keySwap, SwapEndian64(key, 16, 8), 16);
                 ulc_print_3deskey(keySwap);
             }
+            PrintAndLogEx(INFO, "Done!");
             return PM3_SUCCESS;
         }
     }
@@ -1937,7 +2010,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             DropField();
             return PM3_ESOFT;
         }
-        if (status == 32) {
+        if (status == 32 || status == 34) {
             ulev1_print_signature(tagtype, card.uid, ulev1_signature, 32);
         } else if (status == 48) {
             ulev1_print_signature(tagtype, card.uid, ulev1_signature, 48);
@@ -2006,7 +2079,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenA(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found default password " _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                has_auth_key = true;
+                ak_len = 4;
+                memcpy(authenticationkey, key, 4);
+                PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -2018,7 +2094,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenB(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found default password " _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                has_auth_key = true;
+                ak_len = 4;
+                memcpy(authenticationkey, key, 4);
+                PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -2030,7 +2109,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenC(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found default password " _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                has_auth_key = true;
+                ak_len = 4;
+                memcpy(authenticationkey, key, 4);
+                PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -2042,7 +2124,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             num_to_bytes(ul_ev1_pwdgenD(card.uid), 4, key);
             len = ulev1_requestAuthentication(key, pack, sizeof(pack));
             if (len > -1) {
-                PrintAndLogEx(SUCCESS, "Found default password" _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                has_auth_key = true;
+                ak_len = 4;
+                memcpy(authenticationkey, key, 4);
+                PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -2054,7 +2139,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 key = default_pwd_pack[i];
                 len = ulev1_requestAuthentication(key, pack, sizeof(pack));
                 if (len > -1) {
-                    PrintAndLogEx(SUCCESS, "Found default password " _GREEN_("%s") " pack %02X %02X", sprint_hex(key, 4), pack[0], pack[1]);
+                    has_auth_key = true;
+                    ak_len = 4;
+                    memcpy(authenticationkey, key, 4);
+                    PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                     break;
                 } else {
                     if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
@@ -2067,13 +2155,16 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
             }
         } else {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+
+            if (locked) {
+                PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+            }
         }
     }
 
+out:
     mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
 
-out:
     DropField();
     if (locked) {
         PrintAndLogEx(INFO, "\nTag appears to be locked, try using a key to get more info");
@@ -2325,7 +2416,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
+void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool dense_output) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _CYAN_("MFU dump file information"));
@@ -2373,6 +2464,8 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
         }
         PrintAndLogEx(INFO, "DYNAMIC LOCK: %s", sprint_hex(lockbytes_dyn, 3));
     }
+
+    bool in_repeated_block = false;
 
     for (uint16_t i = 0; i < pages; ++i) {
         if (i < 3) {
@@ -2475,7 +2568,40 @@ void printMFUdumpEx(mfu_dump_t *card, uint16_t pages, uint8_t startpage) {
             default:
                 break;
         }
-        PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s", i + startpage, i + startpage, sprint_hex(data + i * 4, 4), (lckbit) ? _RED_("1") : "0", sprint_ascii(data + i * 4, 4));
+
+
+        // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
+        // but the blocks in between are replaced with a single line of "......" if dense_output is enabled
+        uint8_t *blk = data + (i * MFU_BLOCK_SIZE);
+        if (dense_output &&
+                (i > 3) &&
+                (i < (pages - 1)) &&
+                (in_repeated_block == false) &&
+                (memcmp(blk, blk - MFU_BLOCK_SIZE, MFU_BLOCK_SIZE) == 0) &&
+                (memcmp(blk, blk + MFU_BLOCK_SIZE, MFU_BLOCK_SIZE) == 0) &&
+                (memcmp(blk, blk + (MFU_BLOCK_SIZE * 2), MFU_BLOCK_SIZE) == 0)
+           ) {
+            // we're in a user block that isn't the first user block nor last two user blocks,
+            // and the current block data is the same as the previous and next two block
+            in_repeated_block = true;
+            PrintAndLogEx(INFO, "  ......");
+        } else if (in_repeated_block &&
+                   (memcmp(blk, blk + MFU_BLOCK_SIZE, MFU_BLOCK_SIZE) || i == pages)
+                  ) {
+            // in a repeating block, but the next block doesn't match anymore, or we're at the end block
+            in_repeated_block = false;
+        }
+
+
+        if (in_repeated_block == false) {
+            PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s"
+                          , i + startpage
+                          , i + startpage
+                          , sprint_hex(data + i * 4, 4)
+                          , (lckbit) ? _RED_("1") : "0"
+                          , sprint_ascii(data + i * 4, 4)
+                         );
+        }
     }
     PrintAndLogEx(INFO, "---------------------------------");
 }
@@ -2507,6 +2633,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         arg_int0("p", "page", "<dec>", "Manually set start page number to start from"),
         arg_int0("q", "qty", "<dec>", "Manually set number of pages to dump"),
         arg_lit0(NULL, "ns", "no save to file"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2523,6 +2650,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     int start_page = arg_get_int_def(ctx, 4, 0);
     int pages = arg_get_int_def(ctx, 5, 16);
     bool nosave = arg_get_lit(ctx, 6);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 7));
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -2603,7 +2731,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         buffer_size = sizeof(data);
     }
 
-    if (!GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
@@ -2716,7 +2844,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     memcpy(dump_file_data.counter_tearing, get_counter_tearing, sizeof(dump_file_data.counter_tearing));
     memcpy(dump_file_data.data, data, pages * 4);
 
-    printMFUdumpEx(&dump_file_data, pages, start_page);
+    mfu_print_dump(&dump_file_data, pages, start_page, dense_output);
 
     if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
@@ -2740,7 +2868,6 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     if (is_partial) {
         PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
     }
-
     return PM3_SUCCESS;
 }
 
@@ -2911,7 +3038,8 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         arg_lit0("s", NULL, "enable special write UID -MAGIC TAG ONLY-"),
         arg_lit0("e", NULL, "enable special write version/signature -MAGIC NTAG 21* ONLY-"),
         arg_lit0("r", NULL, "use password found in dumpfile to configure tag. Requires " _YELLOW_("'-e'") " parameter to work"),
-        arg_lit0("v", "verbose", "verbose"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2930,8 +3058,8 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     bool write_extra = arg_get_lit(ctx, 5);
     bool read_key = arg_get_lit(ctx, 6);
     bool verbose = arg_get_lit(ctx, 7);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 8));
     CLIParserFree(ctx);
-
 
     bool has_key = false;
     if (ak_len > 0) {
@@ -2986,8 +3114,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
 
-    // print dump
-    printMFUdumpEx(mem, pages, 0);
+    mfu_print_dump(mem, pages, 0, dense_output);
 
     // Swap endianness
     if (swap_endian && has_key) {
@@ -3105,7 +3232,8 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     DropField();
     free(dump);
-    PrintAndLogEx(INFO, "Restore finished");
+    PrintAndLogEx(HINT, "try `" _YELLOW_("hf mfu dump --ns") "` to verify");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 //
@@ -3700,7 +3828,9 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "--------------------+----------+-----");
     PrintAndLogEx(INFO, " Vingcard algo");
-    PrintAndLogEx(INFO, " Saflok algo");
+    uint64_t key = 0;
+    mfc_algo_saflok_one(uid, 0, 0, &key);
+    PrintAndLogEx(INFO, " Saflok algo        | %012" PRIX64, key);
     PrintAndLogEx(INFO, " SALTO algo");
     PrintAndLogEx(INFO, " Dorma Kaba algo");
     PrintAndLogEx(INFO, " STiD algo");
@@ -4407,7 +4537,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
         arg_str0("k", "key", "Replace default key for NDEF", NULL),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
         arg_str0("f", "file", "<fn>", "Save raw NDEF to file"),
-        arg_litn("v",  "verbose",  0, 2, "show technical data"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4586,11 +4716,13 @@ static int CmdHF14AMfuEView(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0("e", "end", "<dec>", "index of last block"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int end = arg_get_int_def(ctx, 1, -1);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 2));
     CLIParserFree(ctx);
 
     bool override_end = (end != -1) ;
@@ -4612,7 +4744,7 @@ static int CmdHF14AMfuEView(const char *Cmd) {
         end = dump->pages ;
     }
 
-    printMFUdumpEx(dump, end, 0);
+    mfu_print_dump(dump, end, 0, dense_output);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -4693,6 +4825,7 @@ static int CmdHF14AMfuView(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "Verbose output"),
+        arg_lit0("z", "dense", "dense dump output style"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4700,6 +4833,7 @@ static int CmdHF14AMfuView(const char *Cmd) {
     char filename[FILE_PATH_SIZE];
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
+    bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 3));
     CLIParserFree(ctx);
 
     // read dump file
@@ -4730,7 +4864,7 @@ static int CmdHF14AMfuView(const char *Cmd) {
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
     }
 
-    printMFUdumpEx((mfu_dump_t *)dump, block_cnt, 0);
+    mfu_print_dump((mfu_dump_t *)dump, block_cnt, 0, dense_output);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -4739,50 +4873,131 @@ static int CmdHF14AMfuList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf 14a", "14a -c");
 }
 
-
-/*
-static int CmdHF14AMfUCDecryptAmiibo(const char *Cmd){
+static int CmdHF14AAmiibo(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfu decrypt",
+    CLIParserInit(&ctx, "hf mfu amiibo",
                   "Tries to read all memory from amiibo tag and decrypt it",
-                  "hf mfu decrypt"
+                  "hf mfu amiiboo --dec -f hf-mfu-04579DB27C4880-dump.bin  --> decrypt file\n"
+                  "hf mfu amiiboo -v --dec                                 --> decrypt tag"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0(NULL, "dec", "Decrypt memory"),
+        arg_lit0(NULL, "enc", "Encrypt memory"),
+        arg_str0("i", "in", "<fn>", "Specify a filename for input dump file"),
+        arg_str0("o", "out", "<fn>", "Specify a filename for output dump file"),
+        arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool shall_decrypt = arg_get_lit(ctx, 1);
+    bool shall_encrypt = arg_get_lit(ctx, 2);
+
+    int infnlen = 0;
+    char infilename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)infilename, FILE_PATH_SIZE, &infnlen);
+
+    int outfnlen = 0;
+    char outfilename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)outfilename, FILE_PATH_SIZE, &outfnlen);
+
+    bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
-    uint16_t elen = 0, dlen = 0;
-    uint8_t *encrypted = NULL;
+    // sanity checks
+    if ((shall_decrypt + shall_encrypt) > 1) {
+        PrintAndLogEx(WARNING, "Only specify decrypt or encrypt");
+        return PM3_EINVARG;
+    }
 
-    int res = mfu_dump_tag( MAX_NTAG_215, (void **)&encrypted, &elen);
-    if (res == PM3_SUCCESS) {
+    // load keys
+    nfc3d_amiibo_keys_t amiibo_keys;
+    if (nfc3d_amiibo_load_keys(&amiibo_keys) == false) {
+        PrintAndLogEx(INFO, "loading key file ( " _RED_("fail") " )");
+        return PM3_EFILE;
+    }
 
-        PrintAndLogEx(INFO, "32 first bytes of tag dump");
-        PrintAndLogEx(INFO, "%s", sprint_hex(encrypted, 32));
-        PrintAndLogEx(INFO, "-----------------------");
+    int res = PM3_ESOFT;
 
-        uint8_t decrypted[NFC3D_AMIIBO_SIZE] = {0};
-        res = mfu_decrypt_amiibo(encrypted, elen, decrypted, &dlen);
-        if ( res == PM3_SUCCESS) {
+    uint8_t original[NFC3D_AMIIBO_SIZE] = {0};
 
-            for (uint8_t i = 0; i < dlen/16; i++ ) {
+    // load dump file if available
+    if (infnlen > 0) {
+        uint8_t *dump = NULL;
+        size_t dumplen = 0;
+        res = loadFile_safe(infilename, "", (void **)&dump, &dumplen);
+        if (res != PM3_SUCCESS) {
+            free(dump);
+            return PM3_EFILE;
+        }
+
+        if (dumplen < MFU_DUMP_PREFIX_LENGTH) {
+            PrintAndLogEx(ERR, "Error, dump file is too small");
+            free(dump);
+            return PM3_ESOFT;
+        }
+
+        res = convert_mfu_dump_format(&dump, &dumplen, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Failed convert on load to new Ultralight/NTAG format");
+            free(dump);
+            return res;
+        }
+
+        mfu_dump_t *d = (mfu_dump_t *)dump;
+        memcpy(original, d->data, sizeof(original));
+        free(dump);
+    } else {
+        uint16_t dlen = 0;
+        uint8_t *dump = NULL;
+        res = mfu_dump_tag(MAX_NTAG_215, (void **)&dump, &dlen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Failed to dump memory from tag");
+            free(dump);
+            return res;
+        }
+        memcpy(original, dump, sizeof(original));
+        free(dump);
+    }
+
+
+    uint8_t decrypted[NFC3D_AMIIBO_SIZE] = {0};
+    if (shall_decrypt) {
+        if (nfc3d_amiibo_unpack(&amiibo_keys, original, decrypted) == false) {
+            PrintAndLogEx(INFO, "Tag signature ( " _RED_("fail") " )");
+            return PM3_ESOFT;
+        }
+        // print
+        if (verbose) {
+            for (uint8_t i = 0; i < (NFC3D_AMIIBO_SIZE / 16); i++) {
                 PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex_ascii(decrypted + (i * 16), 16));
             }
         }
-        free(encrypted);
     }
+
+    if (shall_encrypt) {
+        uint8_t encrypted[NFC3D_AMIIBO_SIZE] = {0};
+        nfc3d_amiibo_pack(&amiibo_keys, decrypted, encrypted);
+        // print
+        if (verbose) {
+            for (uint8_t i = 0; i < (NFC3D_AMIIBO_SIZE / 16); i++) {
+                PrintAndLogEx(INFO, "[%d] %s", i, sprint_hex_ascii(encrypted + (i * 16), 16));
+            }
+        }
+    }
+
+    if (outfnlen) {
+        // save dump. Last block contains PACK + RFU
+//        uint16_t datalen = MFU_BLOCK_SIZE + MFU_DUMP_PREFIX_LENGTH;
+//        res = pm3_save_dump(outfilename, (uint8_t *)dump, datalen, jsfMfuMemory);
+    }
+
     return PM3_SUCCESS;
 }
-*/
 
-//------------------------------------
-// Menu Stuff
-//------------------------------------
 static command_t CommandTable[] = {
     {"help",     CmdHelp,                   AlwaysAvailable, "This help"},
     {"list",     CmdHF14AMfuList,           AlwaysAvailable, "List MIFARE Ultralight / NTAG history"},
@@ -4801,16 +5016,16 @@ static command_t CommandTable[] = {
     {"view",     CmdHF14AMfuView,           AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",     CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
     {"tamper",   CmdHF14MfUTamper,          IfPm3Iso14443a,  "Configure the tamper feature on an NTAG 213TT"},
-    {"---------", CmdHelp,                  IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
-    {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "Load Ultralight dump file into emulator memory"},
-    {"esave",    CmdHF14AMfuESave,          IfPm3Iso14443a,  "Save Ultralight dump file from emulator memory"},
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
+    {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "Upload file into emulator memory"},
+    {"esave",    CmdHF14AMfuESave,          IfPm3Iso14443a,  "Save emulator memory to file"},
     {"eview",    CmdHF14AMfuEView,          IfPm3Iso14443a,  "View emulator memory"},
     {"sim",      CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate MIFARE Ultralight from emulator memory"},
-    {"---------", CmdHelp,                  IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},
     {"setpwd",   CmdHF14AMfUCSetPwd,        IfPm3Iso14443a,  "Set 3DES key - Ultralight-C"},
     {"setuid",   CmdHF14AMfUCSetUid,        IfPm3Iso14443a,  "Set UID - MAGIC tags only"},
-//    {"---------", CmdHelp,                 IfPm3Iso14443a,  "----------------------- " _CYAN_("amiibo") " ----------------------------"},
-//    {"decrypt",  CmdHF14AMfUCDecryptAmiibo, IfPm3Iso14443a, "Decrypt a amiibo tag"},
+    {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("amiibo") " ----------------------------"},
+    {"amiibo",   CmdHF14AAmiibo,            IfPm3Iso14443a,  "Amiibo tag operations"},
     {NULL, NULL, NULL, NULL}
 };
 

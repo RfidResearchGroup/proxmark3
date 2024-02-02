@@ -128,6 +128,7 @@ Check column "offline" for their availability.
 |`data bitsamples        `|N       |`Get raw samples as bitstring`
 |`data bmap              `|Y       |`Convert hex value according a binary template`
 |`data clear             `|Y       |`Clears bigbuf on deviceside and graph window`
+|`data crypto            `|Y       |`Encrypt and decrypt data`
 |`data diff              `|Y       |`Diff of input files`
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`
 |`data hex2bin           `|Y       |`Converts hexadecimal to binary`
@@ -208,18 +209,19 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf 14b help            `|Y       |`This help`
+|`hf 14b list            `|Y       |`List ISO-14443-B history`
 |`hf 14b apdu            `|N       |`Send ISO 14443-4 APDU to tag`
 |`hf 14b dump            `|N       |`Read all memory pages of an ISO-14443-B tag, save to file`
 |`hf 14b info            `|N       |`Tag information`
-|`hf 14b list            `|Y       |`List ISO-14443-B history`
 |`hf 14b ndefread        `|N       |`Read NDEF file on tag`
 |`hf 14b raw             `|N       |`Send raw hex data to tag`
+|`hf 14b rdbl            `|N       |`Read SRI512/SRIX4 block`
 |`hf 14b reader          `|N       |`Act as a ISO-14443-B reader to identify a tag`
 |`hf 14b sim             `|N       |`Fake ISO ISO-14443-B tag`
 |`hf 14b sniff           `|N       |`Eavesdrop ISO-14443-B`
-|`hf 14b rdbl            `|N       |`Read SRI512/SRIX4x block`
-|`hf 14b sriwrite        `|N       |`Write data to a SRI512 or SRIX4K tag`
+|`hf 14b wrbl            `|N       |`Write data to a SRI512/SRIX4 tag`
 |`hf 14b view            `|Y       |`Display content from tag dump file`
+|`hf 14b valid           `|Y       |`SRIX4 checksum test`
 
 
 ### hf 15
@@ -241,6 +243,7 @@ Check column "offline" for their availability.
 |`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO-15693 tag`
 |`hf 15 samples          `|N       |`Acquire samples as reader (enables carrier, sends inquiry)`
 |`hf 15 view             `|Y       |`Display content from tag dump file`
+|`hf 15 wipe             `|N       |`Wipe card to zeros`
 |`hf 15 wrbl             `|N       |`Write a block`
 |`hf 15 sim              `|N       |`Fake an ISO-15693 tag`
 |`hf 15 eload            `|N       |`Load image file into emulator to be used by 'sim' command`
@@ -314,11 +317,11 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf felica help         `|Y       |`This help`
 |`hf felica list         `|Y       |`List ISO 18092/FeliCa history`
-|`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
 |`hf felica info         `|N       |`Tag information`
-|`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica raw          `|N       |`Send raw hex data to tag`
 |`hf felica rdbl         `|N       |`read block data from authentication-not-required Service.`
+|`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
+|`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
 |`hf felica rqservice    `|N       |`verify the existence of Area and Service, and to acquire Key Version.`
 |`hf felica rqresponse   `|N       |`verify the existence of a card and its Mode.`
@@ -489,6 +492,7 @@ Check column "offline" for their availability.
 |`hf mf nested           `|N       |`Nested attack`
 |`hf mf hardnested       `|Y       |`Nested attack for hardened MIFARE Classic cards`
 |`hf mf staticnested     `|N       |`Nested attack against static nonce MIFARE Classic cards`
+|`hf mf brute            `|N       |`Smart bruteforce to exploit weak key generators`
 |`hf mf autopwn          `|N       |`Automatic key recovery tool for MIFARE Classic`
 |`hf mf nack             `|N       |`Test for MIFARE NACK bug`
 |`hf mf chk              `|N       |`Check keys`
@@ -538,6 +542,7 @@ Check column "offline" for their availability.
 |`hf mf gchpwd           `|N       |`Change card access password. Warning!`
 |`hf mf gdmcfg           `|N       |`Read config block from card`
 |`hf mf gdmsetcfg        `|N       |`Write config block to card`
+|`hf mf gdmparsecfg      `|Y       |`Parse config block to card`
 |`hf mf gdmsetblk        `|N       |`Write block to card`
 |`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
 |`hf mf ndefread         `|N       |`Read and print NDEF records from card`
@@ -595,6 +600,7 @@ Check column "offline" for their availability.
 |`hf mfu sim             `|N       |`Simulate MIFARE Ultralight from emulator memory`
 |`hf mfu setpwd          `|N       |`Set 3DES key - Ultralight-C`
 |`hf mfu setuid          `|N       |`Set UID - MAGIC tags only`
+|`hf mfu amiibo          `|N       |`Amiibo tag operations`
 
 
 ### hf mfdes
@@ -758,7 +764,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf waveshare help      `|Y       |`This help`
-|`hf waveshare loadbmp   `|N       |`Load BMP file to Waveshare NFC ePaper`
+|`hf waveshare load      `|Y       |`Load image file to Waveshare NFC ePaper`
 
 
 ### hf xerox
@@ -768,9 +774,12 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf xerox help          `|Y       |`This help`
+|`hf xerox list          `|Y       |`List ISO-14443B history`
 |`hf xerox info          `|N       |`Short info on Fuji/Xerox tag`
-|`hf xerox reader        `|N       |`Act like a Fuji/Xerox reader`
 |`hf xerox dump          `|N       |`Read all memory pages of an Fuji/Xerox tag, save to file`
+|`hf xerox reader        `|N       |`Act like a Fuji/Xerox reader`
+|`hf xerox view          `|Y       |`Display content from tag dump file`
+|`hf xerox rdbl          `|N       |`Read Fuji/Xerox block`
 
 
 ### hw
@@ -781,6 +790,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hw help                `|Y       |`This help`
 |`hw break               `|N       |`Send break loop usb command`
+|`hw bootloader          `|N       |`Reboot Proxmark3 into bootloader mode`
 |`hw connect             `|Y       |`Connect Proxmark3 to serial port`
 |`hw dbg                 `|N       |`Set Proxmark3 debug level`
 |`hw detectreader        `|N       |`Detect external reader field`
@@ -788,7 +798,7 @@ Check column "offline" for their availability.
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
-|`hw readmem             `|N       |`Read memory at decimal address from flash`
+|`hw readmem             `|N       |`Read from processor flash`
 |`hw reset               `|N       |`Reset the Proxmark3`
 |`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
 |`hw setmux              `|N       |`Set the ADC mux to a specific value`
@@ -894,12 +904,14 @@ Check column "offline" for their availability.
 |`lf em 4x05 help        `|Y       |`This help`
 |`lf em 4x05 brute       `|N       |`Bruteforce password`
 |`lf em 4x05 chk         `|N       |`Check passwords from dictionary`
+|`lf em 4x05 config      `|Y       |`Create common configuration words`
 |`lf em 4x05 demod       `|Y       |`Demodulate a EM4x05/EM4x69 tag from the GraphBuffer`
 |`lf em 4x05 dump        `|N       |`Dump EM4x05/EM4x69 tag`
 |`lf em 4x05 info        `|N       |`Tag information`
 |`lf em 4x05 read        `|N       |`Read word data from EM4x05/EM4x69`
 |`lf em 4x05 sniff       `|Y       |`Attempt to recover em4x05 commands from sample buffer`
 |`lf em 4x05 unlock      `|N       |`Execute tear off against EM4x05/EM4x69`
+|`lf em 4x05 view        `|Y       |`Display content from tag dump file`
 |`lf em 4x05 wipe        `|N       |`Wipe EM4x05/EM4x69 tag`
 |`lf em 4x05 write       `|N       |`Write word data to EM4x05/EM4x69`
 

@@ -268,8 +268,9 @@ int BUTTON_HELD(int ms) {
     int ticks = (48000 * (ms ? ms : 1000)) >> 10;
 
     // If we're not even pressed, forget about it!
-    if (BUTTON_PRESS() == false)
+    if (BUTTON_PRESS() == false) {
         return BUTTON_NO_CLICK;
+    }
 
     // Borrow a PWM unit for my real-time clock
     AT91C_BASE_PWMC->PWMC_ENA = PWM_CHANNEL(0);
@@ -284,12 +285,14 @@ int BUTTON_HELD(int ms) {
         uint16_t now = AT91C_BASE_PWMC_CH0->PWMC_CCNTR;
 
         // As soon as our button let go, we didn't hold long enough
-        if (BUTTON_PRESS() == false)
+        if (BUTTON_PRESS() == false) {
             return BUTTON_SINGLE_CLICK;
+        }
 
         // Have we waited the full second?
-        else if (now == (uint16_t)(start + ticks))
+        else if (now == (uint16_t)(start + ticks)) {
             return BUTTON_HOLD;
+        }
 
         WDT_HIT();
     }
@@ -317,4 +320,35 @@ bool data_available_fast(void) {
 #else
     return usb_available_length();
 #endif
+}
+
+uint32_t flash_size_from_cidr(uint32_t cidr) {
+    uint8_t nvpsiz = (cidr & 0xF00) >> 8;
+    switch (nvpsiz) {
+        case 0:
+            return 0;
+        case 1:
+            return 8 * 1024;
+        case 2:
+            return 16 * 1024;
+        case 3:
+            return 32 * 1024;
+        case 5:
+            return 64 * 1024;
+        case 7:
+            return 128 * 1024;
+        case 9:
+            return 256 * 1024;
+        case 10:
+            return 512 * 1024;
+        case 12:
+            return 1024 * 1024;
+        case 14:
+        default: // for 'reserved' values, guess 2MB
+            return 2048 * 1024;
+    }
+}
+
+uint32_t get_flash_size(void) {
+    return flash_size_from_cidr(*AT91C_DBGU_CIDR);
 }

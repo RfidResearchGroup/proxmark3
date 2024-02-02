@@ -282,7 +282,7 @@ int CmdEM4x70Brute(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to exit");
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_LF_EM4X70_BRUTE, (uint8_t *)&etd, sizeof(etd));
@@ -488,11 +488,11 @@ int CmdEM4x70WritePIN(const char *Cmd) {
 
     if (resp.status) {
         print_info_result(resp.data.asBytes);
-        PrintAndLogEx(INFO, "Writing new PIN: " _GREEN_("SUCCESS"));
+        PrintAndLogEx(INFO, "Writing new PIN: " _GREEN_("ok"));
         return PM3_SUCCESS;
     }
 
-    PrintAndLogEx(FAILED, "Writing new PIN: " _RED_("FAILED"));
+    PrintAndLogEx(FAILED, "Writing new PIN: " _RED_("failed"));
     return PM3_ESOFT;
 }
 
@@ -539,11 +539,11 @@ int CmdEM4x70WriteKey(const char *Cmd) {
     }
 
     if (resp.status) {
-        PrintAndLogEx(INFO, "Writing new crypt key: " _GREEN_("SUCCESS"));
+        PrintAndLogEx(INFO, "Writing new crypt key: " _GREEN_("ok"));
         return PM3_SUCCESS;
     }
 
-    PrintAndLogEx(FAILED, "Writing new crypt key: " _RED_("FAILED"));
+    PrintAndLogEx(FAILED, "Writing new crypt key: " _RED_("failed"));
     return PM3_ESOFT;
 }
 

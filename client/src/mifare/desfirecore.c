@@ -495,53 +495,68 @@ static int DESFIRESendApdu(bool activate_field, sAPDU_t apdu, uint8_t *result, u
 
 static int DESFIRESendRaw(bool activate_field, uint8_t *data, size_t datalen, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint8_t *respcode) {
     *result_len = 0;
-    if (respcode) *respcode = 0xff;
+    if (respcode) {
+        *respcode = 0xff;
+    }
 
     if (activate_field) {
         DropField();
         msleep(50);
     }
 
-    if (GetAPDULogging())
+    if (GetAPDULogging()) {
         PrintAndLogEx(SUCCESS, "raw>> %s", sprint_hex(data, datalen));
+    }
 
     int res = ExchangeRAW14a(data, datalen, activate_field, true, result, max_result_len, (int *)result_len, true);
     if (res != PM3_SUCCESS) {
         return res;
     }
 
-    if (GetAPDULogging())
+    if (GetAPDULogging()) {
         PrintAndLogEx(SUCCESS, "raw<< %s", sprint_hex(result, *result_len));
+    }
 
     if (*result_len < 1) {
         return PM3_SUCCESS;
     }
 
-    *result_len -= 1 + 2;
+    *result_len -= (1 + 2);
+
     uint8_t rcode = result[0];
-    if (respcode) *respcode = rcode;
+    if (respcode) {
+        *respcode = rcode;
+    }
+
     memmove(&result[0], &result[1], *result_len);
 
     if (rcode != MFDES_S_OPERATION_OK &&
-            rcode != MFDES_S_SIGNATURE &&
-            rcode != MFDES_S_ADDITIONAL_FRAME &&
-            rcode != MFDES_S_NO_CHANGES) {
-        if (GetAPDULogging())
+        rcode != MFDES_S_SIGNATURE &&
+        rcode != MFDES_S_ADDITIONAL_FRAME &&
+        rcode != MFDES_S_NO_CHANGES) {
+
+        if (GetAPDULogging()) {
             PrintAndLogEx(ERR, "Command (%02x) ERROR: 0x%02x", data[0], rcode);
+        }
         return PM3_EAPDU_FAIL;
     }
     return PM3_SUCCESS;
 }
 
 static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
-    if (resplen)
+    if (resplen) {
         *resplen = 0;
-    if (respcode)
+    }
+
+    if (respcode) {
         *respcode = 0xff;
+    }
 
     uint8_t *buf  = calloc(DESFIRE_BUFFER_SIZE, 1);
-    if (buf == NULL)
+    if (buf == NULL) {
         return PM3_EMALLOC;
+    }
+
     uint32_t buflen = 0;
     uint32_t pos = 0;
     uint32_t i = 1;
@@ -558,7 +573,8 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
     // tx chaining
     size_t sentdatalen = 0;
     while (cdatalen >= sentdatalen) {
-        if (cdatalen - sentdatalen > DESFIRE_TX_FRAME_MAX_LEN)
+
+        if ((cdatalen - sentdatalen) > DESFIRE_TX_FRAME_MAX_LEN)
             len = DESFIRE_TX_FRAME_MAX_LEN;
         else
             len = cdatalen - sentdatalen;
@@ -580,9 +596,10 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
         }
 
         sentdatalen += len;
-        if (rcode != MFDES_ADDITIONAL_FRAME || buflen > 0) {
-            if (sentdatalen != cdatalen)
+        if ((rcode != MFDES_ADDITIONAL_FRAME) || (buflen > 0)) {
+            if (sentdatalen != cdatalen) {
                 PrintAndLogEx(WARNING, "Tx chaining error. Needs to send: %d but sent: %zu", cdatalen, sentdatalen);
+            }
             break;
         }
     }
@@ -596,15 +613,19 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
             memcpy(resp, buf, buflen);
         }
     }
-    if (respcode != NULL)
+    if (respcode != NULL) {
         *respcode = rcode;
+    }
 
     pos += buflen;
-    if (!enable_chaining) {
+
+    if (enable_chaining == false) {
         if (rcode == MFDES_S_OPERATION_OK ||
-                rcode == MFDES_ADDITIONAL_FRAME) {
-            if (resplen)
+            rcode == MFDES_ADDITIONAL_FRAME) {
+
+            if (resplen) {
                 *resplen = pos;
+            }
         }
         free(buf);
         return PM3_SUCCESS;
@@ -620,8 +641,9 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
             return res;
         }
 
-        if (respcode != NULL)
+        if (respcode != NULL) {
             *respcode = rcode;
+        }
 
         if (resp != NULL) {
             if (splitbysize) {
@@ -634,22 +656,26 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
         }
         pos += buflen;
 
-        if (rcode != MFDES_ADDITIONAL_FRAME) break;
+        if (rcode != MFDES_ADDITIONAL_FRAME) 
+            break;
     }
 
-    if (resplen)
+    if (resplen) {
         *resplen = (splitbysize) ? i : pos;
+    }
 
     free(buf);
     return PM3_SUCCESS;
 }
 
 static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *respcode, uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
-    if (resplen)
+    if (resplen) {
         *resplen = 0;
+    }
 
-    if (respcode)
+    if (respcode) {
         *respcode = 0xff;
+    }
 
     uint16_t sw = 0;
     uint8_t *buf  = calloc(DESFIRE_BUFFER_SIZE, 1);
@@ -679,8 +705,9 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
 
         apdu.data = &data[sentdatalen];
 
-        if (sentdatalen > 0)
+        if (sentdatalen > 0) {
             apdu.INS = MFDES_ADDITIONAL_FRAME;
+        }
 
         res = DESFIRESendApdu(activate_field, apdu, buf, DESFIRE_BUFFER_SIZE, &buflen, &sw);
         if (res != PM3_SUCCESS) {
@@ -691,14 +718,16 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
 
         sentdatalen += apdu.Lc;
         if (sw != DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME) || buflen > 0) {
-            if (sentdatalen != datalen)
+            if (sentdatalen != datalen) {
                 PrintAndLogEx(WARNING, "Tx chaining error. Needs to send: %zu but sent: %zu", datalen, sentdatalen);
+            }
             break;
         }
     }
 
-    if (respcode != NULL && ((sw & 0xff00) == 0x9100))
+    if (respcode != NULL && ((sw & 0xff00) == 0x9100)) {
         *respcode = sw & 0xff;
+    }
 
     if (resp) {
         if (splitbysize) {
@@ -710,11 +739,13 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
     }
 
     pos += buflen;
-    if (!enable_chaining) {
+    if (enable_chaining == false) {
         if (sw == DESFIRE_GET_ISO_STATUS(MFDES_S_OPERATION_OK) ||
-                sw == DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
-            if (resplen)
+            sw == DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
+
+            if (resplen) {
                 *resplen = pos;
+            }
         }
         free(buf);
         return PM3_SUCCESS;
@@ -735,8 +766,9 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
             return res;
         }
 
-        if (respcode != NULL && ((sw & 0xff00) == 0x9100))
+        if (respcode != NULL && ((sw & 0xff00) == 0x9100)) {
             *respcode = sw & 0xff;
+        }
 
         if (resp != NULL) {
             if (splitbysize) {
@@ -749,11 +781,14 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
         }
         pos += buflen;
 
-        if (sw != DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) break;
+        if (sw != DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
+            break;
+        }
     }
 
-    if (resplen)
+    if (resplen) {
         *resplen = (splitbysize) ? i : pos;
+    }
 
     free(buf);
     return PM3_SUCCESS;
@@ -761,13 +796,16 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
 
 static int DesfireExchangeISO(bool activate_field, DesfireContext_t *ctx, sAPDU_t apdu, uint16_t le, uint8_t *resp, size_t *resplen, uint16_t *sw) {
     uint8_t *data  = calloc(DESFIRE_BUFFER_SIZE, 1);
-    if (data == NULL)
+    if (data == NULL) {
         return PM3_EMALLOC;
+    }
+
     uint32_t datalen = 0;
     int res = DESFIRESendApduEx(activate_field, apdu, le, data, DESFIRE_BUFFER_SIZE, &datalen, sw);
 
-    if (res == PM3_SUCCESS)
+    if (res == PM3_SUCCESS) {
         DesfireSecureChannelDecode(ctx, data, datalen, 0, resp, resplen);
+    }
 
     free(data);
     return res;
@@ -791,15 +829,18 @@ static void DesfireSplitBytesToBlock(uint8_t *blockdata, size_t *blockdatacount,
         size_t tlen = len + blockdata[i * blockdatasize];
         if (tlen > dstdatalen) {
             tlen = dstdatalen;
+
             if (tlen >= len)
                 blockdata[i * blockdatasize] = tlen - len;
             else
                 blockdata[i * blockdatasize] = 0;
         }
+
         if (len == tlen) {
             *blockdatacount = i;
             break;
         }
+
         memcpy(&blockdata[i * blockdatasize + 1], &dstdata[len], tlen - len);
         len = tlen;
     }
@@ -809,12 +850,15 @@ int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, u
                       uint8_t *resp, size_t *resplen, bool enable_chaining, size_t splitbysize) {
     int res = PM3_SUCCESS;
 
-    if (!PrintChannelModeWarning(cmd, ctx->secureChannel, ctx->cmdSet, ctx->commMode))
+    if (PrintChannelModeWarning(cmd, ctx->secureChannel, ctx->cmdSet, ctx->commMode) == false) {
         DesfirePrintContext(ctx);
+    }
 
     uint8_t *databuf  = calloc(DESFIRE_BUFFER_SIZE, 1);
-    if (databuf == NULL)
+    if (databuf == NULL) {
         return PM3_EMALLOC;
+    }
+
     size_t databuflen = 0;
 
     switch (ctx->cmdSet) {
@@ -857,13 +901,16 @@ int DesfireExchange(DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t da
 }
 
 int DesfireSelectAID(DesfireContext_t *ctx, uint8_t *aid1, uint8_t *aid2) {
-    if (aid1 == NULL)
+    if (aid1 == NULL) {
         return PM3_EINVARG;
+    }
 
     uint8_t data[6] = {0};
     memcpy(data, aid1, 3);
-    if (aid2 != NULL)
+    if (aid2 != NULL) {
         memcpy(&data[3], aid2, 3);
+    }
+
     uint8_t resp[257] = {0};
     size_t resplen = 0;
     uint8_t respcode = 0;
@@ -871,12 +918,14 @@ int DesfireSelectAID(DesfireContext_t *ctx, uint8_t *aid1, uint8_t *aid2) {
     ctx->secureChannel = DACNone;
     int res = DesfireExchangeEx(true, ctx, MFDES_SELECT_APPLICATION, data, (aid2 == NULL) ? 3 : 6, &respcode, resp, &resplen, true, 0);
     if (res == PM3_SUCCESS) {
-        if (resplen != 0)
+        if (resplen != 0) {
             return PM3_ECARDEXCHANGE;
+        }
 
         // select operation fail
-        if (respcode != MFDES_S_OPERATION_OK)
+        if (respcode != MFDES_S_OPERATION_OK) {
             return PM3_EAPDU_FAIL;
+        }
 
         DesfireClearSession(ctx);
         ctx->appSelected = (aid1[0] != 0x00 || aid1[1] != 0x00 || aid1[2] != 0x00);
@@ -1933,8 +1982,9 @@ int DesfireGetFreeMem(DesfireContext_t *dctx, uint32_t *freemem) {
     uint8_t resp[257] = {0};
     size_t resplen = 0;
     int res = DesfireCommandRxData(dctx, MFDES_GET_FREE_MEMORY, resp, &resplen, 3);
-    if (res == PM3_SUCCESS)
+    if (res == PM3_SUCCESS) {
         *freemem = DesfireAIDByteToUint(resp);
+    }
     return res;
 }
 
@@ -2148,8 +2198,9 @@ int DesfireValueFileOperations(DesfireContext_t *dctx, uint8_t fid, uint8_t oper
 
     int res = DesfireCommand(dctx, operation, data, datalen, resp, &resplen, -1);
 
-    if (resplen == 4 && value)
+    if (resplen == 4 && value) {
         *value = MemLeToUint4byte(resp);
+    }
     return res;
 }
 

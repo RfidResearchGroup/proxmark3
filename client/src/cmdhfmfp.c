@@ -232,9 +232,9 @@ static int get_plus_signature(uint8_t *signature, int *signature_len) {
 
 // GET VERSION
 static int plus_print_version(uint8_t *version) {
-    PrintAndLogEx(SUCCESS, "              UID: " _GREEN_("%s"), sprint_hex(version + 14, 7));
-    PrintAndLogEx(SUCCESS, "     Batch number: " _GREEN_("%s"), sprint_hex(version + 21, 5));
-    PrintAndLogEx(SUCCESS, "  Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), version[7 + 7 + 7 + 5], version[7 + 7 + 7 + 5 + 1]);
+    PrintAndLogEx(SUCCESS, "UID: " _GREEN_("%s"), sprint_hex(version + 14, 7));
+    PrintAndLogEx(SUCCESS, "Batch number: " _GREEN_("%s"), sprint_hex(version + 21, 5));
+    PrintAndLogEx(SUCCESS, "Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), version[7 + 7 + 7 + 5], version[7 + 7 + 7 + 5 + 1]);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
     PrintAndLogEx(INFO, "          Raw : %s", sprint_hex(version, 7));
@@ -294,7 +294,6 @@ static int CmdHFMFPInfo(const char *Cmd) {
 
     uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 
-
     bool supportVersion = false;
     bool supportSignature = false;
 
@@ -305,13 +304,9 @@ static int CmdHFMFPInfo(const char *Cmd) {
         plus_print_version(version);
         supportVersion = true;
     } else {
-        // info about 14a part
+        // info about 14a part, historical bytes.
         infoHF14A(false, false, false);
-
-        // Historical bytes.
-
     }
-
 
     // Signature originality check
     uint8_t signature[56] = {0};
@@ -333,13 +328,13 @@ static int CmdHFMFPInfo(const char *Cmd) {
 
             if (cardtype == 6) {
                 if (supportSignature) {
-                    PrintAndLogEx(INFO, "          Tech: " _GREEN_("MIFARE Plus EV1"));
+                    PrintAndLogEx(INFO, "  Tech...... " _GREEN_("MIFARE Plus EV1"));
                 } else {
-                    PrintAndLogEx(INFO, "          Tech: " _YELLOW_("MIFARE Plus SE/X"));
+                    PrintAndLogEx(INFO, "  Tech...... " _YELLOW_("MIFARE Plus SE/X"));
                 }
                 isPlus = true;
             } else {
-
+                PrintAndLogEx(INFO, "  Tech...... Unknown ( " _YELLOW_("%u") " )", cardtype);
             }
         }
 
@@ -348,80 +343,98 @@ static int CmdHFMFPInfo(const char *Cmd) {
         uint16_t ATQA = card.atqa[0] + (card.atqa[1] << 8);
 
         if (ATQA & 0x0004) {
-            PrintAndLogEx(INFO, "          SIZE: " _GREEN_("2K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
+            PrintAndLogEx(INFO, " Size...... " _GREEN_("2K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
             isPlus = true;
         }
         if (ATQA & 0x0002) {
-            PrintAndLogEx(INFO, "          SIZE: " _GREEN_("4K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
+            PrintAndLogEx(INFO, "  Size...... " _GREEN_("4K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
             isPlus = true;
         }
 
         uint8_t SLmode = 0xFF;
         if (isPlus) {
             if (card.sak == 0x08) {
-                PrintAndLogEx(INFO, "            SAK: " _GREEN_("2K 7b UID"));
+                PrintAndLogEx(INFO, "  SAK....... " _GREEN_("2K 7b UID"));
                 if (select_status == 2) SLmode = 1;
             }
             if (card.sak == 0x18) {
-                PrintAndLogEx(INFO, "            SAK: " _GREEN_("4K 7b UID"));
+                PrintAndLogEx(INFO, "  SAK....... " _GREEN_("4K 7b UID"));
                 if (select_status == 2) SLmode = 1;
             }
             if (card.sak == 0x10) {
-                PrintAndLogEx(INFO, "            SAK: " _GREEN_("2K"));
+                PrintAndLogEx(INFO, "  SAK....... " _GREEN_("2K"));
                 if (select_status == 2) SLmode = 2;
             }
             if (card.sak == 0x11) {
-                PrintAndLogEx(INFO, "            SAK: " _GREEN_("4K"));
+                PrintAndLogEx(INFO, "  SAK....... " _GREEN_("4K"));
                 if (select_status == 2) SLmode = 2;
             }
         }
 
         if (card.sak == 0x20) {
             if (card.ats_len > 0) {
-                PrintAndLogEx(INFO, "           SAK: " _GREEN_("MIFARE Plus SL0/SL3") " or " _GREEN_("MIFARE DESFire"));
+                PrintAndLogEx(INFO, "  SAK....... " _GREEN_("MIFARE Plus SL0/SL3") " or " _GREEN_("MIFARE DESFire"));
                 SLmode = 3;
                 // check SL0
-                uint8_t data[250] = {0};
+                uint8_t data[128] = {0};
                 int datalen = 0;
                 // https://github.com/Proxmark/proxmark3/blob/master/client/luascripts/mifarePlus.lua#L161
                 uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
                 int res = ExchangeRAW14a(cmd, sizeof(cmd), true, false, data, sizeof(data), &datalen, false);
-
+                if (res != PM3_SUCCESS) {
+                    PrintAndLogEx(INFO, "identification failed");
+                    PrintAndLogEx(NORMAL, "");
+                    DropField();
+                    return PM3_SUCCESS;
+                }
                 // DESFire answers 0x1C or 67 00
                 // Plus answers 0x0B, 0x09, 0x06
                 // 6D00 is "INS code not supported" in APDU
-                if (data[0] != 0x0b && data[0] != 0x09 && data[0] != 0x1C && data[0] != 0x67 && data[0] != 0x6d) {
+                if (
+                    data[0] != 0x0B && 
+                    data[0] != 0x09 && 
+                    data[0] != 0x1C && 
+                    data[0] != 0x67 && 
+                    data[0] != 0x6D &&
+                    data[0] != 0x6E) {
+
                     PrintAndLogEx(INFO, _RED_("Send copy to iceman of this command output!"));
                     PrintAndLogEx(INFO, "data: %s", sprint_hex(data, datalen));
                 }
 
-                if ((memcmp(data, "\x67\x00", 2) == 0) ||
-                        (memcmp(data, "\x1C\x83\x0C", 3) == 0)
+                if ((memcmp(data, "\x67\x00", 2) == 0) ||   // wrong length
+                    (memcmp(data, "\x1C\x83\x0C", 3) == 0)  // desfire answers
                    ) {
-                    PrintAndLogEx(INFO, "        result: " _RED_("MIFARE DESFire"));
+                    PrintAndLogEx(INFO, "  result.... " _RED_("MIFARE DESFire"));
                     PrintAndLogEx(HINT, "Hint:  Try " _YELLOW_("`hf mfdes info`"));
                     DropField();
                     return PM3_SUCCESS;
+
+//                } else if (memcmp(data, "\x68\x82", 2) == 0) {  // Secure message not supported
                 } else if (memcmp(data, "\x6D\x00", 2) == 0) {
+//                } else if (memcmp(data, "\x6E\x00", 2) == 0) {  // Class not supported
                     isPlus = false;
                 } else {
-                    PrintAndLogEx(INFO, "        result: " _GREEN_("MIFARE Plus SL0/SL3"));
+                    PrintAndLogEx(INFO, "  result.... " _GREEN_("MIFARE Plus SL0/SL3"));
                 }
 
-                if (!res && datalen > 1 && data[0] == 0x09) {
+                if ((datalen > 1) && 
+                    (data[0] == 0x09)) {
                     SLmode = 0;
                 }
             }
         }
+
 
         if (isPlus) {
             // How do we detect SL0 / SL1 / SL2 / SL3 modes?!?
             PrintAndLogEx(INFO, "--- " _CYAN_("Security Level (SL)"));
 
             if (SLmode != 0xFF)
-                PrintAndLogEx(SUCCESS, "       SL mode: " _YELLOW_("SL%d"), SLmode);
+                PrintAndLogEx(SUCCESS, "  SL mode... " _YELLOW_("SL%d"), SLmode);
             else
-                PrintAndLogEx(WARNING, "       SL mode: " _YELLOW_("unknown"));
+                PrintAndLogEx(WARNING, "  SL mode... " _YELLOW_("unknown"));
+
             switch (SLmode) {
                 case 0:
                     PrintAndLogEx(INFO, "  SL 0: initial delivery configuration, used for card personalization");
@@ -440,7 +453,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
             }
         }
     } else {
-        PrintAndLogEx(INFO, "\tMifare Plus info not available.");
+        PrintAndLogEx(INFO, "   Mifare Plus info not available");
     }
     PrintAndLogEx(NORMAL, "");
     DropField();
@@ -532,7 +545,7 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_litn("v",  "verbose", 0, 2, "Verbose mode"),
+        arg_litn("v",  "verbose", 0, 2, "Verbose output"),
         arg_str0("k", "key", "<hex>", "Key, 16 hex bytes"),
         arg_param_end
     };
@@ -610,7 +623,7 @@ static int CmdHFMFPCommitPerso(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
 //        arg_int0(NULL,  "sl", "<dec>", "SL mode"),
         arg_param_end
     };
@@ -657,7 +670,7 @@ static int CmdHFMFPAuth(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_str1(NULL, "ki", "<hex>", "Key number, 2 hex bytes"),
         arg_str1(NULL, "key", "<hex>", "Key, 16 hex bytes"),
         arg_param_end
@@ -713,7 +726,7 @@ static int CmdHFMFPRdbl(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "count", "<dec>", "Blocks count (def: 1)"),
         arg_lit0("b",  "keyb", "Use key B (def: keyA)"),
         arg_lit0("p", "plain", "Do not use encrypted communication mode between reader and card"),
@@ -831,7 +844,7 @@ static int CmdHFMFPRdsc(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_lit0("b",  "keyb",    "Use key B (def: keyA)"),
         arg_lit0("p", "plain", "Do not use encrypted communication mode between reader and card"),
         arg_lit0(NULL, "nmc", "Do not append MAC to command"),
@@ -938,7 +951,7 @@ static int CmdHFMFPWrbl(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_lit0("b",  "keyb",    "Use key B (def: keyA)"),
         arg_int1(NULL, "blk",     "<0..255>", "Block number"),
         arg_lit0("p", "plain", "Do not use encrypted transmission"),
@@ -1049,7 +1062,7 @@ static int CmdHFMFPChKey(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_lit0(NULL, "nmr", "Do not expect MAC in response"),
         arg_str1(NULL, "ki", "<hex>", "Key Index, 2 hex bytes"),
         arg_str0("k", "key",      "<hex>", "Current sector key, 16 hex bytes"),
@@ -1165,7 +1178,7 @@ static int CmdHFMFPChConf(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_lit0(NULL, "nmr", "Do not expect MAC in response"),
         arg_int1("c", "conf", "<hex>", "Config block number, 0-3"),
         arg_str0("k", "key",      "<hex>", "Card key, 16 hex bytes"),
@@ -1387,7 +1400,7 @@ static int CmdHFMFPChk(const char *Cmd) {
         arg_lit0(NULL, "pattern2b", "Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
         arg_str0(NULL, "startp2b",  "<pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
         arg_lit0(NULL, "dump",      "Dump found keys to JSON file"),
-        arg_lit0("v",  "verbose",   "Verbose mode"),
+        arg_lit0("v",  "verbose",   "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1661,8 +1674,8 @@ static int CmdHFMFPDump(const char *Cmd) {
         arg_param_begin,
         arg_str0("f",  "file", "<fn>", "Specify a filename for dump file"),
         arg_str0("k",  "keys", "<fn>", "Specify a filename for keys file"),
-        arg_lit0(NULL, "ns", "no save to file"),
-        arg_lit0("v",  "verbose",   "Verbose mode"),
+//        arg_lit0(NULL, "ns", "no save to file"),
+//        arg_lit0("v",  "verbose",   "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1675,53 +1688,54 @@ static int CmdHFMFPDump(const char *Cmd) {
     char key_fn[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)key_fn, FILE_PATH_SIZE, &keyfnlen);
 
-    bool nosave = arg_get_lit(ctx, 3);
-    bool verbose = arg_get_lit(ctx, 4);
+//    bool nosave = arg_get_lit(ctx, 3);
+//    bool verbose = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
-    mfpSetVerboseMode(verbose);
-
-    // read card
-    uint8_t *mem = calloc(MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, sizeof(uint8_t));
-    if (mem == NULL) {
-        PrintAndLogEx(ERR, "failed to allocate memory");
-        return PM3_EMALLOC;
-    }
+    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
+    return PM3_ENOTIMPL;
 
     /*
-        iso14a_card_select_t card ;
-        int res = mfp_read_tag(&card, mem, key_fn);
-        if (res != PM3_SUCCESS) {
-            free(mem);
-            return res;
-        }
-    */
+        mfpSetVerboseMode(verbose);
 
-    // Skip saving card data to file
-    if (nosave) {
-        PrintAndLogEx(INFO, "Called with no save option");
+        // read card
+        uint8_t *mem = calloc(MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, sizeof(uint8_t));
+        if (mem == NULL) {
+            PrintAndLogEx(ERR, "failed to allocate memory");
+            return PM3_EMALLOC;
+        }
+
+
+    //        iso14a_card_select_t card ;
+    //        int res = mfp_read_tag(&card, mem, key_fn);
+    //        if (res != PM3_SUCCESS) {
+    //            free(mem);
+    //            return res;
+    //        }
+
+
+        // Skip saving card data to file
+        if (nosave) {
+            PrintAndLogEx(INFO, "Called with no save option");
+            free(mem);
+            return PM3_SUCCESS;
+        }
+
+            // Save to file
+    //        if (strlen(data_fn) < 1) {
+    //            char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-dump")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
+    //            strcpy(fptr, "hf-mfp-");
+    //            FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
+    //            strcpy(data_fn, fptr);
+    //            free(fptr);
+    //        }
+
+    //        pm3_save_mf_dump(filename, dump, MIFARE_4K_MAX_BYTES, jsfCardMemory);
+
         free(mem);
         return PM3_SUCCESS;
-    }
-    /*
-        // Save to file
-        if (strlen(data_fn) < 1) {
-
-            char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-dump")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
-            strcpy(fptr, "hf-mfp-");
-
-            FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
-
-            strcpy(data_fn, fptr);
-            free(fptr);
-        }
-
-        pm3_save_mf_dump(filename, dump, MIFARE_4K_MAX_BYTES, jsfCardMemory);
     */
-    free(mem);
-    return PM3_SUCCESS;
 }
-
 
 static int CmdHFMFPMAD(const char *Cmd) {
 
@@ -1733,7 +1747,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v",  "verbose",  "Show technical data"),
+        arg_lit0("v",  "verbose",  "Verbose output"),
         arg_str0(NULL, "aid",      "<hex>", "Print all sectors with aid"),
         arg_str0("k",  "key",      "<hex>", "Key for printing sectors"),
         arg_lit0("b",  "keyb",     "Use key B for access printing sectors (def: key A)"),
@@ -1904,7 +1918,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_litn("v",  "verbose",  0, 2, "show technical data"),
+        arg_litn("v",  "verbose",  0, 2, "verbose output"),
         arg_str0(NULL, "aid",      "<aid>", "replace default aid for NDEF"),
         arg_str0("k",  "key",      "<key>", "replace default key for NDEF"),
         arg_lit0("b",  "keyb",     "use key B for access sectors (by default: key A)"),
@@ -2089,7 +2103,7 @@ static command_t CommandTable[] = {
     {"rdbl",        CmdHFMFPRdbl,            IfPm3Iso14443a,  "Read blocks from card"},
     {"rdsc",        CmdHFMFPRdsc,            IfPm3Iso14443a,  "Read sectors from card"},
     {"wrbl",        CmdHFMFPWrbl,            IfPm3Iso14443a,  "Write block to card"},
-    {"chkey",	CmdHFMFPChKey,	    IfPm3Iso14443a,  "Change key on card"},
+    {"chkey",   CmdHFMFPChKey,      IfPm3Iso14443a,  "Change key on card"},
     {"chconf",    CmdHFMFPChConf,     IfPm3Iso14443a,  "Change config on card"},
     {"-----------", CmdHelp,                 IfPm3Iso14443a,  "---------------- " _CYAN_("personalization") " -------------------"},
     {"commitp",     CmdHFMFPCommitPerso,     IfPm3Iso14443a,  "Configure security layer (SL1/SL3 mode)"},

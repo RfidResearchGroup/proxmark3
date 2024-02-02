@@ -1139,7 +1139,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_lit0(NULL, "pattern2b",  "Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
         arg_str0(NULL, "startp2b",   "<pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
         arg_str0("j",  "json",       "<fn>",  "Json file name to save keys"),
-        arg_lit0("v",  "verbose",    "Verbose mode"),
+        arg_lit0("v",  "verbose",    "Verbose output"),
         arg_int0(NULL, "kdf",        "<0|1|2>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
         arg_str0("i",  "kdfi",       "<hex>", "KDF input (1-31 hex bytes)"),
         arg_lit0("a",  "apdu",       "Show APDU requests and responses"),
@@ -1445,7 +1445,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
         arg_str0("k",  "key",     "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -1712,7 +1712,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -1755,13 +1755,17 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     AppListS AppList = {{0}};
     DesfireFillAppList(&dctx, &PICCInfo, AppList, false, false, false); // no deep scan, no scan files
 
-    if (PICCInfo.freemem == 0xffffffff)
-        PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _YELLOW_("n/a"), PICCInfo.appCount);
-    else
-        PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d") " bytes", PICCInfo.appCount, PICCInfo.freemem);
+    PrintAndLogEx(SUCCESS, "# Applications... " _GREEN_("%zu"), PICCInfo.appCount);
+    if (PICCInfo.freemem == 0xffffffff) {
+        PrintAndLogEx(SUCCESS, "Free memory...... " _YELLOW_("n/a"));
+    } else {
+        PrintAndLogEx(SUCCESS, "Free memory...... " _GREEN_("%d") " bytes", PICCInfo.freemem);
+    }
 
-    if ((PICCInfo.keySettings & (1 << 1)) == 0)
-        PrintAndLogEx(WARNING, "Directory list access with CMK : " _RED_("Enabled") ". Try to read mad with Card Master Key(");
+    if ((PICCInfo.keySettings & (1 << 1)) == 0) {
+        PrintAndLogEx(WARNING, "Directory list access with CMK... ( " _RED_("Enabled") " )");
+        PrintAndLogEx(HINT, "Try to read MAD with Card Master Key (CMK)");
+    }
 
     PrintAndLogEx(SUCCESS, "----------------------------------------- " _CYAN_("MAD") " ------------------------------------------");
     bool foundFFFFFF = false;
@@ -1882,7 +1886,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -2108,7 +2112,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
         arg_str0("k",  "key",     "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -2203,7 +2207,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -2314,7 +2318,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -2476,7 +2480,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -2648,7 +2652,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -2711,7 +2715,7 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -2791,7 +2795,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -2848,7 +2852,7 @@ static int CmdHF14ADesGetFreeMem(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -2910,7 +2914,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -2983,7 +2987,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number for authentication"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -3085,7 +3089,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -3163,7 +3167,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -3234,7 +3238,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -3306,7 +3310,7 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -3380,7 +3384,7 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -3453,7 +3457,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -3622,7 +3626,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -3765,7 +3769,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -3903,7 +3907,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -4029,7 +4033,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -4148,7 +4152,7 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",      "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose",   "Verbose mode"),
+        arg_lit0("v",  "verbose",   "Verbose output"),
         arg_int0("n",  "keyno",     "<dec>", "Key number"),
         arg_str0("t",  "algo",      "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",       "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -4265,7 +4269,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -4343,7 +4347,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -4515,7 +4519,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -4918,7 +4922,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -5089,7 +5093,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -5428,7 +5432,7 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -5501,7 +5505,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
@@ -5567,7 +5571,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
-        arg_lit0("v",  "verbose", "Verbose mode"),
+        arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),

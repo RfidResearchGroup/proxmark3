@@ -28,6 +28,7 @@
 #include "util.h"
 #include "cmdhficlass.h"  // pagemap
 #include "iclass_cmd.h"
+#include "iso15.h"
 
 #ifdef _WIN32
 #include "scandir.h"
@@ -239,6 +240,22 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
     return fileName;
 }
 
+// trunacate down a filename to LEN size
+void truncate_filename(char *fn, uint16_t maxlen) {
+    if (fn == NULL || maxlen < 5) {
+        return;
+    }
+
+    // Check if the filename is already shorter than or equal to the desired length
+    if (strlen(fn) <= maxlen) {
+        return;
+    }
+
+    // If there's no extension or it's too long, just truncate the filename
+    fn[maxlen - 3] = '\0';
+    strcat(fn, "...");
+}
+
 // --------- SAVE FILES
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen) {
 
@@ -263,7 +280,7 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to binary file " _YELLOW_("%s"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to binary file `" _YELLOW_("%s") "`", datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
 }
@@ -484,21 +501,35 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             break;
         }
-        // handles ISO15693 w blocksize of 4 bytes
-        case jsf15_v2: {
-            JsonSaveStr(root, "FileType", "15693 v2");
-            for (size_t i = 0; i < datalen / 4; i++) {
-                snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &data[i * 4], 4);
-            }
-            break;
-        }
-        // handles ISO15693 w blocksize of 8 bytes
-        case jsf15_v3: {
-            JsonSaveStr(root, "FileType", "15693 v3");
-            for (size_t i = 0; i < datalen / 8; i++) {
-                snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &data[i * 8], 8);
+        // handles ISO15693 in iso15_tag_t format
+        case jsf15_v4: {
+            JsonSaveStr(root, "FileType", "15693 v4");
+            iso15_tag_t *tag = (iso15_tag_t *)data;
+            JsonSaveBufAsHexCompact(root, "$.Card.uid", tag->uid, sizeof(tag->uid));
+            JsonSaveBufAsHexCompact(root, "$.Card.dsfid", &tag->dsfid, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.dsfidlock", (uint8_t *)&tag->dsfidLock, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.afi", &tag->afi, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.afilock", (uint8_t *)&tag->afiLock, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.bytesperpage", &tag->bytesPerPage, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.pagescount", &tag->pagesCount, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.ic", &tag->ic, 1);
+            JsonSaveBufAsHexCompact(root, "$.Card.locks", tag->locks, tag->pagesCount);
+            JsonSaveBufAsHexCompact(root, "$.Card.random", tag->random, 2);
+            JsonSaveBufAsHexCompact(root, "$.Card.privacypasswd", tag->privacyPasswd, sizeof(tag->privacyPasswd));
+            JsonSaveBufAsHexCompact(root, "$.Card.state", (uint8_t *)&tag->state, 1);
+
+            for (uint8_t i = 0 ; i < tag->pagesCount ; i++) {
+
+                if (((i + 1) * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) {
+                    break;
+                }
+
+                snprintf(path, sizeof(path), "$.blocks.%u", i);
+                JsonSaveBufAsHexCompact(root
+                                        , path
+                                        , &tag->data[i * tag->bytesPerPage]
+                                        , tag->bytesPerPage
+                                       );
             }
             break;
         }
@@ -685,6 +716,8 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
         case jsfCardMemory:
         case jsf14b:
         case jsf15:
+        case jsf15_v2:
+        case jsf15_v3:
         case jsfLegic:
         default:
             break;
@@ -696,14 +729,14 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
     }
 
     if (json_dump_file(root, fn, JSON_INDENT(2))) {
-        PrintAndLogEx(FAILED, "error: can't save the file: " _YELLOW_("%s"), fn);
+        PrintAndLogEx(FAILED, "error, can't save the file `" _YELLOW_("%s") "`", fn);
         retval = 200;
         free(fn);
         goto out;
     }
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), fn);
+        PrintAndLogEx(SUCCESS, "saved to json file `" _YELLOW_("%s") "`", fn);
     }
     free(fn);
 
@@ -736,7 +769,7 @@ int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool
         free(filename);
         return PM3_SUCCESS;
     } else {
-        PrintAndLogEx(FAILED, "error: can't save the file: " _YELLOW_("%s"), filename);
+        PrintAndLogEx(FAILED, "error, can't save the file `" _YELLOW_("%s") "`", filename);
     }
     free(filename);
     return PM3_EFILE;
@@ -788,7 +821,7 @@ int saveFileWAVE(const char *preferredName, const int *data, size_t datalen) {
 
     fclose(wave_file);
 
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to wave file " _YELLOW_("'%s'"), 2 * datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to wave file `" _YELLOW_("%s") "`", 2 * datalen, fileName);
 
 out:
     free(fileName);
@@ -822,7 +855,7 @@ int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
 
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to PM3 file " _YELLOW_("'%s'"), datalen, fileName);
+    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to PM3 file `" _YELLOW_("%s") "`", datalen, fileName);
 
 out:
     free(fileName);
@@ -839,11 +872,11 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
 
     FILE *f = fopen(fileName, "wb");
     if (f == NULL) {
-        PrintAndLogEx(WARNING, "Could not create file " _YELLOW_("%s"), fileName);
+        PrintAndLogEx(WARNING, "could not create file `" _YELLOW_("%s") "`", fileName);
         free(fileName);
         return PM3_EFILE;
     }
-    PrintAndLogEx(SUCCESS, "Generating binary key file");
+    PrintAndLogEx(SUCCESS, "generating binary key file");
 
     uint8_t empty[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t tmp[6] = {0, 0, 0, 0, 0, 0};
@@ -866,7 +899,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
 
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "Found keys have been dumped to " _YELLOW_("%s"), fileName);
+    PrintAndLogEx(SUCCESS, "found keys have been dumped to `" _YELLOW_("%s") "`", fileName);
     PrintAndLogEx(INFO, "--[ " _YELLOW_("FFFFFFFFFFFF") " ]-- has been inserted for unknown keys where " _YELLOW_("res") " is " _RED_("0"));
     free(fileName);
     return PM3_SUCCESS;
@@ -979,7 +1012,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
                 break;
 
             fclose(f);
-            PrintAndLogEx(FAILED, "File reading error.");
+            PrintAndLogEx(FAILED, "file reading error");
             return PM3_EFILE;
         }
 
@@ -1052,7 +1085,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 break;
 
             fclose(f);
-            PrintAndLogEx(FAILED, "File reading error.");
+            PrintAndLogEx(FAILED, "file reading error");
             return PM3_EFILE;
         }
 
@@ -1182,7 +1215,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
             sscanf(line, "page %d:", &pageno);
 
             if (strcmp(line, "??") == 0) {
-                PrintAndLogEx(INFO, "Missing data detected in page %i,  skipping...", pageno);
+                PrintAndLogEx(INFO, "missing data detected in page %i,  skipping...", pageno);
                 continue;
             }
 
@@ -1208,7 +1241,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
             sscanf(line, "block %d:", &blockno);
 
             if (strcmp(line, "??") == 0) {
-                PrintAndLogEx(INFO, "Missing data detected in block %i,  skipping...", blockno);
+                PrintAndLogEx(INFO, "missing data detected in block %i,  skipping...", blockno);
                 continue;
             }
 
@@ -1298,7 +1331,7 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
                 break;
 
             fclose(f);
-            PrintAndLogEx(FAILED, "File reading error.");
+            PrintAndLogEx(FAILED, "file reading error");
             return PM3_EFILE;
         }
 
@@ -1336,11 +1369,12 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
 
 static int load_file_sanity(char *s, uint32_t datalen, int i, size_t len) {
     if (len == 0) {
-        PrintAndLogEx(WARNING, "WARNING: json %s block %d has zero-length data", s, i);
-        PrintAndLogEx(INFO, "file parsing stopped");
+        PrintAndLogEx(DEBUG, "WARNING: json %s block %d has zero-length data", s, i);
+        PrintAndLogEx(DEBUG, "File parsing stopped");
         return false;
     } else if (len != datalen) {
-        PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %zu bytes, expected %d (will fill with zero data)", s, i, len, datalen);
+        PrintAndLogEx(WARNING, "WARNING: json %s block %d only has %zu bytes", s, i, len);
+        PrintAndLogEx(INFO, "Expected %d - padding with zeros", datalen);
     }
     return true;
 }
@@ -1364,19 +1398,19 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     json_error_t error;
     json_t *root = json_load_file(path, 0, &error);
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "loaded from JSON file `" _YELLOW_("%s") "`", path);
+        PrintAndLogEx(SUCCESS, "loaded `" _YELLOW_("%s") "`", path);
     }
 
     free(path);
 
     if (!root) {
-        PrintAndLogEx(ERR, "ERROR: json " _YELLOW_("%s") " error on line %d: %s", preferredName, error.line, error.text);
+        PrintAndLogEx(ERR, "error, json " _YELLOW_("%s") " error on line %d: %s", preferredName, error.line, error.text);
         retval = PM3_ESOFT;
         goto out;
     }
 
     if (!json_is_object(root)) {
-        PrintAndLogEx(ERR, "ERROR: Invalid json " _YELLOW_("%s") " format. root must be an object.", preferredName);
+        PrintAndLogEx(ERR, "error, invalid json " _YELLOW_("%s") " format. root must be an object.", preferredName);
         retval = PM3_ESOFT;
         goto out;
     }
@@ -1585,6 +1619,48 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
+    if (!strcmp(ctype, "EM4205/EM4305")) {
+        size_t sptr = 0;
+        for (int i = 0; i < (maxdatalen / 4); i++) {
+            if (sptr + 4 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
+            if (load_file_sanity(ctype, 4, i, len) == false) {
+                break;
+            }
+
+            sptr += len;
+        }
+        *datalen = sptr;
+        goto out;
+    }
+
+    if (!strcmp(ctype, "EM4469/EM4569")) {
+        size_t sptr = 0;
+        for (int i = 0; i < (maxdatalen / 4); i++) {
+            if (sptr + 4 > maxdatalen) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
+            if (load_file_sanity(ctype, 4, i, len) == false) {
+                break;
+            }
+
+            sptr += len;
+        }
+        *datalen = sptr;
+        goto out;
+    }
+
     if (!strcmp(ctype, "EM4X50")) {
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {
@@ -1608,51 +1684,192 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     // depricated
     if (!strcmp(ctype, "15693")) {
-        JsonLoadBufAsHex(root, "$.raw", udata.bytes, maxdatalen, datalen);
+        PrintAndLogEx(WARNING, "loadFileJSONex: loading deprecated 15693 format");
+        // will set every metadata to 0 except 1st UID byte to E0 and memory layout
+        iso15_tag_t *tag = (iso15_tag_t *)udata.bytes;
+        tag->uid[7] = 0xE0;
+        tag->bytesPerPage = 4;
+        JsonLoadBufAsHex(root, "$.raw", tag->data
+                         , MIN(maxdatalen, ISO15693_TAG_MAX_SIZE)
+                         , datalen
+                        );
+
+        if (*datalen > ISO15693_TAG_MAX_SIZE) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   sptr=%zu (%04zx) -- exceeded maxdatalen"
+                          , ISO15693_TAG_MAX_SIZE
+                          , ISO15693_TAG_MAX_SIZE
+                          , *datalen
+                          , *datalen
+                         );
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+        tag->pagesCount = *datalen / 4;
+        if (tag->pagesCount > ISO15693_TAG_MAX_PAGES) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%zu (%04zx)   pagecount=%u (%04x) -- exceeded maxpagecount"
+                          , ISO15693_TAG_MAX_PAGES
+                          , ISO15693_TAG_MAX_PAGES
+                          , tag->pagesCount
+                          , tag->pagesCount
+                         );
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+        *datalen = sizeof(iso15_tag_t);
         goto out;
     }
 
-    // handles ISO15693 w blocksize of 4 bytes.
+    // depricated: handles ISO15693 w blocksize of 4 bytes.
     if (!strcmp(ctype, "15693 v2")) {
+        PrintAndLogEx(WARNING, "loadFileJSONex: loading deprecated 15693 v2 format");
+        // will set every metadata to 0 except 1st UID byte to E0 and memory layout
+        iso15_tag_t *tag = (iso15_tag_t *)udata.bytes;
+        tag->uid[7] = 0xE0;
+        tag->bytesPerPage = 4;
         size_t sptr = 0;
-        for (int i = 0; i < (maxdatalen / 4); i++) {
-            if (sptr + 4 > maxdatalen) {
-                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
+
+        for (uint32_t i = 0; i < (maxdatalen / 4) ; i++) {
+            if (((i + 1) * 4) > ISO15693_TAG_MAX_SIZE) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
+                              , maxdatalen
+                              , maxdatalen
+                              , i
+                              , i
+                              , sptr
+                              , sptr
+                             );
+
                 retval = PM3_EMALLOC;
                 goto out;
             }
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
-            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 4, &len);
-            if (load_file_sanity(ctype, 4, i, len) == false) {
+            JsonLoadBufAsHex(root, blocks, &tag->data[sptr], 4, &len);
+            if (load_file_sanity(ctype, tag->bytesPerPage, i, len) == false) {
                 break;
             }
-
             sptr += len;
         }
 
-        *datalen = sptr;
+        tag->pagesCount = sptr / 4;
+        if (tag->pagesCount > ISO15693_TAG_MAX_PAGES) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%zu (%04zx)   pagecount=%u (%04x) -- exceeded maxpagecount"
+                          , ISO15693_TAG_MAX_PAGES
+                          , ISO15693_TAG_MAX_PAGES
+                          , tag->pagesCount
+                          , tag->pagesCount
+                         );
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
+        *datalen = sizeof(iso15_tag_t);
         goto out;
     }
-    // handles ISO15693 w blocksize of 8 bytes.
+    // depricated: handles ISO15693 w blocksize of 8 bytes.
     if (!strcmp(ctype, "15693 v3")) {
+        PrintAndLogEx(WARNING, "loadFileJSONex: loading deprecated 15693 v3 format");
+        // will set every metadata to 0 except 1st UID byte to E0 and memory layout
+        iso15_tag_t *tag = (iso15_tag_t *)udata.bytes;
+        tag->uid[7] = 0xE0;
+        tag->bytesPerPage = 8;
         size_t sptr = 0;
-        for (int i = 0; i < (maxdatalen / 8); i++) {
-            if (sptr + 8 > maxdatalen) {
-                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
+
+        for (uint32_t i = 0; i < (maxdatalen / 8) ; i++) {
+            if (((i + 1) * 8) > ISO15693_TAG_MAX_SIZE) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
+                              , maxdatalen
+                              , maxdatalen
+                              , i
+                              , i
+                              , sptr
+                              , sptr
+                             );
+
                 retval = PM3_EMALLOC;
                 goto out;
             }
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
-            JsonLoadBufAsHex(root, blocks, &udata.bytes[sptr], 8, &len);
-            if (load_file_sanity(ctype, 8, i, len) == false) {
+            JsonLoadBufAsHex(root, blocks, &tag->data[sptr], 8, &len);
+            if (load_file_sanity(ctype, tag->bytesPerPage, i, len) == false) {
                 break;
             }
             sptr += len;
         }
 
-        *datalen = sptr;
+        tag->pagesCount = sptr / 8;
+        if (tag->pagesCount > ISO15693_TAG_MAX_PAGES) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%zu (%04zx)   pagecount=%u (%04x) -- exceeded maxpagecount"
+                          , ISO15693_TAG_MAX_PAGES
+                          , ISO15693_TAG_MAX_PAGES
+                          , tag->pagesCount
+                          , tag->pagesCount
+                         );
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
+        *datalen = sizeof(iso15_tag_t);
+        goto out;
+    }
+
+    if (!strcmp(ctype, "15693 v4")) {
+        iso15_tag_t *tag = (iso15_tag_t *)udata.bytes;
+        JsonLoadBufAsHex(root, "$.Card.uid", tag->uid, 8, datalen);
+        JsonLoadBufAsHex(root, "$.Card.dsfid", &tag->dsfid, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.dsfidlock", (uint8_t *)&tag->dsfidLock, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.afi", &tag->afi, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.afilock", (uint8_t *)&tag->afiLock, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.bytesperpage", &tag->bytesPerPage, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.pagescount", &tag->pagesCount, 1, datalen);
+
+        if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+                ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+                (tag->pagesCount == 0) ||
+                (tag->bytesPerPage == 0)) {
+            PrintAndLogEx(ERR, "loadFileJSONex: pagesCount=%u (%04x)    bytesPerPage=%u (%04x) -- invalid tag memory layout"
+                          , tag->pagesCount
+                          , tag->pagesCount
+                          , tag->bytesPerPage
+                          , tag->bytesPerPage
+                         );
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
+        JsonLoadBufAsHex(root, "$.Card.ic", &tag->ic, 1, datalen);
+        JsonLoadBufAsHex(root, "$.Card.locks", tag->locks, tag->pagesCount, datalen);
+        JsonLoadBufAsHex(root, "$.Card.random", tag->random, 2, datalen);
+        JsonLoadBufAsHex(root, "$.Card.privacypasswd", tag->privacyPasswd, 4, datalen);
+        JsonLoadBufAsHex(root, "$.Card.state", (uint8_t *)&tag->state, 1, datalen);
+
+        size_t sptr = 0;
+        for (uint8_t i = 0; i < tag->pagesCount ; i++) {
+
+            if (((i + 1) * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) {
+                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
+                              , maxdatalen
+                              , maxdatalen
+                              , i
+                              , i
+                              , sptr
+                              , sptr
+                             );
+
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+
+            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            JsonLoadBufAsHex(root, blocks, &tag->data[sptr], tag->bytesPerPage, &len);
+            if (load_file_sanity(ctype, tag->bytesPerPage, i, len) == false) {
+                break;
+            }
+            sptr += len;
+        }
+
+        *datalen = sizeof(iso15_tag_t);
         goto out;
     }
 
@@ -1885,8 +2102,6 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     }
 
 out:
-
-
     if (callback != NULL) {
         (*callback)(root);
     }
@@ -1904,8 +2119,9 @@ int loadFileJSONroot(const char *preferredName, void **proot, bool verbose) {
 
     json_error_t error;
     json_t *root = json_load_file(path, 0, &error);
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "loaded from JSON file " _YELLOW_("%s"), path);
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%s"), path);
+    }
 
     free(path);
 
@@ -2114,7 +2330,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         memset(line, 0, sizeof(line));
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file " _YELLOW_("%s"), *keycnt, path);
+    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", *keycnt, path);
 
 out:
     free(path);
@@ -2135,7 +2351,6 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
         free(path);
         return PM3_EFILE;
     }
-    free(path);
 
     // get filesize in order to malloc memory
     fseek(f, 0, SEEK_END);
@@ -2145,6 +2360,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     if (fsize <= 0) {
         PrintAndLogEx(FAILED, "error, when getting filesize");
         fclose(f);
+        free(path);
         return PM3_EFILE;
     }
 
@@ -2155,6 +2371,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     if (*keya == NULL) {
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
         fclose(f);
+        free(path);
         return PM3_EMALLOC;
     }
 
@@ -2165,11 +2382,15 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
         PrintAndLogEx(FAILED, "error, cannot allocate memory");
         fclose(f);
         free(*keya);
+        free(path);
         return PM3_EMALLOC;
     }
 
     *blen = fread(*keyb, 1, fsize, f);
     fclose(f);
+
+    PrintAndLogEx(SUCCESS, "loaded binary key file `" _YELLOW_("%s") "`", path);
+    free(path);
     return PM3_SUCCESS;
 }
 
@@ -2184,6 +2405,12 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose) {
     bcc0 = ct ^ new->data[0] ^ new->data[1] ^ new->data[2];
     bcc1 = new->data[4] ^ new->data[5] ^ new->data[6] ^ new->data[7];
     if (bcc0 == new->data[3] && bcc1 == new->data[8]) {
+        retval = MFU_DF_NEWBIN;
+    }
+
+    // Memory layout is different for NTAG I2C 1K/2K plus
+    // Sak 00, atqa 44 00
+    if (0 ==  new->data[7] &&  0x44 == new->data[8] &&  0x00 == new->data[9]) {
         retval = MFU_DF_NEWBIN;
     }
 
@@ -2257,7 +2484,7 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
             }
 
             fclose(f);
-            PrintAndLogEx(FAILED, "File reading error.");
+            PrintAndLogEx(FAILED, "file reading error");
             return PM3_EFILE;
         }
 
@@ -2734,22 +2961,16 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
     switch (dftype) {
         case BIN: {
             res = loadFile_safe(fn, ".bin", pdump, dumplen);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "File IO failed");
-            }
             break;
         }
         case EML: {
             res = loadFileEML_safe(fn, pdump, dumplen);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "File IO failed");
-            }
             break;
         }
         case JSON: {
             *pdump = calloc(maxdumplen, sizeof(uint8_t));
             if (*pdump == NULL) {
-                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                PrintAndLogEx(WARNING, "fail, cannot allocate memory");
                 return PM3_EMALLOC;
             }
             res = loadFileJSON(fn, *pdump, maxdumplen, dumplen, NULL);
@@ -2762,12 +2983,12 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             if (res == PM3_ESOFT) {
                 PrintAndLogEx(WARNING, "JSON objects failed to load");
             } else if (res == PM3_EMALLOC) {
-                PrintAndLogEx(WARNING, "Wrong size of allocated memory. Check your parameters");
+                PrintAndLogEx(WARNING, "wrong size of allocated memory. Check your parameters");
             }
             break;
         }
         case DICTIONARY: {
-            PrintAndLogEx(ERR, "Only <BIN|EML|JSON|MCT|NFC formats allowed");
+            PrintAndLogEx(ERR, "only <BIN|EML|JSON|MCT|NFC formats allowed");
             return PM3_EINVARG;
         }
         case MCT: {
@@ -2780,7 +3001,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
 
                 *pdump = calloc(maxdumplen, sizeof(uint8_t));
                 if (*pdump == NULL) {
-                    PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                    PrintAndLogEx(WARNING, "fail, cannot allocate memory");
                     return PM3_EMALLOC;
                 }
                 res = loadFileNFC_safe(fn, *pdump, maxdumplen, dumplen, foo);
@@ -2793,7 +3014,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
                 if (res == PM3_ESOFT) {
                     PrintAndLogEx(WARNING, "NFC objects failed to load");
                 } else if (res == PM3_EMALLOC) {
-                    PrintAndLogEx(WARNING, "Wrong size of allocated memory. Check your parameters");
+                    PrintAndLogEx(WARNING, "wrong size of allocated memory. Check your parameters");
                 }
             }
             break;
@@ -2807,7 +3028,7 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         return PM3_EINVARG;
     }
     if (d == NULL || n == 0) {
-        PrintAndLogEx(INFO, "No data to save, skipping...");
+        PrintAndLogEx(INFO, "no data to save, skipping...");
         return PM3_EINVARG;
     }
     saveFile(fn, ".bin", d, n);
@@ -2818,7 +3039,7 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
 int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
 
     if (fn == NULL || d == NULL || n == 0) {
-        PrintAndLogEx(INFO, "No data to save, skipping...");
+        PrintAndLogEx(INFO, "no data to save, skipping...");
         return PM3_EINVARG;
     }
     saveFile(fn, ".bin", d, n);
@@ -2840,7 +3061,7 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         jd.card_info.sak = d[7];
         memcpy(jd.card_info.atqa, &d[8], sizeof(jd.card_info.atqa));
     } else {
-        PrintAndLogEx(WARNING, "Invalid dump. UID/SAK/ATQA not found");
+        PrintAndLogEx(WARNING, "invalid dump. UID/SAK/ATQA not found");
     }
     jd.dump = d;
     jd.dumplen = n;

@@ -6,7 +6,7 @@ Copyright (C) 2005-2007 Jonathan Westhues
 
 Since then, each contribution is under the copyright of its respective author.
 
-A few releases were done by the Proxmark community between 2007 and March 2009 before using version control.  
+A few releases were done by the Proxmark3 community between 2007 and March 2009 before using version control.  
 The last release which served as basis for version control, under SVN then migrated to Git, was the `20090306_ela` release by Edouard Lafargue. See the first commit of this repository.
 
 Therefore, only the following copyright notices are left untouched in the corresponding files:

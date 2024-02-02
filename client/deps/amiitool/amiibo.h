@@ -18,14 +18,14 @@
 
 #pragma pack(1)
 typedef struct {
-    nfc3d_keygen_masterkeys data;
-    nfc3d_keygen_masterkeys tag;
-} nfc3d_amiibo_keys;
+    nfc3d_keygen_masterkeys_t data;
+    nfc3d_keygen_masterkeys_t tag;
+} nfc3d_amiibo_keys_t;
 #pragma pack()
 
-bool nfc3d_amiibo_unpack(const nfc3d_amiibo_keys *amiiboKeys, const uint8_t *tag, uint8_t *plain);
-void nfc3d_amiibo_pack(const nfc3d_amiibo_keys *amiiboKeys, const uint8_t *plain, uint8_t *tag);
-bool nfc3d_amiibo_load_keys(nfc3d_amiibo_keys *amiiboKeys);
+bool nfc3d_amiibo_unpack(const nfc3d_amiibo_keys_t *amiiboKeys, const uint8_t *tag, uint8_t *plain);
+void nfc3d_amiibo_pack(const nfc3d_amiibo_keys_t *amiiboKeys, const uint8_t *plain, uint8_t *tag);
+bool nfc3d_amiibo_load_keys(nfc3d_amiibo_keys_t *amiiboKeys);
 void nfc3d_amiibo_copy_app_data(const uint8_t *src, uint8_t *dst);
 
 #endif

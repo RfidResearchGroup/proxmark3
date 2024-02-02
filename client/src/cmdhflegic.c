@@ -556,7 +556,7 @@ static int CmdLegicSim(const char *Cmd) {
     SendCommandNG(CMD_HF_LEGIC_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
     for (;;) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
@@ -1449,8 +1449,8 @@ static command_t CommandTable[] =  {
     {"wrbl",    CmdLegicWrbl,     IfPm3Legicrf,    "Write data to a LEGIC Prime tag"},
     {"-----------", CmdHelp,      AlwaysAvailable, "--------------------- " _CYAN_("simulation") " ---------------------"},
     {"sim",     CmdLegicSim,      IfPm3Legicrf,    "Start tag simulator"},
-    {"eload",   CmdLegicELoad,    IfPm3Legicrf,    "Load binary dump to emulator memory"},
-    {"esave",   CmdLegicESave,    IfPm3Legicrf,    "Save emulator memory to binary file"},
+    {"eload",   CmdLegicELoad,    IfPm3Legicrf,    "Upload file into emulator memory"},
+    {"esave",   CmdLegicESave,    IfPm3Legicrf,    "Save emulator memory to file"},
     {"eview",   CmdLegicEView,    IfPm3Legicrf,    "View emulator memory"},
     {"einfo",   CmdLegicEInfo,    IfPm3Legicrf,    "Display deobfuscated and decoded emulator memory"},
     {"-----------", CmdHelp,      AlwaysAvailable, "--------------------- " _CYAN_("utils") " ---------------------"},

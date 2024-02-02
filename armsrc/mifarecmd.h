@@ -18,9 +18,10 @@
 #define __MIFARECMD_H
 
 #include "common.h"
+#include "pm3_cmd.h"
 
-int16_t mifare_cmd_readblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t read_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data);
-int16_t mifare_cmd_writeblocks(uint8_t key_auth_cmd, uint8_t *key, uint8_t write_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data);
+int16_t mifare_cmd_readblocks(MifareWakeupType wakeup, uint8_t key_auth_cmd, uint8_t *key, uint8_t read_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data);
+int16_t mifare_cmd_writeblocks(MifareWakeupType wakeup, uint8_t key_auth_cmd, uint8_t *key, uint8_t write_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data);
 void MifareReadSector(uint8_t sector_no, uint8_t key_type, uint8_t *key);
 void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 
@@ -47,7 +48,7 @@ int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype);
 // MFC GEN1a /1b
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);  // Work with "magic Chinese" card
 void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);
-void MifareCIdent(bool is_mfc);  // is "magic chinese" card?
+void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key);  // is "magic chinese" card?
 void MifareHasStaticNonce(void);  // Has the tag a static nonce?
 void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *key); // Has the tag a static encrypted nonce?
 

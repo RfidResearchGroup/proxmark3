@@ -521,7 +521,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     mfu_dump->counter_tearing[2][3] = 0xBD;
     mfu_dump->pages = 0x2c;
 
-    printMFUdumpEx(mfu_dump, mfu_dump->pages + 1, 0);
+    mfu_print_dump(mfu_dump, mfu_dump->pages + 1, 0, false);
 
     // upload to emulator memory
     PrintAndLogEx(INFO, "Uploading to emulator memory");
@@ -575,7 +575,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "Starting simulating");
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
     for (;;) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);

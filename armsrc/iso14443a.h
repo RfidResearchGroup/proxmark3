@@ -175,4 +175,7 @@ void DetectNACKbug(void);
 
 bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint8_t *received_len);
 
+extern iso14a_polling_parameters_t WUPA_POLLING_PARAMETERS;
+extern iso14a_polling_parameters_t REQA_POLLING_PARAMETERS;
+
 #endif /* __ISO14443A_H */

@@ -7,7 +7,7 @@
 - [Table of Contents](#table-of-contents)
 - [External resources](#external-resources)
 - [Install the required dependencies](#install-the-required-dependencies)
-  - [On Debian / Ubuntu / Kali / ParrotOS / Raspbian](#on-debian--ubuntu--kali--parrotos--raspbian)
+  - [On Debian / Ubuntu / Kali / ParrotOS / Raspbian / DragonOS](#on-debian--ubuntu--kali--parrotos--raspbian--dragonos)
     - [If you don't need...](#if-you-dont-need)
     - [Failed to load module...](#failed-to-load-module)
   - [On ArchLinux](#on-archlinux)
@@ -42,7 +42,7 @@ You might want to follow one of these external resources to get an overview, but
 # Install the required dependencies
 ^[Top](#top)
 
-## On Debian / Ubuntu / Kali / ParrotOS / Raspbian
+## On Debian / Ubuntu / Kali / ParrotOS / Raspbian / DragonOS
 ^[Top](#top)
 
 First what we want to do is get an update for the system. If you need to apply updates do this **before** installing the Proxmark3 software.  
@@ -72,6 +72,9 @@ you can skip the installation of `qtbase5-dev`.
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `libpython3-dev`.
 
+👉 If you don't need support for NFC ePaper devices,  
+you can skip the installation of `libgd-dev`.
+
 ### Failed to load module... 
 ⚠️ If you get some (non blocking) error at runtime such as _Gtk-Message: Failed to load module "canberra-gtk-module"_  
 you may have to install `libcanberra-gtk-module`.
@@ -82,7 +85,7 @@ you may have to install `libcanberra-gtk-module`.
 
 ```sh
 sudo pacman -Syu git base-devel readline bzip2 lz4 arm-none-eabi-gcc \
-arm-none-eabi-newlib qt5-base bluez python --needed
+arm-none-eabi-newlib qt5-base bluez python gd --needed
 ```
 
 ### If you don't need... 
@@ -95,6 +98,9 @@ you can skip the installation of `qt5-base`.
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `python`.
 
+👉 If you don't need support for NFC ePaper devices,  
+you can skip the installation of `gd`.
+
 
 ## On Fedora
 ^[Top](#top)
@@ -102,7 +108,7 @@ you can skip the installation of `python`.
 ```sh
 sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib \
 readline-devel bzip2-devel lz4-devel qt5-qtbase-devel bluez-libs-devel \
-python3-devel libatomic openssl-devel
+python3-devel libatomic openssl-devel gd-devel
 ```
 
 ### If you don't need... 
@@ -115,6 +121,9 @@ you can skip the installation of `qt5-qtbase-devel`.
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `python3-devel`.
 
+👉 If you don't need support for NFC ePaper devices,  
+you can skip the installation of `gd-devel`.
+
 
 ## On openSUSE
 ^[Top](#top)
@@ -122,7 +131,8 @@ you can skip the installation of `python3-devel`.
 ```sh
 sudo zypper install git patterns-devel-base-devel_basis gcc-c++ \
 readline-devel libbz2-devel liblz4-devel cross-arm-none-gcc9 \
-cross-arm-none-newlib-devel python3-devel libqt5-qtbase-devel libopenssl-devel
+cross-arm-none-newlib-devel python3-devel libqt5-qtbase-devel \
+libopenssl-devel gd-devel
 ```
 
 Note that Bluez is not available on openSUSE so the native Bluetooth support won't be available in the client.
@@ -133,6 +143,9 @@ you can skip the installation of `libqt5-qtbase-devel`.
 
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `python3-devel`.
+
+👉 If you don't need support for NFC ePaper devices,  
+you can skip the installation of `gd-devel`.
 
 
 # Clone the repository

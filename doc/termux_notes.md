@@ -2,32 +2,36 @@
 <a id="top"></a>
 
 ## Table of Contents
-  * [ Requirements ](#requirements)
-  * [ Notes ](#notes)
-  * [ Setup ](#setup)
-    * [ Setting up Termux ](#setting-up-termux)
-    * [ Install Proxmark3 package ](#install-proxmark3-package)
-  * [ PC-like method ](#pc-like-method)
-    * [ Specific requirements ](#specific-requirements)
-    * [ USB_ACM ](#usb_acm)
-      * [ Enable the driver ](#enable-the-driver)
-      * [ Building the kernel ](#building-the-kernel)
-      * [ Flashing the kernel ](#flashing-the-kernel)
-      * [ Testing ](#testing)
-      * [ Troubleshooting ](#troubleshooting)
-  * [ TCP/UDP bridge method ](#tcpudp-bridge-method)
-    * [ USB connection ](#usb-connection)
-      * [ USB-UART bridge application for TCP to USB bridging](#usb-uart-bridge-application-for-tcp-to-usb-bridging)
-      * [ USB-UART Bridge Application for UDP to USB bridging](#usb-uart-bridge-application-for-udp-to-usb-bridging)
-    * [ Bluetooth connection ](#bluetooth-connection)
-      * [ BT-UART bridge application for TCP to BT bridging](#bt-uart-bridge-application-for-tcp-to-bt-bridging)
-    * [ TCP connection ](#tcp-connection)
-    * [ UDP connection ](#udp-connection)
-    * [Troubleshooting](#troubleshooting-1)
-      * [BTADDON Missing in Firmware of PM3](#btaddon-missing-in-firmware-of-pm3)
-  * [Compiling and Flashing a Proxmark3 Firmware from non-root Android](#compiling-and-flashing-a-proxmark3-firmware-from-non-root-android)
-    * [Compiling the Proxmark3 Firmware](#compiling-the-proxmark3-firmware)
-    * [Flashing the Proxmark3 Firmware](#flashing-the-proxmark3-firmware)
+- [Proxmark 3 on Android](#proxmark-3-on-android)
+  - [Table of Contents](#table-of-contents)
+  - [Requirements](#requirements)
+  - [Notes](#notes)
+  - [Setup](#setup)
+    - [Setting up Termux](#setting-up-termux)
+    - [Install Proxmark3 package which follows tagged releases](#install-proxmark3-package-which-follows-tagged-releases)
+    - [Optional: Install Proxmark3 package which offers a more up to date version from git `master` branch](#optional-install-proxmark3-package-which-offers-a-more-up-to-date-version-from-git-master-branch)
+    - [Optional: Building Proxmark3 client from source](#optional-building-proxmark3-client-from-source)
+  - [PC-like method](#pc-like-method)
+    - [Specific requirements](#specific-requirements)
+    - [USB\_ACM](#usb_acm)
+      - [Enable the driver](#enable-the-driver)
+      - [Building the kernel](#building-the-kernel)
+      - [Flashing the kernel](#flashing-the-kernel)
+      - [Testing](#testing)
+      - [Troubleshooting](#troubleshooting)
+  - [TCP/UDP bridge method](#tcpudp-bridge-method)
+    - [USB connection](#usb-connection)
+      - [USB-UART Bridge Application for TCP to USB bridging](#usb-uart-bridge-application-for-tcp-to-usb-bridging)
+      - [USB-UART Bridge Application for UDP to USB bridging](#usb-uart-bridge-application-for-udp-to-usb-bridging)
+    - [Bluetooth connection](#bluetooth-connection)
+      - [BT-UART Bridge Application for TCP to BT bridging](#bt-uart-bridge-application-for-tcp-to-bt-bridging)
+    - [TCP connection](#tcp-connection)
+    - [UDP connection](#udp-connection)
+    - [Troubleshooting](#troubleshooting-1)
+      - [BTADDON Missing in Firmware of PM3](#btaddon-missing-in-firmware-of-pm3)
+  - [Compiling and Flashing a Proxmark3 Firmware from non-root Android](#compiling-and-flashing-a-proxmark3-firmware-from-non-root-android)
+    - [Compiling the Proxmark3 Firmware](#compiling-the-proxmark3-firmware)
+    - [Flashing the Proxmark3 Firmware](#flashing-the-proxmark3-firmware)
 ## Requirements
 ^[Top](#top)
 
@@ -249,7 +253,7 @@ $ proxmark3 tcp:localhost:4321
 
 Using UART port tcp:localhost:4321
 
-[!!] ERROR: cannot communicate with the Proxmark
+[!!] ERROR: cannot communicate with the Proxmark3
 ```
 Solution:  
 

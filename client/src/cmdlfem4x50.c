@@ -169,15 +169,15 @@ static void em4x50_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
     PrintAndLogEx(INFO, "." NOLF);
     // fast push mode
     g_conn.block_after_ACK = true;
-    for (size_t i = offset; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
+    for (size_t i = offset; i < numofbytes; i += PM3_CMD_DATA_SIZE_MIX) {
 
-        size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
+        size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE_MIX);
         if (len == numofbytes - i) {
             // Disable fast mode on last packet
             g_conn.block_after_ACK = false;
         }
         clearCommandBuffer();
-        SendCommandOLD(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);
+        SendCommandMIX(CMD_LF_EM4X50_ESET, i, len, 0, src + i, len);
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
     }
@@ -359,11 +359,12 @@ int CmdEM4x50Brute(const char *Cmd) {
 
                   "lf em 4x50 brute --mode range --begin 12330000 --end 12340000 -> tries pwds from 0x12330000 to 0x12340000\n"
                   "lf em 4x50 brute --mode charset --digits --uppercase -> tries all combinations of ASCII codes for digits and uppercase letters\n"
+                  "lf em 4x50 brute --mode smart -> enable 'smart' pattern key cracking\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL, "mode", "<str>", "Bruteforce mode (range|charset)"),
+        arg_str1(NULL, "mode", "<str>", "Bruteforce mode (range|charset|smart)"),
         arg_str0(NULL, "begin", "<hex>",   "Range mode - start of the key range"),
         arg_str0(NULL, "end", "<hex>",   "Range mode - end of the key range"),
         arg_lit0(NULL, "digits",  "Charset mode - include ASCII codes for digits"),
@@ -382,16 +383,18 @@ int CmdEM4x50Brute(const char *Cmd) {
     PrintAndLogEx(INFO, "Chosen mode: %s", mode);
 
     if (strcmp(mode, "range") == 0) {
-        etd.bruteforce_mode = BRUTEFORCE_MODE_RANGE;
+        etd.bruteforce_mode = BF_MODE_RANGE;
     } else if (strcmp(mode, "charset") == 0) {
-        etd.bruteforce_mode = BRUTEFORCE_MODE_CHARSET;
+        etd.bruteforce_mode = BF_MODE_CHARSET;
+    } else if (strcmp(mode, "smart") == 0) {
+        etd.bruteforce_mode = BF_MODE_SMART;
     } else {
         PrintAndLogEx(FAILED, "Unknown bruteforce mode: %s", mode);
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    if (etd.bruteforce_mode == BRUTEFORCE_MODE_RANGE) {
+    if (etd.bruteforce_mode == BF_MODE_RANGE) {
         int begin_len = 0;
         uint8_t begin[4] = {0x0};
         CLIGetHexWithReturn(ctx, 2, begin, &begin_len);
@@ -414,14 +417,14 @@ int CmdEM4x50Brute(const char *Cmd) {
 
         etd.password1 = BYTES2UINT32_BE(begin);
         etd.password2 = BYTES2UINT32_BE(end);
-    } else if (etd.bruteforce_mode == BRUTEFORCE_MODE_CHARSET) {
+    } else if (etd.bruteforce_mode == BF_MODE_CHARSET) {
         bool enable_digits = arg_get_lit(ctx, 4);
         bool enable_uppercase = arg_get_lit(ctx, 5);
 
         if (enable_digits)
-            etd.bruteforce_charset |= CHARSET_DIGITS;
+            etd.bruteforce_charset |= BF_CHARSET_DIGITS;
         if (enable_uppercase)
-            etd.bruteforce_charset |= CHARSET_UPPERCASE;
+            etd.bruteforce_charset |= BF_CHARSET_UPPERCASE;
 
         if (etd.bruteforce_charset == 0) {
             PrintAndLogEx(FAILED, "Please enable at least one charset when using charset bruteforce mode.");
@@ -441,21 +444,21 @@ int CmdEM4x50Brute(const char *Cmd) {
     const int speed = 27;
     int no_iter = 0;
 
-    if (etd.bruteforce_mode == BRUTEFORCE_MODE_RANGE) {
+    if (etd.bruteforce_mode == BF_MODE_RANGE) {
         no_iter = etd.password2 - etd.password1 + 1;
         PrintAndLogEx(INFO, "Trying " _YELLOW_("%i") " passwords in range [0x%08x, 0x%08x]"
                       , no_iter
                       , etd.password1
                       , etd.password2
                      );
-    } else if (etd.bruteforce_mode == BRUTEFORCE_MODE_CHARSET) {
+    } else if (etd.bruteforce_mode == BF_MODE_CHARSET) {
         unsigned int digits = 0;
 
-        if (etd.bruteforce_charset & CHARSET_DIGITS)
-            digits += CHARSET_DIGITS_SIZE;
+        if (etd.bruteforce_charset & BF_CHARSET_DIGITS)
+            digits += BF_CHARSET_DIGITS_SIZE;
 
-        if (etd.bruteforce_charset & CHARSET_UPPERCASE)
-            digits += CHARSET_UPPERCASE_SIZE;
+        if (etd.bruteforce_charset & BF_CHARSET_UPPERCASE)
+            digits += BF_CHARSET_UPPERCASE_SIZE;
 
         no_iter = pow(digits, 4);
     }
@@ -467,7 +470,10 @@ int CmdEM4x50Brute(const char *Cmd) {
 
     dur_s -= dur_h * 3600 + dur_m * 60;
 
-    PrintAndLogEx(INFO, "Estimated duration: %ih %im %is", dur_h, dur_m, dur_s);
+    if (no_iter > 0)
+        PrintAndLogEx(INFO, "Estimated duration: %ih %im %is", dur_h, dur_m, dur_s);
+    else
+        PrintAndLogEx(INFO, "Estimated duration: unknown");
 
     // start
     clearCommandBuffer();
@@ -1005,8 +1011,10 @@ int CmdEM4x50WritePwd(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    if (resp.status == PM3_ETEAROFF)
+    if (resp.status == PM3_ETEAROFF) {
+        PrintAndLogEx(INFO, "Tear off triggered");
         return PM3_SUCCESS;
+    }
 
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Writing password ( " _RED_("fail") " )");
@@ -1231,7 +1239,7 @@ int CmdEM4x50Sim(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_SIM, (uint8_t *)&password, sizeof(password));
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or press " _GREEN_("<Enter>") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
 
     PacketResponseNG resp;
     // init to ZERO
@@ -1285,9 +1293,9 @@ static command_t CommandTable[] = {
     {"wrpwd",   CmdEM4x50WritePwd,   IfPm3EM4x50,     "Change EM4x50 password"},
     {"wipe",    CmdEM4x50Wipe,       IfPm3EM4x50,     "Wipe EM4x50 tag"},
     {"-----------", CmdHelp,         AlwaysAvailable, "--------------------- " _CYAN_("simulation") " ---------------------"},
-    {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "Upload EM4x50 dump to emulator memory"},
+    {"eload",  CmdEM4x50ELoad,       IfPm3EM4x50,     "Upload file into emulator memory"},
     {"esave",  CmdEM4x50ESave,       IfPm3EM4x50,     "Save emulator memory to file"},
-    {"eview",  CmdEM4x50EView,       IfPm3EM4x50,     "View EM4x50 content in emulator memory"},
+    {"eview",  CmdEM4x50EView,       IfPm3EM4x50,     "View emulator memory"},
     {"sim",    CmdEM4x50Sim,         IfPm3EM4x50,     "Simulate EM4x50 tag"},
     {NULL, NULL, NULL, NULL}
 };

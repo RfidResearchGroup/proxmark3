@@ -510,17 +510,17 @@ void *computing_process(void *arg) {
     a->slice = wu.id + 1;
 
     if (ctx->queue_ctx.queue_type == QUEUE_TYPE_RANDOM) {
-        float progress = 100.0 - (((wu.rem + 1) * 100.0) / wu.max);
 #if DEBUGME > 0
-        printf("[%zu] Slice %zu (off %zu), max %zu, remain %zu slice(s)\n", z, wu.id + 1, wu.off, wu.max, wu.rem);
+        printf("[%zu] Slice %5zu (off %6zu), max %5zu, remain %5zu slice(s)\n", z, wu.id + 1, wu.off, wu.max, wu.rem);
 #else
-        printf("\r[%zu] Slice %zu/%zu (%zu remain) ( %2.1f%% )", z, wu.id + 1, wu.max, wu.rem, progress);
+        float progress = 100.0 - (((wu.rem + 1) * 100.0) / wu.max);
+        printf("\r[%zu] Slice %5zu/%5zu (%5zu remain) ( %2.1f%% )", z, wu.id + 1, wu.max, wu.rem, progress);
 #endif // DEBUGME
     } else {
-        float progress = (((wu.id + 1) * 100.0) / wu.max);
 #if DEBUGME > 0
         printf("[%zu] Slice %zu/%zu, off %zu\n", z, wu.id + 1, wu.max, wu.off);
 #else
+        float progress = (((wu.id + 1) * 100.0) / wu.max);
         printf("\r[%zu] Slice %zu/%zu ( %2.1f%% )", z, wu.id + 1, wu.max, progress);
 #endif // DEBUGME
     }
@@ -588,7 +588,7 @@ void *computing_process_async(void *arg) {
 
     if (status == TH_START) {
 #if TDEBUG >= 1
-        printf("[%s][%zu] plat id %d, uid %u, aR2 %u, nR1 %u, nR2 %u, Initial status: %s\n", __func__, z, ctx->id_platform, uid, aR2, nR1, nR2, thread_status_strdesc(status));
+        printf("[%s][%zu] uid %u, aR2 %u, nR1 %u, nR2 %u, Initial status: %s\n", __func__, z, uid, aR2, nR1, nR2, thread_status_strdesc(status));
 #endif
         status = TH_WAIT;
         // proceed to next
@@ -665,17 +665,17 @@ void *computing_process_async(void *arg) {
             a->slice = wu.id + 1;
 
             if (ctx->queue_ctx.queue_type == QUEUE_TYPE_RANDOM) {
-                float progress = 100.0 - (((wu.rem + 1) * 100.0) / wu.max);
 #if DEBUGME > 0
-                printf("[%zu] Slice %zu (off %zu), max %zu, remain %zu slice(s)\n", z, wu.id + 1, wu.off, wu.max, wu.rem);
+                printf("[%zu] Slice %5zu (off %6zu), max %5zu, remain %5zu slice(s)\n", z, wu.id + 1, wu.off, wu.max, wu.rem);
 #else
-                printf("\r[%zu] Slice %zu/%zu (%zu remain) ( %2.1f%% )", z, wu.id + 1, wu.max, wu.rem, progress);
+                float progress = 100.0 - (((wu.rem + 1) * 100.0) / wu.max);
+                printf("\r[%zu] Slice %5zu/%5zu (%5zu remain) ( %2.1f%% )", z, wu.id + 1, wu.max, wu.rem, progress);
 #endif // DEBUGME
             } else {
-                float progress = (((wu.id + 1) * 100.0) / wu.max);
 #if DEBUGME > 0
                 printf("[%zu] Slice %zu/%zu, off %zu\n", z, wu.id + 1, wu.max, wu.off);
 #else
+                float progress = (((wu.id + 1) * 100.0) / wu.max);
                 printf("\r[%zu] Slice %zu/%zu ( %2.1f%% )", z, wu.id + 1, wu.max, progress);
 #endif // DEBUGME
             }
@@ -772,7 +772,11 @@ void *computing_process_async(void *arg) {
                         a->quit = true;
                         pthread_mutex_unlock(&a->thread_ctx->thread_mutexs[z]);
 #if TDEBUG >= 1
+#ifdef _ISOC99_SOURCE
+                        printf("[%s][%zu] master, I found the key ! state %U64x, slice %zu\n", __func__, z, a->s, a->slice + 1);
+#else
                         printf("[%s][%zu] master, I found the key ! state %" STR(OFF_FORMAT_U) ", slice %zu\n", __func__, z, a->s, a->slice + 1);
+#endif
                         fflush(stdout);
 #endif
 

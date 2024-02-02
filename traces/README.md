@@ -94,6 +94,7 @@
 |hf_14a_mfu-sim.trace                     |Trace seen from a Proxmark3 simulating a MFU|
 |hf_14b_reader.trace                      |Execution of `hf 14b reader` against a card|
 |hf_14b_cryptorf_select.trace             |Sniff of libnfc select / anticollision ofa cryptoRF tag|
+|hf_14b_xerox_info.trace                  |Execution of `hf xerox info` against a tag|
 |hf_15_reader.trace                       |Execution of `hf 15 reader` against a card|
 |hf_mfp_mad_sl3.trace                     |`hf mfp mad`|
 |hf_mfp_read_sc0_sl3.trace                |`hf mfp rdsc --sn 0 -k ...`|

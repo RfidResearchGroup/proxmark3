@@ -1011,7 +1011,7 @@ int main(int argc, char **argv) {
     // at this point z is the max value, still usefulfor free's
 
 #if DEBUGME > 0
-    printf("[debug] Lower profile between %u device(s) is: %d\n", selected_devices_cnt, profile);
+    printf("[debug] Lower profile between %zu device(s) is: %d\n", selected_devices_cnt, profile);
 #endif
 
     uint32_t max_step = profiles[profile][0];
@@ -1102,9 +1102,9 @@ int main(int argc, char **argv) {
     if (ctx.thread_sched_type == THREAD_TYPE_ASYNC) {
         size_t th_status_err = 0;
         for (z = 0; z < thread_count; z++) {
-            pthread_mutex_lock(&thread_mutexs[z]);
+            pthread_mutex_lock(&th_ctx.thread_mutexs[z]);
             thread_status_t tmp = t_arg[z].status;
-            pthread_mutex_unlock(&thread_mutexs[z]);
+            pthread_mutex_unlock(&th_ctx.thread_mutexs[z]);
 
             if (tmp != TH_START) {
                 printf("! Warning: Thread %zu is not in TH_START, found in %s\n", z, thread_status_strdesc(tmp));

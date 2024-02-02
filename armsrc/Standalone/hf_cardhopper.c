@@ -27,7 +27,18 @@
 #include "ticks.h"
 #include "util.h"
 #include "usart.h"
+#include "cmd.h"
+#include "usb_cdc.h"
 
+#ifdef CARDHOPPER_USB
+#define cardhopper_write usb_write
+#define cardhopper_read usb_read_ng
+#define cardhopper_data_available usb_poll_validate_length
+#else
+#define cardhopper_write usart_writebuffer_sync
+#define cardhopper_read usart_read_ng
+#define cardhopper_data_available usart_rxdata_available
+#endif
 
 void ModInfo(void) {
     DbpString("  HF - Long-range relay 14a over serial<->IP -  a.k.a. CardHopper (Sam Haskins)");
@@ -64,6 +75,15 @@ static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *, uint8_t *, int
 
 
 void RunMod(void) {
+    // Ensure debug logs don't polute stream
+#ifdef CARDHOPPER_USB
+    g_reply_via_usb = false;
+    g_reply_via_fpc = true;
+#else
+    g_reply_via_usb = true;
+    g_reply_via_fpc = false;
+#endif
+
     StandAloneMode();
     DbpString(_CYAN_("[@]") " CardHopper has started - waiting for mode");
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
@@ -81,6 +101,11 @@ void RunMod(void) {
 
         packet_t modeRx = { 0 };
         read_packet(&modeRx);
+
+        if (BUTTON_PRESS()) {
+            DbpString(_CYAN_("[@]") " Button pressed - Breaking from mode loop");
+            break;
+        }
 
         if (memcmp(magicREAD, modeRx.dat, sizeof(magicREAD)) == 0) {
             DbpString(_CYAN_("[@]") " I am a READER. I talk to a CARD.");
@@ -118,6 +143,20 @@ static void become_reader(void) {
 
         read_packet(rx);
         if (memcmp(magicRSRT, rx->dat, sizeof(magicRSRT)) == 0) break;
+
+        if (rx->dat[0] == ISO14443A_CMD_RATS && rx->len == 4) {
+            // got RATS from reader, reset the card
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+            SpinDelay(40);
+            iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
+
+            // re-select the card without RATS to allow replaying the real RATS
+            int ret = iso14443a_select_card(NULL, NULL, NULL, true, 0, true);
+            if (ret && ret != 1) {
+                Dbprintf(_RED_("[!]") " Error selecting card: %d", ret);
+                continue;
+            }
+        }
 
         memcpy(toCard, rx->dat, rx->len);
         AddCrc14A(toCard, rx->len);
@@ -191,12 +230,15 @@ static void become_card(void) {
         WDT_HIT();
 
         if (!GetIso14443aCommandFromReaderInterruptible(fromReaderDat, parity, &fromReaderLen)) {
-            if (usart_rxdata_available()) {
+            if (cardhopper_data_available()) {
                 read_packet(rx);
                 if (memcmp(magicRSRT, rx->dat, sizeof(magicRSRT)) == 0) {
-                    DbpString(_CYAN_("[@]") " Breaking from reader loop");
+                    DbpString(_CYAN_("[@]") " Breaking from emulation loop");
                     break;
                 }
+            } else if (BUTTON_PRESS()) {
+                DbpString(_CYAN_("[@]") " Button pressed - Breaking from emulation loop");
+                break;
             }
             continue;
         }
@@ -205,9 +247,13 @@ static void become_card(void) {
         if (try_use_canned_response(fromReaderDat, fromReaderLen, canned)) continue;
 
         // Option 2: Reply with our cooked ATS
+        bool no_reply = false;
         if (fromReaderDat[0] == ISO14443A_CMD_RATS && fromReaderLen == 4) {
             reply_with_packet(&ats);
-            continue;
+
+            // fallthrough to still send the RATS to the card so it can learn the CID
+            // but don't send the reply since we've already sent our cooked ATS
+            no_reply = true;
         }
 
         // Option 3: Relay the message
@@ -216,7 +262,9 @@ static void become_card(void) {
         write_packet(tx);
 
         read_packet(rx);
-        reply_with_packet(rx);
+        if (!no_reply && rx->len > 0) {
+            reply_with_packet(rx);
+        }
     }
 }
 
@@ -268,28 +316,71 @@ static void cook_ats(packet_t *ats, uint8_t fwi, uint8_t sfgi) {
         return;
     }
 
-    // If the ATS is too short (unusual), pad it to length with hopefully-sensible data
-    // Might be better for the phone side to do this tbh
-    if (ats->len == 1) {
-        ats->len = 4;
-        ats->dat[0] = 0x04;
-        ats->dat[1] = 0x78;
-        ats->dat[2] = 0x77;
-        // ats->dat[3] = 0x80;
-    } else if (ats->len == 2) {
-        ats->len = 4;
-        ats->dat[0] = 0x04;
-        ats->dat[2] = 0x77;
-        // ats->dat[3] = 0x80;
-    } else if (ats->len == 3) {
-        ats->len = 4;
-        ats->dat[0] = 0x04;
-        // ats->dat[3] = 0x80;
+    uint8_t t0 = 0x70; // TA, TB, and TC transmitted, FSCI nibble set later
+    uint8_t ta = 0x80; // only 106kbps rate supported, and must be same in both directions - PM3 doesn't support any other rates
+    uint8_t tb = (fwi << 4) | sfgi; // cooked value
+    uint8_t tc = 0;
+
+    uint8_t historical_len = 0;
+    uint8_t *historical_bytes;
+    if (ats->len > 1) {
+        // T0 byte exists when ats length > 1
+
+        uint8_t orig_t0 = ats->dat[1];
+        // Update FSCI in T0 from the received ATS
+        t0 |= orig_t0 & 0x0F;
+
+        uint8_t len = ats->len - 2;
+        uint8_t *orig_ats_ptr = &ats->dat[2];
+        if (orig_t0 & 0x10) {
+            // TA present
+            if (len < 1) {
+                DbpString(_RED_("[!]") " Malformed ATS - unable to cook; things may go wrong!");
+                return;
+            }
+            orig_ats_ptr++;
+            len--;
+        }
+        if (orig_t0 & 0x20) {
+            // TB present
+            if (len < 1) {
+                DbpString(_RED_("[!]") " Malformed ATS - unable to cook; things may go wrong!");
+                return;
+            }
+            orig_ats_ptr++;
+            len--;
+        }
+        if (orig_t0 & 0x40) {
+            // TC present, extract protocol parameters
+            if (len < 1) {
+                DbpString(_RED_("[!]") " Malformed ATS - unable to cook; things may go wrong!");
+                return;
+            }
+            tc = *orig_ats_ptr;
+            orig_ats_ptr++;
+            len--;
+        }
+
+        historical_bytes = orig_ats_ptr;
+        historical_len = len;
+    } else {
+        // T0 byte missing, update FSCI in T0 to the default value of 2
+        t0 |= 0x02;
     }
 
-    // Set the SFGI as well as the FWI - needed for some older readers (firmware revs?)
-    uint8_t cookedTB0 = (fwi << 4) | sfgi;
-    ats->dat[3] = cookedTB0;
+    packet_t cooked_ats = { 0 };
+    cooked_ats.len = 5 + historical_len;
+    cooked_ats.dat[0] = cooked_ats.len;
+    cooked_ats.dat[1] = t0;
+    cooked_ats.dat[2] = ta;
+    cooked_ats.dat[3] = tb;
+    cooked_ats.dat[4] = tc;
+
+    if (historical_len > 0) {
+        memcpy(cooked_ats.dat + 5, historical_bytes, historical_len);
+    }
+
+    memcpy(ats, &cooked_ats, sizeof(packet_t));
 }
 
 
@@ -325,17 +416,18 @@ static bool try_use_canned_response(const uint8_t *dat, int len, tag_response_in
         }
     }
 
-    if (dat[0] == ISO14443A_CMD_PPS) {
+    // high nibble of PPS is PPS CMD, low nibble of PPS is CID
+    if ((dat[0] & 0xF0) == ISO14443A_CMD_PPS) {
         EmSendPrecompiledCmd(canned + RESP_INDEX_PPS);
         return true;
     }
 
     // No response is expected to these 14a commands
-    if ((dat[0] == 0xf2 && len == 4) || dat[0] == 0xfa) return true;
+    if ((dat[0] & 0xF7) == ISO14443A_CMD_WTX) return true; // bit 0x08 indicates CID following
     if (dat[0] == ISO14443A_CMD_HALT && len == 4) return true;
 
     // Ignore Apple ECP2 polling
-    if (dat[0] == 0x6a) return true;
+    if (dat[0] == ECP_HEADER) return true;
 
     return false;
 }
@@ -359,23 +451,48 @@ static void reply_with_packet(packet_t *packet) {
 
 
 static void read_packet(packet_t *packet) {
-    while (!usart_rxdata_available()) {
+    while (!cardhopper_data_available()) {
         WDT_HIT();
         SpinDelayUs(100);
+        if (BUTTON_PRESS()) {
+            DbpString(_CYAN_("[@]") " Button pressed while waiting for packet - aborting");
+            return;
+        }
     }
 
-    uint32_t dataReceived = usart_read_ng((uint8_t *) packet, sizeof(packet_t)) - 1;
+    cardhopper_read((uint8_t *) &packet->len, 1);
+
+    uint32_t dataReceived = 0;
     while (dataReceived != packet->len) {
-        while (!usart_rxdata_available()) WDT_HIT();
+        while (!cardhopper_data_available()) {
+            WDT_HIT();
+            if (BUTTON_PRESS()) {
+                DbpString(_CYAN_("[@]") " Button pressed while reading packet - aborting");
+                return;
+            }
+        }
 
-        dataReceived += usart_read_ng(packet->dat + dataReceived, 255 - dataReceived);
+        dataReceived += cardhopper_read(packet->dat + dataReceived, packet->len - dataReceived);
+
+        if (packet->len == 0x50 && dataReceived >= sizeof(PacketResponseNGPreamble) && packet->dat[0] == 0x4D && packet->dat[1] == 0x33 && packet->dat[2] == 0x61) {
+            // PM3 NG packet magic
+            DbpString(_CYAN_("[@]") " PM3 NG packet recieved - ignoring");
+
+            // clear any remaining buffered data
+            while (cardhopper_data_available()) {
+                cardhopper_read(packet->dat, 255);
+            }
+
+            packet->len = 0;
+            return;
+        }
     }
-    usart_writebuffer_sync(magicACK, sizeof(magicACK));
+    cardhopper_write(magicACK, sizeof(magicACK));
 }
 
 
 static void write_packet(packet_t *packet) {
-    usart_writebuffer_sync((uint8_t *) packet, packet->len + 1);
+    cardhopper_write((uint8_t *) packet, packet->len + 1);
 }
 
 
@@ -394,7 +511,7 @@ static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *received, uint8_
         WDT_HIT();
 
         if (flip == 3) {
-            if (usart_rxdata_available())
+            if (cardhopper_data_available() || BUTTON_PRESS())
                 return false;
 
             flip = 0;

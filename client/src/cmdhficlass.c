@@ -834,7 +834,7 @@ static int CmdHFiClassSim(const char *Cmd) {
 
         case ICLASS_SIM_MODE_READER_ATTACK: {
             PrintAndLogEx(INFO, "Starting iCLASS sim 2 attack (elite mode)");
-            PrintAndLogEx(INFO, "press " _YELLOW_("`enter`") " to cancel");
+            PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort");
             PacketResponseNG resp;
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 1, csns, NUM_CSNS * PICOPASS_BLOCK_SIZE);
@@ -885,7 +885,7 @@ static int CmdHFiClassSim(const char *Cmd) {
         case ICLASS_SIM_MODE_READER_ATTACK_KEYROLL: {
             // reader in key roll mode,  when it has two keys it alternates when trying to verify.
             PrintAndLogEx(INFO, "Starting iCLASS sim 4 attack (elite mode, reader in key roll mode)");
-            PrintAndLogEx(INFO, "press Enter to cancel");
+            PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort");
             PacketResponseNG resp;
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, NUM_CSNS, 1, csns, NUM_CSNS * PICOPASS_BLOCK_SIZE);
@@ -952,7 +952,7 @@ static int CmdHFiClassSim(const char *Cmd) {
         case ICLASS_SIM_MODE_FULL:
         default: {
             PrintAndLogEx(INFO, "Starting iCLASS simulation");
-            PrintAndLogEx(INFO, "press " _YELLOW_("`button`") " to cancel");
+            PrintAndLogEx(INFO, "Press " _GREEN_("`pm3 button`") " to abort");
             uint8_t numberOfCSNs = 0;
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, csn, 8);
@@ -1009,7 +1009,7 @@ int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
             } else {
 
                 if (r->status == FLAG_ICLASS_NULL || resp.status == PM3_ERFTRANS) {
-                    if (verbose) PrintAndLogEx(WARNING, "iCLASS / Picopass card select failed ( %d )", r->status);
+                    if (verbose) PrintAndLogEx(WARNING, "iCLASS / Picopass card select failed ( %d , %d)", r->status, resp.status);
                     res = PM3_EOPABORTED;
                     break;
                 }
@@ -1059,7 +1059,7 @@ static int CmdHFiClassReader(const char *Cmd) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
-    return read_iclass_csn(cm, true, shallow_mod);
+    return read_iclass_csn(cm, false, shallow_mod);
 }
 
 static int CmdHFiClassELoad(const char *Cmd) {
@@ -4648,7 +4648,7 @@ static command_t CommandTable[] = {
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
     {"-----------", CmdHelp,                    IfPm3Iclass,     "-------------------- " _CYAN_("simulation") " -------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
-    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Load Picopass / iCLASS dump file into emulator memory"},
+    {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Upload file into emulator memory"},
     {"esave",       CmdHFiClassESave,           IfPm3Iclass,     "Save emulator memory to file"},
     {"esetblk",     CmdHFiClassESetBlk,         IfPm3Iclass,     "Set emulator memory block data"},
     {"eview",       CmdHFiClassEView,           IfPm3Iclass,     "View emulator memory"},

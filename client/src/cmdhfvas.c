@@ -418,7 +418,7 @@ static int CmdVASReader(const char *Cmd) {
         arg_str0("f", "file", "<fn>", "path to terminal private key file"),
         arg_str0(NULL, "url", "<str>", "a URL to provide to the mobile device"),
         arg_lit0("@", NULL, "continuous mode"),
-        arg_lit0("v", "verbose", "log additional information"),
+        arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

@@ -22,6 +22,9 @@
 #include "pm3_cmd.h"
 #include "util.h" // nbytes
 
+#define BIGBUF_ALIGN_BYTES (4)
+#define BIGBUF_ALIGN_MASK  (0xFFFF + 1 - BIGBUF_ALIGN_BYTES)
+
 extern uint32_t _stack_start[], __bss_end__[];
 
 // BigBuf is the large multi-purpose buffer, typically used to hold A/D samples or traces.
@@ -69,8 +72,6 @@ static dmabuf8_t dma_8 = {
     .buf = NULL
 };
 
-
-
 // trace related variables
 static uint32_t trace_len = 0;
 static bool tracing = true;
@@ -94,11 +95,16 @@ uint32_t BigBuf_get_size(void) {
 // get the address of the emulator memory. Allocate part of Bigbuf for it, if not yet done
 uint8_t *BigBuf_get_EM_addr(void) {
     // not yet allocated
-    if (emulator_memory == NULL)
-        emulator_memory = BigBuf_malloc(CARD_MEMORY_SIZE);
-
+    if (emulator_memory == NULL) {
+        emulator_memory = BigBuf_calloc(CARD_MEMORY_SIZE);
+    }
     return emulator_memory;
 }
+
+uint32_t BigBuf_get_hi(void) {
+    return s_bigbuf_hi;
+}
+
 /*
 uint32_t BigBuf_get_EM_size(void) {
     return CARD_MEMORY_SIZE;
@@ -114,8 +120,9 @@ void BigBuf_Clear(void) {
 void BigBuf_Clear_ext(bool verbose) {
     memset(BigBuf, 0, s_bigbuf_size);
     clear_trace();
-    if (verbose)
+    if (verbose) {
         Dbprintf("Buffer cleared (%i bytes)", s_bigbuf_size);
+    }
 }
 
 void BigBuf_Clear_EM(void) {
@@ -129,10 +136,12 @@ void BigBuf_Clear_keep_EM(void) {
 // allocate a chunk of memory from BigBuf. We allocate high memory first. The unallocated memory
 // at the beginning of BigBuf is always for traces/samples
 uint8_t *BigBuf_malloc(uint16_t chunksize) {
-    if (s_bigbuf_hi < chunksize)
-        return NULL; // no memory left
+    chunksize = (chunksize + BIGBUF_ALIGN_BYTES - 1) & BIGBUF_ALIGN_MASK; // round up to next multiple of 4
 
-    chunksize = (chunksize + 3) & 0xfffc; // round to next multiple of 4
+    if (s_bigbuf_hi < chunksize) {
+        return NULL; // no memory left
+    }
+
     s_bigbuf_hi -= chunksize;  // aligned to 4 Byte boundary
     return (uint8_t *)BigBuf + s_bigbuf_hi;
 }
@@ -142,7 +151,7 @@ uint8_t *BigBuf_malloc(uint16_t chunksize) {
 uint8_t *BigBuf_calloc(uint16_t chunksize) {
     uint8_t *mem = BigBuf_malloc(chunksize);
     if (mem != NULL) {
-        memset(mem, 0x00, chunksize);
+        memset(mem, 0x00, ((chunksize + BIGBUF_ALIGN_BYTES - 1) & BIGBUF_ALIGN_MASK)); // round up to next multiple of 4
     }
     return mem;
 }
@@ -200,7 +209,7 @@ void BigBuf_print_status(void) {
 
 // return the maximum trace length (i.e. the unallocated size of BigBuf)
 uint16_t BigBuf_max_traceLen(void) {
-    return s_bigbuf_hi;
+    return s_bigbuf_hi & BIGBUF_ALIGN_MASK;
 }
 
 void clear_trace(void) {
@@ -241,7 +250,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
     uint8_t *trace = BigBuf_get_addr();
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + trace_len);
 
-    uint32_t num_paritybytes = (iLen - 1) / 8 + 1; // number of valid paritybytes in *parity
+    uint16_t num_paritybytes = (iLen - 1) / 8 + 1; // number of valid paritybytes in *parity
 
     // Return when trace is full
     if (TRACELOG_HDR_LEN + iLen + num_paritybytes >= BigBuf_max_traceLen() - trace_len) {
@@ -262,7 +271,7 @@ bool RAMFUNC LogTrace(const uint8_t *btBytes, uint16_t iLen, uint32_t timestamp_
             Dbprintf("Error in LogTrace: duration too long for 16 bits encoding: 0x%08x   start: 0x%08x end: 0x%08x", duration, timestamp_start, timestamp_end);
         }
         */
-        duration = 0;
+        duration = 0xFFFF;
     }
 
     hdr->timestamp = timestamp_start;
@@ -306,31 +315,35 @@ bool RAMFUNC LogTraceBits(const uint8_t *btBytes, uint16_t bitLen, uint32_t time
 }
 
 // Emulator memory
-uint8_t emlSet(const uint8_t *data, uint32_t offset, uint32_t length) {
+int emlSet(const uint8_t *data, uint32_t offset, uint32_t length) {
     uint8_t *mem = BigBuf_get_EM_addr();
     if (offset + length <= CARD_MEMORY_SIZE) {
         memcpy(mem + offset, data, length);
-        return 0;
+        return PM3_SUCCESS;
     }
+
     Dbprintf("Error, trying to set memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
-    return 1;
+    return PM3_EOUTOFBOUND;
 }
-uint8_t emlGet(uint8_t *out, uint32_t offset, uint32_t length) {
+
+int emlGet(uint8_t *out, uint32_t offset, uint32_t length) {
     uint8_t *mem = BigBuf_get_EM_addr();
     if (offset + length <= CARD_MEMORY_SIZE) {
         memcpy(out, mem + offset, length);
-        return 0;
+        return PM3_SUCCESS;
     }
+
     Dbprintf("Error, trying to read memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
-    return 1;
+    return PM3_EOUTOFBOUND;
 }
+
 
 // get the address of the ToSend buffer. Allocate part of Bigbuf for it, if not yet done
 tosend_t *get_tosend(void) {
 
-    if (toSend.buf == NULL)
+    if (toSend.buf == NULL) {
         toSend.buf = BigBuf_malloc(TOSEND_BUFFER_SIZE);
-
+    }
     return &toSend;
 }
 
@@ -363,8 +376,9 @@ void tosend_stuffbit(int b) {
 }
 
 dmabuf16_t *get_dma16(void) {
-    if (dma_16.buf == NULL)
+    if (dma_16.buf == NULL) {
         dma_16.buf = (uint16_t *)BigBuf_malloc(DMA_BUFFER_SIZE * sizeof(uint16_t));
+    }
 
     return &dma_16;
 }
@@ -375,4 +389,3 @@ dmabuf8_t *get_dma8(void) {
 
     return &dma_8;
 }
-
