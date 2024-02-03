@@ -111,6 +111,8 @@ always @(posedge spck) if (~ncs) shift_reg <= {shift_reg[14:0], mosi};
 reg trace_enable;
 
 reg [7:0] lf_ed_threshold;
+reg [5:0] hf_edge_detect_threshold;
+reg [5:0] hf_edge_detect_threshold_high;
 
 // adjustable frequency clock
 wire [7:0] pck_cnt;
@@ -123,6 +125,12 @@ reg [11:0] conf_word;
 `else
 reg [8:0] conf_word;
 `endif
+
+initial
+begin
+    hf_edge_detect_threshold <= 7;
+    hf_edge_detect_threshold_high <= 20;
+end
 
 // We switch modes between transmitting to the 13.56 MHz tag and receiving
 // from it, which means that we must make sure that we can do so without
@@ -147,6 +155,11 @@ begin
 `else
         `FPGA_CMD_SET_CONFREG:  conf_word <= shift_reg[8:0];
         `FPGA_CMD_TRACE_ENABLE: trace_enable <= shift_reg[0];
+        `FPGA_CMD_SET_EDGE_DETECT_THRESHOLD:
+        begin
+            hf_edge_detect_threshold <= shift_reg[5:0];
+            hf_edge_detect_threshold_high <= shift_reg[11:6];
+        end
 `endif
     endcase
 end
@@ -321,7 +334,9 @@ hi_iso14443a hisn(
     .pwr_oe2    (mux2_pwr_oe2),
     .pwr_oe3    (mux2_pwr_oe3),
     .pwr_oe4    (mux2_pwr_oe4),
-    .debug      (mux2_debug)
+    .debug      (mux2_debug),
+    .edge_detect_threshold (hf_edge_detect_threshold),
+    .edge_detect_threshold_high (hf_edge_detect_threshold_high)
 );
 `endif // WITH_HF2
 

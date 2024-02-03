@@ -19,6 +19,8 @@ module hi_iso14443a(
     input ck_1356meg,
     input [7:0] adc_d,
     input [3:0] mod_type,
+    input [10:0] edge_detect_threshold,
+    input [10:0] edge_detect_threshold_high,
     input ssp_dout,
 
     output ssp_din,
@@ -212,13 +214,6 @@ reg signed [10:0] rx_mod_falling_edge_max;
 reg signed [10:0] rx_mod_rising_edge_max;
 reg curbit;
 
-`ifdef PM3ICOPYX
-`define EDGE_DETECT_THRESHOLD   3
-`else
-`define EDGE_DETECT_THRESHOLD   7
-`endif
-`define EDGE_DETECT_THRESHOLDHIGH   20
-
 always @(negedge adc_clk)
 begin
     if(negedge_cnt[3:0] == mod_detect_reset_time)
@@ -226,7 +221,7 @@ begin
         if (mod_type == `FPGA_HF_ISO14443A_SNIFFER)
         begin
             // detect modulation signal: if modulating, there must have been a falling AND a rising edge
-            if ((rx_mod_falling_edge_max > `EDGE_DETECT_THRESHOLDHIGH) && (rx_mod_rising_edge_max < -`EDGE_DETECT_THRESHOLDHIGH))
+            if ((rx_mod_falling_edge_max > edge_detect_threshold_high) && (rx_mod_rising_edge_max < -edge_detect_threshold_high))
                 curbit <= 1'b1; // modulation
             else
                 curbit <= 1'b0; // no modulation
@@ -234,7 +229,7 @@ begin
         else
         begin
             // detect modulation signal: if modulating, there must have been a falling AND a rising edge
-            if ((rx_mod_falling_edge_max > `EDGE_DETECT_THRESHOLD) && (rx_mod_rising_edge_max < -`EDGE_DETECT_THRESHOLD))
+            if ((rx_mod_falling_edge_max > edge_detect_threshold) && (rx_mod_rising_edge_max < -edge_detect_threshold))
                 curbit <= 1'b1; // modulation
             else
                 curbit <= 1'b0; // no modulation

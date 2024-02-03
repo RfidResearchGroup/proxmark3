@@ -640,6 +640,8 @@ typedef struct {
 #define CMD_HF_ISO14443A_GET_CONFIG                                       0x03B1
 #define CMD_HF_ISO14443A_SET_CONFIG                                       0x03B2
 
+#define CMD_HF_ISO14443A_SET_THRESHOLDS                                   0x03B8
+
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING                                        0x0400
 #define CMD_MEASURE_ANTENNA_TUNING_HF                                     0x0401

@@ -743,6 +743,45 @@ static int CmdSetDivisor(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdSetHFThreshold(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw sethfthresh",
+                  "Set thresholds in HF/14a and Legic mode.",
+                  "hw sethfthresh -t 7 -i 20 -l 8"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("t", "thresh", "<dec>", "threshold, used in 14a reader mode (def 7)"),
+        arg_int0("i", "high", "<dec>", "high threshold, used in 14a sniff mode (def 20)"),
+        arg_int0("l", "legic", "<dec>", "threshold used in Legic mode (def 8)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    struct {
+        uint8_t threshold;
+        uint8_t threshold_high;
+        uint8_t legic_threshold;
+    } PACKED params;
+
+    params.threshold = arg_get_int_def(ctx, 1, 7);
+    params.threshold_high = arg_get_int_def(ctx, 2, 20);
+    params.legic_threshold = arg_get_int_def(ctx, 3, 8);
+    CLIParserFree(ctx);
+
+    if ((params.threshold < 1) || (params.threshold > 63) || (params.threshold_high < 1) || (params.threshold_high > 63)) {
+        PrintAndLogEx(ERR, "Thresholds must be between " _YELLOW_("1") " and " _YELLOW_("63"));
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443A_SET_THRESHOLDS, (uint8_t *)&params, sizeof(params));
+    PrintAndLogEx(SUCCESS, "Thresholds set.");
+    return PM3_SUCCESS;
+}
+
 static int CmdSetMux(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -1195,6 +1234,7 @@ static command_t CommandTable[] = {
     {"readmem",       CmdReadmem,      IfPm3Present,    "Read from processor flash"},
     {"reset",         CmdReset,        IfPm3Present,    "Reset the Proxmark3"},
     {"setlfdivisor",  CmdSetDivisor,   IfPm3Present,    "Drive LF antenna at 12MHz / (divisor + 1)"},
+    {"sethfthresh",   CmdSetHFThreshold, IfPm3Present,   "Set thresholds in HF/14a mode"},
     {"setmux",        CmdSetMux,       IfPm3Present,    "Set the ADC mux to a specific value"},
     {"standalone",    CmdStandalone,   IfPm3Present,    "Jump to the standalone mode"},
     {"status",        CmdStatus,       IfPm3Present,    "Show runtime status information about the connected Proxmark3"},

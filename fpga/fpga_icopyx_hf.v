@@ -127,6 +127,10 @@ hi_simulate hs(
 );
 
 //   2 - HF ISO14443-A
+
+`define EDGE_DETECT_THRESHOLD   3
+`define EDGE_DETECT_THRESHOLDHIGH   20
+
 hi_iso14443a hisn(
     .ck_1356meg (ck_1356meg),
     .pwr_lo     (hisn_pwr_lo),
@@ -142,7 +146,9 @@ hi_iso14443a hisn(
     .ssp_dout   (ssp_dout),
     .ssp_clk    (hisn_ssp_clk),
     .debug      (hisn_debug),
-    .mod_type   (minor_mode)
+    .mod_type   (minor_mode),
+    .edge_detect_threshold (`EDGE_DETECT_THRESHOLD),
+    .edge_detect_threshold_high (`EDGE_DETECT_THRESHOLDHIGH)
 );
 
 //   3 - HF sniff
