@@ -87,12 +87,12 @@ static int derive_app_key(uint8_t *uid, uint8_t *app_key) {
         return PM3_EINVARG;
     }
 
-    /*
-        c = b'\x88' + uid
-        ch, cl = c[0:4], c[4:8]
-        payload = (ch + cl + cl + ch) * 2
-        AES.new(ICT_DESFIRE_MASTER_APPKEY, AES.MODE_CBC, iv=b'\0'*16).decrypt(payload)[16:]
-    */
+/*
+    c = b'\x88' + uid
+    ch, cl = c[0:4], c[4:8]
+    payload = (ch + cl + cl + ch) * 2
+    AES.new(ICT_DESFIRE_MASTER_APPKEY, AES.MODE_CBC, iv=b'\0'*16).decrypt(payload)[16:]
+*/
     uint8_t input[] = {0x88, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     memcpy(input + 1, uid, 7);
 
@@ -105,16 +105,16 @@ static int derive_app_key(uint8_t *uid, uint8_t *app_key) {
 
     uint8_t iv[16] = {0};
     mbedtls_aes_context aes;
-    mbedtls_aes_init(&aes);
+    mbedtls_aes_init(&aes);    
     if (mbedtls_aes_setkey_enc(&aes, key, 128)) {
-        return PM3_ESOFT;
+        return PM3_ESOFT;    
     }
-
+   
     uint8_t output[8];
     if (mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, sizeof(input), iv, input, output)) {
         return PM3_ESOFT;
     }
-    mbedtls_aes_free(&aes);
+    mbedtls_aes_free(&aes);    
     memcpy(app_key, output, sizeof(output));
     return PM3_SUCCESS;
 }
@@ -133,21 +133,21 @@ static int diversify_mifare_key(uint8_t *uid, uint8_t *app_key) {
     num_to_bytes(big, 4, input + 4);
 
     uint8_t key[AES_KEY_LEN];
-    memset(key, 0, sizeof(key));
+    memset(key, 0 , sizeof(key));
 //    memcpy(key, ICT_DESFIRE_FILEKEY, AES_KEY_LEN);
 
     uint8_t iv[16] = {0};
     mbedtls_aes_context aes;
-    mbedtls_aes_init(&aes);
+    mbedtls_aes_init(&aes);    
     if (mbedtls_aes_setkey_enc(&aes, key, 128)) {
-        return PM3_ESOFT;
+        return PM3_ESOFT;    
     }
-
+   
     uint8_t output[8];
     if (mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, sizeof(input), iv, input, output)) {
         return PM3_ESOFT;
     }
-    mbedtls_aes_free(&aes);
+    mbedtls_aes_free(&aes);    
     memcpy(app_key, output, sizeof(output));
     return PM3_SUCCESS;
 }
@@ -165,16 +165,16 @@ static int decrypt_card_sector(uint8_t *uid, uint8_t *sector_data, uint8_t len, 
 
     uint8_t iv[16] = {0};
     mbedtls_aes_context aes;
-    mbedtls_aes_init(&aes);
+    mbedtls_aes_init(&aes);    
     if (mbedtls_aes_setkey_enc(&aes, key, 128)) {
-        return PM3_ESOFT;
+        return PM3_ESOFT;    
     }
-
+   
     uint8_t output[len];
     if (mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, sizeof(input), iv, input, output)) {
         return PM3_ESOFT;
     }
-    mbedtls_aes_free(&aes);
+    mbedtls_aes_free(&aes);    
 
     memcpy(plain, output, sizeof(output));
     return PM3_SUCCESS;
@@ -184,11 +184,11 @@ static int derive_mifare_key(uint8_t *uid, const uint8_t *base_key, uint8_t *app
     if (uid == NULL || base_key == NULL || app_key == NULL) {
         return PM3_EINVARG;
     }
-
+    
     uint8_t diverse[MIFARE_KEY_SIZE];
     diversify_mifare_key(uid, diverse);
 
-    for (uint8_t i = 0; i < MIFARE_KEY_SIZE; i++) {
+    for (uint8_t i=0; i < MIFARE_KEY_SIZE; i++) {
         app_key[i] = base_key[i] ^ diverse[i];
     }
 
@@ -204,10 +204,10 @@ static int derive_mifare_key_b(uint8_t *uid, uint8_t *app_key) {
 }
 
 static int decrypt_card_file(uint8_t *card_file, uint8_t len, uint8_t *plain) {
-    if (card_file == NULL || plain == NULL) {
+     if (card_file == NULL || plain == NULL) {
         return PM3_EINVARG;
     }
-
+ 
     uint8_t input[ICT_FILE_SIZE];
     memcpy(input, card_file, len);
 
@@ -216,11 +216,11 @@ static int decrypt_card_file(uint8_t *card_file, uint8_t len, uint8_t *plain) {
 
     uint8_t iv[16] = {0};
     mbedtls_aes_context aes;
-    mbedtls_aes_init(&aes);
+    mbedtls_aes_init(&aes);    
     if (mbedtls_aes_setkey_enc(&aes, key, 128)) {
         return PM3_ESOFT;
     }
-
+   
     uint8_t output[ICT_FILE_SIZE];
     if (mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, ICT_FILE_SIZE, iv, input, output)) {
         return PM3_ESOFT;
@@ -248,16 +248,16 @@ static int encrypt_card_file(uint8_t *card_file, uint8_t len, bool padding, uint
 
     uint8_t iv[16] = {0};
     mbedtls_aes_context aes;
-    mbedtls_aes_init(&aes);
+    mbedtls_aes_init(&aes);    
     if (mbedtls_aes_setkey_enc(&aes, key, 128)) {
-        return PM3_ESOFT;
+        return PM3_ESOFT;    
     }
-
+   
     uint8_t output[ICT_FILE_SIZE];
     if (mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, ICT_FILE_SIZE, iv, input, output)) {
         return PM3_ESOFT;
     }
-    mbedtls_aes_free(&aes);
+    mbedtls_aes_free(&aes);    
     memcpy(enc, output, sizeof(output));
     return PM3_SUCCESS;
 }
@@ -266,56 +266,56 @@ static void itc_decode_card_blob(uint8_t *data, uint8_t card_type) {
     if (data == NULL) {
         return;
     }
-    /*
-        uint8_t block[16];
-        if (card_type == ICT_CT_NFC)
-            memcpy(block, data+16, sizeof(block));
-        else
-            memcpy(block, data, sizeof(block));
+/*
+    uint8_t block[16];
+    if (card_type == ICT_CT_NFC)
+        memcpy(block, data+16, sizeof(block));
+    else
+        memcpy(block, data, sizeof(block));
 
-        uint8_t bit_count = data[8];
+    uint8_t bit_count = data[8];
 
-        uint8_t wiegand[32];
+    uint8_t wiegand[32];
 
-        if (card_type == ICT_CT_DESFIRE || card_type == ICT_CT_NFC) {
-            memcpy(wiegand, data + 11, 32-11);
-        }
+    if (card_type == ICT_CT_DESFIRE || card_type == ICT_CT_NFC) {
+        memcpy(wiegand, data + 11, 32-11);
+    }
 
-        if (card_type == ICT_CT_CLASSIC) {
-            memcpy(wiegand, data + 9, 32-9);
-        }
+    if (card_type == ICT_CT_CLASSIC) {
+        memcpy(wiegand, data + 9, 32-9);
+    }
 
-        if (bit_count == 26) {
-            fc, cn = decode_wiegand_26(wiegand_payload)
-            ct = "Wiegand 26-bit"
-        }
-        if (bit_count == 34) {
-            fc, cn = decode_wiegand_34(wiegand_payload)
-            ct = "Wiegand 34-bit"
-        }else  {
-            return f"Unknown format (bitlength={bit_count})", None, None
-        }
+    if (bit_count == 26) {
+        fc, cn = decode_wiegand_26(wiegand_payload)
+        ct = "Wiegand 26-bit"
+    }
+    if (bit_count == 34) {
+        fc, cn = decode_wiegand_34(wiegand_payload)
+        ct = "Wiegand 34-bit"
+    }else  {
+        return f"Unknown format (bitlength={bit_count})", None, None
+    }
 
-        return ct, fc, cn
-        */
+    return ct, fc, cn
+    */
 }
 static void itc_encode_card_blob(uint8_t facility_code, uint16_t card_number, uint8_t bit_count) {
-    /*
-        // encode wiegand ..
-        uint8_t wiegand[] = {0,0,0,0,0};
-        if (bit_count == 26) {
-    //        wiegand_data = encode_wiegand_26(facility_code, card_number)
-        }
-        if (bit_count == 34) {
-    //        wiegand_data = encode_wiegand_34(facility_code, card_number)
-        }
+/*
+    // encode wiegand ..
+    uint8_t wiegand[] = {0,0,0,0,0};
+    if (bit_count == 26) {
+//        wiegand_data = encode_wiegand_26(facility_code, card_number)
+    }
+    if (bit_count == 34) {
+//        wiegand_data = encode_wiegand_34(facility_code, card_number)
+    }
 
-        // card binary blog
-        uint8_t blob[] = {
-            '@', 'I', 'C', 'T', 0x00, 0x80, 0x00, 0x00, bit_count, 0x00, bit_count
-        };
-        // return b'@ICT' + bytes([0,128,0,0,bit_count, 0, bit_count]) + wiegand_data
-        */
+    // card binary blog
+    uint8_t blob[] = {
+        '@', 'I', 'C', 'T', 0x00, 0x80, 0x00, 0x00, bit_count, 0x00, bit_count
+    };
+    // return b'@ICT' + bytes([0,128,0,0,bit_count, 0, bit_count]) + wiegand_data
+    */
 }
 
 static int ict_select(void) {
@@ -463,13 +463,13 @@ static int CmdHfIctRead(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHfIctCredential(const char *Cmd) {
+static int CmdHfIctCredential(const char * Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf ict credential",
-                  "Read ICT sector from tag and decode",
-                  "hf ict credential\n"
-                 );
+                "Read ICT sector from tag and decode",
+                "hf ict credential\n"
+            );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose", "verbose output"),
@@ -479,30 +479,54 @@ static int CmdHfIctCredential(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
-    uint16_t sc_size = mfNumBlocksPerSector(ICT_MIFARE_SECTOR) * MFBLOCK_SIZE;
-    uint8_t *data = calloc(sc_size, sizeof(uint8_t));
-    if (data == NULL) {
-        PrintAndLogEx(ERR, "failed to allocate memory");
-        return PM3_EMALLOC;
+    SetAPDULogging(false);
+    DropField();
+
+    iso14a_card_select_t card;
+    if (ict_select_card(&card) != PM3_SUCCESS) {
+        return PM3_ESOFT;
     }
 
-    // diversified key A?
-    int res = mfReadSector(ICT_MIFARE_SECTOR, MF_KEY_A, ICT_MIFARE_A_KEY, data);
-    if (res != PM3_SUCCESS) {
+    bool isdesfire = false;
+    if ((card.sak & 0x24) == 0x24) {
+        isdesfire = true;
+    } else if ((card.sak & 0x20) == 0x20) {
+        if (card.atqa[0] == 0x003&& card.atqa[1] == 0x40) {
+            isdesfire = true;
+        }
+    }
+
+    if (isdesfire) {
+
+        // read file in desfire application 
+        // add decrypt sector
+
+    } else {
+        uint16_t sc_size = mfNumBlocksPerSector(ICT_MIFARE_SECTOR) * MFBLOCK_SIZE;
+        uint8_t *data = calloc(sc_size, sizeof(uint8_t));
+        if (data == NULL) {
+            PrintAndLogEx(ERR, "failed to allocate memory");
+            return PM3_EMALLOC;
+        }
+
+        // diversified key A?
+        int res = mfReadSector(ICT_MIFARE_SECTOR, MF_KEY_A, ICT_MIFARE_A_KEY, data);    
+        if (res != PM3_SUCCESS) {
+            free(data);
+            return res;
+        }
+        uint8_t blocks = mfNumBlocksPerSector(ICT_MIFARE_SECTOR);
+        uint8_t start = mfFirstBlockOfSector(ICT_MIFARE_SECTOR);
+
+        mf_print_sector_hdr(ICT_MIFARE_SECTOR);
+        for (int i = 0; i < blocks; i++) {
+            mf_print_block_one(start + i, data + (i * MFBLOCK_SIZE), verbose);
+        }
+
+        // add decrypt sector
+
         free(data);
-        return res;
     }
-    uint8_t blocks = mfNumBlocksPerSector(ICT_MIFARE_SECTOR);
-    uint8_t start = mfFirstBlockOfSector(ICT_MIFARE_SECTOR);
-
-    mf_print_sector_hdr(ICT_MIFARE_SECTOR);
-    for (int i = 0; i < blocks; i++) {
-        mf_print_block_one(start + i, data + (i * MFBLOCK_SIZE), verbose);
-    }
-
-    // add decrypt sector
-
-    free(data);
     return PM3_SUCCESS;
 }
 
