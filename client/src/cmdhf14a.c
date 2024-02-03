@@ -502,7 +502,6 @@ iso14a_polling_parameters_t iso14a_get_polling_parameters(bool use_ecp, bool use
     return wupa_polling_parameters;
 }
 
-
 static int CmdHF14AReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a reader",
@@ -567,13 +566,13 @@ static int CmdHF14AReader(const char *Cmd) {
     do {
         clearCommandBuffer();
 
-        if (cm & ISO14A_USE_CUSTOM_POLLING) {
+        if ((cm & ISO14A_USE_CUSTOM_POLLING) == ISO14A_USE_CUSTOM_POLLING) {
             SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t));
         } else {
             SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
         }
 
-        if (ISO14A_CONNECT & cm) {
+        if ((cm & ISO14A_CONNECT) == ISO14A_CONNECT) {
             PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
                 DropField();
