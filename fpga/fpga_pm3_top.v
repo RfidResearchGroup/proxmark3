@@ -111,8 +111,8 @@ always @(posedge spck) if (~ncs) shift_reg <= {shift_reg[14:0], mosi};
 reg trace_enable;
 
 reg [7:0] lf_ed_threshold;
-reg [10:0] hf_edge_detect_threshold;
-reg [10:0] hf_edge_detect_threshold_high;
+reg [5:0] hf_edge_detect_threshold;
+reg [5:0] hf_edge_detect_threshold_high;
 
 // adjustable frequency clock
 wire [7:0] pck_cnt;
@@ -157,8 +157,8 @@ begin
         `FPGA_CMD_TRACE_ENABLE: trace_enable <= shift_reg[0];
         `FPGA_CMD_SET_EDGE_DETECT_THRESHOLD:
         begin
-            hf_edge_detect_threshold <= {6'b0, shift_reg[5:0]};
-            hf_edge_detect_threshold_high <= {6'b0, shift_reg[11:6]};
+            hf_edge_detect_threshold <= shift_reg[5:0];
+            hf_edge_detect_threshold_high <= shift_reg[11:6];
         end
 `endif
     endcase
