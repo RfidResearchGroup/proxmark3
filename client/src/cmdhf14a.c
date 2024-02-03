@@ -453,7 +453,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
         PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s") " ( random )", sprint_hex(card->uid, card->uidlen));
     } else {
         PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card->uid, card->uidlen));
-    }    
+    }
     PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card->atqa[1], card->atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: %02X [%" PRIu64 "]", card->sak, resp.oldarg[0]);
     if (card->ats_len < 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
@@ -2575,32 +2575,32 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     if (isMifareClassic &&
-        (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B))
-        ) {
+            (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B))
+       ) {
         PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf c*") "` commands when interacting");
     }
 
     if (isMifareClassic &&
-        ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2)
-        ) {
+            ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2)
+       ) {
         PrintAndLogEx(HINT, "Hint: Use normal `" _YELLOW_("hf mf") "` commands when interacting");
     }
 
     if (isMifareClassic &&
-        ((isMagic & MAGIC_FLAG_GEN_3) == MAGIC_FLAG_GEN_3)
-        ) {
+            ((isMagic & MAGIC_FLAG_GEN_3) == MAGIC_FLAG_GEN_3)
+       ) {
         PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gen3*") "` commands when interacting");
     }
 
     if (isMifareClassic &&
-        ((isMagic & MAGIC_FLAG_GEN_4GTU) == MAGIC_FLAG_GEN_4GTU)
-        ) {
+            ((isMagic & MAGIC_FLAG_GEN_4GTU) == MAGIC_FLAG_GEN_4GTU)
+       ) {
         PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf g*") "` commands when interacting");
     }
 
     if (isMifareClassic &&
-        ((isMagic & MAGIC_FLAG_GDM_AUTH) == MAGIC_FLAG_GDM_AUTH)
-        ) {
+            ((isMagic & MAGIC_FLAG_GDM_AUTH) == MAGIC_FLAG_GDM_AUTH)
+       ) {
         PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gdm*") "` commands when interacting");
     }
 

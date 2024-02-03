@@ -1390,7 +1390,7 @@ int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, ui
 }
 
 // try to see if card responses to "Chinese magic backdoor" commands.
-// returns flag 
+// returns flag
 uint16_t detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
 
     PacketResponseNG resp;

@@ -246,8 +246,8 @@ Check column "offline" for their availability.
 |`hf 15 wipe             `|N       |`Wipe card to zeros`
 |`hf 15 wrbl             `|N       |`Write a block`
 |`hf 15 sim              `|N       |`Fake an ISO-15693 tag`
-|`hf 15 eload            `|N       |`Load image file into emulator to be used by 'sim' command`
-|`hf 15 esave            `|N       |`Save emulator memory into image file`
+|`hf 15 eload            `|N       |`Upload file into emulator memory`
+|`hf 15 esave            `|N       |`Save emulator memory to file`
 |`hf 15 eview            `|N       |`View emulator memory`
 |`hf 15 slixwritepwd     `|N       |`Writes a password on a SLIX ISO-15693 tag`
 |`hf 15 slixeasdisable   `|N       |`Disable EAS mode on SLIX ISO-15693 tag`
@@ -378,33 +378,6 @@ Check column "offline" for their availability.
 |`hf gallagher decode    `|Y       |`Decode Gallagher credential block`
 
 
-### hf ksx6924
-
- { KS X 6924 (T-Money, Snapper+) RFIDs }
-
-|command                  |offline |description
-|-------                  |------- |-----------
-|`hf ksx6924 help        `|Y       |`This help`
-|`hf ksx6924 select      `|N       |`Select application, and leave field up`
-|`hf ksx6924 info        `|N       |`Get info about a KS X 6924 (T-Money, Snapper+) transit card`
-|`hf ksx6924 balance     `|N       |`Get current purse balance`
-|`hf ksx6924 init        `|N       |`Perform transaction initialization with Mpda`
-|`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
-
-
-### hf jooki
-
- { Jooki RFIDs...                      }
-
-|command                  |offline |description
-|-------                  |------- |-----------
-|`hf jooki help          `|Y       |`This help`
-|`hf jooki clone         `|N       |`Write a Jooki token`
-|`hf jooki decode        `|Y       |`Decode Jooki token`
-|`hf jooki encode        `|Y       |`Encode Jooki token`
-|`hf jooki sim           `|N       |`Simulate Jooki token`
-
-
 ### hf iclass
 
  { ICLASS RFIDs...                     }
@@ -426,7 +399,7 @@ Check column "offline" for their availability.
 |`hf iclass loclass      `|Y       |`Use loclass to perform bruteforce reader attack`
 |`hf iclass lookup       `|Y       |`Uses authentication trace to check for key in dictionary file`
 |`hf iclass sim          `|N       |`Simulate iCLASS tag`
-|`hf iclass eload        `|N       |`Load Picopass / iCLASS dump file into emulator memory`
+|`hf iclass eload        `|N       |`Upload file into emulator memory`
 |`hf iclass esave        `|N       |`Save emulator memory to file`
 |`hf iclass esetblk      `|N       |`Set emulator memory block data`
 |`hf iclass eview        `|N       |`View emulator memory`
@@ -438,6 +411,46 @@ Check column "offline" for their availability.
 |`hf iclass managekeys   `|Y       |`Manage keys to use with iclass commands`
 |`hf iclass permutekey   `|Y       |`Permute function from 'heart of darkness' paper`
 |`hf iclass sam          `|N       |`SAM tests`
+
+
+### hf ict
+
+ { ICT MFC/DESfire RFIDs...            }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf ict help            `|Y       |`This help`
+|`hf ict credential      `|N       |`Read ICT credential and decode`
+|`hf ict info            `|N       |`Tag information`
+|`hf ict list            `|Y       |`List ICT history`
+|`hf ict reader          `|Y       |`Act like an IS14443-a reader`
+
+
+### hf jooki
+
+ { Jooki RFIDs...                      }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf jooki help          `|Y       |`This help`
+|`hf jooki clone         `|N       |`Write a Jooki token`
+|`hf jooki decode        `|Y       |`Decode Jooki token`
+|`hf jooki encode        `|Y       |`Encode Jooki token`
+|`hf jooki sim           `|N       |`Simulate Jooki token`
+
+
+### hf ksx6924
+
+ { KS X 6924 (T-Money, Snapper+) RFIDs }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf ksx6924 help        `|Y       |`This help`
+|`hf ksx6924 select      `|N       |`Select application, and leave field up`
+|`hf ksx6924 info        `|N       |`Get info about a KS X 6924 (T-Money, Snapper+) transit card`
+|`hf ksx6924 balance     `|N       |`Get current purse balance`
+|`hf ksx6924 init        `|N       |`Perform transaction initialization with Mpda`
+|`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
 
 
 ### hf legic
@@ -456,8 +469,8 @@ Check column "offline" for their availability.
 |`hf legic wipe          `|N       |`Wipe a LEGIC Prime tag`
 |`hf legic wrbl          `|N       |`Write data to a LEGIC Prime tag`
 |`hf legic sim           `|N       |`Start tag simulator`
-|`hf legic eload         `|N       |`Load binary dump to emulator memory`
-|`hf legic esave         `|N       |`Save emulator memory to binary file`
+|`hf legic eload         `|N       |`Upload file into emulator memory`
+|`hf legic esave         `|N       |`Save emulator memory to file`
 |`hf legic eview         `|N       |`View emulator memory`
 |`hf legic einfo         `|N       |`Display deobfuscated and decoded emulator memory`
 |`hf legic crc           `|Y       |`Calculate Legic CRC over given bytes`
@@ -519,8 +532,8 @@ Check column "offline" for their availability.
 |`hf mf egetblk          `|N       |`Get emulator memory block`
 |`hf mf egetsc           `|N       |`Get emulator memory sector`
 |`hf mf ekeyprn          `|N       |`Print keys from emulator memory`
-|`hf mf eload            `|N       |`Load from file emul dump`
-|`hf mf esave            `|N       |`Save to file emul dump`
+|`hf mf eload            `|N       |`Upload file into emulator memory`
+|`hf mf esave            `|N       |`Save emulator memory to file`
 |`hf mf esetblk          `|N       |`Set emulator memory block`
 |`hf mf eview            `|N       |`View emulator memory`
 |`hf mf cgetblk          `|N       |`Read block from card`
@@ -597,8 +610,8 @@ Check column "offline" for their availability.
 |`hf mfu view            `|Y       |`Display content from tag dump file`
 |`hf mfu wrbl            `|N       |`Write block`
 |`hf mfu tamper          `|N       |`Configure the tamper feature on an NTAG 213TT`
-|`hf mfu eload           `|N       |`Load Ultralight dump file into emulator memory`
-|`hf mfu esave           `|N       |`Save Ultralight dump file from emulator memory`
+|`hf mfu eload           `|N       |`Upload file into emulator memory`
+|`hf mfu esave           `|N       |`Save emulator memory to file`
 |`hf mfu eview           `|N       |`View emulator memory`
 |`hf mfu sim             `|N       |`Simulate MIFARE Ultralight from emulator memory`
 |`hf mfu setpwd          `|N       |`Set 3DES key - Ultralight-C`
@@ -935,12 +948,13 @@ Check column "offline" for their availability.
 |`lf em 4x50 rdbl        `|N       |`Read EM4x50 word data`
 |`lf em 4x50 reader      `|N       |`Show standard read mode data`
 |`lf em 4x50 restore     `|N       |`Restore EM4x50 dump to tag`
+|`lf em 4x50 view        `|Y       |`Display content from tag dump file`
+|`lf em 4x50 wipe        `|N       |`Wipe EM4x50 tag`
 |`lf em 4x50 wrbl        `|N       |`Write EM4x50 word data`
 |`lf em 4x50 wrpwd       `|N       |`Change EM4x50 password`
-|`lf em 4x50 wipe        `|N       |`Wipe EM4x50 tag`
-|`lf em 4x50 eload       `|N       |`Upload EM4x50 dump to emulator memory`
+|`lf em 4x50 eload       `|N       |`Upload file into emulator memory`
 |`lf em 4x50 esave       `|N       |`Save emulator memory to file`
-|`lf em 4x50 eview       `|N       |`View EM4x50 content in emulator memory`
+|`lf em 4x50 eview       `|N       |`View emulator memory`
 |`lf em 4x50 sim         `|N       |`Simulate EM4x50 tag`
 
 
@@ -1025,11 +1039,13 @@ Check column "offline" for their availability.
 |`lf hitag info          `|N       |`Hitag 2 tag information`
 |`lf hitag dump          `|N       |`Dump Hitag 2 tag`
 |`lf hitag read          `|N       |`Read Hitag memory`
+|`lf hitag view          `|Y       |`Display content from tag dump file`
 |`lf hitag wrbl          `|N       |`Write a block (page) in Hitag memory`
 |`lf hitag sniff         `|N       |`Eavesdrop Hitag communication`
 |`lf hitag cc            `|N       |`Hitag S: test all provided challenges`
 |`lf hitag ta            `|N       |`Hitag 2: test all recorded authentications`
-|`lf hitag eload         `|N       |`Load Hitag dump file into emulator memory`
+|`lf hitag eload         `|N       |`Upload file into emulator memory`
+|`lf hitag eview         `|N       |`View emulator memory`
 |`lf hitag sim           `|N       |`Simulate Hitag transponder`
 
 

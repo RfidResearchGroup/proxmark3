@@ -76,7 +76,7 @@ static em_tech_type_t em_get_card_type(uint32_t config) {
 }
 
 static void em4x05_print_type(em_tech_type_t ct) {
-    switch(ct) {
+    switch (ct) {
         case EM_4469: {
             PrintAndLogEx(INFO, "Identified... " _GREEN_("EM 4469"));
             break;

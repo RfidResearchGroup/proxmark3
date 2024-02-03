@@ -243,7 +243,7 @@ static void print_hitag2_configuration(uint32_t uid, uint8_t config) {
     uint8_t bits[8 + 1] = {0};
     num_to_bytebits(config, 8, bits);
     const char *bs = sprint_bytebits_bin(bits, 8);
-    
+
     //configuration byte
     PrintAndLogEx(SUCCESS, "");
     PrintAndLogEx(SUCCESS, "Config byte... 0x%02X", config);
@@ -284,7 +284,7 @@ static void print_hitag2_configuration(uint32_t uid, uint8_t config) {
 
 }
 
-const char* annotation[] = {
+const char *annotation[] = {
     "UID", "Pwd", "Key/Pwd", "Config",
     "User", "User", "User", "User",
     "User", "User", "User", "User"
@@ -317,7 +317,7 @@ static void print_hitag2_blocks(uint8_t *d, uint16_t n) {
                 }
                 break;
             case  2:
-                if (config & 0x80) {                
+                if (config & 0x80) {
                     if (config & 0x8) {
                         sprintf(lckstr, "%s", _RED_("L "));
                     } else {
@@ -357,13 +357,13 @@ static void print_hitag2_blocks(uint8_t *d, uint16_t n) {
         }
 
         PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s  | %s  | %s"
-                        , i 
-                        , i
-                        , sprint_hex(d + (i * HITAG_BLOCK_SIZE), HITAG_BLOCK_SIZE)
-                        , sprint_ascii(d + (i * HITAG_BLOCK_SIZE), HITAG_BLOCK_SIZE)
-                        , lckstr
-                        , annotation[i]
-                        );
+                      , i
+                      , i
+                      , sprint_hex(d + (i * HITAG_BLOCK_SIZE), HITAG_BLOCK_SIZE)
+                      , sprint_ascii(d + (i * HITAG_BLOCK_SIZE), HITAG_BLOCK_SIZE)
+                      , lckstr
+                      , annotation[i]
+                     );
     }
     PrintAndLogEx(INFO, "---------+-------------+-------+-----+---------");
     PrintAndLogEx(INFO, " L = Locked, "_GREEN_("RW") " = Read Write, R = Read Only");
@@ -474,7 +474,7 @@ static int CmdLFHitagInfo(const char *Cmd) {
     // read block3,  get configuration byte.
 
     // common configurations.
-    print_hitag2_configuration( uid, 0x06 );
+    print_hitag2_configuration(uid, 0x06);
     // print_hitag2_configuration( uid,  0x0E );
     // print_hitag2_configuration( uid,  0x02 );
     // print_hitag2_configuration( uid,  0x00 );
@@ -1061,7 +1061,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
     uint8_t *data = resp.data.asBytes;
 
     // block3, 1 byte
-    uint32_t uid = bytes_to_num(data, HITAG_UID_SIZE);    
+    uint32_t uid = bytes_to_num(data, HITAG_UID_SIZE);
     print_hitag2_configuration(uid, data[HITAG_BLOCK_SIZE * 3]);
     print_hitag2_blocks(data, HITAG2_MAX_BYTE_SIZE);
     print_hitag2_paxton(data);
@@ -1134,7 +1134,7 @@ static int CmdLFHitagEload(const char *Cmd) {
     CLIParserInit(&ctx, "lf hitag eload",
                   "Loads hitag tag dump into emulator memory on device",
                   "lf hitag eload -2 -f lf-hitag-11223344-dump.bin\n"
-                );
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify dump filename"),
@@ -1209,7 +1209,7 @@ static int CmdLFHitagEview(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v", "verbose", "Verbose output"),        
+        arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

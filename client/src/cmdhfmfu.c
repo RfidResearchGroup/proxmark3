@@ -482,8 +482,8 @@ static int ul_fudan_check(void) {
         return MFU_TT_UL_ERROR;
     }
 
-    return (resp.data.asBytes[0] == 0) 
-        ? MFU_TT_FUDAN_UL : MFU_TT_UL; //if response == 0x00 then Fudan, else Genuine NXP
+    return (resp.data.asBytes[0] == 0)
+           ? MFU_TT_FUDAN_UL : MFU_TT_UL; //if response == 0x00 then Fudan, else Genuine NXP
 }
 
 static int ul_print_default(uint8_t *data, uint8_t *real_uid) {
@@ -790,10 +790,10 @@ static int ulc_print_configuration(uint8_t *data) {
     bool validAuth = (data[8] >= 0x03 && data[8] < 0x30);
     if (validAuth)
         PrintAndLogEx(INFO, "42 / 0x2A |  Auth0, %s Page " _YELLOW_("%d") "/" _YELLOW_("0x%02X") " and above need authentication"
-            , sprint_hex(data + 8, 4)
-            , data[8]
-            , data[8]
-            );
+                      , sprint_hex(data + 8, 4)
+                      , data[8]
+                      , data[8]
+                     );
     else {
         if (data[8] == 0) {
             PrintAndLogEx(INFO, "42 / 0x2A | %s Auth0 default", sprint_hex(data + 8, 4));
@@ -804,9 +804,9 @@ static int ulc_print_configuration(uint8_t *data) {
         }
     }
     PrintAndLogEx(INFO, "43 / 0x2B | %s Auth1 %s",
-                sprint_hex(data + 12, 4),
-                (data[12] & 1) ? "write access restricted" : _RED_("R/W access restricted")
-            );
+                  sprint_hex(data + 12, 4),
+                  (data[12] & 1) ? "write access restricted" : _RED_("R/W access restricted")
+                 );
     return PM3_SUCCESS;
 }
 

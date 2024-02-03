@@ -121,7 +121,7 @@ int CmdHFSearch(const char *Cmd) {
 
     // ICT
     if (IfPm3Iso14443a()) {
-                int sel_state = infoHF14A(false, false, false);
+        int sel_state = infoHF14A(false, false, false);
         if (sel_state > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-A tag") " found\n");
             success[ISO_14443A] = true;

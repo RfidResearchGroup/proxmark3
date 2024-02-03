@@ -813,7 +813,7 @@ static int CmdEM4x50Dump(const char *Cmd) {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "specify dump filename"),
         arg_str0("p", "pwd", "<hex>", "password, 4 hex bytes, lsb"),
-        arg_lit0(NULL, "ns", "no save to file"),        
+        arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
     };
 
@@ -1293,9 +1293,9 @@ static int CmdEM4x50View(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x50 view",
-                "Print a EM4x50 dump file\n",
-                "lf em 4x50 view -f lf-4x50-01020304-dump.json"
-            );
+                  "Print a EM4x50 dump file\n",
+                  "lf em 4x50 view -f lf-4x50-01020304-dump.json"
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "specify a filename for dump file"),
