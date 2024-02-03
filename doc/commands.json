@@ -7940,6 +7940,21 @@
             ],
             "usage": "hw reset [-h]"
         },
+        "hw sethfthresh": {
+            "command": "hw sethfthresh",
+            "description": "Set thresholds in HF/14a and Legic mode.",
+            "notes": [
+                "hw sethfthresh -t 7 -i 20 -l 8"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-t, --thresh <dec> threshold, used in 14a reader mode (def 7)",
+                "-i, --high <dec> high threshold, used in 14a sniff mode (def 20)",
+                "-l, --legic <dec> threshold used in Legic mode (def 8)"
+            ],
+            "usage": "hw sethfthresh [-h] [-t <dec>] [-i <dec>] [-l <dec>]"
+        },
         "hw setlfdivisor": {
             "command": "hw setlfdivisor",
             "description": "Drive LF antenna at 12 MHz / (divisor + 1).",

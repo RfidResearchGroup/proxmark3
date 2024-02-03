@@ -804,6 +804,7 @@ Check column "offline" for their availability.
 |`hw readmem             `|N       |`Read from processor flash`
 |`hw reset               `|N       |`Reset the Proxmark3`
 |`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
+|`hw sethfthresh         `|N       |`Set thresholds in HF/14a mode`
 |`hw setmux              `|N       |`Set the ADC mux to a specific value`
 |`hw standalone          `|N       |`Jump to the standalone mode`
 |`hw status              `|N       |`Show runtime status information about the connected Proxmark3`

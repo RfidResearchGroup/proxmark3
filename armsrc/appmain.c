@@ -1560,6 +1560,18 @@ static void PacketReceived(PacketCommandNG *packet) {
             setHf14aConfig(&c);
             break;
         }
+        case CMD_HF_ISO14443A_SET_THRESHOLDS: {
+            struct p {
+                uint8_t threshold;
+                uint8_t threshold_high;
+                uint8_t legic_threshold;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+            FpgaSendCommand(FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, (payload->threshold & 0x3f) | ((payload->threshold_high & 0x3f) << 6));
+            LegicRfSetThreshold((uint32_t)payload->legic_threshold);
+            break;
+        }
         case CMD_HF_ISO14443A_SNIFF: {
             SniffIso14443a(packet->data.asBytes[0]);
             reply_ng(CMD_HF_ISO14443A_SNIFF, PM3_SUCCESS, NULL, 0);
