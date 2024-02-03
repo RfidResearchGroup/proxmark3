@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `lf em 4x50 dump --ns` - now supports the nosave flag (@iceman1001)
+ - Added `lf em 4x50 view` - view on Em4x50 dump files (@iceman1001)
  - Changed the magic card detection. It now acts as flags (@iceman1001)
  - Added `hf ict` - skeleton commands in preperation (@iceman1001)
  - Added `lf hitag eview` - now supports viewing of emulator memory (@iceman1001)

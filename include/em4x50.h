@@ -53,8 +53,8 @@
 #define EM4X50_COMMAND_STANDARD_READ        0x02 // virtual command
 
 // misc
-#define TIMEOUT_CMD                 3000
-#define DUMP_FILESIZE               136
+#define EM4X50_TIMEOUT_CMD                 3000
+#define EM4X50_DUMP_FILESIZE               136
 
 typedef struct {
     bool addr_given;
