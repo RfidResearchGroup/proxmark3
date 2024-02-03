@@ -430,12 +430,12 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
     if (select_status == 0) {
         PrintAndLogEx(ERR, "E->iso14443a card select failed");
-        return 1;
+        return PM3_EFAILED;
     }
 
     if (select_status == 2) {
         PrintAndLogEx(ERR, "E->Card doesn't support iso14443-4 mode");
-        return 1;
+        return PM3_EFAILED;
     }
 
     if (select_status == 3) {
@@ -446,7 +446,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
         } else {
             PrintAndLogEx(SUCCESS, "\tATQA : %02X %02X", card->atqa[1], card->atqa[0]);
         }
-        return 1;
+        return PM3_EFAILED;
     }
 
     if ((card->uidlen == 4) && (card->uid[0] == 0x08)) {
@@ -456,16 +456,19 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     }
     PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card->atqa[1], card->atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: %02X [%" PRIu64 "]", card->sak, resp.oldarg[0]);
-    if (card->ats_len < 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
+
+    // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
+    if (card->ats_len < 3) {
         PrintAndLogEx(INFO, "E-> Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
-        return 1;
+        return PM3_ECARDEXCHANGE;
     }
 
     if (card->ats_len == card->ats[0] + 2)
         PrintAndLogEx(SUCCESS, " ATS: [%d] %s", card->ats[0], sprint_hex(card->ats, card->ats[0]));
     else
         PrintAndLogEx(SUCCESS, " ATS: [%d] %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
-    return 0;
+
+    return PM3_SUCCESS;
 }
 
 iso14a_polling_parameters_t iso14a_get_polling_parameters(bool use_ecp, bool use_magsafe) {

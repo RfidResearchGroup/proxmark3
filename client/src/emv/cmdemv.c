@@ -2094,7 +2094,7 @@ static int CmdEMVScan(const char *Cmd) {
         PrintAndLogEx(INFO, "GET UID, ATS");
 
         iso14a_card_select_t card;
-        if (Hf14443_4aGetCardData(&card)) {
+        if (Hf14443_4aGetCardData(&card) != PM3_SUCCESS) {
             return PM3_ERFTRANS;
         }
 
