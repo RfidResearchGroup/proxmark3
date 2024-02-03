@@ -16,24 +16,27 @@
 // SEOS commands
 //-----------------------------------------------------------------------------
 #include "cmdhfict.h"
+#include <ctype.h>              // tolower
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>              // tolower
+
 #include "cliparser.h"
 #include "cmdparser.h"          // command_t
 #include "comms.h"              // clearCommandBuffer
-#include "cmdtrace.h"
-#include "ui.h"
+#include "commonutil.h"         // get_sw
 #include "cmdhf14a.h"           // manufacture
+#include "cmdhfmf.h"            // mf_print_sector
+#include "cmdtrace.h"
 #include "protocols.h"          // definitions of ISO14A/7816 protocol
 #include "iso7816/apduinfo.h"   // GetAPDUCodeDescription
-#include "commonutil.h"         // get_sw
 #include "protocols.h"          // ISO7816 APDU return codes
 #include "mifare/mifaredefault.h"      // AES_KEY_LEN
+#include "mifare/mifare4.h"
 #include <mbedtls/aes.h>
 #include <mbedtls/cmac.h>
 //#include <mbedtls/entropy.h>
 #include <mbedtls/error.h>
+#include "ui.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -43,8 +46,6 @@ static int CmdHelp(const char *Cmd);
 #define ICT_DESFIRE_MASTER_APPKEY   "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 #define ICT_BLE_DEFAULT_BASE_KEY    "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 
-#define ICT_MIFARE_A_KEY    "\x9c\x28\xa6\x0f\x72\x49"
-#define ICT_MIFARE_B_KEY    "\xc9\x82\x6a\xf0\x27\x94"
 #define ICT_MIFARE_SECTOR   14
 #define ICT_APP_ID          0x1023f5
 #define ICT_REV_APP_ID      0xf52310
@@ -54,6 +55,9 @@ static int CmdHelp(const char *Cmd);
 #define ICT_CT_DESFIRE      0
 #define ICT_CT_CLASSIC      1
 #define ICT_CT_NFC          2
+
+static const uint8_t ICT_MIFARE_A_KEY[] = {0x9c, 0x28, 0xa6, 0x0f, 0x72, 0x49};
+static const uint8_t ICT_MIFARE_B_KEY[] = {0xc9, 0x82, 0x6a, 0xf0, 0x27, 0x94};
 
 static int derive_ble_key(uint8_t *unique_data, uint8_t len, uint8_t *app_key) {
 
@@ -129,6 +133,7 @@ static int diversify_mifare_key(uint8_t *uid, uint8_t *app_key) {
     num_to_bytes(big, 4, input + 4);
 
     uint8_t key[AES_KEY_LEN];
+    memset(key, 0 , sizeof(key));
 //    memcpy(key, ICT_DESFIRE_FILEKEY, AES_KEY_LEN);
 
     uint8_t iv[16] = {0};
@@ -191,11 +196,11 @@ static int derive_mifare_key(uint8_t *uid, const uint8_t *base_key, uint8_t *app
 }
 
 static int derive_mifare_key_a(uint8_t *uid, uint8_t *app_key) {
-    return derive_mifare_key(uid, (const uint8_t*)ICT_MIFARE_A_KEY, app_key);
+    return derive_mifare_key(uid, ICT_MIFARE_A_KEY, app_key);
 }
 
 static int derive_mifare_key_b(uint8_t *uid, uint8_t *app_key) {
-    return derive_mifare_key(uid, (const uint8_t*)ICT_MIFARE_B_KEY, app_key);
+    return derive_mifare_key(uid, ICT_MIFARE_B_KEY, app_key);
 }
 
 static int decrypt_card_file(uint8_t *card_file, uint8_t len, uint8_t *plain) {
@@ -388,13 +393,50 @@ static int CmdHfIctInfo(const char *Cmd) {
     return infoICT(true);
 }
 
+static int ict_select_card(iso14a_card_select_t *card) {
+    if (card == NULL) {
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        return PM3_ESOFT;
+    }
+
+    /*
+        0: couldn't read
+        1: OK, with ATS
+        2: OK, no ATS
+        3: proprietary Anticollision
+    */
+    uint64_t select_status = resp.oldarg[0];
+    if (select_status == 0) {
+        return PM3_ESOFT;
+    }
+
+    memcpy(card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+    return PM3_SUCCESS;
+}
+
 static int CmdHfIctRead(const char *Cmd) {
 
+    iso14a_card_select_t card;
+    if (ict_select_card(&card) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "UID... %s", sprint_hex_inrow(card.uid, card.uidlen));
     // MFC actions
     uint8_t uid[4] = {0x04, 0x01, 0x02, 0x03};
     uint8_t key[MIFARE_KEY_SIZE] = {0};
-    derive_mifare_key_a(uid, key);
-    derive_mifare_key_b(uid, key);
+    derive_mifare_key_a(card.uid, key);
+    PrintAndLogEx(INFO, "Derived KEY A... %s", sprint_hex_inrow(key, MIFARE_KEY_SIZE));
+
+    memset(key, 0, sizeof(key));
+    derive_mifare_key_b(card.uid, key);
+    PrintAndLogEx(INFO, "Derived KEY B... %s", sprint_hex_inrow(key, MIFARE_KEY_SIZE));
 
     uint8_t encsector[48] = {0};
     uint8_t plainsector[48] = {0};
@@ -421,15 +463,59 @@ static int CmdHfIctRead(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHfIctCredential(const char * Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf ict credential",
+                "Read ICT sector from tag and decode",
+                "hf ict credential\n"
+            );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
+
+    uint16_t sc_size = mfNumBlocksPerSector(ICT_MIFARE_SECTOR) * MFBLOCK_SIZE;
+    uint8_t *data = calloc(sc_size, sizeof(uint8_t));
+    if (data == NULL) {
+        PrintAndLogEx(ERR, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // diversified key A?
+    int res = mfReadSector(ICT_MIFARE_SECTOR, MF_KEY_A, ICT_MIFARE_A_KEY, data);    
+    if (res != PM3_SUCCESS) {
+        free(data);
+        return res;
+    }
+    uint8_t blocks = mfNumBlocksPerSector(ICT_MIFARE_SECTOR);
+    uint8_t start = mfFirstBlockOfSector(ICT_MIFARE_SECTOR);
+
+    mf_print_sector_hdr(ICT_MIFARE_SECTOR);
+    for (int i = 0; i < blocks; i++) {
+        mf_print_block_one(start + i, data + (i * MFBLOCK_SIZE), verbose);
+    }
+
+    // add decrypt sector
+
+    free(data);
+    return PM3_SUCCESS;
+}
+
 static int CmdHfIctList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf ict", "14a -c");
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,        AlwaysAvailable, "This help"},
-    {"info",    CmdHfIctInfo,   IfPm3NfcBarcode, "Tag information"},
-    {"list",    CmdHfIctList,   AlwaysAvailable, "List ICT history"},
-    {"reader",  CmdHfIctRead,   AlwaysAvailable, "Act like an IS14443-a reader"},
+    {"help",       CmdHelp,            AlwaysAvailable, "This help"},
+    {"credential", CmdHfIctCredential, IfPm3Iso14443a,  "Read ICT credential and decode"},
+    {"info",       CmdHfIctInfo,       IfPm3Iso14443a,  "Tag information"},
+    {"list",       CmdHfIctList,       AlwaysAvailable, "List ICT history"},
+    {"reader",     CmdHfIctRead,       AlwaysAvailable, "Act like an IS14443-a reader"},
     {NULL, NULL, NULL, NULL}
 };
 
