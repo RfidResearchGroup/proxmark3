@@ -1809,7 +1809,7 @@ static int CmdHFFelicaSniff(const char *Cmd) {
     }
 
     PrintAndLogEx(HINT, "try `" _YELLOW_("hf felica list") "` to view");
-    PrintAndLogEx(INFO, "Done");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -1856,7 +1856,7 @@ static int CmdHFFelicaSimLite(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, "Done");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 

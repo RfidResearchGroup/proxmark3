@@ -2497,7 +2497,7 @@ int CmdEM4x05Sniff(const char *Cmd) {
 static int CmdEM4x05View(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em ex05 view",
-                  "Print a EM4205/4305/4369/4469 dump file (bin/eml/json)\n"
+                  "Print a EM4205/4305/4369/4469 dump file\n"
                   "note:\n"
                   "We don't track if password is known in current dump file formats.\n"
                   "All zeros password block might be filler data",

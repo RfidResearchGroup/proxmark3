@@ -92,7 +92,7 @@ int lfsim_wait_check(uint32_t cmd) {
             }
         }
     }
-    PrintAndLogEx(INFO, "Done");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
@@ -145,9 +145,9 @@ static int CmdLFTune(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (freq != 125)
+    if (freq != 125) {
         divisor = LF_FREQ2DIV(freq);
-
+    }
 
     if ((is_bar + is_mix + is_value) > 1) {
         PrintAndLogEx(ERR, "Select only one output style");
@@ -155,12 +155,15 @@ static int CmdLFTune(const char *Cmd) {
     }
 
     barMode_t style = g_session.bar_mode;
-    if (is_bar)
+    if (is_bar) {
         style = STYLE_BAR;
-    if (is_mix)
+    }
+    if (is_mix) {
         style = STYLE_MIXED;
-    if (is_value)
+    }
+    if (is_value) {
         style = STYLE_VALUE;
+    }
 
     PrintAndLogEx(INFO, "Measuring LF antenna at " _YELLOW_("%.2f") " kHz", LF_DIV2FREQ(divisor));
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to exit");
@@ -222,10 +225,11 @@ static int CmdLFTune(const char *Cmd) {
 
     params[0] = 3;
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
-    if (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000)) {
+    if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000) == false) {
         PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF shutdown, aborting");
         return PM3_ETIMEOUT;
     }
+
     PrintAndLogEx(NORMAL, "\x1b%c[2K\r", 30);
     if (verbose) {
         PrintAndLogEx(INFO, "Min....... %u mV", v_min);
@@ -242,9 +246,9 @@ int CmdLFCommandRead(const char *Cmd) {
     CLIParserInit(&ctx, "lf cmdread",
                   "Modulate LF reader field to send command before read. All periods in microseconds.\n"
                   " - use " _YELLOW_("`lf config`") _CYAN_(" to set parameters"),
-                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110                           --> probing for Hitag 1/S\n"
-                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000                           --> probing for Hitag 2\n"
-                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -s 2000 -@                --> probing for Hitag 2, oscilloscope style\n"
+                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110                           --> probing for Hitag1/S\n"
+                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000                           --> probing for Hitag2\n"
+                  "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -s 2000 -@                --> probing for Hitag2, oscilloscope style\n"
                   "lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -c W0S00000010000E  --> probing for Hitag (us)\n"
                  );
 

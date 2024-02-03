@@ -879,7 +879,7 @@ int CmdHF14ASim(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, "Done");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 

@@ -668,8 +668,8 @@ static int CmdHF14AJookiClone(const char *Cmd) {
         i++;
     }
 
-    PrintAndLogEx(INFO, "Done");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf mfu ndefread") "` to view");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 

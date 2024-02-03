@@ -473,14 +473,13 @@ static int CmdHIDClone(const char *Cmd) {
     PacketResponseNG resp;
     WaitForResponse(CMD_LF_HID_CLONE, &resp);
     if (resp.status == PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "Done");
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid reader`") " to verify");
+        PrintAndLogEx(INFO, "Done!");
     } else {
-        PrintAndLogEx(FAILED, "Failed cloning");
-        return resp.status;
-    }
+        PrintAndLogEx(FAILED, "cloning ( " _RED_("fail") " )");
 
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid reader`") " to verify");
-    return PM3_SUCCESS;
+    }
+    return resp.status;
 }
 
 /*

@@ -552,10 +552,10 @@ static int CmdLFNedapSim(const char *Cmd) {
     PacketResponseNG resp;
     WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
 
-    PrintAndLogEx(INFO, "Done");
-    if (resp.status != PM3_EOPABORTED)
+    PrintAndLogEx(INFO, "Done!");
+    if (resp.status != PM3_EOPABORTED) {
         return resp.status;
-
+    }
     return PM3_SUCCESS;
 }
 

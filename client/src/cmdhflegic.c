@@ -569,8 +569,8 @@ static int CmdLegicSim(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, "Done");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf legic list") "` to view trace log");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 

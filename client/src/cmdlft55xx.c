@@ -2897,7 +2897,7 @@ static int CmdResetRead(const char *Cmd) {
         free(got);
     }
 
-    PrintAndLogEx(INFO, "Done");
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
