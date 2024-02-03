@@ -759,13 +759,19 @@ static int CmdSetHFThreshold(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint8_t params[3];
-    params[0] = arg_get_int_def(ctx, 1, 7);
-    params[1] = arg_get_int_def(ctx, 2, 20);
-    params[2] = arg_get_int_def(ctx, 3, 8);
+
+    struct {
+        uint8_t threshold;
+        uint8_t threshold_high;
+        uint8_t legic_threshold;
+    } PACKED params;
+
+    params.threshold = arg_get_int_def(ctx, 1, 7);
+    params.threshold_high = arg_get_int_def(ctx, 2, 20);
+    params.legic_threshold = arg_get_int_def(ctx, 3, 8);
     CLIParserFree(ctx);
 
-    if ((params[0] < 1) || (params[0] > 63) || (params[1] < 1) || (params[1] > 63)) {
+    if ((params.threshold < 1) || (params.threshold > 63) || (params.threshold_high < 1) || (params.threshold_high > 63)) {
         PrintAndLogEx(ERR, "Thresholds must be between " _YELLOW_("1") " and " _YELLOW_("63"));
         return PM3_EINVARG;
     }
