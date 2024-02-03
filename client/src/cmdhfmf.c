@@ -16,9 +16,10 @@
 // High frequency MIFARE commands
 //-----------------------------------------------------------------------------
 
-#include "bruteforce.h"
 #include "cmdhfmf.h"
 #include <ctype.h>
+
+#include "bruteforce.h"
 #include "cmdparser.h"             // command_t
 #include "commonutil.h"            // ARRAYLEN
 #include "comms.h"                 // clearCommandBuffer
