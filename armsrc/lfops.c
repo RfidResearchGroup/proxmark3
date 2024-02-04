@@ -208,7 +208,7 @@ static uint32_t GetT55xxClockBit(uint8_t clock) {
 
 void printT55xxConfig(void) {
 
-#define PRN_NA   sprintf(s  + strlen(s), _RED_("N/A") " | ");
+#define PRN_NA   sprintf(s  + strlen(s), _RED_("n/a") " | ");
 
     DbpString(_CYAN_("LF T55XX config"));
     Dbprintf("           [r]               [a]   [b]   [c]   [d]   [e]   [f]   [g]");
