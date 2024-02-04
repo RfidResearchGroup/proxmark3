@@ -532,6 +532,7 @@ static void resume(lua_State *L, void *ud) {
 
 LUA_API int lua_resume(lua_State *L, lua_State *from, int nargs) {
     int status;
+    int oldnny = L->nny; /* save 'nny' */
     lua_lock(L);
     luai_userstateresume(L, nargs);
     L->nCcalls = (from) ? from->nCcalls + 1 : 1;
@@ -553,7 +554,7 @@ LUA_API int lua_resume(lua_State *L, lua_State *from, int nargs) {
         }
         lua_assert(status == L->status);
     }
-    L->nny = 1;  /* do not allow yields */
+    L->nny = oldnny; /* restore 'nny' */
     L->nCcalls--;
     lua_assert(L->nCcalls == ((from) ? from->nCcalls : 0));
     lua_unlock(L);
