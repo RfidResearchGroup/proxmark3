@@ -257,6 +257,7 @@ static StkId adjust_varargs(lua_State *L, Proto *p, int actual) {
     StkId base, fixed;
     lua_assert(actual >= nfixargs);
     /* move fixed parameters to final position */
+    luaD_checkstack(L, p->maxstacksize); /* check again for new 'base' */
     fixed = L->top - actual;  /* first fixed argument */
     base = L->top;  /* final position of first argument */
     for (i = 0; i < nfixargs; i++) {
@@ -321,12 +322,20 @@ Cfunc:
         case LUA_TLCL: {  /* Lua function: prepare its call */
             StkId base;
             Proto *p = clLvalue(func)->p;
-            luaD_checkstack(L, p->maxstacksize);
-            func = restorestack(L, funcr);
             n = cast_int(L->top - func) - 1;  /* number of real arguments */
-            for (; n < p->numparams; n++)
+            luaD_checkstack(L, p->maxstacksize);
+            for (; n < p->numparams; n++) {
                 setnilvalue(L->top++);  /* complete missing arguments */
-            base = (!p->is_vararg) ? func + 1 : adjust_varargs(L, p, n);
+            }
+            if (!p->is_vararg) {
+                func = restorestack(L, funcr);
+                base = func + 1;
+            }
+            else {
+                base = adjust_varargs(L, p, n);
+                func = restorestack(L, funcr);  /* previous call can change stack */
+            }
+
             ci = next_ci(L);  /* now 'enter' new function */
             ci->nresults = nresults;
             ci->func = func;
