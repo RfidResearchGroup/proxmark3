@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.63 2013/03/16 21:10:18 roberto Exp $
+** $Id: llex.c,v 2.63.1.2 2013/08/30 15:49:41 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -150,7 +150,7 @@ static void inclinenumber(LexState *ls) {
     if (currIsNewline(ls) && ls->current != old)
         next(ls);  /* skip `\n\r' or `\r\n' */
     if (++ls->linenumber >= MAX_INT)
-        luaX_syntaxerror(ls, "chunk has too many lines");
+        lexerror(ls, "chunk has too many lines", 0);
 }
 
 
