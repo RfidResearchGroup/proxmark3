@@ -833,11 +833,13 @@ int getDeviceDebugLevel(uint8_t *debug_level) {
 }
 
 int setDeviceDebugLevel(uint8_t debug_level, bool verbose) {
-    if (!g_session.pm3_present)
+    if (!g_session.pm3_present) {
         return PM3_EFAILED;
+    }
 
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(INFO, "setting device debug loglevel to %u", debug_level);
+    }
 
     uint8_t cdata[] = {debug_level, verbose};
     clearCommandBuffer();
@@ -847,10 +849,8 @@ int setDeviceDebugLevel(uint8_t debug_level, bool verbose) {
         PrintAndLogEx(WARNING, "failed to set device debug loglevel");
         return PM3_EFAILED;
     }
-
     return PM3_SUCCESS;
 }
-
 
 static int setCmdOutput(const char *Cmd) {
     CLIParserContext *ctx;

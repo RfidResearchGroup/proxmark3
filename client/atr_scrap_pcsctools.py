@@ -62,7 +62,7 @@ const static atr_t AtrTable[] = {
     { "3B90969181B1FE551FC7D4", "IClass SE Processor (Other) https://www.hidglobal.com/products/embedded-modules/iclass-se/sio-processor"},
 """
 
-C_FOOTER="""    {NULL, "N/A"}
+C_FOOTER="""    {NULL, "n/a"}
 };
 
 #endif

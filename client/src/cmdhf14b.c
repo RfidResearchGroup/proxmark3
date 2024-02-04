@@ -1181,6 +1181,9 @@ static int CmdHF14Binfo(const char *Cmd) {
     return infoHF14B(verbose, do_aid_search);
 }
 
+// #define ISO14443B_READ_BLK     0x08
+// #define ISO14443B_WRITE_BLK    0x09
+
 static int read_sr_block(uint8_t blockno, uint8_t *out) {
     struct {
         uint8_t blockno;
@@ -2317,12 +2320,12 @@ static int CmdHF14BAPDU(const char *Cmd) {
     int user_timeout = arg_get_int_def(ctx, 9, -1);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, ">>>> %s%s%s >>>> " _YELLOW_("%s"),
-                  activate_field ? "sel" : "",
-                  leave_signal_on ? "| keep" : "",
-                  decode_TLV ? "| TLV" : "",
-                  sprint_hex(data, datalen)
+    PrintAndLogEx(SUCCESS, _YELLOW_("%s%s%s"),
+                  activate_field ? "select card" : "",
+                  leave_signal_on ? ", keep field on" : "",
+                  decode_TLV ? ", TLV" : ""
                  );
+    PrintAndLogEx(SUCCESS, ">>> %s", sprint_hex_inrow(data, datalen));
 
     if (decode_APDU) {
         APDU_t apdu;

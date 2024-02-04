@@ -1383,9 +1383,9 @@ static int CmdHF14AAPDU(const char *Cmd) {
     }
     CLIParserFree(ctx);
 
-    PrintAndLogEx(SUCCESS, "( " _YELLOW_("%s%s%s")" )",
-                  activateField ? "select" : "",
-                  leaveSignalON ? ", keep" : "",
+    PrintAndLogEx(SUCCESS, _YELLOW_("%s%s%s"),
+                  activateField ? "select card" : "",
+                  leaveSignalON ? ", keep field on" : "",
                   decodeTLV ? ", TLV" : ""
                  );
     PrintAndLogEx(SUCCESS, ">>> %s", sprint_hex_inrow(data, datalen));

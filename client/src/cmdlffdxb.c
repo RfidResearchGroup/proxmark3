@@ -471,7 +471,7 @@ static const fdxbCountryMapping_t fdxbCountryMapping[] = {
     { 985, "HomeAgain (Destron Fearing/Digital Angel)" },
     { 991, "Peeva" },
     { 999, "Test range" },
-    { 0,   "N/A" } // must be the last entry
+    { 0,   "n/a" } // must be the last entry
 };
 
 static const char *mapFDBX(uint16_t countryCode) {

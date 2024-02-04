@@ -4053,7 +4053,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
     PrintAndLogEx(INFO, _YELLOW_("MIFARE %s") " | %s UID  " _YELLOW_("%s") ""
                   , csize
                   , uidsize
-                  , (uidlen == 0) ? "N/A" : sprint_hex(uid, uidlen)
+                  , (uidlen == 0) ? "n/a" : sprint_hex(uid, uidlen)
                  );
 
     PrintAndLogEx(INFO, "Options [ numreads: %d, flags: %d (0x%02x) ]"

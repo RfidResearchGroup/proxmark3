@@ -4236,7 +4236,7 @@ const static atr_t AtrTable[] = {
     { "3FFF9500FF918171FF4700444E4153505330312044736836303916", "PayTV card for DishNetwork Sat receiver\nhttp://www.dishnetwork.com/\nCards were obsoleted in nationwide system update in 2009." },
     { "3FFF9500FF918171FF4700444E4153505330312052657636343702", "BELL EXPRESSVU (Pay TV)" },
     { "3FFF9500FF918171FF470054494745523030332052657632353064", "Tivu' Sat (Italy) CAM card www.tivu.tv" },
-    {NULL, "N/A"}
+    {NULL, "n/a"}
 };
 
 #endif

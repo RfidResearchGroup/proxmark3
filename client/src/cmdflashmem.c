@@ -594,7 +594,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
         PrintAndLogEx(
             (is_keyok) ? SUCCESS : FAILED,
             "RDV4 RSA private key check... ( %s )",
-            (is_keyok) ?  _GREEN_("ok") : _YELLOW_("N/A")
+            (is_keyok) ?  _GREEN_("ok") : _YELLOW_("n/aA")
         );
     }
 

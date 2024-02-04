@@ -32,12 +32,15 @@ device-side.
 
 -- iceman, todo:  return payload from ISO14b APDU is a struct now. iso14b_raw_apdu_response_t
 local function mobib_parse(result)
-    if result.Oldarg0 >= 0 then
-        local len = result.Oldarg0 * 2
-        if len > 0 then
-            d = string.sub(result.Data, 0, len);
-            return d, nil
-        end
+    if result.Length >= 0 then
+        local response_byte = string.sub(result.Data, 0, 1); 
+        local datalen = string.sub(result.Data, 2, 5); 
+        local d = string.sub(result.Data, 6, datalen * 2);
+        return {
+            response_byte = response_byte,
+            datalen = datalen,
+            data = d
+            }, nil
     end
     return nil, "mobib_parse failed"
 end
@@ -126,12 +129,8 @@ local function mobib_send_cmd_raw(data, ignoreresponse )
     local c = Command:newNG{cmd = cmds.CMD_HF_ISO14443B_COMMAND, data = senddata}
 
     local result, err = c:sendNG(ignoreresponse, 2000)
-    if result then
-        if result.status == PM3_SUCCESS then
-            return mobib_parse(result)
-        else
-            err = 'card response failed'
-        end
+    if result and result.status == PM3_SUCCESS then
+        return mobib_parse(result)
     else
         err = 'No response from card'
     end
@@ -240,13 +239,13 @@ function main(args)
     for i, apdu in spairs(_calypso_cmds) do
         print('>> '..ansicolors.yellow..i..ansicolors.reset)
         apdu = apdu:gsub('%s+', '')
-        data, err = mobib_send_cmd_raw(apdu , false)
+        obj, err = mobib_send_cmd_raw(apdu , false)
         if err then
             print('<< '..err)
         else
-            if data then
-                local status, desc, err = mobib_apdu_status(data)
-                local d = data:sub(3, (#data - 8))
+            if obj.data then
+                local status, desc, err = mobib_apdu_status(obj.data)
+                local d = data:sub(3, (obj.datalen - 8))
                 if status then
                     print('<< '..d..' ('..ansicolors.green..'ok'..ansicolors.reset..')')
                 else

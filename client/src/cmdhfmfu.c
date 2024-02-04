@@ -372,7 +372,10 @@ static int try_default_3des_keys(uint8_t **correct_key) {
     }
 
     int res = PM3_ESOFT;
-    PrintAndLogEx(INFO, "Trying some default 3des keys");
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(SUCCESS, "--- " _CYAN_("Known UL-C 3DES keys"));
+
     for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
         uint8_t *key = default_3des_keys[i];
         if (ulc_authentication(key, true)) {
@@ -471,7 +474,7 @@ static int ul_fudan_check(void) {
         return MFU_TT_UL_ERROR;
     }
 
-    uint8_t cmd[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa7}; //wrong crc on purpose  should be 0xa8
+    uint8_t cmd[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa7}; // wrong crc on purpose, should be 0xa8
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
     PacketResponseNG resp;
@@ -540,11 +543,10 @@ static int ul_print_default(uint8_t *data, uint8_t *real_uid) {
                   sprint_bin(data + 10, 2)
                  );
 
-    PrintAndLogEx(SUCCESS, "OneTimePad: %s - %s",
+    PrintAndLogEx(SUCCESS, "       OTP: " _YELLOW_("%s") " - %s",
                   sprint_hex(data + 12, 4),
                   sprint_bin(data + 12, 4)
                  );
-
     return PM3_SUCCESS;
 }
 
@@ -1411,14 +1413,13 @@ typedef struct {
 } mfu_otp_identify_t;
 
 static mfu_otp_identify_t mfu_otp_ident_table[] = {
-    { "SALTO tag", 12, 4, "534C544F", ul_c_otpgenA, NULL },
-//    { "SAFLOK tag", 12, 4, NULL, ul_c_otpgenB, NULL },
-//    { "VINGCARD tag", 12, 4, NULL, ul_c_otpgenC, NULL },
-//    { "DORMA KABA tag", 12, 4, NULL, ul_c_otpgenD, NULL },
+    { "SALTO Systems card", 12, 4, "534C544F", ul_c_otpgenA, NULL },
+    { "Assa Abloy Ving Card", 12, 4, NULL, ul_ev1_otpgenA, NULL },
+    { "MyKey", 12, 4, NULL, ul_mykey_otpgen, NULL },
     { NULL, 0, 0, NULL, NULL, NULL }
 };
 
-static mfu_otp_identify_t *mfu_match_otp_fingerprint(uint8_t *data) {
+static mfu_otp_identify_t *mfu_match_otp_fingerprint(uint8_t *uid, uint8_t *data) {
     uint8_t i = 0;
     do {
         int ml = 0;
@@ -1428,11 +1429,17 @@ static mfu_otp_identify_t *mfu_match_otp_fingerprint(uint8_t *data) {
         if (mfu_otp_ident_table[i].match) {
             param_gethex_to_eol(mfu_otp_ident_table[i].match, 0, mtmp, sizeof(mtmp), &ml);
         } else {
-            uint32_t otp = mfu_otp_ident_table[i].otp(data);
+            uint32_t otp = mfu_otp_ident_table[i].otp(uid);
             num_to_bytes(otp, 4, mtmp);
         }
 
-        bool m2 = (memcmp(mtmp, data + mfu_otp_ident_table[i].mpos, mfu_otp_ident_table[i].mlen) == 0);
+        int min = MIN(mfu_otp_ident_table[i].mlen, 4);
+
+        PrintAndLogEx(DEBUG, "uid.... %s", sprint_hex_inrow(uid, 7));
+        PrintAndLogEx(DEBUG, "calc... %s", sprint_hex_inrow(mtmp, 4));
+        PrintAndLogEx(DEBUG, "dump... %s", sprint_hex_inrow(data + mfu_otp_ident_table[i].mpos, min));
+        
+        bool m2 = (memcmp(mtmp, data + mfu_otp_ident_table[i].mpos, min) == 0);
         if (m2) {
             PrintAndLogEx(DEBUG, "(fingerprint) found %s", mfu_otp_ident_table[i].desc);
             return &mfu_otp_ident_table[i];
@@ -1558,26 +1565,28 @@ static uint8_t mfu_max_len(void) {
 
 static int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
     iso14a_card_select_t card;
-    if (ul_select(&card) == false)
+    if (ul_select(&card) == false) {
         return PM3_ESOFT;
+    }
+    memcpy(uid, card.uid, card.uidlen);
 
     uint8_t v[10] = {0x00};
     int len  = ulev1_getVersion(v, sizeof(v));
     DropField();
-    if (len != sizeof(v))
+    if (len != sizeof(v)) {
         return PM3_ESOFT;
+    }
 
     memcpy(version, v, 8);
-    memcpy(uid, card.uid, 7);
     return PM3_SUCCESS;
 }
 
 static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, int ak_len) {
 
     uint8_t *data = NULL;
-    int res = PM3_SUCCESS;
+    int res = PM3_ESOFT;
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "------------------------ " _CYAN_("Fingerprint") " -----------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
     uint8_t maxbytes = mfu_max_len();
     if (maxbytes == 0) {
         PrintAndLogEx(ERR, "fingerprint table wrong");
@@ -1594,15 +1603,26 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
     }
 
     uint8_t pages = (maxbytes / MFU_BLOCK_SIZE);
-    PrintAndLogEx(INFO, "Reading tag memory...");
-
     uint8_t keytype = 0;
+
     if (hasAuthKey) {
         if (tagtype & MFU_TT_UL_C)
-            keytype = 1; //UL_C auth
+            keytype = 1; // UL_C auth
         else
-            keytype = 2; //UL_EV1/NTAG auth
+            keytype = 2; // UL_EV1/NTAG auth
     }
+
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+        res = PM3_ESOFT;
+        goto out; 
+    }
+
+    if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
+        res = PM3_ESOFT;
+        goto out;        
+    }
+
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, authkey, ak_len);
 
@@ -1633,13 +1653,13 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
         goto out;
     }
 
-
     uint8_t version[8] = {0};
     uint8_t uid[7] = {0};
     if (mfu_get_version_uid(version, uid) == PM3_SUCCESS) {
         mfu_identify_t *item = mfu_match_fingerprint(version, data);
         if (item) {
-            PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s"), item->desc);
+            PrintAndLogEx(SUCCESS, _GREEN_("%s"), item->desc);
+            res = PM3_SUCCESS;
 
             if (item->hint) {
                 if (item->Pwd) {
@@ -1654,9 +1674,10 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
     }
 
     // OTP checks
-    mfu_otp_identify_t *item = mfu_match_otp_fingerprint(data);
+    mfu_otp_identify_t *item = mfu_match_otp_fingerprint(uid, data);
     if (item) {
-        PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s"), item->desc);
+        PrintAndLogEx(SUCCESS, _GREEN_("%s"), item->desc);
+        res = PM3_SUCCESS;
 
         if (item->hint) {
             if (item->otp) {
@@ -1668,13 +1689,15 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
             }
         }
     }
-    //
-
-
 
 out:
+
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "n/a");
+    }
+
+    setDeviceDebugLevel(dbg_curr, false);    
     free(data);
-    PrintAndLogEx(INFO, "------------------------------------------------------------");
     return res;
 }
 
@@ -1969,6 +1992,8 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 uint8_t keySwap[16];
                 memcpy(keySwap, SwapEndian64(key, 16, 8), 16);
                 ulc_print_3deskey(keySwap);
+            } else {
+                PrintAndLogEx(INFO, "n/a");
             }
             PrintAndLogEx(INFO, "Done!");
             return PM3_SUCCESS;
@@ -2082,7 +2107,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 has_auth_key = true;
                 ak_len = 4;
                 memcpy(authenticationkey, key, 4);
-                PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -2097,7 +2122,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 has_auth_key = true;
                 ak_len = 4;
                 memcpy(authenticationkey, key, 4);
-                PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -2112,7 +2137,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 has_auth_key = true;
                 ak_len = 4;
                 memcpy(authenticationkey, key, 4);
-                PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -2127,7 +2152,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 has_auth_key = true;
                 ak_len = 4;
                 memcpy(authenticationkey, key, 4);
-                PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
+                PrintAndLogEx(SUCCESS, "Password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                 goto out;
             }
 
@@ -2142,7 +2167,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                     has_auth_key = true;
                     ak_len = 4;
                     memcpy(authenticationkey, key, 4);
-                    PrintAndLogEx(SUCCESS, "Found password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
+                    PrintAndLogEx(SUCCESS, "Password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                     break;
                 } else {
                     if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {

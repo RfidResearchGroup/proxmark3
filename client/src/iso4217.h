@@ -216,7 +216,7 @@ const static iso4217_t Iso4217Table[] = {
     {"997", "US Dollar (Next day)", 2},
     {"998", "US Dollar (Same day)", 2},
     {"999", "No currency is involved", -1},
-    {"NULL", "N/A", -1}
+    {"NULL", "n/a", -1}
 };
 
 #endif
