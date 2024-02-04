@@ -1414,7 +1414,7 @@ typedef struct {
 
 static mfu_otp_identify_t mfu_otp_ident_table[] = {
     { "SALTO Systems card", 12, 4, "534C544F", ul_c_otpgenA, NULL },
-    { "Assa Abloy Ving Card", 12, 4, NULL, ul_ev1_otpgenA, NULL },
+//    { "Assa Abloy Ving Card", 12, 4, NULL, ul_ev1_otpgenA, NULL },
 //    { "MyKey", 12, 4, NULL, ul_mykey_otpgen, NULL },
     { NULL, 0, 0, NULL, NULL, NULL }
 };
