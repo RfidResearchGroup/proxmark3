@@ -1526,6 +1526,12 @@ static mfu_identify_t mfu_ident_table[] = {
         ul_ev1_pwdgen_def, ul_ev1_packgen_def,
         NULL
     },
+    {
+        "Art-Dass NFT card", "0004040201000F03",
+        16, 16, "033ED1013A5504617274646173732E6E",
+        ul_ev1_pwdgen_def, ul_ev1_packgen_def,
+        NULL
+    },
     {NULL, NULL, 0, 0, NULL, NULL, NULL, NULL}
 };
 
