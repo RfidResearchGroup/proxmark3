@@ -385,9 +385,7 @@ static int try_default_3des_keys(uint8_t **correct_key) {
         }
     }
 
-    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
-        return res;
-    }
+    setDeviceDebugLevel(dbg_curr, false);
     return res;
 }
 
@@ -1583,6 +1581,7 @@ static int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
 
 static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, int ak_len) {
 
+    uint8_t dbg_curr = DBG_NONE;
     uint8_t *data = NULL;
     int res = PM3_ESOFT;
     PrintAndLogEx(INFO, "");
@@ -1612,7 +1611,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
             keytype = 2; // UL_EV1/NTAG auth
     }
 
-    uint8_t dbg_curr = DBG_NONE;
+
     if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
         res = PM3_ESOFT;
         goto out; 
