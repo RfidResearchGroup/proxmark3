@@ -1520,6 +1520,12 @@ static mfu_identify_t mfu_ident_table[] = {
         ul_ev1_pwdgen_def, ul_ev1_packgen_def,
         "hf mfu pwdgen -r"
     },
+    {
+        "Bank Of Archie brothers", "0004030101000B03",
+        9, 11, "48F6FF0000000036343533",
+        ul_ev1_pwdgen_def, ul_ev1_packgen_def,
+        NULL
+    },
     {NULL, NULL, 0, 0, NULL, NULL, NULL, NULL}
 };
 
