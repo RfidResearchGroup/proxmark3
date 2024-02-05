@@ -1101,7 +1101,7 @@ static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signat
         {"NXP Public key",                     "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
         {"NXP Ultralight Ev1",                 "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
         {"NXP NTAG21x (2013)",                 "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MIKRON Public key",                  "04f971eda742a4a80d32dcf6a814a707cc3dc396d35902f72929fdcd698b3468f2"},
+        {"MIKRON Public key",                  "04F971EDA742A4A80D32DCF6A814A707CC3DC396D35902F72929FDCD698B3468F2"},
     };
 
     // https://www.nxp.com/docs/en/application-note/AN13452.pdf
@@ -1529,6 +1529,12 @@ static mfu_identify_t mfu_ident_table[] = {
     {
         "Art-Dass NFT card", "0004040201000F03",
         16, 16, "033ED1013A5504617274646173732E6E",
+        ul_ev1_pwdgen_def, ul_ev1_packgen_def,
+        NULL
+    },
+    {
+        "Bonverde Coffe card", "0004030101000B03",
+        18, 4, "644B05AA",
         ul_ev1_pwdgen_def, ul_ev1_packgen_def,
         NULL
     },
