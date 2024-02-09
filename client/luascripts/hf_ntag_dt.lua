@@ -23,9 +23,9 @@ Default hf mfu info:
 [=]                     - user configuration writeable
 [=]                     - write access is protected with password
 [=]                     - 05, Virtual Card Type Identifier is default
-[=]   PWD  [229/0xE5]: 00 00 00 00 - (cannot be read)
-[=]   PACK [230/0xE6]: 00 00       - (cannot be read)
-[=]   RFU  [230/0xE6]:       00 00 - (cannot be read)
+[=]   PWD  [229/0xE5]: 00 00 00 00 - ( cannot be read )
+[=]   PACK [230/0xE6]: 00 00       - ( cannot be read )
+[=]   RFU  [230/0xE6]:       00 00 - ( cannot be read )
 ----------------------------------------------------------------------
 
 Default blocks 0xE0 to 0xE6:
