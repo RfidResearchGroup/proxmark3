@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mfu keygen -b` - now takes a block number (@iceman1001)
+ - Fixed `hf mfu info` - now tries pwdgens better (@iceman1001)
  - Changed `hf mf info` - now also checks sector 1 (@iceman1001)
  - Changed `lf em 410x` - now allows for card number zero.  thanks @dangerousthings !  (@iceman1001)
  - Changed `liblua` - now bugfixes applied and current version is v.5.2.4 (@iceman1001)
