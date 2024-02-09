@@ -754,7 +754,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
     return PM3_SUCCESS ;
 }
 
-static int mfLoadKeys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, int userkeylen, const char *filename, int fnlen) {
+static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, int userkeylen, const char *filename, int fnlen) {
     // Handle Keys
     *pkeycnt = 0;
     *pkeyBlock = NULL;
@@ -2661,7 +2661,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Start the timer
     uint64_t t1 = msclock();
 
-    int ret = mfLoadKeys(&keyBlock, &key_cnt, in_keys, in_keys_len, filename, fnlen);
+    int ret = mf_load_keys(&keyBlock, &key_cnt, in_keys, in_keys_len, filename, fnlen);
     if (ret != PM3_SUCCESS) {
         free(e_sector);
         return ret;
@@ -3240,7 +3240,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
-    int ret = mfLoadKeys(&keyBlock, &keycnt, key, keylen, filename, fnlen);
+    int ret = mf_load_keys(&keyBlock, &keycnt, key, keylen, filename, fnlen);
     if (ret != PM3_SUCCESS) {
         return ret;
     }
@@ -3690,7 +3690,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
-    int ret = mfLoadKeys(&keyBlock, &keycnt, key, keylen, filename, fnlen);
+    int ret = mf_load_keys(&keyBlock, &keycnt, key, keylen, filename, fnlen);
     if (ret != PM3_SUCCESS) {
         return ret;
     }
@@ -9284,10 +9284,10 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     uint8_t fkey[MIFARE_KEY_SIZE] = {0};
     uint8_t fKeyType = 0xff;
 
-    int sectorsCnt = 1;
+    int sectorsCnt = 2;
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
-    res = mfLoadKeys(&keyBlock, &keycnt, key, MIFARE_KEY_SIZE, NULL, 0);
+    res = mf_load_keys(&keyBlock, &keycnt, key, MIFARE_KEY_SIZE, NULL, 0);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -9321,6 +9321,10 @@ static int CmdHF14AMfInfo(const char *Cmd) {
                     fKeyType = MF_KEY_B;
                 }
             }
+        }
+
+        if (e_sector[1].foundKey[MF_KEY_A]) {
+            PrintAndLogEx(SUCCESS, "Sector 1 key A... " _GREEN_("%012" PRIX64), e_sector[1].Key[MF_KEY_A]);
         }
 
         if (fKeyType != 0xFF) {
