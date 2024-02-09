@@ -512,9 +512,6 @@ static int getUID(bool verbose, bool loop, uint8_t *buf) {
 bool readHF15Uid(bool loop, bool verbose) {
     uint8_t uid[HF15_UID_LENGTH] = {0};
     if (getUID(verbose, loop, uid) != PM3_SUCCESS) {
-        if (verbose) {
-            PrintAndLogEx(WARNING, "no tag found");
-        }
         return false;
     }
     return true;

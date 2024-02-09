@@ -685,10 +685,6 @@ static int CmdEM410xClone(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint64_t id = bytes_to_num(uid, uid_len);
-    if (id == 0) {
-        PrintAndLogEx(ERR, "Cardnumber can't be zero");
-        return PM3_EINVARG;
-    }
 
     if (q5 && em) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
