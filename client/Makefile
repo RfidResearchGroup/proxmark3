@@ -816,7 +816,7 @@ all-static: $(BINS)
 proxmark3: $(OBJS) $(STATICLIBS) lualibs/pm3_cmd.lua lualibs/mfc_default_keys.lua
 	$(info [=] CXX $@)
 #	$(Q)$(CXX) $(PM3LDFLAGS) $(OBJS) $(STATICLIBS) $(LDLIBS) -o $@
-	$(Q)$(CXX) $(PM3CFLAGS) $(PM3LDFLAGS) $(OBJS) $(STATICLIBS) $(LDLIBS) -o $@
+	$(Q)$(CXX) $(PM3CFLAGS) $(PM3LDFLAGS) $(OBJS) $(STATICLIBS) $(LDLIBS) -o $@ -lutil
 
 src/proxgui.cpp: src/ui/ui_overlays.h src/ui/ui_image.h
 
