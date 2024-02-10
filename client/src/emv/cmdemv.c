@@ -2896,11 +2896,11 @@ static int CmdEMVReader(const char *Cmd) {
 }
 
 static command_t CommandTable[] =  {
-    {"-----------", CmdHelp,                        AlwaysAvailable, "----------------------- " _CYAN_("general") " -----------------------"},
+    {"-----------", CmdHelp,                        AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",        CmdHelp,                        AlwaysAvailable, "This help"},
     {"list",        CmdEMVList,                     AlwaysAvailable, "List ISO7816 history"},
-    {"test",        CmdEMVTest,                     AlwaysAvailable, "Crypto logic test"},
-    {"-----------", CmdHelp,                        IfPm3Iso14443a,  "---------------------- " _CYAN_("operations") " ---------------------"},
+    {"test",        CmdEMVTest,                     AlwaysAvailable, "Crypto logic selftest"},
+    {"-----------", CmdHelp,                        IfPm3Iso14443a,  "---------------------- " _CYAN_("Operations") " ---------------------"},
     {"challenge",   CmdEMVGenerateChallenge,        IfPm3Iso14443,   "Generate challenge"},
     {"exec",        CmdEMVExec,                     IfPm3Iso14443,   "Executes EMV contactless transaction"},
     {"genac",       CmdEMVAC,                       IfPm3Iso14443,   "Generate ApplicationCryptogram"},

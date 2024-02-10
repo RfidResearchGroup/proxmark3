@@ -2595,8 +2595,9 @@ static int CmdEM4x05Config(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
+    {"-----------", CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
-    {"-----------", CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("general") " -----------------------"},
+    {"-----------", CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},    
     {"brute",       CmdEM4x05Brute,   IfPm3Lf,         "Bruteforce password"},
     {"chk",         CmdEM4x05Chk,     IfPm3Lf,         "Check passwords from dictionary"},
     {"config",      CmdEM4x05Config,  AlwaysAvailable, "Create common configuration words"},

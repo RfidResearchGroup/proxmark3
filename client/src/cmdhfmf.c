@@ -9331,14 +9331,20 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
         }
 
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
         if (
             (blockdata[8] == 0x03 && blockdata[15] == 0x90) ||
             (blockdata[9] == 0x02 && blockdata[14] == 0x1D) ||
             (blockdata[8] == 0x04 && blockdata[15] == 0x90) ||
             (memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0)
         ) {
-            PrintAndLogEx(SUCCESS, "   Fudan tag detected");
+            PrintAndLogEx(SUCCESS, "FUDAN detected");
         }
+
+        if (e_sector[1].foundKey[MF_KEY_A] && (e_sector[1].Key[MF_KEY_A] == 0x2A2C13CC242A)) {
+            PrintAndLogEx(SUCCESS, "Dorma Kaba SAFLOK detected");
+        }       
 
     } else {
         PrintAndLogEx(INFO, "<N/A>");

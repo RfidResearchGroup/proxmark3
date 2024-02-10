@@ -2522,9 +2522,10 @@ static int CmdHF14BView(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
+    {"---------", CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",      CmdHelp,          AlwaysAvailable, "This help"},
     {"list",      CmdHF14BList,     AlwaysAvailable, "List ISO-14443-B history"},
-    {"---------", CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("general") " -----------------------"},
+    {"---------", CmdHelp,          AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},
     {"apdu",      CmdHF14BAPDU,     IfPm3Iso14443b,  "Send ISO 14443-4 APDU to tag"},
     {"dump",      CmdHF14BDump,     IfPm3Iso14443b,  "Read all memory pages of an ISO-14443-B tag, save to file"},
     {"info",      CmdHF14Binfo,     IfPm3Iso14443b,  "Tag information"},

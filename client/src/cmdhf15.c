@@ -3418,9 +3418,10 @@ static int CmdHF15Wipe(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
+    {"-----------",         CmdHF15Help,              AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",                CmdHF15Help,              AlwaysAvailable, "This help"},
     {"list",                CmdHF15List,              AlwaysAvailable, "List ISO-15693 history"},
-    {"-----------",         CmdHF15Help,              AlwaysAvailable, "----------------------- " _CYAN_("general") " -----------------------"},
+    {"-----------",         CmdHF15Help,              AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},
     {"demod",               CmdHF15Demod,             AlwaysAvailable, "Demodulate ISO-15693 from tag"},
     {"dump",                CmdHF15Dump,              IfPm3Iso15693,   "Read all memory pages of an ISO-15693 tag, save to file"},
     {"info",                CmdHF15Info,              IfPm3Iso15693,   "Tag information"},
@@ -3434,7 +3435,7 @@ static command_t CommandTable[] = {
     {"view",                CmdHF15View,              AlwaysAvailable, "Display content from tag dump file"},
     {"wipe",                CmdHF15Wipe,              IfPm3Iso15693,   "Wipe card to zeros"},
     {"wrbl",                CmdHF15Write,             IfPm3Iso15693,   "Write a block"},
-    {"-----------",         CmdHF15Help,              IfPm3Iso15693,   "--------------------- " _CYAN_("simulation") " ----------------------"},
+    {"-----------",         CmdHF15Help,              IfPm3Iso15693,   "--------------------- " _CYAN_("Simulation") " ----------------------"},
     {"sim",                 CmdHF15Sim,               IfPm3Iso15693,   "Fake an ISO-15693 tag"},
     {"eload",               CmdHF15ELoad,             IfPm3Iso15693,   "Upload file into emulator memory"},
     {"esave",               CmdHF15ESave,             IfPm3Iso15693,   "Save emulator memory to file"},
@@ -3451,7 +3452,7 @@ static command_t CommandTable[] = {
     {"findafi",             CmdHF15FindAfi,           IfPm3Iso15693,   "Brute force AFI of an ISO-15693 tag"},
     {"writeafi",            CmdHF15WriteAfi,          IfPm3Iso15693,   "Writes the AFI on an ISO-15693 tag"},
     {"writedsfid",          CmdHF15WriteDsfid,        IfPm3Iso15693,   "Writes the DSFID on an ISO-15693 tag"},
-    {"-----------",         CmdHF15Help,              IfPm3Iso15693,  "------------------------- " _CYAN_("magic") " -----------------------"},
+    {"-----------",         CmdHF15Help,              IfPm3Iso15693,  "------------------------- " _CYAN_("Magic") " -----------------------"},
     {"csetuid",             CmdHF15CSetUID,           IfPm3Iso15693,   "Set UID for magic card"},
     {NULL, NULL, NULL, NULL}
 };
