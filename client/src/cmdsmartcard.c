@@ -1229,9 +1229,9 @@ static void atqbToEmulatedAtr(uint8_t *atqb, uint8_t cid, uint8_t *atr, int *atr
     *atrLen = 13;
 }
 
-static int CmdRelay(const char *Cmd) {
+static int CmdPCSC(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "smart relay",
+    CLIParserInit(&ctx, "smart pcsc",
                   "Make pm3 available to host OS smartcard driver via vpcd to enable use with other software such as GlobalPlatform Pro",
                   "Requires the virtual smartcard daemon to be installed and running\n"
                   "  see https://frankmorgner.github.io/vsmartcard/virtualsmartcard/README.html\n"
@@ -1241,9 +1241,13 @@ static int CmdRelay(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "host", "<str>", "VPCD socket host (default: localhost)"),
-        arg_str0("p", "port", "<int>", "VPCD socket port (default: 35963)"),
-        arg_lit0("v", "verbose", "Verbose output"),
+        arg_str0(NULL, "host", "<str>", "vpcd socket host (default: localhost)"),
+        arg_str0("p", "port", "<int>", "vpcd socket port (default: 35963)"),
+        arg_lit0("v", "verbose", "display APDU transactions between OS and card"),
+        arg_lit0("a", NULL, "use ISO 14443A contactless interface"),
+        arg_lit0("b", NULL, "use ISO 14443B contactless interface"),
+//        arg_lit0("v", NULL, "use ISO 15693 contactless interface"),
+        arg_lit0("c", NULL, "use ISO 7816 contact interface"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1263,7 +1267,10 @@ static int CmdRelay(const char *Cmd) {
     }
 
     bool verbose = arg_get_lit(ctx, 3);
-
+    bool use14a = arg_get_lit(ctx, 4);
+    bool use14b = arg_get_lit(ctx, 5);
+//    bool use15 = arg_get_lit(ctx, 6);
+    bool use_contact = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     mbedtls_net_context netCtx;
@@ -1273,36 +1280,62 @@ static int CmdRelay(const char *Cmd) {
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
     uint8_t cmdbuf[512] = {0};
-    iso14a_card_select_t selectedCard14a;
-    iso14b_card_select_t selectedCard14b;
-    isodep_state_t cardType = ISODEP_INACTIVE;
-    bool fieldActivated = false;
+    iso14a_card_select_t card14a;
+    iso14b_card_select_t card14b;
+    smart_card_atr_t card;
 
+    bool have_card = false;
+    Iso7816CommandChannel card_type = CC_CONTACT;
+    isodep_state_t cl_proto = ISODEP_INACTIVE;
+    bool field_activated = false;
+
+    // main loop
     do {
-        if (cardType != ISODEP_INACTIVE) {
-            int bytesRead = mbedtls_net_recv_timeout(&netCtx, cmdbuf, sizeof(cmdbuf), 100);
 
-            if (bytesRead == MBEDTLS_ERR_SSL_TIMEOUT || bytesRead == MBEDTLS_ERR_SSL_WANT_READ) {
+        if (have_card) {
+            int bytes_read = mbedtls_net_recv_timeout(&netCtx, cmdbuf, sizeof(cmdbuf), 100);
+
+            if (bytes_read == MBEDTLS_ERR_SSL_TIMEOUT || bytes_read == MBEDTLS_ERR_SSL_WANT_READ) {
                 continue;
             }
 
-            if (bytesRead > 0) {
+            if (bytes_read > 0) {
+
                 if (cmdbuf[1] == 0x01 && cmdbuf[2] == 0x04) { // vpcd GET ATR
-                    uint8_t atr[20] = {0};
+                    uint8_t atr[50] = {0};
                     int atrLen = 0;
 
-                    if (cardType == ISODEP_NFCA) {
-                        atsToEmulatedAtr(selectedCard14a.ats, atr, &atrLen);
-                    } else if (cardType == ISODEP_NFCB) {
-                        atqbToEmulatedAtr(selectedCard14b.atqb, selectedCard14b.cid, atr, &atrLen);
+                    switch(card_type) {
+                        case CC_CONTACT: {
+                            memcpy(atr, card.atr, card.atr_len);
+                            atrLen = card.atr_len;
+                            break;
+                        } 
+                        case CC_CONTACTLESS: {
+
+                            if (cl_proto == ISODEP_NFCA) {
+                                atsToEmulatedAtr(card14a.ats, atr, &atrLen);
+                            }
+                            if (cl_proto == ISODEP_NFCB) {
+                                atqbToEmulatedAtr(card14b.atqb, card14b.cid, atr, &atrLen);
+                            }
+                            if (cl_proto == ISODEP_NFCV) {
+                                // Not implemented
+                            }
+                            break;
+                        }
+                        default: {
+                            break;
+                        }
                     }
 
                     uint8_t res[22] = {0};
                     res[1] = atrLen;
                     memcpy(res + 2, atr, atrLen);
                     mbedtls_net_send(&netCtx, res, 2 + atrLen);
+
                 } else if (cmdbuf[1] != 0x01) { // vpcd APDU
-                    int apduLen = (cmdbuf[0] << 8) + cmdbuf[1];
+                    int apduLen = (cmdbuf[0] << 8)+ cmdbuf[1];
 
                     uint8_t apduRes[APDU_RES_LEN] = {0};
                     int apduResLen = 0;
@@ -1311,21 +1344,44 @@ static int CmdRelay(const char *Cmd) {
                         PrintAndLogEx(INFO, ">> %s", sprint_hex(cmdbuf + 2, apduLen));
                     }
 
-                    if (cardType == ISODEP_NFCA) {
-                        if (ExchangeAPDU14a(cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen) != PM3_SUCCESS) {
-                            cardType = ISODEP_INACTIVE;
-                            mbedtls_net_close(&netCtx);
-                            continue;
+                    switch (card_type) {
+                        case CC_CONTACT: {
+                            if (ExchangeAPDUSC(false, cmdbuf + 2, apduLen, !field_activated, true, apduRes, sizeof(apduRes), &apduResLen) != PM3_SUCCESS) {
+                                have_card = false;
+                                mbedtls_net_close(&netCtx);
+                                continue;
+                            }
+                            break;
                         }
-                    } else if (cardType == ISODEP_NFCB) {
-                        if (exchange_14b_apdu(cmdbuf + 2, apduLen, !fieldActivated, true, apduRes, sizeof(apduRes), &apduResLen, 0))    {
-                            cardType = ISODEP_INACTIVE;
-                            mbedtls_net_close(&netCtx);
-                            continue;
+                        case CC_CONTACTLESS: {
+
+                            if (cl_proto == ISODEP_NFCA) {
+                                if (ExchangeAPDU14a(cmdbuf + 2, apduLen, !field_activated, true, apduRes, sizeof(apduRes), &apduResLen) != PM3_SUCCESS) {
+                                    have_card = false;
+                                    mbedtls_net_close(&netCtx);
+                                    continue;
+                                }
+                            } 
+                            if (cl_proto == ISODEP_NFCB) {
+                             
+                                if (exchange_14b_apdu(cmdbuf + 2, apduLen, !field_activated, true, apduRes, sizeof(apduRes), &apduResLen, 0))	{
+                                    have_card = false;
+                                    mbedtls_net_close(&netCtx);
+                                    continue;
+                                }
+                            }
+                            if (cl_proto == ISODEP_NFCV) {
+                                // Not implemented
+                            }
+                            break;                            
+                        }
+
+                        default: {
+                            break;
                         }
                     }
-
-                    fieldActivated = true;
+  
+                    field_activated = true;
 
                     if (verbose) {
                         PrintAndLogEx(INFO, "<< %s", sprint_hex(apduRes, apduResLen));
@@ -1339,13 +1395,28 @@ static int CmdRelay(const char *Cmd) {
                 }
             }
         } else {
-            if (IfPm3Iso14443a() && SelectCard14443A_4(false, false, &selectedCard14a) == PM3_SUCCESS) {
-                cardType = ISODEP_NFCA;
-            } else if (IfPm3Iso14443b() && select_card_14443b_4(false, &selectedCard14b) == PM3_SUCCESS) {
-                cardType = ISODEP_NFCB;
+
+            if (use14a && IfPm3Iso14443a() && SelectCard14443A_4(false, false, &card14a) == PM3_SUCCESS) {
+                have_card = true;
+                card_type = CC_CONTACTLESS;
+                cl_proto = ISODEP_NFCA;
             }
-            if (cardType != ISODEP_INACTIVE) {
-                fieldActivated = false;
+
+            if (use14b && IfPm3Iso14443b() && select_card_14443b_4(false, &card14b) == PM3_SUCCESS) {
+                have_card = true;
+                card_type = CC_CONTACTLESS;
+                cl_proto = ISODEP_NFCB;
+            }
+            
+            // ISO 15.
+
+            if (use_contact && IfPm3Iso14443() && smart_select(false, &card) == PM3_SUCCESS) {
+                have_card = true;
+                card_type = CC_CONTACT;
+            }
+
+            if (have_card) {
+                field_activated = false;
                 if (mbedtls_net_connect(&netCtx, (char *) host, (char *) port, MBEDTLS_NET_PROTO_TCP)) {
                     PrintAndLogEx(FAILED, "Failed to connect to vpcd socket. Ensure you have vpcd installed and running");
                     mbedtls_net_close(&netCtx);
@@ -1356,6 +1427,7 @@ static int CmdRelay(const char *Cmd) {
             }
             msleep(300);
         }
+
     } while (!kbd_enter_pressed());
 
     mbedtls_net_close(&netCtx);
@@ -1366,15 +1438,17 @@ static int CmdRelay(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",     CmdHelp,               AlwaysAvailable, "This help"},
-    {"list",     CmdSmartList,          AlwaysAvailable, "List ISO 7816 history"},
-    {"info",     CmdSmartInfo,          IfPm3Smartcard,  "Tag information"},
-    {"relay",    CmdRelay,              IfPm3Iso14443a,  "Turn pm3 into pcsc reader and relay to host OS via vpcd"},
-    {"reader",   CmdSmartReader,        IfPm3Smartcard,  "Act like an IS07816 reader"},
-    {"raw",      CmdSmartRaw,           IfPm3Smartcard,  "Send raw hex data to tag"},
-    {"upgrade",  CmdSmartUpgrade,       AlwaysAvailable, "Upgrade sim module firmware"},
-    {"setclock", CmdSmartSetClock,      IfPm3Smartcard,  "Set clock speed"},
-    {"brute",    CmdSmartBruteforceSFI, IfPm3Smartcard,  "Bruteforce SFI"},
+    {"----------", CmdHelp,               IfPm3Iso14443a,  "------------------- " _CYAN_("General") " -------------------"},
+    {"help",       CmdHelp,               AlwaysAvailable, "This help"},
+    {"list",       CmdSmartList,          AlwaysAvailable, "List ISO 7816 history"},
+    {"----------", CmdHelp,               IfPm3Iso14443a,  "------------------- " _CYAN_("Operations") " -------------------"},
+    {"brute",      CmdSmartBruteforceSFI, IfPm3Smartcard,  "Bruteforce SFI"},
+    {"info",       CmdSmartInfo,          IfPm3Smartcard,  "Tag information"},
+    {"pcsc",       CmdPCSC,               AlwaysAvailable, "Turn pm3 into pcsc reader and relay to host OS via vpcd"},
+    {"reader",     CmdSmartReader,        IfPm3Smartcard,  "Act like an IS07816 reader"},
+    {"raw",        CmdSmartRaw,           IfPm3Smartcard,  "Send raw hex data to tag"},
+    {"upgrade",    CmdSmartUpgrade,       AlwaysAvailable, "Upgrade sim module firmware"},
+    {"setclock",   CmdSmartSetClock,      IfPm3Smartcard,  "Set clock speed"},
     {NULL, NULL, NULL, NULL}
 };
 

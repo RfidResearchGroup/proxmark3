@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Rename `smart relay` to `smart pcsc` and add support for contact interface (@gm3197)
+ - Updated ATR list (@iceman1001)
  - Changed `hf mfu keygen -b` - now takes a block number (@iceman1001)
  - Fixed `hf mfu info` - now tries pwdgens better (@iceman1001)
  - Changed `hf mf info` - now also checks sector 1 (@iceman1001)
