@@ -1219,7 +1219,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 continue;
             }
 
-            if (((pageno * MFU_BLOCK_SIZE) + MFU_BLOCK_SIZE) >= maxdatalen) {
+            if (((pageno * MFU_BLOCK_SIZE) + MFU_BLOCK_SIZE) > maxdatalen) {
                 continue;
             }
 
@@ -1245,7 +1245,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
                 continue;
             }
 
-            if (((blockno * MFBLOCK_SIZE) + MFBLOCK_SIZE) >= maxdatalen) {
+            if (((blockno * MFBLOCK_SIZE) + MFBLOCK_SIZE) > maxdatalen) {
                 continue;
             }
 
