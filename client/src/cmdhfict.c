@@ -476,7 +476,7 @@ static int CmdHfIctCredential(const char * Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(ctx, 5);
+    bool verbose = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
     SetAPDULogging(false);
