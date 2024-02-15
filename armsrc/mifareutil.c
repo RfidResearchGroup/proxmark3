@@ -395,7 +395,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
 
     // REQUEST AUTHENTICATION
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULAES_AUTH_1, keyno, resp, respPar, NULL);
-    if (len != 11) {
+    if (len != 19) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
         return 0;
     }
@@ -428,7 +428,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     aes128_nxp_send(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b);
 
     len = mifare_sendcmd(MIFARE_ULAES_AUTH_2, rnd_ab, sizeof(rnd_ab), resp, respPar, NULL);
-    if (len != 11) {
+    if (len != 19) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
         return 0;
     }
