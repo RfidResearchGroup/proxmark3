@@ -447,7 +447,7 @@ static int try_default_3des_keys(uint8_t **correct_key) {
 }
 
 static int try_default_aes_keys(void) {
-
+    /*
     uint8_t dbg_curr = DBG_NONE;
     if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
         return PM3_ESOFT;
@@ -456,6 +456,7 @@ static int try_default_aes_keys(void) {
     if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
         return PM3_ESOFT;
     }
+    */
 
     int res = PM3_ESOFT;
 
@@ -494,7 +495,7 @@ static int try_default_aes_keys(void) {
         }
     }
 
-    setDeviceDebugLevel(dbg_curr, false);
+//    setDeviceDebugLevel(dbg_curr, false);
     return res;
 }
 
