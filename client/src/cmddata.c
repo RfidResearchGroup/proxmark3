@@ -3684,33 +3684,55 @@ static int CmdCryptography(const char *Cmd) {
 
     // Do data length check
     if ((type & 0x4) >> 2) { // Use AES(0) or DES(1)?
+
         if (datilen % 8 != 0) {
             PrintAndLogEx(ERR, "<data> length must be a multiple of 8. Got %d", datilen);
             return PM3_EINVARG;
         }
+
         if (keylen != 8 && keylen != 16 && keylen != 24) {
             PrintAndLogEx(ERR, "<key> must be 8, 16 or 24 bytes. Got %d", keylen);
             return PM3_EINVARG;
         }
+
     } else {
+
         if (datilen % 16 != 0 && ((type & 0x2) >> 1 == 0)) {
             PrintAndLogEx(ERR, "<data> length must be a multiple of 16. Got %d", datilen);
             return PM3_EINVARG;
         }
+
         if (keylen != 16) {
             PrintAndLogEx(ERR, "<key> must be 16 bytes. Got %d", keylen);
             return PM3_EINVARG;
         }
     }
-    if ((type & 0x8) >> 3) { // Encrypt(0) or decrypt(1)?
+
+    // Encrypt(0) or decrypt(1)?
+    if ((type & 0x8) >> 3) { 
+
         if ((type & 0x4) >> 2) { // AES or DES?
-            if (keylen > 8) {PrintAndLogEx(INFO, "Called 3DES decrypt"); des3_decrypt(dato, dati, key, keylen / 8);}
-            else {
+
+            if (keylen > 8) {
+
+                PrintAndLogEx(INFO, "Called 3DES decrypt"); 
+                des3_decrypt(dato, dati, key, keylen / 8);
+
+            } else {
+
                 PrintAndLogEx(INFO, "Called DES decrypt");
-                if (!ivlen) {des_decrypt_ecb(dato, dati, datilen, key);} // If there's an IV, use CBC
-                else {des_decrypt_cbc(dato, dati, datilen, key, iv);}
+                if (ivlen == 0) {
+                    // If there's an IV, use CBC
+                    des_decrypt_ecb(dato, dati, datilen, key);
+                } else {
+                    des_decrypt_cbc(dato, dati, datilen, key, iv);
+                }
             }
-        } else {PrintAndLogEx(INFO, "Called AES decrypt"); aes_decode(iv, key, dati, dato, datilen);}
+        } else { 
+            PrintAndLogEx(INFO, "Called AES decrypt"); 
+            aes_decode(iv, key, dati, dato, datilen);
+        }
+
     } else {
         if (type & 0x4) { // AES or DES?
             if (type & 0x02) { // If we will calculate a MAC
@@ -3735,13 +3757,18 @@ static int CmdCryptography(const char *Cmd) {
                 PrintAndLogEx(INFO, "Not implemented yet - feel free to contribute!");
                 return PM3_SUCCESS;
             } else {
+
                 if (keylen > 8) {
                     PrintAndLogEx(INFO, "Called 3DES encrypt keysize: %i", keylen / 8);
                     des3_encrypt(dato, dati, key, keylen / 8);
                 } else {
+
                     PrintAndLogEx(INFO, "Called DES encrypt");
-                    if (!ivlen) {des_encrypt_ecb(dato, dati, datilen, key);} // If there's an IV, use ECB
-                    else {
+
+                    if (ivlen == 0) {
+                         // If there's an IV, use ECB
+                        des_encrypt_ecb(dato, dati, datilen, key);
+                    } else {
                         des_encrypt_cbc(dato, dati, datilen, key, iv);
                         char pad[250];
                         memset(pad, ' ', 4 + 8 + (datilen - 8) * 3);
@@ -3751,8 +3778,15 @@ static int CmdCryptography(const char *Cmd) {
                 }
             }
         } else {
-            if (type & 0x02) {PrintAndLogEx(INFO, "Called AES CMAC"); aes_cmac8(iv, key, dati, dato, datilen);} // If we will calculate a MAC
-            else {PrintAndLogEx(INFO, "Called AES encrypt"); aes_encode(iv, key, dati, dato, datilen);}
+
+            if (type & 0x02) {
+                PrintAndLogEx(INFO, "Called AES CMAC"); 
+                 // If we will calculate a MAC
+                aes_cmac8(iv, key, dati, dato, datilen);
+            } else {
+                PrintAndLogEx(INFO, "Called AES encrypt");
+                aes_encode(iv, key, dati, dato, datilen);
+            }
         }
     }
     PrintAndLogEx(SUCCESS, "Result: %s", sprint_hex(dato, datilen));
