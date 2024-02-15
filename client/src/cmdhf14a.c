@@ -2042,6 +2042,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         switch (card.uid[0]) {
             case 0x02: // ST
                 isST = true;
+                isMifareClassic = false;
                 break;
             case 0x04: // NXP
                 nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status);
@@ -2537,6 +2538,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         return PM3_EFAILED;
     }
 
+    PrintAndLogEx(NORMAL, "");
     if (isMifareUltralight) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfu info") "`");
     }
