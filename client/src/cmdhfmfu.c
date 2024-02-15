@@ -1723,7 +1723,7 @@ out:
     return res;
 }
 
-uint32_t GetHF14AMfU_Type(void) {
+uint64_t GetHF14AMfU_Type(void) {
 
     uint64_t tagtype = MFU_TT_UNKNOWN;
     iso14a_card_select_t card;

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `hf mfu info` - tag type identification now properly handles 64bits (@iceman1001)
  - Changed `hf st info` - reworked the output (@iceman1001)
  - Rename `smart relay` to `smart pcsc` and add support for contact interface (@gm3197)
  - Updated ATR list (@iceman1001)

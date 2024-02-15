@@ -42,7 +42,7 @@ typedef struct {
     uint8_t data[1024];
 } PACKED old_mfu_dump_t;
 
-uint32_t GetHF14AMfU_Type(void);
+uint64_t GetHF14AMfU_Type(void);
 int ul_print_type(uint64_t tagtype, uint8_t spaces);
 void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool dense_output);
 int ul_read_uid(uint8_t *uid);
