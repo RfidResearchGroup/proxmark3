@@ -1813,6 +1813,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
             printTag("MIFARE Ultralight C");
             printTag("MIFARE Ultralight EV1");
             printTag("MIFARE Ultralight Nano");
+            printTag("MIFARE Ultralight AES");
             printTag("MIFARE Hospitality");
             printTag("NTAG 2xx");
             type |= MTULTRALIGHT;
