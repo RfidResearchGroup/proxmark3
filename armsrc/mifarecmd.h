@@ -27,6 +27,8 @@ void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes);
+void MifareUL_AES_Auth(bool turn_off_field, uint8_t keyno, uint8_t *keybytes);
+
 void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain);
 void MifareUWriteBlockCompat(uint8_t arg0, uint8_t arg1, uint8_t *datain);
 void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);

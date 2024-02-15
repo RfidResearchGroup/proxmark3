@@ -56,6 +56,16 @@
 
 static int CmdHelp(const char *Cmd);
 
+static uint8_t default_aes_keys[][16] = {
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // all zeroes
+    { 0x42, 0x52, 0x45, 0x41, 0x4b, 0x4d, 0x45, 0x49, 0x46, 0x59, 0x4f, 0x55, 0x43, 0x41, 0x4e, 0x21 }, // 3des std key
+    { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f }, // 0x00-0x0F
+    { 0x49, 0x45, 0x4D, 0x4B, 0x41, 0x45, 0x52, 0x42, 0x21, 0x4E, 0x41, 0x43, 0x55, 0x4F, 0x59, 0x46 }, // NFC-key
+    { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01 }, // all ones
+    { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }, // all FF
+    { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF } // 11 22 33
+};
+
 static uint8_t default_3des_keys[][16] = {
     { 0x42, 0x52, 0x45, 0x41, 0x4b, 0x4d, 0x45, 0x49, 0x46, 0x59, 0x4f, 0x55, 0x43, 0x41, 0x4e, 0x21 }, // 3des std key
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // all zeroes
@@ -295,14 +305,56 @@ static int ulc_requestAuthentication(uint8_t *nonce, uint16_t nonceLength) {
     return len;
 }
 
+static int ulev1_requestAuthentication(uint8_t *pwd, uint8_t *pack, uint16_t packLength) {
+
+    uint8_t cmd[] = {MIFARE_ULEV1_AUTH, pwd[0], pwd[1], pwd[2], pwd[3]};
+    int len = ul_send_cmd_raw(cmd, sizeof(cmd), pack, packLength);
+    // NACK tables different tags,  but between 0-9 is a NEGATIVE response.
+    // ACK == 0xA
+    if (len == 1 && pack[0] <= 0x09)
+        return -1;
+    return len;
+}
+
+/*
+Default AES key is 00-00h. Both the data and UID one.
+Data key is 00, UID is 01. Authenticity is 02h
+Auth is 1A[Key ID][CRC] - AF[RndB] - AF[RndA][RndB'] - 00[RndA']
+*/
+static int ulaes_requestAuthentication(uint8_t *key, uint8_t keyno, bool switch_off_field) {
+    struct p {
+        bool turn_off_field;
+        uint8_t keyno;
+        uint8_t key[16];
+    } PACKED payload;
+
+    payload.turn_off_field = switch_off_field;
+    payload.keyno = keyno;
+    memcpy(payload.key, key, sizeof(payload.key));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFAREULAES_AUTH, (uint8_t*)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFAREULAES_AUTH, &resp, 1500) == false) {
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        return resp.status;
+    }
+    return PM3_SUCCESS;
+}
+
 static int ulc_authentication(uint8_t *key, bool switch_off_field) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREUC_AUTH, switch_off_field, 0, 0, key, 16);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return 0;
-    if (resp.oldarg[0] == 1) return 1;
-
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        return 0;
+    }
+    if (resp.oldarg[0] == 1) {
+        return 1;
+    }
     return 0;
 }
 
@@ -394,16 +446,58 @@ static int try_default_3des_keys(uint8_t **correct_key) {
     return res;
 }
 
-static int ulev1_requestAuthentication(uint8_t *pwd, uint8_t *pack, uint16_t packLength) {
+static int try_default_aes_keys(void) {
 
-    uint8_t cmd[] = {MIFARE_ULEV1_AUTH, pwd[0], pwd[1], pwd[2], pwd[3]};
-    int len = ul_send_cmd_raw(cmd, sizeof(cmd), pack, packLength);
-    // NACK tables different tags,  but between 0-9 is a NEGATIVE response.
-    // ACK == 0xA
-    if (len == 1 && pack[0] <= 0x09)
-        return -1;
-    return len;
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    int res = PM3_ESOFT;
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(SUCCESS, "--- " _CYAN_("Known UL-AES keys"));
+
+    for (uint8_t i = 0; i < ARRAYLEN(default_aes_keys); ++i) {
+        uint8_t *key = default_aes_keys[i];
+
+        for (uint8_t keyno = 0; keyno < 2; keyno++) {
+
+            if (ulaes_requestAuthentication(key, keyno, true) == PM3_SUCCESS) {
+
+                char keystr[20] = {0};
+                switch(keyno) {
+                    case 0:
+                        sprintf(keystr, "Data key");
+                        break;
+                    case 1:
+                        sprintf(keystr, "UID key");
+                        break;
+                    case 2:
+                        sprintf(keystr, "Authenticity key");
+                        break;
+                    default:
+                        break;
+                }
+                PrintAndLogEx(SUCCESS, "Found %s keyno %02X - %s ( "_GREEN_("ok") " )"
+                    , keystr
+                    , keyno
+                    , sprint_hex_inrow(key, 16)
+                );
+
+                res = PM3_SUCCESS;
+            }
+        }
+    }
+
+    setDeviceDebugLevel(dbg_curr, false);
+    return res;
 }
+
 
 static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, uint8_t *pack, uint8_t packSize) {
     if (hasAuthKey && (tagtype & MFU_TT_UL_C)) {
@@ -2026,6 +2120,23 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         }
     }
 
+    // Specific UL-AES
+    if (tagtype & MFU_TT_UL_AES) {
+
+        // print AES configuration etc..
+
+        DropField();
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "--- " _CYAN_("Known AES keys"));
+
+        // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
+        if (try_default_aes_keys() != PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "n/a");
+        }
+        PrintAndLogEx(INFO, "Done!");
+    }
+
+
     // do counters and signature first (don't neet auth)
 
     // ul counters are different than ntag counters
@@ -2117,6 +2228,11 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 }
                 ulev1_print_configuration(tagtype, ulev1_conf, startconfigblock);
             }
+        }
+
+        // Don't check passwords for Ul AES :)
+        if (tagtype == MFU_TT_UL_AES) {
+            goto out;
         }
 
         // AUTHLIMIT, (number of failed authentications)

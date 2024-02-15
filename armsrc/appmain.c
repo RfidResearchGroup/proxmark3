@@ -1639,11 +1639,22 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFAREU_READBL: {
+
             MifareUReadBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFAREUC_AUTH: {
             MifareUC_Auth(packet->oldarg[0], packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_MIFAREULAES_AUTH: {
+            struct p {
+                bool turn_off_field;
+                uint8_t keyno;
+                uint8_t key[18];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            MifareUL_AES_Auth(payload->turn_off_field, payload->keyno, payload->key);
             break;
         }
         case CMD_HF_MIFAREU_READCARD: {
@@ -1801,8 +1812,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_CIDENT: {
-
-
             struct p {
                 uint8_t is_mfc;
                 uint8_t keytype;
@@ -2025,7 +2034,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t skipMode;
                 uint8_t skipRatio;
             } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
+            struct p *payload = (struct p *) packet->data.asBytes;
 
             uint16_t len = 0;
             int res = HfSniff(payload->samplesToSkip, payload->triggersToSkip, &len, payload->skipMode, payload->skipRatio);
@@ -2059,12 +2068,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p {
                 uint32_t new_clk;
             } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
+            struct p *payload = (struct p *) packet->data.asBytes;
             SmartCardSetClock(payload->new_clk);
             break;
         }
         case CMD_SMART_RAW: {
-            SmartCardRaw((smart_card_raw_t *)packet->data.asBytes);
+            SmartCardRaw((smart_card_raw_t *) packet->data.asBytes);
             break;
         }
         case CMD_SMART_UPLOAD: {
@@ -2075,7 +2084,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint16_t crc;
                 uint8_t data[400];
             } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
+            struct p *payload = (struct p *) packet->data.asBytes;
             uint8_t *mem = BigBuf_get_addr();
             memcpy(mem + payload->idx, payload->data, payload->bytes_in_packet);
 
@@ -2094,7 +2103,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint16_t fw_size;
                 uint16_t crc;
             } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
+            struct p *payload = (struct p *) packet->data.asBytes;
 
             uint8_t *fwdata = BigBuf_get_addr();
             uint8_t a = 0, b = 0;
@@ -2139,7 +2148,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p {
                 uint32_t waittime;
             } PACKED;
-            struct p *payload = (struct p *) &packet->data.asBytes;
+            struct p *payload = (struct p *) packet->data.asBytes;
 
             uint16_t available;
             uint16_t pre_available = 0;
@@ -2182,7 +2191,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint32_t waittime;
                 uint8_t data[];
             } PACKED;
-            struct p *payload = (struct p *) &packet->data.asBytes;
+            struct p *payload = (struct p *) packet->data.asBytes;
             usart_writebuffer_sync(payload->data, packet->length - sizeof(payload));
 
             uint16_t available;
@@ -2226,7 +2235,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint32_t baudrate;
                 uint8_t parity;
             } PACKED;
-            struct p *payload = (struct p *) &packet->data.asBytes;
+            struct p *payload = (struct p *) packet->data.asBytes;
             usart_init(payload->baudrate, payload->parity);
             reply_ng(CMD_USART_CONFIG, PM3_SUCCESS, NULL, 0);
             break;
@@ -2350,7 +2359,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint16_t offset;
                 uint8_t data[PM3_CMD_DATA_SIZE - sizeof(uint8_t) - sizeof(uint16_t)];
             } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
+            struct p *payload = (struct p *) packet->data.asBytes;
 
             FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 

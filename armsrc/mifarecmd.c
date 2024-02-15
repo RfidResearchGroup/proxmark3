@@ -281,6 +281,36 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes) {
     reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
 }
 
+void MifareUL_AES_Auth(bool turn_off_field, uint8_t keyno, uint8_t *keybytes) {
+
+    LED_A_ON();
+    LED_B_OFF();
+    LED_C_OFF();
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
+    clear_trace();
+    set_tracing(true);
+
+    if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
+        reply_ng(CMD_HF_MIFAREULAES_AUTH, PM3_ESOFT, NULL, 0);
+        return;
+    };
+
+    if (!mifare_ultra_aes_auth(keyno, keybytes)) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Authentication failed");
+        reply_ng(CMD_HF_MIFAREULAES_AUTH, PM3_ESOFT, NULL, 0);
+        return;
+    }
+
+    if (turn_off_field) {
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        LEDsoff();
+    }
+    reply_ng(CMD_HF_MIFAREULAES_AUTH, PM3_SUCCESS, NULL, 0);
+}
+
 // Arg0 = BlockNo,
 // Arg1 = UsePwd bool
 // datain = PWD bytes,
@@ -361,8 +391,8 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
     // params
     uint8_t blockNo = arg0;
     uint16_t blocks = arg1;
-    bool useKey = (arg2 == 1); //UL_C
-    bool usePwd = (arg2 == 2); //UL_EV1/NTAG
+    bool useKey = (arg2 == 1); // UL_C
+    bool usePwd = (arg2 == 2); // UL_EV1/NTAG
     uint32_t countblocks = 0;
     uint8_t *dataout = BigBuf_malloc(CARD_MEMORY_SIZE);
     if (dataout == NULL) {
@@ -407,7 +437,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
             break;
         }
 
-        len = mifare_ultra_readblock(blockNo + i, dataout + 4 * i);
+        len = mifare_ultra_readblock(blockNo + i, dataout + (4 * i));
 
         if (len) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Read block %d error", i);

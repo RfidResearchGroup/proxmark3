@@ -378,6 +378,92 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     return 1;
 }
 
+int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
+
+    /// aes-128
+    uint8_t random_a[8] = {1, 1, 1, 1, 1, 1, 1, 1};
+    uint8_t random_b[8] = {0x00};
+    uint8_t enc_random_b[8] = {0x00};
+    uint8_t rnd_ab[16] = {0x00};
+    uint8_t IV[8] = {0x00};
+    uint8_t key[16] = {0x00};
+    memcpy(key, keybytes, sizeof(key));
+
+    uint16_t len = 0;
+    uint8_t resp[19] = {0x00};
+    uint8_t respPar[3] = {0, 0, 0};
+
+    // REQUEST AUTHENTICATION
+    len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULAES_AUTH_1, keyno, resp, respPar, NULL);
+    if (len != 11) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
+        return 0;
+    }
+
+    // tag nonce.
+    memcpy(enc_random_b, resp + 1, 8);
+
+    // decrypt nonce.
+    aes128_nxp_receive((void *)enc_random_b, (void *)random_b, sizeof(random_b), (const void *)key, IV);
+
+    rol(random_b, 8);
+    memcpy(rnd_ab, random_a, 8);
+    memcpy(rnd_ab + 8, random_b, 8);
+
+    if (g_dbglevel >= DBG_EXTENDED) {
+        Dbprintf("enc_B: %02x %02x %02x %02x %02x %02x %02x %02x",
+                 enc_random_b[0], enc_random_b[1], enc_random_b[2], enc_random_b[3], enc_random_b[4], enc_random_b[5], enc_random_b[6], enc_random_b[7]);
+
+        Dbprintf("    B: %02x %02x %02x %02x %02x %02x %02x %02x",
+                 random_b[0], random_b[1], random_b[2], random_b[3], random_b[4], random_b[5], random_b[6], random_b[7]);
+
+        Dbprintf("rnd_ab: %02x %02x %02x %02x %02x %02x %02x %02x",
+                 rnd_ab[0], rnd_ab[1], rnd_ab[2], rnd_ab[3], rnd_ab[4], rnd_ab[5], rnd_ab[6], rnd_ab[7]);
+
+        Dbprintf("rnd_ab: %02x %02x %02x %02x %02x %02x %02x %02x",
+                 rnd_ab[8], rnd_ab[9], rnd_ab[10], rnd_ab[11], rnd_ab[12], rnd_ab[13], rnd_ab[14], rnd_ab[15]);
+    }
+
+    // encrypt    out, in, length, key, iv
+    aes128_nxp_send(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b);
+
+    len = mifare_sendcmd(MIFARE_ULAES_AUTH_2, rnd_ab, sizeof(rnd_ab), resp, respPar, NULL);
+    if (len != 11) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
+        return 0;
+    }
+
+    uint8_t enc_resp[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    uint8_t resp_random_a[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    memcpy(enc_resp, resp + 1, 8);
+
+    // decrypt    out, in, length, key, iv
+    aes128_nxp_receive(enc_resp, resp_random_a, 8, key, enc_random_b);
+    if (memcmp(resp_random_a, random_a, 8) != 0) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("failed authentication");
+        return 0;
+    }
+
+    if (g_dbglevel >= DBG_EXTENDED) {
+        Dbprintf("e_AB: %02x %02x %02x %02x %02x %02x %02x %02x",
+                 rnd_ab[0], rnd_ab[1], rnd_ab[2], rnd_ab[3],
+                 rnd_ab[4], rnd_ab[5], rnd_ab[6], rnd_ab[7]);
+
+        Dbprintf("e_AB: %02x %02x %02x %02x %02x %02x %02x %02x",
+                 rnd_ab[8], rnd_ab[9], rnd_ab[10], rnd_ab[11],
+                 rnd_ab[12], rnd_ab[13], rnd_ab[14], rnd_ab[15]);
+
+        Dbprintf("a: %02x %02x %02x %02x %02x %02x %02x %02x",
+                 random_a[0], random_a[1], random_a[2], random_a[3],
+                 random_a[4], random_a[5], random_a[6], random_a[7]);
+
+        Dbprintf("b: %02x %02x %02x %02x %02x %02x %02x %02x",
+                 resp_random_a[0], resp_random_a[1], resp_random_a[2], resp_random_a[3],
+                 resp_random_a[4], resp_random_a[5], resp_random_a[6], resp_random_a[7]);
+    }
+    return 1;
+}
+
 static int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
     uint16_t len = 0;
     uint8_t bt[2] = {0x00, 0x00};
