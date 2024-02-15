@@ -411,17 +411,14 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     memcpy(rnd_ab + 16, random_b, 16);
 
     if (g_dbglevel >= DBG_EXTENDED) {
-        Dbprintf("enc_B: %02x %02x %02x %02x %02x %02x %02x %02x",
-                 enc_random_b[0], enc_random_b[1], enc_random_b[2], enc_random_b[3], enc_random_b[4], enc_random_b[5], enc_random_b[6], enc_random_b[7]);
+        Dbprintf("enc_B:");
+        Dbhexdump(16, enc_random_b, false);
 
-        Dbprintf("    B: %02x %02x %02x %02x %02x %02x %02x %02x",
-                 random_b[0], random_b[1], random_b[2], random_b[3], random_b[4], random_b[5], random_b[6], random_b[7]);
+        Dbprintf("    B:");
+        Dbhexdump(16, random_b, false);
 
-        Dbprintf("rnd_ab: %02x %02x %02x %02x %02x %02x %02x %02x",
-                 rnd_ab[0], rnd_ab[1], rnd_ab[2], rnd_ab[3], rnd_ab[4], rnd_ab[5], rnd_ab[6], rnd_ab[7]);
-
-        Dbprintf("rnd_ab: %02x %02x %02x %02x %02x %02x %02x %02x",
-                 rnd_ab[8], rnd_ab[9], rnd_ab[10], rnd_ab[11], rnd_ab[12], rnd_ab[13], rnd_ab[14], rnd_ab[15]);
+        Dbprintf("rnd_ab:");
+        Dbhexdump(32, rnd_ab, false);
     }
 
     // encrypt    out, in, length, key, iv
@@ -445,21 +442,15 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     }
 
     if (g_dbglevel >= DBG_EXTENDED) {
-        Dbprintf("e_AB: %02x %02x %02x %02x %02x %02x %02x %02x",
-                 rnd_ab[0], rnd_ab[1], rnd_ab[2], rnd_ab[3],
-                 rnd_ab[4], rnd_ab[5], rnd_ab[6], rnd_ab[7]);
 
-        Dbprintf("e_AB: %02x %02x %02x %02x %02x %02x %02x %02x",
-                 rnd_ab[8], rnd_ab[9], rnd_ab[10], rnd_ab[11],
-                 rnd_ab[12], rnd_ab[13], rnd_ab[14], rnd_ab[15]);
+        Dbprintf("e_AB:");
+        Dbhexdump(32, rnd_ab, false);
 
-        Dbprintf("a: %02x %02x %02x %02x %02x %02x %02x %02x",
-                 random_a[0], random_a[1], random_a[2], random_a[3],
-                 random_a[4], random_a[5], random_a[6], random_a[7]);
+        Dbprintf("  a:");
+        Dbhexdump(16, random_a, false);
 
-        Dbprintf("b: %02x %02x %02x %02x %02x %02x %02x %02x",
-                 resp_random_a[0], resp_random_a[1], resp_random_a[2], resp_random_a[3],
-                 resp_random_a[4], resp_random_a[5], resp_random_a[6], resp_random_a[7]);
+        Dbprintf("  b:");
+        Dbhexdump(16, resp_random_a, false);
     }
     return 1;
 }
