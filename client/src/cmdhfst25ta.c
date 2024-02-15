@@ -44,67 +44,75 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "------------ " _CYAN_("ST System file") " ------------");
+    PrintAndLogEx(SUCCESS, "------------ " _CYAN_("ST System file") " -----------------------------");
 
-    uint16_t len = (d[0] << 8 | d[1]);
-    PrintAndLogEx(SUCCESS, " len      %u bytes ( " _GREEN_("0x%04X") " )", len, len);
+    PrintAndLogEx(SUCCESS, "Manufacture..... " _YELLOW_("%s"), getTagInfo(d[8]));
+    PrintAndLogEx(SUCCESS, "Product Code.... " _YELLOW_("%s"), get_st_chip_model(d[9]));
+    PrintAndLogEx(SUCCESS, "Device Serial... " _YELLOW_("%s"), sprint_hex_inrow(d + 10, 5));
 
-    if (d[2] == 0x80) {
-        PrintAndLogEx(SUCCESS, " ST reserved  ( 0x%02X )", d[2]);
-    } else {
-        PrintAndLogEx(SUCCESS, " GPO Config ( 0x%02X )", d[2]);
-        PrintAndLogEx(SUCCESS, "    config lock bit ( %s )", ((d[2] & 0x80) == 0x80) ? _RED_("locked") : _GREEN_("unlocked"));
+    if (d[2] != 0x80) {
+
+        PrintAndLogEx(SUCCESS, "GPO Config... 0x%02X", d[2]);
+        PrintAndLogEx(SUCCESS, " lock bit.... %s", ((d[2] & 0x80) == 0x80) ? _RED_("locked") : _GREEN_("unlocked"));
+
         uint8_t conf = (d[2] & 0x70) >> 4;
         switch (conf) {
             case 0:
-                PrintAndLogEx(SUCCESS, "");
                 break;
             case 1:
-                PrintAndLogEx(SUCCESS, "Session opened");
+                PrintAndLogEx(SUCCESS, " Session opened");
                 break;
             case 2:
-                PrintAndLogEx(SUCCESS, "WIP");
+                PrintAndLogEx(SUCCESS, " WIP");
                 break;
             case 3:
-                PrintAndLogEx(SUCCESS, "MIP");
+                PrintAndLogEx(SUCCESS, " MIP");
                 break;
             case 4:
-                PrintAndLogEx(SUCCESS, "Interrupt");
+                PrintAndLogEx(SUCCESS, " Interrupt");
                 break;
             case 5:
-                PrintAndLogEx(SUCCESS, "State Control");
+                PrintAndLogEx(SUCCESS, " State Control");
                 break;
             case 6:
-                PrintAndLogEx(SUCCESS, "RF Busy");
+                PrintAndLogEx(SUCCESS, " RF Busy");
                 break;
             case 7:
-                PrintAndLogEx(SUCCESS, "Field Detect");
+                PrintAndLogEx(SUCCESS, " Field Detect");
                 break;
         }
     }
 
-    PrintAndLogEx(SUCCESS, " Event counter config ( 0x%02X )", d[3]);
-    PrintAndLogEx(SUCCESS, "        config lock bit ( %s )", ((d[3] & 0x80) == 0x80) ? _RED_("locked") : _GREEN_("unlocked"));
-    PrintAndLogEx(SUCCESS, "                counter ( %s )", ((d[3] & 0x02) == 0x02) ? _RED_("enabled") : _GREEN_("disable"));
-    PrintAndLogEx(SUCCESS, "   counter increment on ( %s )", ((d[3] & 0x01) == 0x01) ? _YELLOW_("write") : _YELLOW_("read"));
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Event counter config.... 0x%02X", d[3]);
+    PrintAndLogEx(SUCCESS, " config lock bit........ %s", ((d[3] & 0x80) == 0x80) ? _RED_("locked") : _GREEN_("unlocked"));
+    PrintAndLogEx(SUCCESS, " counter................ %s", ((d[3] & 0x02) == 0x02) ? _RED_("enabled") : _GREEN_("disable"));
+    PrintAndLogEx(SUCCESS, " counter increment on... %s", ((d[3] & 0x01) == 0x01) ? _YELLOW_("write") : _YELLOW_("read"));
+    PrintAndLogEx(NORMAL, "");
+
+    uint16_t len = (d[0] << 8 | d[1]);
+
+    PrintAndLogEx(SUCCESS, "----------------- " _CYAN_("raw") " -----------------------------------");
+    PrintAndLogEx(SUCCESS, " %s", sprint_hex_inrow(d, n));
+    PrintAndLogEx(SUCCESS, " %02X%02X................................ - Len ( %u bytes )", d[0], d[1], len);
+
+    if (d[2] == 0x80) {
+        PrintAndLogEx(SUCCESS, " ....%02X.............................. - ST reserved", d[2]);
+    } else {
+        PrintAndLogEx(SUCCESS, " ....%02X.............................. - GPO config" , d[2]);
+    }
+
+    PrintAndLogEx(SUCCESS, " ......%02X............................ - Event counter config", d[3]);
 
     uint32_t counter = (d[4] << 16 | d[5] << 8 | d[6]);
-    PrintAndLogEx(SUCCESS, " 20bit counter ( 0x%05X )", counter & 0xFFFFF);
-
-    PrintAndLogEx(SUCCESS, " Product version ( 0x%02X )", d[7]);
-
-    PrintAndLogEx(SUCCESS, "          UID " _GREEN_("%s"), sprint_hex_inrow(d + 8, 7));
-    PrintAndLogEx(SUCCESS, "          MFG  0x%02X, " _YELLOW_("%s"), d[8], getTagInfo(d[8]));
-    PrintAndLogEx(SUCCESS, " Product Code  0x%02X, " _YELLOW_("%s"), d[9], get_st_chip_model(d[9]));
-    PrintAndLogEx(SUCCESS, "      Device#  " _YELLOW_("%s"), sprint_hex_inrow(d + 10, 5));
+    PrintAndLogEx(SUCCESS, " ........%02X%02X%02X...................... - 20 bit counter ( %u )", d[4],d[5],d[6], (counter & 0xFFFFF));
+    PrintAndLogEx(SUCCESS, " ..............%02X.................... - Product version", d[7]);
+    PrintAndLogEx(SUCCESS, " ................%s...... - UID", sprint_hex_inrow(d + 8, 7));
 
     uint16_t mem = (d[0xF] << 8 | d[0x10]);
-    PrintAndLogEx(SUCCESS, " Memory Size - 1   %u bytes ( " _GREEN_("0x%04X") " )", mem, mem);
+    PrintAndLogEx(SUCCESS, " ..............................%02X%02X.. - Mem size - 1 ( %u bytes )", d[0xf], d[0x10], mem);
 
-    PrintAndLogEx(SUCCESS, " IC Reference code %u ( 0x%02X )", d[0x12], d[0x12]);
-
-    PrintAndLogEx(SUCCESS, "----------------- " _CYAN_("raw") " -----------------");
-    PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow(d, n));
+    PrintAndLogEx(SUCCESS, " ..................................%02X - IC ref code", d[0x11]);
     PrintAndLogEx(NORMAL, "");
 
     /*
