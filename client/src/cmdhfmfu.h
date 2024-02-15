@@ -52,9 +52,6 @@ int CmdHFMFUltra(const char *Cmd);
 int CmdHF14MfuNDEFRead(const char *Cmd);
 int CmdHF14MfUTamper(const char *Cmd);
 
-uint16_t ul_ev1_packgen_VCNEW(uint8_t *uid, uint32_t pwd);
-uint32_t ul_ev1_otpgenA(uint8_t *uid);
-
 #define MFU_TT_UNKNOWN          0x0ULL
 #define MFU_TT_UL               0x1ULL
 #define MFU_TT_UL_C             0x2ULL

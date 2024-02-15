@@ -222,8 +222,13 @@ static int ul_send_cmd_raw(uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0, cmd, cmdlen);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) return -1;
-    if (!resp.oldarg[0] && responseLength) return -1;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        return -1;
+    }
+
+    if (!resp.oldarg[0] && responseLength) {
+        return -1;
+    }
 
     uint16_t resplen = (resp.oldarg[0] < responseLength) ? resp.oldarg[0] : responseLength;
     memcpy(response, resp.data.asBytes, resplen);
@@ -423,34 +428,27 @@ static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool has
 
 static int ntagtt_getTamperStatus(uint8_t *response, uint16_t responseLength) {
     uint8_t cmd[] = {NTAGTT_CMD_READ_TT, 0x00};
-    int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
-    return len;
+    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
 }
 
 static int ulev1_getVersion(uint8_t *response, uint16_t responseLength) {
     uint8_t cmd[] = {MIFARE_ULEV1_VERSION};
-    int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
-    return len;
+    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
 }
 
 static int ulev1_readCounter(uint8_t counter, uint8_t *response, uint16_t responseLength) {
-
     uint8_t cmd[] = {MIFARE_ULEV1_READ_CNT, counter};
-    int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
-    return len;
+    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
 }
 
 static int ulev1_readTearing(uint8_t counter, uint8_t *response, uint16_t responseLength) {
-
     uint8_t cmd[] = {MIFARE_ULEV1_CHECKTEAR, counter};
-    int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
-    return len;
+    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
 }
 
 static int ulev1_readSignature(uint8_t *response, uint16_t responseLength) {
     uint8_t cmd[] = {MIFARE_ULEV1_READSIG, 0x00};
-    int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
-    return len;
+    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
 }
 
 // Fudan check checks for which error is given for a command with incorrect crc
@@ -688,8 +686,9 @@ static int ndef_print_CC(uint8_t *data) {
 
 int ul_print_type(uint64_t tagtype, uint8_t spaces) {
 
-    if (spaces > 10)
+    if (spaces > 10) {
         spaces = 10;
+    }
 
     char typestr[100];
     memset(typestr, 0x00, sizeof(typestr));
@@ -756,16 +755,20 @@ int ul_print_type(uint64_t tagtype, uint8_t spaces) {
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("Unknown %06" PRIx64), spaces, "", tagtype);
 
     bool ismagic = ((tagtype & MFU_TT_MAGIC) == MFU_TT_MAGIC);
-    if (ismagic)
+    if (ismagic) {
         snprintf(typestr + strlen(typestr), 4, " (");
+    }
 
     snprintf(typestr + strlen(typestr), sizeof(typestr) - strlen(typestr), " %s ", (tagtype & MFU_TT_MAGIC) ?  _GREEN_("magic") : "");
+
     tagtype &= ~(MFU_TT_MAGIC);
+
     snprintf(typestr + strlen(typestr), sizeof(typestr) - strlen(typestr), "%s", (tagtype & MFU_TT_MAGIC_1A) ? _GREEN_("Gen 1a") : "");
     snprintf(typestr + strlen(typestr), sizeof(typestr) - strlen(typestr), "%s", (tagtype & MFU_TT_MAGIC_1B) ? _GREEN_("Gen 1b") : "");
 
-    if (ismagic)
+    if (ismagic) {
         snprintf(typestr + strlen(typestr), 4, " )");
+    }
 
     PrintAndLogEx(SUCCESS, "%s", typestr);
     return PM3_SUCCESS;
@@ -1781,6 +1784,7 @@ uint32_t GetHF14AMfU_Type(void) {
                 NT2H1311TTDUx 0004040203000F03
                 Micron UL 0034210101000E03
                 Feiju NTAG 0053040201000F03
+                MF0AES2001DUD 0004030104000F03
                 */
 
                 if (memcmp(version, "\x00\x04\x03\x01\x01\x00\x0B", 7) == 0)      { tagtype = MFU_TT_UL_EV1_48; break; }
@@ -1826,7 +1830,9 @@ uint32_t GetHF14AMfU_Type(void) {
 
         // UL vs UL-C vs ntag203 test
         if (tagtype & (MFU_TT_UL | MFU_TT_UL_C | MFU_TT_NTAG_203)) {
-            if (!ul_select(&card)) return MFU_TT_UL_ERROR;
+            if (ul_select(&card) == false) {
+                return MFU_TT_UL_ERROR;
+            }
 
             // do UL_C check first...
             uint8_t nonce[11] = {0x00};
@@ -1836,8 +1842,9 @@ uint32_t GetHF14AMfU_Type(void) {
                 tagtype = MFU_TT_UL_C;
             } else {
                 // need to re-select after authentication error
-                if (ul_select(&card) == false)
+                if (ul_select(&card) == false) {
                     return MFU_TT_UL_ERROR;
+                }
 
                 uint8_t data[16] = {0x00};
                 // read page 0x26-0x29 (last valid ntag203 page)
