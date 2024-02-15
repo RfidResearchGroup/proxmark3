@@ -381,17 +381,17 @@ int mifare_ultra_auth(uint8_t *keybytes) {
 int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
 
     /// aes-128
-    uint8_t random_a[8] = {1, 1, 1, 1, 1, 1, 1, 1};
-    uint8_t random_b[8] = {0x00};
-    uint8_t enc_random_b[8] = {0x00};
-    uint8_t rnd_ab[16] = {0x00};
-    uint8_t IV[8] = {0x00};
+    uint8_t random_a[16] = {1, 1, 1, 1, 1, 1, 1, 1};
+    uint8_t random_b[16] = {0x00};
+    uint8_t enc_random_b[16] = {0x00};
+    uint8_t rnd_ab[32] = {0x00};
+    uint8_t IV[16] = {0x00};
     uint8_t key[16] = {0x00};
     memcpy(key, keybytes, sizeof(key));
 
     uint16_t len = 0;
     uint8_t resp[19] = {0x00};
-    uint8_t respPar[3] = {0, 0, 0};
+    uint8_t respPar[5] = {0, 0, 0};
 
     // REQUEST AUTHENTICATION
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULAES_AUTH_1, keyno, resp, respPar, NULL);
@@ -401,14 +401,14 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     }
 
     // tag nonce.
-    memcpy(enc_random_b, resp + 1, 8);
+    memcpy(enc_random_b, resp + 1, 16);
 
     // decrypt nonce.
     aes128_nxp_receive((void *)enc_random_b, (void *)random_b, sizeof(random_b), (const void *)key, IV);
 
-    rol(random_b, 8);
-    memcpy(rnd_ab, random_a, 8);
-    memcpy(rnd_ab + 8, random_b, 8);
+    rol(random_b, 16);
+    memcpy(rnd_ab, random_a, 16);
+    memcpy(rnd_ab + 16, random_b, 16);
 
     if (g_dbglevel >= DBG_EXTENDED) {
         Dbprintf("enc_B: %02x %02x %02x %02x %02x %02x %02x %02x",
@@ -428,18 +428,18 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     aes128_nxp_send(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b);
 
     len = mifare_sendcmd(MIFARE_ULAES_AUTH_2, rnd_ab, sizeof(rnd_ab), resp, respPar, NULL);
-    if (len != 19) {
+    if (len != 35) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
         return 0;
     }
 
-    uint8_t enc_resp[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    uint8_t resp_random_a[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    memcpy(enc_resp, resp + 1, 8);
+    uint8_t enc_resp[16] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    uint8_t resp_random_a[16] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    memcpy(enc_resp, resp + 1, 16);
 
     // decrypt    out, in, length, key, iv
-    aes128_nxp_receive(enc_resp, resp_random_a, 8, key, enc_random_b);
-    if (memcmp(resp_random_a, random_a, 8) != 0) {
+    aes128_nxp_receive(enc_resp, resp_random_a, 16, key, enc_random_b);
+    if (memcmp(resp_random_a, random_a, 16) != 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("failed authentication");
         return 0;
     }
