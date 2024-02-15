@@ -119,55 +119,24 @@ void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, un
     }
 }
 
-void aes128_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8]) {
+void aes128_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[16]) {
     if (length % 8) return;
+
+    uint8_t *tin = (uint8_t *) in;
+    uint8_t *tout = (uint8_t *) out;
 
     mbedtls_aes_setkey_dec(&actx, key, 128);
-
-    uint8_t i;
-    unsigned char temp[8];
-    uint8_t *tin = (uint8_t *) in;
-    uint8_t *tout = (uint8_t *) out;
-
-    while (length > 0) {
-        memcpy(temp, tin, 8);
-
-        mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_DECRYPT, tin, tout);
-
-        for (i = 0; i < 8; i++) {
-            tout[i] = (unsigned char)(tout[i] ^ iv[i]);
-        }
-
-        memcpy(iv, temp, 8);
-
-        tin  += 8;
-        tout += 8;
-        length -= 8;
-    }
+    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, length, iv, tin, tout);
 }
 
-void aes128_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[8]) {
+void aes128_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[16]) {
     if (length % 8) return;
 
-    mbedtls_aes_setkey_enc(&actx, key, 128);
-
-    uint8_t i;
     uint8_t *tin = (uint8_t *) in;
     uint8_t *tout = (uint8_t *) out;
 
-    while (length > 0) {
-        for (i = 0; i < 8; i++) {
-            tin[i] = (unsigned char)(tin[i] ^ iv[i]);
-        }
-
-        mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_ENCRYPT, tin, tout);
-
-        memcpy(iv, tout, 8);
-
-        tin  += 8;
-        tout += 8;
-        length -= 8;
-    }
+    mbedtls_aes_setkey_enc(&actx, key, 128);
+    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_ENCRYPT, length, iv, tin, tout);
 }
 
 void Desfire_des_key_new(const uint8_t value[8], desfirekey_t key) {

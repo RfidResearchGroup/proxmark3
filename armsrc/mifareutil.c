@@ -381,17 +381,17 @@ int mifare_ultra_auth(uint8_t *keybytes) {
 int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
 
     /// aes-128
-    uint8_t random_a[16] = {1, 1, 1, 1, 1, 1, 1, 1};
-    uint8_t random_b[16] = {0x00};
-    uint8_t enc_random_b[16] = {0x00};
-    uint8_t rnd_ab[32] = {0x00};
-    uint8_t IV[16] = {0x00};
-    uint8_t key[16] = {0x00};
+    uint8_t random_a[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    uint8_t random_b[16] = { 0 };
+    uint8_t enc_random_b[16] = { 0 };
+    uint8_t rnd_ab[32] = { 0 };
+    uint8_t IV[16] = { 0 };
+    uint8_t key[16] = { 0 };
     memcpy(key, keybytes, sizeof(key));
 
     uint16_t len = 0;
     uint8_t resp[19] = {0x00};
-    uint8_t respPar[5] = {0, 0, 0};
+    uint8_t respPar[5] = {0};
 
     // REQUEST AUTHENTICATION
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULAES_AUTH_1, keyno, resp, respPar, NULL);
@@ -414,7 +414,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
         Dbprintf("enc_B:");
         Dbhexdump(16, enc_random_b, false);
 
-        Dbprintf("    B:");
+        Dbprintf("B:");
         Dbhexdump(16, random_b, false);
 
         Dbprintf("rnd_ab:");
@@ -430,12 +430,13 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
         return 0;
     }
 
-    uint8_t enc_resp[16] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    uint8_t resp_random_a[16] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    uint8_t enc_resp[16] = { 0 };
+    uint8_t resp_random_a[16] = { 0 };
     memcpy(enc_resp, resp + 1, 16);
 
     // decrypt    out, in, length, key, iv
     aes128_nxp_receive(enc_resp, resp_random_a, 16, key, enc_random_b);
+
     if (memcmp(resp_random_a, random_a, 16) != 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("failed authentication");
         return 0;
@@ -446,10 +447,10 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
         Dbprintf("e_AB:");
         Dbhexdump(32, rnd_ab, false);
 
-        Dbprintf("  a:");
+        Dbprintf("A:");
         Dbhexdump(16, random_a, false);
 
-        Dbprintf("  b:");
+        Dbprintf("B:");
         Dbhexdump(16, resp_random_a, false);
     }
     return 1;
