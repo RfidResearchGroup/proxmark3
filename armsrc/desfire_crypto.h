@@ -180,8 +180,8 @@ void des_decrypt(void *out, const void *in, const void *key);
 void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode);
 void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode);
 
-void aes128_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8]);
-void aes128_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[8]);
+void aes128_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[16]);
+void aes128_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[16]);
 
 void Desfire_des_key_new(const uint8_t value[8], desfirekey_t key);
 void Desfire_3des_key_new(const uint8_t value[16], desfirekey_t key);
