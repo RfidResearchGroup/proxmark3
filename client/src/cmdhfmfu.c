@@ -706,6 +706,8 @@ int ul_print_type(uint64_t tagtype, uint8_t spaces) {
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("MIFARE Ultralight EV1 128bytes (MF0UL2101)"), spaces, "");
     else if (tagtype & MFU_TT_UL_EV1)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("MIFARE Ultralight EV1 UNKNOWN"), spaces, "");
+    else if (tagtype & MFU_TT_UL_AES)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("MIFARE Ultralight AES"), spaces, "");
     else if (tagtype & MFU_TT_NTAG)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG UNKNOWN"), spaces, "");
     else if (tagtype & MFU_TT_NTAG_203)
@@ -2281,8 +2283,8 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         return PM3_ESOFT;
 
     uint8_t maxblockno = 0;
-    for (uint8_t idx = 0; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
-        if (tagtype & UL_TYPES_ARRAY[idx]) {
+    for (uint8_t idx = 1; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
+        if ((tagtype & UL_TYPES_ARRAY[idx]) == UL_TYPES_ARRAY[idx]) {
             maxblockno = UL_MEMORY_ARRAY[idx];
             break;
         }
@@ -2402,8 +2404,8 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
         return PM3_ESOFT;
 
     uint8_t maxblockno = 0;
-    for (uint8_t idx = 0; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
-        if (tagtype & UL_TYPES_ARRAY[idx]) {
+    for (uint8_t idx = 1; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
+        if ((tagtype & UL_TYPES_ARRAY[idx]) == UL_TYPES_ARRAY[idx]) {
             maxblockno = UL_MEMORY_ARRAY[idx];
             break;
         }
@@ -2734,8 +2736,8 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     //get number of pages to read
     if (manual_pages == false) {
-        for (uint8_t idx = 0; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
-            if (tagtype & UL_TYPES_ARRAY[idx]) {
+        for (uint8_t idx = 1; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
+            if ((tagtype & UL_TYPES_ARRAY[idx]) == UL_TYPES_ARRAY[idx]) {
                 //add one as maxblks starts at 0
                 card_mem_size = pages = UL_MEMORY_ARRAY[idx] + 1;
                 break;
@@ -4658,13 +4660,13 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
 
     // iceman: maybe always take MIN of tag identified size vs NDEF reported size?
     // fix: UL_EV1 48bytes != NDEF reported size
-    for (uint8_t i = 0; i < ARRAYLEN(UL_TYPES_ARRAY); i++) {
-        if (tagtype & UL_TYPES_ARRAY[i]) {
+    for (uint8_t idx = 1; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
+        if ((tagtype & UL_TYPES_ARRAY[idx]) == UL_TYPES_ARRAY[idx]) {
 
-            if (maxsize != (UL_MEMORY_ARRAY[i] * 4)) {
+            if (maxsize != (UL_MEMORY_ARRAY[idx] * 4)) {
                 PrintAndLogEx(INFO, "Tag reported size vs NDEF reported size mismatch. Using smallest value");
             }
-            maxsize = MIN(maxsize, (UL_MEMORY_ARRAY[i] * 4));
+            maxsize = MIN(maxsize, (UL_MEMORY_ARRAY[idx] * 4));
             break;
         }
     }
