@@ -9,6 +9,9 @@ DUMP="dump_$(date +'%Y%m%d-%H%M%S').bin"
 # Segger Jlink:
 CONFIG_IF=interface/jlink.cfg
 
+# CMSIS-DAP (read interface-cmsis-dap.cfg for notes):
+#CONFIG_IF=interface-cmsis-dap.cfg
+
 # Raspberry Pi models Pi1, Pi2 and Pi Zero (read interface-raspberrypi.cfg for pinout)
 #CONFIG_IF=interface-raspberrypi.cfg
 
