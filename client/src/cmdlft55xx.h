@@ -42,6 +42,7 @@
 #define T55X7_PRESCO_CONFIG_BLOCK       0x00088088  // ASK, data rate 32, Manchester, 4 data blocks, STT
 #define T55X7_SECURAKEY_CONFIG_BLOCK    0x000C8060  // ASK, Manchester, data rate 40, 3 data blocks
 #define T55X7_UNK_CONFIG_BLOCK          0x000880FA  // ASK, Manchester, data rate 32, 7 data blocks STT, Inverse ...
+#define T55X7_PYRONIX_CONFIG_BLOCK      0x00088C40  // ASK, Manchester, data rate 32, 2 data blocks
 
 // FDXB requires data inversion and BiPhase 57 is simply BiPhase 50 inverted, so we can either do it using the modulation scheme or the inversion flag
 // we've done both below to prove that it works either way, and the modulation value for BiPhase 50 in the Atmel data sheet of binary "10001" (17) is a typo,
