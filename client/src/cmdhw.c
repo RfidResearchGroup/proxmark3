@@ -529,13 +529,14 @@ static int CmdDetectReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw detectreader",
                   "Start to detect presences of reader field",
+                  "hw detectreader\n"
                   "hw detectreader -L\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("L", "LF", "detect low frequency 125/134 kHz"),
-        arg_lit0("H", "HF", "detect high frequency 13.56 MHZ"),
+        arg_lit0("L", "LF", "only detect low frequency 125/134 kHz"),
+        arg_lit0("H", "HF", "only detect high frequency 13.56 MHZ"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -543,20 +544,35 @@ static int CmdDetectReader(const char *Cmd) {
     bool hf = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    if ((lf + hf) > 1) {
-        PrintAndLogEx(INFO, "Can only set one frequency");
-        return PM3_EINVARG;
+    // 0: Detect both frequency in mode 1
+    // 1: LF_ONLY
+    // 2: HF_ONLY
+    uint8_t arg = 0;
+    if (lf == true && hf == false) {
+        arg = 1;
+    } else if (hf == true && lf == false) {
+        arg = 2;
     }
 
-    uint8_t arg = 0;
-    if (lf)
-        arg = 1;
-    else if (hf)
-        arg = 2;
-
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to change modes and exit");
     clearCommandBuffer();
     SendCommandNG(CMD_LISTEN_READER_FIELD, (uint8_t *)&arg, sizeof(arg));
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to change modes and exit");
+
+    for (;;) {
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, _GREEN_("<Enter>") " pressed");
+        }
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_LISTEN_READER_FIELD, &resp, 1000)) {
+            if (resp.status != PM3_EOPABORTED) {
+                PrintAndLogEx(ERR, "Unexpected response: %d", resp.status);
+            }
+            break;
+        }
+    }
+    PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
 
