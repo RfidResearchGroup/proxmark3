@@ -417,17 +417,20 @@ int trace_mfuc_try_default_3des_keys(uint8_t **correct_key, int state, uint8_t (
     return PM3_ESOFT;
 }
 
-static int try_default_3des_keys(uint8_t **correct_key) {
+// param override,  means we override hw debug levels.
+static int try_default_3des_keys(bool override, uint8_t **correct_key) {
 
     uint8_t dbg_curr = DBG_NONE;
-    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
-        return PM3_ESOFT;
-    }
+    if (override) {
+        if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+            return PM3_ESOFT;
+        }
 
-    if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
-        return PM3_ESOFT;
-    }
+        if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
+            return PM3_ESOFT;
+        }
 
+    }
     int res = PM3_ESOFT;
 
     PrintAndLogEx(INFO, "");
@@ -442,21 +445,25 @@ static int try_default_3des_keys(uint8_t **correct_key) {
         }
     }
 
-    setDeviceDebugLevel(dbg_curr, false);
+    if (override) {
+        setDeviceDebugLevel(dbg_curr, false);
+    }
     return res;
 }
 
-static int try_default_aes_keys(void) {
-    /*
+// param override,  means we override hw debug levels.
+static int try_default_aes_keys(bool override) {
+    
     uint8_t dbg_curr = DBG_NONE;
-    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
-        return PM3_ESOFT;
-    }
+    if (override) {
+        if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+            return PM3_ESOFT;
+        }
 
-    if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
-        return PM3_ESOFT;
+        if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
+            return PM3_ESOFT;
+        }
     }
-    */
 
     int res = PM3_ESOFT;
 
@@ -495,7 +502,9 @@ static int try_default_aes_keys(void) {
         }
     }
 
-//    setDeviceDebugLevel(dbg_curr, false);
+    if (override) {
+        setDeviceDebugLevel(dbg_curr, false);
+    }
     return res;
 }
 
@@ -2007,6 +2016,8 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "Authentication key (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
+//        arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "force", "override `hw dbg` settings"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2015,6 +2026,8 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     uint8_t authenticationkey[16] = {0x00};
     CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
     bool swap_endian = arg_get_lit(ctx, 2);
+//    bool verbose = arg_get_lit(ctx, 3);
+    bool override = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     if (ak_len) {
@@ -2039,8 +2052,9 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     int len;
 
     uint64_t tagtype = GetHF14AMfU_Type();
-    if (tagtype == MFU_TT_UL_ERROR)
+    if (tagtype == MFU_TT_UL_ERROR) {
         return PM3_ESOFT;
+    }
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " --------------------------");
@@ -2108,7 +2122,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             }
 
             // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
-            if (try_default_3des_keys(&key) == PM3_SUCCESS) {
+            if (try_default_3des_keys(override, &key) == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "Found default 3des key: ");
                 uint8_t keySwap[16];
                 memcpy(keySwap, SwapEndian64(key, 16, 8), 16);
@@ -2128,9 +2142,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         DropField();
 
         // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
-        if (try_default_aes_keys() != PM3_SUCCESS) {
+        if (try_default_aes_keys(override) != PM3_SUCCESS) {
             PrintAndLogEx(INFO, "n/a");
         }
+        DropField();
         PrintAndLogEx(INFO, "Done!");
     }
 
@@ -3531,7 +3546,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
 
     // If no hex key is specified, try default keys
     if (ak_len == 0) {
-        isok = (try_default_3des_keys(&authKeyPtr) == PM3_SUCCESS);
+        isok = (try_default_3des_keys(false, &authKeyPtr) == PM3_SUCCESS);
     } else {
         // try user-supplied
         isok = ulc_authentication(authKeyPtr, !keep_field_on);
