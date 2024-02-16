@@ -405,7 +405,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     // Send REQUEST AUTHENTICATION / receive tag nonce
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULAES_AUTH_1, keyno, resp, respPar, NULL);
     if (len != 19) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x - expected 19 got " _RED_("%u"), resp[0], len);
         return 0;
     }
 
@@ -435,7 +435,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     // send & recieve
     len = mifare_sendcmd(MIFARE_ULAES_AUTH_2, enc_rnd_ab, sizeof(enc_rnd_ab), resp, respPar, NULL);
     if (len != 19) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x - expected 19 got " _RED_("%u"), resp[0], len);
         return 0;
     }
   
