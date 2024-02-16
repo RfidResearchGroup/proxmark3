@@ -41,8 +41,8 @@ typedef struct {
 
 local function calypso_parse(result)
     if result.Length >= 0 then
-        local response_byte = string.sub(result.Data, 0, 1); 
-        local datalen = string.sub(result.Data, 2, 5); 
+        local response_byte = string.sub(result.Data, 0, 1);
+        local datalen = string.sub(result.Data, 2, 5);
         local d = string.sub(result.Data, 6, datalen * 2);
         return {
             response_byte = response_byte,

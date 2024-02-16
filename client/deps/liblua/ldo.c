@@ -330,8 +330,7 @@ Cfunc:
             if (!p->is_vararg) {
                 func = restorestack(L, funcr);
                 base = func + 1;
-            }
-            else {
+            } else {
                 base = adjust_varargs(L, p, n);
                 func = restorestack(L, funcr);  /* previous call can change stack */
             }

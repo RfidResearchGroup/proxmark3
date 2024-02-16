@@ -99,13 +99,13 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     if (d[2] == 0x80) {
         PrintAndLogEx(SUCCESS, " ....%02X.............................. - ST reserved", d[2]);
     } else {
-        PrintAndLogEx(SUCCESS, " ....%02X.............................. - GPO config" , d[2]);
+        PrintAndLogEx(SUCCESS, " ....%02X.............................. - GPO config", d[2]);
     }
 
     PrintAndLogEx(SUCCESS, " ......%02X............................ - Event counter config", d[3]);
 
     uint32_t counter = (d[4] << 16 | d[5] << 8 | d[6]);
-    PrintAndLogEx(SUCCESS, " ........%02X%02X%02X...................... - 20 bit counter ( %u )", d[4],d[5],d[6], (counter & 0xFFFFF));
+    PrintAndLogEx(SUCCESS, " ........%02X%02X%02X...................... - 20 bit counter ( %u )", d[4], d[5], d[6], (counter & 0xFFFFF));
     PrintAndLogEx(SUCCESS, " ..............%02X.................... - Product version", d[7]);
     PrintAndLogEx(SUCCESS, " ................%s...... - UID", sprint_hex_inrow(d + 8, 7));
 

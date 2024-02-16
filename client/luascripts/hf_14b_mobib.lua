@@ -33,8 +33,8 @@ device-side.
 -- iceman, todo:  return payload from ISO14b APDU is a struct now. iso14b_raw_apdu_response_t
 local function mobib_parse(result)
     if result.Length >= 0 then
-        local response_byte = string.sub(result.Data, 0, 1); 
-        local datalen = string.sub(result.Data, 2, 5); 
+        local response_byte = string.sub(result.Data, 0, 1);
+        local datalen = string.sub(result.Data, 2, 5);
         local d = string.sub(result.Data, 6, datalen * 2);
         return {
             response_byte = response_byte,

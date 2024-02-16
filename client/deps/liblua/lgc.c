@@ -506,9 +506,9 @@ static lu_mem traversestack(global_State *g, lua_State *th) {
     } else {  /* count call infos to compute size */
         CallInfo *ci;
         for (ci = &th->base_ci; ci != th->ci; ci = ci->next)
-        n++;
+            n++;
     }
-  return sizeof(lua_State) + sizeof(TValue) * th->stacksize + sizeof(CallInfo) * n;
+    return sizeof(lua_State) + sizeof(TValue) * th->stacksize + sizeof(CallInfo) * n;
 }
 
 

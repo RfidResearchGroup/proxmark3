@@ -2450,10 +2450,10 @@ int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t i
     if (ledcontrol) LEDsoff();
 
     Dbprintf("Tag %s written with 0x%08x%08x",
-            card == 0 ? "T5555" : (card == 1 ? "T55x7" : "EM4x05"),
-            (uint32_t)(id >> 32),
-            (uint32_t)id
-        );
+             card == 0 ? "T5555" : (card == 1 ? "T55x7" : "EM4x05"),
+             (uint32_t)(id >> 32),
+             (uint32_t)id
+            );
 
     if (add_electra) {
         Dbprintf("Electra 0x%08x%08x\n", electra[0], electra[1]);

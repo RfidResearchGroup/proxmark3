@@ -336,7 +336,7 @@ static int ulaes_requestAuthentication(uint8_t *key, uint8_t keyno, bool switch_
     memcpy(payload.key, key, sizeof(payload.key));
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFAREULAES_AUTH, (uint8_t*)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFAREULAES_AUTH, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFAREULAES_AUTH, &resp, 1500) == false) {
         return PM3_ETIMEOUT;
@@ -456,7 +456,7 @@ static int try_default_3des_keys(bool override, uint8_t **correct_key) {
 
 // param override,  means we override hw debug levels.
 static int try_default_aes_keys(bool override) {
-    
+
     uint8_t dbg_curr = DBG_NONE;
     if (override) {
         if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
@@ -481,7 +481,7 @@ static int try_default_aes_keys(bool override) {
             if (ulaes_requestAuthentication(key, keyno, true) == PM3_SUCCESS) {
 
                 char keystr[20] = {0};
-                switch(keyno) {
+                switch (keyno) {
                     case 0:
                         sprintf(keystr, "Data key");
                         break;
@@ -495,10 +495,10 @@ static int try_default_aes_keys(bool override) {
                         break;
                 }
                 PrintAndLogEx(SUCCESS, "%02X " _YELLOW_("%s") " - %s ( "_GREEN_("ok") " )"
-                    , keyno
-                    , keystr
-                    , sprint_hex_inrow(key, 16)
-                );
+                              , keyno
+                              , keystr
+                              , sprint_hex_inrow(key, 16)
+                             );
 
                 res = PM3_SUCCESS;
             }
@@ -1586,7 +1586,7 @@ static mfu_otp_identify_t *mfu_match_otp_fingerprint(uint8_t *uid, uint8_t *data
         PrintAndLogEx(DEBUG, "uid.... %s", sprint_hex_inrow(uid, 7));
         PrintAndLogEx(DEBUG, "calc... %s", sprint_hex_inrow(mtmp, 4));
         PrintAndLogEx(DEBUG, "dump... %s", sprint_hex_inrow(data + mfu_otp_ident_table[i].mpos, min));
-        
+
         bool m2 = (memcmp(mtmp, data + mfu_otp_ident_table[i].mpos, min) == 0);
         if (m2) {
             PrintAndLogEx(DEBUG, "(fingerprint) found %s", mfu_otp_ident_table[i].desc);
@@ -1781,12 +1781,12 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
 
     if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
         res = PM3_ESOFT;
-        goto out; 
+        goto out;
     }
 
     if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
         res = PM3_ESOFT;
-        goto out;        
+        goto out;
     }
 
     clearCommandBuffer();
@@ -2958,7 +2958,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
         return PM3_ESOFT;
     }
-    
+
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_READCARD, start_page, pages, keytype, authKeyPtr, ak_len);
     PacketResponseNG resp;
@@ -3071,7 +3071,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         ulev1_readSignature(get_signature, sizeof(get_signature));
         DropField();
     }
-    
+
 
     // format and add keys to block dump output
     // only add keys if not partial read, and complete pages read

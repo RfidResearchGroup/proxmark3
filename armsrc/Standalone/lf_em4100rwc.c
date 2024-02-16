@@ -218,12 +218,12 @@ void RunMod(void) {
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {
                     // Click - write ID to tag
                     copy_em410x_to_t55xx(0
-                        , LF_CLOCK
-                        , (uint32_t)(em4100rwc_low[selected] >> 32)
-                        , (uint32_t)(em4100rwc_low[selected] & 0xffffffff)
-                        , false
-                        , true
-                        );
+                                         , LF_CLOCK
+                                         , (uint32_t)(em4100rwc_low[selected] >> 32)
+                                         , (uint32_t)(em4100rwc_low[selected] & 0xffffffff)
+                                         , false
+                                         , true
+                                        );
                     led_slot(selected);
                     state = 0; // Switch to select mode
                 }

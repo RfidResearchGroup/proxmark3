@@ -167,12 +167,12 @@ static void Wipe(void) {
         LED_C_ON();
         LED_D_ON();
         copy_em410x_to_t55xx(LF_RWSB_T55XX_TYPE
-            , LF_CLOCK
-            , (uint32_t) 0
-            , (uint32_t) 0
-            , false
-            , false
-        );
+                             , LF_CLOCK
+                             , (uint32_t) 0
+                             , (uint32_t) 0
+                             , false
+                             , false
+                            );
         SpinDelay(60);
         LEDsoff();
         LED_D_ON();
@@ -290,12 +290,12 @@ static void Write(void) {
     LED_A_ON();
     LED_B_ON();
     copy_em410x_to_t55xx(LF_RWSB_T55XX_TYPE
-        , LF_CLOCK
-        , (uint32_t)(low >> 32)
-        , (uint32_t)(low & 0xffffffff)
-        , false
-        , false
-    );
+                         , LF_CLOCK
+                         , (uint32_t)(low >> 32)
+                         , (uint32_t)(low & 0xffffffff)
+                         , false
+                         , false
+                        );
     SpinDelay(75);
     LEDsoff();
 

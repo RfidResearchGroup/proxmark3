@@ -20,9 +20,9 @@
 
 #define HOOKKEY "_HKEY"
 
-static void checkstack (lua_State *L, lua_State *L1, int n) {
-  if (L != L1 && !lua_checkstack(L1, n))
-    luaL_error(L, "stack overflow");
+static void checkstack(lua_State *L, lua_State *L1, int n) {
+    if (L != L1 && !lua_checkstack(L1, n))
+        luaL_error(L, "stack overflow");
 }
 
 

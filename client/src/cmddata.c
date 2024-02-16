@@ -3709,13 +3709,13 @@ static int CmdCryptography(const char *Cmd) {
     }
 
     // Encrypt(0) or decrypt(1)?
-    if ((type & 0x8) >> 3) { 
+    if ((type & 0x8) >> 3) {
 
         if ((type & 0x4) >> 2) { // AES or DES?
 
             if (keylen > 8) {
 
-                PrintAndLogEx(INFO, "Called 3DES decrypt"); 
+                PrintAndLogEx(INFO, "Called 3DES decrypt");
                 des3_decrypt(dato, dati, key, keylen / 8);
 
             } else {
@@ -3728,8 +3728,8 @@ static int CmdCryptography(const char *Cmd) {
                     des_decrypt_cbc(dato, dati, datilen, key, iv);
                 }
             }
-        } else { 
-            PrintAndLogEx(INFO, "Called AES decrypt"); 
+        } else {
+            PrintAndLogEx(INFO, "Called AES decrypt");
             aes_decode(iv, key, dati, dato, datilen);
         }
 
@@ -3766,7 +3766,7 @@ static int CmdCryptography(const char *Cmd) {
                     PrintAndLogEx(INFO, "Called DES encrypt");
 
                     if (ivlen == 0) {
-                         // If there's an IV, use ECB
+                        // If there's an IV, use ECB
                         des_encrypt_ecb(dato, dati, datilen, key);
                     } else {
                         des_encrypt_cbc(dato, dati, datilen, key, iv);
@@ -3780,8 +3780,8 @@ static int CmdCryptography(const char *Cmd) {
         } else {
 
             if (type & 0x02) {
-                PrintAndLogEx(INFO, "Called AES CMAC"); 
-                 // If we will calculate a MAC
+                PrintAndLogEx(INFO, "Called AES CMAC");
+                // If we will calculate a MAC
                 aes_cmac8(iv, key, dati, dato, datilen);
             } else {
                 PrintAndLogEx(INFO, "Called AES encrypt");
@@ -3860,7 +3860,7 @@ static int CmdBinaryMap(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},    
+    {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
     {"help",            CmdHelp,                 AlwaysAvailable,  "This help"},
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Modulation") "-------------------------"},
     {"biphaserawdecode", CmdBiphaseDecodeRaw,    AlwaysAvailable,  "Biphase decode bin stream in DemodBuffer"},

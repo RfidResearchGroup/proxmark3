@@ -438,7 +438,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x - expected 19 got " _RED_("%u"), resp[0], len);
         return 0;
     }
-  
+
     memset(IV, 0, 16);
     mbedtls_aes_setkey_dec(&actx, key, 128);
     mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, sizeof(random_b), IV, resp + 1, random_b);

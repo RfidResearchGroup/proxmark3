@@ -1305,12 +1305,12 @@ static int CmdPCSC(const char *Cmd) {
                     uint8_t atr[50] = {0};
                     int atrLen = 0;
 
-                    switch(card_type) {
+                    switch (card_type) {
                         case CC_CONTACT: {
                             memcpy(atr, card.atr, card.atr_len);
                             atrLen = card.atr_len;
                             break;
-                        } 
+                        }
                         case CC_CONTACTLESS: {
 
                             if (cl_proto == ISODEP_NFCA) {
@@ -1335,7 +1335,7 @@ static int CmdPCSC(const char *Cmd) {
                     mbedtls_net_send(&netCtx, res, 2 + atrLen);
 
                 } else if (cmdbuf[1] != 0x01) { // vpcd APDU
-                    int apduLen = (cmdbuf[0] << 8)+ cmdbuf[1];
+                    int apduLen = (cmdbuf[0] << 8) + cmdbuf[1];
 
                     uint8_t apduRes[APDU_RES_LEN] = {0};
                     int apduResLen = 0;
@@ -1361,9 +1361,9 @@ static int CmdPCSC(const char *Cmd) {
                                     mbedtls_net_close(&netCtx);
                                     continue;
                                 }
-                            } 
+                            }
                             if (cl_proto == ISODEP_NFCB) {
-                             
+
                                 if (exchange_14b_apdu(cmdbuf + 2, apduLen, !field_activated, true, apduRes, sizeof(apduRes), &apduResLen, 0))	{
                                     have_card = false;
                                     mbedtls_net_close(&netCtx);
@@ -1373,14 +1373,14 @@ static int CmdPCSC(const char *Cmd) {
                             if (cl_proto == ISODEP_NFCV) {
                                 // Not implemented
                             }
-                            break;                            
+                            break;
                         }
 
                         default: {
                             break;
                         }
                     }
-  
+
                     field_activated = true;
 
                     if (verbose) {
@@ -1407,7 +1407,7 @@ static int CmdPCSC(const char *Cmd) {
                 card_type = CC_CONTACTLESS;
                 cl_proto = ISODEP_NFCB;
             }
-            
+
             // ISO 15.
 
             if (use_contact && IfPm3Iso14443() && smart_select(false, &card) == PM3_SUCCESS) {

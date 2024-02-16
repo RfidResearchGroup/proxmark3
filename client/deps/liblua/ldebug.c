@@ -34,7 +34,7 @@
 
 static const char *getfuncname(lua_State *L, CallInfo *ci, const char **name);
 
-static void swapextra (lua_State *L) {
+static void swapextra(lua_State *L) {
     if (L->status == LUA_YIELD) {
         CallInfo *ci = L->ci;  /* get function that yielded */
         StkId temp = ci->func;  /* exchange its 'func' and 'extra' values */
@@ -337,11 +337,11 @@ static void kname(Proto *p, int pc, int c, const char **name) {
     *name = "?";  /* no reasonable name found */
 }
 
-static int filterpc (int pc, int jmptarget) {
-  if (pc < jmptarget)  /* is code conditional (inside a jump)? */
-    return -1;  /* cannot know who sets that register */
-  else
-    return pc;  /* current position sets that register */
+static int filterpc(int pc, int jmptarget) {
+    if (pc < jmptarget)  /* is code conditional (inside a jump)? */
+        return -1;  /* cannot know who sets that register */
+    else
+        return pc;  /* current position sets that register */
 }
 
 /*
@@ -350,7 +350,7 @@ static int filterpc (int pc, int jmptarget) {
 static int findsetreg(Proto *p, int lastpc, int reg) {
     int pc;
     int setreg = -1;  /* keep last instruction that changed 'reg' */
-    int jmptarget = 0; /* any code before this address is conditional */    
+    int jmptarget = 0; /* any code before this address is conditional */
     for (pc = 0; pc < lastpc; pc++) {
         Instruction i = p->code[pc];
         OpCode op = GET_OPCODE(i);

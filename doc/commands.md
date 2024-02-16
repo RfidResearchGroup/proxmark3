@@ -149,7 +149,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`emv help               `|Y       |`This help`
 |`emv list               `|Y       |`List ISO7816 history`
-|`emv test               `|Y       |`Crypto logic test`
+|`emv test               `|Y       |`Crypto logic selftest`
 |`emv challenge          `|N       |`Generate challenge`
 |`emv exec               `|N       |`Executes EMV contactless transaction`
 |`emv genac              `|N       |`Generate ApplicationCryptogram`
@@ -598,7 +598,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf mfu help            `|Y       |`This help`
 |`hf mfu list            `|Y       |`List MIFARE Ultralight / NTAG history`
-|`hf mfu keygen          `|Y       |`Generate 3DES MIFARE diversified keys`
+|`hf mfu keygen          `|Y       |`Generate DES/3DES/AES MIFARE diversified keys`
 |`hf mfu pwdgen          `|Y       |`Generate pwd from known algos`
 |`hf mfu otptear         `|N       |`Tear-off test on OTP bits`
 |`hf mfu cauth           `|N       |`Authentication - Ultralight-C`
@@ -626,17 +626,17 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf mfdes help          `|Y       |`This help`
-|`hf mfdes info          `|N       |`Tag information`
-|`hf mfdes getuid        `|N       |`Get uid from card`
-|`hf mfdes default       `|N       |`Set defaults for all the commands`
+|`hf mfdes list          `|Y       |`List DESFire (ISO 14443A) history`
 |`hf mfdes auth          `|N       |`MIFARE DesFire Authentication`
 |`hf mfdes chk           `|N       |`Check keys`
+|`hf mfdes default       `|N       |`Set defaults for all the commands`
 |`hf mfdes detect        `|N       |`Detect key type and tries to find one from the list`
-|`hf mfdes freemem       `|N       |`Get free memory size`
-|`hf mfdes setconfig     `|N       |`Set card configuration`
 |`hf mfdes formatpicc    `|N       |`Format PICC`
-|`hf mfdes list          `|Y       |`List DESFire (ISO 14443A) history`
+|`hf mfdes freemem       `|N       |`Get free memory size`
+|`hf mfdes getuid        `|N       |`Get uid from card`
+|`hf mfdes info          `|N       |`Tag information`
 |`hf mfdes mad           `|N       |`Prints MAD records / files from the card`
+|`hf mfdes setconfig     `|N       |`Set card configuration`
 |`hf mfdes lsapp         `|N       |`Show all applications with files list`
 |`hf mfdes getaids       `|N       |`Get Application IDs list`
 |`hf mfdes getappnames   `|N       |`Get Applications list`
@@ -1455,13 +1455,13 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`smart help             `|Y       |`This help`
 |`smart list             `|Y       |`List ISO 7816 history`
+|`smart brute            `|N       |`Bruteforce SFI`
 |`smart info             `|N       |`Tag information`
-|`smart relay            `|N       |`Turn pm3 into pcsc reader and relay to host OS via vpcd`
+|`smart pcsc             `|Y       |`Turn pm3 into pcsc reader and relay to host OS via vpcd`
 |`smart reader           `|N       |`Act like an IS07816 reader`
 |`smart raw              `|N       |`Send raw hex data to tag`
 |`smart upgrade          `|Y       |`Upgrade sim module firmware`
 |`smart setclock         `|N       |`Set clock speed`
-|`smart brute            `|N       |`Bruteforce SFI`
 
 
 ### script
