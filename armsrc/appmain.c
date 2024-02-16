@@ -958,13 +958,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p {
                 bool Q5;
                 bool EM;
+                bool add_electra;
                 uint8_t clock;
                 uint32_t high;
                 uint32_t low;
             } PACKED;
             struct p *payload = (struct p *)packet->data.asBytes;
             uint8_t card = payload->Q5 ? 0 : (payload->EM ? 2 : 1);
-            int res = copy_em410x_to_t55xx(card, payload->clock, payload->high, payload->low, true);
+            int res = copy_em410x_to_t55xx(card, payload->clock, payload->high, payload->low, payload->add_electra, true);
             reply_ng(CMD_LF_EM410X_CLONE, res, NULL, 0);
             break;
         }

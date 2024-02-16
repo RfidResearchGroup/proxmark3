@@ -2344,7 +2344,7 @@ void CopyVikingtoT55xx(const uint8_t *blocks, bool q5, bool em, bool ledcontrol)
     reply_ng(CMD_LF_VIKING_CLONE, PM3_SUCCESS, NULL, 0);
 }
 
-int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t id_lo, bool ledcontrol) {
+int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t id_lo, bool add_electra, bool ledcontrol) {
 
 // Define 9bit header for EM410x tags
 #define EM410X_HEADER    0x1FF
@@ -2422,24 +2422,43 @@ int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t i
     clock = (clock == 0) ? 64 : clock;
     Dbprintf("Clock rate: %d", clock);
 
+    uint32_t electra[] = { 0x7E1EAAAA, 0xAAAAAAAA };
+    uint8_t blocks = 2;
+    if (add_electra) {
+        blocks = 4;
+    }
+
     if (card == 1) { // T55x7
-        data[0] = clockbits | T55x7_MODULATION_MANCHESTER | (2 << T55x7_MAXBLOCK_SHIFT);
+        data[0] = clockbits | T55x7_MODULATION_MANCHESTER | (blocks << T55x7_MAXBLOCK_SHIFT);
     } else if (card == 2) { // EM4x05
-        data[0] = (EM4x05_SET_BITRATE(clock) | EM4x05_MODULATION_MANCHESTER | EM4x05_SET_NUM_BLOCKS(2));
+        data[0] = (EM4x05_SET_BITRATE(clock) | EM4x05_MODULATION_MANCHESTER | EM4x05_SET_NUM_BLOCKS(blocks));
     } else { // T5555 (Q5)
-        data[0] = T5555_SET_BITRATE(clock) | T5555_MODULATION_MANCHESTER | (2 << T5555_MAXBLOCK_SHIFT);
+        data[0] = T5555_SET_BITRATE(clock) | T5555_MODULATION_MANCHESTER | (blocks << T5555_MAXBLOCK_SHIFT);
     }
     if (card == 2) {
         WriteEM4x05(data, 4, 3, ledcontrol);
+        if (add_electra) {
+            WriteEM4x05(electra, 7, 2, ledcontrol);
+        }
     } else {
         WriteT55xx(data, 0, 3, ledcontrol);
+        if (add_electra) {
+            WriteT55xx(electra, 3, 2, ledcontrol);
+        }
     }
 
     if (ledcontrol) LEDsoff();
-    Dbprintf("Tag %s written with 0x%08x%08x\n",
-             card == 0 ? "T5555" : (card == 1 ? "T55x7" : "EM4x05"),
-             (uint32_t)(id >> 32),
-             (uint32_t)id);
+
+    Dbprintf("Tag %s written with 0x%08x%08x",
+            card == 0 ? "T5555" : (card == 1 ? "T55x7" : "EM4x05"),
+            (uint32_t)(id >> 32),
+            (uint32_t)id
+        );
+
+    if (add_electra) {
+        Dbprintf("Electra 0x%08x%08x\n", electra[0], electra[1]);
+    }
+
     return PM3_SUCCESS;
 }
 

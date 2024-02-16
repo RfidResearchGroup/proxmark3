@@ -56,7 +56,7 @@ int lf_io_watch(int findone, uint32_t *high, uint32_t *low, bool ledcontrol);
 void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool q5, bool em, bool ledcontrol); // Clone an HID card to T5557/T5567
 void CopyVikingtoT55xx(const uint8_t *blocks, bool q5, bool em, bool ledcontrol);
 
-int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t id_lo, bool ledcontrol);
+int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t id_lo, bool add_electra, bool ledcontrol);
 
 void T55xxResetRead(uint8_t flags, bool ledcontrol);
 //id T55xxWriteBlock(uint32_t data, uint8_t blockno, uint32_t pwd, uint8_t flags, bool ledcontrol);
