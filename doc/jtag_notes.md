@@ -11,12 +11,12 @@ Some notes on how to reflash a bricked Proxmark3 over JTAG.
   - [RDV4 pinout](#rdv4-pinout)
   - [JLink pinout](#jlink-pinout)
   - [Raspberry Pi pinout](#raspberry-pi-pinout)
+- [Notes for enabling JTAG port](#notes-for-enabling-jtag-port)
 - [Where to find more information?](#where-to-find-more-information)
   - [Third party notes on using a BusPirate](#third-party-notes-on-using-a-buspirate)
   - [Third party notes on using a J-Link](#third-party-notes-on-using-a-j-link)
   - [Third party notes on using a RaspBerry Pi](#third-party-notes-on-using-a-raspberry-pi)
   - [Third party notes on using a J-Link on Windows](#third-party-notes-on-using-a-j-link-on-windows)
-  - [Stack Overflow write up article.](#stack-overflow-write-up-article)
   - [Old original docs](#old-original-docs)
 
 
@@ -95,6 +95,23 @@ GND |  6
 3.3 |  1
 ```
 
+# Notes for enabling JTAG port
+^[Top](#top)
+
+If you can communicate with Proxmark3 with OpenOCD, then you don't need to care about this note, as the JTAG port is enabled by default. However, if you see the following output when running OpenOCD, it indicates that the MCU is found, but the JTAG port is disabled (locked).
+```
+Info : JTAG tap: sam7x.cpu tap/device found: 0x3f0f0f0f (mfg: 0x787 (<unknown>), part: 0xf0f0, ver: 0x3)
+Info : TAP auto0.tap does not have valid IDCODE (idcode=0x0)
+......
+Error: double-check your JTAG setup (interface, speed, ...)
+......
+Info : Halt timed out, wake up GDB.
+Error: timed out while waiting for target halted
+```
+
+To resolve this, you need to erase the chip by following the instructions in this Stack Overflow thread. 
+https://stackoverflow.com/questions/48794076/error-halt-timed-out-wake-up-gdb/64291913#64291913
+
 # Where to find more information?
 ^[Top](#top)
 
@@ -124,11 +141,6 @@ There has been lots of articles and blogposts about recovering, debricking, JTAG
 ^[Top](#top)
 
 * https://github.com/Proxmark/proxmark3/wiki/De-Bricking-Segger
-
-## Stack Overflow write up article.
-^[Top](#top)
-
-https://stackoverflow.com/questions/48794076/error-halt-timed-out-wake-up-gdb/64291913#64291913
 
 ## Old original docs
 ^[Top](#top)
