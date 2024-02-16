@@ -925,6 +925,42 @@ static int ulc_print_configuration(uint8_t *data) {
     return PM3_SUCCESS;
 }
 
+static int ulaes_print_configuration(uint8_t *data, uint8_t start_page) {
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("UL-AES Configuration") " --------------------------");
+
+    bool rid_act = (data[0] & 1);
+    bool sec_msg_act = (data[0] & 2);
+    bool prot = (data[4] & 0x80);
+    bool cfglck = (data[4] & 0x40);
+    bool cnt_inc_en = (data[4] & 8);
+    bool cnt_rd_en = (data[4] & 4);
+    uint16_t authlim = (data[6]) | ((data[7] & 0x3) << 8);
+
+    PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: %s", start_page, start_page, sprint_hex(data, 4));
+
+    PrintAndLogEx(INFO, "                    - Random ID is %s", (rid_act) ? "enabled" : "disabled");
+    PrintAndLogEx(INFO, "                    - Secure messaging is %s", (sec_msg_act) ? "enabled" : "disabled");
+    if (data[3] < 0x3c) {
+        PrintAndLogEx(INFO, "                    - page %d and above need authentication", data[3]);
+    } else {
+        PrintAndLogEx(INFO, "                    - pages don't need authentication");
+    }
+    PrintAndLogEx(INFO, "  cfg1 [%u/0x%02X]: %s", start_page + 1, start_page + 1,  sprint_hex(data + 4, 4));
+
+    if (authlim == 0) {
+        PrintAndLogEx(INFO, "                    - " _GREEN_("Unlimited authentication attempts"));
+    } else {
+        PrintAndLogEx(INFO, "                    - Max number of authentication attempts is " _YELLOW_("%d"), authlim);
+    }
+    PrintAndLogEx(INFO, "                    - %s access requires authentication", prot ? "Read and write" : "Write");
+    PrintAndLogEx(INFO, "                    - User configuration is %s", cfglck ? _RED_("locked") : "unlocked");
+    PrintAndLogEx(INFO, "                    - Counter 2 increment access %s authentication", cnt_inc_en ? "does not require" : "requires");
+    PrintAndLogEx(INFO, "                    - Counter 2      read access %s authentication", cnt_rd_en ? "does not require" : "requires");
+    return PM3_SUCCESS;
+}
+
 static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t startPage) {
 
     PrintAndLogEx(NORMAL, "");
@@ -2143,7 +2179,6 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     // Specific UL-AES
     if (tagtype & MFU_TT_UL_AES) {
 
-        // print AES configuration etc..
         DropField();
 
         // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
@@ -2246,7 +2281,11 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                     memcpy(ulev1_conf + 8, authkeyptr, 4);
                     memcpy(ulev1_conf + 12, pack, 2);
                 }
-                ulev1_print_configuration(tagtype, ulev1_conf, startconfigblock);
+                if (tagtype & MFU_TT_UL_AES) {
+                    ulaes_print_configuration(ulev1_conf, startconfigblock);
+                } else {
+                    ulev1_print_configuration(tagtype, ulev1_conf, startconfigblock);
+                }
             }
         }
 
