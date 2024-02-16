@@ -2136,10 +2136,12 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             DropField();
             return PM3_ESOFT;
         }
-        if (status == 16)
+
+        if (status == 16) {
             ulc_print_configuration(ulc_conf);
-        else
+        } else {
             locked = true;
+        }
 
         mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
 
@@ -2178,6 +2180,21 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
 
     // Specific UL-AES
     if (tagtype & MFU_TT_UL_AES) {
+
+        // read pages 0x28, 0x29, 0x2A, 0x2B
+        uint8_t ulaes_conf[16] = {0x00};
+        status = ul_read(0x29, ulaes_conf, sizeof(ulaes_conf));
+        if (status <= 0) {
+            PrintAndLogEx(ERR, "Error: tag didn't answer to READ UL-AES");
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (status == 16) {
+            ulaes_print_configuration(ulaes_conf, 0x29);
+        } else {
+            locked = true;
+        }
 
         DropField();
 
@@ -2257,6 +2274,11 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             }
         }
 
+        // Don't check config / passwords for Ul AES :)
+        if (tagtype == MFU_TT_UL_AES) {
+            goto out;
+        }
+
         uint8_t startconfigblock = 0;
         uint8_t ulev1_conf[16] = {0x00};
 
@@ -2281,17 +2303,8 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                     memcpy(ulev1_conf + 8, authkeyptr, 4);
                     memcpy(ulev1_conf + 12, pack, 2);
                 }
-                if (tagtype & MFU_TT_UL_AES) {
-                    ulaes_print_configuration(ulev1_conf, startconfigblock);
-                } else {
-                    ulev1_print_configuration(tagtype, ulev1_conf, startconfigblock);
-                }
+                ulev1_print_configuration(tagtype, ulev1_conf, startconfigblock);
             }
-        }
-
-        // Don't check passwords for Ul AES :)
-        if (tagtype == MFU_TT_UL_AES) {
-            goto out;
         }
 
         // AUTHLIMIT, (number of failed authentications)
