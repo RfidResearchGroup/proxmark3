@@ -612,6 +612,7 @@ at the same place! :-)
 #define LIGHT_LEVELS 20
 
 void ListenReaderField(uint8_t limit) {
+#define LF_HF_BOTH 0
 #define LF_ONLY 1
 #define HF_ONLY 2
 #define REPORT_CHANGE 1000    // report new values only if they have changed at least by REPORT_CHANGE mV
@@ -627,13 +628,13 @@ void ListenReaderField(uint8_t limit) {
 
     LEDsoff();
 
-    if (limit == LF_ONLY) {
+    if (limit == LF_ONLY || limit == LF_HF_BOTH) {
         lf_av = lf_max = (MAX_ADC_LF_VOLTAGE * SumAdc(ADC_CHAN_LF, 32)) >> 15;
         Dbprintf("LF 125/134kHz Baseline: %dmV", lf_av);
         lf_baseline = lf_av;
     }
 
-    if (limit == HF_ONLY) {
+    if (limit == HF_ONLY || limit == LF_HF_BOTH) {
 
         // iceman,  useless,  since we are measuring readerfield,  not our field.  My tests shows a max of 20v from a reader.
         hf_av = hf_max = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
@@ -643,8 +644,15 @@ void ListenReaderField(uint8_t limit) {
 
     for (;;) {
 
-        // Switch modes with button
-        if (BUTTON_PRESS()) {
+        // Switch modes with button or Enter key
+        bool modeSwitched = BUTTON_PRESS();
+        if (modeSwitched == false && data_available()) {
+            // flush the buffer
+            PacketCommandNG rx;
+            receive_ng(&rx);
+            modeSwitched = true;
+        }
+        if (modeSwitched) {
             SpinDelay(500);
             switch (mode) {
                 case 1:
@@ -661,7 +669,7 @@ void ListenReaderField(uint8_t limit) {
         }
         WDT_HIT();
 
-        if (limit == LF_ONLY) {
+        if (limit == LF_ONLY || limit == LF_HF_BOTH) {
             if (mode == 1) {
                 if (ABS(lf_av - lf_baseline) > REPORT_CHANGE)
                     LED_D_ON();
@@ -679,7 +687,7 @@ void ListenReaderField(uint8_t limit) {
             }
         }
 
-        if (limit == HF_ONLY) {
+        if (limit == HF_ONLY || limit == LF_HF_BOTH) {
             if (mode == 1) {
                 if (ABS(hf_av - hf_baseline) > REPORT_CHANGE)
                     LED_B_ON();
@@ -2312,6 +2320,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (packet->length != sizeof(uint8_t))
                 break;
             ListenReaderField(packet->data.asBytes[0]);
+            reply_ng(CMD_LISTEN_READER_FIELD, PM3_EOPABORTED, NULL, 0);
             break;
         }
         case CMD_FPGA_MAJOR_MODE_OFF: { // ## FPGA Control
