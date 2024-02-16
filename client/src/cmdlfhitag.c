@@ -1343,6 +1343,6 @@ int CmdLFHitag(const char *Cmd) {
 }
 
 int readHitagUid(void) {
-    return (CmdLFHitagReader("--ht2") == PM3_SUCCESS);
+    return (CmdLFHitagReader("--ht2 --pwd") == PM3_SUCCESS);
 }
 
