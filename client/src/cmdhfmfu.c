@@ -473,7 +473,7 @@ static int try_default_aes_keys(bool override) {
     for (uint8_t i = 0; i < ARRAYLEN(default_aes_keys); ++i) {
         uint8_t *key = default_aes_keys[0];
 
-        for (uint8_t keyno = 0; keyno < 1; keyno++) {
+        for (uint8_t keyno = 0; keyno < 3; keyno++) {
 
             if (ulaes_requestAuthentication(key, keyno, true) == PM3_SUCCESS) {
 
@@ -507,7 +507,6 @@ static int try_default_aes_keys(bool override) {
     }
     return res;
 }
-
 
 static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, uint8_t *pack, uint8_t packSize) {
     if (hasAuthKey && (tagtype & MFU_TT_UL_C)) {
