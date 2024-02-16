@@ -2030,7 +2030,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
     bool swap_endian = arg_get_lit(ctx, 2);
 //    bool verbose = arg_get_lit(ctx, 3);
-    bool override = arg_get_lit(ctx, 3);
+    bool override = (arg_get_lit(ctx, 3) == false);
     CLIParserFree(ctx);
 
     if (ak_len) {
@@ -2155,7 +2155,6 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             return PM3_ESOFT;
         }
     }
-
 
     // do counters and signature first (don't neet auth)
 
