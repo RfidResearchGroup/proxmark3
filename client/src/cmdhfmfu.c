@@ -470,7 +470,7 @@ static int try_default_aes_keys(bool override) {
 
     int res = PM3_ESOFT;
 
-    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "--- " _CYAN_("Known UL-AES keys"));
 
     for (uint8_t i = 0; i < ARRAYLEN(default_aes_keys); ++i) {
@@ -494,7 +494,7 @@ static int try_default_aes_keys(bool override) {
                     default:
                         break;
                 }
-                PrintAndLogEx(SUCCESS, "%02X - " _YELLOW_("%s") " - %s ( "_GREEN_("ok") " )"
+                PrintAndLogEx(SUCCESS, "%02X " _YELLOW_("%s") " - %s ( "_GREEN_("ok") " )"
                     , keyno
                     , keystr
                     , sprint_hex_inrow(key, 16)
