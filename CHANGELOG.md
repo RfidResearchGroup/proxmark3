@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf fudan dump --ns` - now supports nosave flag (@iceman1001)
  - Added `lf em 410x --electra` - adds two extra blocks. Thanks jareckib (@iceman1001)
  - Changed `hf mfu info` - now identifies UL-AES correct (@iceman1001)
  - Changed `hw detectreader` - Detect both LF and HF at the same time (@wh201906)

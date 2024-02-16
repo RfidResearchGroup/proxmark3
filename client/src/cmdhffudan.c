@@ -243,6 +243,7 @@ static int CmdHFFudanDump(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -250,6 +251,7 @@ static int CmdHFFudanDump(const char *Cmd) {
     int datafnlen = 0;
     char dataFilename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)dataFilename, FILE_PATH_SIZE, &datafnlen);
+    bool nosave = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     // Select card to get UID/UIDLEN/ATQA/SAK information
@@ -328,6 +330,12 @@ static int CmdHFFudanDump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "\nSucceeded in dumping all blocks");
 
     fudan_print_blocks(num_blocks, carddata);
+
+    if (nosave) {
+        PrintAndLogEx(INFO, "Called with no save option");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
+    }
 
     // create filename if none was given
     if (strlen(dataFilename) < 1) {
