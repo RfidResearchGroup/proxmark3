@@ -383,15 +383,24 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     /// aes-128
     uint8_t random_a[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     uint8_t random_b[16] = { 0 };
-    uint8_t enc_random_b[16] = { 0 };
     uint8_t rnd_ab[32] = { 0 };
+    uint8_t enc_rnd_ab[32] = { 0 };
     uint8_t IV[16] = { 0 };
     uint8_t key[16] = { 0 };
     memcpy(key, keybytes, sizeof(key));
 
     uint16_t len = 0;
+
+    // 1 cmd + 16 bytes + 2 crc
     uint8_t resp[19] = {0x00};
     uint8_t respPar[5] = {0};
+
+
+    // setup AES
+    mbedtls_aes_context actx;
+    mbedtls_aes_init(&actx);
+    mbedtls_aes_init(&actx);
+    mbedtls_aes_setkey_dec(&actx, key, 128);
 
     // REQUEST AUTHENTICATION
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULAES_AUTH_1, keyno, resp, respPar, NULL);
@@ -400,11 +409,8 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
         return 0;
     }
 
-    // tag nonce.
-    memcpy(enc_random_b, resp + 1, 16);
-
-    // decrypt nonce.
-    aes128_nxp_receive((void *)enc_random_b, (void *)random_b, sizeof(random_b), (const void *)key, IV);
+    // decrypt tag nonce.
+    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, sizeof(random_b), IV, resp + 1, random_b);
 
     rol(random_b, 16);
     memcpy(rnd_ab, random_a, 16);
@@ -412,7 +418,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
 
     if (g_dbglevel >= DBG_EXTENDED) {
         Dbprintf("enc_B:");
-        Dbhexdump(16, enc_random_b, false);
+        Dbhexdump(16, resp + 1, false);
 
         Dbprintf("B:");
         Dbhexdump(16, random_b, false);
@@ -421,23 +427,23 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
         Dbhexdump(32, rnd_ab, false);
     }
 
-    // encrypt    out, in, length, key, iv
-    aes128_nxp_send(rnd_ab, rnd_ab, sizeof(rnd_ab), key, enc_random_b);
+    // encrypt reader response
+    memset(IV, 0, 16);
+    mbedtls_aes_setkey_enc(&actx, key, 128);
+    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_ENCRYPT, sizeof(enc_rnd_ab), IV, rnd_ab, enc_rnd_ab);
 
-    len = mifare_sendcmd(MIFARE_ULAES_AUTH_2, rnd_ab, sizeof(rnd_ab), resp, respPar, NULL);
+    // send
+    len = mifare_sendcmd(MIFARE_ULAES_AUTH_2, enc_rnd_ab, sizeof(enc_rnd_ab), resp, respPar, NULL);
     if (len != 35) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
         return 0;
     }
+  
+    memset(IV, 0, 16);
+    mbedtls_aes_setkey_dec(&actx, key, 128);
+    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, sizeof(random_b), IV, resp + 1, random_b);
 
-    uint8_t enc_resp[16] = { 0 };
-    uint8_t resp_random_a[16] = { 0 };
-    memcpy(enc_resp, resp + 1, 16);
-
-    // decrypt    out, in, length, key, iv
-    aes128_nxp_receive(enc_resp, resp_random_a, 16, key, enc_random_b);
-
-    if (memcmp(resp_random_a, random_a, 16) != 0) {
+    if (memcmp(random_b, random_a, 16) != 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("failed authentication");
         return 0;
     }
@@ -445,14 +451,16 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     if (g_dbglevel >= DBG_EXTENDED) {
 
         Dbprintf("e_AB:");
-        Dbhexdump(32, rnd_ab, false);
+        Dbhexdump(32, enc_rnd_ab, false);
 
         Dbprintf("A:");
         Dbhexdump(16, random_a, false);
 
         Dbprintf("B:");
-        Dbhexdump(16, resp_random_a, false);
+        Dbhexdump(16, random_b, false);
     }
+
+    mbedtls_aes_free(&actx);
     return 1;
 }
 
