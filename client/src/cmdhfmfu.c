@@ -350,12 +350,12 @@ static int ulc_authentication(uint8_t *key, bool switch_off_field) {
     SendCommandMIX(CMD_HF_MIFAREUC_AUTH, switch_off_field, 0, 0, key, 16);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        return 0;
+        return PM3_ETIMEOUT;
     }
     if (resp.oldarg[0] == 1) {
-        return 1;
+        return PM3_SUCCESS;
     }
-    return 0;
+    return PM3_ESOFT;
 }
 
 static int trace_mfuc_try_key(uint8_t *key, int state, uint8_t (*authdata)[16]) {
@@ -438,7 +438,7 @@ static int try_default_3des_keys(bool override, uint8_t **correct_key) {
 
     for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
         uint8_t *key = default_3des_keys[i];
-        if (ulc_authentication(key, true)) {
+        if (ulc_authentication(key, true) == PM3_SUCCESS) {
             *correct_key = key;
             res = PM3_SUCCESS;
             break;
@@ -509,14 +509,18 @@ static int try_default_aes_keys(bool override) {
 }
 
 static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, uint8_t *pack, uint8_t packSize) {
+
     if (hasAuthKey && (tagtype & MFU_TT_UL_C)) {
         //will select card automatically and close connection on error
-        if (!ulc_authentication(authkey, false)) {
+        if (ulc_authentication(authkey, false) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Authentication Failed UL-C");
             return PM3_ESOFT;
         }
+
     } else {
-        if (!ul_select(card)) return PM3_ESOFT;
+        if (ul_select(card) == false) {
+            return PM3_ESOFT;
+        }
 
         if (hasAuthKey) {
             if (ulev1_requestAuthentication(authkey, pack, packSize) == -1) {
@@ -2146,6 +2150,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         }
         DropField();
         PrintAndLogEx(INFO, "Done!");
+
+        if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
+            return PM3_ESOFT;
+        }
     }
 
 
@@ -3541,21 +3549,21 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
         authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
     }
 
-    bool isok = false;
+    int isok;
 
     // If no hex key is specified, try default keys
     if (ak_len == 0) {
-        isok = (try_default_3des_keys(false, &authKeyPtr) == PM3_SUCCESS);
+        isok = try_default_3des_keys(false, &authKeyPtr);
     } else {
         // try user-supplied
         isok = ulc_authentication(authKeyPtr, !keep_field_on);
     }
 
-    if (isok)
+    if (isok == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Authentication success. 3des key: " _GREEN_("%s"), sprint_hex_inrow(authKeyPtr, 16));
-    else
+    } else {
         PrintAndLogEx(WARNING, "Authentication ( " _RED_("fail") " )");
-
+    }
     return PM3_SUCCESS;
 }
 
