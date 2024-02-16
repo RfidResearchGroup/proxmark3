@@ -471,7 +471,7 @@ static int try_default_aes_keys(bool override) {
     PrintAndLogEx(SUCCESS, "--- " _CYAN_("Known UL-AES keys"));
 
     for (uint8_t i = 0; i < ARRAYLEN(default_aes_keys); ++i) {
-        uint8_t *key = default_aes_keys[0];
+        uint8_t *key = default_aes_keys[i];
 
         for (uint8_t keyno = 0; keyno < 3; keyno++) {
 
