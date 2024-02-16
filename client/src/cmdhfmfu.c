@@ -2125,10 +2125,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     if (tagtype & MFU_TT_UL_AES) {
 
         // print AES configuration etc..
-
         DropField();
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(SUCCESS, "--- " _CYAN_("Known AES keys"));
 
         // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
         if (try_default_aes_keys() != PM3_SUCCESS) {

@@ -402,7 +402,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     mbedtls_aes_init(&actx);
     mbedtls_aes_setkey_dec(&actx, key, 128);
 
-    // REQUEST AUTHENTICATION
+    // Send REQUEST AUTHENTICATION / receive tag nonce
     len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULAES_AUTH_1, keyno, resp, respPar, NULL);
     if (len != 19) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
@@ -432,9 +432,9 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     mbedtls_aes_setkey_enc(&actx, key, 128);
     mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_ENCRYPT, sizeof(enc_rnd_ab), IV, rnd_ab, enc_rnd_ab);
 
-    // send
+    // send & recieve
     len = mifare_sendcmd(MIFARE_ULAES_AUTH_2, enc_rnd_ab, sizeof(enc_rnd_ab), resp, respPar, NULL);
-    if (len != 35) {
+    if (len != 19) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", resp[0]);
         return 0;
     }
