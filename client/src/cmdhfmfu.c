@@ -233,11 +233,11 @@ static int ul_send_cmd_raw(uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0, cmd, cmdlen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        return -1;
+        return PM3_ETIMEOUT;
     }
 
     if (!resp.oldarg[0] && responseLength) {
-        return -1;
+        return PM3_EWRONGANSWER;
     }
 
     uint16_t resplen = (resp.oldarg[0] < responseLength) ? resp.oldarg[0] : responseLength;
@@ -263,8 +263,9 @@ static bool ul_select(iso14a_card_select_t *card) {
             return false;
         }
 
-        if (card)
+        if (card) {
             memcpy(card, resp.data.asBytes, sizeof(iso14a_card_select_t));
+        }
     }
     return true;
 }
@@ -273,14 +274,14 @@ static bool ul_select(iso14a_card_select_t *card) {
 static int ul_read(uint8_t page, uint8_t *response, uint16_t responseLength) {
 
     uint8_t cmd[] = {ISO14443A_CMD_READBLOCK, page};
-    int len = ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
-    return len;
+    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
 }
 
 static int ul_comp_write(uint8_t page, uint8_t *data, uint8_t datalen) {
 
-    if (data == NULL)
-        return -1;
+    if (data == NULL) {
+        return PM3_EINVARG;
+    }
 
     uint8_t cmd[18];
     memset(cmd, 0x00, sizeof(cmd));
@@ -293,16 +294,17 @@ static int ul_comp_write(uint8_t page, uint8_t *data, uint8_t datalen) {
     uint8_t response[1] = {0xFF};
     ul_send_cmd_raw(cmd, 2 + datalen, response, sizeof(response));
     // ACK
-    if (response[0] == 0x0a) return 0;
+    if (response[0] == 0x0a) {
+        return PM3_SUCCESS;
+    }
     // NACK
-    return -1;
+    return PM3_EWRONGANSWER;
 }
 
 static int ulc_requestAuthentication(uint8_t *nonce, uint16_t nonceLength) {
 
     uint8_t cmd[] = {MIFARE_ULC_AUTH_1, 0x00};
-    int len = ul_send_cmd_raw(cmd, sizeof(cmd), nonce, nonceLength);
-    return len;
+    return ul_send_cmd_raw(cmd, sizeof(cmd), nonce, nonceLength);
 }
 
 static int ulev1_requestAuthentication(uint8_t *pwd, uint8_t *pack, uint16_t packLength) {
@@ -311,8 +313,9 @@ static int ulev1_requestAuthentication(uint8_t *pwd, uint8_t *pack, uint16_t pac
     int len = ul_send_cmd_raw(cmd, sizeof(cmd), pack, packLength);
     // NACK tables different tags,  but between 0-9 is a NEGATIVE response.
     // ACK == 0xA
-    if (len == 1 && pack[0] <= 0x09)
-        return -1;
+    if (len == 1 && pack[0] <= 0x09) {
+        return PM3_EWRONGANSWER;
+    }
     return len;
 }
 
@@ -523,7 +526,7 @@ static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool has
         }
 
         if (hasAuthKey) {
-            if (ulev1_requestAuthentication(authkey, pack, packSize) == -1) {
+            if (ulev1_requestAuthentication(authkey, pack, packSize) == PM3_EWRONGANSWER) {
                 DropField();
                 PrintAndLogEx(WARNING, "Authentication Failed UL-EV1/NTAG");
                 return PM3_ESOFT;
@@ -1141,8 +1144,7 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
     //The NTAG213TT only returns meaningful information for the fields below if the tamper feature is enabled
     if ((tagtype & MFU_TT_NTAG_213_TT) && tt_enabled) {
 
-        uint8_t tt_status_len = ntagtt_getTamperStatus(tt_status_resp, 5);
-
+        int tt_status_len = ntagtt_getTamperStatus(tt_status_resp, 5);
         if (tt_status_len != 5) {
             PrintAndLogEx(WARNING, "Error sending the READ_TT_STATUS command to tag\n");
             return PM3_ESOFT;
@@ -1374,7 +1376,7 @@ static int ulc_magic_test(){
         return MFU_TT_UL_ERROR;
     }
     int status = ulc_requestAuthentication(nonce1, sizeof(nonce1));
-    if ( status > 0 ) {
+    if ( status <= 0 ) {
         status = ulc_requestAuthentication(nonce2, sizeof(nonce2));
         returnValue =  ( !memcmp(nonce1, nonce2, 11) ) ? MFU_TT_UL_C_MAGIC : MFU_TT_UL_C;
     } else {
@@ -1396,7 +1398,7 @@ static int ul_magic_test(void) {
 
     int status = ul_comp_write(0, NULL, 0);
     DropField();
-    if (status == 0) {
+    if (status == PM3_SUCCESS) {
         return MFU_TT_MAGIC;
     }
 
@@ -1927,7 +1929,8 @@ uint64_t GetHF14AMfU_Type(void) {
             case 0x00:
                 tagtype = MFU_TT_UL;
                 break;
-            case -1  :
+            case PM3_ETIMEOUT:
+            case PM3_EWRONGANSWER:
                 tagtype = (MFU_TT_UL | MFU_TT_UL_C | MFU_TT_NTAG_203);
                 break;  // could be UL | UL_C magic tags
             default  :
@@ -2075,7 +2078,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     bool locked = false;
     // read pages 0,1,2,3 (should read 4 pages)
     status = ul_read(0, data, sizeof(data));
-    if (status == -1) {
+    if (status <= 0) {
         DropField();
         PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
         return PM3_ESOFT;
@@ -2092,7 +2095,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         // read pages 0x28, 0x29, 0x2A, 0x2B
         uint8_t ulc_conf[16] = {0x00};
         status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
-        if (status == -1) {
+        if (status <= 0) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ UL-C");
             DropField();
             return PM3_ESOFT;
@@ -2108,7 +2111,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             //just read key
             uint8_t ulc_deskey[16] = {0x00};
             status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey));
-            if (status == -1) {
+            if (status <= 0) {
                 DropField();
                 PrintAndLogEx(ERR, "Error: tag didn't answer to READ magic");
                 return PM3_ESOFT;
@@ -2133,7 +2136,6 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             } else {
                 PrintAndLogEx(INFO, "n/a");
             }
-            PrintAndLogEx(INFO, "Done!");
             return PM3_SUCCESS;
         }
     }
@@ -2149,7 +2151,6 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             PrintAndLogEx(INFO, "n/a");
         }
         DropField();
-        PrintAndLogEx(INFO, "Done!");
 
         if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
             return PM3_ESOFT;
@@ -2184,9 +2185,9 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                     MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
                     MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS |
                     MFU_TT_UL_AES))) {
-        uint8_t ulev1_signature[49] = {0x00};
+        uint8_t ulev1_signature[48] = {0x00};
         status = ulev1_readSignature(ulev1_signature, sizeof(ulev1_signature));
-        if (status == -1) {
+        if (status < 0) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ SIGNATURE");
             DropField();
             return PM3_ESOFT;
@@ -2208,7 +2209,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         // Get Version
         uint8_t version[10] = {0x00};
         status  = ulev1_getVersion(version, sizeof(version));
-        if (status == -1) {
+        if (status < 0) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to GETVERSION");
             DropField();
             return PM3_ESOFT;
@@ -2233,7 +2234,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
 
         if (startconfigblock) { // if we know where the config block is...
             status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
-            if (status == -1) {
+            if (status <= 0) {
                 PrintAndLogEx(ERR, "Error: tag didn't answer to READ EV1");
                 DropField();
                 return PM3_ESOFT;
@@ -4001,7 +4002,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
             // Philips toothbrush needs page 0x21-0x23
             uint8_t data[16] = {0x00};
             int status = ul_read(0x21, data, sizeof(data));
-            if (status == -1) {
+            if (status <= 0) {
                 PrintAndLogEx(DEBUG, "Error: tag didn't answer to READ");
             } else if (status == 16) {
                 memcpy(philips_mfg, data + 2, sizeof(philips_mfg));
@@ -4783,7 +4784,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
 
     // read pages 0,1,2,3 (should read 4pages)
     status = ul_read(0, data, sizeof(data));
-    if (status == -1) {
+    if (status <= 0) {
         DropField();
         PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
         return PM3_ESOFT;
@@ -4826,7 +4827,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     // read NDEF records.
     for (uint32_t i = 0, j = 0; i < maxsize; i += 16, j += 4) {
         status = ul_read(4 + j, records + i, 16);
-        if (status == -1) {
+        if (status <= 0) {
             DropField();
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
             free(records);
