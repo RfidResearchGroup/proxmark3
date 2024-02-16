@@ -573,14 +573,14 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        PrintAndLogEx(FAILED, "iso14443a card select timeout");
         return PM3_ETIMEOUT;
     }
 
     uint64_t select_status = resp.oldarg[0];
     if (select_status == 0) {
-        PrintAndLogEx(DEBUG, "iso14443a card select failed");
-        return PM3_SUCCESS;
+        PrintAndLogEx(FAILED, "iso14443a card select failed");
+        return PM3_ESOFT;
     }
 
     // store card info
