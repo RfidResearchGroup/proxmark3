@@ -261,6 +261,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/common/iso15693tools.c
         ${PM3_ROOT}/common/cardhelper.c
         ${PM3_ROOT}/common/generator.c
+        ${PM3_ROOT}/common/bruteforce.c
         ${PM3_ROOT}/client/src/crypto/asn1dump.c
         ${PM3_ROOT}/client/src/crypto/asn1utils.c
         ${PM3_ROOT}/client/src/crypto/libpcrypto.c
@@ -336,6 +337,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfgallagher.c
         ${PM3_ROOT}/client/src/cmdhfcipurse.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
+        ${PM3_ROOT}/client/src/cmdhfict.c
         ${PM3_ROOT}/client/src/cmdhfjooki.c
         ${PM3_ROOT}/client/src/cmdhfksx6924.c
         ${PM3_ROOT}/client/src/cmdhflegic.c
