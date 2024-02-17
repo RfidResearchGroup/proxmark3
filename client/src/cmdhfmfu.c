@@ -2561,7 +2561,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "Authentication key (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
-        arg_int1("b", "block", "<dec>", "Nlock number to read"),
+        arg_int1("b", "block", "<dec>", "Block number to read"),
         arg_lit0(NULL, "force", "Force operation even if address is out of range"),
         arg_param_end
     };
