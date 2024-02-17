@@ -3737,23 +3737,23 @@ static int CmdCryptography(const char *Cmd) {
         if (type & 0x4) { // AES or DES?
             if (type & 0x02) { // If we will calculate a MAC
                 /*PrintAndLogEx(INFO, "Called FeliCa MAC");
-                	// For DES all I know useful is the felica and fudan MAC algorithm.This is just des-cbc, but felica needs it in its way.
-                	for (int i = 0; i < datilen; i+=8){ // For all 8 byte sequences
-                		reverser(dati, &dati[i], 8, i);
-                		if (i){ // If IV is processed
-                			for (int n = 0; n < 8; ++n){
-                				dato[n] ^= dati[i+n]; // XOR with Dx
-                			}
-                			des_encrypt_ecb(dato, dato, 8, key); // Cipher itself
-                		} else { // If we didn't start with IV
-                			for (int n = 0; n < 8; ++n){
-                				dato[n] = iv[n]; // Feed data into output
-                				dato[n] ^= dati[i+n]; // XOR with D1
-                			}
-                			des_encrypt_ecb(dato, dato, 8, key); // Cipher itself
-                		}
-                	}
-                	PrintAndLogEx(SUCCESS, "MAC: %s", sprint_hex_inrow(dato, 8));*/
+                    // For DES all I know useful is the felica and fudan MAC algorithm.This is just des-cbc, but felica needs it in its way.
+                    for (int i = 0; i < datilen; i+=8){ // For all 8 byte sequences
+                        reverser(dati, &dati[i], 8, i);
+                        if (i){ // If IV is processed
+                            for (int n = 0; n < 8; ++n){
+                                dato[n] ^= dati[i+n]; // XOR with Dx
+                            }
+                            des_encrypt_ecb(dato, dato, 8, key); // Cipher itself
+                        } else { // If we didn't start with IV
+                            for (int n = 0; n < 8; ++n){
+                                dato[n] = iv[n]; // Feed data into output
+                                dato[n] ^= dati[i+n]; // XOR with D1
+                            }
+                            des_encrypt_ecb(dato, dato, 8, key); // Cipher itself
+                        }
+                    }
+                    PrintAndLogEx(SUCCESS, "MAC: %s", sprint_hex_inrow(dato, 8));*/
                 PrintAndLogEx(INFO, "Not implemented yet - feel free to contribute!");
                 return PM3_SUCCESS;
             } else {

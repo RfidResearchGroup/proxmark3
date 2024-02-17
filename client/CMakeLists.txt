@@ -519,14 +519,14 @@ if (LZ4_FOUND)
 endif (LZ4_FOUND)
 
 if (NOT SKIPGD EQUAL 1 AND GD_FOUND)
-	set(ADDITIONAL_DIRS ${GD_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
-	set(ADDITIONAL_LNK ${GD_LIBRARIES} ${ADDITIONAL_LNK})
-	set(ADDITIONAL_LNKDIRS ${GD_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})
-	set(TARGET_SOURCES
-			${PM3_ROOT}/client/src/imgutils.c
-			${PM3_ROOT}/client/src/cmdhfwaveshare.c
-			${TARGET_SOURCES})
-	add_definitions("-DHAVE_GD")
+    set(ADDITIONAL_DIRS ${GD_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${GD_LIBRARIES} ${ADDITIONAL_LNK})
+    set(ADDITIONAL_LNKDIRS ${GD_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})
+    set(TARGET_SOURCES
+            ${PM3_ROOT}/client/src/imgutils.c
+            ${PM3_ROOT}/client/src/cmdhfwaveshare.c
+            ${TARGET_SOURCES})
+    add_definitions("-DHAVE_GD")
 endif (NOT SKIPGD EQUAL 1 AND GD_FOUND)
 
 if (WHEREAMI_FOUND)

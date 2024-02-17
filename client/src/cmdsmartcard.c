@@ -1364,7 +1364,7 @@ static int CmdPCSC(const char *Cmd) {
                             }
                             if (cl_proto == ISODEP_NFCB) {
 
-                                if (exchange_14b_apdu(cmdbuf + 2, apduLen, !field_activated, true, apduRes, sizeof(apduRes), &apduResLen, 0))	{
+                                if (exchange_14b_apdu(cmdbuf + 2, apduLen, !field_activated, true, apduRes, sizeof(apduRes), &apduResLen, 0))   {
                                     have_card = false;
                                     mbedtls_net_close(&netCtx);
                                     continue;
