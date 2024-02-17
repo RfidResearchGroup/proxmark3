@@ -580,7 +580,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
     uint64_t select_status = resp.oldarg[0];
     if (select_status == 0) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
-        return PM3_SUCCESS;
+        return PM3_ESOFT;
     }
 
     // store card info
