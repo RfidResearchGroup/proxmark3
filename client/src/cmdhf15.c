@@ -491,6 +491,7 @@ static int getUID(bool verbose, bool loop, uint8_t *buf) {
                 }
 
                 if (verbose) {
+                    PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%s"), iso15693_sprintUID(NULL, buf));
                     PrintAndLogEx(SUCCESS, "TYPE... " _YELLOW_("%s"), getTagInfo_15(buf));
                     PrintAndLogEx(NORMAL, "");
