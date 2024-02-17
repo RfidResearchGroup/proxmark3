@@ -1776,6 +1776,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
                         printTag("MIFARE DESFire EV2 2K/4K/8K/16K/32K");
                         printTag("MIFARE DESFire EV3 2K/4K/8K");
                         printTag("MIFARE DESFire Light 640B");
+                        type |= MTDESFIRE;
                     } else {
                         printTag("MIFARE Plus EV1 2K/4K CL2 in SL3");
                         printTag("MIFARE Plus S 2K/4K CL2 in SL3");
@@ -2012,6 +2013,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isFUDAN = false;
     bool isISO18092 = false;
     bool isNTAG424 = false;
+    bool isSEOS = false;
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
@@ -2022,18 +2024,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
         isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
         isNTAG424 = ((nxptype & MT424) == MT424);
+        isFUDAN = ((nxptype & MTFUDAN) == MTFUDAN);
+        isEMV = ((nxptype & MTEMV) == MTEMV);
+        isISO18092 = ((nxptype & MTISO18092) == MTISO18092);
+        isSEOS = ((nxptype & HID_SEOS) == HID_SEOS);
 
-        if ((nxptype & MTOTHER) == MTOTHER)
-            isMifareClassic = true;
-
-        if ((nxptype & MTFUDAN) == MTFUDAN)
-            isFUDAN = true;
-
-        if ((nxptype & MTEMV) == MTEMV)
-            isEMV = true;
-
-        if ((nxptype & MTISO18092) == MTISO18092)
-            isISO18092 = true;
+        // generic catch,  we assume MIFARE Classic for all unknown ISO14443a tags
+        isMifareClassic = ((nxptype & MTOTHER) == MTOTHER);
 
     } else {
 
@@ -2544,7 +2541,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfu info") "`");
     }
 
-    if (isMifarePlus && (isMagic == MAGIC_FLAG_NONE) && isEMV == false) {
+    if (isMifarePlus && (isMagic == MAGIC_FLAG_NONE)) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfp info") "`");
     }
 
@@ -2558,6 +2555,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (isEMV) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("emv reader") "`");
+    }
+
+    if (isSEOS) {
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf seos info") "`");
     }
 
     if (isFUDAN) {
