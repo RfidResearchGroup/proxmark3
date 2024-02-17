@@ -1,3 +1,5 @@
+# most common mistake
+00000000
 # known cloners
 # ref. http://www.proxmark.org/forum/viewtopic.php?id=2022
 51243648
@@ -55,7 +57,6 @@ DEADC0DE
 # derived from BCARD key B
 A9EF2AFC
 # Default pwd, simple:
-00000000
 11111111
 22222222
 33333333
