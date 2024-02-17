@@ -200,9 +200,13 @@ void RunMod(void) {
         Dbprintf("[!] Trace length (bytes) = %u", trace_len);
 
         uint8_t *trace_buffer = BigBuf_get_addr();
-        if (!exists_in_spiffs(HF_15693SSIM_LOGFILE)) {
+        if (!exists_in_spiffs(HF_15693SIM_LOGFILE)) {
             rdv40_spiffs_write(
-                HF_15693SIM_LOGFILE, trace_buffer, trace_len, RDV40_SPIFFS_SAFETY_SAFE);
+                HF_15693SIM_LOGFILE,
+                trace_buffer,
+                trace_len,
+                 RDV40_SPIFFS_SAFETY_SAFE
+            );
             Dbprintf("[!] Wrote trace to "HF_15693SIM_LOGFILE);
         } else {
             rdv40_spiffs_append(
