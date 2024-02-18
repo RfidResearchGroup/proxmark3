@@ -420,7 +420,18 @@ static int ict_select_card(iso14a_card_select_t *card) {
     return PM3_SUCCESS;
 }
 
-static int CmdHfIctRead(const char *Cmd) {
+static int CmdHfIctReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf ict reader",
+                  "Act as a reader",
+                  "hf ict reader\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
 
     iso14a_card_select_t card;
     if (ict_select_card(&card) != PM3_SUCCESS) {
@@ -539,7 +550,7 @@ static command_t CommandTable[] = {
     {"credential", CmdHfIctCredential, IfPm3Iso14443a,  "Read ICT credential and decode"},
     {"info",       CmdHfIctInfo,       IfPm3Iso14443a,  "Tag information"},
     {"list",       CmdHfIctList,       AlwaysAvailable, "List ICT history"},
-    {"reader",     CmdHfIctRead,       AlwaysAvailable, "Act like an IS14443-a reader"},
+    {"reader",     CmdHfIctReader,     AlwaysAvailable, "Act like an IS14443-a reader"},
     {NULL, NULL, NULL, NULL}
 };
 
