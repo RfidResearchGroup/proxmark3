@@ -10,6 +10,10 @@ PLATFORM=PM3RDV4
 #PLATFORM_EXTRAS=BTADDON FLASH
 #STANDALONE=LF_SAMYRUN
 
+# Uncomment the line below to set the correct LED order on board Proxmark3 Easy
+# Only available with PLATFORM=PM3GENERIC
+#LED_ORDER=PM3EASY
+
 # Uncomment the lines below in order to make a 256KB image
 # and comment out the lines above
 

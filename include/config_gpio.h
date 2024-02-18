@@ -21,13 +21,21 @@
 
 #define GPIO_LED_A          AT91C_PIO_PA0
 #define GPIO_PA1            AT91C_PIO_PA1
+#ifndef LED_ORDER_PM3EASY
 #define GPIO_LED_D          AT91C_PIO_PA2
+#else
+#define GPIO_LED_B          AT91C_PIO_PA2
+#endif
 #define GPIO_NVDD_ON        AT91C_PIO_PA3
 #define GPIO_FPGA_NINIT     AT91C_PIO_PA4
 #define GPIO_PA5            AT91C_PIO_PA5
 #define GPIO_PCK0           AT91C_PA6_PCK0
 #define GPIO_LRST           AT91C_PIO_PA7
+#ifndef LED_ORDER_PM3EASY
 #define GPIO_LED_B          AT91C_PIO_PA8
+#else
+#define GPIO_LED_D          AT91C_PIO_PA8
+#endif
 #define GPIO_LED_C          AT91C_PIO_PA9
 
 // defines for flash mem,  or rdv40 ?
