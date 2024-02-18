@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
-## [DEFCON is Cancelled][2024-02-18]
+## [DEFCON is Cancelled.4.18218][2024-02-18]
  - Changed `hf fudan dump --ns` - now supports nosave flag (@iceman1001)
  - Added `lf em 410x --electra` - adds two extra blocks. Thanks jareckib (@iceman1001)
  - Changed `hf mfu info` - now identifies UL-AES correct (@iceman1001)
