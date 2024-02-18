@@ -205,7 +205,7 @@ void RunMod(void) {
                 HF_15693SIM_LOGFILE,
                 trace_buffer,
                 trace_len,
-                 RDV40_SPIFFS_SAFETY_SAFE
+                RDV40_SPIFFS_SAFETY_SAFE
             );
             Dbprintf("[!] Wrote trace to "HF_15693SIM_LOGFILE);
         } else {
