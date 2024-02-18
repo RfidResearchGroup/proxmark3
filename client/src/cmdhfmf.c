@@ -3050,7 +3050,7 @@ tryStaticnested:
                                           (current_key_type_i == MF_KEY_B) ? 'B' : 'A');
                         }
 
-                        isOK = mfStaticNested(sectorno, keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key);
+                        isOK = mfStaticNested(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key);
                         DropField();
                         switch (isOK) {
                             case PM3_ETIMEOUT: {
