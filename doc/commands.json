@@ -2898,9 +2898,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> Specify a filename for dump file"
+                "-f, --file <fn> Specify a filename for dump file",
+                "--ns no save to file"
             ],
-            "usage": "hf fudan dump [-h] [-f <fn>]"
+            "usage": "hf fudan dump [-h] [-f <fn>] [--ns]"
         },
         "hf fudan help": {
             "command": "hf fudan help",
@@ -6961,7 +6962,7 @@
                 "-h, --help This help",
                 "-k, --key <hex> Authentication key (UL-C 16 bytes, EV1/NTAG 4 bytes)",
                 "-l Swap entered key's endianness",
-                "-b, --block <dec> Nlock number to read",
+                "-b, --block <dec> Block number to read",
                 "--force Force operation even if address is out of range"
             ],
             "usage": "hf mfu rdbl [-hl] [-k <hex>] -b <dec> [--force]"
@@ -12498,6 +12499,6 @@
     "metadata": {
         "commands_extracted": 721,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-02-16T20:57:06"
+        "extracted_on": "2024-02-18T19:13:37"
     }
 }
