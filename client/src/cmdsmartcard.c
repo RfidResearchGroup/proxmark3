@@ -1172,8 +1172,8 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 }
 
 static void atsToEmulatedAtr(uint8_t *ats, uint8_t *atr, int *atrLen) {
-    int historicalLen = 0;
-    int offset = 2;
+    uint8_t historicalLen = 0;
+    uint8_t offset = 2;
 
     if (ats[0] < 2) {
         historicalLen = 0;
@@ -1202,7 +1202,7 @@ static void atsToEmulatedAtr(uint8_t *ats, uint8_t *atr, int *atrLen) {
     atr[3] = 0x01;
 
     uint8_t tck = atr[1] ^ atr[2] ^ atr[3];
-    for (int i = 0; i < historicalLen; ++i) {
+    for (uint8_t i = 0; i < historicalLen; ++i) {
         atr[4 + i] = ats[offset + i];
         tck = tck ^ ats[offset + i];
     }
@@ -1302,7 +1302,7 @@ static int CmdPCSC(const char *Cmd) {
             if (bytes_read > 0) {
 
                 if (cmdbuf[1] == 0x01 && cmdbuf[2] == 0x04) { // vpcd GET ATR
-                    uint8_t atr[50] = {0};
+                    uint8_t atr[256] = {0};
                     int atrLen = 0;
 
                     switch (card_type) {
