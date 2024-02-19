@@ -447,7 +447,6 @@ static bool getHitag2Uid(uint32_t *uid) {
     if (uid) {
         *uid = bytes_to_num(resp.data.asBytes, HITAG_UID_SIZE);
     }
-
     return true;
 }
 
@@ -645,6 +644,7 @@ static int CmdLFHitagReader(const char *Cmd) {
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         return PM3_ETIMEOUT;
     }
     if (resp.oldarg[0] == false) {
@@ -1343,6 +1343,13 @@ int CmdLFHitag(const char *Cmd) {
 }
 
 int readHitagUid(void) {
-    return (CmdLFHitagReader("--ht2 --pwd") == PM3_SUCCESS);
+    uint32_t uid = 0;
+    if (getHitag2Uid(&uid) == false) {
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
+    PrintAndLogEx(SUCCESS, "TYPE... " _GREEN_("%s"), getHitagTypeStr(uid));
+    return PM3_SUCCESS;
 }
 

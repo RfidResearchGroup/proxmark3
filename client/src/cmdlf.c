@@ -1665,7 +1665,7 @@ int CmdLFfind(const char *Cmd) {
     if (is_online) {
 
         if (IfPm3Hitag()) {
-            if (readHitagUid()) {
+            if (readHitagUid() == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") " found!");
                 if (search_cont) {
                     found++;
