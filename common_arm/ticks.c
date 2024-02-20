@@ -309,6 +309,14 @@ uint32_t GetTicks(void) {
     return (hi << 16) | lo;
 }
 
+uint32_t RAMFUNC GetTicksDelta(uint32_t start) {
+    uint32_t stop = GetTicks();
+    if (stop >= start) {
+        return stop - start;
+    }
+    return (UINT32_MAX - start) + stop;
+}
+
 // Wait - Spindelay in ticks.
 // if called with a high number, this will trigger the WDT...
 void WaitTicks(uint32_t ticks) {
@@ -328,3 +336,4 @@ void StopTicks(void) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 }
+

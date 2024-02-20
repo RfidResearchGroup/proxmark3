@@ -28,6 +28,7 @@
 
 void StartTicks(void);
 uint32_t GetTicks(void);
+uint32_t RAMFUNC GetTicksDelta(uint32_t start);
 void WaitUS(uint32_t us);
 void WaitTicks(uint32_t ticks);
 void StartCountUS(void);
