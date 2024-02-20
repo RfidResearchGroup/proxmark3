@@ -1734,11 +1734,13 @@ void ReaderHitag(hitag_function htf, const hitag_data *htd, bool ledcontrol) {
             }
             case RHT2F_UID_ONLY: {
                 bStop = !hitag2_read_uid(rx, rxlen, tx, &txlen);
-                if (bSuccessful) bStop = true;
-                attempt_count++; //attempt 3 times to get uid then quit
-                if (!bStop && attempt_count == 3)
+                if (bSuccessful)  {
                     bStop = true;
-
+                }
+                attempt_count++; //attempt 3 times to get uid then quit
+                if ((bStop == false) && (attempt_count == 3)) {
+                    bStop = true;
+                }
                 break;
             }
             default: {
@@ -1746,7 +1748,10 @@ void ReaderHitag(hitag_function htf, const hitag_data *htd, bool ledcontrol) {
                 goto out;
             }
         }
-        if (bStop) break;
+        if (bStop) {
+            break;
+        }
+
         if (turn_on) {
             // Wait 50ms with field off to be sure the transponder gets reset
             SpinDelay(50);
@@ -1779,6 +1784,7 @@ void ReaderHitag(hitag_function htf, const hitag_data *htd, bool ledcontrol) {
         tag_modulation = lf_get_tag_modulation();
 
         // Reset the number of NRZ samples and use edge detection to detect them
+
         nrzs = 0;
         while (nrzs < max_nrzs) {
             // Get the timing of the next edge in number of wave periods
