@@ -14,7 +14,7 @@ jobs:
   check-unique:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: check unique keys in dic files
         shell: bash
         run: |

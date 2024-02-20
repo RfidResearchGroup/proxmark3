@@ -26,7 +26,7 @@ Run `tools/release_tests.sh` on:
 - [ ] RPI Zero
 - [ ] Jetson Nano
 - [ ] WSL
-- [ ] PSv3.10
+- [ ] PSv3.xx
 - [ ] Archlinux
 - [ ] Kali
 - [ ] Debian Stable

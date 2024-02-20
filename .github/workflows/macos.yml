@@ -19,7 +19,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set Git http.postBuffer to something high
         run: git config --global http.postBuffer 524288000
@@ -59,7 +59,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set Git http.postBuffer to something high
         run: git config --global http.postBuffer 524288000
@@ -100,7 +100,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set Git http.postBuffer to something high
         run: git config --global http.postBuffer 524288000
