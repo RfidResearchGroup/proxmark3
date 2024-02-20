@@ -398,7 +398,7 @@ int t55xxWrite(uint8_t block, bool page1, bool usepwd, bool testMode, uint32_t p
 
 void printT5xxHeader(uint8_t page) {
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Page " _YELLOW_("%d"), page);
+    PrintAndLogEx(SUCCESS, _YELLOW_("Page %d"), page);
     PrintAndLogEx(SUCCESS, "blk | hex data | binary                           | ascii");
     PrintAndLogEx(SUCCESS, "----+----------+----------------------------------+-------");
 }
@@ -2281,6 +2281,9 @@ static int CmdT55xxDump(const char *Cmd) {
         downlink_mode = ref1of4;
 
     bool success = true;
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "------------------------- " _CYAN_("T55xx tag memory") " -----------------------------");
 
     // Due to the few different T55xx cards and number of blocks supported
     // will save the dump file if ALL page 0 is OK
