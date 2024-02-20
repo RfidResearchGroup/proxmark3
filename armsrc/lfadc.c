@@ -81,8 +81,9 @@ void lf_sample_mean(void) {
     adc_avg = adc_sum >> 5;
     previous_adc_val = adc_avg;
 
-    if (g_dbglevel >= DBG_EXTENDED)
+    if (g_dbglevel >= DBG_EXTENDED) {
         Dbprintf("LF ADC average %u", adc_avg);
+    }
 }
 
 static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
