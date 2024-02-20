@@ -27,7 +27,8 @@ Always use the latest repository commits from *master* branch. There are always 
   - [bzlib.h: No such file or directory](#bzlibh-no-such-file-or-directory)
   - [target attribute is not supported on this machine](#target-attribute-is-not-supported-on-this-machine)
   - [Qt Session management error](#qt-session-management-error)
-  - [found architecture x86_64 required architecture arm64 error](#found-architecture-x86_64-required-architecture-arm64-error)
+  - [found architecture 'x86\_64' required architecture 'arm64' error](#found-architecture-x86_64-required-architecture-arm64-error)
+  - [wrong permissions on runtime directory /run/user/1000](#wrong-permissions-on-runtime-directory-runuser1000)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -332,4 +333,31 @@ Then run this again
 
 ```
 make clean && make -j
+```
+
+## wrong permissions on runtime directory /run/user/1000
+
+If you get the message 
+
+```
+QStandardPaths: wrong permissions on runtime directory /run/user/1000, 0770 instead of 0700
+```
+
+when running 
+
+```
+tools/pm3_tests.sh --long
+```
+
+Solution: 
+
+Try set the XDG_RUNTIME_DIR environment variable. 
+ref:  https://stackoverflow.com/questions/60458596/standardpaths-wrong-ownership-on-runtime-directory-run-user-1000-1000-instead
+
+```
+export XDG_RUNTIME_DIR=/run/user/1000
+
+or
+
+export XDG_RUNTIME_DIR=/var/run/user/1000
 ```
