@@ -894,17 +894,18 @@ static int CmdTune(const char *Cmd) {
 #define HF_MARGINAL_V   5000
 #define ANTENNA_ERROR   1.00 // current algo has 3% error margin.
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("Reminder") " ----------------------------");
+    PrintAndLogEx(INFO, "`" _YELLOW_("hw tune") "` doesn't actively tune your antennas.");
+    PrintAndLogEx(INFO, "It's only informative.");
+    PrintAndLogEx(INFO, "Measuring antenna characteristics...");
+
     // hide demod plot line
     g_DemodBufferLen = 0;
     setClockGrid(0, 0);
     RepaintGraphWindow();
-
     int timeout = 0;
     int timeout_max = 20;
-    PrintAndLogEx(INFO, "---------- " _CYAN_("Reminder") " ------------------------");
-    PrintAndLogEx(INFO, "`" _YELLOW_("hw tune") "` doesn't actively tune your antennas,");
-    PrintAndLogEx(INFO, "it's only informative.");
-    PrintAndLogEx(INFO, "Measuring antenna characteristics, please wait...");
 
     clearCommandBuffer();
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING, NULL, 0);
@@ -919,6 +920,7 @@ static int CmdTune(const char *Cmd) {
         timeout++;
         PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
     }
+    PrintAndLogEx(NORMAL, "");
 
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Antenna tuning failed");
@@ -926,7 +928,7 @@ static int CmdTune(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "---------- " _CYAN_("LF Antenna") " ----------");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("LF Antenna") " ----------");
     // in mVolt
     struct p {
         uint32_t v_lf134;
@@ -942,16 +944,16 @@ static int CmdTune(const char *Cmd) {
     struct p *package = (struct p *)resp.data.asBytes;
 
     if (package->v_lf125 > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "At %.2f kHz .......... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(LF_DIVISOR_125), (package->v_lf125 * ANTENNA_ERROR) / 1000.0);
+        PrintAndLogEx(SUCCESS, "%.2f kHz ........... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(LF_DIVISOR_125), (package->v_lf125 * ANTENNA_ERROR) / 1000.0);
 
     if (package->v_lf134 > NON_VOLTAGE)
-        PrintAndLogEx(SUCCESS, "At %.2f kHz .......... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(LF_DIVISOR_134), (package->v_lf134 * ANTENNA_ERROR) / 1000.0);
+        PrintAndLogEx(SUCCESS, "%.2f kHz ........... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(LF_DIVISOR_134), (package->v_lf134 * ANTENNA_ERROR) / 1000.0);
 
     if (package->v_lfconf > NON_VOLTAGE && package->divisor > 0 && package->divisor != LF_DIVISOR_125 && package->divisor != LF_DIVISOR_134)
-        PrintAndLogEx(SUCCESS, "At %.2f kHz .......... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(package->divisor), (package->v_lfconf * ANTENNA_ERROR) / 1000.0);
+        PrintAndLogEx(SUCCESS, "%.2f kHz ........... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(package->divisor), (package->v_lfconf * ANTENNA_ERROR) / 1000.0);
 
     if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
-        PrintAndLogEx(SUCCESS, "At %.2f kHz optimal... " _BACK_GREEN_("%5.2f") " V", LF_DIV2FREQ(package->peak_f), (package->peak_v * ANTENNA_ERROR) / 1000.0);
+        PrintAndLogEx(SUCCESS, "%.2f kHz optimal.... " _BACK_GREEN_("%5.2f") " V", LF_DIV2FREQ(package->peak_f), (package->peak_v * ANTENNA_ERROR) / 1000.0);
 
     // Empirical measures in mV
     const double vdd_rdv4 = 9000;
@@ -974,7 +976,7 @@ static int CmdTune(const char *Cmd) {
         }
 
         PrintAndLogEx(SUCCESS, "");
-        PrintAndLogEx(SUCCESS, "Approx. Q factor measurement (*)");
+        PrintAndLogEx(SUCCESS, "Approx. Q factor measurement");
         double lfq1 = 0;
         if (s4 != 0) { // we got all our points of interest
             double a = package->results[s2 - 1];
@@ -984,12 +986,12 @@ static int CmdTune(const char *Cmd) {
             double d = package->results[s4];
             double f2 = LF_DIV2FREQ(s4 - 1 + (c - v_3db_scaled) / (c - d));
             lfq1 = LF_DIV2FREQ(package->peak_f) / (f1 - f2);
-            PrintAndLogEx(SUCCESS, "Frequency bandwidth..... " _YELLOW_("%.1lf"), lfq1);
+            PrintAndLogEx(SUCCESS, "Frequency bandwidth... " _YELLOW_("%.1lf"), lfq1);
         }
 
         // Q measure with Vlr=Q*(2*Vdd/pi)
         double lfq2 = (double)package->peak_v * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "Peak voltage............ " _YELLOW_("%.1lf"), lfq2);
+        PrintAndLogEx(SUCCESS, "Peak voltage.......... " _YELLOW_("%.1lf"), lfq2);
         // cross-check results
         if (lfq1 > 3) {
             double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
@@ -1020,24 +1022,25 @@ static int CmdTune(const char *Cmd) {
     else
         snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
 
-    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna ( %s )", judgement);
+    //PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna ( %s )", judgement);
+    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna............ %s", judgement);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "---------- " _CYAN_("HF Antenna") " ----------");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("HF Antenna") " ----------");
     // HF evaluation
     if (package->v_hf > NON_VOLTAGE) {
-        PrintAndLogEx(SUCCESS, "13.56 MHz............... " _YELLOW_("%5.2f") " V", (package->v_hf * ANTENNA_ERROR) / 1000.0);
+        PrintAndLogEx(SUCCESS, "13.56 MHz............. " _BACK_GREEN_("%5.2f") " V", (package->v_hf * ANTENNA_ERROR) / 1000.0);
     }
 
     memset(judgement, 0, sizeof(judgement));
 
     PrintAndLogEx(SUCCESS, "");
-    PrintAndLogEx(SUCCESS, "Approx. Q factor measurement (*)");
+    PrintAndLogEx(SUCCESS, "Approx. Q factor measurement");
 
     if (package->v_hf >= HF_UNUSABLE_V) {
         // Q measure with Vlr=Q*(2*Vdd/pi)
         double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "peak voltage............ " _YELLOW_("%.1lf"), hfq);
+        PrintAndLogEx(SUCCESS, "Peak voltage.......... " _YELLOW_("%.1lf"), hfq);
     }
 
     if (package->v_hf < HF_UNUSABLE_V)
@@ -1048,7 +1051,6 @@ static int CmdTune(const char *Cmd) {
         snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
 
     PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna ( %s )", judgement);
-    PrintAndLogEx(NORMAL, "\n(*) Q factor must be measured without tag on the antenna");
 
     // graph LF measurements
     // even here, these values has 3% error.
@@ -1060,14 +1062,14 @@ static int CmdTune(const char *Cmd) {
 
     if (test1 > 0) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "-------- " _CYAN_("LF tuning graph") " ---------");
-        PrintAndLogEx(SUCCESS, "Blue line  Divisor %d / %.2f kHz"
-                      , LF_DIVISOR_134
-                      , LF_DIV2FREQ(LF_DIVISOR_134)
-                     );
-        PrintAndLogEx(SUCCESS, "Red line   Divisor %d / %.2f kHz\n\n"
+        PrintAndLogEx(INFO, "-------- " _CYAN_("LF tuning graph") " ------------");
+        PrintAndLogEx(SUCCESS, "Orange line - divisor %d / %.2f kHz"
                       , LF_DIVISOR_125
                       , LF_DIV2FREQ(LF_DIVISOR_125)
+                     );
+        PrintAndLogEx(SUCCESS, "Blue line - divisor   %d / %.2f kHz\n\n"
+                      , LF_DIVISOR_134
+                      , LF_DIV2FREQ(LF_DIVISOR_134)
                      );
         g_GraphTraceLen = 256;
         g_CursorCPos = LF_DIVISOR_125;
@@ -1075,10 +1077,12 @@ static int CmdTune(const char *Cmd) {
         ShowGraphWindow();
         RepaintGraphWindow();
     } else {
-
-        PrintAndLogEx(FAILED, "\nNot showing LF tuning graph since all values is zero.\n\n");
+        PrintAndLogEx(FAILED, "\nAll values are zero. Not showing LF tuning graph\n\n");
     }
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Q factor must be measured without tag on the antenna");
+    PrintAndLogEx(NORMAL, "");  
     return PM3_SUCCESS;
 }
 
