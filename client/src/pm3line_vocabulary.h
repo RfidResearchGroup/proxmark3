@@ -165,6 +165,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf 14b raw" },
     { 0, "hf 14b rdbl" },
     { 0, "hf 14b reader" },
+    { 0, "hf 14b restore" },
     { 0, "hf 14b sim" },
     { 0, "hf 14b sniff" },
     { 0, "hf 14b wrbl" },
