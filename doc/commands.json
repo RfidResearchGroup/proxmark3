@@ -778,18 +778,6 @@
             ],
             "usage": "data timescale [-h] --sr <float> [-u <string>]"
         },
-        "data tune": {
-            "command": "data tune",
-            "description": "Measure tuning of device antenna. Results shown in graph window. This command doesn't actively tune your antennas, it's only informative by measuring voltage that the antennas will generate",
-            "notes": [
-                "data tune"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help"
-            ],
-            "usage": "data tune [-h]"
-        },
         "data undecimate": {
             "command": "data undecimate",
             "description": "Performs un-decimation, by repeating each sample N times in the graphbuf",
@@ -3610,6 +3598,18 @@
                 "-f, --file <fn> filename of dictionary"
             ],
             "usage": "hf ict list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "hf ict reader": {
+            "command": "hf ict reader",
+            "description": "Act as a reader",
+            "notes": [
+                "hf ict reader"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf ict reader [-h]"
         },
         "hf jooki decode": {
             "command": "hf jooki decode",
@@ -7848,6 +7848,18 @@
             ],
             "usage": "hw bootloader [-h]"
         },
+        "hw break": {
+            "command": "hw break",
+            "description": "send break loop package",
+            "notes": [
+                "hw break"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw break [-h]"
+        },
         "hw connect": {
             "command": "hw connect",
             "description": "Connects to a Proxmark3 device via specified serial port. Baudrate here is only for physical UART or UART-BT, NOT for USB-CDC or blue shark add-on",
@@ -7881,21 +7893,6 @@
             ],
             "usage": "hw dbg [-h01234]"
         },
-        "hw detectreader": {
-            "command": "hw detectreader",
-            "description": "Start to detect presences of reader field",
-            "notes": [
-                "hw detectreader",
-                "hw detectreader -L"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-L, --LF only detect low frequency 125/134 kHz",
-                "-H, --HF only detect high frequency 13.56 MHZ"
-            ],
-            "usage": "hw detectreader [-hLH]"
-        },
         "hw fpgaoff": {
             "command": "hw fpgaoff",
             "description": "Turn of fpga and antenna field",
@@ -7910,15 +7907,18 @@
         },
         "hw help": {
             "command": "hw help",
-            "description": "------------- ----------------------- Hardware ----------------------- help This help connect Connect Proxmark3 to serial port timeout Set the communication timeout on the client side version Show version information about the client and the connected Proxmark3, if any --------------------------------------------------------------------------------------- hw break available offline: no send break loop package",
+            "description": "help This help ------------- ----------------------- Operation ----------------------- timeout Set the communication timeout on the client side version Show version information about the client and Proxmark3 ------------- ----------------------- Hardware ----------------------- connect Connect to the device via serial port --------------------------------------------------------------------------------------- hw detectreader available offline: no Start to detect presences of reader field",
             "notes": [
-                "hw break"
+                "hw detectreader",
+                "hw detectreader -L"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-L, --LF only detect low frequency 125/134 kHz",
+                "-H, --HF only detect high frequency 13.56 MHZ"
             ],
-            "usage": "hw break [-h]"
+            "usage": "hw detectreader [-hLH]"
         },
         "hw lcd": {
             "command": "hw lcd",
@@ -8109,7 +8109,7 @@
         },
         "hw tune": {
             "command": "hw tune",
-            "description": "Measure antenna tuning",
+            "description": "Measure tuning of device antenna. Results shown in graph window. This command doesn't actively tune your antennas, it's only informative by measuring voltage that the antennas will generate",
             "notes": [
                 "hw tune"
             ],
@@ -12499,6 +12499,6 @@
     "metadata": {
         "commands_extracted": 721,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-02-18T19:13:37"
+        "extracted_on": "2024-02-21T16:14:11"
     }
 }

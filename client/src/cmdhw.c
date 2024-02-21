@@ -1082,7 +1082,7 @@ static int CmdTune(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Q factor must be measured without tag on the antenna");
-    PrintAndLogEx(NORMAL, "");  
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -1441,7 +1441,7 @@ static command_t CommandTable[] = {
     {"-------------", CmdHelp,         AlwaysAvailable,  "----------------------- " _CYAN_("Operation") " -----------------------"},
     {"detectreader",  CmdDetectReader, IfPm3Present,     "Detect external reader field"},
     {"status",        CmdStatus,       IfPm3Present,     "Show runtime status information about the connected Proxmark3"},
-    {"tearoff",       CmdTearoff,      IfPm3Present,     "Program a tearoff hook for the next command supporting tearoff"},    
+    {"tearoff",       CmdTearoff,      IfPm3Present,     "Program a tearoff hook for the next command supporting tearoff"},
     {"timeout",       CmdTimeout,      AlwaysAvailable,  "Set the communication timeout on the client side"},
     {"version",       CmdVersion,      AlwaysAvailable,  "Show version information about the client and Proxmark3"},
     {"-------------", CmdHelp,         AlwaysAvailable,  "----------------------- " _CYAN_("Hardware") " -----------------------"},

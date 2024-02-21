@@ -138,7 +138,6 @@ Check column "offline" for their availability.
 |`data samples           `|N       |`Get raw samples for graph window (GraphBuffer)`
 |`data save              `|Y       |`Save signal trace data  (from graph window)`
 |`data setdebugmode      `|Y       |`Set Debugging Level on client side`
-|`data tune              `|N       |`Measure tuning of device antenna. Results shown in graph window`
 
 
 ### emv
@@ -805,27 +804,27 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hw help                `|Y       |`This help`
-|`hw break               `|N       |`Send break loop usb command`
-|`hw bootloader          `|N       |`Reboot Proxmark3 into bootloader mode`
-|`hw connect             `|Y       |`Connect Proxmark3 to serial port`
-|`hw dbg                 `|N       |`Set Proxmark3 debug level`
 |`hw detectreader        `|N       |`Detect external reader field`
-|`hw fpgaoff             `|N       |`Set FPGA off`
+|`hw status              `|N       |`Show runtime status information about the connected Proxmark3`
+|`hw tearoff             `|N       |`Program a tearoff hook for the next command supporting tearoff`
+|`hw timeout             `|Y       |`Set the communication timeout on the client side`
+|`hw version             `|Y       |`Show version information about the client and Proxmark3`
+|`hw break               `|N       |`Send break loop usb command`
+|`hw bootloader          `|N       |`Reboot into bootloader mode`
+|`hw connect             `|Y       |`Connect to the device via serial port`
+|`hw dbg                 `|N       |`Set device side debug level`
+|`hw fpgaoff             `|N       |`Turn off FPGA on device`
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
-|`hw readmem             `|N       |`Read from processor flash`
-|`hw reset               `|N       |`Reset the Proxmark3`
+|`hw readmem             `|N       |`Read from MCU flash`
+|`hw reset               `|N       |`Reset the device`
 |`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
 |`hw sethfthresh         `|N       |`Set thresholds in HF/14a mode`
 |`hw setmux              `|N       |`Set the ADC mux to a specific value`
-|`hw standalone          `|N       |`Jump to the standalone mode`
-|`hw status              `|N       |`Show runtime status information about the connected Proxmark3`
-|`hw tearoff             `|N       |`Program a tearoff hook for the next command supporting tearoff`
+|`hw standalone          `|N       |`Start installed standalone mode on device`
 |`hw tia                 `|N       |`Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider`
-|`hw timeout             `|Y       |`Set the communication timeout on the client side`
-|`hw tune                `|N       |`Measure antenna tuning`
-|`hw version             `|Y       |`Show version information about the client and the connected Proxmark3, if any`
+|`hw tune                `|N       |`Measure tuning of device antenna`
 
 
 ### lf
