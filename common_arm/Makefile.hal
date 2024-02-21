@@ -108,11 +108,17 @@ else ifeq ($(PLATFORM),PM3OTHER)
     FPGA_BITSTREAMS = fpga_pm3_lf.bit fpga_pm3_hf.bit fpga_pm3_felica.bit fpga_pm3_hf_15.bit
     PLTNAME = Proxmark3 generic target
     PLATFORM_FPGA = xc2s30
+    ifeq ($(LED_ORDER),PM3EASY)
+        PLATFORM_DEFS = -DLED_ORDER_PM3EASY
+    endif
 else ifeq ($(PLATFORM),PM3GENERIC)
     # FPGA bitstream files, the order matters!
     FPGA_BITSTREAMS = fpga_pm3_lf.bit fpga_pm3_hf.bit fpga_pm3_felica.bit fpga_pm3_hf_15.bit
     PLTNAME = Proxmark3 generic target
     PLATFORM_FPGA = xc2s30
+    ifeq ($(LED_ORDER),PM3EASY)
+        PLATFORM_DEFS = -DLED_ORDER_PM3EASY
+    endif
 else ifeq ($(PLATFORM),PM3ICOPYX)
     # FPGA bitstream files, the order matters - only hf has a bitstream, the other 3 files are 0 bytes
     FPGA_BITSTREAMS = fpga_icopyx_lf.bit fpga_icopyx_hf.bit fpga_icopyx_felica.bit fpga_icopyx_hf_15.bit

@@ -41,17 +41,26 @@
 #define BYTEx(x, n) (((x) >> (n * 8)) & 0xff )
 #endif
 
-// Proxmark3 RDV4.0 LEDs
+// Proxmark3 RDV4.0 and Proxmark Easy LEDs
 #define LED_A 1
 #define LED_B 2
 #define LED_C 4
 #define LED_D 8
 
+
+#ifndef LED_ORDER_PM3EASY
 // Proxmark3 historical LEDs
 #define LED_ORANGE LED_A
 #define LED_GREEN  LED_B
 #define LED_RED    LED_C
 #define LED_RED2   LED_D
+#else
+// Proxmark3 Easy LEDs
+#define LED_GREEN  LED_A
+#define LED_RED    LED_B
+#define LED_ORANGE LED_C
+#define LED_RED2   LED_D
+#endif
 
 #define BUTTON_HOLD 1
 #define BUTTON_NO_CLICK 0
