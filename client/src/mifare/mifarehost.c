@@ -1407,7 +1407,7 @@ uint16_t detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
 
     uint16_t isMagic = MAGIC_FLAG_NONE;
     if ((resp.status == PM3_SUCCESS) && resp.length == sizeof(uint16_t)) {
-        isMagic = resp.data.asDwords[0] & 0xFFFF;
+        isMagic = MemLeToUint2byte(resp.data.asBytes);
     }
 
     if ((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) {

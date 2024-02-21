@@ -2030,7 +2030,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         isSEOS = ((nxptype & HID_SEOS) == HID_SEOS);
 
         // generic catch,  we assume MIFARE Classic for all unknown ISO14443a tags
-        isMifareClassic = ((nxptype & MTOTHER) == MTOTHER);
+        isMifareClassic |= ((nxptype & MTOTHER) == MTOTHER);
 
     } else {
 
@@ -2272,10 +2272,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                     } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
 
-                        if ((card.atqa[0] & 0x02) == 0x02)
+                        if ((card.atqa[0] & 0x02) == 0x02) {
                             snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 2K (SL3)");
-                        else if ((card.atqa[0] & 0x04) == 0x04)
+                        } else if ((card.atqa[0] & 0x04) == 0x04) {
                             snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 4K (SL3)");
+                        }
 
                     } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
                         snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (17pF)");
@@ -2287,7 +2288,6 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 } else {  //SAK B4,5,6
 
                     if ((card.sak & 0x20) == 0x20) {  // and no GetVersion()..
-
 
                         if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
                             snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus X 2K (SL1)");
@@ -2480,8 +2480,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 PrintAndLogEx(INFO, "--> SAK incorrectly claims that card supports RATS <--");
             }
         }
-        if (select_status == 1)
+
+        if (select_status == 1) {
             select_status = 2;
+        }
     }
 
     if (setDeviceDebugLevel(verbose ? DBG_INFO : DBG_NONE, false) != PM3_SUCCESS) {
@@ -2489,6 +2491,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     uint16_t isMagic = 0;
+
     if (isMifareClassic) {
         isMagic = detect_mf_magic(true, MF_KEY_B, 0xFFFFFFFFFFFF);
     }
@@ -2529,7 +2532,6 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if (res == PM3_SUCCESS) {
             mfc_ev1_print_signature(card.uid, card.uidlen, signature, sizeof(signature));
         }
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf`") " commands");
     }
 
     if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
@@ -2580,34 +2582,28 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf ntag424 info") "`");
     }
 
-    if (isMifareClassic &&
-            (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B))
-       ) {
-        PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf c*") "` commands when interacting");
-    }
+    if (isMifareClassic) {
+        if (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B)) {
+            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf c*") "` commands when interacting");
+        }
 
-    if (isMifareClassic &&
-            ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2)
-       ) {
-        PrintAndLogEx(HINT, "Hint: Use normal `" _YELLOW_("hf mf") "` commands when interacting");
-    }
+        if ((isMagic & MAGIC_FLAG_GEN_3) == MAGIC_FLAG_GEN_3) {
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gen3*") "` commands when interacting");
+        }
 
-    if (isMifareClassic &&
-            ((isMagic & MAGIC_FLAG_GEN_3) == MAGIC_FLAG_GEN_3)
-       ) {
-        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gen3*") "` commands when interacting");
-    }
+        if ((isMagic & MAGIC_FLAG_GEN_4GTU) == MAGIC_FLAG_GEN_4GTU) {
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf g*") "` commands when interacting");
+        }
 
-    if (isMifareClassic &&
-            ((isMagic & MAGIC_FLAG_GEN_4GTU) == MAGIC_FLAG_GEN_4GTU)
-       ) {
-        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf g*") "` commands when interacting");
-    }
+        if ((isMagic & MAGIC_FLAG_GDM_AUTH) == MAGIC_FLAG_GDM_AUTH) {
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gdm*") "` commands when interacting");
+        }
 
-    if (isMifareClassic &&
-            ((isMagic & MAGIC_FLAG_GDM_AUTH) == MAGIC_FLAG_GDM_AUTH)
-       ) {
-        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gdm*") "` commands when interacting");
+        if ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2) {
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf") "` commands when interacting");
+        } else {
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf`") " commands");
+        }
     }
 
     PrintAndLogEx(NORMAL, "");
