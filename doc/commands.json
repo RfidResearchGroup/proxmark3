@@ -1513,6 +1513,22 @@
             ],
             "usage": "hf 14b reader [-hv@]"
         },
+        "hf 14b restore": {
+            "command": "hf 14b restore",
+            "description": "Restore data from (bin/eml/json) dump file to tag If the dump file includes the special block at the end it will be ignored",
+            "notes": [
+                "hf 14b restore --4k -f myfilename",
+                "hf 14b restore --512 -f myfilename"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> (optional) filename, if no <name> UID will be used as filename",
+                "--512 target SRI 512 tag",
+                "--4k target SRIX 4k tag (def)"
+            ],
+            "usage": "hf 14b restore [-h] [-f <fn>] [--512] [--4k]"
+        },
         "hf 14b sim": {
             "command": "hf 14b sim",
             "description": "Simulate a ISO/IEC 14443 type B tag with 4 byte UID / PUPI",
@@ -1580,7 +1596,7 @@
                 "-b, --block <dec> block number",
                 "-d, --data <hex> 4 hex bytes",
                 "--512 target SRI 512 tag",
-                "--4k target SRIX 4k tag",
+                "--4k target SRIX 4k tag (def)",
                 "--sb special block write at end of memory (0xFF)",
                 "--force overrides block range checks"
             ],
@@ -12497,8 +12513,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 721,
+        "commands_extracted": 722,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-02-21T16:14:11"
+        "extracted_on": "2024-02-21T21:49:16"
     }
 }

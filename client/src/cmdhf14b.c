@@ -1921,7 +1921,7 @@ static int CmdHF14BRestore(const char *Cmd) {
     int blockno = 0;
     while (bytes_read) {
 
-        int status = write_sr_block(blockno, ST25TB_SR_BLOCK_SIZE, data+blockno*ST25TB_SR_BLOCK_SIZE);
+        int status = write_sr_block(blockno, ST25TB_SR_BLOCK_SIZE, data + blockno * ST25TB_SR_BLOCK_SIZE);
         if (status != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Write failed");
             free(data);
@@ -1932,16 +1932,16 @@ static int CmdHF14BRestore(const char *Cmd) {
         uint8_t out[ST25TB_SR_BLOCK_SIZE] = {0};
         status = read_sr_block(blockno, out);
         if (status == PM3_SUCCESS) {
-            if (memcmp(data+blockno*ST25TB_SR_BLOCK_SIZE, out, ST25TB_SR_BLOCK_SIZE) == 0) {
+            if (memcmp(data + blockno * ST25TB_SR_BLOCK_SIZE, out, ST25TB_SR_BLOCK_SIZE) == 0) {
                 printf("\33[2K\r");
-                PrintAndLogEx(INFO, "SRx write block %d/%d ( " _GREEN_("ok") " )" NOLF, blockno, block_cnt-1);
-            }else {
+                PrintAndLogEx(INFO, "SRx write block %d/%d ( " _GREEN_("ok") " )" NOLF, blockno, block_cnt - 1);
+            } else {
                 printf("\n");
-                PrintAndLogEx(INFO, "SRx write block %d/%d ( " _RED_("different") " )",blockno, block_cnt-1);
+                PrintAndLogEx(INFO, "SRx write block %d/%d ( " _RED_("different") " )", blockno, block_cnt - 1);
             }
-        }else{
+        } else {
             printf("\n");
-            PrintAndLogEx(INFO, "Verifying block %d/%d ( " _RED_("failed") " )",blockno, block_cnt-1);
+            PrintAndLogEx(INFO, "Verifying block %d/%d ( " _RED_("failed") " )", blockno, block_cnt - 1);
         }
 
         fflush(stdout);

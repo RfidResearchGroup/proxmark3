@@ -216,6 +216,7 @@ Check column "offline" for their availability.
 |`hf 14b raw             `|N       |`Send raw hex data to tag`
 |`hf 14b rdbl            `|N       |`Read SRI512/SRIX4 block`
 |`hf 14b reader          `|N       |`Act as a ISO-14443-B reader to identify a tag`
+|`hf 14b restore         `|N       |`Restore from file to all memory pages of an ISO-14443-B tag`
 |`hf 14b sim             `|N       |`Fake ISO ISO-14443-B tag`
 |`hf 14b sniff           `|N       |`Eavesdrop ISO-14443-B`
 |`hf 14b wrbl            `|N       |`Write data to a SRI512/SRIX4 tag`
