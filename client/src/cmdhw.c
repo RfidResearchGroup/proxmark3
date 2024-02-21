@@ -22,7 +22,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "cmdparser.h"    // command_t
+#include "cmdparser.h"      // command_t
 #include "cliparser.h"
 #include "comms.h"
 #include "usart_defs.h"
@@ -33,11 +33,13 @@
 #include "commonutil.h"
 #include "preferences.h"
 #include "pm3_cmd.h"
-#include "pmflash.h"      // rdv40validation_t
-#include "cmdflashmem.h"  // get_signature..
-#include "uart/uart.h" // configure timeout
+#include "pmflash.h"        // rdv40validation_t
+#include "cmdflashmem.h"    // get_signature..
+#include "uart/uart.h"      // configure timeout
 #include "util_posix.h"
-#include "flash.h" // reboot to bootloader mode
+#include "flash.h"          // reboot to bootloader mode
+#include "proxgui.h"
+#include "graph.h"          // for graph data
 
 static int CmdHelp(const char *Cmd);
 
@@ -870,19 +872,214 @@ static int CmdStandalone(const char *Cmd) {
 }
 
 static int CmdTune(const char *Cmd) {
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw tune",
-                  "Measure antenna tuning",
+                  "Measure tuning of device antenna. Results shown in graph window.\n"
+                  "This command doesn't actively tune your antennas, \n"
+                  "it's only informative by measuring voltage that the antennas will generate",
                   "hw tune"
                  );
-
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-    return CmdTuneSamples(Cmd);
+
+#define NON_VOLTAGE     1000
+#define LF_UNUSABLE_V   2000
+#define LF_MARGINAL_V   10000
+#define HF_UNUSABLE_V   3000
+#define HF_MARGINAL_V   5000
+#define ANTENNA_ERROR   1.00 // current algo has 3% error margin.
+
+    // hide demod plot line
+    g_DemodBufferLen = 0;
+    setClockGrid(0, 0);
+    RepaintGraphWindow();
+
+    int timeout = 0;
+    int timeout_max = 20;
+    PrintAndLogEx(INFO, "---------- " _CYAN_("Reminder") " ------------------------");
+    PrintAndLogEx(INFO, "`" _YELLOW_("hw tune") "` doesn't actively tune your antennas,");
+    PrintAndLogEx(INFO, "it's only informative.");
+    PrintAndLogEx(INFO, "Measuring antenna characteristics, please wait...");
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_MEASURE_ANTENNA_TUNING, NULL, 0);
+    PacketResponseNG resp;
+    PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
+    while (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 500)) {
+        fflush(stdout);
+        if (timeout >= timeout_max) {
+            PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+            return PM3_ETIMEOUT;
+        }
+        timeout++;
+        PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Antenna tuning failed");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------- " _CYAN_("LF Antenna") " ----------");
+    // in mVolt
+    struct p {
+        uint32_t v_lf134;
+        uint32_t v_lf125;
+        uint32_t v_lfconf;
+        uint32_t v_hf;
+        uint32_t peak_v;
+        uint32_t peak_f;
+        int divisor;
+        uint8_t results[256];
+    } PACKED;
+
+    struct p *package = (struct p *)resp.data.asBytes;
+
+    if (package->v_lf125 > NON_VOLTAGE)
+        PrintAndLogEx(SUCCESS, "At %.2f kHz .......... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(LF_DIVISOR_125), (package->v_lf125 * ANTENNA_ERROR) / 1000.0);
+
+    if (package->v_lf134 > NON_VOLTAGE)
+        PrintAndLogEx(SUCCESS, "At %.2f kHz .......... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(LF_DIVISOR_134), (package->v_lf134 * ANTENNA_ERROR) / 1000.0);
+
+    if (package->v_lfconf > NON_VOLTAGE && package->divisor > 0 && package->divisor != LF_DIVISOR_125 && package->divisor != LF_DIVISOR_134)
+        PrintAndLogEx(SUCCESS, "At %.2f kHz .......... " _YELLOW_("%5.2f") " V", LF_DIV2FREQ(package->divisor), (package->v_lfconf * ANTENNA_ERROR) / 1000.0);
+
+    if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
+        PrintAndLogEx(SUCCESS, "At %.2f kHz optimal... " _BACK_GREEN_("%5.2f") " V", LF_DIV2FREQ(package->peak_f), (package->peak_v * ANTENNA_ERROR) / 1000.0);
+
+    // Empirical measures in mV
+    const double vdd_rdv4 = 9000;
+    const double vdd_other = 5400;
+    double vdd = IfPm3Rdv4Fw() ? vdd_rdv4 : vdd_other;
+
+    if (package->peak_v > NON_VOLTAGE && package->peak_f > 0) {
+
+        // Q measure with Q=f/delta_f
+        double v_3db_scaled = (double)(package->peak_v * 0.707) / 512; // /512 == >>9
+        uint32_t s2 = 0, s4 = 0;
+        for (int i = 1; i < 256; i++) {
+            if ((s2 == 0) && (package->results[i] > v_3db_scaled)) {
+                s2 = i;
+            }
+            if ((s2 != 0) && (package->results[i] < v_3db_scaled)) {
+                s4 = i;
+                break;
+            }
+        }
+
+        PrintAndLogEx(SUCCESS, "");
+        PrintAndLogEx(SUCCESS, "Approx. Q factor measurement (*)");
+        double lfq1 = 0;
+        if (s4 != 0) { // we got all our points of interest
+            double a = package->results[s2 - 1];
+            double b = package->results[s2];
+            double f1 = LF_DIV2FREQ(s2 - 1 + (v_3db_scaled - a) / (b - a));
+            double c = package->results[s4 - 1];
+            double d = package->results[s4];
+            double f2 = LF_DIV2FREQ(s4 - 1 + (c - v_3db_scaled) / (c - d));
+            lfq1 = LF_DIV2FREQ(package->peak_f) / (f1 - f2);
+            PrintAndLogEx(SUCCESS, "Frequency bandwidth..... " _YELLOW_("%.1lf"), lfq1);
+        }
+
+        // Q measure with Vlr=Q*(2*Vdd/pi)
+        double lfq2 = (double)package->peak_v * 3.14 / 2 / vdd;
+        PrintAndLogEx(SUCCESS, "Peak voltage............ " _YELLOW_("%.1lf"), lfq2);
+        // cross-check results
+        if (lfq1 > 3) {
+            double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
+            // Got 8858 on a RDV4 with large antenna 134/14
+            // Got 8761 on a non-RDV4
+            const double approx_vdd_other_max = 8840;
+
+            // 1% over threshold and supposedly non-RDV4
+            if ((approx_vdd > approx_vdd_other_max * 1.01) && (!IfPm3Rdv4Fw())) {
+                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3GENERIC firmware on a RDV4"));
+                PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
+            }
+            // 1% below threshold and supposedly RDV4
+            if ((approx_vdd < approx_vdd_other_max * 0.99) && (IfPm3Rdv4Fw())) {
+                PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_RDV4 firmware on a generic device"));
+                PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
+            }
+        }
+    }
+
+    char judgement[20];
+    memset(judgement, 0, sizeof(judgement));
+    // LF evaluation
+    if (package->peak_v < LF_UNUSABLE_V)
+        snprintf(judgement, sizeof(judgement), _RED_("unusable"));
+    else if (package->peak_v < LF_MARGINAL_V)
+        snprintf(judgement, sizeof(judgement), _YELLOW_("marginal"));
+    else
+        snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
+
+    PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna ( %s )", judgement);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------- " _CYAN_("HF Antenna") " ----------");
+    // HF evaluation
+    if (package->v_hf > NON_VOLTAGE) {
+        PrintAndLogEx(SUCCESS, "13.56 MHz............... " _YELLOW_("%5.2f") " V", (package->v_hf * ANTENNA_ERROR) / 1000.0);
+    }
+
+    memset(judgement, 0, sizeof(judgement));
+
+    PrintAndLogEx(SUCCESS, "");
+    PrintAndLogEx(SUCCESS, "Approx. Q factor measurement (*)");
+
+    if (package->v_hf >= HF_UNUSABLE_V) {
+        // Q measure with Vlr=Q*(2*Vdd/pi)
+        double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
+        PrintAndLogEx(SUCCESS, "peak voltage............ " _YELLOW_("%.1lf"), hfq);
+    }
+
+    if (package->v_hf < HF_UNUSABLE_V)
+        snprintf(judgement, sizeof(judgement), _RED_("unusable"));
+    else if (package->v_hf < HF_MARGINAL_V)
+        snprintf(judgement, sizeof(judgement), _YELLOW_("marginal"));
+    else
+        snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
+
+    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna ( %s )", judgement);
+    PrintAndLogEx(NORMAL, "\n(*) Q factor must be measured without tag on the antenna");
+
+    // graph LF measurements
+    // even here, these values has 3% error.
+    uint16_t test1 = 0;
+    for (int i = 0; i < 256; i++) {
+        g_GraphBuffer[i] = package->results[i] - 128;
+        test1 += package->results[i];
+    }
+
+    if (test1 > 0) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "-------- " _CYAN_("LF tuning graph") " ---------");
+        PrintAndLogEx(SUCCESS, "Blue line  Divisor %d / %.2f kHz"
+                      , LF_DIVISOR_134
+                      , LF_DIV2FREQ(LF_DIVISOR_134)
+                     );
+        PrintAndLogEx(SUCCESS, "Red line   Divisor %d / %.2f kHz\n\n"
+                      , LF_DIVISOR_125
+                      , LF_DIV2FREQ(LF_DIVISOR_125)
+                     );
+        g_GraphTraceLen = 256;
+        g_CursorCPos = LF_DIVISOR_125;
+        g_CursorDPos = LF_DIVISOR_134;
+        ShowGraphWindow();
+        RepaintGraphWindow();
+    } else {
+
+        PrintAndLogEx(FAILED, "\nNot showing LF tuning graph since all values is zero.\n\n");
+    }
+
+    return PM3_SUCCESS;
 }
 
 static int CmdVersion(const char *Cmd) {
@@ -1236,29 +1433,30 @@ int set_fpga_mode(uint8_t mode) {
 }
 
 static command_t CommandTable[] = {
-    {"-------------", CmdHelp,         AlwaysAvailable, "----------------------- " _CYAN_("Hardware") " -----------------------"},
-    {"help",          CmdHelp,         AlwaysAvailable, "This help"},
-    {"break",         CmdBreak,        IfPm3Present,    "Send break loop usb command"},
-    {"bootloader",    CmdBootloader,   IfPm3Present,    "Reboot Proxmark3 into bootloader mode"},
-    {"connect",       CmdConnect,      AlwaysAvailable, "Connect Proxmark3 to serial port"},
-    {"dbg",           CmdDbg,          IfPm3Present,    "Set Proxmark3 debug level"},
-    {"detectreader",  CmdDetectReader, IfPm3Present,    "Detect external reader field"},
-    {"fpgaoff",       CmdFPGAOff,      IfPm3Present,    "Set FPGA off"},
-    {"lcd",           CmdLCD,          IfPm3Lcd,        "Send command/data to LCD"},
-    {"lcdreset",      CmdLCDReset,     IfPm3Lcd,        "Hardware reset LCD"},
-    {"ping",          CmdPing,         IfPm3Present,    "Test if the Proxmark3 is responsive"},
-    {"readmem",       CmdReadmem,      IfPm3Present,    "Read from processor flash"},
-    {"reset",         CmdReset,        IfPm3Present,    "Reset the Proxmark3"},
-    {"setlfdivisor",  CmdSetDivisor,   IfPm3Present,    "Drive LF antenna at 12MHz / (divisor + 1)"},
+    {"help",          CmdHelp,         AlwaysAvailable,  "This help"},
+    {"-------------", CmdHelp,         AlwaysAvailable,  "----------------------- " _CYAN_("Operation") " -----------------------"},
+    {"detectreader",  CmdDetectReader, IfPm3Present,     "Detect external reader field"},
+    {"status",        CmdStatus,       IfPm3Present,     "Show runtime status information about the connected Proxmark3"},
+    {"tearoff",       CmdTearoff,      IfPm3Present,     "Program a tearoff hook for the next command supporting tearoff"},    
+    {"timeout",       CmdTimeout,      AlwaysAvailable,  "Set the communication timeout on the client side"},
+    {"version",       CmdVersion,      AlwaysAvailable,  "Show version information about the client and Proxmark3"},
+    {"-------------", CmdHelp,         AlwaysAvailable,  "----------------------- " _CYAN_("Hardware") " -----------------------"},
+    {"break",         CmdBreak,        IfPm3Present,     "Send break loop usb command"},
+    {"bootloader",    CmdBootloader,   IfPm3Present,     "Reboot into bootloader mode"},
+    {"connect",       CmdConnect,      AlwaysAvailable,  "Connect to the device via serial port"},
+    {"dbg",           CmdDbg,          IfPm3Present,     "Set device side debug level"},
+    {"fpgaoff",       CmdFPGAOff,      IfPm3Present,     "Turn off FPGA on device"},
+    {"lcd",           CmdLCD,          IfPm3Lcd,         "Send command/data to LCD"},
+    {"lcdreset",      CmdLCDReset,     IfPm3Lcd,         "Hardware reset LCD"},
+    {"ping",          CmdPing,         IfPm3Present,     "Test if the Proxmark3 is responsive"},
+    {"readmem",       CmdReadmem,      IfPm3Present,     "Read from MCU flash"},
+    {"reset",         CmdReset,        IfPm3Present,     "Reset the device"},
+    {"setlfdivisor",  CmdSetDivisor,   IfPm3Present,     "Drive LF antenna at 12MHz / (divisor + 1)"},
     {"sethfthresh",   CmdSetHFThreshold, IfPm3Present,   "Set thresholds in HF/14a mode"},
-    {"setmux",        CmdSetMux,       IfPm3Present,    "Set the ADC mux to a specific value"},
-    {"standalone",    CmdStandalone,   IfPm3Present,    "Jump to the standalone mode"},
-    {"status",        CmdStatus,       IfPm3Present,    "Show runtime status information about the connected Proxmark3"},
-    {"tearoff",       CmdTearoff,      IfPm3Present,    "Program a tearoff hook for the next command supporting tearoff"},
-    {"tia",           CmdTia,          IfPm3Present,    "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
-    {"timeout",       CmdTimeout,      AlwaysAvailable, "Set the communication timeout on the client side"},
-    {"tune",          CmdTune,         IfPm3Present,    "Measure antenna tuning"},
-    {"version",       CmdVersion,      AlwaysAvailable, "Show version information about the client and the connected Proxmark3, if any"},
+    {"setmux",        CmdSetMux,       IfPm3Present,     "Set the ADC mux to a specific value"},
+    {"standalone",    CmdStandalone,   IfPm3Present,     "Start installed standalone mode on device"},
+    {"tia",           CmdTia,          IfPm3Present,     "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
+    {"tune",          CmdTune,         IfPm3Present,     "Measure tuning of device antenna"},
     {NULL, NULL, NULL, NULL}
 };
 
