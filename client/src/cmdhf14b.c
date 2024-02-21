@@ -1923,7 +1923,8 @@ static int CmdHF14BRestore(const char *Cmd) {
 
         int status = write_sr_block(blockno, 4, data+blockno*4);
         if (status != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Write failed shutting down");
+            PrintAndLogEx(FAILED, "Write failed");
+            free(data);
             return status;
         }
 
