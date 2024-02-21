@@ -2726,7 +2726,7 @@ int readHF14B(bool loop, bool verbose) {
 plot:
         res = handle_hf_plot();
         if (res != PM3_SUCCESS)
-            break;
+            PrintAndLogEx(DEBUG, "plot failed");
 
     } while (loop && kbd_enter_pressed() == false);
 
