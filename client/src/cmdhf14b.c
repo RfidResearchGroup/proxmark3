@@ -1646,7 +1646,7 @@ static int CmdHF14BSriWrbl(const char *Cmd) {
                      );
     }
 
-    int status = write_sr_block(blockno, 4, data);
+    int status = write_sr_block(blockno, ST25TB_SR_BLOCK_SIZE, data);
     if (status != PM3_SUCCESS) {
         return status;
     }
@@ -1903,15 +1903,15 @@ static int CmdHF14BRestore(const char *Cmd) {
     // reserve memory
     uint8_t *data = NULL;
     size_t bytes_read = 0;
-    int res = pm3_load_dump(filename, (void **)&data, &bytes_read, (4 * block_cnt));
+    int res = pm3_load_dump(filename, (void **)&data, &bytes_read, (ST25TB_SR_BLOCK_SIZE * block_cnt));
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Failed to load file");
         return res;
     }
 
-    // Ignore remaining 4 bytes if the file is 4 bytes larger than the expected size
+    // Ignore remaining block if the file is 1 block larger than the expected size
     // (because hf 14b dump also saves the special block at the end of the memory, it will be ignored by the restore command)
-    if (bytes_read != (block_cnt * 4) && bytes_read != (block_cnt * 4 + 4)) {
+    if (bytes_read != (block_cnt * ST25TB_SR_BLOCK_SIZE) && bytes_read != ((block_cnt + 1) * ST25TB_SR_BLOCK_SIZE)) {
         PrintAndLogEx(ERR, "File content error. Read %zu", bytes_read);
         free(data);
         return PM3_EFILE;
@@ -1921,7 +1921,7 @@ static int CmdHF14BRestore(const char *Cmd) {
     int blockno = 0;
     while (bytes_read) {
 
-        int status = write_sr_block(blockno, 4, data+blockno*4);
+        int status = write_sr_block(blockno, ST25TB_SR_BLOCK_SIZE, data+blockno*ST25TB_SR_BLOCK_SIZE);
         if (status != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Write failed");
             free(data);
@@ -1929,10 +1929,10 @@ static int CmdHF14BRestore(const char *Cmd) {
         }
 
         // verify
-        uint8_t out[4] = {0};
+        uint8_t out[ST25TB_SR_BLOCK_SIZE] = {0};
         status = read_sr_block(blockno, out);
         if (status == PM3_SUCCESS) {
-            if (memcmp(data+blockno*ST25TB_SR_BLOCK_SIZE, out, 4) == 0) {
+            if (memcmp(data+blockno*ST25TB_SR_BLOCK_SIZE, out, ST25TB_SR_BLOCK_SIZE) == 0) {
                 printf("\33[2K\r");
                 PrintAndLogEx(INFO, "SRx write block %d/%d ( " _GREEN_("ok") " )" NOLF, blockno, block_cnt-1);
             }else {
