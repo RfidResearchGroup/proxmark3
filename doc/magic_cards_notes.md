@@ -318,9 +318,9 @@ UID 7b:
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 1a
+[+] Magic capabilities... Gen 1a
 ```
 
 ### Magic commands
@@ -459,9 +459,9 @@ Similar to Gen1A, but supports directly read/write after command 40
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 1b
+[+] Magic capabilities... Gen 1b
 ```
 
 ### Magic commands
@@ -497,9 +497,9 @@ As a successor, [OTP 2.0](#mifare-classic-otp-20) was created.
 Only possible before personalization.
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Write Once / FUID
+[+] Magic capabilities... Write Once / FUID
 ```
 
 ## MIFARE Classic OTP 2.0
@@ -521,10 +521,13 @@ Were manufactured by iKey LLC as a replacement for [OTP](#mifare-classic-direct-
 Only possible before personalization.
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 1a
-[+] Prng detection: hard
+[=] --- Magic Tag Information
+[+] Magic capabilities... Gen 1a
+
+[=] --- PRNG Information
+[+] Prng................. hard
 ```
 
 ### Magic commands
@@ -539,21 +542,17 @@ hf 14a info
 
 * Other names:
   * MF-8 (RU)
-  * MF3 (RU)
+  * MF-3 (RU)
     - What's so special about this chip in particular..?
 
 ### Identify
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 2 / CUID
+[+] Magic capabilities... Gen 2 / CUID
 ```
-
-Not all Gen2 cards can be identified with `hf 14a info`, only those replying to RATS.
-
-To identify the other ones, you've to try to write to block0 and see if it works...
 
 ### Magic commands
 ^[Top](#top)
@@ -689,9 +688,9 @@ hf 14a reader
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 3 / APDU
+[+] Magic capabilities... Gen 3 / APDU ( possibly )
 ```
 
 ### Magic commands
@@ -771,6 +770,19 @@ You cannot turn a Classic tag into an Ultralight and vice-versa!
 * SAK: read from backdoor or configuration
 * BCC: read from memory, beware!
 * ATS: no/unknown
+
+### Identify
+^[Top](#top)
+
+```
+hf mf info
+...
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Magic Auth/Gen1 Magic Wakeup/Alt Magic Wakeup )
+```
+Possible tag wakeup mechanisms are:
+* Magic Auth
+* Gen1 Magic Wakeup
+* Alt Magic Wakeup
 
 ### Magic commands
 ^[Top](#top)
@@ -860,15 +872,17 @@ Sectors 2-15
 ### Proxmark3 commands
 ^[Top](#top)
 ```
-Using magic auth:
-# Write to persistent memory:
-hf mf gdmsetblk
-
-# Read configuration (0xE0):
+# Read config block from card
 hf mf gdmcfg
 
-# Write configuration (0xE1):
+# Write config block to card
 hf mf gdmsetcfg
+
+# Parse config block to card
+hf mf gdmparsecfg
+
+# Write block to card
+hf mf gdmsetblk
 ```
 
 ### libnfc commands
@@ -917,24 +931,33 @@ That's a key difference from [OTP](#mifare-classic-direct-write-otp)/[OTP 2.0](#
 ### Identify
 ^[Top](#top)
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Write Once / FUID
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Alt Magic Wakeup )
+[+] Magic capabilities... Write Once / FUID
 
 ```
 
-⚠️ **Current Proxmark3 identification is based on the initial UID. That could lead to the false positives. Also that doesn't allow to detect FUID after the personalization.**
-
-More correct detection should be based on a backdoor commands and configuration block value:
-
+### Parsed configuration 
+^[Top](#top)
 ```
-[usb] pm3 --> hf 14a raw -k -a -b 7 20
-[+] 0A
-[usb] pm3 --> hf 14a raw -k -a 23
-[+] 0A
-[usb] pm3 --> hf 14a raw -c -k -a E000
-[+] 7A FF 85 00 00 00 00 00 00 FF 00 00 00 00 00 08 [ 66 92 ]
+[usb] pm3 --> hf mf gdmcfg --gdm
+[+] Config... 7A FF 85 00 00 00 00 00 00 FF 00 00 00 00 00 08
+[+]           7A FF .......................................... Magic wakeup enabled with GDM config block access
+[+]                 85 ....................................... Magic wakeup style GDM 20(7)/23
+[+]                    00 00 00 .............................. Unknown
+[+]                             00 ........................... Key B use allowed when readable by ACL
+[+]                                00 ........................ Block 0 Direct Write Disabled (CUID)
+[+]                                   00 ..................... Unknown
+[+]                                      FF .................. MFC EV1 personalization: 4B UID from Block 0
+[+]                                         00 ............... Shadow mode disabled
+[+]                                           00 ............. Magic auth disabled
+[+]                                             00 ........... Static encrypted nonce disabled
+[+]                                               00 ......... MFC EV1 signature disabled
+[+]                                                  00 ...... Unknown
+[+]                                                     08 ... SAK
 ```
+
 ### Commands
 ^[Top](#top)
 
@@ -957,6 +980,13 @@ More correct detection should be based on a backdoor commands and configuration 
 [=]   0 | B5 02 45 4E BC 08 04 00 01 68 AA 89 47 CE 4D 1D | ..EN.....h..G.M.
 ```
 
+### Proxmark3 commands
+^[Top](#top)
+
+* `hf mf gdmcfg --gdm`
+* `hf mf gdmsetcfg --gdm`
+* `hf mf gdmsetblk --gdm`
+
 ## UFUID
 ^[Top](#top)
 
@@ -976,22 +1006,34 @@ The tag is positioned as "sealable UID", so that means you could use the same co
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 1a
+[+] Magic capabilities... Gen 1a
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Gen1 Magic Wakeup )
 
 ```
 
 Currently Proxmark3 doesn't identify it as a separate tag. 
-Before the sealing could be detected from the config block value:
+Before the sealing could be detected from the config block value.
 
+### Parsed configuration
+^[Top](#top)
 ```
-[usb] pm3 --> hf 14a raw -k -a -b 7 40
-[+] 0A
-[usb] pm3 --> hf 14a raw -k -a 43
-[+] 0A
-[usb] pm3 --> hf 14a raw -c -k -a E000
-[+] 7A FF 00 00 00 00 00 00 BA FA 00 00 00 00 00 08 [ F1 69 ]
+[usb] pm3 --> hf mf gdmcfg --gen1a
+[+] Config... 7A FF 00 00 00 00 00 00 BA FA 00 00 00 00 00 08
+[+]           7A FF .......................................... Magic wakeup enabled with GDM config block access
+[+]                 00 ....................................... Magic wakeup style Gen1a 40(7)/43
+[+]                    00 00 00 .............................. Unknown
+[+]                             00 ........................... Key B use allowed when readable by ACL
+[+]                                00 ........................ Block 0 Direct Write Disabled (CUID)
+[+]                                   BA ..................... Unknown
+[+]                                      FA .................. MFC EV1 personalization: 4B UID from Block 0
+[+]                                         00 ............... Shadow mode disabled
+[+]                                           00 ............. Magic auth disabled
+[+]                                             00 ........... Static encrypted nonce disabled
+[+]                                               00 ......... MFC EV1 signature disabled
+[+]                                                  00 ...... Unknown
+[+]                                                     08 ... SAK
 ```
 
 ### Commands
@@ -999,8 +1041,7 @@ Before the sealing could be detected from the config block value:
 
 All commands are available before sealing.
 * Proxmark3 magic Gen1 commands
-* Read configuration: `E000+crc`
-* Write configuration: `E100+crc`
+* Proxmark3 magic Gen4 GDM commands
 
 Example of the sealing, performed by Chinese copiers in raw commands:
 
@@ -1010,6 +1051,22 @@ hf 14a raw    -k      43
 hf 14a raw    -k -c   e100
 hf 14a raw       -c   85000000000000000000000000000008
 ```
+
+### Proxmark3 commands
+^[Top](#top)
+
+All commands are available before sealing.
+* `hf mf gdmcfg --gen1a`
+* `hf mf gdmsetcfg --gen1a`
+* `hf mf gdmsetblk --gen1a`
+* `hf mf csetuid`
+* `hf mf cwipe`
+* `hf mf csetblk`
+* `hf mf cgetblk`
+* `hf mf cgetsc`
+* `hf mf cload`
+* `hf mf csave`
+* `hf mf cview`
 
 ## ZUID
 ^[Top](#top)
@@ -1028,30 +1085,56 @@ That tag is a UID tag, built on USCUID chip. It doesn't sold separately, but cou
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 1a
+[+] Magic capabilities... Gen 1a
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Gen1 Magic Wakeup )
 
 ```
 
 Currently Proxmark3 doesn't identify it as a separate tag. 
-Could be detected from the config block value:
+Could be detected from the config block value.
 
+### Parsed configuration
+^[Top](#top)
 ```
-[usb] pm3 --> hf 14a raw -k -a -b 7 40
-[+] 0A
-[usb] pm3 --> hf 14a raw -k -a 43
-[+] 0A
-[usb] pm3 --> hf 14a raw -c -k -a E000
-[+] 7A FF 00 00 00 00 00 00 00 00 00 00 00 00 00 08 [ 4E 17 ]
+[usb] pm3 --> hf mf gdmcfg --gen1a
+[+] Config... 7A FF 00 00 00 00 00 00 BA FA 00 00 00 00 00 08
+[+]           7A FF .......................................... Magic wakeup enabled with GDM config block access
+[+]                 00 ....................................... Magic wakeup style Gen1a 40(7)/43
+[+]                    00 00 00 .............................. Unknown
+[+]                             00 ........................... Key B use allowed when readable by ACL
+[+]                                00 ........................ Block 0 Direct Write Disabled (CUID)
+[+]                                   BA ..................... Unknown
+[+]                                      FA .................. MFC EV1 personalization: 4B UID from Block 0
+[+]                                         00 ............... Shadow mode disabled
+[+]                                           00 ............. Magic auth disabled
+[+]                                             00 ........... Static encrypted nonce disabled
+[+]                                               00 ......... MFC EV1 signature disabled
+[+]                                                  00 ...... Unknown
+[+]                                                     08 ... SAK
 ```
 
 ### Commands
 ^[Top](#top)
 
 * Proxmark3 magic Gen1 commands
-* Read configuration: `E000+crc`
-* Write configuration: `E100+crc`
+* Proxmark3 magic Gen4 GDM commands
+
+### Proxmark3 commands
+^[Top](#top)
+
+* `hf mf gdmcfg --gen1a`
+* `hf mf gdmsetcfg --gen1a`
+* `hf mf gdmsetblk --gen1a`
+* `hf mf csetuid`
+* `hf mf cwipe`
+* `hf mf csetblk`
+* `hf mf cgetblk`
+* `hf mf cgetsc`
+* `hf mf cload`
+* `hf mf csave`
+* `hf mf cview`
 
 ## GDM
 ^[Top](#top)
@@ -1069,31 +1152,40 @@ The tag has a shadow mode, which means that every change to normal MFC memory wo
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 4 GDM
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Magic Auth )
 
 ```
 
-Could be manually validated with the configuration block value:
+Could be manually validated with the configuration block value.
 
+### Parsed configuration
+^[Top](#top)
 ```
 [usb] pm3 --> hf mf gdmcfg
-[+] config... 85 00 00 00 00 00 00 00 00 00 5A 5A 00 00 00 08
+[+] Config... 85 00 00 00 00 00 00 00 00 00 5A 5A 00 00 00 08
+[+]           85 00 .......................................... Magic wakeup disabled
+[+]                 00 ....................................... Magic wakeup style Gen1a 40(7)/43
+[+]                    00 00 00 .............................. Unknown
+[+]                             00 ........................... Key B use allowed when readable by ACL
+[+]                                00 ........................ Block 0 Direct Write Disabled (CUID)
+[+]                                   00 ..................... Unknown
+[+]                                      00 .................. MFC EV1 personalization: 4B UID from Block 0
+[+]                                         5A ............... Shadow mode enabled
+[+]                                           5A ............. Magic auth enabled
+[+]                                             00 ........... Static encrypted nonce disabled
+[+]                                               00 ......... MFC EV1 signature disabled
+[+]                                                  00 ...... Unknown
+[+]                                                     08 ... SAK
 ```
 
-### Commands
+### Proxmark3 commands
 ^[Top](#top)
 
-* Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
-  * Backdoor read: `38xx+crc`
-  * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
-  * Read configuration: `E000+crc`
-  * Write configuration: `E100+crc`; `[16 bytes data]+crc`
-* Proxmark3 commands (does auth and executes the corresponding command)
-  * Backdoor write: `gdmsetcfg`
-  * Read configuration: `gdmcfg`
-  * Write configuration: `gdmsetcfg`
+* Backdoor write: `gdmsetcfg`
+* Read configuration: `gdmcfg`
+* Write configuration: `gdmsetcfg`
 
 ## GDCUID
 ^[Top](#top)
@@ -1111,28 +1203,41 @@ That tag is a CUID tag, built on USCUID chip. It doesn't sold separately, but co
 ^[Top](#top)
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Gen 4 GDM
+[+] Magic capabilities... Gen 2 / CUID
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Magic Auth )
 
 ```
 Currently Proxmark3 doesn't identify it as a separate tag. 
-Could be manually validated with the configuration block value:
+Could be manually validated with the configuration block value.
 
+### Parsed configuration
+^[Top](#top)
 ```
 [usb] pm3 --> hf mf gdmcfg
-[+] config... 85 00 00 00 00 00 00 5A 00 FF 00 5A 00 00 00 08
+[+] Config... 85 00 00 00 00 00 00 5A 00 FF 00 5A 00 00 00 08
+[+]           85 00 .......................................... Magic wakeup disabled
+[+]                 00 ....................................... Magic wakeup style Gen1a 40(7)/43
+[+]                    00 00 00 .............................. Unknown
+[+]                             00 ........................... Key B use allowed when readable by ACL
+[+]                                5A ........................ Block 0 Direct Write Enabled (CUID)
+[+]                                   00 ..................... Unknown
+[+]                                      FF .................. MFC EV1 personalization: 4B UID from Block 0
+[+]                                         00 ............... Shadow mode disabled
+[+]                                           5A ............. Magic auth enabled
+[+]                                             00 ........... Static encrypted nonce disabled
+[+]                                               00 ......... MFC EV1 signature disabled
+[+]                                                  00 ...... Unknown
+[+]                                                     08 ... SAK
 ```
 
-### Commands
+### Proxmark3 commands
 ^[Top](#top)
 
-* Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
-  * Read configuration: `E000+crc`
-  * Write configuration: `E100+crc`; `[16 bytes data]+crc`
-* Proxmark3 commands (does auth and executes the corresponding command)
-  * Read configuration: `gdmcfg`
-  * Write configuration: `gdmsetcfg`
+* Backdoor write: `gdmsetcfg`
+* Read configuration: `gdmcfg`
+* Write configuration: `gdmsetcfg`
 
 ## MIFARE Classic, other versions
 ^[Top](#top)
@@ -1247,9 +1352,9 @@ Parsing traces:
 Only Gen1/Gen2 at this moment (Gen1B is unsupported):
 
 ```
-hf 14a info
+hf mf info
 ...
-[+] Magic capabilities : Super card (Gen ?)
+[+] Magic capabilities... Super card ( Gen ? )
 ```
 
 ### Proxmark3 commands
