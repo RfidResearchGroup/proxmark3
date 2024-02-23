@@ -26,9 +26,8 @@ Useful docs:
   * [MIFARE Classic Gen1A aka UID](#mifare-classic-gen1a-aka-uid)
   * [MIFARE Classic Gen1B](#mifare-classic-gen1b)
   * [Mifare Classic Direct Write OTP](#mifare-classic-direct-write-otp)
-  * [MIFARE Classic OTP 2.0](#mifare-classic-otp-2.0)
+  * [MIFARE Classic OTP 2.0](#mifare-classic-otp-20)
   * [MIFARE Classic DirectWrite aka Gen2 aka CUID](#mifare-classic-directwrite-aka-gen2-aka-cuid)
-  * [MIFARE Classic DirectWrite, FUID version aka 1-write](#mifare-classic-directwrite-fuid-version-aka-1-write)
   * [MIFARE Classic Gen3 aka APDU](#mifare-classic-gen3-aka-apdu)
   * [MIFARE Classic USCUID](#mifare-classic-uscuid)
      * [FUID](#fuid)
@@ -484,7 +483,7 @@ After the response to first `26 (7)` command, but before the following `93 70` c
 
 That issue led to the development of the filters against that card and discontinuation of the production. 
 
-As a successor, [OTP 2.0](#mifare-classic-otp-2.0) was created.
+As a successor, [OTP 2.0](#mifare-classic-otp-20) was created.
 
 ### Characteristics
 ^[Top](#top)
@@ -905,7 +904,7 @@ Allows direct write to block 0 only when UID is default `AA55C396`. But always c
 
 Backdoor commands are available even after the personalization and makes that tag detectable.
 
-That's a key difference from [OTP](#mifare-classic-direct-write-otp)/[OTP 2.0](#mifare-classic-otp-2.0) tags.
+That's a key difference from [OTP](#mifare-classic-direct-write-otp)/[OTP 2.0](#mifare-classic-otp-20) tags.
 
 ### Characteristics
 ^[Top](#top)
@@ -1652,9 +1651,9 @@ TAG IC Signature: 00000000000000000000000000000000000000000000000000000000000000
 
 After personalization it is not possible to identify UL-5. 
 
-Usually chips have initial UIDs: 
-  * `AA 55 C3 A4 30 61 80`
-  * `AA 55 C3 A4 30 61 80`
+The manufacturer confirmed unpersonalized tags could be identified by first 3 bytes of UID:
+  * `AA 55 39...`
+  * `AA 55 C3...`
 
 ### UL, other chips
 
@@ -2401,7 +2400,7 @@ hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC1910101112131
 Don`t forget configure maximum read/write blocks. It`s can be adjusted directly in config (see *Dump configuration*) or by command 6B: 
 
 ```
-hf mf raw -s -c -t 1000 CF000000006BFB
+hf 14a raw -s -c -t 1000 CF000000006BFB
 ```
 
 Note: 0xFB = 251
