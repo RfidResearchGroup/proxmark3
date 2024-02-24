@@ -1957,7 +1957,7 @@ Behavior: similar to Ultra, but after editing page 0 become locked and tag becom
 
 ```
 hf mfu info
-[=] UID: AA 55 C3 A1 30 61 80
+...
 TAG IC Signature: 0000000000000000000000000000000000000000000000000000000000000000
 [=] --- Tag Version
 [=]        Raw bytes: 00 34 21 01 01 00 0E 03
