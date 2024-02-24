@@ -1045,7 +1045,13 @@ hf mf info
 
 ^[Top](#top)
 
-* Commands described under the corresponding section of USCUID chip
+* Magic wakeup: `20(7)`, `23`
+  * Backdoor read main block: `30xx+crc`
+  * Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
+  * Read hidden block: `38xx+crc`
+  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`
 * Example of changing block 0 after the personalization:
 
 ```
@@ -1131,12 +1137,16 @@ Before the sealing could be detected from the config block value.
 
 ^[Top](#top)
 
-All commands are available before sealing.
+All commands are available before sealing. After the sealing acts as a Mifare Classic 1K tag.
 
-* Proxmark3 magic Gen1 commands
-* Proxmark3 magic Gen4 GDM commands
-
-Example of the sealing, performed by Chinese copiers in raw commands:
+* Magic wakeup: `40(7)`, `43`
+  * Backdoor read main block: `30xx+crc`
+  * Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
+  * Read hidden block: `38xx+crc`
+  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`
+* Example of the sealing, performed by Chinese copiers in raw commands:
 
 ```
 hf 14a raw -a -k -b 7 40
@@ -1199,14 +1209,14 @@ Could be detected from the config block value.
 
 ```
 [usb] pm3 --> hf mf gdmcfg --gen1a
-[+] Config... 7A FF 00 00 00 00 00 00 BA FA 00 00 00 00 00 08
+[+] Config... 7A FF 00 00 00 00 00 00 00 00 00 00 00 00 00 08
 [+]           7A FF .......................................... Magic wakeup enabled with GDM config block access
 [+]                 00 ....................................... Magic wakeup style Gen1a 40(7)/43
 [+]                    00 00 00 .............................. Unknown
 [+]                             00 ........................... Key B use allowed when readable by ACL
 [+]                                00 ........................ Block 0 Direct Write Disabled (CUID)
-[+]                                   BA ..................... Unknown
-[+]                                      FA .................. MFC EV1 personalization: 4B UID from Block 0
+[+]                                   00 ..................... Unknown
+[+]                                      00 .................. MFC EV1 personalization: 4B UID from Block 0
 [+]                                         00 ............... Shadow mode disabled
 [+]                                           00 ............. Magic auth disabled
 [+]                                             00 ........... Static encrypted nonce disabled
@@ -1219,8 +1229,13 @@ Could be detected from the config block value.
 
 ^[Top](#top)
 
-* Proxmark3 magic Gen1 commands
-* Proxmark3 magic Gen4 GDM commands
+* Magic wakeup: `40(7)`, `43`
+  * Backdoor read main block: `30xx+crc`
+  * Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
+  * Read hidden block: `38xx+crc`
+  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`
 
 ### Proxmark3 commands
 
@@ -1243,6 +1258,9 @@ Could be detected from the config block value.
 ^[Top](#top)
 
 The tag has a shadow mode, which means that every change to normal MFC memory would be restored back from the persistent memory after being off RFID field.
+
+* Other names:
+  * GDMIC
 
 ### Characteristics
 
@@ -1286,6 +1304,16 @@ Could be manually validated with the configuration block value.
 [+]                                                  00 ...... Unknown
 [+]                                                     08 ... SAK
 ```
+
+### Commands
+
+^[Top](#top)
+
+* Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
+  * Backdoor read: `38xx+crc`
+  * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`; `[16 bytes data]+crc`
 
 ### Proxmark3 commands
 
@@ -1345,6 +1373,16 @@ Could be manually validated with the configuration block value.
 [+]                                                  00 ...... Unknown
 [+]                                                     08 ... SAK
 ```
+
+### Commands
+
+^[Top](#top)
+
+* Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
+  * Backdoor read: `38xx+crc`
+  * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`; `[16 bytes data]+crc`
 
 ### Proxmark3 commands
 
