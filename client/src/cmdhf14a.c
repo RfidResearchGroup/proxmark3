@@ -642,9 +642,9 @@ static int CmdHF14AReader(const char *Cmd) {
         }
 plot:
         if (continuous) {
-            res = handle_hf_plot();
+            res = handle_hf_plot(false);
             if (res != PM3_SUCCESS) {
-                break;
+                PrintAndLogEx(DEBUG, "plot failed");
             }
         }
 
@@ -2497,7 +2497,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     if (isMifareUltralight) {
-        isMagic = ((detect_mf_magic(false, MF_KEY_A, 0) & MAGIC_FLAG_NTAG21X) == MAGIC_FLAG_NTAG21X);
+        isMagic = detect_mf_magic(false, MF_KEY_A, 0);
     }
 
     if (isMifareClassic) {
@@ -2542,6 +2542,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     if (isMifareUltralight) {
 
         if (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B)) {
+            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mfu *") "` magic commands");
+        }
+
+        if ((isMagic & MAGIC_FLAG_NTAG21X) == MAGIC_FLAG_NTAG21X) {
             PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mfu *") "` magic commands");
         }
 

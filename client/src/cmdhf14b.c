@@ -2724,9 +2724,10 @@ int readHF14B(bool loop, bool verbose) {
         if (found)
             goto plot;
 plot:
-        res = handle_hf_plot();
-        if (res != PM3_SUCCESS)
+        res = handle_hf_plot(verbose);
+        if (res != PM3_SUCCESS) {
             PrintAndLogEx(DEBUG, "plot failed");
+        }
 
     } while (loop && kbd_enter_pressed() == false);
 

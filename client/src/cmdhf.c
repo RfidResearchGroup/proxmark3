@@ -518,7 +518,7 @@ int CmdHFSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int handle_hf_plot(void) {
+int handle_hf_plot(bool show_plot) {
 
     uint8_t buf[FPGA_TRACE_SIZE] = {0};
 
@@ -534,7 +534,9 @@ int handle_hf_plot(void) {
 
     g_GraphTraceLen = FPGA_TRACE_SIZE;
 
-    ShowGraphWindow();
+    if (show_plot) {
+        ShowGraphWindow();
+    }
 
     // remove signal offset
     CmdHpf("");
@@ -558,7 +560,7 @@ int CmdHFPlot(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    return handle_hf_plot();
+    return handle_hf_plot(true);
 }
 
 static int CmdHFList(const char *Cmd) {

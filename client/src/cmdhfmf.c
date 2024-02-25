@@ -8446,13 +8446,19 @@ static int CmdHF14AGen4ChangePwd(const char *Cmd) {
 }
 
 static void parse_gdm_cfg(const uint8_t *d) {
-    PrintAndLogEx(SUCCESS, "Config... " _YELLOW_("%s"), sprint_hex(d, MFBLOCK_SIZE));
-    PrintAndLogEx(SUCCESS, "          " _YELLOW_("%02X %02X") " .......................................... %s %s", d[0], d[1], (d[0] == 0x85 && d[1] == 0x00) ? "Magic wakeup disabled" : _GREEN_("Magic wakeup enabled"), (d[0] == 0x85 && d[1] == 0x00) ? "" : ((d[0] == 0x7A && d[1] == 0xFF) ? _GREEN_("with GDM config block access") : _RED_("without GDM config block access")));
-    PrintAndLogEx(SUCCESS, "                " _YELLOW_("%02X") " ....................................... Magic wakeup style %s", d[2], ((d[2] == 0x85) ? "GDM 20(7)/23" : "Gen1a 40(7)/43"));
-    PrintAndLogEx(SUCCESS, "                   " _YELLOW_("%02X %02X %02X") " .............................. Unknown", d[3], d[4], d[5]);
-    PrintAndLogEx(SUCCESS, "                            " _YELLOW_("%02X") " ........................... %s", d[6], (d[6] == 0x5A) ? "Key B use blocked when readable by ACL" : "Key B use allowed when readable by ACL");
-    PrintAndLogEx(SUCCESS, "                               " _YELLOW_("%02X") " ........................ %s", d[7], (d[7] == 0x5A) ? _GREEN_("Block 0 Direct Write Enabled (CUID)") : "Block 0 Direct Write Disabled (CUID)");
-    PrintAndLogEx(SUCCESS, "                                  " _YELLOW_("%02X") " ..................... Unknown", d[8]);
+    PrintAndLogEx(SUCCESS, "------------------- " _CYAN_("GDM Configuration") " -----------------------------------------");
+    PrintAndLogEx(SUCCESS,  _YELLOW_("%s"), sprint_hex_inrow(d, MFBLOCK_SIZE));
+    PrintAndLogEx(SUCCESS,  _YELLOW_("%02X%02X") "............................ %s %s"
+        , d[0]
+        , d[1]
+        , (d[0] == 0x85 && d[1] == 0x00) ? "Magic wakeup disabled" : _GREEN_("Magic wakeup enabled")
+        , (d[0] == 0x85 && d[1] == 0x00) ? "" : ((d[0] == 0x7A && d[1] == 0xFF) ? _GREEN_("with GDM cfg block access") : _RED_(", no GDM cfg block access"))
+    );
+    PrintAndLogEx(SUCCESS, "...." _YELLOW_("%02X") ".......................... Magic wakeup style %s", d[2], ((d[2] == 0x85) ? "GDM 20(7)/23" : "Gen1a 40(7)/43"));
+    PrintAndLogEx(SUCCESS, "......" _YELLOW_("%02X%02X%02X") ".................... n/a", d[3], d[4], d[5]);
+    PrintAndLogEx(SUCCESS, "............" _YELLOW_("%02X") ".................. %s", d[6], (d[6] == 0x5A) ? "Key B use blocked when readable by ACL" : "Key B use allowed when readable by ACL");
+    PrintAndLogEx(SUCCESS, ".............." _YELLOW_("%02X") "................ %s", d[7], (d[7] == 0x5A) ? _GREEN_("CUID - Block 0 Direct Write Enabled") : "CUID - Block 0 Direct Write Disabled");
+    PrintAndLogEx(SUCCESS, "................" _YELLOW_("%02X") ".............. n/a", d[8]);
 
     const char *pers;
     switch (d[9]) {
@@ -8475,14 +8481,13 @@ static void parse_gdm_cfg(const uint8_t *d) {
             pers = "4B UID from Block 0";
             break;
     }
-    PrintAndLogEx(SUCCESS, "                                     " _YELLOW_("%02X") " .................. MFC EV1 personalization: %s", d[9], pers);
-
-    PrintAndLogEx(SUCCESS, "                                        " _YELLOW_("%02X") " ............... %s", d[10], (d[10] == 0x5A) ? _GREEN_("Shadow mode enabled") : "Shadow mode disabled");
-    PrintAndLogEx(SUCCESS, "                                          " _YELLOW_("%02X") " ............. %s", d[11], (d[11] == 0x5A) ? _GREEN_("Magic auth enabled") : "Magic auth disabled");
-    PrintAndLogEx(SUCCESS, "                                            " _YELLOW_("%02X") " ........... %s", d[12], (d[12] == 0x5A) ? _GREEN_("Static encrypted nonce enabled") : "Static encrypted nonce disabled");
-    PrintAndLogEx(SUCCESS, "                                              " _YELLOW_("%02X") " ......... %s", d[13], (d[13] == 0x5A) ? _GREEN_("MFC EV1 signature enabled") : "MFC EV1 signature disabled");
-    PrintAndLogEx(SUCCESS, "                                                 " _YELLOW_("%02X") " ...... Unknown", d[14]);
-    PrintAndLogEx(SUCCESS, "                                                    " _YELLOW_("%02X") " ... SAK", d[15]);
+    PrintAndLogEx(SUCCESS, ".................." _YELLOW_("%02X") "............ MFC EV1 perso... " _YELLOW_("%s"), d[9], pers);
+    PrintAndLogEx(SUCCESS, "...................." _YELLOW_("%02X") ".......... %s", d[10], (d[10] == 0x5A) ? _GREEN_("Shadow mode enabled") : "Shadow mode disabled");
+    PrintAndLogEx(SUCCESS, "......................" _YELLOW_("%02X") "........ %s", d[11], (d[11] == 0x5A) ? _GREEN_("Magic auth enabled") : "Magic auth disabled");
+    PrintAndLogEx(SUCCESS, "........................" _YELLOW_("%02X") "...... %s", d[12], (d[12] == 0x5A) ? _GREEN_("Static encrypted nonce enabled") : "Static encrypted nonce disabled");
+    PrintAndLogEx(SUCCESS, ".........................." _YELLOW_("%02X") ".... %s", d[13], (d[13] == 0x5A) ? _GREEN_("MFC EV1 signature enabled") : "MFC EV1 signature disabled");
+    PrintAndLogEx(SUCCESS, "............................" _YELLOW_("%02X") ".. n/a", d[14]);
+    PrintAndLogEx(SUCCESS, ".............................." _YELLOW_("%02X") " SAK", d[15]);
 }
 
 static int CmdHF14AGen4_GDM_ParseCfg(const char *Cmd) {

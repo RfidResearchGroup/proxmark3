@@ -27,5 +27,5 @@ int CmdHFSearch(const char *Cmd);
 int CmdHFSniff(const char *Cmd);
 int CmdHFPlot(const char *Cmd);
 
-int handle_hf_plot(void);
+int handle_hf_plot(bool show_plot);
 #endif

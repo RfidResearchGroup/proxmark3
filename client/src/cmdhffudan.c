@@ -184,9 +184,9 @@ int read_fudan_uid(bool loop, bool verbose) {
 
 
         if (loop) {
-            res = handle_hf_plot();
+            res = handle_hf_plot(verbose);
             if (res != PM3_SUCCESS) {
-                break;
+                PrintAndLogEx(DEBUG, "plot failed");
             }
         }
 
