@@ -2540,6 +2540,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     PrintAndLogEx(NORMAL, "");
     if (isMifareUltralight) {
+
+        if (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B)) {
+            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mfu *") "` magic commands");
+        }
+
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfu info") "`");
     }
 
@@ -2584,27 +2589,33 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (isMifareClassic) {
         if (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B)) {
-            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf c*") "` commands when interacting");
+            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf c*") "` magic commands");
+
+            // if GEN4 GDM in Gen1a more,  hint about it
+            if ((isMagic & MAGIC_FLAG_GDM_WUP_40) == MAGIC_FLAG_GDM_WUP_40) {
+                PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf gdm* --gen1a") "` magic commands");
+            }
         }
 
         if ((isMagic & MAGIC_FLAG_GEN_3) == MAGIC_FLAG_GEN_3) {
-            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gen3*") "` commands when interacting");
+            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf gen3*") "` magic commands");
         }
 
         if ((isMagic & MAGIC_FLAG_GEN_4GTU) == MAGIC_FLAG_GEN_4GTU) {
-            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf g*") "` commands when interacting");
+            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf g*") "` magic commands");
         }
 
         if ((isMagic & MAGIC_FLAG_GDM_AUTH) == MAGIC_FLAG_GDM_AUTH) {
-            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gdm*") "` commands when interacting");
+            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf gdm*") "` magic commands");
         }
 
         if ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2) {
-            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf") "` commands when interacting");
+            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf") "` commands");
         } else {
             PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf`") " commands");
         }
     }
+
 
     PrintAndLogEx(NORMAL, "");
     DropField();

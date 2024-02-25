@@ -1435,7 +1435,7 @@ uint16_t detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
     }
 
     if ((isMagic & MAGIC_FLAG_GDM_WUP_20) == MAGIC_FLAG_GDM_WUP_20) {
-        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Alt Magic Wakeup )");
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Gen4 Magic Wakeup )");
     }
 
     if ((isMagic & MAGIC_FLAG_GDM_WUP_40) == MAGIC_FLAG_GDM_WUP_40) {
